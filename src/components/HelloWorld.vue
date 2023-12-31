@@ -6,7 +6,9 @@ const statsEl = ref(null)
 const canvas = ref(null)
 
 onMounted(() => {
-  init(canvas.value, statsEl.value)
+  init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsEl.value as unknown as HTMLElement)
 })
 </script>
 

@@ -2,8 +2,20 @@
 import Stats from "stats.js";
 import * as dat from "dat.gui";
 
-export const init = (canvas, statsEl) => {
-  const config = {
+interface Config {
+  pixelSize: number;
+  noiseSize: number;
+  speed: number;
+  lightAmount: number;
+  fluidity: number;
+  windowSize: number;
+  frameCount: number;
+  width: number;
+  height: number;
+}
+
+export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
+  const config: Config = {
     pixelSize: 4,
     noiseSize: 0.03,
     speed: 200,
@@ -72,4 +84,4 @@ export const init = (canvas, statsEl) => {
   // worker.postMessage(config);
   // worker.onmessage = (event) => canvas.transferFromImageBitmap(event.data);
 };
-export const stop = clearInterval(init);
+// export const stop = clearInterval(init);
