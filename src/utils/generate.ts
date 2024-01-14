@@ -35,23 +35,10 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
   statsEl.appendChild(stats.dom);
 
-  const onChangeConfig = () => worker.postMessage({ workerConfig: config });
-  control.open();
-  control.add(config, "pixelSize").min(1).max(10).onChange(onChangeConfig);
-  control
-    .add(config, "noiseSize")
-    .min(0.0001)
-    .max(0.1)
-    .onChange(onChangeConfig);
-  control.add(config, "speed").min(80).max(500).onChange(onChangeConfig);
-  control.add(config, "lightAmount").min(1).max(5).onChange(onChangeConfig);
-  control.add(config, "fluidity").min(0).max(1).onChange(onChangeConfig);
-  control.add(config, "windowSize").min(0.1).max(1).onChange(onChangeConfig);
-
   // Detached mode
   // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#asynchronous_display_of_frames_produced_by_an_offscreencanvas
   const offscreen = canvas.transferControlToOffscreen();
-  const worker = new Worker("../src/worker.js"); // <-- path has to be set like this
+  const worker = new Worker(new URL('./worker.js', import.meta.url))
   worker.postMessage(
     {
       canvas: offscreen,
@@ -71,6 +58,19 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
       console.log(event.data.message);
     }
   };
+
+  const onChangeConfig = () => worker.postMessage({ workerConfig: config });
+  control.open();
+  control.add(config, "pixelSize").min(1).max(10).onChange(onChangeConfig);
+  control
+    .add(config, "noiseSize")
+    .min(0.0001)
+    .max(0.1)
+    .onChange(onChangeConfig);
+  control.add(config, "speed").min(80).max(500).onChange(onChangeConfig);
+  control.add(config, "lightAmount").min(1).max(5).onChange(onChangeConfig);
+  control.add(config, "fluidity").min(0).max(1).onChange(onChangeConfig);
+  control.add(config, "windowSize").min(0.1).max(1).onChange(onChangeConfig);
 
   // Synchronous mode
   // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#synchronous_display_of_frames_produced_by_an_offscreencanvas
