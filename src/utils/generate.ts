@@ -1,6 +1,8 @@
 // Based on the Coding Train video https://youtu.be/Lv9gyZZJPE0
 import Stats from "stats.js";
 import * as dat from "dat.gui";
+// @ts-ignore
+import simplex from 'simplex.js?url'
 
 interface Config {
   pixelSize: number;
