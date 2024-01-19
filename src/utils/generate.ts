@@ -19,9 +19,9 @@ interface Config {
 export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   const config: Config = {
     pixelSize: 4,
-    noiseSize: 0.03,
+    noiseSize: 0.015,
     speed: 200,
-    lightAmount: 2.2,
+    lightAmount: 1.9,
     fluidity: 0.2,
     windowSize: 1,
     frameCount: 0,
