@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import SimplexWorker from './components/SimplexWorker/index.vue'
+import SimplexCached from './components/SimplexCached/index.vue'
+const style = 1;
 </script>
 
 <template>
-  <div>
-  </div>
-  <HelloWorld />
+  <SimplexWorker v-if="style === 1" />
+  <SimplexCached v-if="style === 2" />
 </template>
 
 <style scoped>

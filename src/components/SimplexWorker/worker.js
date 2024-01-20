@@ -1,4 +1,4 @@
-import { createNoise4D } from './simplex.js';
+import { createNoise4D } from '../../utils/simplex.js';
 
 let config;
 let simplex = createNoise4D();
