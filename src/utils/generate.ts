@@ -2,7 +2,7 @@
 import Stats from "stats.js";
 import * as dat from "dat.gui";
 // @ts-ignore
-import simplex from 'simplex.js?url'
+import MyWorker from './worker?worker'
 
 interface Config {
   pixelSize: number;
@@ -40,7 +40,7 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   // Detached mode
   // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#asynchronous_display_of_frames_produced_by_an_offscreencanvas
   const offscreen = canvas.transferControlToOffscreen();
-  const worker = new Worker(new URL('./worker.js', import.meta.url))
+  const worker = new MyWorker();
   worker.postMessage(
     {
       canvas: offscreen,

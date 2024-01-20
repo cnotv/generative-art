@@ -1,4 +1,4 @@
-importScripts(new URL("simplex.js", self.location));
+import { createNoise4D } from './simplex.js';
 
 let config;
 let simplex = createNoise4D();
@@ -15,9 +15,9 @@ const draw = (canvas) => {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   let x, y;
-  const waveLenght = (Math.PI * 2 * config.frameCount) / config.speed;
-  const z = config.fluidity * Math.cos(waveLenght);
-  const w = config.fluidity * Math.sin(waveLenght);
+  const waveLength = (Math.PI * 2 * config.frameCount) / config.speed;
+  const z = config.fluidity * Math.cos(waveLength);
+  const w = config.fluidity * Math.sin(waveLength);
 
   for (y = 0; y < canvas.height / config.pixelSize; y++) {
     for (x = 0; x < canvas.width / config.pixelSize; x++) {

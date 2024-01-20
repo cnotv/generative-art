@@ -305,7 +305,7 @@ function createNoise3D(t = Math.random) {
     return 32 * (l + i + c + f);
   };
 }
-function createNoise4D(t = Math.random) {
+export function createNoise4D(t = Math.random) {
   const e = buildPermutationTable(t),
     r = new Float64Array(e).map((t) => grad4[(t % 32) * 4]),
     o = new Float64Array(e).map((t) => grad4[(t % 32) * 4 + 1]),
