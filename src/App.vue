@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SimplexWorker from './components/SimplexWorker/index.vue'
 import SimplexCached from './components/SimplexCached/index.vue'
-const style = 1;
+const style = 2;
 </script>
 
 <template>

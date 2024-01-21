@@ -1,8 +1,11 @@
 // Based on the Coding Train video https://youtu.be/Lv9gyZZJPE0
 import Stats from "stats.js";
 import * as dat from "dat.gui";
-// @ts-ignore
-import MyWorker from './worker?worker'
+import { createNoise4D } from '../../utils/simplex.js';
+let simplex = createNoise4D();
+// Create a cache for the frames
+let frameCache: ImageBitmap[] = [];
+const totalFrames = 400;
 
 interface Config {
   pixelSize: number;
@@ -37,31 +40,73 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
   statsEl.appendChild(stats.dom);
 
-  // Detached mode
-  // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#asynchronous_display_of_frames_produced_by_an_offscreencanvas
-  const offscreen = canvas.transferControlToOffscreen();
-  const worker = new MyWorker();
-  worker.postMessage(
-    {
-      canvas: offscreen,
-      workerConfig: config
-    },
-    [offscreen]
-  );
+  // Create an offscreen canvas
+  let offscreenCanvas = new OffscreenCanvas(config.width, config.height);
 
-  worker.onmessage = (event) => {
-    if (event.data.begin) {
-      stats.begin();
-    }
-    if (event.data.end) {
-      stats.end();
-    }
-    if (event.data.message) {
-      console.log(event.data.message);
-    }
-  };
+  // Function to generate a frame
+  function generateFrame(frameCount: number) {
+    console.log(frameCount);
 
-  const onChangeConfig = () => worker.postMessage({ workerConfig: config });
+    stats.begin();
+
+    const ctx = offscreenCanvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = config.width * config.windowSize;
+    canvas.height = config.height * config.windowSize;
+
+    ctx.fillStyle = "#ccc";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let x, y;
+    const waveLength = (Math.PI * 2 * config.frameCount) / config.speed;
+    const z = config.fluidity * Math.cos(waveLength);
+    const w = config.fluidity * Math.sin(waveLength);
+
+    for (y = 0; y < canvas.height / config.pixelSize; y++) {
+      for (x = 0; x < canvas.width / config.pixelSize; x++) {
+        const lightness = Math.round(
+          (simplex(x * config.noiseSize, y * config.noiseSize, z, w) + 1) /
+            config.lightAmount
+        );
+        // const lightness = Math.round(Math.random());
+        // const lightness = Math.random();
+
+        ctx.fillStyle = `rgba(212, 241, 249, ${lightness})`;
+        ctx.fillRect(
+          x * config.pixelSize,
+          y * config.pixelSize,
+          config.pixelSize,
+          config.pixelSize
+        );
+      }
+    }
+
+    stats.end();
+
+    // Convert the offscreen canvas to an ImageBitmap and store it in the cache
+    frameCache[frameCount] = offscreenCanvas.transferToImageBitmap();
+  }
+
+  // Generate all frames ahead of time
+  for (let frameCount = 0; frameCount < totalFrames; frameCount++) {
+    generateFrame(frameCount);
+  }
+
+  // Now you can use the pre-calculated frames in your draw function
+  function draw() {
+    if (!frameCache[totalFrames -1]) return;
+    // console.log(config.frameCount)
+    config.frameCount++;
+    let ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const count = config.frameCount % totalFrames
+    // console.log(count)
+    // console.log(frameCache[count])
+    ctx.drawImage(frameCache[count], 0, 0);
+  }
+    
+  const onChangeConfig = () => console.log('ok');
   control.open();
   control.add(config, "pixelSize").min(1).max(10).onChange(onChangeConfig);
   control
@@ -74,16 +119,15 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   control.add(config, "fluidity").min(0).max(1).onChange(onChangeConfig);
   control.add(config, "windowSize").min(0.1).max(1).onChange(onChangeConfig);
 
-  // Synchronous mode
-  // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#synchronous_display_of_frames_produced_by_an_offscreencanvas
-  // const canvas = document.getElementById("app").getContext("bitmaprenderer");
-  // const offscreen = new OffscreenCanvas(256, 256);
-  // const ctx = offscreen.getContext("2d");
-  // ctx.fillStyle = `rgba(212, 241, 249, 1`;
-  // ctx.fillRect(0, 0, 10, 10);
-  // const bitmap = offscreen.transferToImageBitmap();
-  // canvas.transferFromImageBitmap(bitmap);
-  // worker.postMessage(config);
-  // worker.onmessage = (event) => canvas.transferFromImageBitmap(event.data);
+  setInterval(draw, 1);
+  // draw();
 };
-// export const stop = clearInterval(init);
+
+// Synchronous mode
+// https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas#synchronous_display_of_frames_produced_by_an_offscreencanvas
+// const canvas = document.getElementById("app").getContext("bitmaprenderer");
+// const offscreen = new OffscreenCanvas(256, 256);
+// const ctx = offscreen.getContext("2d");
+// ctx.fillRect(0, 0, 10, 10);
+// const bitmap = offscreen.transferToImageBitmap();
+// canvas.transferFromImageBitmap(bitmap);
