@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import SimplexWorker from './components/SimplexWorker/index.vue'
-import SimplexCached from './components/SimplexCached/index.vue'
-const style = 2;
+import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
-  <SimplexWorker v-if="style === 1" />
-  <SimplexCached v-if="style === 2" />
+  <RouterView />
 </template>
 
 <style scoped>

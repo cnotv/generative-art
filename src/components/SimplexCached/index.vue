@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-
 import { init } from "./generate.js";
+
 const statsEl = ref(null)
 const canvas = ref(null)
 

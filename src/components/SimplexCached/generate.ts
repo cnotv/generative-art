@@ -1,7 +1,7 @@
 // Based on the Coding Train video https://youtu.be/Lv9gyZZJPE0
 import Stats from "stats.js";
 import * as dat from "dat.gui";
-import { createNoise4D } from '../../utils/simplex.js';
+import { createNoise4D } from '@/utils/simplex.js';
 let simplex = createNoise4D();
 // Create a cache for the frames
 let frameCache: ImageBitmap[] = [];
