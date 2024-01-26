@@ -5,7 +5,7 @@ import { createNoise4D } from '@/utils/simplex.js';
 let simplex = createNoise4D();
 // Create a cache for the frames
 let frameCache: ImageBitmap[] = [];
-const totalFrames = 400;
+const totalFrames = 1;
 
 interface Config {
   pixelSize: number;
