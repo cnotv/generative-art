@@ -7,11 +7,13 @@ import { useRoute } from 'vue-router';
 
 const statsEl = ref(null)
 const canvas = ref(null)
-const stats = new Stats();
 const route = useRoute();
+
 const hasStats = route.query.stats === 'true';
 const hasControl = route.query.control === 'true';
 const isRecording = route.query.record === 'true';
+
+const stats = new Stats();
 
 onMounted(() => {
   new P5((p: P5) => init(
@@ -23,8 +25,6 @@ onMounted(() => {
 })
 
 const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Stats): void => {
-
-
   if (hasStats) {
     // FPS stats
     stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
@@ -36,15 +36,14 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
   let rotation = 0;
   let amountX = 50;
   let amountY = 50;
-  const totalFrames = 500;
+  const totalFrames = 100;
 
   const config = {
     size: 20,
-    speed: 15,
+    speed: 7,
     gap: 1.1
   };
 
-  
   if (hasControl) {
     const gui = new dat.GUI();
     const control = gui.addFolder("control");
@@ -64,7 +63,6 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
 
     mediaRecorder.ondataavailable = function (e) {
       chunks.push(e.data);
-      console.log(e.data)
     };
 
     mediaRecorder.onstop = function (e) {
@@ -98,7 +96,6 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
 
   p.setup = function () {
     p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL); // Define canvas size
-    // p.rectMode(p.CENTER);
     const aspectRatio = p.width / p.height;
     const halfWidth = Math.max(1, aspectRatio);
     const halfHeight = Math.max(1, 1 / aspectRatio);
@@ -154,5 +151,9 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+div {
+  background: #333;
 }
 </style>
