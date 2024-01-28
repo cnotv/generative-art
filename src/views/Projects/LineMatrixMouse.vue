@@ -25,8 +25,8 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
   let offsetY = -220;
     
   const config = {
-    size: 12,
-    gap: 1.6
+    size: 25,
+    gap: 1.5
   };
   const amountX = Math.floor(p.windowWidth / (config.size + config.gap) - offsetX);
   const amountY = Math.floor(p.windowHeight / (config.size + config.gap));
@@ -41,9 +41,10 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
     p.push(); // Point changes to this instance
     const itemX = x * config.size * config.gap + offsetX;
     const itemY = y * config.size * config.gap + offsetY;
-    
-    const mouseAngle = p.map(itemX - p.mouseX, itemY - p.mouseY, config.size, p.PI, 1.2);
-    
+    const dx = itemX - p.mouseX;
+    const dy = itemY - p.mouseY;
+    const mouseAngle = p.atan2(dy, dx);
+
     p.translate(itemX, itemY);
     p.rotate(mouseAngle)
     p.fill(`#333`);
