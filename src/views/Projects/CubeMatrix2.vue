@@ -9,6 +9,9 @@ const statsEl = ref(null)
 const canvas = ref(null)
 const stats = new Stats();
 const route = useRoute();
+const hasStats = route.query.stats === 'true';
+const hasControl = route.query.control === 'true';
+const isRecording = route.query.record === 'true';
 
 onMounted(() => {
   new P5((p: P5) => init(
@@ -20,9 +23,13 @@ onMounted(() => {
 })
 
 const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Stats): void => {
-  // FPS stats
-  stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-  statsEl!.appendChild(stats.dom);
+
+
+  if (hasStats) {
+    // FPS stats
+    stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+    statsEl!.appendChild(stats.dom);
+  }
 
   let offsetX = -850;
   let offsetY = -220;
@@ -37,18 +44,21 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
     gap: 1.1
   };
 
-  const gui = new dat.GUI();
-  const control = gui.addFolder("control");
-  control.open();
-  control.add(config, "size").min(10).max(50);
-  control.add(config, "speed").min(1).max(100);
-  control.add(config, "gap").min(1).max(3);
+  
+  if (hasControl) {
+    const gui = new dat.GUI();
+    const control = gui.addFolder("control");
+    control.open();
+    control.add(config, "size").min(10).max(50);
+    control.add(config, "speed").min(1).max(100);
+    control.add(config, "gap").min(1).max(3);
+  }
 
     // Outside your setup function
   let chunks: Blob[] = [];
   let mediaRecorder: MediaRecorder;
 
-  if (route.query.record === 'true') {
+  if (isRecording) {
     let stream = canvas.captureStream(30); // 30 FPS
     mediaRecorder = new MediaRecorder(stream);
 
@@ -96,7 +106,10 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
   };
 
   p.draw = function () {
-    stats.begin();
+
+    if (hasStats) {
+      stats.begin();
+    }
 
     // Setup
     offsetX = -Math.floor(p.windowWidth / 2 - config.size * 2.5);
@@ -114,14 +127,16 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
         drawGeometry(p, x, y);
       }
     }
-    if (route.query.record === 'true') {
+    if (isRecording) {
       if (p.frameCount >= totalFrames) {
         if (mediaRecorder) {
           mediaRecorder.stop();
         }
       }
     }
-    stats.end();
+    if (hasStats) {
+      stats.end();
+    };
   };
 };
 
