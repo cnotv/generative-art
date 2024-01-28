@@ -8,6 +8,11 @@ const router = createRouter({
       path: '/',
       redirect: '/1'
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      redirect: '/1'
+    },
     ...routes
   ]
 })
