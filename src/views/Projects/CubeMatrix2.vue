@@ -29,8 +29,8 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
 
   const config = {
     size: 20,
-    speed: 20,
-    gap: 2
+    speed: 15,
+    gap: 1.1
   };
 
   const gui = new dat.GUI();
@@ -38,11 +38,10 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
   control.open();
   control.add(config, "size").min(10).max(50);
   control.add(config, "speed").min(1).max(100);
-  control.add(config, "gap").min(1).max(5);
+  control.add(config, "gap").min(1).max(3);
 
   const drawGeometry = (p: P5, x: number, y: number) => {
     p.push(); // Point changes to this instance
-    const color = `#333`;
     p.translate(
       x * config.size * config.gap + offsetX,
       y * config.size * config.gap + offsetY
@@ -51,10 +50,10 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
     p.rotateX(rotation);
     p.rotateY(rotation);
     p.rotateZ(rotation);
-    p.fill(50, 50, 250, 60);
+    p.fill(200, 200, 200);
     // p.noFill();
     p.noStroke();
-    p.stroke(color);
+    // p.stroke(`#333`);
     p.box(config.size);
     p.pop(); // Close instance
   };
@@ -62,6 +61,10 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
   p.setup = function () {
     p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL); // Define canvas size
     // p.rectMode(p.CENTER);
+    const aspectRatio = p.width / p.height;
+    const halfWidth = Math.max(1, aspectRatio);
+    const halfHeight = Math.max(1, 1 / aspectRatio);
+    p.ortho(-halfWidth * 200, halfWidth * 200, halfHeight * 200, -halfHeight * 200, 0, 1000);
   };
 
   p.draw = function () {
