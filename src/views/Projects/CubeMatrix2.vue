@@ -36,7 +36,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
   let rotation = 0;
   let amountX = 50;
   let amountY = 50;
-  const totalFrames = 100;
+  const totalFrames = 400;
 
   const config = {
     size: 20,
@@ -57,24 +57,30 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
   let chunks: Blob[] = [];
   let mediaRecorder: MediaRecorder;
 
-  if (isRecording) {
-    let stream = canvas.captureStream(30); // 30 FPS
-    mediaRecorder = new MediaRecorder(stream);
+  const saveVideo = () => {
+    const blob = new Blob(chunks, { 'type': 'video/webm' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'animation.webm';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
-    mediaRecorder.ondataavailable = function (e) {
-      chunks.push(e.data);
+  const recordVideo = () => {
+    if (isRecording) {
+      chunks = [];
+      const stream = canvas.captureStream(30);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 100000000 });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size) {
+          chunks.push(e.data);
+        }
+      };
+      mediaRecorder.onstop = saveVideo;
+      mediaRecorder.start();
     };
-
-    mediaRecorder.onstop = function (e) {
-      let blob = new Blob(chunks, { 'type': 'video/mp4' });
-      let url = URL.createObjectURL(blob);
-      let a = document.createElement('a');
-      a.href = url;
-      a.download = 'animation.mp4';
-      a.click();
-    };
-    mediaRecorder.start();
-  }
+  };
 
   const drawGeometry = (p: P5, x: number, y: number) => {
     p.push(); // Point changes to this instance
@@ -95,15 +101,16 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
   };
 
   p.setup = function () {
-    p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL); // Define canvas size
+    p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL, canvas); // Define canvas size
     const aspectRatio = p.width / p.height;
     const halfWidth = Math.max(1, aspectRatio);
     const halfHeight = Math.max(1, 1 / aspectRatio);
     p.ortho(-halfWidth * 200, halfWidth * 200, halfHeight * 200, -halfHeight * 200, 0, 1000);
+      
+    recordVideo();
   };
 
   p.draw = function () {
-
     if (hasStats) {
       stats.begin();
     }
@@ -124,6 +131,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
         drawGeometry(p, x, y);
       }
     }
+
     if (isRecording) {
       if (p.frameCount >= totalFrames) {
         if (mediaRecorder) {
@@ -131,6 +139,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
         }
       }
     }
+
     if (hasStats) {
       stats.end();
     };
@@ -151,9 +160,6 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
-}
-
-div {
   background: #333;
 }
 </style>
