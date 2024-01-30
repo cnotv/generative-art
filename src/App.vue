@@ -14,17 +14,29 @@ onUnmounted(() => {
 });
 
 const handleKeyPress = (event: KeyboardEvent) => {
-  const path = router.currentRoute.value.path
+  const { path, query } = router.currentRoute.value;
   const page = path ? +path.toString().replace('/', '') : 0;
   
   switch (event.key) {
     case 'ArrowRight': {
-      if (page < routes.length) router.push(`/${page + 1}`);
+      const path = `/${page + 1}`;
+      if (page < routes.length) router.push({query, path});
       break;
     }
 
     case 'ArrowLeft': {
-      if (page > 1) router.push(`/${page - 1}`);
+      const path = `/${page - 1}`;
+      if (page > 1) router.push({query, path});
+      break;
+    }
+
+    case 'ArrowUp': {
+      toggleQuery('record');
+      break;
+    }
+
+    case 'ArrowDown': {
+      toggleQuery(['control', 'stats']);
       break;
     }
   
@@ -32,6 +44,13 @@ const handleKeyPress = (event: KeyboardEvent) => {
       break;
   }
 };
+
+const toggleQuery = (param: string | string[]) => {
+  const { path, query } = router.currentRoute.value;
+  const params = typeof param === 'string' ? [param] : param;
+  const newQuery = params.reduce((acc, key) => ({ ...acc, [key]: query[key] === 'true' ? undefined : 'true' }), {})
+  router.push({ path, query: { ...query,  ...newQuery } });
+}
 
 </script>
 
