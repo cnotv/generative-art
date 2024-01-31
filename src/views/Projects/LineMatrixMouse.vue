@@ -1,26 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import Stats from "stats.js";
-import * as dat from "dat.gui";
 import P5 from "p5";
+import { video } from '@/utils/video';
+import { controls } from '@/utils/control';
+import { stats } from '@/utils/stats';
+import { useRoute } from 'vue-router';
 
 const statsEl = ref(null)
 const canvas = ref(null)
-const stats = new Stats();
+const route = useRoute();
 
 onMounted(() => {
   new P5((p: P5) => init(
     p,
     statsEl.value as unknown as HTMLElement,
-    stats as unknown as Stats
-  ), statsEl.value);
+    canvas.value as unknown as HTMLCanvasElement,
+  ), statsEl.value!);
 })
 
-const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
-  // FPS stats
-  stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-  statsEl!.appendChild(stats.dom);
-
+const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   let offsetX = -50;
   let offsetY = -220;
     
@@ -28,14 +26,14 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
     size: 25,
     gap: 1.5
   };
+  stats.init(route, statsEl);
+  controls.create(config, route, {
+    size: { min: 10, max: 50 },
+    gap: { min: 1, max: 3 }
+  });
+
   const amountX = Math.floor(p.windowWidth / (config.size + config.gap) - offsetX);
   const amountY = Math.floor(p.windowHeight / (config.size + config.gap));
-
-  const gui = new dat.GUI();
-  const control = gui.addFolder("control");
-  control.open();
-  control.add(config, "size").min(10).max(50);
-  control.add(config, "gap").min(1).max(5);
 
   const drawGeometry = (p: P5, x: number, y: number) => {
     p.push(); // Point changes to this instance
@@ -56,10 +54,11 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
   p.setup = function () {
 		p.createCanvas(p.windowWidth, p.windowHeight); // Define canvas size
 		p.rectMode(p.CENTER);
+    video.record(canvas, route);
   };
 
   p.draw = function () {
-    stats.begin();
+    stats.start(route);
 
 		p.clear();
 		for (let x = 0; x < amountX; x++) {
@@ -68,7 +67,8 @@ const init = (p: P5, statsEl: HTMLElement, stats: Stats): void => {
 			}
     }
     
-    stats.end();
+    video.stop(p.frameCount ,route);
+    stats.end(route);
   };
 };
 

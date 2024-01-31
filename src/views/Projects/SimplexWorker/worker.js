@@ -38,6 +38,7 @@ const draw = (canvas) => {
     }
   }
 
+  postMessage({ frameCount: config.frameCount});
   postMessage({ end: true });
 };
 

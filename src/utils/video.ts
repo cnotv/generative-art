@@ -21,7 +21,9 @@ const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded)
   if (isRecording) {
     chunks = [];
     const stream = canvas.captureStream(30);
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 100000000 });
+    mediaRecorder = new MediaRecorder(
+      stream,
+      { mimeType: 'video/webm', bitsPerSecond: 100000000 });
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size) {
         chunks.push(e.data);
