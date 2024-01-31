@@ -1,42 +1,29 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import Stats from "stats.js";
-import * as dat from "dat.gui";
 import P5 from "p5";
 import { useRoute } from 'vue-router';
+import { video } from '@/utils/video';
+import { controls } from '@/utils/control';
+import { stats } from '@/utils/stats';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-
-const hasStats = route.query.stats === 'true';
-const hasControl = route.query.control === 'true';
-const isRecording = route.query.record === 'true';
-
-const stats = new Stats();
 
 onMounted(() => {
   new P5((p: P5) => init(
     p,
     statsEl.value as unknown as HTMLElement,
     canvas.value as unknown as HTMLCanvasElement,
-    stats as unknown as Stats
   ), statsEl.value!);
 })
 
-const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Stats): void => {
-  if (hasStats) {
-    // FPS stats
-    stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-    statsEl!.appendChild(stats.dom);
-  }
-
+const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   let offsetX = -850;
   let offsetY = -220;
   let rotation = 0;
   let amountX = 50;
   let amountY = 50;
-  const totalFrames = 400;
 
   const config = {
     size: 20,
@@ -44,43 +31,12 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
     gap: 1.1
   };
 
-  if (hasControl) {
-    const gui = new dat.GUI();
-    const control = gui.addFolder("control");
-    control.open();
-    control.add(config, "size").min(10).max(50);
-    control.add(config, "speed").min(1).max(100);
-    control.add(config, "gap").min(1).max(3);
-  }
-
-    // Outside your setup function
-  let chunks: Blob[] = [];
-  let mediaRecorder: MediaRecorder;
-
-  const saveVideo = () => {
-    const blob = new Blob(chunks, { 'type': 'video/webm' });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = 'animation.webm';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const recordVideo = () => {
-    if (isRecording) {
-      chunks = [];
-      const stream = canvas.captureStream(30);
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 100000000 });
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size) {
-          chunks.push(e.data);
-        }
-      };
-      mediaRecorder.onstop = saveVideo;
-      mediaRecorder.start();
-    };
-  };
+  stats.init(route, statsEl);
+  controls.create(config, route, {
+    size: { min: 10, max: 50 },
+    speed: { min: 1, max: 100 },
+    gap: { min: 1, max: 3 }
+  });
 
   const drawGeometry = (p: P5, x: number, y: number) => {
     p.push(); // Point changes to this instance
@@ -107,13 +63,11 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
     const halfHeight = Math.max(1, 1 / aspectRatio);
     p.ortho(-halfWidth * 200, halfWidth * 200, halfHeight * 200, -halfHeight * 200, 0, 1000);
       
-    recordVideo();
+    video.record(canvas, route);
   };
 
   p.draw = function () {
-    if (hasStats) {
-      stats.begin();
-    }
+    stats.start(route);
 
     // Setup
     offsetX = -Math.floor(p.windowWidth / 2 - config.size * 2.5);
@@ -132,17 +86,8 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement, stats: Sta
       }
     }
 
-    if (isRecording) {
-      if (p.frameCount >= totalFrames) {
-        if (mediaRecorder) {
-          mediaRecorder.stop();
-        }
-      }
-    }
-
-    if (hasStats) {
-      stats.end();
-    };
+    video.stop(p.frameCount ,route);
+    stats.end(route);
   };
 };
 
