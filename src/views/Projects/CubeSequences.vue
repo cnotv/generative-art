@@ -25,11 +25,16 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   let amountY = 50;
 
   const config = {
-    size: 16,
-    speed: 30,
-    gap: 1.2,
-    interval: 450,
-    initialAngle: 105
+    size: 50,
+    speed: 100,
+    gap: 1,
+    interval: 135,
+    initialAngle: 45,
+    strokeWeight: 1,
+    opacity: 0,
+    stroke: [50, 50, 50],
+    fill: [255, 255, 255],
+    background: [255, 255, 255],
   };
 
   let rotation = {
@@ -41,10 +46,15 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   stats.init(route, statsEl);
   controls.create(config, route, {
     size: { min: 10, max: 50 },
-    speed: { min: 1, max: 100 },
+    speed: { min: 1, max: 200 },
     gap: { min: 1, max: 3 },
     interval: { min: 60, max: 1000 },
-    initialAngle: { min: 0, max: 360 }
+    initialAngle: { min: 0, max: 360 },
+    strokeWeight: { min: 0, max: 10 },
+    opacity: { min: 0, max: 255 },
+    stroke: { addColor: []},
+    fill: { addColor: []},
+    background: { addColor: []},
   }, () => {
     rotation = {
       x: config.initialAngle,
@@ -60,17 +70,18 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
       x * config.size * config.gap + offsetX,
       y * config.size * config.gap + offsetY
     );
-    // p.rotate(rotation + x + y)
-
-    // p.rotateX(rotation);
-    // console.log(p.frameCount % 100)
 
     p.rotateX(rotation.x);
     p.rotateY(rotation.y);
     p.rotateZ(rotation.z);
 
     p.noFill();
-    p.stroke(`#333`);
+    // p.noStroke();
+    p.stroke(config.stroke);
+    p.strokeWeight(config.strokeWeight);
+    if (config.opacity) {
+      p.fill([...config.fill, config.opacity]);
+    }
     p.box(config.size);
     p.pop(); // Close instance
   };
@@ -81,7 +92,6 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
     const halfWidth = Math.max(1, aspectRatio);
     const halfHeight = Math.max(1, 1 / aspectRatio);
     p.ortho(-halfWidth * 200, halfWidth * 200, halfHeight * 200, -halfHeight * 200, 0, 1000);
-      
     video.record(canvas, route);
   };
 
@@ -95,7 +105,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
     amountY = Math.floor(p.windowHeight / (config.size * config.gap));
 
     p.clear();
-
+    p.background(config.background);
 
     let remainder = p.frameCount % config.interval;
     const speed = config.speed / 4000;
