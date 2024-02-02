@@ -2,11 +2,10 @@
 import type { RouteLocationNormalizedLoaded } from "vue-router";
 import * as dat from "dat.gui";
 
-const create = <T extends Record<string, number>>(
+const create = <T extends Record<string, any>>(
   config: T,
   route: RouteLocationNormalizedLoaded,
-  // params: Record<keyof Partial<T>, { min: number, max: number }>,
-  params: Record<string, { min: number, max: number }>,
+  params: Record<string, any>,
   callback = () => {}
 ) => {
   const hasControl = route.query.control === 'true';
@@ -14,8 +13,19 @@ const create = <T extends Record<string, number>>(
     const gui = new dat.GUI();
     const control = gui.addFolder("control");
     control.open();
+    
     Object.keys(params).forEach(key => {
-      control.add(config, key).min(params[key].min).max(params[key].max).onChange(callback);
+      if (params[key].addColor) {
+        control.addColor(config, key);
+      } else {
+        const custom = control.add(config, key);
+        custom.onChange(callback);
+        Object.keys(params[key]).forEach((param) => {
+          if (params[key][param] !== undefined && custom[param]) {
+            custom[param](params[key][param])
+          }
+        });
+      }
     });
   }
 };
