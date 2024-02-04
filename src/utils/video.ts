@@ -3,7 +3,7 @@ import type { RouteLocationNormalizedLoaded } from "vue-router";
 // Outside your setup function
 let chunks: Blob[] = [];
 let mediaRecorder: MediaRecorder;
-const totalFrames = 400;
+const totalFrames = 800;
 
 
 const saveVideo = () => {
