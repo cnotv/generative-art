@@ -66,6 +66,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
 
   const drawGeometry = (p: P5, x: number, y: number) => {
     p.push(); // Point changes to this instance
+    p.directionalLight(255, 255, 255, 0, 0, -1);
     p.translate(
       x * config.size * config.gap + offsetX,
       y * config.size * config.gap + offsetY
