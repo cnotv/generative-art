@@ -10,7 +10,12 @@ const create = <T extends Record<string, any>>(
 ) => {
   const hasControl = route.query.control === 'true';
   if (hasControl) {
-    const gui = new dat.GUI();
+    const panel = document.querySelector('.dg.main');
+    if (panel) {
+      panel.remove();
+    };
+    
+    const gui = new dat.GUI({name: 'asd'});
     const control = gui.addFolder("control");
     control.open();
     
