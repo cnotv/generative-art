@@ -28,7 +28,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
     size: 50,
     speed: 100,
     gap: 1,
-    interval: 135,
+    interval: 375,
     initialAngle: 45,
     strokeWeight: 1,
     opacity: 0,
