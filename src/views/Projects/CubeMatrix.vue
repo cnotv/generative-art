@@ -94,13 +94,3 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 </template>
-
-<style scoped>
-canvas {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-</style>

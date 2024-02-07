@@ -76,6 +76,7 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
     amountY = Math.floor(p.windowHeight / (config.size * config.gap));
 
     p.clear();
+    p.background('#333');
 
     rotation += (config.speed / 1000);
 
@@ -97,14 +98,3 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 </template>
-
-<style scoped>
-canvas {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: #333;
-}
-</style>

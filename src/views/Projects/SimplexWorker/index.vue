@@ -78,6 +78,3 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   <canvas ref="canvas"></canvas>
   <div ref="statsEl"></div>
 </template>
-
-<style scoped>
-</style>

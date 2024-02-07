@@ -16,6 +16,3 @@ onMounted(() => {
   <canvas ref="canvas"></canvas>
   <div ref="statsEl"></div>
 </template>
-
-<style scoped>
-</style>
