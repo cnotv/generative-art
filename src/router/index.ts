@@ -1,19 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { routes } from '@/config/router'
+import { generatedRoutes } from '@/config/router'
 
+const homePath = generatedRoutes[0].path;
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: '/1'
+      redirect: homePath
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      redirect: '/1'
+      redirect: homePath
     },
-    ...routes
+    ...generatedRoutes
   ]
 })
 

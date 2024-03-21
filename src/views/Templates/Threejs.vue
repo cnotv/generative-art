@@ -25,11 +25,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
     size: {  },
-    details: {},
-    wireframe: {},
-    background: { addColor: []},
-    fill: { addColor: []},
-    light: { addColor: []},
+    // details: {},
+    // wireframe: {},
+    // background: { addColor: []},
+    // fill: { addColor: []},
+    // light: { addColor: []},
   }, () => {
     setup()
   });

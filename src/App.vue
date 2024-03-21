@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
-import { routes } from '@/config/router'
+import { generatedRoutes } from '@/config/router'
 
 const router = useRouter()
 
@@ -14,19 +14,19 @@ onUnmounted(() => {
 });
 
 const handleKeyPress = (event: KeyboardEvent) => {
-  const { path, query } = router.currentRoute.value;
-  const page = path ? +path.toString().replace('/', '') : 0;
+  const { name, query } = router.currentRoute.value;
+  const page = typeof name === 'string'  ? generatedRoutes.map(route => route.name).indexOf(name) : 0;
   
   switch (event.key) {
     case 'ArrowRight': {
-      const path = `/${page + 1}`;
-      if (page < routes.length) router.push({query, path});
+      const path = generatedRoutes[page + 1]?.path;
+      if (page < generatedRoutes.length - 1) router.push({query, path});
       break;
     }
 
     case 'ArrowLeft': {
-      const path = `/${page - 1}`;
-      if (page > 1) router.push({query, path});
+      const path = generatedRoutes[page - 1]?.path;
+      if (page > 0) router.push({query, path});
       break;
     }
 
