@@ -6,6 +6,7 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import moon from '@/assets/moon.jpg';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -63,7 +64,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     // Load the texture
     // https://www.solarsystemscope.com/textures/
     const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load('moon.jpg');
+    const texture = textureLoader.load(moon);
 
     // Adjust the texture offset and repeat
     texture.wrapS = THREE.RepeatWrapping;

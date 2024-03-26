@@ -6,6 +6,8 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import earthDay from '@/assets/earth_day.jpg';
+import earthNight from '@/assets/earth_night.jpg';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -44,8 +46,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     // Load the texture
     // https://www.solarsystemscope.com/textures/
     const textureLoader = new THREE.TextureLoader();
-    const texture1 = textureLoader.load('earth_day.jpg');
-    const texture2 = textureLoader.load('earth_night.jpg');
+    const texture1 = textureLoader.load(earthDay);
+    const texture2 = textureLoader.load(earthNight);
 
     // Create a shader material
     const material = new THREE.ShaderMaterial({
