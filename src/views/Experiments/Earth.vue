@@ -103,13 +103,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
       mesh.rotation.y += (0.001 * config.speed);
 
-  // Update time
-  time += 0.005;
-
-  // Update the opacity based on time
-  const opacity = (Math.sin(time) + 1.2) / 2; // oscillates between 0 and 1
-
-  // Update the opacity uniform
+      // Update time
+      time += 0.005;
+      // Update the opacity based on time
+      const opacity = (Math.sin(time) + 1.2) / 2; // oscillates between 0 and 1
+      // Update the opacity uniform
       material.uniforms.opacity.value = opacity;
 
       // Update the controls
