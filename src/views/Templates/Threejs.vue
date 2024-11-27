@@ -22,7 +22,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
     size: 50,
   }
+  // Set stats
   stats.init(route, statsEl);
+
+  // Set configuration and start setup
   controls.create(config, route, {
     size: {  },
     // details: {},
@@ -35,6 +38,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = () => {
+    // Init canvas
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor(0x000000); // Set background color to black
@@ -45,25 +49,33 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     
     camera.position.z = 5;
 
+    // Create and add model
     const geometry = new THREE.BoxGeometry( 1, 1, 1 );
     const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
     const cube = new THREE.Mesh( geometry, material );
-    orbit.target.copy(cube.position);
+    orbit.target.copy(cube.position); // Copy position of the model as camera target
     scene.add(cube);
-    
+
+    // Start recording video if URL has query string ?video=true
     video.record(canvas, route);
 
     function animate() {
-      stats.start(route);
+      stats.start(route); // Stats counter start if URL has query string ?stats=true
       requestAnimationFrame(animate);
 
+      // Example of animation
       cube.rotation.x += 0.01;
       cube.rotation.y += 0.01;
+
+      // Update ca,era
       orbit.update();
 
-      renderer.render( scene, camera );
-      video.stop(renderer.info.render.frame ,route);
-      stats.end(route);
+      renderer.render(scene, camera);
+
+      // Stop recording after X frames
+      video.stop(renderer.info.render.frame, route);
+      
+      stats.end(route); // Stats counter finish
     }
     animate();
   }
