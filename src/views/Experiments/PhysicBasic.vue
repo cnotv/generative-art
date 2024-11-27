@@ -70,7 +70,7 @@ const createCube = (
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size);
+  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size.map(x => x * 0.6) as [number, number, number]);
   let collider = world.createCollider(colliderDesc, rigidBody);
 
   return { cube, rigidBody, collider };
