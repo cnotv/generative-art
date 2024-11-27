@@ -14,9 +14,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@dimforge/rapier3d": "^0.14.0",
     "dat.gui": "^0.7.9",
     "p5": "^1.9.0",
     "stats.js": "^0.17.0",
+    "vite-plugin-wasm": "^3.3.0",
     "vue": "^3.3.11",
     "vue-router": "^4.2.5"
   },
