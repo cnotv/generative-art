@@ -11,11 +11,11 @@ import RAPIER from '@dimforge/rapier3d';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const cubes = [] as { cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+const cubes = [] as { cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
 
 const setCubePosition = (
   click: MouseEvent,
-  model: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>,
+  model: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>,
   rigidBody: RAPIER.RigidBody
 ) => {
   const x = - (click.clientX - window.innerWidth / 2) / 50;
@@ -57,7 +57,7 @@ const createCube = (
 ) => {
   // Create and add model
   const geometry = new THREE.BoxGeometry( ...size);
-  const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+  const material = new THREE.MeshLambertMaterial( { color: 0xdddddd } );
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(...position);
   cube.rotation.set(0.5, 0.5, 0.5);
@@ -109,7 +109,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x000000); // Set background color to black
+    renderer.setClearColor(0x111111); // Set background color to black
+    renderer.shadowMap.enabled = true; // Enable shadow maps
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const scene = new THREE.Scene();
@@ -117,6 +119,19 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     camera.position.z = -10;
     camera.position.y = 4;
+
+    // Add directional light with shadows
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.bias = -0.0001;
+    scene.add(directionalLight);
+
+    // Add hemisphere light
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(hemisphereLight);
 
     createGround(groundSize, groundPosition, scene, world);
     cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world));
