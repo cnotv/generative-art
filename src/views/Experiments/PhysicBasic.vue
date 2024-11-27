@@ -11,6 +11,7 @@ import RAPIER from '@dimforge/rapier3d';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
+const cubes = [] as { cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
 
 const setCubePosition = (
   click: MouseEvent,
@@ -59,12 +60,14 @@ const createCube = (
   const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(...position);
+  cube.rotation.set(0.5, 0.5, 0.5);
   orbit.target.copy(cube.position);
   scene.add(cube);
 
   // Create a dynamic rigid-body.
   let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
   let rigidBody = world.createRigidBody(rigidBodyDesc);
+  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
   let colliderDesc = RAPIER.ColliderDesc.cuboid(...size);
@@ -105,21 +108,25 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const groundPosition = [1, -1, 1] as [number, number, number];
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000); // Set background color to black
-    
-    const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
-    
+
     camera.position.z = -10;
     camera.position.y = 4;
 
     createGround(groundSize, groundPosition, scene, world);
-    const { cube: cube1, rigidBody: rigidBody1 } = createCube(cubeSize, cubePosition, scene, orbit, world);
+    cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world));
 
     // Change cube position
-    document.addEventListener('click', (event) => setCubePosition(event, cube1, rigidBody1));
+    document.addEventListener('click', (event) => {
+      const { cube, rigidBody } = createCube(cubeSize, cubePosition, scene, orbit, world);
+      setCubePosition(event, cube, rigidBody);
+      cubes.push({ cube, rigidBody });
+    });
 
     video.record(canvas, route);
 
@@ -128,9 +135,12 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       requestAnimationFrame(animate);
       world.step();
 
-      // Get the rigid-body's position.
-      let position = rigidBody1.translation();
-      cube1.position.set(position.x, position.y, position.z);
+      cubes.forEach(({ cube, rigidBody }) => {
+        let position = rigidBody.translation();
+        cube.position.set(position.x, position.y, position.z);
+        let rotation = rigidBody.rotation();
+        cube.rotation.set(rotation.x, rotation.y, rotation.z);
+      });
 
       orbit.update();
 
