@@ -11,11 +11,11 @@ import RAPIER from '@dimforge/rapier3d';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const cubes = [] as { cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
 
 const setCubePosition = (
   click: MouseEvent,
-  model: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>,
+  model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>,
   rigidBody: RAPIER.RigidBody
 ) => {
   const x = - (click.clientX - window.innerWidth / 2) / 50;
@@ -48,15 +48,15 @@ const createGround = (
   return { ground, collider };
 }
 
-const createCube = (
-  size: [number, number, number],
+const createBall = (
+  size: number,
   position: [number, number, number],
   scene: THREE.Scene,
   orbit: OrbitControls,
   world: RAPIER.World
 ) => {
   // Create and add model
-  const geometry = new THREE.BoxGeometry( ...size);
+  const geometry = new THREE.SphereGeometry(size);
   const material = new THREE.MeshLambertMaterial( { color: 0xdddddd } );
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(...position);
@@ -70,7 +70,7 @@ const createCube = (
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size.map(x => x * 0.6) as [number, number, number]);
+  let colliderDesc = RAPIER.ColliderDesc.ball(size);
   let collider = world.createCollider(colliderDesc, rigidBody);
 
   return { cube, rigidBody, collider };
@@ -103,7 +103,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     let gravity = { x: 0.0, y: -9.81, z: 0.0 };
     let world = new RAPIER.World(gravity);
     const groundSize = [100.0, 0.1, 20.0] as [number, number, number];
-    const cubeSize = [1.0, 1.0, 1.0] as [number, number, number];
+    const sphereSize = 1;
     const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
     const groundPosition = [1, -1, 1] as [number, number, number];
 
@@ -134,11 +134,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     scene.add(hemisphereLight);
 
     createGround(groundSize, groundPosition, scene, world);
-    cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world));
+    cubes.push(createBall(sphereSize, cubePosition, scene, orbit, world));
 
     // Change cube position
     document.addEventListener('click', (event) => {
-      const { cube, rigidBody } = createCube(cubeSize, cubePosition, scene, orbit, world);
+      const { cube, rigidBody } = createBall(sphereSize, cubePosition, scene, orbit, world);
       setCubePosition(event, cube, rigidBody);
       cubes.push({ cube, rigidBody });
     });
