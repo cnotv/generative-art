@@ -13,6 +13,12 @@ const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
+const sphereSize = () => Math.random() * 0.5 + 0.5;
+const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
+const groundPosition = [1, -1, 1] as [number, number, number];
+let gravity = { x: 0.0, y: -9.81, z: 0.0 };
+let world = new RAPIER.World(gravity);
 
 /**
  * Reflection
@@ -23,94 +29,6 @@ const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalM
 const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
 const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
 const reflection = new THREE.CubeTextureLoader().load( urls );
-
-
-const setCubePosition = (
-  click: MouseEvent,
-  model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>,
-  rigidBody: RAPIER.RigidBody
-) => {
-  const x = - (click.clientX - window.innerWidth / 2) / 50;
-  const y = - (click.clientY - window.innerHeight) / 50;
-
-  model.position.set(x, y, 0);
-  rigidBody.setTranslation({ x, y, z: 0 }, true);
-}
-
-const getTextures = (img: string) => {
-  const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load(img);
-
-  // Adjust the texture offset and repeat
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.offset.set(1, 1); // Offset the texture by 50%
-  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
-
-  return texture;
-}
-
-const createGround = (
-  size: [number, number, number],
-  position: [number, number, number],
-  scene: THREE.Scene,
-  world: RAPIER.World
-) => {
-  // Create and add model
-  const geometry = new THREE.BoxGeometry( ...size);
-  const groundTexture = getTextures(textureAsset);
-  const material = new THREE.MeshBasicMaterial( { color: 0x333333, map: groundTexture } );
-  const ground = new THREE.Mesh(geometry, material);
-  ground.position.set(...position);
-  scene.add(ground);
-
-  // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
-
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  let collider = world.createCollider(colliderDesc);
-
-  return { ground, collider };
-}
-
-const createBall = (
-  size: number,
-  position: [number, number, number],
-  scene: THREE.Scene,
-  orbit: OrbitControls,
-  world: RAPIER.World
-) => {
-  // Create and add model
-  const geometry = new THREE.SphereGeometry(size);
-  const material = new THREE.MeshPhysicalMaterial({
-    color: 0x000000,
-    envMap: reflection,      
-    // combine: THREE.MixOperation,     
-    reflectivity: 0.2,
-    roughness: 0.3,
-    transmission: 1,
-  });
-  const cube = new THREE.Mesh(geometry, material);
-  cube.position.set(...position);
-  cube.rotation.set(0.5, 0.5, 0.5);
-  orbit.target.copy(cube.position);
-  scene.add(cube);
-
-  // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
-  let rigidBody = world.createRigidBody(rigidBodyDesc);
-  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
-
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc
-    .ball(size)
-    .setRestitution(1 / size / 3)
-    .setFriction(5 * size);
-  let collider = world.createCollider(colliderDesc, rigidBody);
-
-  return { cube, rigidBody, collider };
-}
 
 onMounted(() => {
   init(
@@ -130,19 +48,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = () => {
-    let gravity = { x: 0.0, y: -9.81, z: 0.0 };
-    let world = new RAPIER.World(gravity);
-    const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
-    const sphereSize = () => Math.random() * 0.5 + 0.5;
-    const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
-    const groundPosition = [1, -1, 1] as [number, number, number];
-
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x777777); // Set background color to black
-    renderer.shadowMap.enabled = true; // Enable shadow maps
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
-
+    const renderer = getRenderer(canvas);
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
@@ -150,25 +56,14 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     camera.position.z = -10;
     camera.position.y = 6;
 
-    // Add directional light with shadows
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(5, 5, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.bias = -0.0001;
-    scene.add(directionalLight);
+    createLights(scene);
 
-    // Add hemisphere light
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    scene.add(hemisphereLight);
-
-    createGround(groundSize, groundPosition, scene, world);
-    cubes.push(createBall(sphereSize(), cubePosition, scene, orbit, world));
+    getGround(groundSize, groundPosition, scene, world);
+    cubes.push(getBall(sphereSize(), cubePosition, scene, orbit, world));
 
     // Change cube position
     document.addEventListener('click', (event) => {
-      const { cube, rigidBody } = createBall(sphereSize(), cubePosition, scene, orbit, world);
+      const { cube, rigidBody } = getBall(sphereSize(), cubePosition, scene, orbit, world);
       setCubePosition(event, cube, rigidBody);
       cubes.push({ cube, rigidBody });
     });
@@ -196,6 +91,158 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     animate();
   }
   setup();
+}
+
+const getRenderer = (canvas: HTMLCanvasElement) => {
+  const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x777777); // Set background color to black
+  renderer.shadowMap.enabled = true; // Enable shadow maps
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
+  return renderer;
+}
+
+const createLights = (scene: THREE.Scene) => {
+  // Add directional light with shadows
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  directionalLight.position.set(5, 5, 5);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 50;
+  directionalLight.shadow.camera.left = -10;
+  directionalLight.shadow.camera.right = 10;
+  directionalLight.shadow.camera.top = 10;
+  directionalLight.shadow.camera.bottom = -10;
+  directionalLight.shadow.bias = -0.0001;
+  scene.add(directionalLight);
+  
+  // Add hemisphere light
+  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+  hemisphereLight.castShadow = true; // default false
+  scene.add(hemisphereLight);
+}
+
+/**
+ * Reassign ball position on click
+ * @param click 
+ * @param model 
+ * @param rigidBody 
+ */
+const setCubePosition = (
+  click: MouseEvent,
+  model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>,
+  rigidBody: RAPIER.RigidBody
+) => {
+  const x = - (click.clientX - window.innerWidth / 2) / 50;
+  const y = - (click.clientY - window.innerHeight) / 50;
+
+  model.position.set(x, y, 0);
+  rigidBody.setTranslation({ x, y, z: 0 }, true);
+}
+
+/**
+ * Get default textures
+ * @param img 
+ * @returns 
+ */
+const getTextures = (img: string) => {
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load(img);
+
+  // Adjust the texture offset and repeat
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.offset.set(1, 1); // Offset the texture by 50%
+  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
+
+  return texture;
+}
+
+/**
+ * Create scene ground with physics, texture, and shadow
+ * @param size 
+ * @param position 
+ * @param scene 
+ * @param world 
+ */
+const getGround = (
+  size: [number, number, number],
+  position: [number, number, number],
+  scene: THREE.Scene,
+  world: RAPIER.World
+) => {
+  // Create and add model
+  const geometry = new THREE.BoxGeometry( ...size);
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0x000000,
+    // envMap: reflection,
+    reflectivity: 0.3,
+    roughness: 0.3,
+    transmission: 1,
+  });
+  const ground = new THREE.Mesh(geometry, material);
+  ground.position.set(...position);
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Create a dynamic rigid-body.
+  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+
+  // Create a cuboid collider attached to the dynamic rigidBody.
+  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
+  let collider = world.createCollider(colliderDesc);
+
+  return { ground, collider };
+}
+
+/**
+ * Create a ball with physics, texture, and shadow
+ * Friction and bounciness is size based
+ * @param size 
+ * @param position 
+ * @param scene 
+ * @param orbit 
+ * @param world 
+ */
+const getBall = (
+  size: number,
+  position: [number, number, number],
+  scene: THREE.Scene,
+  orbit: OrbitControls,
+  world: RAPIER.World
+) => {
+  // Create and add model
+  const geometry = new THREE.SphereGeometry(size);
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0x000000,
+    envMap: reflection,      
+    reflectivity: 0.2,
+    roughness: 0.3,
+    transmission: 1,
+  });
+  const cube = new THREE.Mesh(geometry, material);
+  cube.position.set(...position);
+  cube.rotation.set(0.5, 0.5, 0.5);
+  cube.castShadow = true;
+  cube.receiveShadow = false; //default
+  orbit.target.copy(cube.position);
+  scene.add(cube);
+
+  // Create a dynamic rigid-body.
+  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  let rigidBody = world.createRigidBody(rigidBodyDesc);
+  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
+
+  // Create a cuboid collider attached to the dynamic rigidBody.
+  let colliderDesc = RAPIER.ColliderDesc
+    .ball(size)
+    .setRestitution(1 / size / 3)
+    .setFriction(5 * size);
+  let collider = world.createCollider(colliderDesc, rigidBody);
+
+  return { cube, rigidBody, collider };
 }
 </script>
 
