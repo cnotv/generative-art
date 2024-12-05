@@ -7,6 +7,7 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
+import textureAsset from '@/assets/moon.jpg';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -36,6 +37,19 @@ const setCubePosition = (
   rigidBody.setTranslation({ x, y, z: 0 }, true);
 }
 
+const getTextures = (img: string) => {
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load(img);
+
+  // Adjust the texture offset and repeat
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.offset.set(1, 1); // Offset the texture by 50%
+  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
+
+  return texture;
+}
+
 const createGround = (
   size: [number, number, number],
   position: [number, number, number],
@@ -44,7 +58,8 @@ const createGround = (
 ) => {
   // Create and add model
   const geometry = new THREE.BoxGeometry( ...size);
-  const material = new THREE.MeshBasicMaterial( { color: 0x333333 } );
+  const groundTexture = getTextures(textureAsset);
+  const material = new THREE.MeshBasicMaterial( { color: 0x333333, map: groundTexture } );
   const ground = new THREE.Mesh(geometry, material);
   ground.position.set(...position);
   scene.add(ground);
@@ -118,13 +133,13 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     let gravity = { x: 0.0, y: -9.81, z: 0.0 };
     let world = new RAPIER.World(gravity);
     const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
-    const sphereSize = () => Math.random() * 0.5 + 0.3;
+    const sphereSize = () => Math.random() * 0.5 + 0.5;
     const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
     const groundPosition = [1, -1, 1] as [number, number, number];
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x111111); // Set background color to black
+    renderer.setClearColor(0x777777); // Set background color to black
     renderer.shadowMap.enabled = true; // Enable shadow maps
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
 
