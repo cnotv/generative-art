@@ -16,11 +16,14 @@ const canvas = ref(null)
 const route = useRoute();
 const cubes = [] as THREE.Mesh<any>[];
 
-// https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
-// https://threejs.org/examples/#webgl_animation_skinning_ik
+/**
+ * Reflection
+ * https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
+ * https://threejs.org/examples/#webgl_animation_skinning_ik
+ * https://paulbourke.net/panorama/cubemaps/
+ */
 const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
 const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
-// https://paulbourke.net/panorama/cubemaps/
 const reflection = new THREE.CubeTextureLoader().load( urls );
 
 // Define different mesh types

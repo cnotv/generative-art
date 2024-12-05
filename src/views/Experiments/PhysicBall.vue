@@ -11,11 +11,22 @@ import RAPIER from '@dimforge/rapier3d';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+
+/**
+ * Reflection
+ * https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
+ * https://threejs.org/examples/#webgl_animation_skinning_ik
+ * https://paulbourke.net/panorama/cubemaps/
+ */
+const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
+const reflection = new THREE.CubeTextureLoader().load( urls );
+
 
 const setCubePosition = (
   click: MouseEvent,
-  model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>,
+  model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>,
   rigidBody: RAPIER.RigidBody
 ) => {
   const x = - (click.clientX - window.innerWidth / 2) / 50;
@@ -57,7 +68,14 @@ const createBall = (
 ) => {
   // Create and add model
   const geometry = new THREE.SphereGeometry(size);
-  const material = new THREE.MeshLambertMaterial( { color: 0xdddddd } );
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0x000000,
+    envMap: reflection,      
+    // combine: THREE.MixOperation,     
+    reflectivity: 0.2,
+    roughness: 0.3,
+    transmission: 1,
+  });
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(...position);
   cube.rotation.set(0.5, 0.5, 0.5);
@@ -70,7 +88,10 @@ const createBall = (
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.ball(size);
+  let colliderDesc = RAPIER.ColliderDesc
+    .ball(size)
+    .setRestitution(1 / size / 3)
+    .setFriction(5 * size);
   let collider = world.createCollider(colliderDesc, rigidBody);
 
   return { cube, rigidBody, collider };
@@ -89,12 +110,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   stats.init(route, statsEl);
   controls.create(config, route, {
-    // size: {  },
-    // details: {},
-    // wireframe: {},
-    // background: { addColor: []},
-    // fill: { addColor: []},
-    // light: { addColor: []},
   }, () => {
     setup()
   });
@@ -102,8 +117,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const setup = () => {
     let gravity = { x: 0.0, y: -9.81, z: 0.0 };
     let world = new RAPIER.World(gravity);
-    const groundSize = [100.0, 0.1, 20.0] as [number, number, number];
-    const sphereSize = 1;
+    const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
+    const sphereSize = () => Math.random() * 0.5 + 0.3;
     const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
     const groundPosition = [1, -1, 1] as [number, number, number];
 
@@ -118,7 +133,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const orbit = new OrbitControls(camera, renderer.domElement);
 
     camera.position.z = -10;
-    camera.position.y = 4;
+    camera.position.y = 6;
 
     // Add directional light with shadows
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -134,11 +149,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     scene.add(hemisphereLight);
 
     createGround(groundSize, groundPosition, scene, world);
-    cubes.push(createBall(sphereSize, cubePosition, scene, orbit, world));
+    cubes.push(createBall(sphereSize(), cubePosition, scene, orbit, world));
 
     // Change cube position
     document.addEventListener('click', (event) => {
-      const { cube, rigidBody } = createBall(sphereSize, cubePosition, scene, orbit, world);
+      const { cube, rigidBody } = createBall(sphereSize(), cubePosition, scene, orbit, world);
       setCubePosition(event, cube, rigidBody);
       cubes.push({ cube, rigidBody });
     });
