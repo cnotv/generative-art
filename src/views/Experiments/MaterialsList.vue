@@ -6,7 +6,10 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 
+type ProjectConfig = any;
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -14,6 +17,7 @@ const route = useRoute();
 const cubes = [] as THREE.Mesh<any>[];
 
 // https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
+// https://threejs.org/examples/#webgl_animation_skinning_ik
 const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
 const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
 // https://paulbourke.net/panorama/cubemaps/
@@ -52,12 +56,38 @@ const createGround = (
   return ground;
 }
 
+const createText = (
+  text: string,
+  position: [number, number, number],
+  scene: THREE.Scene,
+  config: ProjectConfig,
+) => {
+  const fontLoader = new FontLoader();
+  fontLoader.load( 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', ( font ) => {
+    // Create text geometry
+    const textGeometryOptions = {
+      font: font,
+      size: 0.2,
+      height: 0.1,
+    }
+    const textGeometry = new TextGeometry(text, textGeometryOptions);
+
+    // Create text material
+    const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+    // Position the text below the sphere
+    textMesh.position.set(position[0] - (config.size / 2 * text.length * textGeometryOptions.size / 2 ), position[1] + 1 + config.size, position[2]);
+    scene.add(textMesh);
+  });
+}
+
 const createCube = (
   size: [number, number, number],
   position: [number, number, number],
   scene: THREE.Scene,
   meshType: string,
-  config: any,
+  config: ProjectConfig,
 ) => {
   // Create and add model
   const geometry = new THREE.SphereGeometry(size[0]);
@@ -112,11 +142,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     reflectivity: {},
     roughness: {},
     transmission: {},
-    // details: {},
-    // wireframe: {},
-    // background: { addColor: []},
-    // fill: { addColor: []},
-    // light: { addColor: []},
   }, () => {
     setup()
   });
@@ -164,6 +189,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       const gap = index * config.size * 3;
       const position = [config.size + gap, config.size, config.size] as [number, number, number];
       cubes.push(createCube(cubeSize, position, scene, meshType, config));
+      createText(meshType, position, scene, config);
     });
 
     video.record(canvas, route);
