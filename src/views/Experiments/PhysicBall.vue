@@ -7,15 +7,14 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
-import textureAsset from '@/assets/moon.jpg';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const cubes = [] as { cube: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
+const models = [] as { mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>, rigidBody: RAPIER.RigidBody}[];
 const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
 const sphereSize = () => Math.random() * 0.5 + 0.5;
-const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
+const modelPosition = [0.0, 5.0, 0.0] as [number, number, number];
 const groundPosition = [1, -1, 1] as [number, number, number];
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
@@ -59,13 +58,13 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     createLights(scene);
 
     getGround(groundSize, groundPosition, scene, world);
-    cubes.push(getBall(sphereSize(), cubePosition, scene, orbit, world));
+    models.push(getModel(sphereSize(), modelPosition, scene, orbit, world));
 
-    // Change cube position
+    // Change mesh position
     document.addEventListener('click', (event) => {
-      const { cube, rigidBody } = getBall(sphereSize(), cubePosition, scene, orbit, world);
-      setCubePosition(event, cube, rigidBody);
-      cubes.push({ cube, rigidBody });
+      const { mesh, rigidBody } = getModel(sphereSize(), modelPosition, scene, orbit, world);
+      setModelPosition(event, mesh, rigidBody);
+      models.push({ mesh, rigidBody });
     });
 
     video.record(canvas, route);
@@ -75,11 +74,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       requestAnimationFrame(animate);
       world.step();
 
-      cubes.forEach(({ cube, rigidBody }) => {
+      models.forEach(({ mesh, rigidBody }) => {
         let position = rigidBody.translation();
-        cube.position.set(position.x, position.y, position.z);
+        mesh.position.set(position.x, position.y, position.z);
         let rotation = rigidBody.rotation();
-        cube.rotation.set(rotation.x, rotation.y, rotation.z);
+        mesh.rotation.set(rotation.x, rotation.y, rotation.z);
       });
 
       orbit.update();
@@ -130,7 +129,7 @@ const createLights = (scene: THREE.Scene) => {
  * @param model 
  * @param rigidBody 
  */
-const setCubePosition = (
+const setModelPosition = (
   click: MouseEvent,
   model: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>,
   rigidBody: RAPIER.RigidBody
@@ -206,7 +205,7 @@ const getGround = (
  * @param orbit 
  * @param world 
  */
-const getBall = (
+const getModel = (
   size: number,
   position: [number, number, number],
   scene: THREE.Scene,
@@ -222,13 +221,13 @@ const getBall = (
     roughness: 0.3,
     transmission: 1,
   });
-  const cube = new THREE.Mesh(geometry, material);
-  cube.position.set(...position);
-  cube.rotation.set(0.5, 0.5, 0.5);
-  cube.castShadow = true;
-  cube.receiveShadow = false; //default
-  orbit.target.copy(cube.position);
-  scene.add(cube);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(...position);
+  mesh.rotation.set(0.5, 0.5, 0.5);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false; //default
+  orbit.target.copy(mesh.position);
+  scene.add(mesh);
 
   // Create a dynamic rigid-body.
   let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
@@ -242,7 +241,7 @@ const getBall = (
     .setFriction(5 * size);
   let collider = world.createCollider(colliderDesc, rigidBody);
 
-  return { cube, rigidBody, collider };
+  return { mesh, rigidBody, collider };
 }
 </script>
 
