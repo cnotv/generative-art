@@ -8,6 +8,8 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 
+type ProjectConfig = any;
+
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
@@ -38,10 +40,46 @@ onMounted(() => {
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
+    directional: {
+      enabled: true,
+      helper: false
+    },
+    area: {
+      enabled: true,
+      intensity: 1,
+      width: 10,
+      height: 10,
+    },
+    ambient: {
+      enabled: true,
+      intensity: 1,
+    },
+    hemisphere: {
+      enabled: true,
+      intensity: 1,
+    },
     // size: 50,
   }
   stats.init(route, statsEl);
   controls.create(config, route, {
+    directional: {
+      enabled: {},
+      helper: {}
+    },
+    area: {
+      enabled: {},
+      intensity: {},
+      width: {},
+      height: {},
+    },
+    ambient: {
+      enabled: {},
+      intensity: {},
+    },
+    hemisphere: {
+      enabled: {},
+      intensity: {},
+    },
   }, () => {
     setup()
   });
@@ -55,7 +93,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     camera.position.z = -10;
     camera.position.y = 6;
 
-    createLights(scene);
+    createLights(scene, config);
 
     getGround(groundSize, groundPosition, scene, world);
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world));
@@ -101,26 +139,47 @@ const getRenderer = (canvas: HTMLCanvasElement) => {
   return renderer;
 }
 
-const createLights = (scene: THREE.Scene) => {
-  // Add directional light with shadows
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(5, 5, 5);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 50;
-  directionalLight.shadow.camera.left = -10;
-  directionalLight.shadow.camera.right = 10;
-  directionalLight.shadow.camera.top = 10;
-  directionalLight.shadow.camera.bottom = -10;
-  directionalLight.shadow.bias = -0.0001;
-  scene.add(directionalLight);
-  
-  // Add hemisphere light
-  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-  hemisphereLight.castShadow = true; // default false
-  scene.add(hemisphereLight);
+const createLights = (scene: THREE.Scene, config: ProjectConfig) => {
+  if (config.directional.enabled) {
+    // Add directional light with shadows
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
+    directionalLight.shadow.camera.left = -10;
+    directionalLight.shadow.camera.right = 10;
+    directionalLight.shadow.camera.top = 10;
+    directionalLight.shadow.camera.bottom = -10;
+    directionalLight.shadow.bias = -0.0001;
+    scene.add(directionalLight);
+
+    if (config.directional.helper) {
+      // Add light helper
+      const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+      scene.add(helper);
+    }
+  }
+
+  if (config.area.enabled) {
+    const rectLight = new THREE.RectAreaLight( 0xffffff, config.area.intensity, config.area.width, config.area.height );
+    rectLight.position.set( 5, 5, 0 );
+    rectLight.lookAt( 0, 0, 0 );
+    scene.add(rectLight)
+  }
+
+  if (config.ambient.enabled) {
+    const ambient = new THREE.AmbientLight( 0xffffff, config.ambient.intensity );
+    scene.add( ambient )
+  }
+
+  if (config.hemisphere.enabled) {
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, config.hemisphere.intensity);
+    hemisphereLight.castShadow = true; // default false
+    scene.add(hemisphereLight);
+  }
 }
 
 /**
