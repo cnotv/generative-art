@@ -40,81 +40,6 @@ const meshTypes = [
   // 'MeshMatcapMaterial',
 ];
 
-const createGround = (
-  size: [number, number, number],
-  position: [number, number, number],
-  scene: THREE.Scene,
-  orbit: OrbitControls,
-) => {
-  // Create and add model
-  const geometry = new THREE.BoxGeometry( ...size);
-  const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
-  material.opacity = 0.7;
-  material.transparent = true;
-  const ground = new THREE.Mesh(geometry, material);
-  ground.position.set(...position);
-  orbit.target.copy(ground.position);
-  scene.add(ground);
-
-  return ground;
-}
-
-const createText = (
-  text: string,
-  position: [number, number, number],
-  scene: THREE.Scene,
-  config: ProjectConfig,
-) => {
-  const fontLoader = new FontLoader();
-  fontLoader.load( 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', ( font ) => {
-    // Create text geometry
-    const textGeometryOptions = {
-      font: font,
-      size: 0.2,
-      height: 0.1,
-    }
-    const textGeometry = new TextGeometry(text, textGeometryOptions);
-
-    // Create text material
-    const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-
-    // Position the text below the sphere
-    textMesh.position.set(position[0] - (config.size / 2 * text.length * textGeometryOptions.size / 2 ), position[1] + 1 + config.size, position[2]);
-    scene.add(textMesh);
-  });
-}
-
-const createCube = (
-  size: [number, number, number],
-  position: [number, number, number],
-  scene: THREE.Scene,
-  meshType: string,
-  config: ProjectConfig,
-) => {
-  // Create and add model
-  const geometry = new THREE.SphereGeometry(size[0]);
-  const reflectionOptions = config.reflection ? {
-    envMap: reflection,      
-    // envMap: scene.background,      
-    combine: THREE.MixOperation,     
-    reflectivity: config.reflectivity,
-    roughness: config.roughness,
-    transmission: config.transmission,
-  }: {};
-  const material = new THREE[meshType]({
-    color: 0x123456,
-    ...reflectionOptions,
-  });
-  material.wireframe = config.wireframe;
-  // material.reflection = config.reflection;
-  const cube = new THREE.Mesh(geometry, material);
-  cube.position.set(...position);
-  scene.add(cube);
-
-  return cube;
-}
-
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
@@ -132,6 +57,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     reflection: true,
     reflectivity: .2,
     roughness: 0.3,
+    metalness: 0.8,
     transmission: 1,
   };
   stats.init(route, statsEl);
@@ -144,6 +70,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     reflection: {},
     reflectivity: {},
     roughness: {},
+    metalness: {},
     transmission: {},
   }, () => {
     setup()
@@ -212,6 +139,82 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     animate();
   }
   setup();
+}
+
+const createGround = (
+  size: [number, number, number],
+  position: [number, number, number],
+  scene: THREE.Scene,
+  orbit: OrbitControls,
+) => {
+  // Create and add model
+  const geometry = new THREE.BoxGeometry( ...size);
+  const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  material.opacity = 0.7;
+  material.transparent = true;
+  const ground = new THREE.Mesh(geometry, material);
+  ground.position.set(...position);
+  orbit.target.copy(ground.position);
+  scene.add(ground);
+
+  return ground;
+}
+
+const createText = (
+  text: string,
+  position: [number, number, number],
+  scene: THREE.Scene,
+  config: ProjectConfig,
+) => {
+  const fontLoader = new FontLoader();
+  fontLoader.load( 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', ( font ) => {
+    // Create text geometry
+    const textGeometryOptions = {
+      font: font,
+      size: 0.2,
+      height: 0.1,
+    }
+    const textGeometry = new TextGeometry(text, textGeometryOptions);
+
+    // Create text material
+    const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+    // Position the text below the sphere
+    textMesh.position.set(position[0] - (config.size / 2 * text.length * textGeometryOptions.size / 2 ), position[1] + 1 + config.size, position[2]);
+    scene.add(textMesh);
+  });
+}
+
+const createCube = (
+  size: [number, number, number],
+  position: [number, number, number],
+  scene: THREE.Scene,
+  meshType: string,
+  config: ProjectConfig,
+) => {
+  // Create and add model
+  const geometry = new THREE.SphereGeometry(size[0]);
+  const reflectionOptions = config.reflection ? {
+    envMap: reflection,      
+    // envMap: scene.background,      
+    combine: THREE.MixOperation,     
+    reflectivity: config.reflectivity,
+    roughness: config.roughness,
+    metalness: config.metalness,
+    transmission: config.transmission,
+  }: {};
+  const material = new THREE[meshType]({
+    color: 0x123456,
+    ...reflectionOptions,
+  });
+  material.wireframe = config.wireframe;
+  // material.reflection = config.reflection;
+  const cube = new THREE.Mesh(geometry, material);
+  cube.position.set(...position);
+  scene.add(cube);
+
+  return cube;
 }
 </script>
 
