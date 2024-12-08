@@ -54,12 +54,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
+    const clock = new THREE.Clock();
 
-    camera.position.z = -50;
-    camera.position.y = 10;
+    camera.position.set(-30, 25, 30);
+    scene.fog = new THREE.Fog( 0xaaaaff, 1)
 
     createLights(scene);
-    getGround(groundSize, groundPosition, scene, world);
+    const { texture: groundTexture } = getGround(groundSize, groundPosition, scene, world);
     const { model, mixer } = await loadAnimatedModel();
     scene.add(model);
 
@@ -67,9 +68,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     function animate() {
       stats.start(route);
-      const frame = requestAnimationFrame(animate);
-      playAnimationModel(mixer, frame);
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      mixer.update(delta);
+
       orbit.update();
+      groundTexture.offset.y -= 0.0015;
 
       renderer.render( scene, camera );
       video.stop(renderer.info.render.frame ,route);
@@ -79,15 +83,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   setup();
 }
-
-const playAnimationModel = (mixer: THREE.AnimationMixer, frame: number) => {
-  if (mixer) {
-    mixer.timeScale = 1;
-    if (frame % 7 === 0) {
-      mixer.update(frame);
-    }
-  }
-} 
 
 const getRenderer = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
@@ -151,9 +146,9 @@ const getGround = (
   world: RAPIER.World
 ) => {
   // Create and add model
-  const terrainTexture = getTextures(terrainTextureAsset);
+  const texture = getTextures(terrainTextureAsset);
   const material = new THREE.MeshPhysicalMaterial({
-    map: terrainTexture,
+    map: texture,
     reflectivity: 0.3,
   });
   const geometry = new THREE.BoxGeometry( ...size);
@@ -169,7 +164,7 @@ const getGround = (
   let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
   let collider = world.createCollider(colliderDesc);
 
-  return { ground, collider };
+  return { ground, collider, texture };
 }
 
 const loadFBX = () => {
@@ -202,7 +197,7 @@ const loadAnimatedModel = async () => {
   model.position.set(0, 0, 0);
   model.scale.set(8, 8, 8);
   // Flip the model
-  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+  // model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
 
   // Add animation
   const mixer = new THREE.AnimationMixer(model)
