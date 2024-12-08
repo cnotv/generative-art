@@ -352,6 +352,7 @@ const getModel = (
     // envMap: reflection,
     reflectivity: 0.2,
     roughness: 0.3,
+    metalness: 0.5,
     transmission: 1,
   });
   const mesh = new THREE.Mesh(geometry, material);
