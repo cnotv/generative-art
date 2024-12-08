@@ -102,14 +102,19 @@ const createLights = (scene: THREE.Scene) => {
   directionalLight.shadow.mapSize.height = 2048;
   directionalLight.shadow.camera.near = 0.5;
   directionalLight.shadow.camera.far = 50;
-  directionalLight.shadow.camera.left = -10;
-  directionalLight.shadow.camera.right = 10;
-  directionalLight.shadow.camera.top = 10;
-  directionalLight.shadow.camera.bottom = -10;
+
+  // Camera frustum
+  directionalLight.shadow.camera.left = -20;
+  directionalLight.shadow.camera.right = 20;
+  directionalLight.shadow.camera.top = 20;
+  directionalLight.shadow.camera.bottom = -20;
   directionalLight.shadow.bias = -0.0001;
   scene.add(directionalLight);
 
-  const ambient = new THREE.AmbientLight( 0xffffff, 0.3 );
+  // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+  // scene.add(shadowCameraHelper);
+  
+  const ambient = new THREE.AmbientLight( 0xffffff, 0.2 );
   ambient.position.set(5, 5, 5);
   scene.add( ambient )
 }
@@ -194,10 +199,15 @@ const loadAnimatedModel = async () => {
   const { model, gltf } = await loadGLTF();
   model.castShadow = true;
   model.receiveShadow = false; //default
-  model.position.set(0, 0, 0);
+  model.position.set(0, -1, 0);
   model.scale.set(8, 8, 8);
-  // Flip the model
-  // model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+  // Ensure the model casts and receives shadows
+  model.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
 
   // Add animation
   const mixer = new THREE.AnimationMixer(model)
