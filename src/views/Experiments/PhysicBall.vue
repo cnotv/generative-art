@@ -7,6 +7,7 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
+import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
 
 type ProjectConfig = any;
 
@@ -42,20 +43,33 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
     directional: {
       enabled: true,
-      helper: false
+      helper: false,
+      intensity: 10,
     },
     area: {
       enabled: true,
+      helper: false,
       intensity: 1,
       width: 10,
       height: 10,
     },
     ambient: {
       enabled: true,
-      intensity: 1,
+      intensity: 0.2,
     },
     hemisphere: {
       enabled: true,
+      helper: false,
+      intensity: 1,
+    },
+    point: {
+      enabled: true,
+      helper: false,
+      intensity: 1,
+    },
+    spot: {
+      enabled: true,
+      helper: false,
       intensity: 1,
     },
     // size: 50,
@@ -64,13 +78,15 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   controls.create(config, route, {
     directional: {
       enabled: {},
-      helper: {}
+      intensity: {},
+      helper: {},
     },
     area: {
       enabled: {},
       intensity: {},
       width: {},
       height: {},
+      helper: {},
     },
     ambient: {
       enabled: {},
@@ -78,6 +94,17 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     },
     hemisphere: {
       enabled: {},
+      helper: {},
+      intensity: {},
+    },
+    point: {
+      enabled: {},
+      helper: {},
+      intensity: {},
+    },
+    spot: {
+      enabled: {},
+      helper: {},
       intensity: {},
     },
   }, () => {
@@ -90,11 +117,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
 
-    camera.position.z = -10;
-    camera.position.y = 6;
+    camera.position.z = -20;
+    camera.position.y = 10;
 
     createLights(scene, config);
-
     getGround(groundSize, groundPosition, scene, world);
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world));
 
@@ -142,8 +168,8 @@ const getRenderer = (canvas: HTMLCanvasElement) => {
 const createLights = (scene: THREE.Scene, config: ProjectConfig) => {
   if (config.directional.enabled) {
     // Add directional light with shadows
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(5, 5, 5);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, config.directional.intensity);
+    directionalLight.position.set(5, 10, 5);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
@@ -165,20 +191,68 @@ const createLights = (scene: THREE.Scene, config: ProjectConfig) => {
 
   if (config.area.enabled) {
     const rectLight = new THREE.RectAreaLight( 0xffffff, config.area.intensity, config.area.width, config.area.height );
-    rectLight.position.set( 5, 5, 0 );
+    rectLight.position.set(5, 5, 5);
     rectLight.lookAt( 0, 0, 0 );
     scene.add(rectLight)
+
+    if (config.area.helper) {
+      // Add light helper
+      const helper = new RectAreaLightHelper(rectLight, 5);
+      scene.add(helper);
+    }
   }
 
   if (config.ambient.enabled) {
     const ambient = new THREE.AmbientLight( 0xffffff, config.ambient.intensity );
+    ambient.position.set(5, 5, 5);
     scene.add( ambient )
   }
 
   if (config.hemisphere.enabled) {
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, config.hemisphere.intensity);
-    hemisphereLight.castShadow = true; // default false
-    scene.add(hemisphereLight);
+    const hemisphereLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, config.hemisphere.intensity );
+    hemisphereLight.color.setHSL( 0.6, 1, 0.6 );
+    hemisphereLight.groundColor.setHSL( 0.095, 1, 0.75 );
+    hemisphereLight.position.set( 0, 50, 0 );
+    scene.add( hemisphereLight );
+
+    if (config.hemisphere.helper) {
+      const hemisphereLightHelper = new THREE.HemisphereLightHelper( hemisphereLight, 10 );
+      scene.add( hemisphereLightHelper );
+    }
+  }
+
+  if (config.point.enabled) {
+    const pointLight = new THREE.PointLight(0xffffff, 1.2);
+    pointLight.position.set(5, 5, 5);
+    pointLight.castShadow = true;
+    pointLight.shadow.mapSize.width = 2048;
+    pointLight.shadow.mapSize.height = 2048;
+    pointLight.shadow.camera.near = 0.5;
+    pointLight.shadow.camera.far = 50;
+    pointLight.shadow.bias = -0.0001;
+    scene.add(pointLight);
+
+    if (config.hemisphere.helper) {
+      const pointLightHelper = new THREE.PointLightHelper( pointLight, 10 );
+      scene.add( pointLightHelper );
+    }
+  }
+
+  if (config.spot.enabled) {
+    const spotLight = new THREE.SpotLight(0xffffff, 1.2);
+    spotLight.position.set(5, 5, 5);
+    spotLight.castShadow = true;
+    spotLight.shadow.mapSize.width = 2048;
+    spotLight.shadow.mapSize.height = 2048;
+    spotLight.shadow.camera.near = 0.5;
+    spotLight.shadow.camera.far = 50;
+    spotLight.shadow.bias = -0.0001;
+    scene.add(spotLight);
+
+    if (config.spot.helper) {
+      const spotLightHelper = new THREE.SpotLightHelper( spotLight, 10 );
+      scene.add( spotLightHelper );
+    }
   }
 }
 
@@ -234,7 +308,7 @@ const getGround = (
   // Create and add model
   const geometry = new THREE.BoxGeometry( ...size);
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x000000,
+    color: 0x222222,
     // envMap: reflection,
     reflectivity: 0.3,
     roughness: 0.3,
@@ -274,8 +348,8 @@ const getModel = (
   // Create and add model
   const geometry = new THREE.SphereGeometry(size);
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x000000,
-    envMap: reflection,      
+    color: 0x222222,
+    // envMap: reflection,
     reflectivity: 0.2,
     roughness: 0.3,
     transmission: 1,
