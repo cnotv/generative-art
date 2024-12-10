@@ -175,8 +175,7 @@ const getGround = (
 const loadFBX = () => {
   return new Promise((resolve, reject) => {
     const loader = new FBXLoader();
-    loader.setPath('../../../public/');
-    loader.load('low_poly.glb', (fbx) => {
+    loader.load('/low_poly.glb', (fbx) => {
       resolve(fbx);
     }, undefined, reject);
   });
@@ -188,8 +187,7 @@ const loadFBX = () => {
 const loadGLTF = (): Promise<{ model: Model, gltf: any}> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
-    loader.setPath('../../../public/');
-    loader.load('low_poly.glb', (gltf) => {
+    loader.load('/low_poly.glb', (gltf) => {
       resolve({model: gltf.scene, gltf});
     }, undefined, reject);
   });
