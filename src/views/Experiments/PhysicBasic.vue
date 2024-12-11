@@ -26,8 +26,8 @@ const setCubePosition = (
 }
 
 const createGround = (
-  size: [number, number, number],
-  position: [number, number, number],
+  size: CoordinateTuple,
+  position: CoordinateTuple,
   scene: THREE.Scene,
   world: RAPIER.World
 ) => {
@@ -49,8 +49,8 @@ const createGround = (
 }
 
 const createCube = (
-  size: [number, number, number],
-  position: [number, number, number],
+  size: CoordinateTuple,
+  position: CoordinateTuple,
   scene: THREE.Scene,
   orbit: OrbitControls,
   world: RAPIER.World
@@ -70,7 +70,7 @@ const createCube = (
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size.map(x => x * 0.6) as [number, number, number]);
+  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size.map(x => x * 0.6) as CoordinateTuple);
   let collider = world.createCollider(colliderDesc, rigidBody);
 
   return { cube, rigidBody, collider };
@@ -102,10 +102,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const setup = () => {
     let gravity = { x: 0.0, y: -9.81, z: 0.0 };
     let world = new RAPIER.World(gravity);
-    const groundSize = [100.0, 0.1, 20.0] as [number, number, number];
-    const cubeSize = [1.0, 1.0, 1.0] as [number, number, number];
-    const cubePosition = [0.0, 5.0, 0.0] as [number, number, number];
-    const groundPosition = [1, -1, 1] as [number, number, number];
+    const groundSize = [100.0, 0.1, 20.0] as CoordinateTuple;
+    const cubeSize = [1.0, 1.0, 1.0] as CoordinateTuple;
+    const cubePosition = [0.0, 5.0, 0.0] as CoordinateTuple;
+    const groundPosition = [1, -1, 1] as CoordinateTuple;
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     renderer.setSize(window.innerWidth, window.innerHeight);

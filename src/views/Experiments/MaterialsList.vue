@@ -77,9 +77,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = () => {
-    const groundSize = [100.0, 0.1, 100.0] as [number, number, number];
-    const cubeSize = [config.size, config.size, config.size] as [number, number, number];
-    const groundPosition = [meshTypes.length/2 * 1, 0, 1] as [number, number, number];
+    const groundSize = [100.0, 0.1, 100.0] as CoordinateTuple;
+    const cubeSize = [config.size, config.size, config.size] as CoordinateTuple;
+    const groundPosition = [meshTypes.length/2 * 1, 0, 1] as CoordinateTuple;
 
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -117,7 +117,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     // Create a cube for each mesh type
     meshTypes.forEach((meshType, index) => {
       const gap = index * config.size * 3;
-      const position = [config.size + gap, config.size, config.size] as [number, number, number];
+      const position = [config.size + gap, config.size, config.size] as CoordinateTuple;
       cubes.push(createCube(cubeSize, position, scene, meshType, config));
       createText(meshType, position, scene, config);
     });
@@ -142,8 +142,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 }
 
 const createGround = (
-  size: [number, number, number],
-  position: [number, number, number],
+  size: CoordinateTuple,
+  position: CoordinateTuple,
   scene: THREE.Scene,
   orbit: OrbitControls,
 ) => {
@@ -162,7 +162,7 @@ const createGround = (
 
 const createText = (
   text: string,
-  position: [number, number, number],
+  position: CoordinateTuple,
   scene: THREE.Scene,
   config: ProjectConfig,
 ) => {
@@ -187,8 +187,8 @@ const createText = (
 }
 
 const createCube = (
-  size: [number, number, number],
-  position: [number, number, number],
+  size: CoordinateTuple,
+  position: CoordinateTuple,
   scene: THREE.Scene,
   meshType: string,
   config: ProjectConfig,
