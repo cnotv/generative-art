@@ -20,11 +20,12 @@ interface ModelOptions {
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const groundSize = [1000.0, 0.1, 1000.0] as [number, number, number];
+const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
 const sphereSize = () => Math.random() * 0.5 + 0.5;
-const groundPosition = [1, -1, 1] as [number, number, number];
+const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
+const trees = [] as CoordinateTuple[];
 
 /**
  * Reflection
@@ -68,6 +69,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const girl = await loadFBX('character.fbx', { position: [0, -1, 0], scale: [0.15, 0.15, 0.15] });
     const animationWalk = await loadAnimation(girl, 'walk.fbx');
     scene.add(girl);
+    const { model: tree } = await loadGLTF('tree.glb', { scale: [5, 5, 5] });
+    
+    scene.add(tree);
 
     video.record(canvas, route);
 
@@ -150,8 +154,8 @@ const getTextures = (img: string) => {
  * @param world 
  */
 const getGround = (
-  size: [number, number, number],
-  position: [number, number, number],
+  size: CoordinateTuple,
+  position: CoordinateTuple,
   scene: THREE.Scene,
   world: RAPIER.World
 ) => {
