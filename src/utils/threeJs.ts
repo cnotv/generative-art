@@ -3,6 +3,22 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 
+export const config = {
+  fov: 60,
+  aspect: window.innerWidth / window.innerHeight,
+  far: 1000.0,
+  offset: {
+    x: -20,
+    y: 20,
+    z: 40
+  },
+  lookAt: {
+    x: 0,
+    y: 10,
+    z: 50
+  },
+}
+
 export const getOffset = (model: Model, config: any) => {
   const { x, y, z } = config.offset
   const offset = new THREE.Vector3(x, y, z)
@@ -52,22 +68,24 @@ export const createLights = (scene: THREE.Scene) => {
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;
   directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 50;
+  directionalLight.shadow.camera.far = 100;
 
   // Camera frustum
-  directionalLight.shadow.camera.left = -20;
-  directionalLight.shadow.camera.right = 20;
-  directionalLight.shadow.camera.top = 20;
-  directionalLight.shadow.camera.bottom = -20;
+  directionalLight.shadow.camera.left = -200;
+  directionalLight.shadow.camera.right = 200;
+  directionalLight.shadow.camera.top = 200;
+  directionalLight.shadow.camera.bottom = -200;
   directionalLight.shadow.bias = -0.0001;
   scene.add(directionalLight);
 
   // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
   // scene.add(shadowCameraHelper);
   
-  const ambient = new THREE.AmbientLight( 0xffffff, 0.5 );
-  ambient.position.set(5, 5, 5);
-  scene.add( ambient )
+  const ambientLight = new THREE.AmbientLight( 0xffffff, 0.5 );
+  ambientLight.position.set(5, 5, 5);
+  scene.add(ambientLight)
+  
+  return { directionalLight, ambientLight };
 }
 
 /**
@@ -83,7 +101,7 @@ export const loadTextures = (img: string) => {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.offset.set(1, 1); // Offset the texture by 50%
-  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
+  texture.repeat.set(20, 20); // Repeat the texture 0.5 times in both directions
 
   return texture;
 }
@@ -176,5 +194,15 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
       action.play();
       resolve(mixer);
     });
+  });
+}
+
+export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
+  options.forEach(({position, rotation, scale}) => {
+    const clone = model.clone();
+    clone.position.set(...position!);
+    clone.rotation.set(...rotation!);
+    clone.scale.set(...scale!);
+    scene.add(clone);
   });
 }

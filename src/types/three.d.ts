@@ -23,3 +23,10 @@ type PhysicObject = {
   rigidBody: RAPIER.RigidBody
   collider: RAPIER.Collider
 }
+
+type Model = THREE.Group<THREE.Object3DEventMap>
+interface ModelOptions {
+  position?: CoordinateTuple;
+  scale?: CoordinateTuple;
+  rotation?: CoordinateTuple;
+}
