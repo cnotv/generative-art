@@ -12,6 +12,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
+interface ModelOptions {
+  position?: [number, number, number];
+  scale?: [number, number, number];
+}
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -61,9 +65,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     createLights(scene);
     const { texture: groundTexture } = getGround(groundSize, groundPosition, scene, world);
-    const model = await loadFBX();
-    const animationRun = await loadAnimation(model);
-    scene.add(model);
+    const girl = await loadFBX('character.fbx', { position: [0, -1, 0], scale: [0.15, 0.15, 0.15] });
+    const animationWalk = await loadAnimation(girl, 'walk.fbx');
+    scene.add(girl);
 
     video.record(canvas, route);
 
@@ -71,10 +75,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       stats.start(route);
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      animationRun.update(delta);
+      animationWalk.update(delta);
 
       orbit.update();
-      groundTexture.offset.y -= 0.0015;
+      groundTexture.offset.y -= 0.00015;
 
       renderer.render( scene, camera );
       video.stop(renderer.info.render.frame ,route);
@@ -173,14 +177,14 @@ const getGround = (
   return { ground, collider, texture };
 }
 
-const loadFBX = (): Promise<Model> => {
+const loadFBX = (fileName: string, { position, scale }: ModelOptions = {}): Promise<Model> => {
   return new Promise((resolve, reject) => {
     const loader = new FBXLoader();
-    loader.load('/character.fbx', (model) => {
-      model.scale.set(0.15, 0.15, 0.15);
+    loader.load(`/${fileName}`, (model) => {
+      if (position) model.position.set(...position);
+      if (scale) model.scale.set(...scale);
       model.castShadow = true;
       model.receiveShadow = false; //default
-      model.position.set(0, -1, 0);
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
@@ -195,31 +199,31 @@ const loadFBX = (): Promise<Model> => {
 /**
  * Return threeJS valid 3D model
  */
-const loadGLTF = (): Promise<{ model: Model, gltf: any}> => {
+const loadGLTF = (fileName: string, { position, scale }: ModelOptions = {}): Promise<{ model: Model, gltf: any}> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
-    loader.load('/low_poly.glb', (gltf) => {
+    loader.load(`/${fileName}`, (gltf) => {
       const model = gltf.scene;
       model.castShadow = true;
       model.receiveShadow = false; //default
-      model.position.set(0, -1, 0);
-      model.scale.set(8, 8, 8);
+      if (position) model.position.set(...position);
+      if (scale) model.scale.set(...scale);
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
         }
       });
-      resolve({model, gltf});
+      resolve({ model, gltf });
     }, undefined, reject);
   });
 }
 
-const loadAnimation = (model: Model): Promise<THREE.AnimationMixer> => {
+const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve, reject) => {
     // Add animation
     const loader = new FBXLoader();
-    loader.load('/fast_run.fbx', (animation) => {
+    loader.load(`/${fileName}`, (animation) => {
     const mixer = new THREE.AnimationMixer(model);
       const action = mixer.clipAction((model?.animations[0] ? model : animation).animations[0]);
       action.play();
