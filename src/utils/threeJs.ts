@@ -4,6 +4,11 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 
 export const config = {
+  show: {
+    trees: false,
+    grass: true,
+    mushrooms: false,
+  },
   fov: 60,
   aspect: window.innerWidth / window.innerHeight,
   far: 1000.0,
@@ -197,6 +202,7 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
   });
 }
 
+// https://threejs.org/docs/#api/en/objects/InstancedMesh
 export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
   options.forEach(({position, rotation, scale}) => {
     const clone = model.clone();

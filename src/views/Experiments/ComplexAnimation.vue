@@ -19,7 +19,7 @@ const sphereSize = () => Math.random() * 0.5 + 0.5;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
-const trees = times(500, () => {
+const treeConfig = times(500, () => {
   const size = Math.random() * 5 + 3;
   const getPosition = () => Math.random() * groundSize[0] - groundSize[0]/2
 
@@ -30,7 +30,18 @@ const trees = times(500, () => {
   }
 }) as ModelOptions[];
 
-const mushrooms = times(1000, () => {
+const grassConfig = times(10000, () => {
+  const size = Math.random() * 10 + 2;
+  const getPosition = () => Math.random() * groundSize[0]/5 - groundSize[0]/10
+
+  return {
+    position: [getPosition(), 0, getPosition()],
+    rotation: [0, Math.random() * 360, 0],
+    scale: [size, size, size]
+  }
+}) as ModelOptions[];
+
+const mushroomConfig = times(1000, () => {
   const size = Math.random() * 5 + 3;
   const getPosition = () => Math.random() * groundSize[0] - groundSize[0]/2
 
@@ -61,6 +72,11 @@ onMounted(() => {
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
+    show: {
+      trees: {},
+      grass: {},
+      mushrooms: {},
+    },
   }, () => {
     setup()
   });
@@ -84,12 +100,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     scene.add(girl);
 
     // Populate trees
-    const { model: tree } = await loadGLTF('tree.glb');
-    cloneModel(tree, scene, trees);
-
-    // Populate mushrooms
-    const { model: mushroom } = await loadGLTF('cute_mushrooms.glb');
-    cloneModel(mushroom, scene, mushrooms);
+    if (config.show.trees) {
+      const { model: tree } = await loadGLTF('tree.glb');
+      cloneModel(tree, scene, treeConfig);
+    }
+    // Populate mushroom
+    if (config.show.mushrooms) {
+      const { model: mushroom } = await loadGLTF('cute_mushrooms.glb');
+      cloneModel(mushroom, scene, mushroomConfig);
+    }
 
     video.record(canvas, route);
 
