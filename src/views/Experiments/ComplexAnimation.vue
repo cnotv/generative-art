@@ -8,7 +8,8 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import terrainTextureAsset from '@/assets/grass.jpg';
-import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, config, cloneModel, instanceMatrix, getInstanceConfig } from '@/utils/threeJs';
+import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, cloneModel, instanceMatrix, getInstanceConfig } from '@/utils/threeJs';
+import { complexAnimation as config } from '@/config/scenes';
 import { getBlade } from '@/utils/custom-models';
 
 const statsEl = ref(null)
