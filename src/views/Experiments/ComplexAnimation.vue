@@ -10,6 +10,7 @@ import RAPIER from '@dimforge/rapier3d';
 import terrainTextureAsset from '@/assets/grass.jpg';
 import { times } from '@/utils/lodash';
 import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, config, cloneModel } from '@/utils/threeJs';
+import { getBlade } from '@/utils/custom-models';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -104,6 +105,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       const { model: tree } = await loadGLTF('tree.glb');
       cloneModel(tree, scene, treeConfig);
     }
+
+    // Populate grass
+    if (config.show.grass) {
+      const grass = getBlade();
+      cloneModel(grass, scene, grassConfig);
+    }
+
     // Populate mushroom
     if (config.show.mushrooms) {
       const { model: mushroom } = await loadGLTF('cute_mushrooms.glb');
