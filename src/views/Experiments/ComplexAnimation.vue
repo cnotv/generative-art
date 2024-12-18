@@ -8,50 +8,21 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import terrainTextureAsset from '@/assets/grass.jpg';
-import { times } from '@/utils/lodash';
-import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, config, cloneModel } from '@/utils/threeJs';
+import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, config, cloneModel, instanceMatrix, getInstanceConfig } from '@/utils/threeJs';
 import { getBlade } from '@/utils/custom-models';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
-const sphereSize = () => Math.random() * 0.5 + 0.5;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
-const treeConfig = times(500, () => {
-  const size = Math.random() * 5 + 3;
-  const getPosition = () => Math.random() * groundSize[0] - groundSize[0]/2
-
-  return {
-    position: [getPosition(), 0, getPosition()],
-    rotation: [0, Math.random() * 360, 0],
-    scale: [size, size, size]
-  }
-}) as ModelOptions[];
-
-const grassConfig = times(10000, () => {
-  const size = Math.random() * 10 + 2;
-  const getPosition = () => Math.random() * groundSize[0]/5 - groundSize[0]/10
-
-  return {
-    position: [getPosition(), 0, getPosition()],
-    rotation: [0, Math.random() * 360, 0],
-    scale: [size, size, size]
-  }
-}) as ModelOptions[];
-
-const mushroomConfig = times(1000, () => {
-  const size = Math.random() * 5 + 3;
-  const getPosition = () => Math.random() * groundSize[0] - groundSize[0]/2
-
-  return {
-    position: [getPosition(), 0, getPosition()],
-    rotation: [0, Math.random() * 360, 0],
-    scale: [size, size, size]
-  }
-}) as ModelOptions[];
+const instancedModels = {
+  tree: getInstanceConfig(config.tree, groundSize),
+  grass: getInstanceConfig(config.grass, groundSize),
+  mushroom: getInstanceConfig(config.mushroom, groundSize),
+} as Record<string, ModelOptions[]>
 
 /**
  * Reflection
@@ -73,10 +44,23 @@ onMounted(() => {
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
-    show: {
-      trees: {},
-      grass: {},
-      mushrooms: {},
+    tree: {
+      show: {},
+      amount: {},
+      size: {},
+      area: {},
+    },
+    grass: {
+      show: {},
+      amount: {},
+      size: {},
+      area: {},
+    },
+    mushroom: {
+      show: {},
+      amount: {},
+      size: {},
+      area: {},
     },
   }, () => {
     setup()
@@ -101,21 +85,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     scene.add(girl);
 
     // Populate trees
-    if (config.show.trees) {
+    if (config.tree.show) {
       const { model: tree } = await loadGLTF('tree.glb');
-      cloneModel(tree, scene, treeConfig);
+      cloneModel(tree, scene, instancedModels.tree);
     }
 
     // Populate grass
-    if (config.show.grass) {
+    if (config.grass.show) {
       const grass = getBlade();
-      cloneModel(grass, scene, grassConfig);
+      instanceMatrix(grass, scene, instancedModels.grass);
     }
 
-    // Populate mushroom
-    if (config.show.mushrooms) {
+    // Populate mushrooms
+    if (config.mushroom.show) {
       const { model: mushroom } = await loadGLTF('cute_mushrooms.glb');
-      cloneModel(mushroom, scene, mushroomConfig);
+      cloneModel(mushroom, scene, instancedModels.mushroom);
     }
 
     video.record(canvas, route);
@@ -125,9 +109,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       const frame = requestAnimationFrame(animate);
       const delta = clock.getDelta();
       animationWalk.update(delta);
-      girl.position.z += 0.15;
+      // girl.position.z += 0.15;
       directionalLight.position.copy({ x: girl.position.x + 5, y: girl.position.y + 5, z: girl.position.z + 5});
-      setThirdPersonCamera(camera, config, girl);
+      // setThirdPersonCamera(camera, config, girl);
 
       orbit.update();
 

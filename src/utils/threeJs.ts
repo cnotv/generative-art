@@ -2,15 +2,30 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
+import { times } from '@/utils/lodash';
 
 export const config = {
-  show: {
-    trees: false,
-    grass: true,
-    mushrooms: false,
+  tree: {
+    show: true,
+    amount: 500,
+    size: 5,
+    area: 1,
+  },
+  grass: {
+    show: true,
+    amount: 100000,
+    size: 0.5,
+    area: 5,
+  },
+  mushroom: {
+    show: true,
+    amount: 1000,
+    size: 5,
+    area: 1,
   },
   fov: 60,
   aspect: window.innerWidth / window.innerHeight,
+  near: 0.1,
   far: 1000.0,
   offset: {
     x: -20,
@@ -202,7 +217,41 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
   });
 }
 
+export const getInstanceConfig = (instanceConfig: InstanceConfig, groundSize: CoordinateTuple) => times(instanceConfig.amount, () => {
+  const size = Math.random() * instanceConfig.size + 3;
+  const getPosition = () => Math.random() * groundSize[0]/instanceConfig.area - groundSize[0]/instanceConfig.area/2
+
+  return {
+    position: [getPosition(), 0, getPosition()],
+    rotation: [0, Math.random() * 360, 0],
+    scale: [size, size, size]
+  }
+});
+
 // https://threejs.org/docs/#api/en/objects/InstancedMesh
+export const instanceMatrix = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
+  const count = options.length;
+  const geometry = model.geometry;
+  const material = model.material;
+  const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+
+  options.forEach(({position, rotation, scale}, index) => {
+    const matrix = new THREE.Matrix4();
+    const positionVector = new THREE.Vector3(...position!);
+    const rotationEuler = new THREE.Euler(...rotation!);
+    const scaleVector = new THREE.Vector3(...scale!);
+
+    matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector);
+    instancedMesh.setMatrixAt(index, matrix);
+
+    scene.add(instancedMesh);
+    // clone.position.set(...position!);
+    // clone.rotation.set(...rotation!);
+    // clone.scale.set(...scale!);
+    // scene.add(clone);
+  });
+}
+
 export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
   options.forEach(({position, rotation, scale}) => {
     const clone = model.clone();

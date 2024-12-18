@@ -30,3 +30,10 @@ interface ModelOptions {
   scale?: CoordinateTuple;
   rotation?: CoordinateTuple;
 }
+
+interface InstanceConfig {
+  show: boolean;
+  amount: number;
+  size: number;
+  area: number;
+}
