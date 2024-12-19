@@ -183,7 +183,7 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
 }
 
 export const getInstanceConfig = (instanceConfig: InstanceConfig, groundSize: CoordinateTuple) => times(instanceConfig.amount, () => {
-  const size = Math.random() * instanceConfig.size + 3;
+  const size = Math.random() * instanceConfig.size + instanceConfig.sizeDelta;
   const getPosition = () => Math.random() * groundSize[0]/instanceConfig.area - groundSize[0]/instanceConfig.area/2
 
   return {

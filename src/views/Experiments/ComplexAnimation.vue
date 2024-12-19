@@ -19,11 +19,6 @@ const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
-const instancedModels = {
-  tree: getInstanceConfig(config.tree, groundSize),
-  grass: getInstanceConfig(config.grass, groundSize),
-  mushroom: getInstanceConfig(config.mushroom, groundSize),
-} as Record<string, ModelOptions[]>
 
 /**
  * Reflection
@@ -49,18 +44,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       show: {},
       amount: {},
       size: {},
+      sizeDelta: {},
       area: {},
     },
     grass: {
       show: {},
       amount: {},
       size: {},
+      sizeDelta: {},
       area: {},
     },
     mushroom: {
       show: {},
       amount: {},
       size: {},
+      sizeDelta: {},
       area: {},
     },
   }, () => {
@@ -73,6 +71,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
     const clock = new THREE.Clock();
+    const instancedModels = {
+      tree: getInstanceConfig(config.tree, groundSize),
+      grass: getInstanceConfig(config.grass, groundSize),
+      mushroom: getInstanceConfig(config.mushroom, groundSize),
+    } as Record<string, ModelOptions[]>
 
     camera.position.set(-30, 25, 30);
     scene.fog = new THREE.Fog( 0xaaaaff, 1)

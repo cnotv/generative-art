@@ -56,6 +56,8 @@ export const getBlade = () => {
 
   // Create the mesh for the grass blade
   const blade = new THREE.Mesh(geometry, material);
+  blade.castShadow = false;
+  blade.receiveShadow = true;
 
   return blade;
 };
