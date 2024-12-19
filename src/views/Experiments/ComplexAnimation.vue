@@ -16,7 +16,7 @@ const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
-const groundPosition = [1, -1, 1] as CoordinateTuple;
+const groundPosition = [1, 0, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
 
@@ -92,7 +92,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     getGround(groundSize, groundPosition, scene, world, terrainTextureAsset);
 
     // Add girl
-    const girl = await loadFBX('character.fbx', { position: [0, -1, 0], scale: [0.1, 0.1, 0.1] });
+    const girl = await loadFBX('character.fbx', { position: [0, 0, 0], scale: [0.1, 0.1, 0.1] });
     const animationWalk = await loadAnimation(girl, 'walk.fbx');
     scene.add(girl);
 
