@@ -2,20 +2,22 @@ import * as THREE from 'three';
 
 export const getBlade = () => {
   // Define the control points for the length curve (curvature along the length)
+  // Vector values respectively: bend sides, blade silhouette, bend front 
   const lengthCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0, 0),  // Base
-    new THREE.Vector3(0, 0.25, 0),  // Midpoint 1
-    new THREE.Vector3(0, 0.5, 0),  // Midpoint 2
-    new THREE.Vector3(0, 0.75, 0),  // Midpoint 3
-    new THREE.Vector3(0, 1, 0)  // Tip
+    new THREE.Vector3(0.01, 0, 0.05),  // Base
+    new THREE.Vector3(0, 0.40, 0.15),  // Midpoint 1
+    // new THREE.Vector3(0, 0.50, 0.1),  // Midpoint 2
+    // new THREE.Vector3(0, 0.60, 0.1),  // Midpoint 3
+    new THREE.Vector3(0, 0.7, 0.05)  // Tip
   ]);
 
   // Define the control points for the side curve (curvature on the sides)
+  // Vector values respectively: Width blade
   const sideCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0.05, 0, 0),  // Base
     new THREE.Vector3(0.04, 0.25, 0),  // Midpoint 1
-    new THREE.Vector3(0.03, 0.5, 0),  // Midpoint 2
-    new THREE.Vector3(0.02, 0.75, 0),  // Midpoint 3
+    // new THREE.Vector3(0.03, 0.5, 0),  // Midpoint 2
+    // new THREE.Vector3(0.02, 0.75, 0),  // Midpoint 3
     new THREE.Vector3(0, 1, 0)  // Tip
   ]);
 

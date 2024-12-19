@@ -182,9 +182,9 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
   });
 }
 
-export const getInstanceConfig = (instanceConfig: InstanceConfig, groundSize: CoordinateTuple) => times(instanceConfig.amount, () => {
-  const size = Math.random() * instanceConfig.size + instanceConfig.sizeDelta;
-  const getPosition = () => Math.random() * groundSize[0]/instanceConfig.area - groundSize[0]/instanceConfig.area/2
+export const getInstanceConfig = (config: InstanceConfig, groundSize: CoordinateTuple) => times(config.amount, () => {
+  const size = Math.random() * config.size + config.sizeDelta;
+  const getPosition = () => Math.random() * groundSize[0]/config.area - groundSize[0]/config.area/2
 
   return {
     position: [getPosition(), 0, getPosition()],
@@ -194,11 +194,12 @@ export const getInstanceConfig = (instanceConfig: InstanceConfig, groundSize: Co
 });
 
 // https://threejs.org/docs/#api/en/objects/InstancedMesh
-export const instanceMatrix = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
+export const instanceMatrixMesh = (mesh: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
   const count = options.length;
-  const geometry = model.geometry;
-  const material = model.material;
+  const geometry = mesh.geometry;
+  const material = mesh.material;
   const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+  instancedMesh.receiveShadow = true; // Enable receiving shadows
 
   options.forEach(({position, rotation, scale}, index) => {
     const matrix = new THREE.Matrix4();
@@ -210,15 +211,19 @@ export const instanceMatrix = (model: Model, scene: THREE.Scene, options: ModelO
     instancedMesh.setMatrixAt(index, matrix);
 
     scene.add(instancedMesh);
-    // clone.position.set(...position!);
-    // clone.rotation.set(...rotation!);
-    // clone.scale.set(...scale!);
-    // scene.add(clone);
+  });
+}
+
+export const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, scene: THREE.Scene, options: ModelOptions[]): Model => {
+  model.traverse((child) => {
+    if (child.isMesh) {
+      instanceMatrixMesh(child, scene, options);
+    }
   });
 }
 
 export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
-  options.forEach(({position, rotation, scale}) => {
+  options.forEach(({ position, rotation, scale }) => {
     const clone = model.clone();
     clone.position.set(...position!);
     clone.rotation.set(...rotation!);

@@ -1,10 +1,10 @@
 export const complexAnimation = {
-  walk: false,
+  walk: true,
   camera: {
-    fixed: false,
-    near: 0.1,
+    fixed: true,
+    near: 2,
     aspect: window.innerWidth / window.innerHeight,
-    far: 1000.0,
+    far: 1000,
     fov: 60,
     offset: {
       x: -20,
@@ -13,27 +13,27 @@ export const complexAnimation = {
     },
     lookAt: {
       x: 0,
-      y: 10,
-      z: 50
+      y: 0,
+      z: 0
     },
   },
   tree: {
     show: true,
-    amount: 500,
+    amount: 300,
     size: 5,
     sizeDelta: 3,
     area: 1,
   },
   grass: {
     show: true,
-    amount: 2000000,
-    size: 0.8,
-    sizeDelta: 3,
+    amount: 1000000,
+    size: 2,
+    sizeDelta: 2,
     area: 1,
   },
   mushroom: {
     show: true,
-    amount: 1000,
+    amount: 500,
     size: 5,
     sizeDelta: 3,
     area: 1,

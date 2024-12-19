@@ -8,14 +8,14 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import terrainTextureAsset from '@/assets/grass.jpg';
-import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, cloneModel, instanceMatrix, getInstanceConfig } from '@/utils/threeJs';
+import { createLights, getGround, getRenderer, loadAnimation, loadFBX, loadGLTF, setThirdPersonCamera, cloneModel, instanceMatrixMesh, getInstanceConfig, instanceMatrixModel } from '@/utils/threeJs';
 import { complexAnimation as config } from '@/config/scenes';
 import { getBlade } from '@/utils/custom-models';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
+const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
 const groundPosition = [1, 0, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
@@ -51,23 +51,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     tree: {
       show: {},
       amount: {},
-      size: {},
-      sizeDelta: {},
-      area: {},
     },
     grass: {
       show: {},
       amount: {},
-      size: {},
-      sizeDelta: {},
-      area: {},
     },
     mushroom: {
       show: {},
       amount: {},
-      size: {},
-      sizeDelta: {},
-      area: {},
     },
   }, () => {
     setup()
@@ -80,9 +71,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const orbit = new OrbitControls(camera, renderer.domElement);
     const clock = new THREE.Clock();
     const instancedModels = {
-      tree: getInstanceConfig(config.tree, groundSize),
-      grass: getInstanceConfig(config.grass, groundSize),
-      mushroom: getInstanceConfig(config.mushroom, groundSize),
+      tree: config.tree.show ? getInstanceConfig(config.tree, groundSize) : {},
+      grass: config.grass.show ? getInstanceConfig(config.grass, groundSize) : {},
+      mushroom: config.mushroom.show ? getInstanceConfig(config.mushroom, groundSize) : {},
     } as Record<string, ModelOptions[]>
 
     camera.position.set(-30, 25, 30);
@@ -105,7 +96,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     // Populate grass
     if (config.grass.show) {
       const grass = getBlade();
-      instanceMatrix(grass, scene, instancedModels.grass);
+      instanceMatrixMesh(grass, scene, instancedModels.grass);
     }
 
     // Populate mushrooms
