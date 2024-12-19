@@ -1,4 +1,22 @@
 export const complexAnimation = {
+  walk: false,
+  camera: {
+    fixed: false,
+    near: 0.1,
+    aspect: window.innerWidth / window.innerHeight,
+    far: 1000.0,
+    fov: 60,
+    offset: {
+      x: -20,
+      y: 20,
+      z: 40
+    },
+    lookAt: {
+      x: 0,
+      y: 10,
+      z: 50
+    },
+  },
   tree: {
     show: true,
     amount: 500,
@@ -19,20 +37,5 @@ export const complexAnimation = {
     size: 5,
     sizeDelta: 3,
     area: 1,
-  },
-  fov: 60,
-  walk: false,
-  aspect: window.innerWidth / window.innerHeight,
-  near: 0.1,
-  far: 1000.0,
-  offset: {
-    x: -20,
-    y: 20,
-    z: 40
-  },
-  lookAt: {
-    x: 0,
-    y: 10,
-    z: 50
   },
 }

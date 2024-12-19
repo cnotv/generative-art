@@ -41,6 +41,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
     walk: {},
+    camera: {
+      fixed: {},
+      near: {},
+      aspect: {},
+      far: {},
+      fov: {},
+    },
     tree: {
       show: {},
       amount: {},
@@ -68,7 +75,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
   const setup = async () => {
     const renderer = getRenderer(canvas);
-    const camera = new THREE.PerspectiveCamera(config.fov, config.aspect, config.near, config.far);
+    const camera = new THREE.PerspectiveCamera(config.camera.fov, config.camera.aspect, config.camera.near, config.camera.far);
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
     const clock = new THREE.Clock();
@@ -118,7 +125,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
         girl.position.z += 0.15;
       }
       directionalLight.position.copy({ x: girl.position.x + 5, y: girl.position.y + 5, z: girl.position.z + 5});
-      // setThirdPersonCamera(camera, config, girl);
+      if (config.camera.fixed) {
+        setThirdPersonCamera(camera, config.camera, girl);
+      }
 
       orbit.update();
 
