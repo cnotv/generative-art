@@ -40,6 +40,7 @@ onMounted(() => {
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
+    walk: {},
     tree: {
       show: {},
       amount: {},
@@ -112,8 +113,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       stats.start(route);
       const frame = requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      animationWalk.update(delta);
-      // girl.position.z += 0.15;
+      if (config.walk) {
+        animationWalk.update(delta);
+        girl.position.z += 0.15;
+      }
       directionalLight.position.copy({ x: girl.position.x + 5, y: girl.position.y + 5, z: girl.position.z + 5});
       // setThirdPersonCamera(camera, config, girl);
 

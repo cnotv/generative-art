@@ -21,6 +21,7 @@ export const complexAnimation = {
     area: 1,
   },
   fov: 60,
+  walk: false,
   aspect: window.innerWidth / window.innerHeight,
   near: 0.1,
   far: 1000.0,
