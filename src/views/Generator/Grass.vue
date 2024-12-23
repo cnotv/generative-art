@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
@@ -23,6 +23,7 @@ interface GenerateConfig {
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
+const animationId = ref(0);
 
 onMounted(() => {
   init(
@@ -30,6 +31,12 @@ onMounted(() => {
     statsEl.value as unknown as HTMLElement,
   ), statsEl.value!;
 })
+
+onBeforeUnmount(() => {
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+  }
+});
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
@@ -89,6 +96,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       // },
     },
   }, () => {
+    if (animationId.value) {
+      cancelAnimationFrame(animationId.value);
+    }
     setup()
   });
 
@@ -127,7 +137,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     function animate() {
       stats.start(route);
-      requestAnimationFrame(animate);
+      animationId.value = requestAnimationFrame(animate);
       if (config.camera.fixed) {
         setThirdPersonCamera(camera, config.camera, grass);
       }
