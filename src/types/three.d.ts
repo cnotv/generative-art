@@ -33,12 +33,3 @@ interface ModelOptions {
 interface ModelConditions {
   randomize?: string[];
 }
-
-interface InstanceConfig {
-  show: boolean;
-  amount: number;
-  size: number;
-  sizeDelta: number;
-  area: number;
-  rotation?: number;
-}

@@ -95,7 +95,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     // Populate grass
     if (config.grass.show) {
-      const grass = getBlade();
+      const grass = getBlade(config.grass);
       instanceMatrixMesh(grass, scene, instancedModels.grass);
     }
 
