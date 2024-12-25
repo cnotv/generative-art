@@ -33,7 +33,7 @@ const addPanel = <T extends Record<string, any>>(
   Object.keys(params).forEach(key => {
     // Nested controls
     if (config[key] && typeof config[key] === 'object') {
-      addPanel(gui, config, params[key], callback, key);
+      addPanel(gui, config[key], params[key], callback, key);
     } else if (params[key] && params[key].addColor) {
       control.addColor(config, key);
     } else {
