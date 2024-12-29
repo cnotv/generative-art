@@ -1,9 +1,30 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router'
+import { onMounted, onUnmounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router'
+import { useQueryStore } from './stores/queryStore';
 import { generatedRoutes } from '@/config/router'
 
 const router = useRouter()
+const route = useRoute();
+const queryStore = useQueryStore();
+queryStore.setQuery(route.query);
+
+// Watch for changes in the router query and update the store
+watch(
+  () => route.query,
+  (newQuery) => {
+    queryStore.setQuery(newQuery);
+  }
+);
+
+// Watch for changes in the store and update the router query
+watch(
+  () => queryStore.query,
+  (newQuery) => {
+    router.push({ query: newQuery });
+  },
+  { deep: true }
+);
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyPress);
@@ -49,7 +70,8 @@ const toggleQuery = (param: string | string[]) => {
   const { path, query } = router.currentRoute.value;
   const params = typeof param === 'string' ? [param] : param;
   const newQuery = params.reduce((acc, key) => ({ ...acc, [key]: query[key] === 'true' ? undefined : 'true' }), {})
-  router.push({ path, query: { ...query,  ...newQuery } });
+  router.push({ path, query: { ...query, ...newQuery } });
+  queryStore.setQuery(newQuery);
 }
 
 </script>
