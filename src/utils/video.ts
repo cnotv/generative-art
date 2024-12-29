@@ -1,13 +1,14 @@
 import type { RouteLocationNormalizedLoaded } from "vue-router";
 
-// Outside your setup function
-let chunks: Blob[] = [];
-let mediaRecorder: MediaRecorder;
-const totalFrames = 800;
-
+// TODO: Use state management?
+const config = {
+  chunks: [] as Blob[],
+  isRecording: false,
+  mediaRecorder: null as MediaRecorder | null
+};
 
 const saveVideo = () => {
-  const blob = new Blob(chunks, { 'type': 'video/webm' });
+  const blob = new Blob(config.chunks, { 'type': 'video/webm' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -17,29 +18,34 @@ const saveVideo = () => {
 };
 
 const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded) => {
-  const isRecording = route.query.record === 'true';
-  if (isRecording) {
-    chunks = [];
+  stop(0, route);
+  const shouldRecord = !!route.query.record;
+  if (shouldRecord) {
     const stream = canvas.captureStream(30);
-    mediaRecorder = new MediaRecorder(
+    config.mediaRecorder = new MediaRecorder(
       stream,
       { mimeType: 'video/webm', bitsPerSecond: 100000000 });
-    mediaRecorder.ondataavailable = (e) => {
+    config.isRecording = true;
+    config.mediaRecorder.ondataavailable = (e) => {
       if (e.data.size) {
-        chunks.push(e.data);
+        config.chunks.push(e.data);
       }
     };
-    mediaRecorder.onstop = saveVideo;
-    mediaRecorder.start();
+    config.mediaRecorder.onstop = saveVideo;
+    config.mediaRecorder.start();
   };
 };
 
 const stop = (frameCount: number, route: RouteLocationNormalizedLoaded) => {
-  const isRecording = route.query.record === 'true';
-  if (isRecording) {
-    if (frameCount >= totalFrames) {
-      if (mediaRecorder) {
-        mediaRecorder.stop();
+  const shouldRecord = !!route.query.record;
+  const totalFrames = isNaN(Number(route.query.record)) ? 800 : Number(route.query.record);
+  if (shouldRecord) {
+    if (frameCount === totalFrames) {
+      if (config.mediaRecorder) {
+        config.mediaRecorder.stop();
+        config.chunks = [];
+        config.isRecording = true;
+        config.mediaRecorder = null;
       }
     }
   }
