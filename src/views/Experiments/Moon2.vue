@@ -58,7 +58,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = () => {
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`),); // Set background color to black
     renderer.shadowMap.enabled = true; // Enable shadow maps
