@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
@@ -10,6 +10,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
+const animationId = ref(0);
 
 onMounted(() => {
   init(
@@ -17,6 +18,12 @@ onMounted(() => {
     statsEl.value as unknown as HTMLElement,
   ), statsEl.value!;
 })
+
+onBeforeUnmount(() => {
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+  }
+});
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
@@ -28,12 +35,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   // Set configuration and start setup
   controls.create(config, route, {
     size: {  },
-    // details: {},
-    // wireframe: {},
-    // background: { addColor: []},
-    // fill: { addColor: []},
-    // light: { addColor: []},
   }, () => {
+    if (animationId.value) {
+      cancelAnimationFrame(animationId.value);
+    }
     setup()
   });
 
@@ -50,11 +55,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     camera.position.z = 5;
 
     // Create and add model
-    const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-    const cube = new THREE.Mesh( geometry, material );
+    const cube = getCube(scene);
     orbit.target.copy(cube.position); // Copy position of the model as camera target
-    scene.add(cube);
 
     // Start recording video if URL has query string ?video=true
     video.record(canvas, route);
@@ -81,6 +83,15 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   setup();
 }
+
+const getCube = (scene: THREE.Scene) => {
+    const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    return cube;
+  }
 </script>
 
 <template>
