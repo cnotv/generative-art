@@ -6,8 +6,6 @@ export const getBlade = (config: GenerateConfig) => {
   const lengthCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(config.lengthCurve.baseX, config.lengthCurve.baseY, config.lengthCurve.baseZ),  // Base
     new THREE.Vector3(config.lengthCurve.midX, config.lengthCurve.midY, config.lengthCurve.midZ),  // Midpoint 1
-    // new THREE.Vector3(0, 0.50, 0.1),  // Midpoint 2
-    // new THREE.Vector3(0, 0.60, 0.1),  // Midpoint 3
     new THREE.Vector3(config.lengthCurve.tipX, config.lengthCurve.tipY, config.lengthCurve.tipZ)  // Tip
   ]);
 
@@ -16,8 +14,6 @@ export const getBlade = (config: GenerateConfig) => {
   const sideCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(config.sideCurve.baseX, config.sideCurve.baseY, config.sideCurve.baseZ),  // Base
     new THREE.Vector3(config.sideCurve.midX, config.sideCurve.midY, config.sideCurve.midZ),  // Midpoint 1
-    // new THREE.Vector3(0.03, 0.5, 0),  // Midpoint 2
-    // new THREE.Vector3(0.02, 0.75, 0),  // Midpoint 3
     new THREE.Vector3(config.sideCurve.tipX, config.sideCurve.tipY, config.sideCurve.tipZ)  // Tip
   ]);
 
@@ -62,4 +58,33 @@ export const getBlade = (config: GenerateConfig) => {
   blade.receiveShadow = true;
 
   return blade;
+};
+
+/**
+  * Create a rounded box geometry
+  * @param {CoordinateTuple} size - The size of the box
+  * @param {number} radius - The radius of the box
+  * @param {number} smoothness - The smoothness of the box
+  * @returns {THREE.ExtrudeGeometry} The rounded box geometry
+*/
+export const getRoundedBox = (size: CoordinateTuple, radius: number, smoothness: number) => {
+  const [width, height, depth] = size;
+  const shape = new THREE.Shape();
+  const eps = 0.00001;
+  const radius0 = radius - eps;
+  shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
+  shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
+  shape.absarc(width - radius * 2, height - radius * 2, eps, Math.PI / 2, 0, true);
+  shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: depth - radius * 2,
+    bevelEnabled: true,
+    bevelSegments: smoothness * 2,
+    steps: 1,
+    bevelSize: radius0,
+    bevelThickness: radius,
+    curveSegments: smoothness
+  });
+  geometry.center();
+  return geometry;
 };
