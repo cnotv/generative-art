@@ -45,9 +45,9 @@ export const getRenderer = (canvas: HTMLCanvasElement) => {
   return renderer;
 }
 
-export const createLights = (scene: THREE.Scene) => {
+export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: {directionalLightIntensity?: number} = {}) => {
   // Add directional light with shadows
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
   directionalLight.position.set(5, 5, 5);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
@@ -229,5 +229,17 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
     clone.rotation.set(...rotation!);
     clone.scale.set(...scale!);
     scene.add(clone);
+  });
+}
+
+export const animateTimeline = <T>(element: T, timeline: Timeline[], frame: number) => {
+  timeline.forEach(({ start, end, frequency, pause, delay, action }) => {
+    if (start ? frame >= start : true && end ? frame <= end : true) {
+      if (start && delay && frame < start + delay) return;
+      if (pause && frame % pause === 0) return;
+      if (frequency && frame % frequency === 0) {
+        action(element);
+      }
+    }
   });
 }

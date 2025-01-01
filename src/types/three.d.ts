@@ -33,3 +33,12 @@ interface ModelOptions {
 interface ModelConditions {
   randomize?: string[];
 }
+
+interface Timeline {
+  action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => void;
+  start?: number;
+  end?: number;
+  frequency?: number;
+  pause?: number;
+  delay?: number;
+}
