@@ -8,8 +8,7 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { animateTimeline, createLights } from '@/utils/threeJs';
 import { getRoundedBox } from '@/utils/custom-models';
-
-type MetalCube = THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>
+import { times } from '@/utils/lodash';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -27,12 +26,6 @@ const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
 const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
 const reflection = new THREE.CubeTextureLoader().load( urls );
 
-// Define the timeline and animations
-const timeline: Timeline[] = [
-  { interval: [100, 100], action: (cube: MetalCube) => { cube.rotation.y += 0.01; } },
-  { delay: 100, interval: [100, 100], action: (cube: MetalCube) => { cube.rotation.z += 0.01; } },
-];
-
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
@@ -48,6 +41,9 @@ onBeforeUnmount(() => {
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
+    size: 20,
+    intervals: 90,
+    cameraDistance: 20,
     reflection: true,
     reflectivity: .2,
     roughness: 0.3,
@@ -59,6 +55,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
   // Set configuration and start setup
   controls.create(config, route, {
+    size: {},
     reflectivity: {},
     roughness: {},
     metalness: {},
@@ -69,6 +66,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     }
     setup()
   });
+  const positions = generatePositions();
 
   const setup = () => {
     // Init canvas
@@ -77,22 +75,18 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     renderer.setClearColor(0x000000); // Set background color to black
     
     const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    camera.position.set(config.size, 0, config.cameraDistance);
+    
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
-    
-    camera.position.z = 5;
 
-    // Create and add model
-    [0.5, 1, 2, 3, 4].forEach(size => {
-      const cubePosition = 0.75 * size;
-      ([
-        [cubePosition, cubePosition, cubePosition],
-        [-cubePosition, cubePosition, cubePosition],
-        [cubePosition, -cubePosition, cubePosition],
-        [-cubePosition, -cubePosition, cubePosition],
-      ] as CoordinateTuple[]).forEach((position) => cubes.push(getCube(scene, config, { position, size: [size, size, size] })));
-    })
+    // Define the timeline and animations
+    const timeline: Timeline[] = [
+      { interval: [config.intervals, config.intervals], action: (cube) => { cube.rotation.x += THREE.MathUtils.degToRad(1); } },
+      { delay: config.intervals, interval: [config.intervals, config.intervals], action: (cube) => { cube.rotation.y  += THREE.MathUtils.degToRad(1); } },
+    ];
 
+    positions.forEach((position) => cubes.push(getCube(scene, config, { position, size: [config.size, config.size, config.size] })))
     createLights(scene, { directionalLightIntensity: 10});
 
     // Start recording video if URL has query string ?video=true
@@ -103,7 +97,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       animationId.value = requestAnimationFrame(animate) / 1;
 
       cubes.forEach((cube, i) => {
-        animateTimeline(timeline, animationId.value);
+        animateTimeline(timeline, animationId.value, cube);
       });
 
       renderer.render(scene, camera);
@@ -118,6 +112,24 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   setup();
 }
 
+const generatePositions = (): CoordinateTuple[] => {
+  const size = 20;
+  const gap = size * 2;
+  const scale = 15;
+  const xCount = Math.ceil(window.innerWidth / scale / gap) * 2 + 1;
+  const yCount = Math.ceil(window.innerHeight / scale / gap) * 2 + 1;
+
+  const positions = times(xCount, (xi) => {
+    const x = -window.innerWidth / scale + xi * gap;
+    return times(yCount, (yi) => {
+      const y = -window.innerHeight / scale + yi * gap;
+      return times(10, (i) => [x, y, -i * size * 2]);
+    }).flat();
+  }).flat();
+
+  return positions;
+}
+
 const getCube = (
   scene: THREE.Scene,
   config: any,
@@ -127,7 +139,7 @@ const getCube = (
   const geometry = getRoundedBox(size ?? [1, 1, 1], depth, 10);
   const material = new THREE.MeshPhysicalMaterial({
     color: 0x333333,
-    // envMap: reflection,      
+    envMap: reflection,
     reflectivity: config.reflectivity,
     roughness: config.roughness,
     metalness: config.metalness,

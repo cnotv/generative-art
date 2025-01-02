@@ -35,11 +35,10 @@ interface ModelConditions {
 }
 
 interface Timeline {
-  action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => void;
+  action: (element: any) => void;
   start?: number;
   end?: number;
   frequency?: number;
   interval?: [number, number]; // Interval as a range [start, end]
-  pause?: number;
   delay?: number;
 }

@@ -248,11 +248,10 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
   { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
  */
 export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
-  timeline.forEach(({ start, end, frequency, pause, delay, interval, action }) => {
+  timeline.forEach(({ start, end, frequency, delay, interval, action }) => {
     if (start && frame < start) return;
     if (end && frame > end) return;
     if (delay && frame < delay) return;
-    if (pause && frame % pause === 0) return;
     if (interval) {
       const [length, pause] = interval;
       const cycle = length + pause;
