@@ -247,7 +247,7 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
   { interval: [100, 100], action: (mesh) => { mesh.rotation.y += 0.01; } },
   { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
  */
-export const animateTimeline = <T>(element: T, timeline: Timeline[], frame: number) => {
+export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
   timeline.forEach(({ start, end, frequency, pause, delay, interval, action }) => {
     if (start && frame < start) return;
     if (end && frame > end) return;
@@ -260,7 +260,7 @@ export const animateTimeline = <T>(element: T, timeline: Timeline[], frame: numb
       if (frameCycle >= length) return;
     }
     if (!frequency || (frequency && frame % frequency === 0)) {
-      action(element);
+      action(args);
     }
   });
 }

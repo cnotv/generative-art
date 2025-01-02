@@ -103,7 +103,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       animationId.value = requestAnimationFrame(animate) / 1;
 
       cubes.forEach((cube, i) => {
-        animateTimeline(cube, timeline, animationId.value);
+        animateTimeline(timeline, animationId.value);
       });
 
       renderer.render(scene, camera);
