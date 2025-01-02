@@ -39,6 +39,7 @@ interface Timeline {
   start?: number;
   end?: number;
   frequency?: number;
+  interval?: [number, number]; // Interval as a range [start, end]
   pause?: number;
   delay?: number;
 }

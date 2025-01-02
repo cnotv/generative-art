@@ -232,14 +232,35 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
   });
 }
 
+/**
+ * 
+ * @param element THREE mesh
+ * @param timeline List of actions to perform
+ * @param frame Current frame
+ * @example
+ * // Sequence of 3 animations
+  { start: 0, end: 100, action: (mesh) => { mesh.rotation.x += 0.01; } },
+  { start: 100, end: 200, action: (mesh) => { mesh.rotation.y += 0.01; } },
+  { start: 200, end: 300, action: (mesh) => { mesh.rotation.z += 0.01; } },
+  
+  // Alternated animations
+  { interval: [100, 100], action: (mesh) => { mesh.rotation.y += 0.01; } },
+  { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
+ */
 export const animateTimeline = <T>(element: T, timeline: Timeline[], frame: number) => {
-  timeline.forEach(({ start, end, frequency, pause, delay, action }) => {
-    if (start ? frame >= start : true && end ? frame <= end : true) {
-      if (start && delay && frame < start + delay) return;
-      if (pause && frame % pause === 0) return;
-      if (frequency && frame % frequency === 0) {
-        action(element);
-      }
+  timeline.forEach(({ start, end, frequency, pause, delay, interval, action }) => {
+    if (start && frame < start) return;
+    if (end && frame > end) return;
+    if (delay && frame < delay) return;
+    if (pause && frame % pause === 0) return;
+    if (interval) {
+      const [length, pause] = interval;
+      const cycle = length + pause;
+      const frameCycle = (frame + (delay ?? 0) + (start ?? 0)) % cycle;
+      if (frameCycle >= length) return;
+    }
+    if (!frequency || (frequency && frame % frequency === 0)) {
+      action(element);
     }
   });
 }

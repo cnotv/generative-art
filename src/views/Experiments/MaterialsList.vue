@@ -8,6 +8,7 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { createLights } from '@/utils/threeJs';
 
 type ProjectConfig = any;
 
@@ -51,7 +52,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
     size: 1,
     exposure: 5,
-    directionalLight: 5,
+    directionalLightIntensity: 5,
     hemisphereLight: 1,
     wireframe: false,
     reflection: true,
@@ -64,7 +65,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   controls.create(config, route, {
     size: {},
     exposure: {},
-    directionalLight: {},
+    directionalLightIntensity: {},
     hemisphereLight: {},
     wireframe: {},
     reflection: {},
@@ -95,13 +96,14 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     camera.position.z = -10;
     camera.position.y = 4;
 
-    // Add directional light with shadows
-    const directionalLight = new THREE.DirectionalLight(0xffffff, config.directionalLight);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.bias = -0.0001;
-    scene.add(directionalLight);
+    createLights(scene, config);
+    // // Add directional light with shadows
+    // const directionalLight = new THREE.DirectionalLight(0xffffff, config.directionalLightIntensity);
+    // directionalLight.castShadow = true;
+    // directionalLight.shadow.mapSize.width = 2048;
+    // directionalLight.shadow.mapSize.height = 2048;
+    // directionalLight.shadow.bias = -0.0001;
+    // scene.add(directionalLight);
 
     let count = 0;
     setInterval(() => {

@@ -53,9 +53,9 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
     initialAngle: { min: 0, max: 360 },
     strokeWeight: { min: 0, max: 10 },
     opacity: { min: 0, max: 255 },
-    stroke: { addColor: []},
-    fill: { addColor: []},
-    background: { addColor: []},
+    // stroke: { addColor: []},
+    // fill: { addColor: []},
+    // background: { addColor: []},
   }, () => {
     rotation = {
       x: config.initialAngle,

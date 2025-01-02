@@ -9,6 +9,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { animateTimeline, createLights } from '@/utils/threeJs';
 import { getRoundedBox } from '@/utils/custom-models';
 
+type MetalCube = THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>
+
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
@@ -26,15 +28,9 @@ const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}
 const reflection = new THREE.CubeTextureLoader().load( urls );
 
 // Define the timeline and animations
-const timeline = [
-  // { start: 0, end: 100, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.x += 0.01; } },
-  // { start: 100, end: 200, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.y += 0.01; } },
-  // { start: 200, end: 300, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.z += 0.01; } },
-  { start: 0, end: 100, frequency: 1, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.x += 0.01; } },
-  { start: 100, end: 200, frequency: 2, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.y += 0.01; } },
-  { start: 200, end: 300, frequency: 3, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.z += 0.01; } },
-  { start: 300, end: 400, pause: 50, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.x += 0.01; } },
-  { start: 400, end: 500, delay: 100, action: (cube: THREE.Mesh<any, THREE.Material | THREE.Material[], THREE.Object3DEventMap>) => { cube.rotation.y += 0.01; } },
+const timeline: Timeline[] = [
+  { interval: [100, 100], action: (cube: MetalCube) => { cube.rotation.y += 0.01; } },
+  { delay: 100, interval: [100, 100], action: (cube: MetalCube) => { cube.rotation.z += 0.01; } },
 ];
 
 onMounted(() => {
