@@ -194,23 +194,29 @@ export const getInstanceConfig = (config: InstanceConfig, groundSize: Coordinate
 });
 
 // https://threejs.org/docs/#api/en/objects/InstancedMesh
-export const instanceMatrixMesh = (mesh: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
+export const instanceMatrixMesh = (
+  mesh: Model,
+  scene: THREE.Scene,
+  options: ModelOptions[]
+): THREE.InstancedMesh<any, any, THREE.InstancedMeshEventMap>[] => {
   const count = options.length;
   const geometry = mesh.geometry;
   const material = mesh.material;
   const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
   instancedMesh.receiveShadow = true; // Enable receiving shadows
 
-  options.forEach(({position, rotation, scale}, index) => {
+  return options.map(({position, rotation, scale}, index) => {
     const matrix = new THREE.Matrix4();
-    const positionVector = new THREE.Vector3(...position!);
-    const rotationEuler = new THREE.Euler(...rotation!);
-    const scaleVector = new THREE.Vector3(...scale!);
+    const positionVector = new THREE.Vector3(...(position ?? [0, 0 ,0]));
+    const rotationEuler = new THREE.Euler(...(rotation ?? [0, 0, 0]));
+    const scaleVector = new THREE.Vector3(...(scale ?? [1, 1, 1]));
 
     matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector);
     instancedMesh.setMatrixAt(index, matrix);
 
     scene.add(instancedMesh);
+
+    return instancedMesh;
   });
 }
 
