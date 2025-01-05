@@ -43,7 +43,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
     size: 20,
     intervals: 90,
-    cameraDistance: 20,
+    cameraDistance: 10,
     reflection: true,
     reflectivity: .2,
     roughness: 0.3,
@@ -73,15 +73,15 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setClearColor(0x000000); // Set background color to black
+    const scene = new THREE.Scene();
     
     const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-    camera.position.set(config.size, 0, config.cameraDistance);
-    
-    const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
-
+    camera.position.set(config.size / 2, 0, config.cameraDistance);
+    camera.lookAt(10, 0, 0);
+    
     // Define the timeline and animations
-    const timeline: Timeline[] = [
+    const cubesTimeline: Timeline[] = [
       { interval: [config.intervals, config.intervals], action: (cube) => { cube.rotation.x += THREE.MathUtils.degToRad(1); } },
       { delay: config.intervals, interval: [config.intervals, config.intervals], action: (cube) => { cube.rotation.y  += THREE.MathUtils.degToRad(1); } },
     ];
@@ -97,7 +97,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       animationId.value = requestAnimationFrame(animate) / 1;
 
       cubes.forEach((cube, i) => {
-        animateTimeline(timeline, animationId.value, cube);
+        animateTimeline(cubesTimeline, animationId.value, cube);
       });
 
       renderer.render(scene, camera);
