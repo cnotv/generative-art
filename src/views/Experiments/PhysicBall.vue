@@ -320,7 +320,7 @@ const getGround = (
   scene.add(ground);
 
   // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
   let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
