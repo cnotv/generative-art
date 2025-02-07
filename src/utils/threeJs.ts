@@ -91,40 +91,37 @@ export const loadTextures = (img: string) => {
   return texture;
 }
 
-/**
- * Create scene ground with physics, texture, and shadow
- * @param size 
- * @param position 
- * @param scene 
- * @param world 
- */
 export const getGround = (
-  size: CoordinateTuple,
-  position: CoordinateTuple,
   scene: THREE.Scene,
   world: RAPIER.World,
-  terrainTextureAsset: string
+  { worldSize, showBodyHelpers }: any,
+  path?: string,
 ) => {
-  // Create and add model
-  const texture = loadTextures(terrainTextureAsset);
-  const material = new THREE.MeshPhysicalMaterial({
-    map: texture,
-    reflectivity: 0.3,
-  });
-  const geometry = new THREE.BoxGeometry( ...size);
-  const ground = new THREE.Mesh(geometry, material);
-  ground.position.set(...position);
-  ground.receiveShadow = true;
-  scene.add(ground);
+  const geometry = new THREE.PlaneGeometry(worldSize, worldSize)
+  const defaultProps = { color: 0x333333 }
+  const material = new THREE.MeshBasicMaterial({
+    ...defaultProps,
+    ...path ? { map: loadTextures(path)} : {},
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
+  mesh.position.set(1, -1, 1)
+  scene.add(mesh)
 
-  // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  const size: CoordinateTuple = [worldSize, 0, worldSize]
+  const { rigidBody, collider } = getPhysic(world, {
+    position: mesh.position.toArray(),
+    size,
+    boundary: 0.8,
+  })
 
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  let collider = world.createCollider(colliderDesc);
+  // HELPER: Create a mesh to visualize the collider
+  const helper = new THREE.BoxHelper(mesh, 0x000000)
+  if (showBodyHelpers) {
+    scene.add(helper)
+  }
 
-  return { ground, collider, texture };
+  return { mesh, rigidBody, helper, collider }
 }
 
 export const loadFBX = (fileName: string, { position, scale }: ModelOptions = {}): Promise<Model> => {
@@ -205,7 +202,7 @@ export const instanceMatrixMesh = (
   const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
   instancedMesh.receiveShadow = true; // Enable receiving shadows
 
-  return options.map(({position, rotation, scale}, index) => {
+  return options.map(({position, rotation, scale, textures}, index) => {
     const matrix = new THREE.Matrix4();
     const positionVector = new THREE.Vector3(...(position ?? [0, 0 ,0]));
     const rotationEuler = new THREE.Euler(...(rotation ?? [0, 0, 0]));
@@ -213,6 +210,10 @@ export const instanceMatrixMesh = (
 
     matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector);
     instancedMesh.setMatrixAt(index, matrix);
+    if (textures) {
+      mesh.material.map = textures.random ? textures.list[Math.floor(Math.random() * textures.list.length)] : textures.list[index % textures.list.length];
+      instancedMesh.material = mesh.material;
+    }
 
     scene.add(instancedMesh);
 
@@ -239,10 +240,91 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
 }
 
 /**
+ * Get default textures
+ * @param img 
+ * @returns 
+ */
+export const getTextures = (img: string) => {
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load(img);
+
+  // Adjust the texture offset and repeat
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.offset.set(1, 1); // Offset the texture by 50%
+  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
+
+  return texture;
+}
+
+/**
+ * Add physic to the model for a given world, using default values
+ * @param world
+ * @param position
+ * @param size
+ * @param {Object} options - The options for the physics body and collider.
+ * @param {number} [options.boundary=0] - The boundary size of the collider.
+ * @param {number} [options.restitution=0] - The restitution (bounciness) of the collider.
+ * @param {number} [options.friction=0] - The friction of the collider against other objects.
+ * @param {Rotation} [options.rotation] - The initial rotation of the object.
+ * @param {number} [options.weight=1] - The gravity scale applied to the object to simulate the weight.
+ * @param {number} [options.mass=1] - The mass in the sense of resistance from movement.
+ * @param {number} [options.density=1] - The density of the object.
+ * @param {number} [options.dominance=1] - The influence level from other bodies.
+ * @param {'fixed' | 'dynamic'} [options.type='fixed'] - The type of the rigid body.
+ * @param {'cuboid' | 'ball'} [options.shape='cuboid'] - The shape of the collider.
+ * @returns {Object} The created rigid body and collider.
+
+ * @returns
+ */
+export const getPhysic = (
+  world: RAPIER.World,
+  {
+    rotation,
+    position = [0, 0, 0],
+    size = [1, 1, 1],
+    boundary = 0,
+    restitution = 0,
+    friction = 0,
+    mass = 1,
+    density = 1,
+    weight = 1,
+    dominance = 0,
+    shape = 'cuboid',
+    type = 'fixed',
+  }: PhysicOptions,
+) => {
+  // Create a fixed rigid body for the brick block
+  const rigidBodyDesc = RAPIER.RigidBodyDesc[type]()
+    .setTranslation(...position)
+    .setGravityScale(weight)
+    .setDominanceGroup(dominance)
+  const rigidBody = world.createRigidBody(rigidBodyDesc)
+  if (rotation) {
+    rigidBody.setRotation(rotation, true)
+  }
+  const colliderShape =
+    shape === 'cuboid'
+      ? RAPIER.ColliderDesc.cuboid(
+          ...((size as CoordinateTuple).map((x) => x * boundary) as CoordinateTuple),
+        )
+      : RAPIER.ColliderDesc.ball(size as number)
+  // Create a cuboid collider attached to the fixed rigid body
+  const colliderDesc = colliderShape
+    .setRestitution(restitution)
+    .setFriction(friction)
+    .setMass(mass)
+    .setDensity(density)
+  const collider = world.createCollider(colliderDesc, rigidBody)
+
+  return { rigidBody, collider }
+}
+
+/**
  * 
  * @param element THREE mesh
  * @param timeline List of actions to perform
- * @param frame Current frame
+ * @param frame Current frame (to do not confuse with delta as for animation)
  * @example
  * // Sequence of 3 animations
   { start: 0, end: 100, action: (mesh) => { mesh.rotation.x += 0.01; } },
