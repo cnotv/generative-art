@@ -5,7 +5,6 @@ import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import { animateTimeline, createLights, getRenderer } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
@@ -44,15 +43,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = () => {
-    const renderer = getRenderer(canvas);
-    const scene = new THREE.Scene();
-    const clock = new THREE.Clock();
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = -25;
-    camera.position.y = 10;
-    const orbit = new OrbitControls(camera, renderer.domElement);
-
+    const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas);
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { worldSize: 1000.0 });
     times(9, (i) => {
@@ -101,7 +92,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   setup();
 }
-
 </script>
 
 <template>

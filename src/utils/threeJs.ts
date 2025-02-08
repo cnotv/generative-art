@@ -3,6 +3,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+export const getEnvironment = (canvas) => {
+  const renderer = getRenderer(canvas);
+  const scene = new THREE.Scene();
+  const clock = new THREE.Clock();
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.z = -25;
+  camera.position.y = 10;
+  const orbit = new OrbitControls(camera, renderer.domElement);
+
+  return { renderer, scene, camera, clock, orbit };
+}
 
 export const getOffset = (model: Model, config: any) => {
   const { x, y, z } = config.offset
