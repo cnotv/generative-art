@@ -77,7 +77,9 @@ export const getCube = (
 
   const { rigidBody, collider } = getPhysic(world, {
     position,
-    size, 
+    size,
+    rotation,
+    restitution: 1,
     shape: 'cuboid',
     type: 'fixed',
   })

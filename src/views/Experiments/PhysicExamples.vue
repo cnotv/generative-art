@@ -9,6 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import { animateTimeline, createLights, getRenderer } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
+import { times } from '@/utils/lodash';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -48,18 +49,22 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const clock = new THREE.Clock();
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = -20;
+    camera.position.z = -25;
     camera.position.y = 10;
     const orbit = new OrbitControls(camera, renderer.domElement);
 
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { worldSize: 1000.0 });
-    getCube(scene, world, {
-      size: [10, 0.2, 3],
-      position: [20, 0, 0],
-      rotation: [0, 0, 10],
+    times(9, (i) => {
+      const x = -20 + 20 * i;
+      getCube(scene, world, {
+        color: 0xaaaaaa,
+        size: [10, 0.2, 3],
+        position: [x, 8, 0],
+        rotation: [0, -0.7, 10],
+      })
     });
-    models.push(getBall(scene, world, { position: [20, 10, 0]}));
+    models.push(getBall(scene, world, { position: [10, 10, 0]}));
 
     video.record(canvas, route);
 
@@ -78,10 +83,12 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       // models[0].mesh.position.y -= 0.1;
       animateTimeline([{
         interval: [2, 200], action: () => {
-          models[0].rigidBody.resetForces(true);
-          models[0].rigidBody.resetTorques(true);
-          models[0].rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-          models[0].rigidBody.setTranslation({x: 20, y: 15, z: 0}, true);
+          models.forEach(({ rigidBody }) => {
+            rigidBody.resetForces(true);
+            rigidBody.resetTorques(true);
+            rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+            rigidBody.setTranslation({ x: 20, y: 15, z: 0 }, true);
+          });
         }},
       ], frame);
 
