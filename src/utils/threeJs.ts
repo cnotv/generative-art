@@ -5,7 +5,7 @@ import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export const getEnvironment = (canvas) => {
+export const getEnvironment = (canvas: HTMLCanvasElement) => {
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();

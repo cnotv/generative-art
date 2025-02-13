@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import * as THREE from 'three';
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import RAPIER from '@dimforge/rapier3d';
-import { animateTimeline, createLights, getRenderer } from '@/utils/threeJs';
+import { animateTimeline, createLights, getEnvironment } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
 import { times } from '@/utils/lodash';
 
