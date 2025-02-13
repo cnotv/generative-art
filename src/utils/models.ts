@@ -18,6 +18,7 @@ export const getBall = (
     color = 0x222222
   }: ModelOptions = {},
 ) => {
+  const initialValues = { size, position, color }
   // Create and add model
   const geometry = new THREE.SphereGeometry(size as number)
   const material = new THREE.MeshPhysicalMaterial({
@@ -43,7 +44,7 @@ export const getBall = (
     type: 'dynamic',
   })
 
-  return { mesh, rigidBody, collider }
+  return { mesh, rigidBody, collider, initialValues }
 }
 
 /**
@@ -63,6 +64,7 @@ export const getCube = (
     color = 0x222222
   }: ModelOptions = {},
 ) => {
+  const initialValues = { size, rotation, position, color }
   // Create and add model
   const geometry = new THREE.BoxGeometry(...size)
   const material = new THREE.MeshPhysicalMaterial({
@@ -84,5 +86,5 @@ export const getCube = (
     type: 'fixed',
   })
 
-  return { mesh, rigidBody, collider }
+  return { mesh, rigidBody, collider, initialValues }
 }
