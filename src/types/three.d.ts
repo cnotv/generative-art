@@ -26,12 +26,28 @@ type PhysicObject = {
 }
 
 type Model = THREE.Group<THREE.Object3DEventMap>
-interface ModelOptions {
-  size?: number | CoordinateTuple;
-  position?: CoordinateTuple;
-  scale?: CoordinateTuple;
-  rotation?: CoordinateTuple;
+
+interface CommonOptions {
+  boundary?: number
+  damping?: number;
+  density?: number
+  dominance?: number
+  friction?: number
+  mass?: number
+  position?: CoordinateTuple,
+  restitution?: number
+  restitution?: number
+  rotation?: Rotation
+  size?: number | CoordinateTuple,
+  type?: 'fixed' | 'dynamic'
+  weight?: number
+}
+
+interface ModelOptions extends CommonOptions{
   color?: number;
+  rotation?: CoordinateTuple;
+  scale?: CoordinateTuple;
+  shape?: 'cuboid' | 'ball'
   textures?: {
     random: boolean;
     list: THREE.Texture[];
@@ -51,17 +67,6 @@ interface Timeline {
   delay?: number;
 }
 
-interface PhysicOptions {
-  boundary?: number
-  restitution?: number
-  friction?: number
-  rotation?: Rotation
-  weight?: number
-  mass?: number
-  density?: number
-  dominance?: number
-  position?: CoordinateTuple,
-  size?: number | CoordinateTuple,
-  type?: 'fixed' | 'dynamic'
+interface PhysicOptions extends CommonOptions {
   shape?: 'cuboid' | 'ball'
 }
