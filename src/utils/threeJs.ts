@@ -300,6 +300,7 @@ export const getPhysic = (
     boundary = 0,
     restitution = 0,
     friction = 0,
+    damping = 0,
     mass = 1,
     density = 1,
     weight = 1,
@@ -313,6 +314,7 @@ export const getPhysic = (
     .setTranslation(...position)
     .setGravityScale(weight)
     .setDominanceGroup(dominance)
+    .setLinearDamping(damping)
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   if (rotation) {
     rigidBody.setRotation(rotation, true)

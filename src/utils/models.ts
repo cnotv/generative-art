@@ -15,7 +15,14 @@ export const getBall = (
   {
     size = 1,
     position = [0, 0, 0],
-    color = 0x222222
+    color = 0x222222,
+    mass = 1,
+    density = 1,
+    weight = 5,
+    friction = 0,
+    restitution = 0,
+    damping = 0,
+    type = 'dynamic',
   }: ModelOptions = {},
 ) => {
   const initialValues = { size, position, color }
@@ -36,12 +43,14 @@ export const getBall = (
     size, 
     boundary: 0.8,
     rotation: { w: 1.0, x: 0.5, y: 0.5, z: 0.5 },
-    restitution: 1 / size / 3,
-    friction: 5 * size,
-    weight: 5,
-    mass: 100,
+    restitution,
+    friction: friction ?? 0,
+    weight,
+    density,
+    damping,
+    mass,
     shape: 'ball',
-    type: 'dynamic',
+    type,
   })
 
   return { mesh, rigidBody, collider, initialValues }
@@ -61,7 +70,13 @@ export const getCube = (
     size = [5, 5, 5] as CoordinateTuple,
     rotation = [0, 0, 0] as CoordinateTuple,
     position = [0, 0, 0],
-    color = 0x222222
+    color = 0x222222,
+    mass = 1,
+    density = 1,
+    weight = 5,
+    friction = 0,
+    damping = 0,
+    type = 'dynamic',
   }: ModelOptions = {},
 ) => {
   const initialValues = { size, rotation, position, color }
@@ -82,8 +97,13 @@ export const getCube = (
     size,
     rotation,
     restitution: 1,
+    weight,
+    density,
+    friction,
+    damping,
+    mass,
     shape: 'cuboid',
-    type: 'fixed',
+    type,
   })
 
   return { mesh, rigidBody, collider, initialValues }
