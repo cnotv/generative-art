@@ -45,24 +45,20 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { worldSize: 1000.0 });
 
-    const bouncyBall = getBall(scene, world)
-    const pingPongBall = getBall(scene, world)
-    const bowlingBall = getBall(scene, world)
-    const paperBall = getBall(scene, world)
-    const tennisBall = getBall(scene, world)
-    const rubberBall = getBall(scene, world)
     const experiments = [
-      bouncyBall,
-      pingPongBall,
-      bowlingBall,
-      paperBall,
-      tennisBall,
-      rubberBall
+      getBall(scene, world, { restitution: 0.5 }), // Rubber
+      getBall(scene, world, {size: 5, damping: 8, color: 0xfafafa}), // Balloon
+      getBall(scene, world, {size: 4, weight: 50, restitution: -0.5}), // Bowling
+      getBall(scene, world, {size: 1.5, damping: 1.5, restitution: -0.5, weight: 6, color: 0xffffff}), // Paper
+      getBall(scene, world, {size: 1.5, weight: 5, color: 0xffff00}), // Tennis
+      getBall(scene, world, {size: 0.8, weight: 6, restitution: 0.2, color: 0xffffff}), // Ping Pong
     ];
 
+    const rows = 3;
+    const gaps = { x: 22, y: 20 };
     times(experiments.length, (i) => {
-      const x = -20 + (i % 3) * 20;
-      const y = 5 + Math.floor(i / 3) * -20;
+      const x = -20 + (i % rows) * gaps.x;
+      const y = 5 + Math.floor(i / rows) * -gaps.y;
       getCube(scene, world, {
         color: 0xaaaaaa,
         size: [10, 0.2, 3],
@@ -70,7 +66,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
         rotation: [0, -0.7, 10],
       })
 
-      experiments[i].initialValues.position = [x, y + 10, 0]
+      experiments[i].initialValues.position = [x, y + 15, 0]
       experiments[i].rigidBody.setTranslation({ x, y: y + 10, z: 0 }, true);
     });
 
@@ -90,7 +86,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       });
       // experiments[0].mesh.position.y -= 0.1;
       animateTimeline([{
-        interval: [10, 200], action: () => {
+        interval: [10, 300], action: () => {
           experiments.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
             rigidBody.resetForces(true);
             rigidBody.resetTorques(true);
