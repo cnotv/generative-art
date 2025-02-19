@@ -45,9 +45,15 @@ interface CommonOptions {
 
 interface ModelOptions extends CommonOptions{
   color?: number;
+  opacity?: number;
+  reflectivity?: number;
+  roughness?: number;
+  metalness?: number;
+  transmission?: number;
   rotation?: CoordinateTuple;
   scale?: CoordinateTuple;
   shape?: 'cuboid' | 'ball'
+  texture?: string;
   textures?: {
     random: boolean;
     list: THREE.Texture[];
