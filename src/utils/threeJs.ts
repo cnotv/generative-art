@@ -4,6 +4,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { color } from 'three/examples/jsm/nodes/Nodes.js';
 
 export const getEnvironment = (canvas: HTMLCanvasElement) => {
   const renderer = getRenderer(canvas);
@@ -11,7 +12,7 @@ export const getEnvironment = (canvas: HTMLCanvasElement) => {
   const clock = new THREE.Clock();
 
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.z = -25;
+  camera.position.z = -30;
   camera.position.y = 10;
   const orbit = new OrbitControls(camera, renderer.domElement);
 
@@ -51,7 +52,7 @@ export const setThirdPersonCamera = (
 }
 
 export const getRenderer = (canvas: HTMLCanvasElement) => {
-  const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0xaaaaff); // Set background color to black
   renderer.shadowMap.enabled = true; // Enable shadow maps
@@ -62,7 +63,7 @@ export const getRenderer = (canvas: HTMLCanvasElement) => {
 export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: {directionalLightIntensity?: number} = {}) => {
   // Add directional light with shadows
   const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
-  directionalLight.position.set(5, 5, 5);
+  directionalLight.position.set(5, 10, -2);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;
@@ -87,24 +88,6 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
   return { directionalLight, ambientLight };
 }
 
-/**
- * Get default textures
- * @param img 
- * @returns 
- */
-export const loadTextures = (img: string) => {
-  const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load(img);
-
-  // Adjust the texture offset and repeat
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.offset.set(1, 1); // Offset the texture by 50%
-  texture.repeat.set(20, 20); // Repeat the texture 0.5 times in both directions
-
-  return texture;
-}
-
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -115,7 +98,7 @@ export const getGround = (
   const defaultProps = { color: 0x333333 }
   const material = new THREE.MeshBasicMaterial({
     ...defaultProps,
-    ...path ? { map: loadTextures(path)} : {},
+    ...path ? { map: getTextures(path)} : {},
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
@@ -138,16 +121,41 @@ export const getGround = (
   return { mesh, rigidBody, helper, collider }
 }
 
-export const loadFBX = (fileName: string, { position, scale }: ModelOptions = {}): Promise<Model> => {
+export const loadFBX = (
+  fileName: string,
+  {
+    position = [0, 0, 0],
+    rotation = [0, 0, 0],
+    scale = [1, 1, 1],
+    color,
+    opacity = 1,
+    reflectivity = 0.5,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
+  }: ModelOptions = {}
+): Promise<Model> => {
   return new Promise((resolve, reject) => {
     const loader = new FBXLoader();
     loader.load(`/${fileName}`, (model) => {
-      if (position) model.position.set(...position);
-      if (scale) model.scale.set(...scale);
+      model.position.set(...position);
+      model.scale.set(...scale);
+      model.rotation.set(...rotation);
       model.castShadow = true;
-      model.receiveShadow = false; //default
+      model.receiveShadow = false; 
       model.traverse((child) => {
         if (child.isMesh) {
+          child.material = new THREE.MeshPhysicalMaterial({
+            color,
+            opacity: 0.9, 
+            transparent: opacity < 1,
+            reflection: reflectivity > 0,
+            reflectivity: .5,
+            roughness,
+            transmission,
+            metalness
+          });
+          child.rotation.set(...rotation);
           child.castShadow = true;
           child.receiveShadow = true;
         }
@@ -160,17 +168,44 @@ export const loadFBX = (fileName: string, { position, scale }: ModelOptions = {}
 /**
  * Return threeJS valid 3D model
  */
-export const loadGLTF = (fileName: string, { position, scale }: ModelOptions = {}): Promise<{ model: Model, gltf: any}> => {
+export const loadGLTF = (
+  fileName: string,
+  {
+    position = [0, 0, 0],
+    rotation = [0, 0, 0],
+    scale = [1, 1, 1],
+    color,
+    opacity = 1,
+    reflectivity = 0.5,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
+  }: ModelOptions = {}
+): Promise<{ model: Model, gltf: any }> => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
     loader.load(`/${fileName}`, (gltf) => {
       const model = gltf.scene;
       model.castShadow = true;
-      model.receiveShadow = false; //default
-      if (position) model.position.set(...position);
-      if (scale) model.scale.set(...scale);
+      model.receiveShadow = false; 
+      model.position.set(...position);
+      model.scale.set(...scale);
+      model.rotation.set(...rotation);
       model.traverse((child) => {
         if (child.isMesh) {
+          if (color) {
+            child.material = new THREE.MeshPhysicalMaterial({
+              color,
+              opacity: 0.9, 
+              transparent: opacity < 1,
+              reflection: reflectivity > 0,
+              reflectivity: .5,
+              roughness,
+              transmission,
+              metalness
+            });
+          }
+          child.rotation.set(...rotation);
           child.castShadow = true;
           child.receiveShadow = true;
         }
@@ -271,6 +306,55 @@ export const getTextures = (img: string) => {
   return texture;
 }
 
+export const getModel = async (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  path: string,
+  {
+    size = 1,
+    position = [0, 0, 0],
+    rotation = [0, 0, 0] as CoordinateTuple,
+    scale = [1, 1, 1],
+    color,
+    opacity = 1,
+    mass = 1,
+    density = 1,
+    weight = 5,
+    friction = 0,
+    restitution = 1,
+    damping = 0,
+    type = 'dynamic',
+    reflectivity = 0.5,
+    roughness = 0.1,
+    metalness = 0.8,
+    transmission = 0.2,
+    texture,
+  }: ModelOptions = {},
+) => {
+  const initialValues = { size, rotation, position, color }
+  const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
+  const { model: mesh } = isGLTF
+    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission })
+    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission })
+  scene.add(mesh);
+
+  const { rigidBody, collider } = getPhysic(world, {
+    position,
+    size,
+    rotation,
+    restitution,
+    weight,
+    density,
+    friction,
+    damping,
+    mass,
+    shape: 'ball',
+    type,
+  })
+  
+  return { mesh, rigidBody, collider, initialValues }
+}
+
 /**
  * Add physic to the model for a given world, using default values
  * @param world
@@ -298,7 +382,7 @@ export const getPhysic = (
     position = [0, 0, 0],
     size = [1, 1, 1],
     boundary = 0,
-    restitution = 0,
+    restitution = 1,
     friction = 0,
     damping = 0,
     mass = 1,
