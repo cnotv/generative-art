@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d';
-import { getPhysic } from './threeJs';
-
+import { getPhysic, getTextures } from './threeJs';
+const defaultValues = {}
 /**
  * Create a ball with physics, texture, and shadow
  * Friction and bounciness is size based
@@ -22,20 +22,33 @@ export const getBall = (
     friction = 0,
     restitution = 0,
     damping = 0,
+    opacity = 1,
+    reflectivity = 0.5,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
     type = 'dynamic',
-  }: ModelOptions = {},
+    texture,
+  }: ModelOptions = defaultValues,
 ) => {
   const initialValues = { size, position, color }
   // Create and add model
   const geometry = new THREE.SphereGeometry(size as number)
   const material = new THREE.MeshPhysicalMaterial({
     color,
-    transmission: 1,
+    transmission,
+    opacity, 
+    transparent: opacity < 1,
+    reflection: reflectivity > 0,
+    reflectivity,
+    roughness,
+    metalness,
+    ...texture ? { map: getTextures(texture)} : {},
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
   mesh.castShadow = true
-  mesh.receiveShadow = false //default
+  mesh.receiveShadow = true
   scene.add(mesh)
 
   const { rigidBody, collider } = getPhysic(world, {
@@ -75,7 +88,13 @@ export const getCube = (
     density = 1,
     weight = 5,
     friction = 0,
+    restitution = 1,
     damping = 0,
+    opacity = 1,
+    reflectivity = 0,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
     type = 'dynamic',
   }: ModelOptions = {},
 ) => {
@@ -84,19 +103,26 @@ export const getCube = (
   const geometry = new THREE.BoxGeometry(...size)
   const material = new THREE.MeshPhysicalMaterial({
     color,
+    transmission,
+    opacity, 
+    transparent: opacity < 1,
+    reflection: reflectivity > 0,
+    reflectivity,
+    roughness,
+    metalness,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
   mesh.rotation.set(...rotation)
   mesh.castShadow = true
-  mesh.receiveShadow = false //default
+  mesh.receiveShadow = true
   scene.add(mesh)
 
   const { rigidBody, collider } = getPhysic(world, {
     position,
     size,
     rotation,
-    restitution: 1,
+    restitution,
     weight,
     density,
     friction,
