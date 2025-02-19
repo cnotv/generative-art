@@ -9,7 +9,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d';
 import terrainTextureAsset from '@/assets/terrain.jpg';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 
@@ -21,16 +20,6 @@ const sphereSize = () => Math.random() * 0.5 + 0.5;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world = new RAPIER.World(gravity);
-
-/**
- * Reflection
- * https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
- * https://threejs.org/examples/#webgl_animation_skinning_ik
- * https://paulbourke.net/panorama/cubemaps/
- */
-const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
-const urls = cubeFaces.map(code => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href);
-const reflection = new THREE.CubeTextureLoader().load( urls );
 
 onMounted(() => {
   init(
@@ -170,15 +159,6 @@ const getGround = (
   let collider = world.createCollider(colliderDesc);
 
   return { ground, collider, texture };
-}
-
-const loadFBX = () => {
-  return new Promise((resolve, reject) => {
-    const loader = new FBXLoader();
-    loader.load('/low_poly.glb', (fbx) => {
-      resolve(fbx);
-    }, undefined, reject);
-  });
 }
 
 /**
