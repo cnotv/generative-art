@@ -5,7 +5,7 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import RAPIER from '@dimforge/rapier3d';
-import { animateTimeline, createLights, getEnvironment } from '@/utils/threeJs';
+import { animateTimeline, createLights, getEnvironment, getModel } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
 import { times } from '@/utils/lodash';
 
@@ -22,12 +22,12 @@ onMounted(() => {
   ), statsEl.value!;
 })
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const config = {
     directional: {
       enabled: true,
       helper: false,
-      intensity: 5,
+      intensity: 2,
     },
     ambient: {
       enabled: true,
@@ -40,18 +40,18 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     setup()
   });
 
-  const setup = () => {
+  const setup = async () => {
     const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas);
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { worldSize: 1000.0 });
 
     const experiments = [
-      getBall(scene, world, { restitution: 0.5 }), // Rubber
-      getBall(scene, world, {size: 5, damping: 8, color: 0xfafafa}), // Balloon
-      getBall(scene, world, {size: 4, weight: 50, restitution: -0.5}), // Bowling
-      getBall(scene, world, {size: 1.5, damping: 1.5, restitution: -0.5, weight: 6, color: 0xffffff}), // Paper
-      getBall(scene, world, {size: 1.5, weight: 5, color: 0xffff00}), // Tennis
-      getBall(scene, world, {size: 0.8, weight: 6, restitution: 0.2, color: 0xffffff}), // Ping Pong
+      getBall(scene, world, { weight: 10,restitution: 0.7, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
+      await getModel(scene, world, 'balloon.glb', {rotation: [-0.5,0,1], scale: [15,15,15], size: 0.5, damping: 1.5, restitution: -0.5, weight: 1, color: 0xff2222, opacity: 0.9}), // Balloon
+      await getModel(scene, world, 'bowling.glb', {scale: [0.4,0.4,0.4], size: 1.2, weight: 50, restitution: -0.3}), // Bowling
+      await getModel(scene, world, 'paper_low.glb', {rotation: [1,3,0], scale: [3,3,3], size: 2, damping: 1.5, restitution: -0.5, weight: 6}), // Paper
+      await getModel(scene, world, 'tennis.glb', {scale: [1.8,1.8,1.8], size: 2, weight: 10, restitution: 0.5}), // Tennis
+      getBall(scene, world, {size: 0.6, weight: 6, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
     ];
 
     const rows = 3;

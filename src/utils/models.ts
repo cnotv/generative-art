@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d';
 import { getPhysic, getTextures } from './threeJs';
-const defaultValues = {}
+
 /**
  * Create a ball with physics, texture, and shadow
  * Friction and bounciness is size based
@@ -29,7 +29,7 @@ export const getBall = (
     transmission = 0,
     type = 'dynamic',
     texture,
-  }: ModelOptions = defaultValues,
+  }: ModelOptions = {},
 ) => {
   const initialValues = { size, position, color }
   // Create and add model
