@@ -5,7 +5,7 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import RAPIER from '@dimforge/rapier3d';
-import { animateTimeline, createLights, getEnvironment, getModel } from '@/utils/threeJs';
+import { animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
 import { times } from '@/utils/lodash';
 
@@ -43,8 +43,25 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   const setup = async () => {
     const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas);
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
-    // getGround(scene, world, { worldSize: 1000.0 });
+    getGround(scene, world, { worldSize: 1000.0 });
 
+
+    const length = 30;
+    const height = 15;
+    const depth = 0.2;
+    const walls = [
+      { position: [0, 0, 0] as CoordinateTuple, size: [length, depth, length] as CoordinateTuple },
+      { position: [-length/2, height/2, 0] as CoordinateTuple, size: [depth, height, length] as CoordinateTuple },
+      { position: [length/2, height/2, 0] as CoordinateTuple, size: [depth, height, length] as CoordinateTuple },
+      { position: [0, height/2, length/2] as CoordinateTuple, size: [length, height, depth] as CoordinateTuple },
+      ].map(({ position, size }) => {
+      getCube(scene, world, {
+        color: 0xcccccc,
+        size,
+        position,
+      })
+    });
+    
     const experiments = [
       getBall(scene, world, { weight: 10,restitution: 0.7, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
       await getModel(scene, world, 'balloon.glb', {rotation: [-0.5,0,1], scale: [15,15,15], size: 0.5, damping: 1.5, restitution: -0.5, weight: 1, color: 0xff2222, opacity: 0.9}), // Balloon
@@ -55,19 +72,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     ];
 
     const rows = 3;
-    const gaps = { x: 22, y: 20 };
+    const gaps = { x: 15, y: 0, z: 15 };
     times(experiments.length, (i) => {
-      const x = -20 + (i % rows) * gaps.x;
-      const y = 5 + Math.floor(i / rows) * -gaps.y;
-      getCube(scene, world, {
-        color: 0xaaaaaa,
-        size: [10, 0.2, 3],
-        position: [x, y, 0],
-        rotation: [0, -0.7, 10],
-      })
-
-      experiments[i].initialValues.position = [x, y + 15, 0]
-      experiments[i].rigidBody.setTranslation({ x, y: y + 10, z: 0 }, true);
+      const x = -17 + (i % rows) * gaps.x;
+      const y = 15;
+      const z = 5 + Math.floor(i / rows) * -gaps.z;
+      experiments[i].initialValues.position = [x, y, z];
+      experiments[i].rigidBody.setTranslation({ x, y, z }, true);
     });
 
     video.record(canvas, route);
@@ -86,7 +97,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       });
       // experiments[0].mesh.position.y -= 0.1;
       animateTimeline([{
-        interval: [10, 300], action: () => {
+        interval: [10, 500], action: () => {
           experiments.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
             rigidBody.resetForces(true);
             rigidBody.resetTorques(true);
