@@ -4,7 +4,22 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { color } from 'three/examples/jsm/nodes/Nodes.js';
+
+export const defaultModelOptions: ModelOptions = {
+  position: [0, 0, 0],
+  color: 0x222222,
+  mass: 1,
+  density: 1,
+  weight: 5,
+  friction: 0,
+  restitution: 0,
+  damping: 0,
+  opacity: 1,
+  reflectivity: 0.5,
+  roughness: 1,
+  metalness: 0,
+  transmission: 0,
+};
 
 export const getEnvironment = (canvas: HTMLCanvasElement) => {
   const renderer = getRenderer(canvas);
@@ -381,7 +396,7 @@ export const getPhysic = (
     rotation,
     position = [0, 0, 0],
     size = [1, 1, 1],
-    boundary = 0,
+    boundary = 0.5,
     restitution = 1,
     friction = 0,
     damping = 0,
