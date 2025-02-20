@@ -95,6 +95,7 @@ export const getCube = (
     roughness = 1,
     metalness = 0,
     transmission = 0,
+    boundary = 0.5,
     type = 'dynamic',
   }: ModelOptions = {},
 ) => {
@@ -110,6 +111,7 @@ export const getCube = (
     reflectivity,
     roughness,
     metalness,
+    boundary
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
