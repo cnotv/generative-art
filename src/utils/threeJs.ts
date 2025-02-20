@@ -21,14 +21,15 @@ export const defaultModelOptions: ModelOptions = {
   transmission: 0,
 };
 
-export const getEnvironment = (canvas: HTMLCanvasElement) => {
+export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
+  camera: { position: [0, 10, -30] },
+}) => {
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();
 
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.z = -30;
-  camera.position.y = 10;
+  camera.position.set(...(options.camera.position as CoordinateTuple));
   const orbit = new OrbitControls(camera, renderer.domElement);
 
   return { renderer, scene, camera, clock, orbit };
