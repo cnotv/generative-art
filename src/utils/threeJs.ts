@@ -112,20 +112,21 @@ export const getGround = (
 ) => {
   const geometry = new THREE.PlaneGeometry(worldSize, worldSize)
   const defaultProps = { color: 0x333333 }
-  const material = new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshPhysicalMaterial({
     ...defaultProps,
     ...path ? { map: getTextures(path)} : {},
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
   mesh.position.set(1, -1, 1)
+  mesh.receiveShadow = true
   scene.add(mesh)
 
-  const size: CoordinateTuple = [worldSize, 0, worldSize]
+  const size: CoordinateTuple = [worldSize, 2, worldSize]
   const { rigidBody, collider } = getPhysic(world, {
     position: mesh.position.toArray(),
     size,
-    boundary: 0.8,
+    boundary: 0.1,
   })
 
   // HELPER: Create a mesh to visualize the collider
