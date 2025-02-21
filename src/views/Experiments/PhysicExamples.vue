@@ -8,6 +8,7 @@ import RAPIER from '@dimforge/rapier3d';
 import { animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
 import { getBall, getCube } from '@/utils/models';
 import { times } from '@/utils/lodash';
+import bowlingTexture from '@/assets/bowling.png';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -65,12 +66,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     
     const experiments = [] as any[];
     const balls = [
-      async (position) => getBall(scene, world, { position, size: 4, weight: 50,restitution: 0.8, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
-      async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 3, damping: 0.8, restitution: -0.5, weight: 5, color: Math.floor(Math.random() * 16777215), opacity: 0.9}), // Balloon
-      async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 1.5, weight: 50, restitution: -0.3}), // Bowling
-      async (position) => await getModel(scene, world, 'paper_low.glb', { position, rotation: [1,3,0], scale: [5,5,5], size: 3, friction: 1, damping: 0.2, restitution: -0.5, weight: 6}), // Paper
-      async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 6, weight: 50, restitution: 0.5}), // Tennis
-      async (position) => getBall(scene, world, {position, size: 3, weight: 50, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
+      async (position) => getBall(scene, world, { position, size: 4, weight: 120,restitution: 0.75, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
+      async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 10, damping: 0.8, restitution: -0.5, weight: 5, color: Math.floor(Math.random() * 16777215), opacity: 0.9}), // Balloon
+      // async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 2, weight: 50, restitution: -0.3}), // Bowling
+      async (position) => getBall(scene, world, { position, size: 15, weight: 50, restitution: -0.3, texture: bowlingTexture, color: 0xffffff, friction: 10}), // Bowling
+      async (position) => await getModel(scene, world, 'paper_low.glb', { position, rotation: [Math.random() * 100,Math.random() * 100,Math.random() * 100], scale: [5,5,5], size: 3, friction: 100, angular: 10, damping: 0.2, restitution: -0.5, weight: 8}), // Paper
+      async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 6, weight: 50, friction: 5, angular: 1, restitution: 0.6}), // Tennis
+      async (position) => getBall(scene, world, {position, size: 3, weight: 40, restitution: 0.8, damping: 0.1, color: 0xffffff, roughness: 0.9}), // Ping Pong
     ];
     const addBall = async (position: CoordinateTuple, pick: number) => {
       experiments.push(await balls[pick](position));
