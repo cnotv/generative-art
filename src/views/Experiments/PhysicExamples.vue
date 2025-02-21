@@ -41,12 +41,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = async () => {
-    const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas, { camera: { position: [-7, 16, -23] } });
+    const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas, { camera: { position: [-35, 80, -115] } });
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { worldSize: 1000.0 });
 
-    const length = 40;
-    const height = 10;
+    const length = 200;
+    const height = 50;
     const depth = 0.2;
     const walls = [
       { position: [0, 0, 0], size: [length, depth, length] },
@@ -63,23 +63,35 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       })
     });
     
-    const experiments = [
-      getBall(scene, world, { weight: 10,restitution: 0.7, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
-      await getModel(scene, world, 'balloon.glb', {rotation: [-0.5,0,1], scale: [15,15,15], size: 0.5, damping: 1.5, restitution: -0.5, weight: 1, color: 0xff2222, opacity: 0.9}), // Balloon
-      await getModel(scene, world, 'bowling.glb', {scale: [0.4,0.4,0.4], size: 0.8, weight: 50, restitution: -0.3}), // Bowling
-      await getModel(scene, world, 'paper_low.glb', {rotation: [1,3,0], scale: [3,3,3], size: 2, damping: 1.5, restitution: -0.5, weight: 6}), // Paper
-      await getModel(scene, world, 'tennis.glb', {scale: [1.8,1.8,1.8], size: 2, weight: 10, restitution: 0.5}), // Tennis
-      getBall(scene, world, {size: 0.6, weight: 6, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
+    const experiments = [] as any[];
+    const balls = [
+      async (position) => getBall(scene, world, { position, size: 4, weight: 10,restitution: 0.7, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
+      async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 0.5, damping: 1.5, restitution: -0.5, weight: 1, color: 0xff2222, opacity: 0.9}), // Balloon
+      async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 0.8, weight: 50, restitution: -0.3}), // Bowling
+      async (position) => await getModel(scene, world, 'paper_low.glb', { position, rotation: [1,3,0], scale: [8,8,8], size: 2, damping: 1.5, restitution: -0.5, weight: 6}), // Paper
+      async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 2, weight: 10, restitution: 0.5}), // Tennis
+      async (position) => getBall(scene, world, {position, size: 3, weight: 6, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
     ];
+    const addBall = async (position: CoordinateTuple, pick: number) => {
+      experiments.push(await balls[pick](position));
+    }
+      
+    document.addEventListener('click', async (event) => {
+      const x = - (event.clientX - window.innerWidth / 2) / 50;
+      const y = - (event.clientY - window.innerHeight) / 50;
+
+      const pick = Math.floor(Math.random() * balls.length);
+      addBall([x, y, 0], pick);
+    });
 
     const rows = 3;
-    const gaps = { x: 15, y: 0, z: 15 };
-    times(experiments.length, (i) => {
-      const x = -17 + (i % rows) * gaps.x;
-      const y = 15;
+    const gaps = { x: 50, y: 10, z: 50 };
+    times(6, (i) => {
+      const x = -(length / 2 - gaps.x) + (i % rows) * gaps.x;
+      const y = 15 + (i + gaps.y);
       const z = 5 + Math.floor(i / rows) * -gaps.z;
-      experiments[i].initialValues.position = [x, y, z];
-      experiments[i].rigidBody.setTranslation({ x, y, z }, true);
+      const pick = i % balls.length
+      addBall([x, y, z], pick);
     });
 
     video.record(canvas, route);
