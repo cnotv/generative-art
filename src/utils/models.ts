@@ -22,6 +22,7 @@ export const getBall = (
     friction = 1,
     restitution = 0,
     damping = 0,
+    angular = 0,
     opacity = 1,
     reflectivity = 0.5,
     roughness = 1,
@@ -39,7 +40,6 @@ export const getBall = (
     transmission,
     opacity, 
     transparent: opacity < 1,
-    reflection: reflectivity > 0,
     reflectivity,
     roughness,
     metalness,
@@ -61,6 +61,7 @@ export const getBall = (
     weight,
     density,
     damping,
+    angular,
     mass,
     shape: 'ball',
     type,
@@ -90,6 +91,7 @@ export const getCube = (
     friction = 1,
     restitution = 1,
     damping = 0,
+    angular = 0,
     opacity = 1,
     reflectivity = 0,
     roughness = 1,
@@ -107,11 +109,9 @@ export const getCube = (
     transmission,
     opacity, 
     transparent: opacity < 1,
-    reflection: reflectivity > 0,
     reflectivity,
     roughness,
     metalness,
-    boundary
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
@@ -129,6 +129,8 @@ export const getCube = (
     weight,
     density,
     damping,
+    angular,
+    boundary,
     mass,
     shape: 'cuboid',
     type,

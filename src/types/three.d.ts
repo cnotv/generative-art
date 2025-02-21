@@ -30,6 +30,7 @@ type Model = THREE.Group<THREE.Object3DEventMap>
 interface CommonOptions {
   boundary?: number
   damping?: number;
+  angular?: number;
   density?: number
   dominance?: number
   friction?: number

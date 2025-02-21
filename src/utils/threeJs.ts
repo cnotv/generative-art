@@ -166,8 +166,7 @@ export const loadFBX = (
             color,
             opacity: 0.9, 
             transparent: opacity < 1,
-            reflection: reflectivity > 0,
-            reflectivity: .5,
+            reflectivity,
             roughness,
             transmission,
             metalness
@@ -215,8 +214,7 @@ export const loadGLTF = (
               color,
               opacity: 0.9, 
               transparent: opacity < 1,
-              reflection: reflectivity > 0,
-              reflectivity: .5,
+              reflectivity,
               roughness,
               transmission,
               metalness
@@ -339,7 +337,9 @@ export const getModel = async (
     weight = 5,
     friction = 0,
     restitution = 1,
+    boundary = 0.5,
     damping = 0,
+    angular = 0,
     type = 'dynamic',
     reflectivity = 0.5,
     roughness = 0.1,
@@ -363,6 +363,8 @@ export const getModel = async (
     weight,
     density,
     friction,
+    boundary,
+    angular,
     damping,
     mass,
     shape: 'ball',
@@ -402,6 +404,7 @@ export const getPhysic = (
     restitution = 1,
     friction = 0,
     damping = 0,
+    angular = 1,
     mass = 1,
     density = 1,
     weight = 1,
@@ -416,6 +419,7 @@ export const getPhysic = (
     .setGravityScale(weight)
     .setDominanceGroup(dominance)
     .setLinearDamping(damping)
+    .setAngularDamping(angular)
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   if (rotation) {
     rigidBody.setRotation(rotation, true)
