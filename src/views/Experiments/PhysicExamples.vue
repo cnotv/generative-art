@@ -65,12 +65,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     
     const experiments = [] as any[];
     const balls = [
-      async (position) => getBall(scene, world, { position, size: 4, weight: 10,restitution: 0.7, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
-      async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 0.5, damping: 1.5, restitution: -0.5, weight: 1, color: 0xff2222, opacity: 0.9}), // Balloon
-      async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 0.8, weight: 50, restitution: -0.3}), // Bowling
-      async (position) => await getModel(scene, world, 'paper_low.glb', { position, rotation: [1,3,0], scale: [8,8,8], size: 2, damping: 1.5, restitution: -0.5, weight: 6}), // Paper
-      async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 2, weight: 10, restitution: 0.5}), // Tennis
-      async (position) => getBall(scene, world, {position, size: 3, weight: 6, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
+      async (position) => getBall(scene, world, { position, size: 4, weight: 50,restitution: 0.8, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
+      async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 3, damping: 0.8, restitution: -0.5, weight: 5, color: 0xff2222, opacity: 0.9}), // Balloon
+      async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 1.5, weight: 50, restitution: -0.3}), // Bowling
+      async (position) => await getModel(scene, world, 'paper_low.glb', { position, rotation: [1,3,0], scale: [5,5,5], size: 3, friction: 1, damping: 0.2, restitution: -0.5, weight: 6}), // Paper
+      async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 6, weight: 50, restitution: 0.5}), // Tennis
+      async (position) => getBall(scene, world, {position, size: 3, weight: 50, restitution: 0.2, color: 0xffffff, roughness: 0.9}), // Ping Pong
     ];
     const addBall = async (position: CoordinateTuple, pick: number) => {
       experiments.push(await balls[pick](position));
@@ -86,10 +86,16 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     const rows = 3;
     const gaps = { x: 50, y: 10, z: 50 };
+    // const gaps = { x: 20, y: 10, z: 20 };
+    const getSign = () => Math.random() > 0.5 ? 1 : -1;
     times(6, (i) => {
+      // const x = getSign() * Math.floor(Math.random() * length / 2 - gaps.x)
+      // const z = getSign() * Math.floor(Math.random() * length / 2 - gaps.z)
+      
       const x = -(length / 2 - gaps.x) + (i % rows) * gaps.x;
-      const y = 15 + (i + gaps.y);
+      const y = 50 + (i + gaps.y);
       const z = 5 + Math.floor(i / rows) * -gaps.z;
+
       const pick = i % balls.length
       addBall([x, y, z], pick);
     });
@@ -110,7 +116,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       });
       // experiments[0].mesh.position.y -= 0.1;
       animateTimeline([{
-        interval: [10, 300], action: () => {
+        interval: [10, 3000], action: () => {
           experiments.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
             rigidBody.resetForces(true);
             rigidBody.resetTorques(true);
