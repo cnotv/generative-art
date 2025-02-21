@@ -81,7 +81,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       const y = - (event.clientY - window.innerHeight) / 50;
 
       const pick = Math.floor(Math.random() * balls.length);
-      addBall([x, y, 0], pick);
+      addBall([x, 70, y], pick);
     });
 
     const rows = 3;
