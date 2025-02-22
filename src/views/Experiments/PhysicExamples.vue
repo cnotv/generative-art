@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import { animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
+import { animateElements, animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
 import { getBall, getWalls } from '@/utils/models';
 import { times } from '@/utils/lodash';
 import bowlingTexture from '@/assets/bowling.png';
