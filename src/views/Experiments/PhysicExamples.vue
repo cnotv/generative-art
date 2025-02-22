@@ -39,10 +39,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   });
 
   const setup = async () => {
+    const length = 200;
     const { renderer, scene, camera, clock, orbit, world } = getEnvironment(canvas, { camera: { position: [-35, 80, -115] } });
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { worldSize: 1000.0 });
-    getWalls(scene, world, { length: 200, height: 50, depth: 0.2 });
+    getWalls(scene, world, { length, height: 50, depth: 0.2 });
 
     let experiments = [] as any[];
     const balls = [
@@ -67,27 +68,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     });
 
     const generateBalls = (amount: number, list: any[]) => {
-      const rows = 3;
       const gaps = { x: 50, y: 10, z: 50 };
-      // const gaps = { x: 20, y: 10, z: 20 };
       const getSign = () => Math.random() > 0.5 ? 1 : -1;
 
       times(amount, (i) => {
-        const x = getSign() * Math.floor(Math.random() * length / 2 - gaps.x)
-        const z = getSign() * Math.floor(Math.random() * length / 2 - gaps.z)
-        
+        // const rows = 3;
         // const x = -(length / 2 - gaps.x) + (i % rows) * gaps.x;
         // const z = 5 + Math.floor(i / rows) * -gaps.z;
+        const x = getSign() * Math.floor(Math.random() * length / 2 - gaps.x)
+        const z = getSign() * Math.floor(Math.random() * length / 2 - gaps.z)
         const y = 50 + (i + gaps.y);
-        // const y = 50;
-
         const pick = i % list.length
         addBall([x, y, z], pick, list);
       });
     }
 
     video.record(canvas, route);
-
+    generateBalls(500, [balls[0]]);
     function animate() {
       stats.start(route);
       const delta = clock.getDelta();
@@ -99,10 +96,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
       animateTimeline([
         {
-          interval: [1, 300],
+          interval: [1, 500],
           actionStart: (loop) => {
             experiments = removeElements(scene, world, experiments);
-            generateBalls(100, [balls[loop % balls.length]]);
+            generateBalls(500, [balls[loop % balls.length]]);
           },
           action: () => {
             experiments = resetAnimation(experiments);
