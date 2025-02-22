@@ -462,6 +462,7 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
   timeline.forEach(({ start, end, frequency, delay, interval, action, actionStart }) => {
     let cycle = 0;
     let frameCycle = 0;
+    let loop = 0;
     if (start && frame < start) return;
     if (end && frame > end) return;
     if (delay && frame < delay) return;
@@ -469,11 +470,16 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
       const [length, pause] = interval;
       cycle = length + pause;
       frameCycle = (frame + (delay ?? 0) + (start ?? 0)) % cycle;
+      loop = frame / cycle;
       if (frameCycle >= length) return;
     }
+
     if (!frequency || (frequency && frame % frequency === 0)) {
-      const firstFrameAction = actionStart && frame === 0;
-      firstFrameAction ? action(args) : actionStart!(args);
+      if (actionStart && frameCycle === 0) {
+        actionStart(loop, args);
+      } else {
+        action(args)
+      }
     }
   });
 }
