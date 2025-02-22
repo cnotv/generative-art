@@ -44,25 +44,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     getGround(scene, world, { worldSize: 1000.0 });
     getWalls(scene, world, { length: 200, height: 50, depth: 0.2 });
 
-    const length = 200;
-    const height = 50;
-    const depth = 0.2;
-    const walls = [
-      { position: [0, 0, 0], size: [length, depth, length] },
-      { position: [-length/2, height/2, 0], size: [depth, height, length] },
-      { position: [length/2, height/2, 0], size: [depth, height, length] },
-      { position: [0, height/2, length/2], size: [length, height, depth] },
-      { position: [0, height/2, -length/2], size: [length, height, depth] },
-      ].map(({ position, size }) => {
-      getCube(scene, world, {
-        color: 0xcccccc,
-        size,
-        position,
-        type: 'fixed',
-      })
-    });
-    
-    const experiments = [] as any[];
+    let experiments = [] as any[];
     const balls = [
       async (position) => getBall(scene, world, { position, size: 4, weight: 120,restitution: 0.75, metalness: 0.3, reflectivity: 0.2, roughness: 0.8, transmission: 0.5, color: 0xff3333 }), // Rubber
       async (position) => await getModel(scene, world, 'balloon.glb', { position, rotation: [-0.5,0,1], scale: [70,70,70], size: 10, damping: 0.8, restitution: -0.5, weight: 5, color: Math.floor(Math.random() * 16777215), opacity: 0.9}), // Balloon
@@ -72,8 +54,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       async (position) => await getModel(scene, world, 'tennis.glb', { position, scale: [6,6,6], size: 6, weight: 50, friction: 5, angular: 1, restitution: 0.6}), // Tennis
       async (position) => getBall(scene, world, {position, size: 3, weight: 40, restitution: 0.8, damping: 0.1, color: 0xffffff, roughness: 0.9}), // Ping Pong
     ];
-    const addBall = async (position: CoordinateTuple, pick: number) => {
-      experiments.push(await balls[pick](position));
+    const addBall = async (position: CoordinateTuple, pick: number, list = balls) => {
+      experiments.push(await list[pick](position));
     }
       
     document.addEventListener('click', async (event) => {
@@ -84,21 +66,39 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       addBall([x, 70, y], pick);
     });
 
-    const rows = 3;
-    const gaps = { x: 50, y: 10, z: 50 };
-    // const gaps = { x: 20, y: 10, z: 20 };
-    const getSign = () => Math.random() > 0.5 ? 1 : -1;
-    times(6, (i) => {
-      // const x = getSign() * Math.floor(Math.random() * length / 2 - gaps.x)
-      // const z = getSign() * Math.floor(Math.random() * length / 2 - gaps.z)
-      
-      const x = -(length / 2 - gaps.x) + (i % rows) * gaps.x;
-      const y = 50 + (i + gaps.y);
-      const z = 5 + Math.floor(i / rows) * -gaps.z;
+    const generateBalls = (amount: number, list: any[]) => {
+      const rows = 3;
+      const gaps = { x: 50, y: 10, z: 50 };
+      // const gaps = { x: 20, y: 10, z: 20 };
+      const getSign = () => Math.random() > 0.5 ? 1 : -1;
 
-      const pick = i % balls.length
-      addBall([x, y, z], pick);
-    });
+      times(amount, (i) => {
+        const x = getSign() * Math.floor(Math.random() * length / 2 - gaps.x)
+        const z = getSign() * Math.floor(Math.random() * length / 2 - gaps.z)
+        
+        // const x = -(length / 2 - gaps.x) + (i % rows) * gaps.x;
+        // const z = 5 + Math.floor(i / rows) * -gaps.z;
+        const y = 50 + (i + gaps.y);
+        // const y = 50;
+
+        const pick = i % list.length
+        addBall([x, y, z], pick, list);
+      });
+    }
+
+    const animations = times(6, (i) => ({
+      start: 1000 * i, end: 1000 * i + 1, action: () => {
+        removeElements(experiments);
+        generateBalls(100, [balls[i]]);
+    }}));
+
+    const removeElements = (elements: any[]) => {
+      elements.forEach(({ mesh, rigidBody }) => {
+        scene.remove(mesh);
+        world.removeRigidBody(rigidBody);
+      });
+      elements = [];
+    }
 
     video.record(canvas, route);
 
@@ -115,14 +115,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
         mesh.rotation.set(rotation.x, rotation.y, rotation.z);
       });
       // experiments[0].mesh.position.y -= 0.1;
-      animateTimeline([{
-        interval: [10, 3000], action: () => {
-          experiments.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
-            rigidBody.resetForces(true);
-            rigidBody.resetTorques(true);
-            rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-            rigidBody.setTranslation({ x, y, z }, true);
-          });
+
+      animateTimeline([
+        // ...animations,
+        {
+          start: 0, end: 1, action: () => {
+            removeElements(experiments);
+            generateBalls(100, [balls[1]]);
         }},
         {interval: [10, 500], action: () => animateElements(experiments)},
       ], frame);
