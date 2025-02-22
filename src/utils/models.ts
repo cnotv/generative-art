@@ -29,6 +29,8 @@ export const getBall = (
     metalness = 0,
     transmission = 0,
     type = 'dynamic',
+    castShadow = true,
+    receiveShadow = true,
     texture,
   }: ModelOptions = {},
 ) => {
@@ -47,8 +49,8 @@ export const getBall = (
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
   scene.add(mesh)
 
   const { rigidBody, collider } = getPhysic(world, {
@@ -98,6 +100,8 @@ export const getCube = (
     metalness = 0,
     transmission = 0,
     boundary = 0.5,
+    castShadow = true,
+    receiveShadow = true,
     type = 'dynamic',
   }: ModelOptions = {},
 ) => {
@@ -116,8 +120,8 @@ export const getCube = (
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
   mesh.rotation.set(...rotation)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
   scene.add(mesh)
 
   const { rigidBody, collider } = getPhysic(world, {
@@ -146,6 +150,7 @@ export const getWalls = (
     length = 200,
     height = 50,
     depth = 0.2,
+    opacity = 1,
   } = {},
 ) => ([
   { position: [0, 0, 0], size: [length, depth, length] },
@@ -156,6 +161,7 @@ export const getWalls = (
 ].map(({ position, size }) => 
   getCube(scene, world, {
     color: 0xcccccc,
+    opacity,
     size,
     position,
     type: 'fixed',

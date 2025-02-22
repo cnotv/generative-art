@@ -54,6 +54,8 @@ interface ModelOptions extends CommonOptions{
   rotation?: CoordinateTuple;
   scale?: CoordinateTuple;
   shape?: 'cuboid' | 'ball'
+  castShadow?: boolean;
+  receiveShadow?: boolean;
   texture?: string;
   textures?: {
     random: boolean;
