@@ -474,3 +474,16 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
     }
   });
 }
+
+/**
+ * Bind physic to models to update animation
+ * @param elements 
+ */
+export const animateElements = (elements: any[]) => {
+  elements.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
+    rigidBody.resetForces(true);
+    rigidBody.resetTorques(true);
+    rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+    rigidBody.setTranslation({ x, y, z }, true);
+  });
+}

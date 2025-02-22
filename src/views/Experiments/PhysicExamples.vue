@@ -124,6 +124,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
             rigidBody.setTranslation({ x, y, z }, true);
           });
         }},
+        {interval: [10, 500], action: () => animateElements(experiments)},
       ], frame);
 
       orbit.update();
