@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import { bindAnimatedElements, animateTimeline, createLights, getEnvironment, getGround, getModel, resetAnimation } from '@/utils/threeJs';
+import { bindAnimatedElements, animateTimeline, createLights, getEnvironment, getGround, getModel, resetAnimation, removeElements } from '@/utils/threeJs';
 import { getBall, getWalls } from '@/utils/models';
 import { times } from '@/utils/lodash';
 import bowlingTexture from '@/assets/bowling.png';
@@ -86,22 +86,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       });
     }
 
-    const animations = times(6, (i) => ({
-      start: 1000 * i, end: 1000 * i + 1, action: () => {
-        removeElements(experiments);
-        generateBalls(100, [balls[i]]);
-    }}));
-
-    const removeElements = (elements: any[]) => {
-      elements.forEach(({ mesh, rigidBody }) => {
-        scene.remove(mesh);
-        world.removeRigidBody(rigidBody);
-      });
-      elements = [];
-
-      return elements;
-    }
-
     video.record(canvas, route);
 
     function animate() {
@@ -117,11 +101,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
         {
           interval: [10, 500],
           actionStart: () => {
-            experiments = removeElements(experiments);
+            experiments = removeElements(scene, world, experiments);
             generateBalls(100, [balls[0]]);
           },
           action: () => {
-            experiments = resetAnimation(experiments);
+            resetAnimation(experiments);
           }
         },
       ], frame);

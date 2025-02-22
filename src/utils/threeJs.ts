@@ -505,3 +505,19 @@ export const resetAnimation = (elements: any[]) => {
 
   return elements;
 }
+
+/**
+ * Remove elements from the threeJS scene and Rapier world, then return the emptied list
+ * @param scene 
+ * @param world 
+ * @param elements 
+ * @returns 
+ */
+export const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements: any[]) => {
+  elements.forEach(({ mesh, rigidBody }) => {
+    scene.remove(mesh);
+    world.removeRigidBody(rigidBody);
+  });
+
+  return [];
+}
