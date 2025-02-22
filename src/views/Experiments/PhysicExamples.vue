@@ -99,7 +99,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
       animateTimeline([
         {
-          interval: [10, 500],
+          interval: [1, 300],
           actionStart: (loop) => {
             experiments = removeElements(scene, world, experiments);
             generateBalls(100, [balls[loop % balls.length]]);
