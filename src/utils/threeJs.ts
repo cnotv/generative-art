@@ -109,11 +109,11 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  { worldSize, showBodyHelpers }: any,
+  { worldSize, showBodyHelpers, color = 0x333333 }: any,
   path?: string,
 ) => {
   const geometry = new THREE.PlaneGeometry(worldSize, worldSize)
-  const defaultProps = { color: 0x333333 }
+  const defaultProps = { color }
   const material = new THREE.MeshPhysicalMaterial({
     ...defaultProps,
     ...path ? { map: getTextures(path)} : {},
