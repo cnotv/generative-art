@@ -459,18 +459,21 @@ export const getPhysic = (
   { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
  */
 export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
-  timeline.forEach(({ start, end, frequency, delay, interval, action }) => {
+  timeline.forEach(({ start, end, frequency, delay, interval, action, actionStart }) => {
+    let cycle = 0;
+    let frameCycle = 0;
     if (start && frame < start) return;
     if (end && frame > end) return;
     if (delay && frame < delay) return;
     if (interval) {
       const [length, pause] = interval;
-      const cycle = length + pause;
-      const frameCycle = (frame + (delay ?? 0) + (start ?? 0)) % cycle;
+      cycle = length + pause;
+      frameCycle = (frame + (delay ?? 0) + (start ?? 0)) % cycle;
       if (frameCycle >= length) return;
     }
     if (!frequency || (frequency && frame % frequency === 0)) {
-      action(args);
+      const firstFrameAction = actionStart && frame === 0;
+      firstFrameAction ? action(args) : actionStart!(args);
     }
   });
 }
@@ -479,11 +482,26 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
  * Bind physic to models to update animation
  * @param elements 
  */
-export const animateElements = (elements: any[]) => {
+export const bindAnimatedElements = (elements: any[]) => {
+  elements.forEach(({ mesh, rigidBody }) => {
+    const position = rigidBody.translation();
+    mesh.position.set(position.x, position.y, position.z);
+    const rotation = rigidBody.rotation();
+    mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+  });
+}
+
+/**
+ * Reset models and bodies to their initial state
+ * @param elements 
+ */
+export const resetAnimation = (elements: any[]) => {
   elements.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
     rigidBody.resetForces(true);
     rigidBody.resetTorques(true);
     rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
     rigidBody.setTranslation({ x, y, z }, true);
   });
+
+  return elements;
 }

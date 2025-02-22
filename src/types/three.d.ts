@@ -66,7 +66,8 @@ interface ModelConditions {
 }
 
 interface Timeline {
-  action: (element: any) => void;
+  action: (element?: any) => void;
+  actionStart?: (element?: any) => void;
   start?: number;
   end?: number;
   frequency?: number;
