@@ -24,6 +24,8 @@ export const defaultModelOptions: ModelOptions = {
 export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 10, -30] },
 }) => {
+  const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+  const world = new RAPIER.World(gravity);
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();
@@ -32,7 +34,7 @@ export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   camera.position.set(...(options.camera.position as CoordinateTuple));
   const orbit = new OrbitControls(camera, renderer.domElement);
 
-  return { renderer, scene, camera, clock, orbit };
+  return { renderer, scene, camera, clock, orbit, world };
 }
 
 export const getOffset = (model: Model, config: any) => {

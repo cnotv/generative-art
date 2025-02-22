@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import RAPIER from '@dimforge/rapier3d';
 import { animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
 import { getBall, getWalls } from '@/utils/models';
 import { times } from '@/utils/lodash';
@@ -13,8 +12,6 @@ import bowlingTexture from '@/assets/bowling.png';
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-let gravity = { x: 0.0, y: -9.81, z: 0.0 };
-let world = new RAPIER.World(gravity);
 
 onMounted(() => {
   init(
