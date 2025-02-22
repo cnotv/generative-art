@@ -6,7 +6,7 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import RAPIER from '@dimforge/rapier3d';
 import { animateTimeline, createLights, getEnvironment, getGround, getModel } from '@/utils/threeJs';
-import { getBall, getCube } from '@/utils/models';
+import { getBall, getWalls } from '@/utils/models';
 import { times } from '@/utils/lodash';
 import bowlingTexture from '@/assets/bowling.png';
 
@@ -45,6 +45,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const { renderer, scene, camera, clock, orbit } = getEnvironment(canvas, { camera: { position: [-35, 80, -115] } });
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { worldSize: 1000.0 });
+    getWalls(scene, world, { length: 200, height: 50, depth: 0.2 });
 
     const length = 200;
     const height = 50;
