@@ -1,4 +1,3 @@
-import { stats } from './stats';
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
@@ -30,7 +29,7 @@ export const defaultModelOptions: ModelOptions = {
  * Animation allows to define a timeline with looped actions, as well as a before and after function.
  * Stats, configuration and video are handled by other utilities and added by default.
  * @param {stats, route, canvas} 
- * @returns 
+ * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
 export const getTools = ({stats, route, canvas}: any  ) => {
   const clock = new THREE.Clock();
@@ -107,6 +106,12 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }
 }
 
+/**
+ * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
+ * @param canvas 
+ * @param options 
+ * @returns 
+ */
 export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 10, -30] },
 }) => {
@@ -141,6 +146,12 @@ export const getLookAt = (model: Model, config: any) => {
   return lookAt
 }
 
+/**
+ * Set given camera to third person view
+ * @param camera 
+ * @param config 
+ * @param model 
+ */
 export const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
   config: any,
@@ -164,6 +175,12 @@ export const getRenderer = (canvas: HTMLCanvasElement) => {
   return renderer;
 }
 
+/**
+ * Create and return default lights
+ * @param scene 
+ * @param { directionalLightIntensity } 
+ * @returns 
+ */
 export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: {directionalLightIntensity?: number} = {}) => {
   // Add directional light with shadows
   const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
@@ -192,6 +209,13 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
   return { directionalLight, ambientLight };
 }
 
+/**
+ * Create and return ground with physic, helper and texture
+ * @param scene 
+ * @param world 
+ * @param { size, helpers, color, texture } 
+ * @returns 
+ */
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -321,6 +345,12 @@ export const loadGLTF = (
   });
 }
 
+/**
+ * Attach animations to a model
+ * @param model 
+ * @param fileName 
+ * @returns 
+ */
 export const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve, reject) => {
     // Add animation
@@ -334,6 +364,12 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
   });
 }
 
+/**
+ * Populate a given area with a given amount of instances
+ * @param config 
+ * @param groundSize 
+ * @returns 
+ */
 export const getInstanceConfig = (config: InstanceConfig, groundSize: CoordinateTuple) => times(config.amount, () => {
   const size = Math.random() * config.size + config.sizeDelta;
   const getPosition = () => Math.random() * groundSize[0]/config.area - groundSize[0]/config.area/2
@@ -346,6 +382,13 @@ export const getInstanceConfig = (config: InstanceConfig, groundSize: Coordinate
 });
 
 // https://threejs.org/docs/#api/en/objects/InstancedMesh
+/**
+ * Create multiple instances of a given mesh, based on a configuration
+ * @param mesh 
+ * @param scene 
+ * @param options 
+ * @returns 
+ */
 export const instanceMatrixMesh = (
   mesh: Model,
   scene: THREE.Scene,
@@ -376,6 +419,12 @@ export const instanceMatrixMesh = (
   });
 }
 
+/**
+ * Generate multiple instances for a model based on a configuration
+ * @param model 
+ * @param scene 
+ * @param options 
+ */
 export const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, scene: THREE.Scene, options: ModelOptions[]): Model => {
   model.traverse((child) => {
     if (child.isMesh) {
@@ -412,6 +461,14 @@ export const getTextures = (img: string) => {
   return texture;
 }
 
+/**
+ * Load any type of mode, apply default values and add physic to it
+ * @param scene 
+ * @param world 
+ * @param path 
+ * @param param3 
+ * @returns 
+ */
 export const getModel = async (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -574,7 +631,7 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
 }
 
 /**
- * Bind physic to models to update animation
+ * Bind physic to models to animate them
  * @param elements 
  */
 export const bindAnimatedElements = (elements: any[]) => {
@@ -587,7 +644,7 @@ export const bindAnimatedElements = (elements: any[]) => {
 }
 
 /**
- * Reset models and bodies to their initial state
+ * Reset models and bodies to their initial state (position, rotation, forces, and torques)
  * @param elements 
  */
 export const resetAnimation = (elements: any[]) => {
