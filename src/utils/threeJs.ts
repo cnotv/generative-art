@@ -1,9 +1,11 @@
+import { stats } from './stats';
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { video } from '@/utils/video';
 
 export const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
@@ -20,6 +22,90 @@ export const defaultModelOptions: ModelOptions = {
   metalness: 0,
   transmission: 0,
 };
+
+/**
+ * Initialize ThreeJS and Rapier and retrieve common tools.
+ * Add lights, ground, and camera to the scene with default values.
+ * Configuration passed through the setup function.
+ * Animation allows to define a timeline with looped actions, as well as a before and after function.
+ * Stats, configuration and video are handled by other utilities and added by default.
+ * @param {stats, route, canvas} 
+ * @returns 
+ */
+export const getTools = ({stats, route, canvas}: any  ) => {
+  const clock = new THREE.Clock();
+  let delta = 0;
+  let frame = 0;
+  const { renderer, scene, camera, orbit, world } = getEnvironment(canvas, { camera: { position: [-35, 80, -115] } });
+  video.record(canvas, route);
+
+  /**
+   * Setup scene
+   * @param config Configuration for camera, ground and lights
+   * @param defineSetup Actions required to be performed before the animation loop
+   */
+  const setup = ({
+    config = {},
+    defineSetup = () => {},
+  }: {
+    config?: {
+      camera?: { position?: CoordinateTuple },
+      ground?: { size?: number } | false
+      lights?: { directional?: { intensity?: number } } | false
+    },
+    defineSetup?: () => void
+  }) => {
+    if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
+    if (config.ground !== false) getGround(scene, world, { size: config?.ground?.size });
+    defineSetup();
+  };
+
+  /**
+   * The animation loop.
+   * @param beforeTimeline Actions required to be performed before the timeline
+   * @param afterTimeline Actions required to be performed after the timeline
+   * @param timelines List of animations and loops
+   */
+  const animate = ({
+    beforeTimeline = () => {},
+    afterTimeline = () => {},
+    timelines = []
+  }: {
+    beforeTimeline?: () => void,
+    afterTimeline?: () => void,
+    timelines?: { list: Timeline[], args: any }[]
+  }) => { 
+    function runAnimation() {
+      if (stats) stats.start(route);
+      delta = clock.getDelta();
+      frame = requestAnimationFrame(runAnimation);
+      world.step();
+  
+      beforeTimeline();
+      timelines.forEach(({ list, args }) => animateTimeline(list, frame, args));
+      afterTimeline();
+  
+      orbit.update();
+      renderer.render( scene, camera );
+      video.stop(renderer.info.render.frame ,route);
+      if (stats) stats.end(route);
+    }
+    runAnimation();
+  };
+  
+  return {
+    setup,
+    animate,
+    clock,
+    delta,
+    frame,
+    renderer,
+    scene,
+    camera,
+    orbit,
+    world
+  }
+}
 
 export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 10, -30] },
@@ -109,14 +195,18 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  { worldSize, showBodyHelpers, color = 0x333333 }: any,
-  path?: string,
+  {
+    size,
+    helpers,
+    color = 0x333333,
+    texture,
+  }: any,
 ) => {
-  const geometry = new THREE.PlaneGeometry(worldSize, worldSize)
+  const geometry = new THREE.PlaneGeometry(size, size)
   const defaultProps = { color }
   const material = new THREE.MeshPhysicalMaterial({
     ...defaultProps,
-    ...path ? { map: getTextures(path)} : {},
+    ...texture ? { map: getTextures(texture)} : {},
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
@@ -124,16 +214,15 @@ export const getGround = (
   mesh.receiveShadow = true
   scene.add(mesh)
 
-  const size: CoordinateTuple = [worldSize, 2, worldSize]
   const { rigidBody, collider } = getPhysic(world, {
     position: mesh.position.toArray(),
-    size,
+    size: [size, 2, size],
     boundary: 0.1,
   })
 
   // HELPER: Create a mesh to visualize the collider
   const helper = new THREE.BoxHelper(mesh, 0x000000)
-  if (showBodyHelpers) {
+  if (helpers) {
     scene.add(helper)
   }
 

@@ -42,7 +42,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     const length = 25;
     const { renderer, scene, camera, clock, orbit, world } = getEnvironment(canvas, { camera: { position: [-35, 100, -100] } });
     createLights(scene, {directionalLightIntensity: config.directional.intensity });
-    // getGround(scene, world, { worldSize: 1000.0 });
+    // getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 });
 
     let experiments = [] as any[];
