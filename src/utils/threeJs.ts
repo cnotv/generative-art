@@ -35,7 +35,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
-  const { renderer, scene, camera, orbit, world } = getEnvironment(canvas, { camera: { position: [-35, 80, -115] } });
+  const { renderer, scene, camera, orbit, world } = getEnvironment(canvas);
   video.record(canvas, route);
 
   /**
@@ -56,6 +56,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }) => {
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, { size: config?.ground?.size });
+    if (config?.camera?.position) camera.position.set(...(config.camera.position as CoordinateTuple));
     defineSetup();
   };
 
@@ -72,7 +73,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }: {
     beforeTimeline?: () => void,
     afterTimeline?: () => void,
-    timelines?: { list: Timeline[], args: any }[]
+    timelines?: { list: Timeline[], args?: any }[]
   }) => { 
     function runAnimation() {
       if (stats) stats.start(route);
