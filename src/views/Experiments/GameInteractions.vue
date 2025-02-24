@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import { getModel, getTools } from '@/utils/threeJs';
+import { createLights, getEnvironment, getGround, getModel, getTools } from '@/utils/threeJs';
 import { getBall, getWalls } from '@/utils/models';
 
 const statsEl = ref(null)
@@ -28,6 +28,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
   }, () => {
+    createScene()
+  });
+
+  const createScene = async () => {
     const { animate, setup, scene, world } = getTools({ stats, route, canvas });
     setup({
       config: {
@@ -40,7 +44,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       }
     });
     animate({ beforeTimeline: () => getBall(scene, world, {position: [0, 10, 0], size: 3, weight: 40, restitution: 0.8, damping: 0.1, color: 0xffffff, roughness: 0.9})});
-  });
+  }
+  createScene();
 }
 </script>
 
