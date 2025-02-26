@@ -260,6 +260,7 @@ export const loadFBX = (
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
+    material = false,
     color,
     opacity = 1,
     reflectivity = 0.5,
@@ -278,15 +279,17 @@ export const loadFBX = (
       model.receiveShadow = false; 
       model.traverse((child) => {
         if (child.isMesh) {
-          child.material = new THREE.MeshPhysicalMaterial({
-            color,
-            opacity: 0.9, 
-            transparent: opacity < 1,
-            reflectivity,
-            roughness,
-            transmission,
-            metalness
-          });
+          if (material) {
+            child.material = new THREE.MeshPhysicalMaterial({
+              color,
+              opacity: 0.9, 
+              transparent: opacity < 1,
+              reflectivity,
+              roughness,
+              transmission,
+              metalness
+            });
+          }
           child.rotation.set(...rotation);
           child.castShadow = true;
           child.receiveShadow = true;
