@@ -221,11 +221,18 @@ export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
-    size,
+    size = 100,
+    position = [1, -1, 1],
     helpers,
     color = 0x333333,
     texture,
-  }: any,
+  }: {
+    size?: number,
+    position?: CoordinateTuple,
+    helpers?: boolean,
+    color?: number,
+    texture?: string,
+  },
 ) => {
   const geometry = new THREE.PlaneGeometry(size, size)
   const defaultProps = { color }
@@ -235,7 +242,7 @@ export const getGround = (
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
-  mesh.position.set(1, -1, 1)
+  mesh.position.set(...position)
   mesh.receiveShadow = true
   scene.add(mesh)
 
