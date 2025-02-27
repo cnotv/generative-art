@@ -43,7 +43,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     });
     setup({
       config: {
-        camera: { position: [-35, 50, -200] },
+        camera: { position: [-35, 50, 200] },
         ground: { size: 100000.0 },
         lights: { directional: { intensity: config.directional.intensity } },
       },
@@ -55,7 +55,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           "goomba.glb",
           {
             position: [0, 3, 0],
-            rotation: [0, 3, 0],
             scale: [0.3, 0.3, 0.3],
             size: 3,
             restitution: -1,
@@ -78,8 +77,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   action: () => {
                     console.log("forward", getFrame());
                     updateAnimation(mixer, actions, getDelta(), 10);
-                    mesh.position.z -= 0.5;
-                    mesh.rotation.y = 0;
+                    mesh.position.z += 0.5;
+                    mesh.rotation.y = 3;
                   },
                 },
                 {
@@ -88,8 +87,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   action: () => {
                     console.log("backward", getFrame());
                     updateAnimation(mixer, actions, getDelta(), 10);
-                    mesh.position.z += 0.5;
-                    mesh.rotation.y = 3;
+                    mesh.position.z -= 0.5;
+                    mesh.rotation.y = 0;
                   },
                 },
               ],
