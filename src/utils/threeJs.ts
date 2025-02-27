@@ -72,11 +72,11 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
-    timelines = []
+    timeline = []
   }: {
     beforeTimeline?: () => void,
     afterTimeline?: () => void,
-    timelines?: { list: Timeline[], args?: any }[]
+    timeline?: Timeline[]
   }) => { 
     function runAnimation() {
       if (stats) stats.start(route);
@@ -85,7 +85,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
       world.step();
   
       beforeTimeline();
-      timelines.forEach(({ list, args }) => animateTimeline(list, frame, args));
+      animateTimeline(timeline, frame);
       afterTimeline();
   
       orbit.update();
@@ -634,7 +634,7 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
     if (interval) {
       const [length, pause] = interval;
       cycle = length + pause;
-      frameCycle = (frame + (delay ?? 0) + (start ?? 0)) % cycle;
+      frameCycle = (frame - (delay ?? 0) + (start ?? 0)) % cycle;
       loop = frame / cycle;
       if (frameCycle >= length) return;
     }

@@ -63,35 +63,28 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           }
         );
         elements.push(mesh);
-        // rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
 
         animate({
           beforeTimeline: () => {
             // bindAnimatedElements(elements);
           },
-          timelines: [
+          timeline: [
             {
-              list: [
-                {
-                  interval: [200, 400],
-                  action: () => {
-                    console.log("forward", getFrame());
-                    updateAnimation(mixer, actions.run, getDelta(), 10);
-                    mesh.position.z += 0.5;
-                    mesh.rotation.y = 3;
-                  },
-                },
-                {
-                  interval: [200, 400],
-                  delay: 200,
-                  action: () => {
-                    console.log("backward", getFrame());
-                    updateAnimation(mixer, actions.run, getDelta(), 10);
-                    mesh.position.z -= 0.5;
-                    mesh.rotation.y = 0;
-                  },
-                },
-              ],
+              interval: [200, 200],
+              action: () => {
+                updateAnimation(mixer, actions.run, getDelta(), 10);
+                mesh.position.z += 0.5;
+                mesh.rotation.y = 3;
+              },
+            },
+            {
+              interval: [200, 200],
+              delay: 200,
+              action: () => {
+                updateAnimation(mixer, actions.run, getDelta(), 10);
+                mesh.position.z -= 0.5;
+                mesh.rotation.y = 0;
+              },
             },
           ],
         });
