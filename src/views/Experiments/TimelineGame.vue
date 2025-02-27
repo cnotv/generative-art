@@ -76,7 +76,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   interval: [200, 400],
                   action: () => {
                     console.log("forward", getFrame());
-                    updateAnimation(mixer, actions, getDelta(), 10);
+                    updateAnimation(mixer, actions.run, getDelta(), 10);
                     mesh.position.z += 0.5;
                     mesh.rotation.y = 3;
                   },
@@ -86,7 +86,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   delay: 200,
                   action: () => {
                     console.log("backward", getFrame());
-                    updateAnimation(mixer, actions, getDelta(), 10);
+                    updateAnimation(mixer, actions.run, getDelta(), 10);
                     mesh.position.z -= 0.5;
                     mesh.rotation.y = 0;
                   },

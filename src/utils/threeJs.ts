@@ -519,7 +519,7 @@ export const getModel = async (
 
   // Add animation
   const mixer = new THREE.AnimationMixer(mesh);
-  const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : undefined;
+  const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : {};
 
   // Set physic to the model
   const { rigidBody, collider } = getPhysic(world, {

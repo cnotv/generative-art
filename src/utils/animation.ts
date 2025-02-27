@@ -14,15 +14,16 @@ export const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gl
  */
 export const updateAnimation = (
   mixer: THREE.AnimationMixer,
-  actions: Record<string, THREE.AnimationAction>,
+  action: THREE.AnimationAction,
   delta: number = 0,
   speed: number = 0,
 ) => {
   const coefficient = 0.1
+  if (!action) return
   if (delta) {
     mixer.update(delta * speed * coefficient)
-    actions.run.play()
+    action.play()
   } else {
-    actions.run.stop()
+    action.stop()
   }
 }

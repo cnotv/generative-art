@@ -91,8 +91,8 @@ interface ComplexModel {
     position: CoordinateTuple;
     color: number | undefined;
   },
-  actions?: {
-    run: THREE.AnimationAction;
+  actions: {
+    run?: THREE.AnimationAction;
   },
   mixer: THREE.AnimationMixer
 }
