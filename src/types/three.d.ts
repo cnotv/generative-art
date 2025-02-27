@@ -80,3 +80,14 @@ interface Timeline {
 interface PhysicOptions extends CommonOptions {
   shape?: 'cuboid' | 'ball'
 }
+
+interface ComplexModel {
+  mesh: Model,
+  rigidBody: RAPIER.RigidBody,
+  collider: RAPIER.Collider,
+  initialValues: { size: CoordinateTuple, rotation: CoordinateTuple, position: CoordinateTuple, color: string },
+  actions: {
+    run: THREE.AnimationAction;
+  },
+  mixer: THREE.AnimationMixer
+}

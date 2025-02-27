@@ -658,7 +658,7 @@ export const bindAnimatedElements = (elements: any[]) => {
  * Reset models and bodies to their initial state (position, rotation, forces, and torques)
  * @param elements 
  */
-export const resetAnimation = (elements: any[]) => {
+export const resetAnimation = (elements: ComplexModel[]) => {
   elements.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
     rigidBody.resetForces(true);
     rigidBody.resetTorques(true);
