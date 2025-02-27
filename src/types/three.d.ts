@@ -18,12 +18,6 @@ interface BidimensionalCoords {
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 type BlockTypes = 'ground' | 'characters' | 'blocks'
-type PhysicObject = {
-  model: THREE.Object3D
-  rigidBody: RAPIER.RigidBody
-  helper?: THREE.Object3D
-  collider: RAPIER.Collider
-}
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 
