@@ -5,6 +5,7 @@ import RAPIER from '@dimforge/rapier3d';
 import { times } from '@/utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from '@/utils/video';
+import { getAnimationsModel } from './animation';
 
 export const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
@@ -37,6 +38,8 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   let frame = 0;
   const { renderer, scene, camera, orbit, world } = getEnvironment(canvas);
   video.record(canvas, route);
+  const getDelta = () => delta;
+  const getFrame = () => frame;
 
   /**
    * Setup scene
@@ -97,8 +100,8 @@ export const getTools = ({stats, route, canvas}: any  ) => {
     setup,
     animate,
     clock,
-    delta,
-    frame,
+    getDelta,
+    getFrame,
     renderer,
     scene,
     camera,
@@ -185,7 +188,7 @@ export const getRenderer = (canvas: HTMLCanvasElement) => {
 export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: {directionalLightIntensity?: number} = {}) => {
   // Add directional light with shadows
   const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
-  directionalLight.position.set(5, 10, -2);
+  directionalLight.position.set(5, 10, 10);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;
@@ -476,8 +479,8 @@ export const getTextures = (img: string) => {
  * Load any type of mode, apply default values and add physic to it
  * @param scene 
  * @param world 
- * @param path 
- * @param param3 
+ * @param path Path of the file to be loaded
+ * @param {ModelOptions} options Options for the model 
  * @returns 
  */
 export const getModel = async (
@@ -506,14 +509,19 @@ export const getModel = async (
     transmission = 0.2,
     texture,
   }: ModelOptions = {},
-) => {
+): Promise<ComplexModel> => {
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
-  const { model: mesh } = isGLTF
-    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission })
-    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission })
+  const { model: mesh, gltf } = isGLTF
+    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture })
+    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture })
   scene.add(mesh);
 
+  // Add animation
+  const mixer = new THREE.AnimationMixer(mesh);
+  const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : undefined;
+
+  // Set physic to the model
   const { rigidBody, collider } = getPhysic(world, {
     position,
     size,
@@ -530,7 +538,7 @@ export const getModel = async (
     type,
   })
   
-  return { mesh, rigidBody, collider, initialValues }
+  return { mesh, rigidBody, collider, initialValues, actions, mixer }
 }
 
 /**

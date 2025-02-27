@@ -85,8 +85,13 @@ interface ComplexModel {
   mesh: Model,
   rigidBody: RAPIER.RigidBody,
   collider: RAPIER.Collider,
-  initialValues: { size: CoordinateTuple, rotation: CoordinateTuple, position: CoordinateTuple, color: string },
-  actions: {
+  initialValues: {
+    size: number | CoordinateTuple;
+    rotation: CoordinateTuple;
+    position: CoordinateTuple;
+    color: number | undefined;
+  },
+  actions?: {
     run: THREE.AnimationAction;
   },
   mixer: THREE.AnimationMixer
