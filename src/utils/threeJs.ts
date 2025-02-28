@@ -53,12 +53,15 @@ export const getTools = ({stats, route, canvas}: any  ) => {
     config?: {
       camera?: { position?: CoordinateTuple },
       ground?: { size?: number } | false
+      sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
     },
     defineSetup?: () => void
   }) => {
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, { size: config?.ground?.size });
+    if (config.sky !== false) getSky(scene, { texture: config?.sky?.texture, size: config?.sky?.size });
+
     if (config?.camera?.position) camera.position.set(...(config.camera.position as CoordinateTuple));
     defineSetup();
   };
@@ -263,6 +266,60 @@ export const getGround = (
 
   return { mesh, rigidBody, helper, collider }
 }
+
+
+
+export const getSky = (
+  scene: THREE.Scene,
+  {
+    color = 0xaaaaff,
+    size = 1000,
+    texture
+  }: {
+    color?: number
+    texture?: string
+    size?: number
+  }
+) => {
+  const skyGeometry = new THREE.SphereGeometry(size, 32, 32);
+  const loader = new THREE.TextureLoader();
+  const skyTexture = loader.load(new URL(texture!, import.meta.url) as unknown as string)
+  const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide })
+  const model = new THREE.Mesh(skyGeometry, skyMaterial)
+  scene.add(model)
+
+  return { model }
+}
+
+// /**
+//  * Set sky for the scene
+//  * @param scene 
+//  * @param { size, color, texture } 
+//  * @returns 
+//  */
+// export const getSky = (
+//   scene: THREE.Scene,
+//   {
+//     color = 0xaaaaff,
+//     size = 1000,
+//     texture
+//   }: {
+//     color?: number
+//     texture?: string
+//     size?: number
+//   }
+// ) => {
+//   const skyGeometry = new THREE.SphereGeometry(size, 32, 32)
+//   const skyMaterial = new THREE.MeshBasicMaterial({
+//     side: THREE.BackSide,
+//     color,
+//     ...texture ? { map: getTextures(texture)} : {},
+//   })
+//   const model = new THREE.Mesh(skyGeometry, skyMaterial)
+//   scene.add(model)
+
+//   return { model }
+// }
 
 export const loadFBX = (
   fileName: string,
