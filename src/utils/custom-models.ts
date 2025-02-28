@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { getPhysic } from './threeJs';
+import type RAPIER from '@dimforge/rapier3d';
 
 export const getBlade = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)
@@ -88,3 +90,24 @@ export const getRoundedBox = (size: CoordinateTuple, radius: number, smoothness:
   geometry.center();
   return geometry;
 };
+
+export const getCoinBlock = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  { position = [1, 1, 1] }: { position: CoordinateTuple }
+): ComplexModel => {
+  const color = 0xffff00
+  const size: CoordinateTuple = [1.25, 1.25, 1.25]
+  const material = new THREE.MeshBasicMaterial({ color })
+  const geometry = new THREE.CylinderGeometry(10, 10, 0.1, 32)
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(...position)
+  scene.add(mesh)
+  const initialValues = { position, size, color, rotation: mesh.rotation.toArray() as CoordinateTuple }
+  mesh.rotation.x = Math.PI / 2
+
+  const { rigidBody, collider } = getPhysic(world, { position, size, boundary: 0.8 })
+  rigidBody.setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 }, true)
+
+  return { mesh, rigidBody, collider, initialValues }
+}
