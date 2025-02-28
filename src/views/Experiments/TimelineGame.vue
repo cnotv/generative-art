@@ -11,6 +11,8 @@ import {
 } from "@/utils/threeJs";
 import { moveForward, moveJump, updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
+import brickTexture from "@/assets/brick.jpg";
+import { getCoinBlock } from "@/utils/custom-models";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -51,56 +53,87 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         // getWalls(scene, world, { length: 400, height: 150, depth: 0.2 });
-        const goomba = await getModel(scene, world, "goomba.glb", {
-          position: [0, 30, 0],
-          scale: [0.3, 0.3, 0.3],
-          size: 3,
-          restitution: -10,
-          boundary: 0.5,
-          weight: 50,
-        });
-        const { mesh, rigidBody, mixer, actions }: AnimatedComplexModel = goomba;
-        const cube = getCube(scene, world, {
-          size: [30, 30, 30],
-          restitution: -1,
-          position: [0, 15, 0],
-          type: "fixed",
-          boundary: 0.5,
-          // weight: 10,
-        });
-        elements.push(goomba, cube);
+        const getGoomba = async (position: CoordinateTuple) =>
+          getModel(scene, world, "goomba.glb", {
+            position,
+            scale: [0.3, 0.3, 0.3],
+            size: 3,
+            restitution: -10,
+            boundary: 0.5,
+            weight: 50,
+            angular: 10,
+          });
+        // Goomba 1
+        const goomba1 = await getGoomba([0, 30, 0]);
+        const goomba1Timeline = [
+          {
+            interval: [100, 100],
+            action: () => {
+              updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
+              moveForward(goomba1, cubes, 0.5);
+              goomba1.mesh.rotation.y = 0;
+            },
+          },
+          {
+            interval: [100, 100],
+            delay: 100,
+            action: () => {
+              updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
+              moveForward(goomba1, cubes, 0.5, true);
+
+              goomba1.mesh.rotation.y = 3;
+            },
+          },
+          {
+            interval: [30, 170],
+            delay: 145,
+            action: () => {
+              updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
+              moveJump(goomba1, cubes, 0.5, 3);
+
+              goomba1.mesh.rotation.y = 3;
+            },
+          },
+        ];
+
+        const goomba2 = await getGoomba([-60, 30, 0]);
+        const goomba2Timeline = [];
+        const coins = [[0, 3, 2]].map(([x, y, z]) =>
+          getCoinBlock(scene, world, { position: [30 * x, 30 * y + 15, -30 * z] })
+        );
+        const cubes = [
+          [0, 0, 0],
+          [0, 0, 1],
+          [0, 0, 2],
+          [0, 1, 2],
+          [-1, 0, 2],
+          [-2, 0, 0],
+          [-2, 0, 1],
+          [-2, 0, 2],
+        ].map(([x, y, z]) =>
+          getCube(scene, world, {
+            size: [30, 30, 30],
+            restitution: -1,
+            position: [30 * x, 30 * y + 15, -30 * z],
+            type: "fixed",
+            texture: brickTexture,
+            boundary: 0.5,
+            color: 0x999999,
+          })
+        );
+        elements.push(goomba1, goomba2, ...cubes);
 
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements);
           },
           timeline: [
+            ...goomba1Timeline,
+            ...goomba2Timeline,
             {
-              interval: [100, 100],
+              start: 0,
               action: () => {
-                updateAnimation(mixer, actions.run, getDelta(), 10);
-                moveForward(goomba, [cube], 0.5);
-                mesh.rotation.y = 0;
-              },
-            },
-            {
-              interval: [100, 100],
-              delay: 100,
-              action: () => {
-                updateAnimation(mixer, actions.run, getDelta(), 10);
-                moveForward(goomba, [cube], 0.5, true);
-
-                mesh.rotation.y = 3;
-              },
-            },
-            {
-              interval: [30, 170],
-              delay: 145,
-              action: () => {
-                updateAnimation(mixer, actions.run, getDelta(), 10);
-                moveJump(goomba, [cube], 0.5, 3);
-
-                mesh.rotation.y = 3;
+                coins.forEach((coin) => (coin.mesh.rotation.z += 0.05));
               },
             },
           ],
