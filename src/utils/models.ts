@@ -102,9 +102,10 @@ export const getCube = (
     boundary = 0.5,
     castShadow = true,
     receiveShadow = true,
+    texture,
     type = 'dynamic',
   }: ModelOptions = {},
-) => {
+): ComplexModel => {
   const initialValues = { size, rotation, position, color }
   // Create and add model
   const geometry = new THREE.BoxGeometry(...size)
@@ -116,6 +117,7 @@ export const getCube = (
     reflectivity,
     roughness,
     metalness,
+    ...texture ? { map: getTextures(texture)} : {},
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
