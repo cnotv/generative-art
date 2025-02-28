@@ -75,6 +75,13 @@ interface PhysicOptions extends CommonOptions {
   shape?: 'cuboid' | 'ball'
 }
 
+interface AnimatedComplexModel extends ComplexModel {
+  actions: {
+    run?: THREE.AnimationAction;
+  },
+  mixer: THREE.AnimationMixer
+}
+
 interface ComplexModel {
   mesh: Model,
   rigidBody: RAPIER.RigidBody,
@@ -85,8 +92,4 @@ interface ComplexModel {
     position: CoordinateTuple;
     color: number | undefined;
   },
-  actions: {
-    run?: THREE.AnimationAction;
-  },
-  mixer: THREE.AnimationMixer
 }

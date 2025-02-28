@@ -36,7 +36,7 @@ export const updateAnimation = (
  * @param backwards
  */
 export const moveForward = (
-  element: ComplexModel,
+  element: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
   backwards: boolean = false
@@ -69,7 +69,7 @@ export const moveForward = (
 }
 
 export const moveJump = (
-  element: ComplexModel,
+  element: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
   height: number,

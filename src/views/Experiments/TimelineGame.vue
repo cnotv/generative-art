@@ -54,11 +54,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           position: [0, 30, 0],
           scale: [0.3, 0.3, 0.3],
           size: 3,
-          restitution: -1,
+          restitution: -10,
           boundary: 0.5,
           weight: 50,
         });
-        const { mesh, rigidBody, mixer, actions }: ComplexModel = goomba;
+        const { mesh, rigidBody, mixer, actions }: AnimatedComplexModel = goomba;
         const cube = getCube(scene, world, {
           size: [30, 30, 30],
           restitution: -1,

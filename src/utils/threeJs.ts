@@ -509,7 +509,7 @@ export const getModel = async (
     transmission = 0.2,
     texture,
   }: ModelOptions = {},
-): Promise<ComplexModel> => {
+): Promise<AnimatedComplexModel> => {
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
   const { model: mesh, gltf } = isGLTF
