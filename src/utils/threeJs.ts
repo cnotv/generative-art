@@ -52,15 +52,15 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }: {
     config?: {
       camera?: { position?: CoordinateTuple },
-      ground?: { size?: number } | false
+      ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
     },
     defineSetup?: () => void
   }) => {
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
-    if (config.ground !== false) getGround(scene, world, { size: config?.ground?.size });
-    if (config.sky !== false) getSky(scene, { texture: config?.sky?.texture, size: config?.sky?.size });
+    if (config.ground !== false) getGround(scene, world, config?.ground || {});
+    if (config.sky !== false) getSky(scene, config?.sky || {});
 
     if (config?.camera?.position) camera.position.set(...(config.camera.position as CoordinateTuple));
     defineSetup();
@@ -220,14 +220,14 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
  * Create and return ground with physic, helper and texture
  * @param scene 
  * @param world 
- * @param { size, helpers, color, texture } 
+ * @param { size, position, helpers, color, texture } 
  * @returns 
  */
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
-    size = 100,
+    size = 1000,
     position = [1, -1, 1],
     helpers,
     color = 0x333333,
@@ -255,7 +255,7 @@ export const getGround = (
   const { rigidBody, collider } = getPhysic(world, {
     position: mesh.position.toArray(),
     size: [size, 2, size],
-    boundary: 0.1,
+    boundary: 0.5,
   })
 
   // HELPER: Create a mesh to visualize the collider

@@ -44,8 +44,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     });
     setup({
       config: {
-        camera: { position: [-113, 52, 30] },
-        ground: { size: 100000.0 },
+        camera: { position: [-184, 84, 48] },
+        ground: { size: 100000, color: 0x99ddaa },
+        sky: { texture: "../assets/landscape.jpg", size: 700 },
         lights: { directional: { intensity: config.directional.intensity } },
       },
       defineSetup: async () => {
