@@ -106,7 +106,7 @@ export const getCoinBlock = (
   const initialValues = { position, size, color, rotation: mesh.rotation.toArray() as CoordinateTuple }
   mesh.rotation.x = Math.PI / 2
 
-  const { rigidBody, collider } = getPhysic(world, { position, size, boundary: 0.8 })
+  const { rigidBody, collider } = getPhysic(world, { position, size, boundary: 0.8, type: 'kinematicPositionBased' })
   rigidBody.setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 }, true)
 
   return { mesh, rigidBody, collider, initialValues }

@@ -34,7 +34,7 @@ interface CommonOptions {
   restitution?: number
   rotation?: Rotation
   size?: number | CoordinateTuple,
-  type?: 'fixed' | 'dynamic'
+  type?: 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased'
   weight?: number
 }
 
