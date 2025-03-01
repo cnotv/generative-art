@@ -209,7 +209,7 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
   // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
   // scene.add(shadowCameraHelper);
   
-  const ambientLight = new THREE.AmbientLight( 0xffffff, 0.5 );
+  const ambientLight = new THREE.AmbientLight( 0xffffff, 1 );
   ambientLight.position.set(5, 5, 5);
   scene.add(ambientLight)
   
@@ -376,6 +376,7 @@ export const loadGLTF = (
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
+    material = false,
     color,
     opacity = 1,
     reflectivity = 0.5,
@@ -395,7 +396,7 @@ export const loadGLTF = (
       model.rotation.set(...rotation);
       model.traverse((child) => {
         if (child.isMesh) {
-          if (color) {
+          if (material) {
             child.material = new THREE.MeshPhysicalMaterial({
               color,
               opacity: 0.9, 
