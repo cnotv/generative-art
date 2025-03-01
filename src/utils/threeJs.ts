@@ -708,6 +708,51 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
 }
 
 /**
+  * Generate a Timeline from a given loop
+  * Example:
+    const myLoop = {
+      loop: 0,
+      length: 30,
+      action: (direction) => console.log(direction),
+      list: [
+        [3, forward'],
+        [3, left'],
+        [1, jump'],
+        [3, right'],
+        [3, forward'],
+      ]
+    }
+ * @param loop 
+ */
+export const getTimelineLoopModel = ({ loop, length, action, list }: {
+    loop: number, // 0 === infinite
+    length: number,
+    action: (args: any) => void,
+    list: [number, Direction][] // [steps, direction]
+}): Timeline[] => {
+  const total = list.reduce((acc, [step]) => acc + step * length, 0);
+  return list.reduce((timeline, [step, args], index) => {
+    const partial = loop > 0
+      ? {
+        from: total,
+        to: total + step * length,
+      }
+      : {
+        interval: [step * length, total],
+        delay: timeline[index - 1] ? timeline[index - 1].interval![0] : 0,
+      };
+    
+      return [
+      ...timeline,
+      {
+        ...partial,
+        action: () => action(args),
+      }
+    ] as Timeline[];
+  }, [] as Timeline[]);
+}
+
+/**
  * Bind physic to models to animate them
  * @param elements 
  */

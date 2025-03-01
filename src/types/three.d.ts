@@ -94,3 +94,12 @@ interface ComplexModel {
     color: number | undefined;
   },
 }
+
+type Direction = "forward" | "right" | "left" | "backward" | "jump";
+
+interface RotationMap {
+  forward: number;
+  right: number;
+  backward: number;
+  left: number;
+}

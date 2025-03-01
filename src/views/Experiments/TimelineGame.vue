@@ -6,6 +6,7 @@ import { stats } from "@/utils/stats";
 import {
   bindAnimatedElements,
   getModel,
+  getTimelineLoopModel,
   getTools,
   resetAnimation,
 } from "@/utils/threeJs";
@@ -32,6 +33,13 @@ const config = {
     helper: false,
     intensity: 2,
   },
+};
+
+const rotationMap: RotationMap = {
+  forward: 0,
+  right: 1.5,
+  backward: 3,
+  left: 4.5,
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -95,6 +103,32 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ];
 
         const goomba2 = await getGoomba([-60, 30, 0]);
+        // const goomba2Timeline = getTimelineLoopModel({
+        //   loop: 0,
+        //   length: 40,
+        //   action: (direction: Direction) => {
+        //     updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+        //     if (direction === "jump") {
+        //       moveJump(goomba2, cubes, 0.5, 3);
+        //     } else {
+        //       moveForward(
+        //         goomba2,
+        //         cubes,
+        //         0.5,
+        //         direction === "backward" || direction === "right"
+        //       );
+        //       goomba2.mesh.rotation.y = rotationMap[direction];
+        //     }
+        //   },
+        //   list: [
+        //     [3, "forward"],
+        //     [3, "right"],
+        //     [1, "jump"],
+        //     [3, "left"],
+        //     [3, "backward"],
+        //   ],
+        // });
+
         const goomba2Timeline: Timeline[] = [
           {
             interval: [120, 480],
