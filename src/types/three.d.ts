@@ -45,6 +45,7 @@ interface ModelOptions extends CommonOptions{
   roughness?: number;
   metalness?: number;
   transmission?: number;
+  material?: boolean;
   rotation?: CoordinateTuple;
   scale?: CoordinateTuple;
   shape?: 'cuboid' | 'ball'

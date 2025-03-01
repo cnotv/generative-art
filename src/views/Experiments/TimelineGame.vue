@@ -47,7 +47,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     setup({
       config: {
         camera: { position: [-184, 84, 48] },
-        ground: { size: 100000, color: 0x99ddaa },
+        ground: { size: 100000, color: 0x227755 },
         sky: { texture: "../assets/landscape.jpg", size: 700 },
         lights: { directional: { intensity: config.directional.intensity } },
       },
@@ -65,7 +65,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           });
         // Goomba 1
         const goomba1 = await getGoomba([0, 30, 0]);
-        const goomba1Timeline = [
+        const goomba1Timeline: Timeline[] = [
           {
             interval: [100, 100],
             action: () => {
@@ -80,7 +80,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             action: () => {
               updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
               moveForward(goomba1, cubes, 0.5, true);
-
               goomba1.mesh.rotation.y = 3;
             },
           },
@@ -90,17 +89,81 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             action: () => {
               updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
               moveJump(goomba1, cubes, 0.5, 3);
-
               goomba1.mesh.rotation.y = 3;
             },
           },
         ];
 
         const goomba2 = await getGoomba([-60, 30, 0]);
-        const goomba2Timeline = [];
+        const goomba2Timeline: Timeline[] = [
+          {
+            interval: [120, 480],
+            action: () => {
+              updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+              moveForward(goomba2, cubes, 0.5, true);
+              goomba2.mesh.rotation.y = 3;
+            },
+          },
+          {
+            interval: [120, 480],
+            delay: 120,
+            action: () => {
+              updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+              moveForward(goomba2, cubes, 0.5);
+              goomba2.mesh.rotation.y = 1.5;
+            },
+          },
+          {
+            interval: [30, 570],
+            delay: 200,
+            action: () => {
+              updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+              moveJump(goomba2, cubes, 0.5, 3);
+            },
+          },
+          {
+            interval: [120, 480],
+            delay: 240,
+            action: () => {
+              updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+              moveForward(goomba2, cubes, 0.5, true);
+              goomba2.mesh.rotation.y = 4.5;
+            },
+          },
+          {
+            interval: [120, 480],
+            delay: 360,
+            action: () => {
+              updateAnimation(goomba2.mixer, goomba2.actions.run, getDelta(), 10);
+              moveForward(goomba2, cubes, 0.5);
+              goomba2.mesh.rotation.y = 0;
+            },
+          },
+        ];
+
+        const goomba3 = await getGoomba([-60, 0, 30]);
+        const goomba3Timeline: Timeline[] = [
+          {
+            interval: [200, 0],
+            action: () => {
+              updateAnimation(goomba3.mixer, goomba3.actions.run, getDelta(), 10);
+              moveForward(goomba3, cubes, 0.5, true);
+              goomba3.mesh.rotation.y = 3;
+            },
+          },
+          {
+            interval: [1, 200],
+            delay: 200,
+            action: () => {
+              resetAnimation([goomba3]);
+            },
+          },
+        ];
+
         const coins = [[0, 3, 2]].map(([x, y, z]) =>
           getCoinBlock(scene, world, { position: [30 * x, 30 * y + 15, -30 * z] })
         );
+
         const cubes = [
           [0, 0, 0],
           [0, 0, 1],
@@ -118,10 +181,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             type: "fixed",
             texture: brickTexture,
             boundary: 0.5,
-            color: 0x999999,
+            color: 0x888888,
           })
         );
-        elements.push(goomba1, goomba2, ...cubes);
+
+        elements.push(goomba1, goomba2, goomba3, ...cubes);
 
         animate({
           beforeTimeline: () => {
@@ -130,6 +194,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           timeline: [
             ...goomba1Timeline,
             ...goomba2Timeline,
+            ...goomba3Timeline,
             {
               start: 0,
               action: () => {
