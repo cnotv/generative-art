@@ -36,6 +36,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
+  let frameRate = 1 / 60;
   const { renderer, scene, camera, orbit, world } = getEnvironment(canvas);
   video.record(canvas, route);
   const getDelta = () => delta;
@@ -51,6 +52,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
     defineSetup = () => {},
   }: {
     config?: {
+      global?: { frameRate?: number },
       camera?: { position?: CoordinateTuple },
       ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
@@ -58,6 +60,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
     },
     defineSetup?: () => void
   }) => {
+    frameRate = config?.global?.frameRate || frameRate;
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
     if (config.sky !== false) getSky(scene, config?.sky || {});
@@ -83,16 +86,21 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }) => { 
     function runAnimation() {
       if (stats) stats.start(route);
-      delta = clock.getDelta();
+      // delta = clock.getDelta();
       frame = requestAnimationFrame(runAnimation);
       world.step();
   
       beforeTimeline();
       animateTimeline(timeline, frame);
       afterTimeline();
-  
+      
+      delta += clock.getDelta();
       orbit.update();
-      renderer.render( scene, camera );
+      if (delta  > frameRate) {
+        renderer.render( scene, camera );
+        delta = delta % frameRate;
+      }
+
       video.stop(renderer.info.render.frame ,route);
       if (stats) stats.end(route);
     }
