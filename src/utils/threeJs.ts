@@ -86,7 +86,7 @@ export const getTools = ({stats, route, canvas}: any  ) => {
   }) => { 
     function runAnimation() {
       if (stats) stats.start(route);
-      // delta = clock.getDelta();
+      delta = clock.getDelta();
       frame = requestAnimationFrame(runAnimation);
       world.step();
   
@@ -94,12 +94,8 @@ export const getTools = ({stats, route, canvas}: any  ) => {
       animateTimeline(timeline, frame);
       afterTimeline();
       
-      delta += clock.getDelta();
       orbit.update();
-      if (delta  > frameRate) {
         renderer.render( scene, camera );
-        delta = delta % frameRate;
-      }
 
       video.stop(renderer.info.render.frame ,route);
       if (stats) stats.end(route);
