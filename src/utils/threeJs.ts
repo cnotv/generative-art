@@ -569,6 +569,7 @@ export const getModel = async (
     roughness = 0.1,
     metalness = 0.8,
     transmission = 0.2,
+    showHelper = false,
     texture,
   }: ModelOptions = {},
 ): Promise<AnimatedComplexModel> => {
@@ -579,6 +580,13 @@ export const getModel = async (
     : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture })
   scene.add(mesh);
 
+  let helper;
+  // Add helper model
+  if (showHelper) {
+    helper = new THREE.BoxHelper(mesh, 0xff0000); // Red color for the helper
+    scene.add(helper);
+  }
+  
   // Add animation
   const mixer = new THREE.AnimationMixer(mesh);
   const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : {};
@@ -600,7 +608,7 @@ export const getModel = async (
     type,
   })
   
-  return { mesh, rigidBody, collider, initialValues, actions, mixer }
+  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper }
 }
 
 /**
@@ -761,11 +769,14 @@ export const getTimelineLoopModel = ({ loop, length, action, list }: {
  * @param elements 
  */
 export const bindAnimatedElements = (elements: any[]) => {
-  elements.forEach(({ mesh, rigidBody }) => {
+  elements.forEach(({ mesh, rigidBody, helper }) => {
     const position = rigidBody.translation();
     mesh.position.set(position.x, position.y, position.z);
     const rotation = rigidBody.rotation();
     mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+    if (helper) {
+      helper.update();
+    }
   });
 }
 

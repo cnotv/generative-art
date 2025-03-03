@@ -51,6 +51,7 @@ interface ModelOptions extends CommonOptions{
   shape?: 'cuboid' | 'ball'
   castShadow?: boolean;
   receiveShadow?: boolean;
+  showHelper?: boolean;
   texture?: string;
   textures?: {
     random: boolean;
@@ -81,6 +82,7 @@ interface AnimatedComplexModel extends ComplexModel {
     run?: THREE.AnimationAction;
   },
   mixer: THREE.AnimationMixer
+  helper?: THREE.SkeletonHelper
 }
 
 interface ComplexModel {
