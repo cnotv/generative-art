@@ -195,32 +195,25 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           },
         ];
 
-        const coins = [[0, 3, 2]].map(([x, y, z]) =>
-          getCoinBlock(scene, world, { position: [30 * x, 30 * y + 15, -30 * z] })
-        );
+        const goomba4 = await getGoomba([-120, 0, -30], [0, rotationMap["right"], 0]);
+        const goomba4Timeline: Timeline[] = [
+          {
+            interval: [300, 0],
+            action: () => {
+              updateAnimation(goomba4.mixer, goomba4.actions.run, getDelta(), 10);
+              moveForward(goomba4, cubes, 0.5, true);
+            },
+          },
+          {
+            interval: [1, 300],
+            delay: 300,
+            action: () => {
+              resetAnimation([goomba4]);
+            },
+          },
+        ];
 
-        const cubes = [
-          [0, 0, 0],
-          [0, 0, 1],
-          [0, 0, 2],
-          [0, 1, 2],
-          [-1, 0, 2],
-          [-2, 0, 0],
-          [-2, 0, 1],
-          [-2, 0, 2],
-        ].map(([x, y, z]) =>
-          getCube(scene, world, {
-            size: [30, 30, 30],
-            restitution: -1,
-            position: [30 * x, 30 * y + 15, -30 * z],
-            type: "fixed",
-            texture: brickTexture,
-            boundary: 0.5,
-            color: 0x888888,
-          })
-        );
-
-        elements.push(goomba1, goomba2, goomba3, ...cubes);
+        elements.push(goomba1, goomba2, goomba3, goomba4, ...cubes);
 
         animate({
           beforeTimeline: () => {
@@ -230,6 +223,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             ...goomba1Timeline,
             ...goomba2Timeline,
             ...goomba3Timeline,
+            ...goomba4Timeline,
             {
               start: 0,
               action: () => {
