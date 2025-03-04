@@ -36,50 +36,52 @@ export const updateAnimation = (
  * @param backwards
  */
 export const moveForward = (
-  element: AnimatedComplexModel,
+  model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
   backwards: boolean = false
 ) => {
-  const collision = 2.5
-  const oldPosition = element.mesh.position.clone() // Clone the current position
+  const collision = 10
+  const oldPosition = model.mesh.position.clone() // Clone the current position
 
   // Calculate the forward vector
   const forward = new THREE.Vector3()
-  element.mesh.getWorldDirection(forward)
+  model.mesh.getWorldDirection(forward)
   if (backwards) {
     forward.negate()
   }
   forward.multiplyScalar(distance)
+  // console.log(forward)
 
   // Create a new position by adding the forward vector to the old position
   const newPosition = oldPosition.clone().add(forward)
 
-  // Check for collisions with the new position
-  const isColliding = bodies.some(({ mesh }) => {
-    const difference = mesh.position.distanceTo(newPosition)
-    return difference < collision // Adjust this value based on your collision detection needs
-  })
+  // Chec
+  // Create a raycaster
+  const raycaster = new THREE.Raycaster(oldPosition, forward.normalize(), 0, collision);
 
-  if (!isColliding) {
+  // Check for intersections with the new position
+  const intersects = raycaster.intersectObjects(bodies.map(body => body.mesh), true);
+
+  if (intersects.length === 0) {
     // Update the model's position and the rigid body's translation if no collision is detected
-    element.mesh.position.copy(newPosition)
-    element.rigidBody.setTranslation(newPosition, true)
+    model.mesh.position.copy(newPosition);
+    model.rigidBody.setTranslation(newPosition, true);
   }
 }
 
 export const moveJump = (
-  element: AnimatedComplexModel,
+  model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
   height: number,
 ) => {
-  const collision = 2.5
-  const oldPosition = element.mesh.position.clone() // Clone the current position
+  const collision = 27
+  const oldPosition = model.mesh.position.clone() // Clone the current position
 
   // Calculate the forward vector
   const forward = new THREE.Vector3()
-  element.mesh.getWorldDirection(forward)
+  model.mesh.getWorldDirection(forward)
   forward.multiplyScalar(distance)
 
   // Create an upward vector
@@ -96,7 +98,7 @@ export const moveJump = (
 
   if (!isColliding) {
     // Update the model's position and the rigid body's translation if no collision is detected
-    element.mesh.position.copy(newPosition)
-    element.rigidBody.setTranslation(newPosition, true)
+    model.mesh.position.copy(newPosition)
+    model.rigidBody.setTranslation(newPosition, true)
   }
 }

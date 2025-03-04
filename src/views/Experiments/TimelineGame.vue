@@ -61,9 +61,36 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         // getWalls(scene, world, { length: 400, height: 150, depth: 0.2 });
-        const getGoomba = async (position: CoordinateTuple) =>
+
+        const coins = [[0, 3, 2]].map(([x, y, z]) =>
+          getCoinBlock(scene, world, { position: [30 * x, 30 * y + 15, -30 * z] })
+        );
+
+        const cubes = [
+          [0, 0, 0],
+          [0, 0, 1],
+          [0, 0, 2],
+          [0, 1, 2],
+          [-1, 0, 2],
+          [-2, 0, 0],
+          [-2, 0, 1],
+          [-2, 0, 2],
+        ].map(([x, y, z]) =>
+          getCube(scene, world, {
+            size: [30, 30, 30],
+            restitution: -1,
+            position: [30 * x, 30 * y + 15, -30 * z],
+            type: "fixed",
+            texture: brickTexture,
+            boundary: 0.5,
+            color: 0x888888,
+          })
+        );
+
+        const getGoomba = async (position: CoordinateTuple, rotation?: CoordinateTuple) =>
           getModel(scene, world, "goomba.glb", {
             position,
+            rotation,
             scale: [0.3, 0.3, 0.3],
             size: 3,
             restitution: -10,
@@ -80,7 +107,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             action: () => {
               updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
               moveForward(goomba1, cubes, 0.5);
-              goomba1.mesh.rotation.y = 0;
+              goomba1.mesh.rotation.y = rotationMap["forward"];
             },
           },
           {
@@ -89,16 +116,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             action: () => {
               updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
               moveForward(goomba1, cubes, 0.5, true);
-              goomba1.mesh.rotation.y = 3;
+              goomba1.mesh.rotation.y = rotationMap["backward"];
             },
           },
           {
             interval: [30, 170],
-            delay: 145,
+            delay: 140,
             action: () => {
               updateAnimation(goomba1.mixer, goomba1.actions.run, getDelta(), 10);
-              moveJump(goomba1, cubes, 0.5, 3);
-              goomba1.mesh.rotation.y = 3;
+              moveJump(goomba1, cubes, 0.5, 3.2);
             },
           },
         ];
@@ -176,19 +202,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           },
         ];
 
-        const goomba3 = await getGoomba([-60, 0, 30]);
+        const goomba3 = await getGoomba([-60, 0, 60]);
         const goomba3Timeline: Timeline[] = [
           {
-            interval: [200, 0],
+            interval: [300, 0],
             action: () => {
               updateAnimation(goomba3.mixer, goomba3.actions.run, getDelta(), 10);
               moveForward(goomba3, cubes, 0.5, true);
-              goomba3.mesh.rotation.y = 3;
+              goomba3.mesh.rotation.y = rotationMap["backward"];
             },
           },
           {
-            interval: [1, 200],
-            delay: 200,
+            interval: [1, 300],
+            delay: 300,
             action: () => {
               resetAnimation([goomba3]);
             },
