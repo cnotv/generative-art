@@ -252,7 +252,41 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           ] as Timeline[];
         };
 
-        elements.push(goomba1, goomba2, goomba3, goomba4, ...cubes);
+        const goomba5 = await getGoomba(
+          [30 * 0, 30 * 2 + 15, -30 * -5],
+          [0, rotationMap["right"], 0]
+        );
+
+        const movingCube = getCube(scene, world, {
+          size: [30, 30, 30],
+          restitution: -1,
+          position: [30 * 0, 30 * 0 + 15, -30 * -5],
+          type: "kinematicPositionBased",
+          texture: brickTexture,
+          boundary: 0.5,
+          color: 0x888888,
+        });
+        const movingCubeTimeline: Timeline[] = [
+          {
+            interval: [100, 100],
+            action: () =>
+              movingCube.rigidBody.setTranslation(
+                movingCube.mesh.position.add(new THREE.Vector3(0, 0.5, 0)),
+                true
+              ),
+          },
+          {
+            interval: [100, 100],
+            delay: 100,
+            action: () =>
+              movingCube.rigidBody.setTranslation(
+                movingCube.mesh.position.add(new THREE.Vector3(0, -0.5, 0)),
+                true
+              ),
+          },
+        ];
+
+        elements.push(goomba1, goomba2, goomba3, goomba4, goomba5, movingCube, ...cubes);
 
         animate({
           beforeTimeline: () => {
@@ -263,6 +297,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             ...timeline2(goomba2),
             ...timeline3(goomba3),
             ...timeline4(goomba4),
+            ...movingCubeTimeline,
             {
               start: 0,
               action: () => {
