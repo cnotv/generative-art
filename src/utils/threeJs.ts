@@ -771,11 +771,18 @@ export const getTimelineLoopModel = ({ loop, length, action, list }: {
  * @param elements 
  */
 export const bindAnimatedElements = (elements: any[]) => {
-  elements.forEach(({ mesh, rigidBody, helper }) => {
-    const position = rigidBody.translation();
-    mesh.position.set(position.x, position.y, position.z);
-    const rotation = rigidBody.rotation();
-    mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+  elements.forEach(({ mesh, rigidBody, helper, type }) => {
+    if (type === 'fixed') return;
+    if (type === 'kinematicPositionBased') {
+      rigidBody.setTranslation(mesh.position, true);
+      rigidBody.setRotation(mesh.quaternion, true);
+    } else {
+      const position = rigidBody.translation();
+      mesh.position.set(position.x, position.y, position.z);
+      const rotation = rigidBody.rotation();
+      mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+    }
+
     if (helper) {
       helper.update();
     }
