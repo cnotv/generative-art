@@ -36,6 +36,7 @@ interface CommonOptions {
   size?: number | CoordinateTuple,
   type?: 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased'
   weight?: number
+  enabledRotations?: [boolean, boolean, boolean]
 }
 
 interface ModelOptions extends CommonOptions{

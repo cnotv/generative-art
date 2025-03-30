@@ -98,7 +98,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             boundary: 0.5,
             weight: 50,
             angular: 10,
-            showHelper: true,
+            showHelper: false,
+            enabledRotations: [false, true, false],
           });
         // Goomba 1
         const goomba1 = await getGoomba([0, 30, 0]);

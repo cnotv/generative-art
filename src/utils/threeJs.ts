@@ -571,6 +571,7 @@ export const getModel = async (
     metalness = 0.8,
     transmission = 0.2,
     showHelper = false,
+    enabledRotations = [true, true, true],
     texture,
   }: ModelOptions = {},
 ): Promise<AnimatedComplexModel> => {
@@ -608,6 +609,7 @@ export const getModel = async (
     mass,
     shape: 'ball',
     type,
+    enabledRotations,
   })
   
   return { mesh, rigidBody, collider, initialValues, actions, mixer, helper }
@@ -650,6 +652,7 @@ export const getPhysic = (
     dominance = 0,
     shape = 'cuboid',
     type = 'fixed',
+    enabledRotations = [true, true, true],
   }: PhysicOptions,
 ) => {
   // Create a fixed rigid body for the brick block
@@ -659,6 +662,7 @@ export const getPhysic = (
     .setDominanceGroup(dominance)
     .setLinearDamping(damping)
     .setAngularDamping(angular)
+    .enabledRotations(...enabledRotations as [boolean, boolean, boolean])
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   if (rotation) {
     rigidBody.setRotation(rotation, true)
