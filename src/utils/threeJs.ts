@@ -714,9 +714,8 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
     if (!frequency || (frequency && frame % frequency === 0)) {
       if (actionStart && frameCycle === 0) {
         actionStart(loop, args);
-      } else {
-        action(args)
       }
+      action(args)
     }
   });
 }
