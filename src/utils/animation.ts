@@ -102,3 +102,17 @@ export const moveJump = (
     model.rigidBody.setTranslation(newPosition, true)
   }
 }
+
+/**
+ * Rotate model on defined angle
+ * @param model 
+ * @param angle angle in degrees
+ */
+export const modelTurn = (
+  model: ComplexModel,
+  angle: number,
+) => {
+  const { mesh } = model
+  const radians = THREE.MathUtils.degToRad(angle);
+  mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+};
