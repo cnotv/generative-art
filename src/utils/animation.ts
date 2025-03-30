@@ -35,10 +35,11 @@ export const updateAnimation = (
  * @param distance
  * @param backwards
  */
-export const moveForward = (
+export const controllerForward = (
   model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
+  delta: number,
   backwards: boolean = false
 ) => {
   const collision = 10
@@ -51,12 +52,10 @@ export const moveForward = (
     forward.negate()
   }
   forward.multiplyScalar(distance)
-  // console.log(forward)
 
   // Create a new position by adding the forward vector to the old position
   const newPosition = oldPosition.clone().add(forward)
 
-  // Chec
   // Create a raycaster
   const raycaster = new THREE.Raycaster(oldPosition, forward.normalize(), 0, collision);
 
@@ -68,9 +67,32 @@ export const moveForward = (
     model.mesh.position.copy(newPosition);
     model.rigidBody.setTranslation(newPosition, true);
   }
+
+  updateAnimation(model.mixer, model.actions.run, delta, 10)
 }
 
-export const moveJump = (
+export const controllerJump = (
+  model: AnimatedComplexModel,
+  bodies: ComplexModel[],
+  distance: number,
+  height: number,
+) => {}
+
+/**
+ * Rotate model on defined angle
+ * @param model 
+ * @param angle angle in degrees
+ */
+export const controllerTurn = (
+  model: ComplexModel,
+  angle: number,
+) => {
+  const { mesh } = model
+  const radians = THREE.MathUtils.degToRad(angle);
+  mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+};
+
+export const bodyJump = (
   model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
@@ -102,17 +124,3 @@ export const moveJump = (
     model.rigidBody.setTranslation(newPosition, true)
   }
 }
-
-/**
- * Rotate model on defined angle
- * @param model 
- * @param angle angle in degrees
- */
-export const modelTurn = (
-  model: ComplexModel,
-  angle: number,
-) => {
-  const { mesh } = model
-  const radians = THREE.MathUtils.degToRad(angle);
-  mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
-};
