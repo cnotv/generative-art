@@ -20,6 +20,7 @@ type Model = THREE.Group<THREE.Object3DEventMap>
 type BlockTypes = 'ground' | 'characters' | 'blocks'
 
 type Model = THREE.Group<THREE.Object3DEventMap>
+type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased'
 
 interface CommonOptions {
   boundary?: number
@@ -34,7 +35,7 @@ interface CommonOptions {
   restitution?: number
   rotation?: Rotation
   size?: number | CoordinateTuple,
-  type?: 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased'
+  type?: ModelType
   weight?: number
   enabledRotations?: [boolean, boolean, boolean]
 }
@@ -84,6 +85,7 @@ interface AnimatedComplexModel extends ComplexModel {
   },
   mixer: THREE.AnimationMixer
   helper?: THREE.SkeletonHelper
+  type: ModelType
 }
 
 interface ComplexModel {

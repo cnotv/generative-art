@@ -612,7 +612,7 @@ export const getModel = async (
     enabledRotations,
   })
   
-  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper }
+  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper, type }
 }
 
 /**
