@@ -594,7 +594,7 @@ export const getModel = async (
   const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : {};
 
   // Set physic to the model
-  const { rigidBody, collider } = getPhysic(world, {
+  const { rigidBody, collider, characterController } = getPhysic(world, {
     position,
     size,
     rotation,
@@ -612,7 +612,7 @@ export const getModel = async (
     enabledRotations,
   })
   
-  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper, type }
+  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper, type, characterController }
 }
 
 /**
@@ -681,7 +681,18 @@ export const getPhysic = (
     .setDensity(density)
   const collider = world.createCollider(colliderDesc, rigidBody)
 
-  return { rigidBody, collider }
+  let characterController
+
+  if (type === 'kinematicPositionBased') {
+    // Create a character controller for gravity and collision handling
+    characterController = world.createCharacterController(0.01);
+    characterController.setUp({ x: 0, y: 1, z: 0 }); // Set the up direction
+    characterController.enableSnapToGround(0); // Enable snapping to the ground
+    characterController.setMaxSlopeClimbAngle(45); // Set the maximum slope angle
+    characterController.setMinSlopeSlideAngle(30); // Set the minimum slope angle
+  }
+
+  return { rigidBody, collider, characterController }
 }
 
 /**
@@ -773,11 +784,25 @@ export const getTimelineLoopModel = ({ loop, length, action, list }: {
  * Bind physic to models to animate them
  * @param elements 
  */
-export const bindAnimatedElements = (elements: any[]) => {
-  elements.forEach(({ mesh, rigidBody, helper, type }) => {
+export const bindAnimatedElements = (elements: AnimatedComplexModel[], delta: number) => {
+  elements.forEach((model: AnimatedComplexModel) => {
+    const { mesh, rigidBody, helper, type, characterController, collider } = model;
     if (type === 'fixed') return;
     if (type === 'kinematicPositionBased') {
-      rigidBody.setTranslation(mesh.position, true);
+      const grounded = characterController.computedGrounded()
+      if (!grounded) {
+        // Apply gravity if no collision is detected
+        const gravity = -9.8 * delta;
+        rigidBody.setNextKinematicTranslation({
+          x: mesh.position.x,
+          y: mesh.position.y + gravity,
+          z: mesh.position.z,
+        }, true);
+        mesh.position.y += gravity;
+      } else {
+        const position = rigidBody.translation();
+        mesh.position.set(position.x, position.y, position.z);
+      }
       rigidBody.setRotation(mesh.quaternion, true);
     } else {
       const position = rigidBody.translation();

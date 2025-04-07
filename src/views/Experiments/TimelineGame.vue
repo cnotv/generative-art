@@ -290,7 +290,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         animate({
           beforeTimeline: () => {
-            bindAnimatedElements(elements);
+            bindAnimatedElements(elements, getDelta());
           },
           timeline: [
             ...timeline1(goomba1),

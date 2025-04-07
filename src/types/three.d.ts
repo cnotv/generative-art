@@ -86,6 +86,7 @@ interface AnimatedComplexModel extends ComplexModel {
   mixer: THREE.AnimationMixer
   helper?: THREE.SkeletonHelper
   type: ModelType
+  characterController?: RAPIER.KinematicCharacterController
 }
 
 interface ComplexModel {
