@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -20,13 +20,19 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
+let initInstance: () => void;
 onMounted(() => {
-  init(
-    (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
-  ),
-    statsEl.value!;
+  initInstance = () => {
+    init(
+      (canvas.value as unknown) as HTMLCanvasElement,
+      (statsEl.value as unknown) as HTMLElement
+    );
+  };
+
+  initInstance();
+  window.addEventListener("resize", initInstance);
 });
+onUnmounted(() => window.removeEventListener("resize", initInstance));
 
 const config = {
   directional: {
