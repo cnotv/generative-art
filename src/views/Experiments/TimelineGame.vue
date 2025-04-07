@@ -5,13 +5,14 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import * as THREE from "three";
 
+import { getModel, getTools } from "@/utils/threeJs";
 import {
-  bindAnimatedElements,
-  getModel,
-  getTools,
+  controllerForward,
   resetAnimation,
-} from "@/utils/threeJs";
-import { controllerForward, controllerJump, controllerTurn } from "@/utils/animation";
+  bindAnimatedElements,
+  controllerJump,
+  controllerTurn,
+} from "@/utils/animation";
 import { getCube } from "@/utils/models";
 import brickTexture from "@/assets/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
@@ -54,7 +55,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, scene, world, getDelta, getFrame } = getTools({
+    const { animate, setup, scene, world, getDelta } = getTools({
       stats,
       route,
       canvas,

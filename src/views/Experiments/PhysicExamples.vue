@@ -5,15 +5,13 @@ import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import {
-  bindAnimatedElements,
-  animateTimeline,
   createLights,
   getEnvironment,
   getGround,
   getModel,
-  resetAnimation,
   removeElements,
 } from "@/utils/threeJs";
+import { bindAnimatedElements, resetAnimation, animateTimeline } from "@/utils/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
 import bowlingTexture from "@/assets/bowling.png";
@@ -162,7 +160,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       const frame = requestAnimationFrame(animate);
       world.step();
 
-      bindAnimatedElements(experiments);
+      bindAnimatedElements(experiments, delta);
       // experiments[0].mesh.position.y -= 0.1;
 
       animateTimeline(
