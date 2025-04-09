@@ -84,9 +84,6 @@ interface AnimatedComplexModel extends ComplexModel {
     run?: THREE.AnimationAction;
   },
   mixer: THREE.AnimationMixer
-  helper?: THREE.SkeletonHelper
-  type: ModelType
-  characterController?: RAPIER.KinematicCharacterController
 }
 
 interface ComplexModel {
@@ -99,6 +96,9 @@ interface ComplexModel {
     position: CoordinateTuple;
     color: number | undefined;
   },
+  type: ModelType
+  characterController?: RAPIER.KinematicCharacterController
+  helper?: THREE.SkeletonHelper
 }
 
 type Direction = "forward" | "right" | "left" | "backward" | "jump";

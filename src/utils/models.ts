@@ -6,8 +6,8 @@ import { getPhysic, getTextures } from './threeJs';
  * Create a ball with physics, texture, and shadow
  * Friction and bounciness is size based
  * @param scene
- * @param orbit
  * @param world
+ * @param options
  */
 export const getBall = (
   scene: THREE.Scene,
@@ -30,6 +30,7 @@ export const getBall = (
     transmission = 0,
     type = 'dynamic',
     castShadow = true,
+    showHelper = false,
     receiveShadow = true,
     texture,
   }: ModelOptions = {},
@@ -69,15 +70,31 @@ export const getBall = (
     type,
   })
 
-  return { mesh, rigidBody, collider, initialValues }
+  let characterController
+  if (type === 'kinematicPositionBased') {
+    // Create a character controller for gravity and collision handling
+    characterController = world.createCharacterController(0.01);
+    characterController.setUp({ x: 0, y: 1, z: 0 }); // Set the up direction
+    characterController.enableSnapToGround(0); // Enable snapping to the ground
+    characterController.setMaxSlopeClimbAngle(45); // Set the maximum slope angle
+    characterController.setMinSlopeSlideAngle(30); // Set the minimum slope angle
+  }
+
+  // HELPER: Create a mesh to visualize the collider
+  const helper = new THREE.BoxHelper(mesh, 0x000000)
+  if (showHelper) {
+    scene.add(helper)
+  }
+
+  return { mesh, rigidBody, collider, initialValues, type, characterController, helper }
 }
 
 /**
  * Create a cube with physics, texture, and shadow
  * Friction and bounciness is size based
  * @param scene
- * @param orbit
  * @param world
+ * @param options
  */
 export const getCube = (
   scene: THREE.Scene,
@@ -104,6 +121,7 @@ export const getCube = (
     castShadow = true,
     receiveShadow = true,
     texture,
+    showHelper = false,
     type = 'dynamic',
   }: ModelOptions = {},
 ): ComplexModel => {
@@ -144,7 +162,23 @@ export const getCube = (
     type,
   })
 
-  return { mesh, rigidBody, collider, initialValues }
+  let characterController
+  if (type === 'kinematicPositionBased') {
+    // Create a character controller for gravity and collision handling
+    characterController = world.createCharacterController(0.01);
+    characterController.setUp({ x: 0, y: 1, z: 0 }); // Set the up direction
+    characterController.enableSnapToGround(0); // Enable snapping to the ground
+    characterController.setMaxSlopeClimbAngle(45); // Set the maximum slope angle
+    characterController.setMinSlopeSlideAngle(30); // Set the minimum slope angle
+  }
+
+  // HELPER: Create a mesh to visualize the collider
+  const helper = new THREE.BoxHelper(mesh, 0x000000)
+  if (showHelper) {
+    scene.add(helper)
+  }
+
+  return { mesh, rigidBody, collider, initialValues, type, characterController, helper }
 }
 
 export const getWalls = (
