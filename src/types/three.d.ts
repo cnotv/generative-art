@@ -53,6 +53,7 @@ interface ModelOptions extends CommonOptions{
   shape?: 'cuboid' | 'ball'
   castShadow?: boolean;
   receiveShadow?: boolean;
+  hasGravity?: boolean;
   showHelper?: boolean;
   texture?: string;
   textures?: {
@@ -98,7 +99,8 @@ interface ComplexModel {
   },
   type: ModelType
   characterController?: RAPIER.KinematicCharacterController
-  helper?: THREE.SkeletonHelper
+  helper?: THREE.SkeletonHelper,
+  hasGravity?: boolean
 }
 
 type Direction = "forward" | "right" | "left" | "backward" | "jump";

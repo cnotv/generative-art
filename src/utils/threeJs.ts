@@ -570,6 +570,7 @@ export const getModel = async (
     roughness = 0.1,
     metalness = 0.8,
     transmission = 0.2,
+    hasGravity = false,
     showHelper = false,
     enabledRotations = [true, true, true],
     texture,
@@ -612,7 +613,7 @@ export const getModel = async (
     enabledRotations,
   })
   
-  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper, type, characterController }
+  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper, type, characterController, hasGravity }
 }
 
 /**

@@ -112,6 +112,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             angular: 10,
             showHelper: false,
             enabledRotations: [false, true, false],
+            hasGravity: true,
           });
 
         // Goomba 1

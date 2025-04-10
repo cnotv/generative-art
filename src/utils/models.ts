@@ -31,6 +31,7 @@ export const getBall = (
     type = 'dynamic',
     castShadow = true,
     showHelper = false,
+    hasGravity = false,
     receiveShadow = true,
     texture,
   }: ModelOptions = {},
@@ -86,7 +87,7 @@ export const getBall = (
     scene.add(helper)
   }
 
-  return { mesh, rigidBody, collider, initialValues, type, characterController, helper }
+  return { mesh, rigidBody, collider, initialValues, type, characterController, helper, hasGravity }
 }
 
 /**
@@ -121,6 +122,7 @@ export const getCube = (
     castShadow = true,
     receiveShadow = true,
     texture,
+    hasGravity = false,
     showHelper = false,
     type = 'dynamic',
   }: ModelOptions = {},
@@ -178,7 +180,7 @@ export const getCube = (
     scene.add(helper)
   }
 
-  return { mesh, rigidBody, collider, initialValues, type, characterController, helper }
+  return { mesh, rigidBody, collider, initialValues, type, characterController, helper, hasGravity }
 }
 
 export const getWalls = (

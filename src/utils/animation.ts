@@ -1,3 +1,4 @@
+import RAPIER from '@dimforge/rapier3d';
 import * as THREE from 'three';
 
 /**
@@ -90,7 +91,7 @@ const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World): boolean =
   const maxToi = 4.0;
   const solid = true;
   const ray = new RAPIER.Ray(
-    { x: 0.0, y: 3, z: 0.0 }, // Origin
+    { x: position.x, y: 3, z: position.z }, // Origin
     { x: 0.0, y: -1.0, z: 0.0 }, // Direction (ground)
   );
 
@@ -110,11 +111,11 @@ const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World): boolean =
  */
 export const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: AnimatedComplexModel) => {
-    const { mesh, rigidBody, helper, type } = model;
+    const { mesh, rigidBody, helper, type, hasGravity } = model;
     if (type === 'fixed') return;
     if (type === 'kinematicPositionBased') {
       const grounded = isGrounded(rigidBody, world);
-      const gravity = !grounded ? -9.8 * delta -1 : 0;
+      const gravity = hasGravity && !grounded ? -9.8 * delta -1 : 0;
       mesh.position.y += gravity;
       rigidBody.setNextKinematicTranslation(mesh.position, true);
     } else {
