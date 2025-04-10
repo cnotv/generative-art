@@ -213,7 +213,9 @@ export const controllerJump = (
   bodies: ComplexModel[],
   distance: number,
   height: number,
-) => {}
+) => {
+  model.mesh.position.y = model.mesh.position.y + height;
+}
 
 /**
  * Rotate model on defined angle
