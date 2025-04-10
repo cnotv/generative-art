@@ -13,7 +13,7 @@ import {
   controllerJump,
   controllerTurn,
 } from "@/utils/animation";
-import { getCube } from "@/utils/models";
+import { getBall, getCube } from "@/utils/models";
 import brickTexture from "@/assets/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
 
@@ -52,7 +52,7 @@ const rotationMap: RotationMap = {
 
 const character = {
   speed: 0.5,
-  jump: 3,
+  jump: 2.8,
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -99,12 +99,36 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           })
         );
 
+        const ball = getBall(scene, world, {
+          size: 10,
+          position: [0, 90, 30],
+          showHelper: false,
+        });
+        const ball1 = getBall(scene, world, {
+          size: 10,
+          position: [0, 90, 30],
+          showHelper: false,
+        });
+        const ball2 = getBall(scene, world, {
+          size: 10,
+          position: [0, 90, 30],
+          showHelper: false,
+          type: "fixed",
+        });
+        const ball3 = getBall(scene, world, {
+          size: 10,
+          position: [30, 90, 30],
+          showHelper: false,
+          hasGravity: true,
+          type: "kinematicPositionBased",
+        });
+
         const getGoomba = async (position: CoordinateTuple, rotation?: CoordinateTuple) =>
           getModel(scene, world, "goomba.glb", {
             position,
             rotation,
             scale: [0.3, 0.3, 0.3],
-            size: 3,
+            size: 15,
             restitution: -10,
             boundary: 0.5,
             type: "kinematicPositionBased",
@@ -123,7 +147,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [100, 100],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
@@ -131,14 +155,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
-              interval: [30, 170],
-              delay: 140,
+              interval: [20, 180],
+              delay: 230,
               action: () => {
-                controllerJump(model, cubes, 0.5, 3.2);
+                controllerJump(model, cubes, character.speed, character.jump);
               },
             },
             {
@@ -158,7 +182,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [120, 480],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
@@ -166,14 +190,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 120,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
-              interval: [30, 570],
+              interval: [20, 580],
               delay: 200,
               action: () => {
-                controllerJump(model, cubes, 0.5, 3);
+                controllerJump(model, cubes, 0.5, character.jump);
               },
             },
             {
@@ -181,7 +205,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 240,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
@@ -189,7 +213,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 360,
               actionStart: () => controllerTurn(model, rotationMap["left"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
           ] as Timeline[];
@@ -202,7 +226,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [200, 200],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
@@ -210,7 +234,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 200,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
           ] as Timeline[];
@@ -222,7 +246,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               interval: [100, 100],
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
             {
@@ -230,7 +254,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
               },
             },
           ] as Timeline[];
@@ -277,7 +301,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [1, 0],
               actionStart: () => controllerTurn(model, 1),
               action: () => {
-                controllerForward(model, cubes, 0.5, getDelta());
+                controllerForward(model, cubes, character.speed, getDelta());
+              },
+            },
+            {
+              interval: [20, 100],
+              delay: 100,
+              action: () => {
+                controllerJump(model, cubes, character.speed, character.jump);
               },
             },
           ] as Timeline[];
@@ -285,19 +316,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         // elements.push(goomba6, ...cubes);
         elements.push(
+          ball,
+          ball1,
+          ball2,
+          ball3,
           goomba1,
           goomba2,
           goomba3,
           goomba4,
           goomba5,
           goomba6,
-          movingCube
-          // ...cubes
+          movingCube,
+          ...cubes
         );
 
         animate({
           beforeTimeline: () => {
-            bindAnimatedElements(elements, getDelta());
+            bindAnimatedElements(elements, world, getDelta());
           },
           timeline: [
             ...timeline1(goomba1),
@@ -310,6 +345,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               start: 0,
               action: () => {
                 coins.forEach((coin) => (coin.mesh.rotation.z += 0.05));
+              },
+            },
+
+            {
+              interval: [1, 50],
+              action: () => {
+                elements.push(
+                  getBall(scene, world, {
+                    size: 10,
+                    position: [0, 90, 30],
+                    showHelper: false,
+                  })
+                );
               },
             },
           ],
