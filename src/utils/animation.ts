@@ -85,30 +85,38 @@ export const getTimelineLoopModel = ({ loop, length, action, list }: {
   }, [] as Timeline[]);
 }
 
+const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World): boolean => {
+  const position = rigidBody.translation();
+  const maxToi = 4.0;
+  const solid = true;
+  const ray = new RAPIER.Ray(
+    { x: 0.0, y: 3, z: 0.0 }, // Origin
+    { x: 0.0, y: -1.0, z: 0.0 }, // Direction (ground)
+  );
+
+  const hit = world.castRay(ray, maxToi, solid);
+  if (hit) {
+    const hitPoint = ray.pointAt(hit.timeOfImpact);
+    const distance = position.y - hitPoint.y;
+    return distance < 0.00
+  }
+
+  return false
+}
+
 /**
  * Bind physic to models to animate them
  * @param elements 
  */
-export const bindAnimatedElements = (elements: AnimatedComplexModel[], delta: number) => {
+export const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: AnimatedComplexModel) => {
-    const { mesh, rigidBody, helper, type, characterController, collider } = model;
+    const { mesh, rigidBody, helper, type } = model;
     if (type === 'fixed') return;
     if (type === 'kinematicPositionBased') {
-      const grounded = characterController.computedGrounded()
-      if (!grounded) {
-        // Apply gravity if no collision is detected
-        const gravity = -9.8 * delta;
-        rigidBody.setNextKinematicTranslation({
-          x: mesh.position.x,
-          y: mesh.position.y + gravity,
-          z: mesh.position.z,
-        }, true);
-        mesh.position.y += gravity;
-      } else {
-        const position = rigidBody.translation();
-        mesh.position.set(position.x, position.y, position.z);
-      }
-      rigidBody.setRotation(mesh.quaternion, true);
+      const grounded = isGrounded(rigidBody, world);
+      const gravity = !grounded ? -9.8 * delta -1 : 0;
+      mesh.position.y += gravity;
+      rigidBody.setNextKinematicTranslation(mesh.position, true);
     } else {
       const position = rigidBody.translation();
       mesh.position.set(position.x, position.y, position.z);

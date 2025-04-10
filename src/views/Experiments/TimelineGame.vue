@@ -50,6 +50,11 @@ const rotationMap: RotationMap = {
   right: 270,
 };
 
+const character = {
+  speed: 0.5,
+  jump: 3,
+};
+
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
