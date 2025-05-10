@@ -86,23 +86,28 @@ export const getTimelineLoopModel = ({ loop, length, action, list }: {
   }, [] as Timeline[]);
 }
 
-const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World): boolean => {
-  const position = rigidBody.translation();
+const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: AnimatedComplexModel[]): boolean => {
+  const originPosition = rigidBody.translation();
   const maxToi = 4.0;
   const solid = true;
-  const ray = new RAPIER.Ray(
-    { x: position.x, y: 3, z: position.z }, // Origin
-    { x: 0.0, y: -1.0, z: 0.0 }, // Direction (ground)
-  );
+  
+  return elements.some((model) => {
+    const { rigidBody } = model;
+    const position = rigidBody.translation();
+    const ray = new RAPIER.Ray(
+      { x: originPosition.x, y: 3, z: originPosition.z }, // Origin
+      position, // Direction (ground)
+    );
 
-  const hit = world.castRay(ray, maxToi, solid);
-  if (hit) {
-    const hitPoint = ray.pointAt(hit.timeOfImpact);
-    const distance = position.y - hitPoint.y;
-    return distance < 0.00
-  }
+    const hit = world.castRay(ray, maxToi, solid);
+    if (hit) {
+      const hitPoint = ray.pointAt(hit.timeOfImpact);
+      const distance = originPosition.y - hitPoint.y;
+      return distance < 0.00
+    }
 
-  return false
+    return false
+  })
 }
 
 /**
@@ -114,7 +119,7 @@ export const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RA
     const { mesh, rigidBody, helper, type, hasGravity } = model;
     if (type === 'fixed') return;
     if (type === 'kinematicPositionBased') {
-      const grounded = isGrounded(rigidBody, world);
+      const grounded = isGrounded(rigidBody, world, elements);
       const gravity = hasGravity && !grounded ? -9.8 * delta -1 : 0;
       mesh.position.y += gravity;
       rigidBody.setNextKinematicTranslation(mesh.position, true);
