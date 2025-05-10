@@ -287,8 +287,11 @@ export const getSky = (
 ) => {
   const skyGeometry = new THREE.SphereGeometry(size, 32, 32);
   const loader = new THREE.TextureLoader();
-  const skyTexture = loader.load(new URL(texture!, import.meta.url) as unknown as string)
-  const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide })
+  const skyMaterial = new THREE.MeshBasicMaterial({
+    side: THREE.BackSide,
+    color,
+    ...texture ? { map: loader.load(new URL(texture!, import.meta.url) as unknown as string)} : {},
+  });
   const model = new THREE.Mesh(skyGeometry, skyMaterial)
   scene.add(model)
 
