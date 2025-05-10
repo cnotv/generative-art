@@ -5,7 +5,18 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getModel, getTools } from "@/utils/threeJs";
-import { bindAnimatedElements } from "@/utils/animation";
+import { bindAnimatedElements, bodyJump, updateAnimation } from "@/utils/animation";
+import { useUiStore } from "@/stores/ui";
+
+// Set UI controls
+const uiStore = useUiStore();
+const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true);
+const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
+
+const character = {
+  speed: 0.5,
+  jump: 1,
+};
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -23,6 +34,17 @@ onMounted(() => {
   initInstance();
   window.addEventListener("resize", initInstance);
 });
+
+onMounted(() => {
+  window.addEventListener("keydown", keyUp);
+  window.addEventListener("keyup", keyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", keyUp);
+  window.removeEventListener("keyup", keyDown);
+});
+
 onUnmounted(() => window.removeEventListener("resize", initInstance));
 
 const config = {
@@ -45,31 +67,43 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     });
     setup({
       config: {
-        camera: { position: [-184, 84, 48] },
+        camera: { position: [0, 20, 150] },
         ground: { size: 100000, color: 0x227755 },
         sky: { size: 700 },
         lights: { directional: { intensity: config.directional.intensity } },
         orbit: false,
       },
       defineSetup: async () => {
-        const chickModel = getModel(scene, world, "chick.glb", {
+        const chickModel = await getModel(scene, world, "goomba.glb", {
           scale: [0.3, 0.3, 0.3],
-          size: 15,
+          rotation: [0, 1, 0],
+          size: 3,
           restitution: -10,
           boundary: 0.5,
-          type: "kinematicPositionBased",
-          weight: 50,
+          weight: 10,
           angular: 10,
           showHelper: false,
           enabledRotations: [false, true, false],
           hasGravity: true,
         });
+        elements.push(chickModel);
 
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());
+            if (uiStore.controls.jump) {
+              bodyJump(chickModel, [], character.speed, character.jump);
+            }
           },
-          timeline: [],
+          timeline: [
+            {
+              start: 0,
+              action: () => {
+                // controllerForward(chickModel, [], 10, getDelta());
+                updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
+              },
+            },
+          ],
         });
       },
     });
