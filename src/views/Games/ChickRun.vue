@@ -7,6 +7,8 @@ import { stats } from "@/utils/stats";
 import { getModel, getTools } from "@/utils/threeJs";
 import { bindAnimatedElements, bodyJump, updateAnimation } from "@/utils/animation";
 import { useUiStore } from "@/stores/ui";
+import { getCube } from "@/utils/models";
+import brickTexture from "@/assets/brick.jpg";
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -15,7 +17,7 @@ const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
 
 const character = {
   speed: 0.5,
-  jump: 1,
+  jump: 3,
 };
 
 const statsEl = ref(null);
@@ -59,7 +61,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
-    const elements = [] as any[];
+    const elements = [] as AnimatedComplexModel[];
+    const obstacles = [] as AnimatedComplexModel[];
     const { animate, setup, world, scene, getDelta } = getTools({
       stats,
       route,
@@ -80,7 +83,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           size: 3,
           restitution: -10,
           boundary: 0.5,
-          weight: 10,
+          weight: 30,
           angular: 10,
           showHelper: false,
           enabledRotations: [false, true, false],
@@ -90,17 +93,40 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         animate({
           beforeTimeline: () => {
-            bindAnimatedElements(elements, world, getDelta());
+            bindAnimatedElements([...elements, ...obstacles], world, getDelta());
             if (uiStore.controls.jump) {
               bodyJump(chickModel, [], character.speed, character.jump);
             }
           },
           timeline: [
+            // Make Goomba run
             {
-              start: 0,
               action: () => {
-                // controllerForward(chickModel, [], 10, getDelta());
                 updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
+              },
+            },
+            // Generate cubes
+            {
+              frequency: 75,
+              action: () => {
+                const cube = getCube(scene, world, {
+                  size: [30, 30, 30],
+                  restitution: -1,
+                  position: [30 * 8, 30 * Math.round(Math.random() + 1) - 15, 0],
+                  type: "fixed",
+                  texture: brickTexture,
+                  boundary: 0.5,
+                  color: 0x888888,
+                }) as AnimatedComplexModel;
+                obstacles.push(cube);
+              },
+            },
+            // Move obstacles
+            {
+              action: () => {
+                obstacles.forEach((obstacle: AnimatedComplexModel) => {
+                  obstacle.mesh.position.x -= character.speed * 3;
+                });
               },
             },
           ],
