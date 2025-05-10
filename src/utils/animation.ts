@@ -36,7 +36,7 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
       if (actionStart && frameCycle === 0) {
         actionStart(loop, args);
       }
-      action(args)
+      if (action) action(args)
     }
   });
 }
