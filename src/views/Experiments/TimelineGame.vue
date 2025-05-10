@@ -101,17 +101,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         const ball = getBall(scene, world, {
           size: 10,
-          position: [0, 90, 30],
+          position: [0, 90, -30],
           showHelper: false,
         });
         const ball1 = getBall(scene, world, {
           size: 10,
-          position: [0, 90, 30],
+          position: [0, 90, -30],
           showHelper: false,
         });
         const ball2 = getBall(scene, world, {
           size: 10,
-          position: [0, 90, 30],
+          position: [0, 90, -30],
           showHelper: false,
           type: "fixed",
         });
@@ -354,7 +354,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 elements.push(
                   getBall(scene, world, {
                     size: 10,
-                    position: [0, 90, 30],
+                    position: [0, 90, -30],
                     showHelper: false,
                   })
                 );
