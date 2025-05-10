@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools } from "@/utils/threeJs";
+import { getModel, getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
 
 const statsEl = ref(null);
@@ -38,7 +38,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, world, getDelta } = getTools({
+    const { animate, setup, world, scene, getDelta } = getTools({
       stats,
       route,
       canvas,
@@ -49,8 +49,22 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ground: { size: 100000, color: 0x227755 },
         sky: { size: 700 },
         lights: { directional: { intensity: config.directional.intensity } },
+        orbit: false,
       },
       defineSetup: async () => {
+        const chickModel = getModel(scene, world, "chick.glb", {
+          scale: [0.3, 0.3, 0.3],
+          size: 15,
+          restitution: -10,
+          boundary: 0.5,
+          type: "kinematicPositionBased",
+          weight: 50,
+          angular: 10,
+          showHelper: false,
+          enabledRotations: [false, true, false],
+          hasGravity: true,
+        });
+
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());

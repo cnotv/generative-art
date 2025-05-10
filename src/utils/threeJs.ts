@@ -30,17 +30,19 @@ export const defaultModelOptions: ModelOptions = {
  * Animation allows to define a timeline with looped actions, as well as a before and after function.
  * Stats, configuration and video are handled by other utilities and added by default.
  * @param {stats, route, canvas} 
+ * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
-export const getTools = ({stats, route, canvas}: any  ) => {
+export const getTools = ({ stats, route, canvas }: any) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
   let frameRate = 1 / 60;
-  const { renderer, scene, camera, orbit, world } = getEnvironment(canvas);
+  const { renderer, scene, camera, world } = getEnvironment(canvas);
   video.record(canvas, route);
   const getDelta = () => delta;
   const getFrame = () => frame;
+  let orbit: OrbitControls | null = null;
 
   /**
    * Setup scene
@@ -57,10 +59,14 @@ export const getTools = ({stats, route, canvas}: any  ) => {
       ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
+      orbit?: {} | false
     },
     defineSetup?: () => void
   }) => {
     frameRate = config?.global?.frameRate || frameRate;
+    if (config.orbit !== false) {
+      orbit = new OrbitControls(camera, renderer.domElement);
+    }
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
     if (config.sky !== false) getSky(scene, config?.sky || {});
@@ -94,8 +100,10 @@ export const getTools = ({stats, route, canvas}: any  ) => {
       animateTimeline(timeline, frame);
       afterTimeline();
       
-      orbit.update();
-        renderer.render( scene, camera );
+      if (orbit) {
+        orbit.update();
+      }
+      renderer.render( scene, camera );
 
       video.stop(renderer.info.render.frame ,route);
       if (stats) stats.end(route);
@@ -134,9 +142,8 @@ export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
 
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(...(options.camera.position as CoordinateTuple));
-  const orbit = new OrbitControls(camera, renderer.domElement);
 
-  return { renderer, scene, camera, clock, orbit, world };
+  return { renderer, scene, camera, clock, world };
 }
 
 export const getOffset = (model: Model, config: any) => {
@@ -595,7 +602,7 @@ export const getModel = async (
   
   // Add animation
   const mixer = new THREE.AnimationMixer(mesh);
-  const actions = gltf.animations.length ? getAnimationsModel(mixer, mesh, gltf) : {};
+  const actions = gltf.animations?.length ? getAnimationsModel(mixer, mesh, gltf) : {};
 
   // Set physic to the model
   const { rigidBody, collider, characterController } = getPhysic(world, {
