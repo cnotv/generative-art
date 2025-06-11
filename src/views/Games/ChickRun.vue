@@ -112,7 +112,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 const cube = getCube(scene, world, {
                   size: [30, 30, 30],
                   restitution: -1,
-                  position: [30 * 8, 30 * Math.round(Math.random() + 1) - 15, 0],
+                  position: [30 * 8, 15 * Math.floor(Math.random() * 3) + 15, 0],
                   type: "fixed",
                   texture: brickTexture,
                   boundary: 0.5,
