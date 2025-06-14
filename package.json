@@ -19,7 +19,7 @@
     "p5": "^1.9.0",
     "pinia": "^2.3.0",
     "stats.js": "^0.17.0",
-    "three": "^0.163.0",
+    "three": "^0.177.0",
     "vite-plugin-wasm": "^3.3.0",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
@@ -33,7 +33,6 @@
     "@types/node": "^20.11.28",
     "@types/p5": "^1.7.6",
     "@types/stats.js": "^0.17.3",
-    "@types/three": "^0.163.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/eslint-config-prettier": "^8.0.0",
     "@vue/eslint-config-typescript": "^12.0.0",
