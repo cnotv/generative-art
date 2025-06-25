@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router'
-import { useQueryStore } from './stores/queryStore';
-import { generatedRoutes } from '@/config/router'
+import { onMounted, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useQueryStore } from "./stores/queryStore";
+import { generatedRoutes } from "@/config/router";
+import NavigationSidebar from "@/components/NavigationSidebar.vue";
 
-const router = useRouter()
+const router = useRouter();
 const route = useRoute();
 const queryStore = useQueryStore();
 queryStore.setQuery(route.query);
@@ -27,40 +28,43 @@ watch(
 );
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyPress);
+  window.addEventListener("keydown", handleKeyPress);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyPress);
+  window.removeEventListener("keydown", handleKeyPress);
 });
 
 const handleKeyPress = (event: KeyboardEvent) => {
   const { name, query } = router.currentRoute.value;
-  const page = typeof name === 'string'  ? generatedRoutes.map(route => route.name).indexOf(name) : 0;
-  
+  const page =
+    typeof name === "string"
+      ? generatedRoutes.map((route) => route.name).indexOf(name)
+      : 0;
+
   switch (event.key) {
-    case 'ArrowRight': {
+    case "ArrowRight": {
       const path = generatedRoutes[page + 1]?.path;
-      if (page < generatedRoutes.length - 1) router.push({query, path});
+      if (page < generatedRoutes.length - 1) router.push({ query, path });
       break;
     }
 
-    case 'ArrowLeft': {
+    case "ArrowLeft": {
       const path = generatedRoutes[page - 1]?.path;
-      if (page > 0) router.push({query, path});
+      if (page > 0) router.push({ query, path });
       break;
     }
 
-    case 'ArrowUp': {
-      toggleQuery('record');
+    case "ArrowUp": {
+      toggleQuery("record");
       break;
     }
 
-    case 'ArrowDown': {
-      toggleQuery(['control', 'stats']);
+    case "ArrowDown": {
+      toggleQuery(["control", "stats"]);
       break;
     }
-  
+
     default:
       break;
   }
@@ -68,16 +72,19 @@ const handleKeyPress = (event: KeyboardEvent) => {
 
 const toggleQuery = (param: string | string[]) => {
   const { path, query } = router.currentRoute.value;
-  const params = typeof param === 'string' ? [param] : param;
-  const newQuery = params.reduce((acc, key) => ({ ...acc, [key]: query[key] === 'true' ? undefined : 'true' }), {})
+  const params = typeof param === "string" ? [param] : param;
+  const newQuery = params.reduce(
+    (acc, key) => ({ ...acc, [key]: query[key] === "true" ? undefined : "true" }),
+    {}
+  );
   router.push({ path, query: { ...query, ...newQuery } });
   queryStore.setQuery(newQuery);
-}
-
+};
 </script>
 
 <template>
   <RouterView />
+  <NavigationSidebar />
 </template>
 
 <style>
