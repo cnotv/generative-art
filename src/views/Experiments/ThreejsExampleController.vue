@@ -102,7 +102,7 @@ function animatePlayer(
   return player;
 }
 
-function addBody(scene: THREE.Scene, fixed = true) {
+function addBody(scene: THREE.Scene, fixed = true, physics?: RapierPhysics) {
   const geometry = fixed
     ? new THREE.BoxGeometry(1, 1, 1)
     : new THREE.SphereGeometry(0.25);
@@ -111,17 +111,24 @@ function addBody(scene: THREE.Scene, fixed = true) {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
+  const mass = fixed ? 0 : 0.5;
+  const restitution = fixed ? 0 : 0.3;
   mesh.castShadow = true;
 
   mesh.position.set(random(-10, 10), 2.5, random(-10, 10));
+  mesh.userData.physics = {
+    mass,
+    restitution,
+  };
 
-  mesh.userData.physics = { mass: fixed ? 0 : 0.5, restitution: fixed ? 0 : 0.3 };
-
+  if (physics) {
+    physics.addMesh(mesh, mass, restitution);
+  }
   scene.add(mesh);
 }
 
-function addBodies(scene: THREE.Scene, count: number) {
-  for (let i = 0; i < count; i++) addBody(scene, Math.random() > 0.7);
+function addBodies(scene: THREE.Scene, count: number, physics?: RapierPhysics) {
+  for (let i = 0; i < count; i++) addBody(scene, Math.random() > 0.7, physics);
 }
 
 function getLight(scene: THREE.Scene) {
@@ -214,7 +221,7 @@ function animate(
 
   renderer.render(scene, camera);
   animatePlayer(player, characterController, physics, movement);
-  addBodies(scene, 0);
+  // addBodies(scene, 1, physics); // test
 
   stats.update();
 }
@@ -254,7 +261,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     const { physics, physicsHelper } = await initPhysics(scene);
     const { player, characterController } = await addCharacterController(scene, physics);
-
     renderer.setAnimationLoop(() =>
       animate(
         player,
