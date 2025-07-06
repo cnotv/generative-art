@@ -105,7 +105,7 @@ function animatePlayer(
   return player;
 }
 
-function addBody(scene: THREE.Scene, fixed = true) {
+function addBody(scene: THREE.Scene, fixed = true, physics?: RapierPhysics) {
   const geometry = fixed
     ? new THREE.BoxGeometry(1, 1, 1)
     : new THREE.SphereGeometry(0.25);
@@ -114,11 +114,18 @@ function addBody(scene: THREE.Scene, fixed = true) {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
+  const mass = fixed ? 0 : 0.5;
+  const restitution = fixed ? 0 : 0.3;
   mesh.castShadow = true;
 
   mesh.position.set(random(-10, 10), 1.5, random(-10, 10));
-
-  mesh.userData.physics = { mass: fixed ? 0 : 0.5, restitution: fixed ? 0 : 0.3 };
+  mesh.userData.physics = {
+    mass,
+    restitution,
+  };
+  if (physics) {
+    physics.addMesh(mesh, mass, restitution);
+  }
 
   scene.add(mesh);
 }
@@ -248,7 +255,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               frequency: 75,
               action: () => {
-                addBody(scene, false);
+                addBody(scene, false, physics);
               },
             },
           ],
