@@ -2,14 +2,16 @@
 import * as THREE from "three";
 import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
+import RAPIER from "@dimforge/rapier3d";
 
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools, getTextures } from "@/utils/threeJs";
+import { getTools, getTextures, getModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
+import { updateAnimation } from "@/utils/animation";
 // import brickTexture from "@/assets/brick.jpg";
 
 // Set UI controls
@@ -95,38 +97,60 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     return { physics, physicsHelper };
   };
 
-  const addPlayerController = (scene: THREE.Scene, physics: RapierPhysics) => {
-    // Character Capsule - fixed size and positioning
-    const capsuleRadius = 5;
-    const capsuleHeight = 10;
-    const geometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleHeight, 8, 16);
-    const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-    const player = new THREE.Mesh(geometry, material);
+  const addPlayerController = async (
+    scene: THREE.Scene,
+    physics: RapierPhysics,
+    world: RAPIER.World
+  ) => {
+    // Load Goomba model
+    const goombaModel = await getModel(scene, world, "goomba.glb", {
+      scale: [0.4, 0.4, 0.4],
+      size: 15,
+      type: "kinematicPositionBased",
+      hasGravity: false,
+    });
+
+    if (!goombaModel || !goombaModel.mesh) {
+      throw new Error("Failed to load goomba model");
+    }
+
+    const player = goombaModel.mesh;
     player.castShadow = true;
+
+    // Rotate goomba to face sideways (towards the camera/blocks)
+    player.rotation.y = Math.PI / 2; // 90 degrees rotation on Y-axis
 
     // Position player above ground
     const groundY = 0;
-    const playerY = groundY + capsuleHeight / 2 + capsuleRadius + 2; // Half height + radius + small offset
+    const modelHeight = 15; // Approximate height of goomba model
+    const playerY = groundY + modelHeight + 5; // Full height + offset to ensure above ground
     player.position.set(0, playerY, 0);
-
-    scene.add(player);
 
     // Rapier Character Controller
     const playerController = physics.world.createCharacterController(0.01);
     playerController.setApplyImpulsesToDynamicBodies(true);
     playerController.setCharacterMass(3);
 
-    // Create collider that matches the capsule geometry
-    const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
-      capsuleHeight / 2,
-      capsuleRadius
-    ).setTranslation(0, playerY, 0);
-    player.userData.collider = physics.world.createCollider(colliderDesc);
+    // Create collider that approximates the goomba model (using existing collider from getModel)
+    if (goombaModel.collider) {
+      player.userData.collider = goombaModel.collider;
+      // Update collider position to match player position
+      player.userData.collider.setTranslation({ x: 0, y: playerY, z: 0 });
+    } else {
+      // Fallback: create a capsule collider
+      const capsuleRadius = 5;
+      const capsuleHeight = 10;
+      const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
+        capsuleHeight / 2,
+        capsuleRadius
+      ).setTranslation(0, playerY, 0);
+      player.userData.collider = physics.world.createCollider(colliderDesc);
+    }
 
     // Store base Y position for jump calculations
     player.userData.baseY = playerY;
 
-    return { player, playerController };
+    return { player, playerController, model: goombaModel };
   };
 
   const addBlock = (
@@ -199,7 +223,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         const { physics, physicsHelper } = await initPhysics(scene);
-        const { player, playerController } = addPlayerController(scene, physics);
+        const { player, playerController, model } = await addPlayerController(
+          scene,
+          physics,
+          world
+        );
         onWindowResize(camera, renderer);
         getGround(scene, physics);
 
@@ -221,7 +249,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             gameConfig.player.jump.isActive = true;
             gameConfig.player.jump.startTime = currentTime;
             gameConfig.player.jump.velocity = gameConfig.player.jump.height;
-            console.log("🚀 Jump started!");
           }
 
           // Handle ongoing jump
@@ -359,6 +386,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   physics
                 );
                 obstacles.push({ mesh, characterController, collider });
+              },
+            },
+
+            // Make Goomba run
+            {
+              action: () => {
+                if (!gameConfig.game.play) return;
+                updateAnimation(model.mixer, model.actions.run, getDelta(), 20);
               },
             },
             // Move obstacles
