@@ -221,19 +221,17 @@ export const createLights = (scene: THREE.Scene, {
   
   // Add directional light with shadows
   const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
-  directionalLight.position.set(5, 10, 10);
+  directionalLight.position.set(100, 100, 100);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 100;
-
-  // Camera frustum
-  directionalLight.shadow.camera.left = -200;
-  directionalLight.shadow.camera.right = 200;
-  directionalLight.shadow.camera.top = 200;
-  directionalLight.shadow.camera.bottom = -200;
-  directionalLight.shadow.bias = -0.0001;
+  directionalLight.shadow.camera.left = -500;
+  directionalLight.shadow.camera.right = 500;
+  directionalLight.shadow.camera.top = 500;
+  directionalLight.shadow.camera.bottom = -500;
+  directionalLight.shadow.camera.near = 0.1;
+  directionalLight.shadow.camera.far = 1000;
+  directionalLight.shadow.camera.updateProjectionMatrix();
   scene.add(directionalLight);
 
   // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);

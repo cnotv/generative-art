@@ -220,7 +220,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         // ground: { size: 100000, color: 0x227755 },
         ground: false,
         sky: { size: 700 },
-        lights: { directional: { intensity: config.directional.intensity } },
+        lights: {
+          directional: {
+            intensity: config.directional.intensity * 1.5,
+          },
+        },
         orbit: false,
       },
       defineSetup: async () => {
