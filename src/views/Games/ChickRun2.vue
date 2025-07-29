@@ -203,7 +203,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   ) => {
     const geometry = new THREE.BoxGeometry(30, 30, 30);
     const material = new THREE.MeshStandardMaterial({
-      color: 0x888888,
+      color: 0xD2691E, // Mario brick orange/brown color
       map: getTextures(brickTexture),
     });
     const mesh: THREE.Mesh = new THREE.Mesh(geometry, material);
@@ -258,9 +258,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     setup({
       config: {
         camera: { position: [0, 20, 150] },
-        // ground: { size: 100000, color: 0x227755 },
+        // ground: { size: 100000, color: 0x32CD32 },
         ground: false,
-        sky: { size: 700 },
+        sky: { size: 700 }, // Sky color set through scene.background
         lights: {
           directional: {
             intensity: config.directional.intensity * 1.5,
@@ -275,6 +275,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           physics,
           world
         );
+        
+        // Set Mario sky blue background
+        scene.background = new THREE.Color(0x87CEEB);
+        
         onWindowResize(camera, renderer);
         getGround(scene, physics);
 
@@ -394,7 +398,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
-          const material = new THREE.MeshStandardMaterial({ color: 0x227755 });
+          const material = new THREE.MeshStandardMaterial({ color: 0x32CD32 }); // Mario green ground
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.receiveShadow = true;
@@ -618,11 +622,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 }
 
 .start-screen {
-  background: rgba(0, 50, 100, 0.9);
+  background: rgba(0, 100, 200, 0.9); /* Mario blue */
 }
 
 .game-over-screen {
-  background: rgba(100, 0, 0, 0.9);
+  background: rgba(200, 0, 0, 0.9); /* Mario red */
 }
 
 .game-content {
@@ -632,22 +636,25 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   border-radius: 15px;
   background: rgba(0, 0, 0, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 3px solid #FFD700; /* Mario gold border */
 }
 
 .game-title {
   font-size: 4rem;
   font-weight: bold;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  color: #ffffff;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  color: #FFD700; /* Mario gold */
+  font-family: 'Arial Black', Arial, sans-serif;
 }
 
 .game-over-title {
   font-size: 3.5rem;
   font-weight: bold;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  color: #ff6b6b;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  color: #FF6B6B; /* Mario red */
+  font-family: 'Arial Black', Arial, sans-serif;
 }
 
 .game-instructions {
@@ -676,35 +683,40 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 }
 
 .game-button {
-  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-  border: none;
+  background: linear-gradient(45deg, #FF6B6B 0%, #FF4444 100%); /* Mario red gradient */
+  border: 3px solid #FFD700; /* Mario gold border */
   color: white;
   padding: 15px 30px;
   font-size: 1.1rem;
   font-weight: bold;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   pointer-events: all;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: 'Arial Black', Arial, sans-serif;
 }
 
 .game-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(45deg, #FF8888 0%, #FF6666 100%);
 }
 
 .restart-button {
-  background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+  background: linear-gradient(45deg, #32CD32 0%, #228B22 100%); /* Mario green gradient */
 }
 
 kbd {
-  background: #333;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: monospace;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: #FF6B6B; /* Mario red */
+  color: #FFD700; /* Mario gold text */
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'Arial Black', Arial, monospace;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  border: 2px solid #FFD700;
+  font-weight: bold;
 }
 
 .score-hud {
@@ -715,13 +727,16 @@ kbd {
 }
 
 .current-score {
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px 20px;
+  background: linear-gradient(45deg, #FF6B6B 0%, #FF4444 100%); /* Mario red gradient */
+  color: #FFD700; /* Mario gold text */
+  padding: 12px 24px;
   border-radius: 25px;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: bold;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  border: 3px solid #FFD700; /* Mario gold border */
+  font-family: 'Arial Black', Arial, sans-serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .ui-hint {
@@ -740,13 +755,15 @@ kbd {
 }
 
 .score-display {
-  background: rgba(0, 0, 0, 0.8);
-  color: #ffd700;
-  padding: 12px 20px;
+  background: linear-gradient(45deg, #32CD32 0%, #228B22 100%); /* Mario green gradient */
+  color: #FFD700; /* Mario gold text */
+  padding: 15px 25px;
   border-radius: 25px;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  border: 3px solid #FFD700; /* Mario gold border */
+  font-family: 'Arial Black', Arial, sans-serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 </style>
