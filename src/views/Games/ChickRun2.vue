@@ -12,7 +12,7 @@ import { stats } from "@/utils/stats";
 import { getTools, getTextures, getModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
-// import brickTexture from "@/assets/brick.jpg";
+import brickTexture from "@/assets/brick.jpg";
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -90,7 +90,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     //Optionally display collider outlines
     const physicsHelper = new RapierHelper(physics.world);
-    scene.add(physicsHelper);
+    // scene.add(physicsHelper); // Disabled helper
 
     physics.addScene(scene);
 
@@ -104,8 +104,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   ) => {
     // Load Goomba model
     const goombaModel = await getModel(scene, world, "goomba.glb", {
-      scale: [0.4, 0.4, 0.4],
-      size: 15,
+      scale: [0.3, 0.3, 0.3],
+      size: 3,
+      restitution: -10,
+      boundary: 0.5,
       type: "kinematicPositionBased",
       hasGravity: false,
     });
@@ -118,11 +120,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     player.castShadow = true;
 
     // Rotate goomba to face sideways (towards the camera/blocks)
-    player.rotation.y = Math.PI / 2; // 90 degrees rotation on Y-axis
+    player.rotation.y = 2;
 
     // Position player above ground
     const groundY = 0;
-    const modelHeight = 15; // Approximate height of goomba model
+    const modelHeight = 3; // Approximate height of goomba model
     const playerY = groundY + modelHeight + 5; // Full height + offset to ensure above ground
     player.position.set(0, playerY, 0);
 
@@ -160,8 +162,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   ) => {
     const geometry = new THREE.BoxGeometry(30, 30, 30);
     const material = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      // map: getTextures(brickTexture),
+      color: 0x888888,
+      map: getTextures(brickTexture),
     });
     const mesh: THREE.Mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
@@ -347,7 +349,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
-          const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+          const material = new THREE.MeshStandardMaterial({ color: 0x227755 });
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.receiveShadow = true;
