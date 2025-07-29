@@ -16,7 +16,21 @@ import brickTexture from "@/assets/brick.jpg";
 
 // Set UI controls
 const uiStore = useUiStore();
-const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true);
+const keyUp = (event: KeyboardEvent) => {
+  uiStore.setKeyState(event.key, true);
+
+  // Handle spacebar for game state transitions
+  if (event.key === " ") {
+    if (!gameStarted.value) {
+      startGame();
+    } else if (gameOver.value) {
+      restartGame();
+    } else if (gamePlay.value && gameStarted.value) {
+      // Hide UI when spacebar is pressed during gameplay
+      uiVisible.value = false;
+    }
+  }
+};
 const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
 
 interface PlayerMovement {
@@ -24,6 +38,14 @@ interface PlayerMovement {
   right: number;
   up: number;
 }
+
+// Game state refs
+const gamePlay = ref(false); // Start with game paused to show start screen
+const gameScore = ref(0);
+const gameOver = ref(false);
+const gameStarted = ref(false);
+const shouldClearObstacles = ref(false);
+const uiVisible = ref(true);
 
 const gameConfig = {
   blocks: {
@@ -39,10 +61,6 @@ const gameConfig = {
       velocity: 0,
       startTime: 0,
     },
-  },
-  game: {
-    play: true,
-    score: 0,
   },
 };
 
@@ -74,6 +92,29 @@ onUnmounted(() => {
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
+
+// Game state functions
+const startGame = () => {
+  gamePlay.value = true;
+  gameStarted.value = true;
+  gameOver.value = false;
+  gameScore.value = 0;
+  uiVisible.value = false; // Hide UI immediately when starting game
+};
+
+const restartGame = () => {
+  gamePlay.value = true;
+  gameOver.value = false;
+  gameScore.value = 0;
+  shouldClearObstacles.value = true;
+  uiVisible.value = false; // Hide UI immediately when restarting
+};
+
+const endGame = () => {
+  gamePlay.value = false;
+  gameOver.value = true;
+  uiVisible.value = true; // Show UI on game over
+};
 
 const config = {
   directional: {
@@ -242,7 +283,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function handleJump(player: THREE.Mesh) {
           // Stop jump animation if game is not playing
-          if (!gameConfig.game.play) {
+          if (!gamePlay.value) {
             gameConfig.player.jump.isActive = false;
             gameConfig.player.jump.velocity = 0;
             // Don't move the player - keep current position when game stops
@@ -305,7 +346,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
               if (!loggedCollisions.has(collisionKey)) {
                 loggedCollisions.add(collisionKey);
-                gameConfig.game.play = false;
+                endGame();
               }
             }
           });
@@ -321,7 +362,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const deltaTime = 1 / 60;
 
             // Player movement
-            const speed = 2.5 * deltaTime;
+            const speed = gameConfig.player.speed * deltaTime;
             const moveVector = new physics.RAPIER.Vector3(
               playerMovement.right * speed,
               playerMovement.up * speed,
@@ -339,7 +380,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
             position.x += translation.x;
             // Prevent vertical movement if game is not playing
-            if (gameConfig.game.play) {
+            if (gamePlay.value) {
               position.y += translation.y;
             }
             position.z += translation.z;
@@ -377,7 +418,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           // Use character controller to move the block
           const baseSpeed = gameConfig.blocks.speed;
           // Increase speed based on score (0.1 speed increase per 10 points)
-          const speedMultiplier = 1 + gameConfig.game.score * 0.01;
+          const speedMultiplier = 1 + gameScore.value * 0.01;
           const speed = baseSpeed * speedMultiplier;
           const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
 
@@ -411,7 +452,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const { mesh, collider } = obstacle;
 
           // Increase score when block passes player
-          gameConfig.game.score += 10;
+          gameScore.value += 10;
 
           // Remove from scene and physics world
           scene.remove(mesh);
@@ -428,6 +469,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               action: () => {
                 if (physicsHelper) physicsHelper.update();
 
+                // Clear obstacles if restart was requested
+                if (shouldClearObstacles.value) {
+                  // Remove all obstacles from scene and physics
+                  for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obstacle = obstacles[i];
+                    scene.remove(obstacle.mesh);
+                    physics.world.removeCollider(obstacle.collider);
+                  }
+                  obstacles.length = 0; // Clear the array
+                  shouldClearObstacles.value = false;
+                }
+
                 movePlayer(player, playerController, physics, playerMovement);
                 handleJump(player);
                 checkCollisions(player, obstacles);
@@ -438,7 +491,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               frequency: 75,
               action: () => {
-                if (!gameConfig.game.play) return;
+                if (!gamePlay.value) return;
                 const position: [number, number] = [
                   30 * 10,
                   15 * Math.floor(Math.random() * 3) + 15,
@@ -455,18 +508,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Make Goomba run
             {
               action: () => {
-                if (!gameConfig.game.play) return;
+                if (!gamePlay.value) return;
                 // Increase animation speed based on score (0.1 speed increase per 10 points)
                 const baseSpeed = 20;
-                const speedMultiplier = 1 + gameConfig.game.score * 0.01;
+                const speedMultiplier = 1 + gameScore.value * 0.01;
                 const animationSpeed = baseSpeed * speedMultiplier;
-                updateAnimation(model.mixer, model.actions.run, getDelta(), animationSpeed);
+                updateAnimation(
+                  model.mixer,
+                  model.actions.run,
+                  getDelta(),
+                  animationSpeed
+                );
               },
             },
             // Move obstacles
             {
               action: () => {
-                if (!gameConfig.game.play) return;
+                if (!gamePlay.value) return;
 
                 // Move obstacles and remove off-screen ones
                 for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -494,4 +552,201 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 <template>
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
+
+  <!-- UI Overlay -->
+  <div v-if="uiVisible" class="game-ui-overlay">
+    <!-- Start Screen -->
+    <div v-if="!gameStarted" class="game-screen start-screen">
+      <div class="game-content">
+        <h1 class="game-title">Goomba Runner</h1>
+        <p class="game-instructions">Press <kbd>SPACEBAR</kbd> to jump over obstacles</p>
+        <button @click="startGame" class="game-button start-button">
+          Press SPACEBAR to Start
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div v-if="gameOver" class="game-screen game-over-screen">
+      <div class="game-content">
+        <h1 class="game-over-title">Game Over!</h1>
+        <div class="score-display">
+          <span class="score-label">Final Score:</span>
+          <span class="score-value">{{ gameScore }}</span>
+        </div>
+        <button @click="restartGame" class="game-button restart-button">
+          Press SPACEBAR to Restart
+        </button>
+      </div>
+    </div>
+
+    <!-- In-Game Score Display -->
+    <div v-if="gamePlay && gameStarted" class="score-hud">
+      <span class="current-score">Score: {{ gameScore }}</span>
+      <div class="ui-hint">Press SPACEBAR to hide UI</div>
+    </div>
+  </div>
+
+  <!-- Always visible score during gameplay (even when UI is hidden) -->
+  <div v-if="gamePlay && gameStarted && !uiVisible" class="persistent-score">
+    <span class="score-display">{{ gameScore }}</span>
+  </div>
 </template>
+
+<style scoped>
+.game-ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  pointer-events: all;
+}
+
+.start-screen {
+  background: rgba(0, 50, 100, 0.9);
+}
+
+.game-over-screen {
+  background: rgba(100, 0, 0, 0.9);
+}
+
+.game-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.game-title {
+  font-size: 4rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+}
+
+.game-over-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  color: #ff6b6b;
+}
+
+.game-instructions {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.score-display {
+  margin: 2rem 0;
+}
+
+.score-label {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.score-value {
+  display: block;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-button {
+  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  pointer-events: all;
+}
+
+.game-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.restart-button {
+  background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+kbd {
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.score-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  pointer-events: all;
+}
+
+.current-score {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.ui-hint {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  color: #ccc;
+}
+
+.persistent-score {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.score-display {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffd700;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+</style>
