@@ -147,8 +147,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       player.userData.collider = physics.world.createCollider(colliderDesc);
     }
 
-    // Store base Y position for jump calculations
-    player.userData.baseY = playerY;
+    // Store base Y position for jump calculations (closer to ground level)
+    player.userData.baseY = groundY + 2; // Just slightly above ground
 
     return { player, playerController, model: goombaModel };
   };
@@ -239,6 +239,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           if (!gameConfig.game.play) {
             gameConfig.player.jump.isActive = false;
             gameConfig.player.jump.velocity = 0;
+            // Don't move the player - keep current position when game stops
             return;
           }
 
@@ -331,7 +332,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const position = player.userData.collider.translation();
 
             position.x += translation.x;
-            position.y += translation.y;
+            // Prevent vertical movement if game is not playing
+            if (gameConfig.game.play) {
+              position.y += translation.y;
+            }
             position.z += translation.z;
 
             player.userData.collider.setTranslation(position);
