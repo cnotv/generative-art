@@ -368,6 +368,59 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           scene.add(mesh);
         }
 
+        function moveBlock(
+          obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
+          physics: RapierPhysics
+        ) {
+          const { mesh, characterController, collider } = obstacle;
+
+          // Use character controller to move the block
+          const baseSpeed = gameConfig.blocks.speed;
+          // Increase speed based on score (0.1 speed increase per 10 points)
+          const speedMultiplier = 1 + gameConfig.game.score * 0.01;
+          const speed = baseSpeed * speedMultiplier;
+          const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
+
+          characterController.computeColliderMovement(collider, moveVector);
+          const translation = characterController.computedMovement();
+          const position = collider.translation();
+
+          position.x += translation.x;
+          position.y += translation.y;
+          position.z += translation.z;
+
+          collider.setTranslation(position);
+
+          // Sync Three.js mesh with Rapier collider
+          mesh.position.set(position.x, position.y, position.z);
+        }
+
+        function shouldRemoveBlock(mesh: THREE.Mesh): boolean {
+          // Account for block size (30 units) so blocks don't disappear while visible
+          const blockSize = 30;
+          return mesh.position.x < -300 - blockSize;
+        }
+
+        function removeBlock(
+          obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
+          obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
+          index: number,
+          scene: THREE.Scene,
+          physics: RapierPhysics
+        ) {
+          const { mesh, collider } = obstacle;
+
+          // Increase score when block passes player
+          gameConfig.game.score += 10;
+
+          // Remove from scene and physics world
+          scene.remove(mesh);
+          physics.world.removeCollider(collider);
+
+          // Remove from obstacles array
+          obstacles.splice(index, 1);
+        }
+
         animate({
           beforeTimeline: () => {},
           timeline: [
@@ -403,33 +456,30 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               action: () => {
                 if (!gameConfig.game.play) return;
-                updateAnimation(model.mixer, model.actions.run, getDelta(), 20);
+                // Increase animation speed based on score (0.1 speed increase per 10 points)
+                const baseSpeed = 20;
+                const speedMultiplier = 1 + gameConfig.game.score * 0.01;
+                const animationSpeed = baseSpeed * speedMultiplier;
+                updateAnimation(model.mixer, model.actions.run, getDelta(), animationSpeed);
               },
             },
             // Move obstacles
             {
               action: () => {
                 if (!gameConfig.game.play) return;
-                obstacles.forEach((obstacle) => {
-                  const { mesh, characterController, collider } = obstacle;
 
-                  // Use character controller to move the block
-                  const speed = gameConfig.blocks.speed;
-                  const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
+                // Move obstacles and remove off-screen ones
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                  const obstacle = obstacles[i];
 
-                  characterController.computeColliderMovement(collider, moveVector);
-                  const translation = characterController.computedMovement();
-                  const position = collider.translation();
+                  // Move the block
+                  moveBlock(obstacle, physics);
 
-                  position.x += translation.x;
-                  position.y += translation.y;
-                  position.z += translation.z;
-
-                  collider.setTranslation(position);
-
-                  // Sync Three.js mesh with Rapier collider
-                  mesh.position.set(position.x, position.y, position.z);
-                });
+                  // Check if block should be removed and remove it
+                  if (shouldRemoveBlock(obstacle.mesh)) {
+                    removeBlock(obstacle, obstacles, i, scene, physics);
+                  }
+                }
               },
             },
           ],
