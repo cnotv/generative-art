@@ -21,17 +21,38 @@ const keyUp = (event: KeyboardEvent) => {
 
   // Handle spacebar for game state transitions
   if (event.key === " ") {
-    if (!gameStarted.value) {
-      startGame();
-    } else if (gameOver.value) {
-      restartGame();
-    } else if (gamePlay.value && gameStarted.value) {
-      // Hide UI when spacebar is pressed during gameplay
-      uiVisible.value = false;
-    }
+    handleGameStateTransition();
   }
 };
 const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
+
+// Touch state tracking for jump
+const isTouchActive = ref(false);
+
+// Touch event handlers
+const handleTouch = (event: TouchEvent) => {
+  event.preventDefault(); // Prevent scrolling and other default behaviors
+  
+  if (event.type === "touchstart") {
+    isTouchActive.value = true;
+  } else if (event.type === "touchend") {
+    isTouchActive.value = false;
+  }
+  
+  handleGameStateTransition();
+};
+
+// Common function for both keyboard and touch interactions
+const handleGameStateTransition = () => {
+  if (!gameStarted.value) {
+    startGame();
+  } else if (gameOver.value) {
+    restartGame();
+  } else if (gamePlay.value && gameStarted.value) {
+    // Hide UI when spacebar/touch is pressed during gameplay
+    uiVisible.value = false;
+  }
+};
 
 interface PlayerMovement {
   forward: number;
@@ -84,11 +105,19 @@ onMounted(() => {
 onMounted(() => {
   window.addEventListener("keydown", keyUp);
   window.addEventListener("keyup", keyDown);
+  
+  // Add touch event listeners for mobile support
+  window.addEventListener("touchstart", handleTouch, { passive: false });
+  window.addEventListener("touchend", handleTouch, { passive: false });
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", keyUp);
   window.removeEventListener("keyup", keyDown);
+  
+  // Remove touch event listeners
+  window.removeEventListener("touchstart", handleTouch);
+  window.removeEventListener("touchend", handleTouch);
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
@@ -296,8 +325,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
           const currentTime = Date.now();
 
-          // Start jump if jump key is pressed and not already jumping
-          if (uiStore.controls.jump && !gameConfig.player.jump.isActive) {
+          // Start jump if jump key is pressed OR touch is active and not already jumping
+          if ((uiStore.controls.jump || isTouchActive.value) && !gameConfig.player.jump.isActive) {
             gameConfig.player.jump.isActive = true;
             gameConfig.player.jump.startTime = currentTime;
             gameConfig.player.jump.velocity = gameConfig.player.jump.height;
@@ -563,9 +592,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     <div v-if="!gameStarted" class="game-screen start-screen">
       <div class="game-content">
         <h1 class="game-title">Goomba Runner</h1>
-        <p class="game-instructions">Press <kbd>SPACEBAR</kbd> to jump over obstacles</p>
+        <p class="game-instructions">
+          Press <kbd>SPACEBAR</kbd> or <kbd>TAP SCREEN</kbd> to jump over obstacles
+        </p>
         <button @click="startGame" class="game-button start-button">
-          Press SPACEBAR to Start
+          Press SPACEBAR or TAP to Start
         </button>
       </div>
     </div>
@@ -579,7 +610,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           <span class="score-value">{{ gameScore }}</span>
         </div>
         <button @click="restartGame" class="game-button restart-button">
-          Press SPACEBAR to Restart
+          Press SPACEBAR or TAP to Restart
         </button>
       </div>
     </div>
@@ -587,7 +618,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     <!-- In-Game Score Display -->
     <div v-if="gamePlay && gameStarted" class="score-hud">
       <span class="current-score">Score: {{ gameScore }}</span>
-      <div class="ui-hint">Press SPACEBAR to hide UI</div>
+      <div class="ui-hint">Press SPACEBAR or TAP to hide UI</div>
     </div>
   </div>
 
