@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
-import Stats from "three/addons/libs/stats.module.js";
 
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getModel, getTools, getTextures } from "@/utils/threeJs";
-import { bindAnimatedElements, bodyJump, updateAnimation } from "@/utils/animation";
+import { getTools, getTextures } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
-import { getCube } from "@/utils/models";
 // import brickTexture from "@/assets/brick.jpg";
 
 // Set UI controls
@@ -34,6 +30,13 @@ const gameConfig = {
   player: {
     speed: 2.5,
     maxJump: 30,
+    jump: {
+      height: 70,
+      duration: 1000, // milliseconds
+      isActive: false,
+      velocity: 0,
+      startTime: 0,
+    },
   },
   game: {
     play: true,
@@ -95,7 +98,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const addPlayerController = (scene: THREE.Scene, physics: RapierPhysics) => {
     // Character Capsule - fixed size and positioning
     const capsuleRadius = 5;
-    const capsuleHeight = 20;
+    const capsuleHeight = 10;
     const geometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleHeight, 8, 16);
     const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
     const player = new THREE.Mesh(geometry, material);
@@ -119,6 +122,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       capsuleRadius
     ).setTranslation(0, playerY, 0);
     player.userData.collider = physics.world.createCollider(colliderDesc);
+
+    // Store base Y position for jump calculations
+    player.userData.baseY = playerY;
 
     return { player, playerController };
   };
@@ -200,6 +206,53 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         // Movement input
         const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
 
+        function handleJump(player: THREE.Mesh) {
+          // Stop jump animation if game is not playing
+          if (!gameConfig.game.play) {
+            gameConfig.player.jump.isActive = false;
+            gameConfig.player.jump.velocity = 0;
+            return;
+          }
+
+          const currentTime = Date.now();
+
+          // Start jump if jump key is pressed and not already jumping
+          if (uiStore.controls.jump && !gameConfig.player.jump.isActive) {
+            gameConfig.player.jump.isActive = true;
+            gameConfig.player.jump.startTime = currentTime;
+            gameConfig.player.jump.velocity = gameConfig.player.jump.height;
+            console.log("🚀 Jump started!");
+          }
+
+          // Handle ongoing jump
+          if (gameConfig.player.jump.isActive) {
+            const jumpElapsed = currentTime - gameConfig.player.jump.startTime;
+            const jumpProgress = jumpElapsed / gameConfig.player.jump.duration;
+
+            if (jumpProgress >= 1.0) {
+              // Jump complete
+              gameConfig.player.jump.isActive = false;
+              gameConfig.player.jump.velocity = 0;
+            } else {
+              // Calculate jump arc (parabolic motion)
+              const jumpCurve = Math.sin(jumpProgress * Math.PI); // Creates arc from 0 to 1 to 0
+              const targetY =
+                player.userData.baseY + gameConfig.player.jump.height * jumpCurve;
+
+              // Update player position
+              const currentPosition = player.userData.collider.translation();
+              player.userData.collider.setTranslation({
+                x: currentPosition.x,
+                y: targetY,
+                z: currentPosition.z,
+              });
+
+              // Sync Three.js mesh
+              player.position.set(currentPosition.x, targetY, currentPosition.z);
+            }
+          }
+        }
+
         // Track collisions to log only once per block
         const loggedCollisions = new Set<string>();
 
@@ -217,12 +270,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               const collisionKey = `obstacle-${index}-${obstacle.mesh.uuid}`;
 
               if (!loggedCollisions.has(collisionKey)) {
-                console.log("🔥 COLLISION DETECTED!", {
-                  player: { position: playerPosition },
-                  obstacle: { position: obstaclePosition, index },
-                  distance: distance,
-                  threshold: collisionThreshold,
-                });
                 loggedCollisions.add(collisionKey);
                 gameConfig.game.play = false;
               }
@@ -285,18 +332,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         }
 
         animate({
-          beforeTimeline: () => {
-            // bindAnimatedElements([...elements, ...obstacles], world, getDelta());
-            if (uiStore.controls.jump) {
-              // TODO: Implement jump logic
-            }
-          },
+          beforeTimeline: () => {},
           timeline: [
             {
               action: () => {
                 if (physicsHelper) physicsHelper.update();
 
                 movePlayer(player, playerController, physics, playerMovement);
+                handleJump(player);
                 checkCollisions(player, obstacles);
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
