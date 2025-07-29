@@ -29,11 +29,15 @@ interface PlayerMovement {
 
 const gameConfig = {
   blocks: {
-    speed: 1,
+    speed: 1.5,
   },
   player: {
     speed: 2.5,
     maxJump: 30,
+  },
+  game: {
+    play: true,
+    score: 0,
   },
 };
 
@@ -128,17 +132,29 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       color: 0xff0000,
       // map: getTextures(brickTexture),
     });
-    const mass = 0;
-    const restitution = 0;
     const mesh: THREE.Mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     mesh.position.set(...position);
-    mesh.userData.physics = { mass, restitution };
     scene.add(mesh);
 
     if (physics) {
-      const { body, collider } = physics.addMesh(mesh, mass, restitution);
-      return { mesh, body, collider };
+      // Create character controller for controlled movement
+      const characterController = physics.world.createCharacterController(0.01);
+      characterController.setApplyImpulsesToDynamicBodies(true);
+
+      // Create collider for the block
+      const colliderDesc = physics.RAPIER.ColliderDesc.cuboid(15, 15, 15).setTranslation(
+        position[0],
+        position[1],
+        0
+      );
+      const collider = physics.world.createCollider(colliderDesc);
+
+      // Store collider reference in mesh userData
+      mesh.userData.collider = collider;
+      mesh.userData.characterController = characterController;
+
+      return { mesh, characterController, collider };
     }
 
     return { mesh };
@@ -154,7 +170,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
-    const obstacles = [] as THREE.Mesh[];
+    const obstacles = [] as {
+      mesh: THREE.Mesh;
+      characterController: any;
+      collider: any;
+    }[];
 
     const { animate, setup, world, scene, getDelta, renderer, camera } = getTools({
       stats,
@@ -179,37 +199,28 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         // Movement input
         const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
 
-        function addBody(
-          position: [number, number],
-          fixed = true,
-          physics?: RapierPhysics
+        // Track collisions to log only once per block
+        const loggedCollisions = new Set<string>();
+
+        function checkCollisions(
+          player: THREE.Mesh,
+          obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[]
         ) {
-          const geometry = fixed
-            ? new THREE.BoxGeometry(30, 30, 30)
-            : new THREE.SphereGeometry(10);
-          const material = new THREE.MeshStandardMaterial({
-            color: fixed ? 0xff0000 : 0x00ff00,
+          const playerPosition = player.position;
+          obstacles.forEach((obstacle, index) => {
+            const obstaclePosition = obstacle.mesh.position;
+            const distance = playerPosition.distanceTo(obstaclePosition);
+            const collisionThreshold = 40; // Adjusted for the 30x30x30 blocks and player size
+
+            if (distance < collisionThreshold) {
+              const collisionKey = `obstacle-${index}-${obstacle.mesh.uuid}`;
+
+              if (!loggedCollisions.has(collisionKey)) {
+                gameConfig.game.play = false;
+              }
+            }
           });
-          const mass = fixed ? 0 : 5;
-          const restitution = fixed ? 0 : 0.3;
-          const mesh = new THREE.Mesh(geometry, material);
-          mesh.castShadow = true;
-
-          mesh.position.set(...position);
-
-          mesh.userData.physics = {
-            mass,
-            restitution,
-          };
-          scene.add(mesh);
-          if (physics) {
-            const { body, collider } = physics.addMesh(mesh, mass, restitution);
-            return { mesh, body, collider };
-          }
-          return { mesh };
         }
-
-        function addControlledBlock() {}
 
         function movePlayer(
           player: THREE.Mesh,
@@ -268,6 +279,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           beforeTimeline: () => {
             // bindAnimatedElements([...elements, ...obstacles], world, getDelta());
             if (uiStore.controls.jump) {
+              // TODO: Implement jump logic
             }
           },
           timeline: [
@@ -276,36 +288,50 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 if (physicsHelper) physicsHelper.update();
 
                 movePlayer(player, playerController, physics, playerMovement);
+                checkCollisions(player, obstacles);
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
             },
             // Generate cubes
             {
-              // frequency: 75,
-              start: 50,
-              end: 50,
+              frequency: 75,
               action: () => {
-                const position = [30 * 5, 15 * Math.floor(Math.random() * 3) + 15];
-                const { mesh, body, collider } = addBlock(scene, position, physics);
-                console.log({ mesh, body, collider });
-                // obstacles.push({ mesh, body, collider });
-
-                addBody([Math.random() * 100, Math.random() * 100], false, physics);
+                if (!gameConfig.game.play) return;
+                const position: [number, number] = [
+                  30 * 10,
+                  15 * Math.floor(Math.random() * 3) + 15,
+                ];
+                const { mesh, characterController, collider } = addBlock(
+                  scene,
+                  position,
+                  physics
+                );
+                obstacles.push({ mesh, characterController, collider });
               },
             },
             // Move obstacles
             {
               action: () => {
-                obstacles.forEach((obstacle: THREE.Mesh) => {
-                  console.log(obstacle);
-                  physics.setMeshPosition(
-                    { body: obstacle.body, collider: obstacle.collider },
-                    [
-                      obstacle.mesh.position.x - gameConfig.blocks.speed,
-                      obstacle.mesh.position.y,
-                      obstacle.mesh.position.z,
-                    ]
-                  );
+                if (!gameConfig.game.play) return;
+                obstacles.forEach((obstacle) => {
+                  const { mesh, characterController, collider } = obstacle;
+
+                  // Use character controller to move the block
+                  const speed = gameConfig.blocks.speed;
+                  const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
+
+                  characterController.computeColliderMovement(collider, moveVector);
+                  const translation = characterController.computedMovement();
+                  const position = collider.translation();
+
+                  position.x += translation.x;
+                  position.y += translation.y;
+                  position.z += translation.z;
+
+                  collider.setTranslation(position);
+
+                  // Sync Three.js mesh with Rapier collider
+                  mesh.position.set(position.x, position.y, position.z);
                 });
               },
             },
