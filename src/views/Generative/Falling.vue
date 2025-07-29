@@ -39,11 +39,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   });
 
   const setup = async () => {
-    const { renderer, scene, camera, clock, orbit, world } = getEnvironment(canvas, {
+    const { renderer, scene, camera, clock, world } = getEnvironment(canvas, {
       camera: { position: [0, 150, 0] },
     });
     createLights(scene, { directionalLightIntensity: config.directional.intensity });
-    getGround(scene, world, { worldSize: 1000.0, color: 0xffffff });
+    getGround(scene, world, { size: 1000.0, color: 0xffffff });
 
     let elements = [] as any[];
     const addBall = (position: CoordinateTuple) => {
@@ -76,11 +76,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     video.record(canvas, route);
     function animate() {
       stats.start(route);
-      clock.getDelta();
+      const delta = clock.getDelta();
       const frame = requestAnimationFrame(animate);
       world.step();
 
-      bindAnimatedElements(elements);
+      bindAnimatedElements(elements, world, delta);
       generateBalls(20, 600, 300);
       animateTimeline(
         [
@@ -92,7 +92,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         frame
       );
 
-      orbit.update();
       renderer.render(scene, camera);
       video.stop(renderer.info.render.frame, route);
       stats.end(route);

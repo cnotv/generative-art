@@ -81,7 +81,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       const frame = requestAnimationFrame(animate);
       world.step();
 
-      bindAnimatedElements(experiments, delta);
+      bindAnimatedElements(experiments, world, delta);
 
       animateTimeline(
         [
@@ -96,7 +96,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         frame
       );
 
-      orbit.update();
       renderer.render(scene, camera);
       video.stop(renderer.info.render.frame, route);
       stats.end(route);
