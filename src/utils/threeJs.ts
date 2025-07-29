@@ -59,13 +59,16 @@ export const getTools = ({ stats, route, canvas }: any) => {
       ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
-      orbit?: {} | false
+      orbit?: {target?: THREE.Vector} | false
     },
     defineSetup?: () => void
   }) => {
     frameRate = config?.global?.frameRate || frameRate;
     if (config.orbit !== false) {
       orbit = new OrbitControls(camera, renderer.domElement);
+      if (config.orbit?.target) {
+        orbit.target = new THREE.Vector3(config.orbit.target);
+      }
     }
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
@@ -132,15 +135,17 @@ export const getTools = ({ stats, route, canvas }: any) => {
  * @returns 
  */
 export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
-  camera: { position: [0, 10, -30] },
+  camera: { position: [0, 20, 150], distance: 75 },
+  scene: { background: 0xbfd1e5 },
 }) => {
   const gravity = { x: 0.0, y: -9.81, z: 0.0 };
   const world = new RAPIER.World(gravity);
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();
+  scene.background = new THREE.Color(options.scene?.background || 0xbfd1e5);
 
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const camera = new THREE.PerspectiveCamera(options.camera.distance, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(...(options.camera.position as CoordinateTuple));
 
   return { renderer, scene, camera, clock, world };
@@ -184,8 +189,9 @@ export const setThirdPersonCamera = (
   }
 }
 
-export const getRenderer = (canvas: HTMLCanvasElement) => {
+export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0xaaaaff); // Set background color to black
   renderer.shadowMap.enabled = true; // Enable shadow maps
@@ -196,10 +202,23 @@ export const getRenderer = (canvas: HTMLCanvasElement) => {
 /**
  * Create and return default lights
  * @param scene 
- * @param { directionalLightIntensity } 
  * @returns 
  */
-export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: {directionalLightIntensity?: number} = {}) => {
+export const createLights = (scene: THREE.Scene, {
+  directionalLightIntensity,
+  hemisphere,
+  ambient
+}: {
+  directionalLightIntensity?: number,
+  hemisphere?: { colors?: any[] }
+  ambient?: { color?: number, intensity?: number }
+  } = {
+    hemisphere: { colors: [0x555555, 0xffffff] },
+    ambient: { color: 0xffffff, intensity: 1 }
+  }) => {
+  const hemisphereLight =  new THREE.HemisphereLight(...(hemisphere?.colors || []));
+  scene.add(hemisphereLight);
+  
   // Add directional light with shadows
   const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
   directionalLight.position.set(5, 10, 10);
@@ -220,7 +239,7 @@ export const createLights = (scene: THREE.Scene, { directionalLightIntensity }: 
   // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
   // scene.add(shadowCameraHelper);
   
-  const ambientLight = new THREE.AmbientLight( 0xffffff, 1 );
+  const ambientLight = new THREE.AmbientLight( ambient?.color, ambient?.intensity );
   ambientLight.position.set(5, 5, 5);
   scene.add(ambientLight)
   
@@ -251,17 +270,20 @@ export const getGround = (
     texture?: string,
   },
 ) => {
-  const geometry = new THREE.PlaneGeometry(size, size)
-  const defaultProps = { color }
-  const material = new THREE.MeshPhysicalMaterial({
+    const defaultProps = { color }
+    const geometry = new THREE.BoxGeometry(size, 0.5, size);
+    const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
     ...texture ? { map: getTextures(texture)} : {},
-  })
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true;
+  // mesh.rotation.x = -Math.PI / 2 // Rotate the ground to make it horizontal
   mesh.position.set(...position)
-  mesh.receiveShadow = true
-  scene.add(mesh)
+  mesh.userData.physics = { mass: 0 };
+
+  scene.add(mesh);
 
   const { rigidBody, collider } = getPhysic(world, {
     position: mesh.position.toArray(),
