@@ -93,31 +93,32 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   };
 
   const addPlayerController = (scene: THREE.Scene, physics: RapierPhysics) => {
-    // Character Capsule
-    const size = 30;
-    const geometry = new THREE.CapsuleGeometry(size * 0.3, size, size / 8, size / 8);
+    // Character Capsule - fixed size and positioning
+    const capsuleRadius = 5;
+    const capsuleHeight = 20;
+    const geometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleHeight, 8, 16);
     const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
     const player = new THREE.Mesh(geometry, material);
     player.castShadow = true;
-    player.position.set(0, 0.8, 0);
-    const mass = 0;
-    const restitution = 0;
+
+    // Position player above ground
+    const groundY = 0;
+    const playerY = groundY + capsuleHeight / 2 + capsuleRadius + 2; // Half height + radius + small offset
+    player.position.set(0, playerY, 0);
+
     scene.add(player);
 
     // Rapier Character Controller
     const playerController = physics.world.createCharacterController(0.01);
     playerController.setApplyImpulsesToDynamicBodies(true);
     playerController.setCharacterMass(3);
-    const colliderDesc = physics.RAPIER.ColliderDesc.capsule(0.5, 0.3).setTranslation(
-      0,
-      0.8,
-      0
-    );
-    player.userData.collider = physics.world.createCollider(colliderDesc);
 
-    if (physics) {
-      physics.addMesh(player, mass, restitution);
-    }
+    // Create collider that matches the capsule geometry
+    const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
+      capsuleHeight / 2,
+      capsuleRadius
+    ).setTranslation(0, playerY, 0);
+    player.userData.collider = physics.world.createCollider(colliderDesc);
 
     return { player, playerController };
   };
@@ -210,12 +211,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           obstacles.forEach((obstacle, index) => {
             const obstaclePosition = obstacle.mesh.position;
             const distance = playerPosition.distanceTo(obstaclePosition);
-            const collisionThreshold = 40; // Adjusted for the 30x30x30 blocks and player size
+            const collisionThreshold = 25; // Reduced threshold for smaller player capsule
 
             if (distance < collisionThreshold) {
               const collisionKey = `obstacle-${index}-${obstacle.mesh.uuid}`;
 
               if (!loggedCollisions.has(collisionKey)) {
+                console.log("🔥 COLLISION DETECTED!", {
+                  player: { position: playerPosition },
+                  obstacle: { position: obstaclePosition, index },
+                  distance: distance,
+                  threshold: collisionThreshold,
+                });
+                loggedCollisions.add(collisionKey);
                 gameConfig.game.play = false;
               }
             }
@@ -266,7 +274,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const mesh = new THREE.Mesh(geometry, material);
           mesh.receiveShadow = true;
 
-          mesh.position.y = -0.25;
+          // Position ground at y = 0, with the top surface at y = 0.25
+          mesh.position.y = 0;
           mesh.userData.physics = { mass: 0 };
 
           if (physics) {
