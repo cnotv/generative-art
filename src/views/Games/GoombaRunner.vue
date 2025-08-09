@@ -174,7 +174,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   ) => {
     // Load Goomba model
     const goombaModel = await getModel(scene, world, "goomba.glb", {
-      scale: [0.3, 0.3, 0.3],
+      scale: [0.4, 0.4, 0.4],
       size: 3,
       restitution: -10,
       boundary: 0.5,
@@ -210,8 +210,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       player.userData.collider.setTranslation({ x: 0, y: playerY, z: 0 });
     } else {
       // Fallback: create a capsule collider
-      const capsuleRadius = 5;
-      const capsuleHeight = 10;
+      const capsuleRadius = 8;
+      const capsuleHeight = 15;
       const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
         capsuleHeight / 2,
         capsuleRadius
@@ -232,7 +232,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   ) => {
     const geometry = new THREE.BoxGeometry(30, 30, 30);
     const material = new THREE.MeshStandardMaterial({
-      color: 0xd2691e, // Mario brick orange/brown color
+      color: 0x72391e, // Mario brick orange/brown color
       map: getTextures(brickTexture),
     });
     const mesh: THREE.Mesh = new THREE.Mesh(geometry, material);
