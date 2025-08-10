@@ -14,6 +14,23 @@ import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import brickTexture from "@/assets/brick.jpg";
 
+// Load Google Fonts for this route only
+const loadGoogleFont = () => {
+  const link = document.createElement("link");
+  link.href = "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap";
+  link.rel = "stylesheet";
+  link.id = "goomba-runner-font";
+  document.head.appendChild(link);
+};
+
+// Remove font when component unmounts
+const removeGoogleFont = () => {
+  const existingLink = document.getElementById("goomba-runner-font");
+  if (existingLink) {
+    document.head.removeChild(existingLink);
+  }
+};
+
 // Set UI controls
 const uiStore = useUiStore();
 const keyUp = (event: KeyboardEvent) => {
@@ -91,6 +108,9 @@ const route = useRoute();
 
 let initInstance: () => void;
 onMounted(() => {
+  // Load Google Font for this route
+  loadGoogleFont();
+
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
@@ -112,6 +132,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  // Remove Google Font when leaving this route
+  removeGoogleFont();
+
   window.removeEventListener("keydown", keyUp);
   window.removeEventListener("keyup", keyDown);
 
@@ -641,6 +664,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   --shadow-text-mario-large: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
     0.3rem 0.3rem 0px #000, 0.4rem 0.4rem 0px #000, 0.5rem 0.5rem 0px #000;
   --border-mario: 3px solid var(--color-mario-gold);
+  --font-playful: "Darumadrop One", "Arial Black", sans-serif;
 }
 </style>
 
@@ -684,12 +708,22 @@ button {
 }
 
 .game-title {
-  font-size: 5rem;
-  font-weight: bold;
+  font-size: 12vh;
+  font-weight: 900;
   margin-bottom: 1rem;
   text-shadow: var(--shadow-text-mario-large);
   text-transform: uppercase;
-  font-family: "Arial Black", Arial, sans-serif;
+  font-family: var(--font-playful);
+  color: #000;
+  line-height: 0.6;
+  letter-spacing: -0.4rem;
+  /* Text outline using webkit-text-stroke */
+  -webkit-text-stroke: 3px #fff;
+  /* Fallback text outline using multiple text shadows */
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
+    4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000,
+    0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
 }
 
 .game-title > span {
@@ -718,13 +752,19 @@ button {
 }
 
 .game-over-title {
-  font-size: 5rem;
-  font-weight: bold;
+  font-size: 12vh;
+  font-weight: 900;
   margin-bottom: 1rem;
-  text-shadow: var(--shadow-text-mario);
   text-transform: uppercase;
+  font-family: var(--font-playful);
+  line-height: 0.6;
+  letter-spacing: -0.4rem;
+  color: var(--color-mario-red);
 
-  font-family: "Arial Black", Arial, sans-serif;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
+    4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000,
+    0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
 }
 
 .score-label {
@@ -743,14 +783,18 @@ button {
 
 .game-button {
   padding: 15px 30px;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-size: 1.5rem;
+  font-weight: 800;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   pointer-events: all;
-  text-shadow: var(--shadow-text-mario);
-  font-family: "Arial Black", Arial, sans-serif;
+  color: #000;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
+  font-family: var(--font-playful);
+  /* font-family: monospace; */
+  margin-top: 2rem;
 }
 
 kbd {
@@ -771,9 +815,10 @@ kbd {
   padding: 12px 24px;
   border-radius: 25px;
   font-size: 1.3rem;
-  font-weight: bold;
-  font-family: "Arial Black", Arial, sans-serif;
+  font-weight: 800;
+  font-family: var(--font-playful);
   text-shadow: var(--shadow-text-mario);
+  color: #000;
 }
 
 .ui-hint {
@@ -788,15 +833,16 @@ kbd {
   right: 20px;
   z-index: 2;
   pointer-events: none;
-  text-shadow: var(--shadow-text-mario);
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
 }
 
 .score-display {
   padding: 15px 25px;
   margin: 2rem 0;
   font-size: 1.8rem;
-  font-weight: bold;
-  font-family: "Arial Black", Arial, sans-serif;
-  text-shadow: var(--shadow-text-mario);
+  font-weight: 800;
+  font-family: var(--font-playful);
+  color: #000;
 }
 </style>
