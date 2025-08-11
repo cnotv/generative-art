@@ -32,15 +32,54 @@ const removeGoogleFont = () => {
 
 // Set UI controls
 const uiStore = useUiStore();
-const keyUp = (event: KeyboardEvent) => {
-  uiStore.setKeyState(event.key, true);
 
-  // Handle spacebar for game state transitions
+// Separate event handlers for different game states
+const handleStartScreenKeys = (event: KeyboardEvent) => {
   if (event.key === " ") {
-    handleGameStateTransition();
+    startGame();
   }
 };
-const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
+
+const handleGameOverKeys = (event: KeyboardEvent) => {
+  if (event.key === " ") {
+    restartGame();
+  }
+};
+
+const handleGameplayKeys = (event: KeyboardEvent) => {
+  uiStore.setKeyState(event.key, true);
+  
+  // Only handle UI hiding if UI is visible
+  if (event.key === " " && uiVisible.value) {
+    uiVisible.value = false;
+  }
+};
+
+const handleGameplayKeyUp = (event: KeyboardEvent) => {
+  uiStore.setKeyState(event.key, false);
+};
+
+// Function to add/remove event listeners based on game state
+const updateEventListeners = () => {
+  // Remove all existing listeners first
+  window.removeEventListener("keydown", handleStartScreenKeys);
+  window.removeEventListener("keydown", handleGameOverKeys);
+  window.removeEventListener("keydown", handleGameplayKeys);
+  window.removeEventListener("keyup", handleGameplayKeyUp);
+
+  // Add appropriate listeners based on current state
+  if (!gameStarted.value) {
+    // Start screen
+    window.addEventListener("keydown", handleStartScreenKeys);
+  } else if (gameOver.value) {
+    // Game over screen
+    window.addEventListener("keydown", handleGameOverKeys);
+  } else if (gamePlay.value) {
+    // Active gameplay
+    window.addEventListener("keydown", handleGameplayKeys);
+    window.addEventListener("keyup", handleGameplayKeyUp);
+  }
+};
 
 // Touch state tracking for jump
 const isTouchActive = ref(false);
@@ -51,22 +90,18 @@ const handleTouch = (event: TouchEvent) => {
 
   if (event.type === "touchstart") {
     isTouchActive.value = true;
+    
+    // Handle touch based on current game state
+    if (!gameStarted.value) {
+      startGame();
+    } else if (gameOver.value) {
+      restartGame();
+    } else if (gamePlay.value && uiVisible.value) {
+      // Only hide UI when it's currently visible during gameplay
+      uiVisible.value = false;
+    }
   } else if (event.type === "touchend") {
     isTouchActive.value = false;
-  }
-
-  handleGameStateTransition();
-};
-
-// Common function for both keyboard and touch interactions
-const handleGameStateTransition = () => {
-  if (!gameStarted.value) {
-    startGame();
-  } else if (gameOver.value) {
-    restartGame();
-  } else if (gamePlay.value && gameStarted.value) {
-    // Hide UI when spacebar/touch is pressed during gameplay
-    uiVisible.value = false;
   }
 };
 
@@ -122,8 +157,8 @@ onMounted(() => {
 });
 
 onMounted(() => {
-  window.addEventListener("keydown", keyUp);
-  window.addEventListener("keyup", keyDown);
+  // Initialize event listeners for start screen
+  updateEventListeners();
 
   // Add touch event listeners for mobile support
   window.addEventListener("touchstart", handleTouch, { passive: false });
@@ -134,8 +169,11 @@ onUnmounted(() => {
   // Remove Google Font when leaving this route
   removeGoogleFont();
 
-  window.removeEventListener("keydown", keyUp);
-  window.removeEventListener("keyup", keyDown);
+  // Remove all keyboard event listeners
+  window.removeEventListener("keydown", handleStartScreenKeys);
+  window.removeEventListener("keydown", handleGameOverKeys);
+  window.removeEventListener("keydown", handleGameplayKeys);
+  window.removeEventListener("keyup", handleGameplayKeyUp);
 
   // Remove touch event listeners
   window.removeEventListener("touchstart", handleTouch);
@@ -151,6 +189,7 @@ const startGame = () => {
   gameOver.value = false;
   gameScore.value = 0;
   uiVisible.value = false; // Hide UI immediately when starting game
+  updateEventListeners(); // Update event listeners for gameplay state
 };
 
 const restartGame = () => {
@@ -159,12 +198,14 @@ const restartGame = () => {
   gameScore.value = 0;
   shouldClearObstacles.value = true;
   uiVisible.value = false; // Hide UI immediately when restarting
+  updateEventListeners(); // Update event listeners for gameplay state
 };
 
 const endGame = () => {
   gamePlay.value = false;
   gameOver.value = true;
   uiVisible.value = true; // Show UI on game over
+  updateEventListeners(); // Update event listeners for game over state
 };
 
 const config = {
