@@ -48,7 +48,7 @@ const handleGameOverKeys = (event: KeyboardEvent) => {
 
 const handleGameplayKeys = (event: KeyboardEvent) => {
   uiStore.setKeyState(event.key, true);
-  
+
   // Only handle UI hiding if UI is visible
   if (event.key === " " && uiVisible.value) {
     uiVisible.value = false;
@@ -90,7 +90,7 @@ const handleTouch = (event: TouchEvent) => {
 
   if (event.type === "touchstart") {
     isTouchActive.value = true;
-    
+
     // Handle touch based on current game state
     if (!gameStarted.value) {
       startGame();
@@ -121,10 +121,10 @@ const uiVisible = ref(true);
 
 const gameConfig = {
   blocks: {
-    speed: 1.5,
+    speed: 3,
   },
   player: {
-    speed: 2.5,
+    speed: 3,
     maxJump: 30,
     jump: {
       height: 70,
