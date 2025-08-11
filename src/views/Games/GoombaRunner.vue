@@ -9,10 +9,9 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools, getTextures, getModel } from "@/utils/threeJs";
+import { getTools, getModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
-import brickTexture from "@/assets/brick.jpg";
 
 // Load Google Fonts for this route only
 const loadGoogleFont = () => {
@@ -248,20 +247,24 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     return { player, playerController, model: goombaModel };
   };
 
-  const addBlock = (
+  const addBlock = async (
     scene: THREE.Scene,
     position: [number, number],
+    world: RAPIER.World,
     physics?: RapierPhysics
   ) => {
-    const geometry = new THREE.BoxGeometry(30, 30, 30);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x72391e, // Mario brick orange/brown color
-      map: getTextures(brickTexture),
+    // Load sand block model
+    const sandBlockModel = await getModel(scene, world, "sand_block.glb", {
+      scale: [0.15, 0.15, 0.15],
+      restitution: 0,
+      position: [position[0], position[1], 0],
+      type: "kinematicPositionBased", // Changed from "fixed" to allow movement
+      hasGravity: false,
     });
-    const mesh: THREE.Mesh = new THREE.Mesh(geometry, material);
+
+    const mesh = sandBlockModel.mesh;
     mesh.castShadow = true;
-    mesh.position.set(...position);
-    scene.add(mesh);
+    mesh.position.set(position[0], position[1], 0);
 
     if (physics) {
       // Create character controller for controlled movement
@@ -549,15 +552,16 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Generate cubes
             {
               frequency: 75,
-              action: () => {
+              action: async () => {
                 if (!gamePlay.value) return;
                 const position: [number, number] = [
                   30 * 10,
                   15 * Math.floor(Math.random() * 3) + 15,
                 ];
-                const { mesh, characterController, collider } = addBlock(
+                const { mesh, characterController, collider } = await addBlock(
                   scene,
                   position,
+                  world,
                   physics
                 );
                 obstacles.push({ mesh, characterController, collider });
