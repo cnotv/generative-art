@@ -272,7 +272,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     // Position player above ground
     const groundY = 0;
     const playerY = groundY;
-    player.position.set(0, playerY, 0);
+    const startingPosition = { x: 0, y: playerY, z: 0 };
+    player.position.set(startingPosition.x, startingPosition.y, startingPosition.z);
+
+    // Store starting position for resets
+    player.userData.startingPosition = startingPosition;
 
     // Rapier Character Controller
     const playerController = physics.world.createCharacterController(0.01);
@@ -698,8 +702,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   }
                   explosionParticles.length = 0;
 
-                  // Make Goomba visible again when restarting
+                  // Make Goomba visible again and reset to starting position
                   player.visible = true;
+
+                  // Reset Goomba to starting position
+                  const startPos = player.userData.startingPosition;
+                  player.position.set(startPos.x, startPos.y, startPos.z);
+
+                  // Reset collider position to match
+                  player.userData.collider.setTranslation({
+                    x: startPos.x,
+                    y: startPos.y,
+                    z: startPos.z,
+                  });
 
                   shouldClearObstacles.value = false;
                 }
