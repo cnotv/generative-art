@@ -66,28 +66,32 @@ const updateEventListeners = () => {
   window.removeEventListener("keydown", handleGameOverKeys);
   window.removeEventListener("keydown", handleGameplayKeys);
   window.removeEventListener("keyup", handleGameplayKeyUp);
-  // Add touch event listeners for mobile support
-  window.removeEventListener("touchstart", handleTouch);
-  window.removeEventListener("touchend", handleTouch);
+  // Remove touch event listeners
+  window.removeEventListener("touchstart", handleStartScreenTouch);
+  window.removeEventListener("touchend", handleStartScreenTouch);
+  window.removeEventListener("touchstart", handleGameOverTouch);
+  window.removeEventListener("touchend", handleGameOverTouch);
+  window.removeEventListener("touchstart", handleGameplayTouch);
+  window.removeEventListener("touchend", handleGameplayTouch);
 
   const timeoutId = setTimeout(() => {
     // Add appropriate listeners based on current state
     if (!gameStarted.value) {
       // Start screen
       window.addEventListener("keydown", handleStartScreenKeys);
-      window.addEventListener("touchstart", handleTouch, { passive: false });
-      window.addEventListener("touchend", handleTouch, { passive: false });
+      window.addEventListener("touchstart", handleStartScreenTouch, { passive: false });
+      window.addEventListener("touchend", handleStartScreenTouch, { passive: false });
     } else if (gameOver.value) {
       // Game over screen
       window.addEventListener("keydown", handleGameOverKeys);
-      window.addEventListener("touchstart", handleTouch, { passive: false });
-      window.addEventListener("touchend", handleTouch, { passive: false });
+      window.addEventListener("touchstart", handleGameOverTouch, { passive: false });
+      window.addEventListener("touchend", handleGameOverTouch, { passive: false });
     } else if (gamePlay.value) {
       // Active gameplay
       window.addEventListener("keydown", handleGameplayKeys);
       window.addEventListener("keyup", handleGameplayKeyUp);
-      window.addEventListener("touchstart", handleTouch, { passive: false });
-      window.addEventListener("touchend", handleTouch, { passive: false });
+      window.addEventListener("touchstart", handleGameplayTouch, { passive: false });
+      window.addEventListener("touchend", handleGameplayTouch, { passive: false });
     }
 
     clearTimeout(timeoutId);
@@ -97,20 +101,37 @@ const updateEventListeners = () => {
 // Touch state tracking for jump
 const isTouchActive = ref(false);
 
-// Touch event handlers
-const handleTouch = (event: TouchEvent) => {
-  event.preventDefault(); // Prevent scrolling and other default behaviors
+// Separate touch event handlers for different game states
+const handleStartScreenTouch = (event: TouchEvent) => {
+  event.preventDefault();
+
+  if (event.type === "touchstart") {
+    isTouchActive.value = true;
+    startGame();
+  } else if (event.type === "touchend") {
+    isTouchActive.value = false;
+  }
+};
+
+const handleGameOverTouch = (event: TouchEvent) => {
+  event.preventDefault();
+
+  if (event.type === "touchstart") {
+    isTouchActive.value = true;
+    restartGame();
+  } else if (event.type === "touchend") {
+    isTouchActive.value = false;
+  }
+};
+
+const handleGameplayTouch = (event: TouchEvent) => {
+  event.preventDefault();
 
   if (event.type === "touchstart") {
     isTouchActive.value = true;
 
-    // Handle touch based on current game state
-    if (!gameStarted.value) {
-      startGame();
-    } else if (gameOver.value) {
-      restartGame();
-    } else if (gamePlay.value && uiVisible.value) {
-      // Only hide UI when it's currently visible during gameplay
+    // Only handle UI hiding if UI is visible during gameplay
+    if (uiVisible.value) {
       uiVisible.value = false;
     }
   } else if (event.type === "touchend") {
@@ -152,7 +173,7 @@ const config = {
     collisionThreshold: 38,
     jump: {
       height: 70,
-      duration: 1000, // milliseconds
+      duration: 1000,
       isActive: false,
       velocity: 0,
       startTime: 0,
@@ -166,9 +187,7 @@ const route = useRoute();
 
 let initInstance: () => void;
 onMounted(() => {
-  // Load Google Font for this route
   loadGoogleFont();
-
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
@@ -194,9 +213,13 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleGameplayKeys);
   window.removeEventListener("keyup", handleGameplayKeyUp);
 
-  // Remove touch event listeners
-  window.removeEventListener("touchstart", handleTouch);
-  window.removeEventListener("touchend", handleTouch);
+  // Remove all touch event listeners
+  window.removeEventListener("touchstart", handleStartScreenTouch);
+  window.removeEventListener("touchend", handleStartScreenTouch);
+  window.removeEventListener("touchstart", handleGameOverTouch);
+  window.removeEventListener("touchend", handleGameOverTouch);
+  window.removeEventListener("touchstart", handleGameplayTouch);
+  window.removeEventListener("touchend", handleGameplayTouch);
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
