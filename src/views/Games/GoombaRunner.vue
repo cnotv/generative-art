@@ -149,7 +149,7 @@ const config = {
     speed: 3,
     maxJump: 30,
     heightOffset: 10,
-    collisionThreshold: 35, // Reduced threshold for smaller player capsule
+    collisionThreshold: 38,
     jump: {
       height: 70,
       duration: 1000, // milliseconds
