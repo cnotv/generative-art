@@ -66,19 +66,32 @@ const updateEventListeners = () => {
   window.removeEventListener("keydown", handleGameOverKeys);
   window.removeEventListener("keydown", handleGameplayKeys);
   window.removeEventListener("keyup", handleGameplayKeyUp);
+  // Add touch event listeners for mobile support
+  window.removeEventListener("touchstart", handleTouch);
+  window.removeEventListener("touchend", handleTouch);
 
-  // Add appropriate listeners based on current state
-  if (!gameStarted.value) {
-    // Start screen
-    window.addEventListener("keydown", handleStartScreenKeys);
-  } else if (gameOver.value) {
-    // Game over screen
-    window.addEventListener("keydown", handleGameOverKeys);
-  } else if (gamePlay.value) {
-    // Active gameplay
-    window.addEventListener("keydown", handleGameplayKeys);
-    window.addEventListener("keyup", handleGameplayKeyUp);
-  }
+  const timeoutId = setTimeout(() => {
+    // Add appropriate listeners based on current state
+    if (!gameStarted.value) {
+      // Start screen
+      window.addEventListener("keydown", handleStartScreenKeys);
+      window.addEventListener("touchstart", handleTouch, { passive: false });
+      window.addEventListener("touchend", handleTouch, { passive: false });
+    } else if (gameOver.value) {
+      // Game over screen
+      window.addEventListener("keydown", handleGameOverKeys);
+      window.addEventListener("touchstart", handleTouch, { passive: false });
+      window.addEventListener("touchend", handleTouch, { passive: false });
+    } else if (gamePlay.value) {
+      // Active gameplay
+      window.addEventListener("keydown", handleGameplayKeys);
+      window.addEventListener("keyup", handleGameplayKeyUp);
+      window.addEventListener("touchstart", handleTouch, { passive: false });
+      window.addEventListener("touchend", handleTouch, { passive: false });
+    }
+
+    clearTimeout(timeoutId);
+  }, 500);
 };
 
 // Touch state tracking for jump
@@ -168,12 +181,7 @@ onMounted(() => {
 });
 
 onMounted(() => {
-  // Initialize event listeners for start screen
   updateEventListeners();
-
-  // Add touch event listeners for mobile support
-  window.addEventListener("touchstart", handleTouch, { passive: false });
-  window.addEventListener("touchend", handleTouch, { passive: false });
 });
 
 onUnmounted(() => {
@@ -270,7 +278,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     const playerController = physics.world.createCharacterController(0.01);
     playerController.setApplyImpulsesToDynamicBodies(true);
     playerController.setCharacterMass(3);
-    console.log(playerController);
 
     // Remove existing collider from getModel to avoid conflicts
     if (goombaModel.collider) {
