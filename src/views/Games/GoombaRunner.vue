@@ -434,6 +434,96 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         // Track collisions to log only once per block
         const loggedCollisions = new Set<string>();
 
+        // Explosion particles array
+        const explosionParticles: THREE.Mesh[] = [];
+
+        function createStarExplosion(position: THREE.Vector3) {
+          const starCount = 12; // Number of stars in explosion
+          const colors = [0xffd700, 0xffff00, 0xffa500, 0xff69b4, 0x00ff00, 0x00bfff]; // Gold, yellow, orange, pink, green, blue
+
+          for (let i = 0; i < starCount; i++) {
+            // Create star geometry (using a simple star shape) - 10x larger
+            const starGeometry = new THREE.ConeGeometry(5, 10, 5);
+            const starMaterial = new THREE.MeshStandardMaterial({
+              color: colors[Math.floor(Math.random() * colors.length)],
+              emissive: colors[Math.floor(Math.random() * colors.length)],
+              emissiveIntensity: 0.3,
+            });
+
+            const star = new THREE.Mesh(starGeometry, starMaterial);
+
+            // Position star at collision point
+            star.position.copy(position);
+
+            // Random rotation for variety
+            star.rotation.set(
+              Math.random() * Math.PI * 2,
+              Math.random() * Math.PI * 2,
+              Math.random() * Math.PI * 2
+            );
+
+            // Random velocity for explosion effect
+            const velocity = new THREE.Vector3(
+              (Math.random() - 0.5) * 60, // X velocity
+              Math.random() * 40 + 20, // Y velocity (upward bias)
+              (Math.random() - 0.5) * 40 // Z velocity
+            );
+
+            // Store animation data
+            star.userData = {
+              velocity,
+              gravity: -120, // Gravity effect
+              life: 1.0, // Life span (1.0 = full life)
+              decay: 0.02, // How fast it decays
+              initialScale: 1 + Math.random() * 0.5, // Random initial scale
+              rotationSpeed: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2
+              ),
+            };
+
+            star.scale.setScalar(star.userData.initialScale);
+            scene.add(star);
+            explosionParticles.push(star);
+          }
+        }
+
+        function updateExplosionParticles(deltaTime: number) {
+          for (let i = explosionParticles.length - 1; i >= 0; i--) {
+            const particle = explosionParticles[i];
+            const userData = particle.userData;
+
+            // Update velocity with gravity
+            userData.velocity.y += userData.gravity * deltaTime;
+
+            // Update position
+            particle.position.add(userData.velocity.clone().multiplyScalar(deltaTime));
+
+            // Update rotation
+            particle.rotation.x += userData.rotationSpeed.x;
+            particle.rotation.y += userData.rotationSpeed.y;
+            particle.rotation.z += userData.rotationSpeed.z;
+
+            // Update life and scale
+            userData.life -= userData.decay;
+            const scale = userData.initialScale * userData.life;
+            particle.scale.setScalar(Math.max(0, scale));
+
+            // Update opacity based on life
+            if (particle.material instanceof THREE.MeshStandardMaterial) {
+              particle.material.opacity = userData.life;
+              particle.material.transparent = true;
+            }
+
+            // Remove particle when life is depleted
+            if (userData.life <= 0) {
+              scene.remove(particle);
+              explosionParticles.splice(i, 1);
+            }
+          }
+        }
+
         function checkCollisions(
           player: THREE.Mesh,
           obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[]
@@ -449,6 +539,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
               if (!loggedCollisions.has(collisionKey)) {
                 loggedCollisions.add(collisionKey);
+
+                // Create explosion at collision point
+                const explosionPosition = playerPosition.clone();
+                createStarExplosion(explosionPosition);
+
+                // Make Goomba disappear
+                player.visible = false;
+
                 endGame();
               }
             }
@@ -572,6 +670,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               action: () => {
                 if (physicsHelper) physicsHelper.update();
 
+                // Update explosion particles
+                updateExplosionParticles(getDelta());
+
                 // Clear obstacles if restart was requested
                 if (shouldClearObstacles.value) {
                   // Remove all obstacles from scene and physics
@@ -581,6 +682,16 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                     physics.world.removeCollider(obstacle.collider);
                   }
                   obstacles.length = 0; // Clear the array
+
+                  // Clear explosion particles on restart
+                  for (let i = explosionParticles.length - 1; i >= 0; i--) {
+                    scene.remove(explosionParticles[i]);
+                  }
+                  explosionParticles.length = 0;
+
+                  // Make Goomba visible again when restarting
+                  player.visible = true;
+
                   shouldClearObstacles.value = false;
                 }
 
