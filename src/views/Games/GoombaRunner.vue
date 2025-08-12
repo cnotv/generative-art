@@ -119,13 +119,24 @@ const gameStarted = ref(false);
 const shouldClearObstacles = ref(false);
 const uiVisible = ref(true);
 
-const gameConfig = {
+const config = {
+  helpers: false,
+  directional: {
+    enabled: true,
+    helper: false,
+    intensity: 2,
+  },
   blocks: {
+    helper: false,
     speed: 3,
+    size: 30,
   },
   player: {
+    helper: true,
     speed: 3,
     maxJump: 30,
+    heightOffset: 10,
+    collisionThreshold: 35, // Reduced threshold for smaller player capsule
     jump: {
       height: 70,
       duration: 1000, // milliseconds
@@ -208,14 +219,6 @@ const endGame = () => {
   updateEventListeners(); // Update event listeners for game over state
 };
 
-const config = {
-  directional: {
-    enabled: true,
-    helper: false,
-    intensity: 2,
-  },
-};
-
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const initPhysics = async (scene: THREE.Scene) => {
     //Initialize physics engine using the script in the jsm/physics folder
@@ -223,7 +226,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     //Optionally display collider outlines
     const physicsHelper = new RapierHelper(physics.world);
-    // scene.add(physicsHelper); // Disabled helper
+    if (config.helpers) {
+      scene.add(physicsHelper); // Enable helper to show colliders
+    }
 
     physics.addScene(scene);
 
@@ -243,6 +248,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       boundary: 0.5,
       type: "kinematicPositionBased",
       hasGravity: false,
+      // showHelper: config.player.helper,
     });
 
     if (!goombaModel || !goombaModel.mesh) {
@@ -257,33 +263,33 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     // Position player above ground
     const groundY = 0;
-    const modelHeight = 3; // Approximate height of goomba model
-    const playerY = groundY + modelHeight + 5; // Full height + offset to ensure above ground
+    const playerY = groundY;
     player.position.set(0, playerY, 0);
 
     // Rapier Character Controller
     const playerController = physics.world.createCharacterController(0.01);
     playerController.setApplyImpulsesToDynamicBodies(true);
     playerController.setCharacterMass(3);
+    console.log(playerController);
 
-    // Create collider that approximates the goomba model (using existing collider from getModel)
+    // Remove existing collider from getModel to avoid conflicts
     if (goombaModel.collider) {
-      player.userData.collider = goombaModel.collider;
-      // Update collider position to match player position
-      player.userData.collider.setTranslation({ x: 0, y: playerY, z: 0 });
-    } else {
-      // Fallback: create a capsule collider
-      const capsuleRadius = 8;
-      const capsuleHeight = 15;
-      const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
-        capsuleHeight / 2,
-        capsuleRadius
-      ).setTranslation(0, playerY, 0);
-      player.userData.collider = physics.world.createCollider(colliderDesc);
+      physics.world.removeCollider(goombaModel.collider);
     }
 
+    // Always create a custom capsule collider for better visibility and control
+    const capsuleRadius = 8;
+    const capsuleHeight = 20;
+    const colliderDesc = physics.RAPIER.ColliderDesc.capsule(
+      capsuleHeight / 2,
+      capsuleRadius
+    );
+    colliderDesc.friction = 1;
+    colliderDesc.mass = 1;
+    player.userData.collider = physics.world.createCollider(colliderDesc);
+
     // Store base Y position for jump calculations (closer to ground level)
-    player.userData.baseY = groundY + 2; // Just slightly above ground
+    player.userData.baseY = groundY;
 
     return { player, playerController, model: goombaModel };
   };
@@ -384,8 +390,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         function handleJump(player: THREE.Mesh) {
           // Stop jump animation if game is not playing
           if (!gamePlay.value) {
-            gameConfig.player.jump.isActive = false;
-            gameConfig.player.jump.velocity = 0;
+            config.player.jump.isActive = false;
+            config.player.jump.velocity = 0;
             // Don't move the player - keep current position when game stops
             return;
           }
@@ -395,27 +401,27 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           // Start jump if jump key is pressed OR touch is active and not already jumping
           if (
             (uiStore.controls.jump || isTouchActive.value) &&
-            !gameConfig.player.jump.isActive
+            !config.player.jump.isActive
           ) {
-            gameConfig.player.jump.isActive = true;
-            gameConfig.player.jump.startTime = currentTime;
-            gameConfig.player.jump.velocity = gameConfig.player.jump.height;
+            config.player.jump.isActive = true;
+            config.player.jump.startTime = currentTime;
+            config.player.jump.velocity = config.player.jump.height;
           }
 
           // Handle ongoing jump
-          if (gameConfig.player.jump.isActive) {
-            const jumpElapsed = currentTime - gameConfig.player.jump.startTime;
-            const jumpProgress = jumpElapsed / gameConfig.player.jump.duration;
+          if (config.player.jump.isActive) {
+            const jumpElapsed = currentTime - config.player.jump.startTime;
+            const jumpProgress = jumpElapsed / config.player.jump.duration;
 
             if (jumpProgress >= 1.0) {
               // Jump complete
-              gameConfig.player.jump.isActive = false;
-              gameConfig.player.jump.velocity = 0;
+              config.player.jump.isActive = false;
+              config.player.jump.velocity = 0;
             } else {
               // Calculate jump arc (parabolic motion)
               const jumpCurve = Math.sin(jumpProgress * Math.PI); // Creates arc from 0 to 1 to 0
               const targetY =
-                player.userData.baseY + gameConfig.player.jump.height * jumpCurve;
+                player.userData.baseY + config.player.jump.height * jumpCurve;
 
               // Update player position
               const currentPosition = player.userData.collider.translation();
@@ -532,9 +538,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           obstacles.forEach((obstacle, index) => {
             const obstaclePosition = obstacle.mesh.position;
             const distance = playerPosition.distanceTo(obstaclePosition);
-            const collisionThreshold = 25; // Reduced threshold for smaller player capsule
-
-            if (distance < collisionThreshold) {
+            if (distance < config.player.collisionThreshold) {
               const collisionKey = `obstacle-${index}-${obstacle.mesh.uuid}`;
 
               if (!loggedCollisions.has(collisionKey)) {
@@ -563,7 +567,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const deltaTime = 1 / 60;
 
             // Player movement
-            const speed = gameConfig.player.speed * deltaTime;
+            const speed = config.player.speed * deltaTime;
             const moveVector = new physics.RAPIER.Vector3(
               playerMovement.right * speed,
               playerMovement.up * speed,
@@ -617,7 +621,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const { mesh, characterController, collider } = obstacle;
 
           // Use character controller to move the block
-          const baseSpeed = gameConfig.blocks.speed;
+          const baseSpeed = config.blocks.speed;
           // Increase speed based on score (0.1 speed increase per 10 points)
           const speedMultiplier = 1 + gameScore.value * 0.01;
           const speed = baseSpeed * speedMultiplier;
@@ -638,9 +642,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         }
 
         function shouldRemoveBlock(mesh: THREE.Mesh): boolean {
-          // Account for block size (30 units) so blocks don't disappear while visible
-          const blockSize = 30;
-          return mesh.position.x < -300 - blockSize;
+          return mesh.position.x < -300 - config.blocks.size;
         }
 
         function removeBlock(
@@ -707,8 +709,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               action: async () => {
                 if (!gamePlay.value) return;
                 const position: [number, number] = [
-                  30 * 10,
-                  15 * Math.floor(Math.random() * 3) + 15,
+                  config.blocks.size * 10,
+                  (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
                 ];
                 const { mesh, characterController, collider } = await addBlock(
                   scene,
@@ -726,7 +728,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 if (!gamePlay.value) return;
                 // Increase animation speed based on score (0.1 speed increase per 10 points)
                 const baseSpeed = 20;
-                const speedMultiplier = 1 + gameScore.value * 0.01;
+                const speedMultiplier = 1 + (gameScore.value / 10) * 0.01;
                 const animationSpeed = baseSpeed * speedMultiplier;
                 updateAnimation(
                   model.mixer,
