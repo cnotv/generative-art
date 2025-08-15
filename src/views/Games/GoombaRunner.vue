@@ -4,7 +4,7 @@ import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import RAPIER from "@dimforge/rapier3d";
 
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -33,73 +33,77 @@ const removeGoogleFont = () => {
 // Set UI controls
 const uiStore = useUiStore();
 
-// Separate event handlers for different game states
-const handleStartScreenKeys = (event: KeyboardEvent) => {
-  if (event.key === " ") {
-    startGame();
-  }
-};
+// Game state refs - unified into single status
+const gameScore = ref(0);
+const shouldClearObstacles = ref(false);
 
-const handleGameOverKeys = (event: KeyboardEvent) => {
-  if (event.key === " ") {
-    restartGame();
-  }
-};
+// Game status enum-like values
+const GAME_STATUS = {
+  START: "start",
+  PLAYING: "playing",
+  GAME_OVER: "gameOver",
+} as const;
 
-const handleGameplayKeys = (event: KeyboardEvent) => {
-  uiStore.setKeyState(event.key, true);
-
-  // Only handle UI hiding if UI is visible
-  if (event.key === " " && uiVisible.value) {
-    uiVisible.value = false;
-  }
-};
-
-const handleGameplayKeyUp = (event: KeyboardEvent) => {
-  uiStore.setKeyState(event.key, false);
-};
-
-// Function to add/remove event listeners based on game state
-const updateEventListeners = () => {
-  // Remove all existing listeners first
-  window.removeEventListener("keydown", handleStartScreenKeys);
-  window.removeEventListener("keydown", handleGameOverKeys);
-  window.removeEventListener("keydown", handleGameplayKeys);
-  window.removeEventListener("keyup", handleGameplayKeyUp);
-  // Remove touch event listeners
-  window.removeEventListener("touchstart", handleStartScreenTouch);
-  window.removeEventListener("touchend", handleStartScreenTouch);
-  window.removeEventListener("touchstart", handleGameOverTouch);
-  window.removeEventListener("touchend", handleGameOverTouch);
-  window.removeEventListener("touchstart", handleGameplayTouch);
-  window.removeEventListener("touchend", handleGameplayTouch);
-
-  const timeoutId = setTimeout(() => {
-    // Add appropriate listeners based on current state
-    if (!gameStarted.value) {
-      // Start screen
-      window.addEventListener("keydown", handleStartScreenKeys);
-      window.addEventListener("touchstart", handleStartScreenTouch, { passive: false });
-      window.addEventListener("touchend", handleStartScreenTouch, { passive: false });
-    } else if (gameOver.value) {
-      // Game over screen
-      window.addEventListener("keydown", handleGameOverKeys);
-      window.addEventListener("touchstart", handleGameOverTouch, { passive: false });
-      window.addEventListener("touchend", handleGameOverTouch, { passive: false });
-    } else if (gamePlay.value) {
-      // Active gameplay
-      window.addEventListener("keydown", handleGameplayKeys);
-      window.addEventListener("keyup", handleGameplayKeyUp);
-      window.addEventListener("touchstart", handleGameplayTouch, { passive: false });
-      window.addEventListener("touchend", handleGameplayTouch, { passive: false });
-    }
-
-    clearTimeout(timeoutId);
-  }, 500);
-};
+type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
+const gameStatus = ref<GameStatus>(GAME_STATUS.START);
 
 // Touch state tracking for jump
 const isTouchActive = ref(false);
+
+// Event listener tracking
+const activeListeners: Array<{
+  target: EventTarget;
+  type: string;
+  listener: EventListener;
+}> = [];
+
+// Add event listener with tracking
+const addTrackedEventListener = (
+  target: EventTarget,
+  type: string,
+  listener: EventListener
+) => {
+  target.addEventListener(type, listener);
+  activeListeners.push({ target, type, listener });
+};
+
+// Remove all tracked event listeners
+const removeAllEventListeners = () => {
+  activeListeners.forEach(({ target, type, listener }) => {
+    target.removeEventListener(type, listener);
+  });
+  activeListeners.length = 0;
+};
+
+// Update event listeners based on current game status
+const updateEventListeners = () => {
+  // Remove existing listeners
+  removeAllEventListeners();
+
+  const config = eventConfig[gameStatus.value];
+
+  // Add keyboard listeners
+  if (config.keyboard) {
+    const keyHandler = (event: KeyboardEvent) => {
+      const handler = config.keyboard![event.key];
+      if (handler) {
+        event.preventDefault();
+        handler();
+      }
+    };
+    addTrackedEventListener(window, "keydown", keyHandler as EventListener);
+  }
+
+  // Add touch listeners
+  if (config.touch) {
+    addTrackedEventListener(window, "touchstart", config.touch as EventListener);
+  }
+
+  // Add click listeners
+  if (config.touch) {
+    addTrackedEventListener(window, "click", config.touch as EventListener);
+  }
+};
 
 // Separate touch event handlers for different game states
 const handleStartScreenTouch = (event: TouchEvent) => {
@@ -124,34 +128,72 @@ const handleGameOverTouch = (event: TouchEvent) => {
   }
 };
 
-const handleGameplayTouch = (event: TouchEvent) => {
-  event.preventDefault();
-
-  if (event.type === "touchstart") {
-    isTouchActive.value = true;
-
-    // Only handle UI hiding if UI is visible during gameplay
-    if (uiVisible.value) {
-      uiVisible.value = false;
-    }
-  } else if (event.type === "touchend") {
-    isTouchActive.value = false;
-  }
-};
-
 interface PlayerMovement {
   forward: number;
   right: number;
   up: number;
 }
 
-// Game state refs
-const gamePlay = ref(false); // Start with game paused to show start screen
-const gameScore = ref(0);
-const gameOver = ref(false);
-const gameStarted = ref(false);
-const shouldClearObstacles = ref(false);
-const uiVisible = ref(true);
+const handleGameplayTouch = (event: TouchEvent) => {
+  event.preventDefault();
+
+  if (event.type === "touchstart") {
+    isTouchActive.value = true;
+    jumpGoomba();
+  } else if (event.type === "touchend") {
+    isTouchActive.value = false;
+  }
+};
+
+// Jump function that triggers the player jump action
+const jumpGoomba = () => {
+  if (gameStatus.value === GAME_STATUS.PLAYING) {
+    uiStore.controls.jump = true;
+    // Reset jump control after a short delay to allow the jump to register
+    setTimeout(() => {
+      uiStore.controls.jump = false;
+    }, 100);
+  }
+};
+
+// Event configuration for state-based handling
+interface EventHandlers {
+  keyboard?: Record<string, () => void>;
+  touch?: (event: Event) => void;
+}
+
+const eventConfig: Record<GameStatus, EventHandlers> = {
+  [GAME_STATUS.START]: {
+    keyboard: {
+      " ": () => startGame(),
+      Enter: () => startGame(),
+    },
+    touch: (event: Event) => handleStartScreenTouch(event as TouchEvent),
+  },
+  [GAME_STATUS.PLAYING]: {
+    keyboard: {
+      " ": () => jumpGoomba(),
+      ArrowUp: () => jumpGoomba(),
+    },
+    touch: (event: Event) => handleGameplayTouch(event as TouchEvent),
+  },
+  [GAME_STATUS.GAME_OVER]: {
+    keyboard: {
+      " ": () => restartGame(),
+      Enter: () => restartGame(),
+    },
+    touch: (event: Event) => handleGameOverTouch(event as TouchEvent),
+  },
+};
+
+// Watch for game status changes and update event listeners
+watch(
+  gameStatus,
+  () => {
+    setTimeout(updateEventListeners, 500);
+  },
+  { immediate: true }
+);
 
 const config = {
   helpers: false,
@@ -162,7 +204,7 @@ const config = {
   },
   blocks: {
     helper: false,
-    speed: 3,
+    speed: 1.5,
     size: 30,
   },
   player: {
@@ -206,47 +248,25 @@ onMounted(() => {
 onUnmounted(() => {
   // Remove Google Font when leaving this route
   removeGoogleFont();
-
-  // Remove all keyboard event listeners
-  window.removeEventListener("keydown", handleStartScreenKeys);
-  window.removeEventListener("keydown", handleGameOverKeys);
-  window.removeEventListener("keydown", handleGameplayKeys);
-  window.removeEventListener("keyup", handleGameplayKeyUp);
-
-  // Remove all touch event listeners
-  window.removeEventListener("touchstart", handleStartScreenTouch);
-  window.removeEventListener("touchend", handleStartScreenTouch);
-  window.removeEventListener("touchstart", handleGameOverTouch);
-  window.removeEventListener("touchend", handleGameOverTouch);
-  window.removeEventListener("touchstart", handleGameplayTouch);
-  window.removeEventListener("touchend", handleGameplayTouch);
+  updateEventListeners();
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
 
 // Game state functions
 const startGame = () => {
-  gamePlay.value = true;
-  gameStarted.value = true;
-  gameOver.value = false;
+  gameStatus.value = GAME_STATUS.PLAYING;
   gameScore.value = 0;
-  uiVisible.value = false; // Hide UI immediately when starting game
   updateEventListeners(); // Update event listeners for gameplay state
 };
 
 const restartGame = () => {
-  gamePlay.value = true;
-  gameOver.value = false;
-  gameScore.value = 0;
+  startGame();
   shouldClearObstacles.value = true;
-  uiVisible.value = false; // Hide UI immediately when restarting
-  updateEventListeners(); // Update event listeners for gameplay state
 };
 
 const endGame = () => {
-  gamePlay.value = false;
-  gameOver.value = true;
-  uiVisible.value = true; // Show UI on game over
+  gameStatus.value = GAME_STATUS.GAME_OVER;
   updateEventListeners(); // Update event listeners for game over state
 };
 
@@ -423,7 +443,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function handleJump(player: THREE.Mesh) {
           // Stop jump animation if game is not playing
-          if (!gamePlay.value) {
+          if (gameStatus.value !== GAME_STATUS.PLAYING) {
             config.player.jump.isActive = false;
             config.player.jump.velocity = 0;
             // Don't move the player - keep current position when game stops
@@ -619,7 +639,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
             position.x += translation.x;
             // Prevent vertical movement if game is not playing
-            if (gamePlay.value) {
+            if (gameStatus.value === GAME_STATUS.PLAYING) {
               position.y += translation.y;
             }
             position.z += translation.z;
@@ -750,9 +770,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             },
             // Generate cubes
             {
-              frequency: 75,
+              frequency: 100,
               action: async () => {
-                if (!gamePlay.value) return;
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
                 const position: [number, number] = [
                   config.blocks.size * 10,
                   (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
@@ -770,10 +790,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Make Goomba run
             {
               action: () => {
-                if (!gamePlay.value) return;
-                // Increase animation speed based on score (0.1 speed increase per 10 points)
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
                 const baseSpeed = 20;
-                const speedMultiplier = 1 + (gameScore.value / 10) * 0.01;
+                const speedMultiplier = 1 + (gameScore.value / 100) * 0.01;
                 const animationSpeed = baseSpeed * speedMultiplier;
                 updateAnimation(
                   model.mixer,
@@ -786,7 +805,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Move obstacles
             {
               action: () => {
-                if (!gamePlay.value) return;
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
 
                 // Move obstacles and remove off-screen ones
                 for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -815,10 +834,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 
-  <!-- UI Overlay -->
-  <div v-if="uiVisible" class="game-ui-overlay">
+  <!-- UI Overlay - Always visible, changes based on game status -->
+  <div class="game-ui-overlay">
     <!-- Start Screen -->
-    <div v-if="!gameStarted" class="game-screen start-screen">
+    <div v-if="gameStatus === GAME_STATUS.START" class="game-screen start-screen">
       <div class="game-content">
         <h1 class="game-title">
           <span v-for="(item, i) in 'Goomba Runner'" :key="i">
@@ -832,7 +851,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     </div>
 
     <!-- Game Over Screen -->
-    <div v-if="gameOver" class="game-screen game-over-screen">
+    <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game-screen game-over-screen">
       <div class="game-content">
         <h1 class="game-over-title">Game Over</h1>
         <button @click="restartGame" class="game-button restart-button">
@@ -842,15 +861,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     </div>
 
     <!-- In-Game Score Display -->
-    <div v-if="gamePlay && gameStarted" class="score-hud">
-      <span class="current-score">Score: {{ gameScore }}</span>
-      <div class="ui-hint">Press SPACEBAR or TAP to hide UI</div>
+    <div v-if="gameStatus === GAME_STATUS.PLAYING" class="score-hud">
+      <span class="current-score">{{ gameScore }}</span>
     </div>
-  </div>
-
-  <!-- Always visible score during gameplay (even when UI is hidden) -->
-  <div v-if="gamePlay && gameStarted && !uiVisible" class="persistent-score">
-    <span class="score-display">{{ gameScore }}</span>
   </div>
 </template>
 
@@ -1010,7 +1023,7 @@ kbd {
 .score-hud {
   position: absolute;
   top: 20px;
-  left: 20px;
+  right: 20px;
   pointer-events: all;
 }
 
@@ -1021,7 +1034,6 @@ kbd {
   font-weight: 800;
   font-family: var(--font-playful);
   text-shadow: var(--shadow-text-mario);
-  color: #000;
 }
 
 .ui-hint {
