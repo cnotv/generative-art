@@ -162,7 +162,7 @@ watch(
 const config = {
   game: {
     helpers: false,
-    speed: 1.5,
+    speed: 2,
   },
   directional: {
     enabled: true,
