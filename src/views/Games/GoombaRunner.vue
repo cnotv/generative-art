@@ -160,7 +160,10 @@ watch(
 );
 
 const config = {
-  helpers: false,
+  game: {
+    helpers: false,
+    speed: 1.5,
+  },
   directional: {
     enabled: true,
     helper: false,
@@ -168,7 +171,6 @@ const config = {
   },
   blocks: {
     helper: false,
-    speed: 1.5,
     size: 30,
   },
   player: {
@@ -241,7 +243,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     //Optionally display collider outlines
     const physicsHelper = new RapierHelper(physics.world);
-    if (config.helpers) {
+    if (config.game.helpers) {
       scene.add(physicsHelper); // Enable helper to show colliders
     }
 
@@ -636,7 +638,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const { mesh, characterController, collider } = obstacle;
 
           // Use character controller to move the block
-          const baseSpeed = config.blocks.speed;
+          const baseSpeed = config.game.speed;
           // Increase speed based on score (0.1 speed increase per 10 points)
           const speedMultiplier = 1 + gameScore.value * 0.01;
           const speed = baseSpeed * speedMultiplier;
