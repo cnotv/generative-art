@@ -13,6 +13,20 @@ import { getTools, getModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 
+interface PlayerMovement {
+  forward: number;
+  right: number;
+  up: number;
+}
+
+// Event configuration for state-based handling
+interface EventHandlers {
+  keyboard?: Record<string, () => void>;
+  touch?: () => void;
+}
+
+type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
+
 // Load Google Fonts for this route only
 const loadGoogleFont = () => {
   const link = document.createElement("link");
@@ -44,11 +58,7 @@ const GAME_STATUS = {
   GAME_OVER: "gameOver",
 } as const;
 
-type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 const gameStatus = ref<GameStatus>(GAME_STATUS.START);
-
-// Touch state tracking for jump
-const isTouchActive = ref(false);
 
 // Event listener tracking
 const activeListeners: Array<{
@@ -75,17 +85,15 @@ const removeAllEventListeners = () => {
   activeListeners.length = 0;
 };
 
-// Update event listeners based on current game status
+// Reset and then update event listeners based on current game status
 const updateEventListeners = () => {
-  // Remove existing listeners
   removeAllEventListeners();
-
-  const config = eventConfig[gameStatus.value];
+  const listeners = listenersMap[gameStatus.value];
 
   // Add keyboard listeners
-  if (config.keyboard) {
+  if (listeners.keyboard) {
     const keyHandler = (event: KeyboardEvent) => {
-      const handler = config.keyboard![event.key];
+      const handler = listeners.keyboard![event.key];
       if (handler) {
         event.preventDefault();
         handler();
@@ -94,95 +102,51 @@ const updateEventListeners = () => {
     addTrackedEventListener(window, "keydown", keyHandler as EventListener);
   }
 
-  // Add touch listeners
-  if (config.touch) {
-    addTrackedEventListener(window, "touchstart", config.touch as EventListener);
-  }
+  // Add touch/click listeners
+  if (listeners.touch) {
+    const touchHandler = (event: TouchEvent) => {
+      const handler = listeners.touch;
+      if (handler && event.type === "touchstart") {
+        event.preventDefault();
+        handler();
+      }
+    };
 
-  // Add click listeners
-  if (config.touch) {
-    addTrackedEventListener(window, "click", config.touch as EventListener);
-  }
-};
-
-// Separate touch event handlers for different game states
-const handleStartScreenTouch = (event: TouchEvent) => {
-  event.preventDefault();
-
-  if (event.type === "touchstart") {
-    isTouchActive.value = true;
-    startGame();
-  } else if (event.type === "touchend") {
-    isTouchActive.value = false;
-  }
-};
-
-const handleGameOverTouch = (event: TouchEvent) => {
-  event.preventDefault();
-
-  if (event.type === "touchstart") {
-    isTouchActive.value = true;
-    restartGame();
-  } else if (event.type === "touchend") {
-    isTouchActive.value = false;
-  }
-};
-
-interface PlayerMovement {
-  forward: number;
-  right: number;
-  up: number;
-}
-
-const handleGameplayTouch = (event: TouchEvent) => {
-  event.preventDefault();
-
-  if (event.type === "touchstart") {
-    isTouchActive.value = true;
-    jumpGoomba();
-  } else if (event.type === "touchend") {
-    isTouchActive.value = false;
+    addTrackedEventListener(window, "touchstart", touchHandler as EventListener);
+    addTrackedEventListener(window, "click", touchHandler as EventListener);
   }
 };
 
 // Jump function that triggers the player jump action
-const jumpGoomba = () => {
-  if (gameStatus.value === GAME_STATUS.PLAYING) {
-    uiStore.controls.jump = true;
-    // Reset jump control after a short delay to allow the jump to register
-    setTimeout(() => {
-      uiStore.controls.jump = false;
-    }, 100);
-  }
+const handleJumpGoomba = () => {
+  uiStore.controls.jump = true;
+  // Reset jump control after a short delay to allow the jump to register
+  setTimeout(() => {
+    uiStore.controls.jump = false;
+  }, 100);
 };
 
-// Event configuration for state-based handling
-interface EventHandlers {
-  keyboard?: Record<string, () => void>;
-  touch?: (event: Event) => void;
-}
-
-const eventConfig: Record<GameStatus, EventHandlers> = {
+const listenersMap: Record<GameStatus, EventHandlers> = {
   [GAME_STATUS.START]: {
     keyboard: {
-      " ": () => startGame(),
-      Enter: () => startGame(),
+      " ": () => handleStartGame(),
+      Enter: () => handleStartGame(),
     },
-    touch: (event: Event) => handleStartScreenTouch(event as TouchEvent),
+    touch: () => handleStartGame(),
   },
   [GAME_STATUS.PLAYING]: {
     keyboard: {
-      " ": () => jumpGoomba(),
-      ArrowUp: () => jumpGoomba(),
+      " ": () => handleJumpGoomba(),
+      ArrowUp: () => handleJumpGoomba(),
     },
-    touch: (event: Event) => handleGameplayTouch(event as TouchEvent),
+    touch: () => handleJumpGoomba(),
   },
   [GAME_STATUS.GAME_OVER]: {
     keyboard: {
-      " ": () => restartGame(),
-      Enter: () => restartGame(),
+      " ": () => handleRestartGame(),
+      Enter: () => handleRestartGame(),
     },
-    touch: (event: Event) => handleGameOverTouch(event as TouchEvent),
+    touch: () => handleRestartGame(),
   },
 };
 
@@ -254,14 +218,14 @@ onUnmounted(() => {
 onUnmounted(() => window.removeEventListener("resize", initInstance));
 
 // Game state functions
-const startGame = () => {
+const handleStartGame = () => {
   gameStatus.value = GAME_STATUS.PLAYING;
   gameScore.value = 0;
   updateEventListeners(); // Update event listeners for gameplay state
 };
 
-const restartGame = () => {
-  startGame();
+const handleRestartGame = () => {
+  handleStartGame();
   shouldClearObstacles.value = true;
 };
 
@@ -453,10 +417,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const currentTime = Date.now();
 
           // Start jump if jump key is pressed OR touch is active and not already jumping
-          if (
-            (uiStore.controls.jump || isTouchActive.value) &&
-            !config.player.jump.isActive
-          ) {
+          if (uiStore.controls.jump && !config.player.jump.isActive) {
             config.player.jump.isActive = true;
             config.player.jump.startTime = currentTime;
             config.player.jump.velocity = config.player.jump.height;
@@ -844,7 +805,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {{ item.trim() }}
           </span>
         </h1>
-        <button @click="startGame" class="game-button start-button">
+        <button @click="handleStartGame" class="game-button start-button">
           Press SPACEBAR or TAP to Start
         </button>
       </div>
@@ -854,7 +815,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game-screen game-over-screen">
       <div class="game-content">
         <h1 class="game-over-title">Game Over</h1>
-        <button @click="restartGame" class="game-button restart-button">
+        <button @click="handleRestartGame" class="game-button restart-button">
           Press SPACEBAR or TAP to Restart
         </button>
       </div>
