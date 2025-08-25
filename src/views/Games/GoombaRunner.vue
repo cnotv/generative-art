@@ -15,6 +15,7 @@ import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
+import fireTexture from "@/assets/fire.png";
 
 interface PlayerMovement {
   forward: number;
@@ -203,7 +204,7 @@ const config = {
         zPosition: -300,
         count: 4,
         spacing: 600,
-        opacity: 0.8,
+        opacity: 0.9,
       },
       {
         texture: cloudTexture,
@@ -215,7 +216,7 @@ const config = {
         zPosition: -100,
         count: 3,
         spacing: 600,
-        opacity: 0.2,
+        opacity: 0.9,
       },
       {
         texture: hillTexture,
@@ -227,7 +228,33 @@ const config = {
         zPosition: -400,
         count: 10,
         spacing: 300,
-        opacity: 1,
+        opacity: 0.9,
+      },
+      {
+        texture: fireTexture,
+        speed: 10,
+        size: 15,
+        xVariation: 100,
+        yPosition: 5,
+        yVariation: 0,
+        zVariation: 30,
+        zPosition: -40,
+        count: 10,
+        spacing: 50,
+        opacity: 0.9,
+      },
+      {
+        texture: fireTexture,
+        speed: 10,
+        size: 15,
+        xVariation: 100,
+        yPosition: 5,
+        yVariation: 0,
+        zVariation: 30,
+        zPosition: 80,
+        count: 10,
+        spacing: 50,
+        opacity: 0.9,
       },
     ],
   },
@@ -368,12 +395,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       position: [
         window.innerWidth / 5 + getVariation(options.xVariation),
         options.yPosition + getVariation(options.yVariation),
-        options.zPosition,
+        options.zPosition + getVariation(options.zVariation),
       ],
       castShadow: false,
       receiveShadow: false,
       color: 0xffffff,
-      opacity: 0.9,
+      opacity: options.opacity,
       material: "MeshBasicMaterial",
     });
   };
@@ -527,7 +554,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function createStarExplosion(position: THREE.Vector3) {
           const starCount = 12; // Number of stars in explosion
-          const goombaColor = 0x8B4513; // Brown color like Goomba
+          const goombaColor = 0x8b4513; // Brown color like Goomba
 
           for (let i = 0; i < starCount; i++) {
             // Create cube geometry instead of cone/star shape
