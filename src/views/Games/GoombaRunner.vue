@@ -527,15 +527,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function createStarExplosion(position: THREE.Vector3) {
           const starCount = 12; // Number of stars in explosion
-          const colors = [0xffd700, 0xffff00, 0xffa500, 0xff69b4, 0x00ff00, 0x00bfff]; // Gold, yellow, orange, pink, green, blue
+          const goombaColor = 0x8B4513; // Brown color like Goomba
 
           for (let i = 0; i < starCount; i++) {
-            // Create star geometry (using a simple star shape) - 10x larger
-            const starGeometry = new THREE.ConeGeometry(5, 10, 5);
+            // Create cube geometry instead of cone/star shape
+            const starGeometry = new THREE.BoxGeometry(8, 8, 8);
             const starMaterial = new THREE.MeshStandardMaterial({
-              color: colors[Math.floor(Math.random() * colors.length)],
-              emissive: colors[Math.floor(Math.random() * colors.length)],
-              emissiveIntensity: 0.3,
+              color: goombaColor,
+              emissive: goombaColor,
+              emissiveIntensity: 0.2,
             });
 
             const star = new THREE.Mesh(starGeometry, starMaterial);
