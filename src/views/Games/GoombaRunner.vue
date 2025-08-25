@@ -196,7 +196,7 @@ const config = {
     layers: [
       {
         texture: cloudTexture,
-        speed: 5,
+        speed: 1,
         size: 200,
         yPosition: 130,
         xVariation: 20,
@@ -204,11 +204,11 @@ const config = {
         zPosition: -300,
         count: 4,
         spacing: 600,
-        opacity: 0.9,
+        opacity: 0.5,
       },
       {
         texture: cloudTexture,
-        speed: 8,
+        speed: 1,
         size: 200,
         yPosition: 150,
         xVariation: 20,
@@ -216,23 +216,23 @@ const config = {
         zPosition: -100,
         count: 3,
         spacing: 600,
-        opacity: 0.9,
+        opacity: 0.5,
       },
       {
         texture: hillTexture,
-        speed: 4,
+        speed: 1,
         size: 1000,
         yPosition: 70,
         xVariation: 100,
         yVariation: 70,
         zPosition: -400,
         count: 10,
-        spacing: 300,
-        opacity: 0.9,
+        spacing: 500,
+        opacity: 0.5,
       },
       {
         texture: fireTexture,
-        speed: 10,
+        speed: 1,
         size: 15,
         xVariation: 100,
         yPosition: 5,
@@ -245,7 +245,7 @@ const config = {
       },
       {
         texture: fireTexture,
-        speed: 10,
+        speed: 1,
         size: 15,
         xVariation: 100,
         yPosition: 5,
@@ -305,6 +305,16 @@ const handleRestartGame = () => {
 const endGame = () => {
   gameStatus.value = GAME_STATUS.GAME_OVER;
   updateEventListeners(); // Update event listeners for game over state
+};
+
+/**
+ * Increase speed based on score (0.1 speed increase per 10 points)
+ * @param base
+ */
+const getSpeed = (base: number): number => {
+  const speedMultiplier = 1 + gameScore.value * 0.01;
+  const speed = base * speedMultiplier;
+  return speed;
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -730,10 +740,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const { mesh, characterController, collider } = obstacle;
 
           // Use character controller to move the block
-          const baseSpeed = config.game.speed;
-          // Increase speed based on score (0.1 speed increase per 10 points)
-          const speedMultiplier = 1 + gameScore.value * 0.01;
-          const speed = baseSpeed * speedMultiplier;
+          const speed = getSpeed(config.game.speed);
           const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
 
           characterController.computeColliderMovement(collider, moveVector);
@@ -862,8 +869,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 // Move backgrounds and remove off-screen ones
                 for (let i = backgrounds.length - 1; i >= 0; i--) {
                   const background = backgrounds[i];
-                  background.mesh.position.x -=
-                    (background.speed * config.game.speed) / 10;
+                  background.mesh.position.x -= getSpeed(background.speed);
 
                   // Check if block should be removed and remove it
                   if (background.mesh.position.x < -300) {
