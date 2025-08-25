@@ -14,6 +14,7 @@ import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
 import cloudTexture from "@/assets/cloud.png";
+import hillTexture from "@/assets/hill.png";
 
 interface PlayerMovement {
   forward: number;
@@ -179,11 +180,11 @@ const config = {
   player: {
     helper: true,
     speed: 3,
-    maxJump: 30,
+    maxJump: 100,
     heightOffset: 10,
     collisionThreshold: 38,
     jump: {
-      height: 70,
+      height: 100,
       duration: 1000,
       isActive: false,
       velocity: 0,
@@ -194,9 +195,9 @@ const config = {
     layers: [
       {
         texture: cloudTexture,
-        speed: 2,
+        speed: 5,
         size: 200,
-        yPosition: 65,
+        yPosition: 130,
         xVariation: 20,
         yVariation: 20,
         zPosition: -300,
@@ -206,15 +207,27 @@ const config = {
       },
       {
         texture: cloudTexture,
-        speed: 10,
+        speed: 8,
         size: 200,
-        yPosition: 100,
+        yPosition: 150,
         xVariation: 20,
         yVariation: 20,
         zPosition: -100,
         count: 3,
         spacing: 600,
         opacity: 0.2,
+      },
+      {
+        texture: hillTexture,
+        speed: 4,
+        size: 1000,
+        yPosition: 70,
+        xVariation: 100,
+        yVariation: 70,
+        zPosition: -400,
+        count: 10,
+        spacing: 300,
+        opacity: 1,
       },
     ],
   },
@@ -806,30 +819,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             },
 
             // Create background
-            {
-              frequency: config.backgrounds.layers[0].spacing,
+            ...config.backgrounds.layers.map((background) => ({
+              frequency: background.spacing,
               action: () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const { mesh } = addBackground(
-                  scene,
-                  world,
-                  config.backgrounds.layers[0]
-                );
-                backgrounds.push({ mesh, speed: config.backgrounds.layers[0].speed });
+                const { mesh } = addBackground(scene, world, background);
+                backgrounds.push({ mesh, speed: background.speed });
               },
-            },
-            {
-              frequency: config.backgrounds.layers[1].spacing,
-              action: () => {
-                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const { mesh } = addBackground(
-                  scene,
-                  world,
-                  config.backgrounds.layers[1]
-                );
-                backgrounds.push({ mesh, speed: config.backgrounds.layers[0].speed });
-              },
-            },
+            })),
             // Move background
             {
               action: () => {
