@@ -12,6 +12,8 @@ import { stats } from "@/utils/stats";
 import { getTools, getModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
+import { getCube } from "@/utils/models";
+import cloudTexture from "@/assets/cloud.png";
 
 interface PlayerMovement {
   forward: number;
@@ -172,6 +174,7 @@ const config = {
   blocks: {
     helper: false,
     size: 30,
+    spacing: 150,
   },
   player: {
     helper: true,
@@ -186,6 +189,34 @@ const config = {
       velocity: 0,
       startTime: 0,
     },
+  },
+  backgrounds: {
+    layers: [
+      {
+        texture: cloudTexture,
+        speed: 2,
+        size: 200,
+        yPosition: 65,
+        xVariation: 20,
+        yVariation: 20,
+        zPosition: -300,
+        count: 4,
+        spacing: 600,
+        opacity: 0.8,
+      },
+      {
+        texture: cloudTexture,
+        speed: 10,
+        size: 200,
+        yPosition: 100,
+        xVariation: 20,
+        yVariation: 20,
+        zPosition: -100,
+        count: 3,
+        spacing: 600,
+        opacity: 0.2,
+      },
+    ],
   },
 };
 
@@ -314,6 +345,26 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     return { player, playerController, model: goombaModel };
   };
 
+  const addBackground = (scene: THREE.Scene, world: RAPIER.World, options: any) => {
+    const getVariation = (variation: number) =>
+      (Math.random() - 0.5) * 2 * (variation || 0);
+
+    return getCube(scene, world, {
+      texture: options.texture,
+      size: [options.size, options.size / 2, 0],
+      position: [
+        window.innerWidth / 5 + getVariation(options.xVariation),
+        options.yPosition + getVariation(options.yVariation),
+        options.zPosition,
+      ],
+      castShadow: false,
+      receiveShadow: false,
+      color: 0xffffff,
+      opacity: 0.9,
+      material: "MeshBasicMaterial",
+    });
+  };
+
   const addBlock = async (
     scene: THREE.Scene,
     position: [number, number],
@@ -371,6 +422,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       characterController: any;
       collider: any;
     }[];
+    const backgrounds = [] as { mesh: THREE.Mesh; speed: number }[];
 
     const { animate, setup, world, scene, getDelta, renderer, camera } = getTools({
       stats,
@@ -658,10 +710,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           mesh.position.set(position.x, position.y, position.z);
         }
 
-        function shouldRemoveBlock(mesh: THREE.Mesh): boolean {
-          return mesh.position.x < -300 - config.blocks.size;
-        }
-
         function removeBlock(
           obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
           obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
@@ -702,6 +750,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   }
                   obstacles.length = 0; // Clear the array
 
+                  for (let i = backgrounds.length - 1; i >= 0; i--) {
+                    const obstacle = backgrounds[i];
+                    scene.remove(obstacle.mesh);
+                  }
+                  backgrounds.length = 0; // Clear the array
+
                   // Clear explosion particles on restart
                   for (let i = explosionParticles.length - 1; i >= 0; i--) {
                     scene.remove(explosionParticles[i]);
@@ -728,12 +782,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 movePlayer(player, playerController, physics, playerMovement);
                 handleJump(player);
                 checkCollisions(player, obstacles);
+
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
             },
             // Generate cubes
             {
-              frequency: 100,
+              frequency: config.blocks.spacing,
               action: async () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
                 const position: [number, number] = [
@@ -747,6 +802,51 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   physics
                 );
                 obstacles.push({ mesh, characterController, collider });
+              },
+            },
+
+            // Create background
+            {
+              frequency: config.backgrounds.layers[0].spacing,
+              action: () => {
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+                const { mesh } = addBackground(
+                  scene,
+                  world,
+                  config.backgrounds.layers[0]
+                );
+                backgrounds.push({ mesh, speed: config.backgrounds.layers[0].speed });
+              },
+            },
+            {
+              frequency: config.backgrounds.layers[1].spacing,
+              action: () => {
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+                const { mesh } = addBackground(
+                  scene,
+                  world,
+                  config.backgrounds.layers[1]
+                );
+                backgrounds.push({ mesh, speed: config.backgrounds.layers[0].speed });
+              },
+            },
+            // Move background
+            {
+              action: () => {
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+
+                // Move backgrounds and remove off-screen ones
+                for (let i = backgrounds.length - 1; i >= 0; i--) {
+                  const background = backgrounds[i];
+                  background.mesh.position.x -=
+                    (background.speed * config.game.speed) / 10;
+
+                  // Check if block should be removed and remove it
+                  if (background.mesh.position.x < -300) {
+                    scene.remove(background.mesh);
+                    backgrounds.splice(i, 1);
+                  }
+                }
               },
             },
 
@@ -778,7 +878,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   moveBlock(obstacle, physics);
 
                   // Check if block should be removed and remove it
-                  if (shouldRemoveBlock(obstacle.mesh)) {
+                  if (obstacle.mesh.position.x < -300 - config.blocks.size) {
                     removeBlock(obstacle, obstacles, i, scene, physics);
                   }
                 }
