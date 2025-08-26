@@ -33,6 +33,7 @@
     "@types/node": "^20.11.28",
     "@types/p5": "^1.7.6",
     "@types/stats.js": "^0.17.3",
+    "@types/three": "^0.179.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/eslint-config-prettier": "^8.0.0",
     "@vue/eslint-config-typescript": "^12.0.0",
