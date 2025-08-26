@@ -9,7 +9,7 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools, getModel } from "@/utils/threeJs";
+import { getTools, getModel, colorModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
@@ -369,6 +369,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     const player = goombaModel.mesh;
     player.castShadow = true;
+
+    // Apply styling to Goomba - easily customizable
+    colorModel(player, [
+      0xffffff, // White - unknown
+      0xffffff, // White - unknown
+      0xffffff, // White - unknown
+      0xb1865a, // Beige - body
+      0xffffff, // White - unknown
+      0xbf9a37, // Brown - head
+      0xffffff, // White - unknown
+      0xffffff, // White - tusks
+      0xffffff, // White - unknown
+      0x654321, // Dark brown - feet
+      0x8b4513, // Brown - default/other parts
+    ]);
 
     // Rotate goomba to face sideways (towards the camera/blocks)
     player.rotation.y = 2;

@@ -741,3 +741,34 @@ export const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements
 
   return [];
 }
+
+/**
+ * Change colors of children contained in a mesh
+ * @param mesh 
+ * @param materialColors 
+ */
+export const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
+  // Apply colors from array based on mesh index
+  let meshIndex = 0;
+  mesh.traverse((child: any) => {
+    if (child.isMesh && child.material) {
+      const material = child.material;
+      const targetColor = materialColors[meshIndex % materialColors.length];
+
+      // Apply color to material
+      if (Array.isArray(material)) {
+        material.forEach((mat: any) => {
+          if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial) {
+            mat.color.setHex(targetColor);
+          }
+        });
+      } else if (material.isMeshStandardMaterial || material.isMeshPhongMaterial) {
+        material.color.setHex(targetColor);
+      }
+
+      meshIndex++;
+    }
+  });
+
+  return mesh;
+};
