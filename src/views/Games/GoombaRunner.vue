@@ -569,7 +569,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera: { position: [40, 20, 150] },
         // ground: { size: 100000, color: 0x32CD32 },
         ground: false,
-        sky: { size: 700 }, // Sky color set through scene.background
+        sky: false, // Disable sky sphere to avoid hiding UI elements
         lights: {
           directional: {
             intensity: config.directional.intensity * 1.5,
@@ -1020,7 +1020,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
 <template>
   <div ref="statsEl"></div>
-  <canvas ref="canvas"></canvas>
+  <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
 
   <!-- UI Overlay - Always visible, changes based on game status -->
   <div class="game-ui-overlay">
@@ -1096,7 +1096,7 @@ button {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 1000;
 }
 
 .game-screen {
