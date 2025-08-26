@@ -219,6 +219,7 @@ const config = {
         texture: cloudTexture,
         speed: 1,
         size: 200,
+        ratio: 2.5,
         yPosition: 130,
         xVariation: 20,
         yVariation: 20,
@@ -231,6 +232,7 @@ const config = {
         texture: cloudTexture,
         speed: 1,
         size: 200,
+        ratio: 2.5,
         yPosition: 150,
         xVariation: 20,
         yVariation: 20,
@@ -243,6 +245,7 @@ const config = {
         texture: cloudTexture,
         speed: 1,
         size: 200,
+        ratio: 2.5,
         yPosition: 140,
         xVariation: 20,
         yVariation: 10,
@@ -255,6 +258,7 @@ const config = {
         texture: hillTexture,
         speed: 1,
         size: 1000,
+        ratio: 1,
         xVariation: 100,
         yPosition: 70,
         yVariation: 70,
@@ -266,7 +270,8 @@ const config = {
       {
         texture: fireTexture,
         speed: 1,
-        size: 15,
+        size: 10,
+        ratio: 1,
         xVariation: 100,
         yPosition: 5,
         yVariation: 0,
@@ -279,7 +284,8 @@ const config = {
       {
         texture: fireTexture,
         speed: 1,
-        size: 15,
+        size: 10,
+        ratio: 1,
         xVariation: 100,
         yPosition: 5,
         yVariation: 0,
@@ -461,14 +467,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     const getVariation = (variation: number) =>
       (Math.random() - 0.5) * 2 * (variation || 0);
 
+    // Calculate height based on ratio (width / ratio = height)
+    const width = options.size;
+    const height = options.ratio ? width / options.ratio : width / 2; // fallback to 2:1 ratio
+
     const xPosition =
       initialX !== undefined
         ? initialX + getVariation(options.xVariation)
-        : window.innerWidth / 2 + options.size + getVariation(options.xVariation);
+        : window.innerWidth / 2 + width + getVariation(options.xVariation);
 
     return getCube(scene, world, {
       texture: options.texture,
-      size: [options.size, options.size / 2, 0],
+      size: [width, height, 0],
       position: [
         xPosition,
         options.yPosition + getVariation(options.yVariation),
