@@ -54,8 +54,27 @@ const uiStore = useUiStore();
 // Game state refs - unified into single status
 const gameScore = ref(0);
 const shouldClearObstacles = ref(false);
+const highestScore = ref(0);
+const isNewHighScore = ref(false);
 
 const goombaColor = 0x8b4513; // Brown color like Goomba
+
+// LocalStorage key for highest score
+const HIGH_SCORE_KEY = "goomba-runner-high-score";
+
+// Load highest score from localStorage on component mount
+const loadHighestScore = () => {
+  const saved = localStorage.getItem(HIGH_SCORE_KEY);
+  if (saved) {
+    highestScore.value = parseInt(saved, 10);
+  }
+};
+
+// Save highest score to localStorage
+const saveHighestScore = (score: number) => {
+  localStorage.setItem(HIGH_SCORE_KEY, score.toString());
+  highestScore.value = score;
+};
 
 // Game status enum-like values
 const GAME_STATUS = {
@@ -281,6 +300,7 @@ const route = useRoute();
 let initInstance: () => void;
 onMounted(() => {
   loadGoogleFont();
+  loadHighestScore(); // Load saved high score from localStorage
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
@@ -308,6 +328,7 @@ onUnmounted(() => window.removeEventListener("resize", initInstance));
 const handleStartGame = () => {
   gameStatus.value = GAME_STATUS.PLAYING;
   gameScore.value = 0;
+  isNewHighScore.value = false; // Reset new high score flag
   updateEventListeners(); // Update event listeners for gameplay state
 };
 
@@ -317,6 +338,12 @@ const handleRestartGame = () => {
 };
 
 const endGame = () => {
+  // Check for new high score
+  isNewHighScore.value = gameScore.value > highestScore.value;
+  if (isNewHighScore.value) {
+    saveHighestScore(gameScore.value);
+  }
+
   gameStatus.value = GAME_STATUS.GAME_OVER;
   updateEventListeners(); // Update event listeners for game over state
 };
@@ -901,24 +928,24 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
             },
-            // Generate cubes
-            {
-              frequency: config.blocks.spacing,
-              action: async () => {
-                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const position: [number, number] = [
-                  config.blocks.size * 10,
-                  (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
-                ];
-                const { mesh, characterController, collider } = await addBlock(
-                  scene,
-                  position,
-                  world,
-                  physics
-                );
-                obstacles.push({ mesh, characterController, collider });
-              },
-            },
+            // // Generate cubes
+            // {
+            //   frequency: config.blocks.spacing,
+            //   action: async () => {
+            //     if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+            //     const position: [number, number] = [
+            //       config.blocks.size * 10,
+            //       (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
+            //     ];
+            //     const { mesh, characterController, collider } = await addBlock(
+            //       scene,
+            //       position,
+            //       world,
+            //       physics
+            //     );
+            //     obstacles.push({ mesh, characterController, collider });
+            //   },
+            // },
 
             // Create background
             ...config.backgrounds.layers.map((background) => ({
@@ -1015,6 +1042,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game-screen game-over-screen">
       <div class="game-content">
         <h1 class="game-over-title">Game Over</h1>
+        <div v-if="isNewHighScore" class="new-high-score">
+          <div class="gratz-text">New High Score: {{ gameScore }}</div>
+        </div>
         <button @click="handleRestartGame" class="game-button restart-button">
           Press SPACEBAR or TAP to Restart
         </button>
@@ -1023,7 +1053,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     <!-- In-Game Score Display -->
     <div v-if="gameStatus === GAME_STATUS.PLAYING" class="score-hud">
-      <span class="current-score">{{ gameScore }}</span>
+      <span class="score-hud__value">Highest: {{ highestScore }}</span>
+      <span class="score-hud__value">{{ gameScore }}</span>
     </div>
   </div>
 </template>
@@ -1046,6 +1077,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </style>
 
 <style scoped>
+* {
+  user-select: none;
+}
+
 button {
   background: transparent;
   border: none;
@@ -1183,18 +1218,46 @@ kbd {
 
 .score-hud {
   position: absolute;
-  top: 20px;
-  right: 20px;
   pointer-events: all;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.current-score {
+.score-hud__value {
   padding: 12px 24px;
   border-radius: 25px;
   font-size: 4rem;
   font-weight: 800;
   font-family: var(--font-playful);
   text-shadow: var(--shadow-text-mario);
+}
+
+.gratz-text {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--color-mario-gold);
+  font-family: var(--font-playful);
+  text-shadow: var(--shadow-text-mario-large);
+  animation: bounce 0.8s ease-in-out infinite;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
 }
 
 .ui-hint {
