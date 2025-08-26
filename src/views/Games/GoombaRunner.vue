@@ -219,6 +219,18 @@ const config = {
         opacity: 0.5,
       },
       {
+        texture: cloudTexture,
+        speed: 1,
+        size: 200,
+        yPosition: 140,
+        xVariation: 20,
+        yVariation: 10,
+        zPosition: 20,
+        count: 3,
+        spacing: 600,
+        opacity: 0.7,
+      },
+      {
         texture: hillTexture,
         speed: 1,
         size: 1000,
@@ -227,7 +239,7 @@ const config = {
         yVariation: 70,
         zPosition: -400,
         count: 10,
-        spacing: 500,
+        spacing: 1000,
         opacity: 0.5,
       },
       {
@@ -240,7 +252,7 @@ const config = {
         zVariation: 30,
         zPosition: -40,
         count: 10,
-        spacing: 50,
+        spacing: 100,
         opacity: 0.9,
       },
       {
@@ -253,7 +265,7 @@ const config = {
         zVariation: 30,
         zPosition: 80,
         count: 10,
-        spacing: 50,
+        spacing: 100,
         opacity: 0.9,
       },
     ],
@@ -395,15 +407,25 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     return { player, playerController, model: goombaModel };
   };
 
-  const addBackground = (scene: THREE.Scene, world: RAPIER.World, options: any) => {
+  const addBackground = (
+    scene: THREE.Scene,
+    world: RAPIER.World,
+    options: any,
+    initialX?: number
+  ) => {
     const getVariation = (variation: number) =>
       (Math.random() - 0.5) * 2 * (variation || 0);
+
+    const xPosition =
+      initialX !== undefined
+        ? initialX + getVariation(options.xVariation)
+        : window.innerWidth / 2 + options.size + getVariation(options.xVariation);
 
     return getCube(scene, world, {
       texture: options.texture,
       size: [options.size, options.size / 2, 0],
       position: [
-        window.innerWidth / 5 + getVariation(options.xVariation),
+        xPosition,
         options.yPosition + getVariation(options.yVariation),
         options.zPosition + getVariation(options.zVariation),
       ],
@@ -412,6 +434,25 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       color: 0xffffff,
       opacity: options.opacity,
       material: "MeshBasicMaterial",
+    });
+  };
+
+  const populateInitialBackgrounds = (
+    scene: THREE.Scene,
+    world: RAPIER.World,
+    backgrounds: { mesh: THREE.Mesh; speed: number }[]
+  ) => {
+    const viewportWidth = window.innerWidth;
+    const extendedWidth = viewportWidth * 2; // Cover more area initially
+
+    config.backgrounds.layers.forEach((background) => {
+      const totalElements = Math.ceil(extendedWidth / background.spacing) + 1;
+
+      for (let i = 0; i < totalElements; i++) {
+        const initialX = i * background.spacing - extendedWidth / 2;
+        const { mesh } = addBackground(scene, world, background, initialX);
+        backgrounds.push({ mesh, speed: background.speed });
+      }
     });
   };
 
@@ -508,6 +549,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         // Movement input
         const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
+
+        // Track if initial backgrounds are populated
+        let backgroundsPopulated = false;
 
         function handleJump(player: THREE.Mesh) {
           // Stop jump animation if game is not playing
@@ -784,6 +828,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               action: () => {
                 if (physicsHelper) physicsHelper.update();
 
+                // Populate backgrounds when game is in START status and not yet populated
+                if (gameStatus.value === GAME_STATUS.START && !backgroundsPopulated) {
+                  populateInitialBackgrounds(scene, world, backgrounds);
+                  backgroundsPopulated = true;
+                }
+
                 // Update explosion particles
                 updateExplosionParticles(getDelta());
 
@@ -802,6 +852,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                     scene.remove(obstacle.mesh);
                   }
                   backgrounds.length = 0; // Clear the array
+
+                  // Repopulate backgrounds for restart
+                  populateInitialBackgrounds(scene, world, backgrounds);
+                  backgroundsPopulated = true;
 
                   // Clear explosion particles on restart
                   for (let i = explosionParticles.length - 1; i >= 0; i--) {
