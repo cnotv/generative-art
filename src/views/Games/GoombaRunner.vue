@@ -416,8 +416,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     player.rotation.y = 2;
 
     // Position player above ground
-    const groundY = 0;
-    const playerY = groundY;
+    const groundY = 0.25; // Ground top surface is at y = 0.25
+    const goombaHeight = 5; // Approximate height from center to bottom of Goomba
+    const playerY = groundY + goombaHeight; // Position Goomba above ground
     const startingPosition = { x: 0, y: playerY, z: 0 };
     player.position.set(startingPosition.x, startingPosition.y, startingPosition.z);
 
@@ -445,8 +446,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     colliderDesc.mass = 1;
     player.userData.collider = physics.world.createCollider(colliderDesc);
 
-    // Store base Y position for jump calculations (closer to ground level)
-    player.userData.baseY = groundY;
+    // Store base Y position for jump calculations (above ground level)
+    player.userData.baseY = playerY;
 
     return { player, playerController, model: goombaModel };
   };
@@ -598,11 +599,28 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         let backgroundsPopulated = false;
 
         function handleJump(player: THREE.Mesh) {
+          // Always ensure Goomba is at proper ground level, regardless of game state
+          const ensureGroundPosition = () => {
+            const currentPosition = player.userData.collider.translation();
+            const groundLevel = player.userData.baseY;
+            const safeY = Math.max(currentPosition.y, groundLevel);
+
+            if (currentPosition.y !== safeY) {
+              player.userData.collider.setTranslation({
+                x: currentPosition.x,
+                y: safeY,
+                z: currentPosition.z,
+              });
+              player.position.set(currentPosition.x, safeY, currentPosition.z);
+            }
+          };
+
           // Stop jump animation if game is not playing
           if (gameStatus.value !== GAME_STATUS.PLAYING) {
             config.player.jump.isActive = false;
             config.player.jump.velocity = 0;
-            // Don't move the player - keep current position when game stops
+            // Ensure proper ground position even when game is not playing
+            ensureGroundPosition();
             return;
           }
 
@@ -621,25 +639,40 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const jumpProgress = jumpElapsed / config.player.jump.duration;
 
             if (jumpProgress >= 1.0) {
-              // Jump complete
+              // Jump complete - ensure Goomba returns to ground level
               config.player.jump.isActive = false;
               config.player.jump.velocity = 0;
+
+              // Ensure Goomba is positioned exactly at ground level
+              const currentPosition = player.userData.collider.translation();
+              const groundLevel = player.userData.baseY; // This is already above ground
+
+              player.userData.collider.setTranslation({
+                x: currentPosition.x,
+                y: groundLevel,
+                z: currentPosition.z,
+              });
+              player.position.set(currentPosition.x, groundLevel, currentPosition.z);
             } else {
               // Calculate jump arc (parabolic motion)
               const jumpCurve = Math.sin(jumpProgress * Math.PI); // Creates arc from 0 to 1 to 0
               const targetY =
                 player.userData.baseY + config.player.jump.height * jumpCurve;
 
+              // Ensure Goomba never goes below ground level
+              const minY = player.userData.baseY; // Base Y is already above ground
+              const safeTargetY = Math.max(targetY, minY);
+
               // Update player position
               const currentPosition = player.userData.collider.translation();
               player.userData.collider.setTranslation({
                 x: currentPosition.x,
-                y: targetY,
+                y: safeTargetY,
                 z: currentPosition.z,
               });
 
               // Sync Three.js mesh
-              player.position.set(currentPosition.x, targetY, currentPosition.z);
+              player.position.set(currentPosition.x, safeTargetY, currentPosition.z);
             }
           }
         }
@@ -788,10 +821,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const position = player.userData.collider.translation();
 
             position.x += translation.x;
-            // Prevent vertical movement if game is not playing
+            // Prevent vertical movement if game is not playing, but always ensure ground collision
             if (gameStatus.value === GAME_STATUS.PLAYING) {
               position.y += translation.y;
             }
+            // Always ensure Goomba never goes below ground level, regardless of game state
+            const minY = player.userData.baseY; // Base Y is already above ground
+            position.y = Math.max(position.y, minY);
             position.z += translation.z;
 
             player.userData.collider.setTranslation(position);
@@ -862,12 +898,30 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           obstacles.splice(index, 1);
         }
 
+        // Helper function to ensure Goomba stays above ground in all states
+        function ensurePlayerAboveGround(player: THREE.Mesh) {
+          const currentPosition = player.userData.collider.translation();
+          const groundLevel = player.userData.baseY;
+
+          if (currentPosition.y < groundLevel) {
+            player.userData.collider.setTranslation({
+              x: currentPosition.x,
+              y: groundLevel,
+              z: currentPosition.z,
+            });
+            player.position.set(currentPosition.x, groundLevel, currentPosition.z);
+          }
+        }
+
         animate({
           beforeTimeline: () => {},
           timeline: [
             {
               action: () => {
                 if (physicsHelper) physicsHelper.update();
+
+                // Always ensure Goomba stays above ground, regardless of game state
+                ensurePlayerAboveGround(player);
 
                 // Populate backgrounds when game is in START status and not yet populated
                 if (gameStatus.value === GAME_STATUS.START && !backgroundsPopulated) {
@@ -907,14 +961,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   // Make Goomba visible again and reset to starting position
                   player.visible = true;
 
-                  // Reset Goomba to starting position
+                  // Reset Goomba to starting position (ensure proper ground level)
                   const startPos = player.userData.startingPosition;
-                  player.position.set(startPos.x, startPos.y, startPos.z);
+                  const groundLevel = player.userData.baseY; // Use correct ground level
+                  const safeY = Math.max(startPos.y, groundLevel); // Ensure above ground
 
-                  // Reset collider position to match
+                  player.position.set(startPos.x, safeY, startPos.z);
+
+                  // Reset collider position to match (with ground collision)
                   player.userData.collider.setTranslation({
                     x: startPos.x,
-                    y: startPos.y,
+                    y: safeY,
                     z: startPos.z,
                   });
 
