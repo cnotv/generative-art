@@ -55,6 +55,8 @@ const uiStore = useUiStore();
 const gameScore = ref(0);
 const shouldClearObstacles = ref(false);
 
+const goombaColor = 0x8b4513; // Brown color like Goomba
+
 // Game status enum-like values
 const GAME_STATUS = {
   START: "start",
@@ -606,17 +608,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         // Explosion particles array
         const explosionParticles: THREE.Mesh[] = [];
 
-        function createStarExplosion(position: THREE.Vector3) {
+        function createStarExplosion(position: THREE.Vector3, color: number) {
           const starCount = 12; // Number of stars in explosion
-          const goombaColor = 0x8b4513; // Brown color like Goomba
 
           for (let i = 0; i < starCount; i++) {
             // Create cube geometry instead of cone/star shape
             const starGeometry = new THREE.BoxGeometry(8, 8, 8);
             const starMaterial = new THREE.MeshStandardMaterial({
-              color: goombaColor,
-              emissive: goombaColor,
-              emissiveIntensity: 0.2,
+              color,
             });
 
             const star = new THREE.Mesh(starGeometry, starMaterial);
@@ -709,7 +708,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
                 // Create explosion at collision point
                 const explosionPosition = playerPosition.clone();
-                createStarExplosion(explosionPosition);
+                createStarExplosion(explosionPosition, goombaColor);
 
                 // Make Goomba disappear
                 player.visible = false;
