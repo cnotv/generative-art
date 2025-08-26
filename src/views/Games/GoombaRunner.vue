@@ -839,7 +839,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
-          const material = new THREE.MeshStandardMaterial({ color: 0x32cd32 }); // Mario green ground
+          const material = new THREE.MeshStandardMaterial({ color: 0x68b469 });
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.receiveShadow = true;
