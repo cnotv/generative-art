@@ -1191,7 +1191,7 @@ kbd {
 .current-score {
   padding: 12px 24px;
   border-radius: 25px;
-  font-size: 1.3rem;
+  font-size: 4rem;
   font-weight: 800;
   font-family: var(--font-playful);
   text-shadow: var(--shadow-text-mario);
