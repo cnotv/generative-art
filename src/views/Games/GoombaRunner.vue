@@ -928,24 +928,24 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
             },
-            // // Generate cubes
-            // {
-            //   frequency: config.blocks.spacing,
-            //   action: async () => {
-            //     if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-            //     const position: [number, number] = [
-            //       config.blocks.size * 10,
-            //       (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
-            //     ];
-            //     const { mesh, characterController, collider } = await addBlock(
-            //       scene,
-            //       position,
-            //       world,
-            //       physics
-            //     );
-            //     obstacles.push({ mesh, characterController, collider });
-            //   },
-            // },
+            // Generate cubes
+            {
+              frequency: config.blocks.spacing,
+              action: async () => {
+                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+                const position: [number, number] = [
+                  config.blocks.size * 10,
+                  (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
+                ];
+                const { mesh, characterController, collider } = await addBlock(
+                  scene,
+                  position,
+                  world,
+                  physics
+                );
+                obstacles.push({ mesh, characterController, collider });
+              },
+            },
 
             // Create background
             ...config.backgrounds.layers.map((background) => ({
@@ -1053,7 +1053,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     <!-- In-Game Score Display -->
     <div v-if="gameStatus === GAME_STATUS.PLAYING" class="score-hud">
-      <span class="score-hud__value">Highest: {{ highestScore }}</span>
+      <span class="score-hud__value score-hud__value--highest"
+        >Best: {{ highestScore }}</span
+      >
       <span class="score-hud__value">{{ gameScore }}</span>
     </div>
   </div>
@@ -1186,6 +1188,12 @@ button {
   opacity: 0.8;
 }
 
+@media screen and (max-width: 768px) {
+  .score-hud__value--highest {
+    display: none;
+  }
+}
+
 .score-value {
   display: block;
   font-size: 3rem;
@@ -1220,9 +1228,12 @@ kbd {
   position: absolute;
   pointer-events: all;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  width: 100vw;
+}
+
+.score-hud__value--highest {
 }
 
 .score-hud__value {
