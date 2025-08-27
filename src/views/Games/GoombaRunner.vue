@@ -8,6 +8,13 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
+import {
+  createSound,
+  initializeAudio,
+  startSoundtrack,
+  stopSoundtrack,
+  type NoteSequence,
+} from "@/utils/audio";
 
 import { getTools, getModel, colorModel } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
@@ -84,6 +91,81 @@ const GAME_STATUS = {
 } as const;
 
 const gameStatus = ref<GameStatus>(GAME_STATUS.START);
+
+// Boing sound for jumping - longer and lower
+const playJumpSound = async () => {
+  await createSound({
+    startFreq: 400, // Lower starting frequency
+    endFreq: 120, // Lower ending frequency
+    duration: 0.15, // Short and punchy
+    volume: 0.25, // Same volume as jump sound
+    waveType: "square", // Square wave for more aggressive sound
+    attackTime: 0.005, // Very quick attack
+    releaseTime: 0.08, // Quick fade out
+  });
+};
+
+// Cute bang sound for collisions
+const playCollisionSound = async () => {
+  await createSound({
+    startFreq: 300, // Lower starting frequency
+    endFreq: 80, // Much lower ending frequency
+    duration: 0.4, // Longer duration
+    volume: 0.25, // Moderate volume
+    waveType: "sine",
+    attackTime: 0.02,
+    releaseTime: 0.15,
+  });
+};
+
+// Musical note frequencies (in Hz) for creating melodies - shifted down two octaves for very low sound
+const notes = {
+  C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.0, A2: 110.0, B2: 123.47,
+  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
+  C1: 32.7, D1: 36.71, E1: 41.2, F1: 43.65, G1: 49.0, A1: 55.0, B1: 61.74,
+  REST: 0, // Rest/silence
+};
+
+// Mario-inspired background music sequence - [note, duration] tuples (lower octave, shorter durations for faster tempo)
+const soundtrackSequence: NoteSequence = [
+  // Main melody - cheerful and upbeat like classic Mario games (much lower octave, faster tempo)
+  [notes.E3, 0.2], [notes.E3, 0.2], [notes.REST, 0.2], [notes.E3, 0.2],
+  [notes.REST, 0.2], [notes.C3, 0.2], [notes.E3, 0.4], [notes.G3, 0.4],
+  [notes.REST, 0.4], [notes.G2, 0.4], [notes.REST, 0.4],
+
+  // Second phrase
+  [notes.C3, 0.4], [notes.REST, 0.2], [notes.G2, 0.4], [notes.REST, 0.2],
+  [notes.E2, 0.4], [notes.REST, 0.2], [notes.A2, 0.4], [notes.B2, 0.4],
+  [notes.REST, 0.2], [notes.A2, 0.2], [notes.G2, 0.6],
+
+  // Third phrase - continuing the melody
+  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4], [notes.F3, 0.3],
+  [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3], [notes.C3, 0.3],
+  [notes.D3, 0.3], [notes.B2, 0.6],
+
+  // Fourth phrase - bridge section
+  [notes.C3, 0.3], [notes.G2, 0.2], [notes.REST, 0.1], [notes.E2, 0.3],
+  [notes.A2, 0.4], [notes.B2, 0.4], [notes.A2, 0.3], [notes.G2, 0.2],
+  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4],
+
+  // Fifth phrase - variation
+  [notes.F3, 0.3], [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3],
+  [notes.C3, 0.3], [notes.D3, 0.3], [notes.B2, 0.6],
+
+  // Sixth phrase - building up
+  [notes.G3, 0.2], [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3],
+  [notes.E3, 0.3], [notes.G2, 0.3], [notes.A2, 0.3], [notes.C3, 0.4],
+
+  // Seventh phrase - climax
+  [notes.A2, 0.3], [notes.C3, 0.3], [notes.D3, 0.4], [notes.G3, 0.2],
+  [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3], [notes.E3, 0.3],
+
+  // Eighth phrase - resolution and ending
+  [notes.C3, 0.3], [notes.A2, 0.3], [notes.G2, 0.4], [notes.REST, 0.4],
+
+  // Final resolution
+  [notes.REST, 0.8], // Shorter pause before loop for faster tempo
+];
 
 // Event listener tracking
 const activeListeners: Array<{
@@ -326,16 +408,24 @@ onUnmounted(() => {
   // Remove Google Font when leaving this route
   removeGoogleFont();
   updateEventListeners();
+  // Stop soundtrack to prevent memory leaks
+  stopSoundtrack();
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
 
 // Game state functions
-const handleStartGame = () => {
+const handleStartGame = async () => {
+  // Initialize audio on first user interaction (required for iOS)
+  await initializeAudio();
+  
   gameStatus.value = GAME_STATUS.PLAYING;
   gameScore.value = 0;
   isNewHighScore.value = false; // Reset new high score flag
   updateEventListeners(); // Update event listeners for gameplay state
+
+  // Start background music
+  startSoundtrack(soundtrackSequence, gameScore.value);
 };
 
 const handleRestartGame = () => {
@@ -344,6 +434,9 @@ const handleRestartGame = () => {
 };
 
 const endGame = () => {
+  // Stop background music
+  stopSoundtrack();
+
   // Check for new high score
   isNewHighScore.value = gameScore.value > highestScore.value;
   if (isNewHighScore.value) {
@@ -641,6 +734,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             config.player.jump.isActive = true;
             config.player.jump.startTime = currentTime;
             config.player.jump.velocity = config.player.jump.height;
+
+            // Play boing sound effect
+            playJumpSound();
           }
 
           // Handle ongoing jump
@@ -790,6 +886,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
               if (!loggedCollisions.has(collisionKey)) {
                 loggedCollisions.add(collisionKey);
+
+                // Play collision sound effect
+                playCollisionSound();
 
                 // Create explosion at collision point
                 const explosionPosition = playerPosition.clone();
