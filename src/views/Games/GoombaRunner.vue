@@ -362,7 +362,7 @@ const config = {
         zPosition: -40,
         count: 10,
         spacing: 100,
-        opacity: 0.9,
+        opacity: 0.6,
       },
       {
         texture: fireTexture,
@@ -376,7 +376,7 @@ const config = {
         zPosition: 80,
         count: 10,
         spacing: 100,
-        opacity: 0.9,
+        opacity: 0.6,
       },
     ],
   },
