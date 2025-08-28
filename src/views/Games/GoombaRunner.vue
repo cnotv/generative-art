@@ -345,7 +345,7 @@ const config = {
         xVariation: 100,
         yPosition: 70,
         yVariation: 70,
-        zPosition: -600,
+        zPosition: -800,
         count: 10,
         spacing: 1000,
         opacity: 0.5,
