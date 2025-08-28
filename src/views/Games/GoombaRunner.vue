@@ -23,6 +23,7 @@ import { getCube } from "@/utils/models";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
+import grassTexture from "@/assets/grass.jpg";
 
 interface PlayerMovement {
   forward: number;
@@ -283,7 +284,7 @@ const config = {
   },
   player: {
     helper: true,
-    speed: 3,
+    speed: 25,
     maxJump: 100,
     heightOffset: 10,
     collisionThreshold: 38,
@@ -299,7 +300,7 @@ const config = {
     layers: [
       {
         texture: cloudTexture,
-        speed: 1,
+        speed: 1.2,
         size: 200,
         ratio: 2.5,
         yPosition: 130,
@@ -312,7 +313,7 @@ const config = {
       },
       {
         texture: cloudTexture,
-        speed: 1,
+        speed: 1.2,
         size: 200,
         ratio: 2.5,
         yPosition: 150,
@@ -325,7 +326,7 @@ const config = {
       },
       {
         texture: cloudTexture,
-        speed: 1,
+        speed: 1.2,
         size: 200,
         ratio: 2.5,
         yPosition: 140,
@@ -338,7 +339,7 @@ const config = {
       },
       {
         texture: hillTexture,
-        speed: 1,
+        speed: 1.2,
         size: 1000,
         ratio: 1,
         xVariation: 100,
@@ -351,7 +352,7 @@ const config = {
       },
       {
         texture: fireTexture,
-        speed: 1,
+        speed: 1.2,
         size: 10,
         ratio: 1,
         xVariation: 100,
@@ -365,7 +366,7 @@ const config = {
       },
       {
         texture: fireTexture,
-        speed: 1,
+        speed: 1.2,
         size: 10,
         ratio: 1,
         xVariation: 100,
@@ -418,7 +419,7 @@ onUnmounted(() => window.removeEventListener("resize", initInstance));
 const handleStartGame = async () => {
   // Initialize audio on first user interaction (required for iOS)
   await initializeAudio();
-  
+
   gameStatus.value = GAME_STATUS.PLAYING;
   gameScore.value = 0;
   isNewHighScore.value = false; // Reset new high score flag
@@ -452,7 +453,7 @@ const endGame = () => {
  * @param base
  */
 const getSpeed = (base: number): number => {
-  const speedMultiplier = 1 + gameScore.value * 0.01;
+  const speedMultiplier = 1 + gameScore.value * 0.02;
   const speed = base * speedMultiplier;
   return speed;
 };
@@ -693,6 +694,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         scene.background = new THREE.Color(0x87ceeb);
 
         onWindowResize(camera, renderer);
+
+        // Track ground texture for animation
+        let groundTexture: THREE.Texture | null = null;
         getGround(scene, physics);
 
         // Movement input
@@ -948,7 +952,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
-          const material = new THREE.MeshStandardMaterial({ color: 0x68b469 });
+
+          // Create grass texture with proper tiling and animation setup
+          const textureLoader = new THREE.TextureLoader();
+          const texture = textureLoader.load(grassTexture);
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(50, 50); // Repeat texture many times for tiled grass
+
+          // Store reference for animation
+          groundTexture = texture;
+
+          const material = new THREE.MeshStandardMaterial({
+            map: texture,
+            color: 0x68b469 // Use white to show natural grass texture colors
+          });
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.receiveShadow = true;
@@ -1084,12 +1102,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                     z: startPos.z,
                   });
 
+                  // Reset ground texture offset for restart
+                  if (groundTexture) {
+                    groundTexture.offset.x = 0;
+                    groundTexture.offset.y = 0;
+                  }
+
                   shouldClearObstacles.value = false;
                 }
 
                 movePlayer(player, playerController, physics, playerMovement);
                 handleJump(player);
                 checkCollisions(player, obstacles);
+
+                // Animate ground texture to create moving ground effect
+                if (groundTexture && gameStatus.value === GAME_STATUS.PLAYING) {
+                  groundTexture.offset.x += 0.03 * getSpeed(1); // Move texture based on game speed
+                }
 
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
@@ -1145,9 +1174,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               action: () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const baseSpeed = 20;
-                const speedMultiplier = 1 + (gameScore.value / 100) * 0.01;
-                const animationSpeed = baseSpeed * speedMultiplier;
+                const animationSpeed = getSpeed(config.player.speed);
                 updateAnimation(
                   model.mixer,
                   model.actions.run,
