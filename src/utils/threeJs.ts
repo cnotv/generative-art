@@ -864,3 +864,28 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
   
   return texture;
 };
+
+/**
+ * Smoothly tilt the camera for dynamic effects like jump reactions
+ * @param camera - The Three.js camera to tilt
+ * @param targetTilt - Target tilt angle in radians (positive = tilt up, negative = tilt down)
+ * @param lerpFactor - Smoothing factor (0-1, higher = faster transition)
+ */
+export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor: number = 0.1) => {
+  // Store original rotation if not already stored
+  if (!camera.userData.originalRotation) {
+    camera.userData.originalRotation = {
+      x: camera.rotation.x,
+      y: camera.rotation.y,
+      z: camera.rotation.z
+    };
+  }
+
+  // Smoothly interpolate to target tilt
+  const currentTilt = camera.rotation.x - camera.userData.originalRotation.x;
+  const tiltDifference = targetTilt - currentTilt;
+  const newTilt = currentTilt + tiltDifference * lerpFactor;
+  
+  // Apply tilt relative to original rotation
+  camera.rotation.x = camera.userData.originalRotation.x + newTilt;
+};

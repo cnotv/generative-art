@@ -16,7 +16,7 @@ import {
   type NoteSequence,
 } from "@/utils/audio";
 
-import { getTools, getModel, colorModel, createZigzagTexture } from "@/utils/threeJs";
+import { getTools, getModel, colorModel, createZigzagTexture, tiltCamera } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
@@ -698,6 +698,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         let groundTexture: THREE.Texture | null = null;
         getGround(scene, physics);
 
+        // Add cartoonish horizon line for visual separation
+        const horizonLine = addHorizonLine(scene);
+
         // Movement input
         const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
 
@@ -752,6 +755,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               config.player.jump.isActive = false;
               config.player.jump.velocity = 0;
 
+              // Reset camera tilt when jump completes
+              tiltCamera(camera, 0, 0.15);
+
+              // Reset camera position when jump completes
+              if (camera.userData.originalPosition) {
+                camera.position.y = camera.userData.originalPosition.y;
+              }
+
+              // Reset horizon line position when jump completes
+              if (horizonLine.userData.originalPosition) {
+                horizonLine.position.y = horizonLine.userData.originalPosition.y;
+              }
+
               // Ensure Goomba is positioned exactly at ground level
               const currentPosition = player.userData.collider.translation();
               const groundLevel = player.userData.baseY; // This is already above ground
@@ -767,6 +783,33 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               const jumpCurve = Math.sin(jumpProgress * Math.PI); // Creates arc from 0 to 1 to 0
               const targetY =
                 player.userData.baseY + config.player.jump.height * jumpCurve;
+
+              // Tilt camera based on jump progress (tilt up more during ascent)
+              const maxTilt = -0.1; // Negative = tilt up (radians, about 5.7 degrees)
+              const cameraTilt = jumpCurve * maxTilt;
+              tiltCamera(camera, cameraTilt, 0.2);
+
+              // Move camera up with the player during jump
+              if (!camera.userData.originalPosition) {
+                camera.userData.originalPosition = {
+                  x: camera.position.x,
+                  y: camera.position.y,
+                  z: camera.position.z
+                };
+              }
+              const cameraRiseAmount = jumpCurve * 15; // Rise up to 15 units with the jump
+              camera.position.y = camera.userData.originalPosition.y + cameraRiseAmount;
+
+              // Adjust horizon line to follow camera movement for consistent visual effect
+              if (!horizonLine.userData.originalPosition) {
+                horizonLine.userData.originalPosition = {
+                  x: horizonLine.position.x,
+                  y: horizonLine.position.y,
+                  z: horizonLine.position.z
+                };
+              }
+              const horizonRiseAmount = jumpCurve * 9; // Rise less than camera for depth effect
+              horizonLine.position.y = horizonLine.userData.originalPosition.y + horizonRiseAmount;
 
               // Ensure Goomba never goes below ground level
               const minY = player.userData.baseY; // Base Y is already above ground
@@ -796,12 +839,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const starCount = 12; // Number of stars in explosion
 
           for (let i = 0; i < starCount; i++) {
-            // Create cube geometry instead of cone/star shape
+            // Create cube geometry for both filled and wireframe
             const starGeometry = new THREE.BoxGeometry(8, 8, 8);
+
+            // Create filled cube material
             const starMaterial = new THREE.MeshStandardMaterial({
               color,
             });
 
+            // Create the main filled cube
             const star = new THREE.Mesh(starGeometry, starMaterial);
 
             // Position star at collision point
@@ -949,6 +995,26 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           }
         }
 
+        function addHorizonLine(scene: THREE.Scene) {
+          // Create a dark grey horizontal bar/line for cartoonish horizon effect
+          const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2); // Wide, thin bar
+          const horizonMaterial = new THREE.MeshBasicMaterial({
+            color: 0x333333, // Dark grey
+            transparent: true,
+            opacity: 0.8
+          });
+
+          const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial);
+
+          // Position the horizon line slightly above the ground level
+          horizonLine.position.set(0, 11, -200); // Y=11 for horizon height, Z back a bit for depth
+          horizonLine.receiveShadow = false;
+          horizonLine.castShadow = false;
+
+          scene.add(horizonLine);
+          return horizonLine; // Return the horizon line so we can manipulate it during jumps
+        }
+
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
 
@@ -957,7 +1023,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             size: 128,
             backgroundColor: '#60af2c', // Slightly different green
             zigzagColor: '#333333',     // Darker green for primary zigzag
-            secondaryColor: '#aaaaaa',  // Lighter green for secondary zigzag
+            secondaryColor: '#333333',  // Lighter green for secondary zigzag
             zigzagHeight: 100,           // Taller zigzag amplitude
             zigzagWidth: 30,            // Wider zigzag segments
             primaryThickness: 8,        // Thicker primary line
