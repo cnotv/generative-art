@@ -772,3 +772,95 @@ export const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
 
   return mesh;
 };
+
+/**
+ * Configuration interface for zigzag texture parameters
+ */
+export interface ZigzagTextureOptions {
+  size?: number;           // Canvas size (default: 64)
+  backgroundColor?: string; // Background color (default: '#68b469')
+  zigzagColor?: string;    // Primary zigzag line color (default: '#4a7c59')
+  secondaryColor?: string; // Secondary zigzag line color (default: '#5a8c69')
+  zigzagHeight?: number;   // Amplitude of zigzag pattern (default: 16)
+  zigzagWidth?: number;    // Width of each zigzag segment (default: 8)
+  primaryThickness?: number; // Line width of primary zigzag (default: 3)
+  secondaryThickness?: number; // Line width of secondary zigzag (default: 2)
+  repeatX?: number;        // Texture repeat X (default: 50)
+  repeatY?: number;        // Texture repeat Y (default: 50)
+}
+
+/**
+ * Creates a procedural zigzag pattern texture using Canvas API
+ * @param options Configuration options for the zigzag pattern
+ * @returns THREE.CanvasTexture with zigzag pattern
+ */
+export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.CanvasTexture => {
+  const {
+    size = 64,
+    backgroundColor = '#68b469',
+    zigzagColor = '#4a7c59',
+    secondaryColor = '#5a8c69',
+    zigzagHeight = 16,
+    zigzagWidth = 8,
+    primaryThickness = 3,
+    secondaryThickness = 2,
+    repeatX = 50,
+    repeatY = 50
+  } = options;
+
+  // Create a canvas for the zigzag pattern
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Fill background
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, size, size);
+
+  // Draw primary zigzag pattern
+  ctx.strokeStyle = zigzagColor;
+  ctx.lineWidth = primaryThickness;
+  ctx.beginPath();
+
+  const numZigzags = Math.ceil(size / zigzagWidth);
+
+  for (let i = 0; i <= numZigzags; i++) {
+    const x = i * zigzagWidth;
+    const y = (i % 2 === 0) ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2;
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  
+  ctx.stroke();
+
+  // Draw secondary zigzag pattern for more complexity
+  ctx.strokeStyle = secondaryColor;
+  ctx.lineWidth = secondaryThickness;
+  ctx.beginPath();
+  
+  for (let i = 0; i <= numZigzags; i++) {
+    const x = i * zigzagWidth;
+    const y = (i % 2 === 0) ? size / 2 + zigzagHeight / 4 : size / 2 - zigzagHeight / 4;
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  
+  ctx.stroke();
+
+  // Create Three.js texture from canvas
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(repeatX, repeatY);
+  
+  return texture;
+};

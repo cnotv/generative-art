@@ -16,14 +16,13 @@ import {
   type NoteSequence,
 } from "@/utils/audio";
 
-import { getTools, getModel, colorModel } from "@/utils/threeJs";
+import { getTools, getModel, colorModel, createZigzagTexture } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
-import grassTexture from "@/assets/grass.jpg";
 
 interface PlayerMovement {
   forward: number;
@@ -300,7 +299,7 @@ const config = {
     layers: [
       {
         texture: cloudTexture,
-        speed: 1.2,
+        speed: 2,
         size: 200,
         ratio: 2.5,
         yPosition: 130,
@@ -313,7 +312,7 @@ const config = {
       },
       {
         texture: cloudTexture,
-        speed: 1.2,
+        speed: 2,
         size: 200,
         ratio: 2.5,
         yPosition: 150,
@@ -326,7 +325,7 @@ const config = {
       },
       {
         texture: cloudTexture,
-        speed: 1.2,
+        speed: 2,
         size: 200,
         ratio: 2.5,
         yPosition: 140,
@@ -339,7 +338,7 @@ const config = {
       },
       {
         texture: hillTexture,
-        speed: 1.2,
+        speed: 2,
         size: 1000,
         ratio: 1,
         xVariation: 100,
@@ -352,31 +351,31 @@ const config = {
       },
       {
         texture: fireTexture,
-        speed: 1.2,
-        size: 10,
+        speed: 2,
+        size: 15,
         ratio: 1,
         xVariation: 100,
-        yPosition: 5,
+        yPosition: 8,
         yVariation: 0,
         zVariation: 30,
         zPosition: -40,
         count: 10,
         spacing: 100,
-        opacity: 0.6,
+        opacity: 0.4,
       },
       {
         texture: fireTexture,
-        speed: 1.2,
-        size: 10,
+        speed: 2,
+        size: 15,
         ratio: 1,
         xVariation: 100,
-        yPosition: 5,
+        yPosition: 8,
         yVariation: 0,
         zVariation: 30,
         zPosition: 80,
         count: 10,
         spacing: 100,
-        opacity: 0.6,
+        opacity: 0.5,
       },
     ],
   },
@@ -453,7 +452,7 @@ const endGame = () => {
  * @param base
  */
 const getSpeed = (base: number): number => {
-  const speedMultiplier = 1 + gameScore.value * 0.02;
+  const speedMultiplier = 1 + gameScore.value * 0.001;
   const speed = base * speedMultiplier;
   return speed;
 };
@@ -953,19 +952,26 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         function getGround(scene: THREE.Scene, physics?: RapierPhysics) {
           const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
 
-          // Create grass texture with proper tiling and animation setup
-          const textureLoader = new THREE.TextureLoader();
-          const texture = textureLoader.load(grassTexture);
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(50, 50); // Repeat texture many times for tiled grass
+          // Create zigzag pattern texture with custom parameters
+          const texture = createZigzagTexture({
+            size: 128,
+            backgroundColor: '#60af2c', // Slightly different green
+            zigzagColor: '#333333',     // Darker green for primary zigzag
+            secondaryColor: '#aaaaaa',  // Lighter green for secondary zigzag
+            zigzagHeight: 100,           // Taller zigzag amplitude
+            zigzagWidth: 30,            // Wider zigzag segments
+            primaryThickness: 8,        // Thicker primary line
+            secondaryThickness: 4,      // Standard secondary line
+            repeatX: 40,                // Less repetition for larger pattern
+            repeatY: 40
+          });
 
           // Store reference for animation
           groundTexture = texture;
 
           const material = new THREE.MeshStandardMaterial({
             map: texture,
-            color: 0x68b469 // Use white to show natural grass texture colors
+            color: 0x68b469 // Use white to show natural texture colors
           });
 
           const mesh = new THREE.Mesh(geometry, material);
@@ -1117,7 +1123,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
                 // Animate ground texture to create moving ground effect
                 if (groundTexture && gameStatus.value === GAME_STATUS.PLAYING) {
-                  groundTexture.offset.x += 0.03 * getSpeed(1); // Move texture based on game speed
+                  groundTexture.offset.x += 0.04 * getSpeed(1); // Move texture based on game speed
                 }
 
                 // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
