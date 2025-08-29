@@ -303,7 +303,7 @@ const config = {
         size: 200,
         ratio: 2.5,
         yPosition: 130,
-        xVariation: 20,
+        xVariation: 100,
         yVariation: 20,
         zPosition: -300,
         count: 4,
@@ -316,7 +316,7 @@ const config = {
         size: 200,
         ratio: 2.5,
         yPosition: 150,
-        xVariation: 20,
+        xVariation: 100,
         yVariation: 20,
         zPosition: -100,
         count: 3,
@@ -329,7 +329,7 @@ const config = {
         size: 200,
         ratio: 2.5,
         yPosition: 140,
-        xVariation: 20,
+        xVariation: 100,
         yVariation: 10,
         zPosition: 20,
         count: 3,
@@ -352,13 +352,13 @@ const config = {
       {
         texture: fireTexture,
         speed: 2,
-        size: 15,
+        size: 12,
         ratio: 1,
         xVariation: 100,
         yPosition: 8,
         yVariation: 0,
-        zVariation: 30,
-        zPosition: -40,
+        zVariation: 50,
+        zPosition: -70,
         count: 10,
         spacing: 100,
         opacity: 0.4,
@@ -366,16 +366,16 @@ const config = {
       {
         texture: fireTexture,
         speed: 2,
-        size: 15,
+        size: 12,
         ratio: 1,
         xVariation: 100,
         yPosition: 8,
         yVariation: 0,
         zVariation: 30,
-        zPosition: 80,
+        zPosition: 100,
         count: 10,
-        spacing: 100,
-        opacity: 0.5,
+        spacing: 300,
+        opacity: 0.4,
       },
     ],
   },
@@ -1022,14 +1022,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const texture = createZigzagTexture({
             size: 128,
             backgroundColor: '#60af2c', // Slightly different green
-            zigzagColor: '#333333',     // Darker green for primary zigzag
-            secondaryColor: '#333333',  // Lighter green for secondary zigzag
+            zigzagColor: '#ffff44',     // Darker green for primary zigzag
             zigzagHeight: 100,           // Taller zigzag amplitude
-            zigzagWidth: 30,            // Wider zigzag segments
-            primaryThickness: 8,        // Thicker primary line
-            secondaryThickness: 4,      // Standard secondary line
-            repeatX: 40,                // Less repetition for larger pattern
-            repeatY: 40
+            zigzagWidth: 32,            // Wider zigzag segments
+            primaryThickness: 2,        // Thicker primary line
+            repeatX: 30,                // Less repetition for larger pattern
+            repeatY: 30
           });
 
           // Store reference for animation
@@ -1186,13 +1184,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 movePlayer(player, playerController, physics, playerMovement);
                 handleJump(player);
                 checkCollisions(player, obstacles);
-
-                // Animate ground texture to create moving ground effect
-                if (groundTexture && gameStatus.value === GAME_STATUS.PLAYING) {
-                  groundTexture.offset.x += 0.04 * getSpeed(1); // Move texture based on game speed
-                }
-
-                // updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
               },
             },
             // Generate cubes
@@ -1223,6 +1214,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 backgrounds.push({ mesh, speed: background.speed });
               },
             })),
+
+            // Move ground
+            {
+              action: () => {
+                // Animate ground texture to create moving ground effect
+                if (groundTexture && gameStatus.value === GAME_STATUS.PLAYING) {
+                  groundTexture.offset.x += 0.03 * getSpeed(1); // Move texture based on game speed
+                }
+              },
+            },
+
             // Move background
             {
               action: () => {
@@ -1255,6 +1257,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 );
               },
             },
+
             // Move obstacles
             {
               action: () => {

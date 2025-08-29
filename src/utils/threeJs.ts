@@ -799,11 +799,9 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
     size = 64,
     backgroundColor = '#68b469',
     zigzagColor = '#4a7c59',
-    secondaryColor = '#5a8c69',
     zigzagHeight = 16,
     zigzagWidth = 8,
     primaryThickness = 3,
-    secondaryThickness = 2,
     repeatX = 50,
     repeatY = 50
   } = options;
@@ -828,24 +826,6 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
   for (let i = 0; i <= numZigzags; i++) {
     const x = i * zigzagWidth;
     const y = (i % 2 === 0) ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2;
-    
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-  
-  ctx.stroke();
-
-  // Draw secondary zigzag pattern for more complexity
-  ctx.strokeStyle = secondaryColor;
-  ctx.lineWidth = secondaryThickness;
-  ctx.beginPath();
-  
-  for (let i = 0; i <= numZigzags; i++) {
-    const x = i * zigzagWidth;
-    const y = (i % 2 === 0) ? size / 2 + zigzagHeight / 4 : size / 2 - zigzagHeight / 4;
     
     if (i === 0) {
       ctx.moveTo(x, y);
