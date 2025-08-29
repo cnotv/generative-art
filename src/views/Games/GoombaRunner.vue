@@ -1380,10 +1380,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     <!-- In-Game Score Display -->
     <div v-if="gameStatus === GAME_STATUS.PLAYING" class="score-hud">
+      <span class="score-hud__value">{{ gameScore }}</span>
       <span class="score-hud__value score-hud__value--highest"
         >Best: {{ highestScore }}</span
       >
-      <span class="score-hud__value">{{ gameScore }}</span>
     </div>
   </div>
 </template>
@@ -1515,19 +1515,6 @@ button {
   opacity: 0.8;
 }
 
-@media screen and (max-width: 768px) {
-  .score-hud__value--highest {
-    display: none;
-  }
-}
-
-.score-value {
-  display: block;
-  font-size: 3rem;
-  font-weight: bold;
-  text-shadow: var(--shadow-text-mario);
-}
-
 .game-button {
   padding: 15px 30px;
   font-size: 1.5rem;
@@ -1556,20 +1543,28 @@ kbd {
   pointer-events: all;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100vw;
+  top: 20px;
 }
 
-.score-hud__value--highest {
+.score-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
 }
 
 .score-hud__value {
-  padding: 12px 24px;
+  padding: 0 24px;
   border-radius: 25px;
   font-size: 4rem;
   font-weight: 800;
   font-family: var(--font-playful);
   text-shadow: var(--shadow-text-mario);
+}
+
+.score-hud__value--highest {
+  font-size: 1.5rem;
 }
 
 .gratz-text {
