@@ -13,17 +13,26 @@ import {
   initializeAudio,
   startSoundtrack,
   stopSoundtrack,
-  type NoteSequence,
 } from "@/utils/audio";
 
-import { getTools, getModel, colorModel, createZigzagTexture, tiltCamera, isOoS } from "@/utils/threeJs";
+import {
+  getTools,
+  getModel,
+  colorModel,
+  createZigzagTexture,
+  tiltCamera,
+  isOoS,
+} from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
-import cloudTexture from "@/assets/cloud.png";
-import hillTexture from "@/assets/hill.png";
-import fireTexture from "@/assets/fire.png";
-import { enableZoomPrevention, loadGoogleFont, removeGoogleFont, disableZoomPrevention } from "@/utils/ui";
+import {
+  enableZoomPrevention,
+  loadGoogleFont,
+  removeGoogleFont,
+  disableZoomPrevention,
+} from "@/utils/ui";
+import { config, GAME_STATUS, SOUNDS, soundtrackSequence } from "./config";
 
 interface PlayerMovement {
   forward: number;
@@ -41,18 +50,14 @@ type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 
 // Set UI controls
 const uiStore = useUiStore();
-const fontName = 'goomba-runner-font'
+const fontName = "goomba-runner-font";
+const goombaColor = 0x8b4513; // Brown color like Goomba
+const HIGH_SCORE_KEY = "goomba-runner-high-score";
 
-// Game state refs - unified into single status
 const gameScore = ref(0);
 const shouldClearObstacles = ref(false);
 const highestScore = ref(0);
 const isNewHighScore = ref(false);
-
-const goombaColor = 0x8b4513; // Brown color like Goomba
-
-// LocalStorage key for highest score
-const HIGH_SCORE_KEY = "goomba-runner-high-score";
 
 // Load highest score from localStorage on component mount
 const loadHighestScore = () => {
@@ -68,91 +73,8 @@ const saveHighestScore = (score: number) => {
   highestScore.value = score;
 };
 
-// Game status enum-like values
-const GAME_STATUS = {
-  START: "start",
-  PLAYING: "playing",
-  GAME_OVER: "gameOver",
-} as const;
-
 const gameStatus = ref<GameStatus>(GAME_STATUS.START);
 
-// Boing sound for jumping - longer and lower
-const playJumpSound = async () => {
-  await createSound({
-    startFreq: 400, // Lower starting frequency
-    endFreq: 120, // Lower ending frequency
-    duration: 0.15, // Short and punchy
-    volume: 0.25, // Same volume as jump sound
-    waveType: "square", // Square wave for more aggressive sound
-    attackTime: 0.005, // Very quick attack
-    releaseTime: 0.08, // Quick fade out
-  });
-};
-
-// Cute bang sound for collisions
-const playCollisionSound = async () => {
-  await createSound({
-    startFreq: 300, // Lower starting frequency
-    endFreq: 80, // Much lower ending frequency
-    duration: 0.4, // Longer duration
-    volume: 0.25, // Moderate volume
-    waveType: "sine",
-    attackTime: 0.02,
-    releaseTime: 0.15,
-  });
-};
-
-// Musical note frequencies (in Hz) for creating melodies - shifted down two octaves for very low sound
-const notes = {
-  C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.0, A2: 110.0, B2: 123.47,
-  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
-  C1: 32.7, D1: 36.71, E1: 41.2, F1: 43.65, G1: 49.0, A1: 55.0, B1: 61.74,
-  REST: 0, // Rest/silence
-};
-
-// Mario-inspired background music sequence - [note, duration] tuples (lower octave, shorter durations for faster tempo)
-const soundtrackSequence: NoteSequence = [
-  // Main melody - cheerful and upbeat like classic Mario games (much lower octave, faster tempo)
-  [notes.E3, 0.2], [notes.E3, 0.2], [notes.REST, 0.2], [notes.E3, 0.2],
-  [notes.REST, 0.2], [notes.C3, 0.2], [notes.E3, 0.4], [notes.G3, 0.4],
-  [notes.REST, 0.4], [notes.G2, 0.4], [notes.REST, 0.4],
-
-  // Second phrase
-  [notes.C3, 0.4], [notes.REST, 0.2], [notes.G2, 0.4], [notes.REST, 0.2],
-  [notes.E2, 0.4], [notes.REST, 0.2], [notes.A2, 0.4], [notes.B2, 0.4],
-  [notes.REST, 0.2], [notes.A2, 0.2], [notes.G2, 0.6],
-
-  // Third phrase - continuing the melody
-  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4], [notes.F3, 0.3],
-  [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3], [notes.C3, 0.3],
-  [notes.D3, 0.3], [notes.B2, 0.6],
-
-  // Fourth phrase - bridge section
-  [notes.C3, 0.3], [notes.G2, 0.2], [notes.REST, 0.1], [notes.E2, 0.3],
-  [notes.A2, 0.4], [notes.B2, 0.4], [notes.A2, 0.3], [notes.G2, 0.2],
-  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4],
-
-  // Fifth phrase - variation
-  [notes.F3, 0.3], [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3],
-  [notes.C3, 0.3], [notes.D3, 0.3], [notes.B2, 0.6],
-
-  // Sixth phrase - building up
-  [notes.G3, 0.2], [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3],
-  [notes.E3, 0.3], [notes.G2, 0.3], [notes.A2, 0.3], [notes.C3, 0.4],
-
-  // Seventh phrase - climax
-  [notes.A2, 0.3], [notes.C3, 0.3], [notes.D3, 0.4], [notes.G3, 0.2],
-  [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3], [notes.E3, 0.3],
-
-  // Eighth phrase - resolution and ending
-  [notes.C3, 0.3], [notes.A2, 0.3], [notes.G2, 0.4], [notes.REST, 0.4],
-
-  // Final resolution
-  [notes.REST, 0.8], // Shorter pause before loop for faster tempo
-];
-
-// Event listener tracking
 const activeListeners: Array<{
   target: EventTarget;
   type: string;
@@ -251,121 +173,6 @@ watch(
   { immediate: true }
 );
 
-const config = {
-  game: {
-    helpers: false,
-    speed: 2,
-  },
-  directional: {
-    enabled: true,
-    helper: false,
-    intensity: 2,
-  },
-  blocks: {
-    helper: false,
-    size: 30,
-    spacing: 150,
-  },
-  player: {
-    helper: true,
-    speed: 25,
-    maxJump: 100,
-    heightOffset: 10,
-    collisionThreshold: 38,
-    jump: {
-      height: 100,
-      duration: 1000,
-      isActive: false,
-      velocity: 0,
-      startTime: 0,
-    },
-  },
-  backgrounds: {
-    layers: [
-      {
-        texture: cloudTexture,
-        speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 130,
-        xVariation: 100,
-        yVariation: 20,
-        zPosition: -300,
-        count: 4,
-        spacing: 600,
-        opacity: 0.5,
-      },
-      {
-        texture: cloudTexture,
-        speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 150,
-        xVariation: 100,
-        yVariation: 20,
-        zPosition: -100,
-        count: 3,
-        spacing: 600,
-        opacity: 0.5,
-      },
-      {
-        texture: cloudTexture,
-        speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 140,
-        xVariation: 100,
-        yVariation: 10,
-        zPosition: 20,
-        count: 3,
-        spacing: 600,
-        opacity: 0.7,
-      },
-      {
-        texture: hillTexture,
-        speed: 2,
-        size: 1000,
-        ratio: 1,
-        xVariation: 100,
-        yPosition: 70,
-        yVariation: 70,
-        zPosition: -800,
-        count: 10,
-        spacing: 1000,
-        opacity: 0.5,
-      },
-      {
-        texture: fireTexture,
-        speed: 2,
-        size: 12,
-        ratio: 1,
-        xVariation: 100,
-        yPosition: 8,
-        yVariation: 0,
-        zVariation: 50,
-        zPosition: -70,
-        count: 10,
-        spacing: 100,
-        opacity: 0.4,
-      },
-      {
-        texture: fireTexture,
-        speed: 2,
-        size: 12,
-        ratio: 1,
-        xVariation: 100,
-        yPosition: 8,
-        yVariation: 0,
-        zVariation: 30,
-        zPosition: 100,
-        count: 10,
-        spacing: 300,
-        opacity: 0.4,
-      },
-    ],
-  },
-};
-
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
@@ -374,7 +181,10 @@ const { originalViewport, preventZoomStyleElement } = enableZoomPrevention(); //
 
 let initInstance: () => void;
 onMounted(() => {
-  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', fontName);
+  loadGoogleFont(
+    "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap",
+    fontName
+  );
   loadHighestScore(); // Load saved high score from localStorage
   initInstance = () => {
     init(
@@ -482,7 +292,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     const player = goombaModel.mesh;
     player.castShadow = true;
 
-    // Apply styling to Goomba - easily customizable
+    // Update colors
     colorModel(player, [
       0xffffff, // White - unknown
       0xffffff, // White - unknown
@@ -750,7 +560,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             config.player.jump.velocity = config.player.jump.height;
 
             // Play boing sound effect
-            playJumpSound();
+            createSound(SOUNDS.jump);
           }
 
           // Handle ongoing jump
@@ -802,7 +612,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 camera.userData.originalPosition = {
                   x: camera.position.x,
                   y: camera.position.y,
-                  z: camera.position.z
+                  z: camera.position.z,
                 };
               }
               const cameraRiseAmount = jumpCurve * 15; // Rise up to 15 units with the jump
@@ -813,11 +623,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 horizonLine.userData.originalPosition = {
                   x: horizonLine.position.x,
                   y: horizonLine.position.y,
-                  z: horizonLine.position.z
+                  z: horizonLine.position.z,
                 };
               }
               const horizonRiseAmount = jumpCurve * 9; // Rise less than camera for depth effect
-              horizonLine.position.y = horizonLine.userData.originalPosition.y + horizonRiseAmount;
+              horizonLine.position.y =
+                horizonLine.userData.originalPosition.y + horizonRiseAmount;
 
               // Ensure Goomba never goes below ground level
               const minY = player.userData.baseY; // Base Y is already above ground
@@ -945,7 +756,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 loggedCollisions.add(collisionKey);
 
                 // Play collision sound effect
-                playCollisionSound();
+                createSound(SOUNDS.collision);
 
                 // Create explosion at collision point
                 const explosionPosition = playerPosition.clone();
@@ -1009,7 +820,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           const horizonMaterial = new THREE.MeshBasicMaterial({
             color: 0x333333, // Dark grey
             transparent: true,
-            opacity: 0.8
+            opacity: 0.8,
           });
 
           const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial);
@@ -1029,13 +840,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           // Create zigzag pattern texture with custom parameters
           const texture = createZigzagTexture({
             size: 128,
-            backgroundColor: '#60af2c', // Slightly different green
-            zigzagColor: '#ffff44',     // Darker green for primary zigzag
-            zigzagHeight: 100,           // Taller zigzag amplitude
-            zigzagWidth: 32,            // Wider zigzag segments
-            primaryThickness: 2,        // Thicker primary line
-            repeatX: 30,                // Less repetition for larger pattern
-            repeatY: 30
+            backgroundColor: "#60af2c", // Slightly different green
+            zigzagColor: "#ffff44", // Darker green for primary zigzag
+            zigzagHeight: 100, // Taller zigzag amplitude
+            zigzagWidth: 32, // Wider zigzag segments
+            primaryThickness: 2, // Thicker primary line
+            repeatX: 30, // Less repetition for larger pattern
+            repeatY: 30,
           });
 
           // Store reference for animation
@@ -1043,7 +854,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
           const material = new THREE.MeshStandardMaterial({
             map: texture,
-            color: 0x68b469 // Use white to show natural texture colors
+            color: 0x68b469, // Use white to show natural texture colors
           });
 
           const mesh = new THREE.Mesh(geometry, material);
@@ -1276,7 +1087,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   moveBlock(obstacle, physics);
 
                   // Award score when block passes behind Goomba (only once per block)
-                  if (!obstacle.mesh.userData.scored && obstacle.mesh.position.x < player.position.x - 20) {
+                  if (
+                    !obstacle.mesh.userData.scored &&
+                    obstacle.mesh.position.x < player.position.x - 20
+                  ) {
                     obstacle.mesh.userData.scored = true; // Mark as scored
                     gameScore.value += 10;
                   }

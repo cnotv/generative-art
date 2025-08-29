@@ -9,6 +9,14 @@ export type SoundConfig = {
   releaseTime?: number;
 };
 
+// Musical note frequencies (in Hz) for creating melodies - shifted down two octaves for very low sound
+export const notes = {
+  C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.0, A2: 110.0, B2: 123.47,
+  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
+  C1: 32.7, D1: 36.71, E1: 41.2, F1: 43.65, G1: 49.0, A1: 55.0, B1: 61.74,
+  REST: 0, // Rest/silence
+};
+
 export type NoteSequence = [number, number][];
 
 // Global audio context for all sound effects
