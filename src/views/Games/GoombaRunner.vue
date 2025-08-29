@@ -16,13 +16,14 @@ import {
   type NoteSequence,
 } from "@/utils/audio";
 
-import { getTools, getModel, colorModel, createZigzagTexture, tiltCamera } from "@/utils/threeJs";
+import { getTools, getModel, colorModel, createZigzagTexture, tiltCamera, isOoS } from "@/utils/threeJs";
 import { useUiStore } from "@/stores/ui";
 import { updateAnimation } from "@/utils/animation";
 import { getCube } from "@/utils/models";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
+import { enableZoomPrevention, loadGoogleFont, removeGoogleFont, disableZoomPrevention } from "@/utils/ui";
 
 interface PlayerMovement {
   forward: number;
@@ -38,59 +39,9 @@ interface EventHandlers {
 
 type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 
-/**
- * Calculate Out of Sight (OoS) status for background elements
- * @param camera
- * @param background
- */
-const isOoS = (camera: THREE.PerspectiveCamera, background: {
-    mesh: THREE.Mesh;
-    speed: number;
-}) => {
-  // Calculate removal distance based on camera cone vision and element depth
-  const cameraPos = camera.position;
-  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z);
-
-  // Account for camera field of view cone - wider cone for farther elements
-  const fov = camera.fov * (Math.PI / 180); // Convert to radians
-  const aspect = window.innerWidth / window.innerHeight;
-  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect;
-
-  // Add significant offset for safe removal (element width + cone width + buffer)
-  let elementWidth = 200; // Default fallback
-  if (background.mesh.geometry?.boundingBox) {
-    elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
-  } else {
-    // Compute bounding box if not available
-    background.mesh.geometry.computeBoundingBox();
-    if (background.mesh.geometry.boundingBox) {
-      elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
-    }
-  }
-  const removalOffset = (coneWidth / 2) + elementWidth + 500; // Extra 500 units buffer
-
-  return background.mesh.position.x < cameraPos.x - removalOffset
-}
-
-// Load Google Fonts for this route only
-const loadGoogleFont = () => {
-  const link = document.createElement("link");
-  link.href = "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap";
-  link.rel = "stylesheet";
-  link.id = "goomba-runner-font";
-  document.head.appendChild(link);
-};
-
-// Remove font when component unmounts
-const removeGoogleFont = () => {
-  const existingLink = document.getElementById("goomba-runner-font");
-  if (existingLink) {
-    document.head.removeChild(existingLink);
-  }
-};
-
 // Set UI controls
 const uiStore = useUiStore();
+const fontName = 'goomba-runner-font'
 
 // Game state refs - unified into single status
 const gameScore = ref(0);
@@ -419,9 +370,11 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
+const { originalViewport, preventZoomStyleElement } = enableZoomPrevention(); // Enable zoom prevention for this game
+
 let initInstance: () => void;
 onMounted(() => {
-  loadGoogleFont();
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', fontName);
   loadHighestScore(); // Load saved high score from localStorage
   initInstance = () => {
     init(
@@ -439,10 +392,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Remove Google Font when leaving this route
-  removeGoogleFont();
+  removeGoogleFont(fontName);
+  disableZoomPrevention(originalViewport, preventZoomStyleElement);
   updateEventListeners();
-  // Stop soundtrack to prevent memory leaks
   stopSoundtrack();
 });
 
