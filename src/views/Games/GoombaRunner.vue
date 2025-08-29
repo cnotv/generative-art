@@ -38,6 +38,40 @@ interface EventHandlers {
 
 type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 
+/**
+ * Calculate Out of Sight (OoS) status for background elements
+ * @param camera
+ * @param background
+ */
+const isOoS = (camera: THREE.PerspectiveCamera, background: {
+    mesh: THREE.Mesh;
+    speed: number;
+}) => {
+  // Calculate removal distance based on camera cone vision and element depth
+  const cameraPos = camera.position;
+  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z);
+
+  // Account for camera field of view cone - wider cone for farther elements
+  const fov = camera.fov * (Math.PI / 180); // Convert to radians
+  const aspect = window.innerWidth / window.innerHeight;
+  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect;
+
+  // Add significant offset for safe removal (element width + cone width + buffer)
+  let elementWidth = 200; // Default fallback
+  if (background.mesh.geometry?.boundingBox) {
+    elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+  } else {
+    // Compute bounding box if not available
+    background.mesh.geometry.computeBoundingBox();
+    if (background.mesh.geometry.boundingBox) {
+      elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+    }
+  }
+  const removalOffset = (coneWidth / 2) + elementWidth + 500; // Extra 500 units buffer
+
+  return background.mesh.position.x < cameraPos.x - removalOffset
+}
+
 // Load Google Fonts for this route only
 const loadGoogleFont = () => {
   const link = document.createElement("link");
@@ -1235,8 +1269,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   const background = backgrounds[i];
                   background.mesh.position.x -= getSpeed(background.speed);
 
-                  // Check if block should be removed and remove it
-                  if (background.mesh.position.x < -300) {
+                  // Remove when element is completely outside the camera cone vision
+                  if (isOoS(camera, background)) {
                     scene.remove(background.mesh);
                     backgrounds.splice(i, 1);
                   }
