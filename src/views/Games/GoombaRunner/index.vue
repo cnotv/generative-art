@@ -1275,6 +1275,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 <style>
 /* Global CSS variables for Mario theme */
 :root {
+  --color-text: #333;
   --color-mario-gold: #ffd700;
   --color-mario-red: #ff6b6b;
   --color-mario-green: #32cd32;
@@ -1322,7 +1323,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   text-shadow: var(--shadow-text-mario-large);
   text-transform: uppercase;
   font-family: var(--font-playful);
-  color: #000;
+  color: var(--color-text);
   line-height: 0.6;
   letter-spacing: -0.4rem;
   /* Text outline using webkit-text-stroke */
@@ -1375,8 +1376,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
   text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
     -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
-    4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000,
-    0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
+    4px -4px 0 var(--color-text), -4px 4px 0 var(--color-text),
+    4px 4px 0 var(--color-text), -4px 0 0 var(--color-text), 4px 0 0 var(--color-text),
+    0 -4px 0 var(--color-text), 0 4px 0 var(--color-text), var(--shadow-text-mario-large);
 }
 
 .game__button {
@@ -1387,7 +1389,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   cursor: pointer;
   transition: all 0.3s ease;
   pointer-events: all;
-  color: #000;
+  color: var(--color-text);
   text-shadow: var(--shadow-text-mario-basic);
   font-family: var(--font-playful);
   /* font-family: monospace; */
@@ -1415,7 +1417,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   font-size: 4rem;
   font-weight: 800;
   font-family: var(--font-playful);
-  color: #000;
+  color: var(--color-text);
   text-shadow: var(--shadow-text-mario-basic);
 }
 
