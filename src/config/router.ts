@@ -1,12 +1,13 @@
 export const getRoutes = (views: Record<string, () => Promise<unknown>>, dir: string) => {
   return Object.keys(views).map((key) => {
     // Remove the leading '/src/views/' and the file extension to get the path
-    const component = key.replace(new RegExp(`^/src/views/${dir}/(.*)\\.\\w+$`), '$1')
+    const componentName = key.replace(new RegExp(`^/src/views/${dir}/(.*)\\.\\w+$`), '$1')
+    const isIndex = componentName.endsWith('/index');
+    const cleanName = isIndex ? componentName.replace('/index', '') : componentName;
 
-    // Use the path as the name and component
     return {
-      path: `/${dir.toLowerCase()}/${component}`,
-      name: component,
+      path: `/${dir.toLowerCase()}/${cleanName}`,
+      name: cleanName,
       component: views[key]
     }
   })
