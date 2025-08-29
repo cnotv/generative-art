@@ -28,6 +28,7 @@ import {
   disableZoomPrevention,
 } from "@/utils/ui";
 import { config, GAME_STATUS, SOUNDS } from "./config";
+import starTexture from "@/assets/star1.png";
 
 interface PlayerMovement {
   forward: number;
@@ -654,16 +655,24 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         function createStarExplosion(position: THREE.Vector3, color: number) {
           const starCount = 12; // Number of stars in explosion
 
-          for (let i = 0; i < starCount; i++) {
-            // Create cube geometry for both filled and wireframe
-            const starGeometry = new THREE.BoxGeometry(8, 8, 8);
+          // Load the star texture
+          const textureLoader = new THREE.TextureLoader();
+          const starTextureLoaded = textureLoader.load(starTexture);
 
-            // Create filled cube material
-            const starMaterial = new THREE.MeshStandardMaterial({
-              color,
+          for (let i = 0; i < starCount; i++) {
+            // Create plane geometry for star texture
+            const starGeometry = new THREE.PlaneGeometry(16, 16);
+
+            // Create transparent material with star texture
+            const starMaterial = new THREE.MeshBasicMaterial({
+              map: starTextureLoaded,
+              transparent: true,
+              alphaTest: 0.1, // Remove fully transparent pixels
+              side: THREE.DoubleSide, // Make star visible from both sides
+              opacity: 0.5, // Set initial opacity
             });
 
-            // Create the main filled cube
+            // Create the star mesh
             const star = new THREE.Mesh(starGeometry, starMaterial);
 
             // Position star at collision point
