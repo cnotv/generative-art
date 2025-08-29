@@ -585,6 +585,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     return { player, playerController, model: goombaModel };
   };
 
+  const preventGlitches = (result: ComplexModel, options: any) => {
+    // Fix texture opacity glitches during camera rotation
+    if (result.mesh && options.opacity < 1) {
+      // Set render order based on depth - farther elements render first
+      result.mesh.renderOrder = Math.abs(options.zPosition) / 10;
+
+      // Adjust material properties to prevent Z-fighting
+      if (result.mesh.material instanceof THREE.MeshBasicMaterial) {
+        result.mesh.material.depthTest = true;
+        result.mesh.material.depthWrite = options.opacity >= 0.9; // Only write to depth if mostly opaque
+        result.mesh.material.alphaTest = 0.01; // Discard very transparent pixels
+      }
+    }
+  };
+
   const addBackground = (
     scene: THREE.Scene,
     world: RAPIER.World,
@@ -603,20 +618,27 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ? initialX + getVariation(options.xVariation)
         : window.innerWidth / 2 + width + getVariation(options.xVariation);
 
-    return getCube(scene, world, {
+    const finalPosition: [number, number, number] = [
+      xPosition,
+      options.yPosition + getVariation(options.yVariation),
+      options.zPosition + getVariation(options.zVariation),
+    ];
+
+    // Create the main textured layer
+    const result = getCube(scene, world, {
       texture: options.texture,
       size: [width, height, 0],
-      position: [
-        xPosition,
-        options.yPosition + getVariation(options.yVariation),
-        options.zPosition + getVariation(options.zVariation),
-      ],
+      position: finalPosition,
       castShadow: false,
       receiveShadow: false,
       color: 0xffffff,
       opacity: options.opacity,
       material: "MeshBasicMaterial",
     });
+
+    preventGlitches(result, options);
+
+    return result;
   };
 
   const populateInitialBackgrounds = (
@@ -1174,8 +1196,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   obstacles.length = 0; // Clear the array
 
                   for (let i = backgrounds.length - 1; i >= 0; i--) {
-                    const obstacle = backgrounds[i];
-                    scene.remove(obstacle.mesh);
+                    const background = backgrounds[i];
+                    scene.remove(background.mesh);
                   }
                   backgrounds.length = 0; // Clear the array
 
