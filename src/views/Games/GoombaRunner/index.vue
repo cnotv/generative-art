@@ -8,12 +8,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import {
-  createSound,
-  initializeAudio,
-  startSoundtrack,
-  stopSoundtrack,
-} from "@/utils/audio";
+import { createSound, initializeAudio, stopSoundtrack } from "@/utils/audio";
 
 import {
   getTools,
@@ -32,7 +27,7 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { config, GAME_STATUS, SOUNDS, soundtrackSequence } from "./config";
+import { config, GAME_STATUS, SOUNDS } from "./config";
 
 interface PlayerMovement {
   forward: number;
@@ -520,6 +515,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         // Movement input
         const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
+
+        // Track background generation timing for speed-adjusted spawning
+        let backgroundTimers = config.backgrounds.layers.map(() => 0);
 
         // Track if initial backgrounds are populated
         let backgroundsPopulated = false;
@@ -1020,15 +1018,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               },
             },
 
-            // Create background
-            ...config.backgrounds.layers.map((background) => ({
-              frequency: background.spacing,
-              action: () => {
-                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const { mesh } = addBackground(scene, world, background);
-                backgrounds.push({ mesh, speed: background.speed });
-              },
-            })),
+            // // Create background
+            // ...config.backgrounds.layers.map((background) => ({
+            //   frequency: background.spacing,
+            //   action: () => {
+            //     if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+            //     const { mesh } = addBackground(scene, world, background);
+            //     backgrounds.push({ mesh, speed: background.speed });
+            //   },
+            // })),
 
             // Move ground
             {
@@ -1045,17 +1043,39 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               action: () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
 
-                // Move backgrounds and remove off-screen ones
-                for (let i = backgrounds.length - 1; i >= 0; i--) {
-                  const background = backgrounds[i];
-                  background.mesh.position.x -= getSpeed(background.speed);
+                const createBg = () => {
+                  // Dynamic background generation - create new backgrounds when needed based on speed
+                  config.backgrounds.layers.forEach((backgroundConfig, layerIndex) => {
+                    const currentSpeed = getSpeed(backgroundConfig.speed);
+                    const adjustedSpacing = backgroundConfig.spacing / getSpeed(1); // Adjust spacing based on overall game speed
 
-                  // Remove when element is completely outside the camera cone vision
-                  if (isOoS(camera, background)) {
-                    scene.remove(background.mesh);
-                    backgrounds.splice(i, 1);
+                    // Check if we need to generate a new background element for this layer
+                    backgroundTimers[layerIndex] += currentSpeed;
+
+                    if (backgroundTimers[layerIndex] >= adjustedSpacing) {
+                      backgroundTimers[layerIndex] = 0; // Reset timer
+                      const { mesh } = addBackground(scene, world, backgroundConfig);
+                      backgrounds.push({ mesh, speed: backgroundConfig.speed });
+                    }
+                  });
+                };
+
+                const moveBg = () => {
+                  // Move backgrounds and remove off-screen ones
+                  for (let i = backgrounds.length - 1; i >= 0; i--) {
+                    const background = backgrounds[i];
+                    background.mesh.position.x -= getSpeed(background.speed);
+
+                    // Remove when element is completely outside the camera cone vision
+                    if (isOoS(camera, background)) {
+                      scene.remove(background.mesh);
+                      backgrounds.splice(i, 1);
+                    }
                   }
-                }
+                };
+
+                createBg();
+                moveBg();
               },
             },
 
