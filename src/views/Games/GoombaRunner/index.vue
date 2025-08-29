@@ -759,10 +759,92 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 const explosionPosition = playerPosition.clone();
                 createStarExplosion(explosionPosition, goombaColor);
 
-                // Make Goomba disappear
-                player.visible = false;
+                // Start arc movement toward camera instead of hiding
+                // Pick random direction within camera cone toward camera
+                const randomAngle = (Math.random() - 0.5) * Math.PI * 0.8; // Random angle within camera cone
+                const randomDistance = 80 + Math.random() * 40; // Reduced animation: 80-120 units (was 120-200)
+                const randomHeight = -10 + Math.random() * 5; // Reduced height: -10 to -5 (was -20 to -10)
+
+                player.userData.arcMovement = {
+                  isActive: true,
+                  startTime: Date.now(),
+                  duration: 800, // Shorter animation: reduced from 1200ms to 800ms
+                  startPosition: playerPosition.clone(),
+                  targetPosition: new THREE.Vector3(
+                    playerPosition.x + Math.sin(randomAngle) * 30, // Less dramatic X: reduced from 50 to 30
+                    playerPosition.y + randomHeight, // Random lower height
+                    playerPosition.z + Math.cos(randomAngle) * randomDistance // Random Z toward camera
+                  ),
+                };
 
                 endGame();
+              }
+            }
+          });
+        }
+
+        function handleArcMovement(player: THREE.Mesh) {
+          if (!player.userData.arcMovement || !player.userData.arcMovement.isActive) {
+            return;
+          }
+
+          const arcData = player.userData.arcMovement;
+          const currentTime = Date.now();
+          const elapsed = currentTime - arcData.startTime;
+          const progress = Math.min(elapsed / arcData.duration, 1.0);
+
+          if (progress >= 1.0) {
+            // Arc movement complete - make Goomba disappear
+            arcData.isActive = false;
+            player.visible = false;
+            return;
+          }
+
+          // Create smooth arc movement using easing
+          const easeProgress = 1 - Math.pow(1 - progress, 2); // Faster easing: changed from cubic to quadratic
+
+          // Calculate current position along the arc
+          const startPos = arcData.startPosition;
+          const targetPos = arcData.targetPosition;
+
+          // Create a lower parabolic arc
+          const arcHeight = Math.sin(progress * Math.PI) * 8; // Much lower arc: reduced from 20 to 8
+
+          const currentX = startPos.x + (targetPos.x - startPos.x) * easeProgress;
+          const currentY =
+            startPos.y + (targetPos.y - startPos.y) * easeProgress + arcHeight;
+          const currentZ = startPos.z + (targetPos.z - startPos.z) * easeProgress;
+
+          // Update player position
+          player.userData.collider.setTranslation({
+            x: currentX,
+            y: currentY,
+            z: currentZ,
+          });
+
+          // Sync Three.js mesh
+          player.position.set(currentX, currentY, currentZ);
+
+          // Add much more rotation during arc movement for dramatic effect
+          player.rotation.x = progress * Math.PI * 1.5; // Rotate forward more: increased from 0.5 to 1.5
+          player.rotation.y = 0 + progress * Math.PI * 2; // Maintain right-facing + add spinning
+          player.rotation.z = Math.sin(progress * Math.PI * 6) * 0.4; // More wobble: increased frequency and amplitude
+
+          // Fade out opacity from the beginning of animation
+          const opacity = 1 - progress; // Fade from 1 to 0 throughout entire animation
+
+          // Apply opacity to all materials in the Goomba model
+          player.traverse((child: THREE.Object3D) => {
+            if ((child as any).isMesh && (child as any).material) {
+              const mesh = child as THREE.Mesh;
+              if (Array.isArray(mesh.material)) {
+                mesh.material.forEach((material: any) => {
+                  material.transparent = true;
+                  material.opacity = opacity;
+                });
+              } else {
+                (mesh.material as any).transparent = true;
+                (mesh.material as any).opacity = opacity;
               }
             }
           });
@@ -971,6 +1053,28 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   // Make Goomba visible again and reset to starting position
                   player.visible = true;
 
+                  // Reset arc movement
+                  player.userData.arcMovement = { isActive: false };
+
+                  // Reset Goomba rotation
+                  player.rotation.set(0, Math.PI / 2 - 0.4, 0); // Back to original rotation (facing right/east)
+
+                  // Reset Goomba opacity to full visibility
+                  player.traverse((child: THREE.Object3D) => {
+                    if ((child as any).isMesh && (child as any).material) {
+                      const mesh = child as THREE.Mesh;
+                      if (Array.isArray(mesh.material)) {
+                        mesh.material.forEach((material: any) => {
+                          material.transparent = false;
+                          material.opacity = 1.0;
+                        });
+                      } else {
+                        (mesh.material as any).transparent = false;
+                        (mesh.material as any).opacity = 1.0;
+                      }
+                    }
+                  });
+
                   // Reset Goomba to starting position (ensure proper ground level)
                   const startPos = player.userData.startingPosition;
                   const groundLevel = player.userData.baseY; // Use correct ground level
@@ -996,6 +1100,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
                 movePlayer(player, playerController, physics, playerMovement);
                 handleJump(player);
+                handleArcMovement(player); // Handle arc movement after collision
                 checkCollisions(player, obstacles);
               },
             },
