@@ -1265,12 +1265,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <!-- In-Game Score Display -->
   <div
     v-if="gameStatus === GAME_STATUS.PLAYING || gameStatus === GAME_STATUS.GAME_OVER"
-    class="game__score"
+    class="score"
   >
-    <span class="game__score__value">{{ gameScore }}</span>
-    <span class="game__score__value game__score__value--highest"
-      >Best: {{ highestScore }}</span
-    >
+    <span class="score__value">{{ gameScore }}</span>
+    <span class="score__value score__value--highest">Best: {{ highestScore }}</span>
   </div>
 </template>
 
@@ -1282,6 +1280,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   --color-mario-green: #32cd32;
   --color-mario-blue: #0064c8;
   --shadow-mario: 0.4rem 0.4rem 0px #000;
+  --shadow-text-mario-basic: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
   --shadow-text-mario: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
     0.3rem 0.3rem 0px #000;
   --shadow-text-mario-large: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
@@ -1388,14 +1388,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   transition: all 0.3s ease;
   pointer-events: all;
   color: #000;
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
+  text-shadow: var(--shadow-text-mario-basic);
   font-family: var(--font-playful);
   /* font-family: monospace; */
   margin-top: 2rem;
 }
 
-.game__score {
+.score {
   position: absolute;
   pointer-events: all;
   display: flex;
@@ -1404,22 +1403,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   flex-direction: column;
 }
 
-.game__score__value {
+.score__value {
   display: flex;
   flex-direction: column;
   align-items: end;
 }
 
-.game__score__value {
+.score__value {
   padding: 0 24px;
   border-radius: 25px;
   font-size: 4rem;
   font-weight: 800;
   font-family: var(--font-playful);
-  text-shadow: var(--shadow-text-mario);
+  color: #000;
+  text-shadow: var(--shadow-text-mario-basic);
 }
 
-.game__score__value--highest {
+.score__value--highest {
   font-size: 1.5rem;
 }
 
