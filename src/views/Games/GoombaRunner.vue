@@ -1140,10 +1140,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ) {
           const { mesh, collider } = obstacle;
 
-          // Increase score when block passes player
-          gameScore.value += 10;
-
-          // Remove from scene and physics world
+          // Remove from scene and physics world (scoring now happens when block passes behind player)
           scene.remove(mesh);
           physics.world.removeCollider(collider);
 
@@ -1325,6 +1322,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
                   // Move the block
                   moveBlock(obstacle, physics);
+
+                  // Award score when block passes behind Goomba (only once per block)
+                  if (!obstacle.mesh.userData.scored && obstacle.mesh.position.x < player.position.x - 20) {
+                    obstacle.mesh.userData.scored = true; // Mark as scored
+                    gameScore.value += 10;
+                  }
 
                   // Check if block should be removed and remove it
                   if (obstacle.mesh.position.x < -300 - config.blocks.size) {
