@@ -1134,42 +1134,38 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
 
-  <!-- UI Overlay - Always visible, changes based on game status -->
-  <div class="game-ui-overlay">
-    <!-- Start Screen -->
-    <div v-if="gameStatus === GAME_STATUS.START" class="game-screen start-screen">
-      <div class="game-content">
-        <h1 class="game-title">
-          <span v-for="(item, i) in 'Goomba Runner'" :key="i">
-            {{ item.trim() }}
-          </span>
-        </h1>
-        <button @click="handleStartGame" class="game-button start-button">
-          Press SPACEBAR or TAP to Start
-        </button>
-      </div>
-    </div>
+  <!-- Start Screen -->
+  <div v-if="gameStatus === GAME_STATUS.START" class="game game--start">
+    <h1 class="game__title">
+      <span v-for="(item, i) in 'Goomba Runner'" :key="i">
+        {{ item.trim() }}
+      </span>
+    </h1>
+    <button @click="handleStartGame" class="game__button game__button--start">
+      Press SPACEBAR or TAP to Start
+    </button>
+  </div>
 
-    <!-- Game Over Screen -->
-    <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game-screen game-over-screen">
-      <div class="game-content">
-        <h1 class="game-over-title">Game Over</h1>
-        <div v-if="isNewHighScore" class="new-high-score">
-          <div class="gratz-text">New High Score: {{ gameScore }}</div>
-        </div>
-        <button @click="handleRestartGame" class="game-button restart-button">
-          Press SPACEBAR or TAP to Restart
-        </button>
-      </div>
+  <!-- Game Over Screen -->
+  <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game game--over">
+    <h1 class="game__title">Game Over</h1>
+    <div v-if="isNewHighScore" class="new-high-score">
+      <div class="gratz-text">New High Score: {{ gameScore }}</div>
     </div>
+    <button @click="handleRestartGame" class="game__button game__button--button">
+      Press SPACEBAR or TAP to Restart
+    </button>
+  </div>
 
-    <!-- In-Game Score Display -->
-    <div v-if="gameStatus === GAME_STATUS.PLAYING" class="score-hud">
-      <span class="score-hud__value">{{ gameScore }}</span>
-      <span class="score-hud__value score-hud__value--highest"
-        >Best: {{ highestScore }}</span
-      >
-    </div>
+  <!-- In-Game Score Display -->
+  <div
+    v-if="gameStatus === GAME_STATUS.PLAYING || gameStatus === GAME_STATUS.GAME_OVER"
+    class="game__score"
+  >
+    <span class="game__score__value">{{ gameScore }}</span>
+    <span class="game__score__value game__score__value--highest"
+      >Best: {{ highestScore }}</span
+    >
   </div>
 </template>
 
@@ -1195,45 +1191,26 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   user-select: none;
 }
 
-button {
+.game__button {
   background: transparent;
   border: none;
   color: white;
 }
 
-.game-ui-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1000;
-}
-
-.game-screen {
+.game {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  /* backdrop-filter: blur(8px); */
   pointer-events: all;
+  z-index: 1000;
 }
 
-.game-content {
-  text-align: center;
-  color: white;
-  padding: 2rem;
-  border-radius: 15px;
-  flex-grow: 1;
-  height: 100%;
-}
-
-.game-title {
+.game--start .game__title {
   font-size: 12vh;
   font-weight: 900;
   margin-bottom: 1rem;
@@ -1252,32 +1229,36 @@ button {
     0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
 }
 
-.game-title > span {
+.game--start .game__title > span {
   color: var(--color-mario-red); /* Default/first color */
   display: inline-block;
   transition: transform 0.3s ease;
 }
-.game-title > span:nth-child(4n + 1) {
+.game--start .game__title > span:nth-child(4n + 1) {
   color: var(--color-mario-red); /* 1st, 5th, 9th... */
   transform: rotate(-3deg);
 }
-.game-title > span:nth-child(4n + 2) {
+.game--start .game__title > span:nth-child(4n + 2) {
   color: var(--color-mario-blue); /* 2nd, 6th, 10th... */
   transform: rotate(2deg);
 }
-.game-title > span:nth-child(4n + 3) {
+.game--start .game__title > span:nth-child(4n + 3) {
   color: var(--color-mario-green); /* 3rd, 7th, 11th... */
   transform: rotate(-1deg);
 }
-.game-title > span:nth-child(4n + 4) {
+.game--start .game__title > span:nth-child(4n + 4) {
   color: var(--color-mario-gold); /* 4th, 8th, 12th... */
   transform: rotate(4deg);
 }
-.game-title > span:empty {
+.game--start .game__title > span:empty {
   display: block;
 }
 
-.game-over-title {
+.game--over {
+  justify-content: center;
+}
+
+.game--over .game__title {
   font-size: 12vh;
   font-weight: 900;
   margin-bottom: 1rem;
@@ -1293,14 +1274,7 @@ button {
     0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
 }
 
-.score-label {
-  display: block;
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
-  opacity: 0.8;
-}
-
-.game-button {
+.game__button {
   padding: 15px 30px;
   font-size: 1.5rem;
   font-weight: 800;
@@ -1316,30 +1290,22 @@ button {
   margin-top: 2rem;
 }
 
-kbd {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-family: "Arial Black", Arial, monospace;
-  font-weight: bold;
-}
-
-.score-hud {
+.game__score {
   position: absolute;
   pointer-events: all;
   display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100vw;
   top: 20px;
+  flex-direction: column;
 }
 
-.score-hud {
+.game__score__value {
   display: flex;
   flex-direction: column;
   align-items: end;
 }
 
-.score-hud__value {
+.game__score__value {
   padding: 0 24px;
   border-radius: 25px;
   font-size: 4rem;
@@ -1348,7 +1314,7 @@ kbd {
   text-shadow: var(--shadow-text-mario);
 }
 
-.score-hud__value--highest {
+.game__score__value--highest {
   font-size: 1.5rem;
 }
 
@@ -1376,30 +1342,5 @@ kbd {
   60% {
     transform: translateY(-5px);
   }
-}
-
-.ui-hint {
-  margin-top: 8px;
-  font-size: 0.8rem;
-  opacity: 0.6;
-}
-
-.persistent-score {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 2;
-  pointer-events: none;
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
-}
-
-.score-display {
-  padding: 15px 25px;
-  margin: 2rem 0;
-  font-size: 1.8rem;
-  font-weight: 800;
-  font-family: var(--font-playful);
-  color: #000;
 }
 </style>
