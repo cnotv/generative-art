@@ -8,7 +8,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { createSound, initializeAudio, stopSoundtrack } from "@/utils/audio";
+import { initializeAudio, stopSoundtrack, playAudioFile } from "@/utils/audio";
 
 import {
   getTools,
@@ -27,8 +27,10 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { config, GAME_STATUS, SOUNDS } from "./config";
+import { config, GAME_STATUS } from "./config";
 import starTexture from "@/assets/star1.png";
+import jumpSound from "@/assets/jump.wav";
+import gameOverSound from "@/assets/gameover.wav";
 
 interface PlayerMovement {
   forward: number;
@@ -639,8 +641,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             config.player.jump.startTime = currentTime;
             config.player.jump.velocity = config.player.jump.height;
 
-            // Play boing sound effect
-            createSound(SOUNDS.jump);
+            // Play jump sound effect
+            playAudioFile(jumpSound);
           }
 
           // Handle ongoing jump
@@ -890,8 +892,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               if (!loggedCollisions.has(collisionKey)) {
                 loggedCollisions.add(collisionKey);
 
-                // Play collision sound effect
-                createSound(SOUNDS.collision);
+                // Play game over sound effect
+                playAudioFile(gameOverSound);
 
                 // Create explosion at collision point
                 const explosionPosition = playerPosition.clone();

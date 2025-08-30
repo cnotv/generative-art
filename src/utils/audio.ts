@@ -173,3 +173,12 @@ export const stopSoundtrack = () => {
 
 // Check if soundtrack is currently playing
 export const isSoundtrackPlaying = () => soundtrackPlaying;
+
+// Play audio file with optional volume control
+export const playAudioFile = (audioFile: string, volume: number = 1) => {
+  const audio = new Audio(audioFile);
+  audio.volume = Math.max(0, Math.min(1, volume)); // Clamp volume between 0 and 1
+  audio.play().catch(() => {
+    // Silently handle audio play failures (e.g., no user interaction yet)
+  });
+};
