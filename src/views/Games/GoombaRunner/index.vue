@@ -267,19 +267,21 @@ const endGame = () => {
 };
 
 // Function to initiate falling animation for all background elements
-const startBackgroundFalling = (backgrounds: { 
-  mesh: THREE.Mesh; 
-  speed: number;
-  fallAnimation?: {
-    isActive: boolean;
-    startTime: number;
-    delay: number;
-    fallSpeed: number;
-    rotationSpeed: number;
-  };
-}[]) => {
+const startBackgroundFalling = (
+  backgrounds: {
+    mesh: THREE.Mesh;
+    speed: number;
+    fallAnimation?: {
+      isActive: boolean;
+      startTime: number;
+      delay: number;
+      fallSpeed: number;
+      rotationSpeed: number;
+    };
+  }[]
+) => {
   const currentTime = Date.now();
-  
+
   backgrounds.forEach((background) => {
     // Add random delay between 0-3 seconds for each background element
     const randomDelay = Math.random() * 3000;
@@ -287,7 +289,7 @@ const startBackgroundFalling = (backgrounds: {
     const randomFallSpeed = 50 + Math.random() * 100;
     // Random rotation speed
     const randomRotationSpeed = (Math.random() - 0.5) * 0.02;
-    
+
     background.fallAnimation = {
       isActive: false, // Will be activated after delay
       startTime: currentTime,
@@ -461,8 +463,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const populateInitialBackgrounds = (
     scene: THREE.Scene,
     world: RAPIER.World,
-    backgrounds: { 
-      mesh: THREE.Mesh; 
+    backgrounds: {
+      mesh: THREE.Mesh;
       speed: number;
       fallAnimation?: {
         isActive: boolean;
@@ -544,8 +546,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       characterController: any;
       collider: any;
     }[];
-    const backgrounds = [] as { 
-      mesh: THREE.Mesh; 
+    const backgrounds = [] as {
+      mesh: THREE.Mesh;
       speed: number;
       fallAnimation?: {
         isActive: boolean;
@@ -828,9 +830,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         }
 
         function updateFallingBackgrounds(
-          deltaTime: number, 
-          backgrounds: { 
-            mesh: THREE.Mesh; 
+          deltaTime: number,
+          backgrounds: {
+            mesh: THREE.Mesh;
             speed: number;
             fallAnimation?: {
               isActive: boolean;
@@ -839,14 +841,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               fallSpeed: number;
               rotationSpeed: number;
             };
-          }[], 
+          }[],
           scene: THREE.Scene
         ) {
           const currentTime = Date.now();
 
           for (let i = backgrounds.length - 1; i >= 0; i--) {
             const background = backgrounds[i];
-            
+
             if (background.fallAnimation) {
               const fallData = background.fallAnimation;
               const elapsed = currentTime - fallData.startTime;
@@ -860,10 +862,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               if (fallData.isActive) {
                 // Move downward
                 background.mesh.position.y -= fallData.fallSpeed * deltaTime;
-                
+
                 // Add rotation for more dynamic effect
                 background.mesh.rotation.z += fallData.rotationSpeed;
-                
+
                 // Remove background when it falls completely off screen
                 if (background.mesh.position.y < -window.innerHeight) {
                   scene.remove(background.mesh);
@@ -1316,14 +1318,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   // Move backgrounds and remove off-screen ones
                   for (let i = backgrounds.length - 1; i >= 0; i--) {
                     const background = backgrounds[i];
-                    
+
                     // Only move horizontally if not falling
                     if (!background.fallAnimation || !background.fallAnimation.isActive) {
                       background.mesh.position.x -= getSpeed(background.speed);
                     }
 
                     // Remove when element is completely outside the camera cone vision (only if not falling)
-                    if ((!background.fallAnimation || !background.fallAnimation.isActive) && isOoS(camera, background)) {
+                    if (
+                      (!background.fallAnimation || !background.fallAnimation.isActive) &&
+                      isOoS(camera, background)
+                    ) {
                       scene.remove(background.mesh);
                       backgrounds.splice(i, 1);
                     }
@@ -1393,7 +1398,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <!-- Start Screen -->
   <div v-if="gameStatus === GAME_STATUS.START" class="game game--start">
     <h1 class="game__title">
-      <span v-for="(item, i) in 'Goomba Runner'" :key="i">
+      <span v-for="(item, i) in 'Goomba Runner'" :key="i" class="drift-char">
         {{ item.trim() }}
       </span>
     </h1>
@@ -1403,12 +1408,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   </div>
 
   <!-- Game Over Screen -->
-  <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game game--over">
-    <h1 class="game__title">Game Over</h1>
-    <div v-if="isNewHighScore" class="new-high-score">
+  <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game game--over game--slide-in">
+    <h1 class="game__title game__title--slide-in">Game Over</h1>
+    <div v-if="isNewHighScore" class="new-high-score new-high-score--slide-in">
       <div class="gratz-text">New High Score: {{ gameScore }}</div>
     </div>
-    <button @click="handleRestartGame" class="game__button game__button--button">
+    <button
+      @click="handleRestartGame"
+      class="game__button game__button--button game__button--slide-in"
+    >
       Press SPACEBAR or TAP to Restart
     </button>
   </div>
@@ -1520,26 +1528,162 @@ body {
 }
 .game--start .game__title > span:nth-child(4n + 1) {
   color: var(--color-mario-red); /* 1st, 5th, 9th... */
-  transform: rotate(-3deg);
+  --char-rotation: -3deg;
 }
 .game--start .game__title > span:nth-child(4n + 2) {
   color: var(--color-mario-blue); /* 2nd, 6th, 10th... */
-  transform: rotate(2deg);
+  --char-rotation: 2deg;
 }
 .game--start .game__title > span:nth-child(4n + 3) {
   color: var(--color-mario-green); /* 3rd, 7th, 11th... */
-  transform: rotate(-1deg);
+  --char-rotation: -1deg;
 }
 .game--start .game__title > span:nth-child(4n + 4) {
   color: var(--color-mario-gold); /* 4th, 8th, 12th... */
-  transform: rotate(4deg);
+  --char-rotation: 4deg;
 }
 .game--start .game__title > span:empty {
   display: block;
 }
 
+/* Drifting animation for start screen characters */
+.drift-char {
+  animation-duration: 1s;
+  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation-fill-mode: backwards;
+}
+
+/* Individual character animations using nth-child - each drifts from different directions */
+.drift-char:nth-child(1) {
+  animation: driftFromLeft 1s 0.05s backwards;
+} /* G */
+.drift-char:nth-child(2) {
+  animation: driftFromRight 1s 0.1s backwards;
+} /* o */
+.drift-char:nth-child(3) {
+  animation: driftFromTop 1s 0.15s backwards;
+} /* o */
+.drift-char:nth-child(4) {
+  animation: driftFromBottom 1s 0.2s backwards;
+} /* m */
+.drift-char:nth-child(5) {
+  animation: driftFromLeft 1s 0.25s backwards;
+} /* b */
+.drift-char:nth-child(6) {
+  animation: driftFromRight 1s 0.3s backwards;
+} /* a */
+.drift-char:nth-child(7) {
+  animation: driftFromTop 1s 0.35s backwards;
+} /* (space) */
+.drift-char:nth-child(8) {
+  animation: driftFromBottom 1s 0.4s backwards;
+} /* R */
+.drift-char:nth-child(9) {
+  animation: driftFromLeft 1s 0.45s backwards;
+} /* u */
+.drift-char:nth-child(10) {
+  animation: driftFromRight 1s 0.5s backwards;
+} /* n */
+.drift-char:nth-child(11) {
+  animation: driftFromTop 1s 0.55s backwards;
+} /* n */
+.drift-char:nth-child(12) {
+  animation: driftFromBottom 1s 0.6s backwards;
+} /* e */
+.drift-char:nth-child(13) {
+  animation: driftFromLeft 1s 0.65s backwards;
+} /* r */
+
+@keyframes driftFromLeft {
+  0% {
+    transform: translateX(-100vw) rotate(-45deg) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: translateX(10px) rotate(5deg) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) rotate(var(--char-rotation, 0deg)) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes driftFromRight {
+  0% {
+    transform: translateX(100vw) rotate(45deg) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: translateX(-10px) rotate(-5deg) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) rotate(var(--char-rotation, 0deg)) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes driftFromTop {
+  0% {
+    transform: translateY(-100vh) rotate(-30deg) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(10px) rotate(3deg) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(var(--char-rotation, 0deg)) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes driftFromBottom {
+  0% {
+    transform: translateY(100vh) rotate(30deg) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-10px) rotate(-3deg) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(var(--char-rotation, 0deg)) scale(1);
+    opacity: 1;
+  }
+}
+
 .game--over {
   justify-content: center;
+}
+
+/* Slide-in animation from bottom for game over screen */
+.game--slide-in {
+  animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.game__title--slide-in {
+  animation: slideInFromBottom 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s backwards;
+}
+
+.new-high-score--slide-in {
+  animation: slideInFromBottom 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s backwards;
+}
+
+.game__button--slide-in {
+  animation: slideInFromBottom 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s backwards;
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .game--over .game__title {
