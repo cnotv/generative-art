@@ -182,6 +182,34 @@ onMounted(() => {
     fontName
   );
   loadHighestScore(); // Load saved high score from localStorage
+
+  // Prevent iOS zoom and selection behaviors
+  const preventZoomAndSelection = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Additional iOS-specific prevention
+  document.addEventListener("gesturestart", preventZoomAndSelection, { passive: false });
+  document.addEventListener("gesturechange", preventZoomAndSelection, { passive: false });
+  document.addEventListener("gestureend", preventZoomAndSelection, { passive: false });
+  document.addEventListener("selectstart", preventZoomAndSelection, { passive: false });
+  document.addEventListener("contextmenu", preventZoomAndSelection, { passive: false });
+
+  // Prevent double-tap zoom
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const now = new Date().getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    },
+    { passive: false }
+  );
+
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
@@ -1302,8 +1330,35 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </style>
 
 <style scoped>
+/* iOS-specific zoom and selection prevention */
 * {
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent zoom and selection on canvas and all game elements */
+canvas,
+.game,
+.game * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: manipulation !important;
+}
+
+/* Prevent iOS zoom on double tap and pinch */
+html,
+body {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .game__button {
