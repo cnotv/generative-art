@@ -266,6 +266,38 @@ const endGame = () => {
   updateEventListeners(); // Update event listeners for game over state
 };
 
+// Function to initiate falling animation for all background elements
+const startBackgroundFalling = (backgrounds: { 
+  mesh: THREE.Mesh; 
+  speed: number;
+  fallAnimation?: {
+    isActive: boolean;
+    startTime: number;
+    delay: number;
+    fallSpeed: number;
+    rotationSpeed: number;
+  };
+}[]) => {
+  const currentTime = Date.now();
+  
+  backgrounds.forEach((background) => {
+    // Add random delay between 0-3 seconds for each background element
+    const randomDelay = Math.random() * 3000;
+    // Random fall speed between 50-150 pixels per second
+    const randomFallSpeed = 50 + Math.random() * 100;
+    // Random rotation speed
+    const randomRotationSpeed = (Math.random() - 0.5) * 0.02;
+    
+    background.fallAnimation = {
+      isActive: false, // Will be activated after delay
+      startTime: currentTime,
+      delay: randomDelay,
+      fallSpeed: randomFallSpeed,
+      rotationSpeed: randomRotationSpeed,
+    };
+  });
+};
+
 /**
  * Increase speed based on score (0.1 speed increase per 10 points)
  * @param base
@@ -429,7 +461,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const populateInitialBackgrounds = (
     scene: THREE.Scene,
     world: RAPIER.World,
-    backgrounds: { mesh: THREE.Mesh; speed: number }[]
+    backgrounds: { 
+      mesh: THREE.Mesh; 
+      speed: number;
+      fallAnimation?: {
+        isActive: boolean;
+        startTime: number;
+        delay: number;
+        fallSpeed: number;
+        rotationSpeed: number;
+      };
+    }[]
   ) => {
     const viewportWidth = window.innerWidth;
     const extendedWidth = viewportWidth * 2; // Cover more area initially
@@ -502,7 +544,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       characterController: any;
       collider: any;
     }[];
-    const backgrounds = [] as { mesh: THREE.Mesh; speed: number }[];
+    const backgrounds = [] as { 
+      mesh: THREE.Mesh; 
+      speed: number;
+      fallAnimation?: {
+        isActive: boolean;
+        startTime: number;
+        delay: number;
+        fallSpeed: number;
+        rotationSpeed: number;
+      };
+    }[];
 
     const { animate, setup, world, scene, getDelta, renderer, camera } = getTools({
       stats,
@@ -775,6 +827,53 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           }
         }
 
+        function updateFallingBackgrounds(
+          deltaTime: number, 
+          backgrounds: { 
+            mesh: THREE.Mesh; 
+            speed: number;
+            fallAnimation?: {
+              isActive: boolean;
+              startTime: number;
+              delay: number;
+              fallSpeed: number;
+              rotationSpeed: number;
+            };
+          }[], 
+          scene: THREE.Scene
+        ) {
+          const currentTime = Date.now();
+
+          for (let i = backgrounds.length - 1; i >= 0; i--) {
+            const background = backgrounds[i];
+            
+            if (background.fallAnimation) {
+              const fallData = background.fallAnimation;
+              const elapsed = currentTime - fallData.startTime;
+
+              // Check if delay has passed and activate falling
+              if (!fallData.isActive && elapsed >= fallData.delay) {
+                fallData.isActive = true;
+              }
+
+              // Apply falling animation if active
+              if (fallData.isActive) {
+                // Move downward
+                background.mesh.position.y -= fallData.fallSpeed * deltaTime;
+                
+                // Add rotation for more dynamic effect
+                background.mesh.rotation.z += fallData.rotationSpeed;
+                
+                // Remove background when it falls completely off screen
+                if (background.mesh.position.y < -window.innerHeight) {
+                  scene.remove(background.mesh);
+                  backgrounds.splice(i, 1);
+                }
+              }
+            }
+          }
+        }
+
         function checkCollisions(
           player: THREE.Mesh,
           obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[]
@@ -813,6 +912,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                     playerPosition.z + Math.cos(randomAngle) * randomDistance // Random Z toward camera
                   ),
                 };
+
+                // Start background falling animation
+                startBackgroundFalling(backgrounds);
 
                 endGame();
               }
@@ -1061,6 +1163,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 // Update explosion particles
                 updateExplosionParticles(getDelta());
 
+                // Update falling backgrounds
+                updateFallingBackgrounds(getDelta(), backgrounds, scene);
+
                 // Clear obstacles if restart was requested
                 if (shouldClearObstacles.value) {
                   // Remove all obstacles from scene and physics
@@ -1183,7 +1288,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Move background
             {
               action: () => {
-                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
+                // Only move and create backgrounds when actively playing
+                if (gameStatus.value !== GAME_STATUS.PLAYING) {
+                  // During START screen and GAME_OVER, don't move backgrounds horizontally at all
+                  // Only falling animations are allowed during game over
+                  return;
+                }
 
                 const createBg = () => {
                   // Dynamic background generation - create new backgrounds when needed based on speed
@@ -1206,10 +1316,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   // Move backgrounds and remove off-screen ones
                   for (let i = backgrounds.length - 1; i >= 0; i--) {
                     const background = backgrounds[i];
-                    background.mesh.position.x -= getSpeed(background.speed);
+                    
+                    // Only move horizontally if not falling
+                    if (!background.fallAnimation || !background.fallAnimation.isActive) {
+                      background.mesh.position.x -= getSpeed(background.speed);
+                    }
 
-                    // Remove when element is completely outside the camera cone vision
-                    if (isOoS(camera, background)) {
+                    // Remove when element is completely outside the camera cone vision (only if not falling)
+                    if ((!background.fallAnimation || !background.fallAnimation.isActive) && isOoS(camera, background)) {
                       scene.remove(background.mesh);
                       backgrounds.splice(i, 1);
                     }
