@@ -42,6 +42,10 @@ interface PlayerMovement {
 interface EventHandlers {
   keyboard?: Record<string, () => void>;
   touch?: () => void;
+  gamepad?: {
+    buttons?: Record<number, () => void>; // Button index to handler mapping
+    axes?: Record<number, (value: number) => void>; // Axis index to handler mapping
+  };
 }
 
 type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
@@ -95,6 +99,7 @@ const removeAllEventListeners = () => {
     target.removeEventListener(type, listener);
   });
   activeListeners.length = 0;
+  stopGamepadPolling(); // Also stop gamepad polling
 };
 
 // Reset and then update event listeners based on current game status
@@ -127,6 +132,11 @@ const updateEventListeners = () => {
     addTrackedEventListener(window, "touchstart", touchHandler as EventListener);
     addTrackedEventListener(window, "click", touchHandler as EventListener);
   }
+
+  // Add gamepad polling
+  if (listeners.gamepad) {
+    startGamepadPolling(listeners.gamepad);
+  }
 };
 
 // Jump function that triggers the player jump action
@@ -138,6 +148,60 @@ const handleJumpGoomba = () => {
   }, 100);
 };
 
+// Gamepad polling variables
+let gamepadPollingInterval: number | null = null;
+let lastGamepadButtonStates: Record<string, boolean> = {};
+
+// Start gamepad polling
+const startGamepadPolling = (gamepadConfig: {
+  buttons?: Record<number, () => void>;
+  axes?: Record<number, (value: number) => void>;
+}) => {
+  stopGamepadPolling(); // Clear any existing polling
+
+  gamepadPollingInterval = window.setInterval(() => {
+    const gamepads = navigator.getGamepads();
+
+    for (let i = 0; i < gamepads.length; i++) {
+      const gamepad = gamepads[i];
+      if (gamepad && gamepadConfig.buttons) {
+        // Check all configured buttons
+        Object.entries(gamepadConfig.buttons).forEach(([buttonIndex, handler]) => {
+          const buttonIdx = parseInt(buttonIndex);
+          const button = gamepad.buttons[buttonIdx];
+          const buttonKey = `gamepad${i}_button${buttonIdx}`;
+
+          // Trigger handler on button press (not held)
+          if (button && button.pressed && !lastGamepadButtonStates[buttonKey]) {
+            handler();
+          }
+
+          // Update button state
+          lastGamepadButtonStates[buttonKey] = button ? button.pressed : false;
+        });
+      }
+
+      // Handle axes if configured
+      if (gamepad && gamepadConfig.axes) {
+        Object.entries(gamepadConfig.axes).forEach(([axisIndex, handler]) => {
+          const axisIdx = parseInt(axisIndex);
+          const axisValue = gamepad.axes[axisIdx];
+          if (axisValue !== undefined) {
+            handler(axisValue);
+          }
+        });
+      }
+    }
+  }, 50); // Poll every 50ms for responsive input
+}; // Stop gamepad polling
+const stopGamepadPolling = () => {
+  if (gamepadPollingInterval !== null) {
+    window.clearInterval(gamepadPollingInterval);
+    gamepadPollingInterval = null;
+  }
+  lastGamepadButtonStates = {};
+};
+
 const listenersMap: Record<GameStatus, EventHandlers> = {
   [GAME_STATUS.START]: {
     keyboard: {
@@ -145,6 +209,12 @@ const listenersMap: Record<GameStatus, EventHandlers> = {
       Enter: () => handleStartGame(),
     },
     touch: () => handleStartGame(),
+    gamepad: {
+      buttons: {
+        0: () => handleStartGame(), // X button
+        12: () => handleStartGame(), // D-pad up
+      },
+    },
   },
   [GAME_STATUS.PLAYING]: {
     keyboard: {
@@ -152,6 +222,12 @@ const listenersMap: Record<GameStatus, EventHandlers> = {
       ArrowUp: () => handleJumpGoomba(),
     },
     touch: () => handleJumpGoomba(),
+    gamepad: {
+      buttons: {
+        0: () => handleJumpGoomba(), // X button (jump)
+        12: () => handleJumpGoomba(), // D-pad up (jump)
+      },
+    },
   },
   [GAME_STATUS.GAME_OVER]: {
     keyboard: {
@@ -159,6 +235,12 @@ const listenersMap: Record<GameStatus, EventHandlers> = {
       Enter: () => handleRestartGame(),
     },
     touch: () => handleRestartGame(),
+    gamepad: {
+      buttons: {
+        0: () => handleRestartGame(), // X button
+        12: () => handleRestartGame(), // D-pad up
+      },
+    },
   },
 };
 
@@ -230,7 +312,7 @@ onMounted(() => {
 onUnmounted(() => {
   removeGoogleFont(fontName);
   disableZoomPrevention(originalViewport, preventZoomStyleElement);
-  updateEventListeners();
+  removeAllEventListeners(); // This will also stop gamepad polling
   stopSoundtrack();
 });
 
