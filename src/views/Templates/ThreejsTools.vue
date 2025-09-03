@@ -47,7 +47,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       config: {
         camera: { position: [-184, 84, 48] },
         ground: { size: 100000, color: 0x227755 },
-        sky: { size: 700 },
+        sky: { size: 100000 },
         lights: { directional: { intensity: config.directional.intensity } },
       },
       defineSetup: async () => {
