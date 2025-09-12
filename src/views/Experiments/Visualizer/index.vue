@@ -26,6 +26,25 @@ const availableVisualizers = computed(() => {
   }));
 });
 
+const currentSong = computed(() => {
+  return visualizer.value ? visualizer.value.song : 0;
+});
+
+const songs = [
+  {
+    src: "/Danger Mode - Crime Wave - 01 Summit.mp3",
+    title: "Crime Wave",
+    artist: "Danger Mode",
+    link: "https://dangermode.bandcamp.com/album/crime-wave"
+  },
+  {
+    src: "/Shotgun Sawyer - You Got to Run (Single) - 01 You Got to Run (Single Version).mp3",
+    title: "You Got to Run",
+    artist: "Shotgun Sawyer",
+    link: "https://shotgunsawyer.bandcamp.com/album/you-got-to-run-single"
+  }
+];
+
 // Watch for visualizer changes
 watch(currentVisualizer, (newVisualizer) => {
   if (switchVisualizerFunction) {
@@ -63,8 +82,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
 
-  // Setup audio controls using the new module
-  setupAudio();
+  // Setup audio controls using the new module with audio element reference
+  if (audioElement.value) {
+    setupAudio(audioElement.value as HTMLAudioElement);
+  } else {
+    setupAudio();
+  }
 
   const createScene = async () => {
     const elements = [] as any[];
@@ -162,19 +185,19 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           controls
           loop
           crossorigin="anonymous"
-          src="/Danger Mode - Crime Wave - 01 Summit.mp3"
+          :src="songs[currentSong].src"
         />
       </div>
       <div class="player__credits">
-        <div class="player__song-title">Crime Wave</div>
-        <div class="player__artist">by Danger Mode</div>
+        <div class="player__song-title">{{ songs[currentSong].title }}</div>
+        <div class="player__artist">by {{ songs[currentSong].artist }}</div>
         <a
-          href="https://dangermode.bandcamp.com/album/crime-wave"
+          :href="songs[currentSong].link"
           target="_blank"
+          rel="noopener noreferrer"
           class="player__link"
+          >Artist Link</a
         >
-          dangermode.bandcamp.com/album/crime-wave
-        </a>
       </div>
     </div>
   </div>

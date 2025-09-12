@@ -11,6 +11,7 @@ const config = {
 
 export const barsVisualizer: VisualizerSetup = {
   name: "Bars",
+  song: 0,
 
   setup: (scene: THREE.Scene) => {
     // Create visualizer bars and return them

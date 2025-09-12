@@ -4,6 +4,7 @@ import type { VisualizerSetup } from ".";
 
 export const particlesVisualizer: VisualizerSetup = {
   name: "Particles",
+  song: 0,
   
   setup: (scene: THREE.Scene) => {
     const particleCount = 1000;

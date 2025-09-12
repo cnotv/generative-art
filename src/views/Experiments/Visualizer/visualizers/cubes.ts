@@ -12,6 +12,7 @@ const config = {
 
 export const cubesVisualizer: VisualizerSetup = {
   name: "Cubes",
+  song: 0,
 
   setup: (scene: THREE.Scene) => {
     const cubes: THREE.Mesh[] = [];

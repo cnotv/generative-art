@@ -8,47 +8,80 @@ const barCount = 32;
 // Initialize Web Audio API
 const initializeAudioContext = (): void => {
   if (!audioContext && audioElement) {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64; // Small for simple visualization
-    
-    const source = audioContext.createMediaElementSource(audioElement);
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
+    try {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64; // Small for simple visualization
+      
+      const source = audioContext.createMediaElementSource(audioElement);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      
+      console.log('Audio context initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize audio context:', error);
+    }
   }
 };
 
-// Setup audio controls and auto-load music
-export const setupAudio = (): void => {
-  if (isInitialized) return;
+// Reset audio setup for new songs
+export const resetAudio = (): void => {
+  isInitialized = false;
+  audioElement = null;
+  // Note: Don't close audioContext as it can be reused
+};
 
-  // Find the audio element from the template
-  audioElement = document.querySelector('audio[src*="Danger Mode"]');
+// Setup audio controls and auto-load music
+export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
+  if (isInitialized && audioElement === audioElementRef) return;
+
+  // Reset if we're switching to a new element
+  if (audioElementRef && audioElement !== audioElementRef) {
+    isInitialized = false;
+  }
+
+  // Use provided element or find it in the template
+  audioElement = audioElementRef || document.querySelector('audio.player__audio');
   
   if (!audioElement) {
-    console.error('Audio element not found in template');
+    console.error('Audio element not found');
     return;
   }
 
-  // Try to play after loading
-  audioElement.addEventListener('canplaythrough', () => {
-    initializeAudioContext();
-    audioElement?.play().catch(error => {
-      console.log('Autoplay blocked, user interaction required:', error);
-    });
-  });
+  console.log('Setting up audio with element:', audioElement.src);
 
-  // Add click listener to start audio context on user interaction
-  document.addEventListener('click', () => {
+  // Initialize audio context on first user interaction
+  const initOnInteraction = () => {
+    if (!audioContext) {
+      initializeAudioContext();
+    }
     if (audioContext?.state === 'suspended') {
       audioContext.resume();
     }
-    if (audioElement?.paused) {
-      audioElement.play().catch(error => {
-        console.log('Play failed:', error);
-      });
-    }
-  }, { once: true });
+  };
+
+  // Add event listeners
+  audioElement.addEventListener('canplaythrough', () => {
+    console.log('Audio can play through, initializing context');
+    initializeAudioContext();
+  });
+
+  audioElement.addEventListener('play', initOnInteraction);
+  
+  audioElement.addEventListener('error', (e) => {
+    console.error('Audio loading error:', e);
+  });
+
+  audioElement.addEventListener('loadstart', () => {
+    console.log('Audio loading started');
+  });
+
+  audioElement.addEventListener('loadeddata', () => {
+    console.log('Audio data loaded');
+  });
+  
+  // Add click listener to start audio context on user interaction
+  document.addEventListener('click', initOnInteraction, { once: true });
 
   isInitialized = true;
 };
