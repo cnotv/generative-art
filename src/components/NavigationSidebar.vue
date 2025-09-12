@@ -27,7 +27,7 @@ import { generatedRoutes } from "@/config/router";
   background-color: black;
   transform: translateX(100%);
   transition: all 0.3s ease-in-out;
-  z-index: 1;
+  z-index: 99999;
 }
 
 .sidebar:hover {
