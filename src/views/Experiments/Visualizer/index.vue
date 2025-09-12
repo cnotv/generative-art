@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
-import * as THREE from "three";
-import { setupAudio, getAudioData, cleanup } from "./audio";
+import { setupAudio, cleanup } from "./audio";
+import { getVisualizer, type VisualizerSetup } from "./visualizers";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
+const currentVisualizer = ref("bars");
+const visualizer = ref(null as VisualizerSetup | null);
+const visualizerObjects = ref({} as Record<string, any>);
+let switchVisualizerFunction: ((name: string) => void) | null = null;
+
+// Watch for visualizer changes
+watch(currentVisualizer, (newVisualizer) => {
+  if (switchVisualizerFunction) {
+    switchVisualizerFunction(newVisualizer);
+  }
+});
 
 let initInstance: () => void;
 onMounted(() => {
@@ -38,12 +49,6 @@ const config = {
     helper: false,
     intensity: 2,
   },
-  visualizer: {
-    barCount: 32,
-    barWidth: 2,
-    barSpacing: 3,
-    maxHeight: 20,
-  },
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -55,7 +60,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, world, getDelta, scene } = getTools({
+    const { animate, setup, world, getDelta, scene, camera } = getTools({
       stats,
       route,
       canvas,
@@ -68,27 +73,39 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         lights: { directional: { intensity: config.directional.intensity } },
       },
       defineSetup: async () => {
-        // Create visualizer bars using map
-        const bars: THREE.Mesh[] = Array.from(
-          { length: config.visualizer.barCount },
-          (_, i) => {
-            const barGeometry = new THREE.BoxGeometry(
-              config.visualizer.barWidth,
-              1,
-              config.visualizer.barWidth
+        // Function to switch visualizers
+        const switchVisualizer = (name: string) => {
+          // Clear existing visualizer objects
+          if (visualizer.value) {
+            // Remove all objects from scene except lights and camera
+            const objectsToRemove = scene.children.filter(
+              (child) =>
+                child.type !== "DirectionalLight" &&
+                child.type !== "AmbientLight" &&
+                child.type !== "HemisphereLight"
             );
-            const barMaterial = new THREE.MeshLambertMaterial({});
-            const bar = new THREE.Mesh(barGeometry, barMaterial);
-
-            // Position bars in a line
-            const x = (i - config.visualizer.barCount / 2) * config.visualizer.barSpacing;
-            bar.position.set(x, 0.5, 0);
-
-            scene.add(bar);
-            return bar;
+            objectsToRemove.forEach((obj) => scene.remove(obj));
           }
-        );
 
+          // Reset camera position and rotation
+          camera.position.set(0, 20, 30);
+          camera.rotation.set(0, 0, 0);
+          camera.lookAt(0, 0, 0);
+
+          visualizer.value = getVisualizer(name);
+
+          if (visualizer.value) {
+            // Setup the visualizer and store the returned objects
+            const setupResult = visualizer.value.setup(scene);
+            visualizerObjects.value = setupResult;
+          }
+        };
+
+        // Store the switch function for the watcher
+        switchVisualizerFunction = switchVisualizer;
+
+        // Initialize with default visualizer
+        switchVisualizer(currentVisualizer.value);
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());
@@ -96,14 +113,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           timeline: [
             {
               action: () => {
-                const audioData = getAudioData();
-
-                // Update bar heights based on audio data
-                bars.forEach((bar, index) => {
-                  const height = 1 + audioData[index] * config.visualizer.maxHeight;
-                  bar.scale.y = height;
-                  bar.position.y = height / 2;
-                });
+                if (visualizer.value && visualizerObjects.value) {
+                  visualizer.value.animate(visualizerObjects.value);
+                }
               },
             },
           ],
@@ -119,26 +131,35 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 
+  <!-- Visualizer selector -->
+  <div class="visualizer">
+    <select class="visualizer__select" v-model="currentVisualizer">
+      <option value="bars">Bars</option>
+      <option value="particles">Particles</option>
+      <option value="cubes">Cubes</option>
+    </select>
+  </div>
+
   <!-- Bottom section with audio player and credits -->
-  <div class="bottom-section">
-    <div class="bottom-container">
-      <div class="audio-container">
+  <div class="player">
+    <div class="player__container">
+      <div class="player__audio-wrapper">
         <audio
           ref="audioElement"
+          class="player__audio"
           controls
-          autoplay
           loop
           crossorigin="anonymous"
           src="/Danger Mode - Crime Wave - 01 Summit.mp3"
         />
       </div>
-      <div class="credit-text">
-        <div class="song-title">Crime Wave</div>
-        <div class="artist-name">by Danger Mode</div>
+      <div class="player__credits">
+        <div class="player__song-title">Crime Wave</div>
+        <div class="player__artist">by Danger Mode</div>
         <a
           href="https://dangermode.bandcamp.com/album/crime-wave"
           target="_blank"
-          class="album-link"
+          class="player__link"
         >
           dangermode.bandcamp.com/album/crime-wave
         </a>
@@ -148,7 +169,31 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </template>
 
 <style scoped>
-.bottom-section {
+/* Visualizer Block */
+.visualizer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.visualizer__select {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.visualizer__select:focus {
+  outline: none;
+  border-color: #666;
+}
+
+/* Player Block */
+.player {
   position: absolute;
   bottom: 20px;
   left: 50%;
@@ -156,48 +201,48 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   z-index: 1000;
 }
 
-.bottom-container {
+.player__container {
   background: rgba(0, 0, 0, 0.8);
   padding: 20px;
   border-radius: 10px;
   backdrop-filter: blur(10px);
 }
 
-.audio-container {
+.player__audio-wrapper {
   display: flex;
   justify-content: center;
   margin-bottom: 15px;
 }
 
-.audio-container audio {
+.player__audio {
   width: 300px;
   height: 40px;
 }
 
-.credit-text {
+.player__credits {
   text-align: center;
   color: white;
   font-family: Arial, sans-serif;
 }
 
-.song-title {
+.player__song-title {
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 5px;
 }
 
-.artist-name {
+.player__artist {
   font-size: 14px;
   margin-bottom: 5px;
 }
 
-.album-link {
+.player__link {
   color: #888;
   font-size: 12px;
   text-decoration: none;
 }
 
-.album-link:hover {
+.player__link:hover {
   color: #aaa;
 }
 </style>
