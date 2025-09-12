@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -7,16 +7,24 @@ import { stats } from "@/utils/stats";
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
 import { setupAudio, cleanup } from "./audio";
-import { getVisualizer, type VisualizerSetup } from "./visualizers";
+import { getVisualizer, getVisualizerNames, type VisualizerSetup } from "./visualizers";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
-const currentVisualizer = ref("bars");
+const currentVisualizer = ref(getVisualizerNames()[0] || "bars"); // Use first available visualizer
 const visualizer = ref(null as VisualizerSetup | null);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
+
+// Get available visualizer names
+const availableVisualizers = computed(() => {
+  return getVisualizerNames().map(name => ({
+    value: name,
+    label: name.charAt(0).toUpperCase() + name.slice(1) // Capitalize first letter
+  }));
+});
 
 // Watch for visualizer changes
 watch(currentVisualizer, (newVisualizer) => {
@@ -134,9 +142,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <!-- Visualizer selector -->
   <div class="visualizer">
     <select class="visualizer__select" v-model="currentVisualizer">
-      <option value="bars">Bars</option>
-      <option value="particles">Particles</option>
-      <option value="cubes">Cubes</option>
+      <option
+        v-for="visualizer in availableVisualizers"
+        :key="visualizer.value"
+        :value="visualizer.value"
+      >
+        {{ visualizer.label }}
+      </option>
     </select>
   </div>
 
