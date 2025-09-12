@@ -7,13 +7,13 @@ import { stats } from "@/utils/stats";
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
 import { setupAudio, cleanup } from "./audio";
-import { getVisualizer, getVisualizerNames, type VisualizerSetup } from "./visualizers";
+import { getVisualizer, getVisualizerNames, type VisualizerSetup } from "./visualizer";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
-const currentVisualizer = ref(getVisualizerNames()[0] || "bars"); // Use first available visualizer
+const currentVisualizer = ref('basic'); // Use first available visualizer
 const visualizer = ref(null as VisualizerSetup | null);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { getAudioData } from "../audio";
-import type { VisualizerSetup } from ".";
+import type { VisualizerSetup } from "../visualizer";
 
 const config = {
   barCount: 32,

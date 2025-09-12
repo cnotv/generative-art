@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { getAudioData, getFrequencyRanges } from "../audio";
-import type { VisualizerSetup } from ".";
+import type { VisualizerSetup } from "../visualizer";
 
 const config = {
   cubeCount: 50,
