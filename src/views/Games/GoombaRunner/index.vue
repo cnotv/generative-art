@@ -423,6 +423,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       boundary: 0.5,
       type: "kinematicPositionBased",
       hasGravity: false,
+      castShadow: true,
       // showHelper: config.player.helper,
     });
 

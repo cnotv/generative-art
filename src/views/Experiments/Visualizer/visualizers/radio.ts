@@ -15,7 +15,6 @@ export const boxVisualizer: VisualizerSetup = {
     const model = await getModel(scene, world, "cubik_radio.glb", {
       scale: [3, 3, 3],
       hasGravity: false,
-      receiveShadow: true,
       castShadow: true,
     });
     await getModel(scene, world, "round_table.glb", {

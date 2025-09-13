@@ -365,6 +365,8 @@ export const loadFBX = (
     reflectivity = 0.5,
     roughness = 1,
     metalness = 0,
+    castShadow = false,
+    receiveShadow = false,
     transmission = 0,
   }: ModelOptions = {}
 ): Promise<Model> => {
@@ -374,8 +376,8 @@ export const loadFBX = (
       model.position.set(...position);
       model.scale.set(...scale);
       model.rotation.set(...rotation);
-      model.castShadow = true;
-      model.receiveShadow = false; 
+      model.castShadow = castShadow;
+      model.receiveShadow = receiveShadow; 
       model.traverse((child) => {
         if (child.isMesh) {
           if (material) {
@@ -390,8 +392,8 @@ export const loadFBX = (
             });
           }
           child.rotation.set(...rotation);
-          child.castShadow = true;
-          child.receiveShadow = true;
+          child.castShadow = castShadow;
+          child.receiveShadow = receiveShadow;
         }
       });
       resolve(model)
@@ -414,6 +416,8 @@ export const loadGLTF = (
     reflectivity = 0.5,
     roughness = 1,
     metalness = 0,
+    castShadow = false,
+    receiveShadow = false,
     transmission = 0,
   }: ModelOptions = {}
 ): Promise<{ model: Model, gltf: any }> => {
@@ -421,8 +425,8 @@ export const loadGLTF = (
     const loader = new GLTFLoader();
     loader.load(`/${fileName}`, (gltf) => {
       const model = gltf.scene;
-      model.castShadow = true;
-      model.receiveShadow = false; 
+      model.castShadow = castShadow;
+      model.receiveShadow = receiveShadow; 
       model.position.set(...position);
       model.scale.set(...scale);
       model.rotation.set(...rotation);
@@ -440,8 +444,8 @@ export const loadGLTF = (
             });
           }
           child.rotation.set(...rotation);
-          child.castShadow = true;
-          child.receiveShadow = true;
+          child.castShadow = castShadow;
+          child.receiveShadow = receiveShadow;
         }
       });
       resolve({ model, gltf });
@@ -599,6 +603,8 @@ export const getModel = async (
     metalness = 0.8,
     transmission = 0.2,
     hasGravity = false,
+    castShadow = false,
+    receiveShadow = false,
     showHelper = false,
     enabledRotations = [true, true, true],
     texture,
@@ -607,8 +613,8 @@ export const getModel = async (
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
   const { model: mesh, gltf } = isGLTF
-    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture })
-    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture })
+    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
+    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
   scene.add(mesh);
 
   let helper;
