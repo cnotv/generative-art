@@ -70,6 +70,12 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
   
   audioElement.addEventListener('error', (e) => {
     console.error('Audio loading error:', e);
+    const audioEl = e.target as HTMLAudioElement;
+    if (audioEl && audioEl.error) {
+      console.error('Audio error code:', audioEl.error.code);
+      console.error('Audio error message:', audioEl.error.message);
+      console.error('Audio src:', audioEl.src);
+    }
   });
 
   audioElement.addEventListener('loadstart', () => {

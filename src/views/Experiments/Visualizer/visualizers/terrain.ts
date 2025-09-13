@@ -60,8 +60,6 @@ export const terrainVisualizer: VisualizerSetup = {
 
   animate: (objects: Record<string, any>) => {
     const { terrainRows, audioHistory } = objects;
-    if (!terrainRows) return;
-    
     const audioData = getAudioData();
     const frequencyRanges = getFrequencyRanges();
     const time = Date.now() * 0.001;

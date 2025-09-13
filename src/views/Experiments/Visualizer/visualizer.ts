@@ -32,6 +32,6 @@ export const getVisualizerNames = (): string[] => {
   return Object.keys(visualizers);
 };
 
-export const getVisualizer = (name: string): VisualizerSetup | null => {
-  return visualizers[name] || null;
+export const getVisualizer = (name: string): VisualizerSetup => {
+  return visualizers[name];
 };

@@ -4,7 +4,7 @@ import type { VisualizerSetup } from "../visualizer";
 
 export const boxVisualizer: VisualizerSetup = {
   name: "Basic",
-  song: 0,
+  song: 2,
 
   setup: (scene: THREE.Scene) => {
     const box = new THREE.Mesh(
@@ -16,9 +16,7 @@ export const boxVisualizer: VisualizerSetup = {
     return { box };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { box } = objects;
-    if (!box) return;
+  animate: ({ box }: Record<string, any>) => {
     const audioData = getAudioData();
     const sum = audioData.reduce((a: number, b: number) => a + b, 0);
     const average = sum / audioData.length;

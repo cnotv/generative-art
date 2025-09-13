@@ -14,7 +14,7 @@ const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
 const currentVisualizer = ref('basic'); // Use first available visualizer
-const visualizer = ref(null as VisualizerSetup | null);
+const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
 
@@ -26,8 +26,16 @@ const availableVisualizers = computed(() => {
   }));
 });
 
-const currentSong = computed(() => {
-  return visualizer.value ? visualizer.value.song : 0;
+const currentSong = computed((): number => {
+  const song = visualizer.value?.song;
+  const isValid = (typeof song === 'number' && song >= 0 && song < songs.length)
+  if (isValid) {
+    return song;
+  } else {
+    console.warn(`Visualizer "${visualizer.value?.name}" has invalid song index (${song}). Defaulting to 0.`);
+
+    return 0;
+  }
 });
 
 const songs = [
@@ -42,6 +50,12 @@ const songs = [
     title: "You Got to Run",
     artist: "Shotgun Sawyer",
     link: "https://shotgunsawyer.bandcamp.com/album/you-got-to-run-single"
+  },
+  {
+    src: "/Zef - Ground Zero - 01 Livewire.mp3",
+    title: "Ground Zero",
+    artist: "Zef",
+    link: "https://zef-music.bandcamp.com/album/ground-zero"
   }
 ];
 
@@ -49,6 +63,13 @@ const songs = [
 watch(currentVisualizer, (newVisualizer) => {
   if (switchVisualizerFunction) {
     switchVisualizerFunction(newVisualizer);
+  }
+});
+
+// Watch for song changes and reinitialize audio
+watch(currentSong, () => {
+  if (audioElement.value) {
+    setupAudio(audioElement.value as HTMLAudioElement);
   }
 });
 
