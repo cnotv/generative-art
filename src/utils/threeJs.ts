@@ -298,8 +298,6 @@ export const getGround = (
   return { mesh, rigidBody, helper, collider }
 }
 
-
-
 export const getSky = (
   scene: THREE.Scene,
   {

@@ -13,7 +13,7 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
-const currentVisualizer = ref('basic'); // Use first available visualizer
+const currentVisualizer = ref('radio'); // Use first available visualizer
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
@@ -126,7 +126,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         // Function to switch visualizers
-        const switchVisualizer = (name: string) => {
+        const switchVisualizer = async (name: string) => {
           // Clear existing visualizer objects
           if (visualizer.value) {
             // Remove all objects from scene except lights and camera
@@ -148,7 +148,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
           if (visualizer.value) {
             // Setup the visualizer and store the returned objects
-            const setupResult = visualizer.value.setup(scene);
+            const setupResult = await visualizer.value.setup(scene, world);
             visualizerObjects.value = setupResult;
           }
         };
