@@ -4,48 +4,35 @@ import type { VisualizerSetup } from "../visualizer";
 
 export const boxVisualizer: VisualizerSetup = {
   name: "Glass Pipes",
-  song: 0,
+  song: 2,
   camera: {
-    position: [0, 40, 80]
+    position: [0, 80, 160]
   },
 
   setup: (scene: THREE.Scene) => {
     // Create dark ambient environment
     scene.background = new THREE.Color(0x111111);
-    scene.fog = new THREE.Fog(0x111111, 50, 200);
-
-    // Create a dark starfield background
-    const backgroundGeometry = new THREE.SphereGeometry(100, 32, 32);
-    const backgroundMaterial = new THREE.MeshBasicMaterial({
-      color: 0x111122,
-      side: THREE.BackSide,
-      transparent: true,
-      opacity: 0.5
-    });
-    const backgroundSphere = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
-    scene.add(backgroundSphere);
     
     // Function to create a complete pipe with end caps
     const createPipe = (position: CoordinateTuple, rotation: CoordinateTuple) => {
-    const size = 8;
+      const size = 8; // Reduced size for the grid
       const tubeRadius = size * 0.8;
       
-    // Create glass material for the cube
-    const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
-      // transparent: true,
-      // opacity: 0.1,        // Increased from 0.1 to make it more visible
-      transmission: 0.7,   // Reduced from 0.9 to balance transparency and visibility
-      roughness: 0.05,     // Slightly reduced for more reflection
-      metalness: 0.0,      // Reduced to 0 for pure glass effect
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
-      ior: 1.5,
-      thickness: 0.5,      // Reduced thickness for better transmission
-      envMapIntensity: 2.0, // Increased for better reflections
-      reflectivity: 0.9,   // Added reflectivity
-      side: THREE.DoubleSide // Ensure both sides are rendered
-    });
+      // Create glass material for the pipes
+      const glassMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transmission: 0.7,
+        roughness: 0.05,
+        metalness: 0.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.05,
+        ior: 1.5,
+        thickness: 0.5,
+        envMapIntensity: 2.0,
+        reflectivity: 0.9,
+        side: THREE.DoubleSide
+      });
+      
       // Create the curved half-torus
       const halfTorus = new THREE.Mesh(
         new THREE.TorusGeometry(size, tubeRadius, 2 * size, 4 * size, Math.PI),
@@ -58,7 +45,6 @@ export const boxVisualizer: VisualizerSetup = {
       const sphereGeometry = new THREE.SphereGeometry(tubeRadius, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
       
       // Calculate end positions based on pipe position and rotation
-      // For rotation.y = Math.PI / 2, the openings are at ±Z relative to the pipe center
       const endCap1 = new THREE.Mesh(sphereGeometry, glassMaterial);
       endCap1.position.set(position[0], position[1], position[2] + size);
       endCap1.rotation.set(rotation[0] + Math.PI * 2, rotation[1], rotation[2]);
@@ -72,45 +58,59 @@ export const boxVisualizer: VisualizerSetup = {
       pipe.add(halfTorus);
       pipe.add(endCap1);
       pipe.add(endCap2);
+
+      pipe.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI / 2); // Face camera
       
       scene.add(pipe);
       
       return { pipe, halfTorus, endCap1, endCap2 };
     };
     
-    // Create the main pipe
-    const mainPipe = createPipe([-10, 0, 0], [0, Math.PI / 2, 0]);
+    // Create 10x10 grid of pipes
+    const pipes: THREE.Group[] = [];
+    const gridSize = 20;
+    const spacingY = 22; // Distance between pipes
+    const spacingZ = 30; // Distance between pipes
+    // const startX = -(gridSize - 1) * spacing / 2;
+    const startZ = -(gridSize - 1) * spacingZ / 2;
+    const startY = -(gridSize - 1) * spacingY / 2;
     
-    // Example: Create additional pipes (uncomment to use)
-    // const pipe2 = createPipe([10, 0, 0], [0, -Math.PI / 2, 0]);  // Right side pipe
-    // const pipe3 = createPipe([0, 10, 0], [Math.PI / 2, 0, 0]);   // Top pipe
-    // const pipe4 = createPipe([0, -10, 0], [-Math.PI / 2, 0, 0]); // Bottom pipe
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        const x = 0;
+        // const x = startX + col * spacing;
+        const z = startZ + row * spacingZ;
+        const y = startY + col * spacingY;
+        // const y = 0;
+        
+        // Alternate orientations in a checkerboard pattern
+        const isEven = (row + col) % 2 === 0;
+        const rotation: CoordinateTuple = isEven 
+          ? [0, Math.PI / 2, 0]     // Horizontal orientation
+          : [Math.PI, Math.PI / 2, 0];    // Vertical orientation
 
+        const pipeInstance = createPipe([x, isEven ? y - 8 : y, z], rotation);
+        pipes.push(pipeInstance.pipe);
+      }
+    }
+    
     // Add subtle ambient light
     const ambientLight = new THREE.AmbientLight(0x222244, 0.2);
     scene.add(ambientLight);
     
     return { 
-      pipe: mainPipe.pipe,
-      backgroundSphere, 
+      pipes,
       ambientLight
     };
   },
 
   animate: (objects: Record<string, any>) => {
-    const { pipe, backgroundSphere } = objects;
+    const { pipes, backgroundSphere } = objects;
     
     const audioData = getAudioData();
     const sum = audioData.reduce((a: number, b: number) => a + b, 0);
     const average = sum / audioData.length;
-    
-    // Scale the pipe based on audio with more dramatic effect
-    const scale = 1 + (average * 3);
-    if (pipe) {
-      pipe.scale.setScalar(scale);
-      // No rotation - pipe remains stationary
-    }
-    
+
     // Animate background rotation
     if (backgroundSphere) {
       backgroundSphere.rotation.y += 0.0005;
