@@ -6,6 +6,9 @@ export interface VisualizerSetup {
   animate: (objects: Record<string, any>) => void;
   song?: number;
   name: string;
+  camera?: {
+    position: [number, number, number];
+  };
 }
 
 // Dynamically import all visualizer modules

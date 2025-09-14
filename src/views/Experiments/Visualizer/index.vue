@@ -13,7 +13,7 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref(null);
 const route = useRoute();
-const currentVisualizer = ref('radio'); // Use first available visualizer
+const currentVisualizer = ref('pipes'); // Use first available visualizer
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
@@ -125,10 +125,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         lights: { directional: { intensity: config.directional.intensity } },
       },
       defineSetup: async () => {
-        // Function to switch visualizers
-        const switchVisualizer = async (name: string) => {
-          // Clear existing visualizer objects
-          if (visualizer.value) {
+        // Helper function to reset camera based on visualizer configuration
+        const resetCamera = (currentVisualizer: VisualizerSetup | null) => {
+          if (currentVisualizer && currentVisualizer.camera) {
+            // Use visualizer-specific camera position if defined
+            const [x, y, z] = currentVisualizer.camera.position;
+            camera.position.set(x, y, z);
+          } else {
+            // Default camera position for visualizers without camera config
+            camera.position.set(0, 20, 30);
+          }
+          camera.rotation.set(0, 0, 0);
+          camera.lookAt(0, 0, 0);
+        };
+
+        // Helper function to clear existing visualizer objects from scene
+        const clearVisualizerObjects = (currentVisualizer: VisualizerSetup | null) => {
+          if (currentVisualizer) {
             // Remove all objects from scene except lights and camera
             const objectsToRemove = scene.children.filter(
               (child) =>
@@ -138,13 +151,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             );
             objectsToRemove.forEach((obj) => scene.remove(obj));
           }
+        };
 
-          // Reset camera position and rotation
-          camera.position.set(0, 20, 30);
-          camera.rotation.set(0, 0, 0);
-          camera.lookAt(0, 0, 0);
+        // Function to switch visualizers
+        const switchVisualizer = async (name: string) => {
+          // Clear existing visualizer objects
+          clearVisualizerObjects(visualizer.value);
 
+          // Get new visualizer
           visualizer.value = getVisualizer(name);
+
+          // Reset camera position based on new visualizer
+          resetCamera(visualizer.value);
 
           if (visualizer.value) {
             // Setup the visualizer and store the returned objects
