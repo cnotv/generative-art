@@ -12,19 +12,19 @@ export const boxVisualizer: VisualizerSetup = {
   setup: async (scene: THREE.Scene, world?: RAPIER.World) => {
     if (!world) return {};
     // Create dark ambient environment
-    scene.background = new THREE.Color(0x111111);
+    // scene.background = new THREE.Color(0x111111);
 
     const logo = await getModel(scene, world, "cnotv.glb", {
       scale: [scale, scale, scale],
       rotation: [Math.PI / 6, 0, 0],
       hasGravity: false,
       castShadow: true,
-      color: 0xffffff,
+      color: 0x333333,
       material: true,
       transmission: 0.7,
-      roughness: 0.05,
-      opacity: 0.3,
-      metalness: 1,
+      roughness: 0.5,
+      opacity: 0.5,
+      metalness: 0.5,
       reflectivity: 0.9,
     });
     return { logo };

@@ -368,6 +368,11 @@ export const loadFBX = (
     castShadow = false,
     receiveShadow = false,
     transmission = 0,
+    clearcoat = 1.0,
+    clearcoatRoughness = 0.05,
+    ior = 1.5,
+    thickness = 0.5,
+    envMapIntensity = 2.0,
   }: ModelOptions = {}
 ): Promise<Model> => {
   return new Promise((resolve, reject) => {
@@ -388,7 +393,8 @@ export const loadFBX = (
               reflectivity,
               roughness,
               transmission,
-              metalness
+              metalness,
+              clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, 
             });
           }
           child.rotation.set(...rotation);
@@ -419,6 +425,11 @@ export const loadGLTF = (
     castShadow = false,
     receiveShadow = false,
     transmission = 0,
+    clearcoat = 1.0,
+    clearcoatRoughness = 0.05,
+    ior = 1.5,
+    thickness = 0.5,
+    envMapIntensity = 2.0,
   }: ModelOptions = {}
 ): Promise<{ model: Model, gltf: any }> => {
   return new Promise((resolve, reject) => {
@@ -440,7 +451,8 @@ export const loadGLTF = (
               reflectivity,
               roughness,
               transmission,
-              metalness
+              metalness,
+              clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, 
             });
           }
           child.rotation.set(...rotation);
@@ -603,6 +615,11 @@ export const getModel = async (
     metalness = 0.8,
     material = false,
     transmission = 0.2,
+    clearcoat = 1.0,
+    clearcoatRoughness = 0.05,
+    ior = 1.5,
+    thickness = 0.5,
+    envMapIntensity = 2.0,
     hasGravity = false,
     castShadow = false,
     receiveShadow = false,
@@ -614,8 +631,8 @@ export const getModel = async (
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
   const { model: mesh, gltf } = isGLTF
-    ? await loadGLTF(path, { position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
-    : await loadFBX(path, { position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
+    ? await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow})
+    : await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
   scene.add(mesh);
 
   let helper;
