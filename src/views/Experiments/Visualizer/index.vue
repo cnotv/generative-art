@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
+import * as THREE from "three";
 
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
@@ -157,6 +158,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         const switchVisualizer = async (name: string) => {
           // Clear existing visualizer objects
           clearVisualizerObjects(visualizer.value);
+          scene.background = new THREE.Color(0x87CEEB); // Default sky blue background
 
           // Get new visualizer
           visualizer.value = getVisualizer(name);
