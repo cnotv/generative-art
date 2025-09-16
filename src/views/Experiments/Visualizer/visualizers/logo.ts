@@ -12,7 +12,7 @@ export const boxVisualizer: VisualizerSetup = {
   setup: async (scene: THREE.Scene, world?: RAPIER.World) => {
     if (!world) return {};
     // Create dark ambient environment
-    // scene.background = new THREE.Color(0x111111);
+    scene.background = new THREE.Color(0xaaaaaa);
 
     const logo = await getModel(scene, world, "cnotv.glb", {
       scale: [scale, scale, scale],
@@ -23,9 +23,9 @@ export const boxVisualizer: VisualizerSetup = {
       material: true,
       transmission: 0.7,
       roughness: 0.5,
-      opacity: 0.5,
+      opacity: 1,
       metalness: 0.5,
-      reflectivity: 0.9,
+      reflectivity: 1,
     });
     return { logo };
   },
@@ -50,7 +50,7 @@ export const boxVisualizer: VisualizerSetup = {
     
     // Side rotation - subtle left/right rotation based on audio frequencies
     const rotationIntensity = 3 * 0.01;
-    const sideRotationSpeed = (0.000008 + (average * 0.003)) * 0.0000000000001; // Base speed + audio-reactive speed
+    const sideRotationSpeed = (0.00001 + (average * 0.003)) * 0.0000000000001; // Base speed + audio-reactive speed
     const lowFreq = (audioData.slice(0, audioData.length / 3).reduce((a: number, b: number) => a + b, 0) / (audioData.length / 3)) * 3; // Amplify low freq
     const highFreq = (audioData.slice(audioData.length * 2 / 3).reduce((a: number, b: number) => a + b, 0) / (audioData.length / 3)) * 3; // Amplify high freq
     const rotationBalance = (highFreq - lowFreq) * rotationIntensity;
