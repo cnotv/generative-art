@@ -7,63 +7,53 @@ const config = {
   mediaRecorder: null as MediaRecorder | null
 };
 
-const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Promise<void> => {
+const download = (blob: Blob, type: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `animation.${type}`; // TODO: Set filename dynamically from title
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+const packVideo = async () => {
   try {
-    // Convert blob to base64
-    const reader = new FileReader();
-    const base64Promise = new Promise<string>((resolve, reject) => {
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
-    reader.readAsDataURL(webmBlob);
-    const base64Data = await base64Promise;
-
-    // Send to serverless function for conversion
-    const response = await fetch('/.netlify/functions/convert-video', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        videoData: base64Data,
-        filename
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Conversion failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.success) {
-      // Download the converted MP4
-      const url = result.videoData;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      a.click();
-    } else {
-      throw new Error(result.message || 'Conversion failed');
-    }
-  } catch (error) {
-    console.error('MP4 conversion failed:', error);
-    // Fallback to WebM download
-    const url = URL.createObjectURL(webmBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.webm`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const type = 'mp4';
+    const blob = new Blob(config.chunks, { 'type': `video/${type}` });
+    await convertToMp4(blob, 'animation');
+    download(blob, type);
+  } catch {
+    const type = 'webm';
+    const blob = new Blob(config.chunks, { 'type': `video/${type}` });
+    download(blob, type);
   }
 };
 
-const saveVideo = async () => {
-  // Use WebM with VP9 codec for better compatibility
-  const blob = new Blob(config.chunks, { 'type': 'video/webm; codecs=vp9' });
-  
-  // Try to convert to MP4, fallback to WebM if conversion fails
-  await convertToMp4(blob, 'animation');
+const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Promise<void> => {
+  // Convert blob to base64
+  console.log('Preparing file');
+  const reader = new FileReader();
+  const base64Promise = new Promise<string>((resolve, reject) => {
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
+  reader.readAsDataURL(webmBlob);
+  const base64Data = await base64Promise;
+
+  // Send to serverless function for conversion
+  console.log('Requesting conversion');
+  const response = await fetch('/.netlify/functions/convert-video', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      videoData: base64Data,
+      filename
+    })
+  });
+
+  return response.json();
 };
 
 const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded) => {
@@ -71,28 +61,16 @@ const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded)
   const shouldRecord = !!route.query.record;
   if (shouldRecord) {
     const stream = canvas.captureStream(30);
-    
-    // Check for supported MIME types and use the best available
-    let mimeType = 'video/webm; codecs=vp9';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = 'video/webm; codecs=vp8';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-      }
-    }
-    
     config.mediaRecorder = new MediaRecorder(
       stream,
-      { mimeType, bitsPerSecond: 100000000 });
+      { mimeType: 'video/webm', bitsPerSecond: 100000000 });
     config.isRecording = true;
     config.mediaRecorder.ondataavailable = (e) => {
       if (e.data.size) {
         config.chunks.push(e.data);
       }
     };
-    config.mediaRecorder.onstop = () => {
-      saveVideo().catch(console.error);
-    };
+    config.mediaRecorder.onstop = packVideo;
     config.mediaRecorder.start();
   };
 };

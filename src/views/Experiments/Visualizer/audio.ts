@@ -48,8 +48,6 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
     return;
   }
 
-  console.log('Setting up audio with element:', audioElement.src);
-
   // Initialize audio context on first user interaction
   const initOnInteraction = () => {
     if (!audioContext) {
