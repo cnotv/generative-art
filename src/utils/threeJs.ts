@@ -383,7 +383,7 @@ export const loadFBX = (
           if (material) {
             child.material = new THREE.MeshPhysicalMaterial({
               color,
-              opacity: 0.9, 
+              opacity, 
               transparent: opacity < 1,
               reflectivity,
               roughness,
@@ -435,7 +435,7 @@ export const loadGLTF = (
           if (material) {
             child.material = new THREE.MeshPhysicalMaterial({
               color,
-              opacity: 0.9, 
+              opacity, 
               transparent: opacity < 1,
               reflectivity,
               roughness,
@@ -601,6 +601,7 @@ export const getModel = async (
     reflectivity = 0.5,
     roughness = 0.1,
     metalness = 0.8,
+    material = false,
     transmission = 0.2,
     hasGravity = false,
     castShadow = false,
@@ -613,8 +614,8 @@ export const getModel = async (
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
   const { model: mesh, gltf } = isGLTF
-    ? await loadGLTF(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
-    : await loadFBX(path, { position, scale, rotation, color, opacity, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
+    ? await loadGLTF(path, { position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
+    : await loadFBX(path, { position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow })
   scene.add(mesh);
 
   let helper;
