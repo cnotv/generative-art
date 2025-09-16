@@ -3,6 +3,7 @@ import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
 import { getModel } from "@/utils/threeJs";
 import type RAPIER from "@dimforge/rapier3d";
+import streetBg from '@/assets/street2_blur.jpg';
 
 const scale = 3
 export const boxVisualizer: VisualizerSetup = {
@@ -11,8 +12,17 @@ export const boxVisualizer: VisualizerSetup = {
 
   setup: async (scene: THREE.Scene, world?: RAPIER.World) => {
     if (!world) return {};
-    // Create dark ambient environment
-    scene.background = new THREE.Color(0xaaaaaa);
+    
+    const textureLoader = new THREE.TextureLoader();
+    const bgTexture = textureLoader.load(streetBg);
+    bgTexture.mapping = THREE.EquirectangularReflectionMapping;
+    
+    scene.background = bgTexture;
+    
+    const textureLoader2 = new THREE.TextureLoader();
+    const bgTexture2 = textureLoader2.load(streetBg);
+    bgTexture2.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = bgTexture2;
 
     const logo = await getModel(scene, world, "cnotv.glb", {
       scale: [scale, scale, scale],
@@ -27,6 +37,7 @@ export const boxVisualizer: VisualizerSetup = {
       metalness: 0.5,
       reflectivity: 1,
     });
+
     return { logo };
   },
 
@@ -36,6 +47,7 @@ export const boxVisualizer: VisualizerSetup = {
     const sum = audioData.reduce((a: number, b: number) => a + b, 0);
     const average = (sum / audioData.length) * 3; // Amplify audio data by 3x
     const side = average + 1 * scale;
+    const tiltAmplitude = 3;
     
     // Scale based on audio
     logo.mesh.scale.x = side;
@@ -43,7 +55,7 @@ export const boxVisualizer: VisualizerSetup = {
     logo.mesh.scale.z = side;
     
     // Headbanging effect - tilt forward/backward based on audio intensity
-    const headbangIntensity = 0.2;
+    const headbangIntensity = 0.3;
     const headbangSpeed = 0.000001 + (average * 0.000000000005); // Base speed + audio-reactive speed
     const headbangTilt = Math.sin(Date.now() * headbangSpeed) * average * headbangIntensity;
     logo.mesh.rotation.x = Math.PI / 6 + headbangTilt;
@@ -51,8 +63,8 @@ export const boxVisualizer: VisualizerSetup = {
     // Side rotation - subtle left/right rotation based on audio frequencies
     const rotationIntensity = 3 * 0.01;
     const sideRotationSpeed = (0.00001 + (average * 0.003)) * 0.0000000000001; // Base speed + audio-reactive speed
-    const lowFreq = (audioData.slice(0, audioData.length / 3).reduce((a: number, b: number) => a + b, 0) / (audioData.length / 3)) * 3; // Amplify low freq
-    const highFreq = (audioData.slice(audioData.length * 2 / 3).reduce((a: number, b: number) => a + b, 0) / (audioData.length / 3)) * 3; // Amplify high freq
+    const lowFreq = (audioData.slice(0, audioData.length / tiltAmplitude).reduce((a: number, b: number) => a + b, 0) / (audioData.length / tiltAmplitude)) * tiltAmplitude; // Amplify low freq
+    const highFreq = (audioData.slice(audioData.length * 2 / tiltAmplitude).reduce((a: number, b: number) => a + b, 0) / (audioData.length / tiltAmplitude)) * tiltAmplitude; // Amplify high freq
     const rotationBalance = (highFreq - lowFreq) * rotationIntensity;
     const sideRotation = Math.sin(Date.now() * sideRotationSpeed) * rotationBalance;
     logo.mesh.rotation.z = sideRotation;
