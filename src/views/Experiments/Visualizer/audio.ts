@@ -49,12 +49,16 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
   }
 
   // Initialize audio context on first user interaction
-  const initOnInteraction = () => {
+  const initOnInteraction = (audio?: HTMLAudioElement | null) => {
     if (!audioContext) {
       initializeAudioContext();
     }
     if (audioContext?.state === 'suspended') {
       audioContext.resume();
+    }
+
+    if (audio) {
+      audio.play();
     }
   };
 
@@ -64,7 +68,7 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
     initializeAudioContext();
   });
 
-  audioElement.addEventListener('play', initOnInteraction);
+  audioElement.addEventListener('play', () => initOnInteraction(audioElement));
   
   audioElement.addEventListener('error', (e) => {
     console.error('Audio loading error:', e);
@@ -85,11 +89,7 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
   });
   
   // Add click listener to start audio context on user interaction
-  document.addEventListener('click', initOnInteraction, { once: true });
-
-  if (audioElement) {
-    audioElement.play();
-  }
+  document.addEventListener('click', () => initOnInteraction(audioElement), { once: true });
 
   isInitialized = true;
 };
