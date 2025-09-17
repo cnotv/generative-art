@@ -87,6 +87,10 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
   // Add click listener to start audio context on user interaction
   document.addEventListener('click', initOnInteraction, { once: true });
 
+  if (audioElement) {
+    audioElement.play();
+  }
+
   isInitialized = true;
 };
 
