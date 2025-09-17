@@ -12,7 +12,7 @@ import { getVisualizer, getVisualizerNames, type VisualizerSetup } from "./visua
 
 const statsEl = ref(null);
 const canvas = ref(null);
-const audioElement = ref(null);
+const audioElement = ref();
 const route = useRoute();
 const currentVisualizer = ref('logo'); // Use first available visualizer
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
@@ -67,13 +67,6 @@ watch(currentVisualizer, (newVisualizer) => {
   }
 });
 
-// Watch for song changes and reinitialize audio
-watch(currentSong, () => {
-  if (audioElement.value) {
-    setupAudio(audioElement.value as HTMLAudioElement);
-  }
-});
-
 let initInstance: () => void;
 onMounted(() => {
   initInstance = () => {
@@ -85,6 +78,7 @@ onMounted(() => {
 
   initInstance();
   window.addEventListener("resize", initInstance);
+  audioElement.value.play().catch();
 });
 onUnmounted(() => {
   window.removeEventListener("resize", initInstance);
@@ -103,13 +97,7 @@ const config = {
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
-
-  // Setup audio controls using the new module with audio element reference
-  if (audioElement.value) {
-    setupAudio(audioElement.value as HTMLAudioElement);
-  } else {
-    setupAudio();
-  }
+  setupAudio(audioElement.value);
 
   const createScene = async () => {
     const elements = [] as any[];
@@ -225,6 +213,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           class="player__audio"
           controls
           loop
+          autoplay
           crossorigin="anonymous"
           :src="songs[currentSong].src"
         />
