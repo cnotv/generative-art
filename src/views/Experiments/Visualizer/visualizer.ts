@@ -7,7 +7,8 @@ export interface VisualizerSetup {
   song?: number;
   name: string;
   camera?: {
-    position: [number, number, number];
+    position?: [number, number, number];
+    rotation?: [number, number, number];
   };
 }
 

@@ -127,17 +127,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         // Helper function to reset camera based on visualizer configuration
-        const resetCamera = (currentVisualizer: VisualizerSetup | null) => {
-          if (currentVisualizer && currentVisualizer.camera) {
+        const resetCamera = (visualizerSetup: VisualizerSetup | null) => {
+          if (visualizerSetup && visualizerSetup.camera) {
             // Use visualizer-specific camera position if defined
-            const [x, y, z] = currentVisualizer.camera.position;
-            camera.position.set(x, y, z);
+            camera.position.set(...visualizerSetup?.camera?.position as [number, number, number] || [0, 0, 0]);
+            camera.rotation.set(...(visualizerSetup?.camera?.rotation as [number, number, number]) || [0, 0, 0]);
+            camera.lookAt(10, 10, 10);
           } else {
             // Default camera position for visualizers without camera config
             camera.position.set(0, 20, 30);
+            camera.lookAt(0, 0, 0);
           }
-          camera.rotation.set(0, 0, 0);
-          camera.lookAt(0, 0, 0);
         };
 
         // Helper function to clear existing visualizer objects from scene

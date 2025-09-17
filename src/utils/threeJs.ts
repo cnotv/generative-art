@@ -87,11 +87,15 @@ export const getTools = ({ stats, route, canvas }: any) => {
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
-    timeline = []
+    timeline = [],
+    config = {
+      orbit: {debug: false}
+    }
   }: {
     beforeTimeline?: () => void,
     afterTimeline?: () => void,
-    timeline?: Timeline[]
+      timeline?: Timeline[],
+      config?: any
   }) => { 
     function runAnimation() {
       if (stats) stats.start(route);
@@ -105,6 +109,7 @@ export const getTools = ({ stats, route, canvas }: any) => {
       
       if (orbit) {
         orbit.update();
+        if (config.orbit?.debug) console.log(camera);
       }
       renderer.render( scene, camera );
 
