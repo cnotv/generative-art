@@ -45,34 +45,34 @@ export const boxVisualizer: VisualizerSetup = {
     return { logo };
   },
 
-  // animate: ({ logo }: Record<string, any>) => {
-  //   if (!logo) return;
-  //   const audioData = getAudioData();
-  //   const sensibility = 50;
-  //   const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-  //   const audioMap = 0.00000000001;
-  //   const average = sum / audioData.length * audioMap;
-  //   const speed = 0.005;
-  //   // const speed = 0.005 + Math.abs(average);
-  //   const amplitude = 0.4;
-  //   const offset = 0.3;
-  //   const tilt = Math.sin(Date.now() * speed) * amplitude + offset; // Create oscillation with sine wave
-  //   const rotation = Math.PI / 3 +  Math.floor(tilt * sensibility) / sensibility
-    
-  //   logo.mesh.rotation.x = rotation;
-  // },
-
   animate: ({ logo }: Record<string, any>) => {
     if (!logo) return;
     const audioData = getAudioData();
-    const sensibility = 20;
+    const sensibility = 50;
     const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-    const average = (sum / audioData.length) * 3;
-    const speed = (average * 0.000000000002);
-    const amplitude = 0.7;
-    const tilt = Math.sin(Date.now() * speed) * amplitude;
-    const rotation = Math.PI / 3 +  Math.floor(Math.PI / 6 + tilt * sensibility) / sensibility
+    const audioMap = 0.000000002;
+    const average = sum / audioData.length * audioMap;
+    const speed = 0.005;
+    // const speed = 0.005 + Math.abs(average);
+    const amplitude = 0.4;
+    const offset = 0.3;
+    const tilt = Math.sin(Date.now() * speed * average) * amplitude + offset; // Create oscillation with sine wave
+    const rotation = Math.PI / 3 +  Math.floor(tilt * sensibility) / sensibility
     
     logo.mesh.rotation.x = rotation;
-  }
+  },
+
+  // animate: ({ logo }: Record<string, any>) => {
+  //   if (!logo) return;
+  //   const audioData = getAudioData();
+  //   const sensibility = 20;
+  //   const sum = audioData.reduce((a: number, b: number) => a + b, 0);
+  //   const average = (sum / audioData.length) * 3;
+  //   const speed = (average * 0.000000000002);
+  //   const amplitude = 0.7;
+  //   const tilt = Math.sin(Date.now() * speed) * amplitude;
+  //   const rotation = Math.PI / 3 +  Math.floor(Math.PI / 6 + tilt * sensibility) / sensibility
+    
+  //   logo.mesh.rotation.x = rotation;
+  // }
 };
