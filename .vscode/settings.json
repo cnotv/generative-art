@@ -1,8 +1,14 @@
 {
   "cSpell.words": [
+    "clearcoat",
+    "dimforge",
+    "Equirectangular",
     "gltf",
     "goomba",
+    "lerp",
+    "Livewire",
     "metalness",
+    "Phong",
     "raycaster"
   ],
   "vue3snippets.enable-compile-vue-file-on-did-save-code": true
