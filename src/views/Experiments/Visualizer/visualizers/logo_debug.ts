@@ -7,7 +7,6 @@ import streetBg from '@/assets/street2_blur.jpg';
 
 const scale = 3;
 
-// Bars configuration
 const barsConfig = {
   barCount: 32,
   barWidth: 1,
@@ -15,7 +14,15 @@ const barsConfig = {
   maxHeight: 20,
 };
 
-// Logo setup function
+const barsActiveState: boolean[] = Array(barsConfig.barCount).fill(true);
+
+// Function to toggle bar active state
+const toggleBarActive = (index: number) => {
+  if (index >= 0 && index < barsActiveState.length) {
+    barsActiveState[index] = !barsActiveState[index];
+  }
+};
+
 const setupLogo = async (scene: THREE.Scene, world: RAPIER.World) => {
   const logo = await getModel(scene, world, "cnotv.glb", {
     scale: [scale, scale, scale],
@@ -34,7 +41,6 @@ const setupLogo = async (scene: THREE.Scene, world: RAPIER.World) => {
   return logo;
 };
 
-// Bars setup function
 const setupBars = (scene: THREE.Scene) => {
   const bars = Array.from(
     { length: barsConfig.barCount },
@@ -45,7 +51,7 @@ const setupBars = (scene: THREE.Scene) => {
         barsConfig.barWidth
       );
       const barMaterial = new THREE.MeshLambertMaterial({
-        color: 0x0099ff,
+        color: 0x0099ff, // Default blue for active
       });
       const bar = new THREE.Mesh(barGeometry, barMaterial);
 
@@ -54,17 +60,19 @@ const setupBars = (scene: THREE.Scene) => {
       const x = (i - barsConfig.barCount / 2) * barsConfig.barSpacing + offset;
       bar.position.set(x, 0.5, 0);
 
+      // Store the bar index for click handling
+      bar.userData = { index: i };
+
       scene.add(bar);
       return bar;
     }
   );
+
   return bars;
 };
 
-// Logo animation function
-const animateLogo = (logo: any) => {
+const animateLogo = (logo: any, audioData: number[]) => {
   if (!logo) return;
-  const audioData = getAudioData();
   const sensibility = 50;
   const sum = audioData.reduce((a: number, b: number) => a + b, 0);
   const audioMap = 0.000000002;
@@ -78,16 +86,25 @@ const animateLogo = (logo: any) => {
   logo.mesh.rotation.x = rotation;
 };
 
-// Bars animation function
-const animateBars = (bars: THREE.Mesh[]) => {
+const animateBars = (bars: THREE.Mesh[], audioData: number[]) => {
   if (!bars) return;
-  
-  const audioData = getAudioData();
 
   bars.forEach((bar: THREE.Mesh, index: number) => {
-    const height = 1 + audioData[index] * barsConfig.maxHeight;
-    bar.scale.y = height;
-    bar.position.y = height / 2;
+    // Update bar color based on active state
+    const isActive = barsActiveState[index];
+    const material = bar.material as THREE.MeshLambertMaterial;
+    material.color.setHex(isActive ? 0x0099ff : 0xff0000); // Blue if active, red if inactive
+    
+    // Only animate active bars
+    if (isActive && audioData[index] !== undefined) {
+      const height = 1 + audioData[index] * barsConfig.maxHeight;
+      bar.scale.y = height;
+      bar.position.y = height / 2;
+    } else {
+      // Keep inactive bars at minimum height
+      bar.scale.y = 1;
+      bar.position.y = 0.5;
+    }
   });
 };
 export const boxVisualizer: VisualizerSetup = {
@@ -104,7 +121,6 @@ export const boxVisualizer: VisualizerSetup = {
     const textureLoader = new THREE.TextureLoader();
     const bgTexture = textureLoader.load(streetBg);
     bgTexture.mapping = THREE.EquirectangularReflectionMapping;
-    
     scene.background = bgTexture;
     
     const textureLoader2 = new THREE.TextureLoader();
@@ -112,20 +128,48 @@ export const boxVisualizer: VisualizerSetup = {
     bgTexture2.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = bgTexture2;
 
-    // Setup logo using separated function
     const logo = await setupLogo(scene, world);
-    
-    // Setup bars using separated function
     const bars = setupBars(scene);
 
     return { logo, bars };
   },
 
   animate: ({ logo, bars }: Record<string, any>) => {
-    // Animate logo using separated function
-    animateLogo(logo);
+    // Get audio data once and pass it to both animation functions
+    const audioData = getAudioData();
     
-    // Animate bars using separated function
-    animateBars(bars);
+    // Get filtered audio data from only active bars for logo animation
+    const activeAudioData = audioData.filter((_, index) => barsActiveState[index] || false);
+    
+    animateLogo(logo, activeAudioData);
+    animateBars(bars, audioData);
   },
+
+  handleClick: (event: MouseEvent, camera: THREE.Camera, canvas: HTMLCanvasElement, { bars }: Record<string, any>) => {
+    if (!camera || !canvas || bars.length === 0) return;
+    
+    // Get mouse position in normalized device coordinates (-1 to +1)
+    const rect = canvas.getBoundingClientRect();
+    const mouse = new THREE.Vector2();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    
+    // Create raycaster
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    
+    // Check for intersections with bars
+    const intersects = raycaster.intersectObjects(bars);
+    
+    if (intersects.length > 0) {
+      // Get the clicked bar
+      const clickedBar = intersects[0].object as THREE.Mesh;
+      const barIndex = clickedBar.userData.index;
+      
+      if (typeof barIndex === 'number') {
+        // Toggle the bar's active state
+        toggleBarActive(barIndex);
+      }
+    }
+  }
 };

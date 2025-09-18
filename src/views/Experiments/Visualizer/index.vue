@@ -8,7 +8,13 @@ import * as THREE from "three";
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
 import { setupAudio, cleanup } from "./audio";
-import { getVisualizer, getVisualizerNames, type VisualizerSetup } from "./visualizer";
+import {
+  getVisualizer,
+  getVisualizerNames,
+  type VisualizerSetup,
+  setupVisualizerClickHandlers,
+  clearVisualizerClickHandlers
+} from "./visualizer";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -68,6 +74,7 @@ watch(currentVisualizer, (newVisualizer) => {
 });
 
 let initInstance: () => void;
+
 onMounted(() => {
   initInstance = () => {
     init(
@@ -80,9 +87,10 @@ onMounted(() => {
   window.addEventListener("resize", initInstance);
   audioElement.value.play().catch();
 });
+
 onUnmounted(() => {
   window.removeEventListener("resize", initInstance);
-  // Cleanup audio when component unmounts
+  clearVisualizerClickHandlers();
   cleanup();
 });
 
@@ -159,6 +167,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             const setupResult = await visualizer.value.setup(scene, world);
             visualizerObjects.value = setupResult;
           }
+
+          // Setup click/touch handlers for the new visualizer
+          setupVisualizerClickHandlers(visualizer.value, camera, canvas, visualizerObjects.value);
         };
 
         // Store the switch function for the watcher
