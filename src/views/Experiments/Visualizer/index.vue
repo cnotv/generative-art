@@ -14,7 +14,7 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref();
 const route = useRoute();
-const currentVisualizer = ref('logo'); // Use first available visualizer
+const currentVisualizer = ref('frequencies'); // Use first available visualizer
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
@@ -220,14 +220,16 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       </div>
       <div class="player__credits">
         <div class="player__song-title">{{ songs[currentSong].title }}</div>
-        <div class="player__artist">by {{ songs[currentSong].artist }}</div>
-        <a
-          :href="songs[currentSong].link"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="player__link"
-          >Artist Link</a
-        >
+        <div class="player__artist">
+          by
+          <a
+            :href="songs[currentSong].link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="player__link"
+            >{{ songs[currentSong].artist }}</a
+          >
+        </div>
       </div>
     </div>
   </div>
@@ -293,18 +295,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 .player__song-title {
   font-size: 18px;
   font-weight: bold;
-  margin-bottom: 5px;
 }
 
 .player__artist {
   font-size: 14px;
-  margin-bottom: 5px;
 }
 
 .player__link {
   color: #888;
-  font-size: 12px;
-  text-decoration: none;
 }
 
 .player__link:hover {
