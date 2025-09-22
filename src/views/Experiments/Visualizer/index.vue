@@ -20,7 +20,7 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref();
 const route = useRoute();
-const currentVisualizer = ref('logo_debug'); // Use first available visualizer
+const currentVisualizer = ref('circle'); // Use first available visualizer
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
