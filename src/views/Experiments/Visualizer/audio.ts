@@ -11,7 +11,7 @@ const initializeAudioContext = (): void => {
     try {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyser = audioContext.createAnalyser();
-      analyser.fftSize = 64; // Small for simple visualization
+      analyser.fftSize = 2048; // Small for simple visualization
       
       const source = audioContext.createMediaElementSource(audioElement);
       source.connect(analyser);
