@@ -35,21 +35,29 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
     return { line, points };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { line, points } = objects;
-    if (!line || !points) return;
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { line, points } = objects;
+      if (!line || !points) return;
 
-    const audioData = getAudioData();
-    
-    // Update line points based on audio data
-    for (let i = 0; i < config.barCount && i < audioData.length; i++) {
-      const x = (i / (config.barCount - 1)) * config.width - config.width / 2;
-      const y = audioData[i] * config.height - config.height / 2;
-      points[i].set(x, y, 0);
+      const audioData = getAudioData();
+
+      // Update line points based on audio data
+      for (let i = 0; i < config.barCount && i < audioData.length; i++) {
+        const height = audioData[i] * config.height;
+        points[i].y = height;
+      }
+
+      // Update line geometry
+      const geometry = line.geometry as THREE.BufferGeometry;
+      geometry.setFromPoints(points);
+      geometry.attributes.position.needsUpdate = true;
+
+      // Update color based on audio intensity
+      const intensity = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      const hue = (Date.now() * 0.001) % 1;
+      (line.material as THREE.LineBasicMaterial).color.setHSL(hue, 1, 0.5 + intensity * 0.5);
     }
-
-    // Update geometry
-    line.geometry.setFromPoints(points);
-    line.geometry.attributes.position.needsUpdate = true;
-  },
+  }]
 };

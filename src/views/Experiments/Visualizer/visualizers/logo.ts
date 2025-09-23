@@ -45,22 +45,26 @@ export const boxVisualizer: VisualizerSetup = {
     return { logo };
   },
 
-  animate: ({ logo }: Record<string, any>) => {
-    if (!logo) return;
-    const audioData = getAudioData();
-    const sensibility = 50;
-    const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-    const audioMap = 0.000000002;
-    const average = sum / audioData.length * audioMap;
-    const speed = 0.005;
-    // const speed = 0.005 + Math.abs(average);
-    const amplitude = 0.4;
-    const offset = 0.3;
-    const tilt = Math.sin(Date.now() * speed * average) * amplitude + offset; // Create oscillation with sine wave
-    const rotation = Math.PI / 3 +  Math.floor(tilt * sensibility) / sensibility
-    
-    logo.mesh.rotation.x = rotation;
-  },
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { logo } = objects;
+      if (!logo) return;
+      const audioData = getAudioData();
+      const sensibility = 50;
+      const sum = audioData.reduce((a: number, b: number) => a + b, 0);
+      const audioMap = 0.000000002;
+      const average = sum / audioData.length * audioMap;
+      const speed = 0.005;
+      // const speed = 0.005 + Math.abs(average);
+      const amplitude = 0.4;
+      const offset = 0.3;
+      const tilt = Math.sin(Date.now() * speed * average) * amplitude + offset; // Create oscillation with sine wave
+      const rotation = Math.PI / 3 +  Math.floor(tilt * sensibility) / sensibility
+      
+      logo.mesh.rotation.x = rotation;
+    }
+  }],
 
   // animate: ({ logo }: Record<string, any>) => {
   //   if (!logo) return;

@@ -65,85 +65,88 @@ export const cubesVisualizer: VisualizerSetup = {
     return { cubes, velocities };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { cubes, velocities } = objects;
-    if (!cubes || !velocities) return;
-    
-    const audioData = getAudioData();
-    const frequencyRanges = getFrequencyRanges();
-    const time = Date.now() * 0.001;
-    
-    // Calculate audio intensity
-    const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
-    const bassBoost = frequencyRanges.bass * 5;
-    const midBoost = frequencyRanges.mid * 3;
-    
-    // Hide all cubes if there's no audio activity
-    const hasAudio = audioLevel > 0.01; // Threshold for detecting audio
-    
-    cubes.forEach((cube: THREE.Mesh, index: number) => {
-      // Hide cube if no audio
-      cube.visible = hasAudio;
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { cubes, velocities } = objects;
+      if (!cubes || !velocities) return;
       
-      if (!hasAudio) {
-        return; // Skip animation if no audio
-      }
+      const audioData = getAudioData();
+      const frequencyRanges = getFrequencyRanges();
+      const time = Date.now() * 0.001;
       
-      const velocity = velocities[index];
+      // Calculate audio intensity
+      const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      const bassBoost = frequencyRanges.bass * 5;
+      const midBoost = frequencyRanges.mid * 3;
       
-      // Apply movement based on velocity
-      cube.position.add(velocity.clone().multiplyScalar(0.1));
+      // Hide all cubes if there's no audio activity
+      const hasAudio = audioLevel > 0.01; // Threshold for detecting audio
       
-      // Add audio-reactive movement
-      const audioInfluence = audioLevel * 2;
-      const direction = cube.position.clone().normalize();
-      cube.position.add(direction.multiplyScalar(audioInfluence));
-      
-      // Continuous rotation
-      cube.rotation.x += config.rotationSpeed + bassBoost * 0.05;
-      cube.rotation.y += config.rotationSpeed + midBoost * 0.03;
-      cube.rotation.z += config.rotationSpeed + audioLevel * 0.02;
-      
-      // Audio-reactive scaling
-      const scale = 1 + audioLevel * 0.5 + bassBoost * 0.3;
-      cube.scale.setScalar(scale);
-      
-      // Update color based on audio
-      const material = cube.material as THREE.MeshLambertMaterial;
-      const hue = (time * 0.1 + index * 0.1) % 1;
-      const lightness = 0.3 + audioLevel * 0.7;
-      material.color.setHSL(hue, 1, lightness);
-      
-      // Boundary checking - respawn cubes that go too far
-      const maxDistance = config.spawnRadius * 2;
-      if (cube.position.length() > maxDistance) {
-        // Reset position to origin area
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.random() * Math.PI;
-        const radius = Math.random() * config.spawnRadius * 0.5;
+      cubes.forEach((cube: THREE.Mesh, index: number) => {
+        // Hide cube if no audio
+        cube.visible = hasAudio;
         
-        cube.position.set(
-          radius * Math.sin(phi) * Math.cos(theta),
-          radius * Math.cos(phi),
-          radius * Math.sin(phi) * Math.sin(theta)
-        );
+        if (!hasAudio) {
+          return; // Skip animation if no audio
+        }
         
-        // Reset velocity
-        velocity.set(
-          (Math.random() - 0.5) * config.maxSpeed,
-          (Math.random() - 0.5) * config.maxSpeed,
-          (Math.random() - 0.5) * config.maxSpeed
-        );
-      }
-      
-      // Add some gravitational pull towards center when audio is low
-      if (audioLevel < 0.1) {
-        const centerPull = cube.position.clone().normalize().multiplyScalar(-0.02);
-        velocity.add(centerPull);
-      }
-      
-      // Damping to prevent infinite acceleration
-      velocity.multiplyScalar(0.99);
-    });
-  }
+        const velocity = velocities[index];
+        
+        // Apply movement based on velocity
+        cube.position.add(velocity.clone().multiplyScalar(0.1));
+        
+        // Add audio-reactive movement
+        const audioInfluence = audioLevel * 2;
+        const direction = cube.position.clone().normalize();
+        cube.position.add(direction.multiplyScalar(audioInfluence));
+        
+        // Continuous rotation
+        cube.rotation.x += config.rotationSpeed + bassBoost * 0.05;
+        cube.rotation.y += config.rotationSpeed + midBoost * 0.03;
+        cube.rotation.z += config.rotationSpeed + audioLevel * 0.02;
+        
+        // Audio-reactive scaling
+        const scale = 1 + audioLevel * 0.5 + bassBoost * 0.3;
+        cube.scale.setScalar(scale);
+        
+        // Update color based on audio
+        const material = cube.material as THREE.MeshLambertMaterial;
+        const hue = (time * 0.1 + index * 0.1) % 1;
+        const lightness = 0.3 + audioLevel * 0.7;
+        material.color.setHSL(hue, 1, lightness);
+        
+        // Boundary checking - respawn cubes that go too far
+        const maxDistance = config.spawnRadius * 2;
+        if (cube.position.length() > maxDistance) {
+          // Reset position to origin area
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI;
+          const radius = Math.random() * config.spawnRadius * 0.5;
+          
+          cube.position.set(
+            radius * Math.sin(phi) * Math.cos(theta),
+            radius * Math.cos(phi),
+            radius * Math.sin(phi) * Math.sin(theta)
+          );
+          
+          // Reset velocity
+          velocity.set(
+            (Math.random() - 0.5) * config.maxSpeed,
+            (Math.random() - 0.5) * config.maxSpeed,
+            (Math.random() - 0.5) * config.maxSpeed
+          );
+        }
+        
+        // Add some gravitational pull towards center when audio is low
+        if (audioLevel < 0.1) {
+          const centerPull = cube.position.clone().normalize().multiplyScalar(-0.02);
+          velocity.add(centerPull);
+        }
+        
+        // Damping to prevent infinite acceleration
+        velocity.multiplyScalar(0.99);
+      });
+    }
+  }],
 };

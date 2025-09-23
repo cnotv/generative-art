@@ -3,8 +3,7 @@ import type RAPIER from '@dimforge/rapier3d';
 
 export interface VisualizerSetup {
   setup: (scene: THREE.Scene, world?: RAPIER.World) => Promise<Record<string, any>> | Record<string, any>;
-  animate: (objects: Record<string, any>) => void;
-  timeline?: Timeline[];
+  getTimeline: (getObjects: () => Record<string, any>) => Timeline[];
   handleClick?: (event: MouseEvent, camera: THREE.Camera, canvas: HTMLCanvasElement, visualizerObjects: Record<string, any>) => void;
   song?: number;
   name: string;
@@ -77,11 +76,14 @@ const visualizerModules = import.meta.glob('./visualizers/*.ts', { eager: true }
 // Build visualizers object from imported modules
 export const visualizers: Record<string, VisualizerSetup> = {};
 
+/**
+ * Export visualizers
+ */
 Object.entries(visualizerModules).forEach(([path, module]) => {
   const fileName = path.replace('./visualizers/', '').replace('.ts', '');
   const moduleExports = module as Record<string, any>;
   const visualizerExport = Object.values(moduleExports).find(
-    (exp: any) => exp && typeof exp === 'object' && exp.name && exp.setup && exp.animate
+    (exp: any) => exp && typeof exp === 'object' && exp.name && exp.setup && exp.getTimeline
   );
   
   if (visualizerExport) {

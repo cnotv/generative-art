@@ -104,16 +104,19 @@ export const boxVisualizer: VisualizerSetup = {
     };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { pipes, backgroundSphere } = objects;
-    
-    const audioData = getAudioData();
-    const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-    const average = sum / audioData.length;
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { pipes, backgroundSphere } = objects;
+      
+      const audioData = getAudioData();
+      const sum = audioData.reduce((a: number, b: number) => a + b, 0);
+      const average = sum / audioData.length;
 
-    // Animate background rotation
-    if (backgroundSphere) {
-      backgroundSphere.rotation.y += 0.0005;
+      // Animate background rotation
+      if (backgroundSphere) {
+        backgroundSphere.rotation.y += 0.0005;
+      }
     }
-  }
+  }]
 };

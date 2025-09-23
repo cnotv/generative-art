@@ -43,24 +43,27 @@ export const circularSpectrumVisualizer: VisualizerSetup = {
     return { bars };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { bars } = objects;
-    if (!bars) return;
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const { bars } = getObjects();
+      console.log(bars)
+      if (!bars) return;
 
-    const audioData = getAudioData();
+      const audioData = getAudioData();
 
-    // Set height
-    bars.forEach((bar: THREE.Mesh, index: number) => {
-      const height = 1 + (audioData[index] || 0) * config.maxHeight;
-      bar.scale.y = height;
-      bar.position.y = height / 2;
-    });
+      // Set height
+      bars.forEach((bar: THREE.Mesh, index: number) => {
+        const height = 1 + (audioData[index] || 0) * config.maxHeight;
+        bar.scale.y = height;
+        bar.position.y = height / 2;
+      });
+    },
   },
-
-  timeline: [{
-    frequency: 200,
-    action: (objects: Record<string, any>) => {
-      const { bars } = objects;
+    {
+    start: 0,
+    interval: [100, 100],
+    action: () => {
+      const { bars } = getObjects();
       if (!bars) return;
 
       // Rotate the whole visualization

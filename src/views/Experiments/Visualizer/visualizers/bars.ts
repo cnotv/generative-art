@@ -38,17 +38,20 @@ export const barsVisualizer: VisualizerSetup = {
     return { bars };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { bars } = objects;
-    if (!bars) return;
-    
-    const audioData = getAudioData();
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { bars } = objects;
+      if (!bars) return;
+      
+      const audioData = getAudioData();
 
-    // Update bar heights based on audio data
-    bars.forEach((bar: THREE.Mesh, index: number) => {
-      const height = 1 + audioData[index] * config.maxHeight;
-      bar.scale.y = height;
-      bar.position.y = height / 2;
-    });
-  }
+      // Update bar heights based on audio data
+      bars.forEach((bar: THREE.Mesh, index: number) => {
+        const height = 1 + audioData[index] * config.maxHeight;
+        bar.scale.y = height;
+        bar.position.y = height / 2;
+      });
+    }
+  }],
 };

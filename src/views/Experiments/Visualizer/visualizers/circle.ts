@@ -41,29 +41,38 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
     return { line, points };
   },
 
-  animate: (objects: Record<string, any>) => {
-    const { line, points } = objects;
-    if (!line || !points) return;
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { line, points } = objects;
+      if (!line || !points) return;
 
-    const audioData = getAudioData();
-    
-    // Update circular points based on audio data
-    for (let i = 0; i < config.barCount && i < audioData.length; i++) {
-      const angle = (i / config.barCount) * Math.PI * 2;
-      // Base radius plus audio-reactive extension
-      const radius = config.radius + (audioData[i] * config.maxRadius);
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      points[i].set(x, y, 0);
+      const audioData = getAudioData();
+      
+      // Update circular points based on audio data
+      for (let i = 0; i < config.barCount && i < audioData.length; i++) {
+        const angle = (i / config.barCount) * Math.PI * 2;
+        // Base radius plus audio-reactive extension
+        const radius = config.radius + (audioData[i] * config.maxRadius);
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        points[i].set(x, y, 0);
+      }
+
+      // Update the closing point to match the first point
+      if (points.length > config.barCount) {
+        points[config.barCount].copy(points[0]);
+      }
+
+      // Update geometry
+      line.geometry.setFromPoints(points);
+      line.geometry.attributes.position.needsUpdate = true;
+
+      // Animate color based on average audio level
+      const avgAudio = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      const material = line.material as THREE.LineBasicMaterial;
+      const hue = (Date.now() * 0.001 + avgAudio) % 1;
+      material.color.setHSL(hue, 1, 0.5 + avgAudio * 0.5);
     }
-
-    // Update the closing point to match the first point
-    if (points.length > config.barCount) {
-      points[config.barCount].copy(points[0]);
-    }
-
-    // Update geometry
-    line.geometry.setFromPoints(points);
-    line.geometry.attributes.position.needsUpdate = true;
-  },
+  }],
 };

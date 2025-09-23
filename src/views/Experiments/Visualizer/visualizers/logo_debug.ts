@@ -134,16 +134,20 @@ export const boxVisualizer: VisualizerSetup = {
     return { logo, bars };
   },
 
-  animate: ({ logo, bars }: Record<string, any>) => {
-    // Get audio data once and pass it to both animation functions
-    const audioData = getAudioData();
-    
-    // Get filtered audio data from only active bars for logo animation
-    const activeAudioData = audioData.filter((_, index) => barsActiveState[index] || false);
-    
-    animateLogo(logo, activeAudioData);
-    animateBars(bars, audioData);
-  },
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { logo, bars } = objects;
+      // Get audio data once and pass it to both animation functions
+      const audioData = getAudioData();
+      
+      // Get filtered audio data from only active bars for logo animation
+      const activeAudioData = audioData.filter((_, index) => barsActiveState[index] || false);
+      
+      animateLogo(logo, activeAudioData);
+      animateBars(bars, audioData);
+    }
+  }],
 
   handleClick: (event: MouseEvent, camera: THREE.Camera, canvas: HTMLCanvasElement, { bars }: Record<string, any>) => {
     if (!camera || !canvas || bars.length === 0) return;

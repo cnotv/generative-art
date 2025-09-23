@@ -16,13 +16,17 @@ export const boxVisualizer: VisualizerSetup = {
     return { box };
   },
 
-  animate: ({ box }: Record<string, any>) => {
-    const audioData = getAudioData();
-    const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-    const average = sum / audioData.length;
-    const side = average;
-    box.scale.x = side;
-    box.scale.y = side;
-    box.scale.z = side;
-  }
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { box } = objects;
+      const audioData = getAudioData();
+      const sum = audioData.reduce((a: number, b: number) => a + b, 0);
+      const average = sum / audioData.length;
+      const side = average;
+      box.scale.x = side;
+      box.scale.y = side;
+      box.scale.z = side;
+    }
+  }]
 };

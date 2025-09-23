@@ -110,23 +110,26 @@ export const particlesVisualizer: VisualizerSetup = {
     };
   },
 
-  animate: (objects) => {
-    const audioData = getAudioData();
-    const frequencyRanges = getFrequencyRanges();
-    const time = Date.now() * 0.001;
-    
-    // Calculate average audio level
-    const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
-    
-    // Update shader uniforms
-    objects.material.uniforms.time.value = time;
-    objects.material.uniforms.audioLevel.value = audioLevel;
-    objects.material.uniforms.bassLevel.value = frequencyRanges.bass;
-    objects.material.uniforms.midLevel.value = frequencyRanges.mid;
-    objects.material.uniforms.trebleLevel.value = frequencyRanges.treble;
-    
-    // Rotate the particle system
-    objects.particles.rotation.y = time * 0.1;
-    objects.particles.rotation.x = Math.sin(time * 0.05) * 0.2;
-  }
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const audioData = getAudioData();
+      const frequencyRanges = getFrequencyRanges();
+      const time = Date.now() * 0.001;
+      
+      // Calculate average audio level
+      const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      
+      // Update shader uniforms
+      objects.material.uniforms.time.value = time;
+      objects.material.uniforms.audioLevel.value = audioLevel;
+      objects.material.uniforms.bassLevel.value = frequencyRanges.bass;
+      objects.material.uniforms.midLevel.value = frequencyRanges.mid;
+      objects.material.uniforms.trebleLevel.value = frequencyRanges.treble;
+      
+      // Rotate the particle system
+      objects.particles.rotation.y = time * 0.1;
+      objects.particles.rotation.x = Math.sin(time * 0.05) * 0.2;
+    }
+  }]
 };

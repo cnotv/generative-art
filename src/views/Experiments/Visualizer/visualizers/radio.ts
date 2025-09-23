@@ -28,14 +28,18 @@ export const boxVisualizer: VisualizerSetup = {
     return { model };
   },
 
-  animate: ({ model }: Record<string, AnimatedComplexModel>) => {
-    if (!model) return;
-    const audioData = getAudioData();
-    const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-    const average = sum / audioData.length;
-    const side = average * 2 + 3;
-    model.mesh.scale.x = side;
-    model.mesh.scale.y = side;
-    model.mesh.scale.z = side;
-  }
+  getTimeline: (getObjects: () => Record<string, any>) => [{
+    action: () => {
+      const objects = getObjects();
+      const { model } = objects;
+      if (!model) return;
+      const audioData = getAudioData();
+      const sum = audioData.reduce((a: number, b: number) => a + b, 0);
+      const average = sum / audioData.length;
+      const side = average * 2 + 3;
+      model.mesh.scale.x = side;
+      model.mesh.scale.y = side;
+      model.mesh.scale.z = side;
+    }
+  }]
 };

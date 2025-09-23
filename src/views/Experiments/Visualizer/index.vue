@@ -181,16 +181,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());
           },
-          timeline: [
-            ...(visualizer.value?.timeline || []),
-            {
-              action: () => {
-                if (visualizer.value && visualizerObjects.value) {
-                  visualizer.value.animate(visualizerObjects.value);
-                }
-              },
-            },
-          ],
+          timeline: visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [],
         });
       },
     });
