@@ -49,20 +49,29 @@ export const circularSpectrumVisualizer: VisualizerSetup = {
 
     const audioData = getAudioData();
 
+    // Set height
     bars.forEach((bar: THREE.Mesh, index: number) => {
       const height = 1 + (audioData[index] || 0) * config.maxHeight;
       bar.scale.y = height;
       bar.position.y = height / 2;
     });
-
-    // Rotate the whole visualization
-    bars.forEach((bar: THREE.Mesh, index: number) => {
-      const angle = (index / config.barCount) * Math.PI * 2 + Date.now() * 0.0002;
-      const x = Math.cos(angle) * config.radius;
-      const z = Math.sin(angle) * config.radius;
-      bar.position.x = x;
-      bar.position.z = z;
-      bar.lookAt(0, bar.position.y, 0);
-    });
   },
+
+  timeline: [{
+    frequency: 200,
+    action: (objects: Record<string, any>) => {
+      const { bars } = objects;
+      if (!bars) return;
+
+      // Rotate the whole visualization
+      bars.forEach((bar: THREE.Mesh, index: number) => {
+        const angle = (index / config.barCount) * Math.PI * 2 + Date.now() * 0.0002;
+        const x = Math.cos(angle) * config.radius;
+        const z = Math.sin(angle) * config.radius;
+        bar.position.x = x;
+        bar.position.z = z;
+        bar.lookAt(0, bar.position.y, 0);
+      });
+    }
+  }]
 };

@@ -4,6 +4,7 @@ import type RAPIER from '@dimforge/rapier3d';
 export interface VisualizerSetup {
   setup: (scene: THREE.Scene, world?: RAPIER.World) => Promise<Record<string, any>> | Record<string, any>;
   animate: (objects: Record<string, any>) => void;
+  timeline?: Timeline[];
   handleClick?: (event: MouseEvent, camera: THREE.Camera, canvas: HTMLCanvasElement, visualizerObjects: Record<string, any>) => void;
   song?: number;
   name: string;
