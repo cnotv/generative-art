@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import * as THREE from "three";
@@ -20,14 +20,37 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const audioElement = ref();
 const route = useRoute();
-const currentVisualizer = ref('circular-waves'); // Use first available visualizer
+const router = useRouter();
+
+// Get available visualizer names first
+const availableVisualizerNames = getVisualizerNames();
+
+// Initialize currentVisualizer based on query params with fallbacks
+const initializeVisualizer = () => {
+  // 1. Try to get from query parameter
+  const queryVisualizer = route.query.style as string;
+  if (queryVisualizer && availableVisualizerNames.includes(queryVisualizer)) {
+    return queryVisualizer;
+  }
+
+  // 2. Fallback to default
+  const defaultVisualizer = 'circular-waves';
+  if (availableVisualizerNames.includes(defaultVisualizer)) {
+    return defaultVisualizer;
+  }
+
+  // 3. Fallback to first available visualizer
+  return availableVisualizerNames[0] || defaultVisualizer;
+};
+
+const currentVisualizer = ref(initializeVisualizer());
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
 
-// Get available visualizer names
+// Get available visualizer names for dropdown
 const availableVisualizers = computed(() => {
-  return getVisualizerNames().map(name => ({
+  return availableVisualizerNames.map(name => ({
     value: name,
     label: name.charAt(0).toUpperCase() + name.slice(1) // Capitalize first letter
   }));
@@ -66,10 +89,31 @@ const songs = [
   }
 ];
 
-// Watch for visualizer changes
+// Watch for visualizer changes and update URL
 watch(currentVisualizer, (newVisualizer) => {
+  // Update URL query parameter
+  router.push({
+    query: {
+      ...route.query,
+      style: newVisualizer
+    }
+  });
+
+  // Switch visualizer
   if (switchVisualizerFunction) {
     switchVisualizerFunction(newVisualizer);
+  }
+});
+
+// Watch for route changes (browser back/forward) and update visualizer
+watch(() => route.query.style, (newQueryVisualizer) => {
+  const queryVisualizer = newQueryVisualizer as string;
+  if (
+    queryVisualizer &&
+    availableVisualizerNames.includes(queryVisualizer) &&
+    queryVisualizer !== currentVisualizer.value
+  ) {
+    currentVisualizer.value = queryVisualizer;
   }
 });
 
@@ -150,16 +194,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           }
         };
 
-        // Function to switch visualizers
         const switchVisualizer = async (name: string) => {
-          // Clear existing visualizer objects
           clearVisualizerObjects(visualizer.value);
           scene.background = new THREE.Color(0x87CEEB); // Default sky blue background
-
-          // Get new visualizer
           visualizer.value = getVisualizer(name);
-
-          // Reset camera position based on new visualizer
           resetCamera(visualizer.value);
 
           if (visualizer.value) {
@@ -170,19 +208,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
           // Setup click/touch handlers for the new visualizer
           setupVisualizerClickHandlers(visualizer.value, camera, canvas, visualizerObjects.value);
+
+          // Reset and update the animation with new timeline
+          animate({
+            beforeTimeline: () => {
+              bindAnimatedElements(elements, world, getDelta());
+            },
+            timeline: visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [],
+          });
         };
 
         // Store the switch function for the watcher
         switchVisualizerFunction = switchVisualizer;
 
         // Initialize with default visualizer
-        switchVisualizer(currentVisualizer.value);
-        animate({
-          beforeTimeline: () => {
-            bindAnimatedElements(elements, world, getDelta());
-          },
-          timeline: visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [],
-        });
+        await switchVisualizer(currentVisualizer.value);
       },
     });
   };

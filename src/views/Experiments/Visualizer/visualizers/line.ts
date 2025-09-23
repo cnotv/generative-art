@@ -53,11 +53,6 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
       const geometry = line.geometry as THREE.BufferGeometry;
       geometry.setFromPoints(points);
       geometry.attributes.position.needsUpdate = true;
-
-      // Update color based on audio intensity
-      const intensity = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
-      const hue = (Date.now() * 0.001) % 1;
-      (line.material as THREE.LineBasicMaterial).color.setHSL(hue, 1, 0.5 + intensity * 0.5);
     }
   }]
 };

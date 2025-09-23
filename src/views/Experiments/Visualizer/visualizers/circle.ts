@@ -67,12 +67,6 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
       // Update geometry
       line.geometry.setFromPoints(points);
       line.geometry.attributes.position.needsUpdate = true;
-
-      // Animate color based on average audio level
-      const avgAudio = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
-      const material = line.material as THREE.LineBasicMaterial;
-      const hue = (Date.now() * 0.001 + avgAudio) % 1;
-      material.color.setHSL(hue, 1, 0.5 + avgAudio * 0.5);
     }
   }],
 };
