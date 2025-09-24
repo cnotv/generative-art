@@ -2,13 +2,14 @@
   <div class="minimal-player">
     <span class="minimal-player__song">{{ songTitle }}</span>
     <span class="minimal-player__separator"> BY </span>
-    <a 
+    <a
       :href="artistLink"
       target="_blank"
       rel="noopener noreferrer"
       class="minimal-player__artist"
-    >{{ artist }}</a>
-    
+      >{{ artist }}</a
+    >
+
     <!-- Integrated custom audio player when showAudio is true -->
     <div v-if="showAudio" class="minimal-player__audio">
       <!-- Hidden audio element for control -->
@@ -25,41 +26,38 @@
         @pause="isPlaying = false"
         @play="isPlaying = true"
       />
-      
+
       <!-- Custom controls -->
       <div class="player-controls">
         <!-- Play/Pause button -->
-        <button 
-          @click="togglePlayPause" 
+        <button
+          @click="togglePlayPause"
           class="control-button play-button"
           :title="isPlaying ? 'Pause' : 'Play'"
         >
-          {{ isPlaying ? '⏸' : '▶' }}
+          {{ isPlaying ? "⏸" : "▶" }}
         </button>
-        
+
         <!-- Progress bar -->
         <div class="progress-container" @click="seek">
           <div class="progress-bar">
-            <div 
-              class="progress-fill" 
-              :style="{ width: progressPercent + '%' }"
-            ></div>
+            <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
           </div>
         </div>
-        
+
         <!-- Time display -->
         <span class="time-display">
           {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
         </span>
-        
+
         <!-- Volume control -->
         <div class="volume-container">
-          <button 
-            @click="toggleMute" 
+          <button
+            @click="toggleMute"
             class="control-button volume-button"
             :title="isMuted ? 'Unmute' : 'Mute'"
           >
-            {{ isMuted ? '🔇' : '🔊' }}
+            {{ isMuted ? "🔇" : "🔊" }}
           </button>
           <input
             type="range"
@@ -77,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from "vue";
 
 interface Props {
   songTitle: string;
@@ -89,7 +87,7 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
   showAudio: false,
-  audioSrc: ''
+  audioSrc: "",
 });
 
 const emit = defineEmits<{
@@ -107,13 +105,13 @@ const progressPercent = ref(0);
 
 const handleLoadedData = () => {
   if (audioElement.value) {
-    emit('audioReady', audioElement.value);
+    emit("audioReady", audioElement.value);
   }
 };
 
 const togglePlayPause = () => {
   if (!audioElement.value) return;
-  
+
   if (isPlaying.value) {
     audioElement.value.pause();
   } else {
@@ -123,41 +121,40 @@ const togglePlayPause = () => {
 
 const updateTime = () => {
   if (!audioElement.value) return;
-  
+
   currentTime.value = audioElement.value.currentTime;
-  progressPercent.value = duration.value > 0 
-    ? (currentTime.value / duration.value) * 100 
-    : 0;
+  progressPercent.value =
+    duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0;
 };
 
 const updateDuration = () => {
   if (!audioElement.value) return;
-  
+
   duration.value = audioElement.value.duration;
 };
 
 const seek = (event: MouseEvent) => {
   if (!audioElement.value) return;
-  
+
   const progressContainer = event.currentTarget as HTMLElement;
   const rect = progressContainer.getBoundingClientRect();
   const clickX = event.clientX - rect.left;
   const percent = clickX / rect.width;
   const newTime = percent * duration.value;
-  
+
   audioElement.value.currentTime = newTime;
 };
 
 const toggleMute = () => {
   if (!audioElement.value) return;
-  
+
   isMuted.value = !isMuted.value;
   audioElement.value.muted = isMuted.value;
 };
 
 const updateVolume = () => {
   if (!audioElement.value) return;
-  
+
   audioElement.value.volume = volume.value;
   if (volume.value === 0) {
     isMuted.value = true;
@@ -169,11 +166,11 @@ const updateVolume = () => {
 };
 
 const formatTime = (seconds: number): string => {
-  if (isNaN(seconds)) return '0:00';
-  
+  if (isNaN(seconds)) return "0:00";
+
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
 const handleEnded = () => {
@@ -194,9 +191,6 @@ onMounted(() => {
 
 <style scoped>
 .minimal-player {
-  position: absolute;
-  top: 20px;
-  left: 60px;
   z-index: 1000;
   font-weight: 900; /* Boldest possible */
   color: black;

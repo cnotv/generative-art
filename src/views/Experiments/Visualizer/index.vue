@@ -321,55 +321,56 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 
-  <!-- Minimal player on top left (only show when showAudioInMinimal is true) -->
-  <MinimalPlayer
-    v-if="showAudioInMinimal"
-    :song-title="songs[currentSong].title"
-    :artist="songs[currentSong].artist"
-    :artist-link="songs[currentSong].link"
-    :show-audio="true"
-    :audio-src="songs[currentSong].src"
-    @audio-ready="handleAudioReady"
-  />
-
-  <!-- Custom Visualizer selector -->
-  <div class="visualizer" ref="dropdownRef">
-    <button 
-      @click="toggleDropdown" 
-      class="visualizer__button"
-      :class="{ 'visualizer__button--open': isDropdownOpen }"
-    >
-      {{ currentVisualizerLabel }}
-      <span class="visualizer__arrow">{{ isDropdownOpen ? '▲' : '▼' }}</span>
-    </button>
-    
-    <div v-if="isDropdownOpen" class="visualizer__dropdown">
-      <button
-        v-for="visualizer in availableVisualizers"
-        :key="visualizer.value"
-        @click="selectVisualizer(visualizer.value)"
-        class="visualizer__option"
-        :class="{ 'visualizer__option--active': visualizer.value === currentVisualizer }"
-      >
-        {{ visualizer.label }}
-      </button>
-    </div>
-  </div>
-
-  <!-- Player style toggle button -->
-  <div class="player-toggle">
+  <div class="header">
+    <!-- Player style toggle button -->
     <button
       @click="togglePlayerStyle"
-      class="player-toggle__button"
+      class="player-toggle"
       :title="
         showAudioInMinimal ? 'Switch to Contrast Player' : 'Switch to Minimal Player'
       "
     >
       {{ showAudioInMinimal ? "CONTRAST" : "MINIMAL" }}
     </button>
+
+    <MinimalPlayer
+      v-if="showAudioInMinimal"
+      :song-title="songs[currentSong].title"
+      :artist="songs[currentSong].artist"
+      :artist-link="songs[currentSong].link"
+      :show-audio="true"
+      :audio-src="songs[currentSong].src"
+      @audio-ready="handleAudioReady"
+    />
+
+    <!-- Custom Visualizer selector -->
+    <div class="visualizer" ref="dropdownRef">
+      <button
+        @click="toggleDropdown"
+        class="visualizer__button"
+        :class="{ 'visualizer__button--open': isDropdownOpen }"
+      >
+        {{ currentVisualizerLabel }}
+        <span class="visualizer__arrow">{{ isDropdownOpen ? "▲" : "▼" }}</span>
+      </button>
+
+      <div v-if="isDropdownOpen" class="visualizer__dropdown">
+        <button
+          v-for="visualizer in availableVisualizers"
+          :key="visualizer.value"
+          @click="selectVisualizer(visualizer.value)"
+          class="visualizer__option"
+          :class="{
+            'visualizer__option--active': visualizer.value === currentVisualizer,
+          }"
+        >
+          {{ visualizer.label }}
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- Bottom contrast player (only show when showAudioInMinimal is false) -->
+  <!-- Contrast player -->
   <ContrastPlayer
     v-if="!showAudioInMinimal"
     :song-title="songs[currentSong].title"
@@ -382,12 +383,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </template>
 
 <style scoped>
-/* Custom Visualizer Dropdown */
-.visualizer {
+.header {
   position: absolute;
-  top: 20px;
-  right: 60px;
-  z-index: 1000;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
 }
 
 .visualizer__button {
@@ -470,14 +474,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
 /* Player Toggle */
 .player-toggle {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-.player-toggle__button {
   background: transparent;
   color: black;
   border: none;
@@ -491,11 +487,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   transition: opacity 0.2s ease;
 }
 
-.player-toggle__button:focus {
+.player-toggle:focus {
   outline: none;
 }
 
-.player-toggle__button:hover {
+.player-toggle:hover {
   opacity: 0.7;
 }
 </style>
