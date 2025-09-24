@@ -15,10 +15,12 @@ import {
   setupVisualizerClickHandlers,
   clearVisualizerClickHandlers
 } from "./visualizer";
+import MinimalPlayer from "./components/MinimalPlayer.vue";
+import ContrastPlayer from "./components/ContrastPlayer.vue";
 
 const statsEl = ref(null);
 const canvas = ref(null);
-const audioElement = ref();
+const audioElement = ref<HTMLAudioElement>();
 const route = useRoute();
 const router = useRouter();
 
@@ -48,6 +50,22 @@ const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
 let sceneCleanup: (() => void) | null = null; // Store cleanup function
+
+// Initialize player type from query params
+const initializePlayerType = () => {
+  const queryPlayer = route.query.player as string;
+  if (queryPlayer === 'contrast') {
+    return false; // false = contrast player
+  }
+  return true; // true = minimal player (default)
+};
+
+// Control which player shows audio (true = minimal, false = contrast)
+const showAudioInMinimal = ref(initializePlayerType());
+
+// Custom dropdown state
+const isDropdownOpen = ref(false);
+const dropdownRef = ref<HTMLElement>();
 
 // Get available visualizer names for dropdown
 const availableVisualizers = computed(() => {
@@ -118,7 +136,58 @@ watch(() => route.query.style, (newQueryVisualizer) => {
   }
 });
 
+// Watch for route changes (browser back/forward) and update player type
+watch(() => route.query.player, (newQueryPlayer) => {
+  const queryPlayer = newQueryPlayer as string;
+  const shouldShowMinimal = queryPlayer !== 'contrast';
+
+  if (shouldShowMinimal !== showAudioInMinimal.value) {
+    showAudioInMinimal.value = shouldShowMinimal;
+  }
+});
+
 let initInstance: () => void;
+
+const handleAudioReady = (element: HTMLAudioElement) => {
+  audioElement.value = element;
+  if (audioElement.value) {
+    setupAudio(audioElement.value);
+  }
+};
+
+const togglePlayerStyle = () => {
+  showAudioInMinimal.value = !showAudioInMinimal.value;
+
+  // Update URL query parameter
+  router.push({
+    query: {
+      ...route.query,
+      player: showAudioInMinimal.value ? 'minimal' : 'contrast'
+    }
+  });
+};
+
+// Custom dropdown functions
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value;
+};
+
+const selectVisualizer = (visualizerValue: string) => {
+  currentVisualizer.value = visualizerValue;
+  isDropdownOpen.value = false;
+};
+
+const closeDropdown = (event: Event) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    isDropdownOpen.value = false;
+  }
+};
+
+// Get current visualizer label for display
+const currentVisualizerLabel = computed(() => {
+  const current = availableVisualizers.value.find(v => v.value === currentVisualizer.value);
+  return current?.label || currentVisualizer.value;
+});
 
 onMounted(() => {
   initInstance = () => {
@@ -130,11 +199,19 @@ onMounted(() => {
 
   initInstance();
   window.addEventListener("resize", initInstance);
-  audioElement.value.play().catch();
+  document.addEventListener("click", closeDropdown);
+
+  // Auto-play audio when mounted
+  setTimeout(() => {
+    if (audioElement.value) {
+      audioElement.value.play().catch();
+    }
+  }, 100);
 });
 
 onUnmounted(() => {
   window.removeEventListener("resize", initInstance);
+  document.removeEventListener("click", closeDropdown);
   clearVisualizerClickHandlers();
   cleanup();
   // Also cleanup the scene animation
@@ -154,7 +231,9 @@ const config = {
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
-  setupAudio(audioElement.value);
+  if (audioElement.value) {
+    setupAudio(audioElement.value);
+  }
 
   const createScene = async () => {
     const elements = [] as any[];
@@ -242,121 +321,181 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 
-  <!-- Visualizer selector -->
-  <div class="visualizer">
-    <select class="visualizer__select" v-model="currentVisualizer">
-      <option
+  <!-- Minimal player on top left (only show when showAudioInMinimal is true) -->
+  <MinimalPlayer
+    v-if="showAudioInMinimal"
+    :song-title="songs[currentSong].title"
+    :artist="songs[currentSong].artist"
+    :artist-link="songs[currentSong].link"
+    :show-audio="true"
+    :audio-src="songs[currentSong].src"
+    @audio-ready="handleAudioReady"
+  />
+
+  <!-- Custom Visualizer selector -->
+  <div class="visualizer" ref="dropdownRef">
+    <button 
+      @click="toggleDropdown" 
+      class="visualizer__button"
+      :class="{ 'visualizer__button--open': isDropdownOpen }"
+    >
+      {{ currentVisualizerLabel }}
+      <span class="visualizer__arrow">{{ isDropdownOpen ? '▲' : '▼' }}</span>
+    </button>
+    
+    <div v-if="isDropdownOpen" class="visualizer__dropdown">
+      <button
         v-for="visualizer in availableVisualizers"
         :key="visualizer.value"
-        :value="visualizer.value"
+        @click="selectVisualizer(visualizer.value)"
+        class="visualizer__option"
+        :class="{ 'visualizer__option--active': visualizer.value === currentVisualizer }"
       >
         {{ visualizer.label }}
-      </option>
-    </select>
-  </div>
-
-  <!-- Bottom section with audio player and credits -->
-  <div class="player">
-    <div class="player__container">
-      <div class="player__audio-wrapper">
-        <audio
-          ref="audioElement"
-          class="player__audio"
-          controls
-          loop
-          autoplay
-          crossorigin="anonymous"
-          :src="songs[currentSong].src"
-        />
-      </div>
-      <div class="player__credits">
-        <div class="player__song-title">{{ songs[currentSong].title }}</div>
-        <div class="player__artist">
-          by
-          <a
-            :href="songs[currentSong].link"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="player__link"
-            >{{ songs[currentSong].artist }}</a
-          >
-        </div>
-      </div>
+      </button>
     </div>
   </div>
+
+  <!-- Player style toggle button -->
+  <div class="player-toggle">
+    <button
+      @click="togglePlayerStyle"
+      class="player-toggle__button"
+      :title="
+        showAudioInMinimal ? 'Switch to Contrast Player' : 'Switch to Minimal Player'
+      "
+    >
+      {{ showAudioInMinimal ? "CONTRAST" : "MINIMAL" }}
+    </button>
+  </div>
+
+  <!-- Bottom contrast player (only show when showAudioInMinimal is false) -->
+  <ContrastPlayer
+    v-if="!showAudioInMinimal"
+    :song-title="songs[currentSong].title"
+    :artist="songs[currentSong].artist"
+    :artist-link="songs[currentSong].link"
+    :show-audio="true"
+    :audio-src="songs[currentSong].src"
+    @audio-ready="handleAudioReady"
+  />
 </template>
 
 <style scoped>
-/* Visualizer Block */
+/* Custom Visualizer Dropdown */
 .visualizer {
   position: absolute;
   top: 20px;
-  right: 20px;
+  right: 60px;
   z-index: 1000;
 }
 
-.visualizer__select {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  border: 1px solid #444;
-  border-radius: 5px;
-  padding: 8px 12px;
+.visualizer__button {
+  background: transparent;
+  color: black;
+  border: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 white;
   font-size: 14px;
   cursor: pointer;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s ease;
 }
 
-.visualizer__select:focus {
+.visualizer__button:focus {
   outline: none;
-  border-color: #666;
 }
 
-/* Player Block */
-.player {
+.visualizer__button:hover {
+  opacity: 0.7;
+}
+
+.visualizer__arrow {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.visualizer__button--open .visualizer__arrow {
+  transform: rotate(180deg);
+}
+
+.visualizer__dropdown {
   position: absolute;
-  bottom: 20px;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.visualizer__option {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: black;
+  border: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-shadow: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-family: Arial, sans-serif;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.visualizer__option:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.visualizer__option--active {
+  background: rgba(0, 0, 0, 0.15);
+  font-weight: 900;
+}
+
+.visualizer__option:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Player Toggle */
+.player-toggle {
+  position: absolute;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
 }
 
-.player__container {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 20px;
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
-}
-
-.player__audio-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
-.player__audio {
-  width: 300px;
-  height: 40px;
-}
-
-.player__credits {
-  text-align: center;
-  color: white;
-  font-family: Arial, sans-serif;
-}
-
-.player__song-title {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.player__artist {
+.player-toggle__button {
+  background: transparent;
+  color: black;
+  border: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 white;
   font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  transition: opacity 0.2s ease;
 }
 
-.player__link {
-  color: #888;
+.player-toggle__button:focus {
+  outline: none;
 }
 
-.player__link:hover {
-  color: #aaa;
+.player-toggle__button:hover {
+  opacity: 0.7;
 }
 </style>

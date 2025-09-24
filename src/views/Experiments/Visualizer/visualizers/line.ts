@@ -5,8 +5,8 @@ import type { VisualizerSetup } from "../visualizer";
 const config = {
   barCount: 30,
   width: 40,
-  height: 20,
-  lineWidth: 2,
+  height: 5,
+  lineWidth: 10,
 };
 
 export const lineSpectrumVisualizer: VisualizerSetup = {

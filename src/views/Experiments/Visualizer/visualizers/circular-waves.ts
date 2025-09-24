@@ -46,7 +46,6 @@ export const circularSpectrumVisualizer: VisualizerSetup = {
   getTimeline: (getObjects: () => Record<string, any>) => [{
     action: () => {
       const { bars } = getObjects();
-      console.log(bars)
       if (!bars) return;
 
       const audioData = getAudioData();
