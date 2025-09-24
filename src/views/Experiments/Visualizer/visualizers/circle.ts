@@ -4,9 +4,9 @@ import type { VisualizerSetup } from "../visualizer";
 
 const config = {
   barCount: 32,
-  radius: 12,
+  radius: 6,
   maxRadius: 8,
-  lineWidth: 2,
+  lineWidth: 0.1, // Tube radius
 };
 
 export const lineSpectrumVisualizer: VisualizerSetup = {
@@ -17,38 +17,40 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    // Create line geometry for circular spectrum
+    // Create points for the circular spectrum
     const points: THREE.Vector3[] = [];
     for (let i = 0; i < config.barCount; i++) {
-      // Arrange points in a circle
       const angle = (i / config.barCount) * Math.PI * 2;
       const x = Math.cos(angle) * config.radius;
       const y = Math.sin(angle) * config.radius;
       points.push(new THREE.Vector3(x, y, 0));
     }
-
     // Close the circle by adding the first point again
     points.push(points[0].clone());
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-      linewidth: config.lineWidth,
+    // Create curve from points
+    const curve = new THREE.CatmullRomCurve3(points, true); // closed curve
+    // Create tube geometry for thick line
+    const geometry = new THREE.TubeGeometry(curve, config.barCount, config.lineWidth, 8, true);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      wireframe: false 
     });
 
-    const line = new THREE.Line(geometry, material);
+    const line = new THREE.Mesh(geometry, material);
     scene.add(line);
 
-    return { line, points };
+    return { line, points, curve };
   },
 
   getTimeline: (getObjects: () => Record<string, any>) => [{
     action: () => {
       const objects = getObjects();
-      const { line, points } = objects;
-      if (!line || !points) return;
+      const { line, points, curve } = objects;
+      if (!line || !points || !curve) return;
 
       const audioData = getAudioData();
-      
+
       // Update circular points based on audio data
       for (let i = 0; i < config.barCount && i < audioData.length; i++) {
         const angle = (i / config.barCount) * Math.PI * 2;
@@ -64,9 +66,12 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
         points[config.barCount].copy(points[0]);
       }
 
-      // Update geometry
-      line.geometry.setFromPoints(points);
-      line.geometry.attributes.position.needsUpdate = true;
+      // Update curve with new points
+      curve.points = points;
+      // Recreate tube geometry with updated curve
+      const newGeometry = new THREE.TubeGeometry(curve, config.barCount, config.lineWidth, 8, true);
+      line.geometry.dispose();
+      line.geometry = newGeometry;
     }
   }],
 };

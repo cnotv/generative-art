@@ -6,7 +6,7 @@ const config = {
   barCount: 30,
   width: 40,
   height: 5,
-  lineWidth: 10,
+  lineWidth: 0.1, // Now controls tube radius instead
 };
 
 export const lineSpectrumVisualizer: VisualizerSetup = {
@@ -17,29 +17,34 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    // Create line geometry for spectrum
+    // Create points for the spectrum line
     const points: THREE.Vector3[] = [];
     for (let i = 0; i < config.barCount; i++) {
       const x = (i / (config.barCount - 1)) * config.width - config.width / 2;
       points.push(new THREE.Vector3(x, 0, 0));
     }
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-      linewidth: config.lineWidth,
+    // Create curve from points
+    const curve = new THREE.CatmullRomCurve3(points);
+    
+    // Create tube geometry for thick line
+    const geometry = new THREE.TubeGeometry(curve, config.barCount - 1, config.lineWidth, 8, false);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      wireframe: false 
     });
 
-    const line = new THREE.Line(geometry, material);
+    const line = new THREE.Mesh(geometry, material);
     scene.add(line);
 
-    return { line, points };
+    return { line, points, curve };
   },
 
   getTimeline: (getObjects: () => Record<string, any>) => [{
     action: () => {
       const objects = getObjects();
-      const { line, points } = objects;
-      if (!line || !points) return;
+      const { line, points, curve } = objects;
+      if (!line || !points || !curve) return;
 
       const audioData = getAudioData();
 
@@ -49,10 +54,13 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
         points[i].y = height;
       }
 
-      // Update line geometry
-      const geometry = line.geometry as THREE.BufferGeometry;
-      geometry.setFromPoints(points);
-      geometry.attributes.position.needsUpdate = true;
+      // Update curve with new points
+      curve.points = points;
+      
+      // Recreate tube geometry with updated curve
+      const newGeometry = new THREE.TubeGeometry(curve, config.barCount - 1, config.lineWidth, 8, false);
+      line.geometry.dispose(); // Clean up old geometry
+      line.geometry = newGeometry;
     }
   }]
 };
