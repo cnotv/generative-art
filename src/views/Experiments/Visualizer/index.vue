@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 import { getTools } from "@/utils/threeJs";
 import { bindAnimatedElements } from "@/utils/animation";
-import { setupAudio, cleanup } from "./audio";
+import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from "./audio";
 import {
   getVisualizer,
   getVisualizerNames,
@@ -62,6 +62,9 @@ const initializePlayerType = () => {
 
 // Control which player shows audio (true = minimal, false = contrast)
 const showAudioInMinimal = ref(initializePlayerType());
+
+// Audio source control
+const currentAudioSource = ref<'song' | 'microphone'>('song');
 
 // Custom dropdown state
 const isDropdownOpen = ref(false);
@@ -165,6 +168,17 @@ const togglePlayerStyle = () => {
       player: showAudioInMinimal.value ? 'minimal' : 'contrast'
     }
   });
+};
+
+// Audio source toggle function
+const handleAudioSourceToggle = async () => {
+  const success = await toggleAudioSource();
+  if (success) {
+    currentAudioSource.value = getAudioSource();
+    console.log(`Switched to ${currentAudioSource.value} input`);
+  } else {
+    console.error('Failed to toggle audio source');
+  }
 };
 
 // Custom dropdown functions
@@ -333,6 +347,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       {{ showAudioInMinimal ? "CONTRAST" : "MINIMAL" }}
     </button>
 
+    <!-- Audio source toggle button -->
+    <button
+      @click="handleAudioSourceToggle"
+      class="audio-source-toggle"
+      :title="currentAudioSource === 'song' ? 'Switch to Microphone Input' : 'Switch to Song Playback'"
+    >
+      {{ currentAudioSource === 'song' ? "🎵" : "🎤" }}
+    </button>
+
     <MinimalPlayer
       v-if="showAudioInMinimal"
       :song-title="songs[currentSong].title"
@@ -493,5 +516,27 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
 .player-toggle:hover {
   opacity: 0.7;
+}
+
+/* Audio Source Toggle */
+.audio-source-toggle {
+  background: transparent;
+  color: black;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.2s ease;
+  text-shadow: 1px 1px 0 white;
+  border-radius: 4px;
+}
+
+.audio-source-toggle:focus {
+  outline: none;
+}
+
+.audio-source-toggle:hover {
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.1);
 }
 </style>
