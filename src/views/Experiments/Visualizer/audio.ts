@@ -3,14 +3,19 @@ let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let audioElement: HTMLAudioElement | null = null;
 let microphoneStream: MediaStream | null = null;
+let selectedAudioStream: MediaStream | null = null;
 let songSource: MediaElementAudioSourceNode | null = null;
 let microphoneSource: MediaStreamAudioSourceNode | null = null;
+let selectedAudioSource: MediaStreamAudioSourceNode | null = null;
 let isInitialized = false;
 const barCount = 32;
 
 // Audio source settings
-let isUsingMicrophone = false;
+type AudioSourceType = 'song' | 'microphone' | 'selected-output';
+let currentAudioSourceType: AudioSourceType = 'song';
 let isMicrophoneAvailable = false;
+let isSelectedAudioAvailable = false;
+let availableAudioDevices: MediaDeviceInfo[] = [];
 
 // Initialize Web Audio API
 const initializeAudioContext = (): void => {
@@ -41,14 +46,19 @@ const connectAudioSource = (): void => {
   try {
     if (songSource) songSource.disconnect();
     if (microphoneSource) microphoneSource.disconnect();
+    if (selectedAudioSource) selectedAudioSource.disconnect();
   } catch (e) {
     // Sources may not be connected yet
   }
 
-  if (isUsingMicrophone && microphoneSource) {
+  if (currentAudioSourceType === 'microphone' && microphoneSource) {
     // Connect microphone to analyser (no destination for privacy)
     microphoneSource.connect(analyser);
     console.log('Switched to microphone input');
+  } else if (currentAudioSourceType === 'selected-output' && selectedAudioSource) {
+    // Connect selected audio output to analyser (no destination for privacy)
+    selectedAudioSource.connect(analyser);
+    console.log('Switched to selected audio output');
   } else if (songSource) {
     // Connect song to both analyser and speakers
     songSource.connect(analyser);
@@ -208,41 +218,151 @@ const initializeMicrophone = async (): Promise<boolean> => {
   }
 };
 
-// Toggle between song and microphone input
+// Get available audio devices
+export const getAvailableAudioDevices = async (): Promise<MediaDeviceInfo[]> => {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    availableAudioDevices = devices.filter(device => device.kind === 'audioinput');
+    return availableAudioDevices;
+  } catch (error) {
+    console.error('Failed to get audio devices:', error);
+    return [];
+  }
+};
+
+// Initialize selected audio output
+const initializeSelectedAudio = async (deviceId?: string): Promise<boolean> => {
+  try {
+    if (!audioContext) {
+      console.error('Audio context not initialized');
+      return false;
+    }
+
+    const constraints: MediaStreamConstraints = {
+      audio: deviceId ? { deviceId: { exact: deviceId } } : true
+    };
+
+    selectedAudioStream = await navigator.mediaDevices.getUserMedia(constraints);
+    selectedAudioSource = audioContext.createMediaStreamSource(selectedAudioStream);
+    isSelectedAudioAvailable = true;
+    console.log('Selected audio output initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize selected audio output:', error);
+    isSelectedAudioAvailable = false;
+    return false;
+  }
+};
+
+// Switch to song mode
+const switchToSong = async (): Promise<boolean> => {
+  currentAudioSourceType = 'song';
+  if (audioElement) {
+    await audioElement.play().catch(console.error);
+  }
+  connectAudioSource();
+  return true;
+};
+
+// Switch to microphone mode
+const switchToMicrophone = async (): Promise<boolean> => {
+  if (!isMicrophoneAvailable) {
+    const micInitialized = await initializeMicrophone();
+    if (!micInitialized) {
+      return false;
+    }
+  }
+  
+  currentAudioSourceType = 'microphone';
+  if (audioElement) {
+    audioElement.pause();
+  }
+  connectAudioSource();
+  return true;
+};
+
+// Switch to selected audio output mode
+const switchToSelectedOutput = async (): Promise<boolean> => {
+  if (!isSelectedAudioAvailable) {
+    const audioInitialized = await initializeSelectedAudio();
+    if (!audioInitialized) {
+      return false;
+    }
+  }
+  
+  currentAudioSourceType = 'selected-output';
+  if (audioElement) {
+    audioElement.pause();
+  }
+  connectAudioSource();
+  return true;
+};
+
+// Toggle between song, microphone, and selected audio output
 export const toggleAudioSource = async (): Promise<boolean> => {
   if (!audioContext) {
     console.error('Audio context not initialized');
     return false;
   }
 
-  if (isUsingMicrophone) {
-    // Switch to song
-    isUsingMicrophone = false;
-    if (audioElement) {
-      audioElement.play().catch(console.error);
-    }
-  } else {
-    // Switch to microphone
-    if (!isMicrophoneAvailable) {
-      const micInitialized = await initializeMicrophone();
-      if (!micInitialized) {
-        return false;
-      }
+  // Cycle through the three modes using switch
+  switch (currentAudioSourceType) {
+    case 'song': {
+      return await switchToMicrophone();
     }
     
-    isUsingMicrophone = true;
-    if (audioElement) {
-      audioElement.pause();
+    case 'microphone': {
+      const success = await switchToSelectedOutput();
+      if (!success) {
+        // If selected audio fails, fall back to song
+        return await switchToSong();
+      }
+      return true;
+    }
+    
+    case 'selected-output': {
+      return await switchToSong();
+    }
+    
+    default: {
+      return await switchToSong();
     }
   }
+};
+
+// Set specific audio source
+export const setAudioSource = async (sourceType: AudioSourceType, deviceId?: string): Promise<boolean> => {
+  if (!audioContext) {
+    console.error('Audio context not initialized');
+    return false;
+  }
+
+  if (sourceType === 'microphone' && !isMicrophoneAvailable) {
+    const micInitialized = await initializeMicrophone();
+    if (!micInitialized) return false;
+  }
+
+  if (sourceType === 'selected-output') {
+    const audioInitialized = await initializeSelectedAudio(deviceId);
+    if (!audioInitialized) return false;
+  }
+
+  currentAudioSourceType = sourceType;
   
+  // Handle audio element play/pause
+  if (sourceType === 'song' && audioElement) {
+    audioElement.play().catch(console.error);
+  } else if (audioElement) {
+    audioElement.pause();
+  }
+
   connectAudioSource();
   return true;
 };
 
 // Get current audio source
-export const getAudioSource = (): 'song' | 'microphone' => {
-  return isUsingMicrophone ? 'microphone' : 'song';
+export const getAudioSource = (): AudioSourceType => {
+  return currentAudioSourceType;
 };
 
 // Check if microphone is available
@@ -258,10 +378,17 @@ export const cleanup = (): void => {
     microphoneStream = null;
   }
   
+  // Stop selected audio stream if active
+  if (selectedAudioStream) {
+    selectedAudioStream.getTracks().forEach(track => track.stop());
+    selectedAudioStream = null;
+  }
+  
   // Disconnect sources
   try {
     if (songSource) songSource.disconnect();
     if (microphoneSource) microphoneSource.disconnect();
+    if (selectedAudioSource) selectedAudioSource.disconnect();
   } catch (e) {
     // Sources may not be connected
   }
@@ -269,8 +396,11 @@ export const cleanup = (): void => {
   // Reset state
   songSource = null;
   microphoneSource = null;
-  isUsingMicrophone = false;
+  selectedAudioSource = null;
+  currentAudioSourceType = 'song';
   isMicrophoneAvailable = false;
+  isSelectedAudioAvailable = false;
+  availableAudioDevices = [];
 
   if (audioElement) {
     // Don't remove the element since it's part of the template

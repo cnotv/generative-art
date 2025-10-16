@@ -64,7 +64,7 @@ const initializePlayerType = () => {
 const showAudioInMinimal = ref(initializePlayerType());
 
 // Audio source control
-const currentAudioSource = ref<'song' | 'microphone'>('song');
+const currentAudioSource = ref<'song' | 'microphone' | 'selected-output'>('song');
 
 // Custom dropdown state
 const isDropdownOpen = ref(false);
@@ -170,6 +170,13 @@ const togglePlayerStyle = () => {
   });
 };
 
+// Audio source display constants
+const AUDIO_SOURCE_CONFIG = {
+  'song': { icon: '🎵', text: 'Song', nextTitle: 'Switch to Microphone Input' },
+  'microphone': { icon: '🎤', text: 'Mic', nextTitle: 'Switch to Selected Audio Output' },
+  'selected-output': { icon: '🔊', text: 'Audio', nextTitle: 'Switch to Song Playback' }
+} as const;
+
 // Audio source toggle function
 const handleAudioSourceToggle = async () => {
   const success = await toggleAudioSource();
@@ -179,6 +186,16 @@ const handleAudioSourceToggle = async () => {
   } else {
     console.error('Failed to toggle audio source');
   }
+};
+
+// Combined function for audio source display
+const getAudioSourceDisplay = () => {
+  const config = AUDIO_SOURCE_CONFIG[currentAudioSource.value] || AUDIO_SOURCE_CONFIG['song'];
+  return {
+    icon: config.icon,
+    text: config.text,
+    title: config.nextTitle
+  };
 };
 
 // Custom dropdown functions
@@ -351,9 +368,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     <button
       @click="handleAudioSourceToggle"
       class="audio-source-toggle"
-      :title="currentAudioSource === 'song' ? 'Switch to Microphone Input' : 'Switch to Song Playback'"
+      :title="getAudioSourceDisplay().title"
     >
-      {{ currentAudioSource === 'song' ? "🎵" : "🎤" }}
+      {{ getAudioSourceDisplay().icon }} {{ getAudioSourceDisplay().text }}
     </button>
 
     <MinimalPlayer
@@ -427,7 +444,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   font-size: 14px;
   cursor: pointer;
   padding: 0;
-  font-family: Arial, sans-serif;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -476,7 +493,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   font-size: 12px;
   cursor: pointer;
   padding: 6px 12px;
-  font-family: Arial, sans-serif;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   text-align: left;
   transition: background-color 0.2s ease;
 }
@@ -506,7 +523,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   font-size: 14px;
   cursor: pointer;
   padding: 0;
-  font-family: Arial, sans-serif;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   transition: opacity 0.2s ease;
 }
 
@@ -523,12 +540,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   background: transparent;
   color: black;
   border: none;
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 8px;
   transition: all 0.2s ease;
   text-shadow: 1px 1px 0 white;
   border-radius: 4px;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .audio-source-toggle:focus {
