@@ -186,6 +186,28 @@ export const getFrequencyRanges = (): { bass: number; mid: number; treble: numbe
   return { bass, mid, treble };
 };
 
+// Get frequency bands data for visualizers with configurable ranges
+export const getFrequencyBands = (bandConfig: {
+  [key: string]: { start: number; end: number }
+}): { [key: string]: number } => {
+  const audioData = getAudioData();
+  const result: { [key: string]: number } = {};
+
+  Object.entries(bandConfig).forEach(([bandName, config]) => {
+    const startIndex = Math.max(0, config.start);
+    const endIndex = Math.min(audioData.length - 1, config.end);
+    
+    if (startIndex <= endIndex) {
+      const bandData = audioData.slice(startIndex, endIndex + 1);
+      result[bandName] = bandData.reduce((sum, val) => sum + val, 0) / bandData.length || 0;
+    } else {
+      result[bandName] = 0;
+    }
+  });
+
+  return result;
+};
+
 // Check if audio is playing
 export const isPlaying = (): boolean => {
   return audioElement ? !audioElement.paused : false;
