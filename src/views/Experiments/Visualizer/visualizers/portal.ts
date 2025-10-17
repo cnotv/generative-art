@@ -13,9 +13,9 @@ const config = {
   segments: 64,
   ringSpacing: 4,
   frequencyBands: {
-    low: { start: 0, end: 10, color: 0x333333, position: 0, brightness: 1.5, effectIntensity: 0.8 },
-    mid: { start: 11, end: 21, color: 0x777777, position: 0, brightness: 1.0, effectIntensity: 1.2 },
-    high: { start: 22, end: 31, color: 0xbbbbbb, position: 0, brightness: 0.6, effectIntensity: 3 }
+    low: { start: 0, end: 10, color: 0x62c1e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
+    mid: { start: 11, end: 21, color: 0x62c1e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
+    high: { start: 22, end: 31, color: 0x62c1e5, position: 0, brightness: 0.6, effectIntensity: 3 }
   }
 };
 
@@ -227,19 +227,6 @@ const createFrequencyBandTorusGeometry = (
 };
 
 /**
- * Sets up basic scene lighting with ambient and directional lights
- * Creates foundational lighting that illuminates the geometry and provides depth
- * @param scene - Three.js scene to add lights to
- */
-const setupSceneLighting = (scene: THREE.Scene): void => {
-  const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
-  scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  directionalLight.position.set(10, 10, 5);
-  scene.add(directionalLight);
-};
-
-/**
  * Creates background elements like planes for scene depth and atmosphere
  * Adds geometric elements that react to audio and provide visual context
  * @param scene - Three.js scene to add background elements to
@@ -248,10 +235,13 @@ const setupSceneLighting = (scene: THREE.Scene): void => {
 const createBackgroundElements = (scene: THREE.Scene): THREE.Mesh[] => {
   const backgroundElements: THREE.Mesh[] = [];
   const planeGeometry = new THREE.PlaneGeometry(300, 300);
-  const planeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x000000,
-    roughness: 0.9,
-    metalness: 0.8,
+  const planeMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xa0d9ef,
+    transmission: 0.6,
+    roughness: 0,
+    opacity: 1,
+    metalness: 0.7,
+    reflectivity: 2,
   });
   const backPlane = new THREE.Mesh(planeGeometry, planeMaterial);
   backPlane.position.set(0, 0, -5);
@@ -279,31 +269,6 @@ const createFrequencyBandMaterial = (bandConfig: typeof config.frequencyBands.lo
 };
 
 /**
- * Creates a ring of point lights around each frequency band torus
- * Generates multiple lights positioned in a circle to illuminate the rings
- * @param scene - Three.js scene to add lights to
- * @param bandConfig - Configuration for the frequency band
- * @returns Array of PointLight objects for this ring
- */
-const createRingLights = (scene: THREE.Scene, bandConfig: typeof config.frequencyBands.low): THREE.PointLight[] => {
-  const lights: THREE.PointLight[] = [];
-  const lightCount = 6;
-  for (let i = 0; i < lightCount; i++) {
-    const angle = (i / lightCount) * Math.PI * 2;
-    const lightDistance = config.torusRadius * 1.2;
-    const pointLight = new THREE.PointLight(bandConfig.color, 0.5, 15);
-    pointLight.position.set(
-      Math.cos(angle) * lightDistance,
-      Math.sin(angle) * lightDistance,
-      0
-    );
-    scene.add(pointLight);
-    lights.push(pointLight);
-  }
-  return lights;
-};
-
-/**
  * Processes audio data and applies source-specific multipliers
  * Gets frequency band data and adjusts intensity based on audio source type
  * @returns Object with processed low, mid, and high frequency values
@@ -318,16 +283,6 @@ const getProcessedAudioBands = (): { [key: string]: number } => {
     mid: bands.mid * sourceMultiplier,
     high: bands.high * sourceMultiplier
   };
-};
-
-/**
- * Updates scene lighting based on audio band values (currently unused)
- * Placeholder function for potential future scene-wide lighting effects
- * @param bandValues - Object containing audio band intensity values
- */
-const updateSceneLighting = (bandValues: { [key: string]: number }): void => {
-  // Scene lighting updates would go here if needed
-  void bandValues; // Suppress unused parameter warning
 };
 
 /**
@@ -367,34 +322,6 @@ const updateRing = (
 };
 
 /**
- * Updates the ring lights with audio-reactive intensity, position, and color
- * Animates the lights around the ring with dynamic positioning and brightness
- * @param lights - Array of PointLight objects for this ring
- * @param bandValue - Current audio intensity for this band
- * @param currentColor - Current color of the ring material
- * @param time - Current time for animation
- */
-const updateRingLights = (
-  lights: THREE.PointLight[],
-  bandValue: number,
-  currentColor: THREE.Color,
-  time: number
-): void => {
-  lights.forEach((light: THREE.PointLight, index: number) => {
-    light.intensity = 0.5 + bandValue * 4;
-    const lightAngle = (index / lights.length) * Math.PI * 2 + time * 0.5;
-    const lightDistance = config.torusRadius * (1.2 + bandValue * 0.8);
-    light.position.set(
-      Math.cos(lightAngle) * lightDistance,
-      Math.sin(lightAngle) * lightDistance,
-      Math.sin(time * 2 + index) * 3
-    );
-    light.color = currentColor;
-    light.distance = 20 + bandValue * 15;
-  });
-};
-
-/**
  * Updates background elements with subtle audio-reactive effects
  * Applies gentle emissive glow and movement to background elements based on audio
  * @param backgroundElements - Array of background mesh elements
@@ -427,19 +354,12 @@ export const circularTubesVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    // Set dark background
     scene.background = new THREE.Color(0x0a0a0a);
-
-    // Setup lighting
-    setupSceneLighting(scene);
-
-    // Create background elements
     const backgroundElements = createBackgroundElements(scene);
 
     // Initialize containers
     const materials: { [key: string]: THREE.MeshStandardMaterial } = {};
     const rings: { [key: string]: THREE.Mesh } = {};
-    const ringLights: { [key: string]: THREE.PointLight[] } = {};
 
     // Create materials, rings, and lights for each frequency band
     Object.entries(config.frequencyBands).forEach(([bandType, bandConfig]) => {
@@ -448,17 +368,15 @@ export const circularTubesVisualizer: VisualizerSetup = {
       rings[bandType] = new THREE.Mesh(new THREE.BufferGeometry(), materials[bandType]);
       rings[bandType].position.set(0, 0, 0);
       scene.add(rings[bandType]);
-
-      ringLights[bandType] = createRingLights(scene, bandConfig);
     });
 
-    return { rings, materials, ringLights, backgroundElements };
+    return { rings, materials, backgroundElements };
   },
 
   getTimeline: (getObjects: () => Record<string, any>) => [{
     action: () => {
-      const { rings, materials, ringLights, backgroundElements } = getObjects();
-      if (!rings || !materials || !ringLights) return;
+      const { rings, materials, backgroundElements } = getObjects();
+      if (!rings || !materials) return;
 
       const audioData = getAudioData();
       const time = Date.now() * 0.001;
@@ -469,17 +387,11 @@ export const circularTubesVisualizer: VisualizerSetup = {
         const ring = rings[bandType];
         const material = materials[bandType];
         const bandValue = bands[bandType];
-        const lights = ringLights[bandType];
 
         if (!ring || !material) return;
 
         // Update ring geometry and material
         updateRing(ring, material, bandType as 'low' | 'mid' | 'high', bandValue, bandConfig, audioData, time);
-        
-        // Update ring lights
-        if (lights) {
-          updateRingLights(lights, bandValue, material.color, time);
-        }
       });
 
       // Update background elements
