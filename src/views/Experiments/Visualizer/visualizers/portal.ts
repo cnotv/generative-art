@@ -16,6 +16,10 @@ const config = {
     low: { start: 0, end: 10, color: 0x62c1e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
     mid: { start: 11, end: 21, color: 0x62c1e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
     high: { start: 22, end: 31, color: 0x62c1e5, position: 0, brightness: 0.6, effectIntensity: 3 }
+  },
+  sourceMultiplier: {
+    song: 0.4,
+    mic: 1.6
   }
 };
 
@@ -275,7 +279,7 @@ const createFrequencyBandMaterial = (bandConfig: typeof config.frequencyBands.lo
  */
 const getProcessedAudioBands = (): { [key: string]: number } => {
   const source = getAudioSource();
-  const sourceMultiplier = source === 'song' ? 0.4 : 1.6;
+  const sourceMultiplier = source === 'song' ? config.sourceMultiplier.song : config.sourceMultiplier.mic;
   const bands = getFrequencyBands(config.frequencyBands);
   
   return {
