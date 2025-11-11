@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.github
+.env
+.env.*
+npm-debug.log
+yarn-error.log
+coverage
+logs
+*.local
+/.idea
+.vscode
+*.swp
+*.swo
+Dockerfile
+docker-compose.yml
