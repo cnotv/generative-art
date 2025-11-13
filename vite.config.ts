@@ -17,5 +17,8 @@ export default defineConfig({
     rollupOptions: {
       treeshake: false,
     }
-  }
+  },
+  server: {
+    allowedHosts: ['cnotv.xyz'],
+  },
 })
