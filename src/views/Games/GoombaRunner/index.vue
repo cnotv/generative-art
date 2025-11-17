@@ -327,8 +327,6 @@ const handleStartGame = async () => {
   gameScore.value = 0;
   isNewHighScore.value = false; // Reset new high score flag
   updateEventListeners(); // Update event listeners for gameplay state
-
-  // startSoundtrack(soundtrackSequence, gameScore.value);
 };
 
 const handleRestartGame = () => {

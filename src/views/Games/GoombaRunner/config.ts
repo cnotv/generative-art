@@ -118,71 +118,9 @@ export const config = {
   },
 };
 
-// Mario-inspired background music sequence - [note, duration] tuples (lower octave, shorter durations for faster tempo)
-export const soundtrackSequence: NoteSequence = [
-  // Main melody - cheerful and upbeat like classic Mario games (much lower octave, faster tempo)
-  [notes.E3, 0.2], [notes.E3, 0.2], [notes.REST, 0.2], [notes.E3, 0.2],
-  [notes.REST, 0.2], [notes.C3, 0.2], [notes.E3, 0.4], [notes.G3, 0.4],
-  [notes.REST, 0.4], [notes.G2, 0.4], [notes.REST, 0.4],
-
-  // Second phrase
-  [notes.C3, 0.4], [notes.REST, 0.2], [notes.G2, 0.4], [notes.REST, 0.2],
-  [notes.E2, 0.4], [notes.REST, 0.2], [notes.A2, 0.4], [notes.B2, 0.4],
-  [notes.REST, 0.2], [notes.A2, 0.2], [notes.G2, 0.6],
-
-  // Third phrase - continuing the melody
-  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4], [notes.F3, 0.3],
-  [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3], [notes.C3, 0.3],
-  [notes.D3, 0.3], [notes.B2, 0.6],
-
-  // Fourth phrase - bridge section
-  [notes.C3, 0.3], [notes.G2, 0.2], [notes.REST, 0.1], [notes.E2, 0.3],
-  [notes.A2, 0.4], [notes.B2, 0.4], [notes.A2, 0.3], [notes.G2, 0.2],
-  [notes.E3, 0.3], [notes.G3, 0.3], [notes.A3, 0.4],
-
-  // Fifth phrase - variation
-  [notes.F3, 0.3], [notes.G3, 0.2], [notes.REST, 0.2], [notes.E3, 0.3],
-  [notes.C3, 0.3], [notes.D3, 0.3], [notes.B2, 0.6],
-
-  // Sixth phrase - building up
-  [notes.G3, 0.2], [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3],
-  [notes.E3, 0.3], [notes.G2, 0.3], [notes.A2, 0.3], [notes.C3, 0.4],
-
-  // Seventh phrase - climax
-  [notes.A2, 0.3], [notes.C3, 0.3], [notes.D3, 0.4], [notes.G3, 0.2],
-  [notes.F3, 0.2], [notes.E3, 0.2], [notes.D3, 0.3], [notes.E3, 0.3],
-
-  // Eighth phrase - resolution and ending
-  [notes.C3, 0.3], [notes.A2, 0.3], [notes.G2, 0.4], [notes.REST, 0.4],
-
-  // Final resolution
-  [notes.REST, 0.8], // Shorter pause before loop for faster tempo
-];
-
 // Game status enum-like values
 export const GAME_STATUS = {
   START: "start",
   PLAYING: "playing",
   GAME_OVER: "gameOver",
 } as const;
-
-export const SOUNDS: Record<string, SoundConfig> = {
-  jump: {
-    startFreq: 400,
-    endFreq: 120,
-    duration: 0.15,
-    volume: 0.25,
-    waveType: "square",
-    attackTime: 0.005,
-    releaseTime: 0.08,
-  },
-  collision: {
-    startFreq: 300,
-    endFreq: 80,
-    duration: 0.4,
-    volume: 0.25,
-    waveType: "sine",
-    attackTime: 0.02,
-    releaseTime: 0.15,
-  },
-};
