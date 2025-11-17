@@ -6,6 +6,9 @@ import RAPIER from "@dimforge/rapier3d";
 
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
+import Start from "./screens/Start.vue";
+import GameOver from "./screens/GameOver.vue";
+import Score from "./screens/Score.vue";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopSoundtrack, playAudioFile } from "@/utils/audio";
@@ -1331,6 +1334,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 checkCollisions(player, obstacles);
               },
             },
+
             // Generate cubes
             {
               frequency: config.blocks.spacing,
@@ -1349,16 +1353,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 obstacles.push({ mesh, characterController, collider });
               },
             },
-
-            // // Create background
-            // ...config.backgrounds.layers.map((background) => ({
-            //   frequency: background.spacing,
-            //   action: () => {
-            //     if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-            //     const { mesh } = addBackground(scene, world, background);
-            //     backgrounds.push({ mesh, speed: background.speed });
-            //   },
-            // })),
 
             // Move ground
             {
@@ -1478,44 +1472,21 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   <div ref="statsEl"></div>
   <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
 
-  <!-- Start Screen -->
-  <div v-if="gameStatus === GAME_STATUS.START" class="game game--start">
-    <h1 class="game__title">
-      <span v-for="(item, i) in 'Goomba Runner'" :key="i" class="drift-char">
-        {{ item.trim() }}
-      </span>
-    </h1>
-    <button @click="handleStartGame" class="game__button game__button--start">
-      Press SPACEBAR or TAP to Start
-    </button>
-  </div>
-
-  <!-- Game Over Screen -->
-  <div v-if="gameStatus === GAME_STATUS.GAME_OVER" class="game game--over game--slide-in">
-    <h1 class="game__title game__title--slide-in">Game Over</h1>
-    <div v-if="isNewHighScore" class="new-high-score new-high-score--slide-in">
-      <div class="gratz-text">New High Score: {{ gameScore }}</div>
-    </div>
-    <button
-      @click="handleRestartGame"
-      class="game__button game__button--button game__button--slide-in"
-    >
-      Press SPACEBAR or TAP to Restart
-    </button>
-  </div>
-
-  <!-- In-Game Score Display -->
-  <div
+  <Start v-if="gameStatus === GAME_STATUS.START" @start="handleStartGame" />
+  <GameOver
+    v-if="gameStatus === GAME_STATUS.GAME_OVER"
+    :game-score="gameScore"
+    :is-new-high-score="isNewHighScore"
+    @restart="handleRestartGame"
+  />
+  <Score
     v-if="gameStatus === GAME_STATUS.PLAYING || gameStatus === GAME_STATUS.GAME_OVER"
-    class="score"
-  >
-    <span class="score__value">{{ gameScore }}</span>
-    <span class="score__value score__value--highest">Best: {{ highestScore }}</span>
-  </div>
+    :game-score="gameScore"
+    :highest-score="highestScore"
+  />
 </template>
 
 <style>
-/* Global CSS variables for Mario theme */
 :root {
   --color-text: #333;
   --color-mario-gold: #ffd700;
@@ -1532,9 +1503,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   --border-mario: 3px solid var(--color-mario-gold);
   --font-playful: "Darumadrop One", "Arial Black", sans-serif;
 }
-</style>
 
-<style scoped>
 /* iOS-specific zoom and selection prevention */
 * {
   user-select: none;
@@ -1546,9 +1515,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 }
 
 /* Prevent zoom and selection on canvas and all game elements */
-canvas,
-.game,
-.game * {
+canvas {
   user-select: none !important;
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
@@ -1564,295 +1531,5 @@ body {
   touch-action: manipulation;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-}
-
-.game__button {
-  background: transparent;
-  border: none;
-  color: white;
-}
-
-.game {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: all;
-  z-index: 1000;
-}
-
-.game--start .game__title {
-  font-size: 12vh;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  text-shadow: var(--shadow-text-mario-large);
-  text-transform: uppercase;
-  font-family: var(--font-playful);
-  color: var(--color-text);
-  line-height: 0.6;
-  letter-spacing: -0.4rem;
-  /* Text outline using webkit-text-stroke */
-  -webkit-text-stroke: 3px #fff;
-  /* Fallback text outline using multiple text shadows */
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
-    4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000,
-    0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
-}
-
-.game--start .game__title > span {
-  color: var(--color-mario-red); /* Default/first color */
-  display: inline-block;
-  transition: transform 0.3s ease;
-}
-.game--start .game__title > span:nth-child(4n + 1) {
-  color: var(--color-mario-red); /* 1st, 5th, 9th... */
-  --char-rotation: -3deg;
-}
-.game--start .game__title > span:nth-child(4n + 2) {
-  color: var(--color-mario-blue); /* 2nd, 6th, 10th... */
-  --char-rotation: 2deg;
-}
-.game--start .game__title > span:nth-child(4n + 3) {
-  color: var(--color-mario-green); /* 3rd, 7th, 11th... */
-  --char-rotation: -1deg;
-}
-.game--start .game__title > span:nth-child(4n + 4) {
-  color: var(--color-mario-gold); /* 4th, 8th, 12th... */
-  --char-rotation: 4deg;
-}
-.game--start .game__title > span:empty {
-  display: block;
-}
-
-/* Drifting animation for start screen characters */
-.drift-char {
-  animation-duration: 1s;
-  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  animation-fill-mode: backwards;
-}
-
-/* Individual character animations using nth-child - each drifts from different directions */
-.drift-char:nth-child(1) {
-  animation: driftFromLeft 1s 0.05s backwards;
-} /* G */
-.drift-char:nth-child(2) {
-  animation: driftFromRight 1s 0.1s backwards;
-} /* o */
-.drift-char:nth-child(3) {
-  animation: driftFromTop 1s 0.15s backwards;
-} /* o */
-.drift-char:nth-child(4) {
-  animation: driftFromBottom 1s 0.2s backwards;
-} /* m */
-.drift-char:nth-child(5) {
-  animation: driftFromLeft 1s 0.25s backwards;
-} /* b */
-.drift-char:nth-child(6) {
-  animation: driftFromRight 1s 0.3s backwards;
-} /* a */
-.drift-char:nth-child(7) {
-  animation: driftFromTop 1s 0.35s backwards;
-} /* (space) */
-.drift-char:nth-child(8) {
-  animation: driftFromBottom 1s 0.4s backwards;
-} /* R */
-.drift-char:nth-child(9) {
-  animation: driftFromLeft 1s 0.45s backwards;
-} /* u */
-.drift-char:nth-child(10) {
-  animation: driftFromRight 1s 0.5s backwards;
-} /* n */
-.drift-char:nth-child(11) {
-  animation: driftFromTop 1s 0.55s backwards;
-} /* n */
-.drift-char:nth-child(12) {
-  animation: driftFromBottom 1s 0.6s backwards;
-} /* e */
-.drift-char:nth-child(13) {
-  animation: driftFromLeft 1s 0.65s backwards;
-} /* r */
-
-@keyframes driftFromLeft {
-  0% {
-    transform: translateX(-100vw) rotate(-45deg) scale(0.3);
-    opacity: 0;
-  }
-  70% {
-    transform: translateX(10px) rotate(5deg) scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0) rotate(var(--char-rotation, 0deg)) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes driftFromRight {
-  0% {
-    transform: translateX(100vw) rotate(45deg) scale(0.3);
-    opacity: 0;
-  }
-  70% {
-    transform: translateX(-10px) rotate(-5deg) scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0) rotate(var(--char-rotation, 0deg)) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes driftFromTop {
-  0% {
-    transform: translateY(-100vh) rotate(-30deg) scale(0.3);
-    opacity: 0;
-  }
-  70% {
-    transform: translateY(10px) rotate(3deg) scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0) rotate(var(--char-rotation, 0deg)) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes driftFromBottom {
-  0% {
-    transform: translateY(100vh) rotate(30deg) scale(0.3);
-    opacity: 0;
-  }
-  70% {
-    transform: translateY(-10px) rotate(-3deg) scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0) rotate(var(--char-rotation, 0deg)) scale(1);
-    opacity: 1;
-  }
-}
-
-.game--over {
-  justify-content: center;
-}
-
-/* Slide-in animation from bottom for game over screen */
-.game--slide-in {
-  animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.game__title--slide-in {
-  animation: slideInFromBottom 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s backwards;
-}
-
-.new-high-score--slide-in {
-  animation: slideInFromBottom 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s backwards;
-}
-
-.game__button--slide-in {
-  animation: slideInFromBottom 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s backwards;
-}
-
-@keyframes slideInFromBottom {
-  0% {
-    transform: translateY(100vh);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.game--over .game__title {
-  font-size: 12vh;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  font-family: var(--font-playful);
-  line-height: 0.6;
-  letter-spacing: -0.4rem;
-  color: var(--color-mario-red);
-
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
-    4px -4px 0 var(--color-text), -4px 4px 0 var(--color-text),
-    4px 4px 0 var(--color-text), -4px 0 0 var(--color-text), 4px 0 0 var(--color-text),
-    0 -4px 0 var(--color-text), 0 4px 0 var(--color-text), var(--shadow-text-mario-large);
-}
-
-.game__button {
-  padding: 15px 30px;
-  font-size: 1.5rem;
-  font-weight: 800;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: all;
-  color: var(--color-text);
-  text-shadow: var(--shadow-text-mario-basic);
-  font-family: var(--font-playful);
-  /* font-family: monospace; */
-  margin-top: 2rem;
-}
-
-.score {
-  position: absolute;
-  pointer-events: all;
-  display: flex;
-  width: 100vw;
-  top: 20px;
-  flex-direction: column;
-}
-
-.score__value {
-  display: flex;
-  flex-direction: column;
-  align-items: end;
-}
-
-.score__value {
-  padding: 0 24px;
-  border-radius: 25px;
-  font-size: 4rem;
-  font-weight: 800;
-  font-family: var(--font-playful);
-  color: var(--color-text);
-  text-shadow: var(--shadow-text-mario-basic);
-}
-
-.score__value--highest {
-  font-size: 1.5rem;
-}
-
-.gratz-text {
-  font-size: 3rem;
-  font-weight: 900;
-  color: var(--color-mario-gold);
-  font-family: var(--font-playful);
-  text-shadow: var(--shadow-text-mario-large);
-  animation: bounce 0.8s ease-in-out infinite;
-  margin-bottom: 0.5rem;
-}
-
-@keyframes bounce {
-  0%,
-  20%,
-  50%,
-  80%,
-  100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-10px);
-  }
-  60% {
-    transform: translateY(-5px);
-  }
 }
 </style>
