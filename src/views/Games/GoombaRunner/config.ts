@@ -1,7 +1,6 @@
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
-import { notes, type NoteSequence, type SoundConfig } from "@/utils/audio";
 
 export const config = {
   game: {
