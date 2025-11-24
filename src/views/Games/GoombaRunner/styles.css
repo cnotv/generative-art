@@ -15,7 +15,6 @@
   flex-direction: column;
   align-items: center;
   pointer-events: all;
-  z-index: 1000;
 }
 
 .game__button {

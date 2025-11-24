@@ -204,7 +204,21 @@ const endGame = () => {
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
-  controls.create(config, route, {}, () => createScene());
+  controls.create(config, route, {
+    camera: {
+      position: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      fov: {},
+      rotation: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+    },
+  }, () => createScene());
   const createScene = async () => {
     const obstacles = [] as {
       mesh: THREE.Mesh;
@@ -230,7 +244,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     });
     setup({
       config: {
-        camera: { position: [40, 20, 150] },
+        camera: config.camera as any,
         // ground: { size: 100000, color: 0x32CD32 },
         ground: false,
         sky: false, // Disable sky sphere to avoid hiding UI elements

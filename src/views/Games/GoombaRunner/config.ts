@@ -3,6 +3,19 @@ import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
 
 export const config = {
+  camera: {
+    position: {
+      x: 40,
+      y: 20,
+      z: 150,
+    },
+    fov: 80,
+    rotation: {
+      x: 0,
+      y: 0,
+      z: 0,
+    },
+  },
   game: {
     helpers: false,
     speed: 2,

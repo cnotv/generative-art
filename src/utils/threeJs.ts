@@ -55,7 +55,7 @@ export const getTools = ({ stats, route, canvas }: any) => {
   }: {
     config?: {
       global?: { frameRate?: number },
-      camera?: { position?: CoordinateTuple },
+      camera?: { position?: CoordinateTuple | THREE.Vector3, fov?: number, rotation?: CoordinateTuple | THREE.Vector3 },
       ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
@@ -74,7 +74,20 @@ export const getTools = ({ stats, route, canvas }: any) => {
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
     if (config.sky !== false) getSky(scene, config?.sky || {});
 
-    if (config?.camera?.position) camera.position.set(...(config.camera.position as CoordinateTuple));
+    if (config?.camera?.position)
+      if (config.camera.position instanceof Array) {
+        camera.position.set(...(config.camera.position));
+      } else {
+        camera.position.copy(config.camera.position);
+      }
+    if (config?.camera?.fov) camera.fov = config.camera.fov;
+    if (config?.camera?.rotation) {
+      if (config.camera.rotation instanceof Array) {
+        camera.rotation.set(...(config.camera.rotation));
+      } else {
+        camera.rotation.copy(config.camera.rotation);
+      }
+    }
     defineSetup();
   };
 
