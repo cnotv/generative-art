@@ -96,7 +96,7 @@ export const addPlayerController = async (
 export const handleJump = (
   player: THREE.Mesh,
   gameStatus: string,
-  uiStoreControls: any,
+  uiStore: any,
   camera: THREE.Camera,
   horizonLine: THREE.Mesh
 ) => {
@@ -128,7 +128,7 @@ export const handleJump = (
   const currentTime = Date.now();
 
   // Start jump if jump key is pressed OR touch is active and not already jumping
-  if (uiStoreControls.jump && !config.player.jump.isActive) {
+  if (uiStore.controls.jump && !config.player.jump.isActive) {
     config.player.jump.isActive = true;
     config.player.jump.startTime = currentTime;
     config.player.jump.velocity = config.player.jump.height;

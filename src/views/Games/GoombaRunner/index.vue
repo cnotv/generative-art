@@ -345,7 +345,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 }
 
                 movePlayer(player, playerController, physics, playerMovement, gameStatus.value);
-                handleJump(player, gameStatus.value, uiStore.controls, camera, horizonLine);
+                handleJump(player, gameStatus.value, uiStore, camera, horizonLine);
                 handleArcMovement(player); // Handle arc movement after collision
                 checkCollisions(player, obstacles, backgrounds, scene, endGame, loggedCollisions, goombaColor);
               },
