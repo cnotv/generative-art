@@ -19,6 +19,6 @@ export default defineConfig({
     }
   },
   server: {
-    allowedHosts: ['cnotv.xyz'],
+    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz'],
   },
 })
