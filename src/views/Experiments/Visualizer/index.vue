@@ -49,7 +49,6 @@ const currentVisualizer = ref(initializeVisualizer());
 const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
 const visualizerObjects = ref({} as Record<string, any>);
 let switchVisualizerFunction: ((name: string) => void) | null = null;
-let sceneCleanup: (() => void) | null = null; // Store cleanup function
 
 // Initialize player type from query params
 const initializePlayerType = () => {
@@ -245,10 +244,6 @@ onUnmounted(() => {
   document.removeEventListener("click", closeDropdown);
   clearVisualizerClickHandlers();
   cleanup();
-  // Also cleanup the scene animation
-  if (sceneCleanup) {
-    sceneCleanup();
-  }
 });
 
 const config = {
@@ -268,14 +263,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, world, getDelta, scene, camera, cleanup } = getTools({
+    const { animate, setup, world, getDelta, scene, camera } = getTools({
       stats,
       route,
       canvas,
     });
-
-    // Store cleanup function for later use
-    sceneCleanup = cleanup;
     setup({
       config: {
         camera: { position: [0, 20, 30] },

@@ -43,7 +43,6 @@ export const getTools = ({ stats, route, canvas }: any) => {
   const getDelta = () => delta;
   const getFrame = () => frame;
   let orbit: OrbitControls | null = null;
-  let animationFrameId: number | null = null; // Track current animation frame
 
   /**
    * Setup scene
@@ -98,16 +97,10 @@ export const getTools = ({ stats, route, canvas }: any) => {
       timeline?: Timeline[],
       config?: any
   }) => { 
-    // Cancel any existing animation frame to prevent memory leaks
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-    }
-
     function runAnimation() {
       if (stats) stats.start(route);
       delta = clock.getDelta();
-      animationFrameId = requestAnimationFrame(runAnimation);
+      frame = requestAnimationFrame(runAnimation);
       world.step();
   
       beforeTimeline();
@@ -125,19 +118,10 @@ export const getTools = ({ stats, route, canvas }: any) => {
     }
     runAnimation();
   };
-
-  // Cleanup function to stop animation and clean up resources
-  const cleanup = () => {
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-    }
-  };
   
   return {
     setup,
     animate,
-    cleanup,
     clock,
     getDelta,
     getFrame,
