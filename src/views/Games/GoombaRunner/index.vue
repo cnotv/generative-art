@@ -206,18 +206,31 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {
     camera: {
-      position: {
-        x: 0,
-        y: 0,
-        z: 0,
-      },
       fov: {},
+      position: {
+        x: {},
+        y: {},
+        z: {},
+      },
       rotation: {
-        x: 0,
-        y: 0,
-        z: 0,
+        x: {},
+        y: {},
+        z: {},
       },
     },
+    game: {
+      helper: { boolean : false },
+      speed: { min: 0.5, max: 3 },
+    },
+    player: {
+      helper: { boolean : false },
+      speed: { min: 1, max: 50 },
+      maxJump: {},
+      jump: {
+        height: {},
+        duration: {},
+      }
+    }
   }, () => createScene());
   const createScene = async () => {
     const obstacles = [] as {

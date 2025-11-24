@@ -84,8 +84,10 @@ export const getTools = ({ stats, route, canvas }: any) => {
     if (config?.camera?.rotation) {
       if (config.camera.rotation instanceof Array) {
         camera.rotation.set(...(config.camera.rotation));
+      } else if (config.camera.rotation instanceof THREE.Vector3) {
+        camera.rotation.setFromVector3(config.camera.rotation);
       } else {
-        camera.rotation.copy(config.camera.rotation);
+        camera.rotation.copy(config.camera.rotation as THREE.Euler);
       }
     }
     defineSetup();

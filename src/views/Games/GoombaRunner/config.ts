@@ -17,7 +17,7 @@ export const config = {
     },
   },
   game: {
-    helpers: false,
+    helper: false,
     speed: 2,
   },
   directional: {

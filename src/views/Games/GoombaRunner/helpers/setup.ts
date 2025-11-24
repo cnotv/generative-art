@@ -9,7 +9,7 @@ export const initPhysics = async (scene: THREE.Scene) => {
 
   //Optionally display collider outlines
   const physicsHelper = new RapierHelper(physics.world);
-  if (config.game.helpers) {
+  if (config.game.helper) {
     scene.add(physicsHelper); // Enable helper to show colliders
   }
 
