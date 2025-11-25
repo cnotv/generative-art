@@ -14,7 +14,7 @@ export interface PlayerMovement {
   up: number;
 }
 
-export const addPlayerController = async (
+export const createPlayer = async (
   scene: THREE.Scene,
   physics: any,
   world: RAPIER.World
@@ -266,6 +266,24 @@ export const movePlayer = (
   }
 };
 
+export const updatePlayerAnimation = (
+  model: any,
+  gameStatus: string,
+  gameScore: number,
+  getDelta: () => number,
+  updateAnimation: any,
+  getSpeed: any
+) => {
+  if (gameStatus !== GAME_STATUS.PLAYING) return;
+  const animationSpeed = getSpeed(config.player.speed, gameScore);
+  updateAnimation(
+    model.mixer,
+    model.actions.run,
+    getDelta(),
+    animationSpeed
+  );
+};
+
 export const ensurePlayerAboveGround = (player: THREE.Mesh) => {
   const currentPosition = player.userData.collider.translation();
   const groundLevel = player.userData.baseY;
@@ -411,6 +429,48 @@ export const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3,
   }
 };
 
+export const resetPlayer = (player: THREE.Mesh, scene: THREE.Scene) => {
+  // Clear explosion particles on restart
+  for (let i = explosionParticles.length - 1; i >= 0; i--) {
+    scene.remove(explosionParticles[i]);
+  }
+  explosionParticles.length = 0;
+
+  // Make Goomba visible again and reset to starting position
+  player.visible = true;
+
+  player.userData.arcMovement = { isActive: false };
+  player.rotation.set(0, Math.PI / 2 - 0.4, 0); // Back to original rotation (facing right/east)
+
+  // Reset Goomba opacity to full visibility
+  player.traverse((child: THREE.Object3D) => {
+    if ((child as any).isMesh && (child as any).material) {
+      const mesh = child as THREE.Mesh;
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((material: any) => {
+          material.transparent = false;
+          material.opacity = 1.0;
+        });
+      } else {
+        (mesh.material as any).transparent = false;
+        (mesh.material as any).opacity = 1.0;
+      }
+    }
+  });
+
+  const startPos = player.userData.startingPosition;
+  const groundLevel = player.userData.baseY; // Use correct ground level
+  const safeY = Math.max(startPos.y, groundLevel); // Ensure above ground
+  player.position.set(startPos.x, safeY, startPos.z);
+
+  // Reset collider position to match (with ground collision)
+  player.userData.collider.setTranslation({
+    x: startPos.x,
+    y: safeY,
+    z: startPos.z,
+  });
+};
+
 export const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
   for (let i = explosionParticles.length - 1; i >= 0; i--) {
     const particle = explosionParticles[i];
@@ -453,8 +513,8 @@ export const checkCollisions = (
   scene: THREE.Scene,
   endGameCallback: () => void,
   loggedCollisions: Set<string>,
-  goombaColor: number
 ) => {
+  const goombaColor = 0x8b4513; 
   const playerPosition = player.position;
   obstacles.forEach((obstacle, index) => {
     const obstaclePosition = obstacle.mesh.position;

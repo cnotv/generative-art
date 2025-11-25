@@ -203,3 +203,18 @@ export const moveBackgrounds = (
     }
   }
 };
+
+export const resetBackgrounds = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  backgrounds: any[]
+) => {
+  for (let i = backgrounds.length - 1; i >= 0; i--) {
+    const background = backgrounds[i];
+    scene.remove(background.mesh);
+  }
+  backgrounds.length = 0;
+
+  // Repopulate backgrounds for restart
+  populateInitialBackgrounds(scene, world, backgrounds);
+};

@@ -60,6 +60,11 @@ interface ModelOptions extends CommonOptions{
     random: boolean;
     list: THREE.Texture[];
   };
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  ior?: number;
+  thickness?: number;
+  envMapIntensity?: number;
 }
 
 interface ModelConditions {

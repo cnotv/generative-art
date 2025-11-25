@@ -1,3 +1,20 @@
+:root {
+  --color-text: #333;
+  --color-mario-gold: #ffd700;
+  --color-mario-red: #ff6b6b;
+  --color-mario-green: #32cd32;
+  --color-mario-blue: #0064c8;
+  --shadow-mario: 0.4rem 0.4rem 0px #000;
+  --shadow-text-mario-basic: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
+  --shadow-text-mario: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
+    0.3rem 0.3rem 0px #000;
+  --shadow-text-mario-large: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
+    0.3rem 0.3rem 0px #000, 0.4rem 0.4rem 0px #000, 0.5rem 0.5rem 0px #000;
+  --border-mario: 3px solid var(--color-mario-gold);
+  --font-playful: "Darumadrop One", "Arial Black", sans-serif;
+}
+
 /* Global CSS variables for Mario theme */
 .game__button {
   background: transparent;

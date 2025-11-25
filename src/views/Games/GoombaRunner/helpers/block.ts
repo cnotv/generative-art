@@ -87,3 +87,66 @@ export const removeBlock = (
   // Remove from obstacles array
   obstacles.splice(index, 1);
 };
+
+export const moveBlocks = (
+  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
+  physics: any,
+  gameScore: number,
+  player: THREE.Mesh,
+  scene: THREE.Scene,
+  onScore: (points: number) => void
+) => {
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const obstacle = obstacles[i];
+
+    // Move the block
+    moveBlock(obstacle, physics, gameScore);
+
+    // Award score when block passes behind Goomba (only once per block)
+    if (
+      !obstacle.mesh.userData.scored &&
+      obstacle.mesh.position.x < player.position.x - 20
+    ) {
+      obstacle.mesh.userData.scored = true; // Mark as scored
+      onScore(10);
+    }
+
+    // Check if block should be removed and remove it
+    if (obstacle.mesh.position.x < -300 - config.blocks.size) {
+      removeBlock(obstacle, obstacles, i, scene, physics);
+    }
+  }
+};
+
+export const resetObstacles = (
+  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
+  scene: THREE.Scene,
+  physics: any
+) => {
+  // Remove all obstacles from scene and physics
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const obstacle = obstacles[i];
+    scene.remove(obstacle.mesh);
+    physics.world.removeCollider(obstacle.collider, true);
+  }
+  obstacles.length = 0;
+};
+
+export const createCubes = async (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  physics: any,
+  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[]
+) => {
+  const position: [number, number] = [
+    config.blocks.size * 10,
+    (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
+  ];
+  const { mesh, characterController, collider } = await addBlock(
+    scene,
+    position,
+    world,
+    physics
+  );
+  obstacles.push({ mesh, characterController, collider });
+};

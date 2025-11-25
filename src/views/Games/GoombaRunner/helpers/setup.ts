@@ -69,3 +69,42 @@ export const getSpeed = (base: number, score: number): number => {
   const speed = base * speedMultiplier;
   return speed;
 };
+
+export const prevents = () => {
+  // Prevent iOS zoom and selection behaviors
+  const preventZoomAndSelection = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Additional iOS-specific prevention
+  document.addEventListener("gesturestart", preventZoomAndSelection, {
+    passive: false,
+  });
+  document.addEventListener("gesturechange", preventZoomAndSelection, {
+    passive: false,
+  });
+  document.addEventListener("gestureend", preventZoomAndSelection, {
+    passive: false,
+  });
+  document.addEventListener("selectstart", preventZoomAndSelection, {
+    passive: false,
+  });
+  document.addEventListener("contextmenu", preventZoomAndSelection, {
+    passive: false,
+  });
+
+  // Prevent double-tap zoom
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const now = new Date().getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    },
+    { passive: false }
+  );
+};

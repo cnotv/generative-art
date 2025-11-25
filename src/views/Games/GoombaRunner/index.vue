@@ -17,7 +17,9 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { config, GAME_STATUS } from "./config";
+import { config, GAME_STATUS, configControls } from "./config";
+import "@/assets/prevents.css";
+import "./styles.css";
 
 // Helper imports
 import {
@@ -25,25 +27,28 @@ import {
   onWindowResize,
   addHorizonLine,
   getSpeed,
+  prevents,
 } from "./helpers/setup";
-import { getGround } from "./helpers/ground";
+import { getGround, moveGround, resetGround } from "./helpers/ground";
 import {
   populateInitialBackgrounds,
   updateFallingBackgrounds,
   createBackgrounds,
   moveBackgrounds,
+  resetBackgrounds,
 } from "./helpers/background";
-import { addBlock, moveBlock, removeBlock } from "./helpers/block";
+import { moveBlocks, resetObstacles, createCubes } from "./helpers/block";
 import {
-  addPlayerController,
+  createPlayer,
   handleJump,
   movePlayer,
   ensurePlayerAboveGround,
   handleArcMovement,
   checkCollisions,
   updateExplosionParticles,
+  updatePlayerAnimation,
+  resetPlayer,
   type PlayerMovement,
-  explosionParticles,
 } from "./helpers/player";
 import {
   updateEventListeners,
@@ -56,7 +61,6 @@ type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 // Set UI controls
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
-const goombaColor = 0x8b4513; // Brown color like Goomba
 const HIGH_SCORE_KEY = "goomba-runner-high-score";
 
 const gameScore = ref(0);
@@ -109,32 +113,7 @@ onMounted(() => {
   );
   loadHighestScore(); // Load saved high score from localStorage
 
-  // Prevent iOS zoom and selection behaviors
-  const preventZoomAndSelection = (e: Event) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  // Additional iOS-specific prevention
-  document.addEventListener("gesturestart", preventZoomAndSelection, { passive: false });
-  document.addEventListener("gesturechange", preventZoomAndSelection, { passive: false });
-  document.addEventListener("gestureend", preventZoomAndSelection, { passive: false });
-  document.addEventListener("selectstart", preventZoomAndSelection, { passive: false });
-  document.addEventListener("contextmenu", preventZoomAndSelection, { passive: false });
-
-  // Prevent double-tap zoom
-  let lastTouchEnd = 0;
-  document.addEventListener(
-    "touchend",
-    (event) => {
-      const now = new Date().getTime();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-      lastTouchEnd = now;
-    },
-    { passive: false }
-  );
+  prevents();
 
   initInstance = () => {
     init(
@@ -204,34 +183,7 @@ const endGame = () => {
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
-  controls.create(config, route, {
-    camera: {
-      fov: {},
-      position: {
-        x: {},
-        y: {},
-        z: {},
-      },
-      rotation: {
-        x: {},
-        y: {},
-        z: {},
-      },
-    },
-    game: {
-      helper: { boolean : false },
-      speed: { min: 0.5, max: 3 },
-    },
-    player: {
-      helper: { boolean : false },
-      speed: { min: 1, max: 50 },
-      maxJump: {},
-      jump: {
-        height: {},
-        duration: {},
-      }
-    }
-  }, () => createScene());
+  controls.create(config, route, configControls, () => createScene());
   const createScene = async () => {
     const obstacles = [] as {
       mesh: THREE.Mesh;
@@ -270,17 +222,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
       defineSetup: async () => {
         const { physics, physicsHelper } = await initPhysics(scene);
-        const { player, playerController, model } = await addPlayerController(
+        const { player, playerController, model } = await createPlayer(
           scene,
           physics,
           world
         );
-
-        // Set Mario sky blue background
         scene.background = new THREE.Color(0x87ceeb);
-
         onWindowResize(camera, renderer);
-
         // Track ground texture for animation
         let groundTexture: THREE.Texture | null = null;
         groundTexture = getGround(scene, physics);
@@ -304,77 +252,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 updateExplosionParticles(scene, getDelta());
                 updateFallingBackgrounds(getDelta(), backgrounds, scene);
                 if (shouldClearObstacles.value) {
-                  // Remove all obstacles from scene and physics
-                  for (let i = obstacles.length - 1; i >= 0; i--) {
-                    const obstacle = obstacles[i];
-                    scene.remove(obstacle.mesh);
-                    physics.world.removeCollider(obstacle.collider, true);
-                  }
-                  obstacles.length = 0;
-
-                  for (let i = backgrounds.length - 1; i >= 0; i--) {
-                    const background = backgrounds[i];
-                    scene.remove(background.mesh);
-                  }
-                  backgrounds.length = 0;
-
-                  // Repopulate backgrounds for restart
-                  populateInitialBackgrounds(scene, world, backgrounds);
+                  resetObstacles(obstacles, scene, physics);
+                  resetBackgrounds(scene, world, backgrounds);
                   backgroundsPopulated = true;
-
-                  // Clear explosion particles on restart
-                  for (let i = explosionParticles.length - 1; i >= 0; i--) {
-                    scene.remove(explosionParticles[i]);
-                  }
-                  explosionParticles.length = 0;
-
-                  // Make Goomba visible again and reset to starting position
-                  player.visible = true;
-
-                  player.userData.arcMovement = { isActive: false };
-                  player.rotation.set(0, Math.PI / 2 - 0.4, 0); // Back to original rotation (facing right/east)
-
-                  // Reset Goomba opacity to full visibility
-                  player.traverse((child: THREE.Object3D) => {
-                    if ((child as any).isMesh && (child as any).material) {
-                      const mesh = child as THREE.Mesh;
-                      if (Array.isArray(mesh.material)) {
-                        mesh.material.forEach((material: any) => {
-                          material.transparent = false;
-                          material.opacity = 1.0;
-                        });
-                      } else {
-                        (mesh.material as any).transparent = false;
-                        (mesh.material as any).opacity = 1.0;
-                      }
-                    }
-                  });
-
-                  const startPos = player.userData.startingPosition;
-                  const groundLevel = player.userData.baseY; // Use correct ground level
-                  const safeY = Math.max(startPos.y, groundLevel); // Ensure above ground
-                  player.position.set(startPos.x, safeY, startPos.z);
-
-                  // Reset collider position to match (with ground collision)
-                  player.userData.collider.setTranslation({
-                    x: startPos.x,
-                    y: safeY,
-                    z: startPos.z,
-                  });
-
-                  // Reset ground texture offset for restart
-                  if (groundTexture) {
-                    groundTexture.offset.x = 0;
-                    groundTexture.offset.y = 0;
-                  }
-
+                  resetPlayer(player, scene);
+                  resetGround(groundTexture);
                   shouldClearObstacles.value = false;
                 }
 
                 movePlayer(player, playerController, physics, playerMovement, gameStatus.value);
                 handleJump(player, gameStatus.value, uiStore, camera, horizonLine);
                 handleArcMovement(player); // Handle arc movement after collision
-                checkCollisions(player, obstacles, backgrounds, scene, endGame, loggedCollisions, goombaColor);
+                checkCollisions(player, obstacles, backgrounds, scene, endGame, loggedCollisions);
               },
             },
 
@@ -383,55 +272,37 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               frequency: config.blocks.spacing,
               action: async () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const position: [number, number] = [
-                  config.blocks.size * 10,
-                  (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15,
-                ];
-                const { mesh, characterController, collider } = await addBlock(
-                  scene,
-                  position,
-                  world,
-                  physics
-                );
-                obstacles.push({ mesh, characterController, collider });
+                await createCubes(scene, world, physics, obstacles);
               },
             },
 
             // Move ground
             {
               action: () => {
-                // Animate ground texture to create moving ground effect
-                if (groundTexture && gameStatus.value === GAME_STATUS.PLAYING) {
-                  groundTexture.offset.x += 0.03 * getSpeed(1, gameScore.value); // Move texture based on game speed
-                }
+                moveGround(groundTexture, gameStatus.value, gameScore.value);
               },
             },
 
             // Move background
             {
               action: () => {
-                // Only move and create backgrounds when actively playing
-                if (gameStatus.value !== GAME_STATUS.PLAYING) {
-                  // During START screen and GAME_OVER, don't move backgrounds horizontally at all
-                  // Only falling animations are allowed during game over
-                  return;
+                if (gameStatus.value === GAME_STATUS.PLAYING) {
+                  createBackgrounds(scene, world, backgrounds, backgroundTimers, gameScore.value);
+                  moveBackgrounds(scene, camera, backgrounds, gameScore.value);
                 }
-
-                createBackgrounds(scene, world, backgrounds, backgroundTimers, gameScore.value);
-                moveBackgrounds(scene, camera, backgrounds, gameScore.value);
               },
             },
 
             // Make Goomba run
             {
               action: () => {
-                if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-                const animationSpeed = getSpeed(config.player.speed, gameScore.value);
-                updateAnimation(
-                  model.mixer,
-                  model.actions.run,
-                  getDelta(),
-                  animationSpeed
+                updatePlayerAnimation(
+                  model,
+                  gameStatus.value,
+                  gameScore.value,
+                  getDelta,
+                  updateAnimation,
+                  getSpeed
                 );
               },
             },
@@ -440,28 +311,16 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               action: () => {
                 if (gameStatus.value !== GAME_STATUS.PLAYING) return;
-
-                // Move obstacles and remove off-screen ones
-                for (let i = obstacles.length - 1; i >= 0; i--) {
-                  const obstacle = obstacles[i];
-
-                  // Move the block
-                  moveBlock(obstacle, physics, gameScore.value);
-
-                  // Award score when block passes behind Goomba (only once per block)
-                  if (
-                    !obstacle.mesh.userData.scored &&
-                    obstacle.mesh.position.x < player.position.x - 20
-                  ) {
-                    obstacle.mesh.userData.scored = true; // Mark as scored
-                    gameScore.value += 10;
+                moveBlocks(
+                  obstacles,
+                  physics,
+                  gameScore.value,
+                  player,
+                  scene,
+                  (points) => {
+                    gameScore.value += points;
                   }
-
-                  // Check if block should be removed and remove it
-                  if (obstacle.mesh.position.x < -300 - config.blocks.size) {
-                    removeBlock(obstacle, obstacles, i, scene, physics);
-                  }
-                }
+                );
               },
             },
           ],
@@ -490,52 +349,3 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     :highest-score="highestScore"
   />
 </template>
-
-<style>
-:root {
-  --color-text: #333;
-  --color-mario-gold: #ffd700;
-  --color-mario-red: #ff6b6b;
-  --color-mario-green: #32cd32;
-  --color-mario-blue: #0064c8;
-  --shadow-mario: 0.4rem 0.4rem 0px #000;
-  --shadow-text-mario-basic: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
-    1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff;
-  --shadow-text-mario: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
-    0.3rem 0.3rem 0px #000;
-  --shadow-text-mario-large: 0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000,
-    0.3rem 0.3rem 0px #000, 0.4rem 0.4rem 0px #000, 0.5rem 0.5rem 0px #000;
-  --border-mario: 3px solid var(--color-mario-gold);
-  --font-playful: "Darumadrop One", "Arial Black", sans-serif;
-}
-
-/* iOS-specific zoom and selection prevention */
-* {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Prevent zoom and selection on canvas and all game elements */
-canvas {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  -webkit-touch-callout: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-  touch-action: manipulation !important;
-}
-
-/* Prevent iOS zoom on double tap and pinch */
-html,
-body {
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-</style>

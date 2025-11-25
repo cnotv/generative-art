@@ -55,7 +55,7 @@ export const getTools = ({ stats, route, canvas }: any) => {
   }: {
     config?: {
       global?: { frameRate?: number },
-      camera?: { position?: CoordinateTuple | THREE.Vector3, fov?: number, rotation?: CoordinateTuple | THREE.Vector3 },
+      camera?: { position?: CoordinateTuple | THREE.Vector3, fov?: number, rotation?: CoordinateTuple | THREE.Vector3, lookAt?: CoordinateTuple | THREE.Vector3 },
       ground?: { size?: number, color?: number, texture?: string } | false
       sky?: { texture?: string, size?: number } | false
       lights?: { directional?: { intensity?: number } } | false
@@ -84,12 +84,18 @@ export const getTools = ({ stats, route, canvas }: any) => {
     if (config?.camera?.rotation) {
       if (config.camera.rotation instanceof Array) {
         camera.rotation.set(...(config.camera.rotation));
-      } else if (config.camera.rotation instanceof THREE.Vector3) {
-        camera.rotation.setFromVector3(config.camera.rotation);
       } else {
-        camera.rotation.copy(config.camera.rotation as THREE.Euler);
+        camera.rotation.setFromVector3(config.camera.rotation as THREE.Vector3);
       }
     }
+    if (config?.camera?.lookAt) {
+      if (config.camera.lookAt instanceof Array) {
+        camera.lookAt(...(config.camera.lookAt));
+      } else {
+        camera.lookAt(config.camera.lookAt);
+      }
+    }
+    camera.updateProjectionMatrix();
     defineSetup();
   };
 

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
@@ -127,6 +128,35 @@ export const config = {
         opacity: 0.4,
       },
     ],
+  },
+};
+
+export const configControls = {
+  camera: {
+    fov: {},
+    position: {
+      x: {},
+      y: {},
+      z: {},
+    },
+    rotation: {
+      x: {step: 0.01},
+      y: {step: 0.01},
+      z: {step: 0.01},
+    },
+  },
+  game: {
+    helper: { boolean: false },
+    speed: { min: 0.5, max: 3 },
+  },
+  player: {
+    helper: { boolean: false },
+    speed: { min: 1, max: 50 },
+    maxJump: {},
+    jump: {
+      height: {},
+      duration: {},
+    },
   },
 };
 

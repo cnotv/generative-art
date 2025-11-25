@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { createZigzagTexture } from "@/utils/threeJs";
+import { GAME_STATUS } from "../config";
+import { getSpeed } from "./setup";
 
 export const getGround = (scene: THREE.Scene, physics?: any) => {
   const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
@@ -34,4 +36,21 @@ export const getGround = (scene: THREE.Scene, physics?: any) => {
   scene.add(mesh);
 
   return texture;
+};
+
+export const moveGround = (
+  groundTexture: THREE.Texture | null,
+  gameStatus: string,
+  gameScore: number
+) => {
+  if (groundTexture && gameStatus === GAME_STATUS.PLAYING) {
+    groundTexture.offset.x += 0.03 * getSpeed(1, gameScore);
+  }
+};
+
+export const resetGround = (groundTexture: THREE.Texture | null) => {
+  if (groundTexture) {
+    groundTexture.offset.x = 0;
+    groundTexture.offset.y = 0;
+  }
 };
