@@ -1,5 +1,5 @@
 // Audio utility for game sound effects and soundtrack
-export type SoundConfig = {
+type SoundConfig = {
   startFreq: number;
   endFreq: number;
   duration: number;
@@ -9,25 +9,14 @@ export type SoundConfig = {
   releaseTime?: number;
 };
 
-// Musical note frequencies (in Hz) for creating melodies - shifted down two octaves for very low sound
-export const notes = {
-  C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.0, A2: 110.0, B2: 123.47,
-  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
-  C1: 32.7, D1: 36.71, E1: 41.2, F1: 43.65, G1: 49.0, A1: 55.0, B1: 61.74,
-  REST: 0, // Rest/silence
-};
+type NoteSequence = [number, number][];
 
-export type NoteSequence = [number, number][];
-
-// Global audio context for all sound effects
 let gameAudioContext: AudioContext | null = null;
-
-// Soundtrack state
 let soundtrackTimeout: number | null = null;
-let soundtrackPlaying = false;
+let musicPlaying = false;
 
 // Initialize audio context on first user interaction (required for iOS)
-export const initializeAudio = async () => {
+const initializeAudio = async () => {
   try {
     if (!gameAudioContext) {
       gameAudioContext = new (window.AudioContext ||
@@ -58,7 +47,7 @@ export const initializeAudio = async () => {
 };
 
 // Abstracted sound creation system
-export const createSound = async (config: SoundConfig) => {
+const createSound = async (config: SoundConfig) => {
   try {
     // Initialize audio context if needed
     if (!gameAudioContext) {
@@ -109,7 +98,7 @@ export const createSound = async (config: SoundConfig) => {
   }
 };
 
-const playSoundtrackNote = (note: number, duration: number, volume: number) => {
+const playMusicNote = (note: number, duration: number, volume: number) => {
   if (note === 0) return; // Rest note - silence
 
   createSound({
@@ -123,22 +112,22 @@ const playSoundtrackNote = (note: number, duration: number, volume: number) => {
   });
 };
 
-const playSoundtrack = (soundtrackSequence: NoteSequence, gameScore = 0) => {
-  if (!soundtrackPlaying) return;
+const playMusic = (sequence: NoteSequence, gameScore = 0) => {
+  if (!musicPlaying) return;
 
   let currentIndex = 0;
 
   const playNextNote = () => {
-    if (!soundtrackPlaying || currentIndex >= soundtrackSequence.length) {
+    if (!musicPlaying || currentIndex >= sequence.length) {
       // Loop the soundtrack
       currentIndex = 0;
-      if (soundtrackPlaying) {
+      if (musicPlaying) {
         soundtrackTimeout = window.setTimeout(playNextNote, 500); // Brief pause before looping
       }
       return;
     }
 
-    const [note, duration] = soundtrackSequence[currentIndex];
+    const [note, duration] = sequence[currentIndex];
     const volume = 0.08; // Fixed volume for all notes
 
     // Calculate dynamic speed based on score - music gets faster as score increases (faster tempo, reduced influence)
@@ -147,7 +136,7 @@ const playSoundtrack = (soundtrackSequence: NoteSequence, gameScore = 0) => {
     const adjustedDuration = duration * speedMultiplier;
 
     // Play the note
-    playSoundtrackNote(note, adjustedDuration, volume);
+    playMusicNote(note, adjustedDuration, volume);
 
     // Schedule next note with adjusted timing
     currentIndex++;
@@ -157,14 +146,14 @@ const playSoundtrack = (soundtrackSequence: NoteSequence, gameScore = 0) => {
   playNextNote();
 };
 
-export const startSoundtrack = (soundtrackSequence: NoteSequence, gameScore = 0) => {
-  if (soundtrackPlaying) return;
-  soundtrackPlaying = true;
-  playSoundtrack(soundtrackSequence, gameScore);
+const startMusic = (sequence: NoteSequence, gameScore = 0) => {
+  if (musicPlaying) return;
+  musicPlaying = true;
+  playMusic(sequence, gameScore);
 };
 
-export const stopSoundtrack = () => {
-  soundtrackPlaying = false;
+const stopMusic = () => {
+  musicPlaying = false;
   if (soundtrackTimeout) {
     clearTimeout(soundtrackTimeout);
     soundtrackTimeout = null;
@@ -172,13 +161,24 @@ export const stopSoundtrack = () => {
 };
 
 // Check if soundtrack is currently playing
-export const isSoundtrackPlaying = () => soundtrackPlaying;
+const isMusicPlaying = () => musicPlaying;
 
 // Play audio file with optional volume control
-export const playAudioFile = (audioFile: string, volume: number = 1) => {
+const playAudioFile = (audioFile: string, volume: number = 1) => {
   const audio = new Audio(audioFile);
   audio.volume = Math.max(0, Math.min(1, volume)); // Clamp volume between 0 and 1
   audio.play().catch(() => {
     // Silently handle audio play failures (e.g., no user interaction yet)
   });
+};
+
+export {
+  type SoundConfig,
+  type NoteSequence,
+  initializeAudio,
+  createSound,
+  startMusic,
+  stopMusic,
+  isMusicPlaying,
+  playAudioFile
 };

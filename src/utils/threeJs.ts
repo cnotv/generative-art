@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from '@/utils/video';
 import { animateTimeline, getAnimationsModel } from './animation';
 
-export const defaultModelOptions: ModelOptions = {
+const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
   color: 0x222222,
   mass: 1,
@@ -33,7 +33,7 @@ export const defaultModelOptions: ModelOptions = {
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
-export const getTools = ({ stats, route, canvas }: any) => {
+const getTools = ({ stats, route, canvas }: any) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
@@ -49,19 +49,12 @@ export const getTools = ({ stats, route, canvas }: any) => {
    * @param config Configuration for camera, ground and lights
    * @param defineSetup Actions required to be performed before the animation loop
    */
-  const setup = ({
+  const setup = async ({
     config = {},
-    defineSetup = () => {},
+    defineSetup,
   }: {
-    config?: {
-      global?: { frameRate?: number },
-      camera?: { position?: CoordinateTuple | THREE.Vector3, fov?: number, rotation?: CoordinateTuple | THREE.Vector3, lookAt?: CoordinateTuple | THREE.Vector3 },
-      ground?: { size?: number, color?: number, texture?: string } | false
-      sky?: { texture?: string, size?: number } | false
-      lights?: { directional?: { intensity?: number } } | false
-      orbit?: {target?: THREE.Vector} | false
-    },
-    defineSetup?: () => void
+    config?: SetupConfig,
+    defineSetup?: () => Promise<void> | void
   }) => {
     frameRate = config?.global?.frameRate || frameRate;
     if (config.orbit !== false) {
@@ -76,14 +69,14 @@ export const getTools = ({ stats, route, canvas }: any) => {
 
     if (config?.camera?.position)
       if (config.camera.position instanceof Array) {
-        camera.position.set(...(config.camera.position));
+        camera.position.set(...(config.camera.position as CoordinateTuple));
       } else {
         camera.position.copy(config.camera.position);
       }
     if (config?.camera?.fov) camera.fov = config.camera.fov;
     if (config?.camera?.rotation) {
       if (config.camera.rotation instanceof Array) {
-        camera.rotation.set(...(config.camera.rotation));
+        camera.rotation.set(...(config.camera.rotation as CoordinateTuple));
       } else {
         camera.rotation.setFromVector3(config.camera.rotation as THREE.Vector3);
       }
@@ -96,7 +89,7 @@ export const getTools = ({ stats, route, canvas }: any) => {
       }
     }
     camera.updateProjectionMatrix();
-    defineSetup();
+    if (defineSetup) await defineSetup();
   };
 
   /**
@@ -160,7 +153,7 @@ export const getTools = ({ stats, route, canvas }: any) => {
  * @param options 
  * @returns 
  */
-export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
+const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 20, 150], distance: 75 },
   scene: { background: 0xbfd1e5 },
 }) => {
@@ -177,7 +170,7 @@ export const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
   return { renderer, scene, camera, clock, world };
 }
 
-export const getOffset = (model: Model, config: any) => {
+const getOffset = (model: Model, config: any) => {
   const { x, y, z } = config.offset
   const offset = new THREE.Vector3(x, y, z)
   offset.applyQuaternion(model.quaternion)
@@ -186,7 +179,7 @@ export const getOffset = (model: Model, config: any) => {
   return offset
 }
 
-export const getLookAt = (model: Model, config: any) => {
+const getLookAt = (model: Model, config: any) => {
   const { x, y, z } = config.lookAt
   const lookAt = new THREE.Vector3(x, y, z)
   lookAt.applyQuaternion(model.quaternion)
@@ -201,7 +194,7 @@ export const getLookAt = (model: Model, config: any) => {
  * @param config 
  * @param model 
  */
-export const setThirdPersonCamera = (
+const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
   config: any,
   model: Model | null
@@ -215,7 +208,7 @@ export const setThirdPersonCamera = (
   }
 }
 
-export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
+const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -230,7 +223,7 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
  * @param scene 
  * @returns 
  */
-export const createLights = (scene: THREE.Scene, {
+const createLights = (scene: THREE.Scene, {
   directionalLightIntensity,
   hemisphere,
   ambient
@@ -277,7 +270,7 @@ export const createLights = (scene: THREE.Scene, {
  * @param { size, position, helpers, color, texture } 
  * @returns 
  */
-export const getGround = (
+const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
@@ -324,7 +317,7 @@ export const getGround = (
   return { mesh, rigidBody, helper, collider }
 }
 
-export const getSky = (
+const getSky = (
   scene: THREE.Scene,
   {
     color = 0xaaaaff,
@@ -349,37 +342,7 @@ export const getSky = (
   return { model }
 }
 
-// /**
-//  * Set sky for the scene
-//  * @param scene 
-//  * @param { size, color, texture } 
-//  * @returns 
-//  */
-// export const getSky = (
-//   scene: THREE.Scene,
-//   {
-//     color = 0xaaaaff,
-//     size = 1000,
-//     texture
-//   }: {
-//     color?: number
-//     texture?: string
-//     size?: number
-//   }
-// ) => {
-//   const skyGeometry = new THREE.SphereGeometry(size, 32, 32)
-//   const skyMaterial = new THREE.MeshBasicMaterial({
-//     side: THREE.BackSide,
-//     color,
-//     ...texture ? { map: getTextures(texture)} : {},
-//   })
-//   const model = new THREE.Mesh(skyGeometry, skyMaterial)
-//   scene.add(model)
-
-//   return { model }
-// }
-
-export const loadFBX = (
+const loadFBX = (
   fileName: string,
   {
     position = [0, 0, 0],
@@ -436,7 +399,7 @@ export const loadFBX = (
 /**
  * Return threeJS valid 3D model
  */
-export const loadGLTF = (
+const loadGLTF = (
   fileName: string,
   {
     position = [0, 0, 0],
@@ -497,7 +460,7 @@ export const loadGLTF = (
  * @param fileName 
  * @returns 
  */
-export const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationMixer> => {
+const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve, reject) => {
     // Add animation
     const loader = new FBXLoader();
@@ -516,7 +479,7 @@ export const loadAnimation = (model: Model, fileName: string): Promise<THREE.Ani
  * @param groundSize 
  * @returns 
  */
-export const getInstanceConfig = (config: InstanceConfig, groundSize: CoordinateTuple) => times(config.amount, () => {
+const getInstanceConfig = (config: InstanceConfig, groundSize: CoordinateTuple) => times(config.amount, () => {
   const size = Math.random() * config.size + config.sizeDelta;
   const getPosition = () => Math.random() * groundSize[0]/config.area - groundSize[0]/config.area/2
 
@@ -535,7 +498,7 @@ export const getInstanceConfig = (config: InstanceConfig, groundSize: Coordinate
  * @param options 
  * @returns 
  */
-export const instanceMatrixMesh = (
+const instanceMatrixMesh = (
   mesh: Model,
   scene: THREE.Scene,
   options: ModelOptions[]
@@ -571,7 +534,7 @@ export const instanceMatrixMesh = (
  * @param scene 
  * @param options 
  */
-export const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, scene: THREE.Scene, options: ModelOptions[]): Model => {
+const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, scene: THREE.Scene, options: ModelOptions[]): Model => {
   model.traverse((child) => {
     if (child.isMesh) {
       instanceMatrixMesh(child, scene, options);
@@ -579,7 +542,7 @@ export const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, 
   });
 }
 
-export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
+const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): Model => {
   options.forEach(({ position, rotation, scale }) => {
     const clone = model.clone();
     clone.position.set(...position!);
@@ -594,7 +557,7 @@ export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptio
  * @param img 
  * @returns 
  */
-export const getTextures = (img: string) => {
+const getTextures = (img: string) => {
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(img);
 
@@ -615,7 +578,7 @@ export const getTextures = (img: string) => {
  * @param {ModelOptions} options Options for the model 
  * @returns 
  */
-export const getModel = async (
+const getModel = async (
   scene: THREE.Scene,
   world: RAPIER.World,
   path: string,
@@ -714,7 +677,7 @@ export const getModel = async (
 
  * @returns
  */
-export const getPhysic = (
+const getPhysic = (
   world: RAPIER.World,
   {
     rotation,
@@ -781,7 +744,7 @@ export const getPhysic = (
  * @param elements 
  * @returns 
  */
-export const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements: any[]) => {
+const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements: any[]) => {
   elements.forEach(({ mesh, rigidBody }) => {
     scene.remove(mesh);
     world.removeRigidBody(rigidBody);
@@ -795,7 +758,7 @@ export const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements
  * @param mesh 
  * @param materialColors 
  */
-export const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
+const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
   // Apply colors from array based on mesh index
   let meshIndex = 0;
   mesh.traverse((child: any) => {
@@ -824,7 +787,7 @@ export const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
 /**
  * Configuration interface for zigzag texture parameters
  */
-export interface ZigzagTextureOptions {
+interface ZigzagTextureOptions {
   size?: number;           // Canvas size (default: 64)
   backgroundColor?: string; // Background color (default: '#68b469')
   zigzagColor?: string;    // Primary zigzag line color (default: '#4a7c59')
@@ -842,7 +805,7 @@ export interface ZigzagTextureOptions {
  * @param options Configuration options for the zigzag pattern
  * @returns THREE.CanvasTexture with zigzag pattern
  */
-export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.CanvasTexture => {
+const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.CanvasTexture => {
   const {
     size = 64,
     backgroundColor = '#68b469',
@@ -899,7 +862,7 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
  * @param targetTilt - Target tilt angle in radians (positive = tilt up, negative = tilt down)
  * @param lerpFactor - Smoothing factor (0-1, higher = faster transition)
  */
-export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor: number = 0.1) => {
+const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor: number = 0.1) => {
   // Store original rotation if not already stored
   if (!camera.userData.originalRotation) {
     camera.userData.originalRotation = {
@@ -918,36 +881,38 @@ export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor:
   camera.rotation.x = camera.userData.originalRotation.x + newTilt;
 };
 
-/**
- * Calculate Out of Sight (OoS) status for background elements
- * @param camera
- * @param background
- */
-export const isOoS = (camera: THREE.PerspectiveCamera, background: {
-    mesh: THREE.Mesh;
-    speed: number;
-}) => {
-  // Calculate removal distance based on camera cone vision and element depth
-  const cameraPos = camera.position;
-  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z);
-
-  // Account for camera field of view cone - wider cone for farther elements
-  const fov = camera.fov * (Math.PI / 180); // Convert to radians
-  const aspect = window.innerWidth / window.innerHeight;
-  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect;
-
-  // Add significant offset for safe removal (element width + cone width + buffer)
-  let elementWidth = 200; // Default fallback
-  if (background.mesh.geometry?.boundingBox) {
-    elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
-  } else {
-    // Compute bounding box if not available
-    background.mesh.geometry.computeBoundingBox();
-    if (background.mesh.geometry.boundingBox) {
-      elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
-    }
+const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => {
+  if (camera instanceof THREE.PerspectiveCamera) {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
   }
-  const removalOffset = (coneWidth / 2) + elementWidth + 500; // Extra 500 units buffer
+  renderer.setSize(window.innerWidth, window.innerHeight);
+};
 
-  return background.mesh.position.x < cameraPos.x - removalOffset
-}
+export {
+  defaultModelOptions,
+  getTools,
+  getEnvironment,
+  getOffset,
+  getLookAt,
+  setThirdPersonCamera,
+  getRenderer,
+  createLights,
+  getGround,
+  getSky,
+  loadFBX,
+  loadGLTF,
+  loadAnimation,
+  getInstanceConfig,
+  instanceMatrixMesh,
+  instanceMatrixModel,
+  cloneModel,
+  getTextures,
+  getModel,
+  getPhysic,
+  removeElements,
+  colorModel,
+  createZigzagTexture,
+  tiltCamera,
+  onWindowResize,
+};

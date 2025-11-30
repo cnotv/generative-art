@@ -1,15 +1,12 @@
 <template>
   <div class="score">
-    <span class="score__value">{{ gameScore }}</span>
-    <span class="score__value score__value--highest">Best: {{ highestScore }}</span>
+    <span class="score__value">{{ getGameScore() }}</span>
+    <span class="score__value score__value--highest">Best: {{ getHighestScore() }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  gameScore: number
-  highestScore: number
-}>()
+import { getGameScore, getHighestScore } from "../helpers/game";
 </script>
 
 <style scoped>

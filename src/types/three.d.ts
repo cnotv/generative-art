@@ -72,6 +72,7 @@ interface ModelConditions {
 }
 
 interface Timeline {
+  name?: string;
   action?: (element?: any) => void;
   actionStart?: (loop: number, element?: any) => void;
   start?: number;
@@ -115,4 +116,31 @@ interface RotationMap {
   right: number;
   backward: number;
   left: number;
+}
+
+interface SetupConfig {
+  global?: { frameRate?: number },
+  camera?: {
+    position?: CoordinateTuple | THREE.Vector3,
+    fov?: number,
+    rotation?: CoordinateTuple | THREE.Vector3,
+    lookAt?: CoordinateTuple | THREE.Vector3
+  },
+  ground?: {
+    size?: number,
+    color?: number,
+    texture?: string
+  } | false
+  sky?: {
+    texture?: string,
+    size?: number
+  } | false
+  lights?: {
+    directional?: {
+      intensity?: number
+    }
+  } | false
+  orbit?: {
+    target?: THREE.Vector
+  } | false
 }

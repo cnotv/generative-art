@@ -1,7 +1,7 @@
 /**
  * Enable zoom prevention on mobile devices
  */
-export const enableZoomPrevention = () => {
+const enableZoomPrevention = () => {
   // Store original viewport and modify it
   const originalViewport = document.querySelector('meta[name="viewport"]');
   if (originalViewport) {
@@ -33,7 +33,7 @@ export const enableZoomPrevention = () => {
 /**
  * Restore normal zoom functionality
  */
-export const disableZoomPrevention = (originalViewport: Element | null, preventZoomStyleElement: HTMLStyleElement | null) => {
+const disableZoomPrevention = (originalViewport: Element | null, preventZoomStyleElement: HTMLStyleElement | null) => {
   // Restore original viewport
   if (originalViewport) {
     originalViewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
@@ -49,7 +49,7 @@ export const disableZoomPrevention = (originalViewport: Element | null, preventZ
 /**
  * Load Google Fonts for this route only
  */
-export const loadGoogleFont = (url: string, id: string) => {
+const loadGoogleFont = (url: string, id: string) => {
   const link = document.createElement("link");
   link.href = url;
   link.rel = "stylesheet";
@@ -60,9 +60,16 @@ export const loadGoogleFont = (url: string, id: string) => {
 /**
  * Remove Google Font from the document
  */
-export const removeGoogleFont = (id: string) => {
+const removeGoogleFont = (id: string) => {
   const existingLink = document.getElementById(id);
   if (existingLink) {
     document.head.removeChild(existingLink);
   }
+};
+
+export {
+  enableZoomPrevention,
+  disableZoomPrevention,
+  loadGoogleFont,
+  removeGoogleFont,
 };

@@ -16,7 +16,7 @@ import * as THREE from 'three';
   { interval: [100, 100], action: (mesh) => { mesh.rotation.y += 0.01; } },
   { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
  */
-export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
+const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
   timeline.forEach(({ start, end, frequency, delay, interval, action, actionStart }) => {
     let cycle = 0;
     let frameCycle = 0;
@@ -58,7 +58,7 @@ export const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T
     }
   * @param loop 
   */
-export const getTimelineLoopModel = ({ loop, length, action, list }: {
+const getTimelineLoopModel = ({ loop, length, action, list }: {
     loop: number, // 0 === infinite
     length: number,
     action: (args: any) => void,
@@ -114,7 +114,7 @@ const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: 
  * Bind physic to models to animate them
  * @param elements 
  */
-export const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => {
+const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: AnimatedComplexModel) => {
     const { mesh, rigidBody, helper, type, hasGravity } = model;
     if (type === 'fixed') return;
@@ -140,7 +140,7 @@ export const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RA
  * Reset models and bodies to their initial state (position, rotation, forces, and torques)
  * @param elements 
  */
-export const resetAnimation = (elements: ComplexModel[]) => {
+const resetAnimation = (elements: ComplexModel[]) => {
   elements.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
     rigidBody.resetForces(true);
     rigidBody.resetTorques(true);
@@ -151,7 +151,7 @@ export const resetAnimation = (elements: ComplexModel[]) => {
   return elements;
 }
 
-export const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
+const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
   // action.play()
@@ -163,7 +163,7 @@ export const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gl
 /**
  * Update the animation of the model based on given time
  */
-export const updateAnimation = (
+const updateAnimation = (
   mixer: THREE.AnimationMixer,
   action: THREE.AnimationAction,
   delta: number = 0,
@@ -186,7 +186,7 @@ export const updateAnimation = (
  * @param distance
  * @param backwards
  */
-export const controllerForward = (
+const controllerForward = (
   model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
@@ -222,7 +222,7 @@ export const controllerForward = (
   updateAnimation(model.mixer, model.actions.run, delta, 10)
 }
 
-export const controllerJump = (
+const controllerJump = (
   model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
@@ -236,7 +236,7 @@ export const controllerJump = (
  * @param model 
  * @param angle angle in degrees
  */
-export const controllerTurn = (
+const controllerTurn = (
   model: ComplexModel,
   angle: number,
 ) => {
@@ -245,7 +245,7 @@ export const controllerTurn = (
   mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
 };
 
-export const bodyJump = (
+const bodyJump = (
   model: AnimatedComplexModel,
   bodies: ComplexModel[],
   distance: number,
@@ -277,3 +277,16 @@ export const bodyJump = (
     model.rigidBody.setTranslation(newPosition, true)
   }
 }
+
+export {
+  animateTimeline,
+  getTimelineLoopModel,
+  bindAnimatedElements,
+  resetAnimation,
+  getAnimationsModel,
+  updateAnimation,
+  controllerForward,
+  controllerJump,
+  controllerTurn,
+  bodyJump,
+};

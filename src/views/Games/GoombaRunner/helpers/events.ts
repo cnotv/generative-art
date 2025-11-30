@@ -1,4 +1,4 @@
-import { GAME_STATUS } from "../config";
+import { GAME_STATUS } from "./game";
 
 interface EventHandlers {
   keyboard?: Record<string, () => void>;

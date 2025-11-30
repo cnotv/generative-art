@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import cloudTexture from "@/assets/cloud.png";
 import hillTexture from "@/assets/hill.png";
 import fireTexture from "@/assets/fire.png";
@@ -160,9 +159,14 @@ export const configControls = {
   },
 };
 
-// Game status enum-like values
-export const GAME_STATUS = {
-  START: "start",
-  PLAYING: "playing",
-  GAME_OVER: "gameOver",
-} as const;
+export const setupConfig = {
+  camera: config.camera as any,
+  ground: false,
+  sky: false, // Disable sky sphere to avoid hiding UI elements
+  lights: {
+    directional: {
+      intensity: config.directional.intensity * 1.5,
+    },
+  },
+  orbit: false,
+} as SetupConfig;

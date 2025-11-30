@@ -1,9 +1,41 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d";
 import { getCube } from "@/utils/models";
-import { isOoS } from "@/utils/threeJs";
 import { config } from "../config";
 import { preventGlitches, getSpeed } from "./setup";
+
+/**
+ * Calculate Out of Sight (OoS) status for background elements
+ * @param camera
+ * @param background
+ */
+const isOoS = (camera: THREE.PerspectiveCamera, background: {
+  mesh: THREE.Mesh;
+}) => {
+  // Calculate removal distance based on camera cone vision and element depth
+  const cameraPos = camera.position;
+  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z);
+
+  // Account for camera field of view cone - wider cone for farther elements
+  const fov = camera.fov * (Math.PI / 180); // Convert to radians
+  const aspect = window.innerWidth / window.innerHeight;
+  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect;
+
+  // Add significant offset for safe removal (element width + cone width + buffer)
+  let elementWidth = 200; // Default fallback
+  if (background.mesh.geometry?.boundingBox) {
+    elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+  } else {
+    // Compute bounding box if not available
+    background.mesh.geometry.computeBoundingBox();
+    if (background.mesh.geometry.boundingBox) {
+      elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+    }
+  }
+  const removalOffset = (coneWidth / 2) + elementWidth + 500; // Extra 500 units buffer
+
+  return background.mesh.position.x < cameraPos.x - removalOffset
+}
 
 export const addBackground = (
   scene: THREE.Scene,

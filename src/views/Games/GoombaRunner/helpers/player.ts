@@ -2,19 +2,18 @@ import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d";
 import { getModel, colorModel, tiltCamera } from "@/utils/threeJs";
 import { playAudioFile } from "@/utils/audio";
-import { config, GAME_STATUS } from "../config";
 import { startBackgroundFalling } from "./background";
 import jumpSound from "@/assets/jump.wav";
 import gameOverSound from "@/assets/gameover.wav";
 import starTexture from "@/assets/star1.png";
 
-export interface PlayerMovement {
+interface PlayerMovement {
   forward: number;
   right: number;
   up: number;
 }
 
-export const createPlayer = async (
+const createPlayer = async (
   scene: THREE.Scene,
   physics: any,
   world: RAPIER.World
@@ -93,12 +92,13 @@ export const createPlayer = async (
   return { player, playerController, model: goombaModel };
 };
 
-export const handleJump = (
+const handleJump = (
   player: THREE.Mesh,
-  gameStatus: string,
+  isPlaying: boolean,
   uiStore: any,
   camera: THREE.Camera,
-  horizonLine: THREE.Mesh
+  horizonLine: THREE.Mesh,
+  config: any
 ) => {
   // Always ensure Goomba is at proper ground level, regardless of game state
   const ensureGroundPosition = () => {
@@ -117,7 +117,7 @@ export const handleJump = (
   };
 
   // Stop jump animation if game is not playing
-  if (gameStatus !== GAME_STATUS.PLAYING) {
+  if (!isPlaying) {
     config.player.jump.isActive = false;
     config.player.jump.velocity = 0;
     // Ensure proper ground position even when game is not playing
@@ -222,12 +222,13 @@ export const handleJump = (
   }
 };
 
-export const movePlayer = (
+const movePlayer = (
   player: THREE.Mesh,
   playerController: any,
   physics: any,
   playerMovement: PlayerMovement,
-  gameStatus: string
+  isPlaying: boolean,
+  config: any
 ) => {
   if (physics && playerController) {
     const deltaTime = 1 / 60;
@@ -251,7 +252,7 @@ export const movePlayer = (
 
     position.x += translation.x;
     // Prevent vertical movement if game is not playing, but always ensure ground collision
-    if (gameStatus === GAME_STATUS.PLAYING) {
+    if (isPlaying) {
       position.y += translation.y;
     }
     // Always ensure Goomba never goes below ground level, regardless of game state
@@ -266,15 +267,16 @@ export const movePlayer = (
   }
 };
 
-export const updatePlayerAnimation = (
+const updatePlayerAnimation = (
   model: any,
-  gameStatus: string,
+  isPlaying: boolean,
   gameScore: number,
   getDelta: () => number,
   updateAnimation: any,
-  getSpeed: any
+  getSpeed: any,
+  config: any
 ) => {
-  if (gameStatus !== GAME_STATUS.PLAYING) return;
+  if (!isPlaying) return;
   const animationSpeed = getSpeed(config.player.speed, gameScore);
   updateAnimation(
     model.mixer,
@@ -284,7 +286,7 @@ export const updatePlayerAnimation = (
   );
 };
 
-export const ensurePlayerAboveGround = (player: THREE.Mesh) => {
+const ensurePlayerAboveGround = (player: THREE.Mesh) => {
   const currentPosition = player.userData.collider.translation();
   const groundLevel = player.userData.baseY;
 
@@ -298,7 +300,7 @@ export const ensurePlayerAboveGround = (player: THREE.Mesh) => {
   }
 };
 
-export const handleArcMovement = (player: THREE.Mesh) => {
+const handleArcMovement = (player: THREE.Mesh) => {
   if (!player.userData.arcMovement || !player.userData.arcMovement.isActive) {
     return;
   }
@@ -366,9 +368,9 @@ export const handleArcMovement = (player: THREE.Mesh) => {
 };
 
 // Explosion particles array
-export const explosionParticles: THREE.Mesh[] = [];
+const explosionParticles: THREE.Mesh[] = [];
 
-export const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color: number) => {
+const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color: number) => {
   const starCount = 12; // Number of stars in explosion
 
   // Load the star texture
@@ -429,7 +431,7 @@ export const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3,
   }
 };
 
-export const resetPlayer = (player: THREE.Mesh, scene: THREE.Scene) => {
+const resetPlayer = (player: THREE.Mesh, scene: THREE.Scene) => {
   // Clear explosion particles on restart
   for (let i = explosionParticles.length - 1; i >= 0; i--) {
     scene.remove(explosionParticles[i]);
@@ -471,7 +473,7 @@ export const resetPlayer = (player: THREE.Mesh, scene: THREE.Scene) => {
   });
 };
 
-export const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
+const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
   for (let i = explosionParticles.length - 1; i >= 0; i--) {
     const particle = explosionParticles[i];
     const userData = particle.userData;
@@ -506,13 +508,14 @@ export const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) 
   }
 };
 
-export const checkCollisions = (
+const checkCollisions = (
   player: THREE.Mesh,
   obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
   backgrounds: any[],
   scene: THREE.Scene,
   endGameCallback: () => void,
   loggedCollisions: Set<string>,
+  config: any
 ) => {
   const goombaColor = 0x8b4513; 
   const playerPosition = player.position;
@@ -557,4 +560,19 @@ export const checkCollisions = (
       }
     }
   });
+};
+
+export {
+  type PlayerMovement,
+  createPlayer,
+  handleJump,
+  movePlayer,
+  updatePlayerAnimation,
+  ensurePlayerAboveGround,
+  handleArcMovement,
+  explosionParticles,
+  createStarExplosion,
+  resetPlayer,
+  updateExplosionParticles,
+  checkCollisions,
 };

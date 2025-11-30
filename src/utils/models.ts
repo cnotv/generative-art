@@ -9,7 +9,7 @@ import { getPhysic, getTextures } from './threeJs';
  * @param world
  * @param options
  */
-export const getBall = (
+const getBall = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
@@ -97,7 +97,7 @@ export const getBall = (
  * @param world
  * @param options
  */
-export const getCube = (
+const getCube = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
@@ -184,7 +184,7 @@ export const getCube = (
   return { mesh, rigidBody, collider, initialValues, type, characterController, helper, hasGravity }
 }
 
-export const getWalls = (
+const getWalls = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
@@ -208,3 +208,9 @@ export const getWalls = (
     type: 'fixed',
   })
 ))
+
+export {
+  getBall,
+  getCube,
+  getWalls,
+};
