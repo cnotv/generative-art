@@ -1,0 +1,43 @@
+import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier3d';
+
+export type CoordinateTuple = [number, number, number];
+
+export type Model = THREE.Group<THREE.Object3DEventMap>;
+export type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased';
+
+export interface Timeline {
+  name?: string;
+  action?: (element?: any) => void;
+  actionStart?: (loop: number, element?: any) => void;
+  start?: number;
+  end?: number;
+  frequency?: number;
+  interval?: [number, number]; // Interval as a range [start, end]
+  delay?: number;
+}
+
+export interface ComplexModel {
+  mesh: Model;
+  rigidBody: RAPIER.RigidBody;
+  collider: RAPIER.Collider;
+  initialValues: {
+    size: number | CoordinateTuple;
+    rotation: CoordinateTuple;
+    position: CoordinateTuple;
+    color: number | undefined;
+  };
+  type: ModelType;
+  characterController?: RAPIER.KinematicCharacterController;
+  helper?: THREE.SkeletonHelper;
+  hasGravity?: boolean;
+}
+
+export interface AnimatedComplexModel extends ComplexModel {
+  actions: {
+    run?: THREE.AnimationAction;
+  };
+  mixer: THREE.AnimationMixer;
+}
+
+export type Direction = "forward" | "right" | "left" | "backward" | "jump";

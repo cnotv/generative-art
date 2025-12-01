@@ -9,7 +9,10 @@ export default defineConfig({
   plugins: [vue(), wasm()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@webgametoolkit/animation': fileURLToPath(new URL('./packages/animation/src/index.ts', import.meta.url)),
+      '@webgametoolkit/threejs': fileURLToPath(new URL('./packages/threejs/src/index.ts', import.meta.url)),
+      '@dimforge/rapier3d': fileURLToPath(new URL('./node_modules/@dimforge/rapier3d/rapier.js', import.meta.url))
     }
   },
   build: {

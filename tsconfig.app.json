@@ -7,7 +7,9 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@webgametoolkit/animation": ["./packages/animation/src/index.ts"],
+      "@webgametoolkit/threejs": ["./packages/threejs/src/index.ts"]
     }
   }
 }
