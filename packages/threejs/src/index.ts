@@ -507,7 +507,7 @@ const instanceMatrixMesh = (
   mesh: THREE.Mesh,
   scene: THREE.Scene,
   options: ModelOptions[]
-): THREE.InstancedMesh<any, any, THREE.InstancedMeshEventMap>[] => {
+): THREE.InstancedMesh<any, any>[] => {
   const count = options.length;
   const geometry = mesh.geometry;
   const material = mesh.material;
