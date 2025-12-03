@@ -1,4 +1,4 @@
-import RAPIER from '@dimforge/rapier3d';
+import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { Timeline, Direction, AnimatedComplexModel, ComplexModel, Model } from './types';
 export * from './types';

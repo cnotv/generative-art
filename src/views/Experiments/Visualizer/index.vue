@@ -263,7 +263,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, world, getDelta, scene, camera } = getTools({
+    const { animate, setup, world, getDelta, scene, camera } = await getTools({
       stats,
       route,
       canvas,

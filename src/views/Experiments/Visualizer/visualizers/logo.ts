@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
 import { getModel } from "@/utils/threeJs";
-import type RAPIER from "@dimforge/rapier3d";
+import type RAPIER from "@dimforge/rapier3d-compat";
 import streetBg from '@/assets/street2_blur.jpg';
 
 const scale = 3

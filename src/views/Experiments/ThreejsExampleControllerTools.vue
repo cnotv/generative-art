@@ -221,7 +221,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as any[];
-    const { animate, setup, world, getDelta, scene } = getTools({
+    const { animate, setup, world, getDelta, scene } = await getTools({
       stats,
       route,
       canvas,

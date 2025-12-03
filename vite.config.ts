@@ -11,8 +11,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@webgametoolkit/animation': fileURLToPath(new URL('./packages/animation/src/index.ts', import.meta.url)),
-      '@webgametoolkit/threejs': fileURLToPath(new URL('./packages/threejs/src/index.ts', import.meta.url)),
-      '@dimforge/rapier3d': fileURLToPath(new URL('./node_modules/@dimforge/rapier3d/rapier.js', import.meta.url))
+      '@webgametoolkit/threejs': fileURLToPath(new URL('./packages/threejs/src/index.ts', import.meta.url))
     }
   },
   build: {
@@ -20,6 +19,9 @@ export default defineConfig({
     rollupOptions: {
       treeshake: false,
     }
+  },
+  optimizeDeps: {
+    exclude: ['@dimforge/rapier3d-compat']
   },
   server: {
     allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz'],

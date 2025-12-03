@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
 import { getModel, getSky } from "@/utils/threeJs";
-import type RAPIER from '@dimforge/rapier3d';
+import type RAPIER from '@dimforge/rapier3d-compat';
 import livingRoomImage from "@/assets/livingroom2.jpg";
 
 export const boxVisualizer: VisualizerSetup = {

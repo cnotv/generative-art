@@ -63,7 +63,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const createScene = async () => {
     const elements = [] as AnimatedComplexModel[];
     const obstacles = [] as AnimatedComplexModel[];
-    const { animate, setup, world, scene, getDelta } = getTools({
+    const { animate, setup, world, scene, getDelta } = await getTools({
       stats,
       route,
       canvas,

@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import RAPIER from '@dimforge/rapier3d';
+import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from './utils/video';
@@ -36,12 +36,12 @@ const defaultModelOptions: ModelOptions = {
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
-const getTools = ({ stats, route, canvas }: any) => {
+const getTools = async ({ stats, route, canvas }: any) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
   let frameRate = 1 / 60;
-  const { renderer, scene, camera, world } = getEnvironment(canvas);
+  const { renderer, scene, camera, world } = await getEnvironment(canvas);
   video.record(canvas, route);
   const getDelta = () => delta;
   const getFrame = () => frame;
@@ -156,10 +156,11 @@ const getTools = ({ stats, route, canvas }: any) => {
  * @param options 
  * @returns 
  */
-const getEnvironment = (canvas: HTMLCanvasElement, options: any = {
+const getEnvironment = async (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 20, 150], distance: 75 },
   scene: { background: 0xbfd1e5 },
 }) => {
+  await RAPIER.init();
   const gravity = { x: 0.0, y: -9.81, z: 0.0 };
   const world = new RAPIER.World(gravity);
   const renderer = getRenderer(canvas);

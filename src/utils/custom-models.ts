@@ -1,6 +1,8 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import type RAPIER from '@dimforge/rapier3d-compat';
 import { getPhysic } from './threeJs';
-import type RAPIER from '@dimforge/rapier3d';
+import { getAnimationsModel } from './animation';
 
 export const getBlade = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)

@@ -31,6 +31,6 @@
   },
   "peerDependencies": {
     "three": "^0.178.0",
-    "@dimforge/rapier3d": "^0.14.0"
+    "@dimforge/rapier3d-compat": "^0.14.0"
   }
 }

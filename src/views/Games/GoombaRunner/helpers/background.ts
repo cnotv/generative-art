@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { getCube } from "@/utils/models";
 import { config } from "../config";
 import { preventGlitches, getSpeed } from "./setup";

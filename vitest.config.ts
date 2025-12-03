@@ -11,7 +11,7 @@ export default mergeConfig(
       root: fileURLToPath(new URL('./', import.meta.url)),
       server: {
         deps: {
-          inline: ['@dimforge/rapier3d']
+          inline: ['@dimforge/rapier3d-compat']
         }
       }
     }

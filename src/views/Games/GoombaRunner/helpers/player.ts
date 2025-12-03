@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { getModel, colorModel, tiltCamera } from "@/utils/threeJs";
 import { playAudioFile } from "@/utils/audio";
 import { startBackgroundFalling } from "./background";

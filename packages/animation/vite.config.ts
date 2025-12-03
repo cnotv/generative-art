@@ -9,11 +9,11 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['three', '@dimforge/rapier3d'],
+      external: ['three', '@dimforge/rapier3d-compat'],
       output: {
         globals: {
           three: 'THREE',
-          '@dimforge/rapier3d': 'RAPIER',
+          '@dimforge/rapier3d-compat': 'RAPIER',
         },
       },
     },

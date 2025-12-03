@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { getModel } from "@/utils/threeJs";
 import { config } from "../config";
 import { getSpeed } from "./setup";

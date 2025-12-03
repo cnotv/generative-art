@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type RAPIER from '@dimforge/rapier3d';
+import type RAPIER from '@dimforge/rapier3d-compat';
 
 export interface VisualizerSetup {
   setup: (scene: THREE.Scene, world?: RAPIER.World) => Promise<Record<string, any>> | Record<string, any>;
