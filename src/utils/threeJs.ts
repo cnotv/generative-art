@@ -112,7 +112,7 @@ const getTools = async ({ stats, route, canvas }: any) => {
       config?: any
   }) => { 
     function runAnimation() {
-      if (stats) stats.start(route);
+      if (stats && route) stats.start(route);
       delta = clock.getDelta();
       frame = requestAnimationFrame(runAnimation);
       world.step();
@@ -127,8 +127,8 @@ const getTools = async ({ stats, route, canvas }: any) => {
       }
       renderer.render( scene, camera );
 
-      video.stop(renderer.info.render.frame ,route);
-      if (stats) stats.end(route);
+      if (video) video.stop(renderer.info.render.frame ,route);
+      if (stats && route) stats.stop(route);
     }
     runAnimation();
   };

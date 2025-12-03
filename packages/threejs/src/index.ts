@@ -42,7 +42,7 @@ const getTools = async ({ stats, route, canvas }: any) => {
   let frame = 0;
   let frameRate = 1 / 60;
   const { renderer, scene, camera, world } = await getEnvironment(canvas);
-  if (video) video.record(canvas, route);
+  if (video && route) video.record(canvas, route);
   const getDelta = () => delta;
   const getFrame = () => frame;
   let orbit: OrbitControls | null = null;
@@ -130,8 +130,8 @@ const getTools = async ({ stats, route, canvas }: any) => {
       }
       renderer.render( scene, camera );
 
-      if (video) video.stop(renderer.info.render.frame ,route);
-      if (stats) stats.end(route);
+      if (video && route) video.stop(renderer.info.render.frame ,route);
+      if (stats && route) stats.stop(route);
     }
     runAnimation();
   };
