@@ -1,5 +1,3 @@
-import type { RouteLocationNormalizedLoaded } from "vue-router";
-
 // TODO: Use state management?
 const config = {
   chunks: [] as Blob[],
@@ -56,7 +54,7 @@ const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Pro
   return response.json();
 };
 
-const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded) => {
+const record = (canvas: HTMLCanvasElement, route: any) => {
   stop(0, route);
   const shouldRecord = !!route.query.record;
   if (shouldRecord) {
@@ -75,7 +73,7 @@ const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded)
   };
 };
 
-const stop = (frameCount: number, route: RouteLocationNormalizedLoaded) => {
+const stop = (frameCount: number, route: any) => {
   const shouldRecord = !!route.query.record;
   const totalFrames = isNaN(Number(route.query.record)) ? 800 : Number(route.query.record);
   if (shouldRecord) {
