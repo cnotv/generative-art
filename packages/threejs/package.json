@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "../../node_modules/.bin/vite build && ../../node_modules/.bin/tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {
     "access": "public"

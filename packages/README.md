@@ -9,9 +9,9 @@ This directory contains the source code for the `@webgametoolkit` packages.
 
 ## Development
 
-To build the packages, run `npm run build` (or `yarn build`) inside each package directory.
+To build the packages, run `pnpm run build` inside each package directory.
 
 ## Publishing
 
 Ensure you have updated the version in `package.json` before publishing.
-Run `npm publish` inside each package directory.
+Run `pnpm publish` inside each package directory.

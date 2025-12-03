@@ -205,7 +205,7 @@ bars.forEach((bar, index) => {
 
 ## 🚀 Getting Started
 
-1. **Run the dev server**: `npm run dev`
+1. **Run the dev server**: `pnpm run dev`
 2. **Navigate to visualizer**: Go to the visualizer route
 3. **Play music**: Click play on the audio controls
 4. **Switch visualizers**: Use the dropdown menu

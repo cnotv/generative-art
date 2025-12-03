@@ -5,6 +5,6 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-RUN yarn install
+RUN npm install -g pnpm && pnpm install
 
-CMD ["yarn", "run", "host"]
+CMD ["pnpm", "run", "host"]
