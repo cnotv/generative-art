@@ -471,8 +471,8 @@ const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationM
     // Add animation
     const loader = new FBXLoader();
     loader.load(`/${fileName}`, (animation) => {
-    const mixer = new THREE.AnimationMixer(model);
-      const action = mixer.clipAction((model?.animations[0] ? model : animation).animations[0]);
+      const mixer = new THREE.AnimationMixer(model);
+      const action = mixer.clipAction((model?.animations?.length ? model : animation).animations[0]);
       action.play();
       resolve(mixer);
     });
