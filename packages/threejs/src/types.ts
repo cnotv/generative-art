@@ -52,6 +52,9 @@ export interface PhysicOptions extends CommonOptions {
 
 export interface SetupConfig {
   global?: { frameRate?: number };
+  scene?: {
+    backgroundColor?: number;
+  };
   camera?: {
     position?: CoordinateTuple | THREE.Vector3;
     fov?: number;

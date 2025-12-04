@@ -61,6 +61,7 @@ const getTools = async ({ stats, route, canvas }: any) => {
     defineSetup?: () => Promise<void> | void
   }) => {
     frameRate = config?.global?.frameRate || frameRate;
+    if (config.scene?.backgroundColor) scene.background = new THREE.Color(config.scene.backgroundColor);
     if (config.orbit !== false) {
       orbit = new OrbitControls(camera, renderer.domElement);
       if (config.orbit?.target) {
