@@ -18,7 +18,7 @@ import {
   cloneModel,
   instanceMatrixMesh,
   getInstanceConfig,
-} from "@/utils/threeJs";
+} from "@webgametoolkit/threejs";
 import { complexAnimation as config } from "@/config/scenes";
 import { getBlade } from "@/utils/custom-models";
 
@@ -28,6 +28,7 @@ const route = useRoute();
 const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
 const groundPosition = [1, 0, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
+await RAPIER.init();
 let world = new RAPIER.World(gravity);
 
 onMounted(() => {

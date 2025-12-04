@@ -39,7 +39,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   });
 
   const setup = async () => {
-    const { renderer, scene, camera, clock, world } = getEnvironment(canvas, {
+    const { renderer, scene, camera, clock, world } = await getEnvironment(canvas, {
       camera: { position: [0, 150, 0] },
     });
     createLights(scene, { directionalLightIntensity: config.directional.intensity });

@@ -10,8 +10,12 @@ import {
   getGround,
   getModel,
   removeElements,
-} from "@/utils/threeJs";
-import { bindAnimatedElements, resetAnimation, animateTimeline } from "@/utils/animation";
+} from "@webgametoolkit/threejs";
+import {
+  bindAnimatedElements,
+  resetAnimation,
+  animateTimeline,
+} from "@webgametoolkit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
 import bowlingTexture from "@/assets/bowling.png";
@@ -47,8 +51,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
   const setup = async () => {
     const length = 400;
-    const { renderer, scene, camera, clock, world } = getEnvironment(canvas, {
-      camera: { position: [0, 0, 0] },
+    const { renderer, scene, camera, clock, world } = await getEnvironment(canvas, {
+      camera: { position: [0, 50, 200] },
     });
     createLights(scene, { directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { size: 1000.0 });

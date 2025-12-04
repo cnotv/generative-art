@@ -16,7 +16,7 @@ const init = async () => {
       camera: { position: [0, 5, 20] },
       ground: { size: 10000, color: 0x559955 },
       sky: { size: 500, color: 0x87ceeb },
-      lights: { directional: { intensity: 2 } },
+      lights: { directional: { intensity: 0.1 } },
     },
     defineSetup: async () => {
       const chameleon = await getModel(scene, world, "chameleon.fbx", {

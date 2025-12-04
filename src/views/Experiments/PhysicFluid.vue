@@ -4,8 +4,8 @@ import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { createLights, getEnvironment } from "@/utils/threeJs";
-import { bindAnimatedElements, animateTimeline } from "@/utils/animation";
+import { createLights, getEnvironment } from "@webgametoolkit/threejs";
+import { bindAnimatedElements, animateTimeline } from "@webgametoolkit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
 
@@ -34,15 +34,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     },
   };
   stats.init(route, statsEl);
-  controls.create(config, route, {}, () => {
-    setup();
+  controls.create(config, route, {}, async () => {
+    await setup();
   });
 
   const setup = async () => {
     const length = 25;
-    const { renderer, scene, camera, clock, orbit, world } = getEnvironment(canvas, {
-      camera: { position: [-35, 100, -100] },
-    });
+    const { renderer, scene, camera, clock, orbit, world } = await getEnvironment(
+      canvas,
+      {
+        camera: { position: [0, 40, 100] },
+      }
+    );
     createLights(scene, { directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 });

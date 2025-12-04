@@ -6,7 +6,7 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@/utils/threeJs';
+import { createLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgametoolkit/threejs';
 import { times } from '@/utils/lodash';
 
 const statsEl = ref(null)

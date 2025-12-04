@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { getPhysic, getTextures } from './threeJs';
+import { getPhysic, getTextures } from '@webgametoolkit/threejs';
 
 /**
  * Create a ball with physics, texture, and shadow

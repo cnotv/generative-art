@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createZigzagTexture } from "@/utils/threeJs";
+import { createZigzagTexture } from "@webgametoolkit/threejs";
 import { config } from "../config";
 import { GAME_STATUS } from "./game";
 import { getSpeed } from "./setup";

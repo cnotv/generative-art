@@ -5,8 +5,8 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import * as THREE from "three";
 
-import { getTools } from "@/utils/threeJs";
-import { bindAnimatedElements } from "@/utils/animation";
+import { getTools } from "@webgametoolkit/threejs";
+import { bindAnimatedElements } from "@webgametoolkit/animation";
 import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from "./audio";
 import {
   getVisualizer,

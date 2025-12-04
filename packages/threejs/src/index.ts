@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from './utils/video';
 import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, AnimatedComplexModel, Timeline } from '@webgametoolkit/animation';
 import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig } from './types';
+import { instance } from 'three/examples/jsm/nodes/Nodes.js';
 
 export * from './types';
 
@@ -720,7 +721,7 @@ const getModel = async (
 const getPhysic = (
   world: RAPIER.World,
   {
-    rotation,
+    rotation = [0, 0, 0],
     position = [0, 0, 0],
     size = [1, 1, 1],
     boundary = 0.5,
@@ -746,7 +747,7 @@ const getPhysic = (
     .setAngularDamping(angular)
     .enabledRotations(...enabledRotations as [boolean, boolean, boolean])
   const rigidBody = world.createRigidBody(rigidBodyDesc)
-  if (rotation) {
+  if (rotation && rotation instanceof Array) {
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation));
     rigidBody.setRotation(q, true)
   }

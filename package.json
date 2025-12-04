@@ -15,6 +15,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@webgametoolkit/threejs": "workspace:^",
     "dat.gui": "^0.7.9",
     "p5": "^1.9.0",
     "pinia": "^2.3.0",

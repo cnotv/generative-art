@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools } from "@/utils/threeJs";
+import { getTools } from "@webgametoolkit/threejs";
 import { bindAnimatedElements } from "@/utils/animation";
 
 const statsEl = ref(null);
