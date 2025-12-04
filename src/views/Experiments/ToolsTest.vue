@@ -1,11 +1,11 @@
 <script setup>
 import { onMounted, ref } from "vue";
-import { getTools } from "@webgametoolkit/threejs";
+import { getTools, getModel } from "@webgametoolkit/threejs";
+import { updateAnimation } from "@webgametoolkit/animation";
 
 const canvas = ref(null);
-
-onMounted(async () => {
-  const { setup, animate, scene, world } = await getTools({
+const init = async () => {
+  const { setup, animate, scene, world, getDelta } = await getTools({
     stats: { init: () => {}, start: () => {}, stop: () => {} },
     route: { query: {} },
     canvas: canvas.value,
@@ -13,19 +13,41 @@ onMounted(async () => {
 
   await setup({
     config: {
-      camera: { position: [0, 5, 10] },
-      ground: { size: 100, color: 0x00ff00 },
+      camera: { position: [0, 5, 20] },
+      ground: { size: 10000, color: 0x559955 },
       sky: { size: 500, color: 0x87ceeb },
       lights: { directional: { intensity: 2 } },
     },
     defineSetup: async () => {
+      const chameleon = await getModel(scene, world, "chameleon.fbx", {
+        position: [0, -0.75, 0],
+        scale: [0.05, 0.05, 0.05],
+        restitution: -10,
+        boundary: 0.5,
+        type: "kinematicPositionBased",
+        hasGravity: false,
+        castShadow: true,
+        receiveShadow: true,
+        animations: "chameleon_animations.fbx",
+      });
+
       animate({
         beforeTimeline: () => {},
-        timeline: [],
+        timeline: [
+          {
+            // end: 1,
+            // frequency: 75,
+            action: () => {
+              updateAnimation(chameleon.mixer, chameleon.actions["Walk"], getDelta(), 4);
+            },
+          },
+        ],
       });
     },
   });
-});
+};
+
+onMounted(async () => init());
 </script>
 
 <template>
