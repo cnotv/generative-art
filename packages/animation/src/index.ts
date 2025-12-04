@@ -158,7 +158,6 @@ const resetAnimation = (elements: ComplexModel[]) => {
 const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
-  // action.play()
   return {
     run: mixer.clipAction(gltf.animations[0]),
   }

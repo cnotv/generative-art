@@ -466,15 +466,35 @@ const loadGLTF = (
  * @param fileName 
  * @returns 
  */
-const loadAnimation = (model: Model, fileName: string): Promise<THREE.AnimationMixer> => {
+const loadAnimation = (model: Model, fileName: string, index: number = 0): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve) => {
     // Add animation
     const loader = new FBXLoader();
     loader.load(`/${fileName}`, (animation) => {
       const mixer = new THREE.AnimationMixer(model);
-      const action = mixer.clipAction((model?.animations?.length ? model : animation).animations[0]);
+      const action = mixer.clipAction((model?.animations?.length ? model : animation).animations[index]);
       action.play();
       resolve(mixer);
+    });
+  });
+}
+
+/**
+ * Return all the animations for given filename
+ * @param filename 
+ * @returns 
+ */
+const getAnimations = (mixer: THREE.AnimationMixer, filename: string): Promise<Record<string, THREE.AnimationAction>> => {
+  return new Promise((resolve) => {
+    const loader = new FBXLoader();
+    loader.load(`/${filename}`, (animation) => {
+      const mixers = animation.animations.reduce((acc, animation) => {
+        return {
+          ...acc,
+          [animation.name]: mixer.clipAction(animation)
+        }
+      }, {} as Record<string, THREE.AnimationAction>);
+      resolve(mixers);
     });
   });
 }
@@ -621,6 +641,7 @@ const getModel = async (
     showHelper = false,
     enabledRotations = [true, true, true],
     texture,
+    animations,
   }: ModelOptions = {},
 ): Promise<AnimatedComplexModel> => {
   const initialValues = { size, rotation, position, color }
@@ -646,7 +667,13 @@ const getModel = async (
   
   // Add animation
   const mixer = new THREE.AnimationMixer(mesh);
-  const actions = gltf.animations?.length ? getAnimationsModel(mixer, mesh, gltf) : {};
+  let actions = {}
+  if (animations) {
+    actions = await getAnimations(mixer, animations);
+  }
+  if (gltf.animations?.length) {
+    actions = getAnimationsModel(mixer, mesh, gltf);
+  }
 
   // Set physic to the model
   const { rigidBody, collider, characterController } = getPhysic(world, {
@@ -905,6 +932,7 @@ const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => 
 
 export {
   defaultModelOptions,
+  getAnimations,
   getTools,
   getEnvironment,
   getOffset,

@@ -43,6 +43,7 @@ export interface ModelOptions extends CommonOptions {
   ior?: number;
   thickness?: number;
   envMapIntensity?: number;
+  animations?: string;
 }
 
 export interface PhysicOptions extends CommonOptions {
