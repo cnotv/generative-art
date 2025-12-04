@@ -25,13 +25,8 @@ import { getBlade } from "@/utils/custom-models";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
-const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
-const groundPosition = [1, 0, 1] as CoordinateTuple;
-let gravity = { x: 0.0, y: -9.81, z: 0.0 };
-await RAPIER.init();
-let world = new RAPIER.World(gravity);
 
-onMounted(() => {
+onMounted(async () => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
     (statsEl.value as unknown) as HTMLElement
@@ -72,6 +67,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   );
 
   const setup = async () => {
+    await RAPIER.init();
+    const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
+    const groundPosition = [1, 0, 1] as CoordinateTuple;
+    let world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
     const renderer = getRenderer(canvas);
     const camera = new THREE.PerspectiveCamera(
       config.camera.fov,

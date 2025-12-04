@@ -4,15 +4,21 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import wasm from 'vite-plugin-wasm'
 
+const packages = ['animation', 'threejs', 'audio', 'game'];
+const packageAliases = Object.fromEntries(
+  packages.map(pkg => [
+    `@webgametoolkit/${pkg}`,
+    fileURLToPath(new URL(`./packages/${pkg}/src/index.ts`, import.meta.url))
+  ])
+);
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue(), wasm()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@webgametoolkit/animation': fileURLToPath(new URL('./packages/animation/src/index.ts', import.meta.url)),
-      '@webgametoolkit/threejs': fileURLToPath(new URL('./packages/threejs/src/index.ts', import.meta.url)),
-      '@webgametoolkit/audio': fileURLToPath(new URL('./packages/audio/src/index.ts', import.meta.url))
+      ...packageAliases
     },
     dedupe: ['three']
   },

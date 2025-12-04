@@ -7,7 +7,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from './utils/video';
 import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, AnimatedComplexModel, Timeline } from '@webgametoolkit/animation';
 import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig } from './types';
-import { instance } from 'three/examples/jsm/nodes/Nodes.js';
 
 export * from './types';
 
@@ -133,7 +132,7 @@ const getTools = async ({ stats, route, canvas }: any) => {
       renderer.render( scene, camera );
 
       if (video && route) video.stop(renderer.info.render.frame ,route);
-      if (stats && route) stats.stop(route);
+      if (stats && route) stats.end(route);
     }
     runAnimation();
   };

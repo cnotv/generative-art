@@ -21,13 +21,8 @@ import {
   resetPlayer,
   type PlayerMovement,
 } from "./helpers/player";
-import {
-  isGameStart,
-  isGamePlaying,
-  getGameScore,
-  incrementGameScore,
-} from "./helpers/game";
 import { updateAnimation } from "@webgametoolkit/animation";
+
 import { getSpeed, initPhysics } from "./helpers/setup";
 import { createPlayer } from "./helpers/player";
 
@@ -59,6 +54,7 @@ const createTimeline = async ({
   camera,
   uiStore,
   endGame,
+  gameState
 }: {
   scene: THREE.Scene;
   getDelta: () => number;
@@ -67,7 +63,9 @@ const createTimeline = async ({
   camera: THREE.PerspectiveCamera;
   uiStore: any;
   endGame: () => void;
+  gameState: any;
 }) => {
+  const { isGameStart, isGamePlaying, getGameScore, incrementGameScore } = gameState;
   const { physics, physicsHelper } = await initPhysics(scene);
   const { player, playerController, model } = await createPlayer(
     scene,

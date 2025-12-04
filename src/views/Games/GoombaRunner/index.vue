@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import * as THREE from "three";
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import Start from "./screens/Start.vue";
@@ -9,6 +8,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
 import { getTools, onWindowResize } from "@webgametoolkit/threejs";
+import { gameState, GAME_STATUS } from "@webgametoolkit/game";
 import { useUiStore } from "@/stores/ui";
 import {
   enableZoomPrevention,
@@ -28,14 +28,14 @@ import {
   removeAllEventListeners,
   handleJumpGoomba,
 } from "./helpers/events";
-import {
+
+const {
   loadHighScore,
   checkHighScore,
   setGameStatus,
   resetGameScore,
   getGameStatus,
-  GAME_STATUS,
-} from "./helpers/game";
+} = gameState;
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -128,8 +128,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     await setup({
       config: setupConfig,
     });
-
-    scene.background = new THREE.Color(0x87ceeb);
     onWindowResize(camera, renderer);
     animate({
       timeline: await createTimeline({
@@ -140,6 +138,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera,
         uiStore,
         endGame,
+        gameState,
       }),
     });
   };

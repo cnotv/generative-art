@@ -6,9 +6,11 @@
 </template>
 
 <script setup lang="ts">
-import { getGameScore, getHighestScore } from "../helpers/game";
+import { gameState } from "@webgametoolkit/game";
+
+const { getGameScore, getHighestScore } = gameState;
 </script>
 
 <style scoped>
-@import '../styles.css';
+@import "../styles.css";
 </style>

@@ -99,9 +99,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   });
 
   const setup = async () => {
-    let gravity = { x: 0.0, y: -9.81, z: 0.0 };
     await RAPIER.init();
-    let world = new RAPIER.World(gravity);
+    let world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
     const groundSize = [100.0, 0.1, 20.0] as CoordinateTuple;
     const cubeSize = [1.0, 1.0, 1.0] as CoordinateTuple;
     const cubePosition = [0.0, 5.0, 0.0] as CoordinateTuple;

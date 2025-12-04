@@ -1,4 +1,4 @@
-import { GAME_STATUS } from "./game";
+import { GAME_STATUS } from "@webgametoolkit/game";
 
 interface EventHandlers {
   keyboard?: Record<string, () => void>;
