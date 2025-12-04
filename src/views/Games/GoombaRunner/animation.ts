@@ -27,7 +27,7 @@ import {
   getGameScore,
   incrementGameScore,
 } from "./helpers/game";
-import { updateAnimation } from "@/utils/animation";
+import { updateAnimation } from "@webgametoolkit/animation";
 import { getSpeed, initPhysics } from "./helpers/setup";
 import { createPlayer } from "./helpers/player";
 

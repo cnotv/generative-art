@@ -7,7 +7,7 @@ import GameOver from "./screens/GameOver.vue";
 import Score from "./screens/Score.vue";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { initializeAudio, stopMusic } from "@/utils/audio";
+import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
 import { getTools, onWindowResize } from "@webgametoolkit/threejs";
 import { useUiStore } from "@/stores/ui";
 import {
