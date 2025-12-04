@@ -14,7 +14,7 @@ const init = async () => {
   await setup({
     config: {
       camera: { position: [0, 5, 20] },
-      ground: { size: 10000, color: 0x559955 },
+      ground: { size: 10000, color: 0x99cc99 },
       sky: { size: 500, color: 0x87ceeb },
       lights: { directional: { intensity: 0.1 } },
     },
