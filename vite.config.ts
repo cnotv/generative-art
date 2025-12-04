@@ -12,7 +12,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@webgametoolkit/animation': fileURLToPath(new URL('./packages/animation/src/index.ts', import.meta.url)),
       '@webgametoolkit/threejs': fileURLToPath(new URL('./packages/threejs/src/index.ts', import.meta.url))
-    }
+    },
+    dedupe: ['three']
   },
   build: {
     target: 'esnext',
