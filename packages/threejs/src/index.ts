@@ -755,9 +755,11 @@ const getPhysic = (
   const colliderShape =
     shape === 'cuboid'
       ? RAPIER.ColliderDesc.cuboid(
-          ...((size as CoordinateTuple).map((x) => x * boundary) as CoordinateTuple),
+          ...(Array.isArray(size) 
+            ? (size.map((x) => x * boundary) as CoordinateTuple)
+            : [size * boundary, size * boundary, size * boundary] as CoordinateTuple),
         )
-      : RAPIER.ColliderDesc.ball(size as number)
+      : RAPIER.ColliderDesc.ball((Array.isArray(size) ? size[0] : size) as number)
   // Create a cuboid collider attached to the fixed rigid body
   const colliderDesc = colliderShape
     .setRestitution(restitution)
