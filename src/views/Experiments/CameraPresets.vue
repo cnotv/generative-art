@@ -358,9 +358,8 @@ const init = async () => {
   geekoMixer = new THREE.AnimationMixer(geekoObject);
   if (animObject.animations.length > 0) {
     // Assuming "Walk" is the animation we want, or the first one if named differently in the file
-    // The original code referenced geeko.actions["Walk"]
     const clip =
-      animObject.animations.find((a) => a.name === "Walk") || animObject.animations[0];
+      animObject.animations.find((a) => a.name === "Idle_A") || animObject.animations[0];
     geekoAction = geekoMixer.clipAction(clip);
     geekoAction.play();
   }

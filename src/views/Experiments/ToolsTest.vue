@@ -42,7 +42,12 @@ const init = async () => {
             // end: 1,
             // frequency: 75,
             action: () => {
-              updateAnimation(chameleon.mixer, chameleon.actions["Walk"], getDelta(), 4);
+              updateAnimation(
+                chameleon.mixer,
+                chameleon.actions["Idle_A"],
+                getDelta(),
+                4
+              );
             },
           },
         ],
