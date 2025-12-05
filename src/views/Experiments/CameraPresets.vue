@@ -3,8 +3,10 @@ import { onMounted, ref, onUnmounted } from "vue";
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { createZigzagTexture } from "@webgametoolkit/threejs";
+import grassTextureImg from "@/assets/grass.jpg";
 
 const canvas = ref(null);
 const canvas1 = ref(null);
@@ -181,11 +183,11 @@ const init = async () => {
   const groundSize = 10000;
   const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
 
-  const groundMaterial = new THREE.MeshStandardMaterial({
+  const zigzagMaterial = new THREE.MeshStandardMaterial({
     map: createZigzagTexture({
       size: 32,
-      backgroundColor: "#334422",
-      zigzagColor: "#223311",
+      backgroundColor: "#1a3311",
+      zigzagColor: "#0d1a08",
       zigzagHeight: 16,
       zigzagWidth: 16,
       primaryThickness: 2,
@@ -195,6 +197,20 @@ const init = async () => {
     roughness: 0.8,
     metalness: 0.2,
   });
+
+  const textureLoader = new THREE.TextureLoader();
+  const grassTexture = textureLoader.load(grassTextureImg);
+  grassTexture.wrapS = THREE.RepeatWrapping;
+  grassTexture.wrapT = THREE.RepeatWrapping;
+  grassTexture.repeat.set(groundSize / 10, groundSize / 10);
+
+  const groundMaterial = new THREE.MeshStandardMaterial({
+    map: grassTexture,
+    roughness: 0.9,
+    metalness: 0.1,
+    color: 0x808080,
+  });
+
   const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
   groundMesh.rotation.x = -Math.PI / 2;
   groundMesh.receiveShadow = true;
@@ -210,12 +226,10 @@ const init = async () => {
   );
   world.createCollider(groundColliderDesc, groundBody);
 
-  // Create obstacle cubes on a grid
-  const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-  const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0x591201 });
-
-  // Create obstacles in a grid pattern
+  // Create obstacle sand blocks on a grid
+  const gltfLoader = new GLTFLoader();
   const numCubes = 20;
+
   for (let i = 0; i < numCubes; i++) {
     const gridX = Math.floor(Math.random() * 10) - 5;
     const gridZ = Math.floor(Math.random() * 10) - 5;
@@ -225,36 +239,43 @@ const init = async () => {
     // Skip if too close to starting position
     if (Math.abs(x) < 3 && Math.abs(z) < 3) continue;
 
-    const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cubeMesh.position.set(x, cubeSize / 2, z);
-    cubeMesh.castShadow = true;
-    cubeMesh.receiveShadow = true;
-    scene.add(cubeMesh);
+    // Load sand block model
+    const gltf = await new Promise((resolve, reject) => {
+      gltfLoader.load("/sand_block.glb", resolve, undefined, reject);
+    });
 
-    // Cube physics
-    const cubeBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, cubeSize / 2, z);
-    const cubeBody = world.createRigidBody(cubeBodyDesc);
-    const cubeColliderDesc = RAPIER.ColliderDesc.cuboid(
+    const sandBlockMesh = gltf.scene;
+    sandBlockMesh.scale.set(0.01, 0.01, 0.01);
+    sandBlockMesh.position.set(x, cubeSize / 2, z);
+    sandBlockMesh.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    scene.add(sandBlockMesh);
+
+    // Create physics body
+    const blockBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, cubeSize / 2, z);
+    const blockBody = world.createRigidBody(blockBodyDesc);
+    const blockColliderDesc = RAPIER.ColliderDesc.cuboid(
       cubeSize / 2,
       cubeSize / 2,
       cubeSize / 2
-    ).setSensor(false); // Make solid, not a sensor
-    world.createCollider(cubeColliderDesc, cubeBody);
+    );
+    world.createCollider(blockColliderDesc, blockBody);
 
     obstacles.push({ x, z });
   }
 
   // 5. Load Model (Geeko)
   const loader = new FBXLoader();
-
-  // Load Model
   geekoObject = await new Promise((resolve, reject) => {
     loader.load("/chameleon.fbx", (object) => resolve(object), undefined, reject);
   });
-
   geekoObject.position.set(0, -0.75, 0);
   geekoObject.scale.set(0.05, 0.05, 0.05);
-
   geekoObject.traverse((child) => {
     if (child.isMesh) {
       child.castShadow = true;
@@ -283,11 +304,7 @@ const init = async () => {
   // Capsule collider for the character
   const colliderDesc = RAPIER.ColliderDesc.capsule(0.5, 0.3);
   geekoCollider = world.createCollider(colliderDesc, geekoRigidBody);
-
-  // Create character controller
   characterController = world.createCharacterController(0.01);
-  // Disable autostep to prevent climbing over blocks
-  // characterController.enableAutostep(0.5, 0.2, true);
   characterController.enableSnapToGround(0.5);
 
   // Create Bug Sphere
