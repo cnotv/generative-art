@@ -43,24 +43,24 @@ const handleKeyPress = (event: KeyboardEvent) => {
       : 0;
 
   switch (event.key) {
-    case "ArrowRight": {
+    case "PageDown": {
       const path = generatedRoutes[page + 1]?.path;
       if (page < generatedRoutes.length - 1) router.push({ query, path });
       break;
     }
 
-    case "ArrowLeft": {
+    case "PageUp": {
       const path = generatedRoutes[page - 1]?.path;
       if (page > 0) router.push({ query, path });
       break;
     }
 
-    case "ArrowUp": {
+    case "Home": {
       toggleQuery("record");
       break;
     }
 
-    case "ArrowDown": {
+    case "End": {
       toggleQuery(["control", "stats"]);
       break;
     }
