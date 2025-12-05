@@ -6,9 +6,15 @@ import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 const canvas = ref(null);
+const canvas1 = ref(null);
+const canvas2 = ref(null);
+const canvas3 = ref(null);
+const canvas4 = ref(null);
 let scene, camera, renderer, world, clock;
-let perspectiveCamera, orthographicCamera, fisheyeCamera, cinematicCamera, orbitCamera;
+let cameras = [];
+let renderers = [];
 let orbitControls;
+const isSplitScreen = ref(false);
 let geekoMixer,
   geekoAction,
   characterController,
@@ -17,10 +23,10 @@ let geekoMixer,
   bugMesh,
   geekoCollider;
 let geekoObject;
-let autoTracking = true;
+const autoTracking = ref(true);
 let jumpVelocity = 0;
-let cameraView = "default"; // 'default', 'top', 'left', 'right'
-let cameraType = "perspective"; // 'perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit'
+const cameraView = ref("default"); // 'default', 'top', 'left', 'right'
+const cameraType = ref("perspective"); // 'perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit'
 const cubeSize = 2; // Configurable cube size
 const gridGap = cubeSize; // Gap equals cube size
 const obstacles = []; // Store obstacle positions
@@ -41,77 +47,129 @@ const init = async () => {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb); // Sky color
 
-  // Create perspective camera
-  perspectiveCamera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-  perspectiveCamera.position.set(0, 5, 20);
-
-  // Create orthographic camera (isometric)
-  const aspect = window.innerWidth / window.innerHeight;
+  // Setup viewports
+  const viewportWidth = isSplitScreen.value ? window.innerWidth / 2 : window.innerWidth;
+  const viewportHeight = isSplitScreen.value
+    ? window.innerHeight / 2
+    : window.innerHeight;
+  const aspect = viewportWidth / viewportHeight;
   const frustumSize = 40;
-  const verticalOffset = 15; // Shift view downward
-  orthographicCamera = new THREE.OrthographicCamera(
-    (frustumSize * aspect) / -2,
-    (frustumSize * aspect) / 2,
-    frustumSize / 2 + verticalOffset, // Shift top up
-    frustumSize / -2 + verticalOffset, // Shift bottom up (shows more below)
-    0.1,
-    1000
-  );
-  orthographicCamera.position.set(10, 12, 10); // Raised camera higher
-  orthographicCamera.lookAt(0, -verticalOffset, 0);
+  const verticalOffset = 15;
+  const frustumSize2 = 30;
+  const verticalOffset2 = 10;
 
-  // Create fisheye-style camera (wide FOV perspective)
-  fisheyeCamera = new THREE.PerspectiveCamera(
-    120, // Very wide field of view
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-  fisheyeCamera.position.set(0, 5, 20);
+  // Camera configurations
+  const cameraConfigs = [
+    {
+      name: "perspective",
+      camera: new THREE.PerspectiveCamera(75, aspect, 0.1, 1000),
+      position: [0, 5, 20],
+    },
+    {
+      name: "orthographic-preset",
+      camera: new THREE.OrthographicCamera(
+        (frustumSize2 * aspect) / -2,
+        (frustumSize2 * aspect) / 2,
+        frustumSize2 / 2 + verticalOffset2,
+        frustumSize2 / -2 + verticalOffset2,
+        0.1,
+        1000
+      ),
+      position: [0, 5, 20],
+      frustumSize: frustumSize2,
+      verticalOffset: verticalOffset2,
+    },
+    {
+      name: "fisheye",
+      camera: new THREE.PerspectiveCamera(120, aspect, 0.1, 1000),
+      position: [0, 5, 20],
+    },
+    {
+      name: "orbit",
+      camera: new THREE.PerspectiveCamera(75, aspect, 0.1, 1000),
+      position: [0, 10, 15],
+    },
+    {
+      name: "cinematic",
+      camera: new THREE.PerspectiveCamera(35, aspect, 0.1, 1000),
+      position: [0, 5, 20],
+    },
+    {
+      name: "orthographic",
+      camera: new THREE.OrthographicCamera(
+        (frustumSize * aspect) / -2,
+        (frustumSize * aspect) / 2,
+        frustumSize / 2 + verticalOffset,
+        frustumSize / -2 + verticalOffset,
+        0.1,
+        1000
+      ),
+      position: [10, 12, 10],
+      lookAt: [0, -verticalOffset, 0],
+    },
+  ];
 
-  // Create cinematic camera (narrow FOV for telephoto effect)
-  cinematicCamera = new THREE.PerspectiveCamera(
-    35, // Narrow field of view
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-  cinematicCamera.position.set(0, 5, 20);
-
-  // Create orbit camera with free mouse control
-  orbitCamera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-  orbitCamera.position.set(0, 10, 15);
+  // Create cameras
+  cameras = cameraConfigs.map((config) => {
+    config.camera.position.set(...config.position);
+    if (config.lookAt) {
+      config.camera.lookAt(...config.lookAt);
+    }
+    return { ...config };
+  });
 
   // Set initial camera
-  camera = perspectiveCamera;
+  camera = cameras[0].camera;
 
+  // Create all renderers (both single and split screen)
   renderer = new THREE.WebGLRenderer({ canvas: canvas.value, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
 
+  const canvasRefs = [canvas1, canvas2, canvas3, canvas4];
+  renderers = canvasRefs.map((canvasRef) => {
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvasRef.value,
+      antialias: true,
+    });
+    renderer.setSize(viewportWidth, viewportHeight);
+    renderer.shadowMap.enabled = true;
+    return renderer;
+  });
+
   // Create OrbitControls for orbit camera
-  orbitControls = new OrbitControls(orbitCamera, renderer.domElement);
-  orbitControls.enableDamping = true;
-  orbitControls.dampingFactor = 0.05;
-  orbitControls.enabled = false; // Disabled by default
+  const orbitCam = cameras.find((c) => c.name === "orbit");
+  if (orbitCam) {
+    const targetCanvas = isSplitScreen.value ? renderer3.value : canvas.value;
+    orbitControls = new OrbitControls(
+      orbitCam.camera,
+      isSplitScreen.value ? renderers[3].domElement : renderer.domElement
+    );
+    orbitControls.enableDamping = true;
+    orbitControls.dampingFactor = 0.05;
+    orbitControls.enabled = isSplitScreen.value || cameraType.value === "orbit";
+  }
 
   // 2. Setup Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.1); // Intensity 0.1
-  directionalLight.position.set(10, 10, 10);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  directionalLight.position.set(20, 30, 20);
   directionalLight.castShadow = true;
+
+  // Configure shadow properties for larger, higher quality shadows
+  directionalLight.shadow.mapSize.width = 4096;
+  directionalLight.shadow.mapSize.height = 4096;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 500;
+  directionalLight.shadow.camera.left = -50;
+  directionalLight.shadow.camera.right = 50;
+  directionalLight.shadow.camera.top = 50;
+  directionalLight.shadow.camera.bottom = -50;
+  directionalLight.shadow.bias = -0.0001;
+  directionalLight.shadow.radius = 1;
+
   scene.add(directionalLight);
 
   // 3. Setup Physics World (Rapier)
@@ -187,6 +245,15 @@ const init = async () => {
     if (child.isMesh) {
       child.castShadow = true;
       child.receiveShadow = true;
+      // Replace material with non-reflective Lambert material
+      if (child.material) {
+        const oldMaterial = child.material;
+        child.material = new THREE.MeshLambertMaterial({
+          color: oldMaterial.color || 0xffffff,
+          map: oldMaterial.map,
+          flatShading: false
+        });
+      }
     }
   });
   scene.add(geekoObject);
@@ -283,7 +350,7 @@ const init = async () => {
 
     let direction = new THREE.Vector3(0, 0, 0);
 
-    if (autoTracking) {
+    if (autoTracking.value) {
       // Move Geeko toward Bug
       const bugPosition = bugRigidBody.translation();
       direction = new THREE.Vector3(
@@ -330,7 +397,7 @@ const init = async () => {
     // Handle jump and gravity
     const isGrounded = position.y <= 0.1;
 
-    if (keys.space && isGrounded && !autoTracking) {
+    if (keys.space && isGrounded && !autoTracking.value) {
       jumpVelocity = 0.2; // Initial jump impulse
     }
 
@@ -368,7 +435,7 @@ const init = async () => {
     geekoObject.position.set(newPos.x, newPos.y, newPos.z);
 
     // Rotate geeko to face movement direction (only in auto-tracking mode)
-    if (autoTracking && direction.length() > 0.01) {
+    if (autoTracking.value && direction.length() > 0.01) {
       const angle = Math.atan2(direction.x, direction.z);
       geekoObject.rotation.y = angle;
     }
@@ -410,101 +477,95 @@ const init = async () => {
       geekoMixer.update(delta);
     }
 
-    // Update camera based on view mode
+    // Update all camera positions to follow the character
     const geekoPos = geekoObject.position;
 
-    // Switch active camera based on type
-    switch (cameraType) {
-      case "perspective":
-        camera = perspectiveCamera;
-        orbitControls.enabled = false;
-        break;
-      case "orthographic":
-        camera = orthographicCamera;
-        orbitControls.enabled = false;
-        break;
-      case "fisheye":
-        camera = fisheyeCamera;
-        orbitControls.enabled = false;
-        break;
-      case "cinematic":
-        camera = cinematicCamera;
-        orbitControls.enabled = false;
-        break;
-      case "orbit":
-        camera = orbitCamera;
-        orbitControls.enabled = true;
-        orbitControls.target.set(geekoPos.x, geekoPos.y, geekoPos.z);
-        orbitControls.update();
-        break;
-      default:
-        camera = perspectiveCamera;
-        orbitControls.enabled = false;
-    }
+    // Update camera positions based on configuration
+    cameras.forEach((camConfig, index) => {
+      const cam = camConfig.camera;
 
-    // Only update camera position if not in orbit mode
-    if (cameraType !== "orbit") {
-      switch (cameraView) {
-        case "top":
-          camera.position.set(geekoPos.x, geekoPos.y + 15, geekoPos.z);
-          camera.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
+      switch (camConfig.name) {
+        case "perspective":
+        case "fisheye":
+        case "orthographic-preset":
+          if (cameraView.value === "default" || isSplitScreen.value) {
+            cam.position.set(geekoPos.x, geekoPos.y + 5, geekoPos.z + 20);
+          } else if (cameraView.value === "top") {
+            cam.position.set(geekoPos.x, geekoPos.y + 15, geekoPos.z);
+          } else if (cameraView.value === "left") {
+            cam.position.set(geekoPos.x - 15, geekoPos.y + 5, geekoPos.z);
+          } else if (cameraView.value === "right") {
+            cam.position.set(geekoPos.x + 15, geekoPos.y + 5, geekoPos.z);
+          }
+          cam.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
           break;
-        case "left":
-          camera.position.set(geekoPos.x - 15, geekoPos.y + 5, geekoPos.z);
-          camera.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
+        case "orthographic":
+          cam.position.set(geekoPos.x + 10, geekoPos.y + 12, geekoPos.z + 10);
+          cam.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
           break;
-        case "right":
-          camera.position.set(geekoPos.x + 15, geekoPos.y + 5, geekoPos.z);
-          camera.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
+        case "orbit":
+          if (orbitControls) {
+            orbitControls.target.set(geekoPos.x, geekoPos.y, geekoPos.z);
+            orbitControls.update();
+          }
           break;
-        case "default":
-        default:
-          camera.position.set(geekoPos.x, geekoPos.y + 5, geekoPos.z + 20);
-          camera.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
+        case "cinematic":
+          cam.position.set(geekoPos.x, geekoPos.y + 3, geekoPos.z + 10);
+          cam.lookAt(geekoPos.x, geekoPos.y, geekoPos.z);
           break;
       }
-    }
+    });
 
-    renderer.render(scene, camera);
+    // Render based on mode
+    if (isSplitScreen.value) {
+      // Map specific cameras to each viewport
+      const splitScreenCameras = [0, 1, 5, 3]; // perspective, orthographic-preset, orthographic, orbit
+      renderers.forEach((rend, index) => {
+        const cameraIndex = splitScreenCameras[index];
+        if (cameras[cameraIndex]) {
+          rend.render(scene, cameras[cameraIndex].camera);
+        }
+      });
+    } else {
+      renderer.render(scene, camera);
+    }
   };
 
   animate();
 };
 
 const onWindowResize = () => {
-  if (renderer) {
-    const aspect = window.innerWidth / window.innerHeight;
+  const viewportWidth = isSplitScreen.value ? window.innerWidth / 2 : window.innerWidth;
+  const viewportHeight = isSplitScreen.value
+    ? window.innerHeight / 2
+    : window.innerHeight;
+  const aspect = viewportWidth / viewportHeight;
+  const frustumSize = 40;
+  const verticalOffset = 15;
 
-    // Update perspective cameras
-    if (perspectiveCamera) {
-      perspectiveCamera.aspect = aspect;
-      perspectiveCamera.updateProjectionMatrix();
+  // Update all cameras
+  cameras.forEach((camConfig) => {
+    const cam = camConfig.camera;
+    if (cam.isPerspectiveCamera) {
+      cam.aspect = aspect;
+      cam.updateProjectionMatrix();
+    } else if (cam.isOrthographicCamera) {
+      // Use specific frustum settings if available
+      const fs = camConfig.frustumSize || frustumSize;
+      const vo = camConfig.verticalOffset || verticalOffset;
+      cam.left = (fs * aspect) / -2;
+      cam.right = (fs * aspect) / 2;
+      cam.top = fs / 2 + vo;
+      cam.bottom = fs / -2 + vo;
+      cam.updateProjectionMatrix();
     }
-    if (fisheyeCamera) {
-      fisheyeCamera.aspect = aspect;
-      fisheyeCamera.updateProjectionMatrix();
-    }
-    if (cinematicCamera) {
-      cinematicCamera.aspect = aspect;
-      cinematicCamera.updateProjectionMatrix();
-    }
-    if (orbitCamera) {
-      orbitCamera.aspect = aspect;
-      orbitCamera.updateProjectionMatrix();
-    }
+  });
 
-    // Update orthographic cameras
-    const frustumSize = 30; // Match the initialization value
-    const verticalOffset = 5; // Match the initialization offset
-    if (orthographicCamera) {
-      orthographicCamera.left = (frustumSize * aspect) / -2;
-      orthographicCamera.right = (frustumSize * aspect) / 2;
-      orthographicCamera.top = frustumSize / 2 + verticalOffset;
-      orthographicCamera.bottom = frustumSize / -2 + verticalOffset;
-      orthographicCamera.updateProjectionMatrix();
-    }
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  // Update renderers
+  if (isSplitScreen.value) {
+    renderers.forEach((rend) => rend.setSize(viewportWidth, viewportHeight));
+  } else if (renderer) {
+    renderer.setSize(viewportWidth, viewportHeight);
   }
 };
 
@@ -518,48 +579,92 @@ const onKeyDown = (e) => {
     e.preventDefault(); // Prevent page scroll
   }
   if (key === "enter") {
-    autoTracking = !autoTracking;
-    console.log("Auto-tracking:", autoTracking ? "ON" : "OFF");
+    autoTracking.value = !autoTracking.value;
+    console.log("Auto-tracking:", autoTracking.value ? "ON" : "OFF");
   }
 
-  // Arrow keys for camera views
-  if (e.key === "ArrowUp") {
-    cameraView = "top";
-    console.log("Camera: Top view");
-  }
-  if (e.key === "ArrowLeft") {
-    cameraView = "left";
-    console.log("Camera: Left view");
-  }
-  if (e.key === "ArrowRight") {
-    cameraView = "right";
-    console.log("Camera: Right view");
-  }
-  if (e.key === "ArrowDown") {
-    cameraView = "default";
-    console.log("Camera: Default view");
+  // Arrow keys for camera views (single camera mode only)
+  if (!isSplitScreen.value) {
+    if (e.key === "ArrowUp") {
+      cameraView.value = "top";
+      console.log("Camera: Top view");
+    }
+    if (e.key === "ArrowLeft") {
+      cameraView.value = "left";
+      console.log("Camera: Left view");
+    }
+    if (e.key === "ArrowRight") {
+      cameraView.value = "right";
+      console.log("Camera: Right view");
+    }
+    if (e.key === "ArrowDown") {
+      cameraView.value = "default";
+      console.log("Camera: Default view");
+    }
   }
 
-  // Number keys for camera type
+  // Number keys for camera type - disable split screen and switch to single camera
   if (e.key === "1") {
-    cameraType = "perspective";
+    isSplitScreen.value = false;
+    cameraType.value = "perspective";
+    camera = cameras.find((c) => c.name === "perspective")?.camera;
+    if (orbitControls) orbitControls.enabled = false;
+    onWindowResize();
     console.log("Camera: Perspective (75° FOV)");
   }
   if (e.key === "2") {
-    cameraType = "orthographic";
-    console.log("Camera: Orthographic (Isometric)");
+    isSplitScreen.value = false;
+    cameraType.value = "orthographic-preset";
+    camera = cameras.find((c) => c.name === "orthographic-preset")?.camera;
+    if (orbitControls) orbitControls.enabled = false;
+    onWindowResize();
+    console.log("Camera: Orthographic Preset (Following)");
   }
   if (e.key === "3") {
-    cameraType = "fisheye";
+    isSplitScreen.value = false;
+    cameraType.value = "fisheye";
+    camera = cameras.find((c) => c.name === "fisheye")?.camera;
+    if (orbitControls) orbitControls.enabled = false;
+    onWindowResize();
     console.log("Camera: Fisheye (120° Wide FOV)");
   }
   if (e.key === "4") {
-    cameraType = "cinematic";
-    console.log("Camera: Cinematic (35° Telephoto)");
+    isSplitScreen.value = false;
+    cameraType.value = "orbit";
+    camera = cameras.find((c) => c.name === "orbit")?.camera;
+    if (orbitControls) orbitControls.enabled = true;
+    onWindowResize();
+    console.log("Camera: Orbit (Free mouse control)");
   }
   if (e.key === "5") {
-    cameraType = "orbit";
-    console.log("Camera: Orbit (Free mouse control)");
+    isSplitScreen.value = false;
+    cameraType.value = "cinematic";
+    camera = cameras.find((c) => c.name === "cinematic")?.camera;
+    if (orbitControls) orbitControls.enabled = false;
+    onWindowResize();
+    console.log("Camera: Cinematic (35° Telephoto)");
+  }
+  if (e.key === "6") {
+    isSplitScreen.value = false;
+    cameraType.value = "orthographic";
+    camera = cameras.find((c) => c.name === "orthographic")?.camera;
+    if (orbitControls) orbitControls.enabled = false;
+    onWindowResize();
+    console.log("Camera: Orthographic (Isometric)");
+  }
+
+  // Number 7 enables split screen mode (doesn't disable)
+  if (e.key === "7") {
+    if (!isSplitScreen.value) {
+      isSplitScreen.value = true;
+      console.log("Split screen: ON");
+      // Update OrbitControls state
+      if (orbitControls) {
+        orbitControls.enabled = true;
+      }
+      // Trigger resize to update renderers
+      onWindowResize();
+    }
   }
 };
 
@@ -588,6 +693,127 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
-  <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
+  <!-- Single camera mode -->
+  <canvas
+    ref="canvas"
+    :style="{
+      position: 'relative',
+      zIndex: 0,
+      width: '100vw',
+      height: '100vh',
+      display: isSplitScreen ? 'none' : 'block',
+    }"
+  ></canvas>
+
+  <!-- Split screen mode -->
+  <div
+    :style="{
+      display: isSplitScreen ? 'grid' : 'none',
+      gridTemplateColumns: '1fr 1fr',
+      gridTemplateRows: '1fr 1fr',
+      width: '100vw',
+      height: '100vh',
+      margin: 0,
+      padding: 0,
+      overflow: 'hidden',
+    }"
+    style="
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    "
+  >
+    <div style="position: relative; border: 1px solid #333">
+      <canvas ref="canvas1"></canvas>
+      <div
+        style="
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 5px 10px;
+          font-family: monospace;
+        "
+      >
+        Perspective (75° FOV)
+      </div>
+    </div>
+    <div style="position: relative; border: 1px solid #333">
+      <canvas ref="canvas2"></canvas>
+      <div
+        style="
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 5px 10px;
+          font-family: monospace;
+        "
+      >
+        Orthographic (Isometric)
+      </div>
+    </div>
+    <div style="position: relative; border: 1px solid #333">
+      <canvas ref="canvas3"></canvas>
+      <div
+        style="
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 5px 10px;
+          font-family: monospace;
+        "
+      >
+        Orthographic (Following)
+      </div>
+    </div>
+    <div style="position: relative; border: 1px solid #333">
+      <canvas ref="canvas4"></canvas>
+      <div
+        style="
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 5px 10px;
+          font-family: monospace;
+        "
+      >
+        Orbit (Mouse Control)
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions overlay -->
+  <div
+    style="
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+    "
+  >
+    <div>
+      Mode: {{ isSplitScreen ? "Split Screen" : cameraType }} | View: {{ cameraView }}
+    </div>
+    <div>Press 7: Toggle Split Screen ({{ isSplitScreen ? "ON" : "OFF" }})</div>
+    <div v-if="!isSplitScreen">Press 1-6: Switch Camera | Arrows: Change View</div>
+    <div>
+      WASD: Move | SPACE: Jump | ENTER: Auto-track ({{ autoTracking ? "ON" : "OFF" }})
+    </div>
+  </div>
 </template>
