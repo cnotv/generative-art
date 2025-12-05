@@ -151,10 +151,10 @@ const init = async () => {
   }
 
   // 2. Setup Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 2);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
   directionalLight.position.set(20, 30, 20);
   directionalLight.castShadow = true;
 
@@ -180,7 +180,7 @@ const init = async () => {
   // 4. Create Ground
   const groundSize = 10000;
   const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-  const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x99ff99 });
+  const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x669944 });
   const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
   groundMesh.rotation.x = -Math.PI / 2;
   groundMesh.receiveShadow = true;
@@ -198,7 +198,7 @@ const init = async () => {
 
   // Create obstacle cubes on a grid
   const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-  const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+  const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0x591201 });
 
   // Create obstacles in a grid pattern
   const numCubes = 20;
@@ -251,7 +251,7 @@ const init = async () => {
         child.material = new THREE.MeshLambertMaterial({
           color: oldMaterial.color || 0xffffff,
           map: oldMaterial.map,
-          flatShading: false
+          flatShading: false,
         });
       }
     }
@@ -696,117 +696,35 @@ onUnmounted(() => {
   <!-- Single camera mode -->
   <canvas
     ref="canvas"
-    :style="{
-      position: 'relative',
-      zIndex: 0,
-      width: '100vw',
-      height: '100vh',
-      display: isSplitScreen ? 'none' : 'block',
-    }"
+    class="single-canvas"
+    :style="{ display: isSplitScreen ? 'none' : 'block' }"
   ></canvas>
 
   <!-- Split screen mode -->
   <div
-    :style="{
-      display: isSplitScreen ? 'grid' : 'none',
-      gridTemplateColumns: '1fr 1fr',
-      gridTemplateRows: '1fr 1fr',
-      width: '100vw',
-      height: '100vh',
-      margin: 0,
-      padding: 0,
-      overflow: 'hidden',
-    }"
-    style="
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      width: 100vw;
-      height: 100vh;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    "
+    class="split-screen-container"
+    :style="{ display: isSplitScreen ? 'grid' : 'none' }"
   >
-    <div style="position: relative; border: 1px solid #333">
+    <div class="viewport">
       <canvas ref="canvas1"></canvas>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          color: white;
-          background: rgba(0, 0, 0, 0.5);
-          padding: 5px 10px;
-          font-family: monospace;
-        "
-      >
-        Perspective (75° FOV)
-      </div>
+      <div class="camera-label">Perspective (75° FOV)</div>
     </div>
-    <div style="position: relative; border: 1px solid #333">
+    <div class="viewport">
       <canvas ref="canvas2"></canvas>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          color: white;
-          background: rgba(0, 0, 0, 0.5);
-          padding: 5px 10px;
-          font-family: monospace;
-        "
-      >
-        Orthographic (Isometric)
-      </div>
+      <div class="camera-label">Orthographic (Isometric)</div>
     </div>
-    <div style="position: relative; border: 1px solid #333">
+    <div class="viewport">
       <canvas ref="canvas3"></canvas>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          color: white;
-          background: rgba(0, 0, 0, 0.5);
-          padding: 5px 10px;
-          font-family: monospace;
-        "
-      >
-        Orthographic (Following)
-      </div>
+      <div class="camera-label">Orthographic (Following)</div>
     </div>
-    <div style="position: relative; border: 1px solid #333">
+    <div class="viewport">
       <canvas ref="canvas4"></canvas>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          color: white;
-          background: rgba(0, 0, 0, 0.5);
-          padding: 5px 10px;
-          font-family: monospace;
-        "
-      >
-        Orbit (Mouse Control)
-      </div>
+      <div class="camera-label">Orbit (Mouse Control)</div>
     </div>
   </div>
 
   <!-- Instructions overlay -->
-  <div
-    style="
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      color: white;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 10px;
-      font-family: monospace;
-      font-size: 12px;
-    "
-  >
+  <div class="instructions">
     <div>
       Mode: {{ isSplitScreen ? "Split Screen" : cameraType }} | View: {{ cameraView }}
     </div>
@@ -817,3 +735,53 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.single-canvas {
+  position: relative;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+.split-screen-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.viewport {
+  position: relative;
+  border: 1px solid #333;
+  overflow: hidden;
+}
+
+.camera-label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 5px 10px;
+  font-family: monospace;
+}
+
+.instructions {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  font-family: monospace;
+  font-size: 12px;
+}
+</style>
