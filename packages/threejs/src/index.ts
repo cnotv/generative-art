@@ -643,6 +643,7 @@ const getModel = async (
     enabledRotations = [true, true, true],
     texture,
     animations,
+    shape = 'cuboid',
   }: ModelOptions = {},
 ): Promise<AnimatedComplexModel> => {
   const initialValues = { size, rotation, position, color }
@@ -690,7 +691,7 @@ const getModel = async (
     angular,
     damping,
     mass,
-    shape: 'ball',
+    shape,
     type,
     enabledRotations,
   })
