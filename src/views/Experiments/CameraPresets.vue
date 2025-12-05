@@ -4,6 +4,7 @@ import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { createZigzagTexture } from "@webgametoolkit/threejs";
 
 const canvas = ref(null);
 const canvas1 = ref(null);
@@ -28,7 +29,7 @@ let jumpVelocity = 0;
 const cameraView = ref("default"); // 'default', 'top', 'left', 'right'
 const cameraType = ref("perspective"); // 'perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit'
 const cubeSize = 2; // Configurable cube size
-const gridGap = cubeSize; // Gap equals cube size
+const gridGap = 2; // Gap equals cube size
 const obstacles = []; // Store obstacle positions
 const keys = {
   w: false,
@@ -179,7 +180,21 @@ const init = async () => {
   // 4. Create Ground
   const groundSize = 10000;
   const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-  const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x669944 });
+
+  const groundMaterial = new THREE.MeshStandardMaterial({
+    map: createZigzagTexture({
+      size: 32,
+      backgroundColor: "#334422",
+      zigzagColor: "#223311",
+      zigzagHeight: 16,
+      zigzagWidth: 16,
+      primaryThickness: 2,
+      repeatX: groundSize / 2,
+      repeatY: groundSize / 2,
+    }),
+    roughness: 0.8,
+    metalness: 0.2,
+  });
   const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
   groundMesh.rotation.x = -Math.PI / 2;
   groundMesh.receiveShadow = true;
