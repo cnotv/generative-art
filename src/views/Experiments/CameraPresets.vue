@@ -14,7 +14,7 @@ let scene, camera, renderer, world, clock;
 let cameras = [];
 let renderers = [];
 let orbitControls;
-const isSplitScreen = ref(false);
+const isSplitScreen = ref(true);
 let geekoMixer,
   geekoAction,
   characterController,
@@ -140,7 +140,6 @@ const init = async () => {
   // Create OrbitControls for orbit camera
   const orbitCam = cameras.find((c) => c.name === "orbit");
   if (orbitCam) {
-    const targetCanvas = isSplitScreen.value ? renderer3.value : canvas.value;
     orbitControls = new OrbitControls(
       orbitCam.camera,
       isSplitScreen.value ? renderers[3].domElement : renderer.domElement
