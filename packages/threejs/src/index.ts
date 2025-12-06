@@ -946,6 +946,174 @@ const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => 
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
+/**
+ * Camera preset configurations for different viewing styles
+ */
+interface CameraPresetConfig {
+  type: 'perspective' | 'orthographic';
+  fov?: number;
+  position: CoordinateTuple;
+  lookAt?: CoordinateTuple;
+  near?: number;
+  far?: number;
+  frustumSize?: number;
+  verticalOffset?: number;
+}
+
+/**
+ * Dictionary of predefined camera presets for common use cases
+ */
+const cameraPresets: Record<string, CameraPresetConfig> = {
+  /**
+   * Standard perspective camera with 75° field of view
+   * Good for general 3D scenes with natural depth perception
+   */
+  perspective: {
+    type: 'perspective',
+    fov: 75,
+    position: [0, 5, 20],
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Wide-angle fisheye perspective with 120° field of view
+   * Creates dramatic distortion effect, useful for immersive views
+   */
+  fisheye: {
+    type: 'perspective',
+    fov: 120,
+    position: [0, 5, 20],
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Narrow cinematic perspective with 35° field of view
+   * Mimics telephoto lens, reduces distortion, good for dramatic scenes
+   */
+  cinematic: {
+    type: 'perspective',
+    fov: 35,
+    position: [0, 5, 20],
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Free orbit perspective for user-controlled camera movement
+   * Typically used with OrbitControls for interactive exploration
+   */
+  orbit: {
+    type: 'perspective',
+    fov: 75,
+    position: [0, 10, 15],
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Isometric orthographic camera with elevated diagonal view
+   * No perspective distortion, ideal for strategy games and technical views
+   */
+  orthographic: {
+    type: 'orthographic',
+    position: [10, 12, 10],
+    lookAt: [0, -15, 0],
+    frustumSize: 40,
+    verticalOffset: 15,
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Following orthographic camera that tracks targets
+   * Maintains constant scale while following moving objects
+   */
+  'orthographic-following': {
+    type: 'orthographic',
+    position: [0, 5, 20],
+    frustumSize: 30,
+    verticalOffset: 10,
+    near: 0.1,
+    far: 1000,
+  },
+  
+  /**
+   * Top-down orthographic view
+   * Perfect for 2D-style games or map views
+   */
+  'top-down': {
+    type: 'orthographic',
+    position: [0, 50, 0],
+    lookAt: [0, 0, 0],
+    frustumSize: 50,
+    verticalOffset: 0,
+    near: 0.1,
+    far: 1000,
+  },
+};
+
+/**
+ * Apply a predefined camera preset to an existing camera
+ * @param camera - The Three.js camera to configure (PerspectiveCamera or OrthographicCamera)
+ * @param presetName - Name of the preset from cameraPresets dictionary
+ * @param aspect - Optional aspect ratio (defaults to current window aspect ratio)
+ * @returns The configured camera, or null if preset not found
+ * 
+ * @example
+ * ```typescript
+ * const camera = new THREE.PerspectiveCamera();
+ * setCameraPreset(camera, 'cinematic'); // Applies cinematic preset
+ * 
+ * // With custom aspect ratio
+ * setCameraPreset(camera, 'fisheye', 16/9);
+ * ```
+ */
+const setCameraPreset = (
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  presetName: keyof typeof cameraPresets,
+  aspect: number = window.innerWidth / window.innerHeight
+): THREE.Camera | null => {
+  const preset = cameraPresets[presetName];
+  
+  if (!preset) {
+    console.warn(`Camera preset "${presetName}" not found. Available presets: ${Object.keys(cameraPresets).join(', ')}`);
+    return null;
+  }
+
+  // Set common properties
+  camera.position.set(...preset.position);
+  
+  if (preset.near !== undefined) camera.near = preset.near;
+  if (preset.far !== undefined) camera.far = preset.far;
+
+  // Apply preset-specific properties based on camera type
+  if (preset.type === 'perspective' && camera instanceof THREE.PerspectiveCamera) {
+    if (preset.fov !== undefined) {
+      camera.fov = preset.fov;
+    }
+    camera.aspect = aspect;
+  } else if (preset.type === 'orthographic' && camera instanceof THREE.OrthographicCamera) {
+    const frustumSize = preset.frustumSize || 40;
+    const verticalOffset = preset.verticalOffset || 0;
+    
+    camera.left = (frustumSize * aspect) / -2;
+    camera.right = (frustumSize * aspect) / 2;
+    camera.top = frustumSize / 2 + verticalOffset;
+    camera.bottom = frustumSize / -2 + verticalOffset;
+  }
+
+  // Apply lookAt if specified
+  if (preset.lookAt) {
+    camera.lookAt(...preset.lookAt);
+  }
+
+  camera.updateProjectionMatrix();
+  
+  return camera;
+};
+
 export {
   defaultModelOptions,
   getAnimations,
@@ -973,4 +1141,6 @@ export {
   createZigzagTexture,
   tiltCamera,
   onWindowResize,
+  cameraPresets,
+  setCameraPreset,
 };
