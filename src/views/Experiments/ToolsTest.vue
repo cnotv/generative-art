@@ -39,8 +39,6 @@ const init = async () => {
         beforeTimeline: () => {},
         timeline: [
           {
-            // end: 1,
-            // frequency: 75,
             action: () => {
               updateAnimation(
                 chameleon.mixer,

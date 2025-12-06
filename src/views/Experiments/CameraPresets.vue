@@ -327,7 +327,6 @@ const init = async () => {
   };
 
   const bugPos = getValidBugPosition();
-  
   const waspGltf = await new Promise((resolve, reject) => {
     gltfLoader.load("/wasp.glb", resolve, undefined, reject);
   });
@@ -521,7 +520,7 @@ const init = async () => {
     if (geekoMixer) {
       geekoMixer.update(delta);
     }
-    
+
     // Update wasp animation
     if (bugMixer) {
       bugMixer.update(delta);

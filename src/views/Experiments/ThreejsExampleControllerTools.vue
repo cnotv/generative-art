@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
-import Stats from "three/addons/libs/stats.module.js";
-
-import { video } from "@/utils/video";
 
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
@@ -13,7 +9,6 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getTools } from "@webgametoolkit/threejs";
-import { bindAnimatedElements } from "@/utils/animation";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -220,7 +215,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
-    const elements = [] as any[];
     const { animate, setup, world, getDelta, scene } = await getTools({
       stats,
       route,

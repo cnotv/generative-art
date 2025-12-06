@@ -5,7 +5,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getTools } from "@webgametoolkit/threejs";
-import { bindAnimatedElements } from "@/utils/animation";
+import { bindAnimatedElements } from "@webgametoolkit/animation";
 
 const statsEl = ref(null);
 const canvas = ref(null);

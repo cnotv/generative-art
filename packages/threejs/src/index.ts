@@ -70,35 +70,34 @@ const getTools = async ({ stats, route, canvas }: any) => {
     if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
     if (config.sky !== false) getSky(scene, config?.sky || {});
+    
+    if (config?.camera) {
+      if (config.camera.position)
+        if (config.camera.position instanceof Array) {
+          camera.position.set(...(config.camera.position as CoordinateTuple));
+        } else {
+          camera.position.copy(config.camera.position);
+        }
+      if (config.camera.near) camera.near = config.camera.near;
+      if (config.camera.far) camera.far = config.camera.far;
+      if (config.camera.fov) camera.fov = config.camera.fov;
+      if (config.camera.rotation) {
+        if (config.camera.rotation instanceof Array) {
+          camera.rotation.set(...(config.camera.rotation as CoordinateTuple));
+        } else {
+          camera.rotation.setFromVector3(config.camera.rotation as THREE.Vector3);
+        }
+      }
+      if (config.camera.lookAt) {
+        if (config.camera.lookAt instanceof Array) {
+          camera.lookAt(...(config.camera.lookAt));
+        } else {
+          camera.lookAt(config.camera.lookAt);
+        }
+      }
+      camera.updateProjectionMatrix();
+    }
 
-    if (config?.camera?.position)
-      if (config.camera.position instanceof Array) {
-        camera.position.set(...(config.camera.position as CoordinateTuple));
-      } else {
-        camera.position.copy(config.camera.position);
-      }
-    if (config?.camera?.fov) camera.fov = config.camera.fov;
-    if (config?.camera?.rotation) {
-      if (config.camera.rotation instanceof Array) {
-        camera.rotation.set(...(config.camera.rotation as CoordinateTuple));
-      } else {
-        camera.rotation.setFromVector3(config.camera.rotation as THREE.Vector3);
-      }
-    }
-    if (config?.camera?.lookAt) {
-      if (config.camera.lookAt instanceof Array) {
-        camera.lookAt(...(config.camera.lookAt));
-      } else {
-        camera.lookAt(config.camera.lookAt);
-      }
-    }
-    camera.updateProjectionMatrix();
-    if (config?.global?.autoResize) {
-      try {
-        window.removeEventListener("resize", () => onWindowResize(camera, renderer), false);
-      } catch (error) { /**/ }
-      window.addEventListener("resize", () => onWindowResize(camera, renderer), false);
-    }
     if (defineSetup) await defineSetup();
   };
 

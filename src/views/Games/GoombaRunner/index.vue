@@ -7,7 +7,7 @@ import Score from "./screens/Score.vue";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
-import { getTools, onWindowResize } from "@webgametoolkit/threejs";
+import { getTools } from "@webgametoolkit/threejs";
 import { gameState, GAME_STATUS } from "@webgametoolkit/game";
 import { useUiStore } from "@/stores/ui";
 import {

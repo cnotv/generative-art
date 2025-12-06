@@ -54,7 +54,6 @@ export interface PhysicOptions extends CommonOptions {
 export interface SetupConfig {
   global?: {
     frameRate?: number;
-    autoResize?: boolean;
   };
   scene?: {
     backgroundColor?: number;
@@ -64,6 +63,8 @@ export interface SetupConfig {
     fov?: number;
     rotation?: CoordinateTuple | THREE.Vector3;
     lookAt?: CoordinateTuple | THREE.Vector3;
+    near?: number;
+    far?: number;
   };
   ground?: {
     size?: number;
