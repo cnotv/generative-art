@@ -816,7 +816,7 @@ const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements: any[]
  * @param mesh 
  * @param materialColors 
  */
-const colorModel = (mesh: THREE.Mesh, materialColors: number[] = []) => {
+const colorModel = (mesh: Model, materialColors: number[] = []) => {
   // Apply colors from array based on mesh index
   let meshIndex = 0;
   mesh.traverse((child: any) => {

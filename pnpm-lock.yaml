@@ -133,11 +133,29 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@types/node@20.19.25)(jsdom@24.1.3)
 
+  packages/audio:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.4.5
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.25)
+
+  packages/game:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.4.5
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.25)
+
   packages/threejs:
     dependencies:
       '@webgametoolkit/animation':
-        specifier: github:cnotv/generative-art#path:packages/animation
-        version: https://codeload.github.com/cnotv/generative-art/tar.gz/62dd3abae88933462c1d06e6259d17a913f8c994#path:packages/animation(@dimforge/rapier3d-compat@0.19.3)(three@0.178.0)
+        specifier: workspace:*
+        version: link:../animation
     devDependencies:
       '@dimforge/rapier3d-compat':
         specifier: ^0.19.3
@@ -729,13 +747,6 @@ packages:
 
   '@vue/tsconfig@0.5.1':
     resolution: {integrity: sha512-VcZK7MvpjuTPx2w6blwnwZAu5/LgBUtejFOi3pPGQFXQN5Ela03FUtd2Qtg4yWGGissVL0dr6Ro1LfOFh+PCuQ==}
-
-  '@webgametoolkit/animation@https://codeload.github.com/cnotv/generative-art/tar.gz/62dd3abae88933462c1d06e6259d17a913f8c994#path:packages/animation':
-    resolution: {path: packages/animation, tarball: https://codeload.github.com/cnotv/generative-art/tar.gz/62dd3abae88933462c1d06e6259d17a913f8c994}
-    version: 0.0.1
-    peerDependencies:
-      '@dimforge/rapier3d-compat': ^0.14.0
-      three: ^0.178.0
 
   '@webgpu/types@0.1.67':
     resolution: {integrity: sha512-uk53+2ECGUkWoDFez/hymwpRfdgdIn6y1ref70fEecGMe5607f4sozNFgBk0oxlr7j2CRGWBEc3IBYMmFdGGTQ==}
@@ -2464,11 +2475,6 @@ snapshots:
       vue-component-type-helpers: 2.2.12
 
   '@vue/tsconfig@0.5.1': {}
-
-  '@webgametoolkit/animation@https://codeload.github.com/cnotv/generative-art/tar.gz/62dd3abae88933462c1d06e6259d17a913f8c994#path:packages/animation(@dimforge/rapier3d-compat@0.19.3)(three@0.178.0)':
-    dependencies:
-      '@dimforge/rapier3d-compat': 0.19.3
-      three: 0.178.0
 
   '@webgpu/types@0.1.67': {}
 

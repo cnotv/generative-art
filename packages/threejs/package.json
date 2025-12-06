@@ -24,7 +24,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@webgametoolkit/animation": "github:cnotv/generative-art#path:packages/animation" 
+    "@webgametoolkit/animation": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
