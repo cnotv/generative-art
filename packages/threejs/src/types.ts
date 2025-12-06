@@ -51,6 +51,16 @@ export interface PhysicOptions extends CommonOptions {
   shape?: 'cuboid' | 'ball';
 }
 
+export interface ToolsConfig {
+  stats?: {
+    init: any,
+    start: any,
+    end: any
+  };
+  route?: any;
+  canvas: HTMLCanvasElement;
+}
+
 export interface SetupConfig {
   global?: {
     frameRate?: number;

@@ -36,7 +36,7 @@ const defaultModelOptions: ModelOptions = {
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
-const getTools = async ({ stats, route, canvas }: any) => {
+const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
