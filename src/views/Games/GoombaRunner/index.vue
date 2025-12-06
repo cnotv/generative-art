@@ -128,7 +128,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     await setup({
       config: setupConfig,
     });
-    onWindowResize(camera, renderer);
     animate({
       timeline: await createTimeline({
         scene,

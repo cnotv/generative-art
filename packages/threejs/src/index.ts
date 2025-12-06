@@ -93,6 +93,12 @@ const getTools = async ({ stats, route, canvas }: any) => {
       }
     }
     camera.updateProjectionMatrix();
+    if (config?.global?.autoResize) {
+      try {
+        window.removeEventListener("resize", () => onWindowResize(camera, renderer), false);
+      } catch (error) { /**/ }
+      window.addEventListener("resize", () => onWindowResize(camera, renderer), false);
+    }
     if (defineSetup) await defineSetup();
   };
 

@@ -52,7 +52,10 @@ export interface PhysicOptions extends CommonOptions {
 }
 
 export interface SetupConfig {
-  global?: { frameRate?: number };
+  global?: {
+    frameRate?: number;
+    autoResize?: boolean;
+  };
   scene?: {
     backgroundColor?: number;
   };
