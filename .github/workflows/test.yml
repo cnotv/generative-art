@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: CI Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  unit-test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +29,46 @@ jobs:
     - name: Run Linter
       run: pnpm run lint
 
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install
+
     - name: Run Unit Tests
       run: pnpm run test:unit
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install
 
     - name: Build Project
       run: pnpm run build
