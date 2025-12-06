@@ -7,13 +7,19 @@ import { generatedRoutes } from "@/config/router";
     <div class="sidebar__menu"></div>
     <div class="sidebar__content">
       <router-link
-        v-for="route in generatedRoutes"
+        v-for="(route, index) in generatedRoutes"
         :key="route.path"
         :to="route.path"
         class="sidebar__link"
         active-class="sidebar__link--active"
       >
-        <span class="sidebar__link-text">{{ route.name }}</span>
+        <div
+          class="sidebar__link__group"
+          v-if="generatedRoutes[index - 1]?.group !== route.group"
+        >
+          {{ route.group }}
+        </div>
+        <span class="sidebar__link__text">{{ route.name }}</span>
       </router-link>
     </div>
   </div>
@@ -46,6 +52,18 @@ import { generatedRoutes } from "@/config/router";
   color: white;
   text-decoration: none;
   font-size: 0.8em;
+}
+
+.sidebar__link__group {
+  font-weight: bold;
+}
+
+.sidebar__link:not(:first-child) .sidebar__link__group {
+  margin-top: 1em;
+}
+
+.sidebar__link__text {
+  margin-left: 1em;
 }
 
 .sidebar__menu {

@@ -8,6 +8,7 @@ export const getRoutes = (views: Record<string, () => Promise<unknown>>, dir: st
     return {
       path: `/${dir.toLowerCase()}/${cleanName}`,
       name: cleanName,
+      group: dir,
       component: views[key]
     }
   })
