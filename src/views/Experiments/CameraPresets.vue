@@ -24,7 +24,8 @@ let geekoMixer,
   geekoRigidBody,
   bugRigidBody,
   bugMesh,
-  geekoCollider;
+  geekoCollider,
+  bugMixer;
 let geekoObject;
 const autoTracking = ref(true);
 let jumpVelocity = 0;
@@ -307,12 +308,7 @@ const init = async () => {
   characterController = world.createCharacterController(0.01);
   characterController.enableSnapToGround(0.5);
 
-  // Create Bug Sphere
-  const bugGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-  const bugMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-  bugMesh = new THREE.Mesh(bugGeometry, bugMaterial);
-
-  // Find valid position for bug (not on obstacles)
+  // Load Wasp Model
   const getValidBugPosition = () => {
     let validPos = null;
     let attempts = 0;
@@ -331,9 +327,28 @@ const init = async () => {
   };
 
   const bugPos = getValidBugPosition();
+  
+  const waspGltf = await new Promise((resolve, reject) => {
+    gltfLoader.load("/wasp.glb", resolve, undefined, reject);
+  });
+
+  bugMesh = waspGltf.scene;
   bugMesh.position.set(bugPos.x, bugPos.y, bugPos.z);
-  bugMesh.castShadow = true;
+  bugMesh.scale.set(1, 1, 1); // Adjust scale as needed
+  bugMesh.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
   scene.add(bugMesh);
+
+  // Setup wasp animations if available
+  if (waspGltf.animations && waspGltf.animations.length > 0) {
+    bugMixer = new THREE.AnimationMixer(bugMesh);
+    const bugAction = bugMixer.clipAction(waspGltf.animations[0]);
+    bugAction.play();
+  }
 
   // Bug Physics Body
   const bugBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
@@ -505,6 +520,11 @@ const init = async () => {
     // Update Animation
     if (geekoMixer) {
       geekoMixer.update(delta);
+    }
+    
+    // Update wasp animation
+    if (bugMixer) {
+      bugMixer.update(delta);
     }
 
     // Update all camera positions to follow the character
