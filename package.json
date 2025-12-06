@@ -12,7 +12,14 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "lint:staged": "eslint --fix --ignore-path .gitignore",
+    "format": "prettier --write src/",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{vue,js,jsx,cjs,mjs,ts,tsx,cts,mts}": [
+      "eslint --fix --ignore-path .gitignore"
+    ]
   },
   "dependencies": {
     "@webgametoolkit/threejs": "workspace:^",
@@ -44,7 +51,9 @@
     "eslint": "^8.49.0",
     "eslint-plugin-cypress": "^2.15.1",
     "eslint-plugin-vue": "^9.17.0",
+    "husky": "^9.1.7",
     "jsdom": "^24.0.0",
+    "lint-staged": "^16.2.7",
     "npm-run-all2": "^6.1.1",
     "prettier": "^3.0.3",
     "typescript": "~5.4.0",
