@@ -6,7 +6,7 @@ import { times } from './utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from './utils/video';
 import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, AnimatedComplexModel, Timeline } from '@webgametoolkit/animation';
-import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig } from './types';
+import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig, ToolsConfig } from './types';
 
 export * from './types';
 

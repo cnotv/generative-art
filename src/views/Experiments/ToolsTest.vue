@@ -25,8 +25,6 @@ const setupConfig = {
 const canvas = ref(null);
 const init = async () => {
   const { setup, animate, scene, world, getDelta } = await getTools({
-    stats: { init: () => {}, start: () => {}, stop: () => {} },
-    route: { query: {} },
     canvas: canvas.value,
   });
 
