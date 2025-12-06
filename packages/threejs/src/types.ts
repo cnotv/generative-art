@@ -44,6 +44,7 @@ export interface ModelOptions extends CommonOptions {
   thickness?: number;
   envMapIntensity?: number;
   animations?: string;
+  materialColors?: number[];
 }
 
 export interface PhysicOptions extends CommonOptions {

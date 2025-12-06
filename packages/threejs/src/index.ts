@@ -644,6 +644,7 @@ const getModel = async (
     texture,
     animations,
     shape = 'cuboid',
+    materialColors,
   }: ModelOptions = {},
 ): Promise<AnimatedComplexModel> => {
   const initialValues = { size, rotation, position, color }
@@ -658,6 +659,12 @@ const getModel = async (
   } else {
     mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
   }
+  
+  // Apply material colors if provided
+  if (materialColors && materialColors.length > 0) {
+    colorModel(mesh, materialColors);
+  }
+  
   scene.add(mesh);
 
   let helper;
