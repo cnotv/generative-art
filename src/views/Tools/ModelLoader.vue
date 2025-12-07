@@ -14,6 +14,8 @@ const chameleonConfig = {
   castShadow: true,
   receiveShadow: true,
   animations: "chameleon_animations.fbx",
+  material: true,
+  materialType: "MeshLambertMaterial",
 };
 
 const setupConfig = {

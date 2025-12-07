@@ -395,6 +395,7 @@ const loadFBX = (
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
     material = false,
+    materialType = 'MeshPhysicalMaterial',
     color,
     opacity = 1,
     reflectivity = 0.5,
@@ -422,16 +423,41 @@ const loadFBX = (
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           if (material) {
-            mesh.material = new THREE.MeshPhysicalMaterial({
+            const materialProps: any = {
               color,
-              opacity, 
+              opacity,
               transparent: opacity < 1,
-              reflectivity,
-              roughness,
-              transmission,
-              metalness,
-              clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, 
-            });
+            };
+
+            if (materialType === 'MeshPhysicalMaterial') {
+              mesh.material = new THREE.MeshPhysicalMaterial({
+                ...materialProps,
+                reflectivity,
+                roughness,
+                transmission,
+                metalness,
+                clearcoat,
+                clearcoatRoughness,
+                ior,
+                thickness,
+                envMapIntensity,
+              });
+            } else if (materialType === 'MeshStandardMaterial') {
+              mesh.material = new THREE.MeshStandardMaterial({
+                ...materialProps,
+                roughness,
+                metalness,
+              });
+            } else if (materialType === 'MeshLambertMaterial') {
+              mesh.material = new THREE.MeshLambertMaterial(materialProps);
+            } else if (materialType === 'MeshPhongMaterial') {
+              mesh.material = new THREE.MeshPhongMaterial({
+                ...materialProps,
+                shininess: 30,
+              });
+            } else if (materialType === 'MeshBasicMaterial') {
+              mesh.material = new THREE.MeshBasicMaterial(materialProps);
+            }
           }
           mesh.rotation.set(...rotation);
           mesh.castShadow = castShadow;
@@ -453,6 +479,7 @@ const loadGLTF = (
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
     material = false,
+    materialType = 'MeshPhysicalMaterial',
     color,
     opacity = 1,
     reflectivity = 0.5,
@@ -481,16 +508,41 @@ const loadGLTF = (
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           if (material) {
-            mesh.material = new THREE.MeshPhysicalMaterial({
+            const materialProps: any = {
               color,
-              opacity, 
+              opacity,
               transparent: opacity < 1,
-              reflectivity,
-              roughness,
-              transmission,
-              metalness,
-              clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, 
-            });
+            };
+
+            if (materialType === 'MeshPhysicalMaterial') {
+              mesh.material = new THREE.MeshPhysicalMaterial({
+                ...materialProps,
+                reflectivity,
+                roughness,
+                transmission,
+                metalness,
+                clearcoat,
+                clearcoatRoughness,
+                ior,
+                thickness,
+                envMapIntensity,
+              });
+            } else if (materialType === 'MeshStandardMaterial') {
+              mesh.material = new THREE.MeshStandardMaterial({
+                ...materialProps,
+                roughness,
+                metalness,
+              });
+            } else if (materialType === 'MeshLambertMaterial') {
+              mesh.material = new THREE.MeshLambertMaterial(materialProps);
+            } else if (materialType === 'MeshPhongMaterial') {
+              mesh.material = new THREE.MeshPhongMaterial({
+                ...materialProps,
+                shininess: 30,
+              });
+            } else if (materialType === 'MeshBasicMaterial') {
+              mesh.material = new THREE.MeshBasicMaterial(materialProps);
+            }
           }
           mesh.rotation.set(...rotation);
           mesh.castShadow = castShadow;
@@ -671,6 +723,7 @@ const getModel = async (
     roughness = 0.1,
     metalness = 0.8,
     material = false,
+    materialType = 'MeshPhysicalMaterial',
     transmission = 0.2,
     clearcoat = 1.0,
     clearcoatRoughness = 0.05,
@@ -694,11 +747,11 @@ const getModel = async (
   let gltf: any = {};
 
   if (isGLTF) {
-    const result = await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow});
+    const result = await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, materialType, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow});
     mesh = result.model;
     gltf = result.gltf;
   } else {
-    mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
+    mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, materialType, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
   }
   
   // Apply material colors if provided
