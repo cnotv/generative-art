@@ -59,27 +59,210 @@ const animationPath = ref("chameleon_animations.fbx");
 const meshColors = ref([]);
 const modelScale = ref([0.05, 0.05, 0.05]);
 
+// Mesh inspector panel state
+const selectedMesh = ref(null);
+const panelVisible = ref(false);
+const meshHelper = ref(null);
+
+const meshProperties = ref({
+  name: "",
+  position: { x: 0, y: 0, z: 0 },
+  rotation: { x: 0, y: 0, z: 0 },
+  scale: { x: 0, y: 0, z: 0 },
+  materialType: "",
+  color: "",
+  opacity: 1,
+  visible: true,
+  castShadow: false,
+  receiveShadow: false,
+  geometry: "",
+  vertexCount: 0,
+  faceCount: 0,
+  uuid: "",
+  type: "",
+  frustumCulled: true,
+  renderOrder: 0,
+  layers: "",
+  matrixAutoUpdate: true,
+  // Material properties
+  metalness: 0,
+  roughness: 1,
+  transparent: false,
+  side: "",
+  flatShading: false,
+  wireframe: false,
+  vertexColors: false,
+  fog: true,
+  // Geometry properties
+  boundingSphere: null,
+  boundingBox: null,
+});
+
 let chameleonModel = null;
 let sceneRef = null;
 let worldRef = null;
 let getDeltaRef = null;
+let cameraRef = null;
+
+const closePanel = () => {
+  panelVisible.value = false;
+  selectedMesh.value = null;
+  if (meshHelper.value && sceneRef) {
+    sceneRef.remove(meshHelper.value);
+    meshHelper.value = null;
+  }
+};
 
 const init = async () => {
-  const { setup, animate, scene, world, getDelta } = await getTools({
+  const { setup, animate, scene, world, getDelta, camera } = await getTools({
     canvas: canvas.value,
   });
 
   sceneRef = scene;
   worldRef = world;
   getDeltaRef = getDelta;
+  cameraRef = camera;
 
   await setup({
     config: setupConfig,
     defineSetup: async () => {
       await loadModel();
 
+      // Raycaster for mesh selection
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      const onPointerClick = (event) => {
+        // Calculate pointer position in normalized device coordinates
+        const rect = canvas.value.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Update the raycaster
+        raycaster.setFromCamera(pointer, cameraRef);
+
+        // Calculate objects intersecting the ray
+        const intersects = raycaster.intersectObjects(sceneRef.children, true);
+
+        if (intersects.length > 0) {
+          const intersectedObject = intersects[0].object;
+          if (intersectedObject.isMesh) {
+            updateMeshProperties(intersectedObject);
+          }
+        }
+      };
+
+      const updateMeshProperties = (mesh) => {
+        if (!mesh) return;
+
+        // Remove previous helper if exists
+        if (meshHelper.value) {
+          sceneRef.remove(meshHelper.value);
+          meshHelper.value = null;
+        }
+
+        selectedMesh.value = mesh;
+        panelVisible.value = true;
+
+        // Create and add new helper
+        meshHelper.value = new THREE.BoxHelper(mesh, 0x00ff00);
+        sceneRef.add(meshHelper.value);
+
+        // Compute bounding box and sphere if not already computed
+        if (!mesh.geometry.boundingBox) {
+          mesh.geometry.computeBoundingBox();
+        }
+        if (!mesh.geometry.boundingSphere) {
+          mesh.geometry.computeBoundingSphere();
+        }
+
+        const getSideName = (side) => {
+          if (side === THREE.FrontSide) return "Front";
+          if (side === THREE.BackSide) return "Back";
+          if (side === THREE.DoubleSide) return "Double";
+          return "Unknown";
+        };
+
+        meshProperties.value = {
+          name: mesh.name || "Unnamed",
+          uuid: mesh.uuid,
+          type: mesh.type,
+          position: {
+            x: mesh.position.x.toFixed(2),
+            y: mesh.position.y.toFixed(2),
+            z: mesh.position.z.toFixed(2),
+          },
+          rotation: {
+            x: ((mesh.rotation.x * 180) / Math.PI).toFixed(2),
+            y: ((mesh.rotation.y * 180) / Math.PI).toFixed(2),
+            z: ((mesh.rotation.z * 180) / Math.PI).toFixed(2),
+          },
+          scale: {
+            x: mesh.scale.x.toFixed(2),
+            y: mesh.scale.y.toFixed(2),
+            z: mesh.scale.z.toFixed(2),
+          },
+          visible: mesh.visible,
+          frustumCulled: mesh.frustumCulled,
+          renderOrder: mesh.renderOrder,
+          layers: mesh.layers.mask,
+          matrixAutoUpdate: mesh.matrixAutoUpdate,
+          castShadow: mesh.castShadow,
+          receiveShadow: mesh.receiveShadow,
+          // Material properties
+          materialType: mesh.material?.type || "N/A",
+          color: mesh.material?.color ? `#${mesh.material.color.getHexString()}` : "N/A",
+          opacity: mesh.material?.opacity?.toFixed(2) || 1,
+          transparent: mesh.material?.transparent || false,
+          metalness: mesh.material?.metalness?.toFixed(2) || "N/A",
+          roughness: mesh.material?.roughness?.toFixed(2) || "N/A",
+          side:
+            mesh.material?.side !== undefined ? getSideName(mesh.material.side) : "N/A",
+          flatShading: mesh.material?.flatShading || false,
+          wireframe: mesh.material?.wireframe || false,
+          vertexColors: mesh.material?.vertexColors || false,
+          fog: mesh.material?.fog !== undefined ? mesh.material.fog : true,
+          // Geometry properties
+          geometry: mesh.geometry?.type || "N/A",
+          vertexCount: mesh.geometry?.attributes?.position?.count || 0,
+          faceCount: mesh.geometry?.index
+            ? mesh.geometry.index.count / 3
+            : (mesh.geometry?.attributes?.position?.count || 0) / 3,
+          boundingSphere: mesh.geometry?.boundingSphere
+            ? `radius: ${mesh.geometry.boundingSphere.radius.toFixed(2)}`
+            : "N/A",
+          boundingBox: mesh.geometry?.boundingBox
+            ? `${mesh.geometry.boundingBox.min.x.toFixed(
+                1
+              )},${mesh.geometry.boundingBox.min.y.toFixed(
+                1
+              )},${mesh.geometry.boundingBox.min.z.toFixed(
+                1
+              )} to ${mesh.geometry.boundingBox.max.x.toFixed(
+                1
+              )},${mesh.geometry.boundingBox.max.y.toFixed(
+                1
+              )},${mesh.geometry.boundingBox.max.z.toFixed(1)}`
+            : "N/A",
+        };
+      };
+
+      // Add click and touch event listeners
+      canvas.value.addEventListener("click", onPointerClick);
+      canvas.value.addEventListener("touchend", (event) => {
+        if (event.changedTouches.length > 0) {
+          const touch = event.changedTouches[0];
+          onPointerClick(touch);
+        }
+      });
+
       animate({
-        beforeTimeline: () => {},
+        beforeTimeline: () => {
+          // Update helper if mesh is selected
+          if (meshHelper.value && selectedMesh.value) {
+            meshHelper.value.update();
+          }
+        },
         timeline: [
           {
             action: () => {
@@ -486,9 +669,173 @@ onMounted(async () => init());
 </script>
 
 <template>
-  <canvas ref="canvas"></canvas>
+  <div class="container">
+    <canvas ref="canvas"></canvas>
 
-  <div class="controls">
+    <!-- Mesh Inspector Panel (left side) -->
+    <div v-if="panelVisible" class="side-panel">
+      <div class="panel-header">
+        <h3>Mesh Properties</h3>
+        <button @click="closePanel" class="close-btn">×</button>
+      </div>
+
+      <div class="panel-content">
+        <div class="property-group">
+          <h4>General</h4>
+          <div class="property">
+            <span class="label">Name:</span>
+            <span class="value">{{ meshProperties.name }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Type:</span>
+            <span class="value">{{ meshProperties.type }}</span>
+          </div>
+          <div class="property">
+            <span class="label">UUID:</span>
+            <span class="value">{{ meshProperties.uuid.substring(0, 8) }}...</span>
+          </div>
+          <div class="property">
+            <span class="label">Visible:</span>
+            <span class="value">{{ meshProperties.visible }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Frustum Culled:</span>
+            <span class="value">{{ meshProperties.frustumCulled }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Render Order:</span>
+            <span class="value">{{ meshProperties.renderOrder }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Layers:</span>
+            <span class="value">{{ meshProperties.layers }}</span>
+          </div>
+        </div>
+
+        <div class="property-group">
+          <h4>Transform</h4>
+          <div class="property">
+            <span class="label">Position:</span>
+            <span class="value"
+              >x: {{ meshProperties.position.x }}, y: {{ meshProperties.position.y }}, z:
+              {{ meshProperties.position.z }}</span
+            >
+          </div>
+          <div class="property">
+            <span class="label">Rotation (deg):</span>
+            <span class="value"
+              >x: {{ meshProperties.rotation.x }}°, y: {{ meshProperties.rotation.y }}°,
+              z: {{ meshProperties.rotation.z }}°</span
+            >
+          </div>
+          <div class="property">
+            <span class="label">Scale:</span>
+            <span class="value"
+              >x: {{ meshProperties.scale.x }}, y: {{ meshProperties.scale.y }}, z:
+              {{ meshProperties.scale.z }}</span
+            >
+          </div>
+          <div class="property">
+            <span class="label">Matrix Auto Update:</span>
+            <span class="value">{{ meshProperties.matrixAutoUpdate }}</span>
+          </div>
+        </div>
+
+        <div class="property-group">
+          <h4>Material</h4>
+          <div class="property">
+            <span class="label">Type:</span>
+            <span class="value">{{ meshProperties.materialType }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Color:</span>
+            <span class="value">
+              <span
+                class="color-swatch"
+                :style="{ backgroundColor: meshProperties.color }"
+              ></span>
+              {{ meshProperties.color }}
+            </span>
+          </div>
+          <div class="property">
+            <span class="label">Opacity:</span>
+            <span class="value">{{ meshProperties.opacity }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Transparent:</span>
+            <span class="value">{{ meshProperties.transparent }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Side:</span>
+            <span class="value">{{ meshProperties.side }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Metalness:</span>
+            <span class="value">{{ meshProperties.metalness }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Roughness:</span>
+            <span class="value">{{ meshProperties.roughness }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Flat Shading:</span>
+            <span class="value">{{ meshProperties.flatShading }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Wireframe:</span>
+            <span class="value">{{ meshProperties.wireframe }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Vertex Colors:</span>
+            <span class="value">{{ meshProperties.vertexColors }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Fog:</span>
+            <span class="value">{{ meshProperties.fog }}</span>
+          </div>
+        </div>
+
+        <div class="property-group">
+          <h4>Shadows</h4>
+          <div class="property">
+            <span class="label">Cast Shadow:</span>
+            <span class="value">{{ meshProperties.castShadow }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Receive Shadow:</span>
+            <span class="value">{{ meshProperties.receiveShadow }}</span>
+          </div>
+        </div>
+
+        <div class="property-group">
+          <h4>Geometry</h4>
+          <div class="property">
+            <span class="label">Type:</span>
+            <span class="value">{{ meshProperties.geometry }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Vertices:</span>
+            <span class="value">{{ meshProperties.vertexCount }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Faces:</span>
+            <span class="value">{{ Math.floor(meshProperties.faceCount) }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Bounding Sphere:</span>
+            <span class="value">{{ meshProperties.boundingSphere }}</span>
+          </div>
+          <div class="property">
+            <span class="label">Bounding Box:</span>
+            <span class="value" style="font-size: 11px">{{  meshProperties.boundingBox
+            }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Controls Panel (right side) -->
+    <div class="controls">
     <div class="file-inputs">
       <div class="input-group">
         <label for="model-upload">Model (FBX/GLB/GLTF):</label>
@@ -608,9 +955,17 @@ onMounted(async () => init());
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <style scoped>
+.container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
 canvas {
   display: block;
   width: 100%;
@@ -620,7 +975,7 @@ canvas {
 .controls {
   position: fixed;
   top: 20px;
-  left: 20px;
+  right: 20px;
   background: rgba(0, 0, 0, 0.8);
   padding: 15px;
   border-radius: 8px;
@@ -837,5 +1192,128 @@ canvas {
 .color-item input[type="color"]::-webkit-color-swatch {
   border: none;
   border-radius: 2px;
+}
+
+/* Mesh Inspector Panel Styles */
+.side-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 350px;
+  height: 100%;
+  background: rgba(20, 20, 30, 0.95);
+  color: #fff;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.5);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  z-index: 999;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.property-group {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.property-group h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #66b3ff;
+}
+
+.property {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.property:last-child {
+  border-bottom: none;
+}
+
+.property .label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.property .value {
+  font-size: 13px;
+  color: #fff;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Scrollbar styling for side panel */
+.side-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.side-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.side-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.side-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>
