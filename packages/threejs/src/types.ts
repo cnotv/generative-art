@@ -86,8 +86,31 @@ export interface SetupConfig {
     size?: number;
   } | false;
   lights?: {
-    directional?: {
+    ambient?: {
+      color?: number;
       intensity?: number;
+    };
+    directional?: {
+      color?: number;
+      intensity?: number;
+      position?: CoordinateTuple;
+      castShadow?: boolean;
+      shadow?: {
+        mapSize?: { width: number; height: number };
+        camera?: {
+          near?: number;
+          far?: number;
+          left?: number;
+          right?: number;
+          top?: number;
+          bottom?: number;
+        };
+        bias?: number;
+        radius?: number;
+      };
+    };
+    hemisphere?: {
+      colors?: [number, number];
     };
   } | false;
   orbit?: {

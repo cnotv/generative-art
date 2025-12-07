@@ -20,7 +20,31 @@ const setupConfig = {
   camera: { position: [0, 5, 20] },
   ground: { size: 10000, color: 0x99cc99 },
   sky: { size: 500, color: 0x87ceeb },
-  lights: { directional: { intensity: 0.1 } },
+  lights: {
+    ambient: {
+      color: 0xffffff,
+      intensity: 2,
+    },
+    directional: {
+      color: 0xffffff,
+      intensity: 4.0,
+      position: [20, 30, 20],
+      castShadow: true,
+      shadow: {
+        mapSize: { width: 4096, height: 4096 },
+        camera: {
+          near: 0.5,
+          far: 500,
+          left: -50,
+          right: 50,
+          top: 50,
+          bottom: -50,
+        },
+        bias: -0.0001,
+        radius: 1,
+      },
+    },
+  },
 };
 
 const canvas = ref(null);
@@ -40,8 +64,6 @@ let getDeltaRef = null;
 
 const init = async () => {
   const { setup, animate, scene, world, getDelta } = await getTools({
-    stats: { init: () => {}, start: () => {}, stop: () => {} },
-    route: { query: {} },
     canvas: canvas.value,
   });
 

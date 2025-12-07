@@ -233,42 +233,78 @@ const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
  * @param scene 
  * @returns 
  */
-const createLights = (scene: THREE.Scene, {
-  directionalLightIntensity,
-  hemisphere,
-  ambient
-}: {
-  directionalLightIntensity?: number,
-  hemisphere?: { colors?: any[] }
-  ambient?: { color?: number, intensity?: number }
-  } = {
-    hemisphere: { colors: [0x555555, 0xffffff] },
-    ambient: { color: 0xffffff, intensity: 1 }
-  }) => {
-  const hemisphereLight =  new THREE.HemisphereLight(...(hemisphere?.colors || []));
-  scene.add(hemisphereLight);
+const createLights = (scene: THREE.Scene, config: any = {}) => {
+  const {
+    ambient = { color: 0xffffff, intensity: 2 },
+    directional = {
+      color: 0xffffff,
+      intensity: 4.0,
+      position: [20, 30, 20],
+      castShadow: true,
+      shadow: {
+        mapSize: { width: 4096, height: 4096 },
+        camera: {
+          near: 0.5,
+          far: 500,
+          left: -50,
+          right: 50,
+          top: 50,
+          bottom: -50
+        },
+        bias: -0.0001,
+        radius: 1
+      }
+    },
+    hemisphere
+  } = config;
+
+  // Add hemisphere light if configured
+  if (hemisphere?.colors) {
+    const hemisphereLight = new THREE.HemisphereLight(...hemisphere.colors);
+    scene.add(hemisphereLight);
+  }
+  
+  // Add ambient light
+  const ambientLight = new THREE.AmbientLight(ambient.color, ambient.intensity);
+  scene.add(ambientLight);
   
   // Add directional light with shadows
-  const directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity ?? 1.2);
-  directionalLight.position.set(100, 100, 100);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.left = -500;
-  directionalLight.shadow.camera.right = 500;
-  directionalLight.shadow.camera.top = 500;
-  directionalLight.shadow.camera.bottom = -500;
-  directionalLight.shadow.camera.near = 0.1;
-  directionalLight.shadow.camera.far = 1000;
+  const directionalLight = new THREE.DirectionalLight(
+    directional.color,
+    directional.intensity
+  );
+  directionalLight.position.set(...(directional.position as CoordinateTuple));
+  directionalLight.castShadow = directional.castShadow ?? true;
+  
+  if (directional.shadow) {
+    if (directional.shadow.mapSize) {
+      directionalLight.shadow.mapSize.width = directional.shadow.mapSize.width;
+      directionalLight.shadow.mapSize.height = directional.shadow.mapSize.height;
+    }
+    
+    if (directional.shadow.camera) {
+      const cam = directional.shadow.camera;
+      if (cam.near !== undefined) directionalLight.shadow.camera.near = cam.near;
+      if (cam.far !== undefined) directionalLight.shadow.camera.far = cam.far;
+      if (cam.left !== undefined) directionalLight.shadow.camera.left = cam.left;
+      if (cam.right !== undefined) directionalLight.shadow.camera.right = cam.right;
+      if (cam.top !== undefined) directionalLight.shadow.camera.top = cam.top;
+      if (cam.bottom !== undefined) directionalLight.shadow.camera.bottom = cam.bottom;
+    }
+    
+    if (directional.shadow.bias !== undefined) {
+      directionalLight.shadow.bias = directional.shadow.bias;
+    }
+    if (directional.shadow.radius !== undefined) {
+      directionalLight.shadow.radius = directional.shadow.radius;
+    }
+  }
+  
   directionalLight.shadow.camera.updateProjectionMatrix();
   scene.add(directionalLight);
 
   // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
   // scene.add(shadowCameraHelper);
-  
-  const ambientLight = new THREE.AmbientLight( ambient?.color, ambient?.intensity );
-  ambientLight.position.set(5, 5, 5);
-  scene.add(ambientLight)
   
   return { directionalLight, ambientLight };
 }
