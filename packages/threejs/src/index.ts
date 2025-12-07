@@ -392,29 +392,106 @@ const getSky = (
   return { model }
 }
 
+/**
+ * Apply material properties to a model's meshes
+ * @param model The model to apply materials to
+ * @param options Material options
+ */
+const applyMaterialToModel = (
+  model: Model,
+  {
+    rotation,
+    material,
+    materialType,
+    color,
+    materialColors,
+    opacity,
+    reflectivity,
+    roughness,
+    metalness,
+    transmission,
+    clearcoat,
+    clearcoatRoughness,
+    ior,
+    thickness,
+    envMapIntensity,
+    castShadow,
+    receiveShadow,
+  }: ModelOptions
+) => {
+  let meshIndex = 0;
+  model.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      const mesh = child as THREE.Mesh;
+      if (material) {
+        const oldMaterial = mesh.material as any;
+        const meshColor = materialColors && materialColors[meshIndex] !== undefined 
+          ? materialColors[meshIndex] 
+          : (color || (oldMaterial?.color || 0xffffff));
+        const materialProps: any = {
+          color: meshColor,
+          opacity: opacity,
+          transparent: opacity < 1,
+        };
+        meshIndex++;
+
+        // Preserve map/texture from old material if exists
+        if (oldMaterial?.map) {
+          materialProps.map = oldMaterial.map;
+        }
+
+        if (materialType === 'MeshPhysicalMaterial') {
+          mesh.material = new THREE.MeshPhysicalMaterial({
+            ...materialProps,
+            reflectivity,
+            roughness,
+            transmission,
+            metalness,
+            clearcoat,
+            clearcoatRoughness,
+            ior,
+            thickness,
+            envMapIntensity,
+          });
+        } else if (materialType === 'MeshStandardMaterial') {
+          mesh.material = new THREE.MeshStandardMaterial({
+            ...materialProps,
+            roughness,
+            metalness,
+          });
+        } else if (materialType === 'MeshLambertMaterial') {
+          mesh.material = new THREE.MeshLambertMaterial({
+            ...materialProps,
+            flatShading: false,
+          });
+        } else if (materialType === 'MeshPhongMaterial') {
+          mesh.material = new THREE.MeshPhongMaterial({
+            ...materialProps,
+            shininess: 30,
+          });
+        } else if (materialType === 'MeshBasicMaterial') {
+          mesh.material = new THREE.MeshBasicMaterial(materialProps);
+        }
+      }
+      mesh.rotation.set(...rotation);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+    }
+  });
+};
+
 const loadFBX = (
   fileName: string,
-  {
+  options: ModelOptions = {}
+): Promise<Model> => {
+  const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
-    material = false,
-    materialType = 'MeshPhysicalMaterial',
-    color,
-    opacity = 1,
-    reflectivity = 0.5,
-    roughness = 1,
-    metalness = 0,
     castShadow = false,
     receiveShadow = false,
-    transmission = 0,
-    clearcoat = 1.0,
-    clearcoatRoughness = 0.05,
-    ior = 1.5,
-    thickness = 0.5,
-    envMapIntensity = 2.0,
-  }: ModelOptions = {}
-): Promise<Model> => {
+  } = options;
+
   return new Promise((resolve, reject) => {
     const loader = new FBXLoader();
     loader.load(`/${fileName}`, (model) => {
@@ -422,62 +499,11 @@ const loadFBX = (
       model.scale.set(...scale);
       model.rotation.set(...rotation);
       model.castShadow = castShadow;
-      model.receiveShadow = receiveShadow; 
-      model.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          if (material) {
-            const oldMaterial = mesh.material as any;
-            const materialProps: any = {
-              color: color || (oldMaterial?.color || 0xffffff),
-              opacity: opacity,
-              transparent: opacity < 1,
-            };
-
-            // Preserve map/texture from old material if exists
-            if (oldMaterial?.map) {
-              materialProps.map = oldMaterial.map;
-            }
-
-            if (materialType === 'MeshPhysicalMaterial') {
-              mesh.material = new THREE.MeshPhysicalMaterial({
-                ...materialProps,
-                reflectivity,
-                roughness,
-                transmission,
-                metalness,
-                clearcoat,
-                clearcoatRoughness,
-                ior,
-                thickness,
-                envMapIntensity,
-              });
-            } else if (materialType === 'MeshStandardMaterial') {
-              mesh.material = new THREE.MeshStandardMaterial({
-                ...materialProps,
-                roughness,
-                metalness,
-              });
-            } else if (materialType === 'MeshLambertMaterial') {
-              mesh.material = new THREE.MeshLambertMaterial({
-                ...materialProps,
-                flatShading: false,
-              });
-            } else if (materialType === 'MeshPhongMaterial') {
-              mesh.material = new THREE.MeshPhongMaterial({
-                ...materialProps,
-                shininess: 30,
-              });
-            } else if (materialType === 'MeshBasicMaterial') {
-              mesh.material = new THREE.MeshBasicMaterial(materialProps);
-            }
-          }
-          mesh.rotation.set(...rotation);
-          mesh.castShadow = castShadow;
-          mesh.receiveShadow = receiveShadow;
-        }
-      });
-      resolve(model)
+      model.receiveShadow = receiveShadow;
+      
+      applyMaterialToModel(model, options);
+      
+      resolve(model);
     }, undefined, reject);
   });
 }
@@ -487,90 +513,28 @@ const loadFBX = (
  */
 const loadGLTF = (
   fileName: string,
-  {
+  options: ModelOptions = {}
+): Promise<{ model: Model, gltf: any }> => {
+  const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
-    material = false,
-    materialType = 'MeshPhysicalMaterial',
-    color,
-    opacity = 1,
-    reflectivity = 0.5,
-    roughness = 1,
-    metalness = 0,
     castShadow = false,
     receiveShadow = false,
-    transmission = 0,
-    clearcoat = 1.0,
-    clearcoatRoughness = 0.05,
-    ior = 1.5,
-    thickness = 0.5,
-    envMapIntensity = 2.0,
-  }: ModelOptions = {}
-): Promise<{ model: Model, gltf: any }> => {
+  } = options;
+
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
     loader.load(`/${fileName}`, (gltf) => {
       const model = gltf.scene;
       model.castShadow = castShadow;
-      model.receiveShadow = receiveShadow; 
+      model.receiveShadow = receiveShadow;
       model.position.set(...position);
       model.scale.set(...scale);
       model.rotation.set(...rotation);
-      model.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          if (material) {
-            const oldMaterial = mesh.material as any;
-            const materialProps: any = {
-              color: color || (oldMaterial?.color || 0xffffff),
-              opacity: opacity,
-              transparent: opacity < 1,
-            };
-
-            // Preserve map/texture from old material if exists
-            if (oldMaterial?.map) {
-              materialProps.map = oldMaterial.map;
-            }
-
-            if (materialType === 'MeshPhysicalMaterial') {
-              mesh.material = new THREE.MeshPhysicalMaterial({
-                ...materialProps,
-                reflectivity,
-                roughness,
-                transmission,
-                metalness,
-                clearcoat,
-                clearcoatRoughness,
-                ior,
-                thickness,
-                envMapIntensity,
-              });
-            } else if (materialType === 'MeshStandardMaterial') {
-              mesh.material = new THREE.MeshStandardMaterial({
-                ...materialProps,
-                roughness,
-                metalness,
-              });
-            } else if (materialType === 'MeshLambertMaterial') {
-              mesh.material = new THREE.MeshLambertMaterial({
-                ...materialProps,
-                flatShading: false,
-              });
-            } else if (materialType === 'MeshPhongMaterial') {
-              mesh.material = new THREE.MeshPhongMaterial({
-                ...materialProps,
-                shininess: 30,
-              });
-            } else if (materialType === 'MeshBasicMaterial') {
-              mesh.material = new THREE.MeshBasicMaterial(materialProps);
-            }
-          }
-          mesh.rotation.set(...rotation);
-          mesh.castShadow = castShadow;
-          mesh.receiveShadow = receiveShadow;
-        }
-      });
+      
+      applyMaterialToModel(model, options);
+      
       resolve({ model, gltf });
     }, undefined, reject);
   });
