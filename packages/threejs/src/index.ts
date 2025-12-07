@@ -423,11 +423,17 @@ const loadFBX = (
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           if (material) {
+            const oldMaterial = mesh.material as any;
             const materialProps: any = {
-              color,
-              opacity,
+              color: color || (oldMaterial?.color || 0xffffff),
+              opacity: opacity,
               transparent: opacity < 1,
             };
+
+            // Preserve map/texture from old material if exists
+            if (oldMaterial?.map) {
+              materialProps.map = oldMaterial.map;
+            }
 
             if (materialType === 'MeshPhysicalMaterial') {
               mesh.material = new THREE.MeshPhysicalMaterial({
@@ -449,7 +455,10 @@ const loadFBX = (
                 metalness,
               });
             } else if (materialType === 'MeshLambertMaterial') {
-              mesh.material = new THREE.MeshLambertMaterial(materialProps);
+              mesh.material = new THREE.MeshLambertMaterial({
+                ...materialProps,
+                flatShading: false,
+              });
             } else if (materialType === 'MeshPhongMaterial') {
               mesh.material = new THREE.MeshPhongMaterial({
                 ...materialProps,
@@ -508,11 +517,17 @@ const loadGLTF = (
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           if (material) {
+            const oldMaterial = mesh.material as any;
             const materialProps: any = {
-              color,
-              opacity,
+              color: color || (oldMaterial?.color || 0xffffff),
+              opacity: opacity,
               transparent: opacity < 1,
             };
+
+            // Preserve map/texture from old material if exists
+            if (oldMaterial?.map) {
+              materialProps.map = oldMaterial.map;
+            }
 
             if (materialType === 'MeshPhysicalMaterial') {
               mesh.material = new THREE.MeshPhysicalMaterial({
@@ -534,7 +549,10 @@ const loadGLTF = (
                 metalness,
               });
             } else if (materialType === 'MeshLambertMaterial') {
-              mesh.material = new THREE.MeshLambertMaterial(materialProps);
+              mesh.material = new THREE.MeshLambertMaterial({
+                ...materialProps,
+                flatShading: false,
+              });
             } else if (materialType === 'MeshPhongMaterial') {
               mesh.material = new THREE.MeshPhongMaterial({
                 ...materialProps,
