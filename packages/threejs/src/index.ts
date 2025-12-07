@@ -325,19 +325,23 @@ const getGround = (
     helpers,
     color = 0x333333,
     texture,
+    textureRepeat = [10, 10],
+    textureOffset = [0, 0],
   }: {
     size?: number,
     position?: CoordinateTuple,
     helpers?: boolean,
     color?: number,
     texture?: string,
+    textureRepeat?: [number, number],
+    textureOffset?: [number, number],
   },
 ) => {
     const defaultProps = { color }
     const geometry = new THREE.BoxGeometry(size, 0.5, size);
     const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
-    ...texture ? { map: getTextures(texture)} : {},
+    ...texture ? { map: getTextures(texture, textureRepeat, textureOffset)} : {},
   });
 
   const mesh = new THREE.Mesh(geometry, material);
@@ -693,17 +697,18 @@ const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): 
 /**
  * Get default textures
  * @param img 
+ * @param repeat 
  * @returns 
  */
-const getTextures = (img: string) => {
+const getTextures = (img: string, repeat: [number, number] = [10, 10], offset: [number, number] = [0, 0]) => {
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(img);
 
   // Adjust the texture offset and repeat
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.offset.set(1, 1); // Offset the texture by 50%
-  texture.repeat.set(1, 1); // Repeat the texture 0.5 times in both directions
+  texture.offset.set(offset[0], offset[1]);
+  texture.repeat.set(repeat[0], repeat[1]);
 
   return texture;
 }

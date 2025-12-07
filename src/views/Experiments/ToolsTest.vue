@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue";
 import { getTools, getModel } from "@webgametoolkit/threejs";
 import { updateAnimation } from "@webgametoolkit/animation";
+import waterImage from "@/assets/water.png";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -13,11 +14,18 @@ const chameleonConfig = {
   castShadow: true,
   receiveShadow: true,
   animations: "chameleon_animations.fbx",
+  material: true,
+  materialType: "MeshLambertMaterial",
 };
 
 const setupConfig = {
   camera: { position: [0, 5, 20] },
-  ground: { size: 10000, color: 0x99cc99 },
+  ground: {
+    size: 10000,
+    texture: waterImage,
+    textureRepeat: [400, 400],
+    color: 0x99cc99,
+  },
   sky: { size: 500, color: 0x87ceeb },
   lights: { directional: { intensity: 0.1 } },
 };

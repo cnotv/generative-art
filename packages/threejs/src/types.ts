@@ -81,6 +81,8 @@ export interface SetupConfig {
     size?: number;
     color?: number;
     texture?: string;
+    textureRepeat?: [number, number];
+    textureOffset?: [number, number];
   } | false;
   sky?: {
     texture?: string;
