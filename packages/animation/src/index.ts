@@ -194,6 +194,7 @@ const controllerForward = (
   bodies: ComplexModel[],
   distance: number,
   delta: number,
+  actionName: string = 'run',
   backwards: boolean = false
 ) => {
   const collision = 10
@@ -222,8 +223,8 @@ const controllerForward = (
     model.rigidBody.setTranslation(newPosition, true);
   }
 
-  if (model.actions.run) {
-    updateAnimation(model.mixer, model.actions.run, delta, 10)
+  if (model.actions[actionName]) {
+    updateAnimation(model.mixer, model.actions[actionName], delta, 10)
   }
 }
 

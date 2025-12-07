@@ -34,9 +34,7 @@ export interface ComplexModel {
 }
 
 export interface AnimatedComplexModel extends ComplexModel {
-  actions: {
-    run?: THREE.AnimationAction;
-  };
+  actions: Record<string, THREE.AnimationAction | undefined>;
   mixer: THREE.AnimationMixer;
 }
 
