@@ -666,7 +666,7 @@ const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): 
  * @param repeat 
  * @returns 
  */
-const getTextures = (img: string, repeat: [number, number] = [10, 10], offset: [number, number] = [0, 0]) => {
+const getTextures = (img: string, repeat: [number, number] = [1, 1], offset: [number, number] = [0, 0]) => {
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(img);
 
