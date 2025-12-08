@@ -8,70 +8,58 @@ const GAME_STATUS = {
 export type GameStatus = typeof GAME_STATUS[keyof typeof GAME_STATUS];
 
 export interface GameState {
-  score: number;
-  highestScore: number;
-  isNewHighScore: boolean;
   status: GameStatus;
+  data: {
+    [key: string]: any;
+  };
 }
 
 export interface GameConfig {
-  highScoreKey?: string;
-  initialScore?: number;
+  initGameData?: (setData: (key: string, value: any) => void) => void;
 }
 
 export const createGameState = (config?: GameConfig): GameState & {
-  loadHighScore: () => number;
-  checkHighScore: () => boolean;
   setGameStatus: (status: GameStatus) => void;
   getGameStatus: () => GameStatus;
-  resetGameScore: () => void;
-  incrementGameScore: (points: number) => void;
   isGamePlaying: () => boolean;
   isGameStart: () => boolean;
   isGameOver: () => boolean;
-  getGameScore: () => number;
-  getHighestScore: () => number;
-  getIsNewHighScore: () => boolean;
   getGameState: () => GameState;
+  setData: (key: string, value: any) => void;
+  getData: <T = any>(key: string, defaultValue?: T) => T;
+  clearData: () => void;
+  initializeGame: () => void;
 } => {
-  const HIGH_SCORE_KEY = config?.highScoreKey || "game-high-score";
-
   const game: GameState = {
-    score: config?.initialScore || 0,
-    highestScore: 0,
-    isNewHighScore: false,
     status: GAME_STATUS.START as GameStatus,
+    data: {},
   };
 
-  const loadHighScore = () => {
-    const saved = localStorage.getItem(HIGH_SCORE_KEY);
-    const parsed = saved ? parseInt(saved, 10) : 0;
-    game.highestScore = isNaN(parsed) ? 0 : parsed;
-    return game.highestScore;
+  // Data accessor functions
+  const setData = (key: string, value: any) => {
+    game.data[key] = value;
   };
 
-  const checkHighScore = () => {
-    game.isNewHighScore = game.score > game.highestScore;
-    if (game.isNewHighScore) {
-      localStorage.setItem(HIGH_SCORE_KEY, game.score.toString());
-      game.highestScore = game.score;
+  const getData = <T = any>(key: string, defaultValue?: T): T => {
+    return game.data[key] !== undefined ? game.data[key] : defaultValue;
+  };
+
+  const clearData = () => {
+    game.data = {};
+  };
+
+  const initializeGame = () => {
+    // Clear existing data
+    clearData();
+    
+    // Call custom initialization function if provided
+    if (config?.initGameData) {
+      config.initGameData(setData);
     }
-    return game.isNewHighScore;
   };
 
   const setGameStatus = (status: GameStatus) => {
     game.status = status;
-  };
-
-  const resetGameScore = () => {
-    game.score = config?.initialScore || 0;
-    game.isNewHighScore = false;
-  };
-
-  const incrementGameScore = (points: number) => {
-    if (!isNaN(points)) {
-      game.score += points;
-    }
   };
 
   const isGamePlaying = () => game.status === GAME_STATUS.PLAYING;
@@ -80,25 +68,19 @@ export const createGameState = (config?: GameConfig): GameState & {
 
   const getGameState = () => game;
   const getGameStatus = () => game.status;
-  const getGameScore = () => game.score;
-  const getHighestScore = () => game.highestScore;
-  const getIsNewHighScore = () => game.isNewHighScore;
 
   return {
     ...game,
-    loadHighScore,
-    checkHighScore,
     setGameStatus,
     getGameStatus,
-    resetGameScore,
-    incrementGameScore,
     isGamePlaying,
     isGameStart,
     isGameOver,
-    getGameScore,
-    getHighestScore,
-    getIsNewHighScore,
     getGameState,
+    setData,
+    getData,
+    clearData,
+    initializeGame,
   };
 };
 

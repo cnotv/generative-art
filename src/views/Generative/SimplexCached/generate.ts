@@ -2,9 +2,9 @@
 import Stats from "stats.js";
 import * as dat from "dat.gui";
 import { createNoise4D } from '@/utils/simplex.js';
-let simplex = createNoise4D();
+const simplex = createNoise4D();
 // Create a cache for the frames
-let frameCache: ImageBitmap[] = [];
+const frameCache: ImageBitmap[] = [];
 const totalFrames = 1;
 
 interface Config {
@@ -41,7 +41,7 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   statsEl.appendChild(stats.dom);
 
   // Create an offscreen canvas
-  let offscreenCanvas = new OffscreenCanvas(config.width, config.height);
+  const offscreenCanvas = new OffscreenCanvas(config.width, config.height);
 
   // Function to generate a frame
   function generateFrame(frameCount: number) {
@@ -98,7 +98,7 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
     if (!frameCache[totalFrames -1]) return;
     // console.log(config.frameCount)
     config.frameCount++;
-    let ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const count = config.frameCount % totalFrames
     // console.log(count)

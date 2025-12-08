@@ -6,9 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { gameState } from "@webgametoolkit/game";
-
-const { getGameScore, getHighestScore } = gameState;
+import { getGameScore, getHighestScore } from "../composables/useGameScore";
 </script>
 
 <style scoped>

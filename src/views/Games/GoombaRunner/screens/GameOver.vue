@@ -14,9 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { gameState } from "@webgametoolkit/game";
-
-const { getGameScore, getIsNewHighScore } = gameState;
+import { getGameScore, getIsNewHighScore } from "../composables/useGameScore";
 
 defineEmits<{
   restart: []

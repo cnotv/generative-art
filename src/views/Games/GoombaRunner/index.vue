@@ -8,7 +8,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
 import { getTools } from "@webgametoolkit/threejs";
-import { gameState, GAME_STATUS } from "@webgametoolkit/game";
+import { GAME_STATUS } from "@webgametoolkit/game";
 import { useUiStore } from "@/stores/ui";
 import {
   enableZoomPrevention,
@@ -29,13 +29,15 @@ import {
   handleJumpGoomba,
 } from "./helpers/events";
 
-const {
+// Import game score composable
+import {
   loadHighScore,
   checkHighScore,
-  setGameStatus,
   resetGameScore,
+  setGameStatus,
   getGameStatus,
-} = gameState;
+  initializeGame,
+} from "./composables/useGameScore";
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -71,6 +73,7 @@ onMounted(() => {
     "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap",
     fontName
   );
+  initializeGame(); // Initialize game data with default values
   loadHighScore(); // Load saved high score from localStorage
   prevents();
   initInstance = () => {
@@ -120,7 +123,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, configControls, () => createScene());
   const createScene = async () => {
-    const { animate, setup, world, scene, getDelta, renderer, camera } = await getTools({
+    const { animate, setup, world, scene, getDelta, camera } = await getTools({
       stats,
       route,
       canvas,
@@ -137,7 +140,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera,
         uiStore,
         endGame,
-        gameState,
       }),
     });
   };

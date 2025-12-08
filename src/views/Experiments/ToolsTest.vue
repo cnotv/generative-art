@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from "vue";
-import { getTools, getModel } from "@webgametoolkit/threejs";
+import { getTools, getModel, colorModel } from "@webgametoolkit/threejs";
 import {
   updateAnimation,
   controllerTurn,
@@ -47,6 +47,7 @@ const init = async () => {
       const angle = 90;
       const distance = 0.1;
       const speed = 1;
+      colorModel(chameleon.mesh, chameleonConfig.materialColors);
 
       animate({
         beforeTimeline: () => {},
