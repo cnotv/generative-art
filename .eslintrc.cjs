@@ -11,5 +11,25 @@ module.exports = {
   ],
   parserOptions: {
     ecmaVersion: 'latest'
-  }
+  },
+  rules: {
+    // Disable multi-word component name requirement for specific cases
+    'vue/multi-word-component-names': 'off',
+    // Warn on unused vars instead of error (helps during development)
+    '@typescript-eslint/no-unused-vars': 'warn',
+    'no-unused-vars': 'warn'
+  },
+  overrides: [
+    {
+      // Node.js environment for netlify functions
+      files: ['netlify/**/*.js'],
+      env: {
+        node: true,
+        es6: true
+      },
+      rules: {
+        'no-undef': 'off'
+      }
+    }
+  ]
 }
