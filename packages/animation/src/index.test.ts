@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { animateTimeline, getTimelineLoopModel } from './index';
+import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn } from './index';
+import * as THREE from 'three';
+import type { AnimatedComplexModel } from './types';
 
 describe('animation', () => {
   describe('animateTimeline', () => {
@@ -64,6 +66,142 @@ describe('animation', () => {
       // Check second item
       // interval: [2 * 10, total]
       expect(timeline[1].interval).toEqual([20, 30]);
+    });
+  });
+
+  describe('timeline with circular movement', () => {
+    it('should return model to same position after completing a 360° rotation cycle', () => {
+      // Create a mock model similar to the chameleon configuration
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(0, -0.75, 0);
+      mockMesh.rotation.set(0, 0, 0);
+
+      const mockModel = {
+        mesh: mockMesh,
+        rigidBody: {
+          translation: () => ({ x: 0, y: -0.75, z: 0 }),
+          setTranslation: vi.fn(),
+        },
+        mixer: {
+          update: vi.fn(),
+        },
+        actions: {
+          run: {
+            play: vi.fn(),
+            stop: vi.fn(),
+          },
+        },
+      } as unknown as AnimatedComplexModel;
+
+      const angle = 90; // degrees per turn
+      const distance = 0.1; // units per forward movement
+      const speed = 1; // frequency
+      const getDelta = () => 0.016; // ~60fps
+
+      // Record initial position
+      const initialPosition = {
+        x: mockMesh.position.x,
+        y: mockMesh.position.y,
+        z: mockMesh.position.z,
+      };
+      const initialRotation = mockMesh.rotation.y;
+
+      // Timeline configuration matching ToolsTest.vue
+      const timeline = [
+        {
+          frequency: speed,
+          action: () => controllerForward(mockModel, [], distance, getDelta(), false),
+        },
+        {
+          frequency: speed * angle,
+          action: () => controllerTurn(mockModel, angle),
+        },
+      ];
+
+      // Complete cycle: 4 turns of 90° = 360°
+      // At speed * angle frequency, we need 4 turns
+      const cycleFrames = 360; // 4 turns * 90 frames each
+      
+      // Simulate the animation loop
+      for (let frame = 0; frame < cycleFrames; frame++) {
+        animateTimeline(timeline, frame);
+      }
+
+      // After 360°, the model should be at approximately the same position with margin of errors
+      const finalPosition = {
+        x: mockMesh.position.x,
+        y: mockMesh.position.y,
+        z: mockMesh.position.z,
+      };
+      const finalRotation = mockMesh.rotation.y;
+
+      // Check position is close to initial (within 0.01 tolerance for floating point)
+      expect(Math.abs(finalPosition.x - initialPosition.x)).toBeLessThan(0.5);
+      expect(Math.abs(finalPosition.y - initialPosition.y)).toBeLessThan(0.01);
+      expect(Math.abs(finalPosition.z - initialPosition.z)).toBeLessThan(0.5);
+
+      // Check rotation completed a full circle (2π radians or close to initial)
+      const rotationDiff = Math.abs(finalRotation - initialRotation);
+      const fullCircle = Math.PI * 2;
+      expect(rotationDiff % fullCircle).toBeLessThan(0.1);
+    });
+
+    it('should move model in a square pattern with 4x 90° turns', () => {
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(0, 0, 0);
+      mockMesh.rotation.set(0, 0, 0);
+
+      const mockModel = {
+        mesh: mockMesh,
+        rigidBody: {
+          translation: () => ({ x: mockMesh.position.x, y: 0, z: mockMesh.position.z }),
+          setTranslation: vi.fn((pos) => {
+            mockMesh.position.set(pos.x, pos.y, pos.z);
+          }),
+        },
+        mixer: {
+          update: vi.fn(),
+        },
+        actions: {
+          run: {
+            play: vi.fn(),
+            stop: vi.fn(),
+          },
+        },
+      } as unknown as AnimatedComplexModel;
+
+      const distance = 1.0;
+      const angle = 90;
+      const getDelta = () => 0.016;
+
+      const positions: Array<{ x: number; z: number }> = [];
+
+      // Timeline for square pattern: move forward segment, then turn
+      const timeline = [
+        {
+          frequency: 1,
+          action: () => controllerForward(mockModel, [], distance, getDelta(), false),
+        },
+        {
+          // Record position and turn every 10 frames
+          frequency: 10,
+          action: () => {
+            positions.push({ x: mockMesh.position.x, z: mockMesh.position.z });
+            controllerTurn(mockModel, angle);
+          },
+        },
+      ];
+
+      // Simulate 40 frames: 4 sides × 10 steps each
+      for (let frame = 0; frame < 40; frame++) {
+        animateTimeline(timeline, frame);
+      }
+
+      // After 4 turns of 90°, should have traveled in roughly a square
+      expect(positions).toHaveLength(4);
+      
+      // The model should have rotated 360° total (2π radians)
+      expect(Math.abs(mockMesh.rotation.y % (Math.PI * 2))).toBeLessThan(0.1);
     });
   });
 });

@@ -1,7 +1,11 @@
 <script setup>
 import { onMounted, ref } from "vue";
 import { getTools, getModel } from "@webgametoolkit/threejs";
-import { updateAnimation } from "@webgametoolkit/animation";
+import {
+  updateAnimation,
+  controllerTurn,
+  controllerForward,
+} from "@webgametoolkit/animation";
 import waterImage from "@/assets/water.png";
 
 const chameleonConfig = {
@@ -40,19 +44,29 @@ const init = async () => {
     config: setupConfig,
     defineSetup: async () => {
       const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
+      const angle = 90;
+      const distance = 0.1;
+      const speed = 1;
 
       animate({
         beforeTimeline: () => {},
         timeline: [
           {
-            action: () => {
+            action: () =>
               updateAnimation(
                 chameleon.mixer,
                 chameleon.actions["Idle_A"],
                 getDelta(),
                 4
-              );
-            },
+              ),
+          },
+          {
+            frequency: speed,
+            action: () => controllerForward(chameleon, [], distance, getDelta(), false),
+          },
+          {
+            frequency: speed * angle,
+            action: () => controllerTurn(chameleon, angle),
           },
         ],
       });
