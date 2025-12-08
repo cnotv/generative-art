@@ -223,8 +223,9 @@ const controllerForward = (
     model.rigidBody.setTranslation(newPosition, true);
   }
 
-  if (model.actions[actionName]) {
-    updateAnimation(model.mixer, model.actions[actionName], delta, 10)
+  const action = model.actions[actionName];
+  if (action) {
+    updateAnimation(model.mixer, action, delta, 10);
   }
 }
 

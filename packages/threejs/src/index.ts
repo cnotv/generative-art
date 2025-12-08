@@ -430,8 +430,8 @@ const applyMaterialToModel = (
           : (color || (oldMaterial?.color || 0xffffff));
         const materialProps: any = {
           color: meshColor,
-          opacity: opacity,
-          transparent: opacity < 1,
+          opacity: opacity ?? 1,
+          transparent: (opacity ?? 1) < 1,
         };
         meshIndex++;
 
@@ -473,9 +473,11 @@ const applyMaterialToModel = (
           mesh.material = new THREE.MeshBasicMaterial(materialProps);
         }
       }
-      mesh.rotation.set(...rotation);
-      mesh.castShadow = castShadow;
-      mesh.receiveShadow = receiveShadow;
+      if (rotation) {
+        mesh.rotation.set(...rotation);
+      }
+      mesh.castShadow = castShadow ?? false;
+      mesh.receiveShadow = receiveShadow ?? false;
     }
   });
 };
