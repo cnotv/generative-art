@@ -97,7 +97,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     function animate() {
       stats.start(route);
-      const frame = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
 
       // mesh.rotation.x += (0.001 * config.speed);
       moon.rotation.y += (0.001 * config.speed);

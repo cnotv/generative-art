@@ -199,7 +199,7 @@ const F2 = 0.5 * (Math.sqrt(3) - 1),
     -1,
     0
   ]);
-function createNoise2D(t = Math.random) {
+export function createNoise2D(t = Math.random) {
   const e = buildPermutationTable(t),
     r = new Float64Array(e).map((t) => grad2[(t % 12) * 2]),
     o = new Float64Array(e).map((t) => grad2[(t % 12) * 2 + 1]);
@@ -239,7 +239,7 @@ function createNoise2D(t = Math.random) {
     return 70 * (s + n + l);
   };
 }
-function createNoise3D(t = Math.random) {
+export function createNoise3D(t = Math.random) {
   const e = buildPermutationTable(t),
     r = new Float64Array(e).map((t) => grad3[(t % 12) * 3]),
     o = new Float64Array(e).map((t) => grad3[(t % 12) * 3 + 1]),

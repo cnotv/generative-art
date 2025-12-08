@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
-import Start from "./screens/Start.vue";
+import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
-import Score from "./screens/Score.vue";
+import ScoreDisplay from "./screens/ScoreDisplay.vue";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
@@ -150,7 +150,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 <template>
   <div ref="statsEl"></div>
   <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
-  <Start v-if="isGameStart" @start="handleStartGame" />
+  <StartScreen v-if="isGameStart" @start="handleStartGame" />
   <GameOver v-if="isGameOver" @restart="handleRestartGame" />
-  <Score v-if="isGamePlaying || isGameOver" />
+  <ScoreDisplay v-if="isGamePlaying || isGameOver" />
 </template>

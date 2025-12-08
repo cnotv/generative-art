@@ -6,14 +6,9 @@ import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import Stats from "three/addons/libs/stats.module.js";
 
 import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { video } from "@/utils/video";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
 
 const statsEl = ref(null);
 const canvas = ref(null);
-const route = useRoute();
 
 // Movement input
 const movement = { forward: 0, right: 0, up: 0 };
@@ -226,7 +221,7 @@ function animate(
   stats.update();
 }
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = async (canvasEl: HTMLCanvasElement, statsElement: HTMLElement) => {
   initScene();
 
   async function initScene() {
@@ -243,11 +238,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     getLight(scene);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvasEl });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target = new THREE.Vector3(0, 2, 0);
@@ -257,7 +251,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     addBodies(scene, 10);
 
     const stats = new Stats();
-    document.body.appendChild(stats.dom);
+    statsElement.appendChild(stats.dom);
 
     const { physics, physicsHelper } = await initPhysics(scene);
     const { player, characterController } = await addCharacterController(scene, physics);
