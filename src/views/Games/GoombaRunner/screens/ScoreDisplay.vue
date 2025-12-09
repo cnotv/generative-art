@@ -1,12 +1,16 @@
 <template>
   <div class="score">
-    <span class="score__value">{{ getGameScore() }}</span>
-    <span class="score__value score__value--highest">Best: {{ getHighestScore() }}</span>
+    <span class="score__value">{{ gameState.data.score }}</span>
+    <span class="score__value score__value--highest"
+      >Best: {{ gameState.data.highestScore }}</span
+    >
   </div>
 </template>
 
 <script setup lang="ts">
-import { getGameScore, getHighestScore } from "../composables/useGameScore";
+import { gameState } from "../helpers/setup";
+
+console.log(gameState);
 </script>
 
 <style scoped>

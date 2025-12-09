@@ -14,9 +14,7 @@ export interface GameState {
   };
 }
 
-export interface GameConfig {
-  initGameData?: (setData: (key: string, value: any) => void) => void;
-}
+export type GameConfig = Record<string, any> 
 
 export const createGameState = (config?: GameConfig): GameState & {
   setGameStatus: (status: GameStatus) => void;
@@ -29,48 +27,28 @@ export const createGameState = (config?: GameConfig): GameState & {
   getData: <T = any>(key: string, defaultValue?: T) => T;
   clearData: () => void;
   initializeGame: () => void;
+  gameState: GameState;
 } => {
-  const game: GameState = {
+  const gameState: GameState = {
     status: GAME_STATUS.START as GameStatus,
-    data: {},
+    data: { ...(config|| {})},
   };
 
   // Data accessor functions
-  const setData = (key: string, value: any) => {
-    game.data[key] = value;
-  };
+  const setData = (key: string, value: any) => gameState.data[key] = value;
+  const getData = <T = any>(key: string, defaultValue?: T): T => gameState.data[key] !== undefined ? gameState.data[key] : defaultValue;
+  const clearData = () => gameState.data = {};
+  const setGameStatus = (status: GameStatus) => gameState.status = status;
 
-  const getData = <T = any>(key: string, defaultValue?: T): T => {
-    return game.data[key] !== undefined ? game.data[key] : defaultValue;
-  };
+  const isGamePlaying = () => gameState.status === GAME_STATUS.PLAYING;
+  const isGameStart = () => gameState.status === GAME_STATUS.START;
+  const isGameOver = () => gameState.status === GAME_STATUS.GAME_OVER;
 
-  const clearData = () => {
-    game.data = {};
-  };
-
-  const initializeGame = () => {
-    // Clear existing data
-    clearData();
-    
-    // Call custom initialization function if provided
-    if (config?.initGameData) {
-      config.initGameData(setData);
-    }
-  };
-
-  const setGameStatus = (status: GameStatus) => {
-    game.status = status;
-  };
-
-  const isGamePlaying = () => game.status === GAME_STATUS.PLAYING;
-  const isGameStart = () => game.status === GAME_STATUS.START;
-  const isGameOver = () => game.status === GAME_STATUS.GAME_OVER;
-
-  const getGameState = () => game;
-  const getGameStatus = () => game.status;
+  const getGameState = () => gameState;
+  const getGameStatus = () => gameState.status;
 
   return {
-    ...game,
+    gameState,
     setGameStatus,
     getGameStatus,
     isGamePlaying,
@@ -80,11 +58,7 @@ export const createGameState = (config?: GameConfig): GameState & {
     setData,
     getData,
     clearData,
-    initializeGame,
   };
 };
 
 export { GAME_STATUS };
-
-// Export a default game state instance for convenience
-export const gameState = createGameState();

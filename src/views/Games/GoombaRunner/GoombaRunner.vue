@@ -21,23 +21,20 @@ import { createTimeline } from "./animation";
 import "@/assets/prevents.css";
 import "./styles.css";
 
-// Helper imports
-import { prevents } from "./helpers/setup";
 import {
   updateEventListeners,
   removeAllEventListeners,
   handleJumpGoomba,
 } from "./helpers/events";
 
-// Import game score composable
 import {
+  prevents,
   loadHighScore,
   checkHighScore,
-  resetGameScore,
+  setData,
   setGameStatus,
   getGameStatus,
-  initializeGame,
-} from "./composables/useGameScore";
+} from "./helpers/setup";
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -73,7 +70,6 @@ onMounted(() => {
     "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap",
     fontName
   );
-  initializeGame(); // Initialize game data with default values
   loadHighScore(); // Load saved high score from localStorage
   prevents();
   initInstance = () => {
@@ -102,7 +98,7 @@ const handleStartGame = async () => {
   await initializeAudio();
   setGameStatus(GAME_STATUS.PLAYING);
   gameStatus.value = GAME_STATUS.PLAYING;
-  resetGameScore();
+  setData("score", 0);
   changeEventListeners();
 };
 

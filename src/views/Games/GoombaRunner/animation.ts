@@ -30,7 +30,7 @@ import {
   isGamePlaying,
   getGameScore,
   incrementGameScore,
-} from "./composables/useGameScore";
+} from "./helpers/setup";
 
 const addHorizonLine = (scene: THREE.Scene) => {
   // Create a dark grey horizontal bar/line for cartoonish horizon effect

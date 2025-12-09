@@ -14,15 +14,15 @@
 </template>
 
 <script setup lang="ts">
-import { getGameScore, getIsNewHighScore } from "../composables/useGameScore";
+import { getGameScore, getIsNewHighScore } from "../helpers/setup";
 
 defineEmits<{
-  restart: []
-}>()
+  restart: [];
+}>();
 </script>
 
 <style scoped>
-@import '../styles.css';
+@import "../styles.css";
 
 .game--over {
   justify-content: center;
