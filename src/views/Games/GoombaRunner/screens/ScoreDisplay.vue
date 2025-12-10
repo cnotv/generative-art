@@ -9,8 +9,6 @@
 
 <script setup lang="ts">
 import { gameState } from "../helpers/setup";
-
-console.log(gameState);
 </script>
 
 <style scoped>

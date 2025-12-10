@@ -7,6 +7,7 @@ import {
   controllerForward,
 } from "@webgametoolkit/animation";
 import waterImage from "@/assets/water.png";
+import { createGameState } from "@webgametoolkit/game";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -34,6 +35,10 @@ const setupConfig = {
   lights: { directional: { intensity: 0.1 } },
 };
 
+const { gameState, setData, getData } = createGameState({
+  score: 0,
+});
+
 const canvas = ref(null);
 const init = async () => {
   const { setup, animate, scene, world, getDelta } = await getTools({
@@ -58,7 +63,7 @@ const init = async () => {
                 chameleon.mixer,
                 chameleon.actions["Idle_A"],
                 getDelta(),
-                4
+                10
               ),
           },
           {
@@ -68,6 +73,10 @@ const init = async () => {
           {
             frequency: speed * angle,
             action: () => controllerTurn(chameleon, angle),
+          },
+          {
+            frequency: speed * angle * 4,
+            action: () => setData("score", gameState.data.score + 1),
           },
         ],
       });
@@ -80,6 +89,9 @@ onMounted(async () => init());
 
 <template>
   <canvas ref="canvas"></canvas>
+  <div class="ui">
+    <h1>{{ getData("score", 0) }}</h1>
+  </div>
 </template>
 
 <style scoped>
@@ -87,5 +99,9 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+.ui {
+  position: relative;
+  text-align: center;
 }
 </style>
