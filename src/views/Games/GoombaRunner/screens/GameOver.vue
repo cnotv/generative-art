@@ -1,8 +1,8 @@
 <template>
   <div class="game game--over game--slide-in">
     <h1 class="game__title game__title--slide-in">Game Over</h1>
-    <div v-if="getIsNewHighScore()" class="new-high-score new-high-score--slide-in">
-      <div class="gratz-text">New High Score: {{ getGameScore() }}</div>
+    <div v-if="isNewHighScore" class="new-high-score new-high-score--slide-in">
+      <div class="gratz-text">New High Score: {{ gameScore }}</div>
     </div>
     <button
       @click="$emit('restart')"
@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { getGameScore, getIsNewHighScore } from "../helpers/setup";
+import { isNewHighScore, gameScore } from "../helpers/setup";
 
 defineEmits<{
   restart: [];

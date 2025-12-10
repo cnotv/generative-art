@@ -2,16 +2,21 @@ import * as THREE from "three";
 import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import { config } from "../config";
-import { createGameState } from "@webgametoolkit/game";
+import { createGame } from "@webgametoolkit/game";
+import { onUnmounted, shallowRef, computed } from "vue";
 
-/**
- * Initialize game data with default values
- */
-export const { gameState, setData, getData, setGameStatus, getGameStatus, isGameStart, isGamePlaying } = createGameState({
-  score: 0,
-  highestScore: 0,
-  isNewHighScore: false,
-})
+// Facade for game state management
+const gameState = shallowRef({ data: { score: 0, highestScore: 0, isNewHighScore: false } });
+createGame({ score: 0, highestScore: 0, isNewHighScore: false }, gameState as any, onUnmounted);
+const isGameStart = computed(() => gameState.value.status === "idle");
+const isGamePlaying = computed(() => gameState.value.status === "playing");
+const isGameOver = computed(() => gameState.value.status === "game_over");
+const isNewHighScore = computed(() => gameState.value.data.isNewHighScore);
+const gameScore = computed(() => gameState.value.data.score);
+const gameStatus = computed(() => gameState.value.status);
+const setStatus = (status: string) => gameState.value.setStatus(status as any);
+const setScore = (score: number) => gameState.value.setData("score", score);
+const highestScore = computed(() => gameState.value.data.highestScore);
 
 /**
  * Load high score from localStorage
@@ -20,7 +25,7 @@ const loadHighScore = (highScoreKey = "goomba-runner-high-score"): number => {
   const saved = localStorage.getItem(highScoreKey);
   const parsed = saved ? parseInt(saved, 10) : 0;
   const highScore = isNaN(parsed) ? 0 : parsed;
-  setData("highestScore", highScore);
+  gameState.value.data.highestScore = highScore;
   return highScore;
 };
 
@@ -28,14 +33,14 @@ const loadHighScore = (highScoreKey = "goomba-runner-high-score"): number => {
  * Check if current score is a new high score and save it
  */
 const checkHighScore = (highScoreKey = "goomba-runner-high-score"): boolean => {
-  const currentScore = getData("score", 0);
-  const highestScore = getData("highestScore", 0);
+  const currentScore = gameState.value.data.score;
+  const highestScore = gameState.value.data.highestScore;
   const isNewHighScore = currentScore > highestScore;
 
-  setData("isNewHighScore", isNewHighScore);
+  gameState.value.data.isNewHighScore = isNewHighScore;
   if (isNewHighScore) {
     localStorage.setItem(highScoreKey, currentScore.toString());
-    setData("highestScore", currentScore);
+    gameState.value.data.highestScore = currentScore;
   }
   return isNewHighScore;
 };
@@ -45,14 +50,9 @@ const checkHighScore = (highScoreKey = "goomba-runner-high-score"): boolean => {
  */
 const incrementGameScore = (points: number): void => {
   if (!isNaN(points)) {
-    const currentScore = getData("score", 0);
-    setData("score", currentScore + points);
+    setScore(gameScore.value + points);
   }
 };
-
-const getGameScore = (): number => getData("score", 0);
-const getHighestScore = (): number => getData("highestScore", 0);
-const getIsNewHighScore = (): boolean => getData("isNewHighScore", false);
 
 const initPhysics = async (scene: THREE.Scene) => {
   //Initialize physics engine using the script in the jsm/physics folder
@@ -129,12 +129,19 @@ const prevents = () => {
 };
 
 export {
+  gameState,
+  isGameStart,
+  isGamePlaying,
+  isGameOver,
+  isNewHighScore,
+  gameScore,
+  highestScore,
+  gameStatus,
+  setStatus,
+  setScore,
   loadHighScore,
   checkHighScore,
   incrementGameScore,
-  getGameScore,
-  getHighestScore,
-  getIsNewHighScore,
   initPhysics,
   preventGlitches,
   getSpeed,

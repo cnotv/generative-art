@@ -8,7 +8,6 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
 import { getTools } from "@webgametoolkit/threejs";
-import { GAME_STATUS } from "@webgametoolkit/game";
 import { useUiStore } from "@/stores/ui";
 import {
   enableZoomPrevention,
@@ -28,35 +27,35 @@ import {
 } from "./helpers/events";
 
 import {
+  gameStatus,
   prevents,
   loadHighScore,
   checkHighScore,
-  setData,
-  setGameStatus,
-  getGameStatus,
+  isGameOver,
+  isGameStart,
+  isGamePlaying,
+  setStatus,
+  setScore,
 } from "./helpers/setup";
 
 // Set UI controls
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
 
-const gameStatus = ref(getGameStatus());
-const isGameStart = computed(() => gameStatus.value === GAME_STATUS.START);
-const isGamePlaying = computed(() => gameStatus.value === GAME_STATUS.PLAYING);
-const isGameOver = computed(() => gameStatus.value === GAME_STATUS.GAME_OVER);
-
 const shouldClearObstacles = ref(false);
 const changeEventListeners = () =>
-  updateEventListeners(getGameStatus(), {
+  updateEventListeners(gameStatus.value, {
     onStart: handleStartGame,
     onRestart: handleRestartGame,
     onJump: () => handleJumpGoomba(uiStore),
   });
 
 // Watch for game status changes and update event listeners
-watch(gameStatus, () => setTimeout(() => changeEventListeners(), 500), {
-  immediate: true,
-});
+watch(
+  () => gameStatus.value,
+  () => setTimeout(() => changeEventListeners(), 500),
+  { immediate: true }
+);
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -96,9 +95,8 @@ onUnmounted(() => {
 const handleStartGame = async () => {
   // Initialize audio on first user interaction (required for iOS)
   await initializeAudio();
-  setGameStatus(GAME_STATUS.PLAYING);
-  gameStatus.value = GAME_STATUS.PLAYING;
-  setData("score", 0);
+  setStatus("playing");
+  setScore(0);
   changeEventListeners();
 };
 
@@ -110,8 +108,7 @@ const handleRestartGame = () => {
 const endGame = () => {
   stopMusic();
   checkHighScore();
-  setGameStatus(GAME_STATUS.GAME_OVER);
-  gameStatus.value = GAME_STATUS.GAME_OVER;
+  setStatus("game_over");
   changeEventListeners();
 };
 

@@ -90,7 +90,7 @@ onMounted(async () => init());
 <template>
   <canvas ref="canvas"></canvas>
   <div v-if="gameState" class="ui">
-    <h1>Loops: {{ gameState.data.score }}</h1>
+    <h1>Loops: {{ gameState.data.score || 0 }}</h1>
   </div>
 </template>
 

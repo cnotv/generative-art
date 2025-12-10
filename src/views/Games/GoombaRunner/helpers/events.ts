@@ -1,5 +1,3 @@
-import { GAME_STATUS } from "@webgametoolkit/game";
-
 interface EventHandlers {
   keyboard?: Record<string, () => void>;
   touch?: () => void;
@@ -108,7 +106,7 @@ export const updateEventListeners = (
   removeAllEventListeners();
 
   const listenersMap: Record<string, EventHandlers> = {
-    [GAME_STATUS.START]: {
+    'idle': {
       keyboard: {
         " ": callbacks.onStart,
         Enter: callbacks.onStart,
@@ -121,7 +119,7 @@ export const updateEventListeners = (
         },
       },
     },
-    [GAME_STATUS.PLAYING]: {
+    'playing': {
       keyboard: {
         " ": callbacks.onJump,
         ArrowUp: callbacks.onJump,
@@ -134,7 +132,7 @@ export const updateEventListeners = (
         },
       },
     },
-    [GAME_STATUS.GAME_OVER]: {
+    'game_over': {
       keyboard: {
         " ": callbacks.onRestart,
         Enter: callbacks.onRestart,

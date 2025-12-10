@@ -26,10 +26,10 @@ import { updateAnimation } from "@webgametoolkit/animation";
 import { getSpeed, initPhysics } from "./helpers/setup";
 import { createPlayer } from "./helpers/player";
 import {
-  isGameStart,
-  isGamePlaying,
-  getGameScore,
   incrementGameScore,
+  isGamePlaying,
+  isGameStart,
+  gameScore,
 } from "./helpers/setup";
 
 const addHorizonLine = (scene: THREE.Scene) => {
@@ -97,7 +97,7 @@ const createTimeline = async ({
     {
       name: "Reset background",
       action: () => {
-        if (isGameStart() && !backgroundsPopulated) {
+        if (isGameStart && !backgroundsPopulated) {
           populateInitialBackgrounds(scene, world, backgrounds);
           backgroundsPopulated = true;
         }
@@ -116,28 +116,28 @@ const createTimeline = async ({
       name: "Generate cubes",
       frequency: config.blocks.spacing,
       action: async () => {
-        if (!isGamePlaying()) return;
+        if (!isGamePlaying.value) return;
         await createCubes(scene, world, physics, obstacles);
       },
     },
     {
       name: "Move ground",
       action: () => {
-        moveGround(groundTexture, isGamePlaying(), getGameScore());
+        moveGround(groundTexture, isGamePlaying.value, gameScore.value);
       },
     },
     {
       name: "Move background",
       action: () => {
-        if (isGamePlaying()) {
+        if (isGamePlaying.value) {
           createBackgrounds(
             scene,
             world,
             backgrounds,
             backgroundTimers,
-            getGameScore()
+            gameScore.value
           );
-          moveBackgrounds(scene, camera, backgrounds, getGameScore());
+          moveBackgrounds(scene, camera, backgrounds, gameScore.value);
         }
       },
     },
@@ -150,10 +150,10 @@ const createTimeline = async ({
           playerController,
           physics,
           playerMovement,
-          isGamePlaying(),
+          isGamePlaying.value,
           config
         );
-        handleJump(player, isGamePlaying(), uiStore, camera, horizonLine, config);
+        handleJump(player, isGamePlaying.value, uiStore, camera, horizonLine, config);
         handleArcMovement(player);
         checkCollisions(
           player,
@@ -166,8 +166,8 @@ const createTimeline = async ({
         );
         updatePlayerAnimation(
           model,
-          isGamePlaying(),
-          getGameScore(),
+          isGamePlaying.value,
+          gameScore.value,
           getDelta,
           updateAnimation,
           getSpeed,
@@ -179,11 +179,11 @@ const createTimeline = async ({
     {
       name: "Move obstacles",
       action: () => {
-        if (!isGamePlaying()) return;
+        if (!isGamePlaying.value) return;
         moveBlocks(
           obstacles,
           physics,
-          getGameScore(),
+          gameScore.value,
           player,
           scene,
           (points) => incrementGameScore(points)
