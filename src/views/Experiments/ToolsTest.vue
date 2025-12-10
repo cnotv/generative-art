@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { getTools, getModel, colorModel } from "@webgametoolkit/threejs";
 import {
   updateAnimation,
@@ -7,7 +7,7 @@ import {
   controllerForward,
 } from "@webgametoolkit/animation";
 import waterImage from "@/assets/water.png";
-import { createGameState } from "@webgametoolkit/game";
+import { createGame } from "@webgametoolkit/game";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -35,9 +35,8 @@ const setupConfig = {
   lights: { directional: { intensity: 0.1 } },
 };
 
-const { gameState, setData, getData } = createGameState({
-  score: 0,
-});
+const gameState = shallowRef({ data: { score: 0 } });
+createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
 const canvas = ref(null);
 const init = async () => {
@@ -76,7 +75,8 @@ const init = async () => {
           },
           {
             frequency: speed * angle * 4,
-            action: () => setData("score", gameState.data.score + 1),
+            action: () =>
+              gameState.value.setData("score", (gameState.value.data.score || 0) + 1),
           },
         ],
       });
@@ -89,8 +89,8 @@ onMounted(async () => init());
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div class="ui">
-    <h1>{{ getData("score", 0) }}</h1>
+  <div v-if="gameState" class="ui">
+    <h1>Loops: {{ gameState.data.score }}</h1>
   </div>
 </template>
 
@@ -103,5 +103,6 @@ canvas {
 .ui {
   position: relative;
   text-align: center;
+  font-size: 3em;
 }
 </style>
