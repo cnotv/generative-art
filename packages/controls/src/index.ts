@@ -7,21 +7,16 @@
  *
  * import { createControls } from '@webgametoolkit/controls';
  *
- * const controls = createControls({
+ * const { destroyControls, remapControls } = createControls({
  *   mapping: {
  *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },
  *     gamepad: { left: 'left', right: 'right', a: 'jump' },
  *     touch: { tap: 'jump' }
  *   },
  *   onAction: (action, event, rawEvent) => {
- *     // handle action (e.g., update state, call store, etc.)
+ *     // handle action
  *   }
  * });
- *
- * controls.bindKeyboard();
- * controls.bindGamepad();
- * controls.bindTouch(document.body);
- * controls.bindMouse(document.body);
  */
 
 
@@ -34,9 +29,16 @@ export interface ControlMapping {
   touch?: Record<string, ControlAction>;
 }
 
+
 export interface ControlsOptions {
   mapping: ControlMapping;
   onAction: (action: ControlAction, event: ControlEvent, rawEvent: Event) => void;
+  keyboard?: boolean;
+  gamepad?: boolean;
+  touch?: boolean;
+  mouse?: boolean;
+  touchTarget?: HTMLElement | null;
+  mouseTarget?: HTMLElement | null;
 }
 
 export function createControls(options: ControlsOptions) {
@@ -45,7 +47,9 @@ export function createControls(options: ControlsOptions) {
   // Keyboard
   function handleKey(event: KeyboardEvent, eventType: ControlEvent) {
     const action = mapping.keyboard?.[event.key];
-    if (action) onAction(action, eventType, event);
+    if (action) {
+      onAction(action, eventType, event);
+    }
   }
 
   function bindKeyboard() {
@@ -69,7 +73,10 @@ export function createControls(options: ControlsOptions) {
     gp.buttons.forEach((btn, i) => {
       const btnName = Object.keys(mapping.gamepad || {})[i];
       const action = mapping.gamepad?.[btnName];
-      if (!action) return;
+      if (!action) {
+        lastButtons[i] = btn.pressed;
+        return;
+      }
       if (btn.pressed && !lastButtons[i]) onAction(action, 'down', new Event('gamepad'));
       if (!btn.pressed && lastButtons[i]) onAction(action, 'up', new Event('gamepad'));
       lastButtons[i] = btn.pressed;
@@ -90,7 +97,9 @@ export function createControls(options: ControlsOptions) {
   // Touch
   function handleTouch(event: TouchEvent, eventType: ControlEvent) {
     const action = mapping.touch?.['tap'];
-    if (action) onAction(action, eventType, event);
+    if (action) {
+      onAction(action, eventType, event);
+    }
   }
   function bindTouch(target: HTMLElement) {
     target.addEventListener('touchstart', (e) => handleTouch(e, 'down'));
@@ -104,7 +113,9 @@ export function createControls(options: ControlsOptions) {
   // Mouse
   function handleMouse(event: MouseEvent, eventType: ControlEvent) {
     const action = mapping.touch?.['tap'];
-    if (action) onAction(action, eventType, event);
+    if (action) {
+      onAction(action, eventType, event);
+    }
   }
   function bindMouse(target: HTMLElement) {
     target.addEventListener('mousedown', (e) => handleMouse(e, 'down'));
@@ -115,14 +126,63 @@ export function createControls(options: ControlsOptions) {
     target.removeEventListener('mouseup', (e) => handleMouse(e, 'up'));
   }
 
+  // Automatic binding logic
+  function isGamepadSupported() {
+    return typeof window !== 'undefined' && typeof navigator.getGamepads === 'function';
+  }
+  function isTouchSupported() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  }
+
+  function autoBind() {
+    const unbinds: (() => void)[] = [];
+    // Keyboard
+    if (options.keyboard !== false) {
+      bindKeyboard();
+      unbinds.push(unbindKeyboard);
+    }
+    // Gamepad
+    if (options.gamepad !== false && isGamepadSupported()) {
+      bindGamepad();
+      unbinds.push(unbindGamepad);
+    }
+    // Touch
+    const touchTarget = options.touchTarget || window;
+    if (options.touch !== false && isTouchSupported() && touchTarget) {
+      // @ts-ignore
+      bindTouch(touchTarget);
+      if (touchTarget instanceof HTMLElement) {
+        unbinds.push(() => unbindTouch(touchTarget));
+      }
+    }
+    // Mouse
+    const mouseTarget = options.mouseTarget || window;
+    if (options.mouse !== false && mouseTarget) {
+      // @ts-ignore
+      bindMouse(mouseTarget);
+      if (mouseTarget instanceof HTMLElement) {
+        unbinds.push(() => unbindMouse(mouseTarget));
+      }
+    }
+    return () => {
+      unbinds.forEach((fn) => fn());
+    };
+  }
+
+  // Auto-bind on create
+  let destroyControls = autoBind();
+
+  function remapControls(newMapping: ControlMapping) {
+    mapping.keyboard = newMapping.keyboard;
+    mapping.gamepad = newMapping.gamepad;
+    mapping.touch = newMapping.touch;
+    // Optionally, rebind if needed
+    destroyControls();
+    destroyControls = autoBind();
+  }
+
   return {
-    bindKeyboard,
-    unbindKeyboard,
-    bindGamepad,
-    unbindGamepad,
-    bindTouch,
-    unbindTouch,
-    bindMouse,
-    unbindMouse,
+    destroyControls,
+    remapControls,
   };
 }

@@ -9,7 +9,8 @@
     "Livewire",
     "metalness",
     "Phong",
-    "raycaster"
+    "raycaster",
+    "webgametoolkit"
   ],
   "vue3snippets.enable-compile-vue-file-on-did-save-code": true
 }
