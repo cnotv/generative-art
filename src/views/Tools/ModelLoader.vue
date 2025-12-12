@@ -61,7 +61,7 @@ const modelScale = ref([0.05, 0.05, 0.05]);
 
 // Mesh inspector panel state
 const selectedMesh = ref(null);
-const panelVisible = ref(false);
+const panelsVisible = ref(false);
 const meshHelper = ref(null);
 
 const meshProperties = ref({
@@ -105,7 +105,7 @@ let getDeltaRef = null;
 let cameraRef = null;
 
 const closePanel = () => {
-  panelVisible.value = false;
+  panelsVisible.value = false;
   selectedMesh.value = null;
   if (meshHelper.value && sceneRef) {
     sceneRef.remove(meshHelper.value);
@@ -162,7 +162,7 @@ const init = async () => {
         }
 
         selectedMesh.value = mesh;
-        panelVisible.value = true;
+        panelsVisible.value = true;
 
         // Create and add new helper
         meshHelper.value = new THREE.BoxHelper(mesh, 0x00ff00);
@@ -673,7 +673,7 @@ onMounted(async () => init());
     <canvas ref="canvas"></canvas>
 
     <!-- Mesh Inspector Panel (left side) -->
-    <div v-if="panelVisible" class="side-panel">
+    <div v-if="panelsVisible" class="side-panel">
       <div class="panel-header">
         <h3>Mesh Properties</h3>
         <button @click="closePanel" class="close-btn">×</button>
@@ -827,7 +827,8 @@ onMounted(async () => init());
           </div>
           <div class="property">
             <span class="label">Bounding Box:</span>
-            <span class="value" style="font-size: 11px">{{  meshProperties.boundingBox
+            <span class="value" style="font-size: 11px">{{
+              meshProperties.boundingBox
             }}</span>
           </div>
         </div>
@@ -835,132 +836,136 @@ onMounted(async () => init());
     </div>
 
     <!-- Model Controls Panel (right side) -->
-    <div class="controls">
-    <div class="file-inputs">
-      <div class="input-group">
-        <label for="model-upload">Model (FBX/GLB/GLTF):</label>
-        <input
-          id="model-upload"
-          type="file"
-          accept=".fbx,.glb,.gltf"
-          @change="onModelFileChange"
-        />
-      </div>
-
-      <div class="input-group">
-        <label for="animation-upload">Animation (FBX/GLB/GLTF):</label>
-        <input
-          id="animation-upload"
-          type="file"
-          accept=".fbx,.glb,.gltf"
-          @change="onAnimationFileChange"
-        />
-      </div>
-    </div>
-
-    <div v-if="availableAnimations.length > 0" class="animation-select">
-      <label for="animation-dropdown">Animation:</label>
-      <select
-        id="animation-dropdown"
-        v-model="selectedAnimation"
-        @change="onAnimationChange"
-      >
-        <option v-for="animName in availableAnimations" :key="animName" :value="animName">
-          {{ animName }}
-        </option>
-      </select>
-    </div>
-
-    <div class="scale-controls">
-      <h3 class="section-title">Model Scale</h3>
-      <div class="scale-inputs">
-        <div class="scale-input-group">
-          <label for="scale-x">X: {{ modelScale[0].toFixed(2) }}</label>
+    <div v-if="panelsVisible" class="controls">
+      <div class="file-inputs">
+        <div class="input-group">
+          <label for="model-upload">Model (FBX/GLB/GLTF):</label>
           <input
-            id="scale-x"
-            type="range"
-            v-model.number="modelScale[0]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-          />
-          <input
-            type="number"
-            v-model.number="modelScale[0]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-            class="scale-number-input"
+            id="model-upload"
+            type="file"
+            accept=".fbx,.glb,.gltf"
+            @change="onModelFileChange"
           />
         </div>
-        <div class="scale-input-group">
-          <label for="scale-y">Y: {{ modelScale[1].toFixed(2) }}</label>
+
+        <div class="input-group">
+          <label for="animation-upload">Animation (FBX/GLB/GLTF):</label>
           <input
-            id="scale-y"
-            type="range"
-            v-model.number="modelScale[1]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-          />
-          <input
-            type="number"
-            v-model.number="modelScale[1]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-            class="scale-number-input"
-          />
-        </div>
-        <div class="scale-input-group">
-          <label for="scale-z">Z: {{ modelScale[2].toFixed(2) }}</label>
-          <input
-            id="scale-z"
-            type="range"
-            v-model.number="modelScale[2]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-          />
-          <input
-            type="number"
-            v-model.number="modelScale[2]"
-            @input="onScaleChange"
-            step="0.01"
-            min="0.01"
-            max="10"
-            class="scale-number-input"
+            id="animation-upload"
+            type="file"
+            accept=".fbx,.glb,.gltf"
+            @change="onAnimationFileChange"
           />
         </div>
       </div>
-    </div>
 
-    <div v-if="meshColors.length > 0" class="mesh-colors">
-      <h3 class="section-title">Mesh Colors</h3>
-      <div class="color-list">
-        <div v-for="meshItem in meshColors" :key="meshItem.index" class="color-item">
-          <label :for="`color-${meshItem.index}`">{{ meshItem.name }}</label>
-          <input
-            :id="`color-${meshItem.index}`"
-            type="color"
-            :value="meshItem.color"
-            @input="onColorChange(meshItem, $event.target.value)"
-          />
+      <div v-if="availableAnimations.length > 0" class="animation-select">
+        <label for="animation-dropdown">Animation:</label>
+        <select
+          id="animation-dropdown"
+          v-model="selectedAnimation"
+          @change="onAnimationChange"
+        >
+          <option
+            v-for="animName in availableAnimations"
+            :key="animName"
+            :value="animName"
+          >
+            {{ animName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="scale-controls">
+        <h3 class="section-title">Model Scale</h3>
+        <div class="scale-inputs">
+          <div class="scale-input-group">
+            <label for="scale-x">X: {{ modelScale[0].toFixed(2) }}</label>
+            <input
+              id="scale-x"
+              type="range"
+              v-model.number="modelScale[0]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+            />
+            <input
+              type="number"
+              v-model.number="modelScale[0]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+              class="scale-number-input"
+            />
+          </div>
+          <div class="scale-input-group">
+            <label for="scale-y">Y: {{ modelScale[1].toFixed(2) }}</label>
+            <input
+              id="scale-y"
+              type="range"
+              v-model.number="modelScale[1]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+            />
+            <input
+              type="number"
+              v-model.number="modelScale[1]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+              class="scale-number-input"
+            />
+          </div>
+          <div class="scale-input-group">
+            <label for="scale-z">Z: {{ modelScale[2].toFixed(2) }}</label>
+            <input
+              id="scale-z"
+              type="range"
+              v-model.number="modelScale[2]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+            />
+            <input
+              type="number"
+              v-model.number="modelScale[2]"
+              @input="onScaleChange"
+              step="0.01"
+              min="0.01"
+              max="10"
+              class="scale-number-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="meshColors.length > 0" class="mesh-colors">
+        <h3 class="section-title">Mesh Colors</h3>
+        <div class="color-list">
+          <div v-for="meshItem in meshColors" :key="meshItem.index" class="color-item">
+            <label :for="`color-${meshItem.index}`">{{ meshItem.name }}</label>
+            <input
+              :id="`color-${meshItem.index}`"
+              type="color"
+              :value="meshItem.color"
+              @input="onColorChange(meshItem, $event.target.value)"
+            />
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Mobile toggle button -->
+    <button class="mobile-toggle" @click="panelsVisible = !panelsVisible">
+      {{ panelsVisible ? "Hide" : "Show" }} Panel
+    </button>
   </div>
-
-  <!-- Mobile toggle button -->
-  <button class="mobile-toggle" @click="togglePanel">
-    {{ panelVisible ? 'Hide' : 'Show' }} Panel
-  </button>
-</div>
 </template>
 
 <style scoped>
@@ -1327,13 +1332,14 @@ canvas {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 1000;
+  z-index: 2001;
   background: #222;
   color: #fff;
   border: none;
   border-radius: 4px;
   padding: 0.5em 1em;
   font-size: 1.2em;
+  pointer-events: auto;
 }
 @media (max-width: 768px) {
   .mobile-toggle {
@@ -1345,8 +1351,8 @@ canvas {
     left: 0;
     right: 0;
     background: #fff;
-    z-index: 999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 2000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     padding: 1em;
   }
 }
