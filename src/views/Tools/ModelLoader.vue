@@ -955,7 +955,12 @@ onMounted(async () => init());
       </div>
     </div>
   </div>
-  </div>
+
+  <!-- Mobile toggle button -->
+  <button class="mobile-toggle" @click="togglePanel">
+    {{ panelVisible ? 'Hide' : 'Show' }} Panel
+  </button>
+</div>
 </template>
 
 <style scoped>
@@ -1315,5 +1320,34 @@ canvas {
 
 .side-panel::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  font-size: 1.2em;
+}
+@media (max-width: 768px) {
+  .mobile-toggle {
+    display: block;
+  }
+  .panel {
+    position: fixed;
+    top: 3.5rem;
+    left: 0;
+    right: 0;
+    background: #fff;
+    z-index: 999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 1em;
+  }
 }
 </style>
