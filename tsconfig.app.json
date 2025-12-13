@@ -11,7 +11,8 @@
       "@webgametoolkit/animation": ["./packages/animation/src/index.ts"],
       "@webgametoolkit/threejs": ["./packages/threejs/src/index.ts"],
       "@webgametoolkit/audio": ["./packages/audio/src/index.ts"],
-      "@webgametoolkit/game": ["./packages/game/src/index.ts"]
+      "@webgametoolkit/game": ["./packages/game/src/index.ts"],
+      "@webgametoolkit/controls": ["./packages/controls/src/index.ts"]
     }
   }
 }
