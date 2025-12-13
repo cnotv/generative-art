@@ -9,6 +9,8 @@ import {
 import waterImage from "@/assets/water.png";
 import { createGame } from "@webgametoolkit/game";
 import { createControls } from "@webgametoolkit/controls";
+import { initializeAudio, stopMusic, playAudioFile } from "@webgametoolkit/audio";
+import jumpSound from "@/assets/jump.wav";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -43,6 +45,7 @@ const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
 const handleJump = () => {
   if (isJumping.value || !canJump.value) return;
+  playAudioFile(jumpSound);
   isJumping.value = true;
   canJump.value = false;
 };
@@ -58,7 +61,7 @@ const bindings = {
       tap: "jump",
     },
   },
-  onAction: () => handleJump(),
+  onAction: handleJump,
 };
 createControls(bindings);
 
@@ -128,9 +131,13 @@ const init = async () => {
 
 onMounted(async () => {
   init();
+  initializeAudio();
   window.addEventListener("resize", init);
 });
-onUnmounted(() => window.removeEventListener("resize", init));
+onUnmounted(() => {
+  stopMusic();
+  window.removeEventListener("resize", init);
+});
 </script>
 
 <template>
