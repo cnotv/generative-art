@@ -43,6 +43,8 @@ createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
 const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
+const log = shallowRef("");
+const currentActions = shallowRef({});
 const handleJump = () => {
   if (isJumping.value || !canJump.value) return;
   playAudioFile(jumpSound);
@@ -53,15 +55,36 @@ const bindings = {
   mapping: {
     keyboard: {
       " ": "jump",
+      Enter: "toggle-move",
+      a: "turn-left",
+      d: "turn-right",
+      w: "moving",
+      s: "moving",
     },
     gamepad: {
       a: "jump",
+      b: "toggle-move",
+      left: "turn-left",
+      right: "turn-right",
     },
     touch: {
       tap: "jump",
     },
   },
-  onAction: handleJump,
+  onAction: (key, trigger, device) => {
+    currentActions.value = { ...currentActions.value, [key]: true };
+    log.value = `Action ${key} triggered by ${trigger} on ${device}`;
+
+    switch (key) {
+      case "jump":
+        handleJump();
+        break;
+    }
+  },
+  onRelease: (key, trigger, device) => {
+    currentActions.value = { ...currentActions.value, [key]: false };
+    log.value = ``;
+  },
 };
 createControls(bindings);
 
@@ -84,26 +107,47 @@ const init = async () => {
         beforeTimeline: () => {},
         timeline: [
           {
-            action: () =>
-              updateAnimation(
-                chameleon.mixer,
-                chameleon.actions["Idle_A"],
-                getDelta(),
-                10
-              ),
+            action: () => {
+              if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
+                updateAnimation(
+                  chameleon.mixer,
+                  chameleon.actions["Idle_A"],
+                  getDelta(),
+                  10
+                );
+            },
           },
           {
             frequency: speed,
-            action: () => controllerForward(chameleon, [], distance, getDelta(), false),
+            action: () => {
+              if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
+                controllerForward(chameleon, [], distance, getDelta(), false);
+            },
           },
           {
             frequency: speed * angle,
-            action: () => controllerTurn(chameleon, angle),
+            action: () => {
+              if (!currentActions.value["toggle-move"]) {
+                controllerTurn(chameleon, angle);
+              }
+            },
+          },
+          {
+            frequency: speed,
+            action: () => {
+              if (currentActions.value["toggle-move"]) {
+                if (currentActions.value["turn-left"]) controllerTurn(chameleon, -1);
+                if (currentActions.value["turn-right"]) controllerTurn(chameleon, 1);
+              }
+            },
           },
           {
             frequency: speed * angle * 4,
-            action: () =>
-              gameState.value.setData("score", (gameState.value.data.score || 0) + 1),
+            action: () => {
+              if (!currentActions.value["toggle-move"]) {
+                gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
+              }
+            },
           },
           {
             action: () => {
@@ -143,9 +187,19 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
   <div v-if="gameState" class="ui">
-    <p>Jumping: {{ isJumping }}</p>
-    <p>Can jump? {{ canJump }}</p>
-    <h1>Loops: {{ gameState.data.score || 0 }}</h1>
+    <p>
+      <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
+      <span>{{ canJump ? "ready" : "not ready" }}</span>
+      <span
+        >-
+        {{
+          currentActions["toggle-move"]
+            ? "Free move"
+            : `In the loop (${gameState.data.score || 0})`
+        }}</span
+      >
+    </p>
+    <p>{{ log }}</p>
   </div>
 </template>
 
@@ -161,16 +215,12 @@ canvas {
   flex-direction: column;
   align-self: center;
   font-size: 18px;
-  line-height: 1.2em;
-  justify-self: center;
-}
-
-h1 {
-  font-size: 4em;
+  line-height: 1em;
+  margin: 0 1rem;
 }
 
 p {
-  font-size: 2em;
+  font-size: 1.4em;
 }
 
 @media (max-width: 600px) {

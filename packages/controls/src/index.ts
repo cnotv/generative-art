@@ -13,8 +13,8 @@
  *     gamepad: { left: 'left', right: 'right', a: 'jump' },
  *     touch: { tap: 'jump' }
  *   },
- *   onAction: (action, event, rawEvent) => {
- *     // handle action
+ *   onAction: (action, trigger, device) => {
+ *     // e.g. jump, tap, touch
  *   }
  * });
  */
@@ -32,7 +32,9 @@ export interface ControlMapping {
 
 export interface ControlsOptions {
   mapping: ControlMapping;
-  onAction: (action: ControlAction, event: ControlEvent, rawEvent: Event) => void;
+  onAction?: (action: ControlAction, trigger: string, device: string) => void;
+  onRelease?: (action: ControlAction, trigger: string, device: string) => void;
+  onInput?: (action: ControlAction, trigger: string, device: string) => void;
   keyboard?: boolean;
   gamepad?: boolean;
   touch?: boolean;
@@ -42,14 +44,14 @@ export interface ControlsOptions {
 }
 
 export function createControls(options: ControlsOptions) {
-  const { mapping, onAction } = options;
+  const { mapping, onAction, onRelease, onInput } = options;
 
   // Keyboard
   function handleKey(event: KeyboardEvent, eventType: ControlEvent) {
-    const action = mapping.keyboard?.[event.key];
-    if (action) {
-      onAction(action, eventType, event);
-    }
+    const action = mapping.keyboard?.[event.key] ?? 'no action';
+    if (onAction) onAction(action, event.key, 'keyboard');
+    if (onRelease && eventType === 'up') onRelease(action, event.key, 'keyboard');
+    if (onInput) onInput(action, event.key, 'keyboard');
   }
 
   function bindKeyboard() {
@@ -72,13 +74,13 @@ export function createControls(options: ControlsOptions) {
     if (!gp) return;
     gp.buttons.forEach((btn, i) => {
       const btnName = Object.keys(mapping.gamepad || {})[i];
-      const action = mapping.gamepad?.[btnName];
+      const action = mapping.gamepad?.[btnName] ?? 'no action';
       if (!action) {
         lastButtons[i] = btn.pressed;
         return;
       }
-      if (btn.pressed && !lastButtons[i]) onAction(action, 'down', new Event('gamepad'));
-      if (!btn.pressed && lastButtons[i]) onAction(action, 'up', new Event('gamepad'));
+      if (btn.pressed && !lastButtons[i] && onAction) onAction(action, btnName, 'gamepad');
+      if (!btn.pressed && lastButtons[i] && onRelease) onRelease(action, btnName, 'gamepad');
       lastButtons[i] = btn.pressed;
     });
   }
@@ -96,9 +98,10 @@ export function createControls(options: ControlsOptions) {
 
   // Touch
   function handleTouch(event: TouchEvent, eventType: ControlEvent) {
-    const action = mapping.touch?.['tap'];
+    const action = mapping.touch?.['tap'] ?? 'no action';
     if (action) {
-      onAction(action, eventType, event);
+      if (onAction && eventType === 'up') onAction(action, event.type, 'touch');
+      if (onRelease && eventType === 'down') onRelease(action, event.type, 'touch');
     }
   }
   function bindTouch(target: HTMLElement) {
@@ -112,9 +115,10 @@ export function createControls(options: ControlsOptions) {
 
   // Mouse
   function handleMouse(event: MouseEvent, eventType: ControlEvent) {
-    const action = mapping.touch?.['tap'];
+    const action = mapping.touch?.['tap'] ?? 'no action';
     if (action) {
-      onAction(action, eventType, event);
+      if (onAction && eventType === 'down') onAction(action, event.type, 'mouse');
+      if (onRelease && eventType === 'up') onRelease(action, event.type, 'mouse');
     }
   }
   function bindMouse(target: HTMLElement) {
@@ -173,11 +177,10 @@ export function createControls(options: ControlsOptions) {
   let destroyControls = autoBind();
 
   function remapControls(newMapping: ControlMapping) {
-    mapping.keyboard = newMapping.keyboard;
-    mapping.gamepad = newMapping.gamepad;
-    mapping.touch = newMapping.touch;
-    // Optionally, rebind if needed
     destroyControls();
+    if (newMapping.keyboard) mapping.keyboard = newMapping.keyboard;
+    if (newMapping.gamepad) mapping.gamepad = newMapping.gamepad;
+    if (newMapping.touch) mapping.touch = newMapping.touch;
     destroyControls = autoBind();
   }
 
