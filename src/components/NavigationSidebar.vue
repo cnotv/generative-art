@@ -46,6 +46,7 @@ import { generatedRoutes } from "@/config/router";
   flex-direction: column;
   width: 100%;
   padding: 2em;
+  overflow: auto;
 }
 
 .sidebar__link {
