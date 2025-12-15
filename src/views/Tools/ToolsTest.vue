@@ -55,8 +55,11 @@ const handleJump = () => {
 
 const getLogs = (actions) =>
   Object.keys(actions)
-    .filter((key) => !!actions[key])
-    .map((key) => `${key} triggered by ${actions[key].trigger} ${actions[key].device}`);
+    .filter((action) => !!actions[action])
+    .map(
+      (action) =>
+        `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
+    );
 
 const bindings = {
   mapping: {
@@ -78,18 +81,22 @@ const bindings = {
       tap: "jump",
     },
   },
-  onAction: (key, trigger, device) => {
-    currentActions.value = { ...currentActions.value, [key]: { key, trigger, device } };
+  onAction: (action, trigger, device) => {
+    if (currentActions.value[action]) return; // Prevent multiple triggers from the keyboard
+    currentActions.value = {
+      ...currentActions.value,
+      [action]: { action, trigger, device },
+    };
     logs.value = getLogs(currentActions.value);
 
-    switch (key) {
+    switch (action) {
       case "jump":
         handleJump();
         break;
     }
   },
-  onRelease: (key) => {
-    currentActions.value = { ...currentActions.value, [key]: null };
+  onRelease: (action) => {
+    currentActions.value = { ...currentActions.value, [action]: null };
     logs.value = getLogs(currentActions.value);
   },
 };

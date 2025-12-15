@@ -176,16 +176,28 @@ export function createControls(options: ControlsOptions) {
   // Auto-bind on create
   let destroyControls = autoBind();
 
-  function remapControls(newMapping: ControlMapping) {
+  function remapControlsOptions(newOptions: ControlsOptions) {
     destroyControls();
-    if (newMapping.keyboard) mapping.keyboard = newMapping.keyboard;
-    if (newMapping.gamepad) mapping.gamepad = newMapping.gamepad;
-    if (newMapping.touch) mapping.touch = newMapping.touch;
+    // Update all options fields
+    if (newOptions.mapping) {
+      mapping.keyboard = newOptions.mapping.keyboard;
+      mapping.gamepad = newOptions.mapping.gamepad;
+      mapping.touch = newOptions.mapping.touch;
+    }
+    if (typeof newOptions.onAction === 'function') options.onAction = newOptions.onAction;
+    if (typeof newOptions.onRelease === 'function') options.onRelease = newOptions.onRelease;
+    if (typeof newOptions.onInput === 'function') options.onInput = newOptions.onInput;
+    if ('keyboard' in newOptions) options.keyboard = newOptions.keyboard;
+    if ('gamepad' in newOptions) options.gamepad = newOptions.gamepad;
+    if ('touch' in newOptions) options.touch = newOptions.touch;
+    if ('mouse' in newOptions) options.mouse = newOptions.mouse;
+    if ('touchTarget' in newOptions) options.touchTarget = newOptions.touchTarget;
+    if ('mouseTarget' in newOptions) options.mouseTarget = newOptions.mouseTarget;
     destroyControls = autoBind();
   }
 
   return {
     destroyControls,
-    remapControls,
+    remapControlsOptions,
   };
 }
