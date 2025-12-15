@@ -43,14 +43,21 @@ createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
 const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
-const log = shallowRef("");
+const logs = shallowRef("");
 const currentActions = shallowRef({});
+
 const handleJump = () => {
   if (isJumping.value || !canJump.value) return;
   playAudioFile(jumpSound);
   isJumping.value = true;
   canJump.value = false;
 };
+
+const getLogs = (actions) =>
+  Object.keys(actions)
+    .filter((key) => !!actions[key])
+    .map((key) => `${key} triggered by ${actions[key].trigger} ${actions[key].device}`);
+
 const bindings = {
   mapping: {
     keyboard: {
@@ -72,8 +79,8 @@ const bindings = {
     },
   },
   onAction: (key, trigger, device) => {
-    currentActions.value = { ...currentActions.value, [key]: true };
-    log.value = `Action ${key} triggered by ${trigger} on ${device}`;
+    currentActions.value = { ...currentActions.value, [key]: { key, trigger, device } };
+    logs.value = getLogs(currentActions.value);
 
     switch (key) {
       case "jump":
@@ -81,9 +88,9 @@ const bindings = {
         break;
     }
   },
-  onRelease: (key, trigger, device) => {
-    currentActions.value = { ...currentActions.value, [key]: false };
-    log.value = ``;
+  onRelease: (key) => {
+    currentActions.value = { ...currentActions.value, [key]: null };
+    logs.value = getLogs(currentActions.value);
   },
 };
 createControls(bindings);
@@ -100,7 +107,11 @@ const init = async () => {
       const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const angle = 90;
       const distance = 0.1;
-      const speed = 1;
+      const speed = {
+        movement: 1,
+        turning: 4,
+        jump: 2,
+      };
       colorModel(chameleon.mesh, chameleonConfig.materialColors);
 
       animate({
@@ -118,14 +129,14 @@ const init = async () => {
             },
           },
           {
-            frequency: speed,
+            frequency: speed.movement,
             action: () => {
               if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
                 controllerForward(chameleon, [], distance, getDelta(), false);
             },
           },
           {
-            frequency: speed * angle,
+            frequency: speed.movement * angle,
             action: () => {
               if (!currentActions.value["toggle-move"]) {
                 controllerTurn(chameleon, angle);
@@ -133,16 +144,18 @@ const init = async () => {
             },
           },
           {
-            frequency: speed,
+            frequency: speed.movement,
             action: () => {
               if (currentActions.value["toggle-move"]) {
-                if (currentActions.value["turn-left"]) controllerTurn(chameleon, -1);
-                if (currentActions.value["turn-right"]) controllerTurn(chameleon, 1);
+                if (currentActions.value["turn-left"])
+                  controllerTurn(chameleon, speed.turning);
+                if (currentActions.value["turn-right"])
+                  controllerTurn(chameleon, -speed.turning);
               }
             },
           },
           {
-            frequency: speed * angle * 4,
+            frequency: speed.movement * angle * 4,
             action: () => {
               if (!currentActions.value["toggle-move"]) {
                 gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
@@ -151,13 +164,12 @@ const init = async () => {
           },
           {
             action: () => {
-              const jumpSpeed = 2;
               if (isJumping.value) {
                 chameleon.mesh.position.y +=
-                  Math.sin((Date.now() * 0.01) / jumpSpeed) * 0.2;
+                  Math.sin((Date.now() * 0.01) / speed.jump) * 0.2;
               } else {
                 // chameleon.mesh.position.y -=
-                //   Math.sin(Date.now() * 0.01 / jumpSpeed) * 0.2;
+                //   Math.sin(Date.now() * 0.01 / speed.jump) * 0.2;
               }
 
               if (chameleon.mesh.position.y <= chameleonConfig.position[1] + 0.1) {
@@ -187,7 +199,7 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
   <div v-if="gameState" class="ui">
-    <p>
+    <div>
       <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
       <span>{{ canJump ? "ready" : "not ready" }}</span>
       <span
@@ -198,8 +210,8 @@ onUnmounted(() => {
             : `In the loop (${gameState.data.score || 0})`
         }}</span
       >
-    </p>
-    <p>{{ log }}</p>
+    </div>
+    <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
   </div>
 </template>
 
@@ -214,13 +226,9 @@ canvas {
   display: flex;
   flex-direction: column;
   align-self: center;
-  font-size: 18px;
-  line-height: 1em;
-  margin: 0 1rem;
-}
-
-p {
-  font-size: 1.4em;
+  font-size: 24px;
+  line-height: 1.2em;
+  margin: 1rem;
 }
 
 @media (max-width: 600px) {
