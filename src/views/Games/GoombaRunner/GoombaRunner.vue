@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
 import ScoreDisplay from "./screens/ScoreDisplay.vue";
-import { controls } from "@/utils/control";
+import { createControls } from "@webgametoolkit/controls";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
 import { getTools } from "@webgametoolkit/threejs";
@@ -15,19 +15,14 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { config, configControls, setupConfig } from "./config";
+import { setupConfig } from "./config";
 import { createTimeline } from "./animation";
 import "@/assets/prevents.css";
 import "./styles.css";
 
-import {
-  updateEventListeners,
-  removeAllEventListeners,
-  handleJumpGoomba,
-} from "./helpers/events";
+import { handleJumpGoomba } from "./helpers/events";
 
 import {
-  gameStatus,
   prevents,
   loadHighScore,
   checkHighScore,
@@ -37,85 +32,92 @@ import {
   setStatus,
   setScore,
 } from "./helpers/setup";
+import type { ControlsOptions } from "packages/controls/dist";
 
-// Set UI controls
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
-
 const shouldClearObstacles = ref(false);
-const changeEventListeners = () =>
-  updateEventListeners(gameStatus.value, {
-    onStart: handleStartGame,
-    onRestart: handleRestartGame,
-    onJump: () => handleJumpGoomba(uiStore),
-  });
-
-// Watch for game status changes and update event listeners
-watch(
-  () => gameStatus.value,
-  () => setTimeout(() => changeEventListeners(), 500),
-  { immediate: true }
-);
-
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { originalViewport, preventZoomStyleElement } = enableZoomPrevention();
 
-const { originalViewport, preventZoomStyleElement } = enableZoomPrevention(); // Enable zoom prevention for this game
+const bindings: Record<string, ControlsOptions> = {
+  playing: {
+    mapping: {
+      keyboard: {
+        " ": "jump",
+      },
+      gamepad: {
+        a: "jump",
+      },
+      touch: {
+        tap: "jump",
+      },
+    },
+    onAction: (action) => {
+      if (action === "jump") handleJumpGoomba(uiStore);
+    },
+  },
+  "game-over": {
+    mapping: {
+      keyboard: {
+        " ": "restart",
+      },
+      gamepad: {
+        a: "restart",
+      },
+      touch: {
+        tap: "restart",
+      },
+    },
+    onAction: (action) => {
+      if (action === "restart") handleRestartGame();
+    },
+  },
+  idle: {
+    mapping: {
+      keyboard: {
+        " ": "start",
+      },
+      gamepad: {
+        a: "start",
+      },
+      touch: {
+        tap: "start",
+      },
+    },
+    onAction: (action) => {
+      if (action === "start") handleStartGame();
+    },
+  },
+};
 
-let initInstance: () => void;
-onMounted(() => {
-  loadGoogleFont(
-    "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap",
-    fontName
-  );
-  loadHighScore(); // Load saved high score from localStorage
-  prevents();
-  initInstance = () => {
-    init(
-      (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
-    );
-  };
+const { remapControlsOptions, destroyControls } = createControls(bindings["idle"]);
 
-  initInstance();
-  window.addEventListener("resize", initInstance);
-  changeEventListeners();
-});
-
-onUnmounted(() => {
-  removeGoogleFont(fontName);
-  disableZoomPrevention(originalViewport, preventZoomStyleElement);
-  removeAllEventListeners(); // This will also stop gamepad polling
-  stopMusic();
-  window.removeEventListener("resize", initInstance);
-});
-
-// Game state functions
 const handleStartGame = async () => {
-  // Initialize audio on first user interaction (required for iOS)
-  await initializeAudio();
   setStatus("playing");
   setScore(0);
-  changeEventListeners();
+  remapControlsOptions(bindings["playing"]);
 };
 
 const handleRestartGame = () => {
   handleStartGame();
   shouldClearObstacles.value = true;
+  remapControlsOptions(bindings["playing"]);
 };
 
 const endGame = () => {
   stopMusic();
   checkHighScore();
-  setStatus("game_over");
-  changeEventListeners();
+  setStatus("game-over");
+  remapControlsOptions(bindings["game-over"]);
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
-  controls.create(config, route, configControls, () => createScene());
   const createScene = async () => {
+    initializeAudio();
     const { animate, setup, world, scene, getDelta, camera } = await getTools({
       stats,
       route,
@@ -138,6 +140,32 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   };
   createScene();
 };
+
+let initInstance: () => void;
+onMounted(() => {
+  loadGoogleFont(
+    "https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap",
+    fontName
+  );
+  loadHighScore();
+  prevents();
+  initInstance = () => {
+    init(
+      (canvas.value as unknown) as HTMLCanvasElement,
+      (statsEl.value as unknown) as HTMLElement
+    );
+  };
+  initInstance();
+  window.addEventListener("resize", initInstance);
+});
+
+onUnmounted(() => {
+  removeGoogleFont(fontName);
+  disableZoomPrevention(originalViewport, preventZoomStyleElement);
+  destroyControls();
+  stopMusic();
+  window.removeEventListener("resize", initInstance);
+});
 </script>
 
 <template>

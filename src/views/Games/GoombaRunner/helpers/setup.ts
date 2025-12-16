@@ -10,7 +10,7 @@ const gameState = shallowRef({ data: { score: 0, highestScore: 0, isNewHighScore
 createGame({ score: 0, highestScore: 0, isNewHighScore: false }, gameState as any, onUnmounted);
 const isGameStart = computed(() => gameState.value.status === "idle");
 const isGamePlaying = computed(() => gameState.value.status === "playing");
-const isGameOver = computed(() => gameState.value.status === "game_over");
+const isGameOver = computed(() => gameState.value.status === "game-over");
 const isNewHighScore = computed(() => gameState.value.data.isNewHighScore);
 const gameScore = computed(() => gameState.value.data.score);
 const gameStatus = computed(() => gameState.value.status);

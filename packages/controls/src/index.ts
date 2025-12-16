@@ -1,25 +1,3 @@
-/**
- * Stateless controls logic for keyboard, gamepad, and touch
- * This module does not manage state, but emits events or calls callbacks
- * All mapping is configurable via a config object
- * 
- * Example usage:
- *
- * import { createControls } from '@webgametoolkit/controls';
- *
- * const { destroyControls, remapControls } = createControls({
- *   mapping: {
- *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },
- *     gamepad: { left: 'left', right: 'right', a: 'jump' },
- *     touch: { tap: 'jump' }
- *   },
- *   onAction: (action, trigger, device) => {
- *     // e.g. jump, tap, touch
- *   }
- * });
- */
-
-
 export type ControlAction = string;
 export type ControlEvent = 'down' | 'up';
 
@@ -28,7 +6,6 @@ export interface ControlMapping {
   gamepad?: Record<string, ControlAction>;
   touch?: Record<string, ControlAction>;
 }
-
 
 export interface ControlsOptions {
   mapping: ControlMapping;
@@ -43,6 +20,28 @@ export interface ControlsOptions {
   mouseTarget?: HTMLElement | null;
 }
 
+/**
+ * Stateless controls logic for keyboard, gamepad, and touch
+ * This module does not manage state, but emits events or calls callbacks
+ * All mapping is configurable via a config object and updated with remapControlsOptions()
+ * 
+ * @param { ControlsOptions } options Controls configuration options
+ * @returns { destroyControls: () => void, remapControlsOptions: (newOptions: ControlsOptions) => void }
+ * @example
+ * ```typescript
+ * import { createControls } from '@webgametoolkit/controls';
+ * const { destroyControls, remapControlsOptions } = createControls({
+ *   mapping: {
+ *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },
+ *     gamepad: { left: 'left', right: 'right', a: 'jump' },
+ *     touch: { tap: 'jump' }
+ *   },
+ *   onAction: (action, trigger, device) => {
+ *     // e.g. jump, tap, touch
+ *   }
+ * });
+ * ```
+ */
 export function createControls(options: ControlsOptions) {
   const { mapping, onAction, onRelease, onInput } = options;
 
@@ -178,21 +177,7 @@ export function createControls(options: ControlsOptions) {
 
   function remapControlsOptions(newOptions: ControlsOptions) {
     destroyControls();
-    // Update all options fields
-    if (newOptions.mapping) {
-      mapping.keyboard = newOptions.mapping.keyboard;
-      mapping.gamepad = newOptions.mapping.gamepad;
-      mapping.touch = newOptions.mapping.touch;
-    }
-    if (typeof newOptions.onAction === 'function') options.onAction = newOptions.onAction;
-    if (typeof newOptions.onRelease === 'function') options.onRelease = newOptions.onRelease;
-    if (typeof newOptions.onInput === 'function') options.onInput = newOptions.onInput;
-    if ('keyboard' in newOptions) options.keyboard = newOptions.keyboard;
-    if ('gamepad' in newOptions) options.gamepad = newOptions.gamepad;
-    if ('touch' in newOptions) options.touch = newOptions.touch;
-    if ('mouse' in newOptions) options.mouse = newOptions.mouse;
-    if ('touchTarget' in newOptions) options.touchTarget = newOptions.touchTarget;
-    if ('mouseTarget' in newOptions) options.mouseTarget = newOptions.mouseTarget;
+    createControls( newOptions );
     destroyControls = autoBind();
   }
 
