@@ -393,93 +393,77 @@ const getSky = (
 }
 
 /**
- * Apply material properties to a model's meshes
- * @param model The model to apply materials to
+ * Apply material properties to a mesh
+ * @param mesh The mesh to apply materials to
  * @param options Material options
  */
-const applyMaterialToModel = (
-  model: Model,
+const applyMaterial = (
+  mesh: THREE.Mesh,
   {
-    rotation,
     material,
     materialType,
     color,
-    materialColors,
     opacity,
     reflectivity,
     roughness,
     metalness,
     transmission,
+    transparent,
     clearcoat,
     clearcoatRoughness,
     ior,
     thickness,
     envMapIntensity,
-    castShadow,
-    receiveShadow,
   }: ModelOptions
 ) => {
-  let meshIndex = 0;
-  model.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) {
-      const mesh = child as THREE.Mesh;
-      if (material) {
-        const oldMaterial = mesh.material as any;
-        const meshColor = materialColors && materialColors[meshIndex] !== undefined 
-          ? materialColors[meshIndex] 
-          : (color || (oldMaterial?.color || 0xffffff));
-        const materialProps: any = {
-          color: meshColor,
-          opacity: opacity ?? 1,
-          transparent: (opacity ?? 1) < 1,
-        };
-        meshIndex++;
+  if (material) {
+    const oldMaterial = mesh.material as any;
+    const meshColor = color || (oldMaterial?.color || 0xffffff);
+    const materialProps: any = {
+      color: meshColor,
+      opacity: opacity ?? 1,
+      transparent: (opacity ?? 1) < 1,
+    };
 
-        // Preserve map/texture from old material if exists
-        if (oldMaterial?.map) {
-          materialProps.map = oldMaterial.map;
-        }
-
-        if (materialType === 'MeshPhysicalMaterial') {
-          mesh.material = new THREE.MeshPhysicalMaterial({
-            ...materialProps,
-            reflectivity,
-            roughness,
-            transmission,
-            metalness,
-            clearcoat,
-            clearcoatRoughness,
-            ior,
-            thickness,
-            envMapIntensity,
-          });
-        } else if (materialType === 'MeshStandardMaterial') {
-          mesh.material = new THREE.MeshStandardMaterial({
-            ...materialProps,
-            roughness,
-            metalness,
-          });
-        } else if (materialType === 'MeshLambertMaterial') {
-          mesh.material = new THREE.MeshLambertMaterial({
-            ...materialProps,
-            flatShading: false,
-          });
-        } else if (materialType === 'MeshPhongMaterial') {
-          mesh.material = new THREE.MeshPhongMaterial({
-            ...materialProps,
-            shininess: 30,
-          });
-        } else if (materialType === 'MeshBasicMaterial') {
-          mesh.material = new THREE.MeshBasicMaterial(materialProps);
-        }
-      }
-      if (rotation) {
-        mesh.rotation.set(...rotation);
-      }
-      mesh.castShadow = castShadow ?? false;
-      mesh.receiveShadow = receiveShadow ?? false;
+    // Preserve map/texture from old material if exists
+    if (oldMaterial?.map) {
+      materialProps.map = oldMaterial.map;
     }
-  });
+
+    if (materialType === 'MeshPhysicalMaterial') {
+      mesh.material = new THREE.MeshPhysicalMaterial({
+        ...materialProps,
+        reflectivity,
+        roughness,
+        transmission,
+        transparent,
+        metalness,
+        clearcoat,
+        clearcoatRoughness,
+        ior,
+        thickness,
+        envMapIntensity,
+      });
+    } else if (materialType === 'MeshStandardMaterial') {
+      mesh.material = new THREE.MeshStandardMaterial({
+        ...materialProps,
+        roughness,
+        metalness,
+      });
+    } else if (materialType === 'MeshLambertMaterial') {
+      mesh.material = new THREE.MeshLambertMaterial({
+        ...materialProps,
+        flatShading: false,
+      });
+    } else if (materialType === 'MeshPhongMaterial') {
+      mesh.material = new THREE.MeshPhongMaterial({
+        ...materialProps,
+        shininess: 30,
+      });
+    } else if (materialType === 'MeshBasicMaterial') {
+      mesh.material = new THREE.MeshBasicMaterial(materialProps);
+    }
+  }
 };
 
 const loadFBX = (
@@ -502,8 +486,13 @@ const loadFBX = (
       model.rotation.set(...rotation);
       model.castShadow = castShadow;
       model.receiveShadow = receiveShadow;
-      
-      applyMaterialToModel(model, options);
+ 
+      // Traverse and apply to all meshes in the model
+      model.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          applyMaterial(child as THREE.Mesh, options);
+        }
+      });
       
       resolve(model);
     }, undefined, reject);
@@ -535,7 +524,12 @@ const loadGLTF = (
       model.scale.set(...scale);
       model.rotation.set(...rotation);
       
-      applyMaterialToModel(model, options);
+      // Traverse and apply to all meshes in the model
+      model.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          applyMaterial(child as THREE.Mesh, options);
+        }
+      });
       
       resolve({ model, gltf });
     }, undefined, reject);
@@ -1193,32 +1187,33 @@ const setCameraPreset = (
 };
 
 export {
+  applyMaterial,
+  cameraPresets,
+  cloneModel,
+  colorModel,
+  createLights,
+  createZigzagTexture,
   defaultModelOptions,
   getAnimations,
-  getTools,
   getEnvironment,
-  getOffset,
-  getLookAt,
-  setThirdPersonCamera,
-  getRenderer,
-  createLights,
   getGround,
-  getSky,
-  loadFBX,
-  loadGLTF,
-  loadAnimation,
   getInstanceConfig,
+  getLookAt,
+  getModel,
+  getOffset,
+  getPhysic,
+  getRenderer,
+  getSky,
+  getTextures,
+  getTools,
   instanceMatrixMesh,
   instanceMatrixModel,
-  cloneModel,
-  getTextures,
-  getModel,
-  getPhysic,
-  removeElements,
-  colorModel,
-  createZigzagTexture,
-  tiltCamera,
+  loadAnimation,
+  loadFBX,
+  loadGLTF,
   onWindowResize,
-  cameraPresets,
+  removeElements,
   setCameraPreset,
+  setThirdPersonCamera,
+  tiltCamera,
 };
