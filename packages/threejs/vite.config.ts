@@ -9,12 +9,12 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['three', '@dimforge/rapier3d-compat', '@webgametoolkit/animation'],
+      external: ['three', '@dimforge/rapier3d-compat', '@webgamekit/animation'],
       output: {
         globals: {
           three: 'THREE',
           '@dimforge/rapier3d-compat': 'RAPIER',
-          '@webgametoolkit/animation': 'WebGameToolkitAnimation',
+          '@webgamekit/animation': 'WebGameToolkitAnimation',
         },
       },
     },

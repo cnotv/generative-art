@@ -21,7 +21,7 @@ import {
   resetPlayer,
   type PlayerMovement,
 } from "./helpers/player";
-import { updateAnimation } from "@webgametoolkit/animation";
+import { updateAnimation } from "@webgamekit/animation";
 
 import { getSpeed, initPhysics } from "./helpers/setup";
 import { createPlayer } from "./helpers/player";

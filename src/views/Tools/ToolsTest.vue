@@ -1,15 +1,15 @@
 <script setup>
 import { onMounted, onUnmounted, ref, shallowRef } from "vue";
-import { getTools, getModel, colorModel } from "@webgametoolkit/threejs";
+import { getTools, getModel, colorModel } from "@webgamekit/threejs";
 import {
   updateAnimation,
   controllerTurn,
   controllerForward,
-} from "@webgametoolkit/animation";
+} from "@webgamekit/animation";
 import waterImage from "@/assets/water.png";
-import { createGame } from "@webgametoolkit/game";
-import { createControls } from "@webgametoolkit/controls";
-import { initializeAudio, stopMusic, playAudioFile } from "@webgametoolkit/audio";
+import { createGame } from "@webgamekit/game";
+import { createControls } from "@webgamekit/controls";
+import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import jumpSound from "@/assets/jump.wav";
 
 const chameleonConfig = {

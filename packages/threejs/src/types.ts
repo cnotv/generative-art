@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CoordinateTuple, ModelType } from '@webgametoolkit/animation';
+import { CoordinateTuple, ModelType } from '@webgamekit/animation';
 
 export interface CommonOptions {
   boundary?: number;

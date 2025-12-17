@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getModel } from "@webgametoolkit/threejs";
+import { getModel } from "@webgamekit/threejs";
 import { config } from "../config";
 import { getSpeed } from "./setup";
 

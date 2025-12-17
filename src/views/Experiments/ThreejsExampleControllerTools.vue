@@ -8,7 +8,7 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getTools } from "@webgametoolkit/threejs";
+import { getTools } from "@webgamekit/threejs";
 
 const statsEl = ref(null);
 const canvas = ref(null);

@@ -5,14 +5,14 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import * as THREE from "three";
 
-import { getModel, getTools } from "@webgametoolkit/threejs";
+import { getModel, getTools } from "@webgamekit/threejs";
 import {
   controllerForward,
   resetAnimation,
   bindAnimatedElements,
   controllerJump,
   controllerTurn,
-} from "@webgametoolkit/animation";
+} from "@webgamekit/animation";
 import { getBall, getCube } from "@/utils/models";
 import brickTexture from "@/assets/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";

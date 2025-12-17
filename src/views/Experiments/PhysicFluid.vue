@@ -4,8 +4,8 @@ import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { createLights, getEnvironment } from "@webgametoolkit/threejs";
-import { bindAnimatedElements, animateTimeline } from "@webgametoolkit/animation";
+import { createLights, getEnvironment } from "@webgamekit/threejs";
+import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
 

@@ -1,6 +1,6 @@
 # WebGameToolkit Packages
 
-This directory contains the source code for the `@webgametoolkit` packages.
+This directory contains the source code for the `@webgamekit` packages.
 
 ## Packages
 

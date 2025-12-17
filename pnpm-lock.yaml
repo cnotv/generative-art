@@ -8,10 +8,10 @@ importers:
 
   .:
     dependencies:
-      '@webgametoolkit/controls':
+      '@webgamekit/controls':
         specifier: workspace:^
         version: link:packages/controls
-      '@webgametoolkit/threejs':
+      '@webgamekit/threejs':
         specifier: workspace:^
         version: link:packages/threejs
       dat.gui:
@@ -174,7 +174,7 @@ importers:
 
   packages/threejs:
     dependencies:
-      '@webgametoolkit/animation':
+      '@webgamekit/animation':
         specifier: workspace:*
         version: link:../animation
     devDependencies:

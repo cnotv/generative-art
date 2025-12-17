@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { getPhysic } from '@webgametoolkit/threejs';
+import { getPhysic } from '@webgamekit/threejs';
 
 export const getBlade = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getModel, colorModel, tiltCamera } from "@webgametoolkit/threejs";
-import { playAudioFile } from "@webgametoolkit/audio";
+import { getModel, colorModel, tiltCamera } from "@webgamekit/threejs";
+import { playAudioFile } from "@webgamekit/audio";
 import { startBackgroundFalling } from "./background";
 import jumpSound from "@/assets/jump.wav";
 import gameOverSound from "@/assets/gameover.wav";

@@ -7,7 +7,7 @@ import wasm from 'vite-plugin-wasm'
 const packages = ['animation', 'threejs', 'audio', 'game'];
 const packageAliases = Object.fromEntries(
   packages.map(pkg => [
-    `@webgametoolkit/${pkg}`,
+    `@webgamekit/${pkg}`,
     fileURLToPath(new URL(`./packages/${pkg}/src/index.ts`, import.meta.url))
   ])
 );

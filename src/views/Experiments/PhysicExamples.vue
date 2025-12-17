@@ -10,12 +10,12 @@ import {
   getGround,
   getModel,
   removeElements,
-} from "@webgametoolkit/threejs";
+} from "@webgamekit/threejs";
 import {
   bindAnimatedElements,
   resetAnimation,
   animateTimeline,
-} from "@webgametoolkit/animation";
+} from "@webgamekit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
 import bowlingTexture from "@/assets/bowling.png";

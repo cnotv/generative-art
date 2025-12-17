@@ -4,10 +4,10 @@ import { useRoute } from "vue-router";
 import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
 import ScoreDisplay from "./screens/ScoreDisplay.vue";
-import { createControls } from "@webgametoolkit/controls";
+import { createControls } from "@webgamekit/controls";
 import { stats } from "@/utils/stats";
-import { initializeAudio, stopMusic } from "@webgametoolkit/audio";
-import { getTools } from "@webgametoolkit/threejs";
+import { initializeAudio, stopMusic } from "@webgamekit/audio";
+import { getTools } from "@webgamekit/threejs";
 import { useUiStore } from "@/stores/ui";
 import {
   enableZoomPrevention,

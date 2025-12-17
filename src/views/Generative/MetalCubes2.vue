@@ -6,8 +6,8 @@ import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { animateTimeline } from "@webgametoolkit/animation";
-import { createLights, instanceMatrixMesh } from "@webgametoolkit/threejs";
+import { animateTimeline } from "@webgamekit/animation";
+import { createLights, instanceMatrixMesh } from "@webgamekit/threejs";
 import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
 

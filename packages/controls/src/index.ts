@@ -29,7 +29,7 @@ export interface ControlsOptions {
  * @returns { destroyControls: () => void, remapControlsOptions: (newOptions: ControlsOptions) => void }
  * @example
  * ```typescript
- * import { createControls } from '@webgametoolkit/controls';
+ * import { createControls } from '@webgamekit/controls';
  * const { destroyControls, remapControlsOptions } = createControls({
  *   mapping: {
  *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },

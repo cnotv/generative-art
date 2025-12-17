@@ -5,7 +5,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { createZigzagTexture } from "@webgametoolkit/threejs";
+import { createZigzagTexture } from "@webgamekit/threejs";
 import grassTextureImg from "@/assets/grass.jpg";
 
 const canvas = ref(null);

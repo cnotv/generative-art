@@ -19,7 +19,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
-      "@webgametoolkit/animation": ["../animation/dist/index.d.ts"]
+      "@webgamekit/animation": ["../animation/dist/index.d.ts"]
     }
   },
   "include": ["src"]

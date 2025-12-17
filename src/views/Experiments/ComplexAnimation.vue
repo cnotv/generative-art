@@ -18,7 +18,7 @@ import {
   cloneModel,
   instanceMatrixMesh,
   getInstanceConfig,
-} from "@webgametoolkit/threejs";
+} from "@webgamekit/threejs";
 import { complexAnimation as config } from "@/config/scenes";
 import { getBlade } from "@/utils/custom-models";
 

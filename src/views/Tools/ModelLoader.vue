@@ -1,8 +1,8 @@
 <script setup>
 import { onMounted, ref } from "vue";
 import * as THREE from "three";
-import { getTools, getModel } from "@webgametoolkit/threejs";
-import { updateAnimation } from "@webgametoolkit/animation";
+import { getTools, getModel } from "@webgamekit/threejs";
+import { updateAnimation } from "@webgamekit/animation";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],

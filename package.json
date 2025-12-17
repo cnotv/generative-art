@@ -22,8 +22,8 @@
     ]
   },
   "dependencies": {
-    "@webgametoolkit/controls": "workspace:^",
-    "@webgametoolkit/threejs": "workspace:^",
+    "@webgamekit/controls": "workspace:^",
+    "@webgamekit/threejs": "workspace:^",
     "dat.gui": "^0.7.9",
     "p5": "^1.9.0",
     "pinia": "^2.3.0",

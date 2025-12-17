@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import { config } from "../config";
-import { createGame } from "@webgametoolkit/game";
+import { createGame } from "@webgamekit/game";
 import { onUnmounted, shallowRef, computed } from "vue";
 
 // Facade for game state management

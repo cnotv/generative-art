@@ -4,8 +4,8 @@ import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
-import { getModel, getTools } from "@webgametoolkit/threejs";
-import { bindAnimatedElements, bodyJump, updateAnimation } from "@webgametoolkit/animation";
+import { getModel, getTools } from "@webgamekit/threejs";
+import { bindAnimatedElements, bodyJump, updateAnimation } from "@webgamekit/animation";
 import { useUiStore } from "@/stores/ui";
 import { getCube } from "@/utils/models";
 import brickTexture from "@/assets/brick.jpg";

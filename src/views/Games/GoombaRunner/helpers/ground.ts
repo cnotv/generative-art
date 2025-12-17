@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createZigzagTexture } from "@webgametoolkit/threejs";
+import { createZigzagTexture } from "@webgamekit/threejs";
 import { getSpeed } from "./setup";
 
 export const getGround = (scene: THREE.Scene, physics?: any) => {

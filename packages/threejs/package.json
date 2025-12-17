@@ -1,5 +1,5 @@
 {
-  "name": "@webgametoolkit/threejs",
+  "name": "@webgamekit/threejs",
   "version": "0.0.1",
   "type": "module",
   "files": [
@@ -24,7 +24,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@webgametoolkit/animation": "workspace:*"
+    "@webgamekit/animation": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
@@ -33,10 +33,10 @@
     "@types/three": "^0.179.0",
     "vitest": "^1.0.0",
     "@dimforge/rapier3d-compat": "^0.19.3",
-    "@webgametoolkit/animation": "workspace:*"
+    "@webgamekit/animation": "workspace:*"
   },
   "peerDependencies": {
-    "@webgametoolkit/animation": "*",
+    "@webgamekit/animation": "*",
     "three": "^0.178.0" 
   }
 }
