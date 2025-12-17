@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { getPhysic, getTextures } from '@webgametoolkit/threejs';
+import { getPhysic, getTextures, applyMaterial } from '@webgametoolkit/threejs';
 
 /**
  * Create a ball with physics, texture, and shadow
@@ -33,23 +33,25 @@ const getBall = (
     showHelper = false,
     hasGravity = false,
     receiveShadow = true,
+    material = 'MeshPhysicalMaterial',
     texture,
   }: ModelOptions = {},
 ) => {
   const initialValues = { size, position, color }
   // Create and add model
   const geometry = new THREE.SphereGeometry(size as number)
-  const material = new THREE.MeshPhysicalMaterial({
+  const mesh = new THREE.Mesh(geometry)
+  applyMaterial(mesh, {
     color,
     transmission,
-    opacity, 
+    opacity,
     transparent: opacity < 1,
     reflectivity,
     roughness,
     metalness,
-    ...texture ? { map: getTextures(texture)} : {},
+    material,
   })
-  const mesh = new THREE.Mesh(geometry, material)
+  mesh.material.map = texture ? getTextures(texture) : null
   mesh.position.set(...position)
   mesh.castShadow = castShadow
   mesh.receiveShadow = receiveShadow
@@ -93,9 +95,9 @@ const getBall = (
 /**
  * Create a cube with physics, texture, and shadow
  * Friction and bounciness is size based
- * @param scene
- * @param world
- * @param options
+ * @param { THREE.Scene } scene
+ * @param { RAPIER.World } world
+ * @param { ModelOptions } options
  */
 const getCube = (
   scene: THREE.Scene,
@@ -131,17 +133,17 @@ const getCube = (
   const initialValues = { size, rotation, position, color }
   // Create and add model
   const geometry = new THREE.BoxGeometry(...size)
-  const meshMaterial = new THREE[material]({
+  const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
     transmission,
-    opacity, 
+    opacity,
     transparent: opacity < 1,
     reflectivity,
     roughness,
     metalness,
-    ...texture ? { map: getTextures(texture)} : {},
+    material,
   })
-  const mesh = new THREE.Mesh(geometry, meshMaterial)
+  mesh.material.map = texture ? getTextures(texture) : null
   mesh.position.set(...position)
   mesh.rotation.set(...rotation)
   mesh.castShadow = castShadow

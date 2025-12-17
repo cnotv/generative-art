@@ -27,7 +27,6 @@ export interface ModelOptions extends CommonOptions {
   transmission?: number;
   transparent?: boolean;
   material?: typeof THREE.Material | string | boolean;
-  materialType?: 'MeshPhysicalMaterial' | 'MeshStandardMaterial' | 'MeshLambertMaterial' | 'MeshPhongMaterial' | 'MeshBasicMaterial';
   rotation?: CoordinateTuple;
   scale?: CoordinateTuple;
   shape?: 'cuboid' | 'ball';

@@ -401,7 +401,6 @@ const applyMaterial = (
   mesh: THREE.Mesh,
   {
     material,
-    materialType,
     color,
     opacity,
     reflectivity,
@@ -430,7 +429,7 @@ const applyMaterial = (
       materialProps.map = oldMaterial.map;
     }
 
-    if (materialType === 'MeshPhysicalMaterial') {
+    if (material === 'MeshPhysicalMaterial') {
       mesh.material = new THREE.MeshPhysicalMaterial({
         ...materialProps,
         reflectivity,
@@ -444,26 +443,28 @@ const applyMaterial = (
         thickness,
         envMapIntensity,
       });
-    } else if (materialType === 'MeshStandardMaterial') {
+    } else if (material === 'MeshStandardMaterial') {
       mesh.material = new THREE.MeshStandardMaterial({
         ...materialProps,
         roughness,
         metalness,
       });
-    } else if (materialType === 'MeshLambertMaterial') {
+    } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
         ...materialProps,
         flatShading: false,
       });
-    } else if (materialType === 'MeshPhongMaterial') {
+    } else if (material === 'MeshPhongMaterial') {
       mesh.material = new THREE.MeshPhongMaterial({
         ...materialProps,
         shininess: 30,
       });
-    } else if (materialType === 'MeshBasicMaterial') {
+    } else if (material === 'MeshBasicMaterial') {
       mesh.material = new THREE.MeshBasicMaterial(materialProps);
     }
   }
+
+  return mesh;
 };
 
 const loadFBX = (
@@ -706,7 +707,6 @@ const getModel = async (
     roughness = 0.1,
     metalness = 0.8,
     material = false,
-    materialType = 'MeshPhysicalMaterial',
     transmission = 0.2,
     clearcoat = 1.0,
     clearcoatRoughness = 0.05,
@@ -730,11 +730,11 @@ const getModel = async (
   let gltf: any = {};
 
   if (isGLTF) {
-    const result = await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, materialType, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow});
+    const result = await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow});
     mesh = result.model;
     gltf = result.gltf;
   } else {
-    mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, materialType, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
+    mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
   }
   
   // Apply material colors if provided

@@ -14,8 +14,7 @@ const chameleonConfig = {
   castShadow: true,
   receiveShadow: true,
   animations: "chameleon_animations.fbx",
-  material: true,
-  materialType: "MeshLambertMaterial",
+  material: "MeshLambertMaterial",
 };
 
 const setupConfig = {
@@ -69,7 +68,7 @@ const meshProperties = ref({
   position: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0 },
   scale: { x: 0, y: 0, z: 0 },
-  materialType: "",
+  material: "",
   color: "",
   opacity: 1,
   visible: true,
@@ -210,7 +209,7 @@ const init = async () => {
           castShadow: mesh.castShadow,
           receiveShadow: mesh.receiveShadow,
           // Material properties
-          materialType: mesh.material?.type || "N/A",
+          material: mesh.material?.type || "N/A",
           color: mesh.material?.color ? `#${mesh.material.color.getHexString()}` : "N/A",
           opacity: mesh.material?.opacity?.toFixed(2) || 1,
           transparent: mesh.material?.transparent || false,
@@ -745,7 +744,7 @@ onMounted(async () => init());
           <h4>Material</h4>
           <div class="property">
             <span class="label">Type:</span>
-            <span class="value">{{ meshProperties.materialType }}</span>
+            <span class="value">{{ meshProperties.material }}</span>
           </div>
           <div class="property">
             <span class="label">Color:</span>
