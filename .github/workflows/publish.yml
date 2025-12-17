@@ -1,24 +1,44 @@
 name: Publish to NPM
+
 on:
   release:
-    types: [created] # Trigger when you create a Release in GitHub
+    types: [created]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
         with:
-          version: 8
-      - uses: actions/setup-node@v4
+          version: 9 # or your preferred version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
+          # This creates an .npmrc file that references NODE_AUTH_TOKEN
           registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
 
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm publish --access public
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Packages
+        # -r runs recursively in all packages
+        # --if-present prevents failure if a package lacks a build script
+        run: pnpm -r run build --if-present
+
+      - name: Publish to NPM
+        # -r: Recursive (publishes all packages in workspaces)
+        # --no-git-checks: Required because 'on: release' usually creates a detached HEAD state
+        # --access public: Needed if your package scope (e.g. @cnotv) is usually private
+        run: pnpm publish -r --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
