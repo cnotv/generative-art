@@ -6,41 +6,80 @@ on:
       - main
       - master
 
+env:
+  # Use GitHub Container Registry
+  REGISTRY: ghcr.io
+  # image name: owner/repo
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   run-tests:
     uses: ./.github/workflows/test.yml
 
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     needs: run-tests
+    # Required for GITHUB_TOKEN deployment to GHCR
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: pnpm/action-setup@v2
         with:
           version: 8
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha
 
-      - name: Install dependencies
-        run: pnpm install
 
-      - name: Build
-        run: pnpm run build
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Deploy
-        uses: appleboy/scp-action@master
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USERNAME }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
           port: ${{ secrets.HETZNER_PORT || '22' }}
-          source: "dist/*"
-          target: ${{ secrets.HETZNER_TARGET_DIR }}
-          strip_components: 1
+          script: |
+            # Navigate to where your docker-compose.yml is located
+            cd ${{ secrets.HETZNER_TARGET_DIR }}
+            
+            # Log into registry on the server (if repo is private)
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Pull the new image
+            docker compose pull
+            
+            # Restart containers
+            docker compose up -d
+            
+            # Optional: Clean up old images to save disk space
+            docker image prune -f
