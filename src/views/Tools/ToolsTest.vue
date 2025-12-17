@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, Ref, ShallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef, type ShallowRef } from "vue";
 import { getTools, getModel, colorModel } from "@webgamekit/threejs";
-import {
-  updateAnimation,
-  controllerTurn,
-  controllerForward,
-} from "@webgamekit/animation";
+import {  controllerTurn, controllerForward } from "@webgamekit/animation";
 import waterImage from "@/assets/water.png";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -118,29 +114,19 @@ const init = async (): Promise<void> => {
       const speed = {
         movement: 1,
         turning: 4,
-        jump: 2,
+        jump: 3,
       };
+      const maxJump = 3;
       colorModel(chameleon.mesh, chameleonConfig.materialColors);
 
       animate({
         beforeTimeline: () => {},
         timeline: [
           {
-            action: () => {
-              if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
-                updateAnimation(
-                  chameleon.mixer,
-                  chameleon.actions["Idle_A"],
-                  getDelta(),
-                  10
-                );
-            },
-          },
-          {
             frequency: speed.movement,
             action: () => {
               if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
-                controllerForward(chameleon, [], distance, getDelta(), false);
+                controllerForward(chameleon, [], distance, getDelta(), 'Idle_A', false);
             },
           },
           {
@@ -173,15 +159,17 @@ const init = async (): Promise<void> => {
           {
             action: () => {
               if (isJumping.value) {
-                chameleon.mesh.position.y +=
-                  Math.sin((Date.now() * 0.01) / speed.jump) * 0.2;
+                if (chameleon.mesh.position.y >= chameleonConfig.position[1] + maxJump) {
+                  isJumping.value = false;
+                } else {
+                  chameleon.mesh.position.y += speed.jump * 0.1;
+                }
               } else {
-                // chameleon.mesh.position.y -=
-                //   Math.sin(Date.now() * 0.01 / speed.jump) * 0.2;
+                chameleon.mesh.position.y -= speed.jump * 0.1;
               }
 
+              // Fake gravity
               if (chameleon.mesh.position.y <= chameleonConfig.position[1] + 0.1) {
-                isJumping.value = false;
                 canJump.value = true;
                 chameleon.mesh.position.y = chameleonConfig.position[1];
               }
