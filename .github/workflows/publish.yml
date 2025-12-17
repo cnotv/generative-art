@@ -38,6 +38,4 @@ jobs:
         # -r: Recursive (publishes all packages in workspaces)
         # --no-git-checks: Required because 'on: release' usually creates a detached HEAD state
         # --access public: Needed if your package scope (e.g. @cnotv) is usually private
-        run: pnpm publish -r --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish -r --no-git-checks --access public --provenance
