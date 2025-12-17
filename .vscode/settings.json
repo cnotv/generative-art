@@ -10,6 +10,7 @@
     "metalness",
     "Phong",
     "raycaster",
+    "UMAMI",
     "webgametoolkit"
   ],
   "vue3snippets.enable-compile-vue-file-on-did-save-code": true

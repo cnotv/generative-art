@@ -5,16 +5,20 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import * as Sentry from "@sentry/vue";
+import { useUmami } from '@/utils/umami';
+
+const { loadUmami } = useUmami();
 
 const app = createApp(App)
-
 
 Sentry.init({
   app,
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  // Setting this option to true will send default PII data to Sentry.
-  // For example, automatic IP address collection on events
   sendDefaultPii: true
+});
+
+loadUmami({
+  websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID!,
 });
 
 app.use(createPinia())
