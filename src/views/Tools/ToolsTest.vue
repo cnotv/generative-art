@@ -1,5 +1,5 @@
-<script setup>
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref, shallowRef, Ref, ShallowRef } from "vue";
 import { getTools, getModel, colorModel } from "@webgamekit/threejs";
 import {
   updateAnimation,
@@ -37,22 +37,24 @@ const setupConfig = {
   lights: { directional: { intensity: 0.1 } },
 };
 
-const gameState = shallowRef({ data: { score: 0 } });
+const gameState: ShallowRef<{ data: { score: number } }> = shallowRef({
+  data: { score: 0 },
+});
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
 const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
-const logs = shallowRef("");
-const currentActions = shallowRef({});
+const logs = shallowRef<string[]>([]);
+const currentActions = shallowRef<Record<string, any>>({});
 
-const handleJump = () => {
+const handleJump = (): void => {
   if (isJumping.value || !canJump.value) return;
   playAudioFile(jumpSound);
   isJumping.value = true;
   canJump.value = false;
 };
 
-const getLogs = (actions) =>
+const getLogs = (actions: Record<string, any>): string[] =>
   Object.keys(actions)
     .filter((action) => !!actions[action])
     .map(
@@ -80,7 +82,7 @@ const bindings = {
       tap: "jump",
     },
   },
-  onAction: (action, trigger, device) => {
+  onAction: (action: string, trigger: string, device: string) => {
     if (currentActions.value[action]) return; // Prevent multiple triggers from the keyboard
     currentActions.value = {
       ...currentActions.value,
@@ -94,15 +96,15 @@ const bindings = {
         break;
     }
   },
-  onRelease: (action) => {
+  onRelease: (action: string) => {
     currentActions.value = { ...currentActions.value, [action]: null };
     logs.value = getLogs(currentActions.value);
   },
 };
 createControls(bindings);
 
-const canvas = ref(null);
-const init = async () => {
+const canvas = ref<HTMLCanvasElement | null>(null);
+const init = async (): Promise<void> => {
   const { setup, animate, scene, world, getDelta } = await getTools({
     canvas: canvas.value,
   });
@@ -192,8 +194,8 @@ const init = async () => {
 };
 
 onMounted(async () => {
-  init();
-  initializeAudio();
+  await init();
+  await initializeAudio();
   window.addEventListener("resize", init);
 });
 onUnmounted(() => {
