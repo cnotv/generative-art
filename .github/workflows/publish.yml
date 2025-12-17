@@ -32,8 +32,7 @@ jobs:
 
       - name: Build Packages
         # -r runs recursively in all packages
-        # --if-present prevents failure if a package lacks a build script
-        run: pnpm -r run build --if-present
+        run: pnpm -r run build
 
       - name: Publish to NPM
         # -r: Recursive (publishes all packages in workspaces)
