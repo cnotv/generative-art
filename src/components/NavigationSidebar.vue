@@ -1,5 +1,9 @@
 <script lang="ts" setup>
-import { generatedRoutes } from "@/config/router";
+import { generatedRoutes as generatedRoutesAll } from "@/config/router";
+const generatedRoutes = generatedRoutesAll.filter((route) => {
+  const slashCount = (route.path.match(/\//g) || []).length;
+  return slashCount <= 3;
+});
 </script>
 
 <template>
