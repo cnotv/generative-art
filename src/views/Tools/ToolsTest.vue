@@ -68,10 +68,12 @@ const bindings = {
       s: "moving",
     },
     gamepad: {
-      a: "jump",
-      b: "toggle-move",
-      left: "turn-left",
-      right: "turn-right",
+      cross: "jump",
+      circle: "toggle-move",
+      'dpad-left': "turn-left",
+      'dpad-right': "turn-right",
+      'dpad-down': "moving",
+      'dpad-up': "moving",
     },
     touch: {
       tap: "jump",

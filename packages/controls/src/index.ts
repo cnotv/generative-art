@@ -18,6 +18,7 @@ export interface ControlsOptions {
   mouse?: boolean;
   touchTarget?: HTMLElement | null;
   mouseTarget?: HTMLElement | null;
+  buttonMap?: string[]; // Optional: custom button names by index
 }
 
 export type ControlsCurrents = Record<string, { action: string; trigger: string; device: string }>;
@@ -28,6 +29,7 @@ export type ControlsExtras = {
   remapControlsOptions: (newOptions: ControlsOptions) => void;
   currentActions: ControlsCurrents;
   logs: ControlsLogs;
+  buttonMap: string[];
 }
 
 /**
@@ -40,7 +42,7 @@ export type ControlsExtras = {
  * @example
  * ```typescript
  * import { createControls } from '@webgamekit/controls';
- * const { destroyControls, remapControlsOptions, currentActions, logs } = createControls({
+ * const { destroyControls, remapControlsOptions, currentActions, logs, buttonMap } = createControls({
  *   mapping: {
  *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },
  *     gamepad: { left: 'left', right: 'right', a: 'jump' },
@@ -53,6 +55,28 @@ export type ControlsExtras = {
  * ```
  */
 export function createControls(options: ControlsOptions): ControlsExtras {
+  // Default button names for DualShock/Xbox (can be overridden)
+  const buttonMap = [
+    'cross',    // 0
+    'circle',   // 1
+    'square',   // 2
+    'triangle', // 3
+    'l1',       // 4
+    'r1',       // 5
+    'l2',       // 6
+    'r2',       // 7
+    'share',    // 8
+    'options',  // 9
+    'l3',       // 10
+    'r3',       // 11
+    'dpad-up',  // 12
+    'dpad-down',// 13
+    'dpad-left',// 14
+    'dpad-right',// 15
+    'ps',       // 16
+    'touchpad', // 17
+  ];
+
   // Store for currently used actions and logs
   const currentActions: Record<string, { action: string; trigger: string; device: string }> = {};
   const logs: Array<{ action: string; trigger: string; device: string; timestamp: number; type: string }> = [];
@@ -110,7 +134,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     const gp = gamepadIndex !== null ? gamepads[gamepadIndex] : null;
     if (!gp) return;
     gp.buttons.forEach((btn, i) => {
-      const btnName = Object.keys(mapping.gamepad || {})[i];
+      const btnName = (options.buttonMap && options.buttonMap[i]) || buttonMap[i] || `button${i}`;
       const action = mapping.gamepad?.[btnName] ?? 'no action';
       if (!action) {
         lastButtons[i] = btn.pressed;
@@ -248,5 +272,6 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     remapControlsOptions,
     currentActions,
     logs,
+    buttonMap,
   };
 }
