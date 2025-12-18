@@ -29,4 +29,6 @@ body {
 html,
 body {
   user-select: none;
+  overflow: hidden;
+  max-height: 100vh;
 }
