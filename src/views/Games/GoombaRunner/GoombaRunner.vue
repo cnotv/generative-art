@@ -123,6 +123,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       route,
       canvas,
     });
+    remapControlsOptions(bindings["idle"]);
     await setup({
       config: setupConfig,
     });

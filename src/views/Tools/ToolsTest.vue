@@ -41,7 +41,6 @@ createGame({ data: { score: 0 } }, gameState, onUnmounted);
 const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
 const logs = shallowRef<string[]>([]);
-const currentActions = shallowRef<Record<string, any>>({});
 
 const handleJump = (): void => {
   if (isJumping.value || !canJump.value) return;
@@ -78,13 +77,8 @@ const bindings = {
       tap: "jump",
     },
   },
-  onAction: (action: string, trigger: string, device: string) => {
-    if (currentActions.value[action]) return; // Prevent multiple triggers from the keyboard
-    currentActions.value = {
-      ...currentActions.value,
-      [action]: { action, trigger, device },
-    };
-    logs.value = getLogs(currentActions.value);
+  onAction: (action: string) => {
+    logs.value = getLogs(currentActions);
 
     switch (action) {
       case "jump":
@@ -92,12 +86,11 @@ const bindings = {
         break;
     }
   },
-  onRelease: (action: string) => {
-    currentActions.value = { ...currentActions.value, [action]: null };
-    logs.value = getLogs(currentActions.value);
+  onRelease: () => {
+    logs.value = getLogs(currentActions);
   },
 };
-createControls(bindings);
+const { destroyControls, currentActions, remapControlsOptions } = createControls(bindings);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
@@ -118,6 +111,7 @@ const init = async (): Promise<void> => {
       };
       const maxJump = 3;
       colorModel(chameleon.mesh, chameleonConfig.materialColors);
+      remapControlsOptions(bindings);
 
       animate({
         beforeTimeline: () => {},
@@ -125,14 +119,14 @@ const init = async (): Promise<void> => {
           {
             frequency: speed.movement,
             action: () => {
-              if (!currentActions.value["toggle-move"] || currentActions.value["moving"])
+              if (!currentActions["toggle-move"] || currentActions["moving"])
                 controllerForward(chameleon, [], distance, getDelta(), 'Idle_A', false);
             },
           },
           {
             frequency: speed.movement * angle,
             action: () => {
-              if (!currentActions.value["toggle-move"]) {
+              if (!currentActions["toggle-move"]) {
                 controllerTurn(chameleon, angle);
               }
             },
@@ -140,10 +134,10 @@ const init = async (): Promise<void> => {
           {
             frequency: speed.movement,
             action: () => {
-              if (currentActions.value["toggle-move"]) {
-                if (currentActions.value["turn-left"])
+              if (currentActions["toggle-move"]) {
+                if (currentActions["turn-left"])
                   controllerTurn(chameleon, speed.turning);
-                if (currentActions.value["turn-right"])
+                if (currentActions["turn-right"])
                   controllerTurn(chameleon, -speed.turning);
               }
             },
@@ -151,7 +145,7 @@ const init = async (): Promise<void> => {
           {
             frequency: speed.movement * angle * 4,
             action: () => {
-              if (!currentActions.value["toggle-move"]) {
+              if (!currentActions["toggle-move"]) {
                 gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
               }
             },
@@ -188,6 +182,7 @@ onMounted(async () => {
 });
 onUnmounted(() => {
   stopMusic();
+  destroyControls();
   window.removeEventListener("resize", init);
 });
 </script>
