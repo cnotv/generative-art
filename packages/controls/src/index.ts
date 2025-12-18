@@ -20,13 +20,18 @@ export interface ControlsOptions {
   mouseTarget?: HTMLElement | null;
 }
 
+export type ControlsExtras = {
+  destroyControls: () => void;
+  remapControlsOptions: (newOptions: ControlsOptions) => void;
+}
+
 /**
  * Stateless controls logic for keyboard, gamepad, and touch
  * This module does not manage state, but emits events or calls callbacks
  * All mapping is configurable via a config object and updated with remapControlsOptions()
  * 
  * @param { ControlsOptions } options Controls configuration options
- * @returns { destroyControls: () => void, remapControlsOptions: (newOptions: ControlsOptions) => void }
+ * @returns { ControlsExtras }
  * @example
  * ```typescript
  * import { createControls } from '@webgamekit/controls';
@@ -42,7 +47,7 @@ export interface ControlsOptions {
  * });
  * ```
  */
-export function createControls(options: ControlsOptions) {
+export function createControls(options: ControlsOptions): ControlsExtras {
   const { mapping, onAction, onRelease, onInput } = options;
 
   // Keyboard
