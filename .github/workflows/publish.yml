@@ -34,6 +34,9 @@ jobs:
         # -r runs recursively in all packages
         run: pnpm -r run build
 
+      - name: Set up npm auth for pnpm
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
       - name: Publish to NPM
         # -r: Recursive (publishes all packages in workspaces)
         # --no-git-checks: Required because 'on: release' usually creates a detached HEAD state
