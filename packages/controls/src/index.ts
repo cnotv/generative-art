@@ -20,9 +20,14 @@ export interface ControlsOptions {
   mouseTarget?: HTMLElement | null;
 }
 
+export type ControlsCurrents = Record<string, { action: string; trigger: string; device: string }>;
+export type ControlsLogs = Array<{ action: string; trigger: string; device: string; timestamp: number }>;
+
 export type ControlsExtras = {
   destroyControls: () => void;
   remapControlsOptions: (newOptions: ControlsOptions) => void;
+  currentActions: ControlsCurrents;
+  logs: ControlsLogs;
 }
 
 /**
@@ -35,7 +40,7 @@ export type ControlsExtras = {
  * @example
  * ```typescript
  * import { createControls } from '@webgamekit/controls';
- * const { destroyControls, remapControlsOptions } = createControls({
+ * const { destroyControls, remapControlsOptions, currentActions, logs } = createControls({
  *   mapping: {
  *     keyboard: { ArrowLeft: 'left', ArrowRight: 'right', ' ': 'jump' },
  *     gamepad: { left: 'left', right: 'right', a: 'jump' },
@@ -48,23 +53,51 @@ export type ControlsExtras = {
  * ```
  */
 export function createControls(options: ControlsOptions): ControlsExtras {
-  const { mapping, onAction, onRelease, onInput } = options;
+  // Store for currently used actions and logs
+  const currentActions: Record<string, { action: string; trigger: string; device: string }> = {};
+  const logs: Array<{ action: string; trigger: string; device: string; timestamp: number; type: string }> = [];
+
+  let mapping = options.mapping;
+  let onActionRaw = options.onAction || null;
+  let onReleaseRaw = options.onRelease || null;
+  const onInput = options.onInput;
+
+  // Wrapper for onAction to compile logic before calling user handler
+  function onAction(action: ControlAction, trigger: string, device: string) {
+    if (currentActions[action]) return;
+    currentActions[action] = { action, trigger, device };
+    logs.push({ action, trigger, device, timestamp: Date.now(), type: 'action' });
+    if (onActionRaw) onActionRaw(action, trigger, device);
+  }
+
+  // Wrapper for onRelease to remove from currentActions and log
+  function onRelease(action: ControlAction, trigger: string, device: string) {
+    if (currentActions[action]) {
+      delete currentActions[action];
+      logs.push({ action, trigger, device, timestamp: Date.now(), type: 'release' });
+    }
+    if (onReleaseRaw) onReleaseRaw(action, trigger, device);
+  }
 
   // Keyboard
-  function handleKey(event: KeyboardEvent, eventType: ControlEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     const action = mapping.keyboard?.[event.key] ?? 'no action';
     if (onAction) onAction(action, event.key, 'keyboard');
-    if (onRelease && eventType === 'up') onRelease(action, event.key, 'keyboard');
+    if (onInput) onInput(action, event.key, 'keyboard');
+  }
+  function handleKeyUp(event: KeyboardEvent) {
+    const action = mapping.keyboard?.[event.key] ?? 'no action';
+    if (onRelease) onRelease(action, event.key, 'keyboard');
     if (onInput) onInput(action, event.key, 'keyboard');
   }
 
   function bindKeyboard() {
-    window.addEventListener('keydown', (e) => handleKey(e, 'down'));
-    window.addEventListener('keyup', (e) => handleKey(e, 'up'));
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
   }
   function unbindKeyboard() {
-    window.removeEventListener('keydown', (e) => handleKey(e, 'down'));
-    window.removeEventListener('keyup', (e) => handleKey(e, 'up'));
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
   }
 
   // Gamepad (polling based)
@@ -178,16 +211,42 @@ export function createControls(options: ControlsOptions): ControlsExtras {
   }
 
   // Auto-bind on create
-  let destroyControls = autoBind();
+  const destroyControls = function() {
+    // Unbind all listeners
+    unbindAll();
+    // Reset state
+    for (const key in currentActions) delete currentActions[key];
+    logs.length = 0;
+  };
+  // Helper to unbind all listeners (used in remap and destroy)
+  function unbindAll() {
+    // Re-run autoBind to get unbinds, but don't rebind
+    const unbinds: (() => void)[] = [];
+    if (options.keyboard !== false) unbinds.push(unbindKeyboard);
+    if (options.gamepad !== false && isGamepadSupported()) unbinds.push(unbindGamepad);
+    const touchTarget = options.touchTarget || window;
+    if (options.touch !== false && isTouchSupported() && touchTarget && touchTarget instanceof HTMLElement) unbinds.push(() => unbindTouch(touchTarget));
+    const mouseTarget = options.mouseTarget || window;
+    if (options.mouse !== false && mouseTarget && mouseTarget instanceof HTMLElement) unbinds.push(() => unbindMouse(mouseTarget));
+    unbinds.forEach((fn) => fn());
+  }
 
   function remapControlsOptions(newOptions: ControlsOptions) {
-    destroyControls();
-    createControls( newOptions );
-    destroyControls = autoBind();
+    // Unbind all current event listeners, but do not reset logs/currentActions
+    unbindAll();
+    // Update internal state
+    Object.assign(options, newOptions);
+    mapping = newOptions.mapping || {};
+    onActionRaw = newOptions.onAction || null;
+    onReleaseRaw = newOptions.onRelease || null;
+    // Re-bind listeners with new options
+    autoBind();
   }
 
   return {
     destroyControls,
     remapControlsOptions,
+    currentActions,
+    logs,
   };
 }
