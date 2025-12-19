@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef } from "vue";
-import { getTools, getModel, colorModel, setCameraPreset } from "@webgamekit/threejs";
+import {
+  getTools,
+  getModel,
+  colorModel,
+  setCameraPreset,
+  CameraPreset,
+} from "@webgamekit/threejs";
 import { controllerTurn, controllerForward } from "@webgamekit/animation";
 import waterImage from "@/assets/water.png";
 import { createGame } from "@webgamekit/game";
@@ -57,7 +63,13 @@ const getLogs = (actions: Record<string, any>): string[] =>
       (action) =>
         `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
     );
-let cameraPreset: any = null; // TODO: Find way to bind outside (state management?)
+let cameraPreset: any = null; // TODO: Identified issue for tooling block scoping
+
+// Return binding 1 to x for each preset
+const cameraBindings = Object.values(CameraPreset).reduce(
+  (acc, preset, index) => ({ ...acc, [index + 1]: preset }),
+  {}
+);
 const bindings = {
   mapping: {
     keyboard: {
@@ -67,7 +79,7 @@ const bindings = {
       d: "turn-right",
       w: "moving",
       s: "moving",
-      1: "perspective",
+      ...cameraBindings,
     },
     gamepad: {
       cross: "jump",
@@ -88,8 +100,16 @@ const bindings = {
       case "jump":
         handleJump();
         break;
+
+      // TODO: Iterate instead of hardcoding
       case "perspective":
-        setCameraPreset(cameraPreset, action);
+      case "orthographic":
+      case "fisheye":
+      case "cinematic":
+      case "orbit":
+      case "orthographic-following":
+      case "top-down":
+        setCameraPreset(cameraPreset, action as CameraPreset);
         break;
     }
   },

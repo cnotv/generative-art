@@ -1045,62 +1045,71 @@ interface CameraPresetConfig {
 }
 
 /**
+ * Enum for camera preset keys
+ */
+export enum CameraPreset {
+  Perspective = 'perspective',
+  Fisheye = 'fisheye',
+  Cinematic = 'cinematic',
+  Orbit = 'orbit',
+  Orthographic = 'orthographic',
+  OrthographicFollowing = 'orthographic-following',
+  TopDown = 'top-down',
+}
+
+/**
  * Dictionary of predefined camera presets for common use cases
  */
-const cameraPresets: Record<string, CameraPresetConfig> = {
+const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
   /**
    * Standard perspective camera with 75° field of view
    * Good for general 3D scenes with natural depth perception
    */
-  perspective: {
+  [CameraPreset.Perspective]: {
     type: 'perspective',
     fov: 75,
     position: [0, 5, 20],
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Wide-angle fisheye perspective with 120° field of view
    * Creates dramatic distortion effect, useful for immersive views
    */
-  fisheye: {
+  [CameraPreset.Fisheye]: {
     type: 'perspective',
     fov: 120,
     position: [0, 5, 20],
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Narrow cinematic perspective with 35° field of view
    * Mimics telephoto lens, reduces distortion, good for dramatic scenes
    */
-  cinematic: {
+  [CameraPreset.Cinematic]: {
     type: 'perspective',
     fov: 35,
     position: [0, 5, 20],
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Free orbit perspective for user-controlled camera movement
    * Typically used with OrbitControls for interactive exploration
    */
-  orbit: {
+  [CameraPreset.Orbit]: {
     type: 'perspective',
     fov: 75,
     position: [0, 10, 15],
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Isometric orthographic camera with elevated diagonal view
    * No perspective distortion, ideal for strategy games and technical views
    */
-  orthographic: {
+  [CameraPreset.Orthographic]: {
     type: 'orthographic',
     position: [10, 12, 10],
     lookAt: [0, -15, 0],
@@ -1109,12 +1118,11 @@ const cameraPresets: Record<string, CameraPresetConfig> = {
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Following orthographic camera that tracks targets
    * Maintains constant scale while following moving objects
    */
-  'orthographic-following': {
+  [CameraPreset.OrthographicFollowing]: {
     type: 'orthographic',
     position: [0, 5, 20],
     frustumSize: 30,
@@ -1122,12 +1130,11 @@ const cameraPresets: Record<string, CameraPresetConfig> = {
     near: 0.1,
     far: 1000,
   },
-  
   /**
    * Top-down orthographic view
    * Perfect for 2D-style games or map views
    */
-  'top-down': {
+  [CameraPreset.TopDown]: {
     type: 'orthographic',
     position: [0, 50, 0],
     lookAt: [0, 0, 0],
@@ -1137,7 +1144,7 @@ const cameraPresets: Record<string, CameraPresetConfig> = {
     far: 1000,
   },
 };
-
+ 
 /**
  * Apply a predefined camera preset to an existing camera
  * @param camera - The Three.js camera to configure (PerspectiveCamera or OrthographicCamera)
@@ -1156,7 +1163,7 @@ const cameraPresets: Record<string, CameraPresetConfig> = {
  */
 const setCameraPreset = (
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
-  presetName: keyof typeof cameraPresets,
+  presetName: CameraPreset,
   aspect: number = window.innerWidth / window.innerHeight
 ): THREE.Camera | null => {
   const preset = cameraPresets[presetName];
