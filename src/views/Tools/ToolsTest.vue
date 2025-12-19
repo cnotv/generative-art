@@ -8,11 +8,12 @@ import {
   CameraPreset,
 } from "@webgamekit/threejs";
 import { controllerTurn, controllerForward } from "@webgamekit/animation";
-import waterImage from "@/assets/water.png";
+import groundTexture from "@/assets/grass.jpg";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import jumpSound from "@/assets/jump.wav";
+import backgroundImg from "@/assets/fire.png";
 
 const chameleonConfig = {
   position: [0, -0.75, 0] as [number, number, number],
@@ -32,7 +33,7 @@ const setupConfig = {
   camera: { position: [0, 5, 20] as [number, number, number] },
   ground: {
     size: 10000,
-    texture: waterImage,
+    texture: groundTexture,
     textureRepeat: [400, 400] as [number, number],
     color: 0x99cc99,
   },
@@ -42,6 +43,7 @@ const setupConfig = {
 
 // Use correct GameState type and initialization
 import type { GameState } from "@webgamekit/game";
+import { getCube } from "@/utils/models";
 const gameState = shallowRef<GameState>();
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
@@ -147,6 +149,16 @@ const init = async (): Promise<void> => {
         position: [1, 0.2, 0] as [number, number, number],
         type: "kinematicPositionBased", // Changed from "fixed" to allow movement
         hasGravity: false,
+      });
+      getCube(scene, world, {
+        texture: backgroundImg,
+        size: [3, 3, 0],
+        position: [12, 0.8, -10],
+        castShadow: false,
+        receiveShadow: false,
+        color: 0xffffff,
+        opacity: 0.8,
+        material: "MeshBasicMaterial",
       });
 
       colorModel(chameleon, chameleonConfig.materialColors);
