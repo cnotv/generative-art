@@ -114,6 +114,13 @@ const init = async (): Promise<void> => {
       const maxJump = 3;
       colorModel(chameleon.mesh, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
+      const cube = await getModel(scene, world, "sand_block.glb", {
+        scale: [0.01, 0.01, 0.01] as [number, number, number],
+        restitution: 0,
+        position: [1, 0.2, 0] as [number, number, number],
+        type: "kinematicPositionBased", // Changed from "fixed" to allow movement
+        hasGravity: false,
+      });
 
       animate({
         beforeTimeline: () => {},
@@ -122,7 +129,7 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             action: () => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
-                controllerForward(chameleon, [], distance, getDelta(), 'Idle_A', false);
+                controllerForward(chameleon, [cube], distance, getDelta(), 'Idle_A', false);
             },
           },
           {
