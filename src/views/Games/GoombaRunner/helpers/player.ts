@@ -6,6 +6,7 @@ import { startBackgroundFalling } from "./background";
 import jumpSound from "@/assets/jump.wav";
 import gameOverSound from "@/assets/gameover.wav";
 import starTexture from "@/assets/star1.png";
+import { updateAnimation, type ComplexModel } from "@webgamekit/animation";
 
 interface PlayerMovement {
   forward: number;
@@ -30,11 +31,11 @@ const createPlayer = async (
     // showHelper: config.player.helper,
   });
 
-  if (!goombaModel || !goombaModel.mesh) {
+  if (!goombaModel) {
     throw new Error("Failed to load goomba model");
   }
 
-  const player = goombaModel.mesh;
+  const player = goombaModel;
   player.castShadow = true;
 
   // Update colors
@@ -268,19 +269,18 @@ const movePlayer = (
 };
 
 const updatePlayerAnimation = (
-  model: any,
+  model: ComplexModel,
   isPlaying: boolean,
   gameScore: number,
   getDelta: () => number,
-  updateAnimation: any,
   getSpeed: any,
   config: any
 ) => {
   if (!isPlaying) return;
   const animationSpeed = getSpeed(config.player.speed, gameScore);
   updateAnimation(
-    model.mixer,
-    model.actions.run,
+    model.userData.mixer,
+    model.userData.actions.run,
     getDelta(),
     animationSpeed
   );

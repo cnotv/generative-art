@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, type ShallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { getTools, getModel, colorModel } from "@webgamekit/threejs";
-import {  controllerTurn, controllerForward } from "@webgamekit/animation";
+import { controllerTurn, controllerForward } from "@webgamekit/animation";
 import waterImage from "@/assets/water.png";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -9,8 +9,8 @@ import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import jumpSound from "@/assets/jump.wav";
 
 const chameleonConfig = {
-  position: [0, -0.75, 0],
-  scale: [0.05, 0.05, 0.05],
+  position: [0, -0.75, 0] as [number, number, number],
+  scale: [0.05, 0.05, 0.05] as [number, number, number],
   restitution: -10,
   boundary: 0.5,
   // type: "kinematicPositionBased",
@@ -19,23 +19,24 @@ const chameleonConfig = {
   receiveShadow: true,
   animations: "chameleon_animations.fbx",
   material: "MeshLambertMaterial",
+  materialColors: [0x99cc99],
 };
 
 const setupConfig = {
-  camera: { position: [0, 5, 20] },
+  camera: { position: [0, 5, 20] as [number, number, number] },
   ground: {
     size: 10000,
     texture: waterImage,
-    textureRepeat: [400, 400],
+    textureRepeat: [400, 400] as [number, number],
     color: 0x99cc99,
   },
   sky: { size: 500, color: 0x87ceeb },
   lights: { directional: { intensity: 0.1 } },
 };
 
-const gameState: ShallowRef<{ data: { score: number } }> = shallowRef({
-  data: { score: 0 },
-});
+// Use correct GameState type and initialization
+import type { GameState } from "@webgamekit/game";
+const gameState = shallowRef<GameState>();
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
 const isJumping = shallowRef(false);
@@ -70,10 +71,10 @@ const bindings = {
     gamepad: {
       cross: "jump",
       circle: "toggle-move",
-      'dpad-left': "turn-left",
-      'dpad-right': "turn-right",
-      'dpad-down': "moving",
-      'dpad-up': "moving",
+      "dpad-left": "turn-left",
+      "dpad-right": "turn-right",
+      "dpad-down": "moving",
+      "dpad-up": "moving",
     },
     touch: {
       tap: "jump",
@@ -92,10 +93,13 @@ const bindings = {
     logs.value = getLogs(currentActions);
   },
 };
-const { destroyControls, currentActions, remapControlsOptions } = createControls(bindings);
+const { destroyControls, currentActions, remapControlsOptions } = createControls(
+  bindings
+);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
+  if (!canvas.value) return;
   const { setup, animate, scene, world, getDelta } = await getTools({
     canvas: canvas.value,
   });
@@ -103,7 +107,6 @@ const init = async (): Promise<void> => {
   await setup({
     config: setupConfig,
     defineSetup: async () => {
-      const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const angle = 90;
       const distance = 0.1;
       const speed = {
@@ -112,8 +115,8 @@ const init = async (): Promise<void> => {
         jump: 3,
       };
       const maxJump = 3;
-      colorModel(chameleon.mesh, chameleonConfig.materialColors);
-      remapControlsOptions(bindings);
+
+      const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const cube = await getModel(scene, world, "sand_block.glb", {
         scale: [0.01, 0.01, 0.01] as [number, number, number],
         restitution: 0,
@@ -122,6 +125,8 @@ const init = async (): Promise<void> => {
         hasGravity: false,
       });
 
+      colorModel(chameleon, chameleonConfig.materialColors);
+      remapControlsOptions(bindings);
       animate({
         beforeTimeline: () => {},
         timeline: [
@@ -129,7 +134,14 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             action: () => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
-                controllerForward(chameleon, [cube], distance, getDelta(), 'Idle_A', false);
+                controllerForward(
+                  chameleon,
+                  [cube],
+                  distance,
+                  getDelta(),
+                  "Idle_A",
+                  false
+                );
             },
           },
           {
@@ -144,8 +156,7 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             action: () => {
               if (currentActions["toggle-move"]) {
-                if (currentActions["turn-left"])
-                  controllerTurn(chameleon, speed.turning);
+                if (currentActions["turn-left"]) controllerTurn(chameleon, speed.turning);
                 if (currentActions["turn-right"])
                   controllerTurn(chameleon, -speed.turning);
               }
@@ -155,26 +166,27 @@ const init = async (): Promise<void> => {
             frequency: speed.movement * angle * 4,
             action: () => {
               if (!currentActions["toggle-move"]) {
-                gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
+                if (gameState.value)
+                  gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
               }
             },
           },
           {
             action: () => {
               if (isJumping.value) {
-                if (chameleon.mesh.position.y >= chameleonConfig.position[1] + maxJump) {
+                if (chameleon.position.y >= chameleonConfig.position[1] + maxJump) {
                   isJumping.value = false;
                 } else {
-                  chameleon.mesh.position.y += speed.jump * 0.1;
+                  chameleon.position.y += speed.jump * 0.1;
                 }
               } else {
-                chameleon.mesh.position.y -= speed.jump * 0.1;
+                chameleon.position.y -= speed.jump * 0.1;
               }
 
               // Fake gravity
-              if (chameleon.mesh.position.y <= chameleonConfig.position[1] + 0.1) {
+              if (chameleon.position.y <= chameleonConfig.position[1] + 0.1) {
                 canJump.value = true;
-                chameleon.mesh.position.y = chameleonConfig.position[1];
+                chameleon.position.y = chameleonConfig.position[1];
               }
             },
           },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn } from './index';
 import * as THREE from 'three';
-import type { AnimatedComplexModel } from './types';
+import type { ComplexModel } from './types';
 
 describe('animation', () => {
   describe('animateTimeline', () => {
@@ -76,22 +76,25 @@ describe('animation', () => {
       mockMesh.position.set(0, -0.75, 0);
       mockMesh.rotation.set(0, 0, 0);
 
-      const mockModel = {
-        mesh: mockMesh,
-        rigidBody: {
-          translation: () => ({ x: 0, y: -0.75, z: 0 }),
-          setTranslation: vi.fn(),
-        },
-        mixer: {
-          update: vi.fn(),
-        },
-        actions: {
-          run: {
-            play: vi.fn(),
-            stop: vi.fn(),
+      const mockModel = Object.assign(mockMesh, {
+        userData: {
+          body: {
+            translation: () => ({ x: 0, y: -0.75, z: 0 }),
+            setTranslation: vi.fn(),
           },
-        },
-      } as unknown as AnimatedComplexModel;
+          mixer: {
+            update: vi.fn(),
+          },
+          actions: {
+            run: {
+              play: vi.fn(),
+              stop: vi.fn(),
+            },
+          },
+          initialValues: { position: [0, -0.75, 0], rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+        }
+      }) as unknown as ComplexModel;
 
       const angle = 90; // degrees per turn
       const distance = 0.1; // units per forward movement
@@ -110,7 +113,7 @@ describe('animation', () => {
       const timeline = [
         {
           frequency: speed,
-          action: () => controllerForward(mockModel, [], distance, getDelta(), false),
+          action: () => controllerForward(mockModel, [], distance, getDelta(), 'run', false),
         },
         {
           frequency: speed * angle,
@@ -151,24 +154,27 @@ describe('animation', () => {
       mockMesh.position.set(0, 0, 0);
       mockMesh.rotation.set(0, 0, 0);
 
-      const mockModel = {
-        mesh: mockMesh,
-        rigidBody: {
-          translation: () => ({ x: mockMesh.position.x, y: 0, z: mockMesh.position.z }),
-          setTranslation: vi.fn((pos) => {
-            mockMesh.position.set(pos.x, pos.y, pos.z);
-          }),
-        },
-        mixer: {
-          update: vi.fn(),
-        },
-        actions: {
-          run: {
-            play: vi.fn(),
-            stop: vi.fn(),
+      const mockModel = Object.assign(mockMesh, {
+        userData: {
+          body: {
+            translation: () => ({ x: mockMesh.position.x, y: 0, z: mockMesh.position.z }),
+            setTranslation: vi.fn((pos) => {
+              mockMesh.position.set(pos.x, pos.y, pos.z);
+            }),
           },
-        },
-      } as unknown as AnimatedComplexModel;
+          mixer: {
+            update: vi.fn(),
+          },
+          actions: {
+            run: {
+              play: vi.fn(),
+              stop: vi.fn(),
+            },
+          },
+          initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+        }
+      }) as unknown as ComplexModel;
 
       const distance = 1.0;
       const angle = 90;
@@ -180,7 +186,7 @@ describe('animation', () => {
       const timeline = [
         {
           frequency: 1,
-          action: () => controllerForward(mockModel, [], distance, getDelta(), false),
+          action: () => controllerForward(mockModel, [], distance, getDelta(), 'run', false),
         },
         {
           // Record position and turn every 10 frames

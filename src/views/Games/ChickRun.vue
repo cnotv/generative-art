@@ -61,8 +61,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
-    const elements = [] as AnimatedComplexModel[];
-    const obstacles = [] as AnimatedComplexModel[];
+    const elements = [] as ComplexModel[];
+    const obstacles = [] as ComplexModel[];
     const { animate, setup, world, scene, getDelta } = await getTools({
       stats,
       route,
@@ -117,14 +117,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   texture: brickTexture,
                   boundary: 0.5,
                   color: 0x888888,
-                }) as AnimatedComplexModel;
+                }) as ComplexModel;
                 obstacles.push(cube);
               },
             },
             // Move obstacles
             {
               action: () => {
-                obstacles.forEach((obstacle: AnimatedComplexModel) => {
+                obstacles.forEach((obstacle: ComplexModel) => {
                   obstacle.mesh.position.x -= character.speed * 3;
                 });
               },

@@ -13,25 +13,23 @@ export interface Timeline {
   interval?: [number, number];
   delay?: number;
 }
-export interface ComplexModel {
-  mesh: Model;
-  rigidBody: RAPIER.RigidBody;
-  collider: RAPIER.Collider;
-  initialValues: {
-    size: number | CoordinateTuple;
-    rotation: CoordinateTuple;
-    position: CoordinateTuple;
-    color: number | undefined;
+
+export interface ComplexModel extends Model {
+  userData: Record<string, any> & {
+    body: RAPIER.RigidBody;
+    collider: RAPIER.Collider;
+    initialValues: {
+      size: number | CoordinateTuple;
+      rotation: CoordinateTuple;
+      position: CoordinateTuple;
+      color: number | undefined;
+    };
+    type: ModelType;
+    characterController?: RAPIER.KinematicCharacterController;
+    helper?: THREE.SkeletonHelper;
+    hasGravity?: boolean;
+    actions: Record<string, THREE.AnimationAction | undefined>;
+    mixer: THREE.AnimationMixer;
   };
-  type: ModelType;
-  characterController?: RAPIER.KinematicCharacterController;
-  helper?: THREE.SkeletonHelper;
-  hasGravity?: boolean;
-}
-export interface AnimatedComplexModel extends ComplexModel {
-  actions: {
-    run?: THREE.AnimationAction;
-  };
-  mixer: THREE.AnimationMixer;
 }
 export type Direction = "forward" | "right" | "left" | "backward" | "jump";

@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
-import { Timeline, Direction, AnimatedComplexModel, ComplexModel, Model } from './types';
+import { Timeline, Direction, ComplexModel, ComplexModel, Model } from './types';
 export * from './types';
 /**
  *
@@ -45,7 +45,7 @@ declare const getTimelineLoopModel: ({ loop, length, action, list }: {
  * Bind physic to models to animate them
  * @param elements
  */
-declare const bindAnimatedElements: (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => void;
+declare const bindAnimatedElements: (elements: ComplexModel[], world: RAPIER.World, delta: number) => void;
 /**
  * Reset models and bodies to their initial state (position, rotation, forces, and torques)
  * @param elements
@@ -65,13 +65,13 @@ declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.Anima
  * @param distance
  * @param backwards
  */
-declare const controllerForward: (model: AnimatedComplexModel, bodies: ComplexModel[], distance: number, delta: number, backwards?: boolean) => void;
-declare const controllerJump: (model: AnimatedComplexModel, _bodies: ComplexModel[], _distance: number, height: number) => void;
+declare const controllerForward: (model: ComplexModel, bodies: ComplexModel[], distance: number, delta: number, backwards?: boolean) => void;
+declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _distance: number, height: number) => void;
 /**
  * Rotate model on defined angle
  * @param model
  * @param angle angle in degrees
  */
 declare const controllerTurn: (model: ComplexModel, angle: number) => void;
-declare const bodyJump: (model: AnimatedComplexModel, bodies: ComplexModel[], distance: number, height: number) => void;
+declare const bodyJump: (model: ComplexModel, bodies: ComplexModel[], distance: number, height: number) => void;
 export { animateTimeline, getTimelineLoopModel, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, };

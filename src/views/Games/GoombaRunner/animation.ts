@@ -21,7 +21,6 @@ import {
   resetPlayer,
   type PlayerMovement,
 } from "./helpers/player";
-import { updateAnimation } from "@webgamekit/animation";
 
 import { getSpeed, initPhysics } from "./helpers/setup";
 import { createPlayer } from "./helpers/player";
@@ -169,7 +168,6 @@ const createTimeline = async ({
           isGamePlaying.value,
           gameScore.value,
           getDelta,
-          updateAnimation,
           getSpeed,
           config
         );

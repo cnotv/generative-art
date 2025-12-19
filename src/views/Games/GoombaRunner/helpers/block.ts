@@ -19,7 +19,7 @@ export const addBlock = async (
     hasGravity: false,
   });
 
-  const mesh = sandBlockModel.mesh;
+  const mesh = sandBlockModel;
   mesh.castShadow = true;
   mesh.position.set(position[0], position[1], 0);
 

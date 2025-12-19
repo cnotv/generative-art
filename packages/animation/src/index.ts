@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
-import { Timeline, Direction, AnimatedComplexModel, ComplexModel, Model } from './types';
+import { Timeline, Direction, ComplexModel, Model } from './types';
 
 export * from './types';
 
@@ -89,13 +89,13 @@ const getTimelineLoopModel = ({ loop, length, action, list }: {
   }, [] as Timeline[]);
 }
 
-const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: AnimatedComplexModel[]): boolean => {
+const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: ComplexModel[]): boolean => {
   const originPosition = rigidBody.translation();
   const maxToi = 4.0;
   const solid = true;
   
   return elements.some((model) => {
-    const { rigidBody } = model;
+    const rigidBody = model.userData.body;
     const position = rigidBody.translation();
     const ray = new RAPIER.Ray(
       { x: originPosition.x, y: 3, z: originPosition.z }, // Origin
@@ -117,9 +117,10 @@ const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: 
  * Bind physic to models to animate them
  * @param elements 
  */
-const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.World, delta: number) => {
-  elements.forEach((model: AnimatedComplexModel) => {
-    const { mesh, rigidBody, helper, type, hasGravity } = model;
+const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, delta: number) => {
+  elements.forEach((model: ComplexModel) => {
+    const mesh = model;
+    const { body: rigidBody, helper, type, hasGravity } = model.userData;
     if (type === 'fixed') return;
     if (type === 'kinematicPositionBased') {
       const grounded = isGrounded(rigidBody, world, elements);
@@ -145,7 +146,9 @@ const bindAnimatedElements = (elements: AnimatedComplexModel[], world: RAPIER.Wo
  * @param elements 
  */
 const resetAnimation = (elements: ComplexModel[]) => {
-  elements.forEach(({ rigidBody, initialValues: { position: [x, y, z]} }) => {
+  elements.forEach((model) => {
+    const rigidBody = model.userData.body;
+    const { position: [x, y, z] } = model.userData.initialValues;
     rigidBody.resetForces(true);
     rigidBody.resetTorques(true);
     rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
@@ -190,52 +193,55 @@ const updateAnimation = (
  * @param backwards
  */
 const controllerForward = (
-  model: AnimatedComplexModel,
+  model: ComplexModel,
   bodies: ComplexModel[],
   distance: number,
   delta: number,
   actionName: string = 'run',
   backwards: boolean = false
 ) => {
-  const collision = 10
-  const oldPosition = model.mesh.position.clone() // Clone the current position
+  const mesh = model;
+  const { body: rigidBody, actions, mixer } = model.userData;
+  const collision = 10;
+  const oldPosition = mesh.position.clone();
 
   // Calculate the forward vector
-  const forward = new THREE.Vector3()
-  model.mesh.getWorldDirection(forward)
+  const forward = new THREE.Vector3();
+  mesh.getWorldDirection(forward);
   if (backwards) {
-    forward.negate()
+    forward.negate();
   }
-  forward.multiplyScalar(distance)
+  forward.multiplyScalar(distance);
 
   // Create a new position by adding the forward vector to the old position
-  const newPosition = oldPosition.clone().add(forward)
+  const newPosition = oldPosition.clone().add(forward);
 
   // Create a raycaster
   const raycaster = new THREE.Raycaster(oldPosition, forward.normalize(), 0, collision);
 
   // Check for intersections with the new position
-  const intersects = raycaster.intersectObjects(bodies.map(body => body.mesh), true);
+  const intersects = raycaster.intersectObjects(bodies.map(body => body), true);
 
   if (intersects.length === 0) {
     // Update the model's position and the rigid body's translation if no collision is detected
-    model.mesh.position.copy(newPosition);
-    model.rigidBody.setTranslation(newPosition, true);
+    mesh.position.copy(newPosition);
+    rigidBody.setTranslation(newPosition, true);
   }
 
-  const action = model.actions[actionName];
+  const action = actions[actionName];
   if (action) {
-    updateAnimation(model.mixer, action, delta, 10);
+    updateAnimation(mixer, action, delta, 10);
   }
 }
 
 const controllerJump = (
-  model: AnimatedComplexModel,
+  model: ComplexModel,
   _bodies: ComplexModel[],
   _distance: number,
   height: number,
 ) => {
-  model.mesh.position.y = model.mesh.position.y + height;
+  const mesh = model;
+  mesh.position.y = mesh.position.y + height;
 }
 
 /**
@@ -247,41 +253,43 @@ const controllerTurn = (
   model: ComplexModel,
   angle: number,
 ) => {
-  const { mesh } = model
+  const mesh = model;
   const radians = THREE.MathUtils.degToRad(angle);
   mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
 };
 
 const bodyJump = (
-  model: AnimatedComplexModel,
+  model: ComplexModel,
   bodies: ComplexModel[],
   distance: number,
   height: number,
 ) => {
-  const collision = 27
-  const oldPosition = model.mesh.position.clone() // Clone the current position
+  const mesh = model;
+  const rigidBody = model.userData.body;
+  const collision = 27;
+  const oldPosition = mesh.position.clone();
 
   // Calculate the forward vector
-  const forward = new THREE.Vector3()
-  model.mesh.getWorldDirection(forward)
-  forward.multiplyScalar(distance)
+  const forward = new THREE.Vector3();
+  mesh.getWorldDirection(forward);
+  forward.multiplyScalar(distance);
 
   // Create an upward vector
-  const upward = new THREE.Vector3(0, height, 0)
+  const upward = new THREE.Vector3(0, height, 0);
 
   // Create a new position by adding the forward and upward vectors to the old position
-  const newPosition = oldPosition.clone().add(upward)
+  const newPosition = oldPosition.clone().add(upward);
 
   // Check for collisions with the new position
-  const isColliding = bodies.some(({ mesh }) => {
-    const difference = mesh.position.distanceTo(newPosition)
-    return difference < collision // Adjust this value based on your collision detection needs
-  })
+  const isColliding = bodies.some((body) => {
+    const difference = body.position.distanceTo(newPosition);
+    return difference < collision; // Adjust this value based on your collision detection needs
+  });
 
   if (!isColliding) {
     // Update the model's position and the rigid body's translation if no collision is detected
-    model.mesh.position.copy(newPosition)
-    model.rigidBody.setTranslation(newPosition, true)
+    mesh.position.copy(newPosition);
+    rigidBody.setTranslation(newPosition, true);
   }
 }
 

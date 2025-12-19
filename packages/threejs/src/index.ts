@@ -5,7 +5,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { video } from './utils/video';
-import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, AnimatedComplexModel, Timeline } from '@webgamekit/animation';
+import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, ComplexModel, Timeline } from '@webgamekit/animation';
 import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig, ToolsConfig } from './types';
 
 export * from './types';
@@ -723,7 +723,7 @@ const getModel = async (
     shape = 'cuboid',
     materialColors,
   }: ModelOptions = {},
-): Promise<AnimatedComplexModel> => {
+): Promise<ComplexModel> => {
   const initialValues = { size, rotation, position, color }
   const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension))
   let mesh: Model;
@@ -780,7 +780,19 @@ const getModel = async (
     enabledRotations,
   })
   
-  return { mesh, rigidBody, collider, initialValues, actions, mixer, helper: helper as any, type, characterController, hasGravity }
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+      actions,
+      mixer,
+      helper: helper as any,
+      type,
+      characterController,
+      hasGravity
+    }
+  })
 }
 
 /**

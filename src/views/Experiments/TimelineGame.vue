@@ -141,7 +141,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         // Goomba 1
         const goomba1 = await getGoomba([0, 30, 0]);
-        const timeline1 = (model: AnimatedComplexModel) => {
+        const timeline1 = (model: ComplexModel) => {
           return [
             {
               interval: [100, 100],
@@ -176,7 +176,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         };
 
         const goomba2 = await getGoomba([-60, 30, 0]);
-        const timeline2 = (model: AnimatedComplexModel) => {
+        const timeline2 = (model: ComplexModel) => {
           return [
             {
               interval: [120, 480],
@@ -220,7 +220,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         };
 
         const goomba3 = await getGoomba([-60, 0, 60]);
-        const timeline3 = (model: AnimatedComplexModel) => {
+        const timeline3 = (model: ComplexModel) => {
           return [
             {
               interval: [200, 200],
@@ -241,7 +241,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         };
 
         const goomba4 = await getGoomba([-30 * 5, 0, -30]);
-        const timeline4 = (model: AnimatedComplexModel) => {
+        const timeline4 = (model: ComplexModel) => {
           return [
             {
               interval: [100, 100],
@@ -295,7 +295,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ];
 
         const goomba6 = await getGoomba([30, 0, 30 * 2]);
-        const timeline6 = (model: AnimatedComplexModel) => {
+        const timeline6 = (model: ComplexModel) => {
           return [
             {
               interval: [1, 0],
