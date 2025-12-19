@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef } from "vue";
-import { getTools, getModel, colorModel } from "@webgamekit/threejs";
+import { getTools, getModel, colorModel, setCameraPreset } from "@webgamekit/threejs";
 import { controllerTurn, controllerForward } from "@webgamekit/animation";
 import waterImage from "@/assets/water.png";
 import { createGame } from "@webgamekit/game";
@@ -57,7 +57,7 @@ const getLogs = (actions: Record<string, any>): string[] =>
       (action) =>
         `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
     );
-
+let cameraPreset: any = null; // TODO: Find way to bind outside (state management?)
 const bindings = {
   mapping: {
     keyboard: {
@@ -67,6 +67,7 @@ const bindings = {
       d: "turn-right",
       w: "moving",
       s: "moving",
+      1: "perspective",
     },
     gamepad: {
       cross: "jump",
@@ -87,6 +88,9 @@ const bindings = {
       case "jump":
         handleJump();
         break;
+      case "perspective":
+        setCameraPreset(cameraPreset, action);
+        break;
     }
   },
   onRelease: () => {
@@ -100,10 +104,10 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { setup, animate, scene, world, getDelta } = await getTools({
+  const { camera, setup, animate, scene, world, getDelta } = await getTools({
     canvas: canvas.value,
   });
-
+  cameraPreset = camera;
   await setup({
     config: setupConfig,
     defineSetup: async () => {
@@ -132,6 +136,7 @@ const init = async (): Promise<void> => {
         timeline: [
           {
             frequency: speed.movement,
+            name: "Walk",
             action: () => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
                 controllerForward(
@@ -145,6 +150,7 @@ const init = async (): Promise<void> => {
             },
           },
           {
+            name: "Loop: Turn chameleon",
             frequency: speed.movement * angle,
             action: () => {
               if (!currentActions["toggle-move"]) {
@@ -153,6 +159,7 @@ const init = async (): Promise<void> => {
             },
           },
           {
+            name: "Free: Turn chameleon",
             frequency: speed.movement,
             action: () => {
               if (currentActions["toggle-move"]) {
@@ -163,6 +170,7 @@ const init = async (): Promise<void> => {
             },
           },
           {
+            name: "Loop: Set score",
             frequency: speed.movement * angle * 4,
             action: () => {
               if (!currentActions["toggle-move"]) {
@@ -172,6 +180,7 @@ const init = async (): Promise<void> => {
             },
           },
           {
+            name: "Jump action",
             action: () => {
               if (isJumping.value) {
                 if (chameleon.position.y >= chameleonConfig.position[1] + maxJump) {
