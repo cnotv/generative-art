@@ -666,7 +666,7 @@ const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): 
 const getTextures = (img: string, repeat: [number, number] = [1, 1], offset: [number, number] = [0, 0]) => {
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(img);
-
+  texture.colorSpace = THREE.SRGBColorSpace;
   // Adjust the texture offset and repeat
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
