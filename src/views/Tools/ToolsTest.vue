@@ -6,6 +6,7 @@ import {
   colorModel,
   setCameraPreset,
   CameraPreset,
+  instanceMatrixMesh,
 } from "@webgamekit/threejs";
 import { controllerTurn, controllerForward } from "@webgamekit/animation";
 import groundTexture from "@/assets/grass.jpg";
@@ -150,7 +151,7 @@ const init = async (): Promise<void> => {
         type: "kinematicPositionBased", // Changed from "fixed" to allow movement
         hasGravity: false,
       });
-      getCube(scene, world, {
+      const background = getCube(scene, world, {
         texture: backgroundImg,
         size: [3, 3, 0],
         position: [12, 0.8, -10],
@@ -159,7 +160,13 @@ const init = async (): Promise<void> => {
         color: 0xffffff,
         opacity: 0.8,
         material: "MeshBasicMaterial",
+        physic: false,
       });
+      instanceMatrixMesh(background, scene, [
+        { position: [12, 0.8, -10] },
+        { position: [15, 0.8, -15] },
+        { position: [18, 0.8, -12] },
+      ]);
 
       colorModel(chameleon, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
