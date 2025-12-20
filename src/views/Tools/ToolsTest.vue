@@ -7,6 +7,7 @@ import {
   setCameraPreset,
   CameraPreset,
   instanceMatrixMesh,
+  type SetupConfig,
 } from "@webgamekit/threejs";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
@@ -69,67 +70,61 @@ const flowerConfig = {
   ...genericFlatConfig,
 }
 
-const illustrationFlowersConfig = {
-  texture: illustrationFlowersImg,
-  size: [4, 6, 0],
-  position: [-10, 1, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationCactusConfig = {
-  texture: illustrationCactusImg,
-  size: [5, 7, 0],
-  position: [-6, 2.5, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationFlowers2Config = {
-  texture: illustrationFlowers2Img,
-  size: [5, 7, 0],
-  position: [-2, 2.5, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationFlowers3Config = {
-  texture: illustrationFlowers3Img,
-  size: [5, 7, 0],
-  position: [4, 2.5, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationFlowers4Config = {
-  texture: illustrationFlowers4Img,
-  size: [5, 7, 0],
-  position: [8, 2.5, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationFlowers5Config = {
-  texture: illustrationFlowers5Img,
-  size: [5, 7, 0],
-  position: [13, 2.5, -9],
-  ...genericFlatConfig,
-}
-
-const illustrationPangolinConfig = {
-  texture: illustrationPangolinImg,
-  size: [10, 5, 0],
-  position: [10, 0.5, 7],
-  ...genericFlatConfig,
-}
-
-const illustrationRockDudeConfig = {
-  texture: illustrationRockDudeImg,
-  size: [20, 22, 0],
-  position: [-15, 8.4, 0],
-  ...genericFlatConfig,
-}
-
-const illustrationShroomQueenConfig = {
-  texture: illustrationShroomQueenImg,
-  size: [10, 15, 0],
-  position: [15, 7, 0],
-  ...genericFlatConfig,
+const illustrations = {
+  flower: {
+    texture: illustrationFlowersImg,
+    size: [4, 6, 0],
+    position: [-10, 1, -9],
+    ...genericFlatConfig,
+  },
+  cactus: {
+    texture: illustrationCactusImg,
+    size: [5, 7, 0],
+    position: [-6, 2.5, -9],
+    ...genericFlatConfig,
+  },
+  flowers2: {
+    texture: illustrationFlowers2Img,
+    size: [5, 7, 0],
+    position: [-2, 2.5, -9],
+    ...genericFlatConfig,
+  },
+  flowers3: {
+    texture: illustrationFlowers3Img,
+    size: [5, 7, 0],
+    position: [4, 2.5, -9],
+    ...genericFlatConfig,
+  },
+  flowers4: {
+    texture: illustrationFlowers4Img,
+    size: [5, 7, 0],
+    position: [8, 2.5, -9],
+    ...genericFlatConfig,
+  },
+  flowers5: {
+    texture: illustrationFlowers5Img,
+    size: [5, 7, 0],
+    position: [13, 2.5, -9],
+    ...genericFlatConfig,
+  },
+  pangolin: {
+    texture: illustrationPangolinImg,
+    size: [10, 5, 0],
+    position: [10, 0.5, 7],
+    ...genericFlatConfig,
+  },
+  rockDude: {
+    texture: illustrationRockDudeImg,
+    size: [20, 22, 0],
+    position: [-15, 8.4, 0],
+    ...genericFlatConfig,
+  },
+  shroomQueen: {
+    texture: illustrationShroomQueenImg,
+    size: [10, 15, 0],
+    position: [15, 7, 0],
+    ...genericFlatConfig,
+  },
 }
 
 const smbCubeConfig = {
@@ -147,7 +142,7 @@ const blockConfig = {
   hasGravity: false,
 }
 
-const setupConfig = {
+const setupConfig: SetupConfig = {
   camera: { position: [0, 5, 20] as CoordinateTuple },
   ground: {
     size: [1000, 20, 20],
@@ -156,10 +151,6 @@ const setupConfig = {
     color: 0x99cc99,
   },
   sky: { size: 500, color: 0x87ceeb },
-  lights: {
-    directional: { intensity: 0.1 },
-    ambient: { intensity: 0.8 },
-  },
 };
 
 // Use correct GameState type and initialization
@@ -264,15 +255,13 @@ const init = async (): Promise<void> => {
 
       const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
-      const illustrationFlowers = getCube(scene, world, illustrationFlowersConfig);
-      const illustrationCactus = getCube(scene, world, illustrationCactusConfig);
-      const illustrationFlowers2 = getCube(scene, world, illustrationFlowers2Config);
-      const illustrationFlowers3 = getCube(scene, world, illustrationFlowers3Config);
-      const illustrationFlowers4 = getCube(scene, world, illustrationFlowers4Config);
-      const illustrationFlowers5 = getCube(scene, world, illustrationFlowers5Config);
-      const illustrationPangolin = getCube(scene, world, illustrationPangolinConfig);
-      const illustrationRockDude = getCube(scene, world, illustrationRockDudeConfig);
-      const illustrationShroomQueen = getCube(scene, world, illustrationShroomQueenConfig);
+
+      Object.keys(illustrations).forEach((key) => {
+        const config = (illustrations as Record<string, any>)[key];
+        const model = getCube(scene, world, config);
+        // obstacles.push(model);
+      });
+
       // const cloud = getCube(scene, world, cloudConfig);
       // const smbCube = getCube(scene, world, smbCubeConfig);
 

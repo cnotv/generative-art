@@ -78,7 +78,7 @@ export interface SetupConfig {
     far?: number;
   };
   ground?: {
-    size?: number;
+    size?: number | CoordinateTuple;
     color?: number;
     texture?: string;
     textureRepeat?: [number, number];
@@ -87,6 +87,7 @@ export interface SetupConfig {
   sky?: {
     texture?: string;
     size?: number;
+    color?: number;
   } | false;
   lights?: {
     ambient?: {

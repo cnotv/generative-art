@@ -67,7 +67,7 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
         orbit.target.copy(config.orbit.target as THREE.Vector3);
       }
     }
-    if (config.lights !== false) createLights(scene, {directionalLightIntensity: config?.lights?.directional?.intensity });
+    if (config.lights !== false) createLights(scene, config.lights);
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
     if (config.sky !== false) getSky(scene, config?.sky || {});
     
@@ -273,7 +273,7 @@ const createLights = (scene: THREE.Scene, config: any = {}) => {
     directional.color,
     directional.intensity
   );
-  directionalLight.position.set(...(directional.position as CoordinateTuple));
+  if (directional.position) directionalLight.position.set(...(directional.position as CoordinateTuple));
   directionalLight.castShadow = directional.castShadow ?? true;
   
   if (directional.shadow) {
