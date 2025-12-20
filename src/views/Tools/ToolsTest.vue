@@ -8,34 +8,78 @@ import {
   CameraPreset,
   instanceMatrixMesh,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward } from "@webgamekit/animation";
-import groundTexture from "@/assets/grass.jpg";
+import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
+import type { GameState } from "@webgamekit/game";
+import { getCube } from "@/utils/models";
+
+// Assets
 import jumpSound from "@/assets/jump.wav";
-import backgroundImg from "@/assets/fire.png";
+import flowerImg from "@/assets/fire.png";
+import smbBlockImg from "@/assets/smb_block.png";
+import groundImg from "@/assets/smb_brick.png";
+import cloudImg from "@/assets/cloud.png";
 
 const chameleonConfig = {
-  position: [0, -0.75, 0] as [number, number, number],
-  scale: [0.05, 0.05, 0.05] as [number, number, number],
+  position: [0, -0.75, 0] as CoordinateTuple,
+  scale: [0.03, 0.03, 0.03] as CoordinateTuple,
   restitution: -10,
   boundary: 0.5,
   // type: "kinematicPositionBased",
   hasGravity: false,
   castShadow: true,
-  receiveShadow: true,
   animations: "chameleon_animations.fbx",
   material: "MeshLambertMaterial",
   materialColors: [0x99cc99],
 };
 
+const cloudConfig = {
+  texture: cloudImg,
+  size: [12, 5, 0],
+  position: [3, 10, -10],
+  castShadow: false,
+  receiveShadow: false,
+  color: 0xffffff,
+  opacity: 0.95,
+  material: "MeshBasicMaterial",
+  physic: false,
+}
+
+const flowerConfig = {
+  texture: flowerImg,
+  size: [1, 1, 0],
+  position: [6, -0.5, 0],
+  castShadow: false,
+  receiveShadow: false,
+  color: 0xffffff,
+  opacity: 0.95,
+  material: "MeshBasicMaterial",
+  physic: false,
+}
+
+const smbCubeConfig = {
+  texture: smbBlockImg,
+  size: [2, 2, 2],
+  position: [2, 0, -5],
+  material: "MeshBasicMaterial",
+  color: 0xffffff,
+}
+
+const blockConfig = {
+  scale: [0.01, 0.01, 0.01] as CoordinateTuple,
+  restitution: 0,
+  position: [1, 0.2, 0] as CoordinateTuple,
+  hasGravity: false,
+}
+
 const setupConfig = {
-  camera: { position: [0, 5, 20] as [number, number, number] },
+  camera: { position: [0, 5, 20] as CoordinateTuple },
   ground: {
-    size: 10000,
-    texture: groundTexture,
-    textureRepeat: [400, 400] as [number, number],
+    size: [1000, 20, 20],
+    texture: groundImg,
+    textureRepeat: [500, 10] as [number, number],
     color: 0x99cc99,
   },
   sky: { size: 500, color: 0x87ceeb },
@@ -43,8 +87,6 @@ const setupConfig = {
 };
 
 // Use correct GameState type and initialization
-import type { GameState } from "@webgamekit/game";
-import { getCube } from "@/utils/models";
 const gameState = shallowRef<GameState>();
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
@@ -142,27 +184,14 @@ const init = async (): Promise<void> => {
         jump: 3,
       };
       const maxJump = 3;
+      const obstacles: ComplexModel[] = [];
 
       const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
-      const cube = await getModel(scene, world, "sand_block.glb", {
-        scale: [0.01, 0.01, 0.01] as [number, number, number],
-        restitution: 0,
-        position: [1, 0.2, 0] as [number, number, number],
-        type: "kinematicPositionBased", // Changed from "fixed" to allow movement
-        hasGravity: false,
-      });
-      const background = getCube(scene, world, {
-        texture: backgroundImg,
-        size: [3, 3, 0],
-        position: [12, 0.8, -10],
-        castShadow: false,
-        receiveShadow: false,
-        color: 0xffffff,
-        opacity: 0.8,
-        material: "MeshBasicMaterial",
-        physic: false,
-      });
-      instanceMatrixMesh(background, scene, [
+      // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
+      const smbCube = getCube(scene, world, smbCubeConfig);
+      const flower = getCube(scene, world, flowerConfig);
+      const cloud = getCube(scene, world, cloudConfig);
+      instanceMatrixMesh(flower, scene, [
         { position: [12, 0.8, -10] },
         { position: [15, 0.8, -15] },
         { position: [18, 0.8, -12] },
@@ -180,7 +209,7 @@ const init = async (): Promise<void> => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
                 controllerForward(
                   chameleon,
-                  [cube],
+                  obstacles,
                   distance,
                   getDelta(),
                   "Idle_A",
