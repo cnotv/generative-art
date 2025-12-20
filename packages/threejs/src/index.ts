@@ -320,7 +320,7 @@ const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
-    size = 1000,
+    size = [1000, 0.01, 1000],
     position = [1, -1, 1],
     helpers,
     color = 0x333333,
@@ -328,7 +328,7 @@ const getGround = (
     textureRepeat = [10, 10],
     textureOffset = [0, 0],
   }: {
-    size?: number,
+    size?: CoordinateTuple | number,
     position?: CoordinateTuple,
     helpers?: boolean,
     color?: number,
@@ -337,9 +337,11 @@ const getGround = (
     textureOffset?: [number, number],
   },
 ) => {
-    const defaultProps = { color }
-    const geometry = new THREE.BoxGeometry(size, 0.5, size);
-    const material = new THREE.MeshStandardMaterial({
+  const defaultProps = { color }
+  const groundSizes: CoordinateTuple = Array.isArray(size) ? size : [size, 0.01, size];
+  position[1] = position[1] - (groundSizes[1] || 0.01) / 2;
+  const geometry = new THREE.BoxGeometry(...groundSizes);
+  const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
     ...texture ? { map: getTextures(texture, textureRepeat, textureOffset)} : {},
   });
@@ -354,7 +356,7 @@ const getGround = (
 
   const { rigidBody, collider } = getPhysic(world, {
     position: mesh.position.toArray(),
-    size: [size, 2, size],
+    size: groundSizes,
     boundary: 0.5,
   })
 
