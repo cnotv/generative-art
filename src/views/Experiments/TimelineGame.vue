@@ -14,7 +14,7 @@ import {
   controllerTurn,
 } from "@webgamekit/animation";
 import { getBall, getCube } from "@/utils/models";
-import brickTexture from "@/assets/brick.jpg";
+import brickTexture from "@/assets/images/textures/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
 
 const statsEl = ref(null);

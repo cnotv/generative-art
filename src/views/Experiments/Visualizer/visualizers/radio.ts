@@ -3,7 +3,7 @@ import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
 import { getModel, getSky } from "@webgamekit/threejs";
 import type RAPIER from '@dimforge/rapier3d-compat';
-import livingRoomImage from "@/assets/livingroom2.jpg";
+import livingRoomImage from "@/assets/images/generic/livingroom2.jpg";
 
 export const boxVisualizer: VisualizerSetup = {
   name: "Radio",

@@ -7,7 +7,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
-import terrainTextureAsset from "@/assets/terrain.jpg";
+import terrainTextureAsset from "@/assets/images/textures/terrain.jpg";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 type Model = THREE.Group<THREE.Object3DEventMap>;

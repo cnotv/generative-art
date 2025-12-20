@@ -1,27 +1,28 @@
 <script setup lang="ts">
-import * as THREE from 'three';
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { video } from '@/utils/video';
-import { controls } from '@/utils/control';
-import { stats } from '@/utils/stats';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import moonTextureAsset from '@/assets/moon.jpg';
-import earthDay from '@/assets/earth_day.jpg';
-import earthNight from '@/assets/earth_night.jpg';
+import * as THREE from "three";
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { video } from "@/utils/video";
+import { controls } from "@/utils/control";
+import { stats } from "@/utils/stats";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import moonTextureAsset from "@/assets/images/textures/moon.jpg";
+import earthDay from "@/assets/images/textures/earth_day.jpg";
+import earthNight from "@/assets/images/textures/earth_night.jpg";
 
-const statsEl = ref(null)
-const canvas = ref(null)
+const statsEl = ref(null);
+const canvas = ref(null);
 const route = useRoute();
 
 onMounted(() => {
   init(
-    canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
-})
+    (canvas.value as unknown) as HTMLCanvasElement,
+    (statsEl.value as unknown) as HTMLElement
+  ),
+    statsEl.value!;
+});
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const config = {
     moonSize: 200,
     earthSize: 20,
@@ -38,27 +39,32 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     color: false,
     fill: [0, 0, 255],
     light: [255, 255, 255],
-  }
+  };
   stats.init(route, statsEl);
-  controls.create(config, route, {
-    moonSize: {  },
-    earthSize: {  },
-    speed: {  },
-    details: {},
-    opacity: {},
-    texture: {},
-    offsetX: {},
-    offsetY: {},
-    repeatX: {},
-    repeatY: {},
-    wireframe: {},
-    color: {},
-    fill: { addColor: []},
-    background: { addColor: []},
-    light: { addColor: []},
-  }, () => {
-    setup()
-  });
+  controls.create(
+    config,
+    route,
+    {
+      moonSize: {},
+      earthSize: {},
+      speed: {},
+      details: {},
+      opacity: {},
+      texture: {},
+      offsetX: {},
+      offsetY: {},
+      repeatX: {},
+      repeatY: {},
+      wireframe: {},
+      color: {},
+      fill: { addColor: [] },
+      background: { addColor: [] },
+      light: { addColor: [] },
+    },
+    () => {
+      setup();
+    }
+  );
   let time = 0;
 
   const getTextures = (img: string) => {
@@ -72,16 +78,23 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     texture.repeat.set(config.repeatX, config.repeatY); // Repeat the texture 0.5 times in both directions
 
     return texture;
-  }
+  };
 
   const setup = () => {
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`),); // Set background color to black
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(
+      new THREE.Color(`rgb(${config.background.map(Math.round).join(",")})`)
+    ); // Set background color to black
 
     // Load the texture
     // https://www.solarsystemscope.com/textures/
-    const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
     const scene = new THREE.Scene();
 
     // Earth
@@ -94,7 +107,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       uniforms: {
         earthDayTexture: { value: earthDayTexture },
         earthNightTexture: { value: earthNightTexture },
-        opacity: { value: 0}, // Initial opacity
+        opacity: { value: 0 }, // Initial opacity
       },
       vertexShader: `
         varying vec2 vUv;
@@ -118,8 +131,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       `,
     });
     const earth = new THREE.Mesh(earthGeometry, earthMaterial);
-    scene.add( earth );
-
+    scene.add(earth);
 
     // Moon
     const moonGeometry = new THREE.SphereGeometry(config.moonSize, 32, 32);
@@ -130,7 +142,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       wireframe: config.wireframe,
       opacity: config.opacity,
       transparent: true,
-      color: config.color ? new THREE.Color(`rgb(${config.fill.map(Math.round).join(',')})`) : undefined,
+      color: config.color
+        ? new THREE.Color(`rgb(${config.fill.map(Math.round).join(",")})`)
+        : undefined,
     });
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
 
@@ -147,9 +161,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     earth.position.y = 35;
     earth.rotation.z = -0.6;
     // earth.rotation.y = -20;
-    
+
     const light = new THREE.AmbientLight(
-      new THREE.Color(`rgb(${config.light.map(Math.round).join(',')})`)
+      new THREE.Color(`rgb(${config.light.map(Math.round).join(",")})`)
     ); // soft white light
     scene.add(light);
 
@@ -159,9 +173,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       stats.start(route);
       requestAnimationFrame(animate);
 
-      moon.rotation.z += (-0.0001 * config.speed);
-      earth.rotation.y += (0.0005 * config.speed);
-      earth.rotation.x += (0.000001 * config.speed);
+      moon.rotation.z += -0.0001 * config.speed;
+      earth.rotation.y += 0.0005 * config.speed;
+      earth.rotation.x += 0.000001 * config.speed;
 
       time += 0.005;
       const opacity = (Math.sin(time) + 1.2) / 2;
@@ -169,19 +183,18 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
       // Update the controls
       orbit.update();
-  
-      renderer.render( scene, camera );
-      video.stop(renderer.info.render.frame ,route);
+
+      renderer.render(scene, camera);
+      video.stop(renderer.info.render.frame, route);
       stats.end(route);
     }
     animate();
-  }
+  };
   setup();
-}
+};
 </script>
 
 <template>
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 </template>
-

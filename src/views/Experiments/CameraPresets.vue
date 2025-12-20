@@ -6,7 +6,7 @@ import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { createZigzagTexture } from "@webgamekit/threejs";
-import grassTextureImg from "@/assets/grass.jpg";
+import grassTextureImg from "@/assets/images/textures/grass.jpg";
 
 const canvas = ref(null);
 const canvas1 = ref(null);

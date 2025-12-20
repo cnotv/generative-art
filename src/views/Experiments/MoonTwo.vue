@@ -6,8 +6,8 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import moonImage from '@/assets/moon.jpg';
-import spaceImage from '@/assets/space.png';
+import moonImage from '@/assets/images/textures/moon.jpg';
+import spaceImage from '@/assets/images/generic/space.png';
 
 const statsEl = ref(null)
 const canvas = ref(null)

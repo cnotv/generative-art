@@ -3,9 +3,9 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { getModel, colorModel, tiltCamera } from "@webgamekit/threejs";
 import { playAudioFile } from "@webgamekit/audio";
 import { startBackgroundFalling } from "./background";
-import jumpSound from "@/assets/jump.wav";
-import gameOverSound from "@/assets/gameover.wav";
-import starTexture from "@/assets/star1.png";
+const jumpSound = new URL('@/assets/jump.wav', import.meta.url).href;
+const gameOverSound = new URL('@/assets/gameover.wav', import.meta.url).href;
+const starTexture = new URL('@/assets/star1.png', import.meta.url).href;
 import { updateAnimation, type ComplexModel } from "@webgamekit/animation";
 
 interface PlayerMovement {

@@ -16,11 +16,22 @@ import type { GameState } from "@webgamekit/game";
 import { getCube } from "@/utils/models";
 
 // Assets
-import jumpSound from "@/assets/jump.wav";
-import flowerImg from "@/assets/fire.png";
-import smbBlockImg from "@/assets/smb_block.png";
-import groundImg from "@/assets/smb_brick.png";
-import cloudImg from "@/assets/cloud.png";
+import jumpSound from "@/assets/audio/jump.wav";
+import flowerImg from "@/assets/images/flat/fire.png";
+import illustrationCactusImg from "@/assets/images/illustrations/cactus.png";
+import illustrationFlowersImg from "@/assets/images/illustrations/flowers.png";
+import smbBlockImg from "@/assets/images/textures/smb_block.png";
+import groundImg from "@/assets/images/textures/grass.jpg";
+// import groundImg from "@/assets/images/textures/smb_brick.png";
+import cloudImg from "@/assets/images/flat/cloud.png";
+
+import illustrationFlowers2Img from "@/assets/images/illustrations/flowers2.png";
+import illustrationFlowers3Img from "@/assets/images/illustrations/flowers3.png";
+import illustrationFlowers4Img from "@/assets/images/illustrations/flowers4.png";
+import illustrationFlowers5Img from "@/assets/images/illustrations/flowers5.png";
+import illustrationPangolinImg from "@/assets/images/illustrations/pangolin.png";
+import illustrationRockDudeImg from "@/assets/images/illustrations/rock_dude.png";
+import illustrationShroomQueenImg from "@/assets/images/illustrations/shroom_queen.png";
 
 const chameleonConfig = {
   position: [0, -1, 0] as CoordinateTuple,
@@ -35,27 +46,90 @@ const chameleonConfig = {
   materialColors: [0x99cc99],
 };
 
-const cloudConfig = {
-  texture: cloudImg,
-  size: [12, 5, 0],
-  position: [3, 10, -10],
-  castShadow: false,
+const genericFlatConfig = {
   receiveShadow: false,
+  castShadow: false,
   color: 0xffffff,
   opacity: 0.95,
   material: "MeshBasicMaterial",
   physic: false,
 }
 
+const cloudConfig = {
+  texture: cloudImg,
+  size: [12, 5, 0],
+  position: [3, 10, -10],
+  ...genericFlatConfig,
+}
+
 const flowerConfig = {
   texture: flowerImg,
   size: [1, 1, 0],
   position: [6, -0.5, 0],
-  receiveShadow: false,
-  color: 0xffffff,
-  opacity: 0.95,
-  material: "MeshBasicMaterial",
-  physic: false,
+  ...genericFlatConfig,
+}
+
+const illustrationFlowersConfig = {
+  texture: illustrationFlowersImg,
+  size: [4, 6, 0],
+  position: [-10, 1, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationCactusConfig = {
+  texture: illustrationCactusImg,
+  size: [5, 7, 0],
+  position: [-6, 2.5, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationFlowers2Config = {
+  texture: illustrationFlowers2Img,
+  size: [5, 7, 0],
+  position: [-2, 2.5, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationFlowers3Config = {
+  texture: illustrationFlowers3Img,
+  size: [5, 7, 0],
+  position: [4, 2.5, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationFlowers4Config = {
+  texture: illustrationFlowers4Img,
+  size: [5, 7, 0],
+  position: [8, 2.5, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationFlowers5Config = {
+  texture: illustrationFlowers5Img,
+  size: [5, 7, 0],
+  position: [13, 2.5, -9],
+  ...genericFlatConfig,
+}
+
+const illustrationPangolinConfig = {
+  texture: illustrationPangolinImg,
+  size: [10, 5, 0],
+  position: [10, 0.5, 7],
+  ...genericFlatConfig,
+}
+
+const illustrationRockDudeConfig = {
+  texture: illustrationRockDudeImg,
+  size: [20, 22, 0],
+  position: [-15, 8.4, 0],
+  ...genericFlatConfig,
+}
+
+const illustrationShroomQueenConfig = {
+  texture: illustrationShroomQueenImg,
+  size: [10, 15, 0],
+  position: [15, 7, 0],
+  ...genericFlatConfig,
 }
 
 const smbCubeConfig = {
@@ -82,7 +156,10 @@ const setupConfig = {
     color: 0x99cc99,
   },
   sky: { size: 500, color: 0x87ceeb },
-  lights: { directional: { intensity: 0.1 } },
+  lights: {
+    directional: { intensity: 0.1 },
+    ambient: { intensity: 0.8 },
+  },
 };
 
 // Use correct GameState type and initialization
@@ -187,14 +264,24 @@ const init = async (): Promise<void> => {
 
       const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
-      const smbCube = getCube(scene, world, smbCubeConfig);
-      const flower = getCube(scene, world, flowerConfig);
-      const cloud = getCube(scene, world, cloudConfig);
-      instanceMatrixMesh(flower, scene, [
-        { position: [12, 0.8, -10] },
-        { position: [15, 0.8, -15] },
-        { position: [18, 0.8, -12] },
-      ]);
+      const illustrationFlowers = getCube(scene, world, illustrationFlowersConfig);
+      const illustrationCactus = getCube(scene, world, illustrationCactusConfig);
+      const illustrationFlowers2 = getCube(scene, world, illustrationFlowers2Config);
+      const illustrationFlowers3 = getCube(scene, world, illustrationFlowers3Config);
+      const illustrationFlowers4 = getCube(scene, world, illustrationFlowers4Config);
+      const illustrationFlowers5 = getCube(scene, world, illustrationFlowers5Config);
+      const illustrationPangolin = getCube(scene, world, illustrationPangolinConfig);
+      const illustrationRockDude = getCube(scene, world, illustrationRockDudeConfig);
+      const illustrationShroomQueen = getCube(scene, world, illustrationShroomQueenConfig);
+      // const cloud = getCube(scene, world, cloudConfig);
+      // const smbCube = getCube(scene, world, smbCubeConfig);
+
+      // const flower = getCube(scene, world, flowerConfig);
+      // instanceMatrixMesh(flower, scene, [
+      //   { position: [12, 0.8, -10] },
+      //   { position: [15, 0.8, -15] },
+      //   { position: [18, 0.8, -12] },
+      // ]);
 
       colorModel(chameleon, chameleonConfig.materialColors);
       remapControlsOptions(bindings);

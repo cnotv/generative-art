@@ -3,7 +3,7 @@ import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
 import { getModel } from "@webgamekit/threejs";
 import type RAPIER from "@dimforge/rapier3d-compat";
-import streetBg from '@/assets/street2_blur.jpg';
+import streetBg from '@/assets/images/generic/street2_blur.jpg';
 
 const scale = 3
 export const boxVisualizer: VisualizerSetup = {

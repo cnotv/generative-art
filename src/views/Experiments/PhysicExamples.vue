@@ -18,7 +18,7 @@ import {
 } from "@webgamekit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
-import bowlingTexture from "@/assets/bowling.png";
+import bowlingTexture from "@/assets/images/textures/bowling.png";
 
 const statsEl = ref(null);
 const canvas = ref(null);
