@@ -23,7 +23,7 @@ import groundImg from "@/assets/smb_brick.png";
 import cloudImg from "@/assets/cloud.png";
 
 const chameleonConfig = {
-  position: [0, -0.75, 0] as CoordinateTuple,
+  position: [0, -1, 0] as CoordinateTuple,
   scale: [0.03, 0.03, 0.03] as CoordinateTuple,
   restitution: -10,
   boundary: 0.5,
@@ -51,7 +51,6 @@ const flowerConfig = {
   texture: flowerImg,
   size: [1, 1, 0],
   position: [6, -0.5, 0],
-  castShadow: false,
   receiveShadow: false,
   color: 0xffffff,
   opacity: 0.95,

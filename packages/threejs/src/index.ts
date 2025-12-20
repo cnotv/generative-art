@@ -738,12 +738,20 @@ const getModel = async (
   } else {
     mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
   }
-  
+
+  // Ensure shadows are set for all child meshes
+  mesh.traverse((child: any) => {
+    if (child.isMesh) {
+      child.castShadow = castShadow;
+      child.receiveShadow = receiveShadow;
+    }
+  });
+
   // Apply material colors if provided
   if (materialColors && materialColors.length > 0) {
     colorModel(mesh, materialColors);
   }
-  
+
   scene.add(mesh);
 
   let helper;
@@ -752,7 +760,7 @@ const getModel = async (
     helper = new THREE.BoxHelper(mesh, 0xff0000); // Red color for the helper
     scene.add(helper);
   }
-  
+
   // Add animation
   const mixer = new THREE.AnimationMixer(mesh);
   let actions = {}
@@ -781,7 +789,7 @@ const getModel = async (
     type,
     enabledRotations,
   })
-  
+
   return Object.assign(mesh, {
     userData: {
       body: rigidBody,
