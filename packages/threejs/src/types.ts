@@ -76,6 +76,10 @@ export interface SetupConfig {
     lookAt?: CoordinateTuple | THREE.Vector3;
     near?: number;
     far?: number;
+    up?: THREE.Vector3;
+    aspect?: number;
+    zoom?: number;
+    focus?: number;
   };
   ground?: {
     size?: number | CoordinateTuple;

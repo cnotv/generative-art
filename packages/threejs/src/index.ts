@@ -83,6 +83,10 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       if (config.camera.near) camera.near = config.camera.near;
       if (config.camera.far) camera.far = config.camera.far;
       if (config.camera.fov) camera.fov = config.camera.fov;
+      if (config.camera.up) camera.up = config.camera.up;
+      if (config.camera.aspect) camera.aspect = config.camera.aspect;
+      if (config.camera.zoom) camera.zoom = config.camera.zoom;
+      if (config.camera.focus) (camera as any).focus = config.camera.focus;
       if (config.camera.rotation) {
         if (config.camera.rotation instanceof Array) {
           camera.rotation.set(...(config.camera.rotation as CoordinateTuple));

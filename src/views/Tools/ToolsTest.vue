@@ -9,6 +9,7 @@ import {
   instanceMatrixMesh,
   type SetupConfig,
 } from "@webgamekit/threejs";
+import * as THREE from "three";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -23,10 +24,11 @@ import illustrationCactusImg from "@/assets/images/illustrations/cactus.png";
 import illustrationFlowersImg from "@/assets/images/illustrations/flowers.png";
 import illustrationBackgroundImg from "@/assets/images/illustrations/background.png";
 import smbBlockImg from "@/assets/images/textures/smb_block.png";
-import groundImg from "@/assets/images/textures/grass.jpg";
+// import groundImg from "@/assets/images/textures/grass.jpg";
 // import groundImg from "@/assets/images/textures/smb_brick.png";
 import cloudImg from "@/assets/images/flat/cloud.png";
 
+import groundImg from "@/assets/images/illustrations/ground.png";
 import illustrationFlowers2Img from "@/assets/images/illustrations/flowers2.png";
 import illustrationFlowers3Img from "@/assets/images/illustrations/flowers3.png";
 import illustrationFlowers4Img from "@/assets/images/illustrations/flowers4.png";
@@ -136,14 +138,14 @@ const illustrations = {
   },
   rockDude: {
     texture: illustrationRockDudeImg,
-    size: [20, 22, 0],
-    position: [-15, 8.4, 0],
+    size: [30, 35, 0],
+    position: [-40, 14, 0],
     ...genericFlatConfig,
   },
   shroomQueen: {
     texture: illustrationShroomQueenImg,
-    size: [10, 15, 0],
-    position: [15, 7, 0],
+    size: [15, 24, 0],
+    position: [30, 11, 0],
     ...genericFlatConfig,
   },
 }
@@ -159,17 +161,29 @@ const smbCubeConfig = {
 const blockConfig = {
   scale: [0.01, 0.01, 0.01] as CoordinateTuple,
   restitution: 0,
-  position: [1, 0.2, 0] as CoordinateTuple,
-  hasGravity: false,
+  position: [-7, 0.2, 5] as CoordinateTuple,
+  material: "MeshLambertMaterial",
+  color: 0x88ddcc,
+  castShadow: true,
 }
 
 const setupConfig: SetupConfig = {
-  camera: { position: [0, 10, 20], fov: 80, rotation: [-10, -10, 0] },
+  camera: {
+    position: [0, 10, 20],
+    fov: 80,
+    up: new THREE.Vector3(0, 1, 0),
+    near: 0.1,
+    far: 1000,
+    aspect: 1.9834710743801653,
+    zoom: 1,
+    focus: 10,
+    // Optionally, you can set rotation using a THREE.Euler if you extract it from the matrix
+  },
   ground: {
     size: [1000, 100, 20],
     texture: groundImg,
-    textureRepeat: [250, 25] as [number, number],
-    color: 0x777777,
+    textureRepeat: [500, 20] as [number, number],
+    color: 0xffffff,
   },
   sky: { size: 500, color: 0x335533 },
   // postprocessing: {
@@ -217,6 +231,7 @@ const bindings = {
       d: "turn-right",
       w: "moving",
       s: "moving",
+      p: 'print-log',
       ...cameraBindings,
     },
     gamepad: {
@@ -237,6 +252,9 @@ const bindings = {
     switch (action) {
       case "jump":
         handleJump();
+        break;
+      case "print-log":
+        console.log("Current camera:", cameraPreset);
         break;
 
       // TODO: Iterate instead of hardcoding
