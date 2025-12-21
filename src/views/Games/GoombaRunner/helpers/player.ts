@@ -278,6 +278,7 @@ const updatePlayerAnimation = (
 ) => {
   if (!isPlaying) return;
   const animationSpeed = getSpeed(config.player.speed, gameScore);
+  if (!model.userData.mixer || !model.userData.actions?.run) return;
   updateAnimation(
     model.userData.mixer,
     model.userData.actions.run,

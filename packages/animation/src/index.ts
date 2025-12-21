@@ -230,8 +230,8 @@ const controllerForward = (
     rigidBody.setTranslation(newPosition, true);
   }
 
-  const action = actions[actionName];
-  if (action) {
+  const action = actions?.[actionName];
+  if (action && mixer) {
     updateAnimation(mixer, action, delta, 10);
   }
 }

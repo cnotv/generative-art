@@ -8,6 +8,7 @@ import {
   CameraPreset,
   instanceMatrixMesh,
   type SetupConfig,
+  type PostProcessingConfig,
 } from "@webgamekit/threejs";
 import * as THREE from "three";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
@@ -186,11 +187,19 @@ const setupConfig: SetupConfig = {
     color: 0xffffff,
   },
   sky: { size: 500, color: 0x335533 },
-  // postprocessing: {
-  //   pixelate: {
-  //     size: 6
-  //   }
-  // },
+  postprocessing: {
+    // pixelate: { size: 5 },
+    // bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },
+    // fxaa: {},
+    // dotScreen: { scale: 5, angle: Math.PI / 3, center: [0.2, 0.2] },
+    // rgbShift: { amount: 0.005 },
+    // film: { noiseIntensity: 2.5, grayscale: true },
+    // glitch: {},
+    // afterimage: {},
+    // ssao: {},
+    // vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
+    colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
+  } as PostProcessingConfig,
 };
 
 // Use correct GameState type and initialization

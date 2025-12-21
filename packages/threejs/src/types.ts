@@ -62,6 +62,93 @@ export interface ToolsConfig {
   canvas: HTMLCanvasElement;
 }
 
+export interface LightsConfig {
+  ambient?: {
+    color?: number;
+    intensity?: number;
+  };
+  directional?: {
+    color?: number;
+    intensity?: number;
+    position?: CoordinateTuple;
+    castShadow?: boolean;
+    shadow?: {
+      mapSize?: { width: number; height: number };
+      camera?: {
+        near?: number;
+        far?: number;
+        left?: number;
+        right?: number;
+        top?: number;
+        bottom?: number;
+      };
+      bias?: number;
+      radius?: number;
+    };
+  };
+  hemisphere?: {
+    colors?: [number, number];
+  };
+}
+
+export interface PostProcessingConfig {
+  pixelate?: {
+    size?: number;
+  };
+  bloom?: {
+    strength?: number;
+    threshold?: number;
+    radius?: number;
+  };
+  fxaa?: Record<string, unknown>;
+  dotScreen?: {
+    scale?: number;
+    angle?: number;
+    center?: [number, number];
+  };
+  rgbShift?: {
+    amount?: number;
+  };
+  film?: {
+    noiseIntensity?: number;
+    grayscale?: boolean;
+  };
+  glitch?: Record<string, unknown>;
+  afterimage?: Record<string, unknown>;
+  ssao?: Record<string, unknown>;
+  vignette?: {
+    offset?: number;
+    darkness?: number;
+    color?: number | [number, number, number];
+  };
+  colorCorrection?: {
+    contrast?: number;
+    saturation?: number;
+    brightness?: number;
+  };
+}
+
+export interface CameraConfig {
+  position?: CoordinateTuple | THREE.Vector3;
+  fov?: number;
+  rotation?: CoordinateTuple | THREE.Vector3;
+  lookAt?: CoordinateTuple | THREE.Vector3;
+  near?: number;
+  far?: number;
+  up?: THREE.Vector3;
+  aspect?: number;
+  zoom?: number;
+  focus?: number;
+};
+
+export interface GroundConfig {
+  size?: number | CoordinateTuple;
+  color?: number;
+  texture?: string;
+  textureRepeat?: [number, number];
+  textureOffset?: [number, number];
+};
+    
 export interface SetupConfig {
   global?: {
     frameRate?: number;
@@ -69,71 +156,23 @@ export interface SetupConfig {
   scene?: {
     backgroundColor?: number;
   };
-  camera?: {
-    position?: CoordinateTuple | THREE.Vector3;
-    fov?: number;
-    rotation?: CoordinateTuple | THREE.Vector3;
-    lookAt?: CoordinateTuple | THREE.Vector3;
-    near?: number;
-    far?: number;
-    up?: THREE.Vector3;
-    aspect?: number;
-    zoom?: number;
-    focus?: number;
-  };
-  ground?: {
-    size?: number | CoordinateTuple;
-    color?: number;
-    texture?: string;
-    textureRepeat?: [number, number];
-    textureOffset?: [number, number];
-  } | false;
+  camera?: CameraConfig;
+  ground?: GroundConfig | false;
   sky?: {
     texture?: string;
     size?: number;
     color?: number;
   } | false;
-  lights?: {
-    ambient?: {
-      color?: number;
-      intensity?: number;
-    };
-    directional?: {
-      color?: number;
-      intensity?: number;
-      position?: CoordinateTuple;
-      castShadow?: boolean;
-      shadow?: {
-        mapSize?: { width: number; height: number };
-        camera?: {
-          near?: number;
-          far?: number;
-          left?: number;
-          right?: number;
-          top?: number;
-          bottom?: number;
-        };
-        bias?: number;
-        radius?: number;
-      };
-    };
-    hemisphere?: {
-      colors?: [number, number];
-    };
-  } | false;
+  lights?: LightsConfig | false;
   orbit?: {
     target?: THREE.Vector3;
   } | false;
-  postprocessing?: {
-    pixelate?: {
-      size: number;
-    };
-  };
+  postprocessing?: PostProcessingConfig | false;
 }
 
 export interface InstanceConfig {
-    amount: number;
-    size: number;
-    sizeDelta: number;
-    area: number;
+  amount: number;
+  size: number;
+  sizeDelta: number;
+  area: number;
 }

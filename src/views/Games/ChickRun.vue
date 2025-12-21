@@ -102,7 +102,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             // Make Goomba run
             {
               action: () => {
-                updateAnimation(chickModel.mixer, chickModel.actions.run, getDelta(), 20);
+                if (chickModel.userData.mixer && chickModel.userData.actions?.run) {
+                  updateAnimation(
+                    chickModel.userData.mixer,
+                    chickModel.userData.actions.run,
+                    getDelta()
+                  );
+                }
               },
             },
             // Generate cubes

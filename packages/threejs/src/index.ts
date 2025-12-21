@@ -4,7 +4,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer, RenderPass, ShaderPass, PixelShader } from './postprocessing';
+import { EffectComposer, setupPostprocessing } from './postprocessing';
 import { video } from './utils/video';
 import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, ComplexModel, Timeline } from '@webgamekit/animation';
 import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig, ToolsConfig } from './types';
@@ -33,6 +33,23 @@ const defaultModelOptions: ModelOptions = {
  * Configuration passed through the setup function.
  * Animation allows to define a timeline with looped actions, as well as a before and after function.
  * Stats, configuration and video are handled by other utilities and added by default.
+ *
+ * Example config for postprocessing shading effects:
+ *
+ * postprocessing: {
+ *   pixelate: { size: 8 },
+ *   bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },
+ *   fxaa: {},
+ *   dotScreen: { scale: 1.5, angle: Math.PI / 3, center: [0.5, 0.5] },
+ *   rgbShift: { amount: 0.002 },
+ *   film: { noiseIntensity: 0.5, scanlinesIntensity: 0.05, scanlinesCount: 800, grayscale: true },
+ *   glitch: {},
+ *   afterimage: {},
+ *   ssao: {},
+ *   vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
+ *   colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
+ * }
+ *
  * @param {stats, route, canvas} 
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
@@ -104,13 +121,7 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       camera.updateProjectionMatrix();
     }
 
-    if (config.postprocessing?.pixelate) {
-      composer = new EffectComposer(renderer);
-      composer.addPass(new RenderPass(scene, camera));
-      const pixelPass = new ShaderPass(PixelShader);
-      pixelPass.uniforms['pixelSize'].value = config.postprocessing.pixelate.pixelSize || 6.0;
-      composer.addPass(pixelPass);
-    }
+    if (config.postprocessing) composer = await setupPostprocessing({ renderer, scene, camera, config: config.postprocessing });
     if (defineSetup) await defineSetup();
   };
 
