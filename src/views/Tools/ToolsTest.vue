@@ -9,7 +9,7 @@ import {
   instanceMatrixMesh,
   type SetupConfig,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel } from "@webgamekit/animation";
+import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -172,11 +172,11 @@ const setupConfig: SetupConfig = {
     color: 0x777777,
   },
   sky: { size: 500, color: 0x335533 },
-  postprocessing: {
-    pixelate: {
-      size: 6
-    }
-  },
+  // postprocessing: {
+  //   pixelate: {
+  //     size: 6
+  //   }
+  // },
 };
 
 // Use correct GameState type and initialization
@@ -274,7 +274,7 @@ const init = async (): Promise<void> => {
       const speed = {
         movement: 1,
         turning: 4,
-        jump: 1.1,
+        jump: 3,
       };
       const maxJump = 2;
       const obstacles: ComplexModel[] = [];
@@ -309,7 +309,6 @@ const init = async (): Promise<void> => {
             name: "Walk",
             action: () => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
-                console.log(player)
                 controllerForward(
                   player,
                   obstacles,
@@ -317,8 +316,9 @@ const init = async (): Promise<void> => {
                   getDelta(),
                   "Esqueleto|walking",
                   // "Idle_A",
-                  false
+                  true
                 );
+              else updateAnimation(player.userData.mixer, player.userData.actions["Esqueleto|idle"]!, getDelta(), 10);
             },
           },
           {
