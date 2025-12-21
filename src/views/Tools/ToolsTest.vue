@@ -21,6 +21,7 @@ import jumpSound from "@/assets/audio/jump.wav";
 import flowerImg from "@/assets/images/flat/fire.png";
 import illustrationCactusImg from "@/assets/images/illustrations/cactus.png";
 import illustrationFlowersImg from "@/assets/images/illustrations/flowers.png";
+import illustrationBackgroundImg from "@/assets/images/illustrations/background.png";
 import smbBlockImg from "@/assets/images/textures/smb_block.png";
 import groundImg from "@/assets/images/textures/grass.jpg";
 // import groundImg from "@/assets/images/textures/smb_brick.png";
@@ -47,10 +48,23 @@ const chameleonConfig = {
   materialColors: [0x99cc99],
 };
 
+const mushroomConfig = {
+  position: [0, -1, 0] as CoordinateTuple,
+  rotation: [0, -180, 0] as CoordinateTuple,
+  scale: [1, 1, 1] as CoordinateTuple,
+  restitution: -10,
+  boundary: 0.5,
+  // type: "kinematicPositionBased",
+  hasGravity: false,
+  castShadow: true,
+  material: "MeshLambertMaterial",
+  color: 0xaaaaaa,
+};
+
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
-  color: 0xffffff,
+  color: 0xcccccc,
   opacity: 0.95,
   material: "MeshBasicMaterial",
   physic: false,
@@ -71,42 +85,49 @@ const flowerConfig = {
 }
 
 const illustrations = {
-  flower: {
-    texture: illustrationFlowersImg,
-    size: [4, 6, 0],
-    position: [-10, 1, -9],
+  background: {
+    texture: illustrationBackgroundImg,
+    size: [200, 200, 0],
+    position: [-0, -15, -20],
     ...genericFlatConfig,
+    opacity: 0.5
   },
-  cactus: {
-    texture: illustrationCactusImg,
-    size: [5, 7, 0],
-    position: [-6, 2.5, -9],
-    ...genericFlatConfig,
-  },
-  flowers2: {
-    texture: illustrationFlowers2Img,
-    size: [5, 7, 0],
-    position: [-2, 2.5, -9],
-    ...genericFlatConfig,
-  },
-  flowers3: {
-    texture: illustrationFlowers3Img,
-    size: [5, 7, 0],
-    position: [4, 2.5, -9],
-    ...genericFlatConfig,
-  },
-  flowers4: {
-    texture: illustrationFlowers4Img,
-    size: [5, 7, 0],
-    position: [8, 2.5, -9],
-    ...genericFlatConfig,
-  },
-  flowers5: {
-    texture: illustrationFlowers5Img,
-    size: [5, 7, 0],
-    position: [13, 2.5, -9],
-    ...genericFlatConfig,
-  },
+  // flower: {
+  //   texture: illustrationFlowersImg,
+  //   size: [4, 6, 0],
+  //   position: [-10, 1, -9],
+  //   ...genericFlatConfig,
+  // },
+  // cactus: {
+  //   texture: illustrationCactusImg,
+  //   size: [5, 7, 0],
+  //   position: [-6, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers2: {
+  //   texture: illustrationFlowers2Img,
+  //   size: [5, 7, 0],
+  //   position: [-2, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers3: {
+  //   texture: illustrationFlowers3Img,
+  //   size: [5, 7, 0],
+  //   position: [4, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers4: {
+  //   texture: illustrationFlowers4Img,
+  //   size: [5, 7, 0],
+  //   position: [8, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers5: {
+  //   texture: illustrationFlowers5Img,
+  //   size: [5, 7, 0],
+  //   position: [13, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
   pangolin: {
     texture: illustrationPangolinImg,
     size: [10, 5, 0],
@@ -143,14 +164,19 @@ const blockConfig = {
 }
 
 const setupConfig: SetupConfig = {
-  camera: { position: [0, 5, 20] as CoordinateTuple },
+  camera: { position: [0, 10, 20], fov: 80, rotation: [-10, -10, 0] },
   ground: {
-    size: [1000, 20, 20],
+    size: [1000, 100, 20],
     texture: groundImg,
-    textureRepeat: [500, 10] as [number, number],
-    color: 0x99cc99,
+    textureRepeat: [250, 25] as [number, number],
+    color: 0x777777,
   },
-  sky: { size: 500, color: 0x87ceeb },
+  sky: { size: 500, color: 0x335533 },
+  postprocessing: {
+    pixelate: {
+      size: 6
+    }
+  },
 };
 
 // Use correct GameState type and initialization
@@ -244,16 +270,17 @@ const init = async (): Promise<void> => {
     config: setupConfig,
     defineSetup: async () => {
       const angle = 90;
-      const distance = 0.1;
+      const distance = 0.08;
       const speed = {
         movement: 1,
         turning: 4,
-        jump: 3,
+        jump: 1.1,
       };
-      const maxJump = 3;
+      const maxJump = 2;
       const obstacles: ComplexModel[] = [];
 
-      const chameleon = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
+      // const player = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
+      const player = await getModel(scene, world, "mushroom.glb", mushroomConfig);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
 
       Object.keys(illustrations).forEach((key) => {
@@ -272,7 +299,7 @@ const init = async (): Promise<void> => {
       //   { position: [18, 0.8, -12] },
       // ]);
 
-      colorModel(chameleon, chameleonConfig.materialColors);
+      // colorModel(player, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
       animate({
         beforeTimeline: () => {},
@@ -282,33 +309,35 @@ const init = async (): Promise<void> => {
             name: "Walk",
             action: () => {
               if (!currentActions["toggle-move"] || currentActions["moving"])
+                console.log(player)
                 controllerForward(
-                  chameleon,
+                  player,
                   obstacles,
                   distance,
                   getDelta(),
-                  "Idle_A",
+                  "Esqueleto|walking",
+                  // "Idle_A",
                   false
                 );
             },
           },
           {
-            name: "Loop: Turn chameleon",
+            name: "Loop: Turn player",
             frequency: speed.movement * angle,
             action: () => {
               if (!currentActions["toggle-move"]) {
-                controllerTurn(chameleon, angle);
+                controllerTurn(player, angle);
               }
             },
           },
           {
-            name: "Free: Turn chameleon",
+            name: "Free: Turn player",
             frequency: speed.movement,
             action: () => {
               if (currentActions["toggle-move"]) {
-                if (currentActions["turn-left"]) controllerTurn(chameleon, speed.turning);
+                if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
                 if (currentActions["turn-right"])
-                  controllerTurn(chameleon, -speed.turning);
+                  controllerTurn(player, -speed.turning);
               }
             },
           },
@@ -326,19 +355,19 @@ const init = async (): Promise<void> => {
             name: "Jump action",
             action: () => {
               if (isJumping.value) {
-                if (chameleon.position.y >= chameleonConfig.position[1] + maxJump) {
+                if (player.position.y >= chameleonConfig.position[1] + maxJump) {
                   isJumping.value = false;
                 } else {
-                  chameleon.position.y += speed.jump * 0.1;
+                  player.position.y += speed.jump * 0.1;
                 }
               } else {
-                chameleon.position.y -= speed.jump * 0.1;
+                player.position.y -= speed.jump * 0.1;
               }
 
               // Fake gravity
-              if (chameleon.position.y <= chameleonConfig.position[1] + 0.1) {
+              if (player.position.y <= chameleonConfig.position[1] + 0.1) {
                 canJump.value = true;
-                chameleon.position.y = chameleonConfig.position[1];
+                player.position.y = chameleonConfig.position[1];
               }
             },
           },

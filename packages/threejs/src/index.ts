@@ -4,6 +4,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer, RenderPass, ShaderPass, PixelShader } from './postprocessing';
 import { video } from './utils/video';
 import { animateTimeline, getAnimationsModel, CoordinateTuple, Model, ComplexModel, Timeline } from '@webgamekit/animation';
 import { ModelOptions, SetupConfig, PhysicOptions, InstanceConfig, ToolsConfig } from './types';
@@ -42,6 +43,7 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   let frame = 0;
   let frameRate = 1 / 60;
   const { renderer, scene, camera, world } = await getEnvironment(canvas);
+  let composer: EffectComposer | null = null;
   if (video && route) video.record(canvas, route);
   const getDelta = () => delta;
   const getFrame = () => frame;
@@ -98,6 +100,13 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       camera.updateProjectionMatrix();
     }
 
+    if (config.postprocessing?.pixelate) {
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const pixelPass = new ShaderPass(PixelShader);
+      pixelPass.uniforms['pixelSize'].value = config.postprocessing.pixelate.pixelSize || 6.0;
+      composer.addPass(pixelPass);
+    }
     if (defineSetup) await defineSetup();
   };
 
@@ -134,7 +143,11 @@ const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
         orbit.update();
         if (config.orbit?.debug) console.log(camera);
       }
-      renderer.render( scene, camera );
+      if (composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
 
       if (video?.stop && route) video.stop(renderer.info.render.frame ,route);
       if (stats?.end && route) stats.end(route);

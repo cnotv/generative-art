@@ -120,6 +120,11 @@ export interface SetupConfig {
   orbit?: {
     target?: THREE.Vector3;
   } | false;
+  postprocessing?: {
+    pixelate?: {
+      size: number;
+    };
+  };
 }
 
 export interface InstanceConfig {
