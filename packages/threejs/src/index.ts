@@ -1218,35 +1218,28 @@ const setCameraPreset = (
     return null;
   }
 
-  // Set common properties
-  camera.position.set(...preset.position);
-  
-  if (preset.near !== undefined) camera.near = preset.near;
-  if (preset.far !== undefined) camera.far = preset.far;
+  const isPerspective = preset.type === 'perspective'
+  const isOrthographic = preset.type === 'orthographic'
+  const frustumSize = preset.frustumSize ?? 40;
+  const verticalOffset = preset.verticalOffset || 15;
+  const lookAt = preset.lookAt || [0, 0, 0]
 
-  // Apply preset-specific properties based on camera type
-  if (preset.type === 'perspective' && camera instanceof THREE.PerspectiveCamera) {
-    if (preset.fov !== undefined) {
-      camera.fov = preset.fov;
-    }
+  if (isPerspective) {
+    // camera = new THREE.PerspectiveCamera(frustumSize, aspect, preset.near, preset.far);
+    camera.position.set(...preset.position)
     camera.aspect = aspect;
-  } else if (preset.type === 'orthographic' && camera instanceof THREE.OrthographicCamera) {
-    const frustumSize = preset.frustumSize || 40;
-    const verticalOffset = preset.verticalOffset || 0;
-    
+    camera.fov = preset.fov;
+  } else if (isOrthographic) {
+    // camera = new THREE.OrthographicCamera(frustumSize, aspect, preset.near, preset.far)
+    // Use specific frustum settings if available
     camera.left = (frustumSize * aspect) / -2;
     camera.right = (frustumSize * aspect) / 2;
     camera.top = frustumSize / 2 + verticalOffset;
     camera.bottom = frustumSize / -2 + verticalOffset;
   }
-
-  // Apply lookAt if specified
-  if (preset.lookAt) {
-    camera.lookAt(...preset.lookAt);
-  }
-
+  camera.lookAt(lookAt);
   camera.updateProjectionMatrix();
-  
+
   return camera;
 };
 
@@ -1262,7 +1255,7 @@ const setCameraSide = (camera: THREE.PerspectiveCamera, {x,y,z}: THREE.Vector3, 
     x += 15; y += 5
   }
   camera.position.set(x, y, z)
-  // camera.lookAt(meshPosition.x, meshPosition.y, meshPosition.z);
+  camera.lookAt(x, y, z);
 }
 
 export {
