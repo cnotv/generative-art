@@ -1095,6 +1095,13 @@ export enum CameraPreset {
   TopDown = 'top-down',
 }
 
+export enum CameraSide {
+  CameraLeft = 'camera-left',
+  CameraRight = 'camera-right',
+  CameraUp = 'camera-up',
+  CameraDown = 'camera-down',
+}
+
 /**
  * Dictionary of predefined camera presets for common use cases
  */
@@ -1243,6 +1250,21 @@ const setCameraPreset = (
   return camera;
 };
 
+const setCameraSide = (camera: THREE.PerspectiveCamera, {x,y,z}: THREE.Vector3, value: CameraSide) => {
+  x = 0; y = 0; z = 0;
+  if (value === CameraSide.CameraDown) {
+    y += 5; z += 20;
+  } else if (value === CameraSide.CameraUp) {
+    y += 5;
+  } else if (value === CameraSide.CameraLeft) {
+    x -= 15; y += 5
+  } else if (value === CameraSide.CameraRight) {
+    x += 15; y += 5
+  }
+  camera.position.set(x, y, z)
+  // camera.lookAt(meshPosition.x, meshPosition.y, meshPosition.z);
+}
+
 export {
   applyMaterial,
   cameraPresets,
@@ -1271,6 +1293,7 @@ export {
   onWindowResize,
   removeElements,
   setCameraPreset,
+  setCameraSide,
   setThirdPersonCamera,
   tiltCamera,
 };

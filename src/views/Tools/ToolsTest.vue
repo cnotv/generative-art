@@ -9,6 +9,8 @@ import {
   instanceMatrixMesh,
   type SetupConfig,
   type PostProcessingConfig,
+  CameraSide,
+  setCameraSide,
 } from "@webgamekit/threejs";
 import * as THREE from "three";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
@@ -193,12 +195,12 @@ const setupConfig: SetupConfig = {
     // fxaa: {},
     // dotScreen: { scale: 5, angle: Math.PI / 3, center: [0.2, 0.2] },
     // rgbShift: { amount: 0.005 },
-    // film: { noiseIntensity: 2.5, grayscale: true },
+    // film: { noiseIntensity: 5, grayscale: false },
     // glitch: {},
     // afterimage: {},
     // ssao: {},
     // vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
-    colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
+    // colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
   } as PostProcessingConfig,
 };
 
@@ -227,8 +229,16 @@ const getLogs = (actions: Record<string, any>): string[] =>
 let cameraPreset: any = null; // TODO: Identified issue for tooling block scoping
 
 // Return binding 1 to x for each preset
-const cameraBindings = Object.values(CameraPreset).reduce(
+const cameraPresetBindings = Object.values(CameraPreset).reduce(
   (acc, preset, index) => ({ ...acc, [index + 1]: preset }),
+  {}
+);
+const cameraSideBindings = Object.values(CameraSide).reduce(
+  (acc, preset) => {
+    const [capital, ...rest] = preset.replace('camera-', '')
+    const key = `Arrow${capital.toUpperCase()}${rest.join('')}`
+    return { ...acc, [key]: preset }
+  },
   {}
 );
 const bindings = {
@@ -241,7 +251,8 @@ const bindings = {
       w: "moving",
       s: "moving",
       p: 'print-log',
-      ...cameraBindings,
+      ...cameraPresetBindings,
+      ...cameraSideBindings
     },
     gamepad: {
       cross: "jump",
@@ -267,14 +278,21 @@ const bindings = {
         break;
 
       // TODO: Iterate instead of hardcoding
-      case "perspective":
-      case "orthographic":
-      case "fisheye":
-      case "cinematic":
-      case "orbit":
-      case "orthographic-following":
-      case "top-down":
+      case CameraPreset.Perspective:
+      case CameraPreset.Orthographic:
+      case CameraPreset.Fisheye:
+      case CameraPreset.Cinematic:
+      case CameraPreset.Orbit:
+      case CameraPreset.OrthographicFollowing:
+      case CameraPreset.TopDown:
         setCameraPreset(cameraPreset, action as CameraPreset);
+        break;
+
+      case CameraSide.CameraDown:
+      case CameraSide.CameraUp:
+      case CameraSide.CameraLeft:
+      case CameraSide.CameraRight:
+        setCameraSide(cameraPreset, cameraPreset, action as CameraSide)
         break;
     }
   },
