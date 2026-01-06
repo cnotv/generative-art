@@ -7,7 +7,7 @@ import { stats } from "@/utils/stats";
 import { getModel, getTools } from "@webgamekit/threejs";
 import { bindAnimatedElements, bodyJump, updateAnimation } from "@webgamekit/animation";
 import { useUiStore } from "@/stores/ui";
-import { getCube } from "@/utils/models";
+import { getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
 
 // Set UI controls

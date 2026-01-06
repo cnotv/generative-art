@@ -8,6 +8,7 @@ import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { RectAreaLightHelper } from "three/addons/helpers/RectAreaLightHelper.js";
+import type { CoordinateTuple } from "@/types/three";
 
 type ProjectConfig = any;
 
@@ -27,7 +28,7 @@ const sphereSize = () => Math.random() * 0.5 + 0.5;
 const modelPosition = [0.0, 5.0, 0.0] as CoordinateTuple;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
 let gravity = { x: 0.0, y: -9.81, z: 0.0 };
-let world = new RAPIER.World(gravity);
+let world;
 
 onMounted(() => {
   init(
@@ -114,7 +115,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     }
   );
 
-  const setup = () => {
+  const setup = async () => {
+    world = await new RAPIER.World(gravity);
     const renderer = getRenderer(canvas);
     const camera = new THREE.PerspectiveCamera(
       75,

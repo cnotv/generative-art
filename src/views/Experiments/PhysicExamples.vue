@@ -16,9 +16,10 @@ import {
   resetAnimation,
   animateTimeline,
 } from "@webgamekit/animation";
-import { getBall, getWalls } from "@/utils/models";
+import { getBall, getWalls } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
 import bowlingTexture from "@/assets/images/textures/bowling.png";
+import type { CoordinateTuple } from "@/types/three";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -164,7 +165,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       const frame = requestAnimationFrame(animate);
       world.step();
 
-      bindAnimatedElements(experiments, delta);
+      bindAnimatedElements(experiments, world, delta);
       // experiments[0].mesh.position.y -= 0.1;
 
       animateTimeline(

@@ -13,7 +13,7 @@ import {
   controllerJump,
   controllerTurn,
 } from "@webgamekit/animation";
-import { getBall, getCube } from "@/utils/models";
+import { getBall, getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
 

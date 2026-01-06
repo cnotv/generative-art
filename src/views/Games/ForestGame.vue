@@ -16,7 +16,7 @@ import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import type { GameState } from "@webgamekit/game";
-import { getCube } from "@/utils/models";
+import { getCube } from "@webgamekit/threejs";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";

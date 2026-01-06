@@ -348,3 +348,235 @@ export const loadGLTF = (
     }, undefined, reject);
   });
 };
+
+/**
+ * Create a ball with physics, texture, and shadow
+ * Friction and bounciness is size based
+ * @param scene
+ * @param world
+ * @param options
+ */
+export const getBall = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  {
+    size = 1,
+    position = [0, 0, 0],
+    color = 0x222222,
+    mass = 1,
+    density = 1,
+    weight = 50,
+    friction = 1,
+    restitution = 0,
+    damping = 0,
+    angular = 0,
+    opacity = 1,
+    reflectivity = 0.5,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
+    type = 'dynamic',
+    castShadow = true,
+    showHelper = false,
+    hasGravity = false,
+    receiveShadow = true,
+    material = 'MeshPhysicalMaterial',
+    texture,
+  }: ModelOptions = {},
+): ComplexModel => {
+  const initialValues = { size, position, color };
+  
+  // Create and add model
+  const geometry = new THREE.SphereGeometry(size as number);
+  const mesh = applyMaterial(new THREE.Mesh(geometry), {
+    color,
+    transmission,
+    opacity,
+    transparent: opacity < 1,
+    reflectivity,
+    roughness,
+    metalness,
+    material,
+  });
+  
+  if (texture) {
+    const textureLoader = new THREE.TextureLoader();
+    mesh.material.map = textureLoader.load(texture);
+  }
+  
+  mesh.position.set(...(position as CoordinateTuple));
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = receiveShadow;
+  scene.add(mesh);
+
+  const { rigidBody, collider, characterController } = getPhysic(world, {
+    position,
+    size,
+    boundary: 0.8,
+    rotation: { w: 1.0, x: 0.5, y: 0.5, z: 0.5 },
+    restitution,
+    friction,
+    weight,
+    density,
+    damping,
+    angular,
+    mass,
+    shape: 'ball',
+    type,
+  });
+
+  let helper;
+  if (showHelper) {
+    helper = new THREE.BoxHelper(mesh, 0x000000);
+    scene.add(helper);
+  }
+
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+      actions: {},
+      mixer: null,
+      helper: helper as any,
+      type,
+      characterController,
+      hasGravity
+    }
+  });
+};
+
+/**
+ * Create a cube with physics, texture, and shadow
+ * Friction and bounciness is size based
+ * @param scene
+ * @param world
+ * @param options
+ */
+export const getCube = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  {
+    size = [5, 5, 5] as CoordinateTuple,
+    rotation = [0, 0, 0] as CoordinateTuple,
+    position = [0, 0, 0],
+    color = 0x222222,
+    mass = 1,
+    density = 1,
+    weight = 5,
+    friction = 1,
+    dominance = 0,
+    restitution = 1,
+    damping = 0,
+    angular = 0,
+    opacity = 1,
+    reflectivity = 0,
+    roughness = 1,
+    metalness = 0,
+    transmission = 0,
+    boundary = 0.5,
+    castShadow = true,
+    receiveShadow = true,
+    texture,
+    hasGravity = false,
+    showHelper = false,
+    material = 'MeshPhysicalMaterial',
+    type = 'dynamic',
+  }: ModelOptions = {},
+): ComplexModel => {
+  const initialValues = { size, rotation, position, color };
+  
+  // Create and add model
+  const geometry = new THREE.BoxGeometry(...size);
+  const mesh = applyMaterial(new THREE.Mesh(geometry), {
+    color,
+    transmission,
+    opacity,
+    transparent: opacity < 1,
+    reflectivity,
+    roughness,
+    metalness,
+    material,
+  });
+  
+  if (texture) {
+    const textureLoader = new THREE.TextureLoader();
+    mesh.material.map = textureLoader.load(texture);
+  }
+  
+  mesh.position.set(...(position as CoordinateTuple));
+  mesh.rotation.set(...rotation);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = receiveShadow;
+  scene.add(mesh);
+
+  const { rigidBody, collider, characterController } = getPhysic(world, {
+    position,
+    size,
+    rotation,
+    restitution,
+    friction,
+    weight,
+    density,
+    damping,
+    angular,
+    dominance,
+    boundary,
+    mass,
+    shape: 'cuboid',
+    type,
+  });
+
+  let helper;
+  if (showHelper) {
+    helper = new THREE.BoxHelper(mesh, 0x000000);
+    scene.add(helper);
+  }
+
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+      actions: {},
+      mixer: null,
+      helper: helper as any,
+      type,
+      characterController,
+      hasGravity
+    }
+  });
+};
+
+/**
+ * Create walls around a space
+ * @param scene
+ * @param world
+ * @param options
+ */
+export const getWalls = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  {
+    length = 200,
+    height = 50,
+    depth = 0.2,
+    opacity = 1,
+  } = {},
+): ComplexModel[] => {
+  return [
+    { position: [0, 0, 0], size: [length, depth, length] },
+    { position: [-length/2, height/2, 0], size: [depth, height, length] },
+    { position: [length/2, height/2, 0], size: [depth, height, length] },
+    { position: [0, height/2, length/2], size: [length, height, depth] },
+    { position: [0, height/2, -length/2], size: [length, height, depth] },
+  ].map(({ position, size }) => 
+    getCube(scene, world, {
+      color: 0xcccccc,
+      opacity,
+      size: size as CoordinateTuple,
+      position: position as CoordinateTuple,
+      type: 'fixed',
+    })
+  );
+};

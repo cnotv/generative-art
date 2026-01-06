@@ -6,7 +6,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { getLights, getEnvironment, getGround, removeElements } from "@webgamekit/threejs";
 import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
-import { getBall } from "@/utils/models";
+import { getBall } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
 
 const statsEl = ref(null);
