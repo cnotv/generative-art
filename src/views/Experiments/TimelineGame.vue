@@ -12,10 +12,14 @@ import {
   bindAnimatedElements,
   controllerJump,
   controllerTurn,
+  type Timeline,
+  type ComplexModel,
+  type CoordinateTuple,
 } from "@webgamekit/animation";
 import { getBall, getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
+import type { RotationMap } from "@/types/three";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -278,8 +282,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           {
             interval: [100, 100],
             action: () =>
-              movingCube.rigidBody.setTranslation(
-                movingCube.mesh.position.add(new THREE.Vector3(0, 0.5, 0)),
+              movingCube.userData.body.setTranslation(
+                movingCube.position.add(new THREE.Vector3(0, 0.5, 0)),
                 true
               ),
           },
@@ -287,8 +291,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             interval: [100, 100],
             delay: 100,
             action: () =>
-              movingCube.rigidBody.setTranslation(
-                movingCube.mesh.position.add(new THREE.Vector3(0, -0.5, 0)),
+              movingCube.userData.body.setTranslation(
+                movingCube.position.add(new THREE.Vector3(0, -0.5, 0)),
                 true
               ),
           },
