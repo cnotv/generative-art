@@ -130,10 +130,11 @@ const illustrations = {
 
 const setupConfig: SetupConfig = {
   orbit: {
-    target: new THREE.Vector3(0, 0, 0),
+    target: new THREE.Vector3(0, 15, 0),
+    disabled: true,
   },
   camera: {
-    position: [-0.1137142860882116, 7.309126007131214, 35.4614049040206],
+    position: [0, 7, 35],
     lookAt: [0, 0, 0],
     fov: 80,
     up: new THREE.Vector3(0, 1, 0),
@@ -310,7 +311,7 @@ const init = async (): Promise<void> => {
       // colorModel(player, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
       animate({
-        beforeTimeline: () => {},
+        beforeTimeline: () => { },
         timeline: [
           {
             frequency: speed.movement,

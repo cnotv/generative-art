@@ -81,6 +81,7 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       if (config.orbit?.target) {
         orbit.target.copy(config.orbit.target as THREE.Vector3);
       }
+      orbit.enabled = !(config.orbit?.disabled === true);
     }
     if (config.lights !== false) getLights(scene, config.lights);
     if (config.ground !== false) getGround(scene, world, config?.ground || {});
@@ -132,13 +133,19 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     afterTimeline = () => {},
     timeline = [],
     config = {
-      orbit: {debug: false}
+      orbit: {
+        debug: false,
+      }
     }
   }: {
     beforeTimeline?: () => void,
     afterTimeline?: () => void,
       timeline?: Timeline[],
-      config?: any
+      config?: {
+        orbit?: {
+          debug?: boolean,
+        }
+      }
   }) => { 
     function runAnimation() {
       if (stats?.start && route) stats.start(route);

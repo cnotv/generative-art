@@ -166,6 +166,7 @@ export interface SetupConfig {
   lights?: LightsConfig | false;
   orbit?: {
     target?: THREE.Vector3;
+    disabled?: boolean;
   } | false;
   postprocessing?: PostProcessingConfig | false;
 }
