@@ -49,7 +49,7 @@ const bindings: Record<string, ControlsOptions> = {
         " ": "jump",
       },
       gamepad: {
-        a: "jump",
+        cross: "jump",
       },
       touch: {
         tap: "jump",
@@ -65,7 +65,7 @@ const bindings: Record<string, ControlsOptions> = {
         " ": "restart",
       },
       gamepad: {
-        a: "restart",
+        cross: "restart",
       },
       touch: {
         tap: "restart",
@@ -81,7 +81,7 @@ const bindings: Record<string, ControlsOptions> = {
         " ": "start",
       },
       gamepad: {
-        a: "start",
+        cross: "start",
       },
       touch: {
         tap: "start",
