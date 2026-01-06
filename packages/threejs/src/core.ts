@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { EffectComposer, setupPostprocessing } from './postprocessing';
 import { video } from './utils/video';
-import { animateTimeline, CoordinateTuple, Timeline } from '@webgamekit/animation';
+import { animateTimeline, ComplexModel, CoordinateTuple, Timeline } from '@webgamekit/animation';
 import { ToolsConfig, SetupConfig, ModelOptions } from './types';
 import { getEnvironment, getLights, getGround, getSky } from './getters';
 
@@ -194,10 +194,12 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
  * @param elements 
  * @returns 
  */
-export const removeElements = (scene: THREE.Scene, world: RAPIER.World, elements: any[]) => {
-  elements.forEach(({ mesh, rigidBody }) => {
+export const removeElements = (scene: THREE.Scene, world: RAPIER.World, meshes: ComplexModel[]) => {
+  meshes.forEach((mesh) => {
     scene.remove(mesh);
-    world.removeRigidBody(rigidBody);
+    if (mesh.userData.body) {
+      world.removeRigidBody(mesh.userData.body);
+    }
   });
 
   return [];
