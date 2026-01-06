@@ -6,7 +6,7 @@ import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { animateTimeline } from "@webgamekit/animation";
-import { createLights } from "@webgamekit/threejs";
+import { getLights } from "@webgamekit/threejs";
 import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
 
@@ -117,7 +117,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         })
       )
     );
-    createLights(scene, { directionalLightIntensity: 10 });
+    getLights(scene, { directionalLightIntensity: 10 });
 
     // Start recording video if URL has query string ?video=true
     video.record(canvas, route);

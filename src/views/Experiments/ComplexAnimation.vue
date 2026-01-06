@@ -8,7 +8,7 @@ import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import {
-  createLights,
+  getLights,
   getGround,
   getRenderer,
   loadAnimation,
@@ -92,7 +92,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     camera.position.set(-30, 25, 30);
     scene.fog = new THREE.Fog(0xaaaaff, 1);
 
-    const { directionalLight } = createLights(scene);
+    const { directionalLight } = getLights(scene);
     getGround(scene, world, {
       size: groundSize[0],
       position: groundPosition,

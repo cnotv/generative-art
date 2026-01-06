@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { createLights, getEnvironment } from "@webgamekit/threejs";
+import { getLights, getEnvironment } from "@webgamekit/threejs";
 import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
 import { getBall, getWalls } from "@/utils/models";
 import { times } from "@/utils/lodash";
@@ -46,7 +46,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera: { position: [0, 40, 100] },
       }
     );
-    createLights(scene, { directionalLightIntensity: config.directional.intensity });
+    getLights(scene, { directionalLightIntensity: config.directional.intensity });
     // getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 });
 

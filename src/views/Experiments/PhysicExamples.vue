@@ -5,7 +5,7 @@ import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import {
-  createLights,
+  getLights,
   getEnvironment,
   getGround,
   getModel,
@@ -54,7 +54,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     const { renderer, scene, camera, clock, world } = await getEnvironment(canvas, {
       camera: { position: [0, 50, 200] },
     });
-    createLights(scene, { directionalLightIntensity: config.directional.intensity });
+    getLights(scene, { directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 150, depth: 0.2 });
 

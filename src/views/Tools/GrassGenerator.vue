@@ -6,7 +6,7 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgamekit/threejs';
+import { getLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgamekit/threejs';
 import { times } from '@/utils/lodash';
 
 const statsEl = ref(null)
@@ -160,7 +160,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     ] as ModelOptions[]
 
     camera.position.set(-30, 25, 30);
-    createLights(scene);
+    getLights(scene);
 
     // Populate grass
     const grass = getGrass(config.grass);

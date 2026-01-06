@@ -8,7 +8,7 @@ import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
-import { createLights } from "@webgamekit/threejs";
+import { getLights } from "@webgamekit/threejs";
 
 type ProjectConfig = any;
 
@@ -109,7 +109,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     camera.position.z = -10;
     camera.position.y = 4;
 
-    const { directionalLight } = createLights(scene, config);
+    const { directionalLight } = getLights(scene, config);
     let count = 0;
     setInterval(() => {
       count += 0.1;
