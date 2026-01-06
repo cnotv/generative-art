@@ -276,12 +276,14 @@ const updatePlayerAnimation = (
   getSpeed: any,
   config: any
 ) => {
-  if (!isPlaying) return;
+  if (!isPlaying || !model.userData.mixer || !model.userData.actions) return;
   const animationSpeed = getSpeed(config.player.speed, gameScore);
-  if (!model.userData.mixer || !model.userData.actions?.run) return;
+  const actionName = Object.keys(model.userData.actions)[0]; // Take 001
+  const action = model.userData.actions[actionName];
+  
   updateAnimation(
     model.userData.mixer,
-    model.userData.actions.run,
+    action,
     getDelta(),
     animationSpeed
   );
