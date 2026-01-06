@@ -114,7 +114,7 @@ export const getLookAt = (model: Model, config: any) => {
 export const setCameraPreset = (
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   presetName: CameraPreset,
-  aspect: number = window.innerWidth / window.innerHeight
+  aspect: number = 16 / 9
 ): THREE.Camera | null => {
   const preset = cameraPresets[presetName];
   

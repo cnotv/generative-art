@@ -266,7 +266,6 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
 
 export const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => {
   if (camera instanceof THREE.PerspectiveCamera) {
-    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
   }
   renderer.setSize(window.innerWidth, window.innerHeight);

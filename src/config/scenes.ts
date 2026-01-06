@@ -3,7 +3,7 @@ export const complexAnimation = {
   camera: {
     fixed: true,
     near: 2,
-    aspect: window.innerWidth / window.innerHeight,
+    aspect: 16 / 9,
     far: 1000,
     fov: 60,
     offset: {

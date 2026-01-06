@@ -20,6 +20,27 @@ import { getCube } from "@/utils/models";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
+import illustrationBackgroundImg from "@/assets/images/illustrations/background.png";
+// import groundImg from "@/assets/images/textures/grass.jpg";
+// import groundImg from "@/assets/images/textures/smb_brick.png";
+
+import groundImg from "@/assets/images/illustrations/ground.png";
+import illustrationPangolinImg from "@/assets/images/illustrations/pangolin.png";
+import illustrationRockDudeImg from "@/assets/images/illustrations/rock_dude.png";
+import illustrationShroomQueenImg from "@/assets/images/illustrations/shroom_queen.png";
+
+const chameleonConfig = {
+  position: [0, -1, 0] as CoordinateTuple,
+  scale: [0.03, 0.03, 0.03] as CoordinateTuple,
+  restitution: -10,
+  boundary: 0.5,
+  // type: "kinematicPositionBased",
+  hasGravity: false,
+  castShadow: true,
+  animations: "chameleon_animations.fbx",
+  material: "MeshLambertMaterial",
+  materialColors: [0x99cc99],
+};
 
 const mushroomConfig = {
   position: [0, -1, 0] as CoordinateTuple,
@@ -34,39 +55,98 @@ const mushroomConfig = {
   color: 0xaaaaaa,
 };
 
-// const genericFlatConfig = {
-//   receiveShadow: false,
-//   castShadow: false,
-//   color: 0xcccccc,
-//   opacity: 0.95,
-//   material: "MeshBasicMaterial",
-//   physic: false,
-// }
+const genericFlatConfig = {
+  receiveShadow: false,
+  castShadow: false,
+  color: 0xcccccc,
+  opacity: 0.95,
+  material: "MeshBasicMaterial",
+  physic: false,
+}
 
 const illustrations = {
+  background: {
+    texture: illustrationBackgroundImg,
+    size: [200, 200, 0],
+    position: [-0, -15, -20],
+    ...genericFlatConfig,
+    opacity: 0.5
+  },
   // flower: {
   //   texture: illustrationFlowersImg,
   //   size: [4, 6, 0],
   //   position: [-10, 1, -9],
   //   ...genericFlatConfig,
   // },
+  // cactus: {
+  //   texture: illustrationCactusImg,
+  //   size: [5, 7, 0],
+  //   position: [-6, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers2: {
+  //   texture: illustrationFlowers2Img,
+  //   size: [5, 7, 0],
+  //   position: [-2, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers3: {
+  //   texture: illustrationFlowers3Img,
+  //   size: [5, 7, 0],
+  //   position: [4, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers4: {
+  //   texture: illustrationFlowers4Img,
+  //   size: [5, 7, 0],
+  //   position: [8, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  // flowers5: {
+  //   texture: illustrationFlowers5Img,
+  //   size: [5, 7, 0],
+  //   position: [13, 2.5, -9],
+  //   ...genericFlatConfig,
+  // },
+  pangolin: {
+    texture: illustrationPangolinImg,
+    size: [10, 5, 0],
+    position: [10, 0.5, 7],
+    ...genericFlatConfig,
+  },
+  rockDude: {
+    texture: illustrationRockDudeImg,
+    size: [30, 35, 0],
+    position: [-40, 14, 0],
+    ...genericFlatConfig,
+  },
+  shroomQueen: {
+    texture: illustrationShroomQueenImg,
+    size: [15, 24, 0],
+    position: [30, 11, 0],
+    ...genericFlatConfig,
+  },
 }
 
 const setupConfig: SetupConfig = {
+  orbit: {
+    target: new THREE.Vector3(0, 0, 0),
+  },
   camera: {
-    position: [0, 10, 20],
+    position: [-0.1137142860882116, 7.309126007131214, 35.4614049040206],
+    lookAt: [0, 0, 0],
     fov: 80,
     up: new THREE.Vector3(0, 1, 0),
     near: 0.1,
     far: 1000,
-    aspect: window.innerWidth / window.innerHeight,
     zoom: 1,
     focus: 10,
-    // Optionally, you can set rotation using a THREE.Euler if you extract it from the matrix
   },
   ground: {
-    size: [1000, 100, 100],
-    color: 0x99aa99,
+    size: [1000, 100, 20],
+    texture: groundImg,
+    textureRepeat: [500, 20] as [number, number],
+    color: 0xffffff,
   },
   sky: { size: 500, color: 0x335533 },
   postprocessing: {
@@ -121,6 +201,7 @@ const cameraSideBindings = Object.values(CameraSide).reduce(
   },
   {}
 );
+let orbitControls: any = null;
 const bindings = {
   mapping: {
     keyboard: {
@@ -155,6 +236,7 @@ const bindings = {
         break;
       case "print-log":
         console.log("Current camera:", cameraPreset);
+        console.log(orbitControls)
         break;
 
       // TODO: Iterate instead of hardcoding
@@ -187,9 +269,10 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { camera, setup, animate, scene, world, getDelta } = await getTools({
+  const { camera, setup, animate, scene, world, getDelta, orbit } = await getTools({
     canvas: canvas.value,
   });
+  orbitControls = orbit;
   cameraPreset = camera;
   await setup({
     config: setupConfig,
@@ -204,6 +287,7 @@ const init = async (): Promise<void> => {
       const maxJump = 2;
       const obstacles: ComplexModel[] = [];
 
+      // const player = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const player = await getModel(scene, world, "mushroom.glb", mushroomConfig);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
 
@@ -212,6 +296,9 @@ const init = async (): Promise<void> => {
         getCube(scene, world, config);
         // obstacles.push(model);
       });
+
+      // const cloud = getCube(scene, world, cloudConfig);
+      // const smbCube = getCube(scene, world, smbCubeConfig);
 
       // const flower = getCube(scene, world, flowerConfig);
       // instanceMatrixMesh(flower, scene, [
@@ -276,7 +363,7 @@ const init = async (): Promise<void> => {
             name: "Jump action",
             action: () => {
               if (isJumping.value) {
-                if (player.position.y >= mushroomConfig.position[1] + maxJump) {
+                if (player.position.y >= chameleonConfig.position[1] + maxJump) {
                   isJumping.value = false;
                 } else {
                   player.position.y += speed.jump * 0.1;
@@ -286,9 +373,9 @@ const init = async (): Promise<void> => {
               }
 
               // Fake gravity
-              if (player.position.y <= mushroomConfig.position[1] + 0.1) {
+              if (player.position.y <= chameleonConfig.position[1] + 0.1) {
                 canJump.value = true;
-                player.position.y = mushroomConfig.position[1];
+                player.position.y = chameleonConfig.position[1];
               }
             },
           },
