@@ -3,6 +3,22 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { getCube } from "@webgamekit/threejs";
 import { config } from "../config";
 import { preventGlitches, getSpeed } from "./setup";
+import type { ComplexModel } from "@webgamekit/animation";
+
+/**
+ * Background element with mesh and movement properties
+ */
+export interface BackgroundElement {
+  mesh: ComplexModel;
+  speed: number;
+  fallAnimation?: {
+    isActive: boolean;
+    startTime: number;
+    delay: number;
+    fallSpeed: number;
+    rotationSpeed: number;
+  };
+}
 
 /**
  * Calculate Out of Sight (OoS) status for background elements
@@ -42,7 +58,7 @@ export const addBackground = (
   world: RAPIER.World,
   options: any,
   initialX?: number
-) => {
+): ComplexModel => {
   const getVariation = (variation: number) =>
     (Math.random() - 0.5) * 2 * (variation || 0);
 
@@ -81,17 +97,7 @@ export const addBackground = (
 export const populateInitialBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  backgrounds: {
-    mesh: THREE.Mesh;
-    speed: number;
-    fallAnimation?: {
-      isActive: boolean;
-      startTime: number;
-      delay: number;
-      fallSpeed: number;
-      rotationSpeed: number;
-    };
-  }[]
+  backgrounds: BackgroundElement[]
 ) => {
   const viewportWidth = window.innerWidth;
   const extendedWidth = viewportWidth * 2; // Cover more area initially
@@ -101,24 +107,14 @@ export const populateInitialBackgrounds = (
 
     for (let i = 0; i < totalElements; i++) {
       const initialX = i * background.spacing - extendedWidth / 2;
-      const { mesh } = addBackground(scene, world, background, initialX);
+      const mesh = addBackground(scene, world, background, initialX);
       backgrounds.push({ mesh, speed: background.speed });
     }
   });
 };
 
 export const startBackgroundFalling = (
-  backgrounds: {
-    mesh: THREE.Mesh;
-    speed: number;
-    fallAnimation?: {
-      isActive: boolean;
-      startTime: number;
-      delay: number;
-      fallSpeed: number;
-      rotationSpeed: number;
-    };
-  }[]
+  backgrounds: BackgroundElement[]
 ) => {
   const currentTime = Date.now();
 
@@ -142,17 +138,7 @@ export const startBackgroundFalling = (
 
 export const updateFallingBackgrounds = (
   deltaTime: number,
-  backgrounds: {
-    mesh: THREE.Mesh;
-    speed: number;
-    fallAnimation?: {
-      isActive: boolean;
-      startTime: number;
-      delay: number;
-      fallSpeed: number;
-      rotationSpeed: number;
-    };
-  }[],
+  backgrounds: BackgroundElement[],
   scene: THREE.Scene
 ) => {
   const currentTime = Date.now();
@@ -190,7 +176,7 @@ export const updateFallingBackgrounds = (
 export const createBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  backgrounds: any[],
+  backgrounds: BackgroundElement[],
   backgroundTimers: number[],
   gameScore: number
 ) => {
@@ -204,7 +190,7 @@ export const createBackgrounds = (
 
     if (backgroundTimers[layerIndex] >= adjustedSpacing) {
       backgroundTimers[layerIndex] = 0; // Reset timer
-      const { mesh } = addBackground(scene, world, backgroundConfig);
+      const mesh = addBackground(scene, world, backgroundConfig);
       backgrounds.push({ mesh, speed: backgroundConfig.speed });
     }
   });
@@ -213,12 +199,18 @@ export const createBackgrounds = (
 export const moveBackgrounds = (
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
-  backgrounds: any[],
+  backgrounds: BackgroundElement[],
   gameScore: number
 ) => {
   // Move backgrounds and remove off-screen ones
   for (let i = backgrounds.length - 1; i >= 0; i--) {
     const background = backgrounds[i];
+
+    // Safety check - skip if mesh is undefined
+    if (!background || !background.mesh) {
+      backgrounds.splice(i, 1);
+      continue;
+    }
 
     // Only move horizontally if not falling
     if (!background.fallAnimation || !background.fallAnimation.isActive) {
@@ -239,7 +231,7 @@ export const moveBackgrounds = (
 export const resetBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  backgrounds: any[]
+  backgrounds: BackgroundElement[]
 ) => {
   for (let i = backgrounds.length - 1; i >= 0; i--) {
     const background = backgrounds[i];

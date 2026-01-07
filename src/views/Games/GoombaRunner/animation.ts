@@ -7,6 +7,7 @@ import {
   createBackgrounds,
   moveBackgrounds,
   resetBackgrounds,
+  type BackgroundElement,
 } from "./helpers/background";
 import { moveBlocks, resetObstacles, createCubes } from "./helpers/block";
 import { moveGround, resetGround, getGround } from "./helpers/ground";
@@ -76,7 +77,7 @@ const createTimeline = async ({
   );
 
   const obstacles: any[] = [];
-  const backgrounds: any[] = [];
+  const backgrounds: BackgroundElement[] = [];
   const groundTexture = getGround(scene, physics);
   const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
   const backgroundTimers = config.backgrounds.layers.map(() => 0);
