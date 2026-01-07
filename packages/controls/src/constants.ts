@@ -19,3 +19,9 @@ export const DEFAULT_BUTTON_MAP = [
   'ps',       // 16
   'touchpad', // 17
 ];
+
+// Standard gamepad axes indices
+// Axis 0: Left stick horizontal (left: negative, right: positive)
+// Axis 1: Left stick vertical (up: negative, down: positive)
+// Axis 2: Right stick horizontal (left: negative, right: positive)
+// Axis 3: Right stick vertical (up: negative, down: positive)

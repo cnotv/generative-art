@@ -73,7 +73,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
 
   // Create controllers
   const keyboardController = createKeyboardController(mappingRef, handlers);
-  const gamepadController = createGamepadController(mappingRef, handlers, buttonMap);
+  const gamepadController = createGamepadController(mappingRef, handlers, buttonMap, options.axisThreshold || 0.5);
   const touchController = createTouchController(mappingRef, handlers);
   const mouseController = createMouseController(mappingRef, handlers);
 

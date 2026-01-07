@@ -157,16 +157,22 @@ const bindings = {
       p: 'print-log',
     },
     gamepad: {
+      // Buttons
       cross: "jump",
       "dpad-left": "turn-left",
       "dpad-right": "turn-right",
       "dpad-down": "moving",
       "dpad-up": "moving",
+      "axis0-left": "turn-left",
+      "axis0-right": "turn-right",
+      "axis1-up": "moving",
+      "axis1-down": "moving",
     },
     touch: {
       tap: "jump",
     },
   },
+  axisThreshold: 0.5,
   onAction: (action: string) => {
     logs.value = getLogs(currentActions);
 

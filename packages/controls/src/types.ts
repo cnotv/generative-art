@@ -3,7 +3,7 @@ export type ControlEvent = 'down' | 'up';
 
 export interface ControlMapping {
   keyboard?: Record<string, ControlAction>;
-  gamepad?: Record<string, ControlAction>;
+  gamepad?: Record<string, ControlAction>; // Supports both buttons (cross, dpad-up) and axes (axis0-left, axis1-up)
   touch?: Record<string, ControlAction>;
 }
 
@@ -19,6 +19,7 @@ export interface ControlsOptions {
   touchTarget?: HTMLElement | null;
   mouseTarget?: HTMLElement | null;
   buttonMap?: string[]; // Optional: custom button names by index
+  axisThreshold?: number; // Threshold for axis activation (default: 0.5)
 }
 
 export type ControlsCurrents = Record<string, { action: string; trigger: string; device: string }>;

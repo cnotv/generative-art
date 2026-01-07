@@ -135,17 +135,24 @@ const bindings = {
       ...cameraSideBindings
     },
     gamepad: {
+      // Buttons
       cross: "jump",
       circle: "toggle-move",
       "dpad-left": "turn-left",
       "dpad-right": "turn-right",
       "dpad-down": "moving",
       "dpad-up": "moving",
+      // Left analog stick
+      "axis0-left": "turn-left",
+      "axis0-right": "turn-right",
+      "axis1-up": "moving",
+      "axis1-down": "moving",
     },
     touch: {
       tap: "jump",
     },
   },
+  axisThreshold: 0.3, // Lower threshold for more sensitive analog stick
   onAction: (action: string) => {
     logs.value = getLogs(currentActions);
 
