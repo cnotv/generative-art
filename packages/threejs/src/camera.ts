@@ -180,6 +180,26 @@ export const setThirdPersonCamera = (
 };
 
 /**
+ * Make camera follow a player/model by updating camera position with offset
+ * @param camera - The Three.js camera to update
+ * @param player - The player model to follow
+ * @param offset - Camera offset from player [x, y, z]
+ * @returns Updated camera position as CoordinateTuple
+ */
+export const cameraFollowPlayer = (
+  camera: THREE.Camera,
+  player: Model,
+  offset: CoordinateTuple,
+  coordinates: ('x' | 'y' | 'z')[] = ['x', 'y', 'z']
+): CoordinateTuple => {
+  if (coordinates.includes('x')) camera.position.x = player.position.x + offset[0];
+  if (coordinates.includes('y')) camera.position.y = player.position.y + offset[1];
+  if (coordinates.includes('z')) camera.position.z = player.position.z + offset[2];
+  
+  return [camera.position.x, camera.position.y, camera.position.z];
+};
+
+/**
  * Smoothly tilt the camera for dynamic effects like jump reactions
  * @param camera - The Three.js camera to tilt
  * @param targetTilt - Target tilt angle in radians (positive = tilt up, negative = tilt down)

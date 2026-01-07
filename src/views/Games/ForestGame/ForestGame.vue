@@ -4,8 +4,9 @@ import {
   getTools,
   getModel,
   instanceMatrixMesh,
+  cameraFollowPlayer,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type ComplexModel, updateAnimation } from "@webgamekit/animation";
+import { controllerTurn, controllerForward, type ComplexModel, type CoordinateTuple, updateAnimation } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -68,7 +69,7 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { setup, animate, scene, world, getDelta } = await getTools({
+  const { setup, animate, scene, world, getDelta, camera } = await getTools({
     canvas: canvas.value,
   });
   await setup({
@@ -76,6 +77,7 @@ const init = async (): Promise<void> => {
     defineSetup: async () => {
       const { distance, speed, maxJump } = gameSettings;
       const obstacles: ComplexModel[] = [];
+      const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
 
       // const player = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const player = await getModel(scene, world, "mushroom.glb", mushroomConfig);
@@ -85,7 +87,7 @@ const init = async (): Promise<void> => {
         const config = (illustrations as Record<string, any>)[key];
         const mesh = getCube(scene, world, config);
         if (config.instances) {
-          instanceMatrixMesh(mesh, scene, config.instances);
+          instanceMatrixMesh(mesh as any, scene, config.instances);
         }
         // obstacles.push(model);
       });
@@ -115,6 +117,7 @@ const init = async (): Promise<void> => {
                   actionName,
                   true
                 );
+                cameraFollowPlayer(camera, player, cameraOffset, ['x', 'z']);
               } else {
                 updateAnimation(
                   player.userData.mixer,
