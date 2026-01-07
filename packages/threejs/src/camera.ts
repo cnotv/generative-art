@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CoordinateTuple, Model } from '@webgamekit/animation';
 import { getOffset } from './getters';
+import { OrbitControls } from 'three/examples/jsm/Addons.js';
 
 /**
  * Camera preset configurations for different viewing styles
@@ -190,11 +191,23 @@ export const cameraFollowPlayer = (
   camera: THREE.Camera,
   player: Model,
   offset: CoordinateTuple,
+  orbit: OrbitControls | null,
   coordinates: ('x' | 'y' | 'z')[] = ['x', 'y', 'z']
 ): CoordinateTuple => {
-  if (coordinates.includes('x')) camera.position.x = player.position.x + offset[0];
-  if (coordinates.includes('y')) camera.position.y = player.position.y + offset[1];
-  if (coordinates.includes('z')) camera.position.z = player.position.z + offset[2];
+  if (coordinates.includes('x')) {
+    camera.position.x = player.position.x + offset[0];
+    if (orbit) orbit.target.x = player.position.x;
+  }
+  if (coordinates.includes('y')) {
+    camera.position.y = player.position.y + offset[1];
+    if (orbit) orbit.target.y = player.position.y;
+  }
+  if (coordinates.includes('z')) {
+    camera.position.z = player.position.z + offset[2];
+    if (orbit) orbit.target.z = player.position.z;
+  }
+  
+  if (orbit) orbit.update();
   
   return [camera.position.x, camera.position.y, camera.position.z];
 };

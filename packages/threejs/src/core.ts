@@ -120,6 +120,8 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
 
     if (config.postprocessing) composer = await setupPostprocessing({ renderer, scene, camera, config: config.postprocessing });
     if (defineSetup) await defineSetup();
+    
+    return { orbit };
   };
 
   /**

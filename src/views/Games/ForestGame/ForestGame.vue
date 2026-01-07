@@ -72,7 +72,8 @@ const init = async (): Promise<void> => {
   const { setup, animate, scene, world, getDelta, camera } = await getTools({
     canvas: canvas.value,
   });
-  await setup({
+
+  const { orbit } = await setup({
     config: setupConfig,
     defineSetup: async () => {
       const { distance, speed, maxJump } = gameSettings;
@@ -117,7 +118,7 @@ const init = async (): Promise<void> => {
                   actionName,
                   true
                 );
-                cameraFollowPlayer(camera, player, cameraOffset, ['x', 'z']);
+                cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
               } else {
                 updateAnimation(
                   player.userData.mixer,
@@ -183,14 +184,6 @@ onUnmounted(() => {
     <div>
       <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
       <span>{{ canJump ? "ready" : "not ready" }}</span>
-      <span
-        >-
-        {{
-          currentActions["toggle-move"]
-            ? "Free move"
-            : `In the loop (${gameState.data.score || 0})`
-        }}</span
-      >
     </div>
     <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
   </div>

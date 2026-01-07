@@ -17,7 +17,7 @@ describe('camera', () => {
       player.position.set(0, 0, 0);
       const offset: CoordinateTuple = [5, 10, 15];
 
-      const result = cameraFollowPlayer(camera, player, offset);
+      const result = cameraFollowPlayer(camera, player, offset, null);
 
       expect(camera.position.x).toBe(5);
       expect(camera.position.y).toBe(10);
@@ -29,7 +29,7 @@ describe('camera', () => {
       player.position.set(10, 5, 20);
       const offset: CoordinateTuple = [-5, 10, -15];
 
-      const result = cameraFollowPlayer(camera, player, offset);
+      const result = cameraFollowPlayer(camera, player, offset, null);
 
       expect(camera.position.x).toBe(5);  // 10 + (-5)
       expect(camera.position.y).toBe(15); // 5 + 10
@@ -41,7 +41,7 @@ describe('camera', () => {
       player.position.set(-10, -5, -20);
       const offset: CoordinateTuple = [5, 10, 15];
 
-      const result = cameraFollowPlayer(camera, player, offset);
+      const result = cameraFollowPlayer(camera, player, offset, null);
 
       expect(camera.position.x).toBe(-5);  // -10 + 5
       expect(camera.position.y).toBe(5);   // -5 + 10
@@ -53,7 +53,7 @@ describe('camera', () => {
       player.position.set(100, 50, 200);
       const offset: CoordinateTuple = [0, 0, 0];
 
-      const result = cameraFollowPlayer(camera, player, offset);
+      const result = cameraFollowPlayer(camera, player, offset, null);
 
       expect(camera.position.x).toBe(100);
       expect(camera.position.y).toBe(50);
@@ -66,17 +66,17 @@ describe('camera', () => {
 
       // First position
       player.position.set(0, 0, 0);
-      let result = cameraFollowPlayer(camera, player, offset);
+      let result = cameraFollowPlayer(camera, player, offset, null);
       expect(result).toEqual([0, 10, 20]);
 
       // Second position
       player.position.set(5, 2, 10);
-      result = cameraFollowPlayer(camera, player, offset);
+      result = cameraFollowPlayer(camera, player, offset, null);
       expect(result).toEqual([5, 12, 30]);
 
       // Third position
       player.position.set(-5, -2, -10);
-      result = cameraFollowPlayer(camera, player, offset);
+      result = cameraFollowPlayer(camera, player, offset, null);
       expect(result).toEqual([-5, 8, 10]);
     });
   });
