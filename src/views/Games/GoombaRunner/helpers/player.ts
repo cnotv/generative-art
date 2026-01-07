@@ -94,7 +94,7 @@ const createPlayer = async (
 };
 
 const handleJump = (
-  player: THREE.Mesh,
+  player: ComplexModel,
   isPlaying: boolean,
   uiStore: any,
   camera: THREE.Camera,
@@ -224,7 +224,7 @@ const handleJump = (
 };
 
 const movePlayer = (
-  player: THREE.Mesh,
+  player: ComplexModel,
   playerController: any,
   physics: any,
   playerMovement: PlayerMovement,
@@ -291,7 +291,7 @@ const updatePlayerAnimation = (
   );
 };
 
-const ensurePlayerAboveGround = (player: THREE.Mesh) => {
+const ensurePlayerAboveGround = (player: ComplexModel) => {
   const currentPosition = player.userData.collider.translation();
   const groundLevel = player.userData.baseY;
 
@@ -305,7 +305,7 @@ const ensurePlayerAboveGround = (player: THREE.Mesh) => {
   }
 };
 
-const handleArcMovement = (player: THREE.Mesh) => {
+const handleArcMovement = (player: ComplexModel) => {
   if (!player.userData.arcMovement || !player.userData.arcMovement.isActive) {
     return;
   }
@@ -436,7 +436,7 @@ const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color:
   }
 };
 
-const resetPlayer = (player: THREE.Mesh, scene: THREE.Scene) => {
+const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
   // Clear explosion particles on restart
   for (let i = explosionParticles.length - 1; i >= 0; i--) {
     scene.remove(explosionParticles[i]);
@@ -514,8 +514,8 @@ const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
 };
 
 const checkCollisions = (
-  player: THREE.Mesh,
-  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
+  player: ComplexModel,
+  obstacles: { mesh: ComplexModel; characterController: any; collider: any }[],
   backgrounds: any[],
   scene: THREE.Scene,
   endGameCallback: () => void,

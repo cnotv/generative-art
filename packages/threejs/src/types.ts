@@ -172,8 +172,18 @@ export interface SetupConfig {
 }
 
 export interface InstanceConfig {
-  amount: number;
-  size: number;
-  sizeDelta: number;
-  area: number;
+  show?: boolean;
+  amount?: number;
+  size?: CoordinateTuple;
+  sizeVariation?: CoordinateTuple;
+  position?: CoordinateTuple;
+  positionVariation?: CoordinateTuple;
+  rotation?: CoordinateTuple;
+  rotationVariation?: CoordinateTuple;
+  area?: number;
+  ratio?: number;
+  spacing?: number;
+  opacity?: number;
 }
+
+export type GeneratedInstanceConfig = Array<{ position: number[]; rotation: number[]; scale: number[]; }>

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { CoordinateTuple, Model } from '@webgamekit/animation';
-import { InstanceConfig, PhysicOptions } from './types';
+import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types';
 
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
@@ -88,20 +88,88 @@ export const getGround = (
 
 /**
  * Populate a given area with a given amount of instances
- * @param config 
- * @param groundSize 
- * @returns 
+ * @param {InstanceConfig} config - Instance configuration object
+ * @param {number} [config.amount] - Number of instances to create
+ * @param {CoordinateTuple} [config.size] - Base size [x, y, z] of each instance
+ * @param {CoordinateTuple} [config.sizeVariation] - Random size variation [x, y, z] to add to base size
+ * @param {CoordinateTuple} [config.position] - Base position [x, y, z] of instances
+ * @param {CoordinateTuple} [config.positionVariation] - Random position variation [x, y, z] range
+ * @param {CoordinateTuple} [config.rotation] - Base rotation [x, y, z] in degrees
+ * @param {CoordinateTuple} [config.rotationVariation] - Random rotation variation [x, y, z] range in degrees
+ * @param {number} [config.area] - Area divisor for legacy positioning
+ * @param {number} [config.ratio] - Width to height ratio multiplier (legacy)
+ * @param {number} [config.spacing] - Spacing between instances along X axis (legacy)
+ * @param {number} [config.opacity] - Opacity value (stored but not used in generation)
+ * @param {CoordinateTuple} groundSize - Ground dimensions [width, height, depth]
+ * @returns {GeneratedInstanceConfig} Array of instance configurations
  */
-export const getInstanceConfig = (config: InstanceConfig, groundSize: CoordinateTuple) => times(config.amount, () => {
-  const size = Math.random() * config.size + config.sizeDelta;
-  const getPosition = () => Math.random() * groundSize[0]/config.area - groundSize[0]/config.area/2;
+export const getInstanceConfig = ({
+  size = [1, 1, 1],
+  sizeVariation = [0, 0, 0],
+  position = [0, 0, 0],
+  positionVariation = [0, 0, 0],
+  rotation = [0, 0, 0],
+  rotationVariation = [0, 0, 0],
+  amount = 1,
+  area,
+  ratio = 1,
+  spacing = 0,
+}: InstanceConfig, groundSize: CoordinateTuple): GeneratedInstanceConfig => {
+  const generatedConfig =  times(amount, (index) => {
+    const newSize = [
+      size[0] + (Math.random() - 0.5) * sizeVariation[0],
+      size[1] + (Math.random() - 0.5) * sizeVariation[1],
+      size[2] + (Math.random() - 0.5) * sizeVariation[2],
+    ];
+    
+    let newPosition
+    if (spacing > 0) {
+      // Legacy spacing-based positioning
+      const baseX = index * spacing - (amount * spacing) / 2;
+      const xVar = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
+      newPosition = [
+        baseX + xVar,
+        position[1] + (Math.random() - 0.5) * positionVariation[1],
+        position[2] + (Math.random() - 0.5) * positionVariation[2],
+      ];
+    } else if (area !== undefined) {
+      // Legacy area-based positioning
+      const getPositionLegacy = () => Math.random() * groundSize[0] / area - groundSize[0] / area / 2;
+      newPosition = [
+        getPositionLegacy(),
+        position[1] + (Math.random() - 0.5) * positionVariation[1],
+        getPositionLegacy(),
+      ];
+    } else {
+      // Standard positioning with variation
+      newPosition = [
+        position[0] + (Math.random() - 0.5) * positionVariation[0],
+        position[1] + (Math.random() - 0.5) * positionVariation[1],
+        position[2] + (Math.random() - 0.5) * positionVariation[2],
+      ];
+    }
+    
+    // Calculate rotation with variation
+    const newRotation = [
+      rotation[0] + (Math.random() - 0.5) * rotationVariation[0],
+      rotation[1] + (Math.random() - 0.5) * rotationVariation[1],
+      rotation[2] + (Math.random() - 0.5) * rotationVariation[2],
+    ];
+    
+    // Apply legacy ratio if provided
+    const scale: CoordinateTuple = ratio !== 1 
+      ? [newSize[0] * ratio, newSize[1], newSize[2]]
+      : newSize;
 
-  return {
-    position: [getPosition(), 0, getPosition()],
-    rotation: [0, Math.random() * 360, 0],
-    scale: [size, size, size]
-  };
-});
+    return {
+      position: newPosition,
+      rotation: newRotation,
+      scale,
+    };
+  });
+
+  return generatedConfig;
+};
 
 /**
  * Create and return default lights

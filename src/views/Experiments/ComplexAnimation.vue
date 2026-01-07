@@ -21,6 +21,7 @@ import {
 } from "@webgamekit/threejs";
 import { complexAnimation as config } from "@/config/scenes";
 import { getBlade } from "@/utils/custom-models";
+import type { CoordinateTuple } from "@webgamekit/animation";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -87,7 +88,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       mushroom: config.mushroom.show
         ? getInstanceConfig(config.mushroom, groundSize)
         : {},
-    } as Record<string, ModelOptions[]>;
+    };
 
     camera.position.set(-30, 25, 30);
     scene.fog = new THREE.Fog(0xaaaaff, 1);
