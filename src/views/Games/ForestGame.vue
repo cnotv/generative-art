@@ -3,12 +3,8 @@ import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import {
   getTools,
   getModel,
-  setCameraPreset,
-  CameraPreset,
   type SetupConfig,
   type PostProcessingConfig,
-  CameraSide,
-  setCameraSide,
 } from "@webgamekit/threejs";
 import * as THREE from "three";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
@@ -21,8 +17,6 @@ import { getCube } from "@webgamekit/threejs";
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
 import illustrationBackgroundImg from "@/assets/images/illustrations/background.png";
-// import groundImg from "@/assets/images/textures/grass.jpg";
-// import groundImg from "@/assets/images/textures/smb_brick.png";
 
 import groundImg from "@/assets/images/illustrations/ground.png";
 import illustrationPangolinImg from "@/assets/images/illustrations/pangolin.png";
@@ -72,42 +66,6 @@ const illustrations = {
     ...genericFlatConfig,
     opacity: 0.5
   },
-  // flower: {
-  //   texture: illustrationFlowersImg,
-  //   size: [4, 6, 0],
-  //   position: [-10, 1, -9],
-  //   ...genericFlatConfig,
-  // },
-  // cactus: {
-  //   texture: illustrationCactusImg,
-  //   size: [5, 7, 0],
-  //   position: [-6, 2.5, -9],
-  //   ...genericFlatConfig,
-  // },
-  // flowers2: {
-  //   texture: illustrationFlowers2Img,
-  //   size: [5, 7, 0],
-  //   position: [-2, 2.5, -9],
-  //   ...genericFlatConfig,
-  // },
-  // flowers3: {
-  //   texture: illustrationFlowers3Img,
-  //   size: [5, 7, 0],
-  //   position: [4, 2.5, -9],
-  //   ...genericFlatConfig,
-  // },
-  // flowers4: {
-  //   texture: illustrationFlowers4Img,
-  //   size: [5, 7, 0],
-  //   position: [8, 2.5, -9],
-  //   ...genericFlatConfig,
-  // },
-  // flowers5: {
-  //   texture: illustrationFlowers5Img,
-  //   size: [5, 7, 0],
-  //   position: [13, 2.5, -9],
-  //   ...genericFlatConfig,
-  // },
   pangolin: {
     texture: illustrationPangolinImg,
     size: [10, 5, 0],
@@ -187,38 +145,19 @@ const getLogs = (actions: Record<string, any>): string[] =>
       (action) =>
         `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
     );
-let cameraPreset: any = null; // TODO: Identified issue for tooling block scoping
 
-// Return binding 1 to x for each preset
-const cameraPresetBindings = Object.values(CameraPreset).reduce(
-  (acc, preset, index) => ({ ...acc, [index + 1]: preset }),
-  {}
-);
-const cameraSideBindings = Object.values(CameraSide).reduce(
-  (acc, preset) => {
-    const [capital, ...rest] = preset.replace('camera-', '')
-    const key = `Arrow${capital.toUpperCase()}${rest.join('')}`
-    return { ...acc, [key]: preset }
-  },
-  {}
-);
-let orbitControls: any = null;
 const bindings = {
   mapping: {
     keyboard: {
       " ": "jump",
-      Enter: "toggle-move",
       a: "turn-left",
       d: "turn-right",
       w: "moving",
       s: "moving",
       p: 'print-log',
-      ...cameraPresetBindings,
-      ...cameraSideBindings
     },
     gamepad: {
       cross: "jump",
-      circle: "toggle-move",
       "dpad-left": "turn-left",
       "dpad-right": "turn-right",
       "dpad-down": "moving",
@@ -236,26 +175,6 @@ const bindings = {
         handleJump();
         break;
       case "print-log":
-        console.log("Current camera:", cameraPreset);
-        console.log(orbitControls)
-        break;
-
-      // TODO: Iterate instead of hardcoding
-      case CameraPreset.Perspective:
-      case CameraPreset.Orthographic:
-      case CameraPreset.Fisheye:
-      case CameraPreset.Cinematic:
-      case CameraPreset.Orbit:
-      case CameraPreset.OrthographicFollowing:
-      case CameraPreset.TopDown:
-        setCameraPreset(cameraPreset, action as CameraPreset);
-        break;
-
-      case CameraSide.CameraDown:
-      case CameraSide.CameraUp:
-      case CameraSide.CameraLeft:
-      case CameraSide.CameraRight:
-        setCameraSide(cameraPreset, cameraPreset, action as CameraSide)
         break;
     }
   },
@@ -270,11 +189,9 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { camera, setup, animate, scene, world, getDelta, orbit } = await getTools({
+  const { setup, animate, scene, world, getDelta } = await getTools({
     canvas: canvas.value,
   });
-  orbitControls = orbit;
-  cameraPreset = camera;
   await setup({
     config: setupConfig,
     defineSetup: async () => {
@@ -298,17 +215,12 @@ const init = async (): Promise<void> => {
         // obstacles.push(model);
       });
 
-      // const cloud = getCube(scene, world, cloudConfig);
-      // const smbCube = getCube(scene, world, smbCubeConfig);
-
-      // const flower = getCube(scene, world, flowerConfig);
       // instanceMatrixMesh(flower, scene, [
       //   { position: [12, 0.8, -10] },
       //   { position: [15, 0.8, -15] },
       //   { position: [18, 0.8, -12] },
       // ]);
 
-      // colorModel(player, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
       animate({
         beforeTimeline: () => { },
@@ -317,7 +229,7 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             name: "Walk",
             action: () => {
-              if (!currentActions["toggle-move"] || currentActions["moving"])
+              if (currentActions["moving"])
                 controllerForward(
                   player,
                   obstacles,
@@ -331,33 +243,12 @@ const init = async (): Promise<void> => {
             },
           },
           {
-            name: "Loop: Turn player",
-            frequency: speed.movement * angle,
-            action: () => {
-              if (!currentActions["toggle-move"]) {
-                controllerTurn(player, angle);
-              }
-            },
-          },
-          {
             name: "Free: Turn player",
             frequency: speed.movement,
             action: () => {
-              if (currentActions["toggle-move"]) {
-                if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
-                if (currentActions["turn-right"])
-                  controllerTurn(player, -speed.turning);
-              }
-            },
-          },
-          {
-            name: "Loop: Set score",
-            frequency: speed.movement * angle * 4,
-            action: () => {
-              if (!currentActions["toggle-move"]) {
-                if (gameState.value)
-                  gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
-              }
+              if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
+              if (currentActions["turn-right"])
+                controllerTurn(player, -speed.turning);
             },
           },
           {
