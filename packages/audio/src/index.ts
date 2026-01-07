@@ -1,15 +1,8 @@
-// Audio utility for game sound effects and soundtrack
-type SoundConfig = {
-  startFreq: number;
-  endFreq: number;
-  duration: number;
-  volume: number;
-  waveType?: OscillatorType;
-  attackTime?: number;
-  releaseTime?: number;
-};
+import type { SoundConfig, NoteSequence } from './types';
 
-type NoteSequence = [number, number][];
+export type { SoundConfig, NoteSequence };
+
+// Audio utility for game sound effects and soundtrack
 
 let gameAudioContext: AudioContext | null = null;
 let soundtrackTimeout: number | null = null;
@@ -173,8 +166,6 @@ const playAudioFile = (audioFile: string, volume: number = 1) => {
 };
 
 export {
-  type SoundConfig,
-  type NoteSequence,
   initializeAudio,
   createSound,
   startMusic,

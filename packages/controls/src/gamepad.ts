@@ -1,4 +1,4 @@
-import type { ControlMapping, ControlHandlers } from './core';
+import type { ControlMapping, ControlHandlers } from './types';
 
 export interface GamepadController {
   bind: (index?: number) => void;

@@ -1,13 +1,6 @@
-export type GameStatus = 'idle' | 'playing' | 'paused' | 'game-over';
-export interface GameState {
-  status: GameStatus;
-  data: Record<string, any>;
-  setData: (key: string, value: any) => void;
-  setStatus: (status: GameStatus) => void;
-}
+import type { GameStatus, GameState, RefLike, LifecycleHook } from './types';
 
-type RefLike<T> = { value: T }; 
-type LifecycleHook = (callback: () => void) => void;
+export type { GameStatus, GameState };
 
 /**
  * Initialize a game state management system

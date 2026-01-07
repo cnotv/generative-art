@@ -1,4 +1,4 @@
-import type { ControlMapping, ControlHandlers, ControlEvent } from './core';
+import type { ControlMapping, ControlHandlers, ControlEvent } from './types';
 
 export interface TouchController {
   bind: (target: HTMLElement) => void;

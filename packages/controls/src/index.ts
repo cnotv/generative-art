@@ -6,8 +6,8 @@ import type {
   ControlsCurrents,
   ControlsLogs,
   ControlHandlers,
-} from './core';
-import { DEFAULT_BUTTON_MAP } from './core';
+} from './types';
+import { DEFAULT_BUTTON_MAP } from './constants';
 import { createKeyboardController } from './keyboard';
 import { createGamepadController } from './gamepad';
 import { createTouchController } from './touch';
