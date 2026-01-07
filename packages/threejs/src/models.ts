@@ -384,7 +384,7 @@ export const getBall = (
     texture,
   }: ModelOptions = {},
 ): ComplexModel => {
-  const initialValues = { size, position, color };
+  const initialValues = { size, rotation: [0, 0, 0] as CoordinateTuple, position, color };
   
   // Create and add model
   const geometry = new THREE.SphereGeometry(size as number);
@@ -401,7 +401,11 @@ export const getBall = (
   
   if (texture) {
     const textureLoader = new THREE.TextureLoader();
-    mesh.material.map = textureLoader.load(texture);
+    if (Array.isArray(mesh.material)) {
+      (mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+    } else {
+      (mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+    }
   }
   
   mesh.position.set(...(position as CoordinateTuple));
@@ -413,7 +417,7 @@ export const getBall = (
     position,
     size,
     boundary: 0.8,
-    rotation: { w: 1.0, x: 0.5, y: 0.5, z: 0.5 },
+    rotation: [0.5, 0.5, 0.5] as CoordinateTuple,
     restitution,
     friction,
     weight,
@@ -437,7 +441,7 @@ export const getBall = (
       collider,
       initialValues,
       actions: {},
-      mixer: null,
+      mixer: undefined,
       helper: helper as any,
       type,
       characterController,
@@ -487,7 +491,8 @@ export const getCube = (
   const initialValues = { size, rotation, position, color };
   
   // Create and add model
-  const geometry = new THREE.BoxGeometry(...size);
+  const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
+  const geometry = new THREE.BoxGeometry(...sizeArray);
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
     transmission,
@@ -501,7 +506,11 @@ export const getCube = (
   
   if (texture) {
     const textureLoader = new THREE.TextureLoader();
-    mesh.material.map = textureLoader.load(texture);
+    if (Array.isArray(mesh.material)) {
+      (mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+    } else {
+      (mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+    }
   }
   
   mesh.position.set(...(position as CoordinateTuple));
@@ -539,7 +548,7 @@ export const getCube = (
       collider,
       initialValues,
       actions: {},
-      mixer: null,
+      mixer: undefined,
       helper: helper as any,
       type,
       characterController,

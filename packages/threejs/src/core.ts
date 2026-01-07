@@ -289,7 +289,7 @@ export const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRender
  * @returns 
  */
 export const instanceMatrixMesh = (
-  mesh: THREE.Mesh | ComplexModel,
+  mesh: THREE.Mesh,
   scene: THREE.Scene,
   options: ModelOptions[]
 ): THREE.InstancedMesh<any, any>[] => {

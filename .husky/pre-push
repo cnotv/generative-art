@@ -1,1 +1,1 @@
-pnpm run test:unit --run && pnpm run build
+pnpm run test:unit --run && pnpm -r run prepare && pnpm run build
