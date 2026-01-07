@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { CoordinateTuple, ModelType } from '@webgamekit/animation';
 
+// Re-export for convenience
+export type { CoordinateTuple, ModelType } from '@webgamekit/animation';
+
 export interface CommonOptions {
   boundary?: number;
   damping?: number;

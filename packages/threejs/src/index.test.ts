@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { getOffset, getInstanceConfig } from './index';
+import type { InstanceConfig, CoordinateTuple } from './types';
 
 describe('threejs', () => {
   describe('getOffset', () => {
@@ -129,7 +130,7 @@ describe('threejs', () => {
       
       // Check positions are within expected range for area-based calculation
       instances.forEach(instance => {
-        const [x, y, z] = instance.position;
+        const [x] = instance.position;
         const maxPos = groundSize[0] / (config.area!) / 2;
         expect(x).toBeGreaterThanOrEqual(-maxPos);
         expect(x).toBeLessThanOrEqual(maxPos);
@@ -150,7 +151,7 @@ describe('threejs', () => {
       expect(instances).toHaveLength(4);
       
       instances.forEach(instance => {
-        const [x, y, z] = instance.position;
+        const [, y, z] = instance.position;
         // Y and Z should be applied from position
         expect(y).toBeGreaterThanOrEqual(130 - 10);
         expect(y).toBeLessThanOrEqual(130 + 10);

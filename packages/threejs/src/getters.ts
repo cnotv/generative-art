@@ -116,13 +116,13 @@ export const getInstanceConfig = ({
   spacing = 0,
 }: InstanceConfig, groundSize: CoordinateTuple): GeneratedInstanceConfig => {
   const generatedConfig =  times(amount, (index) => {
-    const newSize = [
+    const newSize: CoordinateTuple = [
       size[0] + (Math.random() - 0.5) * sizeVariation[0],
       size[1] + (Math.random() - 0.5) * sizeVariation[1],
       size[2] + (Math.random() - 0.5) * sizeVariation[2],
     ];
     
-    let newPosition
+    let newPosition: CoordinateTuple;
     if (spacing > 0) {
       // Legacy spacing-based positioning
       const baseX = index * spacing - (amount * spacing) / 2;
@@ -150,7 +150,7 @@ export const getInstanceConfig = ({
     }
     
     // Calculate rotation with variation
-    const newRotation = [
+    const newRotation: CoordinateTuple = [
       rotation[0] + (Math.random() - 0.5) * rotationVariation[0],
       rotation[1] + (Math.random() - 0.5) * rotationVariation[1],
       rotation[2] + (Math.random() - 0.5) * rotationVariation[2],
