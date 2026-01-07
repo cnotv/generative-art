@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn } from './index';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -89,8 +89,13 @@ describe('animation', () => {
             run: {
               play: vi.fn(),
               stop: vi.fn(),
+              reset: vi.fn().mockReturnThis(),
+              fadeIn: vi.fn().mockReturnThis(),
+              fadeOut: vi.fn(),
+              isRunning: vi.fn().mockReturnValue(true),
             },
           },
+          currentAction: undefined,
           initialValues: { position: [0, -0.75, 0], rotation: [0, 0, 0], size: 1, color: undefined },
           type: 'dynamic',
         }
@@ -169,8 +174,13 @@ describe('animation', () => {
             run: {
               play: vi.fn(),
               stop: vi.fn(),
+              reset: vi.fn().mockReturnThis(),
+              fadeIn: vi.fn().mockReturnThis(),
+              fadeOut: vi.fn(),
+              isRunning: vi.fn().mockReturnValue(true),
             },
           },
+          currentAction: undefined,
           initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
           type: 'dynamic',
         }
@@ -208,6 +218,131 @@ describe('animation', () => {
       
       // The model should have rotated 360° total (2π radians)
       expect(Math.abs(mockMesh.rotation.y % (Math.PI * 2))).toBeLessThan(0.1);
+    });
+  });
+
+  describe('updateAnimation', () => {
+    let mockMixer: any;
+    let mockAction: any;
+    let mockPlayer: ComplexModel;
+    let mockPreviousAction: any;
+
+    beforeEach(() => {
+      mockAction = {
+        play: vi.fn(),
+        stop: vi.fn(),
+        reset: vi.fn().mockReturnThis(),
+        fadeIn: vi.fn().mockReturnThis(),
+        fadeOut: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+      };
+
+      mockPreviousAction = {
+        play: vi.fn(),
+        stop: vi.fn(),
+        reset: vi.fn().mockReturnThis(),
+        fadeIn: vi.fn().mockReturnThis(),
+        fadeOut: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+      };
+
+      mockMixer = {
+        update: vi.fn(),
+      };
+
+      const mockMesh = new THREE.Group();
+      mockPlayer = Object.assign(mockMesh, {
+        userData: {
+          mixer: mockMixer,
+          actions: {
+            'walk': mockAction,
+            'idle': mockPreviousAction,
+          },
+          currentAction: undefined,
+          body: {
+            translation: () => ({ x: 0, y: 0, z: 0 }),
+            setTranslation: vi.fn(),
+          },
+          initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+        }
+      }) as unknown as ComplexModel;
+    });
+
+    it('should update mixer and play action when delta is provided', () => {
+      updateAnimation(mockMixer, mockAction, 0.016, 10);
+
+      expect(mockMixer.update).toHaveBeenCalledWith(0.016 * 10 * 0.1);
+    });
+
+    it('should stop action when delta is 0', () => {
+      updateAnimation(mockMixer, mockAction, 0, 10);
+
+      expect(mockAction.stop).toHaveBeenCalled();
+      expect(mockMixer.update).not.toHaveBeenCalled();
+    });
+
+    it('should switch animations when actionName changes', () => {
+      mockPlayer.userData.currentAction = 'idle';
+
+      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+
+      expect(mockPreviousAction.fadeOut).toHaveBeenCalledWith(0.2);
+      expect(mockAction.reset).toHaveBeenCalled();
+      expect(mockAction.fadeIn).toHaveBeenCalledWith(0.2);
+      expect(mockAction.play).toHaveBeenCalled();
+      expect(mockPlayer.userData.currentAction).toBe('walk');
+    });
+
+    it('should not switch animations when actionName is the same', () => {
+      mockPlayer.userData.currentAction = 'walk';
+
+      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+
+      expect(mockAction.reset).not.toHaveBeenCalled();
+      expect(mockAction.fadeIn).not.toHaveBeenCalled();
+      expect(mockMixer.update).toHaveBeenCalled();
+    });
+
+    it('should initialize currentAction when undefined', () => {
+      mockPlayer.userData.currentAction = undefined;
+
+      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+
+      expect(mockAction.reset).toHaveBeenCalled();
+      expect(mockAction.fadeIn).toHaveBeenCalledWith(0.2);
+      expect(mockAction.play).toHaveBeenCalled();
+      expect(mockPlayer.userData.currentAction).toBe('walk');
+    });
+
+    it('should not fade out previous action if it is the same as current action', () => {
+      mockPlayer.userData.currentAction = 'walk';
+      mockPlayer.userData.actions = {
+        'walk': mockAction,
+      };
+
+      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk-new');
+
+      expect(mockAction.fadeOut).not.toHaveBeenCalled();
+      expect(mockAction.reset).toHaveBeenCalled();
+      expect(mockPlayer.userData.currentAction).toBe('walk-new');
+    });
+
+    it('should play action if not running when actionName matches', () => {
+      mockPlayer.userData.currentAction = 'walk';
+      mockAction.isRunning.mockReturnValue(false);
+
+      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+
+      expect(mockAction.play).toHaveBeenCalled();
+      expect(mockMixer.update).toHaveBeenCalled();
+    });
+
+    it('should work without player and actionName for backward compatibility', () => {
+      updateAnimation(mockMixer, mockAction, 0.016, 10);
+
+      expect(mockMixer.update).toHaveBeenCalled();
+      expect(mockAction.reset).not.toHaveBeenCalled();
     });
   });
 });

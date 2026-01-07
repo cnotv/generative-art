@@ -106,7 +106,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                   updateAnimation(
                     chickModel.userData.mixer,
                     chickModel.userData.actions.run,
-                    getDelta()
+                    getDelta(),
+                    1,
+                    chickModel,
+                    'run'
                   );
                 }
               },

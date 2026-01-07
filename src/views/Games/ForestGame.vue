@@ -201,7 +201,6 @@ const init = async (): Promise<void> => {
   await setup({
     config: setupConfig,
     defineSetup: async () => {
-      const angle = 90;
       const distance = 0.08;
       const speed = {
         movement: 1,
@@ -228,6 +227,7 @@ const init = async (): Promise<void> => {
       // ]);
 
       remapControlsOptions(bindings);
+
       animate({
         beforeTimeline: () => { },
         timeline: [
@@ -235,17 +235,32 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             name: "Walk",
             action: () => {
-              if (currentActions["moving"])
+              const actionName = currentActions["moving"]
+                ? "Esqueleto|walking"
+                : "Esqueleto|idle";
+              const action = player.userData.actions?.[actionName];
+
+              if (!action || !player.userData.mixer) return;
+
+              if (currentActions["moving"]) {
                 controllerForward(
                   player,
                   obstacles,
                   distance,
                   getDelta() * 2,
-                  "Esqueleto|walking",
-                  // "Idle_A",
+                  actionName,
                   true
                 );
-              else updateAnimation(player.userData.mixer, player.userData.actions["Esqueleto|idle"]!, getDelta(), 10);
+              } else {
+                updateAnimation(
+                  player.userData.mixer,
+                  action,
+                  getDelta(),
+                  10,
+                  player,
+                  actionName
+                );
+              }
             },
           },
           {

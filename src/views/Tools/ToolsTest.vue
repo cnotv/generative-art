@@ -246,7 +246,14 @@ const init = async (): Promise<void> => {
                   // "Idle_A",
                   true
                 );
-              else updateAnimation(player.userData.mixer, player.userData.actions["Esqueleto|idle"]!, getDelta(), 10);
+              else updateAnimation(
+                player.userData.mixer, 
+                player.userData.actions["Esqueleto|idle"]!, 
+                getDelta(), 
+                10,
+                player,
+                "Esqueleto|idle"
+              );
             },
           },
           {

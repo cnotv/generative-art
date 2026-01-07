@@ -22,7 +22,12 @@ export interface ControlsOptions {
   axisThreshold?: number; // Threshold for axis activation (default: 0.5)
 }
 
-export type ControlsCurrents = Record<string, { action: string; trigger: string; device: string }>;
+export type ControlsCurrents = Record<string, { 
+  action: string; 
+  trigger: string; 
+  device: string;
+  triggers: Set<string>; // Track all active triggers for this action
+}>;
 export type ControlsLogs = Array<{ action: string; trigger: string; device: string; timestamp: number; type: string }>;
 
 export type ControlsExtras = {

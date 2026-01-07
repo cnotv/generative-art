@@ -57,7 +57,7 @@ declare const getAnimationsModel: (mixer: THREE.AnimationMixer, model: Model, gl
 /**
  * Update the animation of the model based on given time
  */
-declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.AnimationAction, delta?: number, speed?: number) => void;
+declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.AnimationAction, delta?: number, speed?: number, player?: ComplexModel, actionName?: string) => void;
 /**
  * Move forward or backward if no collision is detected
  * @param player

@@ -1,7 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createControls, ControlsOptions } from './index';
 
 describe('createControls', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
   it('should accept options and call onAction for keyboard events', () => {
     const onAction = vi.fn();
     const options: ControlsOptions = {
@@ -45,6 +54,122 @@ describe('createControls', () => {
     expect(onActionNew).toHaveBeenCalledWith('new-action', 'a', 'keyboard');
     expect(onActionNew).toHaveBeenCalledTimes(1);
     controls.destroyControls();
+  });
+
+  it('should properly handle action release and remove from currentActions', () => {
+    const onAction = vi.fn();
+    const onRelease = vi.fn();
+    const options: ControlsOptions = {
+      mapping: {
+        keyboard: { w: 'moving' },
+      },
+      onAction,
+      onRelease,
+    };
+    
+    const { destroyControls, currentActions } = createControls(options);
+
+    // Simulate keydown
+    const keydownEvent = new KeyboardEvent('keydown', { key: 'w' });
+    window.dispatchEvent(keydownEvent);
+
+    // Action should be in currentActions
+    expect(currentActions['moving']).toBeDefined();
+    expect(currentActions['moving'].trigger).toBe('w');
+    expect(currentActions['moving'].device).toBe('keyboard');
+    expect(onAction).toHaveBeenCalledWith('moving', 'w', 'keyboard');
+
+    // Simulate keyup
+    const keyupEvent = new KeyboardEvent('keyup', { key: 'w' });
+    window.dispatchEvent(keyupEvent);
+
+    // Action should be removed from currentActions
+    expect(currentActions['moving']).toBeUndefined();
+    expect(onRelease).toHaveBeenCalledWith('moving', 'w', 'keyboard');
+
+    destroyControls();
+  });
+
+  it('should handle multiple triggers for the same action and only release when all are inactive', () => {
+    const onAction = vi.fn();
+    const onRelease = vi.fn();
+    const options: ControlsOptions = {
+      mapping: {
+        keyboard: { w: 'moving', s: 'moving' },
+      },
+      onAction,
+      onRelease,
+    };
+    
+    const { destroyControls, currentActions } = createControls(options);
+
+    // Press 'w' key
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+    expect(currentActions['moving']).toBeDefined();
+    expect(currentActions['moving'].trigger).toBe('w');
+    expect(onAction).toHaveBeenCalledTimes(1);
+
+    // Press 's' key (also maps to 'moving')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }));
+    // currentActions should still have 'moving' but shouldn't trigger onAction again
+    expect(currentActions['moving']).toBeDefined();
+    expect(onAction).toHaveBeenCalledTimes(1); // Should not call again
+
+    // Release 'w' key
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'w' }));
+    // Since 's' is still pressed, action should still be in currentActions
+    // With multi-trigger support, it should remain active!
+    expect(currentActions['moving']).toBeDefined();
+    expect(currentActions['moving'].triggers.size).toBe(1);
+    expect(currentActions['moving'].triggers.has('keyboard:s')).toBe(true);
+    expect(onRelease).toHaveBeenCalledTimes(0); // Should NOT call onRelease yet
+
+    // Release 's' key
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 's' }));
+    // Now the action should be fully released
+    expect(currentActions['moving']).toBeUndefined();
+    expect(onRelease).toHaveBeenCalledTimes(1);
+
+    destroyControls();
+  });
+
+  it('should track each trigger independently for the same action', () => {
+    const onAction = vi.fn();
+    const onRelease = vi.fn();
+    
+    const options: ControlsOptions = {
+      mapping: {
+        keyboard: { w: 'moving', ArrowUp: 'moving' },
+      },
+      onAction,
+      onRelease,
+    };
+    
+    const { destroyControls, currentActions } = createControls(options);
+
+    // Press 'w' - should trigger action
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+    expect(currentActions['moving']).toBeDefined();
+    expect(onAction).toHaveBeenCalledWith('moving', 'w', 'keyboard');
+    expect(currentActions['moving'].triggers.size).toBe(1);
+
+    // Press 'ArrowUp' while 'w' is still pressed - should NOT trigger action again
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    expect(onAction).toHaveBeenCalledTimes(1); // Still 1
+    expect(currentActions['moving'].triggers.size).toBe(2); // But now tracking 2 triggers
+
+    // Release 'w' - action should still be active because ArrowUp is pressed
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'w' }));
+    expect(currentActions['moving']).toBeDefined(); // Should still be defined!
+    expect(currentActions['moving'].triggers.size).toBe(1); // Only ArrowUp remains
+    expect(onRelease).toHaveBeenCalledTimes(0); // Should not call onRelease yet
+
+    // Release 'ArrowUp' - now action should be released
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }));
+    expect(currentActions['moving']).toBeUndefined();
+    expect(onRelease).toHaveBeenCalledTimes(1); // Now onRelease is called
+
+    destroyControls();
   });
 });
 

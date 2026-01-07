@@ -270,11 +270,14 @@ const init = async () => {
                 selectedAnimation.value &&
                 chameleonModel.actions[selectedAnimation.value]
               ) {
+                const actionName = selectedAnimation.value;
                 updateAnimation(
                   chameleonModel.mixer,
-                  chameleonModel.actions[selectedAnimation.value],
+                  chameleonModel.actions[actionName],
                   getDeltaRef(),
-                  4
+                  4,
+                  chameleonModel,
+                  actionName
                 );
               }
             },

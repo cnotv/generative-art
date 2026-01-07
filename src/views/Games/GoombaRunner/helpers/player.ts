@@ -285,7 +285,9 @@ const updatePlayerAnimation = (
     model.userData.mixer,
     action,
     getDelta(),
-    animationSpeed
+    animationSpeed,
+    model,
+    actionName
   );
 };
 

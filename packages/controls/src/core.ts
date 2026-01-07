@@ -50,19 +50,38 @@ export function createControls(options: ControlsOptions): ControlsExtras {
 
   // Wrapper for onAction to compile logic before calling user handler
   function onAction(action: ControlAction, trigger: string, device: string) {
-    if (currentActions[action]) return;
-    currentActions[action] = { action, trigger, device };
-    logs.push({ action, trigger, device, timestamp: Date.now(), type: 'action' });
-    if (onActionRaw) onActionRaw(action, trigger, device);
+    const triggerKey = `${device}:${trigger}`;
+    
+    if (!currentActions[action]) {
+      // First trigger for this action
+      currentActions[action] = { 
+        action, 
+        trigger, 
+        device,
+        triggers: new Set([triggerKey])
+      };
+      logs.push({ action, trigger, device, timestamp: Date.now(), type: 'action' });
+      if (onActionRaw) onActionRaw(action, trigger, device);
+    } else {
+      // Additional trigger for already active action
+      currentActions[action].triggers.add(triggerKey);
+    }
   }
 
   // Wrapper for onRelease to remove from currentActions and log
   function onRelease(action: ControlAction, trigger: string, device: string) {
+    const triggerKey = `${device}:${trigger}`;
+    
     if (currentActions[action]) {
-      delete currentActions[action];
-      logs.push({ action, trigger, device, timestamp: Date.now(), type: 'release' });
+      currentActions[action].triggers.delete(triggerKey);
+      
+      // Only remove the action if no triggers remain
+      if (currentActions[action].triggers.size === 0) {
+        delete currentActions[action];
+        logs.push({ action, trigger, device, timestamp: Date.now(), type: 'release' });
+        if (onReleaseRaw) onReleaseRaw(action, trigger, device);
+      }
     }
-    if (onReleaseRaw) onReleaseRaw(action, trigger, device);
   }
 
   const handlers: ControlHandlers = {

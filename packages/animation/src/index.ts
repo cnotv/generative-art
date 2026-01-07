@@ -176,12 +176,33 @@ const updateAnimation = (
   action: THREE.AnimationAction,
   delta: number = 0,
   speed: number = 0,
+  player?: ComplexModel,
+  actionName?: string,
 ) => {
   const coefficient = 0.1
   if (!action) return
+  
+  // Handle animation switching if player and actionName provided
+  if (player && actionName && player.userData.currentAction !== actionName) {
+    const previousAction = player.userData.currentAction 
+      ? player.userData.actions?.[player.userData.currentAction]
+      : null;
+    
+    if (previousAction && previousAction !== action) {
+      previousAction.fadeOut(0.2);
+    }
+    
+    action.reset().fadeIn(0.2).play();
+    player.userData.currentAction = actionName;
+  } else if (player && actionName && player.userData.currentAction === actionName) {
+    // Ensure the action is playing
+    if (!action.isRunning()) {
+      action.play();
+    }
+  }
+  
   if (delta) {
     mixer.update(delta * speed * coefficient)
-    action.play()
   } else {
     action.stop()
   }
@@ -232,7 +253,7 @@ const controllerForward = (
 
   const action = actions?.[actionName];
   if (action && mixer) {
-    updateAnimation(mixer, action, delta, 10);
+    updateAnimation(mixer, action, delta, 10, model, actionName);
   }
 }
 
