@@ -29,6 +29,7 @@ createGame({ data: { score: 0 } }, gameState, onUnmounted);
 const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
 const logs = shallowRef<string[]>([]);
+const showLogs = false;
 
 const handleJump = (): void => {
   if (isJumping.value || !canJump.value) return;
@@ -180,7 +181,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="gameState" class="ui">
+  <div v-if="gameState && showLogs" class="ui">
     <div>
       <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
       <span>{{ canJump ? "ready" : "not ready" }}</span>

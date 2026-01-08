@@ -127,7 +127,7 @@ export const setupConfig: SetupConfig = {
     // afterimage: {},
     // ssao: {},
     // vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
-    // colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
+    colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
   } as PostProcessingConfig,
 };
 
