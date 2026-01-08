@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export type CoordinateTuple = [number, number, number];
-
 export type Model = THREE.Object3D<THREE.Object3DEventMap>;
 export type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased';
 
@@ -31,7 +30,7 @@ export interface ComplexModel extends Model {
     characterController?: RAPIER.KinematicCharacterController;
     helper?: THREE.SkeletonHelper;
     hasGravity?: boolean;
-    actions?: Record<string, THREE.AnimationAction>;
+    actions: Record<string, THREE.AnimationAction | undefined>;
     mixer?: THREE.AnimationMixer;
   };
 }

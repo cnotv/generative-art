@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { CoordinateTuple, ModelType } from '@webgamekit/animation';
+import type { CoordinateTuple, ModelType } from '@webgamekit/animation';
 
 // Re-export for convenience
-export type { CoordinateTuple, ModelType } from '@webgamekit/animation';
+export type { CoordinateTuple, ModelType, ComplexModel, Model } from '@webgamekit/animation';
 
 export interface CommonOptions {
   boundary?: number;
@@ -46,6 +46,7 @@ export interface ModelOptions extends CommonOptions {
   depthWrite?: boolean;
   alphaTest?: number;
   renderOrder?: number;
+  side?: THREE.Side;
   clearcoat?: number;
   clearcoatRoughness?: number;
   ior?: number;

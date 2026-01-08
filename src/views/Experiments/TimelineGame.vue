@@ -5,7 +5,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import * as THREE from "three";
 
-import { getModel, getTools } from "@webgamekit/threejs";
+import { getModel, getTools, type ComplexModel } from "@webgamekit/threejs";
 import {
   controllerForward,
   resetAnimation,
@@ -13,7 +13,6 @@ import {
   controllerJump,
   controllerTurn,
   type Timeline,
-  type ComplexModel,
   type CoordinateTuple,
 } from "@webgamekit/animation";
 import { getBall, getCube } from "@webgamekit/threejs";

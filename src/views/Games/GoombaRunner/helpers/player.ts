@@ -6,7 +6,8 @@ import { startBackgroundFalling } from "./background";
 const jumpSound = new URL('@/assets/jump.wav', import.meta.url).href;
 const gameOverSound = new URL('@/assets/gameover.wav', import.meta.url).href;
 const starTexture = new URL('@/assets/star1.png', import.meta.url).href;
-import { updateAnimation, type ComplexModel } from "@webgamekit/animation";
+import { updateAnimation } from "@webgamekit/animation";
+import type { ComplexModel } from "@webgamekit/threejs";
 
 interface PlayerMovement {
   forward: number;

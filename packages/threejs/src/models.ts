@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { getAnimationsModel, ComplexModel, Model, CoordinateTuple } from '@webgamekit/animation';
-import { ModelOptions } from './types';
+import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation';
+import { ModelOptions, ComplexModel, Model } from './types';
 import { getPhysic } from './getters';
 import { applyOriginTranslation } from './core';
 

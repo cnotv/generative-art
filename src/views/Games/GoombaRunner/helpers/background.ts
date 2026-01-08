@@ -3,7 +3,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { getCube } from "@webgamekit/threejs";
 import { config } from "../config";
 import { preventGlitches, getSpeed } from "./setup";
-import type { ComplexModel } from "@webgamekit/animation";
+import type { ComplexModel } from "@webgamekit/threejs";
 
 /**
  * Background element with mesh and movement properties

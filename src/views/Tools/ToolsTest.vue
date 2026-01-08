@@ -11,7 +11,8 @@ import {
   CameraSide,
   setCameraSide,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
+import { controllerTurn, controllerForward, type CoordinateTuple, updateAnimation } from "@webgamekit/animation";
+import type { ComplexModel } from "@webgamekit/threejs";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
