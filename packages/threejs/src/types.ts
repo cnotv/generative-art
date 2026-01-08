@@ -42,6 +42,7 @@ export interface ModelOptions extends CommonOptions {
     random: boolean;
     list: THREE.Texture[];
   };
+  origin?: { x?: number; y?: number; z?: number };
   clearcoat?: number;
   clearcoatRoughness?: number;
   ior?: number;

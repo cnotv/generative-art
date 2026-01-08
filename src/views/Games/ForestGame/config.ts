@@ -59,13 +59,13 @@ export const illustrations = {
   tree: {
     texture: illustrationTreeImg,
     size: [30, 60, 0],
-    position: [100, 25, -20],
+    position: [100, 0, -20],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
       amount: 100,
       spacing: 5,
-      position: [0, 32, -100],
+      position: [0, -5, -100],
       positionVariation: [400, 0, 100],
       sizeVariation: [0.5, 0.5, 0],
       area: 10,
@@ -80,16 +80,16 @@ export const illustrations = {
       show: true,
       amount: 1000,
       spacing: 2,
-      position: [0, 0, -10],
+      position: [0, -0.5, -10],
       positionVariation: [400, 0, 50],
-      sizeVariation: [0.5, 1, 0],
+      sizeVariation: [0.5, 0.5, 0],
       area: 10,
     }, groundSize)
   },
   rockDude: {
     texture: illustrationRockDudeImg,
     size: [30, 35, 0],
-    position: [-40, 14, 0],
+    position: [-20, -3.5, 0],
     ...genericFlatConfig,
   },
 };

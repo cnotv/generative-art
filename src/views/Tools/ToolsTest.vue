@@ -47,8 +47,20 @@ const genericFlatConfig = {
 const illustrations = {
   flower: {
     texture: flatFlowerImg,
-    size: [4, 6, 0],
-    position: [-10, 1, -9],
+    size: [5, 6, 0],
+    position: [0, 0, -15],
+    ...genericFlatConfig,
+  },
+  flowerBigger: {
+    texture: flatFlowerImg,
+    size: [10, 12, 0],
+    position: [0, 0, -18],
+    ...genericFlatConfig,
+  },
+  flowerSmaller: {
+    texture: flatFlowerImg,
+    size: [2.5, 3, 0],
+    position: [0, 0, -12],
     ...genericFlatConfig,
   },
 }
