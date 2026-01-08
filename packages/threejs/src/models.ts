@@ -5,6 +5,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { getAnimationsModel, ComplexModel, Model, CoordinateTuple } from '@webgamekit/animation';
 import { ModelOptions } from './types';
 import { getPhysic } from './getters';
+import { applyOriginTranslation } from './core';
 
 /**
  * Apply material properties to a mesh
@@ -495,14 +496,9 @@ export const getCube = (
   const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
   const geometry = new THREE.BoxGeometry(...sizeArray);
   
-  // Apply origin offset - translate geometry so specified edge is at the origin coordinate
-  const translateX = origin?.x !== undefined ? sizeArray[0] / 2 : 0;
-  const translateY = origin?.y !== undefined ? sizeArray[1] / 2 : 0;
-  const translateZ = origin?.z !== undefined ? sizeArray[2] / 2 : 0;
+  // Apply origin translation to position edges at specified coordinates
+  applyOriginTranslation(geometry, sizeArray, origin);
   
-  if (translateX !== 0 || translateY !== 0 || translateZ !== 0) {
-    geometry.translate(translateX, translateY, translateZ);
-  }
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
     transmission,

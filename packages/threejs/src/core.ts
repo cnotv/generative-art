@@ -333,3 +333,26 @@ export const instanceMatrixModel = (model: THREE.Group<THREE.Object3DEventMap>, 
     }
   });
 };
+
+/**
+ * Apply origin-based translation to geometry
+ * Translates geometry so specified edges align with the origin coordinates
+ * @param geometry The geometry to translate
+ * @param size The size [x, y, z] of the geometry
+ * @param origin The origin point specification { x?, y?, z? }
+ */
+export const applyOriginTranslation = (
+  geometry: THREE.BufferGeometry,
+  size: CoordinateTuple,
+  origin?: { x?: number; y?: number; z?: number }
+): void => {
+  if (!origin) return;
+  
+  const translateX = origin.x !== undefined ? size[0] / 2 : 0;
+  const translateY = origin.y !== undefined ? size[1] / 2 : 0;
+  const translateZ = origin.z !== undefined ? size[2] / 2 : 0;
+  
+  if (translateX !== 0 || translateY !== 0 || translateZ !== 0) {
+    geometry.translate(translateX, translateY, translateZ);
+  }
+};
