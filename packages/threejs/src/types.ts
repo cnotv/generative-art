@@ -43,6 +43,9 @@ export interface ModelOptions extends CommonOptions {
     list: THREE.Texture[];
   };
   origin?: { x?: number; y?: number; z?: number };
+  depthWrite?: boolean;
+  alphaTest?: number;
+  renderOrder?: number;
   clearcoat?: number;
   clearcoatRoughness?: number;
   ior?: number;

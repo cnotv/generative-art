@@ -23,6 +23,8 @@ export const applyMaterial = (
     metalness,
     transmission,
     transparent,
+    depthWrite,
+    alphaTest,
     clearcoat,
     clearcoatRoughness,
     ior,
@@ -33,10 +35,13 @@ export const applyMaterial = (
   if (material) {
     const oldMaterial = mesh.material as any;
     const meshColor = color || (oldMaterial?.color || 0xffffff);
+    const isTransparent = transparent ?? (opacity ?? 1) < 1;
     const materialProps: any = {
       color: meshColor,
       opacity: opacity ?? 1,
-      transparent: (opacity ?? 1) < 1,
+      transparent: isTransparent,
+      depthWrite: depthWrite ?? (isTransparent ? false : true), // Prevent transparent issues
+      alphaTest: alphaTest ?? 0,
     };
 
     if (oldMaterial?.map) {
@@ -488,6 +493,10 @@ export const getCube = (
     material = 'MeshPhysicalMaterial',
     type = 'dynamic',
     origin = { y: 0 },
+    depthWrite,
+    alphaTest = 0,
+    renderOrder = 0,
+    side,
   }: ModelOptions = {},
 ): ComplexModel => {
   const initialValues = { size, rotation, position, color };
@@ -508,21 +517,22 @@ export const getCube = (
     roughness,
     metalness,
     material,
+    depthWrite,
+    alphaTest,
+    side,
   });
   
   if (texture) {
     const textureLoader = new THREE.TextureLoader();
-    if (Array.isArray(mesh.material)) {
-      (mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
-    } else {
-      (mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
-    }
+    const loadedTexture = textureLoader.load(texture);
+    (mesh.material as THREE.MeshStandardMaterial).map = loadedTexture;
   }
   
   mesh.position.set(...(position as CoordinateTuple));
   mesh.rotation.set(...rotation);
   mesh.castShadow = castShadow;
   mesh.receiveShadow = receiveShadow;
+  mesh.renderOrder = renderOrder;
   scene.add(mesh);
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
