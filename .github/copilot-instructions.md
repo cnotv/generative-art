@@ -1,6 +1,8 @@
 # Generative Art - WebGameKit Project
 
-This is a Vue 3 + TypeScript monorepo for creating 3D games and interactive generative art using Three.js, Rapier physics, and custom game development packages.
+This is monorepo containing mainly 2 parts:
+- An agnostic toolkit for creating 3D environment, games and animations, as well as all-in-on controls, audio and more
+- A personal playground where to try the toolkit, as well as interactive generative art, Three.js and Rapier physics experiments
 
 ## Architecture Overview
 
@@ -15,7 +17,7 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ### Data Flow Pattern
 1. Views import from `@webgamekit/*` packages (aliased in vite.config.ts)
-2. Each view is a self-contained scene using `<script setup>` composition
+2. Each view is a self-contained scene
 3. `getTools()` initializes Three.js renderer, scene, camera, Rapier world
 4. `setup()` configures lights, ground, sky, camera, and defines scene objects
 5. `animate()` runs timeline-based update loops (physics, animations, controls)
@@ -61,140 +63,16 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ### Creating a New 3D Scene/Game View
 
-1. **File structure**: Create `src/views/{Group}/{SceneName}/{SceneName}.vue` (or `index.vue`)
+**File structure**: Create `src/views/{Group}/{SceneName}/{SceneName}.vue` (or `index.vue`)
    - Router auto-discovers views matching pattern `{Dir}/{Name}/{Name}.vue`
    - Example: `src/views/Games/ForestGame/ForestGame.vue`
 
-2. **Basic scene template**:
-```vue
-<script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { getTools, getModel } from '@webgamekit/threejs';
-
-const canvas = ref<HTMLCanvasElement | null>(null);
-
-const init = async () => {
-  if (!canvas.value) return;
-  
-  const { setup, animate, scene, world, camera, getDelta } = await getTools({
-    canvas: canvas.value
-  });
-  
-  await setup({
-    config: {
-      camera: { position: [0, 10, 20] },
-      orbit: false, // disable OrbitControls for games
-    },
-    defineSetup: async () => {
-      // Load models, create objects
-      const player = await getModel(scene, world, "model.glb", {
-        position: [0, 0, 0],
-        castShadow: true,
-      });
-      
-      animate({
-        timeline: [
-          {
-            frequency: 1, // run every frame
-            action: () => {
-              // Update logic
-            }
-          }
-        ]
-      });
-    }
-  });
-};
-
-onMounted(init);
-</script>
-
-<template>
-  <canvas ref="canvas"></canvas>
-</template>
-```
 
 ### Working with @webgamekit Packages
 
 **Import from source during development** (not build artifacts):
 - Vite aliases resolve to `packages/{pkg}/src/index.ts` for HMR
 - Changes to packages hot-reload without rebuilding
-
-**Common imports**:
-```typescript
-import { getTools, getModel, getCube, instanceMatrixMesh } from '@webgamekit/threejs';
-import { controllerForward, controllerTurn, updateAnimation, type ComplexModel } from '@webgamekit/animation';
-import { createControls } from '@webgamekit/controls';
-import { createGame, type GameState } from '@webgamekit/game';
-import { initializeAudio, playAudioFile } from '@webgamekit/audio';
-```
-
-### Timeline Animation System
-
-The `animate()` function uses a **timeline-based loop** instead of raw requestAnimationFrame:
-```typescript
-animate({
-  beforeTimeline: () => { /* runs once per frame before timeline */ },
-  timeline: [
-    {
-      name: "Movement",
-      frequency: 2, // run every 2 frames
-      action: () => { /* game logic */ }
-    },
-    {
-      interval: [100, 50], // active for 100 frames, pause for 50
-      delay: 10, // start after 10 frames
-      action: () => { /* timed behavior */ }
-    }
-  ],
-  afterTimeline: () => { /* runs once per frame after timeline */ }
-});
-```
-
-### Controls System
-
-**Multi-input unified API** (keyboard, gamepad, touch, mouse):
-```typescript
-const { destroyControls, currentActions, remapControlsOptions } = createControls({
-  mapping: {
-    keyboard: { ArrowUp: 'forward', ' ': 'jump' },
-    gamepad: { left: 'turn-left', a: 'jump' },
-    touch: { swipeUp: 'jump' }
-  },
-  onAction: (action, trigger, device) => {
-    // action triggered (e.g., 'jump')
-  },
-  onRelease: (action) => {
-    // action released
-  }
-});
-
-// Check state in timeline
-if (currentActions['forward']) {
-  controllerForward(player, obstacles, distance, getDelta());
-}
-```
-
-### Physics & Models
-
-**ComplexModel type**: Three.js mesh with `userData.body` (Rapier RigidBody) and `userData.mixer` (AnimationMixer)
-
-**Model configuration pattern**:
-```typescript
-const playerConfig = {
-  position: [0, 2, 0] as CoordinateTuple,
-  scale: [1, 1, 1] as CoordinateTuple,
-  rotation: [0, 0, 0] as CoordinateTuple,
-  castShadow: true,
-  material: "MeshLambertMaterial",
-  color: 0xffffff,
-  hasGravity: true,
-  type: "dynamic", // or "fixed", "kinematicPositionBased"
-  mass: 1,
-  friction: 0.5,
-  restitution: 0.3,
-};
-```
 
 ### Configuration Separation
 
@@ -227,26 +105,6 @@ Example: [ForestGame/config.ts](src/views/Games/ForestGame/config.ts)
 - Component name becomes route: `GoombaRunner/GoombaRunner.vue` → `/games/GoombaRunner`
 - Index files: `SceneName/index.vue` also supported
 - Route titles auto-format: `CubeMatrix` → "Cube Matrix"
-
-## Orbit Controls
-
-OrbitControls are **enabled by default** in `getTools()`:
-```typescript
-const { orbit } = await getTools({ canvas: canvas.value });
-
-// Configure in setup
-await setup({
-  config: {
-    orbit: { 
-      target: new THREE.Vector3(0, 0, 0),
-      disabled: false 
-    }
-  }
-});
-
-// Disable for games (to avoid camera conflicts)
-config: { orbit: false }
-```
 
 ## Common Gotchas
 
