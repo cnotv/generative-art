@@ -9,17 +9,16 @@ export function createMouseController(
   mappingRef: { current: ControlMapping },
   handlers: ControlHandlers
 ): MouseController {
-  function handleMouse(_event: MouseEvent, eventType: ControlEvent) {
-    const action = mappingRef.current.touch?.['tap'] ?? 'no action';
-    if (action && action !== 'no action') {
-      // TODO: investigate how to handle mousedown/mouseup on touchpad triggered with different names
-      if (eventType === 'down') handlers.onAction(action, 'click', 'mouse');
-      if (eventType === 'up') handlers.onRelease(action, 'click', 'mouse');
+  function handleMouse(event: MouseEvent, eventType: ControlEvent) {
+    const action = mappingRef.current.touch?.['tap'];
+    if (action) {
+      if (eventType === event.type) handlers.onAction(action, event.type, 'mouse');
+      if (eventType === event.type) handlers.onRelease(action, event.type, 'mouse');
     }
   }
 
-  const onMouseDown = (e: MouseEvent) => handleMouse(e, 'down');
-  const onMouseUp = (e: MouseEvent) => handleMouse(e, 'up');
+  const onMouseDown = (e: MouseEvent) => handleMouse(e, 'mousedown');
+  const onMouseUp = (e: MouseEvent) => handleMouse(e, 'mouseup');
 
   function bind(target: HTMLElement) {
     target.addEventListener('mousedown', onMouseDown);

@@ -1,5 +1,5 @@
 export type ControlAction = string;
-export type ControlEvent = 'down' | 'up';
+export type ControlEvent = 'touchstart' | 'touchend' | 'mousedown' | 'mouseup';
 
 export interface ControlMapping {
   keyboard?: Record<string, ControlAction>;

@@ -164,7 +164,7 @@ export const controlBindings = {
       "axis1-down": "moving",
     },
     touch: {
-      tap: "jump",
+      'touchstart': "jump",
     },
   },
   axisThreshold: 0.5,

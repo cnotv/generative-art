@@ -163,7 +163,7 @@ const bindings = {
       "axis1-down": "moving",
     },
     touch: {
-      tap: "jump",
+      'touchstart': "jump",
     },
   },
   axisThreshold: 0.3, // Lower threshold for more sensitive analog stick

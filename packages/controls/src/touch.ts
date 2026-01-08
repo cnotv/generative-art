@@ -11,15 +11,15 @@ export function createTouchController(
   handlers: ControlHandlers
 ): TouchController {
   function handleTouch(event: TouchEvent, eventType: ControlEvent) {
-    const action = mappingRef.current.touch?.['tap'] ?? 'no action';
+    const action = mappingRef.current.touch?.[event.type];
     if (action) {
-      if (eventType === 'up') handlers.onAction(action, event.type, 'touch');
-      if (eventType === 'down') handlers.onRelease(action, event.type, 'touch');
+      if (eventType === event.type) handlers.onAction(action, event.type, 'touch');
+      if (eventType === event.type) handlers.onRelease(action, event.type, 'touch');
     }
   }
 
-  const onTouchStart = (e: TouchEvent) => handleTouch(e, 'down');
-  const onTouchEnd = (e: TouchEvent) => handleTouch(e, 'up');
+  const onTouchStart = (e: TouchEvent) => handleTouch(e, 'touchstart');
+  const onTouchEnd = (e: TouchEvent) => handleTouch(e, 'touchend');
 
   function bind(target: HTMLElement) {
     target.addEventListener('touchstart', onTouchStart);
