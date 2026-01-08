@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import * as THREE from "three";
 import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import {
   getTools,
@@ -10,7 +11,6 @@ import {
   CameraSide,
   setCameraSide,
 } from "@webgamekit/threejs";
-import * as THREE from "three";
 import { controllerTurn, controllerForward, type CoordinateTuple, type ComplexModel, updateAnimation } from "@webgamekit/animation";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -19,6 +19,7 @@ import type { GameState } from "@webgamekit/game";
 import { getCube } from "@webgamekit/threejs";
 
 // Assets
+import flatFlowerImg from "@/assets/images/goomba/fire.png";
 import jumpSound from "@/assets/audio/jump.wav";
 
 const mushroomConfig = {
@@ -34,22 +35,22 @@ const mushroomConfig = {
   color: 0xaaaaaa,
 };
 
-// const genericFlatConfig = {
-//   receiveShadow: false,
-//   castShadow: false,
-//   color: 0xcccccc,
-//   opacity: 0.95,
-//   material: "MeshBasicMaterial",
-//   physic: false,
-// }
+const genericFlatConfig = {
+  receiveShadow: false,
+  castShadow: false,
+  color: 0xcccccc,
+  opacity: 0.95,
+  material: "MeshBasicMaterial",
+  physic: false,
+}
 
 const illustrations = {
-  // flower: {
-  //   texture: illustrationFlowersImg,
-  //   size: [4, 6, 0],
-  //   position: [-10, 1, -9],
-  //   ...genericFlatConfig,
-  // },
+  flower: {
+    texture: flatFlowerImg,
+    size: [4, 6, 0],
+    position: [-10, 1, -9],
+    ...genericFlatConfig,
+  },
 }
 
 const setupConfig: SetupConfig = {

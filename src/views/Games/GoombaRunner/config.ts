@@ -1,6 +1,6 @@
-import cloudTexture from "@/assets/images/flat/cloud.png";
-import hillTexture from "@/assets/images/flat/hill.png";
-import fireTexture from "@/assets/images/flat/fire.png";
+import cloudTexture from "@/assets/images/goomba/cloud.png";
+import hillTexture from "@/assets/images/goomba/hill.png";
+import fireTexture from "@/assets/images/goomba/fire.png";
 
 export const config = {
   camera: {
