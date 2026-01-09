@@ -11,4 +11,4 @@ export type {
 } from './types';
 
 export { DEFAULT_BUTTON_MAP } from './constants';
-export { createControls } from './core';
+export { createControls, isMobile } from './core';

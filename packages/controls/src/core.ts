@@ -13,6 +13,15 @@ import { createTouchController } from './touch';
 import { createMouseController } from './mouse';
 
 /**
+ * Detect if the device is mobile
+ */
+export const isMobile = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  ) || ('ontouchstart' in window && window.innerWidth < 768);
+};
+
+/**
  * Stateless controls logic for keyboard, gamepad, and touch
  * This module does not manage state, but emits events or calls callbacks
  * All mapping is configurable via a config object and updated with remapControlsOptions()

@@ -3,16 +3,17 @@ import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import {
   getTools,
   getModel,
+  getCube,
   instanceMatrixMesh,
   cameraFollowPlayer,
+  type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerTurn, controllerForward, type CoordinateTuple, updateAnimation } from "@webgamekit/animation";
-import type { ComplexModel } from "@webgamekit/threejs";
-import { createGame } from "@webgamekit/game";
-import { createControls } from "@webgamekit/controls";
+import { createGame, type GameState } from "@webgamekit/game";
+import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
-import type { GameState } from "@webgamekit/game";
-import { getCube } from "@webgamekit/threejs";
+
+import TouchControl from '@/components/TouchControl.vue'
 import {
   chameleonConfig,
   mushroomConfig,
@@ -31,6 +32,7 @@ const isJumping = shallowRef(false);
 const canJump = shallowRef(true);
 const logs = shallowRef<string[]>([]);
 const showLogs = false;
+const isMobileDevice = isMobile();
 
 const handleJump = (): void => {
   if (isJumping.value || !canJump.value) return;
@@ -189,6 +191,21 @@ onUnmounted(() => {
     </div>
     <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
   </div>
+
+  <TouchControl
+    v-if="isMobileDevice"
+    style="left: 25px; bottom: 25px"
+    ref="touchControlInside"
+    @moved="handleJump"
+    @touchend="handleJump"
+  />
+  <TouchControl
+    v-if="isMobileDevice"
+    style="right: 25px; bottom: 25px"
+    ref="touchControlInside"
+    @touchstart="() => handleJump()"
+    @touchend="() => handleJump()"
+  />
 </template>
 
 <style scoped>

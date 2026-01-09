@@ -11,6 +11,9 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --touch-color-background-light: rgba(255, 255, 255, 0.3);
+  --touch-color-background-dark: rgba(0, 0, 0, 0.3);
 }
 
 a {
