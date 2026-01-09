@@ -65,11 +65,10 @@ export const illustrations = {
     instances: getInstanceConfig({
       show: true,
       amount: 1000,
-      spacing: 3,
+      spacing: 1,
       position: [0, -5, -150],
-      positionVariation: [800, 0, 300],
+      positionVariation: [500, 0, 200],
       sizeVariation: [0.5, 0.5, 0],
-      area: 10,
     }, groundSize)
   },
   // tree2: {
@@ -94,12 +93,11 @@ export const illustrations = {
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
-      amount: 500,
+      amount: 1000,
       spacing: 0.2,
       position: [0, -3, -10],
-      positionVariation: [400, 0, 500],
+      positionVariation: [300, 0, 500],
       sizeVariation: [0.5, 0, 0],
-      area: 10,
     }, groundSize)
   },
   rock1: {
@@ -112,9 +110,8 @@ export const illustrations = {
       amount: 1000,
       spacing: 0.2,
       position: [0, -1.5, -10],
-      positionVariation: [400, 0, 500],
+      positionVariation: [300, 0, 500],
       sizeVariation: [0.5, 0.5, 0],
-      area: 10,
     }, groundSize)
   },
 };
