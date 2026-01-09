@@ -19,3 +19,4 @@ export type {
 export { DEFAULT_BUTTON_MAP } from './constants';
 export { createControls, isMobile } from './core';
 export { createFauxPadController } from './fauxpad';
+export type { FauxPadOptions as FauxPadControllerOptions } from './fauxpad';
