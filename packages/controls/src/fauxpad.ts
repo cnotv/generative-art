@@ -217,7 +217,7 @@ export function createFauxPadController(
     insideElement.addEventListener('touchend', onTouchEnd);
   }
 
-  function unbind(edgeElement: HTMLElement, insideElement: HTMLElement) {
+  function unbind(_edgeElement: HTMLElement, insideElement: HTMLElement) {
     insideElement.removeEventListener('touchstart', onTouchStart as EventListener);
     insideElement.removeEventListener('touchmove', onTouchMove as EventListener);
     insideElement.removeEventListener('touchend', onTouchEnd);
