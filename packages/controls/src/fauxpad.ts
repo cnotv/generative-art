@@ -90,6 +90,11 @@ export function createFauxPadController(
    * Get current faux-pad position and derived values
    */
   const getPosition = (): FauxPadPosition => {
+    // Handle case when threshold hasn't been set (before bind is called)
+    if (threshold.x === 0 || threshold.y === 0) {
+      return { x: 0, y: 0, distance: 0, angle: 0 };
+    }
+
     const x = currentPosition.x / threshold.x;
     const y = currentPosition.y / threshold.y;
     const distance = Math.min(Math.sqrt(x * x + y * y), 1);
