@@ -163,9 +163,12 @@ export const controlBindings = {
       "axis1-up": "moving",
       "axis1-down": "moving",
     },
-    // touch: {
-    //   'touchstart': "jump",
-    // },
+    'faux-pad': {
+      left: "turn-left",
+      right: "turn-right",
+      up: "moving",
+      down: "moving",
+    },
   },
   axisThreshold: 0.5,
 };

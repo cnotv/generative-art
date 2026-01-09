@@ -10,5 +10,12 @@ export type {
   ControlEvent,
 } from './types';
 
+export type {
+  FauxPadController,
+  FauxPadPosition,
+  FauxPadOptions,
+} from './fauxpad';
+
 export { DEFAULT_BUTTON_MAP } from './constants';
 export { createControls, isMobile } from './core';
+export { createFauxPadController } from './fauxpad';

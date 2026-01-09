@@ -195,16 +195,16 @@ onUnmounted(() => {
   <TouchControl
     v-if="isMobileDevice"
     style="left: 25px; bottom: 25px"
-    ref="touchControlInside"
-    @moved="handleJump"
-    @touchend="handleJump"
+    :mapping="{ left: 'turn-left', right: 'turn-right', up: 'moving', down: 'moving' }"
+    :options="{ deadzone: 0.15 }"
+    :on-action="bindings.onAction"
   />
   <TouchControl
     v-if="isMobileDevice"
     style="right: 25px; bottom: 25px"
-    ref="touchControlInside"
-    @touchstart="() => handleJump()"
-    @touchend="() => handleJump()"
+    mode="button"
+    :mapping="{ click: 'jump' }"
+    :on-action="bindings.onAction"
   />
 </template>
 

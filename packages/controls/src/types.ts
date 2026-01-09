@@ -5,6 +5,7 @@ export interface ControlMapping {
   keyboard?: Record<string, ControlAction>;
   gamepad?: Record<string, ControlAction>; // Supports both buttons (cross, dpad-up) and axes (axis0-left, axis1-up)
   touch?: Record<string, ControlAction>;
+  'faux-pad'?: Record<string, ControlAction>; // Virtual faux-pad: up, down, left, right
 }
 
 export interface ControlsOptions {

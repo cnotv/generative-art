@@ -1,67 +1,65 @@
 <script setup lang="ts">
-import type { CoordinateTuple } from "@webgamekit/animation";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { createFauxPadController, type FauxPadController, type FauxPadOptions } from "@webgamekit/controls";
 
-const touchControlInside = ref(null as HTMLElement | null);
-const touchControlEdge = ref(null as HTMLElement | null);
-let initialTouchPosition = { x: 0, y: 0 };
-let threshold = { x: 0, y: 0 };
-
-const emit = defineEmits<{
-  (event: "moved", payload: CoordinateTuple): void;
-  (event: "touchstart"): void;
-  (event: "touchend"): void;
+const props = defineProps<{
+  mapping: Record<string, string>;
+  options?: FauxPadOptions;
+  mode?: 'faux-pad' | 'button'; // Default is 'faux-pad'
+  onAction: (action: string) => void;
 }>();
 
-const onTouchStart = (event: TouchEvent) => {
-  event.preventDefault();
-  initialTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-  emit("touchstart");
-};
+const touchControlInside = ref<HTMLElement | null>(null);
+const touchControlEdge = ref<HTMLElement | null>(null);
 
-const onTouchMove = (event: TouchEvent) => {
-  event.preventDefault();
-  let xDistance = event.touches[0].clientX - initialTouchPosition.x;
-  let yDistance = event.touches[0].clientY - initialTouchPosition.y;
+let fauxpadController: FauxPadController | null = null;
+let cleanup: (() => void) | null = null;
 
-  // Limit the movement to the threshold
-  xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
-  yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
-
-  if (touchControlInside.value) {
-    touchControlInside.value.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
-  }
-
-  emit("moved", { x: xDistance, y: yDistance });
-};
-
-const onTouchEnd = () => {
-  if (touchControlInside.value) {
-    touchControlInside.value.style.transform = "translate(0, 0)";
-  }
-  emit("touchend");
-};
+const isButtonMode = computed(() => props.mode === 'button');
 
 onMounted(() => {
-  if (touchControlEdge.value) {
-    threshold = {
-      x: touchControlEdge.value.offsetWidth / 2,
-      y: touchControlEdge.value.offsetHeight / 2,
-    };
-  }
+  if (!touchControlEdge.value || !touchControlInside.value) return;
 
-  if (touchControlInside.value) {
-    touchControlInside.value.addEventListener("touchstart", onTouchStart);
-    touchControlInside.value.addEventListener("touchmove", onTouchMove);
-    touchControlInside.value.addEventListener("touchend", onTouchEnd);
+  if (isButtonMode.value) {
+    // Button mode: simple tap triggers action
+    const handleTap = (e: Event) => {
+      e.preventDefault();
+      const action = props.mapping.click;
+      if (action) {
+        props.onAction(action);
+      }
+    };
+
+    touchControlInside.value.addEventListener('click', handleTap);
+    touchControlInside.value.addEventListener('touchend', handleTap);
+    
+    cleanup = () => {
+      touchControlInside.value?.removeEventListener('click', handleTap);
+      touchControlInside.value?.removeEventListener('touchend', handleTap);
+    };
+  } else {
+    // Faux-pad mode: directional control
+    const mappingRef = { current: { 'faux-pad': props.mapping } };
+    const handlers = {
+      onAction: (action: string) => {
+        props.onAction(action);
+      },
+      onRelease: () => {
+        // Release events handled by main controls system
+      },
+    };
+
+    fauxpadController = createFauxPadController(mappingRef, handlers, props.options);
+    fauxpadController.bind(touchControlEdge.value, touchControlInside.value);
   }
 });
 
 onUnmounted(() => {
-  if (touchControlInside.value) {
-    touchControlInside.value.removeEventListener("touchstart", onTouchStart);
-    touchControlInside.value.removeEventListener("touchmove", onTouchMove);
-    touchControlInside.value.removeEventListener("touchend", onTouchEnd);
+  if (cleanup) {
+    cleanup();
+  }
+  if (fauxpadController && touchControlEdge.value && touchControlInside.value) {
+    fauxpadController.unbind(touchControlEdge.value, touchControlInside.value);
   }
 });
 </script>
@@ -103,5 +101,6 @@ onUnmounted(() => {
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
   opacity: 0.5;
+  z-index: 1;
 }
 </style>
