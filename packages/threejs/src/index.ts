@@ -4,3 +4,4 @@ export * from './getters';
 export * from './camera';
 export * from './models';
 export * from './core';
+export * from './textures';

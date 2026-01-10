@@ -233,3 +233,45 @@ export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor:
   
   camera.rotation.x = camera.userData.originalRotation.x + newTilt;
 };
+
+/**
+ * Update camera properties based on configuration
+ * @param camera - The Three.js camera to update
+ * @param config - Camera configuration object with position, rotation, lookAt, and other properties
+ */
+export const updateCamera = (camera: THREE.PerspectiveCamera | THREE.OrthographicCamera, config: any): void => {
+  if (config.position) {
+    if (config.position instanceof Array) {
+      camera.position.set(...(config.position as CoordinateTuple));
+    } else {
+      camera.position.copy(config.position);
+    }
+  }
+  if (config.near !== undefined) camera.near = config.near;
+  if (config.far !== undefined) camera.far = config.far;
+  if (config.up) camera.up = config.up;
+  if (config.zoom !== undefined) camera.zoom = config.zoom;
+  
+  // PerspectiveCamera specific properties
+  if (camera instanceof THREE.PerspectiveCamera) {
+    if (config.fov !== undefined) camera.fov = config.fov;
+    if (config.aspect !== undefined) camera.aspect = config.aspect;
+    if (config.focus !== undefined) (camera as any).focus = config.focus;
+  }
+  
+  if (config.rotation) {
+    if (config.rotation instanceof Array) {
+      camera.rotation.set(...(config.rotation as CoordinateTuple));
+    } else {
+      camera.rotation.setFromVector3(config.rotation as THREE.Vector3);
+    }
+  }
+  if (config.lookAt) {
+    if (config.lookAt instanceof Array) {
+      camera.lookAt(...(config.lookAt as CoordinateTuple));
+    } else {
+      camera.lookAt(config.lookAt);
+    }
+  }
+  camera.updateProjectionMatrix();
+};

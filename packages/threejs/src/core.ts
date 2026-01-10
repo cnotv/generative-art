@@ -6,6 +6,7 @@ import { video } from './utils/video';
 import { animateTimeline, CoordinateTuple, Timeline } from '@webgamekit/animation';
 import { ToolsConfig, SetupConfig, ModelOptions, ComplexModel } from './types';
 import { getEnvironment, getLights, getGround, getSky } from './getters';
+import { updateCamera } from './camera';
 
 export const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
@@ -88,36 +89,10 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     if (config.sky !== false) getSky(scene, config?.sky || {});
     
     if (config?.camera) {
-      if (config.camera.position)
-        if (config.camera.position instanceof Array) {
-          camera.position.set(...(config.camera.position as CoordinateTuple));
-        } else {
-          camera.position.copy(config.camera.position);
-        }
-      if (config.camera.near) camera.near = config.camera.near;
-      if (config.camera.far) camera.far = config.camera.far;
-      if (config.camera.fov) camera.fov = config.camera.fov;
-      if (config.camera.up) camera.up = config.camera.up;
-      if (config.camera.aspect) camera.aspect = config.camera.aspect;
-      if (config.camera.zoom) camera.zoom = config.camera.zoom;
-      if (config.camera.focus) (camera as any).focus = config.camera.focus;
-      if (config.camera.rotation) {
-        if (config.camera.rotation instanceof Array) {
-          camera.rotation.set(...(config.camera.rotation as CoordinateTuple));
-        } else {
-          camera.rotation.setFromVector3(config.camera.rotation as THREE.Vector3);
-        }
-      }
-      if (config.camera.lookAt) {
-        if (config.camera.lookAt instanceof Array) {
-          camera.lookAt(...(config.camera.lookAt));
-        } else {
-          camera.lookAt(config.camera.lookAt);
-        }
-      }
-      camera.updateProjectionMatrix();
+      updateCamera(camera, config.camera);
     }
 
+    // Initialize postprocessing if configured
     if (config.postprocessing) composer = await setupPostprocessing({ renderer, scene, camera, config: config.postprocessing });
     if (defineSetup) await defineSetup();
     
@@ -163,12 +138,15 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
         orbit.update();
         if (config.orbit?.debug) console.log(camera);
       }
+
+      // Switch between composer and renderer based on postprocessing setup
       if (composer) {
         composer.render();
       } else {
         renderer.render(scene, camera);
       }
 
+      // Stop video recording if any
       if (video?.stop && route) video.stop(renderer.info.render.frame ,route);
       if (stats?.end && route) stats.end(route);
     }
@@ -205,74 +183,6 @@ export const removeElements = (scene: THREE.Scene, world: RAPIER.World, meshes: 
   });
 
   return [];
-};
-
-/**
- * Configuration interface for zigzag texture parameters
- */
-interface ZigzagTextureOptions {
-  size?: number;
-  backgroundColor?: string;
-  zigzagColor?: string;
-  secondaryColor?: string;
-  zigzagHeight?: number;
-  zigzagWidth?: number;
-  primaryThickness?: number;
-  secondaryThickness?: number;
-  repeatX?: number;
-  repeatY?: number;
-}
-
-/**
- * Creates a procedural zigzag pattern texture using Canvas API
- * @param options Configuration options for the zigzag pattern
- * @returns THREE.CanvasTexture with zigzag pattern
- */
-export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.CanvasTexture => {
-  const {
-    size = 64,
-    backgroundColor = '#68b469',
-    zigzagColor = '#4a7c59',
-    zigzagHeight = 16,
-    zigzagWidth = 8,
-    primaryThickness = 3,
-    repeatX = 50,
-    repeatY = 50
-  } = options;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, size, size);
-
-  ctx.strokeStyle = zigzagColor;
-  ctx.lineWidth = primaryThickness;
-  ctx.beginPath();
-
-  const numZigzags = Math.ceil(size / zigzagWidth);
-
-  for (let i = 0; i <= numZigzags; i++) {
-    const x = i * zigzagWidth;
-    const y = (i % 2 === 0) ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2;
-    
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-  
-  ctx.stroke();
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeatX, repeatY);
-  
-  return texture;
 };
 
 export const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => {
