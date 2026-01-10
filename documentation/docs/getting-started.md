@@ -95,7 +95,7 @@ playSound(sfx);
 ## Next Steps
 
 - **[Monorepo Architecture](./architecture/monorepo.md)** - Understand the project structure
-- **[Package Documentation](./category/packages)** - Detailed API references
+- **[Package Documentation](./packages/threejs.md)** - Detailed API references
 
 ## Contributing
 

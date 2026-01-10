@@ -108,6 +108,7 @@ export function createFauxPadController(
    */
   const updateDirections = () => {
     const pos = getPosition();
+    const directions = getDirectionFromAngle(pos.angle);
     
     // Check deadzone
     if (pos.distance < deadzone) {
@@ -123,7 +124,7 @@ export function createFauxPadController(
     }
 
     // Get current directions
-    const currentDirections = new Set(getDirectionFromAngle(pos.angle));
+    const currentDirections = new Set(directions);
 
     // Release directions that are no longer active
     activeDirections.forEach(dir => {
@@ -212,6 +213,7 @@ export function createFauxPadController(
       y: edgeElement.offsetHeight / 2
     };
 
+    // Bind to inside element - touch events stay attached even when finger moves outside
     insideElement.addEventListener('touchstart', onTouchStart as EventListener);
     insideElement.addEventListener('touchmove', onTouchMove as EventListener);
     insideElement.addEventListener('touchend', onTouchEnd);

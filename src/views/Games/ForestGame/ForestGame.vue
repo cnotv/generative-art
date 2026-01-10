@@ -197,6 +197,7 @@ onUnmounted(() => {
     style="left: 25px; bottom: 25px"
     :mapping="{ left: 'turn-left', right: 'turn-right', up: 'moving', down: 'moving' }"
     :options="{ deadzone: 0.15 }"
+    :current-actions="currentActions"
     :on-action="bindings.onAction"
   />
   <TouchControl

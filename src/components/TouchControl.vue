@@ -6,6 +6,7 @@ const props = defineProps<{
   mapping: Record<string, string>;
   options?: FauxPadOptions;
   mode?: 'faux-pad' | 'button'; // Default is 'faux-pad'
+  currentActions?: Record<string, any>; // Reference to currentActions from createControls
   onAction: (action: string) => void;
 }>();
 
@@ -32,7 +33,7 @@ onMounted(() => {
 
     touchControlInside.value.addEventListener('click', handleTap);
     touchControlInside.value.addEventListener('touchend', handleTap);
-    
+
     cleanup = () => {
       touchControlInside.value?.removeEventListener('click', handleTap);
       touchControlInside.value?.removeEventListener('touchend', handleTap);
@@ -41,15 +42,25 @@ onMounted(() => {
     // Faux-pad mode: directional control
     const mappingRef = { current: { 'faux-pad': props.mapping } };
     const handlers = {
-      onAction: (action: string) => {
+      onAction: (action: string, trigger: string, device: string) => {
+        // Update currentActions so the game loop can read them (intentional mutation of shared state)
+        if (props.currentActions) {
+          // eslint-disable-next-line vue/no-mutating-props
+          props.currentActions[action] = { trigger, device };
+        }
         props.onAction(action);
       },
-      onRelease: () => {
-        // Release events handled by main controls system
+      onRelease: (action: string) => {
+        // Remove from currentActions when released
+        if (props.currentActions && props.currentActions[action]) {
+          // eslint-disable-next-line vue/no-mutating-props
+          delete props.currentActions[action];
+        }
       },
     };
 
     fauxpadController = createFauxPadController(mappingRef, handlers, props.options);
+    // Bind touch events to edge (larger area), visual feedback to inside
     fauxpadController.bind(touchControlEdge.value, touchControlInside.value);
   }
 });
