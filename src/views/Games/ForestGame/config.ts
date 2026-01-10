@@ -7,10 +7,10 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
 import groundImg from "@/assets/images/illustrations/ground.png";
-import illustrationTree1Img from "@/assets/images/illustrations/small_Tree1.png";
-// import illustrationTree2Img from "@/assets/images/illustrations/small_Tree2.png";
-import illustrationRock1Img from "@/assets/images/illustrations/small_Rock1.png";
-import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1.png";
+import illustrationTree1Img from "@/assets/images/illustrations/small_Tree1.webp";
+// import illustrationTree2Img from "@/assets/images/illustrations/small_Tree2.webp";
+import illustrationRock1Img from "@/assets/images/illustrations/small_Rock1.webp";
+import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1.webp";
 
 const groundSize: CoordinateTuple = [1000, 100, 1000]
 
