@@ -59,6 +59,23 @@ The project is organized as a **pnpm workspace monorepo**:
 - **Fix on save**: Run `pnpm lint` to auto-fix issues
 - **No warnings**: Address all lint warnings, don't suppress without reason
 
+### Documentation
+- **Use Docusaurus**: All project documentation lives in `documentation/` folder
+- **Never create standalone .md files**: Use Docusaurus for all documentation needs
+- **Documentation structure**:
+  - `documentation/docs/packages/` - Package API documentation
+  - `documentation/docs/architecture/` - Project architecture docs
+  - `documentation/docs/guides/` - How-to guides and tutorials
+- **Run docs locally**: `cd documentation && pnpm start`
+- **Adding new docs**: Create `.md` files in appropriate `docs/` subfolder with frontmatter:
+  ```markdown
+  ---
+  sidebar_position: 1
+  ---
+  
+  # Your Title Here
+  ```
+
 ## Key Development Patterns
 
 ### Creating a New 3D Scene/Game View

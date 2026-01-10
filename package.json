@@ -18,7 +18,9 @@
     "lint:staged": "eslint --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
     "prepare": "husky",
-    "webp": "./scripts/webp-conversion.sh"
+    "webp": "./scripts/webp-conversion.sh",
+    "docs:dev": "cd documentation && pnpm install --ignore-workspace && node node_modules/@docusaurus/core/bin/docusaurus.mjs start",
+    "docs:build": "cd documentation && pnpm install --ignore-workspace && node node_modules/@docusaurus/core/bin/docusaurus.mjs build"
   },
   "lint-staged": {
     "*.{vue,js,jsx,cjs,mjs,ts,tsx,cts,mts}": [

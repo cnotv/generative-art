@@ -1,20 +1,91 @@
-# Vue 3 + TypeScript + Vite
+# WebGameKit & Generative Art
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A monorepo containing **WebGameKit** - a framework-agnostic toolkit for creating 3D games, environments, and animations - along with a personal playground for generative art and Three.js experiments.
 
-## Recommended IDE Setup
+## 🎮 Live Demo
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+**Main App**: [https://cnotv.github.io/generative-art/](https://cnotv.github.io/generative-art/)
 
-## Type Support For `.vue` Imports in TS
+**Documentation**: [https://cnotv.github.io/generative-art/docs/](https://cnotv.github.io/generative-art/docs/)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+## 📦 Packages
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+| Package | Description |
+|---------|-------------|
+| [@webgamekit/threejs](./packages/threejs) | Three.js + Rapier physics integration |
+| [@webgamekit/controls](./packages/controls) | Multi-input controller (keyboard, gamepad, touch) |
+| [@webgamekit/animation](./packages/animation) | Timeline-based animation system |
+| [@webgamekit/game](./packages/game) | Reactive game state management |
+| [@webgamekit/audio](./packages/audio) | Audio playback utilities |
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
-# generative-art
-# generative-art
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/cnotv/generative-art.git
+cd generative-art
+
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+
+# Run tests
+pnpm test:unit
+
+# Build for production
+pnpm build
+```
+
+## 📖 Documentation
+
+Documentation is built with Docusaurus and hosted on GitHub Pages.
+
+```bash
+# Start documentation locally
+pnpm docs:dev
+
+# Build documentation
+pnpm docs:build
+```
+
+## 🛠️ Development
+
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm host` | Start dev server accessible on network |
+| `pnpm build` | Build for production |
+| `pnpm test:unit` | Run unit tests |
+| `pnpm lint` | Lint and fix code |
+| `pnpm docs:dev` | Start documentation server |
+| `pnpm docs:build` | Build documentation |
+
+### Project Structure
+
+```
+generative-art/
+├── packages/              # Reusable @webgamekit packages
+│   ├── threejs/          # Three.js + Rapier core
+│   ├── controls/         # Input controllers
+│   ├── animation/        # Animation system
+│   ├── game/             # Game state
+│   └── audio/            # Audio utilities
+├── src/                  # Main Vue.js application
+│   └── views/            # Route-based 3D scenes
+├── documentation/        # Docusaurus documentation site
+└── scripts/              # Build and utility scripts
+```
+
+## 🐳 Docker
+
+```bash
+docker-compose up
+```
+
+## 📄 License
+
+MIT
