@@ -12,7 +12,7 @@ import illustrationTree1Img from "@/assets/images/illustrations/small_Tree1.webp
 import illustrationRock1Img from "@/assets/images/illustrations/small_Rock1.webp";
 import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1.webp";
 
-const groundSize: CoordinateTuple = [1000, 100, 1000]
+const groundSize: CoordinateTuple = [1000, 100, 50]
 
 export const chameleonConfig = {
   position: [0, -1, 0] as CoordinateTuple,
@@ -66,8 +66,22 @@ export const illustrations = {
       show: true,
       amount: 1000,
       spacing: 1,
-      position: [0, -5, -150],
-      positionVariation: [500, 0, 200],
+      position: [0, -5, -20],
+      positionVariation: [500, 0, 10],
+      sizeVariation: [0.5, 0.5, 0],
+    }, groundSize)
+  },
+  tree2: {
+    texture: illustrationTree1Img,
+    size: [30, 60, 0],
+    position: [200, 0, -20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 50,
+      spacing: 1,
+      position: [0, -5, 0],
+      positionVariation: [500, 0, 20],
       sizeVariation: [0.5, 0.5, 0],
     }, groundSize)
   },
@@ -89,28 +103,28 @@ export const illustrations = {
   flower1: {
     texture: illustrationFlower1Img,
     size: [10, 5, 0],
-    position: [100, 0, -10],
+    position: [100, 0, 10],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
-      amount: 1000,
+      amount: 200,
       spacing: 0.2,
-      position: [0, -3, -10],
-      positionVariation: [300, 0, 500],
+      position: [0, -3, 5],
+      positionVariation: [300, 0, 40],
       sizeVariation: [0.5, 0, 0],
     }, groundSize)
   },
   rock1: {
     texture: illustrationRock1Img,
     size: [10, 5, 0],
-    position: [100, -1.5, -10],
+    position: [100, -1.5, 10],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
-      amount: 1000,
+      amount: 200,
       spacing: 0.2,
-      position: [0, -1.5, -10],
-      positionVariation: [300, 0, 500],
+      position: [0, -1.5, 5],
+      positionVariation: [300, 0, 40],
       sizeVariation: [0.5, 0.5, 0],
     }, groundSize)
   },
@@ -134,7 +148,7 @@ export const setupConfig: SetupConfig = {
   ground: {
     size: groundSize,
     texture: groundImg,
-    textureRepeat: [500, 200] as [number, number],
+    textureRepeat: [500, 30] as [number, number],
     color: 0xffffff,
   },
   sky: { size: 500, color: 0x00aaff },
