@@ -24,6 +24,13 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ## Code Style & Best Practices
 
+### Uncertainty & Debugging
+- **Ask before assuming**: If uncertain about expected behavior, physics interactions, or edge cases, ask for clarification before implementing
+- **Request logs/metrics**: When debugging 3D/physics issues, ask for console logs, position values, raycast results, or visual debug helpers
+- **Propose debug additions**: Suggest adding temporary `console.log()` statements, Three.js helpers (AxesHelper, ArrowHelper), or Rapier debug renderer to understand the problem
+- **Validate assumptions**: For movement, collision, or animation issues, request screenshots, video, or specific numeric values (positions, distances, angles)
+- **Iterative approach**: Complex 3D behaviors often need iterative refinement - propose small testable changes rather than large rewrites
+
 ### Functional Programming
 - **Prefer pure functions**: Avoid side effects, return new values instead of mutating
 - **Function composition**: Chain small, reusable functions rather than large imperative blocks
@@ -47,6 +54,7 @@ The project is organized as a **pnpm workspace monorepo**:
 - **Test framework**: Use Vitest (`pnpm test:unit`)
 - **Test coverage**: Test core logic, edge cases, and public APIs
 - **Example pattern**: See `packages/controls/src/core.test.ts`
+- **No watch mode in automation**: When running tests programmatically, always use `--run` flag to prevent watch mode (e.g., `pnpm test:unit -- --run`). Kill any existing watch processes before starting new test runs with `pkill -f vitest || true`
 
 ### CSS Conventions
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes

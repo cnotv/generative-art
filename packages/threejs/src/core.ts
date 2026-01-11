@@ -73,7 +73,7 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     defineSetup,
   }: {
     config?: SetupConfig,
-    defineSetup?: () => Promise<void> | void
+    defineSetup?: (context: { ground: ReturnType<typeof getGround> | null }) => Promise<void> | void
   }) => {
     frameRate = config?.global?.frameRate || frameRate;
     if (config.scene?.backgroundColor) scene.background = new THREE.Color(config.scene.backgroundColor);
@@ -85,7 +85,7 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       orbit.enabled = !(config.orbit?.disabled === true);
     }
     if (config.lights !== false) getLights(scene, config.lights);
-    if (config.ground !== false) getGround(scene, world, config?.ground || {});
+    const ground = config.ground !== false ? getGround(scene, world, config?.ground || {}) : null;
     if (config.sky !== false) getSky(scene, config?.sky || {});
     
     if (config?.camera) {
@@ -94,9 +94,9 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
 
     // Initialize postprocessing if configured
     if (config.postprocessing) composer = await setupPostprocessing({ renderer, scene, camera, config: config.postprocessing });
-    if (defineSetup) await defineSetup();
+    if (defineSetup) await defineSetup({ ground });
     
-    return { orbit };
+    return { orbit, ground };
   };
 
   /**

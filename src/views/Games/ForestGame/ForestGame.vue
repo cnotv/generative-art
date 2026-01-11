@@ -79,7 +79,7 @@ const init = async (): Promise<void> => {
 
   const { orbit } = await setup({
     config: setupConfig,
-    defineSetup: async () => {
+    defineSetup: async ({ ground }) => {
       const { distance, speed, maxJump } = gameSettings;
       const obstacles: ComplexModel[] = [];
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
@@ -87,6 +87,9 @@ const init = async (): Promise<void> => {
       // const player = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
       const player = await getModel(scene, world, "mushroom.glb", mushroomConfig);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
+      
+      // Add ground mesh for ground detection (if ground exists)
+      const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
       Object.keys(illustrations).forEach((key) => {
         const config = (illustrations as Record<string, any>)[key];
@@ -116,11 +119,22 @@ const init = async (): Promise<void> => {
               if (currentActions["moving"]) {
                 controllerForward(
                   player,
-                  obstacles,
+                  [...obstacles, ...groundBodies],
                   distance,
                   getDelta() * 2,
                   actionName,
-                  true
+                  true,
+                  {
+                    requireGround: true,
+                    maxGroundDistance: 5,
+                    maxStepHeight: 0.5,
+                    characterRadius: 0.5,
+                    debug: {
+                      logRaycast: true,
+                      logMovement: true,
+                      logPositions: true,
+                    }
+                  }
                 );
                 cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
               } else {

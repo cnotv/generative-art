@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation } from './index';
+import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -343,6 +343,169 @@ describe('animation', () => {
 
       expect(mockMixer.update).toHaveBeenCalled();
       expect(mockAction.reset).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkGroundAtPosition', () => {
+    it('should detect ground below the position', () => {
+      // Create a ground box (BoxGeometry works better with raycasting than PlaneGeometry)
+      const groundGeometry = new THREE.BoxGeometry(10, 0.1, 10);
+      const groundMaterial = new THREE.MeshBasicMaterial();
+      const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+      groundMesh.position.set(0, 0, 0);
+      groundMesh.updateMatrixWorld(true);
+      
+      const groundModel = groundMesh as unknown as ComplexModel;
+      
+      const checkPosition = new THREE.Vector3(0, 2, 0);
+      const result = checkGroundAtPosition(checkPosition, [groundModel], 5);
+      
+      expect(result.hasGround).toBe(true);
+      expect(result.groundHeight).toBeDefined();
+    });
+
+    it('should return hasGround false when no ground is present', () => {
+      const checkPosition = new THREE.Vector3(0, 2, 0);
+      const result = checkGroundAtPosition(checkPosition, [], 5);
+      
+      expect(result.hasGround).toBe(false);
+      expect(result.groundHeight).toBeNull();
+    });
+
+    it('should not detect ground beyond maxDistance', () => {
+      // Create a ground box far below
+      const groundGeometry = new THREE.BoxGeometry(10, 0.1, 10);
+      const groundMaterial = new THREE.MeshBasicMaterial();
+      const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+      groundMesh.position.set(0, -15, 0);
+      groundMesh.updateMatrixWorld(true);
+      
+      const groundModel = groundMesh as unknown as ComplexModel;
+      
+      const checkPosition = new THREE.Vector3(0, 2, 0);
+      const result = checkGroundAtPosition(checkPosition, [groundModel], 5); // maxDistance = 5
+      
+      expect(result.hasGround).toBe(false);
+    });
+  });
+
+  describe('controllerForward with ground detection', () => {
+    const createMockModel = (position: [number, number, number] = [0, 0, 0]) => {
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(...position);
+      mockMesh.rotation.set(0, 0, 0);
+
+      return Object.assign(mockMesh, {
+        userData: {
+          body: {
+            translation: () => ({ x: mockMesh.position.x, y: mockMesh.position.y, z: mockMesh.position.z }),
+            setTranslation: vi.fn((pos) => {
+              mockMesh.position.set(pos.x, pos.y, pos.z);
+            }),
+          },
+          mixer: {
+            update: vi.fn(),
+          },
+          actions: {
+            run: {
+              play: vi.fn(),
+              stop: vi.fn(),
+              reset: vi.fn().mockReturnThis(),
+              fadeIn: vi.fn().mockReturnThis(),
+              fadeOut: vi.fn(),
+              isRunning: vi.fn().mockReturnValue(true),
+            },
+          },
+          currentAction: undefined,
+          initialValues: { position, rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+        }
+      }) as unknown as ComplexModel;
+    };
+
+    const createGroundBox = (y: number = 0, size: number = 100) => {
+      const groundGeometry = new THREE.BoxGeometry(size, 0.1, size);
+      const groundMaterial = new THREE.MeshBasicMaterial();
+      const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+      groundMesh.position.set(0, y, 0);
+      groundMesh.updateMatrixWorld(true);
+      return groundMesh as unknown as ComplexModel;
+    };
+
+    it('should move forward when ground is present and requireGround is true', () => {
+      const mockModel = createMockModel([0, 1, 0]);
+      const ground = createGroundBox(0);
+      
+      const initialZ = mockModel.position.z;
+      
+      controllerForward(mockModel, [ground], 1, 0.016, 'run', false, {
+        requireGround: true,
+        maxGroundDistance: 5,
+      });
+      
+      // Should have moved forward (in -Z direction by default)
+      expect(mockModel.position.z).not.toBe(initialZ);
+    });
+
+    it('should not move forward when no ground is present and requireGround is true', () => {
+      const mockModel = createMockModel([0, 1, 0]);
+      
+      const initialPosition = mockModel.position.clone();
+      
+      controllerForward(mockModel, [], 1, 0.016, 'run', false, {
+        requireGround: true,
+        maxGroundDistance: 5,
+      });
+      
+      // Should not have moved
+      expect(mockModel.position.x).toBe(initialPosition.x);
+      expect(mockModel.position.z).toBe(initialPosition.z);
+    });
+
+    it('should move forward without ground check when requireGround is false', () => {
+      const mockModel = createMockModel([0, 1, 0]);
+      
+      const initialZ = mockModel.position.z;
+      
+      controllerForward(mockModel, [], 1, 0.016, 'run', false, {
+        requireGround: false,
+      });
+      
+      // Should have moved forward even without ground
+      expect(mockModel.position.z).not.toBe(initialZ);
+    });
+
+    it('should adjust height when stepping onto higher ground', () => {
+      const mockModel = createMockModel([0, 0.5, 0]);
+      // Create a step at y=0.8 (slightly higher than model)
+      const step = createGroundBox(0.8);
+      
+      controllerForward(mockModel, [step], 0.5, 0.016, 'run', false, {
+        requireGround: true,
+        maxStepHeight: 0.5,
+        maxGroundDistance: 5,
+      });
+      
+      // Model should have stepped up to approximately 0.85 (top of box at y=0.85)
+      expect(mockModel.position.y).toBeGreaterThan(0.5);
+    });
+
+    it('should not move when step is too high', () => {
+      const mockModel = createMockModel([0, 0, 0]);
+      // Create a high step at y=2
+      const highStep = createGroundBox(2);
+      
+      const initialPosition = mockModel.position.clone();
+      
+      controllerForward(mockModel, [highStep], 1, 0.016, 'run', false, {
+        requireGround: true,
+        maxStepHeight: 0.5, // Step is 2 units high, max is 0.5
+        maxGroundDistance: 5,
+      });
+      
+      // Should not have moved because step is too high
+      expect(mockModel.position.x).toBe(initialPosition.x);
+      expect(mockModel.position.z).toBe(initialPosition.z);
     });
   });
 });

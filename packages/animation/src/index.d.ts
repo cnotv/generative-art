@@ -58,14 +58,62 @@ declare const getAnimationsModel: (mixer: THREE.AnimationMixer, model: Model, gl
  * Update the animation of the model based on given time
  */
 declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.AnimationAction, delta?: number, speed?: number, player?: ComplexModel, actionName?: string) => void;
+
+interface ControllerForwardOptions {
+  /** Maximum height the character can step up (for stairs/small obstacles) */
+  maxStepHeight?: number;
+  /** Maximum distance to check for ground below the character */
+  maxGroundDistance?: number;
+  /** Whether ground is required to move forward (prevents walking off edges) */
+  requireGround?: boolean;
+  /** Collision detection distance for obstacles */
+  collisionDistance?: number;
+  /** Character radius for ground check offset (checks ground at character's edge, not center) */
+  characterRadius?: number;
+  /** Debug options for troubleshooting movement issues */
+  debug?: {
+    /** Log raycast hit positions and ground detection results */
+    logRaycast?: boolean;
+    /** Log canMove decision and reasoning */
+    logMovement?: boolean;
+    /** Log position values (old, new, final) */
+    logPositions?: boolean;
+  };
+}
+
+/**
+ * Check if there's ground at a given position
+ * @param position Position to check from
+ * @param bodies Array of bodies to check against
+ * @param maxDistance Maximum distance to check for ground
+ * @returns Object containing whether ground was found and at what height
+ */
+declare const checkGroundAtPosition: (
+  position: THREE.Vector3,
+  bodies: ComplexModel[],
+  maxDistance: number
+) => { hasGround: boolean; groundHeight: number | null };
+
 /**
  * Move forward or backward if no collision is detected
- * @param player
- * @param dynamicBodies
- * @param distance
- * @param backwards
+ * Optionally checks for ground ahead and handles step climbing
+ * @param model The model to move
+ * @param bodies Array of bodies to check collisions against
+ * @param distance Movement distance
+ * @param delta Time delta for animation
+ * @param actionName Animation action name
+ * @param backwards Whether to move backwards
+ * @param options Additional options for ground checking and step climbing
  */
-declare const controllerForward: (model: ComplexModel, bodies: ComplexModel[], distance: number, delta: number, backwards?: boolean) => void;
+declare const controllerForward: (
+  model: ComplexModel,
+  bodies: ComplexModel[],
+  distance: number,
+  delta: number,
+  actionName?: string,
+  backwards?: boolean,
+  options?: ControllerForwardOptions
+) => void;
 declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _distance: number, height: number) => void;
 /**
  * Rotate model on defined angle
@@ -74,4 +122,5 @@ declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _di
  */
 declare const controllerTurn: (model: ComplexModel, angle: number) => void;
 declare const bodyJump: (model: ComplexModel, bodies: ComplexModel[], distance: number, height: number) => void;
-export { animateTimeline, getTimelineLoopModel, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, };
+export { animateTimeline, getTimelineLoopModel, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, checkGroundAtPosition };
+export type { ControllerForwardOptions };
