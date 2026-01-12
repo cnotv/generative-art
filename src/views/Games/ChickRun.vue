@@ -5,7 +5,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getModel, getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements, bodyJump, updateAnimation } from "@webgamekit/animation";
+import { bindAnimatedElements, bodyJump, updateAnimation, type AnimationData } from "@webgamekit/animation";
 import { useUiStore } from "@/stores/ui";
 import { getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
@@ -103,14 +103,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               action: () => {
                 if (chickModel.userData.mixer && chickModel.userData.actions?.run) {
-                  updateAnimation(
-                    chickModel.userData.mixer,
-                    chickModel.userData.actions.run,
-                    getDelta(),
-                    1,
-                    chickModel,
-                    'run'
-                  );
+                  const animData: AnimationData = {
+                    player: chickModel,
+                    actionName: 'run',
+                    delta: getDelta(),
+                    speed: 1
+                  };
+                  updateAnimation(animData);
                 }
               },
             },

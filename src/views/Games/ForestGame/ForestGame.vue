@@ -8,18 +8,16 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type CoordinateTuple, updateAnimation } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 
 import TouchControl from '@/components/TouchControl.vue'
 import {
-  chameleonConfig,
-  mushroomConfig,
+  playerSettings,
   illustrations,
   setupConfig,
-  gameSettings,
   controlBindings,
   assets,
 } from "./config";
@@ -48,6 +46,18 @@ const getLogs = (actions: Record<string, any>): string[] =>
       (action) =>
         `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
     );
+
+const logControllerForward = (
+  debug: boolean,
+  actions: Record<string, unknown>,
+  targetRotation: number | null
+): void => {
+  if (!debug) return;
+  const activeActions = Object.keys(actions).filter(k => actions[k]);
+  if (activeActions.length > 0) {
+    console.log('[Controls Debug] Active actions:', activeActions, 'Target rotation:', targetRotation);
+  }
+};
 
 const bindings = {
   ...controlBindings,
@@ -80,14 +90,14 @@ const init = async (): Promise<void> => {
   const { orbit } = await setup({
     config: setupConfig,
     defineSetup: async ({ ground }) => {
-      const { distance, speed, maxJump } = gameSettings;
+      const { distance, speed, maxJump } = playerSettings.game;
+      const { movement } = playerSettings;
       const obstacles: ComplexModel[] = [];
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
 
-      // const player = await getModel(scene, world, "chameleon.fbx", chameleonConfig);
-      const player = await getModel(scene, world, "mushroom.glb", mushroomConfig);
+      const player = await getModel(scene, world, "mushroom.glb", playerSettings.model);
       // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
-      
+
       // Add ground mesh for ground detection (if ground exists)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
@@ -109,60 +119,34 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             name: "Walk",
             action: () => {
-              const actionName = currentActions["moving"]
-                ? "Esqueleto|walking"
-                : "Esqueleto|idle";
+              const targetRotation = getRotation(currentActions);
+              const isMoving = targetRotation !== null;
+              const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
               const action = player.userData.actions?.[actionName];
+              logControllerForward(movement.debug, currentActions, targetRotation);
 
               if (!action || !player.userData.mixer) return;
-
-              if (currentActions["moving"]) {
+              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 10, backward: false };
+              if (isMoving) {
+                setRotation(player, targetRotation);
                 controllerForward(
-                  player,
-                  [...obstacles, ...groundBodies],
+                  obstacles,
+                  groundBodies,
                   distance,
-                  getDelta() * 2,
-                  actionName,
-                  true,
-                  {
-                    requireGround: true,
-                    maxGroundDistance: 5,
-                    maxStepHeight: 0.5,
-                    characterRadius: 0.5,
-                    debug: {
-                      logRaycast: true,
-                      logMovement: true,
-                      logPositions: true,
-                    }
-                  }
+                  animationData,
+                  movement
                 );
                 cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
               } else {
-                updateAnimation(
-                  player.userData.mixer,
-                  action,
-                  getDelta(),
-                  10,
-                  player,
-                  actionName
-                );
+                updateAnimation(animationData);
               }
-            },
-          },
-          {
-            name: "Free: Turn player",
-            frequency: speed.movement,
-            action: () => {
-              if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
-              if (currentActions["turn-right"])
-                controllerTurn(player, -speed.turning);
             },
           },
           {
             name: "Jump action",
             action: () => {
               if (isJumping.value) {
-                if (player.position.y >= chameleonConfig.position[1] + maxJump) {
+                if (player.position.y >= playerSettings.model.position[1] + maxJump) {
                   isJumping.value = false;
                 } else {
                   player.position.y += speed.jump * 0.1;
@@ -172,9 +156,9 @@ const init = async (): Promise<void> => {
               }
 
               // Fake gravity
-              if (player.position.y <= chameleonConfig.position[1] + 0.1) {
+              if (player.position.y <= playerSettings.model.position[1] + 0.1) {
                 canJump.value = true;
-                player.position.y = chameleonConfig.position[1];
+                player.position.y = playerSettings.model.position[1];
               }
             },
           },
@@ -209,7 +193,12 @@ onUnmounted(() => {
   <TouchControl
     v-if="isMobileDevice"
     style="left: 25px; bottom: 25px"
-    :mapping="{ left: 'turn-left', right: 'turn-right', up: 'moving', down: 'moving' }"
+    :mapping="{
+      left: 'move-left',
+      right: 'move-right',
+      up: 'move-up',
+      down: 'move-down',
+    }"
     :options="{ deadzone: 0.15 }"
     :current-actions="currentActions"
     :on-action="bindings.onAction"

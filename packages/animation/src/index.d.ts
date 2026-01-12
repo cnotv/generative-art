@@ -59,6 +59,25 @@ declare const getAnimationsModel: (mixer: THREE.AnimationMixer, model: Model, gl
  */
 declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.AnimationAction, delta?: number, speed?: number, player?: ComplexModel, actionName?: string) => void;
 
+/** Animation data for updateAnimation and controllerForward */
+interface AnimationData {
+  /** Animation action name */
+  actionName: string;
+  /** The player/model being animated */
+  player: ComplexModel;
+  /** Time delta for animation update */
+  delta: number;
+  /** Animation playback speed */
+  speed?: number;
+  /** Whether moving backwards */
+  backward?: boolean;
+}
+
+/**
+ * Update the animation of the model based on given time
+ */
+declare const updateAnimation: (data: AnimationData) => void;
+
 interface ControllerForwardOptions {
   /** Maximum height the character can step up (for stairs/small obstacles) */
   maxStepHeight?: number;
@@ -97,21 +116,15 @@ declare const checkGroundAtPosition: (
 /**
  * Move forward or backward if no collision is detected
  * Optionally checks for ground ahead and handles step climbing
- * @param model The model to move
  * @param bodies Array of bodies to check collisions against
  * @param distance Movement distance
- * @param delta Time delta for animation
- * @param actionName Animation action name
- * @param backwards Whether to move backwards
+ * @param animationData Animation data containing player, action, delta, etc.
  * @param options Additional options for ground checking and step climbing
  */
 declare const controllerForward: (
-  model: ComplexModel,
   bodies: ComplexModel[],
   distance: number,
-  delta: number,
-  actionName?: string,
-  backwards?: boolean,
+  animationData: AnimationData,
   options?: ControllerForwardOptions
 ) => void;
 declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _distance: number, height: number) => void;
@@ -123,4 +136,4 @@ declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _di
 declare const controllerTurn: (model: ComplexModel, angle: number) => void;
 declare const bodyJump: (model: ComplexModel, bodies: ComplexModel[], distance: number, height: number) => void;
 export { animateTimeline, getTimelineLoopModel, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, checkGroundAtPosition };
-export type { ControllerForwardOptions };
+export type { AnimationData, ControllerForwardOptions };

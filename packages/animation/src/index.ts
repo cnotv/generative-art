@@ -168,22 +168,33 @@ const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any
   return actions
 }
 
+/** Animation data for updateAnimation and controllerForward */
+interface AnimationData {
+  /** Animation action name */
+  actionName: string;
+  /** The player/model being animated */
+  player: ComplexModel;
+  /** Time delta for animation update */
+  delta: number;
+  /** Animation playback speed */
+  speed?: number;
+  /** Whether moving backwards */
+  backward?: boolean;
+}
+
 /**
  * Update the animation of the model based on given time
  */
-const updateAnimation = (
-  mixer: THREE.AnimationMixer,
-  action: THREE.AnimationAction,
-  delta: number = 0,
-  speed: number = 0,
-  player?: ComplexModel,
-  actionName?: string,
-) => {
-  const coefficient = 0.1
-  if (!action) return
+const updateAnimation = (data: AnimationData): void => {
+  const { player, actionName, delta, speed = 10 } = data;
+  const mixer = player.userData.mixer;
+  const action = player.userData.actions?.[actionName];
+  const coefficient = 0.1;
+
+  if (!action || !mixer) return;
   
-  // Handle animation switching if player and actionName provided
-  if (player && actionName && player.userData.currentAction !== actionName) {
+  // Handle animation switching
+  if (player.userData.currentAction !== actionName) {
     const previousAction = player.userData.currentAction 
       ? player.userData.actions?.[player.userData.currentAction]
       : null;
@@ -194,7 +205,7 @@ const updateAnimation = (
     
     action.reset().fadeIn(0.2).play();
     player.userData.currentAction = actionName;
-  } else if (player && actionName && player.userData.currentAction === actionName) {
+  } else {
     // Ensure the action is playing
     if (!action.isRunning()) {
       action.play();
@@ -202,11 +213,11 @@ const updateAnimation = (
   }
   
   if (delta) {
-    mixer.update(delta * speed * coefficient)
+    mixer.update(delta * speed * coefficient);
   } else {
-    action.stop()
+    action.stop();
   }
-}
+};
 
 interface ControllerForwardOptions {
   /** Maximum height the character can step up (for stairs/small obstacles) */
@@ -220,14 +231,7 @@ interface ControllerForwardOptions {
   /** Character radius for ground check offset (checks ground at character's edge, not center) */
   characterRadius?: number;
   /** Debug options for troubleshooting movement issues */
-  debug?: {
-    /** Log raycast hit positions and ground detection results */
-    logRaycast?: boolean;
-    /** Log canMove decision and reasoning */
-    logMovement?: boolean;
-    /** Log position values (old, new, final) */
-    logPositions?: boolean;
-  };
+  debug?: boolean
 }
 
 /**
@@ -252,178 +256,304 @@ const checkGroundAtPosition = (
   return { hasGround: false, groundHeight: null };
 };
 
+/** Result of movement direction calculation */
+interface MovementDirectionResult {
+  /** The direction vector (scaled by distance) */
+  direction: THREE.Vector3;
+  /** The old position before movement */
+  oldPosition: THREE.Vector3;
+  /** The new target position */
+  newPosition: THREE.Vector3;
+}
+
+/**
+ * Calculate movement direction vector based on model orientation
+ * @param model The model to get direction from
+ * @param distance Movement distance
+ * @param backward Whether to move backward
+ * @returns Direction vector and positions
+ */
+const getMovementDirection = (
+  model: ComplexModel,
+  distance: number,
+  backward: boolean = false
+): MovementDirectionResult => {
+  const oldPosition = model.position.clone();
+  const direction = new THREE.Vector3();
+  model.getWorldDirection(direction);
+  
+  if (backward) {
+    direction.negate();
+  }
+  direction.multiplyScalar(distance);
+  
+  const newPosition = oldPosition.clone().add(direction);
+  
+  return { direction, oldPosition, newPosition };
+};
+
+/** Result of obstacle check */
+interface ObstacleCheckResult {
+  /** Whether the path is clear of obstacles */
+  canMove: boolean;
+  /** Array of intersection points if any */
+  intersections: THREE.Intersection[];
+}
+
+/**
+ * Check for obstacles in the movement path using raycasting
+ * @param oldPosition Starting position
+ * @param direction Movement direction (will be normalized internally)
+ * @param bodies Bodies to check collisions against
+ * @param collisionDistance Maximum distance to check for collisions
+ * @returns Whether movement is possible and intersection data
+ */
+const checkObstacles = (
+  oldPosition: THREE.Vector3,
+  direction: THREE.Vector3,
+  bodies: ComplexModel[],
+  collisionDistance: number
+): ObstacleCheckResult => {
+  const normalizedDirection = direction.clone().normalize();
+  const raycaster = new THREE.Raycaster(oldPosition, normalizedDirection, 0, collisionDistance);
+  const intersections = raycaster.intersectObjects(bodies, true);
+  
+  return {
+    canMove: intersections.length === 0,
+    intersections
+  };
+};
+
+/** Options for ground movement check */
+interface GroundCheckOptions {
+  /** Maximum height the character can step up */
+  maxStepHeight: number;
+  /** Maximum distance to check for ground */
+  maxGroundDistance: number;
+  /** Character radius for ground check offset */
+  characterRadius: number;
+}
+
+/** Result of ground movement validation */
+interface GroundMovementResult {
+  /** Whether movement is allowed */
+  canMove: boolean;
+  /** The final position after ground adjustments */
+  finalPosition: THREE.Vector3;
+  /** Debug info about which path was taken */
+  debugInfo?: string;
+}
+
+/**
+ * Check ground with character radius offset
+ * @param position Position to check
+ * @param forwardDir Direction of movement
+ * @param bodies Bodies to check against
+ * @param options Ground check options
+ * @returns Ground check result
+ */
+const checkGroundWithRadius = (
+  position: THREE.Vector3,
+  forwardDir: THREE.Vector3,
+  bodies: ComplexModel[],
+  options: GroundCheckOptions
+): { hasGround: boolean; groundHeight: number | null } => {
+  const { maxStepHeight, maxGroundDistance, characterRadius } = options;
+  const checkPosition = position.clone();
+  checkPosition.y += maxStepHeight;
+  
+  // Add character radius offset in the movement direction (horizontal only)
+  const horizontalForward = new THREE.Vector3(forwardDir.x, 0, forwardDir.z).normalize();
+  checkPosition.add(horizontalForward.multiplyScalar(characterRadius));
+  
+  return checkGroundAtPosition(checkPosition, bodies, maxGroundDistance + maxStepHeight);
+};
+
+/**
+ * Validate ground for movement and handle axis fallback for edge walking
+ * @param oldPosition Current position
+ * @param newPosition Target position
+ * @param direction Movement direction
+ * @param bodies Bodies to check ground against
+ * @param options Ground check options
+ * @returns Movement result with final position
+ */
+const checkGroundForMovement = (
+  oldPosition: THREE.Vector3,
+  newPosition: THREE.Vector3,
+  direction: THREE.Vector3,
+  bodies: ComplexModel[],
+  options: GroundCheckOptions
+): GroundMovementResult => {
+  const { maxStepHeight } = options;
+  const finalPosition = newPosition.clone();
+  const forwardNormalized = direction.clone().normalize();
+  const groundCheck = checkGroundWithRadius(newPosition, forwardNormalized, bodies, options);
+  
+  if (groundCheck.hasGround && groundCheck.groundHeight !== null) {
+    // Ground found at full movement - check step height
+    const heightDifference = groundCheck.groundHeight - oldPosition.y;
+    
+    if (heightDifference > maxStepHeight) {
+      return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'Step too high' };
+    }
+    
+    finalPosition.y = groundCheck.groundHeight;
+    return { canMove: true, finalPosition, debugInfo: 'Full movement with ground' };
+  }
+  
+  // No ground at full movement position - try axis fallback
+  const xOnlyPosition = oldPosition.clone();
+  xOnlyPosition.x = newPosition.x;
+  const xOnlyCheck = checkGroundWithRadius(
+    xOnlyPosition, 
+    new THREE.Vector3(Math.sign(direction.x), 0, 0), 
+    bodies, 
+    options
+  );
+  
+  const zOnlyPosition = oldPosition.clone();
+  zOnlyPosition.z = newPosition.z;
+  const zOnlyCheck = checkGroundWithRadius(
+    zOnlyPosition, 
+    new THREE.Vector3(0, 0, Math.sign(direction.z)), 
+    bodies, 
+    options
+  );
+  
+  const xMovement = Math.abs(newPosition.x - oldPosition.x);
+  const zMovement = Math.abs(newPosition.z - oldPosition.z);
+  
+  if (xOnlyCheck.hasGround && zOnlyCheck.hasGround) {
+    // Both axes have ground - use the one with more movement
+    if (xMovement >= zMovement) {
+      finalPosition.x = newPosition.x;
+      finalPosition.z = oldPosition.z;
+      if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
+    } else {
+      finalPosition.x = oldPosition.x;
+      finalPosition.z = newPosition.z;
+      if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
+    }
+    return { canMove: true, finalPosition, debugInfo: 'Using axis with more movement' };
+  }
+  
+  if (xOnlyCheck.hasGround && xMovement > 0.001) {
+    finalPosition.x = newPosition.x;
+    finalPosition.z = oldPosition.z;
+    if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
+    return { canMove: true, finalPosition, debugInfo: 'Sliding on X axis' };
+  }
+  
+  if (zOnlyCheck.hasGround && zMovement > 0.001) {
+    finalPosition.x = oldPosition.x;
+    finalPosition.z = newPosition.z;
+    if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
+    return { canMove: true, finalPosition, debugInfo: 'Sliding on Z axis' };
+  }
+  
+  return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'No ground on any axis' };
+};
+
+/**
+ * Apply movement to model and rigid body
+ * @param model The model to move
+ * @param position The target position
+ */
+const moveCharacter = (
+  model: ComplexModel,
+  position: THREE.Vector3
+): void => {
+  const rigidBody = model.userData.body;
+  model.position.copy(position);
+  rigidBody.setTranslation(position, true);
+};
+
 /**
  * Move forward or backward if no collision is detected
  * Optionally checks for ground ahead and handles step climbing
- * @param model The model to move
- * @param bodies Array of bodies to check collisions against
+ * @param obstacles Array of obstacle bodies to check horizontal collisions against
+ * @param groundBodies Array of ground bodies to check for ground detection (vertical raycast)
  * @param distance Movement distance
- * @param delta Time delta for animation
- * @param actionName Animation action name
- * @param backwards Whether to move backwards
- * @param options Additional options for ground checking and step climbing
+ * @param animationData Animation data containing player, action, delta, etc.
+ * @param options Controller forward options for ground and collision checks
  */
 const controllerForward = (
-  model: ComplexModel,
-  bodies: ComplexModel[],
+  obstacles: ComplexModel[],
+  groundBodies: ComplexModel[],
   distance: number,
-  delta: number,
-  actionName: string = 'run',
-  backwards: boolean = false,
-  options: ControllerForwardOptions = {}
-) => {
-  const {
+  animationData: AnimationData,
+  {
     maxStepHeight = 0.5,
     maxGroundDistance = 2,
     requireGround = false,
     collisionDistance = 10,
     characterRadius = 0.5,
-    debug = {}
-  } = options;
-  
-  const { logRaycast = false, logMovement = false, logPositions = false } = debug;
-  
-  const mesh = model;
-  const { body: rigidBody, actions, mixer } = model.userData;
-  const oldPosition = mesh.position.clone();
+    debug = false
+  }: ControllerForwardOptions = {}
+): void => {
+  const { actionName, player: model, backward = false } = animationData;
+  const { actions, mixer } = model.userData;
+  const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward);
 
-  // Calculate the forward vector
-  const forward = new THREE.Vector3();
-  mesh.getWorldDirection(forward);
-  if (backwards) {
-    forward.negate();
-  }
-  forward.multiplyScalar(distance);
-
-  // Create a new position by adding the forward vector to the old position
-  const newPosition = oldPosition.clone().add(forward);
-
-  if (logPositions) {
+  if (debug) {
     console.log('[controllerForward] Old position:', oldPosition.toArray());
     console.log('[controllerForward] New position:', newPosition.toArray());
-    console.log('[controllerForward] Forward vector:', forward.toArray());
+    console.log('[controllerForward] Forward vector:', direction.toArray());
   }
 
-  // Create a raycaster for horizontal collision detection
-  const raycaster = new THREE.Raycaster(oldPosition, forward.normalize(), 0, collisionDistance);
+  // Check for obstacles (horizontal collision)
+  const obstacleResult = checkObstacles(oldPosition, direction, obstacles, collisionDistance);
+  let canMove = obstacleResult.canMove;
+  let finalPosition = newPosition.clone();
 
-  // Check for intersections with the new position
-  const intersects = raycaster.intersectObjects(bodies.map(body => body), true);
+  if (debug) {
+    console.log('[controllerForward] Obstacle check - canMove:', obstacleResult.canMove);
+    if (obstacleResult.intersections.length > 0) {
+      console.log('[controllerForward] Hit obstacle:', obstacleResult.intersections[0].object.name || obstacleResult.intersections[0].object.type);
+      console.log('[controllerForward] Hit point:', obstacleResult.intersections[0].point.toArray());
+      console.log('[controllerForward] Hit distance:', obstacleResult.intersections[0].distance);
+    }
+  }
 
-  let canMove = intersects.length === 0;
-  const finalPosition = newPosition.clone();
-
-  // Helper function to check ground with character radius offset
-  const checkGroundWithRadius = (position: THREE.Vector3, forwardDir: THREE.Vector3): { hasGround: boolean; groundHeight: number | null } => {
-    // Offset the check position in the forward direction by character radius
-    const checkPosition = position.clone();
-    checkPosition.y += maxStepHeight;
-    
-    // Add character radius offset in the movement direction (horizontal only)
-    const horizontalForward = new THREE.Vector3(forwardDir.x, 0, forwardDir.z).normalize();
-    checkPosition.add(horizontalForward.multiplyScalar(characterRadius));
-    
-    return checkGroundAtPosition(checkPosition, bodies, maxGroundDistance + maxStepHeight);
-  };
-
-  // If ground is required, check for ground at the new position
+  // If ground is required, validate ground and adjust position (vertical raycast)
   if (canMove && requireGround) {
-    const forwardNormalized = forward.clone().normalize();
-    const groundCheck = checkGroundWithRadius(newPosition, forwardNormalized);
+    const groundOptions: GroundCheckOptions = { maxStepHeight, maxGroundDistance, characterRadius };
+    const groundResult = checkGroundForMovement(oldPosition, newPosition, direction, groundBodies, groundOptions);
     
-    if (logRaycast) {
-      console.log('[controllerForward] Ground check result:', groundCheck);
-      console.log('[controllerForward] Bodies checked:', bodies.length);
-    }
+    canMove = groundResult.canMove;
+    finalPosition = groundResult.finalPosition;
     
-    if (!groundCheck.hasGround) {
-      // No ground at full movement position - try axis fallback
-      // Check if moving only on X axis has ground
-      const xOnlyPosition = oldPosition.clone();
-      xOnlyPosition.x = newPosition.x;
-      const xOnlyCheck = checkGroundWithRadius(xOnlyPosition, new THREE.Vector3(Math.sign(forward.x), 0, 0));
-      
-      // Check if moving only on Z axis has ground
-      const zOnlyPosition = oldPosition.clone();
-      zOnlyPosition.z = newPosition.z;
-      const zOnlyCheck = checkGroundWithRadius(zOnlyPosition, new THREE.Vector3(0, 0, Math.sign(forward.z)));
-      
-      if (logRaycast) {
-        console.log('[controllerForward] X-only fallback:', xOnlyCheck);
-        console.log('[controllerForward] Z-only fallback:', zOnlyCheck);
-      }
-      
-      // Determine which axis movement is valid
-      const xMovement = Math.abs(newPosition.x - oldPosition.x);
-      const zMovement = Math.abs(newPosition.z - oldPosition.z);
-      
-      if (xOnlyCheck.hasGround && zOnlyCheck.hasGround) {
-        // Both axes have ground - use the one with more movement
-        if (xMovement >= zMovement) {
-          finalPosition.x = newPosition.x;
-          finalPosition.z = oldPosition.z;
-          if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
-        } else {
-          finalPosition.x = oldPosition.x;
-          finalPosition.z = newPosition.z;
-          if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
-        }
-        canMove = true;
-        if (logMovement) console.log('[controllerForward] Using axis with more movement');
-      } else if (xOnlyCheck.hasGround && xMovement > 0.001) {
-        // Only X axis has ground
-        finalPosition.x = newPosition.x;
-        finalPosition.z = oldPosition.z;
-        if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
-        canMove = true;
-        if (logMovement) console.log('[controllerForward] Sliding on X axis');
-      } else if (zOnlyCheck.hasGround && zMovement > 0.001) {
-        // Only Z axis has ground
-        finalPosition.x = oldPosition.x;
-        finalPosition.z = newPosition.z;
-        if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
-        canMove = true;
-        if (logMovement) console.log('[controllerForward] Sliding on Z axis');
-      } else {
-        // No ground on any axis
-        canMove = false;
-        if (logMovement) console.log('[controllerForward] No ground on any axis - blocked');
-      }
-    } else if (groundCheck.groundHeight !== null) {
-      // Ground found at full movement - check step height
-      const heightDifference = groundCheck.groundHeight - oldPosition.y;
-      
-      if (heightDifference > maxStepHeight) {
-        // Step is too high to climb
-        canMove = false;
-      } else {
-        // Adjust Y to ground height
-        finalPosition.y = groundCheck.groundHeight;
+    if (debug) {
+      console.log('[controllerForward] Ground check:', groundResult.debugInfo);
+      console.log('[controllerForward] Ground bodies checked:', groundBodies.length);
+      console.log('[controllerForward] Ground options:', groundOptions);
+      if (groundBodies.length > 0) {
+        console.log('[controllerForward] First ground body position:', groundBodies[0].position?.toArray?.() ?? 'N/A');
       }
     }
   }
 
-  if (logMovement) {
+  if (debug) {
     console.log('[controllerForward] canMove:', canMove, requireGround ? '(ground required)' : '(no ground check)');
   }
   
   if (canMove) {
-    // Update the model's position and the rigid body's translation if movement is allowed
-    mesh.position.copy(finalPosition);
-    rigidBody.setTranslation(finalPosition, true);
+    moveCharacter(model, finalPosition);
     
-    if (logPositions) {
+    if (debug) {
       console.log('[controllerForward] Final position:', finalPosition.toArray());
     }
-  } else if (logMovement) {
+  } else if (debug) {
     console.log('[controllerForward] Movement blocked');
   }
 
+  // Update animation
   const action = actions?.[actionName];
   if (action && mixer) {
-    updateAnimation(mixer, action, delta, 10, model, actionName);
+    updateAnimation(animationData);
   }
-}
+};
 
 const controllerJump = (
   model: ComplexModel,
@@ -447,6 +577,54 @@ const controllerTurn = (
   const mesh = model;
   const radians = THREE.MathUtils.degToRad(angle);
   mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+};
+
+/**
+ * Set the model's rotation to face a specific direction
+ * @param model The model to rotate
+ * @param degrees The target rotation in degrees
+ * @param modelOffset Offset in degrees to correct for models facing wrong direction
+ */
+const setRotation = (
+  model: ComplexModel,
+  degrees: number,
+  modelOffset: number = 0,
+) => {
+  const radians = THREE.MathUtils.degToRad(degrees + modelOffset);
+  model.rotation.y = radians;
+};
+
+/** Rotation mapping for directional input combinations */
+const ROTATION_MAP: Record<string, number> = {
+  'up': 0,
+  'up-right': 45,
+  'right': 90,
+  'down-right': 135,
+  'down': 180,
+  'down-left': 225,
+  'left': 270,
+  'up-left': 315,
+};
+
+/**
+ * Calculate target rotation based on directional input actions
+ * @param currentActions Record of active control actions
+ * @returns Target rotation in degrees (0, 45, 90, 135, 180, 225, 270, 315) or null if no movement
+ */
+const getRotation = (
+  currentActions: Record<string, unknown>,
+): number | null => {
+  const up = !!currentActions["move-up"];
+  const down = !!currentActions["move-down"];
+  const left = !!currentActions["move-left"];
+  const right = !!currentActions["move-right"];
+
+  const key = [
+    up && !down ? 'up' : down && !up ? 'down' : '',
+    left && !right ? 'left' : right && !left ? 'right' : '',
+  ].filter(Boolean).join('-');
+
+  return key ? (ROTATION_MAP[key] ?? null) : null;
 };
 
 const bodyJump = (
@@ -494,8 +672,22 @@ export {
   controllerForward,
   controllerJump,
   controllerTurn,
+  setRotation,
+  getRotation,
   bodyJump,
   checkGroundAtPosition,
+  getMovementDirection,
+  checkObstacles,
+  checkGroundWithRadius,
+  checkGroundForMovement,
+  moveCharacter,
 };
 
-export type { ControllerForwardOptions };
+export type {
+  AnimationData,
+  ControllerForwardOptions,
+  MovementDirectionResult,
+  ObstacleCheckResult,
+  GroundCheckOptions,
+  GroundMovementResult,
+};

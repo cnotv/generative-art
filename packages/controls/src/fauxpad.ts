@@ -19,6 +19,7 @@ export interface FauxPadOptions {
   deadzone?: number; // Minimum distance to trigger (0-1, default: 0.1)
   directionThreshold?: number; // Angle threshold for 4-way directions (default: 45 degrees)
   enableEightWay?: boolean; // Enable 8-way direction detection (default: false)
+  debug?: boolean; // Enable debug logging (default: false)
 }
 
 /**
@@ -42,6 +43,7 @@ export function createFauxPadController(
   const deadzone = options.deadzone ?? 0.1;
   const directionThreshold = options.directionThreshold ?? 45;
   const enableEightWay = options.enableEightWay ?? false;
+  const debug = options.debug ?? false;
 
   let initialPosition = { x: 0, y: 0 };
   let currentPosition = { x: 0, y: 0 };
@@ -109,6 +111,10 @@ export function createFauxPadController(
   const updateDirections = () => {
     const pos = getPosition();
     const directions = getDirectionFromAngle(pos.angle);
+    
+    if (debug && pos.distance > deadzone) {
+      console.log('[FauxPad Debug] position:', pos, 'directions:', directions, 'threshold:', directionThreshold);
+    }
     
     // Check deadzone
     if (pos.distance < deadzone) {

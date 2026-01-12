@@ -11,7 +11,7 @@ import {
   CameraSide,
   setCameraSide,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type CoordinateTuple, updateAnimation } from "@webgamekit/animation";
+import { controllerTurn, controllerForward, type CoordinateTuple, type AnimationData, updateAnimation } from "@webgamekit/animation";
 import type { ComplexModel } from "@webgamekit/threejs";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -250,24 +250,27 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             name: "Walk",
             action: () => {
+              const walkAnimData: AnimationData = {
+                player,
+                actionName: "Esqueleto|walking",
+                delta: getDelta() * 2,
+                speed: 10,
+                backward: true
+              };
+              const idleAnimData: AnimationData = {
+                player,
+                actionName: "Esqueleto|idle",
+                delta: getDelta(),
+                speed: 10
+              };
               if (!currentActions["toggle-move"] || currentActions["moving"])
                 controllerForward(
-                  player,
                   obstacles,
+                  [],
                   distance,
-                  getDelta() * 2,
-                  "Esqueleto|walking",
-                  // "Idle_A",
-                  true
+                  walkAnimData
                 );
-              else updateAnimation(
-                player.userData.mixer,
-                player.userData.actions["Esqueleto|idle"]!,
-                getDelta(),
-                10,
-                player,
-                "Esqueleto|idle"
-              );
+              else updateAnimation(idleAnimData);
             },
           },
           {

@@ -31,11 +31,19 @@ The project is organized as a **pnpm workspace monorepo**:
 - **Validate assumptions**: For movement, collision, or animation issues, request screenshots, video, or specific numeric values (positions, distances, angles)
 - **Iterative approach**: Complex 3D behaviors often need iterative refinement - propose small testable changes rather than large rewrites
 
+### Comments
+- **Meaningful comments only**: Add comments only when they explain WHY, not WHAT the code does
+- **Self-documenting code**: If code needs a comment to explain what it does, refactor for clarity instead
+- **No debug comments**: Never commit commented-out debug notes, thought processes, or "was X, now Y" annotations
+- **No redundant comments**: Avoid comments that repeat what the code already says (e.g., `// Set rotation` before `setRotation()`)
+- **JSDoc for public APIs**: Use JSDoc for exported functions with `@param` and `@returns`, but keep descriptions concise
+
 ### Functional Programming
 - **Prefer pure functions**: Avoid side effects, return new values instead of mutating
 - **Function composition**: Chain small, reusable functions rather than large imperative blocks
 - **Immutability**: Use `const`, spread operators, and avoid direct mutations
 - **Array methods**: Prefer `map`, `filter`, `reduce` over `for` loops
+- **No legacy/deprecated support**: Never add overloads or backward compatibility for old function signatures. When refactoring APIs, update all usages across the codebase instead of maintaining legacy signatures
 
 ### TypeScript
 - **Always use TypeScript**: All new code must be TypeScript (`.ts`, `.vue` with `<script setup lang="ts">`)
@@ -51,10 +59,14 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ### Testing
 - **Always add unit tests**: Create `.test.ts` files alongside implementation files
-- **Test framework**: Use Vitest (`pnpm test:unit`)
+- **Test framework**: Use Vitest
+- **Run tests**: Use `pnpm test:unit` (runs once and exits, watch mode disabled by default)
+- **Watch mode**: Use `pnpm test:watch` only when explicitly needed for development
 - **Test coverage**: Test core logic, edge cases, and public APIs
+- **AAA pattern**: Structure tests with Arrange, Act, Assert sections
+- **Parameterization**: Use `it.each()` for testing multiple inputs/outputs with the same logic
 - **Example pattern**: See `packages/controls/src/core.test.ts`
-- **No watch mode in automation**: When running tests programmatically, always use `--run` flag to prevent watch mode (e.g., `pnpm test:unit -- --run`). Kill any existing watch processes before starting new test runs with `pkill -f vitest || true`
+- **CRITICAL**: The `test:unit` script uses `vitest run` which exits after completion. Never use raw `vitest` command without `run` subcommand or `--run` flag
 
 ### CSS Conventions
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes

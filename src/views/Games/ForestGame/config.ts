@@ -19,30 +19,34 @@ import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1
 
 const groundSize: CoordinateTuple = [1000, 100, 50]
 
-export const chameleonConfig = {
-  position: [0, -1, 0] as CoordinateTuple,
-  scale: [0.03, 0.03, 0.03] as CoordinateTuple,
-  restitution: -10,
-  boundary: 0.5,
-  // type: "kinematicPositionBased",
-  hasGravity: false,
-  castShadow: true,
-  animations: "chameleon_animations.fbx",
-  material: "MeshLambertMaterial",
-  materialColors: [0x99cc99],
-};
-
-export const mushroomConfig = {
-  position: [0, -1, 0] as CoordinateTuple,
-  rotation: [0, -180, 0] as CoordinateTuple,
-  scale: [1, 1, 1] as CoordinateTuple,
-  restitution: -10,
-  boundary: 0.5,
-  // type: "kinematicPositionBased",
-  hasGravity: false,
-  castShadow: true,
-  material: "MeshLambertMaterial",
-  color: 0xaaaaaa,
+export const playerSettings = {
+  model: {
+    position: [0, -1, 0] as CoordinateTuple,
+    rotation: [0, 0, 0] as CoordinateTuple,
+    scale: [1, 1, 1] as CoordinateTuple,
+    restitution: -10,
+    boundary: 0.5,
+    hasGravity: false,
+    castShadow: true,
+    material: "MeshLambertMaterial",
+    color: 0xaaaaaa,
+  },
+  movement: {
+    requireGround: true,
+    maxGroundDistance: 5,
+    maxStepHeight: 0.5,
+    characterRadius: 4,
+    debug: true,
+  },
+  game: {
+    distance: 0.08,
+    speed: {
+      movement: 1,
+      turning: 4,
+      jump: 3,
+    },
+    maxJump: 2,
+  },
 };
 
 const genericFlatConfig = {
@@ -228,43 +232,33 @@ export const setupConfig: SetupConfig = {
   } as PostProcessingConfig,
 };
 
-export const gameSettings = {
-  distance: 0.08,
-  speed: {
-    movement: 1,
-    turning: 4,
-    jump: 3,
-  },
-  maxJump: 2,
-};
-
 export const controlBindings = {
   mapping: {
     keyboard: {
       " ": "jump",
-      a: "turn-left",
-      d: "turn-right",
-      w: "moving",
-      s: "moving",
+      a: "move-left",
+      d: "move-right",
+      w: "move-up",
+      s: "move-down",
       p: "print-log",
     },
     gamepad: {
       // Buttons
       cross: "jump",
-      "dpad-left": "turn-left",
-      "dpad-right": "turn-right",
-      "dpad-down": "moving",
-      "dpad-up": "moving",
-      "axis0-left": "turn-left",
-      "axis0-right": "turn-right",
-      "axis1-up": "moving",
-      "axis1-down": "moving",
+      "dpad-left": "move-left",
+      "dpad-right": "move-right",
+      "dpad-down": "move-down",
+      "dpad-up": "move-up",
+      "axis0-left": "move-left",
+      "axis0-right": "move-right",
+      "axis1-up": "move-up",
+      "axis1-down": "move-down",
     },
     'faux-pad': {
-      left: "turn-left",
-      right: "turn-right",
-      up: "moving",
-      down: "moving",
+      left: "move-left",
+      right: "move-right",
+      up: "move-up",
+      down: "move-down",
     },
   },
   axisThreshold: 0.5,

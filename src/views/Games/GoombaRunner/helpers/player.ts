@@ -6,7 +6,7 @@ import { startBackgroundFalling } from "./background";
 const jumpSound = new URL('@/assets/jump.wav', import.meta.url).href;
 const gameOverSound = new URL('@/assets/gameover.wav', import.meta.url).href;
 const starTexture = new URL('@/assets/star1.png', import.meta.url).href;
-import { updateAnimation } from "@webgamekit/animation";
+import { updateAnimation, type AnimationData } from "@webgamekit/animation";
 import type { ComplexModel } from "@webgamekit/threejs";
 
 interface PlayerMovement {
@@ -280,16 +280,14 @@ const updatePlayerAnimation = (
   if (!isPlaying || !model.userData.mixer || !model.userData.actions) return;
   const animationSpeed = getSpeed(config.player.speed, gameScore);
   const actionName = Object.keys(model.userData.actions)[0]; // Take 001
-  const action = model.userData.actions[actionName];
   
-  updateAnimation(
-    model.userData.mixer,
-    action,
-    getDelta(),
-    animationSpeed,
-    model,
-    actionName
-  );
+  const animData: AnimationData = {
+    player: model,
+    actionName,
+    delta: getDelta(),
+    speed: animationSpeed
+  };
+  updateAnimation(animData);
 };
 
 const ensurePlayerAboveGround = (player: ComplexModel) => {

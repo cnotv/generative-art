@@ -14,6 +14,7 @@ import {
   controllerTurn,
   type Timeline,
   type CoordinateTuple,
+  type AnimationData,
 } from "@webgamekit/animation";
 import { getBall, getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
@@ -57,6 +58,13 @@ const character = {
   speed: 0.5,
   jump: 2.8,
 };
+
+// Helper to create AnimationData for goomba models
+const createGoombaAnimData = (model: ComplexModel, getDelta: () => number): AnimationData => ({
+  player: model,
+  actionName: 'run',
+  delta: getDelta()
+});
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
@@ -150,7 +158,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [100, 100],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -158,7 +166,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -185,7 +193,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [120, 480],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -193,7 +201,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 120,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -208,7 +216,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 240,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -216,7 +224,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 360,
               actionStart: () => controllerTurn(model, rotationMap["left"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
           ] as Timeline[];
@@ -229,7 +237,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [200, 200],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -237,7 +245,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 200,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
           ] as Timeline[];
@@ -249,7 +257,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
             {
               interval: [100, 100],
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {
@@ -257,7 +265,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
           ] as Timeline[];
@@ -304,7 +312,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               interval: [1, 0],
               actionStart: () => controllerTurn(model, 1),
               action: () => {
-                controllerForward(model, cubes, character.speed, getDelta());
+                controllerForward(cubes, [], character.speed, createGoombaAnimData(model, getDelta));
               },
             },
             {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition } from './index';
+import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition, getRotation, setRotation, type AnimationData } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -118,7 +118,10 @@ describe('animation', () => {
       const timeline = [
         {
           frequency: speed,
-          action: () => controllerForward(mockModel, [], distance, getDelta(), 'run', false),
+          action: () => {
+            const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
+            controllerForward([], [], distance, animData);
+          },
         },
         {
           frequency: speed * angle,
@@ -196,7 +199,10 @@ describe('animation', () => {
       const timeline = [
         {
           frequency: 1,
-          action: () => controllerForward(mockModel, [], distance, getDelta(), 'run', false),
+          action: () => {
+            const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
+            controllerForward([], [], distance, animData);
+          },
         },
         {
           // Record position and turn every 10 frames
@@ -270,13 +276,15 @@ describe('animation', () => {
     });
 
     it('should update mixer and play action when delta is provided', () => {
-      updateAnimation(mockMixer, mockAction, 0.016, 10);
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockMixer.update).toHaveBeenCalledWith(0.016 * 10 * 0.1);
     });
 
     it('should stop action when delta is 0', () => {
-      updateAnimation(mockMixer, mockAction, 0, 10);
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockAction.stop).toHaveBeenCalled();
       expect(mockMixer.update).not.toHaveBeenCalled();
@@ -285,7 +293,8 @@ describe('animation', () => {
     it('should switch animations when actionName changes', () => {
       mockPlayer.userData.currentAction = 'idle';
 
-      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockPreviousAction.fadeOut).toHaveBeenCalledWith(0.2);
       expect(mockAction.reset).toHaveBeenCalled();
@@ -297,7 +306,8 @@ describe('animation', () => {
     it('should not switch animations when actionName is the same', () => {
       mockPlayer.userData.currentAction = 'walk';
 
-      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockAction.reset).not.toHaveBeenCalled();
       expect(mockAction.fadeIn).not.toHaveBeenCalled();
@@ -307,7 +317,8 @@ describe('animation', () => {
     it('should initialize currentAction when undefined', () => {
       mockPlayer.userData.currentAction = undefined;
 
-      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockAction.reset).toHaveBeenCalled();
       expect(mockAction.fadeIn).toHaveBeenCalledWith(0.2);
@@ -315,34 +326,29 @@ describe('animation', () => {
       expect(mockPlayer.userData.currentAction).toBe('walk');
     });
 
-    it('should not fade out previous action if it is the same as current action', () => {
+    it('should not fade out previous action if new action is not found', () => {
       mockPlayer.userData.currentAction = 'walk';
       mockPlayer.userData.actions = {
         'walk': mockAction,
       };
 
-      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk-new');
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk-new', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockAction.fadeOut).not.toHaveBeenCalled();
-      expect(mockAction.reset).toHaveBeenCalled();
-      expect(mockPlayer.userData.currentAction).toBe('walk-new');
+      expect(mockAction.reset).not.toHaveBeenCalled();
+      expect(mockPlayer.userData.currentAction).toBe('walk');
     });
 
     it('should play action if not running when actionName matches', () => {
       mockPlayer.userData.currentAction = 'walk';
       mockAction.isRunning.mockReturnValue(false);
 
-      updateAnimation(mockMixer, mockAction, 0.016, 10, mockPlayer, 'walk');
+      const animData: AnimationData = { player: mockPlayer, actionName: 'walk', delta: 0.016, speed: 10 };
+      updateAnimation(animData);
 
       expect(mockAction.play).toHaveBeenCalled();
       expect(mockMixer.update).toHaveBeenCalled();
-    });
-
-    it('should work without player and actionName for backward compatibility', () => {
-      updateAnimation(mockMixer, mockAction, 0.016, 10);
-
-      expect(mockMixer.update).toHaveBeenCalled();
-      expect(mockAction.reset).not.toHaveBeenCalled();
     });
   });
 
@@ -437,8 +443,9 @@ describe('animation', () => {
       const ground = createGroundBox(0);
       
       const initialZ = mockModel.position.z;
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
       
-      controllerForward(mockModel, [ground], 1, 0.016, 'run', false, {
+      controllerForward([], [ground], 1, animData, {
         requireGround: true,
         maxGroundDistance: 5,
       });
@@ -451,8 +458,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 1, 0]);
       
       const initialPosition = mockModel.position.clone();
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
       
-      controllerForward(mockModel, [], 1, 0.016, 'run', false, {
+      controllerForward([], [], 1, animData, {
         requireGround: true,
         maxGroundDistance: 5,
       });
@@ -466,8 +474,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 1, 0]);
       
       const initialZ = mockModel.position.z;
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
       
-      controllerForward(mockModel, [], 1, 0.016, 'run', false, {
+      controllerForward([], [], 1, animData, {
         requireGround: false,
       });
       
@@ -479,8 +488,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 0.5, 0]);
       // Create a step at y=0.8 (slightly higher than model)
       const step = createGroundBox(0.8);
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
       
-      controllerForward(mockModel, [step], 0.5, 0.016, 'run', false, {
+      controllerForward([], [step], 0.5, animData, {
         requireGround: true,
         maxStepHeight: 0.5,
         maxGroundDistance: 5,
@@ -496,8 +506,9 @@ describe('animation', () => {
       const highStep = createGroundBox(2);
       
       const initialPosition = mockModel.position.clone();
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
       
-      controllerForward(mockModel, [highStep], 1, 0.016, 'run', false, {
+      controllerForward([], [highStep], 1, animData, {
         requireGround: true,
         maxStepHeight: 0.5, // Step is 2 units high, max is 0.5
         maxGroundDistance: 5,
@@ -506,6 +517,149 @@ describe('animation', () => {
       // Should not have moved because step is too high
       expect(mockModel.position.x).toBe(initialPosition.x);
       expect(mockModel.position.z).toBe(initialPosition.z);
+    });
+
+    it('should move when player at Y=-1 with large ground box (ForestGame scenario)', () => {
+      // This test reproduces the ForestGame setup:
+      // - Player at Y=-1
+      // - Ground is a large box with size [1000, 100, 50] positioned with top surface at Y=-1
+      // - Player rotated 270° (facing left, moving in -X direction)
+      
+      const playerY = -1;
+      const groundSize: [number, number, number] = [1000, 100, 50];
+      const groundY = -1 - groundSize[1] / 2; // Ground center at -51, top at -1
+      
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(0, playerY, 0);
+      // Rotate 270° (facing left) - this means forward is -X direction
+      mockMesh.rotation.set(0, (270 * Math.PI) / 180, 0);
+      
+      const mockModel = Object.assign(mockMesh, {
+        userData: {
+          body: {
+            translation: () => ({ x: mockMesh.position.x, y: mockMesh.position.y, z: mockMesh.position.z }),
+            setTranslation: vi.fn((pos) => {
+              mockMesh.position.set(pos.x, pos.y, pos.z);
+            }),
+          },
+          mixer: { update: vi.fn() },
+          actions: {
+            run: {
+              play: vi.fn(),
+              stop: vi.fn(),
+              reset: vi.fn().mockReturnThis(),
+              fadeIn: vi.fn().mockReturnThis(),
+              fadeOut: vi.fn(),
+              isRunning: vi.fn().mockReturnValue(true),
+            },
+          },
+          currentAction: undefined,
+          initialValues: { position: [0, playerY, 0], rotation: [0, 270, 0], size: 1, color: undefined },
+          type: 'dynamic',
+        }
+      }) as unknown as ComplexModel;
+      
+      // Create ground like ForestGame: large box with top surface at Y=-1
+      const groundGeometry = new THREE.BoxGeometry(...groundSize);
+      const groundMaterial = new THREE.MeshBasicMaterial();
+      const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+      groundMesh.position.set(0, groundY, 0);
+      groundMesh.updateMatrixWorld(true);
+      const ground = groundMesh as unknown as ComplexModel;
+      
+      const initialPosition = mockModel.position.clone();
+      const distance = 0.08; // Same as ForestGame
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      
+      // ForestGame movement options
+      const movementOptions = {
+        requireGround: true,
+        maxGroundDistance: 5,
+        maxStepHeight: 0.5,
+        characterRadius: 4,
+        debug: true,
+      };
+      
+      controllerForward([], [ground], distance, animData, movementOptions);
+      
+      // Player should have moved in -X direction (left)
+      expect(mockModel.position.x).toBeLessThan(initialPosition.x);
+      // Y position should stay at ground level (-1)
+      expect(mockModel.position.y).toBeCloseTo(-1, 1);
+    });
+  });
+
+  describe('getRotation', () => {
+    it.each([
+      [{}, null, 'no direction keys pressed'],
+      [{ 'move-up': true, 'move-down': true, 'move-left': true, 'move-right': true }, null, 'all direction keys cancel out'],
+      [{ 'move-up': true, 'move-down': true }, null, 'up+down cancel out'],
+      [{ 'move-left': true, 'move-right': true }, null, 'left+right cancel out'],
+    ])('should return null for %j (%s)', (input, expected) => {
+      expect(getRotation(input)).toBe(expected);
+    });
+
+    it.each([
+      [{ 'move-up': true }, 0, 'up'],
+      [{ 'move-down': true }, 180, 'down'],
+      [{ 'move-left': true }, 270, 'left'],
+      [{ 'move-right': true }, 90, 'right'],
+    ])('should return %d for cardinal direction %s', (input, expected) => {
+      expect(getRotation(input)).toBe(expected);
+    });
+
+    it.each([
+      [{ 'move-up': true, 'move-left': true }, 315, 'up-left'],
+      [{ 'move-up': true, 'move-right': true }, 45, 'up-right'],
+      [{ 'move-down': true, 'move-left': true }, 225, 'down-left'],
+      [{ 'move-down': true, 'move-right': true }, 135, 'down-right'],
+    ])('should return %d for diagonal direction %s', (input, expected) => {
+      expect(getRotation(input)).toBe(expected);
+    });
+
+    it.each([
+      [{ 'move-up': true, 'move-down': true, 'move-left': true }, 270, 'up+down with left'],
+      [{ 'move-up': true, 'move-down': true, 'move-right': true }, 90, 'up+down with right'],
+      [{ 'move-left': true, 'move-right': true, 'move-up': true }, 0, 'left+right with up'],
+      [{ 'move-left': true, 'move-right': true, 'move-down': true }, 180, 'left+right with down'],
+    ])('should return %d for opposing directions: %s', (input, expected) => {
+      expect(getRotation(input)).toBe(expected);
+    });
+  });
+
+  describe('setRotation', () => {
+    it('should set model rotation to specified degrees', () => {
+      const mockMesh = new THREE.Group();
+      mockMesh.rotation.set(0, 0, 0);
+
+      const mockModel = Object.assign(mockMesh, {
+        userData: {
+          body: {
+            translation: () => ({ x: 0, y: 0, z: 0 }),
+            setTranslation: vi.fn(),
+          },
+        },
+      }) as unknown as ComplexModel;
+
+      // Test 90 degrees
+      setRotation(mockModel, 90);
+      expect(mockModel.rotation.y).toBeCloseTo(Math.PI / 2, 5);
+
+      // Test 180 degrees
+      setRotation(mockModel, 180);
+      expect(mockModel.rotation.y).toBeCloseTo(Math.PI, 5);
+
+      // Test 270 degrees
+      setRotation(mockModel, 270);
+      expect(mockModel.rotation.y).toBeCloseTo((3 * Math.PI) / 2, 5);
+
+      // Test 0 degrees
+      setRotation(mockModel, 0);
+      expect(mockModel.rotation.y).toBeCloseTo(0, 5);
+
+      // Test 45 degrees (diagonal)
+      setRotation(mockModel, 45);
+      expect(mockModel.rotation.y).toBeCloseTo(Math.PI / 4, 5);
     });
   });
 });

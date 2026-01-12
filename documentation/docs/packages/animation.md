@@ -137,6 +137,89 @@ const position: CoordinateTuple = [0, 5, 10];
 const rotation: CoordinateTuple = [0, Math.PI, 0];
 ```
 
+## Rotation Utilities
+
+Functions for directional input to rotation conversion, useful for 8-directional character movement.
+
+### getRotation
+
+Calculate target rotation based on directional input actions. Returns rotation in degrees for cardinal (0°, 90°, 180°, 270°) and diagonal (45°, 135°, 225°, 315°) directions.
+
+```typescript
+import { getRotation } from '@webgamekit/animation';
+
+// currentActions is typically from createControls()
+const targetRotation = getRotation(currentActions);
+// Returns: number | null
+// - 0: move-up (forward/W) - faces -Z
+// - 180: move-down (backward/S) - faces +Z
+// - 90: move-left (A) - faces -X
+// - 270: move-right (D) - faces +X
+// - 45: move-up + move-left (W+A)
+// - 315: move-up + move-right (W+D)
+// - 135: move-down + move-left (S+A)
+// - 225: move-down + move-right (S+D)
+// - null: no movement or opposing directions cancel
+```
+
+**Expected action keys:**
+- `move-up`: Forward movement (typically W key)
+- `move-down`: Backward movement (typically S key)
+- `move-left`: Left strafe (typically A key)
+- `move-right`: Right strafe (typically D key)
+
+### setRotation
+
+Set the model's Y-axis rotation to face a specific direction.
+
+```typescript
+import { setRotation, getRotation } from '@webgamekit/animation';
+
+// Set rotation based on input
+const targetRotation = getRotation(currentActions);
+if (targetRotation !== null) {
+  setRotation(player, targetRotation);
+  // Player now faces the movement direction
+}
+```
+
+### Usage Example: 8-Directional Movement
+
+```typescript
+import { getRotation, setRotation, controllerForward } from '@webgamekit/animation';
+import { createControls } from '@webgamekit/controls';
+
+const controlBindings = {
+  mapping: {
+    keyboard: {
+      w: 'move-up',
+      s: 'move-down',
+      a: 'move-left',
+      d: 'move-right',
+    },
+  },
+};
+
+const { currentActions } = createControls(controlBindings);
+
+// In animation loop
+animate({
+  timeline: [{
+    action: () => {
+      const targetRotation = getRotation(currentActions);
+      const isMoving = targetRotation !== null;
+
+      if (isMoving) {
+        // Rotate to face movement direction
+        setRotation(player, targetRotation);
+        // Move forward in that direction
+        controllerForward(player, obstacles, distance, delta, 'walk', true);
+      }
+    },
+  }],
+});
+```
+
 ### Model Types
 
 ```typescript
