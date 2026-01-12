@@ -6,9 +6,14 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
-import groundImg from "@/assets/images/illustrations/ground.png";
-import illustrationTree1Img from "@/assets/images/illustrations/small_Tree1.webp";
-// import illustrationTree2Img from "@/assets/images/illustrations/small_Tree2.webp";
+import groundImg from "@/assets/images/illustrations/ground.webp";
+import illustrationTree11Img from "@/assets/images/illustrations/Tree1-1.webp";
+import illustrationTree12Img from "@/assets/images/illustrations/Tree1-2.webp";
+import illustrationTree13Img from "@/assets/images/illustrations/Tree1-3.webp";
+import illustrationTree14Img from "@/assets/images/illustrations/Tree1-4.webp";
+import illustrationTree15Img from "@/assets/images/illustrations/Tree1-5.webp";
+import illustrationTree21Img from "@/assets/images/illustrations/Tree2-1.webp";
+import illustrationTree22Img from "@/assets/images/illustrations/Tree2-2.webp";
 import illustrationRock1Img from "@/assets/images/illustrations/small_Rock1.webp";
 import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1.webp";
 
@@ -57,22 +62,78 @@ export const illustrations = {
   //   ...genericFlatConfig,
   //   opacity: 0.5,
   // },
-  tree1: {
-    texture: illustrationTree1Img,
+  'tree1-1': {
+    texture: illustrationTree12Img,
     size: [30, 60, 0],
     position: [200, 0, -20],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
-      amount: 1000,
+      amount: 15,
       spacing: 1,
       position: [0, -5, -20],
       positionVariation: [500, 0, 10],
       sizeVariation: [0.5, 0.5, 0],
     }, groundSize)
   },
-  tree2: {
-    texture: illustrationTree1Img,
+  'tree1-2': {
+    texture: illustrationTree12Img,
+    size: [30, 60, 0],
+    position: [200, 0, -20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 15,
+      spacing: 1,
+      position: [0, -5, -20],
+      positionVariation: [500, 0, 10],
+      sizeVariation: [0.5, 0.5, 0],
+    }, groundSize)
+  },
+  'tree1-3': {
+    texture: illustrationTree13Img,
+    size: [30, 60, 0],
+    position: [200, 0, -20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 15,
+      spacing: 1,
+      position: [0, -5, -20],
+      positionVariation: [500, 0, 10],
+      sizeVariation: [0.5, 0.5, 0],
+    }, groundSize)
+  },
+  'tree1-4': {
+    texture: illustrationTree14Img,
+    size: [30, 60, 0],
+    position: [200, 0, -20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 15,
+      spacing: 1,
+      position: [0, -5, -20],
+      positionVariation: [500, 0, 10],
+      sizeVariation: [0.5, 0.5, 0],
+    }, groundSize)
+  },
+  'tree1-5': {
+    texture: illustrationTree15Img,
+    size: [30, 60, 0],
+    position: [200, 0, -20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 15,
+      spacing: 1,
+      position: [0, -5, -20],
+      positionVariation: [500, 0, 10],
+      sizeVariation: [0.5, 0.5, 0],
+    }, groundSize)
+  },
+  tree02: {
+    texture: illustrationTree11Img,
     size: [30, 60, 0],
     position: [200, 0, -20],
     ...genericFlatConfig,
