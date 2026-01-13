@@ -591,10 +591,10 @@ export const getWalls = (
 ): ComplexModel[] => {
   return [
     { position: [0, 0, 0], size: [length, depth, length] },
-    { position: [-length/2, height/2, 0], size: [depth, height, length] },
-    { position: [length/2, height/2, 0], size: [depth, height, length] },
-    { position: [0, height/2, length/2], size: [length, height, depth] },
-    { position: [0, height/2, -length/2], size: [length, height, depth] },
+    { position: [-length/2, 0, 0], size: [depth, height, length] },
+    { position: [length/2, 0, 0], size: [depth, height, length] },
+    { position: [0, 0, length/2], size: [length, height, depth] },
+    { position: [0, 0, -length/2], size: [length, height, depth] },
   ].map(({ position, size }) => 
     getCube(scene, world, {
       color: 0xcccccc,
