@@ -111,10 +111,10 @@ export const getInstanceConfig = ({
   rotation = [0, 0, 0],
   rotationVariation = [0, 0, 0],
   amount = 1,
-  area,
   ratio = 1,
   spacing = 0,
-}: InstanceConfig, groundSize: CoordinateTuple): GeneratedInstanceConfig => {
+  textures
+}: InstanceConfig): GeneratedInstanceConfig => {
   const generatedConfig =  times(amount, (index) => {
     const newSize: CoordinateTuple = [
       size[0] + (Math.random() - 0.5) * sizeVariation[0],
@@ -122,32 +122,13 @@ export const getInstanceConfig = ({
       size[2] + (Math.random() - 0.5) * sizeVariation[2],
     ];
     
-    let newPosition: CoordinateTuple;
-    if (spacing > 0) {
-      // Legacy spacing-based positioning
-      const baseX = index * spacing - (amount * spacing) / 2;
-      const xVar = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
-      newPosition = [
-        baseX + xVar,
-        position[1] + (Math.random() - 0.5) * positionVariation[1],
-        position[2] + (Math.random() - 0.5) * positionVariation[2],
-      ];
-    } else if (area !== undefined) {
-      // Legacy area-based positioning
-      const getPositionLegacy = () => Math.random() * groundSize[0] / area - groundSize[0] / area / 2;
-      newPosition = [
-        getPositionLegacy(),
-        position[1] + (Math.random() - 0.5) * positionVariation[1],
-        getPositionLegacy(),
-      ];
-    } else {
-      // Standard positioning with variation
-      newPosition = [
-        position[0] + (Math.random() - 0.5) * positionVariation[0],
-        position[1] + (Math.random() - 0.5) * positionVariation[1],
-        position[2] + (Math.random() - 0.5) * positionVariation[2],
-      ];
-    }
+    const baseX = index * spacing - (amount * spacing) / 2;
+    const xVar = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
+    const newPosition: CoordinateTuple = [
+      baseX + xVar,
+      position[1] + (Math.random() - 0.5) * positionVariation[1],
+      position[2] + (Math.random() - 0.5) * positionVariation[2],
+    ];
     
     // Calculate rotation with variation
     const newRotation: CoordinateTuple = [
@@ -156,7 +137,6 @@ export const getInstanceConfig = ({
       rotation[2] + (Math.random() - 0.5) * rotationVariation[2],
     ];
     
-    // Apply legacy ratio if provided
     const scale: CoordinateTuple = ratio !== 1 
       ? [newSize[0] * ratio, newSize[1], newSize[2]]
       : newSize;
@@ -165,6 +145,7 @@ export const getInstanceConfig = ({
       position: newPosition,
       rotation: newRotation,
       scale,
+      textures
     };
   });
 

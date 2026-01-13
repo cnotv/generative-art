@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { getOffset, getInstanceConfig } from './index';
-import type { InstanceConfig, CoordinateTuple } from './types';
+import type { InstanceConfig } from './types';
 
 describe('threejs', () => {
   describe('getOffset', () => {
@@ -42,9 +42,7 @@ describe('threejs', () => {
         amount: 5,
         size: [1, 1, 1],
       };
-      const groundSize: CoordinateTuple = [100, 100, 100];
-      
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       expect(instances).toHaveLength(5);
       expect(instances[0]).toHaveProperty('position');
       expect(instances[0]).toHaveProperty('rotation');
@@ -57,9 +55,8 @@ describe('threejs', () => {
         size: [100, 100, 100],
         sizeVariation: [20, 20, 20],
       };
-      const groundSize: CoordinateTuple = [1000, 100, 1000];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       
       instances.forEach(instance => {
         const [scaleX, scaleY, scaleZ] = instance.scale;
@@ -80,9 +77,8 @@ describe('threejs', () => {
         position: [0, 100, -200],
         positionVariation: [50, 20, 30],
       };
-      const groundSize: CoordinateTuple = [1000, 100, 1000];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       
       instances.forEach(instance => {
         const [x, y, z] = instance.position;
@@ -103,9 +99,8 @@ describe('threejs', () => {
         rotation: [0, 90, 0],
         rotationVariation: [0, 180, 0],
       };
-      const groundSize: CoordinateTuple = [1000, 100, 1000];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       
       instances.forEach(instance => {
         const [rx, ry, rz] = instance.rotation;
@@ -116,28 +111,8 @@ describe('threejs', () => {
         expect(rz).toBe(0);
       });
     });
-
-    it('should support legacy area-based positioning', () => {
-      const config: InstanceConfig = {
-        amount: 5,
-        size: [1, 1, 1],
-        area: 10,
-      };
-      const groundSize: CoordinateTuple = [100, 100, 100];
       
-      const instances = getInstanceConfig(config, groundSize);
-      expect(instances).toHaveLength(5);
-      
-      // Check positions are within expected range for area-based calculation
-      instances.forEach(instance => {
-        const [x] = instance.position;
-        const maxPos = groundSize[0] / (config.area!) / 2;
-        expect(x).toBeGreaterThanOrEqual(-maxPos);
-        expect(x).toBeLessThanOrEqual(maxPos);
-      });
-    });
-
-    it('should support legacy spacing-based positioning', () => {
+    it('should support spacing-based positioning', () => {
       const config: InstanceConfig = {
         amount: 4,
         size: [200, 200, 200],
@@ -145,9 +120,8 @@ describe('threejs', () => {
         position: [0, 130, -300],
         positionVariation: [100, 20, 0],
       };
-      const groundSize: CoordinateTuple = [1000, 100, 1000];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       expect(instances).toHaveLength(4);
       
       instances.forEach(instance => {
@@ -173,9 +147,8 @@ describe('threejs', () => {
         size: [100, 100, 100],
         ratio: 2.5,
       };
-      const groundSize: CoordinateTuple = [1000, 100, 1000];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       
       instances.forEach(instance => {
         const [scaleX, scaleY, scaleZ] = instance.scale;
@@ -191,9 +164,8 @@ describe('threejs', () => {
       const config: InstanceConfig = {
         size: [1, 1, 1],
       };
-      const groundSize: CoordinateTuple = [100, 100, 100];
       
-      const instances = getInstanceConfig(config, groundSize);
+        const instances = getInstanceConfig({ ...config });
       expect(instances).toHaveLength(1); // Default amount
       
       const instance = instances[0];

@@ -6,10 +6,8 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
-import groundImg from "@/assets/images/illustrations/ground.webp";
 import illustrationMountain11Img from "@/assets/images/illustrations/Mountain1-1.webp";
 import illustrationMountain12Img from "@/assets/images/illustrations/Mountain1-2.webp";
-import illustrationTree11Img from "@/assets/images/illustrations/Tree1-1.webp";
 import illustrationTree12Img from "@/assets/images/illustrations/Tree1-2.webp";
 import illustrationTree13Img from "@/assets/images/illustrations/Tree1-3.webp";
 import illustrationTree14Img from "@/assets/images/illustrations/Tree1-4.webp";
@@ -18,8 +16,8 @@ import illustrationTree21Img from "@/assets/images/illustrations/Tree2-1.webp";
 import illustrationTree22Img from "@/assets/images/illustrations/Tree2-2.webp";
 import illustrationRock1Img from "@/assets/images/illustrations/Rock.webp";
 import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp";
-
-const groundSize: CoordinateTuple = [1000, 100, 50]
+import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
+import illustrationBush12Img from "@/assets/images/illustrations/Bush1-2.webp";
 
 export const playerSettings = {
   model: {
@@ -61,13 +59,6 @@ const genericFlatConfig = {
 };
 
 export const illustrations = {
-  // background: {
-  //   texture: illustrationBackgroundImg,
-  //   size: [200, 200, 0],
-  //   position: [-0, -15, -20],
-  //   ...genericFlatConfig,
-  //   opacity: 0.5,
-  // },
   'mountain1-1': {
     ...genericFlatConfig,
     texture: illustrationMountain11Img,
@@ -80,7 +71,7 @@ export const illustrations = {
       position: [0, -6, -30],
       positionVariation: [1000, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
-    }, groundSize)
+    })
   },
   'mountain1-2': {
     ...genericFlatConfig,
@@ -94,111 +85,42 @@ export const illustrations = {
       position: [0, -6, -30],
       positionVariation: [1000, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
-    }, groundSize)
+    })
   },
-  'tree1-1': {
+  'tree1': {
     texture: illustrationTree12Img,
-    size: [30, 60, 0],
+    size: [30, 50, 0],
     position: [200, -6, -20],
     ...genericFlatConfig,
     instances: getInstanceConfig({
+      textures: {random: true, list: [illustrationTree12Img, illustrationTree13Img, illustrationTree14Img, illustrationTree15Img]},
       show: true,
       amount: 20,
       spacing: 2,
       position: [0, -6, -20],
       positionVariation: [500, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
-    }, groundSize)
+    })
   },
-  // 'tree1-2': {
-  //   texture: illustrationTree12Img,
-  //   size: [30, 60, 0],
-  //   position: [200, 0, -20],
-  //   ...genericFlatConfig,
-  //   instances: getInstanceConfig({
-  //     show: true,
-  //     amount: 15,
-  //     spacing: 1,
-  //     position: [0, -5, -20],
-  //     positionVariation: [500, 0, 0],
-  //     sizeVariation: [0.5, 0, 0],
-  //   }, groundSize)
-  // },
-  // 'tree1-3': {
-  //   texture: illustrationTree13Img,
-  //   size: [30, 60, 0],
-  //   position: [200, 0, -20],
-  //   ...genericFlatConfig,
-  //   instances: getInstanceConfig({
-  //     show: true,
-  //     amount: 15,
-  //     spacing: 1,
-  //     position: [0, -5, -20],
-  //     positionVariation: [500, 0, 0],
-  //     sizeVariation: [0.5, 0, 0],
-  //   }, groundSize)
-  // },
-  // 'tree1-4': {
-  //   texture: illustrationTree14Img,
-  //   size: [30, 60, 0],
-  //   position: [200, 0, -20],
-  //   ...genericFlatConfig,
-  //   instances: getInstanceConfig({
-  //     show: true,
-  //     amount: 15,
-  //     spacing: 1,
-  //     position: [0, -5, -20],
-  //     positionVariation: [500, 0, 0],
-  //     sizeVariation: [0.5, 0, 0],
-  //   }, groundSize)
-  // },
-  // 'tree1-5': {
-  //   texture: illustrationTree15Img,
-  //   size: [30, 60, 0],
-  //   position: [200, 0, -20],
-  //   ...genericFlatConfig,
-  //   instances: getInstanceConfig({
-  //     show: true,
-  //     amount: 15,
-  //     spacing: 1,
-  //     position: [0, -5, -20],
-  //     positionVariation: [500, 0, 0],
-  //     sizeVariation: [0.5, 0, 0],
-  //   }, groundSize)
-  // },
-  tree02: {
-    texture: illustrationTree11Img,
-    size: [30, 60, 0],
-    position: [0, -6, -10],
+  tree2: {
+    texture: illustrationTree21Img,
+    size: [20, 40, 0],
+    position: [-200, -6, -10],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
+      textures: {random: true, list: [illustrationTree21Img, illustrationTree22Img]},
       amount: 20,
       spacing: 2,
       position: [0, -6, -10],
       positionVariation: [500, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
-    }, groundSize)
+    })
   },
-  // tree2: {
-  //   texture: illustrationTree2Img,
-  //   size: [30, 60, 0],
-  //   position: [100, 0, -20],
-  //   ...genericFlatConfig,
-  //   instances: getInstanceConfig({
-  //     show: true,
-  //     amount: 100,
-  //     spacing: 5,
-  //     position: [0, -5, -100],
-  //     positionVariation: [400, 0, 100],
-  //     sizeVariation: [0.5, 0, 0],
-  //     area: 10,
-  //   }, groundSize)
-  // },
   flower1: {
     texture: illustrationFlower1Img,
     size: [10, 5, 0],
-    position: [0, -3, 5],
+    position: [-200, -3, 5],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
@@ -207,12 +129,12 @@ export const illustrations = {
       position: [0, -3, 5],
       positionVariation: [300, 0, 40],
       sizeVariation: [0.5, 0, 0],
-    }, groundSize)
+    })
   },
   rock1: {
     texture: illustrationRock1Img,
     size: [10, 5, 0],
-    position: [0, -1.5, 5],
+    position: [-200, -1.5, 5],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
@@ -221,7 +143,22 @@ export const illustrations = {
       position: [0, -1.5, 5],
       positionVariation: [300, 0, 40],
       sizeVariation: [0.5, 0, 0],
-    }, groundSize)
+    })
+  },
+  bush1: {
+    texture: illustrationBush11Img,
+    size: [20, 10, 0],
+    position: [-200, -2, 5],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 20,
+      textures: {random: true, list: [illustrationBush11Img, illustrationBush12Img]},
+      spacing: 2,
+      position: [0, -1.5, 5],
+      positionVariation: [300, 0, 40],
+      sizeVariation: [0.5, 0, 0],
+    })
   },
 };
 
@@ -263,7 +200,7 @@ export const setupConfig: SetupConfig = {
     },
   },
   ground: {
-    size: groundSize,
+    size: [1000, 100, 50],
     textureRepeat: [500, 30] as [number, number],
     color: 0x80b966,
   },

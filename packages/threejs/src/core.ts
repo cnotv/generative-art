@@ -220,8 +220,10 @@ export const instanceMatrixMesh = (
     matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector);
     instancedMesh.setMatrixAt(index, matrix);
     if (textures) {
-      (mesh.material as THREE.MeshStandardMaterial).map = textures.random ? textures.list[Math.floor(Math.random() * textures.list.length)] : textures.list[index % textures.list.length];
-      instancedMesh.material = mesh.material;
+      const textureLoader = new THREE.TextureLoader();
+      const counter = textures.random ? Math.floor(Math.random() * textures.list.length) : index % textures.list.length;
+      const loadedTexture = textureLoader.load(textures.list[counter]);
+      (mesh.material as THREE.MeshStandardMaterial).map = loadedTexture;
     }
 
     scene.add(instancedMesh);

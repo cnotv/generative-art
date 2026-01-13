@@ -40,7 +40,7 @@ export interface ModelOptions extends CommonOptions {
   texture?: string;
   textures?: {
     random: boolean;
-    list: THREE.Texture[];
+    list: string[];
   };
   origin?: { x?: number; y?: number; z?: number };
   depthWrite?: boolean;
@@ -189,10 +189,13 @@ export interface InstanceConfig {
   positionVariation?: CoordinateTuple;
   rotation?: CoordinateTuple;
   rotationVariation?: CoordinateTuple;
-  area?: number;
   ratio?: number;
   spacing?: number;
   opacity?: number;
+  textures?: {
+    random: boolean;
+    list: string[];
+  };
 }
 
 export type GeneratedInstanceConfig = Array<{ position: number[]; rotation: number[]; scale: number[]; }>
