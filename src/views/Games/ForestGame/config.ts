@@ -8,12 +8,23 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 import jumpSound from "@/assets/audio/jump.wav";
 import illustrationMountain11Img from "@/assets/images/illustrations/Mountain1-1.webp";
 import illustrationMountain12Img from "@/assets/images/illustrations/Mountain1-2.webp";
+import illustrationTree11Img from "@/assets/images/illustrations/Tree1-1.webp";
 import illustrationTree12Img from "@/assets/images/illustrations/Tree1-2.webp";
 import illustrationTree13Img from "@/assets/images/illustrations/Tree1-3.webp";
 import illustrationTree14Img from "@/assets/images/illustrations/Tree1-4.webp";
 import illustrationTree15Img from "@/assets/images/illustrations/Tree1-5.webp";
+import illustrationTree16Img from "@/assets/images/illustrations/Tree1-6.webp";
+import illustrationTree17Img from "@/assets/images/illustrations/Tree1-7.webp";
+import illustrationTree18Img from "@/assets/images/illustrations/Tree1-8.webp";
+import illustrationTree19Img from "@/assets/images/illustrations/Tree1-9.webp";
+
 import illustrationTree21Img from "@/assets/images/illustrations/Tree2-1.webp";
 import illustrationTree22Img from "@/assets/images/illustrations/Tree2-2.webp";
+import illustrationTree23Img from "@/assets/images/illustrations/Tree2-3.webp";
+import illustrationTree24Img from "@/assets/images/illustrations/Tree2-4.webp";
+import illustrationTree25Img from "@/assets/images/illustrations/Tree2-5.webp";
+import illustrationTree26Img from "@/assets/images/illustrations/Tree2-6.webp";
+
 import illustrationRock1Img from "@/assets/images/illustrations/Rock.webp";
 import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp";
 import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
@@ -87,47 +98,68 @@ export const illustrations = {
       sizeVariation: [0.5, 0.5, 0],
     })
   },
-  'tree1': {
-    texture: illustrationTree12Img,
-    size: [30, 50, 0],
-    position: [200, -6, -20],
-    ...genericFlatConfig,
-    instances: getInstanceConfig({
-      textures: {random: true, list: [illustrationTree12Img, illustrationTree13Img, illustrationTree14Img, illustrationTree15Img]},
-      show: true,
-      amount: 20,
-      spacing: 2,
-      position: [0, -6, -20],
-      positionVariation: [500, 0, 0],
-      sizeVariation: [0.5, 0.5, 0],
-    })
-  },
-  tree2: {
-    texture: illustrationTree21Img,
-    size: [20, 40, 0],
-    position: [-200, -6, -10],
-    ...genericFlatConfig,
-    instances: getInstanceConfig({
-      show: true,
-      textures: {random: true, list: [illustrationTree21Img, illustrationTree22Img]},
-      amount: 20,
-      spacing: 2,
-      position: [0, -6, -10],
-      positionVariation: [500, 0, 0],
-      sizeVariation: [0.5, 0.5, 0],
-    })
-  },
+  ...([
+    illustrationTree11Img,
+    illustrationTree12Img,
+    illustrationTree13Img,
+    illustrationTree14Img,
+    illustrationTree15Img,
+    illustrationTree16Img,
+    illustrationTree17Img,
+    illustrationTree18Img,
+    illustrationTree19Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      texture,
+      size: [30, 50, 0],
+      position: [200, -8, -25],
+      ...genericFlatConfig,
+      instances: getInstanceConfig({
+        show: true,
+        amount: 2,
+        spacing: 10,
+        position: [0, -8, -25],
+        positionVariation: [500, 0, 0],
+        sizeVariation: [0.5, 0.5, 0],
+      })
+    }
+  }), {})),
+  ...([
+    illustrationTree21Img,
+    illustrationTree22Img,
+    illustrationTree23Img,
+    illustrationTree24Img,
+    illustrationTree25Img,
+    illustrationTree26Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      texture,
+      size: [20, 40, 0],
+      position: [-200, -8, -10],
+      ...genericFlatConfig,
+      instances: getInstanceConfig({
+        show: true,
+        amount: 3,
+        spacing: 4,
+        position: [0, -8, -10],
+        positionVariation: [500, 0, 0],
+        sizeVariation: [0.5, 0.5, 0],
+      })
+    }
+  }), {})),
   flower1: {
     texture: illustrationFlower1Img,
-    size: [10, 5, 0],
-    position: [-200, -3, 5],
+    size: [14, 7, 0],
+    position: [-200, -4, 5],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
       amount: 20,
       spacing: 2,
-      position: [0, -3, 5],
-      positionVariation: [300, 0, 40],
+      position: [0, -4, 0],
+      positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
   },
@@ -140,26 +172,31 @@ export const illustrations = {
       show: true,
       amount: 20,
       spacing: 2,
-      position: [0, -1.5, 5],
-      positionVariation: [300, 0, 40],
+      position: [0, -1.5, 0],
+      positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
   },
-  bush1: {
-    texture: illustrationBush11Img,
+  ...([
+    illustrationBush11Img,
+    illustrationBush12Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      texture,
     size: [20, 10, 0],
     position: [-200, -2, 5],
-    ...genericFlatConfig,
-    instances: getInstanceConfig({
+      ...genericFlatConfig,
+      instances: getInstanceConfig({
       show: true,
-      amount: 20,
-      textures: {random: true, list: [illustrationBush11Img, illustrationBush12Img]},
+      amount: 5,
       spacing: 2,
-      position: [0, -1.5, 5],
-      positionVariation: [300, 0, 40],
+      position: [0, -2, 0],
+      positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
-    })
-  },
+      })
+    }
+  }), {})),
 };
 
 export const setupConfig: SetupConfig = {
@@ -176,28 +213,6 @@ export const setupConfig: SetupConfig = {
     far: 1000,
     zoom: 1,
     focus: 10,
-  },
-  lights: {
-    ambient: { color: 0xffffff, intensity: 1 },
-    directional: {
-      color: 0xffffff,
-      intensity: 0.8,
-      position: [50, 100, 50],
-      castShadow: true,
-      shadow: {
-        mapSize: { width: 2048, height: 2048 },
-        camera: {
-          near: 1,
-          far: 500,
-          left: -100,
-          right: 100,
-          top: 100,
-          bottom: -100,
-        },
-        bias: -0.0001,
-        radius: 4,
-      },
-    },
   },
   ground: {
     size: [1000, 100, 50],

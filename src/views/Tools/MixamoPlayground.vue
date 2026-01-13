@@ -1,43 +1,107 @@
 <script setup lang="ts">
+import * as THREE from 'three';
 import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import {
   getTools,
   getModel,
-  getCube,
-  instanceMatrixMesh,
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation } from "@webgamekit/animation";
-import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
-import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 
 import TouchControl from '@/components/TouchControl.vue'
-import {
-  playerSettings,
-  illustrations,
-  setupConfig,
-  controlBindings,
-  assets,
-} from "./config";
+import grassTextureImg from "@/assets/images/textures/grass.jpg";
 
-// Use correct GameState type and initialization
-const gameState = shallowRef<GameState>();
-createGame({ data: { score: 0 } }, gameState, onUnmounted);
-
-const isJumping = shallowRef(false);
-const canJump = shallowRef(true);
-const logs = shallowRef<string[]>([]);
-const showLogs = false;
-const isMobileDevice = isMobile();
-
-const handleJump = (): void => {
-  if (isJumping.value || !canJump.value) return;
-  playAudioFile(assets.jumpSound);
-  isJumping.value = true;
-  canJump.value = false;
+const playerSettings = {
+  model: {
+    position: [0, -1, 0] as CoordinateTuple,
+    rotation: [0, 0, 0] as CoordinateTuple,
+    scale: [0.15, 0.15, 0.15] as CoordinateTuple,
+    restitution: -10,
+    boundary: 0.5,
+    hasGravity: false,
+    castShadow: true,
+    material: "MeshLambertMaterial",
+    animations: "walk2.fbx",
+    // animations: ["walk2.fbx", "idle.fbx"],
+    color: 0xffffff,
+  },
+  movement: {
+    requireGround: true,
+    maxGroundDistance: 5,
+    maxStepHeight: 0.5,
+    characterRadius: 4,
+    debug: false,
+  },
+  game: {
+    distance: 0.5,
+    speed: {
+      movement: 2,
+      turning: 4,
+    },
+  },
 };
+
+const setupConfig = {
+  orbit: {
+    target: new THREE.Vector3(0, 15, 0),
+    disabled: true,
+  },
+  camera: {
+    position: [0, 7, 35],
+    lookAt: [0, 0, 0],
+    fov: 80,
+    up: new THREE.Vector3(0, 1, 0),
+    near: 0.1,
+    far: 1000,
+    zoom: 1,
+    focus: 10,
+  },
+  ground: {
+    size: [1000, 100, 50],
+    texture: grassTextureImg,
+    textureRepeat: [100, 10] as [number, number],
+    color: 0x80b966,
+  },
+  sky: { size: 500, color: 0x00aaff },
+};
+
+const controlBindings = {
+  mapping: {
+    keyboard: {
+      " ": "jump",
+      a: "move-left",
+      d: "move-right",
+      w: "move-up",
+      s: "move-down",
+      p: "print-log",
+    },
+    gamepad: {
+      // Buttons
+      cross: "jump",
+      "dpad-left": "move-left",
+      "dpad-right": "move-right",
+      "dpad-down": "move-down",
+      "dpad-up": "move-up",
+      "axis0-left": "move-left",
+      "axis0-right": "move-right",
+      "axis1-up": "move-up",
+      "axis1-down": "move-down",
+    },
+    'faux-pad': {
+      left: "move-left",
+      right: "move-right",
+      up: "move-up",
+      down: "move-down",
+    },
+  },
+  axisThreshold: 0.5,
+};
+
+const logs = shallowRef<string[]>([]);
+const showLogs = true;
+const isMobileDevice = isMobile();
 
 const getLogs = (actions: Record<string, any>): string[] =>
   Object.keys(actions)
@@ -47,27 +111,12 @@ const getLogs = (actions: Record<string, any>): string[] =>
         `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
     );
 
-const logControllerForward = (
-  debug: boolean,
-  actions: Record<string, unknown>,
-  targetRotation: number | null
-): void => {
-  if (!debug) return;
-  const activeActions = Object.keys(actions).filter(k => actions[k]);
-  if (activeActions.length > 0) {
-    console.log('[Controls Debug] Active actions:', activeActions, 'Target rotation:', targetRotation);
-  }
-};
-
 const bindings = {
   ...controlBindings,
   onAction: (action: string) => {
     logs.value = getLogs(currentActions);
 
     switch (action) {
-      case "jump":
-        handleJump();
-        break;
       case "print-log":
         break;
     }
@@ -90,30 +139,18 @@ const init = async (): Promise<void> => {
   const { orbit } = await setup({
     config: setupConfig,
     defineSetup: async ({ ground }) => {
-      const { distance, speed, maxJump } = playerSettings.game;
+      const { distance, speed } = playerSettings.game;
       const { movement } = playerSettings;
       const obstacles: ComplexModel[] = [];
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
 
-      const player = await getModel(scene, world, "mushroom.glb", playerSettings.model);
-      // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
-
-      // Add ground mesh for ground detection (if ground exists)
+      const player = await getModel(scene, world, "mixamoYBot.fbx", playerSettings.model);
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
-
-      Object.keys(illustrations).forEach((key) => {
-        const config = (illustrations as Record<string, any>)[key];
-        const mesh = getCube(scene, world, config);
-        if (config.instances) {
-          instanceMatrixMesh(mesh as any, scene, config.instances);
-        }
-        // obstacles.push(model);
-      });
-
+      console.log(player)
       remapControlsOptions(bindings);
 
       animate({
-        beforeTimeline: () => { },
+        beforeTimeline: () => {},
         timeline: [
           {
             frequency: speed.movement,
@@ -121,8 +158,7 @@ const init = async (): Promise<void> => {
             action: () => {
               const targetRotation = getRotation(currentActions);
               const isMoving = targetRotation !== null;
-              const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
-              logControllerForward(movement.debug, currentActions, targetRotation);
+              const actionName = isMoving ? "mixamo.com" : "Take 001";
               const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: false };
               if (isMoving) {
                 setRotation(player, targetRotation);
@@ -139,26 +175,6 @@ const init = async (): Promise<void> => {
               }
             },
           },
-          {
-            name: "Jump action",
-            action: () => {
-              if (isJumping.value) {
-                if (player.position.y >= playerSettings.model.position[1] + maxJump) {
-                  isJumping.value = false;
-                } else {
-                  player.position.y += speed.jump * 0.1;
-                }
-              } else {
-                player.position.y -= speed.jump * 0.1;
-              }
-
-              // Fake gravity
-              if (player.position.y <= playerSettings.model.position[1] + 0.1) {
-                canJump.value = true;
-                player.position.y = playerSettings.model.position[1];
-              }
-            },
-          },
         ],
       });
     },
@@ -167,11 +183,9 @@ const init = async (): Promise<void> => {
 
 onMounted(async () => {
   await init();
-  await initializeAudio();
   window.addEventListener("resize", init);
 });
 onUnmounted(() => {
-  stopMusic();
   destroyControls();
   window.removeEventListener("resize", init);
 });
@@ -179,11 +193,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="gameState && showLogs" class="ui">
-    <div>
-      <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
-      <span>{{ canJump ? "ready" : "not ready" }}</span>
-    </div>
+  <div v-if="showLogs" class="ui">
     <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
   </div>
 

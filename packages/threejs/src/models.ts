@@ -130,17 +130,20 @@ export const colorModel = (mesh: Model, materialColors: number[] = []) => {
  * @param filename 
  * @returns 
  */
-export const getAnimations = (mixer: THREE.AnimationMixer, filename: string): Promise<Record<string, THREE.AnimationAction>> => {
+export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | string[]): Promise<Record<string, THREE.AnimationAction>> => {
+  const files = Array.isArray(filenames) ? filenames : [filenames];
   return new Promise((resolve) => {
     const loader = new FBXLoader();
-    loader.load(`/${filename}`, (animation) => {
-      const mixers = animation.animations.reduce((acc, animation) => {
-        return {
-          ...acc,
-          [animation.name]: mixer.clipAction(animation)
-        };
-      }, {} as Record<string, THREE.AnimationAction>);
-      resolve(mixers);
+    files.forEach((filename) => {
+      loader.load(`/${filename}`, (animation) => {
+        const mixers = animation.animations.reduce((acc, animation) => {
+          return {
+            ...acc,
+            [animation.name]: mixer.clipAction(animation)
+          };
+        }, {} as Record<string, THREE.AnimationAction>);
+        resolve(mixers);
+      });
     });
   });
 };
