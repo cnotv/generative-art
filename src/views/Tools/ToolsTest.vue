@@ -22,6 +22,7 @@ import { getCube } from "@webgamekit/threejs";
 // Assets
 import flatFlowerImg from "@/assets/images/goomba/fire.png";
 import jumpSound from "@/assets/audio/jump.wav";
+import { times } from "@/utils/lodash";
 
 const mushroomConfig = {
   position: [0, -1, 0] as CoordinateTuple,
@@ -45,26 +46,12 @@ const genericFlatConfig = {
   physic: false,
 }
 
-const illustrations = {
-  flower: {
-    texture: flatFlowerImg,
-    size: [5, 6, 0],
-    position: [0, 0, -15],
-    ...genericFlatConfig,
-  },
-  flowerBigger: {
-    texture: flatFlowerImg,
-    size: [10, 12, 0],
-    position: [0, 0, -18],
-    ...genericFlatConfig,
-  },
-  flowerSmaller: {
-    texture: flatFlowerImg,
-    size: [2.5, 3, 0],
-    position: [0, 0, -12],
-    ...genericFlatConfig,
-  },
-}
+const illustrations = times(3, (i) => times(3, (j) => ({
+  ...genericFlatConfig,
+  texture: flatFlowerImg,
+  size: [2.5 * (i * 2 + 1), 3 * (i * 2 + 1), 0],
+  position: [-20 + j * 20, 0, -5 * (i + 2)],
+}))).flat();
 
 const setupConfig: SetupConfig = {
   camera: {
