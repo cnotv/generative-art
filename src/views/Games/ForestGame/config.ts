@@ -14,8 +14,8 @@ import illustrationTree14Img from "@/assets/images/illustrations/Tree1-4.webp";
 import illustrationTree15Img from "@/assets/images/illustrations/Tree1-5.webp";
 import illustrationTree21Img from "@/assets/images/illustrations/Tree2-1.webp";
 import illustrationTree22Img from "@/assets/images/illustrations/Tree2-2.webp";
-import illustrationRock1Img from "@/assets/images/illustrations/small_Rock1.webp";
-import illustrationFlower1Img from "@/assets/images/illustrations/small_flowers1.webp";
+import illustrationRock1Img from "@/assets/images/illustrations/Rock.webp";
+import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp";
 
 const groundSize: CoordinateTuple = [1000, 100, 50]
 
@@ -36,7 +36,7 @@ export const playerSettings = {
     maxGroundDistance: 5,
     maxStepHeight: 0.5,
     characterRadius: 4,
-    debug: true,
+    debug: false,
   },
   game: {
     distance: 0.08,
