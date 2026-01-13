@@ -39,9 +39,9 @@ export const playerSettings = {
     debug: false,
   },
   game: {
-    distance: 0.08,
+    distance: 0.5,
     speed: {
-      movement: 1,
+      movement: 2,
       turning: 4,
       jump: 3,
     },
@@ -210,6 +210,28 @@ export const setupConfig: SetupConfig = {
     zoom: 1,
     focus: 10,
   },
+  lights: {
+    ambient: { color: 0xffffff, intensity: 1 },
+    directional: {
+      color: 0xffffff,
+      intensity: 0.8,
+      position: [50, 100, 50],
+      castShadow: true,
+      shadow: {
+        mapSize: { width: 2048, height: 2048 },
+        camera: {
+          near: 1,
+          far: 500,
+          left: -100,
+          right: 100,
+          top: 100,
+          bottom: -100,
+        },
+        bias: -0.0001,
+        radius: 4,
+      },
+    },
+  },
   ground: {
     size: groundSize,
     texture: groundImg,
@@ -228,7 +250,7 @@ export const setupConfig: SetupConfig = {
     // afterimage: {},
     // ssao: {},
     // vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
-    colorCorrection: { contrast: 1, saturation: 1, brightness: 1.0 },
+    // colorCorrection: { contrast: 1, saturation: 1, brightness: 1.0 },
   } as PostProcessingConfig,
 };
 

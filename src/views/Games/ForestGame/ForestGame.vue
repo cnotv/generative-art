@@ -126,7 +126,7 @@ const init = async (): Promise<void> => {
               logControllerForward(movement.debug, currentActions, targetRotation);
 
               if (!action || !player.userData.mixer) return;
-              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 10, backward: false };
+              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: false };
               if (isMoving) {
                 setRotation(player, targetRotation);
                 controllerForward(
