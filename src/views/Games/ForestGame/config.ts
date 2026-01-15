@@ -30,6 +30,8 @@ import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp"
 import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
 import illustrationBush12Img from "@/assets/images/illustrations/Bush1-2.webp";
 
+import grassTextureImg from "@/assets/images/illustrations/ground.webp";
+
 export const playerSettings = {
   model: {
     position: [0, -1, 0] as CoordinateTuple,
@@ -216,8 +218,10 @@ export const setupConfig: SetupConfig = {
   },
   ground: {
     size: [1000, 100, 50],
-    textureRepeat: [500, 30] as [number, number],
-    color: 0x80b966,
+    texture: grassTextureImg,
+    textureRepeat: [250, 15] as [number, number],
+    // color: 0x80b966,
+    color: 0xcccccc,
   },
   sky: { size: 500, color: 0x00aaff },
   postprocessing: {
