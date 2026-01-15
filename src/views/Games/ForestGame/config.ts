@@ -73,13 +73,13 @@ export const illustrations = {
   'mountain1-1': {
     ...genericFlatConfig,
     texture: illustrationMountain11Img,
-    size: [80, 80, 0],
-    position: [-1000, -6, -30],
+    size: [120, 120, 0],
+    position: [-1000, -20, -50],
     instances: getInstanceConfig({
       show: true,
       amount: 10,
       spacing: 1,
-      position: [0, -6, -30],
+      position: [0, -20, -50],
       positionVariation: [1000, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
     })
@@ -87,13 +87,13 @@ export const illustrations = {
   'mountain1-2': {
     ...genericFlatConfig,
     texture: illustrationMountain12Img,
-    size: [120, 120, 0],
-    position: [-1000, -6, -30],
+    size: [220, 220, 0],
+    position: [-1000, -20, -100],
       instances: getInstanceConfig({
       show: true,
       amount: 10,
       spacing: 1,
-      position: [0, -6, -30],
+      position: [0, -20, -100],
       positionVariation: [1000, 0, 0],
       sizeVariation: [0.5, 0.5, 0],
     })
