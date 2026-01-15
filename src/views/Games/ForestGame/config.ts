@@ -8,6 +8,9 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 import jumpSound from "@/assets/audio/jump.wav";
 import illustrationMountain11Img from "@/assets/images/illustrations/Mountain1-1.webp";
 import illustrationMountain12Img from "@/assets/images/illustrations/Mountain1-2.webp";
+import illustrationMountain21Img from "@/assets/images/illustrations/Mountain2-1.webp";
+import illustrationMountain22Img from "@/assets/images/illustrations/Mountain2-2.webp";
+
 import illustrationTree11Img from "@/assets/images/illustrations/Tree1-1.webp";
 import illustrationTree12Img from "@/assets/images/illustrations/Tree1-2.webp";
 import illustrationTree13Img from "@/assets/images/illustrations/Tree1-3.webp";
@@ -72,34 +75,46 @@ const genericFlatConfig = {
 };
 
 export const illustrations = {
-  'mountain1-1': {
-    ...genericFlatConfig,
-    texture: illustrationMountain11Img,
-    size: [160, 80, 0],
-    position: [-1000, -20, -50],
-    instances: getInstanceConfig({
-      show: true,
-      amount: 7,
-      spacing: 1,
-      position: [0, -20, -50],
-      positionVariation: [1000, 0, 0],
-      sizeVariation: [0.5, 0.5, 0],
-    })
-  },
-  'mountain1-2': {
-    ...genericFlatConfig,
-    texture: illustrationMountain12Img,
-    size: [360, 180, 0],
-    position: [-1000, -20, -100],
+  ...([
+      illustrationMountain21Img,
+      illustrationMountain22Img,
+    ].reduce((acc, texture) => ({
+      ...acc,
+      [texture]: {
+        ...genericFlatConfig,
+        texture,
+      size: [120, 60, 0],
+      position: [-1000, -20, -50],
       instances: getInstanceConfig({
-      show: true,
-      amount: 7,
-      spacing: 1,
-      position: [0, -20, -100],
-      positionVariation: [1000, 0, 0],
-      sizeVariation: [0.5, 0.5, 0],
-    })
-  },
+        show: true,
+        amount: 2,
+        spacing: 1,
+        position: [0, -20, -50],
+        positionVariation: [1000, 0, 0],
+        sizeVariation: [0.5, 0.5, 0],
+      })
+    }
+  }), {})),
+  ...([
+    illustrationMountain11Img,
+    illustrationMountain12Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      ...genericFlatConfig,
+      texture,
+      size: [240, 120, 0],
+      position: [-1000, -20, -100],
+        instances: getInstanceConfig({
+        show: true,
+        amount: 2,
+        spacing: 1,
+        position: [0, -20, -100],
+        positionVariation: [1000, 0, 0],
+        sizeVariation: [0.5, 0.5, 0],
+      })
+    }
+  }), {})),
   ...([
     illustrationTree11Img,
     illustrationTree12Img,
