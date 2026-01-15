@@ -56,9 +56,9 @@ export const playerSettings = {
     speed: {
       movement: 2,
       turning: 4,
-      jump: 3,
+      jump: 4,
     },
-    maxJump: 5,
+    maxJump: 4,
   },
 };
 
