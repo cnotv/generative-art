@@ -19,7 +19,7 @@
     "lint:staged": "eslint --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
     "prepare": "husky",
-    "webp": "./scripts/webp-conversion.sh",
+    "webp": "node ./scripts/optimize.js",
     "docs:dev": "cd documentation && pnpm install --ignore-workspace && node node_modules/@docusaurus/core/bin/docusaurus.mjs start",
     "docs:build": "cd documentation && pnpm install --ignore-workspace && node node_modules/@docusaurus/core/bin/docusaurus.mjs build"
   },
@@ -65,6 +65,7 @@
     "lint-staged": "^16.2.7",
     "npm-run-all2": "^6.1.1",
     "prettier": "^3.0.3",
+    "sharp": "^0.34.5",
     "typescript": "~5.4.0",
     "vite": "^5.1.6",
     "vitest": "^1.4.0",
