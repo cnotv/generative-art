@@ -16,9 +16,17 @@ import { createMouseController } from './mouse';
  * Detect if the device is mobile
  */
 export const isMobile = (): boolean => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  ) || ('ontouchstart' in window && window.innerWidth < 768);
+  // Modern device detection: prioritize touch capability and iPadOS quirks
+  const ua = navigator.userAgent;
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
+  const isSmallScreen = window.innerWidth < 768;
+  // iPadOS 13+ reports as Macintosh, but has touch
+  const isModernIpad = isTouch && /Macintosh/.test(ua) && (
+    ua.includes('Safari') || ua.includes('AppleWebKit')
+  );
+  // Fallback to classic mobile UA
+  const isClassicMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  return isModernIpad || (isTouch && isSmallScreen) || isClassicMobile;
 };
 
 /**
