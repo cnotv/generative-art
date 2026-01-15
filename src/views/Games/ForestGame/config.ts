@@ -75,11 +75,11 @@ export const illustrations = {
   'mountain1-1': {
     ...genericFlatConfig,
     texture: illustrationMountain11Img,
-    size: [120, 120, 0],
+    size: [160, 80, 0],
     position: [-1000, -20, -50],
     instances: getInstanceConfig({
       show: true,
-      amount: 10,
+      amount: 7,
       spacing: 1,
       position: [0, -20, -50],
       positionVariation: [1000, 0, 0],
@@ -89,11 +89,11 @@ export const illustrations = {
   'mountain1-2': {
     ...genericFlatConfig,
     texture: illustrationMountain12Img,
-    size: [220, 220, 0],
+    size: [360, 180, 0],
     position: [-1000, -20, -100],
       instances: getInstanceConfig({
       show: true,
-      amount: 10,
+      amount: 7,
       spacing: 1,
       position: [0, -20, -100],
       positionVariation: [1000, 0, 0],
@@ -115,13 +115,13 @@ export const illustrations = {
     [texture]: {
       texture,
       size: [30, 50, 0],
-      position: [200, -8, -25],
+      position: [200, -1, -22],
       ...genericFlatConfig,
       instances: getInstanceConfig({
         show: true,
         amount: 2,
         spacing: 10,
-        position: [0, -8, -25],
+        position: [0, -1, -22],
         positionVariation: [500, 0, 0],
         sizeVariation: [0.5, 0.5, 0],
       })
@@ -139,13 +139,13 @@ export const illustrations = {
     [texture]: {
       texture,
       size: [20, 40, 0],
-      position: [-200, -8, -10],
+      position: [-200, -1, -10],
       ...genericFlatConfig,
       instances: getInstanceConfig({
         show: true,
         amount: 3,
         spacing: 4,
-        position: [0, -8, -10],
+        position: [0, -1, -10],
         positionVariation: [500, 0, 0],
         sizeVariation: [0.5, 0.5, 0],
       })
@@ -153,28 +153,28 @@ export const illustrations = {
   }), {})),
   flower1: {
     texture: illustrationFlower1Img,
-    size: [14, 7, 0],
-    position: [-200, -4, 5],
+    size: [10, 6, 0],
+    position: [-200, -1, 5],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
       amount: 20,
       spacing: 2,
-      position: [0, -4, 0],
+      position: [0, -1, 0],
       positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
   },
   rock1: {
     texture: illustrationRock1Img,
-    size: [10, 5, 0],
-    position: [-200, -1.5, 5],
+    size: [7, 3, 0],
+    position: [-200, -1, 5],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
       amount: 20,
       spacing: 2,
-      position: [0, -1.5, 0],
+      position: [0, -1, 0],
       positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
@@ -186,14 +186,14 @@ export const illustrations = {
     ...acc,
     [texture]: {
       texture,
-    size: [20, 10, 0],
-    position: [-200, -2, 5],
+    size: [15, 7, 0],
+    position: [-200, -1, 5],
       ...genericFlatConfig,
       instances: getInstanceConfig({
       show: true,
       amount: 5,
       spacing: 2,
-      position: [0, -2, 0],
+      position: [0, -1, 0],
       positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
       })
