@@ -33,7 +33,7 @@ import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp"
 import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
 import illustrationBush12Img from "@/assets/images/illustrations/Bush1-2.webp";
 
-import grassTextureImg from "@/assets/images/illustrations/ground.webp";
+// import grassTextureImg from "@/assets/images/illustrations/ground.webp";
 
 export const playerSettings = {
   model: {
@@ -51,7 +51,7 @@ export const playerSettings = {
     requireGround: true,
     maxGroundDistance: 5,
     maxStepHeight: 0.5,
-    characterRadius: 4,
+    characterRadius: 20,
     debug: false,
   },
   game: {
@@ -166,16 +166,16 @@ export const illustrations = {
       })
     }
   }), {})),
-  flower1: {
-    texture: illustrationFlower1Img,
-    size: [10, 6, 0],
-    position: [-200, -1, 5],
+  grass: {
+    texture: illustrationTree23Img,
+    size: [10, 17, 0],
+    position: [-200, -16, 10],
     ...genericFlatConfig,
     instances: getInstanceConfig({
       show: true,
-      amount: 20,
-      spacing: 2,
-      position: [0, -1, 0],
+      amount: 200,
+      spacing: 1,
+      position: [0, -16, 10],
       positionVariation: [300, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
@@ -194,6 +194,20 @@ export const illustrations = {
       sizeVariation: [0.5, 0, 0],
     })
   },
+  flower1: {
+    texture: illustrationFlower1Img,
+    size: [10, 6, 0],
+    position: [-200, -1, 20],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 20,
+      spacing: 2,
+      position: [0, -1, 20],
+      positionVariation: [300, 0, 20],
+      sizeVariation: [0.5, 0, 0],
+    })
+  },
   ...([
     illustrationBush11Img,
     illustrationBush12Img,
@@ -202,14 +216,48 @@ export const illustrations = {
     [texture]: {
       texture,
     size: [15, 7, 0],
-    position: [-200, -1, 5],
+    position: [-200, -1, 20],
+      ...genericFlatConfig,
+      instances: getInstanceConfig({
+      show: true,
+      amount: 3,
+      spacing: 1,
+      position: [0, -1, 20],
+      positionVariation: [300, 0, 0],
+      sizeVariation: [0.5, 0, 0],
+      })
+    }
+  }), {})),
+  flower2: {
+    texture: illustrationFlower1Img,
+    size: [10, 6, 0],
+    position: [-200, -1, -18],
+    ...genericFlatConfig,
+    instances: getInstanceConfig({
+      show: true,
+      amount: 10,
+      spacing: 1,
+      position: [0, -1, -18],
+      positionVariation: [300, 0, 0],
+      sizeVariation: [0.5, 0, 0],
+    })
+  },
+  ...([
+    illustrationBush11Img,
+    illustrationBush12Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [`${texture}-2`]: {
+      texture,
+    size: [15, 7, 0],
+    position: [-200, -1, -18],
       ...genericFlatConfig,
       instances: getInstanceConfig({
       show: true,
       amount: 5,
       spacing: 2,
-      position: [0, -1, 0],
-      positionVariation: [300, 0, 30],
+      position: [0, -1, -18],
+      positionVariation: [300, 0, 10],
       sizeVariation: [0.5, 0, 0],
       })
     }
@@ -233,10 +281,10 @@ export const setupConfig: SetupConfig = {
   },
   ground: {
     size: [1000, 100, 50],
-    texture: grassTextureImg,
-    textureRepeat: [250, 15] as [number, number],
-    // color: 0x80b966,
-    color: 0xcccccc,
+    // texture: grassTextureImg,
+    // textureRepeat: [50, 4] as [number, number],
+    color: 0x98887d,
+    // color: 0xcccccc,
   },
   sky: { size: 500, color: 0x00aaff },
   postprocessing: {
