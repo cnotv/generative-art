@@ -33,6 +33,8 @@ import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp"
 import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
 import illustrationBush12Img from "@/assets/images/illustrations/Bush1-2.webp";
 
+// import illustrationUndergroundImg from "@/assets/images/illustrations/underground.webp";
+
 // import grassTextureImg from "@/assets/images/illustrations/ground.webp";
 
 export const playerSettings = {
@@ -190,7 +192,7 @@ export const illustrations = {
       amount: 20,
       spacing: 2,
       position: [0, -1, 0],
-      positionVariation: [300, 0, 30],
+      positionVariation: [500, 0, 30],
       sizeVariation: [0.5, 0, 0],
     })
   },
@@ -204,7 +206,7 @@ export const illustrations = {
       amount: 20,
       spacing: 2,
       position: [0, -1, 20],
-      positionVariation: [300, 0, 20],
+      positionVariation: [500, 0, 14],
       sizeVariation: [0.5, 0, 0],
     })
   },
@@ -215,16 +217,16 @@ export const illustrations = {
     ...acc,
     [texture]: {
       texture,
-    size: [15, 7, 0],
-    position: [-200, -1, 20],
+    size: [10, 5, 0],
+    position: [-200, -1, 21],
       ...genericFlatConfig,
       instances: getInstanceConfig({
       show: true,
       amount: 3,
       spacing: 1,
-      position: [0, -1, 20],
+      position: [0, -1, 21],
       positionVariation: [300, 0, 0],
-      sizeVariation: [0.5, 0, 0],
+      sizeVariation: [0.5, 0.2, 0],
       })
     }
   }), {})),
@@ -254,15 +256,21 @@ export const illustrations = {
       ...genericFlatConfig,
       instances: getInstanceConfig({
       show: true,
-      amount: 5,
+      amount: 4,
       spacing: 2,
       position: [0, -1, -18],
       positionVariation: [300, 0, 10],
-      sizeVariation: [0.5, 0, 0],
+      sizeVariation: [0.5, 0.2, 0],
       })
     }
-  }), {})),
+  }), {}))
 };
+
+// export const undergroundConfig = {
+//   ...genericFlatConfig,
+//   texture: illustrationUndergroundImg,
+//   size: [10, 10, 0],
+// };
 
 export const setupConfig: SetupConfig = {
   orbit: {
@@ -281,7 +289,7 @@ export const setupConfig: SetupConfig = {
   },
   ground: {
     size: [1000, 100, 50],
-    // texture: grassTextureImg,
+    // texture: illustrationUndergroundImg,
     // textureRepeat: [50, 4] as [number, number],
     color: 0x98887d,
     // color: 0xcccccc,

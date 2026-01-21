@@ -20,7 +20,9 @@ import {
   setupConfig,
   controlBindings,
   assets,
+  // undergroundConfig,
 } from "./config";
+// import { times } from "@/utils/lodash";
 
 // Use correct GameState type and initialization
 const gameState = shallowRef<GameState>();
@@ -109,6 +111,7 @@ const init = async (): Promise<void> => {
         }
         // obstacles.push(model);
       });
+      // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
 
       remapControlsOptions(bindings);
 

@@ -68,7 +68,6 @@ export interface ToolsConfig {
   };
   route?: any;
   canvas: HTMLCanvasElement;
-  autoSortTransparent?: boolean; // Auto-sort transparent objects by camera distance
 }
 
 export interface LightsConfig {
