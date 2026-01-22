@@ -23,8 +23,7 @@ const playerSettings = {
     hasGravity: false,
     castShadow: true,
     material: "MeshLambertMaterial",
-    animations: "walk2.fbx",
-    // animations: ["walk2.fbx", "idle.fbx"],
+    animations: ["animations/walk2.fbx", "animations/idle.fbx", 'animations/running.fbx', 'animations/roll.fbx', 'animations/kick.fbx', 'animations/punch.fbx', 'animations/jump.fbx'],
     color: 0xffffff,
   },
   movement: {
@@ -59,9 +58,9 @@ const setupConfig = {
     focus: 10,
   },
   ground: {
-    size: [1000, 100, 50],
+    size: [1000, 100, 1000],
     texture: grassTextureImg,
-    textureRepeat: [100, 10] as [number, number],
+    textureRepeat: [100, 100] as [number, number],
     color: 0x80b966,
   },
   sky: { size: 500, color: 0x00aaff },
@@ -70,16 +69,24 @@ const setupConfig = {
 const controlBindings = {
   mapping: {
     keyboard: {
-      " ": "jump",
       a: "move-left",
       d: "move-right",
       w: "move-up",
       s: "move-down",
       p: "print-log",
+      Enter: "run",
+      " ": "jump",
+      ArrowUp: "jump",
+      ArrowLeft: "kick",
+      ArrowRight: "punch",
+      ArrowDown: "roll",
     },
     gamepad: {
       // Buttons
       cross: "jump",
+      square: "kick",
+      triangle: "punch",
+      circle: "roll",
       "dpad-left": "move-left",
       "dpad-right": "move-right",
       "dpad-down": "move-down",
@@ -102,6 +109,18 @@ const controlBindings = {
 const logs = shallowRef<string[]>([]);
 const showLogs = true;
 const isMobileDevice = isMobile();
+
+const getActionName = (actions: Record<string, any>): string => {
+  if (actions["kick"]) return "kick";
+  if (actions["punch"]) return "punch";
+  if (actions["jump"]) return "jump";
+  if (actions["move-up"] || actions["move-down"] || actions["move-left"] || actions["move-right"]) {
+    if (actions["roll"]) return "roll";
+    if (actions["run"]) return "running";
+    return "walk2";
+  }
+  return "idle";
+};
 
 const getLogs = (actions: Record<string, any>): string[] =>
   Object.keys(actions)
@@ -144,9 +163,9 @@ const init = async (): Promise<void> => {
       const obstacles: ComplexModel[] = [];
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
 
-      const player = await getModel(scene, world, "mixamoYBot.fbx", playerSettings.model);
+      const player = await getModel(scene, world, "character2.fbx", playerSettings.model);
+      // console.log(player.userData.actions)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
-      console.log(player)
       remapControlsOptions(bindings);
 
       animate({
@@ -158,14 +177,14 @@ const init = async (): Promise<void> => {
             action: () => {
               const targetRotation = getRotation(currentActions);
               const isMoving = targetRotation !== null;
-              const actionName = isMoving ? "mixamo.com" : "Take 001";
-              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: false };
+              const newDistance = currentActions["run"] ? distance * 2 : distance;
+              const animationData: AnimationData = { actionName: getActionName(currentActions), player, delta: getDelta() * 2, speed: 20, backward: false };
               if (isMoving) {
                 setRotation(player, targetRotation);
                 controllerForward(
                   obstacles,
                   groundBodies,
-                  distance,
+                  newDistance,
                   animationData,
                   movement
                 );
@@ -197,26 +216,26 @@ onUnmounted(() => {
     <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
   </div>
 
-  <TouchControl
-    v-if="isMobileDevice"
-    style="left: 25px; bottom: 25px"
-    :mapping="{
-      left: 'move-left',
-      right: 'move-right',
-      up: 'move-up',
-      down: 'move-down',
-    }"
-    :options="{ deadzone: 0.15 }"
-    :current-actions="currentActions"
-    :on-action="bindings.onAction"
-  />
-  <TouchControl
-    v-if="isMobileDevice"
-    style="right: 25px; bottom: 25px"
-    mode="button"
-    :mapping="{ click: 'jump' }"
-    :on-action="bindings.onAction"
-  />
+  <template v-if="isMobileDevice">
+    <TouchControl
+      style="left: 25px; bottom: 25px"
+      :mapping="{
+        left: 'move-left',
+        right: 'move-right',
+        up: 'move-up',
+        down: 'move-down',
+      }"
+      :options="{ deadzone: 0.15 }"
+      :current-actions="currentActions"
+      :on-action="bindings.onAction"
+    />
+    <TouchControl
+      style="right: 25px; bottom: 25px"
+      mode="button"
+      :mapping="{ click: 'jump' }"
+      :on-action="bindings.onAction"
+    />
+  </template>
 </template>
 
 <style scoped>

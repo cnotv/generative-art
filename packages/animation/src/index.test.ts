@@ -600,8 +600,8 @@ describe('animation', () => {
     });
 
     it.each([
-      [{ 'move-up': true }, 0, 'up'],
-      [{ 'move-down': true }, 180, 'down'],
+      [{ 'move-up': true }, 180, 'up'],
+      [{ 'move-down': true }, 0, 'down'],
       [{ 'move-left': true }, 270, 'left'],
       [{ 'move-right': true }, 90, 'right'],
     ])('should return %d for cardinal direction %s', (input, expected) => {
@@ -609,10 +609,10 @@ describe('animation', () => {
     });
 
     it.each([
-      [{ 'move-up': true, 'move-left': true }, 315, 'up-left'],
-      [{ 'move-up': true, 'move-right': true }, 45, 'up-right'],
-      [{ 'move-down': true, 'move-left': true }, 225, 'down-left'],
-      [{ 'move-down': true, 'move-right': true }, 135, 'down-right'],
+      [{ 'move-up': true, 'move-left': true }, 225, 'up-left'],
+      [{ 'move-up': true, 'move-right': true }, 135, 'up-right'],
+      [{ 'move-down': true, 'move-left': true }, 315, 'down-left'],
+      [{ 'move-down': true, 'move-right': true }, 45, 'down-right'],
     ])('should return %d for diagonal direction %s', (input, expected) => {
       expect(getRotation(input)).toBe(expected);
     });
@@ -620,8 +620,8 @@ describe('animation', () => {
     it.each([
       [{ 'move-up': true, 'move-down': true, 'move-left': true }, 270, 'up+down with left'],
       [{ 'move-up': true, 'move-down': true, 'move-right': true }, 90, 'up+down with right'],
-      [{ 'move-left': true, 'move-right': true, 'move-up': true }, 0, 'left+right with up'],
-      [{ 'move-left': true, 'move-right': true, 'move-down': true }, 180, 'left+right with down'],
+      [{ 'move-left': true, 'move-right': true, 'move-up': true }, 180, 'left+right with up'],
+      [{ 'move-left': true, 'move-right': true, 'move-down': true }, 0, 'left+right with down'],
     ])('should return %d for opposing directions: %s', (input, expected) => {
       expect(getRotation(input)).toBe(expected);
     });

@@ -346,6 +346,7 @@ export const controlBindings = {
       right: "move-right",
       up: "move-up",
       down: "move-down",
+      click: "jump",
     },
   },
   axisThreshold: 0.5,

@@ -132,18 +132,39 @@ export const colorModel = (mesh: Model, materialColors: number[] = []) => {
  */
 export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | string[]): Promise<Record<string, THREE.AnimationAction>> => {
   const files = Array.isArray(filenames) ? filenames : [filenames];
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const loader = new FBXLoader();
+    const allActions: Record<string, THREE.AnimationAction> = {};
+    let loadedCount = 0;
+    if (files.length === 0) {
+      resolve(allActions);
+      return;
+    }
     files.forEach((filename) => {
-      loader.load(`/${filename}`, (animation) => {
-        const mixers = animation.animations.reduce((acc, animation) => {
-          return {
-            ...acc,
-            [animation.name]: mixer.clipAction(animation)
-          };
-        }, {} as Record<string, THREE.AnimationAction>);
-        resolve(mixers);
-      });
+      loader.load(
+        `/${filename}`,
+        (animation) => {
+          animation.animations.forEach((anim) => {
+            // Use filename (without extension) as base name
+            let baseName = filename.split('/').pop() || filename;
+            baseName = baseName.replace(/\.[^/.]+$/, "");
+            let name = baseName;
+            let idx = 1;
+            while (Object.prototype.hasOwnProperty.call(allActions, name)) {
+              name = `${baseName}_${idx++}`;
+            }
+            allActions[name] = mixer.clipAction(anim);
+          });
+          loadedCount++;
+          if (loadedCount === files.length) {
+            resolve(allActions);
+          }
+        },
+        undefined,
+        (err) => {
+          reject(err);
+        }
+      );
     });
   });
 };
@@ -233,10 +254,10 @@ export const getModel = async (
   const mixer = new THREE.AnimationMixer(mesh);
   let actions = {};
   if (animations) {
-    actions = await getAnimations(mixer, animations);
+    actions = {...actions, ...await getAnimations(mixer, animations)};
   }
   if (gltf.animations?.length) {
-    actions = getAnimationsModel(mixer, mesh, gltf);
+    actions = {...actions, ...getAnimationsModel(mixer, mesh, gltf)};
   }
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
