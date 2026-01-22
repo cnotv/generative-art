@@ -79,15 +79,17 @@ const genericFlatConfig = {
 
 export const illustrations = {
   ...([
-      illustrationMountain21Img,
-      illustrationMountain22Img,
-    ].reduce((acc, texture) => ({
-      ...acc,
-      [texture]: {
-        ...genericFlatConfig,
-        texture,
+    illustrationMountain21Img,
+    illustrationMountain22Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      ...genericFlatConfig,
+      texture,
       size: [120, 60, 0],
       position: [-1000, -20, -50],
+      depthWrite: false,
+      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 2,
@@ -107,8 +109,10 @@ export const illustrations = {
       ...genericFlatConfig,
       texture,
       size: [240, 120, 0],
+      depthWrite: false,
+      alphaTest: 0,
       position: [-1000, -20, -100],
-        instances: getInstanceConfig({
+      instances: getInstanceConfig({
         show: true,
         amount: 2,
         spacing: 1,
@@ -131,10 +135,12 @@ export const illustrations = {
   ].reduce((acc, texture) => ({
     ...acc,
     [texture]: {
+      ...genericFlatConfig,
       texture,
       size: [30, 50, 0],
       position: [200, -1, -22],
-      ...genericFlatConfig,
+      depthWrite: false,
+      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 2,
@@ -155,10 +161,12 @@ export const illustrations = {
   ].reduce((acc, texture) => ({
     ...acc,
     [texture]: {
+      ...genericFlatConfig,
       texture,
       size: [20, 40, 0],
       position: [-200, -1, -10],
-      ...genericFlatConfig,
+      depthWrite: false,
+      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 3,
