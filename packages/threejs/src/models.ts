@@ -495,15 +495,17 @@ export const getCube = (
     showHelper = false,
     material = 'MeshPhysicalMaterial',
     type = 'dynamic',
+    transparent = false,
     origin = { y: 0 },
-    depthWrite,
-    alphaTest = 0,
+    depthWrite = false,
+    alphaTest = 0.01,
     renderOrder = 0,
     side,
   }: ModelOptions = {},
 ): ComplexModel => {
   const initialValues = { size, rotation, position, color };
-  
+  renderOrder = Math.abs(position[2]) / 10;
+
   // Create and add model
   const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
   const geometry = new THREE.BoxGeometry(...sizeArray);
@@ -515,7 +517,7 @@ export const getCube = (
     color,
     transmission,
     opacity,
-    transparent: opacity < 1,
+    transparent: transparent ?? opacity < 1,
     reflectivity,
     roughness,
     metalness,

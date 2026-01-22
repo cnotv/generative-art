@@ -74,6 +74,7 @@ const genericFlatConfig = {
   opacity: 0.95,
   material: "MeshBasicMaterial",
   physic: false,
+  transparent: true,
 };
 
 export const illustrations = {
