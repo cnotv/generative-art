@@ -596,14 +596,14 @@ const setRotation = (
 
 /** Rotation mapping for directional input combinations */
 const ROTATION_MAP: Record<string, number> = {
-  'up': 0,
-  'up-right': 45,
+  'down': 0,
+  'down-right': 45,
   'right': 90,
-  'down-right': 135,
-  'down': 180,
-  'down-left': 225,
+  'up-right': 135,
+  'up': 180,
+  'up-left': 225,
   'left': 270,
-  'up-left': 315,
+  'down-left': 315,
 };
 
 /**

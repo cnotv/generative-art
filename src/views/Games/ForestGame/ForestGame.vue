@@ -126,7 +126,7 @@ const init = async (): Promise<void> => {
               const isMoving = targetRotation !== null;
               const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
               logControllerForward(movement.debug, currentActions, targetRotation);
-              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: false };
+              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: true };
               if (isMoving) {
                 setRotation(player, targetRotation);
                 controllerForward(
