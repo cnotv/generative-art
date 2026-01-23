@@ -77,6 +77,31 @@ const genericFlatConfig = {
   transparent: true,
 };
 
+// Fixes presets
+// const strictLayeringFix = {
+//   depthWrite: false,
+//   // renderOrder: i,
+// };
+
+// const hardEdgesFix = {
+//   alphaTest: 0.5,
+//   depthWrite: true,
+// };
+
+// const sameZFix = {
+//   polygonOffset: true,
+//   polygonOffsetFactor: -1,
+// };
+
+// const messyOverlapsFix = {
+//   alphaHash: true,
+// };
+
+const glitchFix = {
+  depthWrite: false,
+  alphaTest: 0,
+}
+
 export const illustrations = {
   ...([
     illustrationMountain21Img,
@@ -85,11 +110,10 @@ export const illustrations = {
     ...acc,
     [texture]: {
       ...genericFlatConfig,
+      ...glitchFix,
       texture,
       size: [120, 60, 0],
       position: [-1000, -20, -50],
-      depthWrite: false,
-      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 2,
@@ -106,11 +130,10 @@ export const illustrations = {
   ].reduce((acc, texture) => ({
     ...acc,
     [texture]: {
+      ...glitchFix,
       ...genericFlatConfig,
       texture,
       size: [240, 120, 0],
-      depthWrite: false,
-      alphaTest: 0,
       position: [-1000, -20, -100],
       instances: getInstanceConfig({
         show: true,
@@ -136,11 +159,10 @@ export const illustrations = {
     ...acc,
     [texture]: {
       ...genericFlatConfig,
+      ...glitchFix,
       texture,
       size: [30, 50, 0],
       position: [200, -1, -22],
-      depthWrite: false,
-      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 2,
@@ -162,11 +184,10 @@ export const illustrations = {
     ...acc,
     [texture]: {
       ...genericFlatConfig,
+      ...glitchFix,
       texture,
       size: [20, 40, 0],
       position: [-200, -1, -10],
-      depthWrite: false,
-      alphaTest: 0,
       instances: getInstanceConfig({
         show: true,
         amount: 3,
