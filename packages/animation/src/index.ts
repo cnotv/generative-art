@@ -606,6 +606,17 @@ const ROTATION_MAP: Record<string, number> = {
   'down-left': 315,
 };
 
+const ROTATION_MAP_MIRRORED: Record<string, number> = {
+  'down': 0,
+  'down-left': 45,
+  'left': 90,
+  'up-left': 135,
+  'up': 180,
+  'up-right': 225,
+  'right': 270,
+  'down-right': 315,
+};
+
 /**
  * Calculate target rotation based on directional input actions
  * @param currentActions Record of active control actions
@@ -613,7 +624,9 @@ const ROTATION_MAP: Record<string, number> = {
  */
 const getRotation = (
   currentActions: Record<string, unknown>,
+  mirrored: boolean = false
 ): number | null => {
+  const map = mirrored ? ROTATION_MAP_MIRRORED : ROTATION_MAP;
   const up = !!currentActions["move-up"];
   const down = !!currentActions["move-down"];
   const left = !!currentActions["move-left"];
@@ -624,7 +637,7 @@ const getRotation = (
     left && !right ? 'left' : right && !left ? 'right' : '',
   ].filter(Boolean).join('-');
 
-  return key ? (ROTATION_MAP[key] ?? null) : null;
+  return key ? (map[key] ?? null) : null;
 };
 
 const bodyJump = (

@@ -122,7 +122,7 @@ const init = async (): Promise<void> => {
             frequency: speed.movement,
             name: "Walk",
             action: () => {
-              const targetRotation = getRotation(currentActions);
+              const targetRotation = getRotation(currentActions, true);
               const isMoving = targetRotation !== null;
               const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
               logControllerForward(movement.debug, currentActions, targetRotation);
