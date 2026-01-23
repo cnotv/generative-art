@@ -6,6 +6,12 @@ import { getInstanceConfig } from "@webgamekit/threejs";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
+
+import illustrationCloud1Img from "@/assets/images/illustrations/cloud1.webp";
+import illustrationCloud2Img from "@/assets/images/illustrations/cloud2.webp";
+import illustrationCloud3Img from "@/assets/images/illustrations/cloud3.webp";
+import illustrationCloud4Img from "@/assets/images/illustrations/cloud4.webp";
+
 import illustrationMountain11Img from "@/assets/images/illustrations/Mountain1-1.webp";
 import illustrationMountain12Img from "@/assets/images/illustrations/Mountain1-2.webp";
 import illustrationMountain21Img from "@/assets/images/illustrations/Mountain2-1.webp";
@@ -103,6 +109,29 @@ const glitchFix = {
 }
 
 export const illustrations = {
+  ...([
+    illustrationCloud1Img,
+    illustrationCloud2Img,
+    illustrationCloud3Img,
+    illustrationCloud4Img,
+  ].reduce((acc, texture) => ({
+    ...acc,
+    [texture]: {
+      ...genericFlatConfig,
+      // ...glitchFix,
+      texture,
+      size: [200, 100, 0],
+      position: [0, -200, 0],
+      instances: getInstanceConfig({
+        show: true,
+        amount: 1,
+        spacing: 1,
+        position: [0, 60, -80],
+        positionVariation: [1000, 30, 50],
+        sizeVariation: [0.5, 0.5, 0],
+      })
+    }
+  }), {})),
   ...([
     illustrationMountain21Img,
     illustrationMountain22Img,
