@@ -132,7 +132,6 @@ const init = async (): Promise<void> => {
                 controllerForward(
                   obstacles,
                   groundBodies,
-                  distance,
                   animationData,
                   movement
                 );

@@ -242,6 +242,7 @@ const init = async (): Promise<void> => {
                 actionName: "Esqueleto|walking",
                 delta: getDelta() * 2,
                 speed: 10,
+                distance,
                 backward: true
               };
               const idleAnimData: AnimationData = {
@@ -254,7 +255,6 @@ const init = async (): Promise<void> => {
                 controllerForward(
                   obstacles,
                   [],
-                  distance,
                   walkAnimData
                 );
               else updateAnimation(idleAnimData);

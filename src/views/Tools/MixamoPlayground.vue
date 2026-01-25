@@ -12,6 +12,7 @@ import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
+import { aC } from 'vitest/dist/reporters-w_64AS5f.js';
 
 const playerSettings = {
   model: {
@@ -122,6 +123,21 @@ const getActionName = (actions: Record<string, any>): string => {
   return "idle";
 };
 
+const getActionData = (player: ComplexModel, currentActions: Record<string, any>, basicDistance: number, getDelta: () => number): AnimationData => {
+  const actionName = getActionName(currentActions);
+  const distance = currentActions["run"] ? basicDistance * 2 : basicDistance;
+  const blocking = ["kick", "punch", "roll", "jump"].includes(actionName) ? player.userData.actions[actionName]?._clip?.duration : 0;
+  return {
+    actionName,
+    player,
+    delta: getDelta() * 2,
+    speed: 20,
+    backward: false,
+    distance,
+    blocking
+  }
+}
+
 const getLogs = (actions: Record<string, any>): string[] =>
   Object.keys(actions)
     .filter((action) => !!actions[action])
@@ -177,14 +193,12 @@ const init = async (): Promise<void> => {
             action: () => {
               const targetRotation = getRotation(currentActions);
               const isMoving = targetRotation !== null;
-              const newDistance = currentActions["run"] ? distance * 2 : distance;
-              const animationData: AnimationData = { actionName: getActionName(currentActions), player, delta: getDelta() * 2, speed: 20, backward: false };
+              const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
               if (isMoving) {
                 setRotation(player, targetRotation);
                 controllerForward(
                   obstacles,
                   groundBodies,
-                  newDistance,
                   animationData,
                   movement
                 );

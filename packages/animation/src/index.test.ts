@@ -120,7 +120,7 @@ describe('animation', () => {
           frequency: speed,
           action: () => {
             const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
-            controllerForward([], [], distance, animData);
+            controllerForward([], [], animData);
           },
         },
         {
@@ -201,7 +201,7 @@ describe('animation', () => {
           frequency: 1,
           action: () => {
             const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
-            controllerForward([], [], distance, animData);
+            controllerForward([], [], animData);
           },
         },
         {
@@ -443,9 +443,9 @@ describe('animation', () => {
       const ground = createGroundBox(0);
       
       const initialZ = mockModel.position.z;
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: 1 };
       
-      controllerForward([], [ground], 1, animData, {
+      controllerForward([], [ground], animData, {
         requireGround: true,
         maxGroundDistance: 5,
       });
@@ -458,9 +458,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 1, 0]);
       
       const initialPosition = mockModel.position.clone();
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: 1 };
       
-      controllerForward([], [], 1, animData, {
+      controllerForward([], [], animData, {
         requireGround: true,
         maxGroundDistance: 5,
       });
@@ -474,9 +474,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 1, 0]);
       
       const initialZ = mockModel.position.z;
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: 1 };
       
-      controllerForward([], [], 1, animData, {
+      controllerForward([], [], animData, {
         requireGround: false,
       });
       
@@ -488,9 +488,9 @@ describe('animation', () => {
       const mockModel = createMockModel([0, 0.5, 0]);
       // Create a step at y=0.8 (slightly higher than model)
       const step = createGroundBox(0.8);
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: 0.5 };
       
-      controllerForward([], [step], 0.5, animData, {
+      controllerForward([], [step], animData, {
         requireGround: true,
         maxStepHeight: 0.5,
         maxGroundDistance: 5,
@@ -506,9 +506,9 @@ describe('animation', () => {
       const highStep = createGroundBox(2);
       
       const initialPosition = mockModel.position.clone();
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: 1 };
       
-      controllerForward([], [highStep], 1, animData, {
+      controllerForward([], [highStep], animData, {
         requireGround: true,
         maxStepHeight: 0.5, // Step is 2 units high, max is 0.5
         maxGroundDistance: 5,
@@ -569,7 +569,7 @@ describe('animation', () => {
       
       const initialPosition = mockModel.position.clone();
       const distance = 0.08; // Same as ForestGame
-      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016 };
+      const animData: AnimationData = { player: mockModel, actionName: 'run', delta: 0.016, distance: distance };
       
       // ForestGame movement options
       const movementOptions = {
@@ -580,7 +580,7 @@ describe('animation', () => {
         debug: true,
       };
       
-      controllerForward([], [ground], distance, animData, movementOptions);
+      controllerForward([], [ground], animData, movementOptions);
       
       // Player should have moved in -X direction (left)
       expect(mockModel.position.x).toBeLessThan(initialPosition.x);

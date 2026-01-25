@@ -170,31 +170,32 @@ const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any
 
 /** Animation data for updateAnimation and controllerForward */
 interface AnimationData {
-  /** Animation action name */
   actionName: string;
-  /** The player/model being animated */
   player: ComplexModel;
-  /** Time delta for animation update */
-  delta: number;
-  /** Animation playback speed */
+  delta: number; // Threejs counter for frame time
   speed?: number;
-  /** Whether moving backwards */
-  backward?: boolean;
+  backward?: boolean; // For adjusting model direction
+  blocking?: number; // Performing animation should prevent other actions for x ms
+  distance?: number; // Length of action movement
 }
 
 /**
  * Update the animation of the model based on given time
  */
 const updateAnimation = (data: AnimationData): void => {
-  const { player, actionName, delta, speed = 10 } = data;
+  const { player, actionName, delta, speed = 10, blocking = 0 } = data;
   const mixer = player.userData.mixer;
   const action = player.userData.actions?.[actionName];
   const coefficient = 0.1;
 
   if (!action || !mixer) return;
-  
+
+  player.userData.performing = blocking > action.time;
+
   // Handle animation switching
   if (player.userData.currentAction !== actionName) {
+    // if (player.userData.performing) return;
+    
     const previousAction = player.userData.currentAction 
       ? player.userData.actions?.[player.userData.currentAction]
       : null;
@@ -206,7 +207,6 @@ const updateAnimation = (data: AnimationData): void => {
     action.reset().fadeIn(0.2).play();
     player.userData.currentAction = actionName;
   } else {
-    // Ensure the action is playing
     if (!action.isRunning()) {
       action.play();
     }
@@ -481,7 +481,6 @@ const moveCharacter = (
 const controllerForward = (
   obstacles: ComplexModel[],
   groundBodies: ComplexModel[],
-  distance: number,
   animationData: AnimationData,
   {
     maxStepHeight = 0.5,
@@ -492,7 +491,7 @@ const controllerForward = (
     debug = false
   }: ControllerForwardOptions = {}
 ): void => {
-  const { actionName, player: model, backward = false } = animationData;
+  const { actionName, player: model, backward = false, distance = 0 } = animationData;
   const { actions, mixer } = model.userData;
   const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward);
 
