@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
+import { animateTimeline, controllerForward, controllerTurn, updateAnimation, playBlockingAction, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -823,6 +823,147 @@ describe('animation', () => {
       // Frame 17: within second active period (15-24)
       animateTimeline(manager, 17);
       expect(action).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('playBlockingAction', () => {
+    const createBlockingModel = () => {
+      const mockAction = {
+        play: vi.fn(),
+        stop: vi.fn(),
+        reset: vi.fn().mockReturnThis(),
+        fadeIn: vi.fn().mockReturnThis(),
+        fadeOut: vi.fn(),
+        setLoop: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        clampWhenFinished: false,
+      };
+
+      const mockMixer = {
+        update: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(0, 0, 0);
+
+      return Object.assign(mockMesh, {
+        userData: {
+          mixer: mockMixer,
+          actions: { attack: mockAction, idle: { ...mockAction } },
+          currentAction: undefined,
+          body: {
+            translation: () => ({ x: 0, y: 0, z: 0 }),
+            setTranslation: vi.fn((pos) => mockMesh.position.set(pos.x, pos.y, pos.z)),
+          },
+          initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+          performing: false,
+          allowMovement: true,
+          allowRotation: true,
+        },
+      }) as unknown as ComplexModel;
+    };
+
+    it('should set performing=true and block movement/rotation by default', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack');
+
+      expect(model.userData.performing).toBe(true);
+      expect(model.userData.allowMovement).toBe(false);
+      expect(model.userData.allowRotation).toBe(false);
+    });
+
+    it('should allow movement when allowMovement=true', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack', { allowMovement: true });
+
+      expect(model.userData.allowMovement).toBe(true);
+    });
+
+    it('should register finished event listener for LoopOnce', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack');
+
+      expect(model.userData.mixer.addEventListener).toHaveBeenCalledWith('finished', expect.any(Function));
+    });
+
+    it('should reset performing state on animation finish', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack');
+
+      const finishedCallback = (model.userData.mixer.addEventListener as any).mock.calls[0][1];
+      finishedCallback({ action: model.userData.actions.attack });
+
+      expect(model.userData.performing).toBe(false);
+      expect(model.userData.allowMovement).toBe(true);
+      expect(model.userData.allowRotation).toBe(true);
+    });
+
+    it('should block controllerForward when performing and allowMovement=false', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowMovement = false;
+
+      const initialZ = model.position.z;
+      controllerForward([], [], { player: model, actionName: 'attack', delta: 0.016, distance: 1 });
+
+      expect(model.position.z).toBe(initialZ);
+    });
+
+    it('should allow controllerForward when allowMovement=true', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowMovement = true;
+
+      const initialZ = model.position.z;
+      controllerForward([], [], { player: model, actionName: 'attack', delta: 0.016, distance: 1 });
+
+      expect(model.position.z).not.toBe(initialZ);
+    });
+
+    it('should block controllerTurn when performing and allowRotation=false', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowRotation = false;
+
+      const result = controllerTurn(model, 90);
+
+      expect(result).toBe(false);
+      expect(model.rotation.y).toBe(0);
+    });
+
+    it('should allow controllerTurn when allowRotation=true', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowRotation = true;
+
+      const result = controllerTurn(model, 90);
+
+      expect(result).toBe(true);
+      expect(model.rotation.y).toBeCloseTo(Math.PI / 2, 5);
+    });
+
+    it('should block setRotation when performing and allowRotation=false', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowRotation = false;
+
+      const result = setRotation(model, 90);
+
+      expect(result).toBe(false);
+    });
+
+    it('should allow setRotation when allowRotation=true', () => {
+      const model = createBlockingModel();
+      model.userData.performing = true;
+      model.userData.allowRotation = true;
+
+      const result = setRotation(model, 90);
+
+      expect(result).toBe(true);
+      expect(model.rotation.y).toBeCloseTo(Math.PI / 2, 5);
     });
   });
 });

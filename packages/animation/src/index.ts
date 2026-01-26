@@ -183,36 +183,80 @@ interface AnimationData {
   delta: number; // Threejs counter for frame time
   speed?: number;
   backward?: boolean; // For adjusting model direction
-  blocking?: number; // Performing animation should prevent other actions for x ms
   distance?: number; // Length of action movement
 }
+
+/**
+ * Play a blocking animation that prevents other actions until complete
+ * Uses Three.js AnimationMixer 'finished' event for automatic cleanup
+ */
+const playBlockingAction = (
+  player: ComplexModel,
+  actionName: string,
+  options: {
+    allowMovement?: boolean;
+    allowRotation?: boolean;
+    loop?: THREE.AnimationActionLoopStyles;
+    onComplete?: () => void;
+  } = {}
+): void => {
+  const { allowMovement = false, allowRotation = false, loop = THREE.LoopOnce, onComplete } = options;
+  const mixer = player.userData.mixer;
+  const action = player.userData.actions?.[actionName];
+
+  if (!action || !mixer) return;
+
+  const previousAction = player.userData.currentAction
+    ? player.userData.actions?.[player.userData.currentAction]
+    : null;
+
+  if (previousAction && previousAction !== action) {
+    previousAction.fadeOut(0.2);
+  }
+
+  action.reset().fadeIn(0.2).play();
+  action.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity);
+  action.clampWhenFinished = true;
+
+  player.userData.currentAction = actionName;
+  player.userData.performing = true;
+  player.userData.allowMovement = allowMovement;
+  player.userData.allowRotation = allowRotation;
+
+  if (loop === THREE.LoopOnce) {
+    const onFinished = (e: any) => {
+      if (e.action === action) {
+        player.userData.performing = false;
+        player.userData.allowMovement = true;
+        player.userData.allowRotation = true;
+        mixer.removeEventListener('finished', onFinished);
+        if (onComplete) onComplete();
+      }
+    };
+    mixer.addEventListener('finished', onFinished);
+  }
+};
 
 /**
  * Update the animation of the model based on given time
  */
 const updateAnimation = (data: AnimationData): void => {
-  const { player, actionName, delta, speed = 10, blocking = 0 } = data;
+  const { player, actionName, delta, speed = 10 } = data;
   const mixer = player.userData.mixer;
   const action = player.userData.actions?.[actionName];
   const coefficient = 0.1;
 
   if (!action || !mixer) return;
 
-  player.userData.performing = action.time < blocking;
-
-  // Handle animation switching
   if (player.userData.currentAction !== actionName) {
     const previousAction = player.userData.currentAction
       ? player.userData.actions?.[player.userData.currentAction]
       : null;
 
-    // Only allow action change if current action is not performing (time >= blocking)
-    // if (previousAction && previousAction.time < blocking) return;
-    
     if (previousAction && previousAction !== action) {
       previousAction.fadeOut(0.2);
     }
-    
+
     action.reset().fadeIn(0.2).play();
     player.userData.currentAction = actionName;
   } else {
@@ -220,7 +264,7 @@ const updateAnimation = (data: AnimationData): void => {
       action.play();
     }
   }
-  
+
   if (delta) {
     mixer.update(delta * speed * coefficient);
   } else {
@@ -501,6 +545,11 @@ const controllerForward = (
   }: ControllerForwardOptions = {}
 ): void => {
   const { actionName, player: model, backward = false, distance = 0 } = animationData;
+
+  if (model.userData.performing && model.userData.allowMovement === false) {
+    return;
+  }
+
   const { actions, mixer } = model.userData;
   const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward);
 
@@ -575,16 +624,20 @@ const controllerJump = (
 
 /**
  * Rotate model on defined angle
- * @param model 
+ * @param model
  * @param angle angle in degrees
+ * @returns true if rotation was applied, false if blocked
  */
 const controllerTurn = (
   model: ComplexModel,
   angle: number,
-) => {
-  const mesh = model;
+): boolean => {
+  if (model.userData.performing && model.userData.allowRotation === false) {
+    return false;
+  }
   const radians = THREE.MathUtils.degToRad(angle);
-  mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+  return true;
 };
 
 /**
@@ -592,14 +645,19 @@ const controllerTurn = (
  * @param model The model to rotate
  * @param degrees The target rotation in degrees
  * @param modelOffset Offset in degrees to correct for models facing wrong direction
+ * @returns true if rotation was applied, false if blocked
  */
 const setRotation = (
   model: ComplexModel,
   degrees: number,
   modelOffset: number = 0,
-) => {
+): boolean => {
+  if (model.userData.performing && model.userData.allowRotation === false) {
+    return false;
+  }
   const radians = THREE.MathUtils.degToRad(degrees + modelOffset);
   model.rotation.y = radians;
+  return true;
 };
 
 /** Rotation mapping for directional input combinations */
@@ -689,6 +747,7 @@ export {
   resetAnimation,
   getAnimationsModel,
   updateAnimation,
+  playBlockingAction,
   controllerForward,
   controllerJump,
   controllerTurn,
