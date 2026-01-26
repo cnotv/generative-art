@@ -5,7 +5,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getModel, getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements, bodyJump, updateAnimation, type AnimationData } from "@webgamekit/animation";
+import { bindAnimatedElements, bodyJump, updateAnimation, createTimelineManager, type AnimationData } from "@webgamekit/animation";
 import { useUiStore } from "@/stores/ui";
 import { getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
@@ -91,6 +91,55 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         });
         elements.push(chickModel);
 
+        const timelineManager = createTimelineManager();
+
+        // Make Goomba run
+        timelineManager.addAction({
+          name: "Run animation",
+          category: "animation",
+          action: () => {
+            if (chickModel.userData.mixer && chickModel.userData.actions?.run) {
+              const animData: AnimationData = {
+                player: chickModel,
+                actionName: 'run',
+                delta: getDelta(),
+                speed: 1
+              };
+              updateAnimation(animData);
+            }
+          },
+        });
+
+        // Generate cubes
+        timelineManager.addAction({
+          name: "Generate obstacles",
+          frequency: 75,
+          category: "game-logic",
+          action: () => {
+            const cube = getCube(scene, world, {
+              size: [30, 30, 30],
+              restitution: -1,
+              position: [30 * 8, 15 * Math.floor(Math.random() * 3) + 15, 0],
+              type: "fixed",
+              texture: brickTexture,
+              boundary: 0.5,
+              color: 0x888888,
+            }) as ComplexModel;
+            obstacles.push(cube);
+          },
+        });
+
+        // Move obstacles
+        timelineManager.addAction({
+          name: "Move obstacles",
+          category: "physics",
+          action: () => {
+            obstacles.forEach((obstacle: ComplexModel) => {
+              obstacle.mesh.position.x -= character.speed * 3;
+            });
+          },
+        });
+
         animate({
           beforeTimeline: () => {
             bindAnimatedElements([...elements, ...obstacles], world, getDelta());
@@ -98,46 +147,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               bodyJump(chickModel, [], character.speed, character.jump);
             }
           },
-          timeline: [
-            // Make Goomba run
-            {
-              action: () => {
-                if (chickModel.userData.mixer && chickModel.userData.actions?.run) {
-                  const animData: AnimationData = {
-                    player: chickModel,
-                    actionName: 'run',
-                    delta: getDelta(),
-                    speed: 1
-                  };
-                  updateAnimation(animData);
-                }
-              },
-            },
-            // Generate cubes
-            {
-              frequency: 75,
-              action: () => {
-                const cube = getCube(scene, world, {
-                  size: [30, 30, 30],
-                  restitution: -1,
-                  position: [30 * 8, 15 * Math.floor(Math.random() * 3) + 15, 0],
-                  type: "fixed",
-                  texture: brickTexture,
-                  boundary: 0.5,
-                  color: 0x888888,
-                }) as ComplexModel;
-                obstacles.push(cube);
-              },
-            },
-            // Move obstacles
-            {
-              action: () => {
-                obstacles.forEach((obstacle: ComplexModel) => {
-                  obstacle.mesh.position.x -= character.speed * 3;
-                });
-              },
-            },
-          ],
+          timeline: timelineManager,
         });
       },
     });

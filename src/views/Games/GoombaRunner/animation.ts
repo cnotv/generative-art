@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Ref } from "vue";
+import { createTimelineManager } from "@webgamekit/animation";
 import { config } from "./config";
 import {
   populateInitialBackgrounds,
@@ -86,9 +87,12 @@ const createTimeline = async ({
   let backgroundsPopulated = false;
   const horizonLine = addHorizonLine(scene);
 
-  return [
+  const timelineManager = createTimelineManager();
+
+  timelineManager.addActions([
     {
       name: "Cleanup and reset",
+      category: "game-logic",
       action: () => {
         if (physicsHelper) physicsHelper.update();
         updateExplosionParticles(scene, getDelta());
@@ -96,6 +100,7 @@ const createTimeline = async ({
     },
     {
       name: "Reset background",
+      category: "game-logic",
       action: () => {
         if (isGameStart && !backgroundsPopulated) {
           populateInitialBackgrounds(scene, world, backgrounds);
@@ -114,6 +119,7 @@ const createTimeline = async ({
     },
     {
       name: "Generate cubes",
+      category: "game-logic",
       frequency: config.blocks.spacing,
       action: async () => {
         if (!isGamePlaying.value) return;
@@ -122,12 +128,14 @@ const createTimeline = async ({
     },
     {
       name: "Move ground",
+      category: "game-logic",
       action: () => {
         moveGround(groundTexture, isGamePlaying.value, gameScore.value);
       },
     },
     {
       name: "Move background",
+      category: "visual-effects",
       action: () => {
         if (isGamePlaying.value) {
           createBackgrounds(
@@ -143,6 +151,7 @@ const createTimeline = async ({
     },
     {
       name: "Make Goomba run",
+      category: "user-input",
       action: () => {
         ensurePlayerAboveGround(player);
         movePlayer(
@@ -177,6 +186,7 @@ const createTimeline = async ({
 
     {
       name: "Move obstacles",
+      category: "game-logic",
       action: () => {
         if (!isGamePlaying.value) return;
         moveBlocks(
@@ -189,7 +199,9 @@ const createTimeline = async ({
         );
       },
     },
-  ];
+  ]);
+
+  return timelineManager;
 };
 
 export { createTimeline };

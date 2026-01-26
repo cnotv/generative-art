@@ -2,7 +2,7 @@
 import { onMounted, ref } from "vue";
 import * as THREE from "three";
 import { getTools, getModel } from "@webgamekit/threejs";
-import { updateAnimation } from "@webgamekit/animation";
+import { updateAnimation, createTimelineManager } from "@webgamekit/animation";
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -255,6 +255,27 @@ const init = async () => {
         }
       });
 
+      const timelineManager = createTimelineManager();
+
+      timelineManager.addAction({
+        category: "animation",
+        action: () => {
+          if (
+            chameleonModel &&
+            selectedAnimation.value &&
+            chameleonModel.actions[selectedAnimation.value]
+          ) {
+            const actionName = selectedAnimation.value;
+            updateAnimation({
+              player: chameleonModel,
+              actionName,
+              delta: getDeltaRef(),
+              speed: 4
+            });
+          }
+        },
+      });
+
       animate({
         beforeTimeline: () => {
           // Update helper if mesh is selected
@@ -262,25 +283,7 @@ const init = async () => {
             meshHelper.value.update();
           }
         },
-        timeline: [
-          {
-            action: () => {
-              if (
-                chameleonModel &&
-                selectedAnimation.value &&
-                chameleonModel.actions[selectedAnimation.value]
-              ) {
-                const actionName = selectedAnimation.value;
-                updateAnimation({
-                  player: chameleonModel,
-                  actionName,
-                  delta: getDeltaRef(),
-                  speed: 4
-                });
-              }
-            },
-          },
-        ],
+        timeline: timelineManager,
       });
     },
   });

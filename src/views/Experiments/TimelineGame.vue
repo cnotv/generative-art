@@ -12,6 +12,7 @@ import {
   bindAnimatedElements,
   controllerJump,
   controllerTurn,
+  createTimelineManager,
   type Timeline,
   type CoordinateTuple,
   type AnimationData,
@@ -153,17 +154,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         // Goomba 1
         const goomba1 = await getGoomba([0, 30, 0]);
-        const timeline1 = (model: ComplexModel) => {
+        const timeline1 = (model: ComplexModel): Timeline[] => {
           return [
             {
-              interval: [100, 100],
+              interval: [100, 100] as [number, number],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
             {
-              interval: [100, 100],
+              interval: [100, 100] as [number, number],
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
@@ -171,34 +172,34 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               },
             },
             {
-              interval: [20, 180],
+              interval: [20, 180] as [number, number],
               delay: 230,
               action: () => {
                 controllerJump(model, cubes, character.speed, character.jump);
               },
             },
             {
-              interval: [1, 250],
+              interval: [1, 250] as [number, number],
               delay: 250,
               action: () => {
                 resetAnimation([model]);
               },
             },
-          ] as Timeline[];
+          ];
         };
 
         const goomba2 = await getGoomba([-60, 30, 0]);
-        const timeline2 = (model: ComplexModel) => {
+        const timeline2 = (model: ComplexModel): Timeline[] => {
           return [
             {
-              interval: [120, 480],
+              interval: [120, 480] as [number, number],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
             {
-              interval: [120, 480],
+              interval: [120, 480] as [number, number],
               delay: 120,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
@@ -206,14 +207,14 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               },
             },
             {
-              interval: [20, 580],
+              interval: [20, 580] as [number, number],
               delay: 200,
               action: () => {
                 controllerJump(model, cubes, 0.5, character.jump);
               },
             },
             {
-              interval: [120, 480],
+              interval: [120, 480] as [number, number],
               delay: 240,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
@@ -221,55 +222,55 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               },
             },
             {
-              interval: [120, 480],
+              interval: [120, 480] as [number, number],
               delay: 360,
               actionStart: () => controllerTurn(model, rotationMap["left"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
-          ] as Timeline[];
+          ];
         };
 
         const goomba3 = await getGoomba([-60, 0, 60]);
-        const timeline3 = (model: ComplexModel) => {
+        const timeline3 = (model: ComplexModel): Timeline[] => {
           return [
             {
-              interval: [200, 200],
+              interval: [200, 200] as [number, number],
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
             {
-              interval: [100, 300],
+              interval: [100, 300] as [number, number],
               delay: 200,
               actionStart: () => controllerTurn(model, rotationMap["backward"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
-          ] as Timeline[];
+          ];
         };
 
         const goomba4 = await getGoomba([-30 * 5, 0, -30]);
-        const timeline4 = (model: ComplexModel) => {
+        const timeline4 = (model: ComplexModel): Timeline[] => {
           return [
             {
-              interval: [100, 100],
+              interval: [100, 100] as [number, number],
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
             {
-              interval: [100, 100],
+              interval: [100, 100] as [number, number],
               delay: 100,
               actionStart: () => controllerTurn(model, rotationMap["right"]),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
-          ] as Timeline[];
+          ];
         };
 
         const goomba5 = await getGoomba(
@@ -288,7 +289,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         });
         const movingCubeTimeline: Timeline[] = [
           {
-            interval: [100, 100],
+            interval: [100, 100] as [number, number],
             action: () =>
               movingCube.userData.body.setTranslation(
                 movingCube.position.add(new THREE.Vector3(0, 0.5, 0)),
@@ -296,7 +297,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
               ),
           },
           {
-            interval: [100, 100],
+            interval: [100, 100] as [number, number],
             delay: 100,
             action: () =>
               movingCube.userData.body.setTranslation(
@@ -307,23 +308,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         ];
 
         const goomba6 = await getGoomba([30, 0, 30 * 2]);
-        const timeline6 = (model: ComplexModel) => {
+        const timeline6 = (model: ComplexModel): Timeline[] => {
           return [
             {
-              interval: [1, 0],
+              interval: [1, 0] as [number, number],
               actionStart: () => controllerTurn(model, 1),
               action: () => {
                 controllerForward(cubes, [], createGoombaAnimData(model, getDelta));
               },
             },
             {
-              interval: [20, 100],
+              interval: [20, 100] as [number, number],
               delay: 100,
               action: () => {
                 controllerJump(model, cubes, character.speed, character.jump);
               },
             },
-          ] as Timeline[];
+          ];
         };
 
         // elements.push(goomba6, ...cubes);
@@ -342,37 +343,45 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           ...cubes
         );
 
+        const timelineManager = createTimelineManager();
+
+        // Add all timeline actions
+        timelineManager.addActions([
+          ...timeline1(goomba1),
+          ...timeline2(goomba2),
+          ...timeline3(goomba3),
+          ...timeline4(goomba4),
+          ...movingCubeTimeline,
+          ...timeline6(goomba6),
+        ]);
+
+        timelineManager.addAction({
+          start: 0,
+          category: "visual-effects",
+          action: () => {
+            coins.forEach((coin) => (coin.mesh.rotation.z += 0.05));
+          },
+        });
+
+        timelineManager.addAction({
+          interval: [1, 50] as [number, number],
+          category: "physics",
+          action: () => {
+            elements.push(
+              getBall(scene, world, {
+                size: 10,
+                position: [0, 90, -30],
+                showHelper: false,
+              })
+            );
+          },
+        });
+
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());
           },
-          timeline: [
-            ...timeline1(goomba1),
-            ...timeline2(goomba2),
-            ...timeline3(goomba3),
-            ...timeline4(goomba4),
-            ...movingCubeTimeline,
-            ...timeline6(goomba6),
-            {
-              start: 0,
-              action: () => {
-                coins.forEach((coin) => (coin.mesh.rotation.z += 0.05));
-              },
-            },
-
-            {
-              interval: [1, 50],
-              action: () => {
-                elements.push(
-                  getBall(scene, world, {
-                    size: 10,
-                    position: [0, 90, -30],
-                    showHelper: false,
-                  })
-                );
-              },
-            },
-          ],
+          timeline: timelineManager,
         });
       },
     });

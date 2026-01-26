@@ -1,32 +1,70 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
-import { Timeline, Direction, ComplexModel, Model } from './types';
+import { Timeline, ComplexModel, Model } from './types';
+import type { TimelineManager } from './TimelineManager';
 
 export * from './types';
 
 /**
- * 
- * @param element THREE mesh
- * @param timeline List of actions to perform
+ * Animate timeline actions based on the current frame
+ * @param timeline TimelineManager instance with actions to perform
  * @param frame Current frame (to do not confuse with delta as for animation)
+ * @param args Optional arguments to pass to action callbacks
+ * @param options Optional configuration for timeline processing
  * @example
- * // Sequence of 3 animations
-  { start: 0, end: 100, action: (mesh) => { mesh.rotation.x += 0.01; } },
-  { start: 100, end: 200, action: (mesh) => { mesh.rotation.y += 0.01; } },
-  { start: 200, end: 300, action: (mesh) => { mesh.rotation.z += 0.01; } },
-  
-  // Alternated animations
-  { interval: [100, 100], action: (mesh) => { mesh.rotation.y += 0.01; } },
-  { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
+ * const manager = createTimelineManager();
+ * manager.addAction({ start: 0, duration: 100, action: (mesh) => { mesh.rotation.x += 0.01; } });
+ * manager.addAction({ start: 100, duration: 100, action: (mesh) => { mesh.rotation.y += 0.01; } });
+ *
+ * // In animation loop
+ * animateTimeline(manager, frame, mesh, { enableAutoRemoval: true });
  */
-const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
-  timeline.forEach(({ start, end, frequency, delay, interval, action, actionStart }) => {
+const animateTimeline = <T>(
+  timeline: TimelineManager,
+  frame: number,
+  args?: T,
+  options?: {
+    enableAutoRemoval?: boolean;
+    sortByPriority?: boolean;
+  }
+) => {
+  const actions = timeline.getTimeline();
+
+  // Sort by priority if enabled
+  const sortedActions = options?.sortByPriority
+    ? [...actions].sort((a, b) => (b.priority || 0) - (a.priority || 0))
+    : actions;
+
+  // Track completed actions for auto-removal
+  const toRemove: string[] = [];
+
+  sortedActions.forEach((timelineAction: Timeline) => {
+    // Skip if disabled
+    if (timelineAction.enabled === false) return;
+
+    const {
+      start, end, frequency, delay, interval,
+      action, actionStart, duration, id, onComplete
+    } = timelineAction;
+
+    // Calculate actual end from duration if provided
+    const actualEnd = duration !== undefined && start !== undefined
+      ? start + duration
+      : end;
+
     let cycle = 0;
     let frameCycle = 0;
     let loop = 0;
+    let isComplete = false;
+
     if (start && frame < start) return;
-    if (end && frame > end) return;
+    if (actualEnd && frame > actualEnd) {
+      isComplete = true;
+      if (!onComplete) return;
+    }
     if (delay && frame < delay) return;
+
+    // Handle interval logic
     if (interval) {
       const [length, pause] = interval;
       cycle = length + pause;
@@ -35,58 +73,28 @@ const animateTimeline = <T>(timeline: Timeline[], frame: number, args?: T) => {
       if (frameCycle >= length) return;
     }
 
+    // Execute action
     if (!frequency || (frequency && frame % frequency === 0)) {
       if (actionStart && frameCycle === 0) {
         actionStart(loop, args);
       }
-      if (action) action(args)
+      if (action && !isComplete) action(args);
+    }
+
+    // Handle completion
+    if (isComplete && onComplete) {
+      onComplete(args);
+      if (timelineAction.autoRemove && id) {
+        toRemove.push(id);
+        timeline._markCompleted(id);
+      }
     }
   });
-}
 
-/**
-  * Generate a Timeline from a given loop
-  * Example:
-    const myLoop = {
-      loop: 0,
-      length: 30,
-      action: (direction) => console.log(direction),
-      list: [
-        [3, forward'],
-        [3, left'],
-        [1, jump'],
-        [3, right'],
-        [3, forward'],
-      ]
-    }
-  * @param loop 
-  */
-const getTimelineLoopModel = ({ loop, length, action, list }: {
-    loop: number, // 0 === infinite
-    length: number,
-    action: (args: any) => void,
-    list: [number, Direction][] // [steps, direction]
-}): Timeline[] => {
-  const total = list.reduce((acc, [step]) => acc + step * length, 0);
-  return list.reduce((timeline, [step, args], index) => {
-    const partial = loop > 0
-      ? {
-        from: total,
-        to: total + step * length,
-      }
-      : {
-        interval: [step * length, total],
-        delay: timeline[index - 1] ? timeline[index - 1].interval![0] : 0,
-      };
-    
-      return [
-      ...timeline,
-      {
-        ...partial,
-        action: () => action(args),
-      }
-    ] as Timeline[];
-  }, [] as Timeline[]);
+  // Auto-remove completed actions
+  if (options?.enableAutoRemoval) {
+    toRemove.forEach(id => timeline.removeAction(id));
+  }
 }
 
 const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: ComplexModel[]): boolean => {
@@ -190,15 +198,16 @@ const updateAnimation = (data: AnimationData): void => {
 
   if (!action || !mixer) return;
 
-  player.userData.performing = blocking > action.time;
+  player.userData.performing = action.time < blocking;
 
   // Handle animation switching
   if (player.userData.currentAction !== actionName) {
-    // if (player.userData.performing) return;
-    
-    const previousAction = player.userData.currentAction 
+    const previousAction = player.userData.currentAction
       ? player.userData.actions?.[player.userData.currentAction]
       : null;
+
+    // Only allow action change if current action is not performing (time >= blocking)
+    // if (previousAction && previousAction.time < blocking) return;
     
     if (previousAction && previousAction !== action) {
       previousAction.fadeOut(0.2);
@@ -676,7 +685,6 @@ const bodyJump = (
 
 export {
   animateTimeline,
-  getTimelineLoopModel,
   bindAnimatedElements,
   resetAnimation,
   getAnimationsModel,
@@ -703,3 +711,18 @@ export type {
   GroundCheckOptions,
   GroundMovementResult,
 };
+
+// NEW: Timeline management exports
+export { createTimelineManager } from './TimelineManager';
+export type { TimelineManager } from './TimelineManager';
+
+export { createTimelineLogger } from './TimelineLogger';
+export type { TimelineLogger, TimelineLogEntry } from './TimelineLogger';
+
+export {
+  generateTimelineId,
+  createDurationAction,
+  createOneShotAction,
+  createIntervalAction,
+  canAddAction,
+} from './helpers';

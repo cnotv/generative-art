@@ -1,46 +1,31 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
-import { Timeline, Direction, ComplexModel, ComplexModel, Model } from './types';
+import { Timeline, ComplexModel, Model } from './types';
+import type { TimelineManager } from './TimelineManager';
 export * from './types';
 /**
- *
- * @param element THREE mesh
- * @param timeline List of actions to perform
+ * Animate timeline actions based on the current frame
+ * @param timeline TimelineManager instance with actions to perform
  * @param frame Current frame (to do not confuse with delta as for animation)
+ * @param args Optional arguments to pass to action callbacks
+ * @param options Optional configuration for timeline processing
  * @example
- * // Sequence of 3 animations
-  { start: 0, end: 100, action: (mesh) => { mesh.rotation.x += 0.01; } },
-  { start: 100, end: 200, action: (mesh) => { mesh.rotation.y += 0.01; } },
-  { start: 200, end: 300, action: (mesh) => { mesh.rotation.z += 0.01; } },
-  
-  // Alternated animations
-  { interval: [100, 100], action: (mesh) => { mesh.rotation.y += 0.01; } },
-  { delay: 100, interval: [100, 100], action: (mesh) => { mesh.rotation.z += 0.01; } },
+ * const manager = createTimelineManager();
+ * manager.addAction({ start: 0, duration: 100, action: (mesh) => { mesh.rotation.x += 0.01; } });
+ * manager.addAction({ start: 100, duration: 100, action: (mesh) => { mesh.rotation.y += 0.01; } });
+ *
+ * // In animation loop
+ * animateTimeline(manager, frame, mesh, { enableAutoRemoval: true });
  */
-declare const animateTimeline: <T>(timeline: Timeline[], frame: number, args?: T) => void;
-/**
-  * Generate a Timeline from a given loop
-  * Example:
-    const myLoop = {
-      loop: 0,
-      length: 30,
-      action: (direction) => console.log(direction),
-      list: [
-        [3, forward'],
-        [3, left'],
-        [1, jump'],
-        [3, right'],
-        [3, forward'],
-      ]
-    }
-  * @param loop
-  */
-declare const getTimelineLoopModel: ({ loop, length, action, list }: {
-    loop: number;
-    length: number;
-    action: (args: any) => void;
-    list: [number, Direction][];
-}) => Timeline[];
+declare const animateTimeline: <T>(
+  timeline: TimelineManager,
+  frame: number,
+  args?: T,
+  options?: {
+    enableAutoRemoval?: boolean;
+    sortByPriority?: boolean;
+  }
+) => void;
 /**
  * Bind physic to models to animate them
  * @param elements
@@ -135,5 +120,8 @@ declare const controllerJump: (model: ComplexModel, _bodies: ComplexModel[], _di
  */
 declare const controllerTurn: (model: ComplexModel, angle: number) => void;
 declare const bodyJump: (model: ComplexModel, bodies: ComplexModel[], distance: number, height: number) => void;
-export { animateTimeline, getTimelineLoopModel, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, checkGroundAtPosition };
+export { animateTimeline, bindAnimatedElements, resetAnimation, getAnimationsModel, updateAnimation, controllerForward, controllerJump, controllerTurn, bodyJump, checkGroundAtPosition };
 export type { AnimationData, ControllerForwardOptions };
+// Timeline management exports
+export { createTimelineManager, createTimelineLogger, generateTimelineId, createDurationAction, createOneShotAction, createIntervalAction, canAddAction };
+export type { TimelineManager, TimelineLogger, TimelineLogEntry };

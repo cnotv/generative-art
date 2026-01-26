@@ -6,6 +6,7 @@ export type Model = THREE.Object3D<THREE.Object3DEventMap>;
 export type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased';
 
 export interface Timeline {
+  // Existing fields
   name?: string;
   action?: (element?: any) => void;
   actionStart?: (loop: number, element?: any) => void;
@@ -14,6 +15,16 @@ export interface Timeline {
   frequency?: number;
   interval?: [number, number]; // Interval as a range [start, end]
   delay?: number;
+
+  // Enhanced fields (all optional for backward compatibility)
+  id?: string;                    // Unique identifier (auto-generated if not provided)
+  category?: string;              // For logging/filtering ("user-input", "ai-behavior", "physics")
+  duration?: number;              // Duration in frames (calculates end = start + duration)
+  autoRemove?: boolean;           // Auto-remove when complete
+  onComplete?: (element?: any) => void; // Callback on completion
+  priority?: number;              // Execution priority (higher = earlier, default: 0)
+  enabled?: boolean;              // Can be toggled on/off (default: true)
+  metadata?: Record<string, any>; // Custom data
 }
 
 export interface ComplexModel extends Model {

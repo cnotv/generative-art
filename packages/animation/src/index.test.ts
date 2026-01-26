@@ -1,73 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, getTimelineLoopModel, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition, getRotation, setRotation, type AnimationData } from './index';
+import { animateTimeline, controllerForward, controllerTurn, updateAnimation, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
 describe('animation', () => {
   describe('animateTimeline', () => {
     it('should execute action when frame matches start', () => {
+      const manager = createTimelineManager();
       const action = vi.fn();
-      const timeline = [{ start: 10, action }];
-      animateTimeline(timeline, 10);
+      manager.addAction({ start: 10, action });
+      animateTimeline(manager, 10);
       expect(action).toHaveBeenCalled();
     });
 
     it('should not execute action when frame is before start', () => {
+      const manager = createTimelineManager();
       const action = vi.fn();
-      const timeline = [{ start: 10, action }];
-      animateTimeline(timeline, 5);
+      manager.addAction({ start: 10, action });
+      animateTimeline(manager, 5);
       expect(action).not.toHaveBeenCalled();
     });
 
     it('should execute action within interval', () => {
+      const manager = createTimelineManager();
       const action = vi.fn();
       // interval: [length, pause]
       // cycle = 20
-      const timeline = [{ interval: [10, 10] as [number, number], action }];
-      
+      manager.addAction({ interval: [10, 10] as [number, number], action });
+
       // Frame 5: 5 % 20 = 5. 5 < 10. Run.
-      animateTimeline(timeline, 5);
+      animateTimeline(manager, 5);
       expect(action).toHaveBeenCalledTimes(1);
 
       // Frame 15: 15 % 20 = 15. 15 >= 10. Skip.
       action.mockClear();
-      animateTimeline(timeline, 15);
+      animateTimeline(manager, 15);
       expect(action).not.toHaveBeenCalled();
 
       // Frame 25: 25 % 20 = 5. 5 < 10. Run.
       action.mockClear();
-      animateTimeline(timeline, 25);
+      animateTimeline(manager, 25);
       expect(action).toHaveBeenCalled();
     });
   });
 
-  describe('getTimelineLoopModel', () => {
-    it('should generate correct timeline from loop definition', () => {
-      const action = vi.fn();
-      const loop = {
-        loop: 0,
-        length: 10,
-        action,
-        list: [
-          [1, 'forward'],
-          [2, 'left']
-        ] as [number, any][]
-      };
-
-      const timeline = getTimelineLoopModel(loop);
-      
-      expect(timeline).toHaveLength(2);
-      
-      // Check first item
-      // interval: [1 * 10, total]
-      // total = 1*10 + 2*10 = 30
-      expect(timeline[0].interval).toEqual([10, 30]);
-      
-      // Check second item
-      // interval: [2 * 10, total]
-      expect(timeline[1].interval).toEqual([20, 30]);
-    });
-  });
 
   describe('timeline with circular movement', () => {
     it('should return model to same position after completing a 360° rotation cycle', () => {
@@ -115,27 +91,26 @@ describe('animation', () => {
       const initialRotation = mockMesh.rotation.y;
 
       // Timeline configuration matching ToolsTest.vue
-      const timeline = [
-        {
-          frequency: speed,
-          action: () => {
-            const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
-            controllerForward([], [], animData);
-          },
+      const manager = createTimelineManager();
+      manager.addAction({
+        frequency: speed,
+        action: () => {
+          const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
+          controllerForward([], [], animData);
         },
-        {
-          frequency: speed * angle,
-          action: () => controllerTurn(mockModel, angle),
-        },
-      ];
+      });
+      manager.addAction({
+        frequency: speed * angle,
+        action: () => controllerTurn(mockModel, angle),
+      });
 
       // Complete cycle: 4 turns of 90° = 360°
       // At speed * angle frequency, we need 4 turns
       const cycleFrames = 360; // 4 turns * 90 frames each
-      
+
       // Simulate the animation loop
       for (let frame = 0; frame < cycleFrames; frame++) {
-        animateTimeline(timeline, frame);
+        animateTimeline(manager, frame);
       }
 
       // After 360°, the model should be at approximately the same position with margin of errors
@@ -196,27 +171,26 @@ describe('animation', () => {
       const positions: Array<{ x: number; z: number }> = [];
 
       // Timeline for square pattern: move forward segment, then turn
-      const timeline = [
-        {
-          frequency: 1,
-          action: () => {
-            const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
-            controllerForward([], [], animData);
-          },
+      const manager = createTimelineManager();
+      manager.addAction({
+        frequency: 1,
+        action: () => {
+          const animData: AnimationData = { player: mockModel, actionName: 'run', delta: getDelta() };
+          controllerForward([], [], animData);
         },
-        {
-          // Record position and turn every 10 frames
-          frequency: 10,
-          action: () => {
-            positions.push({ x: mockMesh.position.x, z: mockMesh.position.z });
-            controllerTurn(mockModel, angle);
-          },
+      });
+      manager.addAction({
+        // Record position and turn every 10 frames
+        frequency: 10,
+        action: () => {
+          positions.push({ x: mockMesh.position.x, z: mockMesh.position.z });
+          controllerTurn(mockModel, angle);
         },
-      ];
+      });
 
       // Simulate 40 frames: 4 sides × 10 steps each
       for (let frame = 0; frame < 40; frame++) {
-        animateTimeline(timeline, frame);
+        animateTimeline(manager, frame);
       }
 
       // After 4 turns of 90°, should have traveled in roughly a square
@@ -660,6 +634,195 @@ describe('animation', () => {
       // Test 45 degrees (diagonal)
       setRotation(mockModel, 45);
       expect(mockModel.rotation.y).toBeCloseTo(Math.PI / 4, 5);
+    });
+  });
+
+  describe('TimelineManager integration with animateTimeline', () => {
+    it('should execute actions managed by TimelineManager', () => {
+      const manager = createTimelineManager();
+      const action1 = vi.fn();
+      const action2 = vi.fn();
+
+      manager.addAction({ name: 'action1', start: 10, end: 20, action: action1 });
+      manager.addAction({ name: 'action2', start: 15, action: action2 });
+
+      // Frame 5 - no actions should run
+      animateTimeline(manager, 5);
+      expect(action1).not.toHaveBeenCalled();
+      expect(action2).not.toHaveBeenCalled();
+
+      // Frame 10 - action1 should run
+      animateTimeline(manager, 10);
+      expect(action1).toHaveBeenCalledTimes(1);
+      expect(action2).not.toHaveBeenCalled();
+
+      // Frame 15 - both should run
+      action1.mockClear();
+      animateTimeline(manager, 15);
+      expect(action1).toHaveBeenCalledTimes(1);
+      expect(action2).toHaveBeenCalledTimes(1);
+
+      // Frame 25 - only action2 should run (action1 ended at 20)
+      action1.mockClear();
+      action2.mockClear();
+      animateTimeline(manager, 25);
+      expect(action1).not.toHaveBeenCalled();
+      expect(action2).toHaveBeenCalledTimes(1);
+    });
+
+    it('should support dynamic action addition and removal', () => {
+      const manager = createTimelineManager();
+      const action1 = vi.fn();
+      const action2 = vi.fn();
+
+      const id1 = manager.addAction({ name: 'action1', frequency: 1, action: action1 });
+      manager.addAction({ name: 'action2', frequency: 1, action: action2 });
+
+      // Both actions execute
+      animateTimeline(manager, 10);
+      expect(action1).toHaveBeenCalled();
+      expect(action2).toHaveBeenCalled();
+
+      // Remove action1
+      manager.removeAction(id1);
+      action1.mockClear();
+      action2.mockClear();
+
+      // Only action2 executes
+      animateTimeline(manager, 11);
+      expect(action1).not.toHaveBeenCalled();
+      expect(action2).toHaveBeenCalled();
+    });
+
+    it('should handle disabled actions', () => {
+      const manager = createTimelineManager();
+      const action = vi.fn();
+
+      const id = manager.addAction({ name: 'test', frequency: 1, action, enabled: true });
+
+      // Action executes when enabled
+      animateTimeline(manager, 5);
+      expect(action).toHaveBeenCalledTimes(1);
+
+      // Disable action
+      manager.updateAction(id, { enabled: false });
+      action.mockClear();
+
+      // Action does not execute when disabled
+      animateTimeline(manager, 6);
+      expect(action).not.toHaveBeenCalled();
+
+      // Re-enable action
+      manager.updateAction(id, { enabled: true });
+
+      // Action executes again
+      animateTimeline(manager, 7);
+      expect(action).toHaveBeenCalledTimes(1);
+    });
+
+    it('should auto-remove completed actions with autoRemove flag', () => {
+      const manager = createTimelineManager();
+      const action = vi.fn();
+
+      manager.addAction({
+        name: 'one-shot',
+        start: 10,
+        duration: 5,
+        action,
+        autoRemove: true,
+        onComplete: vi.fn(),
+      });
+
+      expect(manager.getTimeline()).toHaveLength(1);
+
+      // Execute at frame 10
+      animateTimeline(manager, 10, undefined, { enableAutoRemoval: true });
+      expect(action).toHaveBeenCalled();
+      expect(manager.getTimeline()).toHaveLength(1); // Not completed yet
+
+      // Execute at frame 20 (after duration)
+      action.mockClear();
+      animateTimeline(manager, 20, undefined, { enableAutoRemoval: true });
+      expect(action).not.toHaveBeenCalled(); // Past duration
+      expect(manager.getTimeline()).toHaveLength(0); // Auto-removed
+    });
+
+    it('should execute actions in priority order when sortByPriority is enabled', () => {
+      const manager = createTimelineManager();
+      const executionOrder: number[] = [];
+
+      manager.addAction({
+        name: 'low-priority',
+        frequency: 1,
+        priority: 1,
+        action: () => executionOrder.push(1),
+      });
+
+      manager.addAction({
+        name: 'high-priority',
+        frequency: 1,
+        priority: 10,
+        action: () => executionOrder.push(10),
+      });
+
+      manager.addAction({
+        name: 'medium-priority',
+        frequency: 1,
+        priority: 5,
+        action: () => executionOrder.push(5),
+      });
+
+      animateTimeline(manager, 1, undefined, { sortByPriority: true });
+
+      // Should execute in order: high (10), medium (5), low (1)
+      expect(executionOrder).toEqual([10, 5, 1]);
+    });
+
+    it('should handle category-based action management', () => {
+      const manager = createTimelineManager();
+      const physicsAction = vi.fn();
+      const uiAction = vi.fn();
+      const aiAction = vi.fn();
+
+      manager.addAction({ name: 'p1', category: 'physics', frequency: 1, action: physicsAction });
+      manager.addAction({ name: 'p2', category: 'physics', frequency: 1, action: physicsAction });
+      manager.addAction({ name: 'ui1', category: 'ui', frequency: 1, action: uiAction });
+      manager.addAction({ name: 'ai1', category: 'ai', frequency: 1, action: aiAction });
+
+      expect(manager.getActionsByCategory('physics')).toHaveLength(2);
+      expect(manager.getActionsByCategory('ui')).toHaveLength(1);
+
+      // Remove all physics actions
+      manager.removeByCategory('physics');
+
+      animateTimeline(manager, 1);
+      expect(physicsAction).not.toHaveBeenCalled();
+      expect(uiAction).toHaveBeenCalled();
+      expect(aiAction).toHaveBeenCalled();
+    });
+
+    it('should work with interval actions', () => {
+      const manager = createTimelineManager();
+      const action = vi.fn();
+
+      manager.addAction({
+        name: 'interval-test',
+        interval: [10, 5], // Active for 10 frames, pause for 5
+        action,
+      });
+
+      // Frame 5: within first active period (0-9)
+      animateTimeline(manager, 5);
+      expect(action).toHaveBeenCalledTimes(1);
+
+      // Frame 12: within pause period (10-14)
+      action.mockClear();
+      animateTimeline(manager, 12);
+      expect(action).not.toHaveBeenCalled();
+
+      // Frame 17: within second active period (15-24)
+      animateTimeline(manager, 17);
+      expect(action).toHaveBeenCalledTimes(1);
     });
   });
 });

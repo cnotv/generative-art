@@ -11,7 +11,7 @@ import {
   CameraSide,
   setCameraSide,
 } from "@webgamekit/threejs";
-import { controllerTurn, controllerForward, type CoordinateTuple, type AnimationData, updateAnimation } from "@webgamekit/animation";
+import { controllerTurn, controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, createTimelineManager } from "@webgamekit/animation";
 import type { ComplexModel } from "@webgamekit/threejs";
 import { createGame } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -230,87 +230,99 @@ const init = async (): Promise<void> => {
 
       // colorModel(player, chameleonConfig.materialColors);
       remapControlsOptions(bindings);
+
+      const timelineManager = createTimelineManager();
+
+      timelineManager.addAction({
+        frequency: speed.movement,
+        name: "Walk",
+        category: "user-input",
+        action: () => {
+          const walkAnimData: AnimationData = {
+            player,
+            actionName: "Esqueleto|walking",
+            delta: getDelta() * 2,
+            speed: 10,
+            distance,
+            backward: true
+          };
+          const idleAnimData: AnimationData = {
+            player,
+            actionName: "Esqueleto|idle",
+            delta: getDelta(),
+            speed: 10
+          };
+          if (!currentActions["toggle-move"] || currentActions["moving"])
+            controllerForward(
+              obstacles,
+              [],
+              walkAnimData
+            );
+          else updateAnimation(idleAnimData);
+        },
+      });
+
+      timelineManager.addAction({
+        name: "Loop: Turn player",
+        frequency: speed.movement * angle,
+        category: "user-input",
+        action: () => {
+          if (!currentActions["toggle-move"]) {
+            controllerTurn(player, angle);
+          }
+        },
+      });
+
+      timelineManager.addAction({
+        name: "Free: Turn player",
+        frequency: speed.movement,
+        category: "user-input",
+        action: () => {
+          if (currentActions["toggle-move"]) {
+            if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
+            if (currentActions["turn-right"])
+              controllerTurn(player, -speed.turning);
+          }
+        },
+      });
+
+      timelineManager.addAction({
+        name: "Loop: Set score",
+        frequency: speed.movement * angle * 4,
+        category: "game-logic",
+        action: () => {
+          if (!currentActions["toggle-move"]) {
+            if (gameState.value)
+              gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
+          }
+        },
+      });
+
+      timelineManager.addAction({
+        name: "Jump action",
+        category: "physics",
+        action: () => {
+          if (isJumping.value) {
+            if (player.position.y >= mushroomConfig.position[1] + maxJump) {
+              isJumping.value = false;
+            } else {
+              player.position.y += speed.jump * 0.1;
+            }
+          } else {
+            player.position.y -= speed.jump * 0.1;
+          }
+
+          // Fake gravity
+          if (player.position.y <= mushroomConfig.position[1] + 0.1) {
+            canJump.value = true;
+            player.position.y = mushroomConfig.position[1];
+          }
+        },
+      });
+
       animate({
         beforeTimeline: () => {},
-        timeline: [
-          {
-            frequency: speed.movement,
-            name: "Walk",
-            action: () => {
-              const walkAnimData: AnimationData = {
-                player,
-                actionName: "Esqueleto|walking",
-                delta: getDelta() * 2,
-                speed: 10,
-                distance,
-                backward: true
-              };
-              const idleAnimData: AnimationData = {
-                player,
-                actionName: "Esqueleto|idle",
-                delta: getDelta(),
-                speed: 10
-              };
-              if (!currentActions["toggle-move"] || currentActions["moving"])
-                controllerForward(
-                  obstacles,
-                  [],
-                  walkAnimData
-                );
-              else updateAnimation(idleAnimData);
-            },
-          },
-          {
-            name: "Loop: Turn player",
-            frequency: speed.movement * angle,
-            action: () => {
-              if (!currentActions["toggle-move"]) {
-                controllerTurn(player, angle);
-              }
-            },
-          },
-          {
-            name: "Free: Turn player",
-            frequency: speed.movement,
-            action: () => {
-              if (currentActions["toggle-move"]) {
-                if (currentActions["turn-left"]) controllerTurn(player, speed.turning);
-                if (currentActions["turn-right"])
-                  controllerTurn(player, -speed.turning);
-              }
-            },
-          },
-          {
-            name: "Loop: Set score",
-            frequency: speed.movement * angle * 4,
-            action: () => {
-              if (!currentActions["toggle-move"]) {
-                if (gameState.value)
-                  gameState.value.setData("score", (gameState.value.data.score || 0) + 1);
-              }
-            },
-          },
-          {
-            name: "Jump action",
-            action: () => {
-              if (isJumping.value) {
-                if (player.position.y >= mushroomConfig.position[1] + maxJump) {
-                  isJumping.value = false;
-                } else {
-                  player.position.y += speed.jump * 0.1;
-                }
-              } else {
-                player.position.y -= speed.jump * 0.1;
-              }
-
-              // Fake gravity
-              if (player.position.y <= mushroomConfig.position[1] + 0.1) {
-                canJump.value = true;
-                player.position.y = mushroomConfig.position[1];
-              }
-            },
-          },
-        ],
+        timeline: timelineManager,
       });
     },
   });

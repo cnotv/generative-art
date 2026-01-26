@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { EffectComposer, setupPostprocessing } from './postprocessing';
 import { video } from './utils/video';
-import { animateTimeline, CoordinateTuple, Timeline } from '@webgamekit/animation';
+import { animateTimeline, CoordinateTuple, type TimelineManager } from '@webgamekit/animation';
 import { ToolsConfig, SetupConfig, ModelOptions, ComplexModel } from './types';
 import { getEnvironment, getLights, getGround, getSky } from './getters';
 import { updateCamera } from './camera';
@@ -103,12 +103,12 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
    * The animation loop.
    * @param beforeTimeline Actions required to be performed before the timeline
    * @param afterTimeline Actions required to be performed after the timeline
-   * @param timelines List of animations and loops
+   * @param timeline TimelineManager instance for managing animations
    */
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
-    timeline = [],
+    timeline,
     config = {
       orbit: {
         debug: false,
@@ -117,21 +117,21 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   }: {
     beforeTimeline?: () => void,
     afterTimeline?: () => void,
-      timeline?: Timeline[],
-      config?: {
-        orbit?: {
-          debug?: boolean,
-        }
+    timeline: TimelineManager,
+    config?: {
+      orbit?: {
+        debug?: boolean,
       }
-  }) => { 
+    }
+  }) => {
     function runAnimation() {
       if (stats?.start && route) stats.start(route);
       delta = clock.getDelta();
       frame = requestAnimationFrame(runAnimation);
       world.step();
-  
+
       beforeTimeline();
-      animateTimeline(timeline, frame);
+      animateTimeline(timeline, frame, undefined, { enableAutoRemoval: true });
       afterTimeline();
       
       if (orbit) {

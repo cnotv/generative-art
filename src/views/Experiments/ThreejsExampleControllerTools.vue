@@ -9,6 +9,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getTools } from "@webgamekit/threejs";
+import { createTimelineManager } from "@webgamekit/animation";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -240,19 +241,23 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
         setControls(movement);
 
+        const timelineManager = createTimelineManager();
+
+        timelineManager.addAction({
+          name: "Add bodies",
+          frequency: 75,
+          category: "physics",
+          action: () => {
+            addBody(scene, false, physics);
+          },
+        });
+
         animate({
           beforeTimeline: () => {
             if (physicsHelper) physicsHelper.update();
             animatePlayer(player, characterController, physics, movement);
           },
-          timeline: [
-            {
-              frequency: 75,
-              action: () => {
-                addBody(scene, false, physics);
-              },
-            },
-          ],
+          timeline: timelineManager,
         });
       },
     });

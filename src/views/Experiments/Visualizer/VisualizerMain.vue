@@ -6,7 +6,7 @@ import { stats } from "@/utils/stats";
 import * as THREE from "three";
 
 import { getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements } from "@webgamekit/animation";
+import { bindAnimatedElements, createTimelineManager } from "@webgamekit/animation";
 import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from "./audio";
 import {
   getVisualizer,
@@ -319,12 +319,17 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           // Setup click/touch handlers for the new visualizer
           setupVisualizerClickHandlers(visualizer.value, camera, canvas, visualizerObjects.value);
 
+          // Create timeline manager and add visualizer actions
+          const timelineManager = createTimelineManager();
+          const timelineActions = visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [];
+          timelineManager.addActions(timelineActions);
+
           // Reset and update the animation with new timeline
           animate({
             beforeTimeline: () => {
               bindAnimatedElements(elements, world, getDelta());
             },
-            timeline: visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [],
+            timeline: timelineManager,
           });
         };
 

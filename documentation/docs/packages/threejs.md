@@ -146,11 +146,29 @@ Start the animation loop with timeline support.
 {
   beforeTimeline?: () => void,
   afterTimeline?: () => void,
-  timeline?: Timeline[],
+  timeline: TimelineManager,  // Required: Use createTimelineManager()
   config?: {
     orbit?: { debug?: boolean }
   }
 }
+```
+
+**Example**:
+```typescript
+import { createTimelineManager } from '@webgamekit/animation';
+
+const timelineManager = createTimelineManager();
+timelineManager.addAction({
+  frequency: 2,
+  category: 'user-input',
+  action: () => {
+    // Your animation logic
+  }
+});
+
+animate({
+  timeline: timelineManager,
+});
 ```
 
 ## Model Loading

@@ -8,7 +8,7 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -115,53 +115,58 @@ const init = async (): Promise<void> => {
 
       remapControlsOptions(bindings);
 
+      const timelineManager = createTimelineManager();
+
+      timelineManager.addAction({
+        frequency: speed.movement,
+        name: "Walk",
+        category: "user-input",
+        action: () => {
+          const targetRotation = getRotation(currentActions, true);
+          const isMoving = targetRotation !== null;
+          const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
+          logControllerForward(movement.debug, currentActions, targetRotation);
+          const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: true, distance };
+          if (isMoving) {
+            setRotation(player, targetRotation);
+            controllerForward(
+              obstacles,
+              groundBodies,
+              animationData,
+              movement
+            );
+            cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+          } else {
+            updateAnimation(animationData);
+          }
+        },
+      });
+
+      timelineManager.addAction({
+        name: "Jump action",
+        category: "physics",
+        action: () => {
+          if (isJumping.value) {
+            if (player.position.y >= playerSettings.model.position[1] + maxJump) {
+              isJumping.value = false;
+            } else {
+              player.position.y += speed.jump * 0.1;
+            }
+          } else {
+            player.position.y -= speed.jump * 0.1;
+          }
+
+          // Fake gravity
+          if (player.position.y <= playerSettings.model.position[1] + 0.1) {
+            canJump.value = true;
+            player.position.y = playerSettings.model.position[1];
+          }
+        },
+      });
+
       animate({
         beforeTimeline: () => { },
-        timeline: [
-          {
-            frequency: speed.movement,
-            name: "Walk",
-            action: () => {
-              const targetRotation = getRotation(currentActions, true);
-              const isMoving = targetRotation !== null;
-              const actionName = isMoving ? "Esqueleto|walking" : "Esqueleto|idle";
-              logControllerForward(movement.debug, currentActions, targetRotation);
-              const animationData: AnimationData = { actionName, player, delta: getDelta() * 2, speed: 20, backward: true };
-              if (isMoving) {
-                setRotation(player, targetRotation);
-                controllerForward(
-                  obstacles,
-                  groundBodies,
-                  animationData,
-                  movement
-                );
-                cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
-              } else {
-                updateAnimation(animationData);
-              }
-            },
-          },
-          {
-            name: "Jump action",
-            action: () => {
-              if (isJumping.value) {
-                if (player.position.y >= playerSettings.model.position[1] + maxJump) {
-                  isJumping.value = false;
-                } else {
-                  player.position.y += speed.jump * 0.1;
-                }
-              } else {
-                player.position.y -= speed.jump * 0.1;
-              }
-
-              // Fake gravity
-              if (player.position.y <= playerSettings.model.position[1] + 0.1) {
-                canJump.value = true;
-                player.position.y = playerSettings.model.position[1];
-              }
-            },
-          },
-        ],
+        timeline: timelineManager,
       });
     },
   });

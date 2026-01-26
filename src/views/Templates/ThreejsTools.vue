@@ -5,7 +5,7 @@ import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 
 import { getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements } from "@webgamekit/animation";
+import { bindAnimatedElements, createTimelineManager } from "@webgamekit/animation";
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -51,11 +51,13 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         lights: { directional: { intensity: config.directional.intensity } },
       },
       defineSetup: async () => {
+        const timelineManager = createTimelineManager();
+
         animate({
           beforeTimeline: () => {
             bindAnimatedElements(elements, world, getDelta());
           },
-          timeline: [],
+          timeline: timelineManager,
         });
       },
     });

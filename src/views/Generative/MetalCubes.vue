@@ -5,7 +5,7 @@ import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { animateTimeline } from "@webgamekit/animation";
+import { animateTimeline, createTimelineManager } from "@webgamekit/animation";
 import { getLights } from "@webgamekit/threejs";
 import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
@@ -93,9 +93,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     camera.lookAt(10, 0, 0);
 
     // Define the timeline and animations
-    const cubesTimeline: Timeline[] = [
+    const cubesTimeline = createTimelineManager();
+    cubesTimeline.addActions([
       {
         interval: [config.intervals, config.intervals],
+        category: "visual-effects",
         action: (cube) => {
           cube.rotation.x += THREE.MathUtils.degToRad(1);
         },
@@ -103,11 +105,12 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       {
         delay: config.intervals,
         interval: [config.intervals, config.intervals],
+        category: "visual-effects",
         action: (cube) => {
           cube.rotation.y += THREE.MathUtils.degToRad(1);
         },
       },
-    ];
+    ]);
 
     positions.forEach((position) =>
       cubes.push(

@@ -7,12 +7,11 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
 import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
-import { aC } from 'vitest/dist/reporters-w_64AS5f.js';
 
 const playerSettings = {
   model: {
@@ -184,31 +183,33 @@ const init = async (): Promise<void> => {
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
       remapControlsOptions(bindings);
 
+      const timelineManager = createTimelineManager();
+      timelineManager.addAction({
+        frequency: speed.movement,
+        name: "Walk",
+        category: "user-input",
+        action: () => {
+          const targetRotation = getRotation(currentActions);
+          const isMoving = targetRotation !== null;
+          const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
+          if (isMoving) {
+            setRotation(player, targetRotation);
+            controllerForward(
+              obstacles,
+              groundBodies,
+              animationData,
+              movement
+            );
+            cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+          } else {
+            updateAnimation(animationData);
+          }
+        },
+      });
+
       animate({
         beforeTimeline: () => {},
-        timeline: [
-          {
-            frequency: speed.movement,
-            name: "Walk",
-            action: () => {
-              const targetRotation = getRotation(currentActions);
-              const isMoving = targetRotation !== null;
-              const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
-              if (isMoving) {
-                setRotation(player, targetRotation);
-                controllerForward(
-                  obstacles,
-                  groundBodies,
-                  animationData,
-                  movement
-                );
-                cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
-              } else {
-                updateAnimation(animationData);
-              }
-            },
-          },
-        ],
+        timeline: timelineManager,
       });
     },
   });
