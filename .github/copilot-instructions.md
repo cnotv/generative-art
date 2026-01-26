@@ -1,5 +1,12 @@
 # Generative Art - WebGameKit Project
 
+## Quick Rules
+
+1. **Document before coding**: Add implementation plan as comment to GitHub issue before writing code
+2. **Ask questions**: When multiple approaches exist, ask which to use
+3. **Use debugger**: Prefer `debugger` statements over `console.log()`
+4. **Run tests**: `pnpm test:unit` (not `vitest` directly)
+
 This is monorepo containing mainly 2 parts:
 - An agnostic toolkit for creating 3D environment, games and animations, as well as all-in-on controls, audio and more
 - A personal playground where to try the toolkit, as well as interactive generative art, Three.js and Rapier physics experiments
@@ -22,12 +29,38 @@ The project is organized as a **pnpm workspace monorepo**:
 4. `setup()` configures lights, ground, sky, camera, and defines scene objects
 5. `animate()` runs timeline-based update loops (physics, animations, controls)
 
+## GitHub Issue Workflow
+
+### Before Implementation
+1. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
+   - What you plan to implement
+   - Files to be modified/created
+   - Key design decisions
+   - Any questions or uncertainties
+2. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
+3. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
+
+### Issue Comment Format
+```markdown
+## Implementation Plan
+
+### Changes
+- `path/to/file.ts` - Description of changes
+
+### Approach
+Brief explanation of the chosen approach
+
+### Questions
+- [ ] Any clarifications needed?
+```
+
 ## Code Style & Best Practices
 
 ### Uncertainty & Debugging
 - **Ask before assuming**: If uncertain about expected behavior, physics interactions, or edge cases, ask for clarification before implementing
-- **Request logs/metrics**: When debugging 3D/physics issues, ask for console logs, position values, raycast results, or visual debug helpers
-- **Propose debug additions**: Suggest adding temporary `console.log()` statements, Three.js helpers (AxesHelper, ArrowHelper), or Rapier debug renderer to understand the problem
+- **Always ask when choices exist**: When multiple implementation approaches are possible, ask the user which direction to take before coding
+- **Use debugger, not console.log**: Prefer `debugger` statements over `console.log()` for debugging. Use browser DevTools breakpoints and step-through debugging
+- **Three.js debug helpers**: Use AxesHelper, ArrowHelper, BoxHelper, or Rapier debug renderer to visualize 3D issues
 - **Validate assumptions**: For movement, collision, or animation issues, request screenshots, video, or specific numeric values (positions, distances, angles)
 - **Iterative approach**: Complex 3D behaviors often need iterative refinement - propose small testable changes rather than large rewrites
 
