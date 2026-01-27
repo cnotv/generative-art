@@ -242,6 +242,74 @@ const playBlockingAction = (
 };
 
 /**
+ * Play a blocking animation using timeline-based management
+ * @param timelineManager Timeline manager instance
+ * @param player Player model with animations
+ * @param actionName Name of the animation action to play
+ * @param getDelta Function that returns delta time per frame
+ * @param options Configuration for blocking behavior
+ */
+const playBlockingActionTimeline = (
+  timelineManager: TimelineManager,
+  player: ComplexModel,
+  actionName: string,
+  getDelta: () => number,
+  options: {
+    allowMovement?: boolean;
+    allowRotation?: boolean;
+    allowActions?: string[];
+  } = {}
+): void => {
+  const { allowMovement = false, allowRotation = false, allowActions = [] } = options;
+  const action = player.userData.actions?.[actionName];
+
+  if (!action) return;
+  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
+
+  const clipDuration = (action as any)._clip?.duration || 0;
+  if (clipDuration === 0) return;
+
+  // Set blocking flags immediately
+  player.userData.performing = true;
+  player.userData.allowMovement = allowMovement;
+  player.userData.allowRotation = allowRotation;
+  player.userData.allowedActions = allowActions;
+  player.userData.currentAction = actionName;
+
+  // Track accumulated time
+  let accumulatedTime = 0;
+
+  // Add timeline action
+  const actionId = timelineManager.addAction({
+    name: `blocking-${actionName}`,
+    category: 'animation',
+    action: () => {
+      const delta = getDelta();
+      accumulatedTime += delta;
+
+      // Update animation
+      updateAnimation({
+        player,
+        actionName,
+        delta,
+      });
+
+      // Check if animation completed
+      if (accumulatedTime >= clipDuration) {
+        // Clear blocking flags
+        player.userData.performing = false;
+        player.userData.allowMovement = true;
+        player.userData.allowRotation = true;
+        player.userData.allowedActions = [];
+
+        // Remove this timeline action
+        timelineManager.removeAction(actionId);
+      }
+    },
+  });
+};
+
+/**
  * Update the animation of the model based on given time
  */
 const updateAnimation = (data: AnimationData): void => {
@@ -752,6 +820,7 @@ export {
   getAnimationsModel,
   updateAnimation,
   playBlockingAction,
+  playBlockingActionTimeline,
   controllerForward,
   controllerJump,
   controllerTurn,

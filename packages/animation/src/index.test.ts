@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, controllerForward, controllerTurn, updateAnimation, playBlockingAction, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
+import { animateTimeline, controllerForward, controllerTurn, updateAnimation, playBlockingAction, playBlockingActionTimeline, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -1007,5 +1007,274 @@ describe('animation', () => {
       expect(result).toBe(true);
       expect(model.rotation.y).toBeCloseTo(Math.PI / 2, 5);
     });
+  });
+
+  describe('playBlockingActionTimeline', () => {
+    const createTimelineModel = (clipDuration: number) => {
+      const mockAction = {
+        play: vi.fn(),
+        stop: vi.fn(),
+        reset: vi.fn().mockReturnThis(),
+        fadeIn: vi.fn().mockReturnThis(),
+        fadeOut: vi.fn(),
+        setLoop: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        clampWhenFinished: false,
+        _clip: { duration: clipDuration },
+      };
+
+      const mockMixer = {
+        update: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+
+      const mockMesh = new THREE.Group();
+      mockMesh.position.set(0, 0, 0);
+
+      return Object.assign(mockMesh, {
+        userData: {
+          mixer: mockMixer,
+          actions: {
+            punch: { ...mockAction, _clip: { duration: 1.5 } },
+            kick: { ...mockAction, _clip: { duration: 1.0 } },
+            jump: { ...mockAction, _clip: { duration: 0.8 } },
+            roll: { ...mockAction, _clip: { duration: 1.2 } },
+          },
+          currentAction: undefined,
+          body: {
+            translation: () => ({ x: 0, y: 0, z: 0 }),
+            setTranslation: vi.fn((pos: any) => mockMesh.position.set(pos.x, pos.y, pos.z)),
+          },
+          initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
+          type: 'dynamic',
+          performing: false,
+          allowMovement: true,
+          allowRotation: true,
+          allowedActions: [],
+        },
+      }) as unknown as ComplexModel;
+    };
+
+    it.each([
+      { action: 'punch', clipDuration: 1.5, deltaPerFrame: 0.016, expectedCalls: 94 },  // ~1.5 / 0.016
+      { action: 'kick', clipDuration: 1.0, deltaPerFrame: 0.016, expectedCalls: 63 },   // ~1.0 / 0.016
+      { action: 'jump', clipDuration: 0.8, deltaPerFrame: 0.016, expectedCalls: 50 },   // ~0.8 / 0.016
+      { action: 'roll', clipDuration: 1.2, deltaPerFrame: 0.016, expectedCalls: 75 },   // ~1.2 / 0.016
+    ])('should call updateAnimation until $action clip finishes (duration=$clipDuration)',
+      ({ action, clipDuration, deltaPerFrame, expectedCalls }) => {
+        // Given: Timeline manager, player with action, and getDelta function
+        const manager = createTimelineManager();
+        const player = createTimelineModel(clipDuration);
+        (player.userData.actions[action] as any)._clip.duration = clipDuration;
+        const getDelta = vi.fn().mockReturnValue(deltaPerFrame);
+
+        // When: playBlockingActionTimeline is called
+        playBlockingActionTimeline(manager, player, action, getDelta);
+
+        // Then: Timeline action should be added
+        expect(manager.getTimeline()).toHaveLength(1);
+
+        // And: Running timeline for expected duration
+        let accumulatedTime = 0;
+        let callCount = 0;
+        while (accumulatedTime < clipDuration && manager.getTimeline().length > 0) {
+          animateTimeline(manager, callCount);
+          accumulatedTime += deltaPerFrame;
+          callCount++;
+        }
+
+        // Then: Should run approximately expectedCalls times
+        expect(callCount).toBeGreaterThanOrEqual(expectedCalls - 2);
+        expect(callCount).toBeLessThanOrEqual(expectedCalls + 2);
+
+        // And: Timeline action should be removed after completion
+        expect(manager.getTimeline()).toHaveLength(0);
+      }
+    );
+
+    it.each([
+      {
+        action: 'kick',
+        options: { allowMovement: false, allowRotation: false },
+        expected: { performing: true, allowMovement: false, allowRotation: false, allowedActions: [] }
+      },
+      {
+        action: 'punch',
+        options: { allowMovement: false, allowRotation: false },
+        expected: { performing: true, allowMovement: false, allowRotation: false, allowedActions: [] }
+      },
+      {
+        action: 'roll',
+        options: { allowMovement: true, allowRotation: true },
+        expected: { performing: true, allowMovement: true, allowRotation: true, allowedActions: [] }
+      },
+      {
+        action: 'jump',
+        options: { allowMovement: true, allowRotation: false, allowActions: ['roll'] },
+        expected: { performing: true, allowMovement: true, allowRotation: false, allowedActions: ['roll'] }
+      },
+    ])('should set correct blocking flags for $action',
+      ({ action, options, expected }) => {
+        // Given: Timeline manager, player, and getDelta
+        const manager = createTimelineManager();
+        const player = createTimelineModel(1.0);
+        (player.userData.actions[action] as any)._clip.duration = 1.0;
+        const getDelta = vi.fn().mockReturnValue(0.016);
+
+        // When: playBlockingActionTimeline is called with options
+        playBlockingActionTimeline(manager, player, action, getDelta, options);
+
+        // Then: player.userData should match expected flags immediately
+        expect(player.userData.performing).toBe(expected.performing);
+        expect(player.userData.allowMovement).toBe(expected.allowMovement);
+        expect(player.userData.allowRotation).toBe(expected.allowRotation);
+        expect(player.userData.allowedActions).toEqual(expected.allowedActions);
+      }
+    );
+
+    it.each([
+      { action: 'punch', clipDuration: 1.0 },
+      { action: 'kick', clipDuration: 1.5 },
+      { action: 'roll', clipDuration: 1.2 },
+    ])('should clear blocking flags after $action animation completes',
+      ({ action, clipDuration }) => {
+        // Given: Timeline manager with running action
+        const manager = createTimelineManager();
+        const player = createTimelineModel(clipDuration);
+        (player.userData.actions[action] as any)._clip.duration = clipDuration;
+        const getDelta = vi.fn().mockReturnValue(0.016);
+
+        // When: playBlockingActionTimeline is called
+        playBlockingActionTimeline(manager, player, action, getDelta, { allowMovement: false });
+
+        // Then: Initial flags should be set
+        expect(player.userData.performing).toBe(true);
+        expect(player.userData.allowMovement).toBe(false);
+
+        // And: Timeline runs past clipDuration
+        const framesToRun = Math.ceil(clipDuration / 0.016) + 5;
+        for (let i = 0; i < framesToRun; i++) {
+          animateTimeline(manager, i);
+        }
+
+        // Then: Flags should be cleared
+        expect(player.userData.performing).toBe(false);
+        expect(player.userData.allowMovement).toBe(true);
+        expect(player.userData.allowRotation).toBe(true);
+        expect(player.userData.allowedActions).toEqual([]);
+      }
+    );
+
+    it.each([
+      {
+        currentAction: 'kick',
+        allowActions: [],
+        attemptedAction: 'punch',
+        shouldBlock: true
+      },
+      {
+        currentAction: 'punch',
+        allowActions: [],
+        attemptedAction: 'jump',
+        shouldBlock: true
+      },
+      {
+        currentAction: 'jump',
+        allowActions: ['roll'],
+        attemptedAction: 'roll',
+        shouldBlock: false
+      },
+      {
+        currentAction: 'jump',
+        allowActions: ['roll'],
+        attemptedAction: 'kick',
+        shouldBlock: true
+      },
+    ])('when performing $currentAction with allowActions=$allowActions, should block $attemptedAction: $shouldBlock',
+      ({ currentAction, allowActions, attemptedAction, shouldBlock }) => {
+        // Given: Timeline manager and player performing currentAction
+        const manager = createTimelineManager();
+        const player = createTimelineModel(1.0);
+        (player.userData.actions[currentAction] as any)._clip.duration = 1.0;
+        (player.userData.actions[attemptedAction] as any)._clip.duration = 1.0;
+        const getDelta = vi.fn().mockReturnValue(0.016);
+
+        // Start currentAction
+        player.userData.performing = true;
+        player.userData.allowedActions = allowActions;
+        player.userData.currentAction = currentAction;
+
+        // When: playBlockingActionTimeline is called for attemptedAction
+        const timelineCountBefore = manager.getTimeline().length;
+        playBlockingActionTimeline(manager, player, attemptedAction, getDelta);
+        const timelineCountAfter = manager.getTimeline().length;
+
+        // Then: If shouldBlock, no new timeline action should be added
+        if (shouldBlock) {
+          expect(timelineCountAfter).toBe(timelineCountBefore);
+          expect(player.userData.currentAction).toBe(currentAction);
+        } else {
+          expect(timelineCountAfter).toBe(timelineCountBefore + 1);
+          expect(player.userData.currentAction).toBe(attemptedAction);
+        }
+      }
+    );
+
+    it.each([
+      {
+        action: 'kick',
+        allowMovement: false,
+        allowRotation: false,
+        movementShouldWork: false,
+        rotationShouldWork: false
+      },
+      {
+        action: 'punch',
+        allowMovement: false,
+        allowRotation: false,
+        movementShouldWork: false,
+        rotationShouldWork: false
+      },
+      {
+        action: 'roll',
+        allowMovement: true,
+        allowRotation: true,
+        movementShouldWork: true,
+        rotationShouldWork: true
+      },
+      {
+        action: 'jump',
+        allowMovement: true,
+        allowRotation: false,
+        movementShouldWork: true,
+        rotationShouldWork: false
+      },
+    ])('$action: movement=$movementShouldWork, rotation=$rotationShouldWork',
+      ({ action, allowMovement, allowRotation, movementShouldWork, rotationShouldWork }) => {
+        // Given: Player performing action with specified flags
+        const player = createTimelineModel(1.0);
+        player.userData.performing = true;
+        player.userData.allowMovement = allowMovement;
+        player.userData.allowRotation = allowRotation;
+
+        // When: controllerForward is called
+        const initialZ = player.position.z;
+        controllerForward([], [], { player, actionName: action, delta: 0.016, distance: 1 });
+
+        // Then: Movement should work or be prevented based on flag
+        if (movementShouldWork) {
+          expect(player.position.z).not.toBe(initialZ);
+        } else {
+          expect(player.position.z).toBe(initialZ);
+        }
+
+        // When: setRotation is called
+        const rotationResult = setRotation(player, 90);
+
+        // Then: Rotation should work or be prevented based on flag
+        expect(rotationResult).toBe(rotationShouldWork);
+      }
+    );
   });
 });
