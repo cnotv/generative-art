@@ -40,6 +40,10 @@ The project is organized as a **pnpm workspace monorepo**:
 2. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
 3. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
 
+### During Implementation
+1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
+2. **Concise PR descriptions**: Keep PR body brief - detailed explanation lives in issue comments
+
 ### Issue Comment Format
 ```markdown
 ## Implementation Plan
@@ -53,6 +57,11 @@ Brief explanation of the chosen approach
 ### Questions
 - [ ] Any clarifications needed?
 ```
+
+### Branch Naming
+Use format: `<type>/<issue-number>-<description>`
+- Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
+- Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 ## Code Style & Best Practices
 

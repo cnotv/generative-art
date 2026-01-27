@@ -18,6 +18,7 @@ import { createControls } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import type { GameState } from "@webgamekit/game";
 import { getCube } from "@webgamekit/threejs";
+import ControlsLogger from "@/components/ControlsLogger.vue";
 
 // Assets
 import flatFlowerImg from "@/assets/images/goomba/fire.png";
@@ -342,7 +343,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="gameState" class="ui">
+  <ControlsLogger v-if="gameState" :logs="logs">
     <div>
       <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
       <span>{{ canJump ? "ready" : "not ready" }}</span>
@@ -355,8 +356,7 @@ onUnmounted(() => {
         }}</span
       >
     </div>
-    <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
-  </div>
+  </ControlsLogger>
 </template>
 
 <style scoped>
@@ -364,20 +364,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-.ui {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-self: center;
-  font-size: 24px;
-  line-height: 1.2em;
-  margin: 1rem;
-}
-
-@media (max-width: 600px) {
-  .ui {
-    line-height: 0.2em;
-  }
 }
 </style>

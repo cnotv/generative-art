@@ -7,10 +7,11 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playBlockingAction } from "@webgamekit/animation";
 import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
+import ControlsLogger from '@/components/ControlsLogger.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
 
 const playerSettings = {
@@ -125,7 +126,6 @@ const getActionName = (actions: Record<string, any>): string => {
 const getActionData = (player: ComplexModel, currentActions: Record<string, any>, basicDistance: number, getDelta: () => number): AnimationData => {
   const actionName = getActionName(currentActions);
   const distance = currentActions["run"] ? basicDistance * 2 : basicDistance;
-  const blocking = ["kick", "punch", "roll", "jump"].includes(actionName) ? player.userData.actions[actionName]?._clip?.duration : 0;
   return {
     actionName,
     player,
@@ -133,8 +133,7 @@ const getActionData = (player: ComplexModel, currentActions: Record<string, any>
     speed: 20,
     backward: false,
     distance,
-    blocking
-  }
+  };
 }
 
 const getLogs = (actions: Record<string, any>): string[] =>
@@ -149,11 +148,6 @@ const bindings = {
   ...controlBindings,
   onAction: (action: string) => {
     logs.value = getLogs(currentActions);
-
-    switch (action) {
-      case "print-log":
-        break;
-    }
   },
   onRelease: () => {
     logs.value = getLogs(currentActions);
@@ -166,7 +160,7 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { setup, animate, scene, world, getDelta, camera } = await getTools({
+  const { setup, animate, scene, world, camera, getDelta } = await getTools({
     canvas: canvas.value,
   });
 
@@ -181,7 +175,35 @@ const init = async (): Promise<void> => {
       const player = await getModel(scene, world, "character2.fbx", playerSettings.model);
       // console.log(player.userData.actions)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
-      remapControlsOptions(bindings);
+
+      const updatedBindings = {
+        ...bindings,
+        onAction: (action: string) => {
+          logs.value = getLogs(currentActions);
+
+          switch (action) {
+            case 'kick':
+            case 'punch':
+            case 'jump':
+              playBlockingAction(player, action, {
+                allowMovement: false,
+                allowRotation: false,
+                allowActions: action === 'jump' ? ['roll'] : [],
+              });
+              break;
+            case 'roll':
+              playBlockingAction(player, action, {
+                allowMovement: true,
+                allowRotation: true,
+              });
+              break;
+            case "print-log":
+              break;
+          }
+        },
+      };
+
+      remapControlsOptions(updatedBindings);
 
       const timelineManager = createTimelineManager();
       timelineManager.addAction({
@@ -227,9 +249,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="showLogs" class="ui">
-    <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
-  </div>
+  <ControlsLogger v-if="showLogs" :logs="logs" />
 
   <template v-if="isMobileDevice">
     <TouchControl
@@ -258,20 +278,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-.ui {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-self: center;
-  font-size: 24px;
-  line-height: 1.2em;
-  margin: 1rem;
-}
-
-@media (max-width: 600px) {
-  .ui {
-    line-height: 0.2em;
-  }
 }
 </style>

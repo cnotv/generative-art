@@ -14,6 +14,7 @@ import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 
 import TouchControl from '@/components/TouchControl.vue'
+import ControlsLogger from '@/components/ControlsLogger.vue'
 import {
   playerSettings,
   illustrations,
@@ -186,13 +187,12 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="gameState && showLogs" class="ui">
+  <ControlsLogger v-if="gameState && showLogs" :logs="logs">
     <div>
       <span>{{ isJumping ? "Jumping" : "On ground" }},</span>
       <span>{{ canJump ? "ready" : "not ready" }}</span>
     </div>
-    <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
-  </div>
+  </ControlsLogger>
 
   <TouchControl
     v-if="isMobileDevice"
@@ -221,20 +221,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-.ui {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-self: center;
-  font-size: 24px;
-  line-height: 1.2em;
-  margin: 1rem;
-}
-
-@media (max-width: 600px) {
-  .ui {
-    line-height: 0.2em;
-  }
 }
 </style>
