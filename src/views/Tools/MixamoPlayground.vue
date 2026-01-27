@@ -7,7 +7,7 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playBlockingAction } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playBlockingActionTimeline } from "@webgamekit/animation";
 import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
@@ -107,6 +107,13 @@ const controlBindings = {
   axisThreshold: 0.5,
 };
 
+const actionConfig = {
+  kick: { allowMovement: false, allowRotation: false, allowActions: [] },
+  punch: { allowMovement: false, allowRotation: false, allowActions: [] },
+  jump: { allowMovement: true, allowRotation: false, allowActions: ['roll'] },
+  roll: { allowMovement: true, allowRotation: true, allowActions: [] },
+};
+
 const logs = shallowRef<string[]>([]);
 const showLogs = true;
 const isMobileDevice = isMobile();
@@ -176,36 +183,21 @@ const init = async (): Promise<void> => {
       // console.log(player.userData.actions)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
+      const timelineManager = createTimelineManager();
+
       const updatedBindings = {
         ...bindings,
         onAction: (action: string) => {
           logs.value = getLogs(currentActions);
 
-          switch (action) {
-            case 'kick':
-            case 'punch':
-            case 'jump':
-              playBlockingAction(player, action, {
-                allowMovement: false,
-                allowRotation: false,
-                allowActions: action === 'jump' ? ['roll'] : [],
-              });
-              break;
-            case 'roll':
-              playBlockingAction(player, action, {
-                allowMovement: true,
-                allowRotation: true,
-              });
-              break;
-            case "print-log":
-              break;
+          const config = actionConfig[action as keyof typeof actionConfig];
+          if (config) {
+            playBlockingActionTimeline(timelineManager, player, action, getDelta, config);
           }
         },
       };
 
       remapControlsOptions(updatedBindings);
-
-      const timelineManager = createTimelineManager();
       timelineManager.addAction({
         frequency: speed.movement,
         name: "Walk",

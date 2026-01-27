@@ -262,12 +262,33 @@ const playBlockingActionTimeline = (
 ): void => {
   const { allowMovement = false, allowRotation = false, allowActions = [] } = options;
   const action = player.userData.actions?.[actionName];
+  const mixer = player.userData.mixer;
 
-  if (!action) return;
+  if (!action || !mixer) return;
   if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
 
   const clipDuration = (action as any)._clip?.duration || 0;
   if (clipDuration === 0) return;
+
+  // Check if timeline action already exists for this animation
+  const existingAction = timelineManager.getTimeline().find(
+    (a) => a.name === `blocking-${actionName}`
+  );
+  if (existingAction) return;
+
+  // Fade out previous action
+  const previousAction = player.userData.currentAction
+    ? player.userData.actions?.[player.userData.currentAction]
+    : null;
+
+  if (previousAction && previousAction !== action) {
+    previousAction.fadeOut(0.2);
+  }
+
+  // Start the animation
+  action.reset().fadeIn(0.2).play();
+  action.setLoop(THREE.LoopOnce, 1);
+  action.clampWhenFinished = true;
 
   // Set blocking flags immediately
   player.userData.performing = true;
@@ -287,12 +308,8 @@ const playBlockingActionTimeline = (
       const delta = getDelta();
       accumulatedTime += delta;
 
-      // Update animation
-      updateAnimation({
-        player,
-        actionName,
-        delta,
-      });
+      // Update mixer
+      mixer.update(delta);
 
       // Check if animation completed
       if (accumulatedTime >= clipDuration) {
