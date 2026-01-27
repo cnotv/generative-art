@@ -848,10 +848,21 @@ describe('animation', () => {
       const mockMesh = new THREE.Group();
       mockMesh.position.set(0, 0, 0);
 
+      const rollAction = {
+        play: vi.fn(),
+        stop: vi.fn(),
+        reset: vi.fn().mockReturnThis(),
+        fadeIn: vi.fn().mockReturnThis(),
+        fadeOut: vi.fn(),
+        setLoop: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        clampWhenFinished: false,
+      };
+
       return Object.assign(mockMesh, {
         userData: {
           mixer: mockMixer,
-          actions: { attack: mockAction, idle: { ...mockAction } },
+          actions: { attack: mockAction, idle: { ...mockAction }, roll: rollAction },
           currentAction: undefined,
           body: {
             translation: () => ({ x: 0, y: 0, z: 0 }),
@@ -899,6 +910,37 @@ describe('animation', () => {
       expect(model.userData.performing).toBe(false);
       expect(model.userData.allowMovement).toBe(true);
       expect(model.userData.allowRotation).toBe(true);
+    });
+
+    it('should prevent triggering another blocking action while performing', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack');
+
+      expect(model.userData.currentAction).toBe('attack');
+
+      playBlockingAction(model, 'idle');
+
+      expect(model.userData.currentAction).toBe('attack');
+    });
+
+    it('should allow whitelisted actions to interrupt via allowActions', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack', { allowActions: ['roll'] });
+
+      expect(model.userData.currentAction).toBe('attack');
+
+      playBlockingAction(model, 'roll');
+
+      expect(model.userData.currentAction).toBe('roll');
+    });
+
+    it('should prevent non-whitelisted actions from interrupting', () => {
+      const model = createBlockingModel();
+      playBlockingAction(model, 'attack', { allowActions: ['roll'] });
+
+      playBlockingAction(model, 'idle');
+
+      expect(model.userData.currentAction).toBe('attack');
     });
 
     it('should block controllerForward when performing and allowMovement=false', () => {

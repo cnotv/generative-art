@@ -196,15 +196,17 @@ const playBlockingAction = (
   options: {
     allowMovement?: boolean;
     allowRotation?: boolean;
+    allowActions?: string[];
     loop?: THREE.AnimationActionLoopStyles;
     onComplete?: () => void;
   } = {}
 ): void => {
-  const { allowMovement = false, allowRotation = false, loop = THREE.LoopOnce, onComplete } = options;
+  const { allowMovement = false, allowRotation = false, allowActions = [], loop = THREE.LoopOnce, onComplete } = options;
   const mixer = player.userData.mixer;
   const action = player.userData.actions?.[actionName];
 
   if (!action || !mixer) return;
+  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
 
   const previousAction = player.userData.currentAction
     ? player.userData.actions?.[player.userData.currentAction]
@@ -222,6 +224,7 @@ const playBlockingAction = (
   player.userData.performing = true;
   player.userData.allowMovement = allowMovement;
   player.userData.allowRotation = allowRotation;
+  player.userData.allowedActions = allowActions;
 
   if (loop === THREE.LoopOnce) {
     const onFinished = (e: any) => {
@@ -229,6 +232,7 @@ const playBlockingAction = (
         player.userData.performing = false;
         player.userData.allowMovement = true;
         player.userData.allowRotation = true;
+        player.userData.allowedActions = [];
         mixer.removeEventListener('finished', onFinished);
         if (onComplete) onComplete();
       }
