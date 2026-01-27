@@ -52,7 +52,7 @@ export interface ModelOptions extends CommonOptions {
   ior?: number;
   thickness?: number;
   envMapIntensity?: number;
-  animations?: string;
+  animations?: string[];
   materialColors?: number[];
 }
 
