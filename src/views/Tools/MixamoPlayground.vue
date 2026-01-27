@@ -203,19 +203,36 @@ const init = async (): Promise<void> => {
         name: "Walk",
         category: "user-input",
         action: () => {
+          // Skip movement/animation updates when a blocking action is performing
+          if (player.userData.performing) {
+            // Only allow movement/rotation if the blocking action permits it
+            if (!player.userData.allowMovement && !player.userData.allowRotation) {
+              return;
+            }
+          }
+
           const targetRotation = getRotation(currentActions);
           const isMoving = targetRotation !== null;
           const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
+
           if (isMoving) {
-            setRotation(player, targetRotation);
-            controllerForward(
-              obstacles,
-              groundBodies,
-              animationData,
-              movement
-            );
-            cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
-          } else {
+            // Only rotate if allowed
+            if (player.userData.allowRotation || !player.userData.performing) {
+              setRotation(player, targetRotation);
+            }
+
+            // Only move if allowed
+            if (player.userData.allowMovement || !player.userData.performing) {
+              controllerForward(
+                obstacles,
+                groundBodies,
+                animationData,
+                movement
+              );
+              cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+            }
+          } else if (!player.userData.performing) {
+            // Only update idle animation if not performing a blocking action
             updateAnimation(animationData);
           }
         },
