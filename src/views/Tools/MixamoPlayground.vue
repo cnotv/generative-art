@@ -114,6 +114,20 @@ const actionConfig = {
   roll: { allowMovement: true, allowRotation: true, allowActions: [] },
 };
 
+// Store references for blocking actions
+let timelineManagerRef: ReturnType<typeof createTimelineManager> | null = null;
+let playerRef: ComplexModel | null = null;
+let getDeltaRef: (() => number) | null = null;
+
+const handleBlockingAction = (actionName: string): void => {
+  if (!timelineManagerRef || !playerRef || !getDeltaRef) return;
+
+  const config = actionConfig[actionName as keyof typeof actionConfig];
+  if (config) {
+    playBlockingActionTimeline(timelineManagerRef, playerRef, actionName, getDeltaRef, config);
+  }
+};
+
 const logs = shallowRef<string[]>([]);
 const showLogs = true;
 const isMobileDevice = isMobile();
@@ -155,14 +169,29 @@ const bindings = {
   ...controlBindings,
   onAction: (action: string) => {
     logs.value = getLogs(currentActions);
+
+    switch (action) {
+      case "kick":
+        handleBlockingAction("kick");
+        break;
+      case "punch":
+        handleBlockingAction("punch");
+        break;
+      case "jump":
+        handleBlockingAction("jump");
+        break;
+      case "roll":
+        handleBlockingAction("roll");
+        break;
+      case "print-log":
+        break;
+    }
   },
   onRelease: () => {
     logs.value = getLogs(currentActions);
   },
 };
-const { destroyControls, currentActions, remapControlsOptions } = createControls(
-  bindings
-);
+const { destroyControls, currentActions } = createControls(bindings);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
@@ -185,19 +214,10 @@ const init = async (): Promise<void> => {
 
       const timelineManager = createTimelineManager();
 
-      const updatedBindings = {
-        ...bindings,
-        onAction: (action: string) => {
-          logs.value = getLogs(currentActions);
-
-          const config = actionConfig[action as keyof typeof actionConfig];
-          if (config) {
-            playBlockingActionTimeline(timelineManager, player, action, getDelta, config);
-          }
-        },
-      };
-
-      remapControlsOptions(updatedBindings);
+      // Set refs for blocking actions
+      timelineManagerRef = timelineManager;
+      playerRef = player;
+      getDeltaRef = getDelta;
       timelineManager.addAction({
         frequency: speed.movement,
         name: "Walk",
