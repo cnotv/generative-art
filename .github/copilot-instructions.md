@@ -43,7 +43,22 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ### During Implementation
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
-2. **Concise PR descriptions**: Keep PR body brief - detailed explanation lives in issue comments
+2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+
+### PR Description Format
+```markdown
+## Summary
+- Brief bullet points of what was implemented
+
+## Key Changes
+- File-by-file or module-by-module breakdown of changes
+
+## Test Plan
+- [ ] Checklist of testing performed
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
 
 ### Issue Comment Format
 ```markdown
