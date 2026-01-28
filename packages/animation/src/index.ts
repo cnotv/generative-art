@@ -183,36 +183,221 @@ interface AnimationData {
   delta: number; // Threejs counter for frame time
   speed?: number;
   backward?: boolean; // For adjusting model direction
-  blocking?: number; // Performing animation should prevent other actions for x ms
   distance?: number; // Length of action movement
 }
+
+/**
+ * Play an animation action with blocking behavior (event-driven approach)
+ *
+ * This approach leverages Three.js AnimationMixer's 'finished' event for automatic cleanup.
+ * Use this when you prefer event-driven animation management without manual timeline tracking.
+ * The mixer handles cleanup automatically when the animation completes.
+ *
+ * **When to use:**
+ * - Simple one-off animations (attacks, jumps, emotes)
+ * - When you want automatic cleanup via mixer events
+ * - When you don't need frame-by-frame control
+ *
+ * **Comparison with playActionTimeline:**
+ * - playAction: Event-driven, automatic cleanup, minimal boilerplate
+ * - playActionTimeline: Frame-based, manual control, timeline integration
+ *
+ * @param player ComplexModel with animation mixer and actions
+ * @param actionName Name of the animation to play
+ * @param options Configuration for blocking behavior and lifecycle
+ *
+ * @example
+ * playAction(player, 'attack', {
+ *   loop: THREE.LoopOnce,
+ *   allowMovement: false,
+ *   onComplete: () => console.log('Attack finished!')
+ * });
+ */
+const playAction = (
+  player: ComplexModel,
+  actionName: string,
+  options: {
+    allowMovement?: boolean;
+    allowRotation?: boolean;
+    allowActions?: string[];
+    loop?: THREE.AnimationActionLoopStyles;
+    onComplete?: () => void;
+  } = {}
+): void => {
+  const { allowMovement = false, allowRotation = false, allowActions = [], loop = THREE.LoopOnce, onComplete } = options;
+  const mixer = player.userData.mixer;
+  const action = player.userData.actions?.[actionName];
+
+  if (!action || !mixer) return;
+  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
+
+  const previousAction = player.userData.currentAction
+    ? player.userData.actions?.[player.userData.currentAction]
+    : null;
+
+  if (previousAction && previousAction !== action) {
+    previousAction.fadeOut(0.2);
+  }
+
+  action.reset().fadeIn(0.2).play();
+  action.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity);
+  action.clampWhenFinished = true;
+
+  player.userData.currentAction = actionName;
+  player.userData.performing = true;
+  player.userData.allowMovement = allowMovement;
+  player.userData.allowRotation = allowRotation;
+  player.userData.allowedActions = allowActions;
+
+  if (loop === THREE.LoopOnce) {
+    const onFinished = (e: any) => {
+      if (e.action === action) {
+        player.userData.performing = false;
+        player.userData.allowMovement = true;
+        player.userData.allowRotation = true;
+        player.userData.allowedActions = [];
+        mixer.removeEventListener('finished', onFinished);
+        if (onComplete) onComplete();
+      }
+    };
+    mixer.addEventListener('finished', onFinished);
+  }
+};
+
+/**
+ * Play an animation action with blocking behavior (timeline-based approach)
+ *
+ * This approach uses the TimelineManager for frame-based tracking and cleanup.
+ * Use this when you need timeline integration or manual control over animation lifecycle.
+ * Requires calling animateTimeline in your render loop.
+ *
+ * **When to use:**
+ * - Complex animations requiring frame-perfect timing
+ * - When you need to coordinate with other timeline actions
+ * - When you want manual control over cleanup timing
+ * - When using the TimelineManager as your animation orchestrator
+ *
+ * **Comparison with playAction:**
+ * - playAction: Event-driven, automatic cleanup, minimal boilerplate
+ * - playActionTimeline: Frame-based, manual control, timeline integration
+ *
+ * @param timelineManager Timeline manager instance that orchestrates all timeline actions
+ * @param player ComplexModel with animation mixer and actions
+ * @param actionName Name of the animation to play
+ * @param getDelta Function that returns delta time per frame (from Three.js clock)
+ * @param options Configuration for blocking behavior (movement, rotation, allowed interruptions)
+ *
+ * @example
+ * const manager = createTimelineManager();
+ * playActionTimeline(manager, player, 'kick', getDelta, {
+ *   allowMovement: false,
+ *   allowRotation: false,
+ *   allowActions: [] // No interruptions
+ * });
+ *
+ * // In your render loop:
+ * animate({
+ *   timeline: manager
+ * });
+ */
+const playActionTimeline = (
+  timelineManager: TimelineManager,
+  player: ComplexModel,
+  actionName: string,
+  getDelta: () => number,
+  config: {
+    allowMovement?: boolean;
+    allowRotation?: boolean;
+    allowActions?: string[];
+    speed?: number;
+  } = {}
+): void => {
+  const { allowMovement = false, allowRotation = false, allowActions = [], speed = 1 } = config;
+  const action = player.userData.actions?.[actionName];
+  const mixer = player.userData.mixer;
+
+  if (!action || !mixer) return;
+  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
+
+  const clipDuration = (action as any)._clip?.duration || 0;
+  if (clipDuration === 0) return;
+
+  // Check if timeline action already exists for this animation
+  const existingAction = timelineManager.getTimeline().find(
+    (a) => a.name === `blocking-${actionName}`
+  );
+  if (existingAction) return;
+
+  // Fade out previous action
+  const previousAction = player.userData.currentAction
+    ? player.userData.actions?.[player.userData.currentAction]
+    : null;
+
+  if (previousAction && previousAction !== action) {
+    previousAction.fadeOut(0.2);
+  }
+
+  // Start the animation
+  action.reset().fadeIn(0.2).play();
+  action.setLoop(THREE.LoopOnce, 1);
+  action.clampWhenFinished = true;
+
+  // Set blocking flags immediately
+  player.userData.performing = true;
+  player.userData.allowMovement = allowMovement;
+  player.userData.allowRotation = allowRotation;
+  player.userData.allowedActions = allowActions;
+  player.userData.currentAction = actionName;
+
+  // Track accumulated time
+  let accumulatedTime = 0;
+
+  // Add timeline action
+  const actionId = timelineManager.addAction({
+    name: `blocking-${actionName}`,
+    category: 'animation',
+    action: () => {
+      const delta = getDelta();
+      accumulatedTime += delta;
+
+      // Update mixer
+      mixer.update(delta * speed);
+
+      // Check if animation completed
+      if (accumulatedTime >= clipDuration / speed) {
+        // Clear blocking flags
+        player.userData.performing = false;
+        player.userData.allowMovement = true;
+        player.userData.allowRotation = true;
+        player.userData.allowedActions = [];
+
+        // Remove this timeline action
+        timelineManager.removeAction(actionId);
+      }
+    },
+  });
+};
 
 /**
  * Update the animation of the model based on given time
  */
 const updateAnimation = (data: AnimationData): void => {
-  const { player, actionName, delta, speed = 10, blocking = 0 } = data;
+  const { player, actionName, delta, speed = 10 } = data;
   const mixer = player.userData.mixer;
   const action = player.userData.actions?.[actionName];
   const coefficient = 0.1;
 
   if (!action || !mixer) return;
 
-  player.userData.performing = action.time < blocking;
-
-  // Handle animation switching
   if (player.userData.currentAction !== actionName) {
     const previousAction = player.userData.currentAction
       ? player.userData.actions?.[player.userData.currentAction]
       : null;
 
-    // Only allow action change if current action is not performing (time >= blocking)
-    // if (previousAction && previousAction.time < blocking) return;
-    
     if (previousAction && previousAction !== action) {
       previousAction.fadeOut(0.2);
     }
-    
+
     action.reset().fadeIn(0.2).play();
     player.userData.currentAction = actionName;
   } else {
@@ -220,7 +405,7 @@ const updateAnimation = (data: AnimationData): void => {
       action.play();
     }
   }
-  
+
   if (delta) {
     mixer.update(delta * speed * coefficient);
   } else {
@@ -501,6 +686,11 @@ const controllerForward = (
   }: ControllerForwardOptions = {}
 ): void => {
   const { actionName, player: model, backward = false, distance = 0 } = animationData;
+
+  if (model.userData.performing && model.userData.allowMovement === false) {
+    return;
+  }
+
   const { actions, mixer } = model.userData;
   const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward);
 
@@ -575,16 +765,20 @@ const controllerJump = (
 
 /**
  * Rotate model on defined angle
- * @param model 
+ * @param model
  * @param angle angle in degrees
+ * @returns true if rotation was applied, false if blocked
  */
 const controllerTurn = (
   model: ComplexModel,
   angle: number,
-) => {
-  const mesh = model;
+): boolean => {
+  if (model.userData.performing && model.userData.allowRotation === false) {
+    return false;
+  }
   const radians = THREE.MathUtils.degToRad(angle);
-  mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
+  return true;
 };
 
 /**
@@ -592,14 +786,19 @@ const controllerTurn = (
  * @param model The model to rotate
  * @param degrees The target rotation in degrees
  * @param modelOffset Offset in degrees to correct for models facing wrong direction
+ * @returns true if rotation was applied, false if blocked
  */
 const setRotation = (
   model: ComplexModel,
   degrees: number,
   modelOffset: number = 0,
-) => {
+): boolean => {
+  if (model.userData.performing && model.userData.allowRotation === false) {
+    return false;
+  }
   const radians = THREE.MathUtils.degToRad(degrees + modelOffset);
   model.rotation.y = radians;
+  return true;
 };
 
 /** Rotation mapping for directional input combinations */
@@ -689,6 +888,8 @@ export {
   resetAnimation,
   getAnimationsModel,
   updateAnimation,
+  playAction,
+  playActionTimeline,
   controllerForward,
   controllerJump,
   controllerTurn,
@@ -725,4 +926,4 @@ export {
   createOneShotAction,
   createIntervalAction,
   canAddAction,
-} from './helpers';
+} from './actions';

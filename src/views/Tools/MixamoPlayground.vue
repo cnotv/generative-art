@@ -7,10 +7,11 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playActionTimeline } from "@webgamekit/animation";
 import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
+import ControlsLogger from '@/components/ControlsLogger.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
 
 const playerSettings = {
@@ -106,6 +107,27 @@ const controlBindings = {
   axisThreshold: 0.5,
 };
 
+const actionConfig = {
+  kick: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+  punch: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+  jump: { allowMovement: true, allowRotation: false, allowActions: ['roll'], speed: 2 },
+  roll: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+};
+
+// Store references for blocking actions
+let timelineManagerRef: ReturnType<typeof createTimelineManager> | null = null;
+let playerRef: ComplexModel | null = null;
+let getDeltaRef: (() => number) | null = null;
+
+const handleBlockingAction = (actionName: string): void => {
+  if (!timelineManagerRef || !playerRef || !getDeltaRef) return;
+
+  const config = actionConfig[actionName as keyof typeof actionConfig];
+  if (config) {
+    playActionTimeline(timelineManagerRef, playerRef, actionName, getDeltaRef, config);
+  }
+};
+
 const logs = shallowRef<string[]>([]);
 const showLogs = true;
 const isMobileDevice = isMobile();
@@ -125,7 +147,6 @@ const getActionName = (actions: Record<string, any>): string => {
 const getActionData = (player: ComplexModel, currentActions: Record<string, any>, basicDistance: number, getDelta: () => number): AnimationData => {
   const actionName = getActionName(currentActions);
   const distance = currentActions["run"] ? basicDistance * 2 : basicDistance;
-  const blocking = ["kick", "punch", "roll", "jump"].includes(actionName) ? player.userData.actions[actionName]?._clip?.duration : 0;
   return {
     actionName,
     player,
@@ -133,8 +154,7 @@ const getActionData = (player: ComplexModel, currentActions: Record<string, any>
     speed: 20,
     backward: false,
     distance,
-    blocking
-  }
+  };
 }
 
 const getLogs = (actions: Record<string, any>): string[] =>
@@ -151,6 +171,18 @@ const bindings = {
     logs.value = getLogs(currentActions);
 
     switch (action) {
+      case "kick":
+        handleBlockingAction("kick");
+        break;
+      case "punch":
+        handleBlockingAction("punch");
+        break;
+      case "jump":
+        handleBlockingAction("jump");
+        break;
+      case "roll":
+        handleBlockingAction("roll");
+        break;
       case "print-log":
         break;
     }
@@ -159,14 +191,12 @@ const bindings = {
     logs.value = getLogs(currentActions);
   },
 };
-const { destroyControls, currentActions, remapControlsOptions } = createControls(
-  bindings
-);
+const { destroyControls, currentActions } = createControls(bindings);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
-  const { setup, animate, scene, world, getDelta, camera } = await getTools({
+  const { setup, animate, scene, world, camera, getDelta } = await getTools({
     canvas: canvas.value,
   });
 
@@ -181,27 +211,48 @@ const init = async (): Promise<void> => {
       const player = await getModel(scene, world, "character2.fbx", playerSettings.model);
       // console.log(player.userData.actions)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
-      remapControlsOptions(bindings);
 
       const timelineManager = createTimelineManager();
+
+      // Set refs for blocking actions
+      timelineManagerRef = timelineManager;
+      playerRef = player;
+      getDeltaRef = getDelta;
       timelineManager.addAction({
         frequency: speed.movement,
         name: "Walk",
         category: "user-input",
         action: () => {
+          // Skip movement/animation updates when a blocking action is performing
+          if (player.userData.performing) {
+            // Only allow movement/rotation if the blocking action permits it
+            if (!player.userData.allowMovement && !player.userData.allowRotation) {
+              return;
+            }
+          }
+
           const targetRotation = getRotation(currentActions);
           const isMoving = targetRotation !== null;
           const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
+
           if (isMoving) {
-            setRotation(player, targetRotation);
-            controllerForward(
-              obstacles,
-              groundBodies,
-              animationData,
-              movement
-            );
-            cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
-          } else {
+            // Only rotate if allowed
+            if (player.userData.allowRotation || !player.userData.performing) {
+              setRotation(player, targetRotation);
+            }
+
+            // Only move if allowed
+            if (player.userData.allowMovement || !player.userData.performing) {
+              controllerForward(
+                obstacles,
+                groundBodies,
+                animationData,
+                movement
+              );
+              cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+            }
+          } else if (!player.userData.performing) {
+            // Only update idle animation if not performing a blocking action
             updateAnimation(animationData);
           }
         },
@@ -227,9 +278,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div v-if="showLogs" class="ui">
-    <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
-  </div>
+  <ControlsLogger v-if="showLogs" :logs="logs" />
 
   <template v-if="isMobileDevice">
     <TouchControl
@@ -258,20 +307,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-.ui {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-self: center;
-  font-size: 24px;
-  line-height: 1.2em;
-  margin: 1rem;
-}
-
-@media (max-width: 600px) {
-  .ui {
-    line-height: 0.2em;
-  }
 }
 </style>

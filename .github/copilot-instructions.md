@@ -2,10 +2,11 @@
 
 ## Quick Rules
 
-1. **Document before coding**: Add implementation plan as comment to GitHub issue before writing code
-2. **Ask questions**: When multiple approaches exist, ask which to use
-3. **Use debugger**: Prefer `debugger` statements over `console.log()`
-4. **Run tests**: `pnpm test:unit` (not `vitest` directly)
+1. **TDD - Test-Driven Development**: ALWAYS write unit tests FIRST before implementing any feature. Present test specifications to user for confirmation before writing implementation code.
+2. **Document before coding**: Add implementation plan as comment to GitHub issue before writing code
+3. **Ask questions**: When multiple approaches exist, ask which to use
+4. **Use debugger**: Prefer `debugger` statements over `console.log()`
+5. **Run tests**: `pnpm test:unit` (not `vitest` directly)
 
 This is monorepo containing mainly 2 parts:
 - An agnostic toolkit for creating 3D environment, games and animations, as well as all-in-on controls, audio and more
@@ -40,6 +41,25 @@ The project is organized as a **pnpm workspace monorepo**:
 2. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
 3. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
 
+### During Implementation
+1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
+2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+
+### PR Description Format
+```markdown
+## Summary
+- Brief bullet points of what was implemented
+
+## Key Changes
+- File-by-file or module-by-module breakdown of changes
+
+## Test Plan
+- [ ] Checklist of testing performed
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
 ### Issue Comment Format
 ```markdown
 ## Implementation Plan
@@ -53,6 +73,11 @@ Brief explanation of the chosen approach
 ### Questions
 - [ ] Any clarifications needed?
 ```
+
+### Branch Naming
+Use format: `<type>/<issue-number>-<description>`
+- Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
+- Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 ## Code Style & Best Practices
 
@@ -90,14 +115,19 @@ Brief explanation of the chosen approach
 - **Single responsibility**: Keep functions focused on one task
 - **Framework-agnostic packages**: `@webgamekit/*` packages must not depend on Vue/React
 
-### Testing
+### Testing (Test-Driven Development)
+- **TDD Workflow - MANDATORY**:
+  1. Write test specifications FIRST describing expected behavior
+  2. Present tests to user for confirmation BEFORE implementation
+  3. Only after test approval, write implementation to make tests pass
+  4. Never skip this workflow - finishing without tests means the feature is incomplete
 - **Always add unit tests**: Create `.test.ts` files alongside implementation files
 - **Test framework**: Use Vitest
 - **Run tests**: Use `pnpm test:unit` (runs once and exits, watch mode disabled by default)
 - **Watch mode**: Use `pnpm test:watch` only when explicitly needed for development
 - **Test coverage**: Test core logic, edge cases, and public APIs
 - **AAA pattern**: Structure tests with Arrange, Act, Assert sections
-- **Parameterization**: Use `it.each()` for testing multiple inputs/outputs with the same logic
+- **Parameterization - CRITICAL**: ALWAYS use `it.each()` for testing multiple similar cases. Never write multiple separate tests when they test the same logic with different inputs. Parameterized tests are more maintainable, easier to read, and prevent code duplication.
 - **Example pattern**: See `packages/controls/src/core.test.ts`
 - **CRITICAL**: The `test:unit` script uses `vitest run` which exits after completion. Never use raw `vitest` command without `run` subcommand or `--run` flag
 
