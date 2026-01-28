@@ -33,23 +33,32 @@ The project is organized as a **pnpm workspace monorepo**:
 ## GitHub Issue Workflow
 
 ### Before Implementation
-1. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
+1. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
+   - Use format: `<type>/<issue-number>-<description>`
+   - Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
+   - Branch from `main` (or current base branch)
+   - Command: `git checkout main && git checkout -b feat/9-issue-description`
+2. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
    - What you plan to implement
    - Files to be modified/created
    - Key design decisions
    - Any questions or uncertainties
-2. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
-3. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
+3. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
+4. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
 
 ### During Implementation
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
 2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
 3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+4. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
 
 ### PR Description Format
 ```markdown
 ## Summary
 - Brief bullet points of what was implemented
+
+## Screenshot (if applicable)
+![Description](.github/screenshots/filename.png)
 
 ## Key Changes
 - File-by-file or module-by-module breakdown of changes
