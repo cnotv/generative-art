@@ -1,6 +1,6 @@
 import type { Timeline } from './types';
 import { createTimelineLogger, type TimelineLogger } from './TimelineLogger';
-import { generateTimelineId } from './helpers';
+import { generateTimelineId } from './actions';
 
 export interface TimelineManager {
   addAction: (action: Timeline) => string;

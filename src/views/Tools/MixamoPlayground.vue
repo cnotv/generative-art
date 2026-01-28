@@ -108,10 +108,10 @@ const controlBindings = {
 };
 
 const actionConfig = {
-  kick: { allowMovement: false, allowRotation: false, allowActions: [] },
-  punch: { allowMovement: false, allowRotation: false, allowActions: [] },
-  jump: { allowMovement: true, allowRotation: false, allowActions: ['roll'] },
-  roll: { allowMovement: true, allowRotation: true, allowActions: [] },
+  kick: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+  punch: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+  jump: { allowMovement: true, allowRotation: false, allowActions: ['roll'], speed: 2 },
+  roll: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
 };
 
 // Store references for blocking actions

@@ -5,7 +5,7 @@ import {
   createOneShotAction,
   createIntervalAction,
   canAddAction,
-} from './helpers';
+} from './actions';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
