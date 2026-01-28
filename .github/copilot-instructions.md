@@ -50,11 +50,15 @@ The project is organized as a **pnpm workspace monorepo**:
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
 2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
 3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+4. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
 
 ### PR Description Format
 ```markdown
 ## Summary
 - Brief bullet points of what was implemented
+
+## Screenshot (if applicable)
+![Description](.github/screenshots/filename.png)
 
 ## Key Changes
 - File-by-file or module-by-module breakdown of changes
