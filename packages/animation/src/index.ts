@@ -305,13 +305,14 @@ const playActionTimeline = (
   player: ComplexModel,
   actionName: string,
   getDelta: () => number,
-  options: {
+  config: {
     allowMovement?: boolean;
     allowRotation?: boolean;
     allowActions?: string[];
+    speed?: number;
   } = {}
 ): void => {
-  const { allowMovement = false, allowRotation = false, allowActions = [] } = options;
+  const { allowMovement = false, allowRotation = false, allowActions = [], speed = 1 } = config;
   const action = player.userData.actions?.[actionName];
   const mixer = player.userData.mixer;
 
@@ -360,10 +361,10 @@ const playActionTimeline = (
       accumulatedTime += delta;
 
       // Update mixer
-      mixer.update(delta);
+      mixer.update(delta * speed);
 
       // Check if animation completed
-      if (accumulatedTime >= clipDuration) {
+      if (accumulatedTime >= clipDuration / speed) {
         // Clear blocking flags
         player.userData.performing = false;
         player.userData.allowMovement = true;
