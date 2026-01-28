@@ -11,7 +11,15 @@ export default mergeConfig(
       root: fileURLToPath(new URL('./', import.meta.url)),
       server: {
         deps: {
-          inline: ['@dimforge/rapier3d-compat']
+          inline: ['@dimforge/rapier3d-compat'],
+          optimize: [
+            'vue',
+            'vue-router',
+            'pinia',
+            'three',
+            'stats.js',
+            '@vue/test-utils'
+          ]
         }
       },
       browser: {
