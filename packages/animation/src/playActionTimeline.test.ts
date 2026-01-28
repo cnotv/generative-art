@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { playBlockingActionTimeline, createTimelineManager, animateTimeline } from './index';
+import { playActionTimeline, createTimelineManager, animateTimeline } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
-describe('playBlockingActionTimeline - REAL tests', () => {
+describe('playActionTimeline - REAL tests', () => {
   const createTestPlayer = (clipDuration: number) => {
     const mockAction = {
       play: vi.fn().mockReturnThis(),
@@ -53,8 +53,8 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const player = createTestPlayer(1.0);
     const getDelta = vi.fn().mockReturnValue(0.016);
 
-    // When: Call playBlockingActionTimeline
-    playBlockingActionTimeline(manager, player, 'kick', getDelta, {
+    // When: Call playActionTimeline
+    playActionTimeline(manager, player, 'kick', getDelta, {
       allowMovement: false,
       allowRotation: false,
     });
@@ -68,8 +68,8 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const player = createTestPlayer(1.0);
     const getDelta = vi.fn().mockReturnValue(0.016);
 
-    // When: Call playBlockingActionTimeline
-    playBlockingActionTimeline(manager, player, 'kick', getDelta);
+    // When: Call playActionTimeline
+    playActionTimeline(manager, player, 'kick', getDelta);
 
     // Clear any setup calls
     (player.userData.mixer.update as any).mockClear();
@@ -89,8 +89,8 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const player = createTestPlayer(0.1); // Short 0.1s clip
     const getDelta = vi.fn().mockReturnValue(0.016);
 
-    // When: Call playBlockingActionTimeline
-    playBlockingActionTimeline(manager, player, 'kick', getDelta, {
+    // When: Call playActionTimeline
+    playActionTimeline(manager, player, 'kick', getDelta, {
       allowMovement: false,
     });
 
@@ -113,11 +113,11 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const player = createTestPlayer(1.0);
     const getDelta = vi.fn().mockReturnValue(0.016);
 
-    // When: Call playBlockingActionTimeline twice
-    playBlockingActionTimeline(manager, player, 'kick', getDelta);
+    // When: Call playActionTimeline twice
+    playActionTimeline(manager, player, 'kick', getDelta);
     const timelineBefore = manager.getTimeline().length;
 
-    playBlockingActionTimeline(manager, player, 'kick', getDelta);
+    playActionTimeline(manager, player, 'kick', getDelta);
     const timelineAfter = manager.getTimeline().length;
 
     // Then: Timeline should NOT grow
@@ -130,7 +130,7 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const getDelta = vi.fn().mockReturnValue(0.016);
 
     // When: Start kick
-    playBlockingActionTimeline(manager, player, 'kick', getDelta, {
+    playActionTimeline(manager, player, 'kick', getDelta, {
       allowActions: [],
     });
 
@@ -139,7 +139,7 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     (player.userData.actions.punch.play as any).mockClear();
 
     // Try to start punch
-    playBlockingActionTimeline(manager, player, 'punch', getDelta);
+    playActionTimeline(manager, player, 'punch', getDelta);
 
     // Then: punch.play() should NOT be called
     expect(player.userData.actions.punch.play).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     const getDelta = vi.fn().mockReturnValue(0.016);
 
     // When: Start jump with roll whitelisted
-    playBlockingActionTimeline(manager, player, 'jump', getDelta, {
+    playActionTimeline(manager, player, 'jump', getDelta, {
       allowActions: ['roll'],
     });
 
@@ -161,7 +161,7 @@ describe('playBlockingActionTimeline - REAL tests', () => {
     (player.userData.actions.roll.play as any).mockClear();
 
     // Try to start roll
-    playBlockingActionTimeline(manager, player, 'roll', getDelta);
+    playActionTimeline(manager, player, 'roll', getDelta);
 
     // Then: roll.play() MUST be called
     expect(player.userData.actions.roll.play).toHaveBeenCalled();

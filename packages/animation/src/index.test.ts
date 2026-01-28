@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { animateTimeline, controllerForward, controllerTurn, updateAnimation, playBlockingAction, playBlockingActionTimeline, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
+import { animateTimeline, controllerForward, controllerTurn, updateAnimation, playAction, playActionTimeline, checkGroundAtPosition, getRotation, setRotation, createTimelineManager, type AnimationData } from './index';
 import * as THREE from 'three';
 import type { ComplexModel } from './types';
 
@@ -826,7 +826,7 @@ describe('animation', () => {
     });
   });
 
-  describe('playBlockingAction', () => {
+  describe('playAction', () => {
     const createBlockingModel = () => {
       const mockAction = {
         play: vi.fn(),
@@ -879,7 +879,7 @@ describe('animation', () => {
 
     it('should set performing=true and block movement/rotation by default', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack');
+      playAction(model, 'attack');
 
       expect(model.userData.performing).toBe(true);
       expect(model.userData.allowMovement).toBe(false);
@@ -888,21 +888,21 @@ describe('animation', () => {
 
     it('should allow movement when allowMovement=true', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack', { allowMovement: true });
+      playAction(model, 'attack', { allowMovement: true });
 
       expect(model.userData.allowMovement).toBe(true);
     });
 
     it('should register finished event listener for LoopOnce', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack');
+      playAction(model, 'attack');
 
       expect(model.userData.mixer.addEventListener).toHaveBeenCalledWith('finished', expect.any(Function));
     });
 
     it('should reset performing state on animation finish', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack');
+      playAction(model, 'attack');
 
       const finishedCallback = (model.userData.mixer.addEventListener as any).mock.calls[0][1];
       finishedCallback({ action: model.userData.actions.attack });
@@ -914,31 +914,31 @@ describe('animation', () => {
 
     it('should prevent triggering another blocking action while performing', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack');
+      playAction(model, 'attack');
 
       expect(model.userData.currentAction).toBe('attack');
 
-      playBlockingAction(model, 'idle');
+      playAction(model, 'idle');
 
       expect(model.userData.currentAction).toBe('attack');
     });
 
     it('should allow whitelisted actions to interrupt via allowActions', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack', { allowActions: ['roll'] });
+      playAction(model, 'attack', { allowActions: ['roll'] });
 
       expect(model.userData.currentAction).toBe('attack');
 
-      playBlockingAction(model, 'roll');
+      playAction(model, 'roll');
 
       expect(model.userData.currentAction).toBe('roll');
     });
 
     it('should prevent non-whitelisted actions from interrupting', () => {
       const model = createBlockingModel();
-      playBlockingAction(model, 'attack', { allowActions: ['roll'] });
+      playAction(model, 'attack', { allowActions: ['roll'] });
 
-      playBlockingAction(model, 'idle');
+      playAction(model, 'idle');
 
       expect(model.userData.currentAction).toBe('attack');
     });
@@ -1009,7 +1009,7 @@ describe('animation', () => {
     });
   });
 
-  describe('playBlockingActionTimeline', () => {
+  describe('playActionTimeline', () => {
     const createTimelineModel = (clipDuration: number) => {
       const mockAction = {
         play: vi.fn(),
@@ -1069,8 +1069,8 @@ describe('animation', () => {
         (player.userData.actions[action] as any)._clip.duration = clipDuration;
         const getDelta = vi.fn().mockReturnValue(deltaPerFrame);
 
-        // When: playBlockingActionTimeline is called
-        playBlockingActionTimeline(manager, player, action, getDelta);
+        // When: playActionTimeline is called
+        playActionTimeline(manager, player, action, getDelta);
 
         // Then: Timeline action should be added
         expect(manager.getTimeline()).toHaveLength(1);
@@ -1122,8 +1122,8 @@ describe('animation', () => {
         (player.userData.actions[action] as any)._clip.duration = 1.0;
         const getDelta = vi.fn().mockReturnValue(0.016);
 
-        // When: playBlockingActionTimeline is called with options
-        playBlockingActionTimeline(manager, player, action, getDelta, options);
+        // When: playActionTimeline is called with options
+        playActionTimeline(manager, player, action, getDelta, options);
 
         // Then: player.userData should match expected flags immediately
         expect(player.userData.performing).toBe(expected.performing);
@@ -1145,8 +1145,8 @@ describe('animation', () => {
         (player.userData.actions[action] as any)._clip.duration = clipDuration;
         const getDelta = vi.fn().mockReturnValue(0.016);
 
-        // When: playBlockingActionTimeline is called
-        playBlockingActionTimeline(manager, player, action, getDelta, { allowMovement: false });
+        // When: playActionTimeline is called
+        playActionTimeline(manager, player, action, getDelta, { allowMovement: false });
 
         // Then: Initial flags should be set
         expect(player.userData.performing).toBe(true);
@@ -1205,9 +1205,9 @@ describe('animation', () => {
         player.userData.allowedActions = allowActions;
         player.userData.currentAction = currentAction;
 
-        // When: playBlockingActionTimeline is called for attemptedAction
+        // When: playActionTimeline is called for attemptedAction
         const timelineCountBefore = manager.getTimeline().length;
-        playBlockingActionTimeline(manager, player, attemptedAction, getDelta);
+        playActionTimeline(manager, player, attemptedAction, getDelta);
         const timelineCountAfter = manager.getTimeline().length;
 
         // Then: If shouldBlock, no new timeline action should be added

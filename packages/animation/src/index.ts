@@ -187,10 +187,33 @@ interface AnimationData {
 }
 
 /**
- * Play a blocking animation that prevents other actions until complete
- * Uses Three.js AnimationMixer 'finished' event for automatic cleanup
+ * Play an animation action with blocking behavior (event-driven approach)
+ *
+ * This approach leverages Three.js AnimationMixer's 'finished' event for automatic cleanup.
+ * Use this when you prefer event-driven animation management without manual timeline tracking.
+ * The mixer handles cleanup automatically when the animation completes.
+ *
+ * **When to use:**
+ * - Simple one-off animations (attacks, jumps, emotes)
+ * - When you want automatic cleanup via mixer events
+ * - When you don't need frame-by-frame control
+ *
+ * **Comparison with playActionTimeline:**
+ * - playAction: Event-driven, automatic cleanup, minimal boilerplate
+ * - playActionTimeline: Frame-based, manual control, timeline integration
+ *
+ * @param player ComplexModel with animation mixer and actions
+ * @param actionName Name of the animation to play
+ * @param options Configuration for blocking behavior and lifecycle
+ *
+ * @example
+ * playAction(player, 'attack', {
+ *   loop: THREE.LoopOnce,
+ *   allowMovement: false,
+ *   onComplete: () => console.log('Attack finished!')
+ * });
  */
-const playBlockingAction = (
+const playAction = (
   player: ComplexModel,
   actionName: string,
   options: {
@@ -242,14 +265,42 @@ const playBlockingAction = (
 };
 
 /**
- * Play a blocking animation using timeline-based management
- * @param timelineManager Timeline manager instance
- * @param player Player model with animations
- * @param actionName Name of the animation action to play
- * @param getDelta Function that returns delta time per frame
- * @param options Configuration for blocking behavior
+ * Play an animation action with blocking behavior (timeline-based approach)
+ *
+ * This approach uses the TimelineManager for frame-based tracking and cleanup.
+ * Use this when you need timeline integration or manual control over animation lifecycle.
+ * Requires calling animateTimeline in your render loop.
+ *
+ * **When to use:**
+ * - Complex animations requiring frame-perfect timing
+ * - When you need to coordinate with other timeline actions
+ * - When you want manual control over cleanup timing
+ * - When using the TimelineManager as your animation orchestrator
+ *
+ * **Comparison with playAction:**
+ * - playAction: Event-driven, automatic cleanup, minimal boilerplate
+ * - playActionTimeline: Frame-based, manual control, timeline integration
+ *
+ * @param timelineManager Timeline manager instance that orchestrates all timeline actions
+ * @param player ComplexModel with animation mixer and actions
+ * @param actionName Name of the animation to play
+ * @param getDelta Function that returns delta time per frame (from Three.js clock)
+ * @param options Configuration for blocking behavior (movement, rotation, allowed interruptions)
+ *
+ * @example
+ * const manager = createTimelineManager();
+ * playActionTimeline(manager, player, 'kick', getDelta, {
+ *   allowMovement: false,
+ *   allowRotation: false,
+ *   allowActions: [] // No interruptions
+ * });
+ *
+ * // In your render loop:
+ * animate({
+ *   timeline: manager
+ * });
  */
-const playBlockingActionTimeline = (
+const playActionTimeline = (
   timelineManager: TimelineManager,
   player: ComplexModel,
   actionName: string,
@@ -836,8 +887,8 @@ export {
   resetAnimation,
   getAnimationsModel,
   updateAnimation,
-  playBlockingAction,
-  playBlockingActionTimeline,
+  playAction,
+  playActionTimeline,
   controllerForward,
   controllerJump,
   controllerTurn,

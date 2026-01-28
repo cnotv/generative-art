@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { playBlockingActionTimeline, createTimelineManager, animateTimeline, updateAnimation } from './index';
+import { playActionTimeline, createTimelineManager, animateTimeline, updateAnimation } from './index';
 import * as THREE from 'three';
 import type { ComplexModel, AnimationData } from './types';
 
-describe('playBlockingActionTimeline - BUG REPRODUCTION', () => {
+describe('playActionTimeline - BUG REPRODUCTION', () => {
   const createTestPlayer = (clipDuration: number) => {
     const mockAction = {
       play: vi.fn().mockReturnThis(),
@@ -79,7 +79,7 @@ describe('playBlockingActionTimeline - BUG REPRODUCTION', () => {
     });
 
     // Start kick animation
-    playBlockingActionTimeline(manager, player, 'kick', getDelta, {
+    playActionTimeline(manager, player, 'kick', getDelta, {
       allowMovement: false,
       allowRotation: false,
     });
@@ -131,7 +131,7 @@ describe('playBlockingActionTimeline - BUG REPRODUCTION', () => {
     });
 
     // Start kick animation
-    playBlockingActionTimeline(manager, player, 'kick', getDelta, {
+    playActionTimeline(manager, player, 'kick', getDelta, {
       allowMovement: false,
       allowRotation: false,
     });

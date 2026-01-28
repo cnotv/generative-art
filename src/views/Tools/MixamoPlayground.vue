@@ -7,7 +7,7 @@ import {
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playBlockingActionTimeline } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playActionTimeline } from "@webgamekit/animation";
 import { createControls, isMobile } from "@webgamekit/controls";
 
 import TouchControl from '@/components/TouchControl.vue'
@@ -124,7 +124,7 @@ const handleBlockingAction = (actionName: string): void => {
 
   const config = actionConfig[actionName as keyof typeof actionConfig];
   if (config) {
-    playBlockingActionTimeline(timelineManagerRef, playerRef, actionName, getDeltaRef, config);
+    playActionTimeline(timelineManagerRef, playerRef, actionName, getDeltaRef, config);
   }
 };
 
