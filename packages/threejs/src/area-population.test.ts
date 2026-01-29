@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateAreaPositions, type AreaConfig } from './area-population'
+import { generateAreaPositions } from './area-population'
+import type { AreaConfig } from './types'
 
 describe('generateAreaPositions', () => {
   describe('center-based area definition', () => {
