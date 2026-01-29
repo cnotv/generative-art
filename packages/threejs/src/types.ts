@@ -198,3 +198,13 @@ export interface InstanceConfig {
 }
 
 export type GeneratedInstanceConfig = Array<{ position: number[]; rotation: number[]; scale: number[]; }>
+
+export interface AreaConfig {
+  center?: CoordinateTuple;
+  size?: CoordinateTuple;
+  min?: CoordinateTuple;
+  max?: CoordinateTuple;
+  count: number;
+  pattern?: 'random' | 'grid' | 'grid-jitter';
+  seed?: number;
+}

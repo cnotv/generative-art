@@ -927,3 +927,10 @@ export {
   createIntervalAction,
   canAddAction,
 } from './actions';
+
+export {
+  createPopUpBounce,
+  createPopUpFade,
+  createPopUpScale,
+  easing,
+} from './pop-up-animations';

@@ -6,9 +6,10 @@ import {
   getCube,
   instanceMatrixMesh,
   cameraFollowPlayer,
+  generateAreaPositions,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -21,6 +22,7 @@ import {
   setupConfig,
   controlBindings,
   assets,
+  dynamicFlowerConfig,
   // undergroundConfig,
 } from "./config";
 // import { times } from "@/utils/lodash";
@@ -112,6 +114,37 @@ const init = async (): Promise<void> => {
         }
         // obstacles.push(model);
       });
+
+      // Demonstrate dynamic area population with pop-up animations
+      const positions = generateAreaPositions(dynamicFlowerConfig.area);
+      const dynamicFlowers: any[] = [];
+
+      positions.forEach((position, index) => {
+        const flowerConfig = {
+          ...dynamicFlowerConfig,
+          position
+        };
+        const flower = getCube(scene, world, flowerConfig);
+        dynamicFlowers.push(flower);
+
+        // Add pop-up animation with staggered delay
+        const popUpAnimation = createPopUpBounce({
+          object: flower,
+          startY: position[1] - 3, // Start below ground
+          endY: position[1],       // End at target position
+          duration: 30,            // 30 frames
+          delay: index * 2         // Stagger by 2 frames each
+        });
+
+        // Add to timeline
+        timelineManager.addAction({
+          name: `flower-${index}-popup`,
+          category: 'visual',
+          action: () => popUpAnimation(timelineManager.getFrame()),
+          autoRemove: true
+        });
+      });
+
       // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
 
       remapControlsOptions(bindings);

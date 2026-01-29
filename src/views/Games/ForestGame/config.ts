@@ -405,3 +405,17 @@ export const controlBindings = {
 export const assets = {
   jumpSound,
 };
+
+// Dynamic area population example
+export const dynamicFlowerConfig = {
+  texture: illustrationFlower1Img,
+  size: [8, 5, 0],
+  ...genericFlatConfig,
+  area: {
+    center: [50, -1, 15] as CoordinateTuple,
+    size: [80, 0, 20] as CoordinateTuple,
+    count: 15,
+    pattern: 'grid-jitter' as const,
+    seed: 54321
+  }
+};
