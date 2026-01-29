@@ -119,6 +119,10 @@ const init = async (): Promise<void> => {
       const positions = generateAreaPositions(dynamicFlowerConfig.area);
       const dynamicFlowers: any[] = [];
 
+      remapControlsOptions(bindings);
+
+      const timelineManager = createTimelineManager();
+
       positions.forEach((position, index) => {
         const flowerConfig = {
           ...dynamicFlowerConfig,
@@ -146,10 +150,6 @@ const init = async (): Promise<void> => {
       });
 
       // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
-
-      remapControlsOptions(bindings);
-
-      const timelineManager = createTimelineManager();
 
       timelineManager.addAction({
         frequency: speed.movement,
