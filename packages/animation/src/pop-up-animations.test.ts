@@ -13,7 +13,7 @@ describe('PopUp Animations', () => {
     )
     object.position.set(0, 0, 0)
     object.scale.set(1, 1, 1)
-    object.material.opacity = 1
+    ;(object.material as THREE.MeshBasicMaterial).opacity = 1
   })
 
   describe('createPopUpBounce', () => {
@@ -121,9 +121,9 @@ describe('PopUp Animations', () => {
       Array.from({ length: config.duration + 1 }).forEach((_, index) => {
         action()
         if (index === 0) {
-          expect(object.material.opacity).toBeCloseTo(0, 1)
+          expect((object.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0, 1)
         } else if (index === config.duration) {
-          expect(object.material.opacity).toBeCloseTo(1, 1)
+          expect((object.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(1, 1)
           expect(object.position.y).toBeCloseTo(config.endY, 1)
         }
       })
@@ -139,7 +139,7 @@ describe('PopUp Animations', () => {
 
       createPopUpFade(config)
 
-      expect(object.material.transparent).toBe(true)
+      expect((object.material as THREE.MeshBasicMaterial).transparent).toBe(true)
     })
   })
 
