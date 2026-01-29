@@ -1,4 +1,4 @@
-import type { PopUpAnimationConfig, EasingFunction } from './types'
+import type { PopUpAnimationConfig } from './types'
 
 /**
  * Easing functions for animations
@@ -88,9 +88,9 @@ export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) =
   } = config
 
   // Ensure material is transparent
-  if (object.material) {
-    object.material.transparent = true
-    object.material.opacity = 0
+  if ('material' in object && object.material) {
+    (object.material as any).transparent = true;
+    (object.material as any).opacity = 0
   }
 
   let hasCompleted = false
@@ -105,8 +105,8 @@ export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) =
     if (adjustedFrame >= duration) {
       if (!hasCompleted) {
         object.position.y = endY
-        if (object.material) {
-          object.material.opacity = 1
+        if ('material' in object && object.material) {
+          (object.material as any).opacity = 1
         }
         hasCompleted = true
         onComplete?.()
@@ -119,8 +119,8 @@ export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) =
 
     object.position.y = startY + (endY - startY) * easedProgress
 
-    if (object.material) {
-      object.material.opacity = easedProgress
+    if ('material' in object && object.material) {
+      (object.material as any).opacity = easedProgress
     }
 
     return true
