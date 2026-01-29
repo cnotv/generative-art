@@ -3,25 +3,43 @@ import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { page } from 'vitest/browser'
-import { generatedRoutes } from '@/config/router'
+
+// Direct imports - this is the key difference from router lazy loading
+import type { Component } from 'vue'
 
 /**
- * Extract test cases from router configuration
- * This ensures we test exactly the pages defined in the routing
+ * Dynamically import all Vue components using Vite's glob import
+ * This resolves the lazy-loaded components immediately
  */
-const testCases = generatedRoutes
-  .filter((route): route is NonNullable<typeof route> => {
-    return route !== null && route !== undefined &&
-           typeof route.component === 'function' &&
-           typeof route.name === 'string' &&
-           typeof route.group === 'string'
-  })
-  .map(route => ({
-    name: route.name as string,
-    category: route.group as string,
-    path: route.path,
-    component: route.component
-  }))
+const componentModules = import.meta.glob('/src/views/**/*.vue', { eager: true })
+
+/**
+ * Extract test cases from the imported components
+ * Filter to match the routing pattern (component name in path)
+ */
+const testCases: Array<{ name: string; category: string; path: string; component: Component }> = []
+
+for (const [path, module] of Object.entries(componentModules)) {
+  // Extract category and component name from path
+  // Pattern: /src/views/{Category}/{ComponentName}/{ComponentName}.vue or /src/views/{Category}/{ComponentName}.vue
+  const match = path.match(/\/src\/views\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
+
+  if (match) {
+    const [, category, componentName] = match
+    // Skip if category is Templates or Stages (not in router)
+    if (category === 'Templates' || category === 'Stages') continue
+
+    // Convert to readable name (e.g., "GoombaRunner" -> "Goomba Runner")
+    const name = componentName.replace(/([A-Z])/g, ' $1').trim()
+
+    testCases.push({
+      name,
+      category,
+      path: `/${category.toLowerCase()}/${componentName}`,
+      component: (module as any).default
+    })
+  }
+}
 
 /**
  * Visual Regression Tests
@@ -53,7 +71,7 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
         history: createMemoryHistory(),
         routes: [{
           path: path,
-          component: component as any
+          component
         }]
       })
 
@@ -62,7 +80,7 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       await router.isReady()
 
       // Mount component
-      wrapper = mount(component as any, {
+      wrapper = mount(component, {
         global: {
           plugins: [pinia, router]
         },
