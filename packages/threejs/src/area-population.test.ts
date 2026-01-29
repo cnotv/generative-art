@@ -99,23 +99,16 @@ describe('generateAreaPositions', () => {
 
       if (pattern === 'grid') {
         // Grid should create evenly spaced positions
-        // For 9 elements, we expect a 3x3 grid
-        const gridSize = 3
-        const cellWidth = 100 / gridSize
-        const cellDepth = 100 / gridSize
+        // Verify all positions are unique and within bounds
+        const uniquePositions = new Set(positions.map(p => `${p[0]},${p[2]}`))
+        expect(uniquePositions.size).toBe(positions.length)
 
-        // Verify positions are on grid
+        // Verify positions are evenly distributed
         positions.forEach(([x, , z]) => {
-          // Positions should be at cell centers relative to area bounds (-50 to 50)
-          const relativeX = x + 50 // Convert to 0-100 range
-          const relativeZ = z + 50
-
-          // Check if position aligns with grid cell centers
-          const isOnGridX = positions.some(([px]) => Math.abs(px - x) < 0.01)
-          const isOnGridZ = positions.some(([,, pz]) => Math.abs(pz - z) < 0.01)
-
-          expect(isOnGridX).toBe(true)
-          expect(isOnGridZ).toBe(true)
+          expect(x).toBeGreaterThanOrEqual(-50)
+          expect(x).toBeLessThanOrEqual(50)
+          expect(z).toBeGreaterThanOrEqual(-50)
+          expect(z).toBeLessThanOrEqual(50)
         })
       }
     })

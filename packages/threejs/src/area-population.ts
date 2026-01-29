@@ -1,14 +1,4 @@
-import type { CoordinateTuple } from './types'
-
-export interface AreaConfig {
-  center?: CoordinateTuple
-  size?: CoordinateTuple
-  min?: CoordinateTuple
-  max?: CoordinateTuple
-  count: number
-  pattern?: 'random' | 'grid' | 'grid-jitter'
-  seed?: number
-}
+import type { CoordinateTuple, AreaConfig } from './types'
 
 /**
  * Seeded random number generator using mulberry32
