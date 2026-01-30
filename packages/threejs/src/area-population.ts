@@ -25,13 +25,6 @@ type SeededRandom = {
 }
 
 /**
- * Create a new seeded random generator
- */
-const createSeededRandom = (seed: number): SeededRandom => ({
-  state: seed
-})
-
-/**
  * Generate next random number between 0 and 1 using mulberry32 algorithm
  *
  * Mulberry32 is a simple, fast pseudo-random number generator with good statistical properties.
@@ -167,7 +160,7 @@ const generateRandomPositions = (
         positions: [...accumulator.positions, position]
       }
     },
-    { randomGenerator: createSeededRandom(randomSeed), positions: [] as CoordinateTuple[] }
+    { randomGenerator: { state: randomSeed }, positions: [] as CoordinateTuple[] }
   )
 
   return positions
@@ -302,7 +295,7 @@ const generateGridJitterPositions = (
         positions: [...accumulator.positions, jitteredPosition]
       }
     },
-    { randomGenerator: createSeededRandom(randomSeed), positions: [] as CoordinateTuple[] }
+    { randomGenerator: { state: randomSeed }, positions: [] as CoordinateTuple[] }
   )
 
   return positions
