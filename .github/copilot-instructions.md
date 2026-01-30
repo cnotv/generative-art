@@ -107,10 +107,12 @@ Use format: `<type>/<issue-number>-<description>`
 
 ### Functional Programming
 - **NEVER use classes**: ALWAYS use functional programming patterns. Use functions, types, and composition instead of classes
+- **NEVER use for loops**: Use `map`, `filter`, `reduce`, `flatMap`, `Array.from`, etc. instead of for/for-of/for-in/while loops
 - **Prefer pure functions**: Avoid side effects, return new values instead of mutating
 - **Function composition**: Chain small, reusable functions rather than large imperative blocks
+- **Split large functions**: Break down complex logic into small, single-purpose functions with descriptive names
+- **Long descriptive names**: Prefer verbose, readable variable/function names over short abbreviations (e.g., `elementCount` over `count`, `randomGenerator` over `rng`)
 - **Immutability**: Use `const`, spread operators, and avoid direct mutations
-- **Array methods**: Prefer `map`, `filter`, `reduce` over `for` loops
 - **State management**: Use closures, tuples, or plain objects instead of class instances
 - **No legacy/deprecated support**: Never add overloads or backward compatibility for old function signatures. When refactoring APIs, update all usages across the codebase instead of maintaining legacy signatures
 
