@@ -118,13 +118,12 @@ const init = async (): Promise<void> => {
             };
             const element = getCube(scene, world, elementConfig);
 
-            // Add pop-up animation with staggered delay based on category
+            // Add pop-up animation (delay only if specified in config)
             const popUpAnimation = createPopUpBounce({
               object: element,
               startY: position[1] - 3,
               endY: position[1],
-              duration: 30,
-              delay: animationIndex * 0.5 // Faster stagger for many elements
+              duration: 30
             });
 
             timelineManager.addAction({
