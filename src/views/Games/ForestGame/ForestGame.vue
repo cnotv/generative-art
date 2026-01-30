@@ -4,7 +4,6 @@ import {
   getTools,
   getModel,
   getCube,
-  instanceMatrixMesh,
   cameraFollowPlayer,
   generateAreaPositions,
   type ComplexModel
@@ -18,11 +17,10 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import {
   playerSettings,
-  illustrations,
   setupConfig,
   controlBindings,
   assets,
-  dynamicFlowerConfig,
+  illustrationAreas,
   // undergroundConfig,
 } from "./config";
 // import { times } from "@/utils/lodash";
@@ -106,46 +104,41 @@ const init = async (): Promise<void> => {
       // Add ground mesh for ground detection (if ground exists)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
-      Object.keys(illustrations).forEach((key) => {
-        const config = (illustrations as Record<string, any>)[key];
-        const mesh = getCube(scene, world, config);
-        if (config.instances) {
-          instanceMatrixMesh(mesh as any, scene, config.instances);
-        }
-        // obstacles.push(model);
-      });
-
-      // Demonstrate dynamic area population with pop-up animations
-      const positions = generateAreaPositions(dynamicFlowerConfig.area);
-      const dynamicFlowers: any[] = [];
-
       remapControlsOptions(bindings);
 
       const timelineManager = createTimelineManager();
 
-      positions.forEach((position, index) => {
-        const flowerConfig = {
-          ...dynamicFlowerConfig,
-          position
-        };
-        const flower = getCube(scene, world, flowerConfig);
-        dynamicFlowers.push(flower);
+      // Populate all illustrations using area-based generation with pop-up animations
+      let animationIndex = 0;
+      Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
+        configs.forEach((config) => {
+          const positions = generateAreaPositions(config.area);
 
-        // Add pop-up animation with staggered delay
-        const popUpAnimation = createPopUpBounce({
-          object: flower,
-          startY: position[1] - 3, // Start below ground
-          endY: position[1],       // End at target position
-          duration: 30,            // 30 frames
-          delay: index * 2         // Stagger by 2 frames each
-        });
+          positions.forEach((position) => {
+            const elementConfig = {
+              ...config,
+              position
+            };
+            const element = getCube(scene, world, elementConfig);
 
-        // Add to timeline
-        timelineManager.addAction({
-          name: `flower-${index}-popup`,
-          category: 'visual',
-          action: popUpAnimation,
-          autoRemove: true
+            // Add pop-up animation with staggered delay based on category
+            const popUpAnimation = createPopUpBounce({
+              object: element,
+              startY: position[1] - 3,
+              endY: position[1],
+              duration: 30,
+              delay: animationIndex * 0.5 // Faster stagger for many elements
+            });
+
+            timelineManager.addAction({
+              name: `${categoryName}-${animationIndex}-popup`,
+              category: 'visual',
+              action: popUpAnimation,
+              autoRemove: true
+            });
+
+            animationIndex++;
+          });
         });
       });
 
