@@ -5,7 +5,6 @@ import {
   getModel,
   getCube,
   cameraFollowPlayer,
-  generateAreaPositions,
   type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
@@ -108,13 +107,11 @@ const init = async (): Promise<void> => {
 
       const timelineManager = createTimelineManager();
 
-      // Populate all illustrations using area-based generation with pop-up animations
+      // Populate all illustrations using pre-generated positions with pop-up animations
       let animationIndex = 0;
       Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
         configs.forEach((config) => {
-          const positions = generateAreaPositions(config.area);
-
-          positions.forEach((position) => {
+          config.positions.forEach((position: CoordinateTuple) => {
             const elementConfig = {
               ...config,
               position

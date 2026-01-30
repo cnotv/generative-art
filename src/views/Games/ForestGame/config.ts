@@ -1,8 +1,8 @@
 import type { CoordinateTuple } from "@webgamekit/animation";
-import type { SetupConfig, PostProcessingConfig } from "@webgamekit/threejs";
+import type { SetupConfig, PostProcessingConfig, AreaConfig } from "@webgamekit/threejs";
 import * as THREE from "three";
 
-import { getInstanceConfig } from "@webgamekit/threejs";
+import { getInstanceConfig, generateAreaPositions } from "@webgamekit/threejs";
 
 // Assets
 import jumpSound from "@/assets/audio/jump.wav";
@@ -406,150 +406,178 @@ export const assets = {
   jumpSound,
 };
 
+// Helper to split positions into chunks for texture variants
+const createTextureVariants = (
+  textures: string[],
+  baseConfig: any,
+  area: AreaConfig
+) => {
+  const positions = generateAreaPositions(area);
+  const chunkSize = Math.ceil(positions.length / textures.length);
+
+  return textures.map((texture, index) => ({
+    texture,
+    ...baseConfig,
+    positions: positions.slice(index * chunkSize, (index + 1) * chunkSize)
+  }));
+};
+
 // Area population configurations for illustrations with pop-up animations
 export const illustrationAreas = {
-  clouds: [
-    illustrationCloud1Img,
-    illustrationCloud2Img,
-    illustrationCloud3Img,
-    illustrationCloud4Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [200, 100, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    area: {
+  clouds: createTextureVariants(
+    [
+      illustrationCloud1Img,
+      illustrationCloud2Img,
+      illustrationCloud3Img,
+      illustrationCloud4Img,
+    ],
+    {
+      size: [200, 100, 0] as CoordinateTuple,
+      ...genericFlatConfig
+    },
+    {
       center: [0, 60, -80] as CoordinateTuple,
       size: [2000, 60, 100] as CoordinateTuple,
-      count: 3,
+      count: 12,
       pattern: 'random' as const,
-      seed: 1000 + index
+      seed: 1000
     }
-  })),
-  mountains1: [
-    illustrationMountain11Img,
-    illustrationMountain12Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [240, 120, 0] as CoordinateTuple,
-    ...glitchFix,
-    ...genericFlatConfig,
-    area: {
+  ),
+  mountains1: createTextureVariants(
+    [
+      illustrationMountain11Img,
+      illustrationMountain12Img,
+    ],
+    {
+      size: [240, 120, 0] as CoordinateTuple,
+      ...glitchFix,
+      ...genericFlatConfig
+    },
+    {
       center: [0, -20, -100] as CoordinateTuple,
       size: [2000, 0, 0] as CoordinateTuple,
-      count: 4,
-      pattern: 'grid-jitter' as const,
-      seed: 2000 + index
-    }
-  })),
-  mountains2: [
-    illustrationMountain21Img,
-    illustrationMountain22Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [120, 60, 0] as CoordinateTuple,
-    ...glitchFix,
-    ...genericFlatConfig,
-    area: {
-      center: [0, -20, -50] as CoordinateTuple,
-      size: [2000, 0, 0] as CoordinateTuple,
-      count: 5,
-      pattern: 'grid-jitter' as const,
-      seed: 3000 + index
-    }
-  })),
-  trees1: [
-    illustrationTree11Img,
-    illustrationTree12Img,
-    illustrationTree13Img,
-    illustrationTree14Img,
-    illustrationTree15Img,
-    illustrationTree16Img,
-    illustrationTree17Img,
-    illustrationTree18Img,
-    illustrationTree19Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [30, 50, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    ...glitchFix,
-    area: {
-      center: [0, -1, -22] as CoordinateTuple,
-      size: [1000, 0, 0] as CoordinateTuple,
       count: 8,
       pattern: 'grid-jitter' as const,
-      seed: 4000 + index
+      seed: 2000
     }
-  })),
-  trees2: [
-    illustrationTree21Img,
-    illustrationTree22Img,
-    illustrationTree23Img,
-    illustrationTree24Img,
-    illustrationTree25Img,
-    illustrationTree26Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [20, 40, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    ...glitchFix,
-    area: {
-      center: [0, -1, -10] as CoordinateTuple,
-      size: [1000, 0, 0] as CoordinateTuple,
+  ),
+  mountains2: createTextureVariants(
+    [
+      illustrationMountain21Img,
+      illustrationMountain22Img,
+    ],
+    {
+      size: [120, 60, 0] as CoordinateTuple,
+      ...glitchFix,
+      ...genericFlatConfig
+    },
+    {
+      center: [0, -20, -50] as CoordinateTuple,
+      size: [2000, 0, 0] as CoordinateTuple,
       count: 10,
       pattern: 'grid-jitter' as const,
-      seed: 5000 + index
+      seed: 3000
     }
-  })),
+  ),
+  trees1: createTextureVariants(
+    [
+      illustrationTree11Img,
+      illustrationTree12Img,
+      illustrationTree13Img,
+      illustrationTree14Img,
+      illustrationTree15Img,
+      illustrationTree16Img,
+      illustrationTree17Img,
+      illustrationTree18Img,
+      illustrationTree19Img,
+    ],
+    {
+      size: [30, 50, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      ...glitchFix
+    },
+    {
+      center: [0, -1, -22] as CoordinateTuple,
+      size: [1000, 0, 0] as CoordinateTuple,
+      count: 72,
+      pattern: 'grid-jitter' as const,
+      seed: 4000
+    }
+  ),
+  trees2: createTextureVariants(
+    [
+      illustrationTree21Img,
+      illustrationTree22Img,
+      illustrationTree23Img,
+      illustrationTree24Img,
+      illustrationTree25Img,
+      illustrationTree26Img,
+    ],
+    {
+      size: [20, 40, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      ...glitchFix
+    },
+    {
+      center: [0, -1, -10] as CoordinateTuple,
+      size: [1000, 0, 0] as CoordinateTuple,
+      count: 60,
+      pattern: 'grid-jitter' as const,
+      seed: 5000
+    }
+  ),
   grass: [{
     texture: illustrationTree23Img,
     size: [10, 17, 0] as CoordinateTuple,
     ...genericFlatConfig,
-    area: {
+    positions: generateAreaPositions({
       center: [0, -16, 10] as CoordinateTuple,
       size: [600, 0, 60] as CoordinateTuple,
       count: 100,
       pattern: 'random' as const,
       seed: 6000
-    }
+    })
   }],
   rocks: [{
     texture: illustrationRock1Img,
     size: [7, 3, 0] as CoordinateTuple,
     ...genericFlatConfig,
-    area: {
+    positions: generateAreaPositions({
       center: [0, -1, 5] as CoordinateTuple,
       size: [1000, 0, 60] as CoordinateTuple,
       count: 30,
       pattern: 'random' as const,
       seed: 7000
-    }
+    })
   }],
-  bushes: [
-    illustrationBush11Img,
-    illustrationBush12Img,
-  ].map((texture, index) => ({
-    texture,
-    size: [15, 10, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    ...glitchFix,
-    area: {
+  bushes: createTextureVariants(
+    [
+      illustrationBush11Img,
+      illustrationBush12Img,
+    ],
+    {
+      size: [15, 10, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      ...glitchFix
+    },
+    {
       center: [0, -1, 20] as CoordinateTuple,
       size: [800, 0, 40] as CoordinateTuple,
-      count: 25,
+      count: 50,
       pattern: 'random' as const,
-      seed: 8000 + index
+      seed: 8000
     }
-  })),
+  ),
   flowers: [{
     texture: illustrationFlower1Img,
     size: [8, 5, 0] as CoordinateTuple,
     ...genericFlatConfig,
-    area: {
+    positions: generateAreaPositions({
       center: [50, -1, 15] as CoordinateTuple,
       size: [80, 0, 20] as CoordinateTuple,
       count: 15,
       pattern: 'grid-jitter' as const,
       seed: 9000
-    }
+    })
   }]
 };
