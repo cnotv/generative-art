@@ -106,10 +106,12 @@ Use format: `<type>/<issue-number>-<description>`
 - **JSDoc for public APIs**: Use JSDoc for exported functions with `@param` and `@returns`, but keep descriptions concise
 
 ### Functional Programming
+- **NEVER use classes**: ALWAYS use functional programming patterns. Use functions, types, and composition instead of classes
 - **Prefer pure functions**: Avoid side effects, return new values instead of mutating
 - **Function composition**: Chain small, reusable functions rather than large imperative blocks
 - **Immutability**: Use `const`, spread operators, and avoid direct mutations
 - **Array methods**: Prefer `map`, `filter`, `reduce` over `for` loops
+- **State management**: Use closures, tuples, or plain objects instead of class instances
 - **No legacy/deprecated support**: Never add overloads or backward compatibility for old function signatures. When refactoring APIs, update all usages across the codebase instead of maintaining legacy signatures
 
 ### TypeScript

@@ -1,26 +1,40 @@
 import type { CoordinateTuple, AreaConfig } from './types'
 
 /**
- * Seeded random number generator using mulberry32
+ * Seeded random number generator using mulberry32 algorithm
+ * Provides reproducible random numbers for testing and consistent layouts
  */
-class SeededRandom {
-  private state: number
+type SeededRandom = {
+  state: number
+}
 
-  constructor(seed: number) {
-    this.state = seed
-  }
+/**
+ * Create a new seeded random generator
+ */
+const createSeededRandom = (seed: number): SeededRandom => ({
+  state: seed
+})
 
-  next(): number {
-    this.state |= 0
-    this.state = (this.state + 0x6d2b79f5) | 0
-    let t = Math.imul(this.state ^ (this.state >>> 15), 1 | this.state)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+/**
+ * Generate next random number between 0 and 1
+ * Returns [newState, randomValue]
+ */
+const nextRandom = (rng: SeededRandom): [SeededRandom, number] => {
+  let state = rng.state | 0
+  state = (state + 0x6d2b79f5) | 0
+  let t = Math.imul(state ^ (state >>> 15), 1 | state)
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+  const value = ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  return [{ state }, value]
+}
 
-  range(min: number, max: number): number {
-    return min + this.next() * (max - min)
-  }
+/**
+ * Generate random number in range [min, max)
+ * Returns [newState, randomValue]
+ */
+const randomRange = (rng: SeededRandom, min: number, max: number): [SeededRandom, number] => {
+  const [newRng, value] = nextRandom(rng)
+  return [newRng, min + value * (max - min)]
 }
 
 /**
@@ -58,16 +72,16 @@ export function generateAreaPositions(config: AreaConfig): CoordinateTuple[] {
     throw new Error('Either (center + size) or (min + max) must be provided')
   }
 
-  const rng = new SeededRandom(seed)
+  let rng = createSeededRandom(seed)
   const positions: CoordinateTuple[] = []
 
   if (pattern === 'random') {
     for (let i = 0; i < count; i++) {
-      positions.push([
-        rng.range(minBounds[0], maxBounds[0]),
-        rng.range(minBounds[1], maxBounds[1]),
-        rng.range(minBounds[2], maxBounds[2])
-      ])
+      let x: number, y: number, z: number
+      ;[rng, x] = randomRange(rng, minBounds[0], maxBounds[0])
+      ;[rng, y] = randomRange(rng, minBounds[1], maxBounds[1])
+      ;[rng, z] = randomRange(rng, minBounds[2], maxBounds[2])
+      positions.push([x, y, z])
     }
   } else if (pattern === 'grid' || pattern === 'grid-jitter') {
     // Calculate grid dimensions
@@ -83,16 +97,19 @@ export function generateAreaPositions(config: AreaConfig): CoordinateTuple[] {
         const baseX = minBounds[0] + col * cellWidth + cellWidth / 2
         const baseZ = minBounds[2] + row * cellDepth + cellDepth / 2
 
-        const x = pattern === 'grid-jitter'
-          ? baseX + rng.range(-cellWidth * 0.3, cellWidth * 0.3)
-          : baseX
-        const z = pattern === 'grid-jitter'
-          ? baseZ + rng.range(-cellDepth * 0.3, cellDepth * 0.3)
-          : baseZ
-
-        const y = pattern === 'grid-jitter'
-          ? rng.range(minBounds[1], maxBounds[1])
-          : (minBounds[1] + maxBounds[1]) / 2
+        let x: number, z: number, y: number
+        if (pattern === 'grid-jitter') {
+          let jitterX: number, jitterZ: number
+          ;[rng, jitterX] = randomRange(rng, -cellWidth * 0.3, cellWidth * 0.3)
+          ;[rng, jitterZ] = randomRange(rng, -cellDepth * 0.3, cellDepth * 0.3)
+          ;[rng, y] = randomRange(rng, minBounds[1], maxBounds[1])
+          x = baseX + jitterX
+          z = baseZ + jitterZ
+        } else {
+          x = baseX
+          z = baseZ
+          y = (minBounds[1] + maxBounds[1]) / 2
+        }
 
         positions.push([x, y, z])
         generated++
