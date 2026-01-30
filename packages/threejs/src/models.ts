@@ -544,7 +544,6 @@ export const getCube = (
   }: ModelOptions = {},
 ): ComplexModel => {
   const initialValues = { size, rotation, position, color };
-  renderOrder = Math.abs(position[2]) / 10;
 
   // Create and add model
   const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
