@@ -2,7 +2,23 @@ import type { CoordinateTuple, AreaConfig } from './types'
 
 /**
  * Seeded random number generator using mulberry32 algorithm
- * Provides reproducible random numbers for testing and consistent layouts
+ *
+ * Why mulberry32 over Math.random():
+ * - Reproducibility: Same seed always produces same sequence (critical for testing)
+ * - Determinism: Math.random() cannot be seeded in JavaScript
+ * - Consistency: Ensures identical layouts across different runs/browsers
+ * - Testing: Allows unit tests to verify exact position generation
+ * - Performance: Faster than crypto.getRandomValues() for non-security use
+ *
+ * Why mulberry32 specifically:
+ * - Simple: Only 5 lines of code, easy to understand and maintain
+ * - Fast: Uses only bitwise operations and multiplication
+ * - Good distribution: Passes statistical quality tests
+ * - Small state: Only 32 bits (4 bytes) of state
+ * - Well-tested: Widely used in game development and simulations
+ *
+ * Source: https://github.com/bryc/code/blob/master/jshash/PRNGs.md
+ * Research: Community-vetted PRNG implementations
  */
 type SeededRandom = {
   state: number
