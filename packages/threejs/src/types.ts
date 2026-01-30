@@ -208,4 +208,6 @@ export interface AreaConfig {
   count: number;
   pattern?: 'random' | 'grid' | 'grid-jitter';
   seed?: number;
+  sizeVariation?: CoordinateTuple;
+  rotationVariation?: CoordinateTuple;
 }

@@ -406,20 +406,53 @@ export const assets = {
   jumpSound,
 };
 
-// Helper to split positions into chunks for texture variants
+// Helper to split positions into equal chunks for texture variants
+// Generates positions for (count × textures.length) and splits into chunks
 const createTextureVariants = (
   textures: string[],
   baseConfig: any,
   area: AreaConfig
 ) => {
-  const positions = generateAreaPositions(area);
-  const chunkSize = Math.ceil(positions.length / textures.length);
+  // Generate positions for total count (will be split among variants)
+  const allPositions = generateAreaPositions(area);
+  const { sizeVariation, rotationVariation } = area;
+  const chunkSize = Math.ceil(allPositions.length / textures.length);
 
-  return textures.map((texture, index) => ({
-    texture,
-    ...baseConfig,
-    positions: positions.slice(index * chunkSize, (index + 1) * chunkSize)
-  }));
+  return textures.map((texture, index) => {
+    // Get chunk of positions for this texture variant
+    const startIndex = index * chunkSize;
+    const endIndex = Math.min(startIndex + chunkSize, allPositions.length);
+    const chunkPositions = allPositions.slice(startIndex, endIndex);
+
+    // Generate instances with variations if specified
+    const instances = (sizeVariation || rotationVariation)
+      ? chunkPositions.map((position: CoordinateTuple) => {
+          const sizeVar = sizeVariation || [0, 0, 0] as CoordinateTuple;
+          const rotVar = rotationVariation || [0, 0, 0] as CoordinateTuple;
+
+          return {
+            position,
+            scale: [
+              baseConfig.size[0] + (Math.random() - 0.5) * sizeVar[0],
+              baseConfig.size[1] + (Math.random() - 0.5) * sizeVar[1],
+              baseConfig.size[2] + (Math.random() - 0.5) * sizeVar[2]
+            ] as CoordinateTuple,
+            rotation: [
+              (Math.random() - 0.5) * rotVar[0],
+              (Math.random() - 0.5) * rotVar[1],
+              (Math.random() - 0.5) * rotVar[2]
+            ] as CoordinateTuple
+          };
+        })
+      : undefined;
+
+    return {
+      texture,
+      ...baseConfig,
+      positions: chunkPositions,
+      instances
+    };
+  });
 };
 
 // Area population configurations for illustrations with pop-up animations
@@ -440,7 +473,8 @@ export const illustrationAreas = {
       size: [2000, 60, 100] as CoordinateTuple,
       count: 12,
       pattern: 'random' as const,
-      seed: 1000
+      seed: 1000,
+      sizeVariation: [100, 50, 0] as CoordinateTuple
     }
   ),
   mountains1: createTextureVariants(
@@ -458,7 +492,8 @@ export const illustrationAreas = {
       size: [2000, 0, 0] as CoordinateTuple,
       count: 8,
       pattern: 'grid-jitter' as const,
-      seed: 2000
+      seed: 2000,
+      sizeVariation: [120, 60, 0] as CoordinateTuple
     }
   ),
   mountains2: createTextureVariants(
@@ -476,7 +511,8 @@ export const illustrationAreas = {
       size: [2000, 0, 0] as CoordinateTuple,
       count: 10,
       pattern: 'grid-jitter' as const,
-      seed: 3000
+      seed: 3000,
+      sizeVariation: [60, 30, 0] as CoordinateTuple
     }
   ),
   trees1: createTextureVariants(
@@ -501,7 +537,8 @@ export const illustrationAreas = {
       size: [1000, 0, 0] as CoordinateTuple,
       count: 72,
       pattern: 'grid-jitter' as const,
-      seed: 4000
+      seed: 4000,
+      sizeVariation: [15, 25, 0] as CoordinateTuple
     }
   ),
   trees2: createTextureVariants(
@@ -523,7 +560,8 @@ export const illustrationAreas = {
       size: [1000, 0, 0] as CoordinateTuple,
       count: 60,
       pattern: 'grid-jitter' as const,
-      seed: 5000
+      seed: 5000,
+      sizeVariation: [10, 20, 0] as CoordinateTuple
     }
   ),
   grass: [{
@@ -565,7 +603,8 @@ export const illustrationAreas = {
       size: [800, 0, 40] as CoordinateTuple,
       count: 50,
       pattern: 'random' as const,
-      seed: 8000
+      seed: 8000,
+      sizeVariation: [5, 3, 0] as CoordinateTuple
     }
   ),
   flowers: [{

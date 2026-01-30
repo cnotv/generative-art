@@ -111,10 +111,16 @@ const init = async (): Promise<void> => {
       let animationIndex = 0;
       Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
         configs.forEach((config) => {
-          config.positions.forEach((position: CoordinateTuple) => {
+          // Use instances with variations if available, otherwise use positions
+          const elementsData = config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }));
+
+          elementsData.forEach((elementData: any) => {
+            const position = elementData.position;
             const elementConfig = {
               ...config,
-              position
+              position,
+              ...(elementData.scale && { size: elementData.scale }),
+              ...(elementData.rotation && { rotation: elementData.rotation })
             };
             const element = getCube(scene, world, elementConfig);
 
