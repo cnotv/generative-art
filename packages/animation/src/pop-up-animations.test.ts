@@ -44,17 +44,17 @@ describe('PopUp Animations', () => {
       // Start position
       object.position.y = config.startY
 
-      // Simulate animation frames
-      for (let frame = 0; frame <= config.duration; frame++) {
-        const result = action(frame)
-        if (frame === config.duration) {
+      // Simulate animation frames - call action() without parameters
+      Array.from({ length: config.duration + 1 }).forEach((_, index) => {
+        const result = action()
+        if (index === config.duration) {
           expect(result).toBe(false) // Animation complete
           expect(object.position.y).toBeCloseTo(config.endY, 1)
-        } else if (frame > 0) {
+        } else if (index > 0) {
           expect(result).toBe(true) // Still animating
           expect(object.position.y).toBeGreaterThan(config.startY)
         }
-      }
+      })
     })
 
     it('should call onComplete when animation finishes', () => {
@@ -70,9 +70,7 @@ describe('PopUp Animations', () => {
       const action = createPopUpBounce(config)
 
       // Run through animation
-      for (let frame = 0; frame <= config.duration; frame++) {
-        action(frame)
-      }
+      Array.from({ length: config.duration + 1 }).forEach(() => action())
 
       expect(onComplete).toHaveBeenCalledOnce()
     })
@@ -90,14 +88,20 @@ describe('PopUp Animations', () => {
 
       object.position.y = config.startY
 
-      // During delay, position should not change
-      action(0)
+      // During delay (frames 0-2), position should not change
+      action()
       expect(object.position.y).toBe(config.startY)
-      action(2)
+      action()
+      expect(object.position.y).toBe(config.startY)
+      action()
       expect(object.position.y).toBe(config.startY)
 
-      // After delay, animation starts
-      action(4) // Frame 4 = delay (3) + 1 frame of animation
+      // Frame 3: delay ends, adjustedFrame=0, progress=0, position still at start
+      action()
+      expect(object.position.y).toBe(config.startY)
+
+      // Frame 4: adjustedFrame=1, animation progresses
+      action()
       expect(object.position.y).toBeGreaterThan(config.startY)
     })
   })
@@ -113,20 +117,16 @@ describe('PopUp Animations', () => {
 
       const action = createPopUpFade(config)
 
-      // Set initial opacity
-      object.material.opacity = 0
-      object.material.transparent = true
-
       // Simulate animation
-      for (let frame = 0; frame <= config.duration; frame++) {
-        action(frame)
-        if (frame === 0) {
+      Array.from({ length: config.duration + 1 }).forEach((_, index) => {
+        action()
+        if (index === 0) {
           expect(object.material.opacity).toBeCloseTo(0, 1)
-        } else if (frame === config.duration) {
+        } else if (index === config.duration) {
           expect(object.material.opacity).toBeCloseTo(1, 1)
           expect(object.position.y).toBeCloseTo(config.endY, 1)
         }
-      }
+      })
     })
 
     it('should set material to transparent', () => {
@@ -137,8 +137,7 @@ describe('PopUp Animations', () => {
         duration: 5
       }
 
-      const action = createPopUpFade(config)
-      action(0)
+      createPopUpFade(config)
 
       expect(object.material.transparent).toBe(true)
     })
@@ -156,19 +155,19 @@ describe('PopUp Animations', () => {
       const action = createPopUpScale(config)
 
       // Simulate animation
-      for (let frame = 0; frame <= config.duration; frame++) {
-        action(frame)
-        if (frame === 0) {
+      Array.from({ length: config.duration + 1 }).forEach((_, index) => {
+        action()
+        if (index === 0) {
           expect(object.scale.x).toBeCloseTo(0, 1)
           expect(object.scale.y).toBeCloseTo(0, 1)
           expect(object.scale.z).toBeCloseTo(0, 1)
-        } else if (frame === config.duration) {
+        } else if (index === config.duration) {
           expect(object.scale.x).toBeCloseTo(1, 1)
           expect(object.scale.y).toBeCloseTo(1, 1)
           expect(object.scale.z).toBeCloseTo(1, 1)
           expect(object.position.y).toBeCloseTo(config.endY, 1)
         }
-      }
+      })
     })
   })
 

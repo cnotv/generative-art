@@ -34,8 +34,9 @@ export const easing = {
 
 /**
  * Create a pop-up animation with bounce effect
+ * Returns a function that tracks frames internally and returns false when complete
  */
-export function createPopUpBounce(config: PopUpAnimationConfig): (frame: number) => boolean {
+export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
   const {
     object,
     startY,
@@ -46,15 +47,18 @@ export function createPopUpBounce(config: PopUpAnimationConfig): (frame: number)
     onComplete
   } = config
 
+  let currentFrame = -1
   let hasCompleted = false
 
-  return (frame: number): boolean => {
+  return (): boolean => {
+    currentFrame++
+
     // Handle delay
-    if (frame < delay) {
+    if (currentFrame < delay) {
       return true
     }
 
-    const adjustedFrame = frame - delay
+    const adjustedFrame = currentFrame - delay
 
     if (adjustedFrame >= duration) {
       if (!hasCompleted) {
@@ -75,8 +79,9 @@ export function createPopUpBounce(config: PopUpAnimationConfig): (frame: number)
 
 /**
  * Create a pop-up animation with fade effect
+ * Returns a function that tracks frames internally and returns false when complete
  */
-export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) => boolean {
+export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
   const {
     object,
     startY,
@@ -93,14 +98,17 @@ export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) =
     (object.material as any).opacity = 0
   }
 
+  let currentFrame = -1
   let hasCompleted = false
 
-  return (frame: number): boolean => {
-    if (frame < delay) {
+  return (): boolean => {
+    currentFrame++
+
+    if (currentFrame < delay) {
       return true
     }
 
-    const adjustedFrame = frame - delay
+    const adjustedFrame = currentFrame - delay
 
     if (adjustedFrame >= duration) {
       if (!hasCompleted) {
@@ -129,8 +137,9 @@ export function createPopUpFade(config: PopUpAnimationConfig): (frame: number) =
 
 /**
  * Create a pop-up animation with scale effect
+ * Returns a function that tracks frames internally and returns false when complete
  */
-export function createPopUpScale(config: PopUpAnimationConfig): (frame: number) => boolean {
+export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
   const {
     object,
     startY,
@@ -147,14 +156,17 @@ export function createPopUpScale(config: PopUpAnimationConfig): (frame: number) 
   // Set initial scale to 0
   object.scale.set(0, 0, 0)
 
+  let currentFrame = -1
   let hasCompleted = false
 
-  return (frame: number): boolean => {
-    if (frame < delay) {
+  return (): boolean => {
+    currentFrame++
+
+    if (currentFrame < delay) {
       return true
     }
 
-    const adjustedFrame = frame - delay
+    const adjustedFrame = currentFrame - delay
 
     if (adjustedFrame >= duration) {
       if (!hasCompleted) {

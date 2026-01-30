@@ -144,7 +144,7 @@ const init = async (): Promise<void> => {
         timelineManager.addAction({
           name: `flower-${index}-popup`,
           category: 'visual',
-          action: () => popUpAnimation(timelineManager.getFrame()),
+          action: popUpAnimation,
           autoRemove: true
         });
       });

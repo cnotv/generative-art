@@ -409,7 +409,7 @@ export const assets = {
 // Dynamic area population example
 export const dynamicFlowerConfig = {
   texture: illustrationFlower1Img,
-  size: [8, 5, 0],
+  size: [8, 5, 0] as CoordinateTuple,
   ...genericFlatConfig,
   area: {
     center: [50, -1, 15] as CoordinateTuple,
