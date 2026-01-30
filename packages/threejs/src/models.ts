@@ -217,6 +217,7 @@ export const getModel = async (
     animations,
     shape = 'cuboid',
     materialColors,
+    onSpawn,
   }: ModelOptions = {},
 ): Promise<ComplexModel> => {
   const initialValues = { size, rotation, position, color };
@@ -278,7 +279,7 @@ export const getModel = async (
     enabledRotations,
   });
 
-  return Object.assign(mesh, {
+  const complexModel = Object.assign(mesh, {
     userData: {
       body: rigidBody,
       collider,
@@ -288,9 +289,17 @@ export const getModel = async (
       helper: helper as any,
       type,
       characterController,
-      hasGravity
+      hasGravity,
+      onSpawn
     }
   });
+
+  // Invoke onSpawn callback if provided
+  if (onSpawn) {
+    onSpawn();
+  }
+
+  return complexModel;
 };
 
 /**
@@ -412,10 +421,11 @@ export const getBall = (
     receiveShadow = true,
     material = 'MeshPhysicalMaterial',
     texture,
+    onSpawn,
   }: ModelOptions = {},
 ): ComplexModel => {
   const initialValues = { size, rotation: [0, 0, 0] as CoordinateTuple, position, color };
-  
+
   // Create and add model
   const geometry = new THREE.SphereGeometry(size as number);
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
@@ -428,7 +438,7 @@ export const getBall = (
     metalness,
     material,
   });
-  
+
   if (texture) {
     const textureLoader = new THREE.TextureLoader();
     if (Array.isArray(mesh.material)) {
@@ -437,7 +447,7 @@ export const getBall = (
       (mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
     }
   }
-  
+
   mesh.position.set(...(position as CoordinateTuple));
   mesh.castShadow = castShadow;
   mesh.receiveShadow = receiveShadow;
@@ -465,7 +475,7 @@ export const getBall = (
     scene.add(helper);
   }
 
-  return Object.assign(mesh, {
+  const complexModel = Object.assign(mesh, {
     userData: {
       body: rigidBody,
       collider,
@@ -475,9 +485,17 @@ export const getBall = (
       helper: helper as any,
       type,
       characterController,
-      hasGravity
+      hasGravity,
+      onSpawn
     }
   });
+
+  // Invoke onSpawn callback if provided
+  if (onSpawn) {
+    onSpawn();
+  }
+
+  return complexModel;
 };
 
 /**
@@ -522,6 +540,7 @@ export const getCube = (
     alphaTest = 0.5,
     renderOrder = 0,
     side,
+    onSpawn,
   }: ModelOptions = {},
 ): ComplexModel => {
   const initialValues = { size, rotation, position, color };
@@ -530,10 +549,10 @@ export const getCube = (
   // Create and add model
   const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
   const geometry = new THREE.BoxGeometry(...sizeArray);
-  
+
   // Apply origin translation to position edges at specified coordinates
   applyOriginTranslation(geometry, sizeArray, origin);
-  
+
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
     transmission,
@@ -547,13 +566,13 @@ export const getCube = (
     alphaTest,
     side,
   });
-  
+
   if (texture) {
     const textureLoader = new THREE.TextureLoader();
     const loadedTexture = textureLoader.load(texture);
     (mesh.material as THREE.MeshStandardMaterial).map = loadedTexture;
   }
-  
+
   mesh.position.set(...(position as CoordinateTuple));
   mesh.rotation.set(...rotation);
   mesh.castShadow = castShadow;
@@ -584,7 +603,7 @@ export const getCube = (
     scene.add(helper);
   }
 
-  return Object.assign(mesh, {
+  const complexModel = Object.assign(mesh, {
     userData: {
       body: rigidBody,
       collider,
@@ -594,9 +613,17 @@ export const getCube = (
       helper: helper as any,
       type,
       characterController,
-      hasGravity
+      hasGravity,
+      onSpawn
     }
   });
+
+  // Invoke onSpawn callback if provided
+  if (onSpawn) {
+    onSpawn();
+  }
+
+  return complexModel;
 };
 
 /**

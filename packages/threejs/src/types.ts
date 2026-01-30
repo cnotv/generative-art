@@ -54,6 +54,7 @@ export interface ModelOptions extends CommonOptions {
   envMapIntensity?: number;
   animations?: string[];
   materialColors?: number[];
+  onSpawn?: () => boolean;
 }
 
 export interface PhysicOptions extends CommonOptions {
