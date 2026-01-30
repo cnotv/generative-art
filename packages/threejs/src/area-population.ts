@@ -16,15 +16,41 @@ const createSeededRandom = (seed: number): SeededRandom => ({
 })
 
 /**
- * Generate next random number between 0 and 1
- * Returns [newState, randomValue]
+ * Generate next random number between 0 and 1 using mulberry32 algorithm
+ *
+ * Mulberry32 is a simple, fast pseudo-random number generator with good statistical properties.
+ * It uses bitwise operations and multiplication to generate pseudo-random sequences.
+ *
+ * Magic numbers explanation:
+ * - 0x6d2b79f5 (1831565813): Increment constant that ensures state progression
+ * - 15, 7, 14: Bit shift amounts for XOR operations that mix bits
+ * - 61: Multiplier for additional bit mixing
+ * - 4294967296 (2^32): Converts 32-bit integer to [0, 1) range
+ *
+ * Algorithm steps:
+ * 1. Add constant to state (ensures state changes even if input is 0)
+ * 2. Apply XOR shifts and multiplication for bit mixing (avalanche effect)
+ * 3. Final XOR and shift for output distribution
+ * 4. Normalize to [0, 1) by dividing by 2^32
+ *
+ * Returns [newState, randomValue] where:
+ * - newState: Updated generator state for next call
+ * - randomValue: Pseudo-random number in range [0, 1)
+ *
+ * @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#mulberry32
  */
 const nextRandom = (randomGenerator: SeededRandom): [SeededRandom, number] => {
+  // Step 1: Ensure 32-bit integer and add increment constant
   let state = randomGenerator.state | 0
   state = (state + 0x6d2b79f5) | 0
+
+  // Step 2-3: XOR shifts and multiplication for bit mixing
   let temporaryValue = Math.imul(state ^ (state >>> 15), 1 | state)
   temporaryValue = (temporaryValue + Math.imul(temporaryValue ^ (temporaryValue >>> 7), 61 | temporaryValue)) ^ temporaryValue
+
+  // Step 4: Final XOR shift and normalize to [0, 1)
   const randomValue = ((temporaryValue ^ (temporaryValue >>> 14)) >>> 0) / 4294967296
+
   return [{ state }, randomValue]
 }
 
