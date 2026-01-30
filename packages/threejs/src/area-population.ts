@@ -8,7 +8,6 @@ import type { CoordinateTuple, AreaConfig } from './types'
  * - Determinism: Math.random() cannot be seeded in JavaScript
  * - Consistency: Ensures identical layouts across different runs/browsers
  * - Testing: Allows unit tests to verify exact position generation
- * - Performance: Faster than crypto.getRandomValues() for non-security use
  *
  * Why mulberry32 specifically:
  * - Simple: Only 5 lines of code, easy to understand and maintain
@@ -311,17 +310,17 @@ export function generateAreaPositions(configuration: AreaConfig): CoordinateTupl
 
   const { minimumBounds, maximumBounds } = determineAreaBounds(configuration)
 
-  if (distributionPattern === 'random') {
-    return generateRandomPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
-  }
+  switch (distributionPattern) {
+    case 'random':
+      return generateRandomPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
 
-  if (distributionPattern === 'grid') {
-    return generateGridPositions(elementCount, minimumBounds, maximumBounds)
-  }
+    case 'grid':
+      return generateGridPositions(elementCount, minimumBounds, maximumBounds)
 
-  if (distributionPattern === 'grid-jitter') {
-    return generateGridJitterPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
-  }
+    case 'grid-jitter':
+      return generateGridJitterPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
 
-  return []
+    default:
+      return []
+  }
 }
