@@ -311,13 +311,13 @@ export const illustrations = {
     [`${texture}-2`]: {
       texture,
     size: [15, 7, 0],
-    position: [-200, -1, -18],
+    position: [-200, -1, 21],
       ...genericFlatConfig,
       instances: getInstanceConfig({
       show: true,
       amount: 4,
       spacing: 2,
-      position: [0, -1, -18],
+      position: [0, -1, 21],
       positionVariation: [300, 0, 10],
       sizeVariation: [0.5, 0.2, 0],
       })
