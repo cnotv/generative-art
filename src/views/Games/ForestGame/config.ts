@@ -406,53 +406,56 @@ export const assets = {
   jumpSound,
 };
 
-// Helper to split positions into equal chunks for texture variants
-// Generates positions for (count × textures.length) and splits into chunks
+// Helper to randomly distribute positions across texture variants
+// Generates positions and assigns them randomly to texture variants
 const createTextureVariants = (
   textures: string[],
   baseConfig: any,
   area: AreaConfig
 ) => {
-  // Generate positions for total count (will be split among variants)
+  // Generate positions for total count
   const allPositions = generateAreaPositions(area);
   const { sizeVariation, rotationVariation } = area;
-  const chunkSize = Math.ceil(allPositions.length / textures.length);
 
-  return textures.map((texture, index) => {
-    // Get chunk of positions for this texture variant
-    const startIndex = index * chunkSize;
-    const endIndex = Math.min(startIndex + chunkSize, allPositions.length);
-    const chunkPositions = allPositions.slice(startIndex, endIndex);
+  // Initialize arrays for each texture variant
+  const variantData = textures.map(texture => ({
+    texture,
+    ...baseConfig,
+    positions: [] as CoordinateTuple[],
+    instances: [] as any[]
+  }));
 
-    // Generate instances with variations if specified
-    const instances = (sizeVariation || rotationVariation)
-      ? chunkPositions.map((position: CoordinateTuple) => {
-          const sizeVar = sizeVariation || [0, 0, 0] as CoordinateTuple;
-          const rotVar = rotationVariation || [0, 0, 0] as CoordinateTuple;
+  // Randomly assign each position to a texture variant
+  allPositions.forEach((position: CoordinateTuple) => {
+    const randomIndex = Math.floor(Math.random() * textures.length);
+    variantData[randomIndex].positions.push(position);
 
-          return {
-            position,
-            scale: [
-              baseConfig.size[0] + (Math.random() - 0.5) * sizeVar[0],
-              baseConfig.size[1] + (Math.random() - 0.5) * sizeVar[1],
-              baseConfig.size[2] + (Math.random() - 0.5) * sizeVar[2]
-            ] as CoordinateTuple,
-            rotation: [
-              (Math.random() - 0.5) * rotVar[0],
-              (Math.random() - 0.5) * rotVar[1],
-              (Math.random() - 0.5) * rotVar[2]
-            ] as CoordinateTuple
-          };
-        })
-      : undefined;
+    // Generate instance with variations if specified
+    if (sizeVariation || rotationVariation) {
+      const sizeVar = sizeVariation || [0, 0, 0] as CoordinateTuple;
+      const rotVar = rotationVariation || [0, 0, 0] as CoordinateTuple;
 
-    return {
-      texture,
-      ...baseConfig,
-      positions: chunkPositions,
-      instances
-    };
+      variantData[randomIndex].instances.push({
+        position,
+        scale: [
+          baseConfig.size[0] + (Math.random() - 0.5) * sizeVar[0],
+          baseConfig.size[1] + (Math.random() - 0.5) * sizeVar[1],
+          baseConfig.size[2] + (Math.random() - 0.5) * sizeVar[2]
+        ] as CoordinateTuple,
+        rotation: [
+          (Math.random() - 0.5) * rotVar[0],
+          (Math.random() - 0.5) * rotVar[1],
+          (Math.random() - 0.5) * rotVar[2]
+        ] as CoordinateTuple
+      });
+    }
   });
+
+  // Clean up empty instances arrays
+  return variantData.map(variant => ({
+    ...variant,
+    instances: variant.instances.length > 0 ? variant.instances : undefined
+  }));
 };
 
 // Area population configurations for illustrations with pop-up animations
