@@ -318,7 +318,7 @@ export const illustrations = {
       amount: 4,
       spacing: 2,
       position: [0, -1, 21],
-      positionVariation: [300, 0, 10],
+      positionVariation: [300, 0, 0],
       sizeVariation: [0.5, 0.2, 0],
       })
     }
@@ -616,8 +616,8 @@ export const illustrationAreas = {
     ...genericFlatConfig,
     positions: generateAreaPositions({
       center: [50, -1, 15] as CoordinateTuple,
-      size: [80, 0, 20] as CoordinateTuple,
-      count: 15,
+      size: [1000, 0, 20] as CoordinateTuple,
+      count: 50,
       pattern: 'grid-jitter' as const,
       seed: 9000
     })
