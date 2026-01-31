@@ -47,3 +47,15 @@ export interface ComplexModel extends Model {
 }
 
 export type Direction = "forward" | "right" | "left" | "backward" | "jump";
+
+export type EasingFunction = (t: number) => number;
+
+export interface PopUpAnimationConfig {
+  object: Model;
+  startY: number;
+  endY: number;
+  duration: number; // in frames
+  easing?: EasingFunction;
+  delay?: number; // in frames
+  onComplete?: () => void;
+}

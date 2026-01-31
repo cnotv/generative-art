@@ -4,11 +4,10 @@ import {
   getTools,
   getModel,
   getCube,
-  instanceMatrixMesh,
   cameraFollowPlayer,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -17,10 +16,10 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import {
   playerSettings,
-  illustrations,
   setupConfig,
   controlBindings,
   assets,
+  illustrationAreas,
   // undergroundConfig,
 } from "./config";
 // import { times } from "@/utils/lodash";
@@ -104,19 +103,48 @@ const init = async (): Promise<void> => {
       // Add ground mesh for ground detection (if ground exists)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
-      Object.keys(illustrations).forEach((key) => {
-        const config = (illustrations as Record<string, any>)[key];
-        const mesh = getCube(scene, world, config);
-        if (config.instances) {
-          instanceMatrixMesh(mesh as any, scene, config.instances);
-        }
-        // obstacles.push(model);
-      });
-      // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
-
       remapControlsOptions(bindings);
 
       const timelineManager = createTimelineManager();
+
+      // Populate all illustrations using pre-generated positions with pop-up animations
+      let animationIndex = 0;
+      Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
+        configs.forEach((config) => {
+          // Use instances with variations if available, otherwise use positions
+          const elementsData = config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }));
+
+          elementsData.forEach((elementData: any) => {
+            const position = elementData.position;
+            const elementConfig = {
+              ...config,
+              position,
+              ...(elementData.scale && { size: elementData.scale }),
+              ...(elementData.rotation && { rotation: elementData.rotation })
+            };
+            const element = getCube(scene, world, elementConfig);
+
+            // Add pop-up animation (delay only if specified in config)
+            const popUpAnimation = createPopUpBounce({
+              object: element,
+              startY: position[1] - 3,
+              endY: position[1],
+              duration: 30
+            });
+
+            timelineManager.addAction({
+              name: `${categoryName}-${animationIndex}-popup`,
+              category: 'visual',
+              action: popUpAnimation,
+              autoRemove: true
+            });
+
+            animationIndex++;
+          });
+        });
+      });
+
+      // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
 
       timelineManager.addAction({
         frequency: speed.movement,

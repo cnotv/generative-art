@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { getCube } from './models';
+import { getCube, getBall } from './models';
 import type { CoordinateTuple } from './types';
 
 describe('getCube', () => {
@@ -183,6 +183,84 @@ describe('getCube', () => {
       // Cube should be centered (no origin adjustment)
       expect(box.min.y).toBeCloseTo(-5, 5);
       expect(box.max.y).toBeCloseTo(5, 5);
+    });
+  });
+
+  describe('onSpawn callback', () => {
+    it('should invoke onSpawn callback when cube is created', () => {
+      const onSpawn = vi.fn();
+
+      getCube(scene, world, {
+        size: [10, 10, 10],
+        position: [0, 0, 0],
+        type: 'fixed',
+        onSpawn
+      });
+
+      expect(onSpawn).toHaveBeenCalledOnce();
+    });
+
+    it('should attach onSpawn callback to userData', () => {
+      const onSpawn = vi.fn();
+
+      const cube = getCube(scene, world, {
+        size: [10, 10, 10],
+        position: [0, 0, 0],
+        type: 'fixed',
+        onSpawn
+      });
+
+      expect(cube.userData.onSpawn).toBe(onSpawn);
+    });
+
+    it('should not invoke onSpawn if not provided', () => {
+      const cube = getCube(scene, world, {
+        size: [10, 10, 10],
+        position: [0, 0, 0],
+        type: 'fixed'
+      });
+
+      expect(cube.userData.onSpawn).toBeUndefined();
+    });
+  });
+});
+
+describe('getBall', () => {
+  let scene: THREE.Scene;
+  let world: RAPIER.World;
+
+  beforeEach(async () => {
+    await RAPIER.init();
+    scene = new THREE.Scene();
+    const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+    world = new RAPIER.World(gravity);
+  });
+
+  describe('onSpawn callback', () => {
+    it('should invoke onSpawn callback when ball is created', () => {
+      const onSpawn = vi.fn();
+
+      getBall(scene, world, {
+        size: 5,
+        position: [0, 0, 0],
+        type: 'fixed',
+        onSpawn
+      });
+
+      expect(onSpawn).toHaveBeenCalledOnce();
+    });
+
+    it('should attach onSpawn callback to userData', () => {
+      const onSpawn = vi.fn();
+
+      const ball = getBall(scene, world, {
+        size: 5,
+        position: [0, 0, 0],
+        type: 'fixed',
+        onSpawn
+      });
+
+      expect(ball.userData.onSpawn).toBe(onSpawn);
     });
   });
 });
