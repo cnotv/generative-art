@@ -122,41 +122,41 @@ const determineAreaBounds = (
 }
 
 /**
- * Generate a single random position within bounds
- * Returns [newState, position]
+ * Generate N positions using stratified sampling
+ *
+ * Stratified sampling divides the area into N segments along the X-axis,
+ * then places one random point within each segment. This guarantees
+ * even distribution while maintaining randomness within each segment.
+ *
+ * Benefits over pure random:
+ * - No clustering: Each segment gets exactly one element
+ * - Predictable spacing: Elements are guaranteed to be spread out
+ * - Still random: Position within each segment is randomized
  */
-const generateRandomPosition = (
-  randomGenerator: SeededRandom,
-  minimumBounds: CoordinateTuple,
-  maximumBounds: CoordinateTuple
-): [SeededRandom, CoordinateTuple] => {
-  const [rng1, xCoordinate] = randomInRange(randomGenerator, minimumBounds[0], maximumBounds[0])
-  const [rng2, yCoordinate] = randomInRange(rng1, minimumBounds[1], maximumBounds[1])
-  const [rng3, zCoordinate] = randomInRange(rng2, minimumBounds[2], maximumBounds[2])
-  return [rng3, [xCoordinate, yCoordinate, zCoordinate]]
-}
-
-/**
- * Generate N random positions
- */
-const generateRandomPositions = (
+const generateStratifiedPositions = (
   elementCount: number,
   minimumBounds: CoordinateTuple,
   maximumBounds: CoordinateTuple,
   randomSeed: number
 ): CoordinateTuple[] => {
+  const areaWidth = maximumBounds[0] - minimumBounds[0]
+  const segmentWidth = areaWidth / elementCount
   const elementIndices = Array.from({ length: elementCount }, (_, index) => index)
 
   const { positions } = elementIndices.reduce(
-    (accumulator) => {
-      const [newRandomGenerator, position] = generateRandomPosition(
-        accumulator.randomGenerator,
-        minimumBounds,
-        maximumBounds
-      )
+    (accumulator, segmentIndex) => {
+      // Calculate segment bounds for X axis
+      const segmentMinX = minimumBounds[0] + segmentIndex * segmentWidth
+      const segmentMaxX = segmentMinX + segmentWidth
+
+      // Generate random position within segment
+      const [rng1, xCoordinate] = randomInRange(accumulator.randomGenerator, segmentMinX, segmentMaxX)
+      const [rng2, yCoordinate] = randomInRange(rng1, minimumBounds[1], maximumBounds[1])
+      const [rng3, zCoordinate] = randomInRange(rng2, minimumBounds[2], maximumBounds[2])
+
       return {
-        randomGenerator: newRandomGenerator,
-        positions: [...accumulator.positions, position]
+        randomGenerator: rng3,
+        positions: [...accumulator.positions, [xCoordinate, yCoordinate, zCoordinate] as CoordinateTuple]
       }
     },
     { randomGenerator: { state: randomSeed }, positions: [] as CoordinateTuple[] }
@@ -312,7 +312,7 @@ export function generateAreaPositions(configuration: AreaConfig): CoordinateTupl
 
   switch (distributionPattern) {
     case 'random':
-      return generateRandomPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
+      return generateStratifiedPositions(elementCount, minimumBounds, maximumBounds, randomSeed)
 
     case 'grid':
       return generateGridPositions(elementCount, minimumBounds, maximumBounds)
