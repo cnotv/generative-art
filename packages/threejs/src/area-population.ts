@@ -166,25 +166,48 @@ const generateStratifiedPositions = (
 }
 
 /**
- * Calculate grid dimensions for a given count
+ * Calculate grid dimensions for a given count and area bounds
+ *
+ * When one dimension (X or Z) is 0, creates a 1D line distribution.
+ * Otherwise creates a square-ish 2D grid.
  */
-const calculateGridDimensions = (elementCount: number) => ({
-  gridSize: Math.ceil(Math.sqrt(elementCount))
-})
+const calculateGridDimensions = (
+  elementCount: number,
+  minimumBounds: CoordinateTuple,
+  maximumBounds: CoordinateTuple
+) => {
+  const areaWidth = maximumBounds[0] - minimumBounds[0]
+  const areaDepth = maximumBounds[2] - minimumBounds[2]
+
+  // 1D distribution along X when Z dimension is 0
+  if (areaDepth === 0) {
+    return { gridColumns: elementCount, gridRows: 1 }
+  }
+
+  // 1D distribution along Z when X dimension is 0
+  if (areaWidth === 0) {
+    return { gridColumns: 1, gridRows: elementCount }
+  }
+
+  // 2D grid for both dimensions
+  const gridSize = Math.ceil(Math.sqrt(elementCount))
+  return { gridColumns: gridSize, gridRows: gridSize }
+}
 
 /**
- * Calculate cell dimensions based on area and grid size
+ * Calculate cell dimensions based on area and grid dimensions
  */
 const calculateCellDimensions = (
   minimumBounds: CoordinateTuple,
   maximumBounds: CoordinateTuple,
-  gridSize: number
+  gridColumns: number,
+  gridRows: number
 ) => {
   const areaWidth = maximumBounds[0] - minimumBounds[0]
   const areaDepth = maximumBounds[2] - minimumBounds[2]
   return {
-    cellWidth: areaWidth / gridSize,
-    cellDepth: areaDepth / gridSize
+    cellWidth: gridColumns > 0 ? areaWidth / gridColumns : 0,
+    cellDepth: gridRows > 0 ? areaDepth / gridRows : 0
   }
 }
 
@@ -234,10 +257,14 @@ const applyJitterToGridPosition = (
 /**
  * Generate all grid cell positions (row, col pairs) up to elementCount
  */
-const generateGridCellIndices = (gridSize: number, elementCount: number): Array<[number, number]> =>
-  Array.from({ length: gridSize }, (_, rowIndex) => rowIndex)
+const generateGridCellIndices = (
+  gridColumns: number,
+  gridRows: number,
+  elementCount: number
+): Array<[number, number]> =>
+  Array.from({ length: gridRows }, (_, rowIndex) => rowIndex)
     .flatMap(rowIndex =>
-      Array.from({ length: gridSize }, (_, columnIndex) => [rowIndex, columnIndex] as [number, number])
+      Array.from({ length: gridColumns }, (_, columnIndex) => [rowIndex, columnIndex] as [number, number])
     )
     .slice(0, elementCount)
 
@@ -249,9 +276,9 @@ const generateGridPositions = (
   minimumBounds: CoordinateTuple,
   maximumBounds: CoordinateTuple
 ): CoordinateTuple[] => {
-  const { gridSize } = calculateGridDimensions(elementCount)
-  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridSize)
-  const gridCellIndices = generateGridCellIndices(gridSize, elementCount)
+  const { gridColumns, gridRows } = calculateGridDimensions(elementCount, minimumBounds, maximumBounds)
+  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridColumns, gridRows)
+  const gridCellIndices = generateGridCellIndices(gridColumns, gridRows, elementCount)
 
   return gridCellIndices.map(([rowIndex, columnIndex]) =>
     generateGridPosition(rowIndex, columnIndex, minimumBounds, maximumBounds, cellWidth, cellDepth)
@@ -267,9 +294,9 @@ const generateGridJitterPositions = (
   maximumBounds: CoordinateTuple,
   randomSeed: number
 ): CoordinateTuple[] => {
-  const { gridSize } = calculateGridDimensions(elementCount)
-  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridSize)
-  const gridCellIndices = generateGridCellIndices(gridSize, elementCount)
+  const { gridColumns, gridRows } = calculateGridDimensions(elementCount, minimumBounds, maximumBounds)
+  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridColumns, gridRows)
+  const gridCellIndices = generateGridCellIndices(gridColumns, gridRows, elementCount)
 
   const { positions } = gridCellIndices.reduce(
     (accumulator, [rowIndex, columnIndex]) => {

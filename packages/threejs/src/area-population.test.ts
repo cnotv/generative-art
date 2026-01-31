@@ -81,6 +81,77 @@ describe('generateAreaPositions', () => {
   })
 
   describe('distribution patterns', () => {
+    it('should place exactly one element per segment with stratified sampling (random pattern)', () => {
+      const config: AreaConfig = {
+        min: [0, 0, 0],
+        max: [100, 0, 0],
+        count: 10,
+        pattern: 'random',
+        seed: 12345
+      }
+
+      const positions = generateAreaPositions(config)
+
+      expect(positions).toHaveLength(10)
+
+      // Each segment is 10 units wide (100 / 10 = 10)
+      const segmentWidth = 10
+      const segmentCounts = Array(10).fill(0)
+
+      positions.forEach(([x]) => {
+        // Calculate which segment this x falls into
+        const segmentIndex = Math.min(Math.floor(x / segmentWidth), 9)
+        segmentCounts[segmentIndex]++
+      })
+
+      // Every segment should have exactly 1 element
+      segmentCounts.forEach((count) => {
+        expect(count).toBe(1)
+      })
+
+      // Also verify X values are in correct ranges
+      positions.forEach(([x], index) => {
+        const expectedMinX = index * segmentWidth
+        const expectedMaxX = (index + 1) * segmentWidth
+        expect(x).toBeGreaterThanOrEqual(expectedMinX)
+        expect(x).toBeLessThan(expectedMaxX)
+      })
+    })
+
+    it('should distribute elements in 1D line when Z dimension is 0 (grid-jitter)', () => {
+      const config: AreaConfig = {
+        min: [0, 0, 0],
+        max: [100, 0, 0], // Z=0, only X dimension
+        count: 10,
+        pattern: 'grid-jitter',
+        seed: 12345
+      }
+
+      const positions = generateAreaPositions(config)
+
+      expect(positions).toHaveLength(10)
+
+      // All positions should be at Z=0
+      positions.forEach(([, , z]) => {
+        expect(z).toBe(0)
+      })
+
+      // Each segment of 10 units should have exactly 1 element (no overlapping)
+      const segmentWidth = 10
+      const segmentCounts = Array(10).fill(0)
+
+      positions.forEach(([x]) => {
+        const segmentIndex = Math.min(Math.floor(x / segmentWidth), 9)
+        segmentCounts[segmentIndex]++
+      })
+
+      // Every segment should have exactly 1 element - this tests that
+      // grid-jitter doesn't create a 2D grid that collapses when Z=0
+      segmentCounts.forEach((count) => {
+        expect(count).toBe(1)
+      })
+    })
+
     it.each([
       { pattern: 'random' as const, description: 'random distribution' },
       { pattern: 'grid' as const, description: 'grid-based distribution' },
