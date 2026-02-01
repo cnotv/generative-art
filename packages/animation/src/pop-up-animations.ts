@@ -15,7 +15,7 @@ export const easing = {
     } else if (t < 2.5 / d1) {
       return n1 * (t -= 2.25 / d1) * t + 0.9375
     } else {
-      return n1 * (t -= 2.625 / d1) * t + 0.984375
+      return n1 * (t -= 2.625 / d1) * t + 0.984_375
     }
   },
 
@@ -24,7 +24,7 @@ export const easing = {
   },
 
   easeOutBack: (t: number): number => {
-    const c1 = 1.70158
+    const c1 = 1.701_58
     const c3 = c1 + 1
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
   },
@@ -42,7 +42,7 @@ export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutBounce,
+    easing: easingFunction = easing.easeOutBounce,
     delay = 0,
     onComplete
   } = config
@@ -70,7 +70,7 @@ export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
     object.position.y = startY + (endY - startY) * easedProgress
 
     return true
@@ -87,7 +87,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutQuad,
+    easing: easingFunction = easing.easeOutQuad,
     delay = 0,
     onComplete
   } = config
@@ -123,7 +123,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
 
     object.position.y = startY + (endY - startY) * easedProgress
 
@@ -145,7 +145,7 @@ export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutBack,
+    easing: easingFunction = easing.easeOutBack,
     delay = 0,
     onComplete
   } = config
@@ -179,7 +179,7 @@ export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
 
     object.position.y = startY + (endY - startY) * easedProgress
 

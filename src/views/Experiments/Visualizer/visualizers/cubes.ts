@@ -76,7 +76,7 @@ export const cubesVisualizer: VisualizerSetup = {
       const time = Date.now() * 0.001;
       
       // Calculate audio intensity
-      const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      const audioLevel = audioData.reduce((sum, value) => sum + value, 0) / audioData.length;
       const bassBoost = frequencyRanges.bass * 5;
       const midBoost = frequencyRanges.mid * 3;
       

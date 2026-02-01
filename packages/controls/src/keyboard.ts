@@ -6,17 +6,17 @@ export interface KeyboardController {
 }
 
 export function createKeyboardController(
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers
 ): KeyboardController {
   function handleKeyDown(event: KeyboardEvent) {
-    const action = mappingRef.current.keyboard?.[event.key] ?? 'no action';
+    const action = mappingReference.current.keyboard?.[event.key] ?? 'no action';
     handlers.onAction(action, event.key, 'keyboard');
     if (handlers.onInput) handlers.onInput(action, event.key, 'keyboard');
   }
 
   function handleKeyUp(event: KeyboardEvent) {
-    const action = mappingRef.current.keyboard?.[event.key] ?? 'no action';
+    const action = mappingReference.current.keyboard?.[event.key] ?? 'no action';
     handlers.onRelease(action, event.key, 'keyboard');
     if (handlers.onInput) handlers.onInput(action, event.key, 'keyboard');
   }

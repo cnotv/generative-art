@@ -11,7 +11,7 @@ export const boxVisualizer: VisualizerSetup = {
 
   setup: (scene: THREE.Scene) => {
     // Create dark ambient environment
-    scene.background = new THREE.Color(0x111111);
+    scene.background = new THREE.Color(0x11_11_11);
     
     // Function to create a complete pipe with end caps
     const createPipe = (position: CoordinateTuple, rotation: CoordinateTuple) => {
@@ -20,7 +20,7 @@ export const boxVisualizer: VisualizerSetup = {
       
       // Create glass material for the pipes
       const glassMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff,
+        color: 0xff_ff_ff,
         transmission: 0.7,
         roughness: 0.05,
         metalness: 0.0,
@@ -95,7 +95,7 @@ export const boxVisualizer: VisualizerSetup = {
     }
     
     // Add subtle ambient light
-    const ambientLight = new THREE.AmbientLight(0x222244, 0.2);
+    const ambientLight = new THREE.AmbientLight(0x22_22_44, 0.2);
     scene.add(ambientLight);
     
     return { 

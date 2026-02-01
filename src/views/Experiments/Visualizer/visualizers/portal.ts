@@ -13,9 +13,9 @@ const config = {
   segments: 64,
   ringSpacing: 4,
   frequencyBands: {
-    low: { start: 0, end: 10, color: 0x62c1e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
-    mid: { start: 11, end: 21, color: 0x62c1e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
-    high: { start: 22, end: 31, color: 0x62c1e5, position: 0, brightness: 0.6, effectIntensity: 3 }
+    low: { start: 0, end: 10, color: 0x62_c1_e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
+    mid: { start: 11, end: 21, color: 0x62_c1_e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
+    high: { start: 22, end: 31, color: 0x62_c1_e5, position: 0, brightness: 0.6, effectIntensity: 3 }
   },
   sourceMultiplier: {
     song: 0.4,
@@ -150,7 +150,7 @@ const applySpiralTwist = (
   audioValue: number, 
   tubularPosition: number
 ): { x: number; y: number } => {
-  const radialDistance = Math.sqrt(x * x + y * y);
+  const radialDistance = Math.hypot(x, y);
   const angle = Math.atan2(y, x);
   const twist = audioValue * Math.PI * 0.3;
   const twistedAngle = angle + twist * (tubularPosition / Math.PI);
@@ -169,12 +169,12 @@ const applySpiralTwist = (
  */
 const generateTorusIndices = (radialSegments: number, tubularSegments: number): number[] => {
   const indices: number[] = [];
-  for (let j = 1; j <= radialSegments; j++) {
+  for (let index = 1; index <= radialSegments; index++) {
     for (let i = 1; i <= tubularSegments; i++) {
-      const a = (tubularSegments + 1) * j + i - 1;
-      const b = (tubularSegments + 1) * (j - 1) + i - 1;
-      const c = (tubularSegments + 1) * (j - 1) + i;
-      const d = (tubularSegments + 1) * j + i;
+      const a = (tubularSegments + 1) * index + i - 1;
+      const b = (tubularSegments + 1) * (index - 1) + i - 1;
+      const c = (tubularSegments + 1) * (index - 1) + i;
+      const d = (tubularSegments + 1) * index + i;
       indices.push(a, b, d);
       indices.push(b, c, d);
     }
@@ -205,10 +205,10 @@ const createFrequencyBandTorusGeometry = (
   const normals: number[] = [];
   const uvs: number[] = [];
 
-  for (let j = 0; j <= radialSegments; j++) {
+  for (let index = 0; index <= radialSegments; index++) {
     for (let i = 0; i <= tubularSegments; i++) {
       const u = (i / tubularSegments) * Math.PI * 2;
-      const v = (j / radialSegments) * Math.PI * 2;
+      const v = (index / radialSegments) * Math.PI * 2;
       const basePos = calculateTorusCoordinates(u, v);
       const audioValue = getAudioValueForPosition(audioData, basePos.x, basePos.y, band);
       const totalWave = calculateWaveDeformation(u, v, time, audioValue, bandType);
@@ -217,7 +217,7 @@ const createFrequencyBandTorusGeometry = (
       vertices.push(twisted.x, twisted.y, displaced.z);
       const normal = new THREE.Vector3(basePos.x, basePos.y, basePos.z).normalize();
       normals.push(normal.x, normal.y, normal.z);
-      uvs.push(i / tubularSegments, j / radialSegments);
+      uvs.push(i / tubularSegments, index / radialSegments);
     }
   }
 
@@ -240,7 +240,7 @@ const createBackgroundElements = (scene: THREE.Scene): THREE.Mesh[] => {
   const backgroundElements: THREE.Mesh[] = [];
   const planeGeometry = new THREE.PlaneGeometry(300, 300);
   const planeMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xa0d9ef,
+    color: 0xa0_d9_ef,
     transmission: 0.6,
     roughness: 0,
     opacity: 1,
@@ -358,7 +358,7 @@ export const circularTubesVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    scene.background = new THREE.Color(0x0a0a0a);
+    scene.background = new THREE.Color(0x0a_0a_0a);
     const backgroundElements = createBackgroundElements(scene);
 
     // Initialize containers
@@ -400,7 +400,7 @@ export const circularTubesVisualizer: VisualizerSetup = {
 
       // Update background elements
       if (backgroundElements) {
-        const overallIntensity = Object.values(bands).reduce((sum, val) => sum + val, 0) / 3;
+        const overallIntensity = Object.values(bands).reduce((sum, value) => sum + value, 0) / 3;
         updateBackgroundElements(backgroundElements, overallIntensity, time);
       }
     }

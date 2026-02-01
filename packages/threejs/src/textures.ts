@@ -45,9 +45,9 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
   ctx.lineWidth = primaryThickness;
   ctx.beginPath();
 
-  const numZigzags = Math.ceil(size / zigzagWidth);
+  const numberZigzags = Math.ceil(size / zigzagWidth);
 
-  for (let i = 0; i <= numZigzags; i++) {
+  for (let i = 0; i <= numberZigzags; i++) {
     const x = i * zigzagWidth;
     const y = (i % 2 === 0) ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2;
     

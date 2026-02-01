@@ -48,11 +48,11 @@ describe('GoombaRunner - Component Loading', () => {
     expect(screenshot).toBeDefined()
 
     // Verify the canvas has actual dimensions (not 0x0)
-    const canvasEl = canvas.element as HTMLCanvasElement
-    expect(canvasEl.width).toBeGreaterThan(0)
-    expect(canvasEl.height).toBeGreaterThan(0)
+    const canvasElement = canvas.element as HTMLCanvasElement
+    expect(canvasElement.width).toBeGreaterThan(0)
+    expect(canvasElement.height).toBeGreaterThan(0)
 
     // Cleanup
     wrapper.unmount()
-  }, 10000) // Increase timeout to 10 seconds
+  }, 10_000) // Increase timeout to 10 seconds
 })

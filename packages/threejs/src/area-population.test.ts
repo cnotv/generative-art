@@ -9,7 +9,7 @@ describe('generateAreaPositions', () => {
         center: [0, 0, 0],
         size: [100, 0, 100],
         count: 10,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -64,7 +64,7 @@ describe('generateAreaPositions', () => {
         min: [-50, 0, -50],
         max: [50, 0, 50],
         count: 10,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -87,7 +87,7 @@ describe('generateAreaPositions', () => {
         max: [100, 0, 0],
         count: 10,
         pattern: 'random',
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -124,7 +124,7 @@ describe('generateAreaPositions', () => {
         max: [100, 0, 0], // Z=0, only X dimension
         count: 10,
         pattern: 'grid-jitter',
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -162,7 +162,7 @@ describe('generateAreaPositions', () => {
         size: [100, 0, 100],
         count: 9,
         pattern,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -192,7 +192,7 @@ describe('generateAreaPositions', () => {
         center: [0, 0, 0],
         size: [100, 0, 100],
         count: 0,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -204,7 +204,7 @@ describe('generateAreaPositions', () => {
         center: [10, 5, 10],
         size: [100, 0, 100],
         count: 1,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)
@@ -224,7 +224,7 @@ describe('generateAreaPositions', () => {
         center: [0, 10, 0],
         size: [100, 20, 100],
         count: 5,
-        seed: 12345
+        seed: 12_345
       }
 
       const positions = generateAreaPositions(config)

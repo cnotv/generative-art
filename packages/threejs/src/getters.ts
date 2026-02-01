@@ -12,7 +12,7 @@ import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
  */
 export const getEnvironment = async (canvas: HTMLCanvasElement, options: any = {
   camera: { position: [0, 20, 150], distance: 75 },
-  scene: { background: 0xbfd1e5 },
+  scene: { background: 0xbf_d1_e5 },
 }) => {
   await RAPIER.init();
   const gravity = { x: 0.0, y: -9.81, z: 0.0 };
@@ -20,7 +20,7 @@ export const getEnvironment = async (canvas: HTMLCanvasElement, options: any = {
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();
-  scene.background = new THREE.Color(options.scene?.background || 0xbfd1e5);
+  scene.background = new THREE.Color(options.scene?.background || 0xbf_d1_e5);
 
   const camera = new THREE.PerspectiveCamera(options.camera.distance, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(...(options.camera.position as CoordinateTuple));
@@ -42,7 +42,7 @@ export const getGround = (
     size = [1000, 0.01, 1000],
     position = [1, -1, 1],
     helpers,
-    color = 0x333333,
+    color = 0x33_33_33,
     texture,
     textureRepeat = [10, 10],
     textureOffset = [0, 0],
@@ -78,7 +78,7 @@ export const getGround = (
     boundary: 0.5,
   });
 
-  const helper = new THREE.BoxHelper(mesh, 0x000000);
+  const helper = new THREE.BoxHelper(mesh, 0x00_00_00);
   if (helpers) {
     scene.add(helper);
   }
@@ -123,9 +123,9 @@ export const getInstanceConfig = ({
     ];
     
     const baseX = index * spacing - (amount * spacing) / 2;
-    const xVar = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
+    const xVariable = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
     const newPosition: CoordinateTuple = [
-      baseX + xVar,
+      baseX + xVariable,
       position[1] + (Math.random() - 0.5) * positionVariation[1],
       position[2] + (Math.random() - 0.5) * positionVariation[2],
     ];
@@ -159,9 +159,9 @@ export const getInstanceConfig = ({
  */
 export const getLights = (scene: THREE.Scene, config: any = {}) => {
   const {
-    ambient = { color: 0xffffff, intensity: 2 },
+    ambient = { color: 0xff_ff_ff, intensity: 2 },
     directional = {
-      color: 0xffffff,
+      color: 0xff_ff_ff,
       intensity: 4.0,
       position: [20, 30, 20],
       castShadow: true,
@@ -317,7 +317,7 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0xaaaaff);
+  renderer.setClearColor(0xaa_aa_ff);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   return renderer;
@@ -326,7 +326,7 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
 export const getSky = (
   scene: THREE.Scene,
   {
-    color = 0xaaaaff,
+    color = 0xaa_aa_ff,
     size = 1000,
     texture
   }: {

@@ -63,7 +63,7 @@ const record = (canvas: HTMLCanvasElement, route: RouteLocationNormalizedLoaded)
     const stream = canvas.captureStream(30);
     config.mediaRecorder = new MediaRecorder(
       stream,
-      { mimeType: 'video/webm', bitsPerSecond: 100000000 });
+      { mimeType: 'video/webm', bitsPerSecond: 100_000_000 });
     config.isRecording = true;
     config.mediaRecorder.ondataavailable = (e) => {
       if (e.data.size) {

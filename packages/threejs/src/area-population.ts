@@ -50,14 +50,14 @@ type SeededRandom = {
 const nextRandom = (randomGenerator: SeededRandom): [SeededRandom, number] => {
   // Step 1: Ensure 32-bit integer and add increment constant
   let state = randomGenerator.state | 0
-  state = (state + 0x6d2b79f5) | 0
+  state = (state + 0x6d_2b_79_f5) | 0
 
   // Step 2-3: XOR shifts and multiplication for bit mixing
   let temporaryValue = Math.imul(state ^ (state >>> 15), 1 | state)
   temporaryValue = (temporaryValue + Math.imul(temporaryValue ^ (temporaryValue >>> 7), 61 | temporaryValue)) ^ temporaryValue
 
   // Step 4: Final XOR shift and normalize to [0, 1)
-  const randomValue = ((temporaryValue ^ (temporaryValue >>> 14)) >>> 0) / 4294967296
+  const randomValue = ((temporaryValue ^ (temporaryValue >>> 14)) >>> 0) / 4_294_967_296
 
   return [{ state }, randomValue]
 }

@@ -136,10 +136,10 @@ describe('TimelineManager', () => {
 
     it('should retrieve action by ID', () => {
       const manager = createTimelineManager();
-      const actionFn = vi.fn();
+      const actionFunction = vi.fn();
       const action: Timeline = {
         name: 'test-action',
-        action: actionFn,
+        action: actionFunction,
         start: 10,
       };
       const id = manager.addAction(action);
@@ -149,7 +149,7 @@ describe('TimelineManager', () => {
       expect(retrieved).toBeDefined();
       expect(retrieved?.name).toBe('test-action');
       expect(retrieved?.start).toBe(10);
-      expect(retrieved?.action).toBe(actionFn);
+      expect(retrieved?.action).toBe(actionFunction);
     });
 
     it('should return undefined for non-existent action', () => {
@@ -367,19 +367,19 @@ describe('TimelineManager', () => {
   describe('integration with animateTimeline', () => {
     it('should work with animateTimeline for action execution', () => {
       const manager = createTimelineManager();
-      const actionFn = vi.fn();
+      const actionFunction = vi.fn();
 
       manager.addAction({
         name: 'test',
         start: 10,
         end: 20,
-        action: actionFn,
+        action: actionFunction,
       });
 
       // Simulate animateTimeline usage
       const timeline = manager.getTimeline();
       expect(timeline).toHaveLength(1);
-      expect(timeline[0].action).toBe(actionFn);
+      expect(timeline[0].action).toBe(actionFunction);
     });
 
     it('should support frequency-based actions', () => {

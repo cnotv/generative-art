@@ -169,9 +169,9 @@ const resetAnimation = (elements: ComplexModel[]) => {
 const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
-  const actions: Record<string, THREE.AnimationAction> = gltf.animations.reduce((acc: Record<string, THREE.AnimationAction>, animation: THREE.AnimationClip) => {
-    acc[animation.name] = mixer.clipAction(animation);
-    return acc;
+  const actions: Record<string, THREE.AnimationAction> = gltf.animations.reduce((accumulator: Record<string, THREE.AnimationAction>, animation: THREE.AnimationClip) => {
+    accumulator[animation.name] = mixer.clipAction(animation);
+    return accumulator;
   }, {});
   return actions
 }
@@ -548,7 +548,7 @@ interface GroundMovementResult {
  */
 const checkGroundWithRadius = (
   position: THREE.Vector3,
-  forwardDir: THREE.Vector3,
+  forwardDirection: THREE.Vector3,
   bodies: ComplexModel[],
   options: GroundCheckOptions
 ): { hasGround: boolean; groundHeight: number | null } => {
@@ -557,7 +557,7 @@ const checkGroundWithRadius = (
   checkPosition.y += maxStepHeight;
   
   // Add character radius offset in the movement direction (horizontal only)
-  const horizontalForward = new THREE.Vector3(forwardDir.x, 0, forwardDir.z).normalize();
+  const horizontalForward = new THREE.Vector3(forwardDirection.x, 0, forwardDirection.z).normalize();
   checkPosition.add(horizontalForward.multiplyScalar(characterRadius));
   
   return checkGroundAtPosition(checkPosition, bodies, maxGroundDistance + maxStepHeight);

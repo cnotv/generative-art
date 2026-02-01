@@ -7,11 +7,11 @@ export interface TouchController {
 }
 
 export function createTouchController(
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers
 ): TouchController {
   function handleTouch(event: TouchEvent, eventType: ControlEvent) {
-    const action = mappingRef.current.touch?.[event.type];
+    const action = mappingReference.current.touch?.[event.type];
     if (action) {
       if (eventType === event.type) handlers.onAction(action, event.type, 'touch');
       if (eventType === event.type) handlers.onRelease(action, event.type, 'touch');

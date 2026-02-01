@@ -41,17 +41,17 @@ const createPlayer = async (
 
   // Update colors
   colorModel(player, [
-    0xffffff, // White - unknown
-    0xffffff, // White - unknown
-    0xffffff, // White - unknown
-    0xb1865a, // Beige - body
-    0xffffff, // White - unknown
-    0xbf9a37, // Brown - head
-    0xffffff, // White - unknown
-    0xffffff, // White - tusks
-    0xffffff, // White - unknown
-    0x654321, // Dark brown - feet
-    0x8b4513, // Brown - default/other parts
+    0xff_ff_ff, // White - unknown
+    0xff_ff_ff, // White - unknown
+    0xff_ff_ff, // White - unknown
+    0xb1_86_5a, // Beige - body
+    0xff_ff_ff, // White - unknown
+    0xbf_9a_37, // Brown - head
+    0xff_ff_ff, // White - unknown
+    0xff_ff_ff, // White - tusks
+    0xff_ff_ff, // White - unknown
+    0x65_43_21, // Dark brown - feet
+    0x8b_45_13, // Brown - default/other parts
   ]);
 
   // Rotate goomba to face sideways (towards the camera/blocks)
@@ -521,7 +521,7 @@ const checkCollisions = (
   loggedCollisions: Set<string>,
   config: any
 ) => {
-  const goombaColor = 0x8b4513; 
+  const goombaColor = 0x8b_45_13; 
   const playerPosition = player.position;
   obstacles.forEach((obstacle, index) => {
     const obstaclePosition = obstacle.mesh.position;

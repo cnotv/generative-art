@@ -9,7 +9,7 @@ export const boxVisualizer: VisualizerSetup = {
   setup: (scene: THREE.Scene) => {
     const box = new THREE.Mesh(
       new THREE.BoxGeometry(20, 20, 20),
-      new THREE.MeshLambertMaterial({ color: 0xff4444 })
+      new THREE.MeshLambertMaterial({ color: 0xff_44_44 })
     );
     scene.add(box);
     

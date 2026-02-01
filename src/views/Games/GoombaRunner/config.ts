@@ -162,7 +162,7 @@ export const configControls = {
 export const setupConfig = {
   camera: config.camera as any,
   scene: {
-    backgroundColor: 0x87ceeb,
+    backgroundColor: 0x87_ce_eb,
   },
   ground: false,
   sky: false, // Disable sky sphere to avoid hiding UI elements

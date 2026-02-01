@@ -29,7 +29,7 @@ export const complexAnimation = {
   } as InstanceConfig,
   grass: {
     show: true,
-    amount: 1000000,
+    amount: 1_000_000,
     size: [3, 3, 3],
     sizeVariation: [0, 2, 0],
     area: 1,

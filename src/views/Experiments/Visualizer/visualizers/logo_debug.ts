@@ -30,7 +30,7 @@ const setupLogo = async (scene: THREE.Scene, world: RAPIER.World) => {
     position: [30, -5, 0],
     hasGravity: false,
     castShadow: true,
-    color: 0x333333,
+    color: 0x33_33_33,
     material: true,
     transmission: 0.7,
     roughness: 0.5,
@@ -51,7 +51,7 @@ const setupBars = (scene: THREE.Scene) => {
         barsConfig.barWidth
       );
       const barMaterial = new THREE.MeshLambertMaterial({
-        color: 0x0099ff, // Default blue for active
+        color: 0x00_99_ff, // Default blue for active
       });
       const bar = new THREE.Mesh(barGeometry, barMaterial);
 
@@ -75,7 +75,7 @@ const animateLogo = (logo: any, audioData: number[]) => {
   if (!logo) return;
   const sensibility = 50;
   const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-  const audioMap = 0.000000002;
+  const audioMap = 0.000_000_002;
   const average = sum / audioData.length * audioMap;
   const speed = 0.005;
   const amplitude = 0.4;
@@ -93,7 +93,7 @@ const animateBars = (bars: THREE.Mesh[], audioData: number[]) => {
     // Update bar color based on active state
     const isActive = barsActiveState[index];
     const material = bar.material as THREE.MeshLambertMaterial;
-    material.color.setHex(isActive ? 0x0099ff : 0xff0000); // Blue if active, red if inactive
+    material.color.setHex(isActive ? 0x00_99_ff : 0xff_00_00); // Blue if active, red if inactive
     
     // Only animate active bars
     if (isActive && audioData[index] !== undefined) {

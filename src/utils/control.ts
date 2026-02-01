@@ -39,9 +39,9 @@ const addPanel = <T extends Record<string, any>>(
     } else {
       const custom = control.add(config[panelName] ?? config, key);
       custom.onChange(callback);
-      Object.keys(params[key]).forEach((param) => {
-        if (params[key][param] !== undefined && custom[param]) {
-          custom[param](params[key][param])
+      Object.keys(params[key]).forEach((parameter) => {
+        if (params[key][parameter] !== undefined && custom[parameter]) {
+          custom[parameter](params[key][parameter])
         }
       });
     }

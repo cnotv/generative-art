@@ -115,14 +115,14 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       expect(screenshot, `${name}: Screenshot should be captured`).toBeDefined()
 
       // Verify canvas dimensions
-      const canvasEl = canvas.element as HTMLCanvasElement
-      expect(canvasEl.width, `${name}: Canvas width should be > 0`).toBeGreaterThan(0)
-      expect(canvasEl.height, `${name}: Canvas height should be > 0`).toBeGreaterThan(0)
+      const canvasElement = canvas.element as HTMLCanvasElement
+      expect(canvasElement.width, `${name}: Canvas width should be > 0`).toBeGreaterThan(0)
+      expect(canvasElement.height, `${name}: Canvas height should be > 0`).toBeGreaterThan(0)
     } finally {
       // Cleanup
       if (wrapper) {
         wrapper.unmount()
       }
     }
-  }, 30000) // Increased timeout to 30 seconds per test
+  }, 30_000) // Increased timeout to 30 seconds per test
 })

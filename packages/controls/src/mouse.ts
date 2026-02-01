@@ -6,11 +6,11 @@ export interface MouseController {
 }
 
 export function createMouseController(
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers
 ): MouseController {
   function handleMouse(event: MouseEvent, eventType: ControlEvent) {
-    const action = mappingRef.current.touch?.['tap'];
+    const action = mappingReference.current.touch?.['tap'];
     if (action) {
       if (eventType === event.type) handlers.onAction(action, event.type, 'mouse');
       if (eventType === event.type) handlers.onRelease(action, event.type, 'mouse');

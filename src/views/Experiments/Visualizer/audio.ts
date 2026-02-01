@@ -75,16 +75,16 @@ export const resetAudio = (): void => {
 };
 
 // Setup audio controls and auto-load music
-export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
-  if (isInitialized && audioElement === audioElementRef) return;
+export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
+  if (isInitialized && audioElement === audioElementReference) return;
 
   // Reset if we're switching to a new element
-  if (audioElementRef && audioElement !== audioElementRef) {
+  if (audioElementReference && audioElement !== audioElementReference) {
     isInitialized = false;
   }
 
   // Use provided element or find it in the template
-  audioElement = audioElementRef || document.querySelector('audio.player__audio');
+  audioElement = audioElementReference || document.querySelector('audio.player__audio');
   
   if (!audioElement) {
     console.error('Audio element not found');
@@ -115,11 +115,11 @@ export const setupAudio = (audioElementRef?: HTMLAudioElement): void => {
   
   audioElement.addEventListener('error', (e) => {
     console.error('Audio loading error:', e);
-    const audioEl = e.target as HTMLAudioElement;
-    if (audioEl && audioEl.error) {
-      console.error('Audio error code:', audioEl.error.code);
-      console.error('Audio error message:', audioEl.error.message);
-      console.error('Audio src:', audioEl.src);
+    const audioElement_ = e.target as HTMLAudioElement;
+    if (audioElement_ && audioElement_.error) {
+      console.error('Audio error code:', audioElement_.error.code);
+      console.error('Audio error message:', audioElement_.error.message);
+      console.error('Audio src:', audioElement_.src);
     }
   });
 
@@ -147,7 +147,7 @@ export const getAudioData = (): number[] => {
   analyser.getByteFrequencyData(dataArray);
   
   // Convert to normalized values (0-1)
-  return Array.from(dataArray)
+  return [...dataArray]
     .slice(0, barCount)
     .map(value => value / 255);
 };
@@ -162,7 +162,7 @@ export const getWaveformData = (): number[] => {
   analyser.getByteTimeDomainData(dataArray);
   
   // Convert to normalized values (-1 to 1)
-  return Array.from(dataArray)
+  return [...dataArray]
     .slice(0, barCount)
     .map(value => (value - 128) / 128);
 };
@@ -179,9 +179,9 @@ export const getFrequencyRanges = (): { bass: number; mid: number; treble: numbe
   const bassEnd = Math.floor(audioData.length * 0.1);
   const midEnd = Math.floor(audioData.length * 0.5);
   
-  const bass = audioData.slice(0, bassEnd).reduce((sum, val) => sum + val, 0) / bassEnd || 0;
-  const mid = audioData.slice(bassEnd, midEnd).reduce((sum, val) => sum + val, 0) / (midEnd - bassEnd) || 0;
-  const treble = audioData.slice(midEnd).reduce((sum, val) => sum + val, 0) / (audioData.length - midEnd) || 0;
+  const bass = audioData.slice(0, bassEnd).reduce((sum, value) => sum + value, 0) / bassEnd || 0;
+  const mid = audioData.slice(bassEnd, midEnd).reduce((sum, value) => sum + value, 0) / (midEnd - bassEnd) || 0;
+  const treble = audioData.slice(midEnd).reduce((sum, value) => sum + value, 0) / (audioData.length - midEnd) || 0;
   
   return { bass, mid, treble };
 };
@@ -199,7 +199,7 @@ export const getFrequencyBands = (bandConfig: {
     
     if (startIndex <= endIndex) {
       const bandData = audioData.slice(startIndex, endIndex + 1);
-      result[bandName] = bandData.reduce((sum, val) => sum + val, 0) / bandData.length || 0;
+      result[bandName] = bandData.reduce((sum, value) => sum + value, 0) / bandData.length || 0;
     } else {
       result[bandName] = 0;
     }
