@@ -104,50 +104,6 @@ const init = async (): Promise<void> => {
       // Add ground mesh for ground detection (if ground exists)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
-<<<<<<< HEAD
-=======
-      Object.keys(illustrations).forEach((key) => {
-        const config = (illustrations as Record<string, any>)[key];
-        const mesh = getCube(scene, world, config);
-        if (config.instances) {
-          instanceMatrixMesh(mesh as any, scene, config.instances);
-        }
-        // obstacles.push(model);
-      });
-
-      // Demonstrate dynamic area population with pop-up animations
-      const positions = generateAreaPositions(dynamicFlowerConfig.area);
-      const dynamicFlowers: any[] = [];
-
-      positions.forEach((position, index) => {
-        const flowerConfig = {
-          ...dynamicFlowerConfig,
-          position
-        };
-        const flower = getCube(scene, world, flowerConfig);
-        dynamicFlowers.push(flower);
-
-        // Add pop-up animation with staggered delay
-        const popUpAnimation = createPopUpBounce({
-          object: flower,
-          startY: position[1] - 3, // Start below ground
-          endY: position[1],       // End at target position
-          duration: 30,            // 30 frames
-          delay: index * 2         // Stagger by 2 frames each
-        });
-
-        // Add to timeline
-        timelineManager.addAction({
-          name: `flower-${index}-popup`,
-          category: 'visual',
-          action: () => popUpAnimation(timelineManager.getFrame()),
-          autoRemove: true
-        });
-      });
-
-      // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
-
->>>>>>> 3db8098 (feat: add area population and pop-up animations)
       remapControlsOptions(bindings);
 
       const timelineManager = createTimelineManager();

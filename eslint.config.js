@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
+import vueParser from 'vue-eslint-parser';
 import functional from 'eslint-plugin-functional';
 import unicorn from 'eslint-plugin-unicorn';
 import prettierConfig from 'eslint-config-prettier';
@@ -297,11 +298,13 @@ export default [
   {
     files: ['**/*.vue'],
     languageOptions: {
+      parser: vueParser,
       parserOptions: {
         parser: tsparser,
         ecmaVersion: 'latest',
         sourceType: 'module',
         projectService: false,
+        extraFileExtensions: ['.vue'],
       },
     },
     rules: {
