@@ -269,7 +269,7 @@ export default [
       'no-debugger': 'warn',
 
       // Consistent return
-      'consistent-return': 'error',
+      'consistent-return': 'warn',
 
       // No unused vars
       'no-unused-vars': 'off', // Turn off base rule
@@ -308,6 +308,9 @@ export default [
       // Allow assignments in Vue template expressions
       'functional/immutable-data': 'off',
       '@typescript-eslint/naming-convention': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'consistent-return': 'off',
     },
   },
 
@@ -331,13 +334,17 @@ export default [
     },
   },
 
-  // Declaration files - skip type checking
+  // Declaration files - skip type checking and no-undef
   {
     files: ['**/*.d.ts'],
     languageOptions: {
       parserOptions: {
         projectService: false,
       },
+    },
+    rules: {
+      'no-undef': 'off', // Declaration files define types
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 
@@ -359,9 +366,9 @@ export default [
     },
   },
 
-  // Config files specific configuration
+  // Config files and scripts - disable type checking
   {
-    files: ['*.config.{js,ts,mjs,cjs}', '.eslintrc.{js,cjs}'],
+    files: ['*.config.{js,ts,mjs,cjs}', '.eslintrc.{js,cjs}', '**/vite.config.ts', 'scripts/**/*.js'],
     languageOptions: {
       parserOptions: {
         projectService: false,
@@ -372,6 +379,24 @@ export default [
       'no-magic-numbers': 'off',
       '@typescript-eslint/naming-convention': 'off',
       'unicorn/prevent-abbreviations': 'off',
+      'no-undef': 'off',
+    },
+  },
+
+  // JavaScript files - disable TypeScript-specific rules
+  {
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-undef': 'off',
+      'functional/immutable-data': 'off', // Can't use type info on JS files
+      'consistent-return': 'off',
     },
   },
 

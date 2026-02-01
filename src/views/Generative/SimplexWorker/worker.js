@@ -1,7 +1,7 @@
 import { createNoise4D } from '@/utils/simplex.js';
 
 let config;
-let simplex = createNoise4D();
+const simplex = createNoise4D();
 
 const draw = (canvas) => {
   postMessage({ begin: true });
