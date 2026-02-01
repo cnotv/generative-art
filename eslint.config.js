@@ -390,6 +390,7 @@ export default [
     },
     rules: {
       // Disable type-aware rules for Vue files (no projectService)
+      // vue-tsc handles type checking for Vue files
       'functional/immutable-data': 'off',
       'functional/no-let': 'off',
       '@typescript-eslint/naming-convention': 'off',
@@ -397,6 +398,8 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
       'consistent-return': 'off',
       'vue/multi-word-component-names': 'off',
+      'no-undef': 'off', // TypeScript handles this via vue-tsc
+      'no-unused-vars': 'off', // TypeScript handles this via vue-tsc
     },
   },
 
@@ -431,6 +434,16 @@ export default [
     rules: {
       'no-undef': 'off', // Declaration files define types
       '@typescript-eslint/no-unused-vars': 'off',
+      'no-redeclare': 'off', // Type declarations are redeclaring types
+    },
+  },
+
+  // Utility files often need to mutate state
+  {
+    files: ['src/utils/**/*.ts', 'src/router/**/*.ts', 'src/config/**/*.ts', 'packages/controls/**/*.ts', 'packages/audio/**/*.ts', 'packages/game/**/*.ts'],
+    rules: {
+      'functional/immutable-data': 'warn',
+      'functional/no-let': 'warn',
     },
   },
 

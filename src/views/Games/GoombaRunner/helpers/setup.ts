@@ -4,6 +4,7 @@ import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import { config } from "../config";
 import { createGame } from "@webgamekit/game";
 import { onUnmounted, shallowRef, computed } from "vue";
+import type { ComplexModel } from "@webgamekit/threejs";
 
 // Facade for game state management
 const gameState = shallowRef({ data: { score: 0, highestScore: 0, isNewHighScore: false } });

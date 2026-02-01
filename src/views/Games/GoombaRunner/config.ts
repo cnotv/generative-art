@@ -1,6 +1,7 @@
 import cloudTexture from "@/assets/images/goomba/cloud.png";
 import hillTexture from "@/assets/images/goomba/hill.png";
 import fireTexture from "@/assets/images/goomba/fire.png";
+import type { SetupConfig } from "@webgamekit/threejs";
 
 export const config = {
   camera: {
