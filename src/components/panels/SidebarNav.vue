@@ -4,8 +4,14 @@ import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { usePanels } from '@/composables/usePanels';
 import { Menu, Circle, Square } from 'lucide-vue-next';
+import { generatedRoutes as generatedRoutesAll } from '@/config/router';
 
 const { isSidebarOpen, togglePanel, closePanel } = usePanels();
+
+const generatedRoutes = generatedRoutesAll.filter((route) => {
+  const slashCount = (route.path.match(/\//g) || []).length;
+  return slashCount <= 3;
+});
 
 const isRecording = ref(false);
 const recordingDuration = ref(10);
@@ -46,8 +52,22 @@ const recordingButtonClass = computed(() =>
       <div class="sidebar-nav__content flex flex-col gap-6">
         <h2 class="text-lg font-semibold">Navigation</h2>
 
-        <nav class="sidebar-nav__links flex flex-col gap-2">
-          <slot name="navigation" />
+        <nav class="sidebar-nav__links flex flex-col gap-1">
+          <template v-for="(route, index) in generatedRoutes" :key="route.path">
+            <div
+              v-if="generatedRoutes[index - 1]?.group !== route.group"
+              class="sidebar-nav__group mt-4 text-xs font-bold text-muted-foreground uppercase"
+            >
+              {{ route.group }}
+            </div>
+            <router-link
+              :to="route.path"
+              class="sidebar-nav__link text-sm hover:text-primary transition-colors"
+              active-class="sidebar-nav__link--active text-primary font-medium"
+            >
+              {{ route.name }}
+            </router-link>
+          </template>
         </nav>
 
         <div class="sidebar-nav__recording mt-auto border-t pt-6">
