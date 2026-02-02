@@ -195,8 +195,8 @@ export default [
       // COMPLEXITY RULES
       // ====================
 
-      // Max cyclomatic complexity (common standard)
-      'complexity': ['warn', { max: 15 }],
+      // Max cyclomatic complexity (McCabe's recommended max)
+      'complexity': ['warn', { max: 10 }],
 
       // Max nested callbacks
       'max-depth': ['error', { max: 4 }],
@@ -403,7 +403,7 @@ export default [
       // Three.js requires mutating objects for position, rotation, etc.
       'functional/immutable-data': 'warn',
       'max-lines-per-function': ['warn', { max: 150 }],
-      'complexity': ['warn', { max: 20 }],
+      'complexity': ['warn', { max: 15 }],
     },
   },
 
