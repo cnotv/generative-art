@@ -33,27 +33,31 @@ The project is organized as a **pnpm workspace monorepo**:
 ## GitHub Issue Workflow
 
 ### Before Implementation
-1. **Sync with main branch**: ALWAYS update main and rebase before creating a new branch
-   - Command: `git checkout main && git pull origin main`
+1. **Sync with main branch**: ALWAYS fetch and rebase main before creating a new branch
+   - Command: `git checkout main && git fetch origin main && git pull origin main`
    - This prevents lockfile churn and merge conflicts
 2. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
    - Use format: `<type>/<issue-number>-<description>`
    - Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
    - Branch from `main` (or current base branch)
    - Command: `git checkout -b feat/9-issue-description`
-2. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
+3. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
    - What you plan to implement
    - Files to be modified/created
    - Key design decisions
    - Any questions or uncertainties
-3. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
-4. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
+4. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
+5. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
 
 ### During Implementation
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
-2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-4. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
+2. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+   - Command: `git fetch origin main && git rebase origin/main`
+   - Resolve any conflicts, then force push: `git push --force-with-lease`
+   - CI will fail if branch is behind main
+3. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+4. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+5. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
 
 ### PR Description Format
 ```markdown
