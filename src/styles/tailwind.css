@@ -19,14 +19,6 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-
   .sr-only {
     position: absolute;
     width: 1px;
@@ -38,4 +30,13 @@
     white-space: nowrap;
     border-width: 0;
   }
+}
+
+/* Scoped panel styles - only apply within UI components */
+.panel-ui {
+  @apply bg-background text-foreground;
+}
+
+.panel-ui * {
+  @apply border-border;
 }

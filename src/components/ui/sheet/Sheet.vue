@@ -38,7 +38,7 @@ const sideClasses: Record<SheetSide, string> = {
 
 const contentClasses = computed(() =>
   cn(
-    'fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+    'panel-ui fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
     sideClasses[props.side]
   )
 );
