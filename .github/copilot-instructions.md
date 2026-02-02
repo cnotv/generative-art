@@ -33,11 +33,14 @@ The project is organized as a **pnpm workspace monorepo**:
 ## GitHub Issue Workflow
 
 ### Before Implementation
-1. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
+1. **Sync with main branch**: ALWAYS update main and rebase before creating a new branch
+   - Command: `git checkout main && git pull origin main`
+   - This prevents lockfile churn and merge conflicts
+2. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
    - Use format: `<type>/<issue-number>-<description>`
    - Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
    - Branch from `main` (or current base branch)
-   - Command: `git checkout main && git checkout -b feat/9-issue-description`
+   - Command: `git checkout -b feat/9-issue-description`
 2. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
    - What you plan to implement
    - Files to be modified/created

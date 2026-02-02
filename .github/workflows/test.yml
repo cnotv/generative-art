@@ -6,8 +6,27 @@ on:
   workflow_call:
 
 jobs:
+  check-rebase:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check if branch is rebased on main
+      run: |
+        git fetch origin main
+        BEHIND=$(git rev-list --count HEAD..origin/main)
+        if [ "$BEHIND" -gt "0" ]; then
+          echo "::error::Branch is $BEHIND commits behind main. Please rebase: git fetch origin main && git rebase origin/main"
+          exit 1
+        fi
+        echo "Branch is up to date with main"
+
   lint:
     runs-on: ubuntu-latest
+    needs: check-rebase
 
     steps:
     - uses: actions/checkout@v4
@@ -30,6 +49,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    needs: check-rebase
 
     steps:
     - uses: actions/checkout@v4
@@ -52,6 +72,7 @@ jobs:
 
   visual-tests:
     runs-on: ubuntu-latest
+    needs: check-rebase
 
     steps:
     - uses: actions/checkout@v4
@@ -79,6 +100,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: check-rebase
 
     steps:
     - uses: actions/checkout@v4
