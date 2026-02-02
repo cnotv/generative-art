@@ -65,27 +65,27 @@ export function createFauxPadController(
    * Convert angle to directional action
    */
   const getDirectionFromAngle = (angle: number): string[] => {
-    const directories: string[] = [];
+    const directions: string[] = [];
     
     if (enableEightWay) {
       // 8-way directions
-      if (angle >= 337.5 || angle < 22.5) directories.push('right');
-      else if (angle >= 22.5 && angle < 67.5) directories.push('down', 'right');
-      else if (angle >= 67.5 && angle < 112.5) directories.push('down');
-      else if (angle >= 112.5 && angle < 157.5) directories.push('down', 'left');
-      else if (angle >= 157.5 && angle < 202.5) directories.push('left');
-      else if (angle >= 202.5 && angle < 247.5) directories.push('up', 'left');
-      else if (angle >= 247.5 && angle < 292.5) directories.push('up');
-      else if (angle >= 292.5 && angle < 337.5) directories.push('up', 'right');
+      if (angle >= 337.5 || angle < 22.5) directions.push('right');
+      else if (angle >= 22.5 && angle < 67.5) directions.push('down', 'right');
+      else if (angle >= 67.5 && angle < 112.5) directions.push('down');
+      else if (angle >= 112.5 && angle < 157.5) directions.push('down', 'left');
+      else if (angle >= 157.5 && angle < 202.5) directions.push('left');
+      else if (angle >= 202.5 && angle < 247.5) directions.push('up', 'left');
+      else if (angle >= 247.5 && angle < 292.5) directions.push('up');
+      else if (angle >= 292.5 && angle < 337.5) directions.push('up', 'right');
     } else {
       // 4-way directions
-      if (angle >= 360 - directionThreshold || angle < directionThreshold) directories.push('right');
-      else if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold) directories.push('down');
-      else if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold) directories.push('left');
-      else if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold) directories.push('up');
+      if (angle >= 360 - directionThreshold || angle < directionThreshold) directions.push('right');
+      else if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold) directions.push('down');
+      else if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold) directions.push('left');
+      else if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold) directions.push('up');
     }
 
-    return directories;
+    return directions;
   };
 
   /**
