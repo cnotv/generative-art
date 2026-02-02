@@ -36,7 +36,7 @@ const recordingButtonClass = computed(() =>
     <Button
       variant="ghost"
       size="icon"
-      class="sidebar-nav__trigger fixed left-4 top-4 z-40 bg-black/50 hover:bg-black/70"
+      class="sidebar-nav__trigger fixed left-4 top-4 z-40 opacity-0 hover:opacity-100 hover:bg-black/70 transition-opacity"
       @click="handleToggle"
     >
       <Menu class="h-5 w-5 text-white" />

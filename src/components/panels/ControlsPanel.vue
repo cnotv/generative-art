@@ -22,7 +22,7 @@ const handleOpenChange = (open: boolean) => {
     <Button
       variant="ghost"
       size="icon"
-      class="controls-panel__trigger fixed right-4 top-4 z-40 bg-black/50 hover:bg-black/70"
+      class="controls-panel__trigger fixed right-4 top-4 z-40 opacity-0 hover:opacity-100 hover:bg-black/70 transition-opacity"
       @click="handleToggle"
     >
       <Settings class="h-5 w-5 text-white" />

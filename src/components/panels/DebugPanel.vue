@@ -59,7 +59,7 @@ onUnmounted(() => {
     <Button
       variant="ghost"
       size="icon"
-      class="debug-panel__trigger fixed right-4 top-16 z-40 bg-black/50 hover:bg-black/70"
+      class="debug-panel__trigger fixed right-4 top-16 z-40 opacity-0 hover:opacity-100 hover:bg-black/70 transition-opacity"
       @click="handleToggle"
     >
       <Bug class="h-5 w-5 text-white" />
