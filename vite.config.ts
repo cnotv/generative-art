@@ -3,8 +3,9 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import wasm from 'vite-plugin-wasm'
+import tailwindcss from '@tailwindcss/vite'
 
-const packages = ['animation', 'threejs', 'audio', 'game', 'controls'];
+const packages = ['animation', 'threejs', 'audio', 'game', 'controls', 'recording'];
 const packageAliases = Object.fromEntries(
   packages.map(pkg => [
     `@webgamekit/${pkg}`,
@@ -15,7 +16,7 @@ const packageAliases = Object.fromEntries(
 // https://vitejs.dev/config/
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
-  plugins: [vue(), wasm()],
+  plugins: [vue(), wasm(), tailwindcss()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
