@@ -53,7 +53,7 @@ export const playerSettings = {
     hasGravity: false,
     castShadow: true,
     material: "MeshLambertMaterial",
-    color: 0xff_ff_ff,
+    color: 0xffffff,
   },
   movement: {
     requireGround: true,
@@ -76,7 +76,7 @@ export const playerSettings = {
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
-  color: 0x00_00_00,
+  color: 0x000000,
   // opacity: 0.95,
   material: "MeshBasicMaterial",
   physic: false,
@@ -107,10 +107,10 @@ export const setupConfig: SetupConfig = {
     size: [1000, 100, 50],
     // texture: illustrationUndergroundImg,
     // textureRepeat: [50, 4] as [number, number],
-    color: 0x98_88_7d,
+    color: 0x98887d,
     // color: 0xcccccc,
   },
-  sky: { size: 500, color: 0x00_aa_ff },
+  sky: { size: 500, color: 0x00aaff },
   postprocessing: {
     // pixelate: { size: 5 },
     // bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },

@@ -33,7 +33,7 @@ export const boxVisualizer: VisualizerSetup = {
       position: [-2, -5, 0],
       hasGravity: false,
       castShadow: true,
-      color: 0x33_33_33,
+      color: 0x333333,
       material: true,
       transmission: 0.7,
       roughness: 0.5,
@@ -53,7 +53,7 @@ export const boxVisualizer: VisualizerSetup = {
       const audioData = getAudioData();
       const sensibility = 50;
       const sum = audioData.reduce((a: number, b: number) => a + b, 0);
-      const audioMap = 0.000_000_002;
+      const audioMap = 0.000000002;
       const average = sum / audioData.length * audioMap;
       const speed = 0.005;
       // const speed = 0.005 + Math.abs(average);

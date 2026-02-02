@@ -11,7 +11,7 @@ export const boxVisualizer: VisualizerSetup = {
 
   setup: async (scene: THREE.Scene, world?: RAPIER.World) => {
     if (!world) return {};
-    getSky(scene, {texture: livingRoomImage, color: 0xaa_aa_aa,});
+    getSky(scene, {texture: livingRoomImage, color: 0xaaaaaa,});
     const model = await getModel(scene, world, "cubik_radio.glb", {
       scale: [3, 3, 3],
       hasGravity: false,

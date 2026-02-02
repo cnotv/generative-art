@@ -34,7 +34,7 @@ export const applyMaterial = (
 ) => {
   if (material) {
     const oldMaterial = mesh.material as any;
-    const meshColor = color || (oldMaterial?.color || 0xff_ff_ff);
+    const meshColor = color || (oldMaterial?.color || 0xffffff);
     const isTransparent = transparent ?? (opacity ?? 1) < 1;
     const materialProperties: any = {
       color: meshColor,
@@ -248,7 +248,7 @@ export const getModel = async (
 
   let helper;
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0xff_00_00);
+    helper = new THREE.BoxHelper(mesh, 0xff0000);
     scene.add(helper);
   }
 
@@ -401,7 +401,7 @@ export const getBall = (
   {
     size = 1,
     position = [0, 0, 0],
-    color = 0x22_22_22,
+    color = 0x222222,
     mass = 1,
     density = 1,
     weight = 50,
@@ -471,7 +471,7 @@ export const getBall = (
 
   let helper;
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0x00_00_00);
+    helper = new THREE.BoxHelper(mesh, 0x000000);
     scene.add(helper);
   }
 
@@ -512,7 +512,7 @@ export const getCube = (
     size = [5, 5, 5] as CoordinateTuple,
     rotation = [0, 0, 0] as CoordinateTuple,
     position = [0, 0, 0],
-    color = 0x22_22_22,
+    color = 0x222222,
     mass = 1,
     density = 1,
     weight = 5,
@@ -598,7 +598,7 @@ export const getCube = (
 
   let helper;
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0x00_00_00);
+    helper = new THREE.BoxHelper(mesh, 0x000000);
     scene.add(helper);
   }
 
@@ -649,7 +649,7 @@ export const getWalls = (
     { position: [0, 0, -length/2], size: [length, height, depth] },
   ].map(({ position, size }) => 
     getCube(scene, world, {
-      color: 0xcc_cc_cc,
+      color: 0xcccccc,
       opacity,
       size: size as CoordinateTuple,
       position: position as CoordinateTuple,

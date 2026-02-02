@@ -84,7 +84,7 @@ export const addBackground = (
     position: finalPosition,
     castShadow: false,
     receiveShadow: false,
-    color: 0xff_ff_ff,
+    color: 0xffffff,
     opacity: options.opacity,
     material: "MeshBasicMaterial",
   });

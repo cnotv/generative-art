@@ -19,7 +19,7 @@ export const getGround = (scene: THREE.Scene, physics?: any) => {
 
   const material = new THREE.MeshStandardMaterial({
     map: texture,
-    color: 0x68_b4_69, // Use white to show natural texture colors
+    color: 0x68b469, // Use white to show natural texture colors
   });
 
   const mesh = new THREE.Mesh(geometry, material);

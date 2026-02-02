@@ -10,7 +10,7 @@ import { updateCamera } from './camera';
 
 export const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
-  color: 0x22_22_22,
+  color: 0x222222,
   mass: 1,
   density: 1,
   weight: 5,

@@ -189,14 +189,7 @@ export default [
       // Better regex
       'unicorn/better-regex': 'error',
 
-      // Numeric separators for readability (e.g., 1_000_000)
-      'unicorn/numeric-separators-style': ['error', {
-        onlyIfContainsSeparator: false,
-        number: {
-          minimumDigits: 5,
-          groupLength: 3,
-        },
-      }],
+      'unicorn/numeric-separators-style': 'off',
 
       // ====================
       // COMPLEXITY RULES

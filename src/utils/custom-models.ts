@@ -64,7 +64,7 @@ export const getBlade = (config: GenerateConfig) => {
 
   // Define the material for the grass blade
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x33_bb_33,
+    color: 0x33bb33,
     side: THREE.DoubleSide,
   });
 
@@ -86,7 +86,7 @@ export const getBlade = (config: GenerateConfig) => {
 export const getRoundedBox = (size: CoordinateTuple, radius: number, smoothness: number) => {
   const [width, height, depth] = size;
   const shape = new THREE.Shape();
-  const eps = 0.000_01;
+  const eps = 0.00001;
   const radius0 = radius - eps;
   shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
   shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
@@ -110,7 +110,7 @@ export const getCoinBlock = (
   world: RAPIER.World,
   { position = [1, 1, 1] }: { position: CoordinateTuple }
 ): ComplexModel => {
-  const color = 0xff_ff_00
+  const color = 0xffff00
   const size: CoordinateTuple = [1.25, 1.25, 1.25]
   const material = new THREE.MeshPhysicalMaterial({ color })
   const geometry = new THREE.CylinderGeometry(10, 10, 1, 32)

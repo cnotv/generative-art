@@ -37,7 +37,7 @@ const addHorizonLine = (scene: THREE.Scene) => {
   // Create a dark grey horizontal bar/line for cartoonish horizon effect
   const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2); // Wide, thin bar
   const horizonMaterial = new THREE.MeshBasicMaterial({
-    color: 0x33_33_33, // Dark grey
+    color: 0x333333, // Dark grey
     transparent: true,
     opacity: 0.8,
   });

@@ -13,9 +13,9 @@ const config = {
   segments: 64,
   ringSpacing: 4,
   frequencyBands: {
-    low: { start: 0, end: 10, color: 0x62_c1_e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
-    mid: { start: 11, end: 21, color: 0x62_c1_e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
-    high: { start: 22, end: 31, color: 0x62_c1_e5, position: 0, brightness: 0.6, effectIntensity: 3 }
+    low: { start: 0, end: 10, color: 0x62c1e5, position: 0, brightness: 1.5, effectIntensity: 0.8 },
+    mid: { start: 11, end: 21, color: 0x62c1e5, position: 0, brightness: 1.0, effectIntensity: 1.2 },
+    high: { start: 22, end: 31, color: 0x62c1e5, position: 0, brightness: 0.6, effectIntensity: 3 }
   },
   sourceMultiplier: {
     song: 0.4,
@@ -240,7 +240,7 @@ const createBackgroundElements = (scene: THREE.Scene): THREE.Mesh[] => {
   const backgroundElements: THREE.Mesh[] = [];
   const planeGeometry = new THREE.PlaneGeometry(300, 300);
   const planeMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xa0_d9_ef,
+    color: 0xa0d9ef,
     transmission: 0.6,
     roughness: 0,
     opacity: 1,
@@ -358,7 +358,7 @@ export const circularTubesVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    scene.background = new THREE.Color(0x0a_0a_0a);
+    scene.background = new THREE.Color(0x0a0a0a);
     const backgroundElements = createBackgroundElements(scene);
 
     // Initialize containers

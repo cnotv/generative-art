@@ -33,7 +33,7 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
     // Create tube geometry for thick line
     const geometry = new THREE.TubeGeometry(curve, config.barCount, config.lineWidth, 8, true);
     const material = new THREE.MeshBasicMaterial({ 
-      color: 0xff_ff_ff,
+      color: 0xffffff,
       wireframe: false 
     });
 
