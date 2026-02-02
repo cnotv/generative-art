@@ -38,7 +38,7 @@ const createMockElement = (width: number, height: number): HTMLElement => {
 };
 
 describe('createFauxPadController', () => {
-  let mappingRef: { current: ControlMapping };
+  let mappingReference: { current: ControlMapping };
   let handlers: ControlHandlers;
   let onActionMock: ReturnType<typeof vi.fn>;
   let onReleaseMock: ReturnType<typeof vi.fn>;
@@ -47,7 +47,7 @@ describe('createFauxPadController', () => {
     onActionMock = vi.fn();
     onReleaseMock = vi.fn();
 
-    mappingRef = {
+    mappingReference = {
       current: {
         'faux-pad': {
           up: 'move-up',
@@ -65,7 +65,7 @@ describe('createFauxPadController', () => {
   });
 
   it('should create a faux-pad controller', () => {
-    const controller = createFauxPadController(mappingRef, handlers);
+    const controller = createFauxPadController(mappingReference, handlers);
     expect(controller).toBeDefined();
     expect(controller.bind).toBeInstanceOf(Function);
     expect(controller.unbind).toBeInstanceOf(Function);
@@ -74,7 +74,7 @@ describe('createFauxPadController', () => {
   });
 
   it('should return initial position as centered', () => {
-    const controller = createFauxPadController(mappingRef, handlers);
+    const controller = createFauxPadController(mappingReference, handlers);
     const position = controller.getPosition();
     
     expect(position.x).toBe(0);
@@ -83,12 +83,12 @@ describe('createFauxPadController', () => {
   });
 
   it('should not be active initially', () => {
-    const controller = createFauxPadController(mappingRef, handlers);
+    const controller = createFauxPadController(mappingReference, handlers);
     expect(controller.isActive()).toBe(false);
   });
 
   it('should respect deadzone setting', () => {
-    const controller = createFauxPadController(mappingRef, handlers, {
+    const controller = createFauxPadController(mappingReference, handlers, {
       deadzone: 0.2,
     });
     
@@ -96,7 +96,7 @@ describe('createFauxPadController', () => {
   });
 
   it('should support 8-way direction mode', () => {
-    const controller = createFauxPadController(mappingRef, handlers, {
+    const controller = createFauxPadController(mappingReference, handlers, {
       enableEightWay: true,
     });
     
@@ -104,7 +104,7 @@ describe('createFauxPadController', () => {
   });
 
   it('should reset position correctly', () => {
-    const controller = createFauxPadController(mappingRef, handlers);
+    const controller = createFauxPadController(mappingReference, handlers);
     controller.reset();
     
     const position = controller.getPosition();
@@ -115,33 +115,33 @@ describe('createFauxPadController', () => {
 
   describe('touch interaction', () => {
     it('should become active on touchstart', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers);
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers);
+      controller.bind(edgeElement, insideElement);
       
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       expect(controller.isActive()).toBe(true);
       console.log('[TEST] touchstart - isActive:', controller.isActive());
     });
 
     it('should trigger RIGHT action when moving right', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.1 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 });
+      controller.bind(edgeElement, insideElement);
       
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       // Move right (increase X)
       const touchMove = createTouchEvent('touchmove', 100, 50);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       console.log('[TEST] Move RIGHT - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());
@@ -150,19 +150,19 @@ describe('createFauxPadController', () => {
     });
 
     it('should trigger LEFT action when moving left', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.1 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 });
+      controller.bind(edgeElement, insideElement);
       
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       // Move left (decrease X)
       const touchMove = createTouchEvent('touchmove', 0, 50);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       console.log('[TEST] Move LEFT - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());
@@ -171,19 +171,19 @@ describe('createFauxPadController', () => {
     });
 
     it('should trigger UP action when moving up', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.1 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 });
+      controller.bind(edgeElement, insideElement);
       
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       // Move up (decrease Y - screen coords, up is negative Y)
       const touchMove = createTouchEvent('touchmove', 50, 0);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       console.log('[TEST] Move UP - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());
@@ -192,19 +192,19 @@ describe('createFauxPadController', () => {
     });
 
     it('should trigger DOWN action when moving down', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.1 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 });
+      controller.bind(edgeElement, insideElement);
       
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       // Move down (increase Y)
       const touchMove = createTouchEvent('touchmove', 50, 100);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       console.log('[TEST] Move DOWN - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());
@@ -213,40 +213,40 @@ describe('createFauxPadController', () => {
     });
 
     it('should update inside element transform on move', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers);
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers);
+      controller.bind(edgeElement, insideElement);
       
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       const touchMove = createTouchEvent('touchmove', 80, 50);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
-      console.log('[TEST] Inside element transform:', insideEl.style.transform);
+      console.log('[TEST] Inside element transform:', insideElement.style.transform);
       
-      expect(insideEl.style.transform).toContain('translate');
+      expect(insideElement.style.transform).toContain('translate');
     });
 
     it('should release actions on touchend', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.1 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 });
+      controller.bind(edgeElement, insideElement);
       
       // Start and move right
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       const touchMove = createTouchEvent('touchmove', 100, 50);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       // End touch
       const touchEnd = createTouchEvent('touchend', 100, 50);
-      insideEl.dispatchEvent(touchEnd);
+      insideElement.dispatchEvent(touchEnd);
       
       console.log('[TEST] touchend - onRelease calls:', onReleaseMock.mock.calls);
       console.log('[TEST] isActive after touchend:', controller.isActive());
@@ -256,19 +256,19 @@ describe('createFauxPadController', () => {
     });
 
     it('should not trigger action within deadzone', () => {
-      const edgeEl = createMockElement(100, 100);
-      const insideEl = createMockElement(50, 50);
+      const edgeElement = createMockElement(100, 100);
+      const insideElement = createMockElement(50, 50);
       
-      const controller = createFauxPadController(mappingRef, handlers, { deadzone: 0.5 });
-      controller.bind(edgeEl, insideEl);
+      const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.5 });
+      controller.bind(edgeElement, insideElement);
       
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
-      insideEl.dispatchEvent(touchStart);
+      insideElement.dispatchEvent(touchStart);
       
       // Move only slightly (within deadzone)
       const touchMove = createTouchEvent('touchmove', 55, 50);
-      insideEl.dispatchEvent(touchMove);
+      insideElement.dispatchEvent(touchMove);
       
       console.log('[TEST] Deadzone test - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());

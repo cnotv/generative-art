@@ -36,7 +36,7 @@ export interface FauxPadOptions {
  * ```
  */
 export function createFauxPadController(
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,
   options: FauxPadOptions = {}
 ): FauxPadController {
@@ -50,7 +50,7 @@ export function createFauxPadController(
   let threshold = { x: 0, y: 0 };
   let isActive = false;
   const activeDirections = new Set<string>();
-  let insideEl: HTMLElement | null = null;
+  let insideElement_: HTMLElement | null = null;
 
   /**
    * Calculate angle in degrees (0 = right, 90 = down, 180 = left, 270 = up)
@@ -65,27 +65,27 @@ export function createFauxPadController(
    * Convert angle to directional action
    */
   const getDirectionFromAngle = (angle: number): string[] => {
-    const dirs: string[] = [];
+    const directions: string[] = [];
     
     if (enableEightWay) {
       // 8-way directions
-      if (angle >= 337.5 || angle < 22.5) dirs.push('right');
-      else if (angle >= 22.5 && angle < 67.5) dirs.push('down', 'right');
-      else if (angle >= 67.5 && angle < 112.5) dirs.push('down');
-      else if (angle >= 112.5 && angle < 157.5) dirs.push('down', 'left');
-      else if (angle >= 157.5 && angle < 202.5) dirs.push('left');
-      else if (angle >= 202.5 && angle < 247.5) dirs.push('up', 'left');
-      else if (angle >= 247.5 && angle < 292.5) dirs.push('up');
-      else if (angle >= 292.5 && angle < 337.5) dirs.push('up', 'right');
+      if (angle >= 337.5 || angle < 22.5) directions.push('right');
+      else if (angle >= 22.5 && angle < 67.5) directions.push('down', 'right');
+      else if (angle >= 67.5 && angle < 112.5) directions.push('down');
+      else if (angle >= 112.5 && angle < 157.5) directions.push('down', 'left');
+      else if (angle >= 157.5 && angle < 202.5) directions.push('left');
+      else if (angle >= 202.5 && angle < 247.5) directions.push('up', 'left');
+      else if (angle >= 247.5 && angle < 292.5) directions.push('up');
+      else if (angle >= 292.5 && angle < 337.5) directions.push('up', 'right');
     } else {
       // 4-way directions
-      if (angle >= 360 - directionThreshold || angle < directionThreshold) dirs.push('right');
-      else if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold) dirs.push('down');
-      else if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold) dirs.push('left');
-      else if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold) dirs.push('up');
+      if (angle >= 360 - directionThreshold || angle < directionThreshold) directions.push('right');
+      else if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold) directions.push('down');
+      else if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold) directions.push('left');
+      else if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold) directions.push('up');
     }
 
-    return dirs;
+    return directions;
   };
 
   /**
@@ -99,7 +99,7 @@ export function createFauxPadController(
 
     const x = currentPosition.x / threshold.x;
     const y = currentPosition.y / threshold.y;
-    const distance = Math.min(Math.sqrt(x * x + y * y), 1);
+    const distance = Math.min(Math.hypot(x, y), 1);
     const angle = getAngle(x, y);
 
     return { x, y, distance, angle };
@@ -120,7 +120,7 @@ export function createFauxPadController(
     if (pos.distance < deadzone) {
       // Release all directions
       activeDirections.forEach(dir => {
-        const action = mappingRef.current['faux-pad']?.[dir];
+        const action = mappingReference.current['faux-pad']?.[dir];
         if (action) {
           handlers.onRelease(action, dir, 'faux-pad');
         }
@@ -135,7 +135,7 @@ export function createFauxPadController(
     // Release directions that are no longer active
     activeDirections.forEach(dir => {
       if (!currentDirections.has(dir)) {
-        const action = mappingRef.current['faux-pad']?.[dir];
+        const action = mappingReference.current['faux-pad']?.[dir];
         if (action) {
           handlers.onRelease(action, dir, 'faux-pad');
         }
@@ -146,7 +146,7 @@ export function createFauxPadController(
     // Activate new directions
     currentDirections.forEach(dir => {
       if (!activeDirections.has(dir)) {
-        const action = mappingRef.current['faux-pad']?.[dir];
+        const action = mappingReference.current['faux-pad']?.[dir];
         if (action) {
           handlers.onAction(action, dir, 'faux-pad');
         }
@@ -160,13 +160,13 @@ export function createFauxPadController(
    */
   const reset = () => {
     currentPosition = { x: 0, y: 0 };
-    if (insideEl) {
-      insideEl.style.transform = 'translate(0, 0)';
+    if (insideElement_) {
+      insideElement_.style.transform = 'translate(0, 0)';
     }
     
     // Release all active directions
     activeDirections.forEach(dir => {
-      const action = mappingRef.current['faux-pad']?.[dir];
+      const action = mappingReference.current['faux-pad']?.[dir];
       if (action) {
         handlers.onRelease(action, dir, 'faux-pad');
       }
@@ -198,8 +198,8 @@ export function createFauxPadController(
     currentPosition = { x: xDistance, y: yDistance };
 
     // Update visual position
-    if (insideEl) {
-      insideEl.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
+    if (insideElement_) {
+      insideElement_.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
     }
 
     // Update directional actions
@@ -211,7 +211,7 @@ export function createFauxPadController(
   };
 
   function bind(edgeElement: HTMLElement, insideElement: HTMLElement) {
-    insideEl = insideElement;
+    insideElement_ = insideElement;
     
     // Calculate threshold based on edge element size
     threshold = {
@@ -229,7 +229,7 @@ export function createFauxPadController(
     insideElement.removeEventListener('touchstart', onTouchStart as EventListener);
     insideElement.removeEventListener('touchmove', onTouchMove as EventListener);
     insideElement.removeEventListener('touchend', onTouchEnd);
-    insideEl = null;
+    insideElement_ = null;
   }
 
   return {

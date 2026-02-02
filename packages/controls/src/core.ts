@@ -25,7 +25,7 @@ export const isMobile = (): boolean => {
     ua.includes('Safari') || ua.includes('AppleWebKit')
   );
   // Fallback to classic mobile UA
-  const isClassicMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isClassicMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   return isModernIpad || (isTouch && isSmallScreen) || isClassicMobile;
 };
 
@@ -59,7 +59,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
   const logs: ControlsLogs = [];
 
   // Mutable reference for mapping (used by controllers)
-  const mappingRef = { current: options.mapping };
+  const mappingReference = { current: options.mapping };
 
   let onActionRaw = options.onAction || null;
   let onReleaseRaw = options.onRelease || null;
@@ -108,10 +108,10 @@ export function createControls(options: ControlsOptions): ControlsExtras {
   };
 
   // Create controllers
-  const keyboardController = createKeyboardController(mappingRef, handlers);
-  const gamepadController = createGamepadController(mappingRef, handlers, buttonMap, options.axisThreshold || 0.5);
-  const touchController = createTouchController(mappingRef, handlers);
-  const mouseController = createMouseController(mappingRef, handlers);
+  const keyboardController = createKeyboardController(mappingReference, handlers);
+  const gamepadController = createGamepadController(mappingReference, handlers, buttonMap, options.axisThreshold || 0.5);
+  const touchController = createTouchController(mappingReference, handlers);
+  const mouseController = createMouseController(mappingReference, handlers);
 
   // Track bound controllers and their targets
   const boundControllers: Array<() => void> = [];
@@ -162,7 +162,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     
     // Update internal state
     Object.assign(options, newOptions);
-    mappingRef.current = newOptions.mapping || {};
+    mappingReference.current = newOptions.mapping || {};
     onActionRaw = newOptions.onAction || null;
     onReleaseRaw = newOptions.onRelease || null;
     

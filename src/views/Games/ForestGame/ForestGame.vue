@@ -5,6 +5,7 @@ import {
   getModel,
   getCube,
   cameraFollowPlayer,
+  generateAreaPositions,
   type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";

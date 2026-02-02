@@ -123,9 +123,9 @@ export const getInstanceConfig = ({
     ];
     
     const baseX = index * spacing - (amount * spacing) / 2;
-    const xVar = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
+    const xVariable = positionVariation[0] > 0 ? (Math.random() - 0.5) * positionVariation[0] : 0;
     const newPosition: CoordinateTuple = [
-      baseX + xVar,
+      baseX + xVariable,
       position[1] + (Math.random() - 0.5) * positionVariation[1],
       position[2] + (Math.random() - 0.5) * positionVariation[2],
     ];

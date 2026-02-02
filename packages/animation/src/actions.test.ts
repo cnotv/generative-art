@@ -34,24 +34,24 @@ describe('helpers', () => {
       expect(parts).toHaveLength(3);
       expect(parts[0]).toBe('timeline');
       expect(parts[1]).toMatch(/^\d+$/); // Timestamp
-      expect(parts[2]).toMatch(/^[a-z0-9]+$/); // Random string
+      expect(parts[2]).toMatch(/^[\da-z]+$/); // Random string
     });
   });
 
   describe('createDurationAction', () => {
     it('should create action with start, duration, and calculated end', () => {
-      const actionFn = vi.fn();
-      const action = createDurationAction(10, 20, actionFn);
+      const actionFunction = vi.fn();
+      const action = createDurationAction(10, 20, actionFunction);
 
       expect(action.start).toBe(10);
       expect(action.duration).toBe(20);
-      expect(action.action).toBe(actionFn);
+      expect(action.action).toBe(actionFunction);
       expect(action.id).toBeDefined();
     });
 
     it('should accept additional options', () => {
-      const actionFn = vi.fn();
-      const action = createDurationAction(10, 20, actionFn, {
+      const actionFunction = vi.fn();
+      const action = createDurationAction(10, 20, actionFunction, {
         name: 'test-action',
         category: 'physics',
         priority: 5,
@@ -63,17 +63,17 @@ describe('helpers', () => {
     });
 
     it('should generate unique IDs for each action', () => {
-      const actionFn = vi.fn();
-      const action1 = createDurationAction(0, 10, actionFn);
-      const action2 = createDurationAction(0, 10, actionFn);
+      const actionFunction = vi.fn();
+      const action1 = createDurationAction(0, 10, actionFunction);
+      const action2 = createDurationAction(0, 10, actionFunction);
 
       expect(action1.id).not.toBe(action2.id);
     });
 
     it('should override generated ID if provided in options', () => {
-      const actionFn = vi.fn();
+      const actionFunction = vi.fn();
       const customId = 'custom-id';
-      const action = createDurationAction(10, 20, actionFn, { id: customId });
+      const action = createDurationAction(10, 20, actionFunction, { id: customId });
 
       expect(action.id).toBe(customId);
     });
@@ -81,19 +81,19 @@ describe('helpers', () => {
 
   describe('createOneShotAction', () => {
     it('should create action that runs once with start = end', () => {
-      const actionFn = vi.fn();
-      const action = createOneShotAction(50, actionFn);
+      const actionFunction = vi.fn();
+      const action = createOneShotAction(50, actionFunction);
 
       expect(action.start).toBe(50);
       expect(action.end).toBe(50);
-      expect(action.action).toBe(actionFn);
+      expect(action.action).toBe(actionFunction);
       expect(action.autoRemove).toBe(true);
       expect(action.id).toBeDefined();
     });
 
     it('should accept additional options', () => {
-      const actionFn = vi.fn();
-      const action = createOneShotAction(50, actionFn, {
+      const actionFunction = vi.fn();
+      const action = createOneShotAction(50, actionFunction, {
         name: 'one-shot',
         category: 'ui',
       });
@@ -104,8 +104,8 @@ describe('helpers', () => {
     });
 
     it('should allow overriding autoRemove in options', () => {
-      const actionFn = vi.fn();
-      const action = createOneShotAction(50, actionFn, {
+      const actionFunction = vi.fn();
+      const action = createOneShotAction(50, actionFunction, {
         autoRemove: false,
       });
 
@@ -113,9 +113,9 @@ describe('helpers', () => {
     });
 
     it('should generate unique IDs', () => {
-      const actionFn = vi.fn();
-      const action1 = createOneShotAction(50, actionFn);
-      const action2 = createOneShotAction(50, actionFn);
+      const actionFunction = vi.fn();
+      const action1 = createOneShotAction(50, actionFunction);
+      const action2 = createOneShotAction(50, actionFunction);
 
       expect(action1.id).not.toBe(action2.id);
     });
@@ -123,24 +123,24 @@ describe('helpers', () => {
 
   describe('createIntervalAction', () => {
     it('should create action with interval configuration', () => {
-      const actionFn = vi.fn();
-      const action = createIntervalAction([10, 5], actionFn);
+      const actionFunction = vi.fn();
+      const action = createIntervalAction([10, 5], actionFunction);
 
       expect(action.interval).toEqual([10, 5]);
-      expect(action.action).toBe(actionFn);
+      expect(action.action).toBe(actionFunction);
       expect(action.id).toBeDefined();
     });
 
     it('should auto-generate name from interval', () => {
-      const actionFn = vi.fn();
-      const action = createIntervalAction([10, 5], actionFn);
+      const actionFunction = vi.fn();
+      const action = createIntervalAction([10, 5], actionFunction);
 
       expect(action.name).toBe('interval_10_5');
     });
 
     it('should use provided name over auto-generated name', () => {
-      const actionFn = vi.fn();
-      const action = createIntervalAction([10, 5], actionFn, {
+      const actionFunction = vi.fn();
+      const action = createIntervalAction([10, 5], actionFunction, {
         name: 'custom-interval',
       });
 
@@ -148,8 +148,8 @@ describe('helpers', () => {
     });
 
     it('should accept additional options', () => {
-      const actionFn = vi.fn();
-      const action = createIntervalAction([10, 5], actionFn, {
+      const actionFunction = vi.fn();
+      const action = createIntervalAction([10, 5], actionFunction, {
         category: 'animation',
         priority: 3,
       });
@@ -159,17 +159,17 @@ describe('helpers', () => {
     });
 
     it('should generate unique IDs', () => {
-      const actionFn = vi.fn();
-      const action1 = createIntervalAction([10, 5], actionFn);
-      const action2 = createIntervalAction([10, 5], actionFn);
+      const actionFunction = vi.fn();
+      const action1 = createIntervalAction([10, 5], actionFunction);
+      const action2 = createIntervalAction([10, 5], actionFunction);
 
       expect(action1.id).not.toBe(action2.id);
     });
 
     it('should handle different interval patterns', () => {
-      const actionFn = vi.fn();
-      const action1 = createIntervalAction([100, 50], actionFn);
-      const action2 = createIntervalAction([5, 2], actionFn);
+      const actionFunction = vi.fn();
+      const action1 = createIntervalAction([100, 50], actionFunction);
+      const action2 = createIntervalAction([5, 2], actionFunction);
 
       expect(action1.name).toBe('interval_100_50');
       expect(action2.name).toBe('interval_5_2');

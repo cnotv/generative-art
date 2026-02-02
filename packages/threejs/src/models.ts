@@ -36,7 +36,7 @@ export const applyMaterial = (
     const oldMaterial = mesh.material as any;
     const meshColor = color || (oldMaterial?.color || 0xffffff);
     const isTransparent = transparent ?? (opacity ?? 1) < 1;
-    const materialProps: any = {
+    const materialProperties: any = {
       color: meshColor,
       opacity: opacity ?? 1,
       transparent: isTransparent,
@@ -45,12 +45,12 @@ export const applyMaterial = (
     };
 
     if (oldMaterial?.map) {
-      materialProps.map = oldMaterial.map;
+      materialProperties.map = oldMaterial.map;
     }
 
     if (material === 'MeshPhysicalMaterial') {
       mesh.material = new THREE.MeshPhysicalMaterial({
-        ...materialProps,
+        ...materialProperties,
         reflectivity,
         roughness,
         transmission,
@@ -64,22 +64,22 @@ export const applyMaterial = (
       });
     } else if (material === 'MeshStandardMaterial') {
       mesh.material = new THREE.MeshStandardMaterial({
-        ...materialProps,
+        ...materialProperties,
         roughness,
         metalness,
       });
     } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
-        ...materialProps,
+        ...materialProperties,
         flatShading: false,
       });
     } else if (material === 'MeshPhongMaterial') {
       mesh.material = new THREE.MeshPhongMaterial({
-        ...materialProps,
+        ...materialProperties,
         shininess: 30,
       });
     } else if (material === 'MeshBasicMaterial') {
-      mesh.material = new THREE.MeshBasicMaterial(materialProps);
+      mesh.material = new THREE.MeshBasicMaterial(materialProperties);
     }
   }
 
@@ -147,11 +147,11 @@ export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | s
           animation.animations.forEach((anim) => {
             // Use filename (without extension) as base name
             let baseName = filename.split('/').pop() || filename;
-            baseName = baseName.replace(/\.[^/.]+$/, "");
+            baseName = baseName.replace(/\.[^./]+$/, "");
             let name = baseName;
-            let idx = 1;
+            let index = 1;
             while (Object.prototype.hasOwnProperty.call(allActions, name)) {
-              name = `${baseName}_${idx++}`;
+              name = `${baseName}_${index++}`;
             }
             allActions[name] = mixer.clipAction(anim);
           });
@@ -161,8 +161,8 @@ export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | s
           }
         },
         undefined,
-        (err) => {
-          reject(err);
+        (error) => {
+          reject(error);
         }
       );
     });

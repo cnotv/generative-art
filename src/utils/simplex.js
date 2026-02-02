@@ -273,7 +273,7 @@ export function createNoise3D(t = Math.random) {
       q = b - N + 2 * G3,
       v = y - x + 2 * G3,
       _ = p - 1 + 0.5,
-      j = b - 1 + 0.5,
+      index = b - 1 + 0.5,
       O = y - 1 + 0.5,
       U = 255 & u,
       k = 255 & F,
@@ -296,11 +296,11 @@ export function createNoise3D(t = Math.random) {
       const t = U + D + e[k + N + e[z + x]];
       (E *= E), (c = E * E * (r[t] * T + o[t] * q + a[t] * v));
     }
-    let H = 0.6 - _ * _ - j * j - O * O;
+    let H = 0.6 - _ * _ - index * index - O * O;
     if (H < 0) f = 0;
     else {
       const t = U + 1 + e[k + 1 + e[z + 1]];
-      (H *= H), (f = H * H * (r[t] * _ + o[t] * j + a[t] * O));
+      (H *= H), (f = H * H * (r[t] * _ + o[t] * index + a[t] * O));
     }
     return 32 * (l + i + c + f);
   };
@@ -337,7 +337,7 @@ export function createNoise4D(t = Math.random) {
       q = M >= 3 ? 1 : 0,
       v = h >= 3 ? 1 : 0,
       _ = P >= 3 ? 1 : 0,
-      j = x >= 2 ? 1 : 0,
+      index = x >= 2 ? 1 : 0,
       O = M >= 2 ? 1 : 0,
       U = h >= 2 ? 1 : 0,
       k = P >= 2 ? 1 : 0,
@@ -349,7 +349,7 @@ export function createNoise4D(t = Math.random) {
       I = g - q + G4,
       J = D - v + G4,
       K = N - _ + G4,
-      L = A - j + 2 * G4,
+      L = A - index + 2 * G4,
       Q = g - O + 2 * G4,
       R = D - U + 2 * G4,
       S = N - k + 2 * G4,
@@ -380,7 +380,7 @@ export function createNoise4D(t = Math.random) {
     let it = 0.6 - L * L - Q * Q - R * R - S * S;
     if (it < 0) G = 0;
     else {
-      const t = rt + j + e[ot + O + e[at + U + e[st + k]]];
+      const t = rt + index + e[ot + O + e[at + U + e[st + k]]];
       (it *= it), (G = it * it * (r[t] * L + o[t] * Q + a[t] * R + s[t] * S));
     }
     let ct = 0.6 - V * V - W * W - X * X - Y * Y;

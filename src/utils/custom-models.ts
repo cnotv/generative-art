@@ -1,6 +1,20 @@
 import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { getPhysic } from '@webgamekit/threejs';
+import { getPhysic, type CoordinateTuple, type ComplexModel } from '@webgamekit/threejs';
+
+// Local type for blade generation config
+interface GenerateConfig {
+  lengthCurve: {
+    baseX: number; baseY: number; baseZ: number;
+    midX: number; midY: number; midZ: number;
+    tipX: number; tipY: number; tipZ: number;
+  };
+  sideCurve: {
+    baseX: number; baseY: number; baseZ: number;
+    midX: number; midY: number; midZ: number;
+    tipX: number; tipY: number; tipZ: number;
+  };
+}
 
 export const getBlade = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)

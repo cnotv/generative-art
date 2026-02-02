@@ -42,7 +42,7 @@ export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutBounce,
+    easing: easingFunction = easing.easeOutBounce,
     delay = 0,
     onComplete
   } = config
@@ -70,7 +70,7 @@ export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
     object.position.y = startY + (endY - startY) * easedProgress
 
     return true
@@ -87,7 +87,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutQuad,
+    easing: easingFunction = easing.easeOutQuad,
     delay = 0,
     onComplete
   } = config
@@ -123,7 +123,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
 
     object.position.y = startY + (endY - startY) * easedProgress
 
@@ -145,7 +145,7 @@ export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
     startY,
     endY,
     duration,
-    easing: easingFn = easing.easeOutBack,
+    easing: easingFunction = easing.easeOutBack,
     delay = 0,
     onComplete
   } = config
@@ -179,7 +179,7 @@ export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
     }
 
     const progress = adjustedFrame / duration
-    const easedProgress = easingFn(progress)
+    const easedProgress = easingFunction(progress)
 
     object.position.y = startY + (endY - startY) * easedProgress
 

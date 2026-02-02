@@ -118,7 +118,7 @@ export const particlesVisualizer: VisualizerSetup = {
       const time = Date.now() * 0.001;
       
       // Calculate average audio level
-      const audioLevel = audioData.reduce((sum, val) => sum + val, 0) / audioData.length;
+      const audioLevel = audioData.reduce((sum, value) => sum + value, 0) / audioData.length;
       
       // Update shader uniforms
       objects.material.uniforms.time.value = time;

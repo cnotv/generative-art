@@ -1,4 +1,4 @@
-import type { GameStatus, GameState, RefLike, LifecycleHook } from './types';
+import type { GameStatus, GameState, RefLike as ReferenceLike, LifecycleHook } from './types';
 
 export type { GameStatus, GameState };
 
@@ -11,7 +11,7 @@ export type { GameStatus, GameState };
  */
 export function createGame(
   initialConfig: Record<string, any>,
-  bindTo?: RefLike<GameState | undefined>,
+  bindTo?: ReferenceLike<GameState | undefined>,
   cleanupHook?: LifecycleHook
 ): GameState {
   let _status: GameStatus = 'idle';
@@ -34,7 +34,7 @@ export function createGame(
       bindTo.value = snapshot;
     }
 
-    _listeners.forEach((cb) => cb(snapshot));
+    _listeners.forEach((callback) => callback(snapshot));
   };
 
   const setData = (key: string, value: any) => {

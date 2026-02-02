@@ -8,28 +8,28 @@ export interface GamepadController {
 
 function pollButtons(
   gp: Gamepad,
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,
   buttonMap: string[],
   lastButtons: boolean[]
 ): void {
-  gp.buttons.forEach((btn, i) => {
-    const btnName = buttonMap[i] || `button${i}`;
-    const action = mappingRef.current.gamepad?.[btnName] ?? 'no action';
+  gp.buttons.forEach((button, i) => {
+    const buttonName = buttonMap[i] || `button${i}`;
+    const action = mappingReference.current.gamepad?.[buttonName] ?? 'no action';
     
     if (!action) {
-      lastButtons[i] = btn.pressed;
+      lastButtons[i] = button.pressed;
       return;
     }
 
-    if (btn.pressed && !lastButtons[i]) {
-      handlers.onAction(action, btnName, 'gamepad');
+    if (button.pressed && !lastButtons[i]) {
+      handlers.onAction(action, buttonName, 'gamepad');
     }
-    if (!btn.pressed && lastButtons[i]) {
-      handlers.onRelease(action, btnName, 'gamepad');
+    if (!button.pressed && lastButtons[i]) {
+      handlers.onRelease(action, buttonName, 'gamepad');
     }
     
-    lastButtons[i] = btn.pressed;
+    lastButtons[i] = button.pressed;
   });
 }
 
@@ -89,12 +89,12 @@ function pollVerticalAxis(
 
 function pollAxes(
   gp: Gamepad,
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,
   axisThreshold: number,
   lastAxesStates: Record<string, boolean>
 ): void {
-  const axesMapping = mappingRef.current.gamepad;
+  const axesMapping = mappingReference.current.gamepad;
   if (!axesMapping) return;
 
   gp.axes.forEach((axisValue, axisIndex) => {
@@ -109,7 +109,7 @@ function pollAxes(
 }
 
 export function createGamepadController(
-  mappingRef: { current: ControlMapping },
+  mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,
   buttonMap: string[],
   axisThreshold: number = 0.5
@@ -124,8 +124,8 @@ export function createGamepadController(
     const gp = gamepadIndex !== null ? gamepads[gamepadIndex] : null;
     if (!gp) return;
 
-    pollButtons(gp, mappingRef, handlers, buttonMap, lastButtons);
-    pollAxes(gp, mappingRef, handlers, axisThreshold, lastAxesStates);
+    pollButtons(gp, mappingReference, handlers, buttonMap, lastButtons);
+    pollAxes(gp, mappingReference, handlers, axisThreshold, lastAxesStates);
   }
 
   function bind(index = 0) {

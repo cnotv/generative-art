@@ -19,7 +19,7 @@ interface Config {
   height: number;
 }
 
-export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
+export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void => {
   const config: Config = {
     pixelSize: 4,
     noiseSize: 0.03,
@@ -38,7 +38,7 @@ export const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   // FPS stats
   const stats = new Stats();
   stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-  statsEl.appendChild(stats.dom);
+  statsElement.appendChild(stats.dom);
 
   // Create an offscreen canvas
   const offscreenCanvas = new OffscreenCanvas(config.width, config.height);

@@ -76,8 +76,8 @@ export const playerSettings = {
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
-  color: 0xcccccc,
-  opacity: 0.95,
+  color: 0x000000,
+  // opacity: 0.95,
   material: "MeshBasicMaterial",
   physic: false,
   transparent: true,
@@ -189,20 +189,20 @@ const createTextureVariants = (
 
     // Generate instance with variations if specified
     if (sizeVariation || rotationVariation) {
-      const sizeVar = sizeVariation || [0, 0, 0] as CoordinateTuple;
-      const rotVar = rotationVariation || [0, 0, 0] as CoordinateTuple;
+      const sizeVariable = sizeVariation || [0, 0, 0] as CoordinateTuple;
+      const rotVariable = rotationVariation || [0, 0, 0] as CoordinateTuple;
 
       variantData[randomIndex].instances.push({
         position,
         scale: [
-          baseConfig.size[0] + (Math.random() - 0.5) * sizeVar[0],
-          baseConfig.size[1] + (Math.random() - 0.5) * sizeVar[1],
-          baseConfig.size[2] + (Math.random() - 0.5) * sizeVar[2]
+          baseConfig.size[0] + (Math.random() - 0.5) * sizeVariable[0],
+          baseConfig.size[1] + (Math.random() - 0.5) * sizeVariable[1],
+          baseConfig.size[2] + (Math.random() - 0.5) * sizeVariable[2]
         ] as CoordinateTuple,
         rotation: [
-          (Math.random() - 0.5) * rotVar[0],
-          (Math.random() - 0.5) * rotVar[1],
-          (Math.random() - 0.5) * rotVar[2]
+          (Math.random() - 0.5) * rotVariable[0],
+          (Math.random() - 0.5) * rotVariable[1],
+          (Math.random() - 0.5) * rotVariable[2]
         ] as CoordinateTuple
       });
     }
@@ -229,9 +229,9 @@ export const illustrationAreas = {
       ...genericFlatConfig
     },
     {
-      center: [0, 60, -80] as CoordinateTuple,
+      center: [0, 85, -80] as CoordinateTuple,
       size: [1000, 60, 100] as CoordinateTuple,
-      count: 6,
+      count: 5,
       pattern: 'random' as const,
       seed: 1000,
       sizeVariation: [100, 50, 0] as CoordinateTuple
@@ -250,7 +250,7 @@ export const illustrationAreas = {
     {
       center: [0, -20, -100] as CoordinateTuple,
       size: [1000, 0, 0] as CoordinateTuple,
-      count: 6,
+      count: 4,
       pattern: 'grid-jitter' as const,
       seed: 2000,
       sizeVariation: [120, 60, 0] as CoordinateTuple
@@ -269,7 +269,7 @@ export const illustrationAreas = {
     {
       center: [0, -20, -50] as CoordinateTuple,
       size: [1000, 0, 0] as CoordinateTuple,
-      count: 8,
+      count: 4,
       pattern: 'grid-jitter' as const,
       seed: 3000,
       sizeVariation: [60, 30, 0] as CoordinateTuple
@@ -361,7 +361,7 @@ export const illustrationAreas = {
     {
       center: [0, -1, -15] as CoordinateTuple,
       size: [1000, 0, 0] as CoordinateTuple,
-      count: 50,
+      count: 30,
       pattern: 'grid-jitter' as const,
       seed: 8000,
       sizeVariation: [5, 3, 0] as CoordinateTuple
@@ -380,7 +380,7 @@ export const illustrationAreas = {
     {
       center: [0, -1, 20] as CoordinateTuple,
       size: [1000, 0, 0] as CoordinateTuple,
-      count: 50,
+      count: 30,
       pattern: 'grid-jitter' as const,
       seed: 8000,
       sizeVariation: [5, 3, 0] as CoordinateTuple

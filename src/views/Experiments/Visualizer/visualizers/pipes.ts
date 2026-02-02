@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { getAudioData } from "../audio";
 import type { VisualizerSetup } from "../visualizer";
+import type { CoordinateTuple } from "@webgamekit/threejs";
 
 export const boxVisualizer: VisualizerSetup = {
   name: "Glass Pipes",
