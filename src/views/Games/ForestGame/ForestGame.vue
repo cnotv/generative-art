@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { useRoute } from "vue-router";
 import {
   getTools,
   getModel,
@@ -12,6 +13,7 @@ import { controllerForward, type CoordinateTuple, type AnimationData, updateAnim
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -21,8 +23,39 @@ import {
   controlBindings,
   assets,
   illustrationAreas,
-  // undergroundConfig,
+  configControls,
 } from "./config";
+
+const route = useRoute();
+
+// Create reactive config for controllable values
+const reactiveConfig = createReactiveConfig({
+  camera: {
+    fov: setupConfig.camera?.fov ?? 80,
+    position: {
+      x: (setupConfig.camera?.position as CoordinateTuple)?.[0] ?? 0,
+      y: (setupConfig.camera?.position as CoordinateTuple)?.[1] ?? 7,
+      z: (setupConfig.camera?.position as CoordinateTuple)?.[2] ?? 35,
+    },
+  },
+  player: {
+    speed: { ...playerSettings.game.speed },
+    maxJump: playerSettings.game.maxJump,
+  },
+  ground: {
+    color: setupConfig.ground && typeof setupConfig.ground === 'object' ? setupConfig.ground.color : 0x98887d,
+  },
+  sky: {
+    color: setupConfig.sky && typeof setupConfig.sky === 'object' ? setupConfig.sky.color : 0x00aaff,
+  },
+  illustrations: {
+    grass: { count: 500 },
+    treesBack: { count: 30 },
+    treesFront: { count: 40 },
+    clouds: { count: 5 },
+  },
+});
+
 // import { times } from "@/utils/lodash";
 
 // Use correct GameState type and initialization
@@ -203,6 +236,9 @@ const init = async (): Promise<void> => {
 };
 
 onMounted(async () => {
+  // Register config with the config panel
+  registerViewConfig(route.name as string, reactiveConfig, configControls);
+
   await init();
   await initializeAudio();
   window.addEventListener("resize", init);
@@ -210,6 +246,7 @@ onMounted(async () => {
 onUnmounted(() => {
   stopMusic();
   destroyControls();
+  unregisterViewConfig(route.name as string);
   window.removeEventListener("resize", init);
 });
 </script>

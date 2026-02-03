@@ -1,12 +1,12 @@
 import { ref, computed } from 'vue';
 
-export type PanelType = 'sidebar' | 'controls' | 'debug' | null;
+export type PanelType = 'sidebar' | 'config' | 'debug' | null;
 
 const activePanel = ref<PanelType>(null);
 
 export const usePanels = () => {
   const isSidebarOpen = computed(() => activePanel.value === 'sidebar');
-  const isControlsOpen = computed(() => activePanel.value === 'controls');
+  const isConfigOpen = computed(() => activePanel.value === 'config');
   const isDebugOpen = computed(() => activePanel.value === 'debug');
 
   const openPanel = (panel: PanelType) => {
@@ -24,7 +24,7 @@ export const usePanels = () => {
   return {
     activePanel: computed(() => activePanel.value),
     isSidebarOpen,
-    isControlsOpen,
+    isConfigOpen,
     isDebugOpen,
     openPanel,
     closePanel,

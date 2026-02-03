@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AccordionHeader, AccordionTrigger } from 'radix-vue';
 import { ChevronDown } from 'lucide-vue-next';
+import { cn } from '@/lib/utilities';
 
 defineProps<{
   class?: string;
@@ -9,14 +10,9 @@ defineProps<{
 
 <template>
   <AccordionHeader class="flex">
-    <AccordionTrigger
-      :class="[
-        'flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180',
-        $props.class,
-      ]"
-    >
+    <AccordionTrigger :class="cn('accordion__trigger', $props.class)">
       <slot />
-      <ChevronDown class="h-4 w-4 shrink-0 transition-transform duration-200" />
+      <ChevronDown class="accordion__chevron" />
     </AccordionTrigger>
   </AccordionHeader>
 </template>

@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <AccordionItem :value="value" class="border-b">
+  <AccordionItem :value="value" class="accordion__item">
     <slot />
   </AccordionItem>
 </template>

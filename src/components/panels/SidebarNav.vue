@@ -50,9 +50,9 @@ const recordingButtonClass = computed(() =>
 
     <Sheet :open="isSidebarOpen" side="left" @update:open="handleOpenChange">
       <div class="sidebar-nav__content flex flex-col gap-6">
-        <h2 class="text-lg font-semibold">Navigation</h2>
+        <h2 class="text-lg font-semibold shrink-0">Navigation</h2>
 
-        <nav class="sidebar-nav__links flex flex-col gap-1">
+        <nav class="sidebar-nav__links flex flex-col gap-1 flex-1 overflow-y-auto min-h-0">
           <template v-for="(route, index) in generatedRoutes" :key="route.path">
             <div
               v-if="generatedRoutes[index - 1]?.group !== route.group"
@@ -70,7 +70,7 @@ const recordingButtonClass = computed(() =>
           </template>
         </nav>
 
-        <div class="sidebar-nav__recording mt-auto border-t pt-6">
+        <div class="sidebar-nav__recording shrink-0 border-t pt-6">
           <h3 class="mb-4 text-sm font-medium">Recording</h3>
 
           <div class="flex flex-col gap-4">

@@ -11,7 +11,7 @@ import type { Component } from 'vue'
  * Dynamically import all Vue components using Vite's glob import
  * This resolves the lazy-loaded components immediately
  */
-const componentModules = import.meta.glob('/src/views/**/*.vue', { eager: true })
+const componentModules = import.meta.glob('./**/*.vue', { eager: true })
 
 /**
  * Extract test cases from the imported components
@@ -21,8 +21,8 @@ const testCases: Array<{ name: string; category: string; path: string; component
 
 for (const [path, module] of Object.entries(componentModules)) {
   // Extract category and component name from path
-  // Pattern: /src/views/{Category}/{ComponentName}/{ComponentName}.vue or /src/views/{Category}/{ComponentName}.vue
-  const match = path.match(/\/src\/views\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
+  // Pattern: ./{Category}/{ComponentName}/{ComponentName}.vue or ./{Category}/{ComponentName}.vue
+  const match = path.match(/^\.\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
 
   if (match) {
     const [, category, componentName] = match
