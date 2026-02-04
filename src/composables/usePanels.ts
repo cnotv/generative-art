@@ -16,15 +16,10 @@ export const usePanels = () => {
   // Sync panel state with query parameters
   const syncToQuery = (panel: PanelType) => {
     const { path, query } = route;
-    const newQuery = { ...query };
-
-    if (panel === 'config') {
-      // eslint-disable-next-line functional/immutable-data
-      newQuery.config = 'true';
-    } else {
-      // eslint-disable-next-line functional/immutable-data
-      delete newQuery.config;
-    }
+    const newQuery = {
+      ...query,
+      config: panel === 'config' ? 'true' : undefined,
+    };
 
     router.push({ path, query: newQuery });
   };

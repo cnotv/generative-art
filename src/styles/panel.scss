@@ -81,7 +81,8 @@
   padding: 1rem;
   box-shadow: none;
   transition: all 0.3s ease-in-out;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 

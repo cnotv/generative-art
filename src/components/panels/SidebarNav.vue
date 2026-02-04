@@ -64,5 +64,10 @@ const handleOpenChange = (open: boolean) => {
 <style scoped>
 .sidebar-nav__content {
   height: 100%;
+  overflow-x: hidden;
+}
+
+.sidebar-nav__links {
+  overflow-x: hidden;
 }
 </style>

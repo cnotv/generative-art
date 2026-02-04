@@ -235,14 +235,9 @@ const init = async (): Promise<void> => {
   });
 };
 
-// Reinitialize scene when config changes
-const reinitScene = () => {
-  init();
-};
-
 onMounted(async () => {
-  // Register config with the config panel (onChange will reinitialize scene)
-  registerViewConfig(route.name as string, reactiveConfig, configControls, reinitScene);
+  // Register config with the config panel (display only - no onChange to avoid WebGL crashes)
+  registerViewConfig(route.name as string, reactiveConfig, configControls);
 
   await init();
   await initializeAudio();
