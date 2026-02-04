@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { stats } from '@/utils/stats';
@@ -21,6 +21,29 @@ const reactiveConfig = createReactiveConfig({
     scale: 1.5,
     scaleMin: 0.5,
     area: 4,
+    points: 10,
+  },
+  lengthCurve: {
+    baseX: 0,
+    baseY: 0,
+    baseZ: 0,
+    midX: 0,
+    midY: 0.28,
+    midZ: 0.04,
+    tipX: 0,
+    tipY: 0.5,
+    tipZ: -0.07,
+  },
+  sideCurve: {
+    baseX: 0.04,
+    baseY: 0,
+    baseZ: 0,
+    midX: 0.04,
+    midY: 0,
+    midZ: 0,
+    tipX: 0,
+    tipY: 0.5,
+    tipZ: 0,
   },
 });
 
@@ -31,35 +54,50 @@ const configSchema = {
     scale: { min: 0.5, max: 3, step: 0.1 },
     scaleMin: { min: 0.1, max: 1, step: 0.1 },
     area: { min: 1, max: 10, step: 1 },
+    points: { min: 3, max: 20, step: 1 },
+  },
+  lengthCurve: {
+    baseX: { min: -0.2, max: 0.2, step: 0.01 },
+    baseY: { min: -0.2, max: 0.2, step: 0.01 },
+    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
+    midX: { min: -0.3, max: 0.3, step: 0.01 },
+    midY: { min: 0, max: 1, step: 0.01 },
+    midZ: { min: -0.3, max: 0.3, step: 0.01 },
+    tipX: { min: -0.3, max: 0.3, step: 0.01 },
+    tipY: { min: 0, max: 1, step: 0.01 },
+    tipZ: { min: -0.3, max: 0.3, step: 0.01 },
+  },
+  sideCurve: {
+    baseX: { min: 0, max: 0.2, step: 0.01 },
+    baseY: { min: -0.2, max: 0.2, step: 0.01 },
+    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
+    midX: { min: 0, max: 0.2, step: 0.01 },
+    midY: { min: -0.2, max: 0.2, step: 0.01 },
+    midZ: { min: -0.2, max: 0.2, step: 0.01 },
+    tipX: { min: 0, max: 0.2, step: 0.01 },
+    tipY: { min: 0, max: 1, step: 0.01 },
+    tipZ: { min: -0.2, max: 0.2, step: 0.01 },
   },
 };
 
-onMounted(() => {
-  // Register config with the config panel
-  registerViewConfig(route.name as string, reactiveConfig, configSchema);
-
+// Reinitialize scene callback (auto-debounced by useViewConfig)
+const reinitScene = () => {
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+  }
   init(
     canvas.value as unknown as HTMLCanvasElement,
     statsEl.value as unknown as HTMLElement,
   );
+};
 
-  // Watch for config changes and reinitialize
-  watch(
-    () => [
-      reactiveConfig.value.grass.density,
-      reactiveConfig.value.grass.scale,
-      reactiveConfig.value.grass.scaleMin,
-      reactiveConfig.value.grass.area,
-    ],
-    () => {
-      if (animationId.value) {
-        cancelAnimationFrame(animationId.value);
-      }
-      init(
-        canvas.value as unknown as HTMLCanvasElement,
-        statsEl.value as unknown as HTMLElement,
-      );
-    }
+onMounted(() => {
+  // Register config with the config panel (onChange callback is auto-debounced)
+  registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
+
+  init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsEl.value as unknown as HTMLElement,
   );
 })
 
@@ -75,32 +113,11 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const config = {
     grass: {
       ...reactiveConfig.value.grass,
-      points: 10,
       offsetX: -2,
       offsetY: 0,
       offsetZ: 0,
-      lengthCurve: {
-        baseX: 0,
-        baseY: 0,
-        baseZ: 0,
-        midX: 0,
-        midY: 0.28,
-        midZ: 0.04,
-        tipX: 0,
-        tipY: 0.5,
-        tipZ: -0.07,
-      },
-      sideCurve: {
-        baseX: 0.04,
-        baseY: 0,
-        baseZ: 0,
-        midX: 0.04,
-        midY: 0,
-        midZ: 0,
-        tipX: 0,
-        tipY: 0.5,
-        tipZ: 0,
-      },
+      lengthCurve: { ...reactiveConfig.value.lengthCurve },
+      sideCurve: { ...reactiveConfig.value.sideCurve },
     },
     camera: {
       fixed: true,

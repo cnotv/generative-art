@@ -46,6 +46,9 @@ const groups = computed(() => {
   return { groups: result, controls };
 });
 
+// All group keys for default-open accordion
+const defaultOpenGroups = computed(() => groups.value.groups.map(g => g.key));
+
 const handleSliderUpdate = (path: string, value: number[]) => {
   props.onUpdate(path, value[0]);
 };
@@ -63,9 +66,9 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
 </script>
 
 <template>
-  <div class="config-controls flex flex-col gap-4">
+  <div class="config-controls flex flex-col gap-2">
     <!-- Direct controls at this level -->
-    <div v-for="control in groups.controls" :key="control.path" class="config-controls__item flex flex-col gap-2">
+    <div v-for="control in groups.controls" :key="control.path" class="config-controls__item flex flex-col gap-1">
       <template v-if="control.schema.boolean !== undefined">
         <div class="flex items-center gap-2">
           <Checkbox
@@ -73,14 +76,14 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
             :model-value="getValue(control.path) ?? control.schema.boolean"
             @update:model-value="handleCheckboxUpdate(control.path, $event)"
           />
-          <label :for="control.path" class="text-sm cursor-pointer">
+          <label :for="control.path" class="text-xs cursor-pointer">
             {{ control.schema.label ?? formatLabel(control.key) }}
           </label>
         </div>
       </template>
 
       <template v-else-if="control.schema.min !== undefined || control.schema.max !== undefined">
-        <label :for="control.path" class="text-sm font-medium">
+        <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
           <span class="text-muted-foreground">{{ getValue(control.path) ?? 0 }}</span>
         </label>
@@ -95,7 +98,7 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
       </template>
 
       <template v-else>
-        <label :for="control.path" class="text-sm font-medium">
+        <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>
         <Input
@@ -103,16 +106,16 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
           type="number"
           :model-value="getValue(control.path) ?? 0"
           :step="control.schema.step"
-          class="h-8"
+          class="h-7 text-xs"
           @update:model-value="handleInputUpdate(control.path, $event)"
         />
       </template>
     </div>
 
-    <!-- Nested groups -->
-    <Accordion v-if="groups.groups.length > 0" type="multiple" class="w-full">
+    <!-- Nested groups (open by default) -->
+    <Accordion v-if="groups.groups.length > 0" type="multiple" :default-value="defaultOpenGroups" class="w-full">
       <AccordionItem v-for="group in groups.groups" :key="group.key" :value="group.key">
-        <AccordionTrigger class="text-sm font-medium py-2">
+        <AccordionTrigger class="text-xs font-medium py-1">
           {{ formatLabel(group.key) }}
         </AccordionTrigger>
         <AccordionContent>

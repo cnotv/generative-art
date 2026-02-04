@@ -1,5 +1,6 @@
-import { ref, shallowReactive, computed, type Ref } from 'vue';
+import { ref, shallowReactive, computed, watch, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { debounce } from '@/utils/lodash';
 
 export type ControlSchema = {
   min?: number;
@@ -14,27 +15,60 @@ export type ConfigControlsSchema = {
   [key: string]: ControlSchema | ConfigControlsSchema;
 };
 
+type OnChangeCallback = () => void;
+
 type ConfigEntry = {
   config: Ref<Record<string, any>>;
   schema: ConfigControlsSchema;
+  onChange?: OnChangeCallback;
+  stopWatch?: () => void;
 };
 
 // Use shallowReactive to prevent Vue from unwrapping nested refs
 const registry = shallowReactive<Record<string, ConfigEntry>>({});
+
+// Default debounce delay in milliseconds
+const DEFAULT_DEBOUNCE_DELAY = 150;
 
 // Version counter to force reactivity updates
 const version = ref(0);
 
 /**
  * Register a view's config and schema for the controls panel
+ * @param routeName - The route name to register the config for
+ * @param config - The reactive config ref
+ * @param schema - The schema for the controls panel
+ * @param onChange - Optional callback that fires when config changes (auto-debounced)
+ * @param debounceDelay - Custom debounce delay in ms (default: 150)
  */
 export const registerViewConfig = (
   routeName: string,
   config: Ref<Record<string, any>>,
-  schema: ConfigControlsSchema
+  schema: ConfigControlsSchema,
+  onChange?: OnChangeCallback,
+  debounceDelay: number = DEFAULT_DEBOUNCE_DELAY
 ) => {
+  // Clean up any existing watcher
+  const existingEntry = registry[routeName];
+  if (existingEntry?.stopWatch) {
+    existingEntry.stopWatch();
+  }
+
+  let stopWatch: (() => void) | undefined;
+
+  // Set up debounced watcher if onChange callback provided
+  if (onChange) {
+    const debouncedCallback = debounce(onChange, debounceDelay);
+    stopWatch = watch(
+      () => JSON.stringify(config.value),
+      () => {
+        debouncedCallback();
+      }
+    );
+  }
+
   // eslint-disable-next-line functional/immutable-data
-  registry[routeName] = { config, schema };
+  registry[routeName] = { config, schema, onChange, stopWatch };
   version.value++;
 };
 
@@ -42,6 +76,11 @@ export const registerViewConfig = (
  * Unregister a view's config when component unmounts
  */
 export const unregisterViewConfig = (routeName: string) => {
+  const entry = registry[routeName];
+  // Clean up watcher if it exists
+  if (entry?.stopWatch) {
+    entry.stopWatch();
+  }
   // eslint-disable-next-line functional/immutable-data
   delete registry[routeName];
   version.value++;
