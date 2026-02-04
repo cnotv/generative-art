@@ -1,39 +1,80 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
-import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { getLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgamekit/threejs';
 import { times } from '@/utils/lodash';
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/composables/useViewConfig';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const animationId = ref(0);
 
+// Create reactive config for the panel
+const reactiveConfig = createReactiveConfig({
+  grass: {
+    density: 250,
+    scale: 1.5,
+    scaleMin: 0.5,
+    area: 4,
+  },
+});
+
+// Config schema for the panel controls
+const configSchema = {
+  grass: {
+    density: { min: 50, max: 500, step: 10 },
+    scale: { min: 0.5, max: 3, step: 0.1 },
+    scaleMin: { min: 0.1, max: 1, step: 0.1 },
+    area: { min: 1, max: 10, step: 1 },
+  },
+};
+
 onMounted(() => {
+  // Register config with the config panel
+  registerViewConfig(route.name as string, reactiveConfig, configSchema);
+
   init(
     canvas.value as unknown as HTMLCanvasElement,
     statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+  );
+
+  // Watch for config changes and reinitialize
+  watch(
+    () => [
+      reactiveConfig.value.grass.density,
+      reactiveConfig.value.grass.scale,
+      reactiveConfig.value.grass.scaleMin,
+      reactiveConfig.value.grass.area,
+    ],
+    () => {
+      if (animationId.value) {
+        cancelAnimationFrame(animationId.value);
+      }
+      init(
+        canvas.value as unknown as HTMLCanvasElement,
+        statsEl.value as unknown as HTMLElement,
+      );
+    }
+  );
 })
 
 onBeforeUnmount(() => {
+  unregisterViewConfig(route.name as string);
   if (animationId.value) {
     cancelAnimationFrame(animationId.value);
   }
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+  // Merge reactive config with static config
   const config = {
     grass: {
-      density: 250,
-      scale: 1.5,
-      scaleMin: 0.5,
-      area: 4,
+      ...reactiveConfig.value.grass,
       points: 10,
       offsetX: -2,
       offsetY: 0,
@@ -81,59 +122,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   // Set stats
   stats.init(route, statsEl);
-
-  // Set configuration and start setup
-  controls.create(config, route, {
-    grass: {
-      // density: { min: 0 },
-      // scale: { min: 0 },
-      // scaleMin: { min: 0 },
-      // area: { min: 0 },
-      // points: { min: 0 },
-      // offsetX: {},
-      // offsetY: {},
-      // offsetZ: {},
-      lengthCurve: {
-        baseX: { min: -1, step: 0.01 },
-        baseY: { min: -1, step: 0.01 },
-        baseZ: { min: -1, step: 0.01 },
-        midX: { min: -1, step: 0.01 },
-        midY: { min: -1, step: 0.01 },
-        midZ: { min: -1, step: 0.01 },
-        tipX: { min: -1, step: 0.01 },
-        tipY: { min: -1, step: 0.01 },
-        tipZ: { min: -1, step: 0.01 },
-      },
-      sideCurve: {
-        baseX: { min: -1, step: 0.01 },
-        baseY: { min: -1, step: 0.01 },
-        baseZ: { min: -1, step: 0.01 },
-        midX: { min: -1, step: 0.01 },
-        midY: { min: -1, step: 0.01 },
-        midZ: { min: -1, step: 0.01 },
-        tipX: { min: -1, step: 0.01 },
-        tipY: { min: -1, step: 0.01 },
-        tipZ: { min: -1, step: 0.01 },
-      },
-    },
-    camera: {
-      fixed: {},
-      near: {},
-      aspect: {},
-      far: {},
-      fov: {},
-      // offset: {
-      //   x: {},
-      //   y: {},
-      //   z: {},
-      // },
-    },
-  }, () => {
-    if (animationId.value) {
-      cancelAnimationFrame(animationId.value);
-    }
-    setup()
-  });
 
   const setup = async () => {
     const renderer = getRenderer(canvas);
