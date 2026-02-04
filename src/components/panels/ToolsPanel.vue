@@ -157,6 +157,8 @@ onUnmounted(() => {
 
 <style scoped>
 .tools-panel__content {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

@@ -28,7 +28,7 @@ type ConfigEntry = {
 const registry = shallowReactive<Record<string, ConfigEntry>>({});
 
 // Default debounce delay in milliseconds
-const DEFAULT_DEBOUNCE_DELAY = 150;
+const DEFAULT_DEBOUNCE_DELAY = 500;
 
 // Version counter to force reactivity updates
 const version = ref(0);

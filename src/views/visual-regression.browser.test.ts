@@ -95,9 +95,8 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       expect(canvas.exists(), `${name}: Canvas should exist`).toBe(true)
 
       // Wait for Three.js scene to initialize and render
-      // Increased wait time to ensure WebGL compiles shaders, loads models, and renders
-      // Also allows time for animations to start (like pop-up animations in ForestGame)
-      await new Promise(resolve => setTimeout(resolve, 5000))
+      // 2 seconds is sufficient for WebGL shader compilation and initial render
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Wait for multiple animation frames to ensure rendering happened
       await new Promise(resolve => requestAnimationFrame(() => {
@@ -124,5 +123,5 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
         wrapper.unmount()
       }
     }
-  }, 30_000) // Increased timeout to 30 seconds per test
+  }, 15_000) // 15 seconds per test should be sufficient
 })
