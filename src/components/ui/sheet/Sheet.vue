@@ -39,6 +39,10 @@ const sideClasses: Record<SheetSide, string> = {
 const contentClasses = computed(() =>
   cn('panel-ui', 'sheet-content', sideClasses[props.side])
 );
+
+const handleClose = () => {
+  emit('update:open', false);
+};
 </script>
 
 <template>
@@ -50,12 +54,16 @@ const contentClasses = computed(() =>
     </slot>
 
     <DialogPortal>
-      <DialogOverlay class="sheet-overlay" @click="emit('update:open', false)" />
-      <DialogContent :class="contentClasses">
+      <DialogOverlay class="sheet-overlay" @click="handleClose" />
+      <DialogContent
+        :class="contentClasses"
+        @interact-outside="handleClose"
+        @escape-key-down="handleClose"
+      >
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />
-        <DialogClose class="sheet-close">
+        <DialogClose class="sheet-close" @click="handleClose">
           <X class="h-4 w-4" />
           <span class="sr-only">Close</span>
         </DialogClose>
