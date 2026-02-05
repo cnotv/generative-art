@@ -15,6 +15,7 @@ defineProps<{
 <style scoped>
 .tabs-content {
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
   margin-top: 0.75rem;

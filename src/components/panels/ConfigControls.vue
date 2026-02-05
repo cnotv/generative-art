@@ -130,3 +130,9 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
     </Accordion>
   </div>
 </template>
+
+<style scoped>
+.config-controls {
+  overflow-x: hidden;
+}
+</style>
