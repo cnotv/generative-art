@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
+import type * as THREE from 'three';
 import {
   getTools,
   getModel,
@@ -117,11 +118,42 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 );
 
 const canvas = ref<HTMLCanvasElement | null>(null);
+
+// Store references to scene objects for live config updates
+const sceneRefs = shallowRef<{
+  camera?: THREE.PerspectiveCamera;
+  scene?: THREE.Scene;
+} | null>(null);
+
+// Watch camera config and apply changes without reinitializing
+watch(
+  () => reactiveConfig.value.camera,
+  (newCameraConfig) => {
+    if (sceneRefs.value?.camera) {
+      const camera = sceneRefs.value.camera;
+      camera.fov = newCameraConfig.fov;
+      camera.position.set(
+        newCameraConfig.position.x,
+        newCameraConfig.position.y,
+        newCameraConfig.position.z
+      );
+      camera.updateProjectionMatrix();
+    }
+  },
+  { deep: true }
+);
+
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
   const { setup, animate, scene, world, getDelta, camera } = await getTools({
     canvas: canvas.value,
   });
+
+  // Store references for live updates
+  sceneRefs.value = {
+    camera: camera as THREE.PerspectiveCamera,
+    scene,
+  };
 
   const { orbit } = await setup({
     config: setupConfig,
@@ -248,6 +280,7 @@ onUnmounted(() => {
   destroyControls();
   unregisterViewConfig(route.name as string);
   window.removeEventListener("resize", init);
+  sceneRefs.value = null;
 });
 </script>
 
