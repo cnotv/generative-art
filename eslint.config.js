@@ -433,7 +433,7 @@ export default [
 
   // Utility files often need to mutate state
   {
-    files: ['src/utils/**/*.ts', 'src/router/**/*.ts', 'src/config/**/*.ts', 'packages/controls/**/*.ts', 'packages/audio/**/*.ts', 'packages/game/**/*.ts'],
+    files: ['src/utils/**/*.ts', 'src/router/**/*.ts', 'src/config/**/*.ts', 'packages/controls/**/*.ts', 'packages/audio/**/*.ts', 'packages/game/**/*.ts', 'packages/recording/**/*.ts'],
     rules: {
       'functional/immutable-data': 'warn',
       'functional/no-let': 'warn',

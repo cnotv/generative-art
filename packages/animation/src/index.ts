@@ -7,7 +7,7 @@ export * from './types';
 
 /**
  * Animate timeline actions based on the current frame
- * @param timeline TimelineManager instance with actions to perform
+ * @param timeline TimelineManager instance or array of Timeline actions (for backwards compatibility)
  * @param frame Current frame (to do not confuse with delta as for animation)
  * @param args Optional arguments to pass to action callbacks
  * @param options Optional configuration for timeline processing
@@ -18,9 +18,12 @@ export * from './types';
  *
  * // In animation loop
  * animateTimeline(manager, frame, mesh, { enableAutoRemoval: true });
+ *
+ * // Legacy array syntax (backwards compatible)
+ * animateTimeline([{ start: 0, action: () => {} }], frame);
  */
 const animateTimeline = <T>(
-  timeline: TimelineManager,
+  timeline: TimelineManager | Timeline[],
   frame: number,
   args?: T,
   options?: {
@@ -28,7 +31,8 @@ const animateTimeline = <T>(
     sortByPriority?: boolean;
   }
 ) => {
-  const actions = timeline.getTimeline();
+  // Support both TimelineManager instances and raw arrays (backwards compatibility)
+  const actions = Array.isArray(timeline) ? timeline : timeline.getTimeline();
 
   // Sort by priority if enabled
   const sortedActions = options?.sortByPriority
@@ -84,15 +88,15 @@ const animateTimeline = <T>(
     // Handle completion
     if (isComplete && onComplete) {
       onComplete(args);
-      if (timelineAction.autoRemove && id) {
+      if (timelineAction.autoRemove && id && !Array.isArray(timeline)) {
         toRemove.push(id);
         timeline._markCompleted(id);
       }
     }
   });
 
-  // Auto-remove completed actions
-  if (options?.enableAutoRemoval) {
+  // Auto-remove completed actions (only for TimelineManager instances)
+  if (options?.enableAutoRemoval && !Array.isArray(timeline)) {
     toRemove.forEach(id => timeline.removeAction(id));
   }
 }

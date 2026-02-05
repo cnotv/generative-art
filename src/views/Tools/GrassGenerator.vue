@@ -3,63 +3,121 @@ import * as THREE from 'three';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
-import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { getLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgamekit/threejs';
 import { times } from '@/utils/lodash';
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/composables/useViewConfig';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const animationId = ref(0);
 
-onMounted(() => {
+// Create reactive config for the panel
+const reactiveConfig = createReactiveConfig({
+  grass: {
+    density: 250,
+    scale: 1.5,
+    scaleMin: 0.5,
+    area: 4,
+    points: 10,
+  },
+  lengthCurve: {
+    baseX: 0,
+    baseY: 0,
+    baseZ: 0,
+    midX: 0,
+    midY: 0.28,
+    midZ: 0.04,
+    tipX: 0,
+    tipY: 0.5,
+    tipZ: -0.07,
+  },
+  sideCurve: {
+    baseX: 0.04,
+    baseY: 0,
+    baseZ: 0,
+    midX: 0.04,
+    midY: 0,
+    midZ: 0,
+    tipX: 0,
+    tipY: 0.5,
+    tipZ: 0,
+  },
+});
+
+// Config schema for the panel controls
+const configSchema = {
+  grass: {
+    density: { min: 50, max: 500, step: 10 },
+    scale: { min: 0.5, max: 3, step: 0.1 },
+    scaleMin: { min: 0.1, max: 1, step: 0.1 },
+    area: { min: 1, max: 10, step: 1 },
+    points: { min: 3, max: 20, step: 1 },
+  },
+  lengthCurve: {
+    baseX: { min: -0.2, max: 0.2, step: 0.01 },
+    baseY: { min: -0.2, max: 0.2, step: 0.01 },
+    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
+    midX: { min: -0.3, max: 0.3, step: 0.01 },
+    midY: { min: 0, max: 1, step: 0.01 },
+    midZ: { min: -0.3, max: 0.3, step: 0.01 },
+    tipX: { min: -0.3, max: 0.3, step: 0.01 },
+    tipY: { min: 0, max: 1, step: 0.01 },
+    tipZ: { min: -0.3, max: 0.3, step: 0.01 },
+  },
+  sideCurve: {
+    baseX: { min: 0, max: 0.2, step: 0.01 },
+    baseY: { min: -0.2, max: 0.2, step: 0.01 },
+    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
+    midX: { min: 0, max: 0.2, step: 0.01 },
+    midY: { min: -0.2, max: 0.2, step: 0.01 },
+    midZ: { min: -0.2, max: 0.2, step: 0.01 },
+    tipX: { min: 0, max: 0.2, step: 0.01 },
+    tipY: { min: 0, max: 1, step: 0.01 },
+    tipZ: { min: -0.2, max: 0.2, step: 0.01 },
+  },
+};
+
+// Reinitialize scene callback (auto-debounced by useViewConfig)
+const reinitScene = () => {
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+  }
   init(
     canvas.value as unknown as HTMLCanvasElement,
     statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+  );
+};
+
+onMounted(() => {
+  // Register config with the config panel (onChange callback is auto-debounced)
+  registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
+
+  init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsEl.value as unknown as HTMLElement,
+  );
 })
 
 onBeforeUnmount(() => {
+  unregisterViewConfig(route.name as string);
   if (animationId.value) {
     cancelAnimationFrame(animationId.value);
   }
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+  // Merge reactive config with static config
   const config = {
     grass: {
-      density: 250,
-      scale: 1.5,
-      scaleMin: 0.5,
-      area: 4,
-      points: 10,
+      ...reactiveConfig.value.grass,
       offsetX: -2,
       offsetY: 0,
       offsetZ: 0,
-      lengthCurve: {
-        baseX: 0,
-        baseY: 0,
-        baseZ: 0,
-        midX: 0,
-        midY: 0.28,
-        midZ: 0.04,
-        tipX: 0,
-        tipY: 0.5,
-        tipZ: -0.07,
-      },
-      sideCurve: {
-        baseX: 0.04,
-        baseY: 0,
-        baseZ: 0,
-        midX: 0.04,
-        midY: 0,
-        midZ: 0,
-        tipX: 0,
-        tipY: 0.5,
-        tipZ: 0,
-      },
+      lengthCurve: { ...reactiveConfig.value.lengthCurve },
+      sideCurve: { ...reactiveConfig.value.sideCurve },
     },
     camera: {
       fixed: true,
@@ -81,59 +139,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   // Set stats
   stats.init(route, statsEl);
-
-  // Set configuration and start setup
-  controls.create(config, route, {
-    grass: {
-      // density: { min: 0 },
-      // scale: { min: 0 },
-      // scaleMin: { min: 0 },
-      // area: { min: 0 },
-      // points: { min: 0 },
-      // offsetX: {},
-      // offsetY: {},
-      // offsetZ: {},
-      lengthCurve: {
-        baseX: { min: -1, step: 0.01 },
-        baseY: { min: -1, step: 0.01 },
-        baseZ: { min: -1, step: 0.01 },
-        midX: { min: -1, step: 0.01 },
-        midY: { min: -1, step: 0.01 },
-        midZ: { min: -1, step: 0.01 },
-        tipX: { min: -1, step: 0.01 },
-        tipY: { min: -1, step: 0.01 },
-        tipZ: { min: -1, step: 0.01 },
-      },
-      sideCurve: {
-        baseX: { min: -1, step: 0.01 },
-        baseY: { min: -1, step: 0.01 },
-        baseZ: { min: -1, step: 0.01 },
-        midX: { min: -1, step: 0.01 },
-        midY: { min: -1, step: 0.01 },
-        midZ: { min: -1, step: 0.01 },
-        tipX: { min: -1, step: 0.01 },
-        tipY: { min: -1, step: 0.01 },
-        tipZ: { min: -1, step: 0.01 },
-      },
-    },
-    camera: {
-      fixed: {},
-      near: {},
-      aspect: {},
-      far: {},
-      fov: {},
-      // offset: {
-      //   x: {},
-      //   y: {},
-      //   z: {},
-      // },
-    },
-  }, () => {
-    if (animationId.value) {
-      cancelAnimationFrame(animationId.value);
-    }
-    setup()
-  });
 
   const setup = async () => {
     const renderer = getRenderer(canvas);

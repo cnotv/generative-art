@@ -411,3 +411,42 @@ export const illustrationAreas = {
     })
   }]
 };
+
+export const configControls = {
+  camera: {
+    fov: { min: 30, max: 120 },
+    position: {
+      x: { min: -50, max: 50 },
+      y: { min: 0, max: 50 },
+      z: { min: 10, max: 100 },
+    },
+  },
+  player: {
+    speed: {
+      movement: { min: 0.5, max: 5, step: 0.5 },
+      turning: { min: 1, max: 10 },
+      jump: { min: 1, max: 10 },
+    },
+    maxJump: { min: 1, max: 20 },
+  },
+  ground: {
+    color: { color: true },
+  },
+  sky: {
+    color: { color: true },
+  },
+  illustrations: {
+    grass: {
+      count: { min: 100, max: 1000, step: 50 },
+    },
+    treesBack: {
+      count: { min: 10, max: 100, step: 5 },
+    },
+    treesFront: {
+      count: { min: 10, max: 100, step: 5 },
+    },
+    clouds: {
+      count: { min: 1, max: 20 },
+    },
+  },
+};
