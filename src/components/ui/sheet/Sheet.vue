@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from 'radix-vue';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { cn } from '@/lib/utilities';
 import { X } from 'lucide-vue-next';
 
@@ -40,13 +40,40 @@ const contentClasses = computed(() =>
   cn('panel-ui', 'sheet-content', sideClasses[props.side])
 );
 
-const handleClose = () => {
+// Track when dialog opened to ignore clicks that happen immediately after
+const openedAt = ref(0);
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      openedAt.value = Date.now();
+    }
+  }
+);
+
+const handlePointerDownOutside = (event: Event) => {
+  // Ignore clicks within 100ms of opening (same click that opened it)
+  const timeSinceOpen = Date.now() - openedAt.value;
+  if (timeSinceOpen < 100) {
+    event.preventDefault();
+    return;
+  }
+  emit('update:open', false);
+};
+
+const handleOverlayClick = () => {
+  // Ignore clicks within 100ms of opening (same click that opened it)
+  const timeSinceOpen = Date.now() - openedAt.value;
+  if (timeSinceOpen < 100) {
+    return;
+  }
   emit('update:open', false);
 };
 </script>
 
 <template>
-  <DialogRoot :open="open" @update:open="emit('update:open', $event)">
+  <DialogRoot :open="open" :modal="true" @update:open="emit('update:open', $event)">
     <slot name="trigger">
       <DialogTrigger as-child>
         <slot name="trigger-content" />
@@ -54,16 +81,15 @@ const handleClose = () => {
     </slot>
 
     <DialogPortal>
-      <DialogOverlay class="sheet-overlay" @click="handleClose" />
+      <DialogOverlay class="sheet-overlay" @click="handleOverlayClick" />
       <DialogContent
         :class="contentClasses"
-        @interact-outside="handleClose"
-        @escape-key-down="handleClose"
+        @pointer-down-outside="handlePointerDownOutside"
       >
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />
-        <DialogClose class="sheet-close" @click="handleClose">
+        <DialogClose class="sheet-close">
           <X class="h-4 w-4" />
           <span class="sr-only">Close</span>
         </DialogClose>

@@ -5,6 +5,11 @@ export type PanelType = 'sidebar' | 'config' | 'debug' | null;
 
 const activePanel = ref<PanelType>(null);
 
+// Reset function for testing - resets module-level state
+export const resetPanelState = () => {
+  activePanel.value = null;
+};
+
 export const usePanels = () => {
   const router = useRouter();
   const route = useRoute();
