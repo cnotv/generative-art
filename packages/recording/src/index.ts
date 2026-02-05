@@ -1,4 +1,4 @@
-export { createRecorder } from './recorder';
+export { recordCreate } from './recorder';
 export type {
   RecorderConfig,
   RecorderState,

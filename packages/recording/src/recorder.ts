@@ -9,7 +9,7 @@ import type {
 const getMimeType = (format: RecorderFormat): string =>
   format === 'mp4' ? 'video/mp4' : 'video/webm';
 
-export const createRecorder = (config: RecorderConfig): Recorder => {
+export const recordCreate = (config: RecorderConfig): Recorder => {
   const { canvas, duration, format = 'webm', frameRate = 30 } = config;
 
   let state: RecorderState = {
@@ -120,10 +120,10 @@ export const createRecorder = (config: RecorderConfig): Recorder => {
   };
 
   return {
-    start,
-    stop,
-    getState,
-    onStateChange,
-    destroy,
+    recordStart: start,
+    recordStop: stop,
+    recordGetState: getState,
+    recordOnStateChange: onStateChange,
+    recordDestroy: destroy,
   };
 };

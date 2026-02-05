@@ -16,9 +16,9 @@ export type RecorderState = {
 export type StateChangeCallback = (state: RecorderState) => void;
 
 export type Recorder = {
-  start: () => void;
-  stop: () => Promise<Blob>;
-  getState: () => RecorderState;
-  onStateChange: (callback: StateChangeCallback) => () => void;
-  destroy: () => void;
+  recordStart: () => void;
+  recordStop: () => Promise<Blob>;
+  recordGetState: () => RecorderState;
+  recordOnStateChange: (callback: StateChangeCallback) => () => void;
+  recordDestroy: () => void;
 };

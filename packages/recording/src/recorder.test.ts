@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createRecorder } from './recorder';
+import { recordCreate } from './recorder';
 
 const createMockCanvas = () => {
   const mockStream = {
@@ -54,7 +54,7 @@ const createMockMediaRecorderClass = () => {
   };
 };
 
-describe('createRecorder', () => {
+describe('recordCreate', () => {
   let mockCanvas: HTMLCanvasElement;
   let mockMediaRecorderClass: ReturnType<typeof createMockMediaRecorderClass>;
 
@@ -74,167 +74,167 @@ describe('createRecorder', () => {
 
   describe('initialization', () => {
     it('should create a recorder with default state', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
-      const state = recorder.getState();
+      const recorder = recordCreate({ canvas: mockCanvas });
+      const state = recorder.recordGetState();
 
       expect(state.isRecording).toBe(false);
       expect(state.elapsed).toBe(0);
       expect(state.blob).toBeNull();
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should accept custom frame rate', () => {
-      const recorder = createRecorder({ canvas: mockCanvas, frameRate: 60 });
+      const recorder = recordCreate({ canvas: mockCanvas, frameRate: 60 });
 
-      recorder.start();
+      recorder.recordStart();
       expect(mockCanvas.captureStream).toHaveBeenCalledWith(60);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should use default frame rate of 30 when not specified', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
       expect(mockCanvas.captureStream).toHaveBeenCalledWith(30);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 
   describe('start', () => {
     it('should start recording and update state', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
-      const state = recorder.getState();
+      recorder.recordStart();
+      const state = recorder.recordGetState();
 
       expect(state.isRecording).toBe(true);
       expect(mockMediaRecorderClass.getInstance()?.start).toHaveBeenCalled();
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should not start if already recording', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
       const instance = mockMediaRecorderClass.getInstance();
-      recorder.start();
+      recorder.recordStart();
 
       expect(instance?.start).toHaveBeenCalledTimes(1);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should track elapsed time while recording', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
       vi.advanceTimersByTime(1000);
 
-      const state = recorder.getState();
+      const state = recorder.recordGetState();
       expect(state.elapsed).toBe(1000);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 
   describe('stop', () => {
     it('should stop recording and return blob', async () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
-      const blob = await recorder.stop();
+      recorder.recordStart();
+      const blob = await recorder.recordStop();
 
       expect(blob).toBeInstanceOf(Blob);
-      expect(recorder.getState().isRecording).toBe(false);
+      expect(recorder.recordGetState().isRecording).toBe(false);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should update state with blob after stop', async () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
-      await recorder.stop();
+      recorder.recordStart();
+      await recorder.recordStop();
 
-      const state = recorder.getState();
+      const state = recorder.recordGetState();
       expect(state.blob).toBeInstanceOf(Blob);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should reject if not recording', async () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      await expect(recorder.stop()).rejects.toThrow('Not recording');
+      await expect(recorder.recordStop()).rejects.toThrow('Not recording');
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 
   describe('auto-stop with duration', () => {
     it('should auto-stop after specified duration', async () => {
-      const recorder = createRecorder({ canvas: mockCanvas, duration: 5000 });
+      const recorder = recordCreate({ canvas: mockCanvas, duration: 5000 });
 
-      recorder.start();
+      recorder.recordStart();
       vi.advanceTimersByTime(5000);
 
       await vi.waitFor(() => {
-        expect(recorder.getState().isRecording).toBe(false);
+        expect(recorder.recordGetState().isRecording).toBe(false);
       });
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should not auto-stop if duration is not specified', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
       vi.advanceTimersByTime(10000);
 
-      expect(recorder.getState().isRecording).toBe(true);
+      expect(recorder.recordGetState().isRecording).toBe(true);
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 
   describe('onStateChange', () => {
     it('should notify listeners when state changes', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
       const callback = vi.fn();
 
-      recorder.onStateChange(callback);
-      recorder.start();
+      recorder.recordOnStateChange(callback);
+      recorder.recordStart();
 
       expect(callback).toHaveBeenCalledWith(
         expect.objectContaining({ isRecording: true })
       );
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should return unsubscribe function', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
       const callback = vi.fn();
 
-      const unsubscribe = recorder.onStateChange(callback);
+      const unsubscribe = recorder.recordOnStateChange(callback);
       unsubscribe();
-      recorder.start();
+      recorder.recordStart();
 
       expect(callback).not.toHaveBeenCalled();
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
 
     it('should notify on elapsed time updates', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
       const callback = vi.fn();
 
-      recorder.onStateChange(callback);
-      recorder.start();
+      recorder.recordOnStateChange(callback);
+      recorder.recordStart();
       callback.mockClear();
 
       vi.advanceTimersByTime(100);
@@ -243,27 +243,27 @@ describe('createRecorder', () => {
         expect.objectContaining({ elapsed: 100 })
       );
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 
   describe('destroy', () => {
     it('should stop recording if active', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
       const instance = mockMediaRecorderClass.getInstance();
-      recorder.destroy();
+      recorder.recordDestroy();
 
       expect(instance?.stop).toHaveBeenCalled();
     });
 
     it('should clear all listeners', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
       const callback = vi.fn();
 
-      recorder.onStateChange(callback);
-      recorder.destroy();
+      recorder.recordOnStateChange(callback);
+      recorder.recordDestroy();
       callback.mockClear();
 
       expect(callback).not.toHaveBeenCalled();
@@ -277,30 +277,30 @@ describe('createRecorder', () => {
     ] as const)(
       'should create MediaRecorder with %s format',
       (format, mimeType) => {
-        const recorder = createRecorder({ canvas: mockCanvas, format });
+        const recorder = recordCreate({ canvas: mockCanvas, format });
 
-        recorder.start();
+        recorder.recordStart();
 
         expect(mockMediaRecorderClass.MockMediaRecorder).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({ mimeType })
         );
 
-        recorder.destroy();
+        recorder.recordDestroy();
       }
     );
 
     it('should default to webm format', () => {
-      const recorder = createRecorder({ canvas: mockCanvas });
+      const recorder = recordCreate({ canvas: mockCanvas });
 
-      recorder.start();
+      recorder.recordStart();
 
       expect(mockMediaRecorderClass.MockMediaRecorder).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ mimeType: 'video/webm' })
       );
 
-      recorder.destroy();
+      recorder.recordDestroy();
     });
   });
 });

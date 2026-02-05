@@ -57,15 +57,11 @@ The project is organized as a **pnpm workspace monorepo**:
    - CI will fail if branch is behind main
 3. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
 4. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-5. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
 
 ### PR Description Format
 ```markdown
 ## Summary
 - Brief bullet points of what was implemented
-
-## Screenshot (if applicable)
-![Description](.github/screenshots/filename.png)
 
 ## Key Changes
 - File-by-file or module-by-module breakdown of changes
@@ -122,6 +118,7 @@ Use format: `<type>/<issue-number>-<description>`
 - **Immutability**: Use `const`, spread operators, and avoid direct mutations
 - **State management**: Use closures, tuples, or plain objects instead of class instances
 - **No legacy/deprecated support**: Never add overloads or backward compatibility for old function signatures. When refactoring APIs, update all usages across the codebase instead of maintaining legacy signatures
+- **Fix, don't patch**: Always fix issues properly instead of adding workarounds or retrocompatibility layers. If an API needs to change, update all consumers rather than supporting multiple signatures
 
 ### TypeScript
 - **Always use TypeScript**: All new code must be TypeScript (`.ts`, `.vue` with `<script setup lang="ts">`)
@@ -131,6 +128,10 @@ Use format: `<type>/<issue-number>-<description>`
 
 ### Modular Architecture
 - **Barrel exports**: Use `index.ts` files to export public APIs (see `packages/*/src/index.ts`)
+- **Package export prefixes**: Functions exported from packages MUST have a prefix matching the package name to avoid namespace collisions. Examples:
+  - `recording` package: `recordCreate`, `recordDestroy`, `recordStart`, `recordStop`
+  - `animation` package: `animateTimeline`, `animationCreate`
+  - `controls` package: `controlsCreate`, `controlsDestroy`
 - **Abstract functions**: Extract reusable logic into separate functions/modules
 - **Single responsibility**: Keep functions focused on one task
 - **Framework-agnostic packages**: `@webgamekit/*` packages must not depend on Vue/React
