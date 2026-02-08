@@ -23,7 +23,7 @@ export const usePanels = () => {
     const { path, query } = route;
     const newQuery = {
       ...query,
-      config: panel === 'config' ? 'true' : undefined,
+      config: panel === 'config' ? 'true' : 'false',
     };
 
     router.push({ path, query: newQuery });
