@@ -134,5 +134,6 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
 <style scoped>
 .config-controls {
   overflow-x: hidden;
+  padding-bottom: 1rem;
 }
 </style>
