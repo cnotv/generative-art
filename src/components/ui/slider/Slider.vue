@@ -31,6 +31,5 @@ const emit = defineEmits<{
     <SliderTrack class="slider__track">
       <SliderRange class="slider__range" />
     </SliderTrack>
-    <SliderThumb class="slider__thumb" />
   </SliderRoot>
 </template>
