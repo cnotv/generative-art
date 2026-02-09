@@ -77,6 +77,7 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
 };
 
 const handleSelectUpdate = (path: string, value: string) => {
+  console.log('[ConfigControls] Select update:', path, '=', value);
   props.onUpdate(path, value);
 };
 </script>
@@ -94,9 +95,12 @@ const handleSelectUpdate = (path: string, value: string) => {
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>
         <Select
-          :model-value="getValue(control.path)"
+          :model-value="String(getValue(control.path) || '')"
           :options="control.schema.options.map(opt => ({ value: opt, label: opt }))"
-          @update:model-value="handleSelectUpdate(control.path, $event)"
+          @update:model-value="(value) => {
+            console.log('[ConfigControls] Select change detected:', control.path, value);
+            handleSelectUpdate(control.path, value);
+          }"
           class="h-7 text-xs"
         />
       </template>

@@ -136,18 +136,26 @@ watch(
   () => reactiveConfig.value.camera,
   (newCameraConfig) => {
     const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
+    console.log('[ForestGame] Camera config changed:', {
+      preset: newCameraConfig.preset,
+      previousPreset: previousCameraPreset.value,
+      presetChanged,
+      hasCamera: !!sceneRefs.value?.camera
+    });
 
     // If preset changed, apply the new camera preset
     if (presetChanged && sceneRefs.value?.camera) {
+      console.log('[ForestGame] Applying camera preset:', newCameraConfig.preset);
       previousCameraPreset.value = newCameraConfig.preset;
 
       // Apply the camera preset
       const aspect = window.innerWidth / window.innerHeight;
-      setCameraPreset(
+      const result = setCameraPreset(
         sceneRefs.value.camera,
         newCameraConfig.preset as CameraPreset,
         aspect
       );
+      console.log('[ForestGame] Camera preset applied:', result ? 'success' : 'failed');
     } else if (sceneRefs.value?.camera && sceneRefs.value.camera instanceof THREE.PerspectiveCamera) {
       // For perspective camera, update FOV and position without preset
       const camera = sceneRefs.value.camera;
