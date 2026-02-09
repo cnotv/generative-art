@@ -23,7 +23,13 @@ const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
   const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options"];
-  return keys.length === 0 || keys.some((k) => controlKeys.includes(k));
+
+  // Empty object is a control schema (will be rendered as input)
+  if (keys.length === 0) return true;
+
+  // If ALL keys are control keys, it's a control schema
+  // If ANY key is NOT a control key, it's a nested group
+  return keys.every((k) => controlKeys.includes(k));
 };
 
 const formatLabel = (key: string): string => {
