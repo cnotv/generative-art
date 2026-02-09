@@ -414,6 +414,14 @@ export const illustrationAreas = {
 
 export const configControls = {
   camera: {
+    type: {
+      label: 'Camera Type',
+      options: ['perspective', 'orthographic'],
+    },
+    preset: {
+      label: 'Camera Preset',
+      options: ['perspective', 'fisheye', 'cinematic', 'orbit', 'orthographic', 'orthographic-following', 'top-down'],
+    },
     fov: { min: 30, max: 120 },
     position: {
       x: { min: -50, max: 50 },

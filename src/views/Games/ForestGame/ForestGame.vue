@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import {
   getTools,
   getModel,
   getCube,
   cameraFollowPlayer,
   generateAreaPositions,
+  setCameraPreset,
+  CameraPreset,
   type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
@@ -32,6 +34,8 @@ const route = useRoute();
 // Create reactive config for controllable values
 const reactiveConfig = createReactiveConfig({
   camera: {
+    type: 'perspective',
+    preset: 'perspective',
     fov: setupConfig.camera?.fov ?? 80,
     position: {
       x: (setupConfig.camera?.position as CoordinateTuple)?.[0] ?? 0,
@@ -121,15 +125,35 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 
 // Store references to scene objects for live config updates
 const sceneRefs = shallowRef<{
-  camera?: THREE.PerspectiveCamera;
+  camera?: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   scene?: THREE.Scene;
 } | null>(null);
 
-// Watch camera config and apply changes without reinitializing
+// Track previous camera type and preset to detect when reinit is needed
+const previousCameraType = ref<string>('perspective');
+const previousCameraPreset = ref<string>('perspective');
+
+// Watch camera config and apply changes
 watch(
   () => reactiveConfig.value.camera,
   (newCameraConfig) => {
-    if (sceneRefs.value?.camera) {
+    const typeChanged = newCameraConfig.type !== previousCameraType.value;
+    const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
+
+    // If type or preset changed, we need to reinitialize with the new camera
+    if ((typeChanged || presetChanged) && sceneRefs.value?.camera) {
+      previousCameraType.value = newCameraConfig.type;
+      previousCameraPreset.value = newCameraConfig.preset;
+
+      // Apply the camera preset
+      const aspect = window.innerWidth / window.innerHeight;
+      setCameraPreset(
+        sceneRefs.value.camera,
+        newCameraConfig.preset as CameraPreset,
+        aspect
+      );
+    } else if (sceneRefs.value?.camera && sceneRefs.value.camera instanceof THREE.PerspectiveCamera) {
+      // For perspective camera, update FOV and position without preset
       const camera = sceneRefs.value.camera;
       camera.fov = newCameraConfig.fov;
       camera.position.set(
@@ -151,9 +175,23 @@ const init = async (): Promise<void> => {
 
   // Store references for live updates
   sceneRefs.value = {
-    camera: camera as THREE.PerspectiveCamera,
+    camera: camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
     scene,
   };
+
+  // Initialize camera with the configured preset
+  if (sceneRefs.value.camera) {
+    const aspect = window.innerWidth / window.innerHeight;
+    setCameraPreset(
+      sceneRefs.value.camera,
+      reactiveConfig.value.camera.preset as CameraPreset,
+      aspect
+    );
+  }
+
+  // Track initial values
+  previousCameraType.value = reactiveConfig.value.camera.type;
+  previousCameraPreset.value = reactiveConfig.value.camera.preset;
 
   const { orbit } = await setup({
     config: setupConfig,

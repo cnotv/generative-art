@@ -9,6 +9,7 @@ export type ControlSchema = {
   boolean?: boolean;
   color?: boolean;
   label?: string;
+  options?: string[];
 };
 
 export type ConfigControlsSchema = {

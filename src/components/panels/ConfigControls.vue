@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Accordion,
   AccordionItem,
@@ -21,7 +22,7 @@ const props = defineProps<{
 const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "color", "label"];
+  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options"];
   return keys.length === 0 || keys.some((k) => controlKeys.includes(k));
 };
 
@@ -68,6 +69,10 @@ const handleInputUpdate = (path: string, value: string | number) => {
 const handleCheckboxUpdate = (path: string, value: boolean) => {
   props.onUpdate(path, value);
 };
+
+const handleSelectUpdate = (path: string, value: string) => {
+  props.onUpdate(path, value);
+};
 </script>
 
 <template>
@@ -78,7 +83,19 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
       :key="control.path"
       class="config-controls__item flex flex-col gap-1"
     >
-      <template v-if="control.schema.boolean !== undefined">
+      <template v-if="control.schema.options !== undefined">
+        <label :for="control.path" class="text-xs font-medium">
+          {{ control.schema.label ?? formatLabel(control.key) }}
+        </label>
+        <Select
+          :model-value="getValue(control.path)"
+          :options="control.schema.options.map(opt => ({ value: opt, label: opt }))"
+          @update:model-value="handleSelectUpdate(control.path, $event)"
+          class="h-7 text-xs"
+        />
+      </template>
+
+      <template v-else-if="control.schema.boolean !== undefined">
         <div class="flex items-center gap-2">
           <Checkbox
             :id="control.path"
