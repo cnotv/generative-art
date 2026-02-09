@@ -67,7 +67,7 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(false);
       expect(mockPush).toHaveBeenLastCalledWith({
         path: '/test',
-        query: { config: undefined },
+        query: { config: 'false' },
       });
     });
   });
@@ -87,7 +87,7 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(false);
       expect(mockPush).toHaveBeenLastCalledWith({
         path: '/test',
-        query: { config: undefined },
+        query: { config: 'false' },
       });
     });
 
@@ -100,7 +100,7 @@ describe('usePanels', () => {
 
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: undefined, other: 'value' },
+        query: { config: 'false', other: 'value' },
       });
     });
   });
@@ -128,10 +128,10 @@ describe('usePanels', () => {
       await nextTick();
 
       expect(isSidebarOpen.value).toBe(true);
-      // Should still push but with config: undefined (no sidebar param)
+      // Should still push but with config: 'false' (no sidebar param)
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: undefined },
+        query: { config: 'false' },
       });
     });
   });
@@ -169,11 +169,11 @@ describe('usePanels', () => {
 
       // Panel should be closed
       expect(isConfigOpen.value).toBe(false);
-      // URL should be updated with config: undefined
+      // URL should be updated with config: 'false'
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: undefined },
+        query: { config: 'false' },
       });
     });
 
