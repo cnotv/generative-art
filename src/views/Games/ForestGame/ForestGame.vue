@@ -34,7 +34,6 @@ const route = useRoute();
 // Create reactive config for controllable values
 const reactiveConfig = createReactiveConfig({
   camera: {
-    type: 'perspective',
     preset: 'perspective',
     fov: setupConfig.camera?.fov ?? 80,
     position: {
@@ -129,20 +128,17 @@ const sceneRefs = shallowRef<{
   scene?: THREE.Scene;
 } | null>(null);
 
-// Track previous camera type and preset to detect when reinit is needed
-const previousCameraType = ref<string>('perspective');
+// Track previous camera preset to detect when it changes
 const previousCameraPreset = ref<string>('perspective');
 
 // Watch camera config and apply changes
 watch(
   () => reactiveConfig.value.camera,
   (newCameraConfig) => {
-    const typeChanged = newCameraConfig.type !== previousCameraType.value;
     const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
 
-    // If type or preset changed, we need to reinitialize with the new camera
-    if ((typeChanged || presetChanged) && sceneRefs.value?.camera) {
-      previousCameraType.value = newCameraConfig.type;
+    // If preset changed, apply the new camera preset
+    if (presetChanged && sceneRefs.value?.camera) {
       previousCameraPreset.value = newCameraConfig.preset;
 
       // Apply the camera preset
@@ -189,8 +185,7 @@ const init = async (): Promise<void> => {
     );
   }
 
-  // Track initial values
-  previousCameraType.value = reactiveConfig.value.camera.type;
+  // Track initial preset value
   previousCameraPreset.value = reactiveConfig.value.camera.preset;
 
   const { orbit } = await setup({
