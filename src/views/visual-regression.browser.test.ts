@@ -60,9 +60,24 @@ for (const [path, module] of Object.entries(componentModules)) {
  * Screenshots are stored in the format:
  * src/views/__screenshots__/visual-regression.browser.test.ts/Visual-Regression-----{category}-----{name}--should-render-{name}-correctly-1.png
  */
+/**
+ * Force release WebGL context to avoid context exhaustion
+ * Browsers limit active WebGL contexts (typically 8-16)
+ */
+const forceReleaseWebGLContext = (canvas: HTMLCanvasElement) => {
+  const gl = canvas.getContext('webgl') || canvas.getContext('webgl2')
+  if (gl) {
+    const loseContext = gl.getExtension('WEBGL_lose_context')
+    if (loseContext) {
+      loseContext.loseContext()
+    }
+  }
+}
+
 describe.each(testCases)('Visual Regression -- $category - $name', ({ component, name, path }) => {
   it(`should render ${name} correctly`, async () => {
     let wrapper: any
+    let canvasElement: HTMLCanvasElement | null = null
 
     try {
       // Create required dependencies
@@ -93,6 +108,7 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       // Verify canvas element exists
       const canvas = wrapper.find('canvas')
       expect(canvas.exists(), `${name}: Canvas should exist`).toBe(true)
+      canvasElement = canvas.element as HTMLCanvasElement
 
       // Wait for Three.js scene to initialize and render
       // 2 seconds is sufficient for WebGL shader compilation and initial render
@@ -114,14 +130,19 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       expect(screenshot, `${name}: Screenshot should be captured`).toBeDefined()
 
       // Verify canvas dimensions
-      const canvasElement = canvas.element as HTMLCanvasElement
       expect(canvasElement.width, `${name}: Canvas width should be > 0`).toBeGreaterThan(0)
       expect(canvasElement.height, `${name}: Canvas height should be > 0`).toBeGreaterThan(0)
     } finally {
+      // Force release WebGL context before unmounting to avoid context exhaustion
+      if (canvasElement) {
+        forceReleaseWebGLContext(canvasElement)
+      }
       // Cleanup
       if (wrapper) {
         wrapper.unmount()
       }
+      // Small delay to allow context cleanup
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
   }, 15_000) // 15 seconds per test should be sufficient
 })

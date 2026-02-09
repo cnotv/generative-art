@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import type { ConfigControlsSchema, ControlSchema } from '@/composables/useViewConfig';
+import { computed } from "vue";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import type { ConfigControlsSchema, ControlSchema } from "@/composables/useViewConfig";
 
 const props = defineProps<{
   schema: ConfigControlsSchema;
@@ -14,16 +19,16 @@ const props = defineProps<{
 }>();
 
 const isControlSchema = (obj: any): obj is ControlSchema => {
-  if (typeof obj !== 'object' || obj === null) return false;
+  if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ['min', 'max', 'step', 'boolean', 'color', 'label'];
-  return keys.length === 0 || keys.some(k => controlKeys.includes(k));
+  const controlKeys = ["min", "max", "step", "boolean", "color", "label"];
+  return keys.length === 0 || keys.some((k) => controlKeys.includes(k));
 };
 
 const formatLabel = (key: string): string => {
   return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (str) => str.toUpperCase())
     .trim();
 };
 
@@ -47,14 +52,14 @@ const groups = computed(() => {
 });
 
 // All group keys for default-open accordion
-const defaultOpenGroups = computed(() => groups.value.groups.map(g => g.key));
+const defaultOpenGroups = computed(() => groups.value.groups.map((g) => g.key));
 
 const handleSliderUpdate = (path: string, value: number[]) => {
   props.onUpdate(path, value[0]);
 };
 
 const handleInputUpdate = (path: string, value: string | number) => {
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
   if (!isNaN(numValue)) {
     props.onUpdate(path, numValue);
   }
@@ -68,7 +73,11 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
 <template>
   <div class="config-controls flex flex-col gap-2">
     <!-- Direct controls at this level -->
-    <div v-for="control in groups.controls" :key="control.path" class="config-controls__item flex flex-col gap-1">
+    <div
+      v-for="control in groups.controls"
+      :key="control.path"
+      class="config-controls__item flex flex-col gap-1"
+    >
       <template v-if="control.schema.boolean !== undefined">
         <div class="flex items-center gap-2">
           <Checkbox
@@ -82,7 +91,9 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
         </div>
       </template>
 
-      <template v-else-if="control.schema.min !== undefined || control.schema.max !== undefined">
+      <template
+        v-else-if="control.schema.min !== undefined || control.schema.max !== undefined"
+      >
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
           <span class="text-muted-foreground">{{ getValue(control.path) ?? 0 }}</span>
@@ -113,7 +124,12 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
     </div>
 
     <!-- Nested groups (open by default) -->
-    <Accordion v-if="groups.groups.length > 0" type="multiple" :default-value="defaultOpenGroups" class="w-full">
+    <Accordion
+      v-if="groups.groups.length > 0"
+      type="multiple"
+      :default-value="defaultOpenGroups"
+      class="w-full"
+    >
       <AccordionItem v-for="group in groups.groups" :key="group.key" :value="group.key">
         <AccordionTrigger class="text-xs font-medium py-1">
           {{ formatLabel(group.key) }}

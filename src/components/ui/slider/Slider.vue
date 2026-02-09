@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { SliderRoot, SliderTrack, SliderRange, SliderThumb } from 'radix-vue';
-import { cn } from '@/lib/utilities';
+import { SliderRoot, SliderTrack, SliderRange, SliderThumb } from "radix-vue";
+import { cn } from "@/lib/utilities";
 
 const props = defineProps<{
   modelValue?: number[];
@@ -13,7 +13,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number[]];
+  "update:modelValue": [value: number[]];
 }>();
 </script>
 
