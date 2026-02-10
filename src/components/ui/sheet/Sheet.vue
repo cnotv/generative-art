@@ -8,12 +8,11 @@ import {
   DialogClose,
   DialogTitle,
   DialogDescription,
-} from 'radix-vue';
-import { computed, ref, watch } from 'vue';
-import { cn } from '@/lib/utilities';
-import { X } from 'lucide-vue-next';
+} from "radix-vue";
+import { computed, ref, watch } from "vue";
+import { cn } from "@/lib/utilities";
 
-type SheetSide = 'top' | 'bottom' | 'left' | 'right';
+type SheetSide = "top" | "bottom" | "left" | "right";
 
 const props = withDefaults(
   defineProps<{
@@ -21,23 +20,23 @@ const props = withDefaults(
     side?: SheetSide;
   }>(),
   {
-    side: 'right',
+    side: "right",
   }
 );
 
 const emit = defineEmits<{
-  'update:open': [value: boolean];
+  "update:open": [value: boolean];
 }>();
 
 const sideClasses: Record<SheetSide, string> = {
-  top: 'sheet-content--top',
-  bottom: 'sheet-content--bottom',
-  left: 'sheet-content--left',
-  right: 'sheet-content--right',
+  top: "sheet-content--top",
+  bottom: "sheet-content--bottom",
+  left: "sheet-content--left",
+  right: "sheet-content--right",
 };
 
 const contentClasses = computed(() =>
-  cn('panel-ui', 'sheet-content', sideClasses[props.side])
+  cn("panel-ui", "sheet-content", sideClasses[props.side])
 );
 
 // Track when dialog opened to ignore clicks that happen immediately after
@@ -59,7 +58,7 @@ const handlePointerDownOutside = (event: Event) => {
     event.preventDefault();
     return;
   }
-  emit('update:open', false);
+  emit("update:open", false);
 };
 
 const handleOverlayClick = () => {
@@ -68,7 +67,7 @@ const handleOverlayClick = () => {
   if (timeSinceOpen < 100) {
     return;
   }
-  emit('update:open', false);
+  emit("update:open", false);
 };
 </script>
 
@@ -89,10 +88,6 @@ const handleOverlayClick = () => {
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />
-        <DialogClose class="sheet-close">
-          <X class="h-4 w-4" />
-          <span class="sr-only">Close</span>
-        </DialogClose>
       </DialogContent>
     </DialogPortal>
   </DialogRoot>

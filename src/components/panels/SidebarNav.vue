@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Sheet } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { usePanels } from '@/composables/usePanels';
-import { Menu } from 'lucide-vue-next';
-import { generatedRoutes as generatedRoutesAll } from '@/config/router';
+import { Sheet } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { usePanels } from "@/composables/usePanels";
+import { Menu } from "lucide-vue-next";
+import { generatedRoutes as generatedRoutesAll } from "@/config/router";
 
 const { isSidebarOpen, togglePanel, closePanel } = usePanels();
 
@@ -13,7 +13,7 @@ const generatedRoutes = generatedRoutesAll.filter((route) => {
 });
 
 const handleToggle = () => {
-  togglePanel('sidebar');
+  togglePanel("sidebar");
 };
 
 const handleOpenChange = (open: boolean) => {
@@ -36,9 +36,9 @@ const handleOpenChange = (open: boolean) => {
 
     <Sheet :open="isSidebarOpen" side="left" @update:open="handleOpenChange">
       <div class="sidebar-nav__content flex flex-col gap-6">
-        <h2 class="text-lg font-semibold shrink-0">Navigation</h2>
-
-        <nav class="sidebar-nav__links flex flex-col gap-1 flex-1 overflow-y-auto min-h-0">
+        <nav
+          class="sidebar-nav__links flex flex-col gap-1 flex-1 overflow-y-auto min-h-0"
+        >
           <template v-for="(route, index) in generatedRoutes" :key="route.path">
             <div
               v-if="generatedRoutes[index - 1]?.group !== route.group"
@@ -55,7 +55,6 @@ const handleOpenChange = (open: boolean) => {
             </router-link>
           </template>
         </nav>
-
       </div>
     </Sheet>
   </div>

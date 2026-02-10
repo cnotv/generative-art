@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import * as THREE from 'three';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
-import { video } from '@/utils/video';
-import { stats } from '@/utils/stats';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { getLights, getRenderer, instanceMatrixMesh, setThirdPersonCamera } from '@webgamekit/threejs';
-import { times } from '@/utils/lodash';
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/composables/useViewConfig';
+import * as THREE from "three";
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { useRoute } from "vue-router";
+import { video } from "@/utils/video";
+import { stats } from "@/utils/stats";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import {
+  getLights,
+  getRenderer,
+  instanceMatrixMesh,
+  setThirdPersonCamera,
+} from "@webgamekit/threejs";
+import { times } from "@/utils/lodash";
+import {
+  registerViewConfig,
+  unregisterViewConfig,
+  createReactiveConfig,
+} from "@/composables/useViewConfig";
 
-const statsEl = ref(null)
-const canvas = ref(null)
+const statsEl = ref(null);
+const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
 
@@ -86,23 +95,25 @@ const reinitScene = () => {
     cancelAnimationFrame(animationId.value);
   }
   init(
-    canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
+    (canvas.value as unknown) as HTMLCanvasElement,
+    (statsEl.value as unknown) as HTMLElement
   );
 };
 
 onMounted(() => {
   // Register config with the config panel (onChange callback is auto-debounced)
   registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
+  window.addEventListener("resize", reinitScene);
 
   init(
-    canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
+    (canvas.value as unknown) as HTMLCanvasElement,
+    (statsEl.value as unknown) as HTMLElement
   );
-})
+});
 
 onBeforeUnmount(() => {
   unregisterViewConfig(route.name as string);
+  window.removeEventListener("resize", reinitScene);
   if (animationId.value) {
     cancelAnimationFrame(animationId.value);
   }
@@ -128,7 +139,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       offset: {
         x: -20,
         y: 20,
-        z: 40
+        z: 40,
       },
       lookAt: {
         x: 0,
@@ -136,13 +147,18 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         z: 0,
       },
     },
-  }
+  };
   // Set stats
   stats.init(route, statsEl);
 
   const setup = async () => {
     const renderer = getRenderer(canvas);
-    const camera = new THREE.PerspectiveCamera(config.camera.fov, config.camera.aspect, config.camera.near, config.camera.far);
+    const camera = new THREE.PerspectiveCamera(
+      config.camera.fov,
+      config.camera.aspect,
+      config.camera.near,
+      config.camera.far
+    );
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
     const matrixProps = [
@@ -150,19 +166,31 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       {
         position: [3, 1, 0],
         rotation: [0, -0.45, 0],
-        scale: [config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin]
+        scale: [
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+        ],
       }, // Flat front view
       {
         position: [3, -1, 0],
         rotation: [0, 1, 0],
-        scale: [config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin]
-      },// Flat side view
+        scale: [
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+        ],
+      }, // Flat side view
       {
         position: [3, -3, 0],
         rotation: [0, 0, 0],
-        scale: [config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin, config.grass.scale + config.grass.scaleMin]
-      },// Perspective view
-    ] as ModelOptions[]
+        scale: [
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+          config.grass.scale + config.grass.scaleMin,
+        ],
+      }, // Perspective view
+    ] as ModelOptions[];
 
     camera.position.set(-30, 25, 30);
     getLights(scene);
@@ -182,26 +210,30 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
       orbit.update();
 
-      renderer.render( scene, camera );
-      video.stop(renderer.info.render.frame ,route);
+      renderer.render(scene, camera);
+      video.stop(renderer.info.render.frame, route);
       stats.end(route);
     }
     animate();
-  }
+  };
   setup();
-}
+};
 
-const generateProps = (config: GenerateConfig) => times(config.density * config.area, () => {
-  const size = Math.random() * config.scale + config.scaleMin;
-  const getPosition = () => Math.random() * config.area - config.area/2;
+const generateProps = (config: GenerateConfig) =>
+  times(config.density * config.area, () => {
+    const size = Math.random() * config.scale + config.scaleMin;
+    const getPosition = () => Math.random() * config.area - config.area / 2;
 
-  return {
-    position: [getPosition() + config.offsetX, 0, getPosition() + config.offsetY + config.offsetZ],
-    rotation: [0, Math.random() * 360, 0],
-    scale: [size, size, size]
-  }
-});
-
+    return {
+      position: [
+        getPosition() + config.offsetX,
+        0,
+        getPosition() + config.offsetY + config.offsetZ,
+      ],
+      rotation: [0, Math.random() * 360, 0],
+      scale: [size, size, size],
+    };
+  });
 
 // const lengthCurve = new THREE.CatmullRomCurve3([
 //     // new THREE.Vector3(0.01, 0, 0.05),  // Base
@@ -227,23 +259,47 @@ const generateProps = (config: GenerateConfig) => times(config.density * config.
 
 const getGrass = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)
-  // Vector values respectively: bend sides, blade silhouette, bend front 
+  // Vector values respectively: bend sides, blade silhouette, bend front
   const lengthCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(config.lengthCurve.baseX, config.lengthCurve.baseY, config.lengthCurve.baseZ),  // Base
-    new THREE.Vector3(config.lengthCurve.midX, config.lengthCurve.midY, config.lengthCurve.midZ),  // Midpoint 1
+    new THREE.Vector3(
+      config.lengthCurve.baseX,
+      config.lengthCurve.baseY,
+      config.lengthCurve.baseZ
+    ), // Base
+    new THREE.Vector3(
+      config.lengthCurve.midX,
+      config.lengthCurve.midY,
+      config.lengthCurve.midZ
+    ), // Midpoint 1
     // new THREE.Vector3(0, 0.50, 0.1),  // Midpoint 2
     // new THREE.Vector3(0, 0.60, 0.1),  // Midpoint 3
-    new THREE.Vector3(config.lengthCurve.tipX, config.lengthCurve.tipY, config.lengthCurve.tipZ)  // Tip
+    new THREE.Vector3(
+      config.lengthCurve.tipX,
+      config.lengthCurve.tipY,
+      config.lengthCurve.tipZ
+    ), // Tip
   ]);
 
   // Define the control points for the side curve (curvature on the sides)
   // Vector values respectively: Width blade
   const sideCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(config.sideCurve.baseX, config.sideCurve.baseY, config.sideCurve.baseZ),  // Base
-    new THREE.Vector3(config.sideCurve.midX, config.sideCurve.midY, config.sideCurve.midZ),  // Midpoint 1
+    new THREE.Vector3(
+      config.sideCurve.baseX,
+      config.sideCurve.baseY,
+      config.sideCurve.baseZ
+    ), // Base
+    new THREE.Vector3(
+      config.sideCurve.midX,
+      config.sideCurve.midY,
+      config.sideCurve.midZ
+    ), // Midpoint 1
     // new THREE.Vector3(0.03, 0.5, 0),  // Midpoint 2
     // new THREE.Vector3(0.02, 0.75, 0),  // Midpoint 3
-    new THREE.Vector3(config.sideCurve.tipX, config.sideCurve.tipY, config.sideCurve.tipZ)  // Tip
+    new THREE.Vector3(
+      config.sideCurve.tipX,
+      config.sideCurve.tipY,
+      config.sideCurve.tipZ
+    ), // Tip
   ]);
 
   // Define the control points for the length curve (curvature along the length)
@@ -271,7 +327,7 @@ const getGrass = (config: GenerateConfig) => {
 
   // Define the geometry for the grass blade
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
@@ -288,11 +344,9 @@ const getGrass = (config: GenerateConfig) => {
 
   return blade;
 };
-
 </script>
 
 <template>
   <div ref="statsEl"></div>
   <canvas ref="canvas"></canvas>
 </template>
-
