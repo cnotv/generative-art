@@ -47,7 +47,7 @@ for (const [path, module] of Object.entries(componentModules)) {
  * These tests verify that Vue components with 3D scenes load and render correctly.
  * Each test:
  * 1. Mounts the component with required dependencies (Pinia, Vue Router)
- * 2. Waits for the Three.js scene to initialize (200ms + 1 animation frame)
+ * 2. Waits for the Three.js scene to initialize (100ms + 1 animation frame)
  * 3. Captures a screenshot for visual verification
  * 4. Verifies the canvas element exists and has non-zero dimensions
  *
@@ -111,8 +111,8 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       canvasElement = canvas.element as HTMLCanvasElement
 
       // Wait for Three.js scene to initialize and render
-      // 200ms is sufficient for WebGL shader compilation and initial render in CI
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // 100ms minimum wait for WebGL initialization
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // Wait for 1 animation frame to ensure rendering happened
       await new Promise(resolve => requestAnimationFrame(resolve))
@@ -133,8 +133,8 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       if (wrapper) {
         wrapper.unmount()
       }
-      // Small delay to allow context cleanup (reduced from 100ms to 20ms)
-      await new Promise(resolve => setTimeout(resolve, 20))
+      // Small delay to allow context cleanup (reduced to 10ms)
+      await new Promise(resolve => setTimeout(resolve, 10))
     }
-  }, 8_000) // 8 seconds per test (reduced from 15s)
+  }, 6_000) // 6 seconds per test (reduced from 15s for CI speed)
 })

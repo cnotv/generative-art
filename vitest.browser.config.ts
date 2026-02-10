@@ -10,8 +10,8 @@ export default mergeConfig(
       include: ['**/*.browser.test.ts'],
       exclude: [...configDefaults.exclude, 'e2e/*'],
       root: fileURLToPath(new URL('./', import.meta.url)),
-      testTimeout: 8000,
-      hookTimeout: 3000,
+      testTimeout: 6000,
+      hookTimeout: 2000,
       server: {
         deps: {
           inline: ['@dimforge/rapier3d-compat'],
