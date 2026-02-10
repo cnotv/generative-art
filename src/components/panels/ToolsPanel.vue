@@ -1,58 +1,101 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { usePanels } from '@/composables/usePanels';
 import { useViewConfig } from '@/composables/useViewConfig';
 import ConfigControls from './ConfigControls.vue';
-import { Settings, Circle, Square } from 'lucide-vue-next';
+import DebugStats from '@/components/DebugStats.vue';
+import RecordingControls from '@/components/RecordingControls.vue';
+import { Settings } from 'lucide-vue-next';
+import type { DebugStat } from '@/components/DebugStats.vue';
 
+const route = useRoute();
+const router = useRouter();
 const { isConfigOpen, togglePanel, closePanel } = usePanels();
 const viewConfig = useViewConfig();
 
 // Config tab
-const activeSchema = () => viewConfig.currentSchema.value;
-const activeGetValue = (path: string) => viewConfig.getConfigValue(path);
-const activeOnUpdate = (path: string, value: any) => {
+const configSchema = () => viewConfig.currentSchema.value;
+const sceneSchema = () => viewConfig.currentSceneSchema.value;
+const configGetValue = (path: string) => viewConfig.getConfigValue(path);
+const sceneGetValue = (path: string) => viewConfig.getSceneConfigValue(path);
+const configOnUpdate = (path: string, value: any) => {
   viewConfig.updateConfig(path, value);
 };
-const hasActiveConfig = () => activeSchema() !== null;
+const sceneOnUpdate = (path: string, value: any) => {
+  viewConfig.updateSceneConfig(path, value);
+};
 
-// Debug tab
-const fps = ref(0);
-const memory = ref(0);
-const drawCalls = ref(0);
+// Debug tab - custom stats can be passed to DebugStats component
+const customDebugStats = ref<DebugStat[]>([
+  { label: 'Draw Calls', value: 0 },
+]);
 
-let frameCount = 0;
-let lastTime = performance.now();
-let animationFrameId: number | null = null;
+// Recording tab - uses route.query.record
+const isRecording = computed(() => !!route.query.record);
 
-const updateStats = () => {
-  frameCount++;
-  const currentTime = performance.now();
+const handleStartRecording = (durationMs: number) => {
+  // Calculate total frames at 30fps
+  const fps = 30;
+  const durationSeconds = durationMs / 1000;
+  const totalFrames = Math.floor(durationSeconds * fps);
 
-  if (currentTime - lastTime >= 1000) {
-    fps.value = Math.round(frameCount);
-    frameCount = 0;
-    lastTime = currentTime;
+  console.log('[ToolsPanel] Starting recording for', durationMs, 'ms (', totalFrames, 'frames)');
 
-    if ('memory' in performance) {
-      const memoryInfo = (performance as Performance & { memory: { usedJSHeapSize: number } }).memory;
-      memory.value = Math.round(memoryInfo.usedJSHeapSize / 1048576);
-    }
+  // Set route query to trigger recording via video.ts
+  router.push({
+    query: { ...route.query, record: String(totalFrames) }
+  });
+};
+
+const handleStopRecording = () => {
+  console.log('[ToolsPanel] Stopping recording');
+
+  // Remove record query parameter to stop recording
+  const query = { ...route.query };
+  delete query.record;
+  router.push({ query });
+};
+
+// Define tabs programmatically
+const tabs = computed(() => {
+  const availableTabs = [];
+
+  if (configSchema() !== null) {
+    availableTabs.push({
+      value: 'config',
+      label: 'Config',
+      schema: configSchema()!,
+      getValue: configGetValue,
+      onUpdate: configOnUpdate,
+    });
   }
 
-  animationFrameId = requestAnimationFrame(updateStats);
-};
+  if (sceneSchema() !== null) {
+    availableTabs.push({
+      value: 'scene',
+      label: 'Scene',
+      schema: sceneSchema()!,
+      getValue: sceneGetValue,
+      onUpdate: sceneOnUpdate,
+    });
+  }
 
-// Recording tab
-const isRecording = ref(false);
-const recordingDuration = ref(10);
+  availableTabs.push({
+    value: 'debug',
+    label: 'Debug',
+  });
 
-const toggleRecording = () => {
-  isRecording.value = !isRecording.value;
-};
+  availableTabs.push({
+    value: 'recording',
+    label: 'Record',
+  });
+
+  return availableTabs;
+});
 
 // Panel controls
 const handleToggle = () => {
@@ -64,16 +107,6 @@ const handleOpenChange = (open: boolean) => {
     closePanel();
   }
 };
-
-onMounted(() => {
-  updateStats();
-});
-
-onUnmounted(() => {
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId);
-  }
-});
 </script>
 
 <template>
@@ -89,65 +122,35 @@ onUnmounted(() => {
 
     <Sheet :open="isConfigOpen" side="right" @update:open="handleOpenChange">
       <div class="tools-panel__content flex flex-col h-full">
-        <Tabs default-value="config" class="flex-1 flex flex-col min-h-0">
+        <Tabs :default-value="tabs[0]?.value" class="flex-1 flex flex-col min-h-0">
           <TabsList>
-            <TabsTrigger value="config">Config</TabsTrigger>
-            <TabsTrigger value="debug">Debug</TabsTrigger>
-            <TabsTrigger value="recording">Record</TabsTrigger>
+            <TabsTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value">
+              {{ tab.label }}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="config">
+          <TabsContent
+            v-for="tab in tabs.filter(t => t.value === 'config' || t.value === 'scene')"
+            :key="tab.value"
+            :value="tab.value"
+          >
             <ConfigControls
-              v-if="hasActiveConfig() && activeSchema()"
-              :schema="activeSchema()!"
-              :get-value="activeGetValue"
-              :on-update="activeOnUpdate"
+              :schema="tab.schema!"
+              :get-value="tab.getValue!"
+              :on-update="tab.onUpdate!"
             />
-            <p v-else class="text-xs text-muted-foreground">
-              No configuration available for this view.
-            </p>
           </TabsContent>
 
           <TabsContent value="debug">
-            <div class="debug-stats flex flex-col gap-2">
-              <div class="debug-stat flex justify-between rounded bg-secondary p-2">
-                <span class="text-xs font-medium">FPS</span>
-                <span class="font-mono text-xs">{{ fps }}</span>
-              </div>
-              <div class="debug-stat flex justify-between rounded bg-secondary p-2">
-                <span class="text-xs font-medium">Memory (MB)</span>
-                <span class="font-mono text-xs">{{ memory }}</span>
-              </div>
-              <div class="debug-stat flex justify-between rounded bg-secondary p-2">
-                <span class="text-xs font-medium">Draw Calls</span>
-                <span class="font-mono text-xs">{{ drawCalls }}</span>
-              </div>
-            </div>
+            <DebugStats :stats="customDebugStats" />
           </TabsContent>
 
           <TabsContent value="recording">
-            <div class="recording-controls flex flex-col gap-3">
-              <div class="flex items-center gap-2">
-                <label for="duration" class="text-xs">Duration (s):</label>
-                <input
-                  id="duration"
-                  v-model.number="recordingDuration"
-                  type="number"
-                  min="1"
-                  max="300"
-                  class="w-16 rounded border bg-background px-2 py-1 text-xs"
-                />
-              </div>
-              <Button
-                size="sm"
-                :class="isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
-                class="text-white"
-                @click="toggleRecording"
-              >
-                <component :is="isRecording ? Square : Circle" class="mr-2 h-3 w-3" />
-                {{ isRecording ? 'Stop' : 'Start' }}
-              </Button>
-            </div>
+            <RecordingControls
+              :is-recording="isRecording"
+              @start="handleStartRecording"
+              @stop="handleStopRecording"
+            />
           </TabsContent>
         </Tabs>
       </div>

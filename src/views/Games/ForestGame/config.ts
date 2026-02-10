@@ -412,19 +412,8 @@ export const illustrationAreas = {
   }]
 };
 
+// Config tab - reactive game settings
 export const configControls = {
-  camera: {
-    preset: {
-      label: 'Camera Preset',
-      options: ['perspective', 'fisheye', 'cinematic', 'orbit'],
-    },
-    fov: { min: 30, max: 120 },
-    position: {
-      x: { min: -50, max: 50 },
-      y: { min: 0, max: 50 },
-      z: { min: 10, max: 100 },
-    },
-  },
   player: {
     speed: {
       movement: { min: 0.5, max: 5, step: 0.5 },
@@ -432,12 +421,6 @@ export const configControls = {
       jump: { min: 1, max: 10 },
     },
     maxJump: { min: 1, max: 20 },
-  },
-  ground: {
-    color: { color: true },
-  },
-  sky: {
-    color: { color: true },
   },
   illustrations: {
     grass: {
@@ -452,5 +435,27 @@ export const configControls = {
     clouds: {
       count: { min: 1, max: 20 },
     },
+  },
+};
+
+// Scene tab - setupConfig-related settings
+export const sceneControls = {
+  camera: {
+    preset: {
+      label: 'Camera Preset',
+      options: ['perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit'],
+    },
+    fov: { min: 30, max: 120 },
+    position: {
+      x: { min: -50, max: 50 },
+      y: { min: 0, max: 50 },
+      z: { min: 10, max: 100 },
+    },
+  },
+  ground: {
+    color: { color: true },
+  },
+  sky: {
+    color: { color: true },
   },
 };

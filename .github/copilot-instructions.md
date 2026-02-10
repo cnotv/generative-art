@@ -188,6 +188,93 @@ Use format: `<type>/<issue-number>-<description>`
    - Router auto-discovers views matching pattern `{Dir}/{Name}/{Name}.vue`
    - Example: `src/views/Games/ForestGame/ForestGame.vue`
 
+**Configuration Panel Setup**:
+When creating a new view, register two separate configurations for the configuration panel:
+
+1. **Config Tab** (reactive game settings):
+   - Player settings (speed, jump height, etc.)
+   - Game mechanics
+   - Interactive elements
+   - Any runtime-adjustable parameters
+
+2. **Scene Tab** (setupConfig-related settings):
+   - Camera settings (preset, FOV, position)
+   - Environment (ground color, sky color)
+   - Lighting
+   - Post-processing effects
+   - Scene elements (illustration counts, etc.)
+
+**Example registration** (in `onMounted`):
+```typescript
+import { registerViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
+
+// Config tab - reactive game settings
+const reactiveConfig = createReactiveConfig({
+  player: {
+    speed: { movement: 2, turning: 4, jump: 4 },
+    maxJump: 4,
+  },
+});
+
+// Scene tab - setupConfig-related settings
+const sceneConfig = createReactiveConfig({
+  camera: {
+    preset: 'perspective',
+    fov: 80,
+    position: { x: 0, y: 7, z: 35 },
+  },
+  ground: { color: 0x98887d },
+  sky: { color: 0x00aaff },
+});
+
+// Define control schemas
+const configControls = {
+  player: {
+    speed: {
+      movement: { min: 0.5, max: 5, step: 0.5 },
+      turning: { min: 1, max: 10 },
+      jump: { min: 1, max: 10 },
+    },
+    maxJump: { min: 1, max: 20 },
+  },
+};
+
+const sceneControls = {
+  camera: {
+    preset: {
+      label: 'Camera Preset',
+      options: ['perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit']
+    },
+    fov: { min: 30, max: 120 },
+    position: {
+      x: { min: -50, max: 50 },
+      y: { min: 0, max: 50 },
+      z: { min: 10, max: 100 },
+    },
+  },
+  ground: { color: { color: true } },
+  sky: { color: { color: true } },
+};
+
+// Register both configs
+onMounted(() => {
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    configControls,
+    sceneConfig,
+    sceneControls
+  );
+});
+
+onUnmounted(() => {
+  unregisterViewConfig(route.name as string);
+});
+```
+
+**Configuration file structure** (`config.ts`):
+Export both `configControls` (Config tab) and `sceneControls` (Scene tab) schemas separately.
+
 
 ### Working with @webgamekit Packages
 

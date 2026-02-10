@@ -172,6 +172,77 @@ describe('useViewConfig', () => {
     });
   });
 
+  describe('scene config', () => {
+    it('should register scene config and schema separately', async () => {
+      const config = ref({ player: { speed: 2 } });
+      const schema: ConfigControlsSchema = { player: { speed: { min: 1, max: 10 } } };
+      const sceneConfig = ref({ camera: { fov: 80 } });
+      const sceneSchema: ConfigControlsSchema = { camera: { fov: { min: 30, max: 120 } } };
+
+      registerViewConfig('Test View', config, schema, sceneConfig, sceneSchema);
+      await nextTick();
+
+      const registry = _getRegistry();
+      const entry = registry['Test View'];
+
+      expect(entry?.sceneConfig?.value).toEqual({ camera: { fov: 80 } });
+      expect(entry?.sceneSchema).toEqual({ camera: { fov: { min: 30, max: 120 } } });
+    });
+
+    it('should return scene config and schema via useViewConfig', async () => {
+      const config = ref({ player: { speed: 2 } });
+      const schema: ConfigControlsSchema = { player: { speed: {} } };
+      const sceneConfig = ref({ camera: { fov: 80 } });
+      const sceneSchema: ConfigControlsSchema = { camera: { fov: {} } };
+
+      const { currentSceneConfig, currentSceneSchema, hasSceneConfig } = useViewConfig();
+
+      registerViewConfig('Test View', config, schema, sceneConfig, sceneSchema);
+      await nextTick();
+
+      expect(hasSceneConfig.value).toBe(true);
+      expect(currentSceneConfig.value).toEqual({ camera: { fov: 80 } });
+      expect(currentSceneSchema.value).toEqual({ camera: { fov: {} } });
+    });
+
+    it('should get scene config values via path', async () => {
+      const config = ref({ player: { speed: 2 } });
+      const schema: ConfigControlsSchema = { player: {} };
+      const sceneConfig = ref({
+        camera: { position: { x: 10, y: 20, z: 30 } }
+      });
+      const sceneSchema: ConfigControlsSchema = {
+        camera: { position: { x: {}, y: {}, z: {} } }
+      };
+
+      const { getSceneConfigValue } = useViewConfig();
+
+      registerViewConfig('Test View', config, schema, sceneConfig, sceneSchema);
+      await nextTick();
+
+      expect(getSceneConfigValue('camera.position.x')).toBe(10);
+      expect(getSceneConfigValue('camera.position.y')).toBe(20);
+      expect(getSceneConfigValue('camera.position.z')).toBe(30);
+    });
+
+    it('should update scene config values', async () => {
+      const config = ref({ player: { speed: 2 } });
+      const schema: ConfigControlsSchema = { player: {} };
+      const sceneConfig = ref({ camera: { fov: 80 } });
+      const sceneSchema: ConfigControlsSchema = { camera: { fov: {} } };
+
+      const { updateSceneConfig, getSceneConfigValue } = useViewConfig();
+
+      registerViewConfig('Test View', config, schema, sceneConfig, sceneSchema);
+      await nextTick();
+
+      updateSceneConfig('camera.fov', 100);
+      await nextTick();
+
+      expect(getSceneConfigValue('camera.fov')).toBe(100);
+    });
+  });
+
   describe('createReactiveConfig', () => {
     it('should create a deep copy of the config', () => {
       const original = {
@@ -195,6 +266,18 @@ describe('useViewConfig', () => {
 
       expect(reactive.value).toBeDefined();
       expect(reactive.value.test).toBe('value');
+    });
+
+    it('should create multiple independent reactive configs', () => {
+      const config1 = createReactiveConfig({ value: 1 });
+      const config2 = createReactiveConfig({ value: 2 });
+
+      expect(config1.value.value).toBe(1);
+      expect(config2.value.value).toBe(2);
+
+      config1.value.value = 10;
+      expect(config1.value.value).toBe(10);
+      expect(config2.value.value).toBe(2); // Should not be affected
     });
   });
 });

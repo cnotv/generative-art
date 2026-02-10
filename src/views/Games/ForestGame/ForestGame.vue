@@ -27,12 +27,27 @@ import {
   assets,
   illustrationAreas,
   configControls,
+  sceneControls,
 } from "./config";
 
 const route = useRoute();
 
-// Create reactive config for controllable values
+// Create reactive config for game settings (Config tab)
 const reactiveConfig = createReactiveConfig({
+  player: {
+    speed: { ...playerSettings.game.speed },
+    maxJump: playerSettings.game.maxJump,
+  },
+  illustrations: {
+    grass: { count: 500 },
+    treesBack: { count: 30 },
+    treesFront: { count: 40 },
+    clouds: { count: 5 },
+  },
+});
+
+// Create reactive scene config for setupConfig-related settings (Scene tab)
+const sceneConfig = createReactiveConfig({
   camera: {
     preset: 'perspective',
     fov: setupConfig.camera?.fov ?? 80,
@@ -42,21 +57,11 @@ const reactiveConfig = createReactiveConfig({
       z: (setupConfig.camera?.position as CoordinateTuple)?.[2] ?? 35,
     },
   },
-  player: {
-    speed: { ...playerSettings.game.speed },
-    maxJump: playerSettings.game.maxJump,
-  },
   ground: {
     color: setupConfig.ground && typeof setupConfig.ground === 'object' ? setupConfig.ground.color : 0x98887d,
   },
   sky: {
     color: setupConfig.sky && typeof setupConfig.sky === 'object' ? setupConfig.sky.color : 0x00aaff,
-  },
-  illustrations: {
-    grass: { count: 500 },
-    treesBack: { count: 30 },
-    treesFront: { count: 40 },
-    clouds: { count: 5 },
   },
 });
 
@@ -131,31 +136,23 @@ const sceneRefs = shallowRef<{
 // Track previous camera preset to detect when it changes
 const previousCameraPreset = ref<string>('perspective');
 
-// Watch camera config and apply changes
+// Watch scene camera config and apply changes
 watch(
-  () => reactiveConfig.value.camera,
+  () => sceneConfig.value.camera,
   (newCameraConfig) => {
     const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
-    console.log('[ForestGame] Camera config changed:', {
-      preset: newCameraConfig.preset,
-      previousPreset: previousCameraPreset.value,
-      presetChanged,
-      hasCamera: !!sceneRefs.value?.camera
-    });
 
     // If preset changed, apply the new camera preset
     if (presetChanged && sceneRefs.value?.camera) {
-      console.log('[ForestGame] Applying camera preset:', newCameraConfig.preset);
       previousCameraPreset.value = newCameraConfig.preset;
 
       // Apply the camera preset
       const aspect = window.innerWidth / window.innerHeight;
-      const result = setCameraPreset(
+      setCameraPreset(
         sceneRefs.value.camera,
         newCameraConfig.preset as CameraPreset,
         aspect
       );
-      console.log('[ForestGame] Camera preset applied:', result ? 'success' : 'failed');
     } else if (sceneRefs.value?.camera && sceneRefs.value.camera instanceof THREE.PerspectiveCamera) {
       // For perspective camera, update FOV and position without preset
       const camera = sceneRefs.value.camera;
@@ -188,13 +185,13 @@ const init = async (): Promise<void> => {
     const aspect = window.innerWidth / window.innerHeight;
     setCameraPreset(
       sceneRefs.value.camera,
-      reactiveConfig.value.camera.preset as CameraPreset,
+      sceneConfig.value.camera.preset as CameraPreset,
       aspect
     );
   }
 
   // Track initial preset value
-  previousCameraPreset.value = reactiveConfig.value.camera.preset;
+  previousCameraPreset.value = sceneConfig.value.camera.preset;
 
   const { orbit } = await setup({
     config: setupConfig,
@@ -309,8 +306,14 @@ const init = async (): Promise<void> => {
 };
 
 onMounted(async () => {
-  // Register config with the config panel (display only - no onChange to avoid WebGL crashes)
-  registerViewConfig(route.name as string, reactiveConfig, configControls);
+  // Register both Config and Scene tabs with the config panel
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    configControls,
+    sceneConfig,
+    sceneControls
+  );
 
   await init();
   await initializeAudio();

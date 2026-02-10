@@ -4,6 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
 import {
   Accordion,
   AccordionItem,
@@ -87,8 +88,22 @@ const handleCheckboxUpdate = (path: string, value: boolean) => {
 };
 
 const handleSelectUpdate = (path: string, value: string) => {
-  console.log('[ConfigControls] Select update:', path, '=', value);
   props.onUpdate(path, value);
+};
+
+const handleColorUpdate = (path: string, hexValue: string) => {
+  // Convert hex to integer (e.g., #98887d -> 0x98887d)
+  const colorInt = parseInt(hexValue.replace('#', ''), 16);
+  props.onUpdate(path, colorInt);
+};
+
+const getColorHex = (path: string): string => {
+  const value = props.getValue(path);
+  if (typeof value === 'number') {
+    // Convert integer to hex string (e.g., 0x98887d -> #98887d)
+    return '#' + value.toString(16).padStart(6, '0');
+  }
+  return value || '#000000';
 };
 </script>
 
@@ -107,11 +122,19 @@ const handleSelectUpdate = (path: string, value: string) => {
         <Select
           :model-value="String(getValue(control.path) || '')"
           :options="control.schema.options.map(opt => ({ value: opt, label: opt }))"
-          @update:model-value="(value) => {
-            console.log('[ConfigControls] Select change detected:', control.path, value);
-            handleSelectUpdate(control.path, value);
-          }"
+          @update:model-value="handleSelectUpdate(control.path, $event)"
           class="h-7 text-xs"
+        />
+      </template>
+
+      <template v-else-if="control.schema.color !== undefined">
+        <label :for="control.path" class="text-xs font-medium">
+          {{ control.schema.label ?? formatLabel(control.key) }}
+        </label>
+        <ColorPicker
+          :model-value="getColorHex(control.path)"
+          @update:model-value="handleColorUpdate(control.path, $event)"
+          class="h-7"
         />
       </template>
 
