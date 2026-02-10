@@ -12,7 +12,7 @@ import {
   CameraPreset,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce, createSlideInFromSides, sortOrder, calculateSequentialDelays } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
@@ -218,7 +218,18 @@ const init = async (): Promise<void> => {
           // Use instances with variations if available, otherwise use positions
           const elementsData = config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }));
 
-          elementsData.forEach((elementData: any) => {
+          // Calculate sequential delays based on Z-position
+          // For grass: animate from middle Z outward (creates expanding effect)
+          // For other elements: animate back to front (depth reveal)
+          let sortFunction;
+          if (categoryName === 'grass') {
+            sortFunction = sortOrder.byDistanceFromZ(elementsData, 'middle');
+          } else {
+            sortFunction = sortOrder.zBackToFront;
+          }
+          const delays = calculateSequentialDelays(elementsData, sortFunction, 2);
+
+          elementsData.forEach((elementData: any, index: number) => {
             const position = elementData.position;
             const elementConfig = {
               ...config,
@@ -228,18 +239,32 @@ const init = async (): Promise<void> => {
             };
             const element = getCube(scene, world, elementConfig);
 
-            // Add pop-up animation (delay only if specified in config)
-            const popUpAnimation = createPopUpBounce({
-              object: element,
-              startY: position[1] - 3,
-              endY: position[1],
-              duration: 30
-            });
+            // Choose animation type based on category
+            let animation;
+            if (categoryName === 'clouds') {
+              // Clouds slide in from the sides
+              animation = createSlideInFromSides({
+                object: element,
+                startY: position[1],
+                endY: position[1],
+                duration: 60,
+                delay: delays[index]
+              });
+            } else {
+              // Other elements use pop-up animation
+              animation = createPopUpBounce({
+                object: element,
+                startY: position[1] - 3,
+                endY: position[1],
+                duration: 30,
+                delay: delays[index]
+              });
+            }
 
             timelineManager.addAction({
               name: `${categoryName}-${animationIndex}-popup`,
               category: 'visual',
-              action: popUpAnimation,
+              action: animation,
               autoRemove: true
             });
 

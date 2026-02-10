@@ -932,5 +932,8 @@ export {
   createPopUpBounce,
   createPopUpFade,
   createPopUpScale,
+  createSlideInFromSides,
   easing,
+  sortOrder,
+  calculateSequentialDelays,
 } from './pop-up-animations';
