@@ -47,7 +47,7 @@ for (const [path, module] of Object.entries(componentModules)) {
  * These tests verify that Vue components with 3D scenes load and render correctly.
  * Each test:
  * 1. Mounts the component with required dependencies (Pinia, Vue Router)
- * 2. Waits for the Three.js scene to initialize (5 seconds + animation frames)
+ * 2. Waits for the Three.js scene to initialize (500ms + 2 animation frames)
  * 3. Captures a screenshot for visual verification
  * 4. Verifies the canvas element exists and has non-zero dimensions
  *
@@ -111,18 +111,12 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       canvasElement = canvas.element as HTMLCanvasElement
 
       // Wait for Three.js scene to initialize and render
-      // 2 seconds is sufficient for WebGL shader compilation and initial render
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // 500ms is sufficient for WebGL shader compilation and initial render
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Wait for multiple animation frames to ensure rendering happened
+      // Wait for 2 animation frames to ensure rendering happened
       await new Promise(resolve => requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(resolve)
-            })
-          })
-        })
+        requestAnimationFrame(resolve)
       }))
 
       // Take screenshot for visual verification
@@ -141,8 +135,8 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       if (wrapper) {
         wrapper.unmount()
       }
-      // Small delay to allow context cleanup
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Small delay to allow context cleanup (reduced from 100ms to 50ms)
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
-  }, 15_000) // 15 seconds per test should be sufficient
+  }, 10_000) // 10 seconds per test (reduced from 15s)
 })
