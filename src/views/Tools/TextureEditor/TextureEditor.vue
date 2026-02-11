@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
-import * as THREE from 'three';
 import { getTools, getCube, generateAreaPositions } from '@webgamekit/threejs';
 import type { CoordinateTuple, AreaConfig } from '@webgamekit/threejs';
+import { createTimelineManager } from '@webgamekit/animation';
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/composables/useViewConfig';
 import { defaultConfig, presets, configControls, sceneControls } from './config';
 import type { TextureEditorConfig } from './config';
@@ -11,7 +11,6 @@ import type { TextureEditorConfig } from './config';
 const route = useRoute();
 const canvas = ref<HTMLCanvasElement | null>(null);
 const uploadedTextures = ref<string[]>([]);
-const fileInput = ref<HTMLInputElement | null>(null);
 
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<TextureEditorConfig>(defaultConfig);
@@ -30,11 +29,9 @@ const sceneConfig = createReactiveConfig({
   },
 });
 
-let sceneRef: THREE.Scene | null = null;
-let worldRef: any = null;
 let animationId = 0;
 
-// Register configuration panel
+// Register configuration panel with onChange callback (auto-debounced)
 onMounted(() => {
   registerViewConfig(
     route.name as string,
@@ -44,6 +41,10 @@ onMounted(() => {
     sceneControls,
     reinitScene
   );
+
+  if (canvas.value) {
+    initScene();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -142,9 +143,6 @@ const initScene = async () => {
     canvas: canvas.value,
   });
 
-  sceneRef = scene;
-  worldRef = world;
-
   await setup({
     config: {
       camera: {
@@ -204,7 +202,12 @@ const initScene = async () => {
         });
       }
 
-      animate({});
+      // Create an empty timeline manager (no animations needed for static textures)
+      const timelineManager = createTimelineManager();
+
+      animate({
+        timeline: timelineManager,
+      });
     },
   });
 };
@@ -229,6 +232,19 @@ const exportConfiguration = () => {
   return config;
 };
 
+// Download configuration as JSON file
+const downloadConfiguration = () => {
+  const config = exportConfiguration();
+  const jsonString = JSON.stringify(config, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'texture-editor-config.json';
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 // Copy configuration to clipboard
 const copyToClipboard = async () => {
   const config = exportConfiguration();
@@ -236,7 +252,8 @@ const copyToClipboard = async () => {
 
   try {
     await navigator.clipboard.writeText(jsonString);
-    alert('Configuration copied to clipboard!');
+    // Use console instead of alert for better UX
+    console.log('✅ Configuration copied to clipboard!');
   } catch (err) {
     console.error('Failed to copy to clipboard:', err);
   }
@@ -253,65 +270,76 @@ defineExpose({
   <div class="texture-editor">
     <canvas ref="canvas"></canvas>
 
-    <div class="texture-editor__controls">
-      <div class="texture-editor__upload">
-        <label class="texture-editor__label">
-          Upload Textures (PNG, JPG, WebP)
+    <!-- File upload overlay (shown when no textures uploaded) -->
+    <div v-if="uploadedTextures.length === 0" class="texture-editor__upload-overlay">
+      <div class="texture-editor__upload-prompt">
+        <h2>Texture Editor</h2>
+        <p>Upload one or more texture images to begin</p>
+        <label class="texture-editor__upload-btn">
           <input
             ref="fileInput"
             type="file"
             accept="image/*"
             multiple
             @change="handleFileUpload"
-            class="texture-editor__file-input"
+            style="display: none"
           />
+          Choose Files
         </label>
-        <div v-if="uploadedTextures.length > 0" class="texture-editor__preview">
-          {{ uploadedTextures.length }} texture(s) uploaded
-        </div>
+        <p class="texture-editor__hint">Supports PNG, JPG, WebP</p>
       </div>
+    </div>
 
-      <div class="texture-editor__presets">
-        <h3 class="texture-editor__section-title">Presets</h3>
-        <button
-          data-testid="preset-clouds"
-          @click="applyPreset('clouds')"
-          class="texture-editor__preset-btn"
-        >
-          Billboard Clouds
-        </button>
-        <button
-          data-testid="preset-decals"
-          @click="applyPreset('decals')"
-          class="texture-editor__preset-btn"
-        >
-          Scattered Decals
-        </button>
-        <button
-          data-testid="preset-grass"
-          @click="applyPreset('grass')"
-          class="texture-editor__preset-btn"
-        >
-          Dense Grass
-        </button>
-      </div>
+    <!-- Texture info badge (shown when textures uploaded) -->
+    <div v-else class="texture-editor__info-badge">
+      {{ uploadedTextures.length }} texture{{ uploadedTextures.length > 1 ? 's' : '' }} loaded
+      <button @click="uploadedTextures = []; reinitScene()" class="texture-editor__clear-btn">
+        Clear
+      </button>
+    </div>
 
-      <div class="texture-editor__export">
-        <button
-          data-testid="export-config"
-          @click="exportConfiguration"
-          class="texture-editor__export-btn"
-        >
-          Export Config
-        </button>
-        <button
-          data-testid="copy-config"
-          @click="copyToClipboard"
-          class="texture-editor__export-btn"
-        >
-          Copy to Clipboard
-        </button>
-      </div>
+    <!-- Action buttons (top-right corner) -->
+    <div class="texture-editor__actions">
+      <button
+        data-testid="preset-clouds"
+        @click="applyPreset('clouds')"
+        class="texture-editor__action-btn"
+        title="Apply billboard clouds preset"
+      >
+        ☁️ Clouds
+      </button>
+      <button
+        data-testid="preset-decals"
+        @click="applyPreset('decals')"
+        class="texture-editor__action-btn"
+        title="Apply scattered decals preset"
+      >
+        🎨 Decals
+      </button>
+      <button
+        data-testid="preset-grass"
+        @click="applyPreset('grass')"
+        class="texture-editor__action-btn"
+        title="Apply dense grass preset"
+      >
+        🌿 Grass
+      </button>
+      <button
+        data-testid="export-config"
+        @click="downloadConfiguration"
+        class="texture-editor__action-btn"
+        title="Download configuration as JSON"
+      >
+        💾 Export
+      </button>
+      <button
+        data-testid="copy-config"
+        @click="copyToClipboard"
+        class="texture-editor__action-btn"
+        title="Copy configuration to clipboard"
+      >
+        📋 Copy
+      </button>
     </div>
 
     <!-- Hidden test elements for configuration access -->
@@ -388,101 +416,121 @@ canvas {
   height: 100vh;
 }
 
-.texture-editor__controls {
+/* Upload overlay */
+.texture-editor__upload-overlay {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 20px;
-  border-radius: 8px;
-  color: white;
-  font-family: monospace;
-  min-width: 280px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
-.texture-editor__label {
-  display: block;
-  font-size: 14px;
-  margin-bottom: 10px;
-  cursor: pointer;
-}
-
-.texture-editor__file-input {
-  display: block;
-  margin-top: 8px;
-  padding: 8px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #222;
+.texture-editor__upload-prompt {
+  text-align: center;
   color: white;
-  font-size: 12px;
-  width: 100%;
-  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.texture-editor__preview {
-  margin-top: 10px;
-  padding: 8px;
-  background: #333;
-  border-radius: 4px;
-  font-size: 12px;
+.texture-editor__upload-prompt h2 {
+  font-size: 32px;
+  margin: 0 0 16px;
+  font-weight: 600;
 }
 
-.texture-editor__section-title {
-  margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: bold;
-  border-bottom: 1px solid #444;
-  padding-bottom: 8px;
+.texture-editor__upload-prompt p {
+  font-size: 16px;
+  margin: 0 0 24px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.texture-editor__presets {
-  margin-top: 20px;
-}
-
-.texture-editor__preset-btn {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: white;
-  font-family: monospace;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.texture-editor__preset-btn:hover {
-  background: #555;
-}
-
-.texture-editor__export {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #444;
-}
-
-.texture-editor__export-btn {
-  display: block;
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+.texture-editor__upload-btn {
+  display: inline-block;
+  padding: 14px 32px;
   background: #2563eb;
-  border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   color: white;
-  font-family: monospace;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.texture-editor__export-btn:hover {
+.texture-editor__upload-btn:hover {
   background: #1d4ed8;
+}
+
+.texture-editor__hint {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Info badge */
+.texture-editor__info-badge {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px 20px;
+  border-radius: 20px;
+  color: white;
+  font-family: monospace;
+  font-size: 13px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.texture-editor__clear-btn {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.texture-editor__clear-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Action buttons */
+.texture-editor__actions {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 999;
+}
+
+.texture-editor__action-btn {
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.texture-editor__action-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateX(-2px);
 }
 </style>
