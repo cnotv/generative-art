@@ -17,29 +17,30 @@ const componentModules = import.meta.glob('./**/*.vue', { eager: true })
  * Extract test cases from the imported components
  * Filter to match the routing pattern (component name in path)
  */
-const testCases: Array<{ name: string; category: string; path: string; component: Component }> = []
+const testCases: Array<{ name: string; category: string; path: string; component: Component }> = Object.entries(componentModules)
+  .map(([path, module]) => {
+    // Extract category and component name from path
+    // Pattern: ./{Category}/{ComponentName}/{ComponentName}.vue or ./{Category}/{ComponentName}.vue
+    const match = path.match(/^\.\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
 
-for (const [path, module] of Object.entries(componentModules)) {
-  // Extract category and component name from path
-  // Pattern: ./{Category}/{ComponentName}/{ComponentName}.vue or ./{Category}/{ComponentName}.vue
-  const match = path.match(/^\.\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
+    if (!match) return null
 
-  if (match) {
     const [, category, componentName] = match
     // Skip if category is Templates or Stages (not in router)
-    if (category === 'Templates' || category === 'Stages') continue
+    if (category === 'Templates' || category === 'Stages') return null
 
     // Convert to readable name (e.g., "GoombaRunner" -> "Goomba Runner")
     const name = componentName.replace(/([A-Z])/g, ' $1').trim()
 
-    testCases.push({
+    return {
       name,
       category,
       path: `/${category.toLowerCase()}/${componentName}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       component: (module as any).default
-    })
-  }
-}
+    }
+  })
+  .filter((testCase): testCase is NonNullable<typeof testCase> => testCase !== null)
 
 /**
  * Visual Regression Tests
@@ -213,5 +214,5 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       // Small delay to allow context cleanup
       await new Promise(resolve => setTimeout(resolve, 10))
     }
-  }, 10_000) // Increased to 10s to allow for async asset loading in CI
+  }, 1_000) // Increased to 1s to allow for async asset loading in CI
 })
