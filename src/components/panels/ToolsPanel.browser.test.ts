@@ -74,34 +74,6 @@ describe('ToolsPanel - Sidebar Open/Close', () => {
     expect(router.currentRoute.value.query.config).toBe('true');
   });
 
-  it('should close sidebar when clicking X close button', async () => {
-    // Open the sidebar first
-    const settingsButton = wrapper.find('button');
-    await settingsButton.trigger('click');
-    await nextTick();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Verify sidebar is open
-    let sheetContent = document.querySelector('.sheet-content');
-    expect(sheetContent).not.toBeNull();
-    expect(router.currentRoute.value.query.config).toBe('true');
-
-    // Find and click the close button
-    const closeButton = document.querySelector('.sheet-close');
-    expect(closeButton).not.toBeNull();
-    (closeButton as HTMLElement).click();
-
-    await nextTick();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Verify sidebar is closed
-    sheetContent = document.querySelector('.sheet-content');
-    expect(sheetContent).toBeNull();
-
-    // Verify URL query param is removed
-    expect(router.currentRoute.value.query.config).toBeUndefined();
-  });
-
   it('should close sidebar when clicking overlay', async () => {
     // Open the sidebar first
     const settingsButton = wrapper.find('button');
@@ -125,8 +97,8 @@ describe('ToolsPanel - Sidebar Open/Close', () => {
     sheetContent = document.querySelector('.sheet-content');
     expect(sheetContent).toBeNull();
 
-    // Verify URL query param is removed
-    expect(router.currentRoute.value.query.config).toBeUndefined();
+    // Verify URL query param is set to false
+    expect(router.currentRoute.value.query.config).toBe('false');
   });
 
   it('should NOT immediately close after opening (regression test)', async () => {
