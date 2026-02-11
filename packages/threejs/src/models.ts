@@ -49,25 +49,31 @@ export const applyMaterial = (
     }
 
     if (material === 'MeshPhysicalMaterial') {
-      mesh.material = new THREE.MeshPhysicalMaterial({
+      const physicalMaterialProperties: any = {
         ...materialProperties,
-        reflectivity,
-        roughness,
-        transmission,
-        transparent,
-        metalness,
-        clearcoat,
-        clearcoatRoughness,
-        ior,
-        thickness,
-        envMapIntensity,
-      });
+      };
+
+      if (reflectivity !== undefined) physicalMaterialProperties.reflectivity = reflectivity;
+      if (roughness !== undefined) physicalMaterialProperties.roughness = roughness;
+      if (transmission !== undefined) physicalMaterialProperties.transmission = transmission;
+      if (transparent !== undefined) physicalMaterialProperties.transparent = transparent;
+      if (metalness !== undefined) physicalMaterialProperties.metalness = metalness;
+      if (clearcoat !== undefined) physicalMaterialProperties.clearcoat = clearcoat;
+      if (clearcoatRoughness !== undefined) physicalMaterialProperties.clearcoatRoughness = clearcoatRoughness;
+      if (ior !== undefined) physicalMaterialProperties.ior = ior;
+      if (thickness !== undefined) physicalMaterialProperties.thickness = thickness;
+      if (envMapIntensity !== undefined) physicalMaterialProperties.envMapIntensity = envMapIntensity;
+
+      mesh.material = new THREE.MeshPhysicalMaterial(physicalMaterialProperties);
     } else if (material === 'MeshStandardMaterial') {
-      mesh.material = new THREE.MeshStandardMaterial({
+      const standardMaterialProperties: any = {
         ...materialProperties,
-        roughness,
-        metalness,
-      });
+      };
+
+      if (roughness !== undefined) standardMaterialProperties.roughness = roughness;
+      if (metalness !== undefined) standardMaterialProperties.metalness = metalness;
+
+      mesh.material = new THREE.MeshStandardMaterial(standardMaterialProperties);
     } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
         ...materialProperties,
