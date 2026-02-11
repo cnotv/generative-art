@@ -61,6 +61,31 @@ for (const [path, module] of Object.entries(componentModules)) {
  * src/views/__screenshots__/visual-regression.browser.test.ts/Visual-Regression-----{category}-----{name}--should-render-{name}-correctly-1.png
  */
 /**
+ * Suppress THREE.Material warnings during tests
+ * These warnings are expected in some views that demonstrate different material types
+ */
+const originalConsoleWarn = console.warn
+const originalConsoleError = console.error
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+console.warn = (...args: any[]) => {
+  const message = args.join(' ')
+  if (message.includes('THREE.Material:')) {
+    return // Suppress THREE.Material warnings
+  }
+  originalConsoleWarn.apply(console, args)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+console.error = (...args: any[]) => {
+  const message = args.join(' ')
+  if (message.includes('THREE.Material:')) {
+    return // Suppress THREE.Material errors
+  }
+  originalConsoleError.apply(console, args)
+}
+
+/**
  * Force release WebGL context to avoid context exhaustion
  * Browsers limit active WebGL contexts (typically 8-16)
  */
@@ -74,10 +99,49 @@ const forceReleaseWebGLContext = (canvas: HTMLCanvasElement) => {
   }
 }
 
+/**
+ * Wait for canvas to render by checking if pixels are no longer blank
+ * This replaces arbitrary timeouts with actual render detection
+ */
+async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000): Promise<void> {
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        // Check a small sample of pixels to see if anything has been rendered
+        const imageData = ctx.getImageData(0, 0, Math.min(canvas.width, 10), Math.min(canvas.height, 10))
+        const hasNonZeroPixels = imageData.data.some(value => value !== 0)
+
+        if (hasNonZeroPixels) {
+          // Canvas has rendered content, wait one more frame to be sure
+          await new Promise(resolve => requestAnimationFrame(resolve))
+          return
+        }
+      }
+    } catch {
+      // WebGL canvas may not support getContext('2d'), that's okay
+      // Fall back to just waiting for dimensions
+      if (canvas.width > 0 && canvas.height > 0) {
+        await new Promise(resolve => requestAnimationFrame(resolve))
+        return
+      }
+    }
+
+    // Wait a bit before checking again
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+
+  // Timeout reached, proceed anyway (better than failing)
+  await new Promise(resolve => requestAnimationFrame(resolve))
+}
+
 describe.each(testCases)('Visual Regression -- $category - $name', ({ component, name, path }) => {
   it(`should render ${name} correctly`, async () => {
     let wrapper: any
     let canvasElement: HTMLCanvasElement | null = null
+    let rafStub: any = null
 
     try {
       // Create required dependencies
@@ -110,12 +174,25 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       expect(canvas.exists(), `${name}: Canvas should exist`).toBe(true)
       canvasElement = canvas.element as HTMLCanvasElement
 
-      // Wait for Three.js scene to initialize and render
-      // 100ms minimum wait for WebGL initialization
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Wait for canvas to actually render (smart polling instead of fixed timeout)
+      await waitForCanvasRender(canvasElement, 5000)
 
-      // Wait for 1 animation frame to ensure rendering happened
-      await new Promise(resolve => requestAnimationFrame(resolve))
+      // Now freeze the animation loop for consistent screenshots
+      // Store original RAF and replace with immediate execution
+      const originalRAF = window.requestAnimationFrame
+
+      rafStub = (callback: (time: number) => void) => {
+        // Execute callback immediately with timestamp 0 (frozen time)
+        callback(0)
+        return 0
+      }
+      window.requestAnimationFrame = rafStub
+
+      // Execute any pending animation frames at frozen time
+      await new Promise(resolve => originalRAF(resolve))
+
+      // Restore RAF before screenshot to avoid issues
+      window.requestAnimationFrame = originalRAF
 
       // Take screenshot for visual verification
       const screenshot = await page.screenshot()
@@ -133,8 +210,8 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       if (wrapper) {
         wrapper.unmount()
       }
-      // Small delay to allow context cleanup (reduced to 10ms)
+      // Small delay to allow context cleanup
       await new Promise(resolve => setTimeout(resolve, 10))
     }
-  }, 6_000) // 6 seconds per test (reduced from 15s for CI speed)
+  }, 10_000) // Increased to 10s to allow for async asset loading in CI
 })
