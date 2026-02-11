@@ -107,7 +107,13 @@ const forceReleaseWebGLContext = (canvas: HTMLCanvasElement) => {
 async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000): Promise<void> {
   const startTime = Date.now()
 
-  while (Date.now() - startTime < timeoutMs) {
+  const checkCanvas = async (): Promise<void> => {
+    if (Date.now() - startTime >= timeoutMs) {
+      // Timeout reached, proceed anyway (better than failing)
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      return
+    }
+
     try {
       const ctx = canvas.getContext('2d')
       if (ctx) {
@@ -132,10 +138,10 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
 
     // Wait a bit before checking again
     await new Promise(resolve => setTimeout(resolve, 50))
+    await checkCanvas()
   }
 
-  // Timeout reached, proceed anyway (better than failing)
-  await new Promise(resolve => requestAnimationFrame(resolve))
+  await checkCanvas()
 }
 
 describe.each(testCases)('Visual Regression -- $category - $name', ({ component, name, path }) => {
