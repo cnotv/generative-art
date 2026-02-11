@@ -5,7 +5,7 @@ import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
 import { getLights, getEnvironment } from "@webgamekit/threejs";
-import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
+import { bindAnimatedElements, animateTimeline, createTimelineManager } from "@webgamekit/animation";
 import { getBall, getWalls } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
 
@@ -77,6 +77,15 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       });
     };
 
+    const timelineManager = createTimelineManager();
+    timelineManager.addAction({
+      start: 0,
+      end: 2000,
+      action: () => {
+        generateBalls(25);
+      },
+    });
+
     video.record(canvas, route);
     function animate() {
       stats.start(route);
@@ -86,18 +95,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
       bindAnimatedElements(experiments, world, delta);
 
-      animateTimeline(
-        [
-          {
-            start: 0,
-            end: 2000,
-            action: () => {
-              generateBalls(25);
-            },
-          },
-        ],
-        frame
-      );
+      animateTimeline(timelineManager, frame);
 
       renderer.render(scene, camera);
       video.stop(renderer.info.render.frame, route);

@@ -33,32 +33,35 @@ The project is organized as a **pnpm workspace monorepo**:
 ## GitHub Issue Workflow
 
 ### Before Implementation
-1. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
+1. **Sync with main branch**: ALWAYS fetch and rebase main before creating a new branch
+   - Command: `git checkout main && git fetch origin main && git pull origin main`
+   - This prevents lockfile churn and merge conflicts
+2. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
    - Use format: `<type>/<issue-number>-<description>`
    - Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
    - Branch from `main` (or current base branch)
-   - Command: `git checkout main && git checkout -b feat/9-issue-description`
-2. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
+   - Command: `git checkout -b feat/9-issue-description`
+3. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
    - What you plan to implement
    - Files to be modified/created
    - Key design decisions
    - Any questions or uncertainties
-3. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
-4. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
+4. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
+5. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
 
 ### During Implementation
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
-2. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-3. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-4. **Screenshots for visual changes**: ALWAYS include screenshots when PRs involve visual changes (UI components, Three.js scenes, browser tests, etc.). Save screenshots to `.github/screenshots/` and reference them in the PR description
+2. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+   - Command: `git fetch origin main && git rebase origin/main`
+   - Resolve any conflicts, then force push: `git push --force-with-lease`
+   - CI will fail if branch is behind main
+3. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+4. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
 
 ### PR Description Format
 ```markdown
 ## Summary
 - Brief bullet points of what was implemented
-
-## Screenshot (if applicable)
-![Description](.github/screenshots/filename.png)
 
 ## Key Changes
 - File-by-file or module-by-module breakdown of changes
@@ -115,6 +118,7 @@ Use format: `<type>/<issue-number>-<description>`
 - **Immutability**: Use `const`, spread operators, and avoid direct mutations
 - **State management**: Use closures, tuples, or plain objects instead of class instances
 - **No legacy/deprecated support**: Never add overloads or backward compatibility for old function signatures. When refactoring APIs, update all usages across the codebase instead of maintaining legacy signatures
+- **Fix, don't patch**: Always fix issues properly instead of adding workarounds or retrocompatibility layers. If an API needs to change, update all consumers rather than supporting multiple signatures
 
 ### TypeScript
 - **Always use TypeScript**: All new code must be TypeScript (`.ts`, `.vue` with `<script setup lang="ts">`)
@@ -124,6 +128,10 @@ Use format: `<type>/<issue-number>-<description>`
 
 ### Modular Architecture
 - **Barrel exports**: Use `index.ts` files to export public APIs (see `packages/*/src/index.ts`)
+- **Package export prefixes**: Functions exported from packages MUST have a prefix matching the package name to avoid namespace collisions. Examples:
+  - `recording` package: `recordCreate`, `recordDestroy`, `recordStart`, `recordStop`
+  - `animation` package: `animateTimeline`, `animationCreate`
+  - `controls` package: `controlsCreate`, `controlsDestroy`
 - **Abstract functions**: Extract reusable logic into separate functions/modules
 - **Single responsibility**: Keep functions focused on one task
 - **Framework-agnostic packages**: `@webgamekit/*` packages must not depend on Vue/React
@@ -179,6 +187,93 @@ Use format: `<type>/<issue-number>-<description>`
 **File structure**: Create `src/views/{Group}/{SceneName}/{SceneName}.vue` (or `index.vue`)
    - Router auto-discovers views matching pattern `{Dir}/{Name}/{Name}.vue`
    - Example: `src/views/Games/ForestGame/ForestGame.vue`
+
+**Configuration Panel Setup**:
+When creating a new view, register two separate configurations for the configuration panel:
+
+1. **Config Tab** (reactive game settings):
+   - Player settings (speed, jump height, etc.)
+   - Game mechanics
+   - Interactive elements
+   - Any runtime-adjustable parameters
+
+2. **Scene Tab** (setupConfig-related settings):
+   - Camera settings (preset, FOV, position)
+   - Environment (ground color, sky color)
+   - Lighting
+   - Post-processing effects
+   - Scene elements (illustration counts, etc.)
+
+**Example registration** (in `onMounted`):
+```typescript
+import { registerViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
+
+// Config tab - reactive game settings
+const reactiveConfig = createReactiveConfig({
+  player: {
+    speed: { movement: 2, turning: 4, jump: 4 },
+    maxJump: 4,
+  },
+});
+
+// Scene tab - setupConfig-related settings
+const sceneConfig = createReactiveConfig({
+  camera: {
+    preset: 'perspective',
+    fov: 80,
+    position: { x: 0, y: 7, z: 35 },
+  },
+  ground: { color: 0x98887d },
+  sky: { color: 0x00aaff },
+});
+
+// Define control schemas
+const configControls = {
+  player: {
+    speed: {
+      movement: { min: 0.5, max: 5, step: 0.5 },
+      turning: { min: 1, max: 10 },
+      jump: { min: 1, max: 10 },
+    },
+    maxJump: { min: 1, max: 20 },
+  },
+};
+
+const sceneControls = {
+  camera: {
+    preset: {
+      label: 'Camera Preset',
+      options: ['perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit']
+    },
+    fov: { min: 30, max: 120 },
+    position: {
+      x: { min: -50, max: 50 },
+      y: { min: 0, max: 50 },
+      z: { min: 10, max: 100 },
+    },
+  },
+  ground: { color: { color: true } },
+  sky: { color: { color: true } },
+};
+
+// Register both configs
+onMounted(() => {
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    configControls,
+    sceneConfig,
+    sceneControls
+  );
+});
+
+onUnmounted(() => {
+  unregisterViewConfig(route.name as string);
+});
+```
+
+**Configuration file structure** (`config.ts`):
+Export both `configControls` (Config tab) and `sceneControls` (Scene tab) schemas separately.
 
 
 ### Working with @webgamekit Packages

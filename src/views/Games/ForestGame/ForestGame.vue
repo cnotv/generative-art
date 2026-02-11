@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { useRoute } from "vue-router";
+import * as THREE from 'three';
 import {
   getTools,
   getModel,
   getCube,
   cameraFollowPlayer,
   generateAreaPositions,
+  setCameraPreset,
+  CameraPreset,
   type ComplexModel
 } from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce } from "@webgamekit/animation";
+import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce, createSlideInFromSides, sortOrder, calculateSequentialDelays } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -21,8 +26,45 @@ import {
   controlBindings,
   assets,
   illustrationAreas,
-  // undergroundConfig,
+  configControls,
+  sceneControls,
 } from "./config";
+
+const route = useRoute();
+
+// Create reactive config for game settings (Config tab)
+const reactiveConfig = createReactiveConfig({
+  player: {
+    speed: { ...playerSettings.game.speed },
+    maxJump: playerSettings.game.maxJump,
+  },
+  illustrations: {
+    grass: { count: 500 },
+    treesBack: { count: 30 },
+    treesFront: { count: 40 },
+    clouds: { count: 5 },
+  },
+});
+
+// Create reactive scene config for setupConfig-related settings (Scene tab)
+const sceneConfig = createReactiveConfig({
+  camera: {
+    preset: 'perspective',
+    fov: setupConfig.camera?.fov ?? 80,
+    position: {
+      x: (setupConfig.camera?.position as CoordinateTuple)?.[0] ?? 0,
+      y: (setupConfig.camera?.position as CoordinateTuple)?.[1] ?? 7,
+      z: (setupConfig.camera?.position as CoordinateTuple)?.[2] ?? 35,
+    },
+  },
+  ground: {
+    color: setupConfig.ground && typeof setupConfig.ground === 'object' ? setupConfig.ground.color : 0x98887d,
+  },
+  sky: {
+    color: setupConfig.sky && typeof setupConfig.sky === 'object' ? setupConfig.sky.color : 0x00aaff,
+  },
+});
+
 // import { times } from "@/utils/lodash";
 
 // Use correct GameState type and initialization
@@ -84,11 +126,72 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 );
 
 const canvas = ref<HTMLCanvasElement | null>(null);
+
+// Store references to scene objects for live config updates
+const sceneRefs = shallowRef<{
+  camera?: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  scene?: THREE.Scene;
+} | null>(null);
+
+// Track previous camera preset to detect when it changes
+const previousCameraPreset = ref<string>('perspective');
+
+// Watch scene camera config and apply changes
+watch(
+  () => sceneConfig.value.camera,
+  (newCameraConfig) => {
+    const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
+
+    // If preset changed, apply the new camera preset
+    if (presetChanged && sceneRefs.value?.camera) {
+      previousCameraPreset.value = newCameraConfig.preset;
+
+      // Apply the camera preset
+      const aspect = window.innerWidth / window.innerHeight;
+      setCameraPreset(
+        sceneRefs.value.camera,
+        newCameraConfig.preset as CameraPreset,
+        aspect
+      );
+    } else if (sceneRefs.value?.camera && sceneRefs.value.camera instanceof THREE.PerspectiveCamera) {
+      // For perspective camera, update FOV and position without preset
+      const camera = sceneRefs.value.camera;
+      camera.fov = newCameraConfig.fov;
+      camera.position.set(
+        newCameraConfig.position.x,
+        newCameraConfig.position.y,
+        newCameraConfig.position.z
+      );
+      camera.updateProjectionMatrix();
+    }
+  },
+  { deep: true }
+);
+
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
   const { setup, animate, scene, world, getDelta, camera } = await getTools({
     canvas: canvas.value,
   });
+
+  // Store references for live updates
+  sceneRefs.value = {
+    camera: camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
+    scene,
+  };
+
+  // Initialize camera with the configured preset
+  if (sceneRefs.value.camera) {
+    const aspect = window.innerWidth / window.innerHeight;
+    setCameraPreset(
+      sceneRefs.value.camera,
+      sceneConfig.value.camera.preset as CameraPreset,
+      aspect
+    );
+  }
+
+  // Track initial preset value
+  previousCameraPreset.value = sceneConfig.value.camera.preset;
 
   const { orbit } = await setup({
     config: setupConfig,
@@ -115,7 +218,18 @@ const init = async (): Promise<void> => {
           // Use instances with variations if available, otherwise use positions
           const elementsData = config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }));
 
-          elementsData.forEach((elementData: any) => {
+          // Calculate sequential delays based on Z-position
+          // For grass: animate from middle Z outward (creates expanding effect)
+          // For other elements: animate back to front (depth reveal)
+          let sortFunction;
+          if (categoryName === 'grass') {
+            sortFunction = sortOrder.byDistanceFromZ(elementsData, 'middle');
+          } else {
+            sortFunction = sortOrder.zBackToFront;
+          }
+          const delays = calculateSequentialDelays(elementsData, sortFunction, 2);
+
+          elementsData.forEach((elementData: any, index: number) => {
             const position = elementData.position;
             const elementConfig = {
               ...config,
@@ -125,18 +239,32 @@ const init = async (): Promise<void> => {
             };
             const element = getCube(scene, world, elementConfig);
 
-            // Add pop-up animation (delay only if specified in config)
-            const popUpAnimation = createPopUpBounce({
-              object: element,
-              startY: position[1] - 3,
-              endY: position[1],
-              duration: 30
-            });
+            // Choose animation type based on category
+            let animation;
+            if (categoryName === 'clouds') {
+              // Clouds slide in from the sides
+              animation = createSlideInFromSides({
+                object: element,
+                startY: position[1],
+                endY: position[1],
+                duration: 60,
+                delay: delays[index]
+              });
+            } else {
+              // Other elements use pop-up animation
+              animation = createPopUpBounce({
+                object: element,
+                startY: position[1] - 3,
+                endY: position[1],
+                duration: 30,
+                delay: delays[index]
+              });
+            }
 
             timelineManager.addAction({
               name: `${categoryName}-${animationIndex}-popup`,
               category: 'visual',
-              action: popUpAnimation,
+              action: animation,
               autoRemove: true
             });
 
@@ -203,6 +331,15 @@ const init = async (): Promise<void> => {
 };
 
 onMounted(async () => {
+  // Register both Config and Scene tabs with the config panel
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    configControls,
+    sceneConfig,
+    sceneControls
+  );
+
   await init();
   await initializeAudio();
   window.addEventListener("resize", init);
@@ -210,7 +347,9 @@ onMounted(async () => {
 onUnmounted(() => {
   stopMusic();
   destroyControls();
+  unregisterViewConfig(route.name as string);
   window.removeEventListener("resize", init);
+  sceneRefs.value = null;
 });
 </script>
 

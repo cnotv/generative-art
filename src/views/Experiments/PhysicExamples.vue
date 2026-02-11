@@ -15,6 +15,7 @@ import {
   bindAnimatedElements,
   resetAnimation,
   animateTimeline,
+  createTimelineManager,
 } from "@webgamekit/animation";
 import { getBall, getWalls } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
@@ -157,6 +158,18 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       });
     };
 
+    const timelineManager = createTimelineManager();
+    timelineManager.addAction({
+      interval: [1, 500],
+      actionStart: (loop) => {
+        experiments = removeElements(scene, world, experiments);
+        generateBalls(500, [balls[loop % balls.length]]);
+      },
+      action: () => {
+        experiments = resetAnimation(experiments);
+      },
+    });
+
     video.record(canvas, route);
     generateBalls(500, [balls[0]]);
     function animate() {
@@ -166,23 +179,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       world.step();
 
       bindAnimatedElements(experiments, world, delta);
-      // experiments[0].mesh.position.y -= 0.1;
 
-      animateTimeline(
-        [
-          {
-            interval: [1, 500],
-            actionStart: (loop) => {
-              experiments = removeElements(scene, world, experiments);
-              generateBalls(500, [balls[loop % balls.length]]);
-            },
-            action: () => {
-              experiments = resetAnimation(experiments);
-            },
-          },
-        ],
-        frame
-      );
+      animateTimeline(timelineManager, frame);
 
       renderer.render(scene, camera);
       video.stop(renderer.info.render.frame, route);

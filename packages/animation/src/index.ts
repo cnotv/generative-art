@@ -7,7 +7,7 @@ export * from './types';
 
 /**
  * Animate timeline actions based on the current frame
- * @param timeline TimelineManager instance with actions to perform
+ * @param timeline TimelineManager instance
  * @param frame Current frame (to do not confuse with delta as for animation)
  * @param args Optional arguments to pass to action callbacks
  * @param options Optional configuration for timeline processing
@@ -932,5 +932,8 @@ export {
   createPopUpBounce,
   createPopUpFade,
   createPopUpScale,
+  createSlideInFromSides,
   easing,
+  sortOrder,
+  calculateSequentialDelays,
 } from './pop-up-animations';

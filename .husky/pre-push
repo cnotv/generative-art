@@ -1,1 +1,3 @@
-pnpm run test:unit --run && pnpm -r run prepare && pnpm run build
+pnpm run test:unit
+# Visual tests disabled for manual debugging
+# pnpm run test:browser

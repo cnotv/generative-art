@@ -7,8 +7,11 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
+      include: ['**/*.browser.test.ts'],
       exclude: [...configDefaults.exclude, 'e2e/*'],
       root: fileURLToPath(new URL('./', import.meta.url)),
+      testTimeout: 6000,
+      hookTimeout: 2000,
       server: {
         deps: {
           inline: ['@dimforge/rapier3d-compat'],
@@ -28,7 +31,7 @@ export default mergeConfig(
         instances: [{
           browser: 'chromium'
         }],
-        headless: process.env.CI === 'true',
+        headless: true, // Always run headless for faster tests
         screenshotFailures: false
       }
     }

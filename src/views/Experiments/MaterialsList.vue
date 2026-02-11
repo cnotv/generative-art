@@ -213,23 +213,41 @@ const createCube = (
 ) => {
   // Create and add model
   const geometry = new THREE.SphereGeometry(size[0]);
-  const reflectionOptions = config.reflection
-    ? {
-        envMap: reflection,
-        // envMap: scene.background,
-        combine: THREE.MixOperation,
-        reflectivity: config.reflectivity,
-        roughness: config.roughness,
-        metalness: config.metalness,
-        transmission: config.transmission,
-      }
-    : {};
-  const material = new THREE[meshType]({
-    color: 0x123456,
-    ...reflectionOptions,
-  });
+
+  // Build material options based on material type capabilities
+  const materialOptions: any = {};
+
+  // Color is supported by most materials (except MeshNormalMaterial and MeshDepthMaterial)
+  if (!['MeshNormalMaterial', 'MeshDepthMaterial'].includes(meshType)) {
+    materialOptions.color = 0x123456;
+  }
+
+  if (config.reflection) {
+    // envMap is supported by: Basic, Lambert, Phong, Standard, Physical
+    if (['MeshBasicMaterial', 'MeshLambertMaterial', 'MeshPhongMaterial', 'MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(meshType)) {
+      materialOptions.envMap = reflection;
+    }
+
+    // combine and reflectivity are only for Lambert and Phong
+    if (['MeshLambertMaterial', 'MeshPhongMaterial'].includes(meshType)) {
+      materialOptions.combine = THREE.MixOperation;
+      materialOptions.reflectivity = config.reflectivity;
+    }
+
+    // roughness and metalness are for Standard and Physical
+    if (['MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(meshType)) {
+      materialOptions.roughness = config.roughness;
+      materialOptions.metalness = config.metalness;
+    }
+
+    // transmission is only for Physical
+    if (meshType === 'MeshPhysicalMaterial') {
+      materialOptions.transmission = config.transmission;
+    }
+  }
+
+  const material = new THREE[meshType](materialOptions);
   material.wireframe = config.wireframe;
-  // material.reflection = config.reflection;
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(...position);
   scene.add(cube);

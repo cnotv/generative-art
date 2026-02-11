@@ -36,50 +36,63 @@ export const applyMaterial = (
     const oldMaterial = mesh.material as any;
     const meshColor = color || (oldMaterial?.color || 0xffffff);
     const isTransparent = transparent ?? (opacity ?? 1) < 1;
-    const materialProperties: any = {
-      color: meshColor,
+
+    // Common properties for all materials that support them
+    const baseProperties: any = {
       opacity: opacity ?? 1,
       transparent: isTransparent,
-      depthWrite: depthWrite ?? (isTransparent ? false : true), // Prevent transparent issues
+      depthWrite: depthWrite ?? (isTransparent ? false : true),
       alphaTest: alphaTest ?? 0,
     };
 
     if (oldMaterial?.map) {
-      materialProperties.map = oldMaterial.map;
+      baseProperties.map = oldMaterial.map;
     }
 
     if (material === 'MeshPhysicalMaterial') {
-      mesh.material = new THREE.MeshPhysicalMaterial({
-        ...materialProperties,
-        reflectivity,
-        roughness,
-        transmission,
-        transparent,
-        metalness,
-        clearcoat,
-        clearcoatRoughness,
-        ior,
-        thickness,
-        envMapIntensity,
-      });
+      const physicalMaterialProperties: any = {
+        ...baseProperties,
+        color: meshColor,
+      };
+
+      if (reflectivity !== undefined) physicalMaterialProperties.reflectivity = reflectivity;
+      if (roughness !== undefined) physicalMaterialProperties.roughness = roughness;
+      if (transmission !== undefined) physicalMaterialProperties.transmission = transmission;
+      if (metalness !== undefined) physicalMaterialProperties.metalness = metalness;
+      if (clearcoat !== undefined) physicalMaterialProperties.clearcoat = clearcoat;
+      if (clearcoatRoughness !== undefined) physicalMaterialProperties.clearcoatRoughness = clearcoatRoughness;
+      if (ior !== undefined) physicalMaterialProperties.ior = ior;
+      if (thickness !== undefined) physicalMaterialProperties.thickness = thickness;
+      if (envMapIntensity !== undefined) physicalMaterialProperties.envMapIntensity = envMapIntensity;
+
+      mesh.material = new THREE.MeshPhysicalMaterial(physicalMaterialProperties);
     } else if (material === 'MeshStandardMaterial') {
-      mesh.material = new THREE.MeshStandardMaterial({
-        ...materialProperties,
-        roughness,
-        metalness,
-      });
+      const standardMaterialProperties: any = {
+        ...baseProperties,
+        color: meshColor,
+      };
+
+      if (roughness !== undefined) standardMaterialProperties.roughness = roughness;
+      if (metalness !== undefined) standardMaterialProperties.metalness = metalness;
+
+      mesh.material = new THREE.MeshStandardMaterial(standardMaterialProperties);
     } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
-        ...materialProperties,
+        ...baseProperties,
+        color: meshColor,
         flatShading: false,
       });
     } else if (material === 'MeshPhongMaterial') {
       mesh.material = new THREE.MeshPhongMaterial({
-        ...materialProperties,
+        ...baseProperties,
+        color: meshColor,
         shininess: 30,
       });
     } else if (material === 'MeshBasicMaterial') {
-      mesh.material = new THREE.MeshBasicMaterial(materialProperties);
+      mesh.material = new THREE.MeshBasicMaterial({
+        ...baseProperties,
+        color: meshColor,
+      });
     }
   }
 
