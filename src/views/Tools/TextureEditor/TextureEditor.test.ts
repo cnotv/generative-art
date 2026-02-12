@@ -79,29 +79,29 @@ describe('TextureEditor', () => {
       await fileInput.trigger('change');
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.uploadedTextures).toBeDefined();
-      expect(wrapper.vm.uploadedTextures.length).toBeGreaterThan(0);
+      expect(wrapper.vm.textureItems).toBeDefined();
+      expect(wrapper.vm.textureItems.length).toBeGreaterThan(0);
+      expect(wrapper.vm.textureItems[0]).toHaveProperty('name');
+      expect(wrapper.vm.textureItems[0]).toHaveProperty('url');
+      expect(wrapper.vm.textureItems[0]).toHaveProperty('id');
     });
 
-    it('should handle multiple texture files upload for variants', async () => {
+    it('should handle adding texture items with names', async () => {
       const wrapper = createWrapper();
       const fileInput = wrapper.find('input[type="file"]');
 
-      const files = [
-        new File(['texture1'], 'test1.png', { type: 'image/png' }),
-        new File(['texture2'], 'test2.png', { type: 'image/png' }),
-        new File(['texture3'], 'test3.png', { type: 'image/png' })
-      ];
-
+      // Add first texture
+      const file1 = new File(['texture1'], 'grass.png', { type: 'image/png' });
       Object.defineProperty(fileInput.element, 'files', {
-        value: files,
+        value: [file1],
         writable: false,
       });
 
       await fileInput.trigger('change');
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.uploadedTextures.length).toBe(3);
+      expect(wrapper.vm.textureItems.length).toBe(1);
+      expect(wrapper.vm.textureItems[0].name).toBe('grass');
     });
   });
 
@@ -125,7 +125,6 @@ describe('TextureEditor', () => {
       expect(config).toHaveProperty('textures');
       expect(config).toHaveProperty('instances');
       expect(config).toHaveProperty('area');
-      expect(config).toHaveProperty('material');
     });
 
     it('should copy configuration to clipboard', async () => {

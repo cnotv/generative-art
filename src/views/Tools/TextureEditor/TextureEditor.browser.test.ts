@@ -53,25 +53,29 @@ describe('TextureEditor - Component Rendering', () => {
     expect(canvasElement.width).toBeGreaterThan(0);
     expect(canvasElement.height).toBeGreaterThan(0);
 
-    // Verify upload overlay exists (since no textures are uploaded)
-    const uploadOverlay = wrapper.find('.texture-editor__upload-overlay');
-    expect(uploadOverlay.exists()).toBe(true);
+    // Verify top controls exist
+    const topControls = wrapper.find('.texture-editor__top-controls');
+    expect(topControls.exists()).toBe(true);
+
+    // Verify add texture button exists
+    const addButton = wrapper.find('.texture-editor__add-btn');
+    expect(addButton.exists()).toBe(true);
 
     // Verify file input exists
     const fileInput = wrapper.find('input[type="file"]');
     expect(fileInput.exists()).toBe(true);
 
-    // Verify action buttons exist
-    const actions = wrapper.find('.texture-editor__actions');
-    expect(actions.exists()).toBe(true);
-
-    // Verify preset buttons exist
+    // Verify hidden test buttons exist (for testing preset functionality)
     const presetClouds = wrapper.find('[data-testid="preset-clouds"]');
     const presetDecals = wrapper.find('[data-testid="preset-decals"]');
     const presetGrass = wrapper.find('[data-testid="preset-grass"]');
+    const exportButton = wrapper.find('[data-testid="export-config"]');
+    const copyButton = wrapper.find('[data-testid="copy-config"]');
     expect(presetClouds.exists()).toBe(true);
     expect(presetDecals.exists()).toBe(true);
     expect(presetGrass.exists()).toBe(true);
+    expect(exportButton.exists()).toBe(true);
+    expect(copyButton.exists()).toBe(true);
 
     // Cleanup
     wrapper.unmount();

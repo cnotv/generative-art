@@ -4,6 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { CoordinateInput } from "@/components/ui/coordinate-input";
 import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
 import {
   Accordion,
@@ -23,7 +24,7 @@ const props = defineProps<{
 const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options"];
+  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options", "component"];
 
   // Empty object is a control schema (will be rendered as input)
   if (keys.length === 0) return true;
@@ -34,7 +35,9 @@ const isControlSchema = (obj: any): obj is ControlSchema => {
   if (!allKeysAreControlKeys) return false;
 
   // If all keys are control keys, check if any value is an object (meaning it's nested config)
+  // BUT allow min/max/step to be objects (for per-coordinate values in CoordinateInput)
   const hasNestedObjects = keys.some((k) => {
+    if (k === 'min' || k === 'max' || k === 'step') return false; // Allow these to be objects
     const value = obj[k];
     return typeof value === "object" && value !== null && !Array.isArray(value);
   });
@@ -115,7 +118,18 @@ const getColorHex = (path: string): string => {
       :key="control.path"
       class="config-controls__item flex flex-col gap-1"
     >
-      <template v-if="control.schema.options !== undefined">
+      <template v-if="control.schema.component === 'CoordinateInput'">
+        <CoordinateInput
+          :model-value="getValue(control.path)"
+          :label="control.schema.label ?? formatLabel(control.key)"
+          :min="control.schema.min"
+          :max="control.schema.max"
+          :step="control.schema.step"
+          @update:model-value="onUpdate(control.path, $event)"
+        />
+      </template>
+
+      <template v-else-if="control.schema.options !== undefined">
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>

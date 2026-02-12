@@ -1,19 +1,44 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
-import { getTools, getCube, generateAreaPositions } from '@webgamekit/threejs';
-import type { CoordinateTuple, AreaConfig } from '@webgamekit/threejs';
-import { createTimelineManager } from '@webgamekit/animation';
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/composables/useViewConfig';
-import { defaultConfig, presets, configControls, sceneControls } from './config';
-import type { TextureEditorConfig } from './config';
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { useRoute } from "vue-router";
+import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
+import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
+import { createTimelineManager } from "@webgamekit/animation";
+import {
+  registerViewConfig,
+  unregisterViewConfig,
+  createReactiveConfig,
+} from "@/composables/useViewConfig";
+import { defaultConfig, presets, configControls, sceneControls } from "./config";
+import type { TextureEditorConfig } from "./config";
 
 const route = useRoute();
 const canvas = ref<HTMLCanvasElement | null>(null);
-const uploadedTextures = ref<string[]>([]);
+
+// Texture items with names
+interface TextureItem {
+  id: string;
+  name: string;
+  url: string;
+}
+
+const textureItems = ref<TextureItem[]>([]);
+const showAddDialog = ref(false);
+const newTextureName = ref("");
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<TextureEditorConfig>(defaultConfig);
+
+// Watch for preset changes and apply them
+watch(
+  () => reactiveConfig.value.preset,
+  (newPreset) => {
+    if (newPreset && presets[newPreset as keyof typeof presets]) {
+      applyPreset(newPreset as keyof typeof presets);
+    }
+  }
+);
 
 // Scene configuration
 const sceneConfig = createReactiveConfig({
@@ -54,22 +79,41 @@ onBeforeUnmount(() => {
   }
 });
 
+// Handle add texture button click
+const handleAddTexture = () => {
+  fileInputRef.value?.click();
+};
+
 // Handle texture file upload
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const files = target.files;
 
   if (files && files.length > 0) {
-    uploadedTextures.value = Array.from(files).map(file => URL.createObjectURL(file));
+    const file = files[0];
+    const url = URL.createObjectURL(file);
+    const name = newTextureName.value || file.name.replace(/\.[^/.]+$/, "");
+
+    textureItems.value.push({
+      id: `texture-${Date.now()}`,
+      name,
+      url,
+    });
+
+    newTextureName.value = "";
+    showAddDialog.value = false;
     reinitScene();
   }
 };
 
+// Remove texture item
+const removeTexture = (id: string) => {
+  textureItems.value = textureItems.value.filter((item) => item.id !== id);
+  reinitScene();
+};
+
 // Create texture variants following ForestGame pattern
-const createTextureInstances = (
-  textures: string[],
-  config: TextureEditorConfig
-) => {
+const createTextureInstances = (textures: string[], config: TextureEditorConfig) => {
   if (textures.length === 0) return [];
 
   const areaConfig: AreaConfig = {
@@ -86,7 +130,7 @@ const createTextureInstances = (
   const { sizeVariation, rotationVariation } = config.textures;
 
   // Initialize arrays for each texture variant
-  const variantData = textures.map(texture => ({
+  const variantData = textures.map((texture) => ({
     texture,
     positions: [] as CoordinateTuple[],
     instances: [] as Array<{
@@ -102,7 +146,8 @@ const createTextureInstances = (
     variantData[randomIndex].positions.push(position);
 
     // Generate instance with variations
-    const hasVariation = sizeVariation.some(v => v !== 0) || rotationVariation.some(v => v !== 0);
+    const hasVariation =
+      sizeVariation.some((v) => v !== 0) || rotationVariation.some((v) => v !== 0);
 
     if (hasVariation) {
       variantData[randomIndex].instances.push({
@@ -159,31 +204,31 @@ const initScene = async () => {
       },
     },
     defineSetup: () => {
-      // Create textured billboards if textures are uploaded
-      if (uploadedTextures.value.length > 0) {
-        const variantData = createTextureInstances(
-          uploadedTextures.value,
-          reactiveConfig.value
-        );
+      // Create textured billboards if textures are added
+      if (textureItems.value.length > 0) {
+        const textureUrls = textureItems.value.map((item) => item.url);
+        const variantData = createTextureInstances(textureUrls, reactiveConfig.value);
 
         variantData.forEach((variant) => {
           // Use instances with variations if available, otherwise use positions
-          const elementsData = variant.instances.length > 0
-            ? variant.instances
-            : variant.positions.map((pos: CoordinateTuple) => ({ position: pos }));
+          const elementsData =
+            variant.instances.length > 0
+              ? variant.instances
+              : variant.positions.map((pos: CoordinateTuple) => ({ position: pos }));
 
           elementsData.forEach((elementData: any) => {
             const cubeConfig = {
               size: elementData.scale || reactiveConfig.value.textures.baseSize,
               position: elementData.position,
-              rotation: elementData.rotation || [0, 0, 0] as CoordinateTuple,
+              rotation: elementData.rotation || ([0, 0, 0] as CoordinateTuple),
               texture: variant.texture,
-              material: reactiveConfig.value.material.type,
-              opacity: reactiveConfig.value.material.opacity,
-              transparent: reactiveConfig.value.material.transparent,
-              depthWrite: reactiveConfig.value.material.depthWrite,
-              alphaTest: reactiveConfig.value.material.alphaTest,
-              type: 'fixed' as const,
+              material: "MeshBasicMaterial",
+              opacity: 1,
+              color: 0xffffff,
+              // transparent: true,
+              // depthWrite: false,
+              // alphaTest: 0.5,
+              type: "fixed" as const,
               castShadow: false,
               receiveShadow: true,
             };
@@ -196,9 +241,9 @@ const initScene = async () => {
         getCube(scene, world, {
           size: [20, 20, 0.1] as CoordinateTuple,
           position: [0, 0, 0] as CoordinateTuple,
-          color: 0xcccccc,
-          material: 'MeshBasicMaterial',
-          type: 'fixed',
+          color: 0xffffff,
+          material: "MeshBasicMaterial",
+          type: "fixed",
         });
       }
 
@@ -224,10 +269,9 @@ const applyPreset = (presetName: keyof typeof presets) => {
 // Export configuration as JSON
 const exportConfiguration = () => {
   const config = {
+    area: reactiveConfig.value.area,
     textures: reactiveConfig.value.textures,
     instances: reactiveConfig.value.instances,
-    area: reactiveConfig.value.area,
-    material: reactiveConfig.value.material,
   };
   return config;
 };
@@ -236,11 +280,11 @@ const exportConfiguration = () => {
 const downloadConfiguration = () => {
   const config = exportConfiguration();
   const jsonString = JSON.stringify(config, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
-  link.download = 'texture-editor-config.json';
+  link.download = "texture-editor-config.json";
   link.click();
   URL.revokeObjectURL(url);
 };
@@ -253,9 +297,9 @@ const copyToClipboard = async () => {
   try {
     await navigator.clipboard.writeText(jsonString);
     // Use console instead of alert for better UX
-    console.log('✅ Configuration copied to clipboard!');
+    console.log("✅ Configuration copied to clipboard!");
   } catch (err) {
-    console.error('Failed to copy to clipboard:', err);
+    console.error("Failed to copy to clipboard:", err);
   }
 };
 
@@ -263,6 +307,7 @@ const copyToClipboard = async () => {
 defineExpose({
   exportConfiguration,
   reactiveConfig,
+  textureItems,
 });
 </script>
 
@@ -270,79 +315,95 @@ defineExpose({
   <div class="texture-editor">
     <canvas ref="canvas"></canvas>
 
-    <!-- File upload overlay (shown when no textures uploaded) -->
-    <div v-if="uploadedTextures.length === 0" class="texture-editor__upload-overlay">
-      <div class="texture-editor__upload-prompt">
-        <h2>Texture Editor</h2>
-        <p>Upload one or more texture images to begin</p>
-        <label class="texture-editor__upload-btn">
-          <input
-            ref="fileInput"
-            type="file"
-            accept="image/*"
-            multiple
-            @change="handleFileUpload"
-            style="display: none"
-          />
-          Choose Files
-        </label>
-        <p class="texture-editor__hint">Supports PNG, JPG, WebP</p>
+    <!-- Top center controls -->
+    <div class="texture-editor__top-controls">
+      <!-- Add texture button -->
+      <button
+        @click="handleAddTexture"
+        class="texture-editor__add-btn"
+        title="Add texture"
+      >
+        ➕ Add Texture
+      </button>
+
+      <!-- Hidden file input -->
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept="image/*"
+        @change="handleFileUpload"
+        style="display: none"
+      />
+
+      <!-- Texture list dropdown -->
+      <div v-if="textureItems.length > 0" class="texture-editor__texture-list">
+        <div
+          v-for="item in textureItems"
+          :key="item.id"
+          class="texture-editor__texture-item"
+        >
+          <span class="texture-editor__texture-name">{{ item.name }}</span>
+          <button
+            @click="removeTexture(item.id)"
+            class="texture-editor__remove-btn"
+            title="Remove texture"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="texture-editor__actions">
+        <button
+          @click="downloadConfiguration"
+          class="texture-editor__action-btn"
+          title="Download configuration as JSON"
+        >
+          💾 Export
+        </button>
+        <button
+          @click="copyToClipboard"
+          class="texture-editor__action-btn"
+          title="Copy configuration to clipboard"
+        >
+          📋 Copy
+        </button>
       </div>
     </div>
 
-    <!-- Texture info badge (shown when textures uploaded) -->
-    <div v-else class="texture-editor__info-badge">
-      {{ uploadedTextures.length }} texture{{ uploadedTextures.length > 1 ? 's' : '' }} loaded
-      <button @click="uploadedTextures = []; reinitScene()" class="texture-editor__clear-btn">
-        Clear
-      </button>
-    </div>
-
-    <!-- Action buttons (top-right corner) -->
-    <div class="texture-editor__actions">
-      <button
-        data-testid="preset-clouds"
-        @click="applyPreset('clouds')"
-        class="texture-editor__action-btn"
-        title="Apply billboard clouds preset"
-      >
-        ☁️ Clouds
-      </button>
-      <button
-        data-testid="preset-decals"
-        @click="applyPreset('decals')"
-        class="texture-editor__action-btn"
-        title="Apply scattered decals preset"
-      >
-        🎨 Decals
-      </button>
-      <button
-        data-testid="preset-grass"
-        @click="applyPreset('grass')"
-        class="texture-editor__action-btn"
-        title="Apply dense grass preset"
-      >
-        🌿 Grass
-      </button>
-      <button
-        data-testid="export-config"
-        @click="downloadConfiguration"
-        class="texture-editor__action-btn"
-        title="Download configuration as JSON"
-      >
-        💾 Export
-      </button>
-      <button
-        data-testid="copy-config"
-        @click="copyToClipboard"
-        class="texture-editor__action-btn"
-        title="Copy configuration to clipboard"
-      >
-        📋 Copy
-      </button>
-    </div>
-
     <!-- Hidden test elements for configuration access -->
+    <button
+      data-testid="preset-clouds"
+      @click="applyPreset('clouds')"
+      style="display: none"
+    >
+      Clouds
+    </button>
+    <button
+      data-testid="preset-decals"
+      @click="applyPreset('decals')"
+      style="display: none"
+    >
+      Decals
+    </button>
+    <button
+      data-testid="preset-grass"
+      @click="applyPreset('grass')"
+      style="display: none"
+    >
+      Grass
+    </button>
+    <button
+      data-testid="export-config"
+      @click="downloadConfiguration"
+      style="display: none"
+    >
+      Export
+    </button>
+    <button data-testid="copy-config" @click="copyToClipboard" style="display: none">
+      Copy
+    </button>
     <select
       v-model="reactiveConfig.instances.pattern"
       data-testid="pattern-select"
@@ -416,113 +477,85 @@ canvas {
   height: 100vh;
 }
 
-/* Upload overlay */
-.texture-editor__upload-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.texture-editor__upload-prompt {
-  text-align: center;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-.texture-editor__upload-prompt h2 {
-  font-size: 32px;
-  margin: 0 0 16px;
-  font-weight: 600;
-}
-
-.texture-editor__upload-prompt p {
-  font-size: 16px;
-  margin: 0 0 24px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.texture-editor__upload-btn {
-  display: inline-block;
-  padding: 14px 32px;
-  background: #2563eb;
-  border-radius: 8px;
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.texture-editor__upload-btn:hover {
-  background: #1d4ed8;
-}
-
-.texture-editor__hint {
-  margin-top: 16px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-/* Info badge */
-.texture-editor__info-badge {
+/* Top controls */
+.texture-editor__top-controls {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  padding: 10px 20px;
-  border-radius: 20px;
-  color: white;
-  font-family: monospace;
-  font-size: 13px;
   z-index: 999;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.texture-editor__clear-btn {
-  padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.1);
+.texture-editor__add-btn {
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: 8px;
   color: white;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.texture-editor__clear-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+.texture-editor__add-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-/* Action buttons */
-.texture-editor__actions {
-  position: fixed;
-  top: 20px;
-  right: 20px;
+.texture-editor__texture-list {
   display: flex;
-  flex-direction: column;
   gap: 8px;
-  z-index: 999;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.texture-editor__texture-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+}
+
+.texture-editor__texture-name {
+  font-family: monospace;
+}
+
+.texture-editor__remove-btn {
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.texture-editor__remove-btn:hover {
+  color: #ff6b6b;
+}
+
+.texture-editor__actions {
+  display: flex;
+  gap: 8px;
 }
 
 .texture-editor__action-btn {
   padding: 10px 16px;
   background: rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
-  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
@@ -530,7 +563,6 @@ canvas {
 
 .texture-editor__action-btn:hover {
   background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateX(-2px);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 </style>

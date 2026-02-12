@@ -1,6 +1,11 @@
 import type { CoordinateTuple, AreaConfig } from '@webgamekit/threejs';
 
 export interface TextureEditorConfig {
+  preset?: string;
+  area: {
+    center: CoordinateTuple;
+    size: CoordinateTuple;
+  };
   textures: {
     baseSize: CoordinateTuple;
     sizeVariation: CoordinateTuple;
@@ -11,50 +16,38 @@ export interface TextureEditorConfig {
     pattern: 'random' | 'grid' | 'grid-jitter';
     seed: number;
   };
-  area: {
-    center: CoordinateTuple;
-    size: CoordinateTuple;
-  };
-  material: {
-    type: string;
-    opacity: number;
-    transparent: boolean;
-    depthWrite: boolean;
-    alphaTest: number;
-  };
 }
+
+
 
 // Preset configurations matching ForestGame patterns
 export const presets = {
   clouds: {
     name: 'Billboard Clouds',
     config: {
+      area: {
+        center: [0, 38, -195] as CoordinateTuple,
+        size: [670, 33, 230] as CoordinateTuple,
+      },
       textures: {
-        baseSize: [200, 100, 0] as CoordinateTuple,
-        sizeVariation: [100, 50, 0] as CoordinateTuple,
+        baseSize: [90, 40, 0] as CoordinateTuple,
+        sizeVariation: [50, 50, 0] as CoordinateTuple,
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        count: 5,
+        count: 25,
         pattern: 'random' as const,
         seed: 1000,
-      },
-      area: {
-        center: [0, 85, -80] as CoordinateTuple,
-        size: [1000, 60, 100] as CoordinateTuple,
-      },
-      material: {
-        type: 'MeshBasicMaterial',
-        opacity: 0.95,
-        transparent: true,
-        depthWrite: false,
-        alphaTest: 0,
       },
     },
   },
   decals: {
     name: 'Scattered Decals',
     config: {
+      area: {
+        center: [0, -1, 20] as CoordinateTuple,
+        size: [1000, 0, 0] as CoordinateTuple,
+      },
       textures: {
         baseSize: [10, 7, 0] as CoordinateTuple,
         sizeVariation: [5, 3, 0] as CoordinateTuple,
@@ -65,42 +58,24 @@ export const presets = {
         pattern: 'grid-jitter' as const,
         seed: 8000,
       },
-      area: {
-        center: [0, -1, 20] as CoordinateTuple,
-        size: [1000, 0, 0] as CoordinateTuple,
-      },
-      material: {
-        type: 'MeshBasicMaterial',
-        opacity: 0.95,
-        transparent: true,
-        depthWrite: false,
-        alphaTest: 0,
-      },
     },
   },
   grass: {
     name: 'Dense Grass',
     config: {
+      area: {
+        center: [0, 0, 10] as CoordinateTuple,
+        size: [50, 0, 50] as CoordinateTuple,
+      },
       textures: {
-        baseSize: [10, 17, 0] as CoordinateTuple,
+        baseSize: [10, 10, 0] as CoordinateTuple,
         sizeVariation: [0, 0, 0] as CoordinateTuple,
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        count: 500,
-        pattern: 'random' as const,
+        count: 300,
+        pattern: 'grid-jitter' as const,
         seed: 6000,
-      },
-      area: {
-        center: [0, -16, 10] as CoordinateTuple,
-        size: [1000, 0, 30] as CoordinateTuple,
-      },
-      material: {
-        type: 'MeshBasicMaterial',
-        opacity: 0.95,
-        transparent: true,
-        depthWrite: false,
-        alphaTest: 0,
       },
     },
   },
@@ -108,6 +83,10 @@ export const presets = {
 
 // Default configuration
 export const defaultConfig: TextureEditorConfig = {
+  area: {
+    center: [0, 0, 0] as CoordinateTuple,
+    size: [50, 0, 50] as CoordinateTuple,
+  },
   textures: {
     baseSize: [20, 20, 0] as CoordinateTuple,
     sizeVariation: [10, 10, 0] as CoordinateTuple,
@@ -118,36 +97,51 @@ export const defaultConfig: TextureEditorConfig = {
     pattern: 'random',
     seed: 1000,
   },
-  area: {
-    center: [0, 0, 0] as CoordinateTuple,
-    size: [50, 0, 50] as CoordinateTuple,
-  },
-  material: {
-    type: 'MeshBasicMaterial',
-    opacity: 1,
-    transparent: true,
-    depthWrite: false,
-    alphaTest: 0.5,
-  },
 };
 
 // Config panel controls schema
 export const configControls = {
+  preset: {
+    label: 'Preset',
+    options: ['clouds', 'decals', 'grass'],
+  },
+  area: {
+    center: {
+      label: 'Center Position',
+      component: 'CoordinateInput',
+      min: { x: -500, y: -100, z: -500 },
+      max: { x: 500, y: 100, z: 500 },
+      step: { x: 1, y: 1, z: 1 },
+    },
+    size: {
+      label: 'Area Size',
+      component: 'CoordinateInput',
+      min: { x: 1, y: 0, z: 0 },
+      max: { x: 2000, y: 200, z: 2000 },
+      step: { x: 1, y: 1, z: 1 },
+    },
+  },
   textures: {
     baseSize: {
-      x: { min: 1, max: 500, step: 1, label: 'Width' },
-      y: { min: 1, max: 500, step: 1, label: 'Height' },
-      z: { min: 0, max: 10, step: 0.1, label: 'Depth' },
+      label: 'Base Size',
+      component: 'CoordinateInput',
+      min: { x: 1, y: 1, z: 0 },
+      max: { x: 500, y: 500, z: 10 },
+      step: { x: 1, y: 1, z: 0.1 },
     },
     sizeVariation: {
-      x: { min: 0, max: 200, step: 1, label: 'Size Var X' },
-      y: { min: 0, max: 200, step: 1, label: 'Size Var Y' },
-      z: { min: 0, max: 10, step: 0.1, label: 'Size Var Z' },
+      label: 'Size Variation',
+      component: 'CoordinateInput',
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 200, y: 200, z: 10 },
+      step: { x: 1, y: 1, z: 0.1 },
     },
     rotationVariation: {
-      x: { min: 0, max: Math.PI * 2, step: 0.1, label: 'Rot Var X' },
-      y: { min: 0, max: Math.PI * 2, step: 0.1, label: 'Rot Var Y' },
-      z: { min: 0, max: Math.PI * 2, step: 0.1, label: 'Rot Var Z' },
+      label: 'Rotation Variation',
+      component: 'CoordinateInput',
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: Math.PI * 2, y: Math.PI * 2, z: Math.PI * 2 },
+      step: { x: 0.1, y: 0.1, z: 0.1 },
     },
   },
   instances: {
@@ -158,37 +152,17 @@ export const configControls = {
     },
     seed: { min: 0, max: 10000, step: 1 },
   },
-  area: {
-    center: {
-      x: { min: -500, max: 500, step: 10 },
-      y: { min: -100, max: 100, step: 10 },
-      z: { min: -500, max: 500, step: 10 },
-    },
-    size: {
-      x: { min: 1, max: 2000, step: 10 },
-      y: { min: 0, max: 200, step: 10 },
-      z: { min: 1, max: 2000, step: 10 },
-    },
-  },
-  material: {
-    type: {
-      label: 'Material Type',
-      options: ['MeshBasicMaterial', 'MeshLambertMaterial', 'MeshPhongMaterial', 'MeshStandardMaterial'],
-    },
-    opacity: { min: 0, max: 1, step: 0.05 },
-    transparent: { label: 'Transparent' },
-    depthWrite: { label: 'Depth Write' },
-    alphaTest: { min: 0, max: 1, step: 0.05 },
-  },
 };
 
 // Scene panel controls schema
 export const sceneControls = {
   camera: {
     position: {
-      x: { min: -200, max: 200, step: 5 },
-      y: { min: 0, max: 200, step: 5 },
-      z: { min: 10, max: 200, step: 5 },
+      label: 'Camera Position',
+      component: 'CoordinateInput',
+      min: { x: -200, y: 0, z: 10 },
+      max: { x: 200, y: 200, z: 200 },
+      step: { x: 5, y: 5, z: 5 },
     },
     fov: { min: 30, max: 120, step: 5 },
   },
