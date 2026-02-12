@@ -216,8 +216,8 @@ describe('TextureEditor', () => {
       await wrapper.vm.$nextTick();
 
       const config = wrapper.vm.reactiveConfig;
-      expect(config.textures.baseSize).toEqual([200, 100, 0]);
-      expect(config.textures.sizeVariation).toEqual([100, 50, 0]);
+      expect(config.textures.baseSize).toEqual([90, 40, 0]);
+      expect(config.textures.sizeVariation).toEqual([50, 50, 0]);
     });
 
     it('should have preset button for scattered decals', () => {
@@ -254,8 +254,8 @@ describe('TextureEditor', () => {
       await wrapper.vm.$nextTick();
 
       const config = wrapper.vm.reactiveConfig;
-      expect(config.textures.baseSize).toEqual([10, 17, 0]);
-      expect(config.instances.count).toBe(500);
+      expect(config.textures.baseSize).toEqual([10, 10, 0]);
+      expect(config.instances.count).toBe(300);
     });
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import CoordinateInput from './CoordinateInput.vue';
+import Slider from '../slider/Slider.vue';
 import type { CoordinateTuple } from '@webgamekit/threejs';
 
 describe('CoordinateInput', () => {
@@ -26,8 +27,8 @@ describe('CoordinateInput', () => {
         },
       });
 
-      const sliders = wrapper.findAll('input[type="range"]');
-      await sliders[0].setValue(15);
+      const sliders = wrapper.findAllComponents(Slider);
+      await sliders[0].vm.$emit('update:modelValue', [15]);
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy();
       expect(wrapper.emitted('update:modelValue')![0]).toEqual([[15, 20, 30]]);
@@ -56,8 +57,8 @@ describe('CoordinateInput', () => {
         },
       });
 
-      const sliders = wrapper.findAll('input[type="range"]');
-      await sliders[1].setValue(25);
+      const sliders = wrapper.findAllComponents(Slider);
+      await sliders[1].vm.$emit('update:modelValue', [25]);
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy();
       expect(wrapper.emitted('update:modelValue')![0]).toEqual([{ x: 10, y: 25, z: 30 }]);
@@ -75,10 +76,10 @@ describe('CoordinateInput', () => {
         },
       });
 
-      const sliders = wrapper.findAll('input[type="range"]');
-      expect(sliders[0].attributes('min')).toBe('0');
-      expect(sliders[0].attributes('max')).toBe('100');
-      expect(sliders[0].attributes('step')).toBe('5');
+      const sliders = wrapper.findAllComponents(Slider);
+      expect(sliders[0].props('min')).toBe(0);
+      expect(sliders[0].props('max')).toBe(100);
+      expect(sliders[0].props('step')).toBe(5);
     });
 
     it('should support per-coordinate min/max/step', () => {
@@ -91,22 +92,22 @@ describe('CoordinateInput', () => {
         },
       });
 
-      const sliders = wrapper.findAll('input[type="range"]');
+      const sliders = wrapper.findAllComponents(Slider);
 
       // X slider
-      expect(sliders[0].attributes('min')).toBe('0');
-      expect(sliders[0].attributes('max')).toBe('100');
-      expect(sliders[0].attributes('step')).toBe('1');
+      expect(sliders[0].props('min')).toBe(0);
+      expect(sliders[0].props('max')).toBe(100);
+      expect(sliders[0].props('step')).toBe(1);
 
       // Y slider
-      expect(sliders[1].attributes('min')).toBe('10');
-      expect(sliders[1].attributes('max')).toBe('200');
-      expect(sliders[1].attributes('step')).toBe('5');
+      expect(sliders[1].props('min')).toBe(10);
+      expect(sliders[1].props('max')).toBe(200);
+      expect(sliders[1].props('step')).toBe(5);
 
       // Z slider
-      expect(sliders[2].attributes('min')).toBe('20');
-      expect(sliders[2].attributes('max')).toBe('300');
-      expect(sliders[2].attributes('step')).toBe('10');
+      expect(sliders[2].props('min')).toBe(20);
+      expect(sliders[2].props('max')).toBe(300);
+      expect(sliders[2].props('step')).toBe(10);
     });
   });
 
