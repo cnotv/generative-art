@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
+import { CoordinateInput } from "@/components/ui/coordinate-input";
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -19,6 +20,7 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 interface TextureItem {
   id: string;
   name: string;
+  filename: string;
   url: string;
 }
 
@@ -92,11 +94,13 @@ const handleFileUpload = (event: Event) => {
   if (files && files.length > 0) {
     const file = files[0];
     const url = URL.createObjectURL(file);
-    const name = newTextureName.value || file.name.replace(/\.[^/.]+$/, "");
+    const filename = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+    const name = newTextureName.value || filename;
 
     textureItems.value.push({
       id: `texture-${Date.now()}`,
       name,
+      filename,
       url,
     });
 
@@ -106,15 +110,67 @@ const handleFileUpload = (event: Event) => {
   }
 };
 
+// Select texture for configuration
+const selectTexture = (filename: string) => {
+  reactiveConfig.value.selectedTexture = filename;
+};
+
+// Get selected texture info
+const selectedItem = computed(() => {
+  if (!reactiveConfig.value.selectedTexture) return null;
+  return textureItems.value.find(
+    (item) => item.filename === reactiveConfig.value.selectedTexture
+  );
+});
+
+// Get/set properties for selected texture
+const selectedTextureProps = computed(() => {
+  if (!reactiveConfig.value.selectedTexture) return null;
+  return getTextureProperties(reactiveConfig.value.selectedTexture);
+});
+
+const updateSelectedProp = (prop: 'baseSize' | 'sizeVariation' | 'rotationVariation' | 'count' | 'opacity', value: any) => {
+  const selected = reactiveConfig.value.selectedTexture;
+  if (!selected) return;
+
+  if (!reactiveConfig.value.textureProperties[selected]) {
+    reactiveConfig.value.textureProperties[selected] = {};
+  }
+
+  reactiveConfig.value.textureProperties[selected][prop] = value;
+  reinitScene();
+};
+
 // Remove texture item
 const removeTexture = (id: string) => {
+  const item = textureItems.value.find((t) => t.id === id);
+  if (item) {
+    // Remove from textureProperties if exists
+    delete reactiveConfig.value.textureProperties[item.filename];
+    // Clear selection if this texture was selected
+    if (reactiveConfig.value.selectedTexture === item.filename) {
+      reactiveConfig.value.selectedTexture = undefined;
+    }
+  }
   textureItems.value = textureItems.value.filter((item) => item.id !== id);
   reinitScene();
 };
 
+// Get properties for a specific texture (with fallback to global)
+const getTextureProperties = (filename: string): typeof reactiveConfig.value.textures => {
+  const specificProps = reactiveConfig.value.textureProperties[filename];
+  return {
+    baseSize: specificProps?.baseSize || reactiveConfig.value.textures.baseSize,
+    sizeVariation: specificProps?.sizeVariation || reactiveConfig.value.textures.sizeVariation,
+    rotationVariation: specificProps?.rotationVariation || reactiveConfig.value.textures.rotationVariation,
+    count: specificProps?.count,
+    opacity: specificProps?.opacity,
+  };
+};
+
 // Create texture variants following ForestGame pattern
-const createTextureInstances = (textures: string[], config: TextureEditorConfig) => {
-  if (textures.length === 0) return [];
+const createTextureInstances = (textureItems: TextureItem[], config: TextureEditorConfig) => {
+  if (textureItems.length === 0) return [];
 
   const areaConfig: AreaConfig = {
     center: config.area.center,
@@ -127,35 +183,41 @@ const createTextureInstances = (textures: string[], config: TextureEditorConfig)
   };
 
   const allPositions = generateAreaPositions(areaConfig);
-  const { sizeVariation, rotationVariation } = config.textures;
 
   // Initialize arrays for each texture variant
-  const variantData = textures.map((texture) => ({
-    texture,
-    positions: [] as CoordinateTuple[],
-    instances: [] as Array<{
-      position: CoordinateTuple;
-      scale: CoordinateTuple;
-      rotation: CoordinateTuple;
-    }>,
-  }));
+  const variantData = textureItems.map((item) => {
+    const props = getTextureProperties(item.filename);
+    return {
+      texture: item.url,
+      filename: item.filename,
+      properties: props,
+      positions: [] as CoordinateTuple[],
+      instances: [] as Array<{
+        position: CoordinateTuple;
+        scale: CoordinateTuple;
+        rotation: CoordinateTuple;
+      }>,
+    };
+  });
 
   // Randomly assign each position to a texture variant
   allPositions.forEach((position: CoordinateTuple) => {
-    const randomIndex = Math.floor(Math.random() * textures.length);
-    variantData[randomIndex].positions.push(position);
+    const randomIndex = Math.floor(Math.random() * textureItems.length);
+    const variant = variantData[randomIndex];
+    variant.positions.push(position);
 
-    // Generate instance with variations
+    // Generate instance with variations using texture-specific properties
+    const { sizeVariation, rotationVariation, baseSize } = variant.properties;
     const hasVariation =
       sizeVariation.some((v) => v !== 0) || rotationVariation.some((v) => v !== 0);
 
     if (hasVariation) {
-      variantData[randomIndex].instances.push({
+      variant.instances.push({
         position,
         scale: [
-          config.textures.baseSize[0] + (Math.random() - 0.5) * sizeVariation[0],
-          config.textures.baseSize[1] + (Math.random() - 0.5) * sizeVariation[1],
-          config.textures.baseSize[2] + (Math.random() - 0.5) * sizeVariation[2],
+          baseSize[0] + (Math.random() - 0.5) * sizeVariation[0],
+          baseSize[1] + (Math.random() - 0.5) * sizeVariation[1],
+          baseSize[2] + (Math.random() - 0.5) * sizeVariation[2],
         ] as CoordinateTuple,
         rotation: [
           (Math.random() - 0.5) * rotationVariation[0],
@@ -206,8 +268,7 @@ const initScene = async () => {
     defineSetup: () => {
       // Create textured billboards if textures are added
       if (textureItems.value.length > 0) {
-        const textureUrls = textureItems.value.map((item) => item.url);
-        const variantData = createTextureInstances(textureUrls, reactiveConfig.value);
+        const variantData = createTextureInstances(textureItems.value, reactiveConfig.value);
 
         variantData.forEach((variant) => {
           // Use instances with variations if available, otherwise use positions
@@ -218,12 +279,12 @@ const initScene = async () => {
 
           elementsData.forEach((elementData: any) => {
             const cubeConfig = {
-              size: elementData.scale || reactiveConfig.value.textures.baseSize,
+              size: elementData.scale || variant.properties.baseSize,
               position: elementData.position,
               rotation: elementData.rotation || ([0, 0, 0] as CoordinateTuple),
               texture: variant.texture,
               material: "MeshBasicMaterial",
-              opacity: 1,
+              opacity: variant.properties.opacity || 1,
               color: 0xffffff,
               // transparent: true,
               // depthWrite: false,
@@ -341,10 +402,12 @@ defineExpose({
           v-for="item in textureItems"
           :key="item.id"
           class="texture-editor__texture-item"
+          :class="{ 'texture-editor__texture-item--selected': reactiveConfig.selectedTexture === item.filename }"
+          @click="selectTexture(item.filename)"
         >
           <span class="texture-editor__texture-name">{{ item.name }}</span>
           <button
-            @click="removeTexture(item.id)"
+            @click.stop="removeTexture(item.id)"
             class="texture-editor__remove-btn"
             title="Remove texture"
           >
@@ -369,6 +432,40 @@ defineExpose({
         >
           📋 Copy
         </button>
+      </div>
+    </div>
+
+    <!-- Selected Texture Properties Panel -->
+    <div v-if="selectedItem && selectedTextureProps" class="texture-editor__selected-props">
+      <div class="texture-editor__selected-props-header">
+        <h3>{{ selectedItem.name }} Properties</h3>
+        <button @click="reactiveConfig.selectedTexture = undefined" class="texture-editor__close-btn">✕</button>
+      </div>
+      <div class="texture-editor__selected-props-content">
+        <CoordinateInput
+          :model-value="selectedTextureProps.baseSize"
+          label="Base Size"
+          :min="{ x: 1, y: 1, z: 0 }"
+          :max="{ x: 500, y: 500, z: 10 }"
+          :step="{ x: 1, y: 1, z: 0.1 }"
+          @update:model-value="updateSelectedProp('baseSize', $event)"
+        />
+        <CoordinateInput
+          :model-value="selectedTextureProps.sizeVariation"
+          label="Size Variation"
+          :min="{ x: 0, y: 0, z: 0 }"
+          :max="{ x: 200, y: 200, z: 10 }"
+          :step="{ x: 1, y: 1, z: 0.1 }"
+          @update:model-value="updateSelectedProp('sizeVariation', $event)"
+        />
+        <CoordinateInput
+          :model-value="selectedTextureProps.rotationVariation"
+          label="Rotation Variation"
+          :min="{ x: 0, y: 0, z: 0 }"
+          :max="{ x: Math.PI * 2, y: Math.PI * 2, z: Math.PI * 2 }"
+          :step="{ x: 0.1, y: 0.1, z: 0.1 }"
+          @update:model-value="updateSelectedProp('rotationVariation', $event)"
+        />
       </div>
     </div>
 
@@ -524,6 +621,17 @@ canvas {
   border-radius: 6px;
   color: white;
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.texture-editor__texture-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.texture-editor__texture-item--selected {
+  background: rgba(76, 175, 80, 0.5);
+  border: 1px solid rgba(76, 175, 80, 0.8);
 }
 
 .texture-editor__texture-name {
@@ -564,5 +672,56 @@ canvas {
 .texture-editor__action-btn:hover {
   background: rgba(0, 0, 0, 0.9);
   border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Selected Texture Properties Panel */
+.texture-editor__selected-props {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  z-index: 998;
+  overflow: hidden;
+}
+
+.texture-editor__selected-props-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.texture-editor__selected-props-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.texture-editor__close-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.texture-editor__close-btn:hover {
+  color: #ff6b6b;
+}
+
+.texture-editor__selected-props-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>
