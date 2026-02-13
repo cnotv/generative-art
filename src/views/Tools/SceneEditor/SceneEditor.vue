@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
 import { usePanels } from "@/composables/usePanels";
 import { useViewPanels } from "@/composables/useViewPanels";
@@ -44,64 +44,74 @@ const textureConfigRegistry = ref<
   >
 >({});
 
-// Computed selected texture item
-const selectedTexture = computed(() => {
-  if (!selectedTextureId.value) return null;
-  return textureItems.value.find((item) => item.id === selectedTextureId.value) || null;
-});
 
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<SceneEditorConfig>(defaultConfig);
 
-// Watch selected texture and load its config from registry
+// Watch selected texture and register/update its config panel
 watch(
   selectedTextureId,
   (textureId) => {
     if (textureId) {
-      // Initialize config for this texture if it doesn't exist
-      if (!textureConfigRegistry.value[textureId]) {
-        textureConfigRegistry.value[textureId] = {
-          baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
-          sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
-          rotationVariation: [
-            ...defaultConfig.textures.rotationVariation,
-          ] as CoordinateTuple,
-        };
-      }
-      // Load the texture's config into the reactive config for the panel
-      reactiveConfig.value.textures = { ...textureConfigRegistry.value[textureId] };
-    } else {
-      // Reset to defaults when no texture selected
-      reactiveConfig.value.textures = { ...defaultConfig.textures };
-    }
-  },
-  { immediate: true }
-);
-
-// Watch config changes and update texture registry
-watch(
-  () => reactiveConfig.value.textures,
-  (newTextures) => {
-    if (selectedTextureId.value) {
-      // Store this texture's config in the registry
-      textureConfigRegistry.value[selectedTextureId.value] = { ...newTextures };
-
-      // Also update the old textureProperties system for backward compatibility
-      const filename = selectedTexture.value?.filename;
-      if (filename) {
-        if (!reactiveConfig.value.textureProperties[filename]) {
-          reactiveConfig.value.textureProperties[filename] = {};
+      const texture = textureItems.value.find((item) => item.id === textureId);
+      if (texture) {
+        // Initialize config for this texture if it doesn't exist
+        if (!textureConfigRegistry.value[textureId]) {
+          textureConfigRegistry.value[textureId] = {
+            baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
+            sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
+            rotationVariation: [
+              ...defaultConfig.textures.rotationVariation,
+            ] as CoordinateTuple,
+          };
         }
-        reactiveConfig.value.textureProperties[filename].baseSize = newTextures.baseSize;
-        reactiveConfig.value.textureProperties[filename].sizeVariation =
-          newTextures.sizeVariation;
-        reactiveConfig.value.textureProperties[filename].rotationVariation =
-          newTextures.rotationVariation;
+
+        // Create a reactive config for this specific texture
+        const textureReactiveConfig = createReactiveConfig({
+          textures: { ...textureConfigRegistry.value[textureId] },
+        });
+
+        // Register this texture's config with a unique key (filename)
+        const configKey = `${route.name as string}:${texture.filename}`;
+        registerViewConfig(
+          configKey,
+          textureReactiveConfig,
+          {
+            textures: configControls.textures,
+          },
+          undefined,
+          undefined,
+          () => {
+            // When texture config changes, update the registry and reinit scene
+            textureConfigRegistry.value[textureId] = { ...textureReactiveConfig.value.textures };
+
+            // Also update the textureProperties system for backward compatibility
+            if (!reactiveConfig.value.textureProperties[texture.filename]) {
+              reactiveConfig.value.textureProperties[texture.filename] = {};
+            }
+            reactiveConfig.value.textureProperties[texture.filename].baseSize =
+              textureReactiveConfig.value.textures.baseSize;
+            reactiveConfig.value.textureProperties[texture.filename].sizeVariation =
+              textureReactiveConfig.value.textures.sizeVariation;
+            reactiveConfig.value.textureProperties[texture.filename].rotationVariation =
+              textureReactiveConfig.value.textures.rotationVariation;
+
+            reinitScene();
+          }
+        );
       }
-      reinitScene();
+    } else {
+      // When no texture is selected, show the main scene config
+      registerViewConfig(
+        route.name as string,
+        reactiveConfig,
+        configControls,
+        sceneConfig,
+        sceneControls,
+        reinitScene
+      );
     }
-  },
-  { deep: true }
+  }
 );
 
 // Watch for preset changes and apply them
@@ -159,7 +169,14 @@ onBeforeUnmount(() => {
   // Clear view-specific panels
   clearViewPanels();
 
+  // Unregister main scene config
   unregisterViewConfig(route.name as string);
+
+  // Unregister all texture-specific configs
+  textureItems.value.forEach((texture) => {
+    unregisterViewConfig(`${route.name as string}:${texture.filename}`);
+  });
+
   if (animationId) {
     cancelAnimationFrame(animationId);
   }
@@ -223,6 +240,9 @@ const toggleTextureVisibility = (id: string) => {
 const removeTexture = (id: string) => {
   const item = textureItems.value.find((t) => t.id === id);
   if (item) {
+    // Unregister the texture's config panel
+    unregisterViewConfig(`${route.name as string}:${item.filename}`);
+
     delete reactiveConfig.value.textureProperties[item.filename];
     // Remove from texture config registry
     delete textureConfigRegistry.value[id];
