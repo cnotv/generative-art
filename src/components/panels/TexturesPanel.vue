@@ -103,7 +103,7 @@ const handleToggleVisibility = (id: string, event: Event) => {
             <div class="textures-panel__info flex-1 min-w-0">
               <span class="text-xs text-white/90 font-mono truncate block">{{ item.name }}</span>
             </div>
-            <div class="textures-panel__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="textures-panel__actions flex gap-1 shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
