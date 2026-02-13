@@ -68,6 +68,28 @@ const updateZ = (value: number) => {
     emit("update:modelValue", { ...values.value, z: value });
   }
 };
+
+// Direct input handlers
+const handleInputX = (event: Event) => {
+  const value = Number((event.target as HTMLInputElement).value);
+  if (!isNaN(value)) {
+    updateX(value);
+  }
+};
+
+const handleInputY = (event: Event) => {
+  const value = Number((event.target as HTMLInputElement).value);
+  if (!isNaN(value)) {
+    updateY(value);
+  }
+};
+
+const handleInputZ = (event: Event) => {
+  const value = Number((event.target as HTMLInputElement).value);
+  if (!isNaN(value)) {
+    updateZ(value);
+  }
+};
 </script>
 
 <template>
@@ -76,7 +98,18 @@ const updateZ = (value: number) => {
 
     <div class="coordinate-input__sliders">
       <div class="coordinate-input__slider-group">
-        <span class="coordinate-input__value">X: {{ values.x.toFixed(2) }}</span>
+        <label class="coordinate-input__value">
+          X:
+          <input
+            type="number"
+            :value="values.x.toFixed(2)"
+            :min="getCoordValue('x', 'min')"
+            :max="getCoordValue('x', 'max')"
+            :step="getCoordValue('x', 'step')"
+            @input="handleInputX"
+            class="coordinate-input__input"
+          />
+        </label>
         <Slider
           :model-value="[values.x]"
           :min="getCoordValue('x', 'min')"
@@ -88,7 +121,18 @@ const updateZ = (value: number) => {
       </div>
 
       <div class="coordinate-input__slider-group">
-        <span class="coordinate-input__value">Y: {{ values.y.toFixed(2) }}</span>
+        <label class="coordinate-input__value">
+          Y:
+          <input
+            type="number"
+            :value="values.y.toFixed(2)"
+            :min="getCoordValue('y', 'min')"
+            :max="getCoordValue('y', 'max')"
+            :step="getCoordValue('y', 'step')"
+            @input="handleInputY"
+            class="coordinate-input__input"
+          />
+        </label>
         <Slider
           :model-value="[values.y]"
           :min="getCoordValue('y', 'min')"
@@ -100,7 +144,18 @@ const updateZ = (value: number) => {
       </div>
 
       <div class="coordinate-input__slider-group">
-        <span class="coordinate-input__value">Z: {{ values.z.toFixed(2) }}</span>
+        <label class="coordinate-input__value">
+          Z:
+          <input
+            type="number"
+            :value="values.z.toFixed(2)"
+            :min="getCoordValue('z', 'min')"
+            :max="getCoordValue('z', 'max')"
+            :step="getCoordValue('z', 'step')"
+            @input="handleInputZ"
+            class="coordinate-input__input"
+          />
+        </label>
         <Slider
           :model-value="[values.z]"
           :min="getCoordValue('z', 'min')"
@@ -122,12 +177,52 @@ const updateZ = (value: number) => {
 .coordinate-input__label {
   display: block;
   margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .coordinate-input__value {
   display: block;
   text-align: center;
   margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.coordinate-input__input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  width: 4em;
+  padding: 2px 4px;
+  outline: none;
+  border-radius: 2px;
+  transition: background-color 0.15s;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.coordinate-input__input:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.coordinate-input__input:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Hide spinner buttons in number input */
+.coordinate-input__input::-webkit-outer-spin-button,
+.coordinate-input__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.coordinate-input__input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 .coordinate-input__sliders {

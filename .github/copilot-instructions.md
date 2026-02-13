@@ -127,6 +127,7 @@ Use format: `<type>/<issue-number>-<description>`
 - **Export types**: Re-export types from package `index.ts` for public APIs
 
 ### Modular Architecture
+- **Reuse existing components**: ALWAYS check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components (Button, Sheet, Tabs, Input, Select, etc.) and other reusable components in `src/components/`. Never reinvent the wheel.
 - **Barrel exports**: Use `index.ts` files to export public APIs (see `packages/*/src/index.ts`)
 - **Package export prefixes**: Functions exported from packages MUST have a prefix matching the package name to avoid namespace collisions. Examples:
   - `recording` package: `recordCreate`, `recordDestroy`, `recordStart`, `recordStop`

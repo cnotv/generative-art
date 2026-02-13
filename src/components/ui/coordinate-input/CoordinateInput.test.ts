@@ -15,9 +15,11 @@ describe('CoordinateInput', () => {
       });
 
       expect(wrapper.text()).toContain('Position');
-      expect(wrapper.text()).toContain('X: 10.00');
-      expect(wrapper.text()).toContain('Y: 20.00');
-      expect(wrapper.text()).toContain('Z: 30.00');
+      
+      const inputs = wrapper.findAll('.coordinate-input__input');
+      expect((inputs[0].element as HTMLInputElement).value).toBe('10.00');
+      expect((inputs[1].element as HTMLInputElement).value).toBe('20.00');
+      expect((inputs[2].element as HTMLInputElement).value).toBe('30.00');
     });
 
     it('should emit array format when updated', async () => {
@@ -45,9 +47,11 @@ describe('CoordinateInput', () => {
       });
 
       expect(wrapper.text()).toContain('Scale');
-      expect(wrapper.text()).toContain('X: 10.00');
-      expect(wrapper.text()).toContain('Y: 20.00');
-      expect(wrapper.text()).toContain('Z: 30.00');
+      
+      const inputs = wrapper.findAll('.coordinate-input__input');
+      expect((inputs[0].element as HTMLInputElement).value).toBe('10.00');
+      expect((inputs[1].element as HTMLInputElement).value).toBe('20.00');
+      expect((inputs[2].element as HTMLInputElement).value).toBe('30.00');
     });
 
     it('should emit object format when updated', async () => {
@@ -124,9 +128,38 @@ describe('CoordinateInput', () => {
 
       const values = wrapper.findAll('.coordinate-input__value');
       expect(values).toHaveLength(3);
-      expect(values[0].text()).toBe('X: 10.00');
-      expect(values[1].text()).toBe('Y: 20.00');
-      expect(values[2].text()).toBe('Z: 30.00');
+      expect(values[0].text()).toContain('X:');
+      expect(values[1].text()).toContain('Y:');
+      expect(values[2].text()).toContain('Z:');
+    });
+
+    it('should render number inputs for editing values', () => {
+      const wrapper = mount(CoordinateInput, {
+        props: {
+          modelValue: [10, 20, 30] as CoordinateTuple,
+        },
+      });
+
+      const inputs = wrapper.findAll('.coordinate-input__input');
+      expect(inputs).toHaveLength(3);
+      expect(inputs[0].element.getAttribute('type')).toBe('number');
+      expect((inputs[0].element as HTMLInputElement).value).toBe('10.00');
+      expect((inputs[1].element as HTMLInputElement).value).toBe('20.00');
+      expect((inputs[2].element as HTMLInputElement).value).toBe('30.00');
+    });
+
+    it('should emit updates when input values change', async () => {
+      const wrapper = mount(CoordinateInput, {
+        props: {
+          modelValue: [10, 20, 30] as CoordinateTuple,
+        },
+      });
+
+      const inputs = wrapper.findAll('.coordinate-input__input');
+      await inputs[0].setValue('15');
+
+      expect(wrapper.emitted('update:modelValue')).toBeTruthy();
+      expect(wrapper.emitted('update:modelValue')![0]).toEqual([[15, 20, 30]]);
     });
   });
 });
