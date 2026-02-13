@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import GenericPanel from './GenericPanel.vue';
 import { Button } from '@/components/ui/button';
+import TexturePreview from '@/components/TexturePreview.vue';
 
 interface TextureItem {
   id: string;
@@ -86,13 +87,10 @@ const handleRemoveTexture = (id: string, event: Event) => {
             ]"
             @click="handleSelectTexture(item.id)"
           >
-            <div class="textures-panel__preview">
-              <img
-                :src="item.url"
-                :alt="item.name"
-                class="w-12 h-12 object-cover rounded bg-white/10"
-              />
-            </div>
+            <TexturePreview
+              :src="item.url"
+              :alt="item.name"
+            />
             <div class="textures-panel__info flex-1 min-w-0">
               <span class="text-sm text-white font-mono truncate block">{{ item.name }}</span>
             </div>
