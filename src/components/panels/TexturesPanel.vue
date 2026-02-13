@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { Eye, EyeOff, Trash2 } from 'lucide-vue-next';
 import GenericPanel from './GenericPanel.vue';
 import { Button } from '@/components/ui/button';
 import TexturePreview from '@/components/TexturePreview.vue';
@@ -9,6 +10,7 @@ interface TextureItem {
   name: string;
   filename: string;
   url: string;
+  hidden?: boolean;
 }
 
 interface Props {
@@ -19,6 +21,7 @@ interface Props {
 interface Emits {
   (e: 'select', id: string): void;
   (e: 'remove', id: string): void;
+  (e: 'toggle-visibility', id: string): void;
   (e: 'fileChange', event: Event): void;
 }
 
@@ -42,6 +45,11 @@ const handleSelectTexture = (id: string) => {
 const handleRemoveTexture = (id: string, event: Event) => {
   event.stopPropagation();
   emit('remove', id);
+};
+
+const handleToggleVisibility = (id: string, event: Event) => {
+  event.stopPropagation();
+  emit('toggle-visibility', id);
 };
 </script>
 
@@ -79,11 +87,12 @@ const handleRemoveTexture = (id: string, event: Event) => {
           <div
             v-for="item in textureItems"
             :key="item.id"
-            class="textures-panel__item group relative flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer"
+            class="textures-panel__item group relative flex items-center gap-4 p-3 rounded-lg border transition-all cursor-pointer"
             :class="[
               selectedTextureId === item.id
                 ? 'bg-primary/20 border-primary/60'
-                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20',
+              item.hidden && 'opacity-50'
             ]"
             @click="handleSelectTexture(item.id)"
           >
@@ -92,16 +101,29 @@ const handleRemoveTexture = (id: string, event: Event) => {
               :alt="item.name"
             />
             <div class="textures-panel__info flex-1 min-w-0">
-              <span class="text-sm text-white font-mono truncate block">{{ item.name }}</span>
+              <span class="text-xs text-white/90 font-mono truncate block">{{ item.name }}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="textures-panel__remove opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              @click="(e) => handleRemoveTexture(item.id, e)"
-            >
-              <span class="text-destructive">✕</span>
-            </Button>
+            <div class="textures-panel__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                :title="item.hidden ? 'Show texture' : 'Hide texture'"
+                @click="(e: Event) => handleToggleVisibility(item.id, e)"
+              >
+                <EyeOff v-if="item.hidden" class="h-4 w-4 text-white/60" />
+                <Eye v-else class="h-4 w-4 text-white/60" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                title="Delete texture"
+                @click="(e: Event) => handleRemoveTexture(item.id, e)"
+              >
+                <Trash2 class="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
           </div>
         </div>
 

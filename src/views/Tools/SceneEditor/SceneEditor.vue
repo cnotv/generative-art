@@ -26,6 +26,7 @@ interface TextureItem {
   name: string;
   filename: string;
   url: string;
+  hidden?: boolean;
 }
 
 const textureItems = ref<TextureItem[]>([]);
@@ -209,6 +210,15 @@ const selectTexture = (id: string) => {
   }
 };
 
+// Toggle texture visibility
+const toggleTextureVisibility = (id: string) => {
+  const item = textureItems.value.find((t) => t.id === id);
+  if (item) {
+    item.hidden = !item.hidden;
+    reinitScene();
+  }
+};
+
 // Remove texture item
 const removeTexture = (id: string) => {
   const item = textureItems.value.find((t) => t.id === id);
@@ -257,8 +267,13 @@ const createTextureInstances = (
 
   const allPositions = generateAreaPositions(areaConfig);
 
+  // Filter out hidden textures
+  const visibleTextures = textureItems.filter((item) => !item.hidden);
+
+  if (visibleTextures.length === 0) return [];
+
   // Initialize arrays for each texture variant
-  const variantData = textureItems.map((item) => {
+  const variantData = visibleTextures.map((item) => {
     const props = getTextureProperties(item.filename);
     return {
       texture: item.url,
@@ -422,6 +437,7 @@ defineExpose({
       :selected-texture-id="selectedTextureId"
       @select="selectTexture"
       @remove="removeTexture"
+      @toggle-visibility="toggleTextureVisibility"
       @file-change="handleFileUpload"
     />
 
