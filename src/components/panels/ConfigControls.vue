@@ -170,14 +170,22 @@ const getColorHex = (path: string): string => {
       >
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
-          <span class="text-muted-foreground">{{ getValue(control.path) ?? 0 }}</span>
+          <input
+            type="number"
+            :value="getValue(control.path) ?? 0"
+            :min="typeof control.schema.min === 'number' ? control.schema.min : 0"
+            :max="typeof control.schema.max === 'number' ? control.schema.max : 100"
+            :step="typeof control.schema.step === 'number' ? control.schema.step : 1"
+            @input="handleInputUpdate(control.path, ($event.target as HTMLInputElement).value)"
+            class="config-controls__inline-input"
+          />
         </label>
         <Slider
           :id="control.path"
-          :model-value="[getValue(control.path) ?? control.schema.min ?? 0]"
-          :min="control.schema.min ?? 0"
-          :max="control.schema.max ?? 100"
-          :step="control.schema.step ?? 1"
+          :model-value="[getValue(control.path) ?? (typeof control.schema.min === 'number' ? control.schema.min : 0)]"
+          :min="typeof control.schema.min === 'number' ? control.schema.min : 0"
+          :max="typeof control.schema.max === 'number' ? control.schema.max : 100"
+          :step="typeof control.schema.step === 'number' ? control.schema.step : 1"
           @update:model-value="handleSliderUpdate(control.path, $event)"
         />
       </template>
@@ -190,7 +198,7 @@ const getColorHex = (path: string): string => {
           :id="control.path"
           type="number"
           :model-value="getValue(control.path) ?? 0"
-          :step="control.schema.step"
+          :step="typeof control.schema.step === 'number' ? control.schema.step : undefined"
           class="h-7 text-xs"
           @update:model-value="handleInputUpdate(control.path, $event)"
         />
@@ -225,5 +233,41 @@ const getColorHex = (path: string): string => {
 .config-controls {
   overflow-x: hidden;
   padding-bottom: 1rem;
+}
+
+.config-controls__inline-input {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  font: inherit;
+  text-align: left;
+  width: 3.5em;
+  padding: 0 4px;
+  outline: none;
+  border-radius: 2px;
+  transition: background-color 0.15s;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.config-controls__inline-input:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.config-controls__inline-input:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Hide spinner buttons in number input */
+.config-controls__inline-input::-webkit-outer-spin-button,
+.config-controls__inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.config-controls__inline-input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 </style>

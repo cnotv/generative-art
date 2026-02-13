@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "radix-vue";
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 import { cn } from "@/lib/utilities";
 
 type SheetSide = "top" | "bottom" | "left" | "right";
@@ -38,41 +38,10 @@ const sideClasses: Record<SheetSide, string> = {
 const contentClasses = computed(() =>
   cn("panel-ui", "sheet-content", sideClasses[props.side])
 );
-
-// Track when dialog opened to ignore clicks that happen immediately after
-const openedAt = ref(0);
-
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) {
-      openedAt.value = Date.now();
-    }
-  }
-);
-
-const handlePointerDownOutside = (event: Event) => {
-  // Ignore clicks within 100ms of opening (same click that opened it)
-  const timeSinceOpen = Date.now() - openedAt.value;
-  if (timeSinceOpen < 100) {
-    event.preventDefault();
-    return;
-  }
-  emit("update:open", false);
-};
-
-const handleOverlayClick = () => {
-  // Ignore clicks within 100ms of opening (same click that opened it)
-  const timeSinceOpen = Date.now() - openedAt.value;
-  if (timeSinceOpen < 100) {
-    return;
-  }
-  emit("update:open", false);
-};
 </script>
 
 <template>
-  <DialogRoot :open="open" :modal="true" @update:open="emit('update:open', $event)">
+  <DialogRoot :open="open" @update:open="emit('update:open', $event)">
     <slot name="trigger">
       <DialogTrigger as-child>
         <slot name="trigger-content" />
@@ -80,11 +49,8 @@ const handleOverlayClick = () => {
     </slot>
 
     <DialogPortal>
-      <DialogOverlay class="sheet-overlay" @click="handleOverlayClick" />
-      <DialogContent
-        :class="contentClasses"
-        @pointer-down-outside="handlePointerDownOutside"
-      >
+      <DialogOverlay class="sheet-overlay" />
+      <DialogContent :class="contentClasses">
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />

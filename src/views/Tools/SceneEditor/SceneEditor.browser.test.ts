@@ -3,9 +3,9 @@ import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { page } from 'vitest/browser';
-import TextureEditor from './TextureEditor.vue';
+import SceneEditor from './SceneEditor.vue';
 
-describe('TextureEditor - Component Rendering', () => {
+describe('SceneEditor - Component Rendering', () => {
   it('should successfully mount and render 3D scene', async () => {
     // Create required dependencies
     const pinia = createPinia();
@@ -13,12 +13,12 @@ describe('TextureEditor - Component Rendering', () => {
       history: createMemoryHistory(),
       routes: [{
         path: '/',
-        name: 'TextureEditor',
-        component: TextureEditor
+        name: 'SceneEditor',
+        component: SceneEditor
       }]
     });
 
-    const wrapper = mount(TextureEditor, {
+    const wrapper = mount(SceneEditor, {
       global: {
         plugins: [pinia, router]
       },

@@ -1,72 +1,78 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-export type PanelType = 'sidebar' | 'config' | 'debug' | null;
+// Panel types including textures for SceneEditor sidebar
+export type PanelType = 'sidebar' | 'config' | 'debug' | 'textures' | 'recording';
 
-const activePanel = ref<PanelType>(null);
+const activePanels = ref<Set<PanelType>>(new Set());
 
 // Reset function for testing - resets module-level state
 export const resetPanelState = () => {
-  activePanel.value = null;
+  activePanels.value = new Set();
 };
 
 export const usePanels = () => {
   const router = useRouter();
   const route = useRoute();
 
-  const isSidebarOpen = computed(() => activePanel.value === 'sidebar');
-  const isConfigOpen = computed(() => activePanel.value === 'config');
-  const isDebugOpen = computed(() => activePanel.value === 'debug');
+  const isSidebarOpen = computed(() => activePanels.value.has('sidebar'));
+  const isConfigOpen = computed(() => activePanels.value.has('config'));
+  const isDebugOpen = computed(() => activePanels.value.has('debug'));
+  const isTexturesOpen = computed(() => activePanels.value.has('textures'));
 
   // Sync panel state with query parameters
-  const syncToQuery = (panel: PanelType) => {
+  const syncToQuery = () => {
     const { path, query } = route;
     const newQuery = {
       ...query,
-      config: panel === 'config' ? 'true' : 'false',
+      config: activePanels.value.has('config') ? 'true' : 'false',
     };
 
     router.push({ path, query: newQuery });
   };
 
   // Initialize from query on first call
-  if (route.query.config === 'true' && activePanel.value === null) {
-    activePanel.value = 'config';
+  if (route.query.config === 'true' && !activePanels.value.has('config')) {
+    activePanels.value.add('config');
   }
 
   // Watch for external query changes
   watch(
     () => route.query.config,
     (configQuery) => {
-      if (configQuery === 'true' && activePanel.value !== 'config') {
-        activePanel.value = 'config';
-      } else if (configQuery !== 'true' && activePanel.value === 'config') {
-        activePanel.value = null;
+      if (configQuery === 'true' && !activePanels.value.has('config')) {
+        activePanels.value.add('config');
+      } else if (configQuery !== 'true' && activePanels.value.has('config')) {
+        activePanels.value.delete('config');
       }
     }
   );
 
   const openPanel = (panel: PanelType) => {
-    activePanel.value = panel;
-    syncToQuery(panel);
+    activePanels.value.add(panel);
+    syncToQuery();
   };
 
-  const closePanel = () => {
-    activePanel.value = null;
-    syncToQuery(null);
+  const closePanel = (panel: PanelType) => {
+    activePanels.value.delete(panel);
+    syncToQuery();
   };
 
-  const togglePanel = (panel: Exclude<PanelType, null>) => {
-    const newPanel = activePanel.value === panel ? null : panel;
-    activePanel.value = newPanel;
-    syncToQuery(newPanel);
+  const togglePanel = (panel: PanelType) => {
+    if (activePanels.value.has(panel)) {
+      activePanels.value.delete(panel);
+    } else {
+      activePanels.value.add(panel);
+    }
+    syncToQuery();
   };
 
   return {
-    activePanel: computed(() => activePanel.value),
+    activePanels: computed(() => activePanels.value),
     isSidebarOpen,
     isConfigOpen,
     isDebugOpen,
+    isTexturesOpen,
     openPanel,
     closePanel,
     togglePanel,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
-import TextureEditor from './TextureEditor.vue';
+import SceneEditor from './SceneEditor.vue';
 import type { CoordinateTuple } from '@webgamekit/threejs';
 
 //Mock threejs functions
@@ -21,7 +21,7 @@ vi.mock('@webgamekit/threejs', async () => {
   };
 });
 
-describe('TextureEditor', () => {
+describe('SceneEditor', () => {
   let pinia: ReturnType<typeof createPinia>;
   let router: ReturnType<typeof createRouter>;
 
@@ -31,15 +31,15 @@ describe('TextureEditor', () => {
     router = createRouter({
       history: createMemoryHistory(),
       routes: [{
-        path: '/tools/texture-editor',
-        name: 'TextureEditor',
-        component: TextureEditor,
+        path: '/tools/scene-editor',
+        name: 'SceneEditor',
+        component: SceneEditor,
       }],
     });
   });
 
   const createWrapper = () => {
-    return mount(TextureEditor, {
+    return mount(SceneEditor, {
       global: {
         plugins: [pinia, router],
       },

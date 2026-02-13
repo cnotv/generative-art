@@ -1,4 +1,4 @@
-import type { CoordinateTuple, AreaConfig } from '@webgamekit/threejs';
+import type { CoordinateTuple } from '@webgamekit/threejs';
 
 export interface TextureProperties {
   baseSize: CoordinateTuple;
@@ -8,7 +8,7 @@ export interface TextureProperties {
   opacity?: number;
 }
 
-export interface TextureEditorConfig {
+export interface SceneEditorConfig {
   preset?: string;
   selectedTexture?: string;
   area: {
@@ -90,7 +90,7 @@ export const presets = {
 };
 
 // Default configuration
-export const defaultConfig: TextureEditorConfig = {
+export const defaultConfig: SceneEditorConfig = {
   area: {
     center: [0, 0, 0] as CoordinateTuple,
     size: [50, 0, 50] as CoordinateTuple,
@@ -102,7 +102,7 @@ export const defaultConfig: TextureEditorConfig = {
   },
   textureProperties: {},
   instances: {
-    count: 20,
+    count: 1,
     pattern: 'random',
     seed: 1000,
   },
