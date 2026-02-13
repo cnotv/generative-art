@@ -150,8 +150,8 @@ onMounted(() => {
     initScene();
   }
 
-  // Open config panel on page load
-  openPanel("config");
+  // Open textures panel on page load
+  openPanel("textures");
 });
 
 onBeforeUnmount(() => {
