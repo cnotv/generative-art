@@ -444,6 +444,11 @@ defineExpose({
   exportConfiguration,
   reactiveConfig,
   textureItems,
+  textureConfigRegistry,
+  selectedTextureId,
+  handleFileUpload,
+  selectTexture,
+  removeTexture,
 });
 </script>
 
