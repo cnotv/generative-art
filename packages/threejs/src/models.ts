@@ -18,6 +18,7 @@ export const applyMaterial = (
     material,
     color,
     opacity,
+    wireframe,
     reflectivity,
     roughness,
     metalness,
@@ -43,6 +44,8 @@ export const applyMaterial = (
       transparent: isTransparent,
       depthWrite: depthWrite ?? (isTransparent ? false : true),
       alphaTest: alphaTest ?? 0,
+      wireframe: wireframe ?? false,
+      color: meshColor,
     };
 
     if (oldMaterial?.map) {
@@ -52,7 +55,6 @@ export const applyMaterial = (
     if (material === 'MeshPhysicalMaterial') {
       const physicalMaterialProperties: any = {
         ...baseProperties,
-        color: meshColor,
       };
 
       if (reflectivity !== undefined) physicalMaterialProperties.reflectivity = reflectivity;
@@ -69,7 +71,6 @@ export const applyMaterial = (
     } else if (material === 'MeshStandardMaterial') {
       const standardMaterialProperties: any = {
         ...baseProperties,
-        color: meshColor,
       };
 
       if (roughness !== undefined) standardMaterialProperties.roughness = roughness;
@@ -79,19 +80,16 @@ export const applyMaterial = (
     } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
         ...baseProperties,
-        color: meshColor,
         flatShading: false,
       });
     } else if (material === 'MeshPhongMaterial') {
       mesh.material = new THREE.MeshPhongMaterial({
         ...baseProperties,
-        color: meshColor,
         shininess: 30,
       });
     } else if (material === 'MeshBasicMaterial') {
       mesh.material = new THREE.MeshBasicMaterial({
         ...baseProperties,
-        color: meshColor,
       });
     }
   }
@@ -551,6 +549,7 @@ export const getCube = (
     origin = { y: 0 },
     depthWrite = true,
     alphaTest = 0.5,
+    wireframe = false,
     renderOrder = 0,
     side,
     onSpawn,
@@ -577,6 +576,7 @@ export const getCube = (
     depthWrite,
     alphaTest,
     side,
+    wireframe,
   });
 
   if (texture) {

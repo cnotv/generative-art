@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Eye, EyeOff, Trash2 } from "lucide-vue-next";
+import { Eye, EyeOff, Trash2, Box } from "lucide-vue-next";
 import GenericPanel from "./GenericPanel.vue";
 import { Button } from "@/components/ui/button";
 import TexturePreview from "@/components/TexturePreview.vue";
@@ -11,6 +11,7 @@ interface TextureItem {
   filename: string;
   url: string;
   hidden?: boolean;
+  showWireframe?: boolean;
 }
 
 interface Props {
@@ -22,6 +23,7 @@ interface Emits {
   (e: "select", id: string): void;
   (e: "remove", id: string): void;
   (e: "toggle-visibility", id: string): void;
+  (e: "toggle-wireframe", id: string): void;
   (e: "fileChange", event: Event): void;
 }
 
@@ -50,6 +52,11 @@ const handleRemoveTexture = (id: string, event: Event) => {
 const handleToggleVisibility = (id: string, event: Event) => {
   event.stopPropagation();
   emit("toggle-visibility", id);
+};
+
+const handleToggleWireframe = (id: string, event: Event) => {
+  event.stopPropagation();
+  emit("toggle-wireframe", id);
 };
 </script>
 
@@ -100,14 +107,25 @@ const handleToggleVisibility = (id: string, event: Event) => {
             </div>
             <div class="textures-panel__actions flex gap-1 shrink-0">
               <Button
-                variant="ghost"
+                :variant="item.hidden ? 'default' : 'ghost'"
                 size="icon"
                 class="h-8 w-8"
+                :class="{ 'bg-primary/20 hover:bg-primary/30': item.hidden }"
                 :title="item.hidden ? 'Show texture' : 'Hide texture'"
                 @click="(e: Event) => handleToggleVisibility(item.id, e)"
               >
-                <EyeOff v-if="item.hidden" class="h-4 w-4 text-white/60" />
-                <Eye v-else class="h-4 w-4 text-white/60" />
+                <EyeOff v-if="item.hidden" class="h-4 w-4" />
+                <Eye v-else class="h-4 w-4" />
+              </Button>
+              <Button
+                :variant="item.showWireframe ? 'default' : 'ghost'"
+                size="icon"
+                class="h-8 w-8"
+                :class="{ 'bg-primary/20 hover:bg-primary/30': item.showWireframe }"
+                :title="item.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
+                @click="(e: Event) => handleToggleWireframe(item.id, e)"
+              >
+                <Box class="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"

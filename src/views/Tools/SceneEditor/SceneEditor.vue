@@ -27,6 +27,7 @@ interface TextureItem {
   filename: string;
   url: string;
   hidden?: boolean;
+  showWireframe?: boolean;
 }
 
 const textureItems = ref<TextureItem[]>([]);
@@ -44,75 +45,73 @@ const textureConfigRegistry = ref<
   >
 >({});
 
-
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<SceneEditorConfig>(defaultConfig);
 
 // Watch selected texture and register/update its config panel
-watch(
-  selectedTextureId,
-  (textureId) => {
-    if (textureId) {
-      const texture = textureItems.value.find((item) => item.id === textureId);
-      if (texture) {
-        // Initialize config for this texture if it doesn't exist
-        if (!textureConfigRegistry.value[textureId]) {
-          textureConfigRegistry.value[textureId] = {
-            baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
-            sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
-            rotationVariation: [
-              ...defaultConfig.textures.rotationVariation,
-            ] as CoordinateTuple,
-          };
-        }
-
-        // Create a reactive config for this specific texture
-        const textureReactiveConfig = createReactiveConfig({
-          textures: { ...textureConfigRegistry.value[textureId] },
-        });
-
-        // Register this texture's config with a unique key (filename)
-        const configKey = `${route.name as string}:${texture.filename}`;
-        registerViewConfig(
-          configKey,
-          textureReactiveConfig,
-          {
-            textures: configControls.textures,
-          },
-          undefined,
-          undefined,
-          () => {
-            // When texture config changes, update the registry and reinit scene
-            textureConfigRegistry.value[textureId] = { ...textureReactiveConfig.value.textures };
-
-            // Also update the textureProperties system for backward compatibility
-            if (!reactiveConfig.value.textureProperties[texture.filename]) {
-              reactiveConfig.value.textureProperties[texture.filename] = {};
-            }
-            reactiveConfig.value.textureProperties[texture.filename].baseSize =
-              textureReactiveConfig.value.textures.baseSize;
-            reactiveConfig.value.textureProperties[texture.filename].sizeVariation =
-              textureReactiveConfig.value.textures.sizeVariation;
-            reactiveConfig.value.textureProperties[texture.filename].rotationVariation =
-              textureReactiveConfig.value.textures.rotationVariation;
-
-            reinitScene();
-          }
-        );
+watch(selectedTextureId, (textureId) => {
+  if (textureId) {
+    const texture = textureItems.value.find((item) => item.id === textureId);
+    if (texture) {
+      // Initialize config for this texture if it doesn't exist
+      if (!textureConfigRegistry.value[textureId]) {
+        textureConfigRegistry.value[textureId] = {
+          baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
+          sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
+          rotationVariation: [
+            ...defaultConfig.textures.rotationVariation,
+          ] as CoordinateTuple,
+        };
       }
-    } else {
-      // When no texture is selected, show the main scene config
+
+      // Create a reactive config for this specific texture
+      const textureReactiveConfig = createReactiveConfig({
+        textures: { ...textureConfigRegistry.value[textureId] },
+      });
+
+      // Register this texture's config with a unique key (filename)
+      const configKey = `${route.name as string}:${texture.filename}`;
       registerViewConfig(
-        route.name as string,
-        reactiveConfig,
-        configControls,
-        sceneConfig,
-        sceneControls,
-        reinitScene
+        configKey,
+        textureReactiveConfig,
+        {
+          textures: configControls.textures,
+        },
+        undefined,
+        undefined,
+        () => {
+          // When texture config changes, update the registry and reinit scene
+          textureConfigRegistry.value[textureId] = {
+            ...textureReactiveConfig.value.textures,
+          };
+
+          // Also update the textureProperties system for backward compatibility
+          if (!reactiveConfig.value.textureProperties[texture.filename]) {
+            reactiveConfig.value.textureProperties[texture.filename] = {};
+          }
+          reactiveConfig.value.textureProperties[texture.filename].baseSize =
+            textureReactiveConfig.value.textures.baseSize;
+          reactiveConfig.value.textureProperties[texture.filename].sizeVariation =
+            textureReactiveConfig.value.textures.sizeVariation;
+          reactiveConfig.value.textureProperties[texture.filename].rotationVariation =
+            textureReactiveConfig.value.textures.rotationVariation;
+
+          reinitScene();
+        }
       );
     }
+  } else {
+    // When no texture is selected, show the main scene config
+    registerViewConfig(
+      route.name as string,
+      reactiveConfig,
+      configControls,
+      sceneConfig,
+      sceneControls,
+      reinitScene
+    );
   }
-);
+});
 
 // Watch for preset changes and apply them
 watch(
@@ -339,6 +338,15 @@ const createTextureInstances = (
   return variantData;
 };
 
+// Toggle texture wireframe
+const toggleTextureWireframe = (id: string) => {
+  const texture = textureItems.value.find((item) => item.id === id);
+  if (texture) {
+    texture.showWireframe = !texture.showWireframe;
+    reinitScene();
+  }
+};
+
 // Reinitialize scene
 const reinitScene = () => {
   if (animationId) {
@@ -374,6 +382,25 @@ const initScene = async () => {
       },
     },
     defineSetup: () => {
+      // Create wireframe boxes for textures with showWireframe enabled
+      textureItems.value
+        .filter((item) => item.showWireframe)
+        .forEach((item) => {
+          const areaSize = reactiveConfig.value.area.size;
+          const areaCenter = reactiveConfig.value.area.center;
+
+          getCube(scene, world, {
+            size: areaSize,
+            position: areaCenter,
+            color: 0x00ff00,
+            material: "MeshBasicMaterial",
+            wireframe: true,
+            type: "fixed" as const,
+            castShadow: false,
+            receiveShadow: false,
+            physics: false,
+          });
+        });
       // Create textured billboards if textures are added
       if (textureItems.value.length > 0) {
         const variantData = createTextureInstances(
@@ -397,11 +424,9 @@ const initScene = async () => {
               material: "MeshBasicMaterial",
               opacity: variant.properties.opacity || 1,
               color: 0xffffff,
-              transparent: true,
-              depthWrite: false,
-              alphaTest: 0.5,
               type: "fixed" as const,
               castShadow: false,
+              physics: false,
               receiveShadow: false,
             };
 
@@ -463,6 +488,7 @@ defineExpose({
       @select="selectTexture"
       @remove="removeTexture"
       @toggle-visibility="toggleTextureVisibility"
+      @toggle-wireframe="toggleTextureWireframe"
       @file-change="handleFileUpload"
     />
 
@@ -482,5 +508,4 @@ canvas {
   width: 100%;
   height: 100vh;
 }
-
 </style>

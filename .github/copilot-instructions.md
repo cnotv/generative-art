@@ -158,11 +158,15 @@ Use format: `<type>/<issue-number>-<description>`
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
 
+### Git Hooks
+- **Never use `--no-verify`**: NEVER use `--no-verify` flag on git commit or git push. If hooks fail, fix the underlying issue instead of bypassing them
+
 ### Linting
 - **Run lint before commit**: Husky + lint-staged enforces this automatically
 - **ESLint config**: Follow project's ESLint rules (Vue + TypeScript + Prettier)
 - **Fix on save**: Run `pnpm lint` to auto-fix issues
 - **No warnings**: Address all lint warnings, don't suppress without reason
+- **Never disable ESLint rules**: NEVER use `eslint-disable`, `eslint-disable-next-line`, or `eslint-disable-line` comments. Fix the code to comply with the rules instead
 
 ### Documentation
 - **Use Docusaurus**: All project documentation lives in `documentation/` folder
