@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Eye, EyeOff, Trash2 } from 'lucide-vue-next';
-import GenericPanel from './GenericPanel.vue';
-import { Button } from '@/components/ui/button';
-import TexturePreview from '@/components/TexturePreview.vue';
+import { ref } from "vue";
+import { Eye, EyeOff, Trash2 } from "lucide-vue-next";
+import GenericPanel from "./GenericPanel.vue";
+import { Button } from "@/components/ui/button";
+import TexturePreview from "@/components/TexturePreview.vue";
 
 interface TextureItem {
   id: string;
@@ -19,10 +19,10 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'select', id: string): void;
-  (e: 'remove', id: string): void;
-  (e: 'toggle-visibility', id: string): void;
-  (e: 'fileChange', event: Event): void;
+  (e: "select", id: string): void;
+  (e: "remove", id: string): void;
+  (e: "toggle-visibility", id: string): void;
+  (e: "fileChange", event: Event): void;
 }
 
 defineProps<Props>();
@@ -35,29 +35,26 @@ const handleAddClick = () => {
 };
 
 const handleFileChange = (event: Event) => {
-  emit('fileChange', event);
+  emit("fileChange", event);
 };
 
 const handleSelectTexture = (id: string) => {
-  emit('select', id);
+  emit("select", id);
 };
 
 const handleRemoveTexture = (id: string, event: Event) => {
   event.stopPropagation();
-  emit('remove', id);
+  emit("remove", id);
 };
 
 const handleToggleVisibility = (id: string, event: Event) => {
   event.stopPropagation();
-  emit('toggle-visibility', id);
+  emit("toggle-visibility", id);
 };
 </script>
 
 <template>
-  <GenericPanel
-    panel-type="textures"
-    side="left"
-  >
+  <GenericPanel panel-type="textures" side="left">
     <div class="textures-panel flex flex-col h-full">
       <div class="textures-panel__header p-4 border-b border-white/10">
         <h2 class="text-lg font-semibold text-white">Textures</h2>
@@ -65,11 +62,7 @@ const handleToggleVisibility = (id: string, event: Event) => {
 
       <div class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4">
         <!-- Add texture button -->
-        <Button
-          variant="default"
-          class="w-full"
-          @click="handleAddClick"
-        >
+        <Button variant="default" class="w-full" @click="handleAddClick">
           ➕ Add Texture
         </Button>
 
@@ -83,7 +76,10 @@ const handleToggleVisibility = (id: string, event: Event) => {
         />
 
         <!-- Texture list -->
-        <div v-if="textureItems.length > 0" class="textures-panel__list flex flex-col gap-2">
+        <div
+          v-if="textureItems.length > 0"
+          class="textures-panel__list flex flex-col gap-2"
+        >
           <div
             v-for="item in textureItems"
             :key="item.id"
@@ -92,16 +88,15 @@ const handleToggleVisibility = (id: string, event: Event) => {
               selectedTextureId === item.id
                 ? 'bg-primary/20 border-primary/60'
                 : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20',
-              item.hidden && 'opacity-50'
+              item.hidden && 'opacity-50',
             ]"
             @click="handleSelectTexture(item.id)"
           >
-            <TexturePreview
-              :src="item.url"
-              :alt="item.name"
-            />
+            <TexturePreview :src="item.url" :alt="item.name" />
             <div class="textures-panel__info flex-1 min-w-0">
-              <span class="text-xs text-white/90 font-mono truncate block">{{ item.name }}</span>
+              <span class="text-xs text-white/90 font-mono truncate block">{{
+                item.name
+              }}</span>
             </div>
             <div class="textures-panel__actions flex gap-1 shrink-0">
               <Button
@@ -128,7 +123,10 @@ const handleToggleVisibility = (id: string, event: Event) => {
         </div>
 
         <!-- Empty state -->
-        <div v-else class="textures-panel__empty flex flex-col items-center justify-center gap-2 py-12 text-center">
+        <div
+          v-else
+          class="textures-panel__empty flex flex-col items-center justify-center gap-2 py-12 text-center"
+        >
           <p class="text-sm text-white/50">No textures added yet</p>
           <p class="text-xs text-white/30">Click "Add Texture" to get started</p>
         </div>

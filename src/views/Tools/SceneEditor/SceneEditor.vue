@@ -310,7 +310,7 @@ const createTextureInstances = (
 
   // Randomly assign each position to a texture variant
   allPositions.forEach((position: CoordinateTuple) => {
-    const randomIndex = Math.floor(Math.random() * textureItems.length);
+    const randomIndex = Math.floor(Math.random() * visibleTextures.length);
     const variant = variantData[randomIndex];
     variant.positions.push(position);
 
