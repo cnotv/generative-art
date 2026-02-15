@@ -277,6 +277,9 @@ const handleFileUpload = (event: Event) => {
     openPanel("config");
 
     reinitScene();
+
+    // Reset file input to allow re-uploading the same file
+    target.value = '';
   }
 };
 
