@@ -38,15 +38,48 @@ const selectedTextureId = ref<string | null>(null);
 interface SceneElement {
   name: string;
   type: string;
+  hidden?: boolean;
 }
 const sceneElements = ref<SceneElement[]>([]);
+const hiddenElements = ref<Set<string>>(new Set());
 
 // Update scene elements list for debugging
 const updateSceneElements = (scene: THREE.Scene) => {
   sceneElements.value = scene.children.map((child: any) => ({
     name: child.name || '(unnamed)',
     type: child.type,
+    hidden: hiddenElements.value.has(child.name),
   }));
+};
+
+// Toggle element visibility in scene
+const toggleElementVisibility = (name: string) => {
+  if (!currentScene) return;
+
+  const element = currentScene.children.find((child: any) => child.name === name);
+  if (element) {
+    element.visible = !element.visible;
+
+    if (element.visible) {
+      hiddenElements.value.delete(name);
+    } else {
+      hiddenElements.value.add(name);
+    }
+
+    updateSceneElements(currentScene);
+  }
+};
+
+// Remove element from scene
+const removeSceneElement = (name: string) => {
+  if (!currentScene) return;
+
+  const element = currentScene.children.find((child: any) => child.name === name);
+  if (element) {
+    currentScene.remove(element);
+    hiddenElements.value.delete(name);
+    updateSceneElements(currentScene);
+  }
 };
 
 // Texture config registry - maps texture IDs to their individual configs
@@ -621,7 +654,11 @@ defineExpose({
 
     <ConfigPanel />
 
-    <DebugPanel :scene-elements="sceneElements" />
+    <DebugPanel
+      :scene-elements="sceneElements"
+      @toggle-visibility="toggleElementVisibility"
+      @remove="removeSceneElement"
+    />
   </div>
 </template>
 

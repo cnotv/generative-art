@@ -2,8 +2,9 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Sheet } from '@/components/ui/sheet';
 import { usePanels } from '@/composables/usePanels';
-import { Box, Lightbulb, Sun, Mountain, Image } from 'lucide-vue-next';
+import { Box, Lightbulb, Sun, Mountain, Image, Eye, EyeOff, Trash2 } from 'lucide-vue-next';
 import IconPreview from '@/components/IconPreview.vue';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionItem,
@@ -14,15 +15,23 @@ import {
 interface SceneElement {
   name: string;
   type: string;
+  hidden?: boolean;
 }
 
 interface Props {
   sceneElements?: SceneElement[];
 }
 
+interface Emits {
+  (e: 'toggleVisibility', name: string): void;
+  (e: 'remove', name: string): void;
+}
+
 const props = withDefaults(defineProps<Props>(), {
   sceneElements: () => [],
 });
+
+const emit = defineEmits<Emits>();
 
 const { isDebugOpen, closePanel } = usePanels();
 
@@ -84,6 +93,16 @@ const getElementColor = (element: SceneElement) => {
   return 'text-gray-400';
 };
 
+const handleToggleVisibility = (name: string, event: Event) => {
+  event.stopPropagation();
+  emit('toggleVisibility', name);
+};
+
+const handleRemove = (name: string, event: Event) => {
+  event.stopPropagation();
+  emit('remove', name);
+};
+
 onMounted(() => {
   updateStats();
 });
@@ -139,7 +158,8 @@ onUnmounted(() => {
                   <div
                     v-for="(element, index) in sceneElements"
                     :key="index"
-                    class="element-item flex items-center gap-4 p-3 rounded-lg border border-white/10 bg-white/5 transition-colors"
+                    class="element-item group flex items-center gap-4 p-3 rounded-lg border border-white/10 bg-white/5 transition-colors"
+                    :class="{ 'opacity-50': element.hidden }"
                   >
                     <IconPreview
                       :icon="getElementIcon(element)"
@@ -152,6 +172,28 @@ onUnmounted(() => {
                       <span class="text-[10px] text-muted-foreground block mt-0.5">
                         {{ element.type }}
                       </span>
+                    </div>
+                    <div class="element-actions flex gap-1 shrink-0">
+                      <Button
+                        :variant="element.hidden ? 'default' : 'ghost'"
+                        size="icon"
+                        class="h-8 w-8"
+                        :class="{ 'bg-primary/20 hover:bg-primary/30': element.hidden }"
+                        :title="element.hidden ? 'Show element' : 'Hide element'"
+                        @click="(e: Event) => handleToggleVisibility(element.name, e)"
+                      >
+                        <EyeOff v-if="element.hidden" class="h-4 w-4" />
+                        <Eye v-else class="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8"
+                        title="Remove element"
+                        @click="(e: Event) => handleRemove(element.name, e)"
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
