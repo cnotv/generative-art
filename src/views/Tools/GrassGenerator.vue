@@ -17,11 +17,13 @@ import {
   unregisterViewConfig,
   createReactiveConfig,
 } from "@/composables/useViewConfig";
+import { useViewPanels } from "@/composables/useViewPanels";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
+const { setViewPanels, clearViewPanels } = useViewPanels();
 
 // Create reactive config for the panel
 const reactiveConfig = createReactiveConfig({
@@ -101,6 +103,11 @@ const reinitScene = () => {
 };
 
 onMounted(() => {
+  // Set view-specific panels for GlobalNavigation
+  setViewPanels({
+    showConfig: true,
+  });
+
   // Register config with the config panel (onChange callback is auto-debounced)
   registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
   window.addEventListener("resize", reinitScene);
@@ -112,6 +119,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  // Clear view-specific panels
+  clearViewPanels();
+
   unregisterViewConfig(route.name as string);
   window.removeEventListener("resize", reinitScene);
   if (animationId.value) {

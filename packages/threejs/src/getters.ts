@@ -66,6 +66,7 @@ export const getGround = (
   });
 
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = 'ground';
   mesh.receiveShadow = true;
   mesh.position.set(...position);
   mesh.userData.physics = { mass: 0 };
@@ -188,12 +189,14 @@ export const getLights = (scene: THREE.Scene, config: any = {}) => {
   }
   
   const ambientLight = new THREE.AmbientLight(ambient.color, ambient.intensity);
+  ambientLight.name = 'ambient-light';
   scene.add(ambientLight);
-  
+
   const directionalLight = new THREE.DirectionalLight(
     directional.color,
     directional.intensity
   );
+  directionalLight.name = 'directional-light';
   if (directional.position) directionalLight.position.set(...(directional.position as CoordinateTuple));
   directionalLight.castShadow = directional.castShadow ?? true;
   
@@ -343,6 +346,7 @@ export const getSky = (
     ...texture ? { map: loader.load(new URL(texture!, import.meta.url) as unknown as string)} : {},
   });
   const model = new THREE.Mesh(skyGeometry, skyMaterial);
+  model.name = 'sky';
   scene.add(model);
   return { model };
 };

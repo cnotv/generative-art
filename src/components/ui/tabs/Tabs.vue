@@ -5,8 +5,11 @@ const props = withDefaults(
   defineProps<{
     defaultValue?: string;
     modelValue?: string;
+    activationMode?: 'automatic' | 'manual';
   }>(),
-  {}
+  {
+    activationMode: 'automatic',
+  }
 );
 
 const emit = defineEmits<{
@@ -18,6 +21,7 @@ const emit = defineEmits<{
   <TabsRoot
     :default-value="defaultValue"
     :model-value="modelValue"
+    :activation-mode="activationMode"
     class="tabs"
     @update:model-value="emit('update:modelValue', $event as string)"
   >

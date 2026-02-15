@@ -24,17 +24,15 @@ vi.mock('vue-router', () => ({
 }));
 
 // Import after mocking
-import { usePanels } from './usePanels';
+import { usePanels, resetPanelState } from './usePanels';
 
 describe('usePanels', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQuery.value = {};
     mockPath.value = '/test';
-    // Reset panel state by closing any open panel
-    const { closePanel } = usePanels();
-    closePanel();
-    vi.clearAllMocks(); // Clear the mock calls from reset
+    // Reset panel state
+    resetPanelState();
   });
 
   describe('togglePanel', () => {
@@ -81,7 +79,7 @@ describe('usePanels', () => {
       await nextTick();
 
       // Then close
-      closePanel();
+      closePanel('config');
       await nextTick();
 
       expect(isConfigOpen.value).toBe(false);
@@ -95,7 +93,7 @@ describe('usePanels', () => {
       mockQuery.value = { config: 'true', other: 'value' };
       const { closePanel } = usePanels();
 
-      closePanel();
+      closePanel('config');
       await nextTick();
 
       expect(mockPush).toHaveBeenCalledWith({
@@ -164,7 +162,7 @@ describe('usePanels', () => {
       vi.clearAllMocks();
 
       // Simulate overlay click by calling closePanel (what handleOpenChange does)
-      closePanel();
+      closePanel('config');
       await nextTick();
 
       // Panel should be closed
@@ -185,7 +183,7 @@ describe('usePanels', () => {
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
 
-      closePanel();
+      closePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
 
@@ -193,12 +191,60 @@ describe('usePanels', () => {
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
 
-      closePanel();
+      closePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
 
       // Should have been called 4 times (open, close, open, close)
       expect(mockPush).toHaveBeenCalledTimes(4);
+    });
+  });
+
+  describe('multiple panels', () => {
+    it('should allow multiple panels to be open simultaneously', async () => {
+      const { togglePanel, isConfigOpen, isSidebarOpen, isTexturesOpen } = usePanels();
+
+      // Open config panel
+      togglePanel('config');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(true);
+
+      // Open sidebar without closing config
+      togglePanel('sidebar');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(true);
+      expect(isSidebarOpen.value).toBe(true);
+
+      // Open textures without closing others
+      togglePanel('textures');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(true);
+      expect(isSidebarOpen.value).toBe(true);
+      expect(isTexturesOpen.value).toBe(true);
+
+      // Close only config
+      togglePanel('config');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(false);
+      expect(isSidebarOpen.value).toBe(true);
+      expect(isTexturesOpen.value).toBe(true);
+    });
+
+    it('should close specific panel with closePanel', async () => {
+      const { openPanel, closePanel, isConfigOpen, isSidebarOpen } = usePanels();
+
+      // Open both panels
+      openPanel('config');
+      openPanel('sidebar');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(true);
+      expect(isSidebarOpen.value).toBe(true);
+
+      // Close only config
+      closePanel('config');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(false);
+      expect(isSidebarOpen.value).toBe(true);
     });
   });
 });

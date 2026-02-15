@@ -1,11 +1,39 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Sheet } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { usePanels } from '@/composables/usePanels';
-import { Bug } from 'lucide-vue-next';
+import { Box, Lightbulb, Sun, Mountain, Image, Eye, EyeOff, Trash2 } from 'lucide-vue-next';
+import IconPreview from '@/components/IconPreview.vue';
+import { Button } from '@/components/ui/button';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
 
-const { isDebugOpen, togglePanel, closePanel } = usePanels();
+interface SceneElement {
+  name: string;
+  type: string;
+  hidden?: boolean;
+}
+
+interface Props {
+  sceneElements?: SceneElement[];
+}
+
+interface Emits {
+  (e: 'toggleVisibility', name: string): void;
+  (e: 'remove', name: string): void;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  sceneElements: () => [],
+});
+
+const emit = defineEmits<Emits>();
+
+const { isDebugOpen, closePanel } = usePanels();
 
 const fps = ref(0);
 const memory = ref(0);
@@ -33,14 +61,46 @@ const updateStats = () => {
   animationFrameId = requestAnimationFrame(updateStats);
 };
 
-const handleToggle = () => {
-  togglePanel('debug');
-};
-
 const handleOpenChange = (open: boolean) => {
   if (!open) {
-    closePanel();
+    closePanel('debug');
   }
+};
+
+// Get icon component based on element type or name
+const getElementIcon = (element: SceneElement) => {
+  const name = element.name.toLowerCase();
+  const type = element.type.toLowerCase();
+
+  if (name.includes('light')) return Lightbulb;
+  if (name.includes('sky')) return Sun;
+  if (name.includes('ground')) return Mountain;
+  if (type.includes('mesh')) return Box;
+  if (name.includes('wireframe')) return Box;
+
+  return Image;
+};
+
+// Get color class based on element type
+const getElementColor = (element: SceneElement) => {
+  const name = element.name.toLowerCase();
+
+  if (name.includes('light')) return 'text-yellow-400';
+  if (name.includes('sky')) return 'text-blue-400';
+  if (name.includes('ground')) return 'text-green-600';
+  if (name.includes('wireframe')) return 'text-green-400';
+
+  return 'text-gray-400';
+};
+
+const handleToggleVisibility = (name: string, event: Event) => {
+  event.stopPropagation();
+  emit('toggleVisibility', name);
+};
+
+const handleRemove = (name: string, event: Event) => {
+  event.stopPropagation();
+  emit('remove', name);
 };
 
 onMounted(() => {
@@ -55,47 +115,100 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="debug-panel">
-    <Button
-      variant="ghost"
-      size="icon"
-      class="debug-panel__trigger fixed right-4 top-16 z-40 opacity-0 hover:opacity-100 hover:bg-black/70 transition-opacity"
-      @click="handleToggle"
-    >
-      <Bug class="h-5 w-5 text-white" />
-    </Button>
-
     <Sheet :open="isDebugOpen" side="right" @update:open="handleOpenChange">
-      <div class="debug-panel__content flex flex-col gap-6">
-        <h2 class="text-lg font-semibold">Debug Stats</h2>
-
-        <div class="debug-panel__stats grid gap-4">
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">FPS</span>
-            <span class="font-mono text-sm">{{ fps }}</span>
-          </div>
-
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">Memory (MB)</span>
-            <span class="font-mono text-sm">{{ memory }}</span>
-          </div>
-
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">Draw Calls</span>
-            <span class="font-mono text-sm">{{ drawCalls }}</span>
-          </div>
+      <div class="debug-panel__content flex flex-col gap-4 h-full">
+        <div class="debug-panel__header p-4 border-b border-border">
+          <h2 class="text-lg font-semibold">Debug</h2>
         </div>
 
-        <div class="debug-panel__additional mt-4">
-          <slot />
+        <div class="flex-1 overflow-y-auto px-4">
+          <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
+            <!-- Stats Section -->
+            <AccordionItem value="stats">
+              <AccordionTrigger class="text-sm font-medium py-2">
+                Performance Stats
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="debug-panel__stats grid gap-3 pb-2">
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">FPS</span>
+                    <span class="font-mono text-xs">{{ fps }}</span>
+                  </div>
+
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">Memory (MB)</span>
+                    <span class="font-mono text-xs">{{ memory }}</span>
+                  </div>
+
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">Draw Calls</span>
+                    <span class="font-mono text-xs">{{ drawCalls }}</span>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <!-- Scene Elements Section -->
+            <AccordionItem value="scene" v-if="sceneElements && sceneElements.length > 0">
+              <AccordionTrigger class="text-sm font-medium py-2">
+                Scene Elements ({{ sceneElements.length }})
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="scene-elements flex flex-col gap-2 pb-2">
+                  <div
+                    v-for="(element, index) in sceneElements"
+                    :key="index"
+                    class="element-item group flex items-center gap-4 p-3 rounded-lg border border-border bg-muted/30 transition-colors"
+                    :class="{ 'opacity-50': element.hidden }"
+                  >
+                    <IconPreview
+                      :icon="getElementIcon(element)"
+                      :color="getElementColor(element)"
+                    />
+                    <div class="element-info flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span class="text-[11px] font-medium font-mono truncate block">
+                        {{ element.name }}
+                      </span>
+                      <span class="text-[9px] text-muted-foreground truncate block">
+                        {{ element.type }}
+                      </span>
+                    </div>
+                    <div class="element-actions flex gap-1 shrink-0">
+                      <Button
+                        :variant="element.hidden ? 'default' : 'ghost'"
+                        size="icon"
+                        class="h-8 w-8"
+                        :class="{ 'bg-primary/20 hover:bg-primary/30': element.hidden }"
+                        :title="element.hidden ? 'Show element' : 'Hide element'"
+                        @click="(e: Event) => handleToggleVisibility(element.name, e)"
+                      >
+                        <EyeOff v-if="element.hidden" class="h-4 w-4" />
+                        <Eye v-else class="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8"
+                        title="Remove element"
+                        @click="(e: Event) => handleRemove(element.name, e)"
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div class="debug-panel__additional mt-4">
+            <slot />
+          </div>
         </div>
       </div>
     </Sheet>
-  </div>
 </template>
 
 <style scoped>
-.debug-panel__content {
-  height: 100%;
-}
+/* No additional styles needed - using TexturesPanel structure */
 </style>

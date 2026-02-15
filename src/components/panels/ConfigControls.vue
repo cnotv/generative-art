@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { CoordinateInput } from "@/components/ui/coordinate-input";
 import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
 import {
   Accordion,
@@ -23,7 +24,7 @@ const props = defineProps<{
 const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options"];
+  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options", "component"];
 
   // Empty object is a control schema (will be rendered as input)
   if (keys.length === 0) return true;
@@ -34,7 +35,9 @@ const isControlSchema = (obj: any): obj is ControlSchema => {
   if (!allKeysAreControlKeys) return false;
 
   // If all keys are control keys, check if any value is an object (meaning it's nested config)
+  // BUT allow min/max/step to be objects (for per-coordinate values in CoordinateInput)
   const hasNestedObjects = keys.some((k) => {
+    if (k === 'min' || k === 'max' || k === 'step') return false; // Allow these to be objects
     const value = obj[k];
     return typeof value === "object" && value !== null && !Array.isArray(value);
   });
@@ -115,7 +118,18 @@ const getColorHex = (path: string): string => {
       :key="control.path"
       class="config-controls__item flex flex-col gap-1"
     >
-      <template v-if="control.schema.options !== undefined">
+      <template v-if="control.schema.component === 'CoordinateInput'">
+        <CoordinateInput
+          :model-value="getValue(control.path)"
+          :label="control.schema.label ?? formatLabel(control.key)"
+          :min="control.schema.min"
+          :max="control.schema.max"
+          :step="control.schema.step"
+          @update:model-value="onUpdate(control.path, $event)"
+        />
+      </template>
+
+      <template v-else-if="control.schema.options !== undefined">
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>
@@ -139,15 +153,15 @@ const getColorHex = (path: string): string => {
       </template>
 
       <template v-else-if="control.schema.boolean !== undefined">
-        <div class="flex items-center gap-2">
-          <Checkbox
+        <div class="flex items-center justify-between">
+          <label :for="control.path" class="text-xs font-medium">
+            {{ control.schema.label ?? formatLabel(control.key) }}
+          </label>
+          <Switch
             :id="control.path"
             :model-value="getValue(control.path) ?? control.schema.boolean"
             @update:model-value="handleCheckboxUpdate(control.path, $event)"
           />
-          <label :for="control.path" class="text-xs cursor-pointer">
-            {{ control.schema.label ?? formatLabel(control.key) }}
-          </label>
         </div>
       </template>
 
@@ -156,14 +170,22 @@ const getColorHex = (path: string): string => {
       >
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
-          <span class="text-muted-foreground">{{ getValue(control.path) ?? 0 }}</span>
+          <input
+            type="number"
+            :value="getValue(control.path) ?? 0"
+            :min="typeof control.schema.min === 'number' ? control.schema.min : 0"
+            :max="typeof control.schema.max === 'number' ? control.schema.max : 100"
+            :step="typeof control.schema.step === 'number' ? control.schema.step : 1"
+            @input="handleInputUpdate(control.path, ($event.target as HTMLInputElement).value)"
+            class="config-controls__inline-input"
+          />
         </label>
         <Slider
           :id="control.path"
-          :model-value="[getValue(control.path) ?? control.schema.min ?? 0]"
-          :min="control.schema.min ?? 0"
-          :max="control.schema.max ?? 100"
-          :step="control.schema.step ?? 1"
+          :model-value="[getValue(control.path) ?? (typeof control.schema.min === 'number' ? control.schema.min : 0)]"
+          :min="typeof control.schema.min === 'number' ? control.schema.min : 0"
+          :max="typeof control.schema.max === 'number' ? control.schema.max : 100"
+          :step="typeof control.schema.step === 'number' ? control.schema.step : 1"
           @update:model-value="handleSliderUpdate(control.path, $event)"
         />
       </template>
@@ -176,7 +198,7 @@ const getColorHex = (path: string): string => {
           :id="control.path"
           type="number"
           :model-value="getValue(control.path) ?? 0"
-          :step="control.schema.step"
+          :step="typeof control.schema.step === 'number' ? control.schema.step : undefined"
           class="h-7 text-xs"
           @update:model-value="handleInputUpdate(control.path, $event)"
         />
@@ -211,5 +233,41 @@ const getColorHex = (path: string): string => {
 .config-controls {
   overflow-x: hidden;
   padding-bottom: 1rem;
+}
+
+.config-controls__inline-input {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  font: inherit;
+  text-align: left;
+  width: 3.5em;
+  padding: 0 4px;
+  outline: none;
+  border-radius: 2px;
+  transition: background-color 0.15s;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.config-controls__inline-input:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.config-controls__inline-input:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Hide spinner buttons in number input */
+.config-controls__inline-input::-webkit-outer-spin-button,
+.config-controls__inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.config-controls__inline-input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 </style>

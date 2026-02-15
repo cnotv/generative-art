@@ -3,7 +3,8 @@ import { onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ToolsPanel } from "@/components/panels";
+import { SidebarNav, ToolsPanel, DebugPanel, RecordingPanel } from "@/components/panels";
+import GlobalNavigation from "@/components/GlobalNavigation.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -84,7 +85,10 @@ const toggleQuery = (param: string | string[]) => {
 
 <template>
   <RouterView />
+  <GlobalNavigation />
   <SidebarNav />
+  <DebugPanel />
+  <RecordingPanel />
   <ToolsPanel />
 </template>
 

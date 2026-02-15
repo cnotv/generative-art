@@ -3,13 +3,14 @@ import { useRoute } from 'vue-router';
 import { debounce } from '@/utils/lodash';
 
 export type ControlSchema = {
-  min?: number;
-  max?: number;
-  step?: number;
+  min?: number | { x: number; y: number; z: number };
+  max?: number | { x: number; y: number; z: number };
+  step?: number | { x: number; y: number; z: number };
   boolean?: boolean;
   color?: boolean;
   label?: string;
   options?: string[];
+  component?: string;
 };
 
 export type ConfigControlsSchema = {

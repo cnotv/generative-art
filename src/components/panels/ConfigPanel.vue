@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Sheet } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { usePanels } from "@/composables/usePanels";
 import { useViewConfig } from "@/composables/useViewConfig";
 import SchemaControls from "./ConfigControls.vue";
-import { Settings } from "lucide-vue-next";
 import type { ConfigControlsSchema } from "@/composables/useViewConfig";
 
 const props = withDefaults(
@@ -21,7 +19,7 @@ const props = withDefaults(
   {}
 );
 
-const { isConfigOpen, togglePanel, closePanel } = usePanels();
+const { isConfigOpen, closePanel } = usePanels();
 const viewConfig = useViewConfig();
 
 // Renamed: activeSchema -> configSchema for clarity
@@ -79,33 +77,19 @@ const tabs = computed(() => {
 const hasMultipleTabs = computed(() => tabs.value.length > 1);
 const hasAnyConfig = computed(() => tabs.value.length > 0);
 
-const handleToggle = () => {
-  togglePanel("config");
-};
-
 const handleOpenChange = (open: boolean) => {
   if (!open) {
-    closePanel();
+    closePanel("config");
   }
 };
 </script>
 
 <template>
-  <div class="config-panel">
-    <Button
-      variant="ghost"
-      size="icon"
-      class="config-panel__trigger fixed right-4 top-4 z-40 opacity-0 hover:opacity-100 hover:bg-black/70 transition-opacity"
-      @click="handleToggle"
-    >
-      <Settings class="h-5 w-5 text-white" />
-    </Button>
-
-    <Sheet :open="isConfigOpen" side="right" @update:open="handleOpenChange">
+  <Sheet :open="isConfigOpen" side="right" @update:open="handleOpenChange">
       <div class="config-panel__content flex flex-col gap-6">
         <div v-if="hasAnyConfig" class="config-panel__options flex-1 min-h-0">
           <!-- Show tabs when multiple configs exist -->
-          <Tabs v-if="hasMultipleTabs" :default-value="tabs[0].value" class="h-full">
+          <Tabs v-if="hasMultipleTabs" :default-value="tabs[0].value" activation-mode="manual" class="h-full">
             <TabsList>
               <TabsTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value">
                 {{ tab.label }}
@@ -134,7 +118,6 @@ const handleOpenChange = (open: boolean) => {
         </p>
       </div>
     </Sheet>
-  </div>
 </template>
 
 <style scoped>
