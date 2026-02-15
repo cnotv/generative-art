@@ -183,9 +183,11 @@ export const sceneControls = {
     fov: { min: 30, max: 120, step: 5 },
   },
   ground: {
+    enabled: { label: 'Show Ground', boolean: false },
     color: { color: true },
   },
-  background: {
-    color: { color: true },
+  sky: {
+    enabled: { label: 'Show Sky', boolean: false },
+    color: { color: true, label: 'Sky Color' },
   },
 };

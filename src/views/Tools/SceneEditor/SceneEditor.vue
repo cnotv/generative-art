@@ -109,7 +109,7 @@ watch(selectedTextureId, (textureId) => {
       configControls,
       sceneConfig,
       sceneControls,
-      reinitScene
+      updateSceneProperties
     );
   }
 });
@@ -132,15 +132,58 @@ const sceneConfig = createReactiveConfig({
     fov: 60,
   },
   ground: {
+    enabled: false,
     color: 0x98887d,
   },
-  background: {
+  sky: {
+    enabled: false,
     color: 0x87ceeb,
   },
 });
 
 let animationId = 0;
 let orbitControls: any = null;
+let currentScene: any = null;
+let currentCamera: any = null;
+let currentGround: any = null;
+let previousGroundEnabled = false;
+let previousSkyEnabled = false;
+// Update only scene properties without regenerating textures
+const updateSceneProperties = () => {
+  // If ground/sky enabled state changed, reinit scene instead
+  if (sceneConfig.value.ground.enabled !== previousGroundEnabled ||
+      sceneConfig.value.sky.enabled !== previousSkyEnabled) {
+    previousGroundEnabled = sceneConfig.value.ground.enabled;
+    previousSkyEnabled = sceneConfig.value.sky.enabled;
+    reinitScene();
+    return;
+  }
+
+  if (!currentScene || !currentCamera) return;
+
+  // Update background color
+  currentScene.background = sceneConfig.value.sky.enabled
+    ? new THREE.Color(sceneConfig.value.sky.color)
+    : new THREE.Color(0x000000);
+
+  // Update ground color
+  if (sceneConfig.value.ground.enabled && currentGround?.mesh?.material) {
+    currentGround.mesh.material.color = new THREE.Color(sceneConfig.value.ground.color);
+  }
+
+  // Update camera properties
+  currentCamera.position.set(...sceneConfig.value.camera.position);
+  if (currentCamera.fov !== undefined) {
+    currentCamera.fov = sceneConfig.value.camera.fov;
+    currentCamera.updateProjectionMatrix();
+  }
+
+  // Update orbit target
+  if (orbitControls) {
+    orbitControls.target.set(...sceneConfig.value.camera.target);
+    orbitControls.update();
+  }
+};
 
 // Register configuration panel with onChange callback (auto-debounced)
 onMounted(() => {
@@ -156,7 +199,7 @@ onMounted(() => {
     configControls,
     sceneConfig,
     sceneControls,
-    reinitScene
+    updateSceneProperties
   );
 
   if (canvas.value) {
@@ -195,12 +238,18 @@ const handleFileUpload = (event: Event) => {
     const filename = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
     const textureId = `texture-${Date.now()}`;
 
+    console.log('=== TEXTURE UPLOAD ===');
+    console.log('Adding texture:', filename);
+    console.log('Texture items before:', textureItems.value.length);
+
     textureItems.value.push({
       id: textureId,
       name: filename,
       filename,
       url,
     });
+
+    console.log('Texture items after:', textureItems.value.length);
 
     // Initialize config for this texture with default values
     textureConfigRegistry.value[textureId] = {
@@ -216,6 +265,7 @@ const handleFileUpload = (event: Event) => {
     // Open config panel for the new texture
     openPanel("config");
 
+    console.log('Calling reinitScene...');
     reinitScene();
   }
 };
@@ -375,7 +425,11 @@ const initScene = async () => {
     canvas: canvas.value,
   });
 
-  const { orbit } = await setup({
+  // Store references for live updates
+  currentScene = scene;
+  currentCamera = camera;
+
+  const { orbit, ground } = await setup({
     config: {
       camera: {
         position: sceneConfig.value.camera.position,
@@ -384,16 +438,33 @@ const initScene = async () => {
       orbit: {
         target: new THREE.Vector3(...sceneConfig.value.camera.target),
       },
-      ground: {
+      lights: {
+        ambient: {
+          color: 0xffffff,
+          intensity: 1.0,
+        },
+        directional: {
+          color: 0xffffff,
+          intensity: 1.0,
+          position: [20, 30, 20],
+          castShadow: false,
+        },
+      },
+      ground: sceneConfig.value.ground.enabled ? {
         size: [1000, 100, 1000],
         color: sceneConfig.value.ground.color,
-      },
-      sky: {
+      } : false,
+      sky: sceneConfig.value.sky.enabled ? {
         size: 500,
-        color: sceneConfig.value.background.color,
-      },
+        color: sceneConfig.value.sky.color,
+      } : false,
     },
     defineSetup: () => {
+      console.log('=== SCENE SETUP START ===');
+      console.log('Scene children before setup:', scene.children.length);
+      console.log('Scene children:', scene.children.map((c: any) => ({ type: c.type, name: c.name })));
+      console.log('World bodies count:', world.bodies.len());
+
       // Create wireframe boxes for textures with showWireframe enabled
       textureItems.value
         .filter((item) => item.showWireframe)
@@ -401,6 +472,7 @@ const initScene = async () => {
           const areaSize = reactiveConfig.value.area.size;
           const areaCenter = reactiveConfig.value.area.center;
 
+          console.log('Creating wireframe box:', { size: areaSize, position: areaCenter });
           getCube(scene, world, {
             size: areaSize,
             position: areaCenter,
@@ -415,6 +487,7 @@ const initScene = async () => {
         });
       // Create textured billboards if textures are added
       if (textureItems.value.length > 0) {
+        console.log('Creating textures. Texture items count:', textureItems.value.length);
         const variantData = createTextureInstances(
           textureItems.value,
           reactiveConfig.value
@@ -427,7 +500,7 @@ const initScene = async () => {
               ? variant.instances
               : variant.positions.map((pos: CoordinateTuple) => ({ position: pos }));
 
-          elementsData.forEach((elementData: any) => {
+          elementsData.forEach((elementData: any, index: number) => {
             const cubeConfig = {
               size: elementData.scale || variant.properties.baseSize,
               position: elementData.position,
@@ -442,13 +515,29 @@ const initScene = async () => {
               receiveShadow: false,
             };
 
+            console.log(`Creating textured cube ${index + 1}/${elementsData.length}:`, {
+              size: cubeConfig.size,
+              position: cubeConfig.position,
+              texture: !!cubeConfig.texture,
+            });
             getCube(scene, world, cubeConfig);
           });
         });
       }
 
+      console.log('Scene children after setup:', scene.children.length);
+      console.log('Scene children:', scene.children.map((c: any) => ({ type: c.type, name: c.name })));
+      console.log('World bodies count:', world.bodies.len());
+      console.log('=== SCENE SETUP END ===');
     },
   });
+
+  // Store ground reference and disable shadows
+  currentGround = ground;
+  if (ground?.mesh) {
+    ground.mesh.receiveShadow = false;
+    ground.mesh.castShadow = false;
+  }
 
   // Sync orbit control changes back to camera config (after setup completes)
   if (orbit) {

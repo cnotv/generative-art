@@ -11,10 +11,11 @@ vi.mock('@webgamekit/threejs', async () => {
   return {
     ...actual,
     getTools: vi.fn(() => Promise.resolve({
-      setup: vi.fn((config) => Promise.resolve()),
+      setup: vi.fn((config) => Promise.resolve({ orbit: null, ground: null })),
       animate: vi.fn(),
       scene: {},
       world: {},
+      camera: { position: { x: 0, y: 50, z: 100 } },
     })),
     getCube: vi.fn(),
     generateAreaPositions: vi.fn(() => [[0, 0, 0] as CoordinateTuple]),
@@ -42,6 +43,11 @@ describe('SceneEditor', () => {
     return mount(SceneEditor, {
       global: {
         plugins: [pinia, router],
+        stubs: {
+          // Stub panel components to avoid radix-vue focus trap crash in jsdom
+          TexturesPanel: { template: '<div data-stub="textures-panel"><slot /></div>' },
+          ConfigPanel: { template: '<div data-stub="config-panel"><slot /></div>' },
+        },
       },
     });
   };

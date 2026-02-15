@@ -41,7 +41,7 @@ const contentClasses = computed(() =>
 </script>
 
 <template>
-  <DialogRoot :open="open" @update:open="emit('update:open', $event)">
+  <DialogRoot :open="open" :modal="false" @update:open="emit('update:open', $event)">
     <slot name="trigger">
       <DialogTrigger as-child>
         <slot name="trigger-content" />
@@ -49,7 +49,11 @@ const contentClasses = computed(() =>
     </slot>
 
     <DialogPortal>
-      <DialogContent :class="contentClasses">
+      <DialogContent
+        :class="contentClasses"
+        @interact-outside.prevent
+        @escape-key-down.prevent
+      >
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />
