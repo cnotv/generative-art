@@ -22,6 +22,7 @@ export interface CommonOptions {
 }
 
 export interface ModelOptions extends CommonOptions {
+  name?: string;
   color?: number;
   opacity?: number;
   reflectivity?: number;

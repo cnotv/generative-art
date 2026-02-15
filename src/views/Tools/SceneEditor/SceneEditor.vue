@@ -34,6 +34,21 @@ interface TextureItem {
 const textureItems = ref<TextureItem[]>([]);
 const selectedTextureId = ref<string | null>(null);
 
+// Scene debugging - list of all elements in the scene
+interface SceneElement {
+  name: string;
+  type: string;
+}
+const sceneElements = ref<SceneElement[]>([]);
+
+// Update scene elements list for debugging
+const updateSceneElements = (scene: THREE.Scene) => {
+  sceneElements.value = scene.children.map((child: any) => ({
+    name: child.name || '(unnamed)',
+    type: child.type,
+  }));
+};
+
 // Texture config registry - maps texture IDs to their individual configs
 const textureConfigRegistry = ref<
   Record<
@@ -132,11 +147,11 @@ const sceneConfig = createReactiveConfig({
     fov: 60,
   },
   ground: {
-    enabled: false,
+    enabled: true,
     color: 0x98887d,
   },
   sky: {
-    enabled: false,
+    enabled: true,
     color: 0x87ceeb,
   },
 });
@@ -151,8 +166,10 @@ let previousSkyEnabled = false;
 // Update only scene properties without regenerating textures
 const updateSceneProperties = () => {
   // If ground/sky enabled state changed, reinit scene instead
-  if (sceneConfig.value.ground.enabled !== previousGroundEnabled ||
-      sceneConfig.value.sky.enabled !== previousSkyEnabled) {
+  if (
+    sceneConfig.value.ground.enabled !== previousGroundEnabled ||
+    sceneConfig.value.sky.enabled !== previousSkyEnabled
+  ) {
     previousGroundEnabled = sceneConfig.value.ground.enabled;
     previousSkyEnabled = sceneConfig.value.sky.enabled;
     reinitScene();
@@ -238,18 +255,12 @@ const handleFileUpload = (event: Event) => {
     const filename = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
     const textureId = `texture-${Date.now()}`;
 
-    console.log('=== TEXTURE UPLOAD ===');
-    console.log('Adding texture:', filename);
-    console.log('Texture items before:', textureItems.value.length);
-
     textureItems.value.push({
       id: textureId,
       name: filename,
       filename,
       url,
     });
-
-    console.log('Texture items after:', textureItems.value.length);
 
     // Initialize config for this texture with default values
     textureConfigRegistry.value[textureId] = {
@@ -265,7 +276,6 @@ const handleFileUpload = (event: Event) => {
     // Open config panel for the new texture
     openPanel("config");
 
-    console.log('Calling reinitScene...');
     reinitScene();
   }
 };
@@ -450,21 +460,20 @@ const initScene = async () => {
           castShadow: false,
         },
       },
-      ground: sceneConfig.value.ground.enabled ? {
-        size: [1000, 100, 1000],
-        color: sceneConfig.value.ground.color,
-      } : false,
-      sky: sceneConfig.value.sky.enabled ? {
-        size: 500,
-        color: sceneConfig.value.sky.color,
-      } : false,
+      ground: sceneConfig.value.ground.enabled
+        ? {
+            size: [1000, 100, 1000],
+            color: sceneConfig.value.ground.color,
+          }
+        : false,
+      sky: sceneConfig.value.sky.enabled
+        ? {
+            size: 500,
+            color: sceneConfig.value.sky.color,
+          }
+        : false,
     },
     defineSetup: () => {
-      console.log('=== SCENE SETUP START ===');
-      console.log('Scene children before setup:', scene.children.length);
-      console.log('Scene children:', scene.children.map((c: any) => ({ type: c.type, name: c.name })));
-      console.log('World bodies count:', world.bodies.len());
-
       // Create wireframe boxes for textures with showWireframe enabled
       textureItems.value
         .filter((item) => item.showWireframe)
@@ -472,8 +481,8 @@ const initScene = async () => {
           const areaSize = reactiveConfig.value.area.size;
           const areaCenter = reactiveConfig.value.area.center;
 
-          console.log('Creating wireframe box:', { size: areaSize, position: areaCenter });
           getCube(scene, world, {
+            name: `wireframe-${item.filename}`,
             size: areaSize,
             position: areaCenter,
             color: 0x00ff00,
@@ -487,7 +496,6 @@ const initScene = async () => {
         });
       // Create textured billboards if textures are added
       if (textureItems.value.length > 0) {
-        console.log('Creating textures. Texture items count:', textureItems.value.length);
         const variantData = createTextureInstances(
           textureItems.value,
           reactiveConfig.value
@@ -502,6 +510,7 @@ const initScene = async () => {
 
           elementsData.forEach((elementData: any, index: number) => {
             const cubeConfig = {
+              name: `${variant.filename}-${index}`,
               size: elementData.scale || variant.properties.baseSize,
               position: elementData.position,
               rotation: elementData.rotation || ([0, 0, 0] as CoordinateTuple),
@@ -515,20 +524,13 @@ const initScene = async () => {
               receiveShadow: false,
             };
 
-            console.log(`Creating textured cube ${index + 1}/${elementsData.length}:`, {
-              size: cubeConfig.size,
-              position: cubeConfig.position,
-              texture: !!cubeConfig.texture,
-            });
             getCube(scene, world, cubeConfig);
           });
         });
       }
 
-      console.log('Scene children after setup:', scene.children.length);
-      console.log('Scene children:', scene.children.map((c: any) => ({ type: c.type, name: c.name })));
-      console.log('World bodies count:', world.bodies.len());
-      console.log('=== SCENE SETUP END ===');
+      // Update debugging area with scene elements
+      updateSceneElements(scene);
     },
   });
 
@@ -556,7 +558,7 @@ const initScene = async () => {
       ] as CoordinateTuple;
     };
 
-    orbit.addEventListener('change', syncCameraToConfig);
+    orbit.addEventListener("change", syncCameraToConfig);
   }
 
   // Create an empty timeline manager (no animations needed for static textures)
@@ -615,6 +617,19 @@ defineExpose({
     />
 
     <ConfigPanel />
+
+    <!-- Scene Debug Panel -->
+    <div class="scene-debug">
+      <details>
+        <summary class="debug-summary">Scene Elements ({{ sceneElements.length }})</summary>
+        <div class="debug-content">
+          <div v-for="(element, index) in sceneElements" :key="index" class="debug-item">
+            <span class="debug-name">{{ element.name }}</span>
+            <span class="debug-type">{{ element.type }}</span>
+          </div>
+        </div>
+      </details>
+    </div>
   </div>
 </template>
 
@@ -629,5 +644,58 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+
+.scene-debug {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  max-width: 300px;
+  max-height: 400px;
+  overflow: auto;
+  font-size: 0.75rem;
+  z-index: 50;
+}
+
+.debug-summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.25rem;
+  user-select: none;
+  list-style: none;
+}
+
+.debug-summary::-webkit-details-marker {
+  display: none;
+}
+
+.debug-content {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.debug-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.5rem;
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 0.25rem;
+}
+
+.debug-name {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.debug-type {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.7rem;
 }
 </style>

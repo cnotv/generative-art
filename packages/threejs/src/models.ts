@@ -193,6 +193,7 @@ export const getModel = async (
   world: RAPIER.World,
   path: string,
   {
+    name,
     size = 1,
     position = [0, 0, 0],
     rotation = [0, 0, 0] as CoordinateTuple,
@@ -255,6 +256,7 @@ export const getModel = async (
     colorModel(mesh, materialColors);
   }
 
+  if (name) mesh.name = name;
   scene.add(mesh);
 
   let helper;
@@ -410,6 +412,7 @@ export const getBall = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
+    name,
     size = 1,
     position = [0, 0, 0],
     color = 0x222222,
@@ -459,6 +462,7 @@ export const getBall = (
     }
   }
 
+  if (name) mesh.name = name;
   mesh.position.set(...(position as CoordinateTuple));
   mesh.castShadow = castShadow;
   mesh.receiveShadow = receiveShadow;
@@ -520,6 +524,7 @@ export const getCube = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
+    name,
     size = [5, 5, 5] as CoordinateTuple,
     rotation = [0, 0, 0] as CoordinateTuple,
     position = [0, 0, 0],
@@ -585,6 +590,7 @@ export const getCube = (
     (mesh.material as THREE.MeshStandardMaterial).map = loadedTexture;
   }
 
+  if (name) mesh.name = name;
   mesh.position.set(...(position as CoordinateTuple));
   mesh.rotation.set(...rotation);
   mesh.castShadow = castShadow;
@@ -648,20 +654,22 @@ export const getWalls = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
+    name,
     length = 200,
     height = 50,
     depth = 0.2,
     opacity = 1,
-  } = {},
+  }: { name?: string; length?: number; height?: number; depth?: number; opacity?: number } = {},
 ): ComplexModel[] => {
   return [
-    { position: [0, 0, 0], size: [length, depth, length] },
-    { position: [-length/2, 0, 0], size: [depth, height, length] },
-    { position: [length/2, 0, 0], size: [depth, height, length] },
-    { position: [0, 0, length/2], size: [length, height, depth] },
-    { position: [0, 0, -length/2], size: [length, height, depth] },
-  ].map(({ position, size }) => 
+    { position: [0, 0, 0], size: [length, depth, length], suffix: 'floor' },
+    { position: [-length/2, 0, 0], size: [depth, height, length], suffix: 'left' },
+    { position: [length/2, 0, 0], size: [depth, height, length], suffix: 'right' },
+    { position: [0, 0, length/2], size: [length, height, depth], suffix: 'front' },
+    { position: [0, 0, -length/2], size: [length, height, depth], suffix: 'back' },
+  ].map(({ position, size, suffix }) =>
     getCube(scene, world, {
+      name: name ? `${name}-${suffix}` : undefined,
       color: 0xcccccc,
       opacity,
       size: size as CoordinateTuple,
