@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Sheet } from '@/components/ui/sheet';
 import { usePanels } from '@/composables/usePanels';
 import { Box, Lightbulb, Sun, Mountain, Image } from 'lucide-vue-next';
+import IconPreview from '@/components/IconPreview.vue';
 import {
   Accordion,
   AccordionItem,
@@ -138,21 +139,19 @@ onUnmounted(() => {
                   <div
                     v-for="(element, index) in sceneElements"
                     :key="index"
-                    class="element-item flex items-center gap-3 p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+                    class="element-item flex items-center gap-4 p-3 rounded-lg border border-white/10 bg-white/5 transition-colors"
                   >
-                    <div class="element-icon flex-shrink-0">
-                      <component
-                        :is="getElementIcon(element)"
-                        :class="['w-5 h-5', getElementColor(element)]"
-                      />
-                    </div>
+                    <IconPreview
+                      :icon="getElementIcon(element)"
+                      :color="getElementColor(element)"
+                    />
                     <div class="element-info flex-1 min-w-0">
-                      <div class="element-name text-xs font-medium truncate">
+                      <span class="text-xs text-white/90 font-mono truncate block">
                         {{ element.name }}
-                      </div>
-                      <div class="element-type text-[10px] text-muted-foreground">
+                      </span>
+                      <span class="text-[10px] text-muted-foreground block mt-0.5">
                         {{ element.type }}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -169,7 +168,5 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.element-item {
-  cursor: default;
-}
+/* No additional styles needed - using TexturesPanel structure */
 </style>
