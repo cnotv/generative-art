@@ -7,7 +7,7 @@ import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { TexturesPanel, ConfigPanel } from "@/components/panels";
+import { TexturesPanel, ConfigPanel, DebugPanel } from "@/components/panels";
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -618,18 +618,7 @@ defineExpose({
 
     <ConfigPanel />
 
-    <!-- Scene Debug Panel -->
-    <div class="scene-debug">
-      <details>
-        <summary class="debug-summary">Scene Elements ({{ sceneElements.length }})</summary>
-        <div class="debug-content">
-          <div v-for="(element, index) in sceneElements" :key="index" class="debug-item">
-            <span class="debug-name">{{ element.name }}</span>
-            <span class="debug-type">{{ element.type }}</span>
-          </div>
-        </div>
-      </details>
-    </div>
+    <DebugPanel :scene-elements="sceneElements" />
   </div>
 </template>
 
@@ -644,58 +633,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-
-.scene-debug {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  max-width: 300px;
-  max-height: 400px;
-  overflow: auto;
-  font-size: 0.75rem;
-  z-index: 50;
-}
-
-.debug-summary {
-  cursor: pointer;
-  font-weight: 600;
-  padding: 0.25rem;
-  user-select: none;
-  list-style: none;
-}
-
-.debug-summary::-webkit-details-marker {
-  display: none;
-}
-
-.debug-content {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.debug-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.25rem 0.5rem;
-  background: hsl(var(--muted) / 0.3);
-  border-radius: 0.25rem;
-}
-
-.debug-name {
-  font-weight: 500;
-  color: hsl(var(--foreground));
-}
-
-.debug-type {
-  color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
 }
 </style>

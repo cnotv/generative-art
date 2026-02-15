@@ -1,7 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { Sheet } from '@/components/ui/sheet';
 import { usePanels } from '@/composables/usePanels';
+import { Box, Lightbulb, Sun, Mountain, Image } from 'lucide-vue-next';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+
+interface SceneElement {
+  name: string;
+  type: string;
+}
+
+interface Props {
+  sceneElements?: SceneElement[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  sceneElements: () => [],
+});
 
 const { isDebugOpen, closePanel } = usePanels();
 
@@ -37,6 +57,32 @@ const handleOpenChange = (open: boolean) => {
   }
 };
 
+// Get icon component based on element type or name
+const getElementIcon = (element: SceneElement) => {
+  const name = element.name.toLowerCase();
+  const type = element.type.toLowerCase();
+
+  if (name.includes('light')) return Lightbulb;
+  if (name.includes('sky')) return Sun;
+  if (name.includes('ground')) return Mountain;
+  if (type.includes('mesh')) return Box;
+  if (name.includes('wireframe')) return Box;
+
+  return Image;
+};
+
+// Get color class based on element type
+const getElementColor = (element: SceneElement) => {
+  const name = element.name.toLowerCase();
+
+  if (name.includes('light')) return 'text-yellow-400';
+  if (name.includes('sky')) return 'text-blue-400';
+  if (name.includes('ground')) return 'text-green-600';
+  if (name.includes('wireframe')) return 'text-green-400';
+
+  return 'text-gray-400';
+};
+
 onMounted(() => {
   updateStats();
 });
@@ -50,35 +96,80 @@ onUnmounted(() => {
 
 <template>
     <Sheet :open="isDebugOpen" side="right" @update:open="handleOpenChange">
-      <div class="debug-panel__content flex flex-col gap-6">
-        <h2 class="text-lg font-semibold">Debug Stats</h2>
-
-        <div class="debug-panel__stats grid gap-4">
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">FPS</span>
-            <span class="font-mono text-sm">{{ fps }}</span>
-          </div>
-
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">Memory (MB)</span>
-            <span class="font-mono text-sm">{{ memory }}</span>
-          </div>
-
-          <div class="debug-panel__stat flex justify-between rounded bg-secondary p-3">
-            <span class="text-sm font-medium">Draw Calls</span>
-            <span class="font-mono text-sm">{{ drawCalls }}</span>
-          </div>
+      <div class="debug-panel__content flex flex-col gap-4 h-full">
+        <div class="debug-panel__header p-4 border-b border-white/10">
+          <h2 class="text-lg font-semibold text-white">Debug</h2>
         </div>
 
-        <div class="debug-panel__additional mt-4">
-          <slot />
+        <div class="flex-1 overflow-y-auto px-4">
+          <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
+            <!-- Stats Section -->
+            <AccordionItem value="stats">
+              <AccordionTrigger class="text-sm font-medium py-2">
+                Performance Stats
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="debug-panel__stats grid gap-3 pb-2">
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">FPS</span>
+                    <span class="font-mono text-xs">{{ fps }}</span>
+                  </div>
+
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">Memory (MB)</span>
+                    <span class="font-mono text-xs">{{ memory }}</span>
+                  </div>
+
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                    <span class="text-xs font-medium">Draw Calls</span>
+                    <span class="font-mono text-xs">{{ drawCalls }}</span>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <!-- Scene Elements Section -->
+            <AccordionItem value="scene" v-if="sceneElements && sceneElements.length > 0">
+              <AccordionTrigger class="text-sm font-medium py-2">
+                Scene Elements ({{ sceneElements.length }})
+              </AccordionTrigger>
+              <AccordionContent>
+                <div class="scene-elements flex flex-col gap-2 pb-2">
+                  <div
+                    v-for="(element, index) in sceneElements"
+                    :key="index"
+                    class="element-item flex items-center gap-3 p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div class="element-icon flex-shrink-0">
+                      <component
+                        :is="getElementIcon(element)"
+                        :class="['w-5 h-5', getElementColor(element)]"
+                      />
+                    </div>
+                    <div class="element-info flex-1 min-w-0">
+                      <div class="element-name text-xs font-medium truncate">
+                        {{ element.name }}
+                      </div>
+                      <div class="element-type text-[10px] text-muted-foreground">
+                        {{ element.type }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div class="debug-panel__additional mt-4">
+            <slot />
+          </div>
         </div>
       </div>
     </Sheet>
 </template>
 
 <style scoped>
-.debug-panel__content {
-  height: 100%;
+.element-item {
+  cursor: default;
 }
 </style>
