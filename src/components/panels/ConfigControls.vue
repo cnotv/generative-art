@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Slider } from "@/components/ui/slider";
-import { Toggle } from "@/components/ui/toggle";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CoordinateInput } from "@/components/ui/coordinate-input";
@@ -153,15 +153,15 @@ const getColorHex = (path: string): string => {
       </template>
 
       <template v-else-if="control.schema.boolean !== undefined">
-        <div class="flex items-center gap-2">
-          <Toggle
+        <div class="flex items-center justify-between">
+          <label :for="control.path" class="text-xs font-medium">
+            {{ control.schema.label ?? formatLabel(control.key) }}
+          </label>
+          <Switch
+            :id="control.path"
             :model-value="getValue(control.path) ?? control.schema.boolean"
             @update:model-value="handleCheckboxUpdate(control.path, $event)"
-            size="sm"
-            variant="outline"
-          >
-            {{ control.schema.label ?? formatLabel(control.key) }}
-          </Toggle>
+          />
         </div>
       </template>
 
