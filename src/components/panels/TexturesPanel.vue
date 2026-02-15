@@ -99,7 +99,11 @@ const handleToggleWireframe = (id: string, event: Event) => {
             ]"
             @click="handleSelectTexture(item.id)"
           >
-            <TexturePreview :src="item.url" :alt="item.name" />
+            <TexturePreview
+              :src="item.url"
+              :alt="item.name"
+              :class="{ 'ring-2 ring-primary ring-offset-1 ring-offset-transparent rounded': selectedTextureId === item.id }"
+            />
             <div class="textures-panel__info flex-1 min-w-0">
               <span class="text-xs text-white/90 font-mono truncate block">{{
                 item.name

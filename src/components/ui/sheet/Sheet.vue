@@ -49,7 +49,6 @@ const contentClasses = computed(() =>
     </slot>
 
     <DialogPortal>
-      <DialogOverlay class="sheet-overlay" />
       <DialogContent :class="contentClasses">
         <DialogTitle class="sr-only">Sheet</DialogTitle>
         <DialogDescription class="sr-only">Sheet content</DialogDescription>

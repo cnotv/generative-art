@@ -6,6 +6,7 @@ import { useViewPanels } from "@/composables/useViewPanels";
 import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
+import * as THREE from "three";
 import { TexturesPanel, ConfigPanel } from "@/components/panels";
 import {
   registerViewConfig,
@@ -127,6 +128,7 @@ watch(
 const sceneConfig = createReactiveConfig({
   camera: {
     position: [0, 50, 100] as CoordinateTuple,
+    target: [0, 0, 0] as CoordinateTuple,
     fov: 60,
   },
   ground: {
@@ -138,6 +140,7 @@ const sceneConfig = createReactiveConfig({
 });
 
 let animationId = 0;
+let orbitControls: any = null;
 
 // Register configuration panel with onChange callback (auto-debounced)
 onMounted(() => {
@@ -353,6 +356,12 @@ const reinitScene = () => {
     cancelAnimationFrame(animationId);
   }
 
+  // Clean up orbit controls listener before reinitializing
+  if (orbitControls) {
+    orbitControls.dispose();
+    orbitControls = null;
+  }
+
   if (canvas.value) {
     initScene();
   }
@@ -362,15 +371,18 @@ const reinitScene = () => {
 const initScene = async () => {
   if (!canvas.value) return;
 
-  const { setup, animate, scene, world } = await getTools({
+  const { setup, animate, scene, world, camera } = await getTools({
     canvas: canvas.value,
   });
 
-  await setup({
+  const { orbit } = await setup({
     config: {
       camera: {
         position: sceneConfig.value.camera.position,
         fov: sceneConfig.value.camera.fov,
+      },
+      orbit: {
+        target: new THREE.Vector3(...sceneConfig.value.camera.target),
       },
       ground: {
         size: [1000, 100, 1000],
@@ -435,13 +447,34 @@ const initScene = async () => {
         });
       }
 
-      // Create an empty timeline manager (no animations needed for static textures)
-      const timelineManager = createTimelineManager();
-
-      animate({
-        timeline: timelineManager,
-      });
     },
+  });
+
+  // Sync orbit control changes back to camera config (after setup completes)
+  if (orbit) {
+    orbitControls = orbit;
+
+    const syncCameraToConfig = () => {
+      sceneConfig.value.camera.position = [
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+      ] as CoordinateTuple;
+      sceneConfig.value.camera.target = [
+        orbit.target.x,
+        orbit.target.y,
+        orbit.target.z,
+      ] as CoordinateTuple;
+    };
+
+    orbit.addEventListener('change', syncCameraToConfig);
+  }
+
+  // Create an empty timeline manager (no animations needed for static textures)
+  const timelineManager = createTimelineManager();
+
+  animate({
+    timeline: timelineManager,
   });
 };
 

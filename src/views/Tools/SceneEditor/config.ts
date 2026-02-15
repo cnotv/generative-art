@@ -173,6 +173,13 @@ export const sceneControls = {
       max: { x: 200, y: 200, z: 200 },
       step: { x: 5, y: 5, z: 5 },
     },
+    target: {
+      label: 'Orbit Target',
+      component: 'CoordinateInput',
+      min: { x: -200, y: -100, z: -200 },
+      max: { x: 200, y: 100, z: 200 },
+      step: { x: 5, y: 5, z: 5 },
+    },
     fov: { min: 30, max: 120, step: 5 },
   },
   ground: {
