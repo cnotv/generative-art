@@ -8,6 +8,9 @@ import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
 import { TexturesPanel, ConfigPanel, DebugPanel } from "@/components/panels";
+import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
+import { RefreshCw } from "lucide-vue-next";
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -33,6 +36,9 @@ interface TextureItem {
 
 const textureItems = ref<TextureItem[]>([]);
 const selectedTextureId = ref<string | null>(null);
+
+// Auto-update toggle
+const autoUpdate = ref(true);
 
 // Scene debugging - list of all elements in the scene
 interface SceneElement {
@@ -145,7 +151,9 @@ watch(selectedTextureId, (textureId) => {
           reactiveConfig.value.textureProperties[texture.filename].rotationVariation =
             textureReactiveConfig.value.textures.rotationVariation;
 
-          reinitScene();
+          if (autoUpdate.value) {
+            reinitScene();
+          }
         }
       );
     }
@@ -172,6 +180,21 @@ watch(
   }
 );
 
+// Watch for main config changes (area, textures, instances) to trigger auto-update
+watch(
+  () => ({
+    area: reactiveConfig.value.area,
+    textures: reactiveConfig.value.textures,
+    instances: reactiveConfig.value.instances,
+  }),
+  () => {
+    if (autoUpdate.value) {
+      reinitScene();
+    }
+  },
+  { deep: true }
+);
+
 // Scene configuration
 const sceneConfig = createReactiveConfig({
   camera: {
@@ -196,6 +219,19 @@ let currentCamera: any = null;
 let currentGround: any = null;
 let previousGroundEnabled = false;
 let previousSkyEnabled = false;
+
+// Wrapper to handle auto-update for main config changes
+const handleMainConfigChange = () => {
+  if (autoUpdate.value) {
+    reinitScene();
+  }
+};
+
+// Manual update trigger
+const triggerManualUpdate = () => {
+  reinitScene();
+};
+
 // Update only scene properties without regenerating textures
 const updateSceneProperties = () => {
   // If ground/sky enabled state changed, reinit scene instead
@@ -659,6 +695,28 @@ defineExpose({
       @toggle-visibility="toggleElementVisibility"
       @remove="removeSceneElement"
     />
+
+    <!-- Auto-update controls -->
+    <div class="update-controls">
+      <Toggle
+        v-model="autoUpdate"
+        variant="outline"
+        size="sm"
+        class="text-xs"
+      >
+        Auto Update
+      </Toggle>
+      <Button
+        v-if="!autoUpdate"
+        variant="default"
+        size="sm"
+        class="text-xs"
+        @click="triggerManualUpdate"
+      >
+        <RefreshCw class="h-3 w-3 mr-1" />
+        Update Scene
+      </Button>
+    </div>
   </div>
 </template>
 
@@ -673,5 +731,21 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+
+.update-controls {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  z-index: 40;
 }
 </style>
