@@ -35,7 +35,8 @@ const props = withDefaults(defineProps<Props>(), {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: hsl(var(--muted) / 0.3);
+  background-color: hsl(var(--muted) / 0.5);
+  border: 1px solid hsl(var(--border));
 }
 
 .icon-preview__icon {

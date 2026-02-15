@@ -117,8 +117,8 @@ onUnmounted(() => {
 <template>
     <Sheet :open="isDebugOpen" side="right" @update:open="handleOpenChange">
       <div class="debug-panel__content flex flex-col gap-4 h-full">
-        <div class="debug-panel__header p-4 border-b border-white/10">
-          <h2 class="text-lg font-semibold text-white">Debug</h2>
+        <div class="debug-panel__header p-4 border-b border-border">
+          <h2 class="text-lg font-semibold">Debug</h2>
         </div>
 
         <div class="flex-1 overflow-y-auto px-4">
@@ -158,18 +158,18 @@ onUnmounted(() => {
                   <div
                     v-for="(element, index) in sceneElements"
                     :key="index"
-                    class="element-item group flex items-center gap-4 p-3 rounded-lg border border-white/10 bg-white/5 transition-colors"
+                    class="element-item group flex items-center gap-4 p-3 rounded-lg border border-border bg-muted/30 transition-colors"
                     :class="{ 'opacity-50': element.hidden }"
                   >
                     <IconPreview
                       :icon="getElementIcon(element)"
                       :color="getElementColor(element)"
                     />
-                    <div class="element-info flex-1 min-w-0">
-                      <span class="text-xs text-white/90 font-mono truncate block">
+                    <div class="element-info flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span class="text-[11px] font-medium font-mono truncate block">
                         {{ element.name }}
                       </span>
-                      <span class="text-[10px] text-muted-foreground block mt-0.5">
+                      <span class="text-[9px] text-muted-foreground truncate block">
                         {{ element.type }}
                       </span>
                     </div>

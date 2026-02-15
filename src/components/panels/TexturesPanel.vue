@@ -63,8 +63,8 @@ const handleToggleWireframe = (id: string, event: Event) => {
 <template>
   <GenericPanel panel-type="textures" side="left">
     <div class="textures-panel flex flex-col h-full">
-      <div class="textures-panel__header p-4 border-b border-white/10">
-        <h2 class="text-lg font-semibold text-white">Textures</h2>
+      <div class="textures-panel__header p-4 border-b border-border">
+        <h2 class="text-lg font-semibold">Textures</h2>
       </div>
 
       <div class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4">
@@ -94,7 +94,7 @@ const handleToggleWireframe = (id: string, event: Event) => {
             :class="[
               selectedTextureId === item.id
                 ? 'bg-primary/20 border-primary/60'
-                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20',
+                : 'bg-muted/30 border-border hover:bg-muted/50 hover:border-border',
               item.hidden && 'opacity-50',
             ]"
             @click="handleSelectTexture(item.id)"
@@ -105,7 +105,7 @@ const handleToggleWireframe = (id: string, event: Event) => {
               :class="{ 'ring-2 ring-primary ring-offset-1 ring-offset-transparent rounded': selectedTextureId === item.id }"
             />
             <div class="textures-panel__info flex-1 min-w-0">
-              <span class="text-xs text-white/90 font-mono truncate block">{{
+              <span class="text-[11px] font-medium font-mono truncate block">{{
                 item.name
               }}</span>
             </div>
