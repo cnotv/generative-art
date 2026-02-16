@@ -1,0 +1,160 @@
+// Panel UI Styles
+// Shared styles for panel components (Sheet/Dialog)
+
+@import './variables';
+
+// Screen reader only utility
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// Panel UI container - scoped styles
+.panel-ui {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+
+  * {
+    border-color: var(--color-border);
+  }
+}
+
+// Sheet/Dialog overlay
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background-color: rgba(0, 0, 0, 0.01); // Near-transparent but clickable
+  cursor: pointer;
+
+  &[data-state="open"] {
+    animation: fadeIn 150ms ease-out;
+  }
+
+  &[data-state="closed"] {
+    animation: fadeOut 150ms ease-in;
+  }
+}
+
+// Sheet/Dialog content
+.sheet-content {
+  position: fixed;
+  z-index: calc(var(--z-overlay) + 1);
+  gap: var(--spacing-3);
+  background-color: var(--color-background);
+  padding: var(--spacing-4);
+  box-shadow: none;
+  transition: all 0.3s ease-in-out;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
+  &--left {
+    inset: 0 auto 0 0;
+    height: 100%;
+    width: 50%;
+    max-width: 20rem;
+    border-right: 1px solid var(--color-border);
+
+    &[data-state="open"] {
+      animation: slideInFromLeft 500ms ease-out;
+    }
+
+    &[data-state="closed"] {
+      animation: slideOutToLeft 300ms ease-in;
+    }
+  }
+
+  &--right {
+    inset: 0 0 0 auto;
+    height: 100%;
+    width: 50%;
+    max-width: 20rem;
+    border-left: 1px solid var(--color-border);
+
+    &[data-state="open"] {
+      animation: slideInFromRight 500ms ease-out;
+    }
+
+    &[data-state="closed"] {
+      animation: slideOutToRight 300ms ease-in;
+    }
+  }
+}
+
+// Close button
+.sheet-close {
+  position: absolute;
+  right: var(--spacing-3);
+  top: var(--spacing-3);
+  background: transparent;
+  border: none;
+  padding: var(--spacing-1);
+  opacity: 0.5;
+  transition: opacity 150ms;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: var(--color-foreground);
+    stroke-width: 2;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes accordionDown {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordionUp {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}

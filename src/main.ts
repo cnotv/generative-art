@@ -1,5 +1,8 @@
 import './style.css'
-import './styles/panel.scss'
+import './assets/styles/_variables.scss'
+import './assets/styles/utilities.scss'
+import './assets/styles/panels.scss'
+import './assets/styles/vendor.scss'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

@@ -126,6 +126,22 @@ Use format: `<type>/<issue-number>-<description>`
 - **Type safety**: Use `CoordinateTuple` for position/rotation/scale arrays, avoid `any`
 - **Export types**: Re-export types from package `index.ts` for public APIs
 
+### Style Organization
+- **Variables**: All CSS variables and theme definitions belong in `src/assets/styles/_variables.scss`
+  - Define both light and dark theme colors
+  - Use semantic naming (e.g., `--color-background`, `--color-primary`)
+  - Include spacing, border-radius, typography, shadows, and z-index scales
+- **Panels**: Shared panel/sheet/dialog styles in `src/assets/styles/panels.scss`
+  - Import `_variables.scss` at the top
+  - Only include layout and structural styles shared across panels
+- **Vendor**: Third-party library overrides in `src/assets/styles/vendor.scss`
+  - Radix UI, Tailwind, and other external library customizations
+  - Keep vendor-specific selectors isolated from application styles
+- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped>` section
+  - Never put component-specific styles in global stylesheets
+  - Use CSS variables from `_variables.scss` for theming
+  - Keep styles close to the components that use them
+
 ### Modular Architecture
 - **Reuse existing components**: ALWAYS check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components (Button, Sheet, Tabs, Input, Select, etc.) and other reusable components in `src/components/`. Never reinvent the wheel.
 - **Barrel exports**: Use `index.ts` files to export public APIs (see `packages/*/src/index.ts`)

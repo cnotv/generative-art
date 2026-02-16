@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Eye, EyeOff, Trash2, Box } from "lucide-vue-next";
+import { Eye, EyeOff, Trash2, Box, Play, RefreshCw } from "lucide-vue-next";
 import GenericPanel from "./GenericPanel.vue";
 import { Button } from "@/components/ui/button";
 import TexturePreview from "@/components/TexturePreview.vue";
@@ -17,6 +17,7 @@ interface TextureItem {
 interface Props {
   textureItems: TextureItem[];
   selectedTextureId: string | null;
+  autoUpdate?: boolean;
 }
 
 interface Emits {
@@ -25,9 +26,13 @@ interface Emits {
   (e: "toggle-visibility", id: string): void;
   (e: "toggle-wireframe", id: string): void;
   (e: "fileChange", event: Event): void;
+  (e: "update:autoUpdate", value: boolean): void;
+  (e: "manualUpdate"): void;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  autoUpdate: true,
+});
 const emit = defineEmits<Emits>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -68,10 +73,31 @@ const handleToggleWireframe = (id: string, event: Event) => {
       </div>
 
       <div class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4">
-        <!-- Add texture button -->
-        <Button variant="default" class="w-full" @click="handleAddClick">
-          ➕ Add Texture
-        </Button>
+        <!-- Action buttons -->
+        <div class="flex gap-2">
+          <Button variant="default" class="flex-1" @click="handleAddClick">
+            ➕ Add Texture
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="btn--toggle"
+            :class="{ 'btn--toggle--active': props.autoUpdate }"
+            title="Auto Update"
+            @click="emit('update:autoUpdate', !props.autoUpdate)"
+          >
+            <RefreshCw class="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-10 w-10 shrink-0"
+            title="Update Now"
+            @click="emit('manualUpdate')"
+          >
+            <Play class="h-4 w-4" />
+          </Button>
+        </div>
 
         <!-- Hidden file input -->
         <input
@@ -168,5 +194,10 @@ const handleToggleWireframe = (id: string, event: Event) => {
 
 .textures-panel__list {
   min-height: 0;
+}
+
+:deep(.btn--toggle--active) {
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
 </style>

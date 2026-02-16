@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Switch as RadixSwitch, SwitchThumb } from 'radix-vue';
+import { SwitchRoot, SwitchThumb } from 'radix-vue';
 import { computed } from 'vue';
 import { cn } from '@/lib/utilities';
 
@@ -30,7 +30,7 @@ const thumbClasses = computed(() =>
 </script>
 
 <template>
-  <RadixSwitch
+  <SwitchRoot
     :id="id"
     :name="name"
     :checked="modelValue"
@@ -39,5 +39,5 @@ const thumbClasses = computed(() =>
     @update:checked="emit('update:modelValue', $event)"
   >
     <SwitchThumb :class="thumbClasses" />
-  </RadixSwitch>
+  </SwitchRoot>
 </template>
