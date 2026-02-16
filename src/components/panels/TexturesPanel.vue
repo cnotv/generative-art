@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Eye, EyeOff, Trash2, Box, Play, RefreshCw } from "lucide-vue-next";
+import {
+  Eye,
+  EyeOff,
+  Trash2,
+  Box,
+  Play,
+  RefreshCw,
+  Plus,
+} from "lucide-vue-next";
 import GenericPanel from "./GenericPanel.vue";
 import { Button } from "@/components/ui/button";
 import TexturePreview from "@/components/TexturePreview.vue";
@@ -10,22 +18,30 @@ interface TextureItem {
   name: string;
   filename: string;
   url: string;
+}
+
+interface TextureGroup {
+  id: string;
+  name: string;
+  textures: TextureItem[];
   hidden?: boolean;
   showWireframe?: boolean;
 }
 
 interface Props {
-  textureItems: TextureItem[];
-  selectedTextureId: string | null;
+  textureGroups: TextureGroup[];
+  selectedGroupId: string | null;
   autoUpdate?: boolean;
 }
 
 interface Emits {
-  (e: "select", id: string): void;
-  (e: "remove", id: string): void;
-  (e: "toggle-visibility", id: string): void;
-  (e: "toggle-wireframe", id: string): void;
+  (e: "selectGroup", id: string): void;
+  (e: "removeGroup", id: string): void;
+  (e: "removeTexture", groupId: string, textureId: string): void;
+  (e: "toggleVisibility", id: string): void;
+  (e: "toggleWireframe", id: string): void;
   (e: "fileChange", event: Event): void;
+  (e: "addTexture", groupId: string, event: Event): void;
   (e: "update:autoUpdate", value: boolean): void;
   (e: "manualUpdate"): void;
 }
@@ -36,6 +52,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
+const addToGroupInputRefs = ref<Record<string, HTMLInputElement | null>>({});
 
 const handleAddClick = () => {
   fileInputRef.value?.click();
@@ -45,23 +62,17 @@ const handleFileChange = (event: Event) => {
   emit("fileChange", event);
 };
 
-const handleSelectTexture = (id: string) => {
-  emit("select", id);
+const handleAddTextureToGroup = (groupId: string) => {
+  const input = addToGroupInputRefs.value[groupId];
+  input?.click();
 };
 
-const handleRemoveTexture = (id: string, event: Event) => {
-  event.stopPropagation();
-  emit("remove", id);
+const handleGroupFileChange = (groupId: string, event: Event) => {
+  emit("addTexture", groupId, event);
 };
 
-const handleToggleVisibility = (id: string, event: Event) => {
-  event.stopPropagation();
-  emit("toggle-visibility", id);
-};
-
-const handleToggleWireframe = (id: string, event: Event) => {
-  event.stopPropagation();
-  emit("toggle-wireframe", id);
+const setAddToGroupRef = (groupId: string, el: any) => {
+  addToGroupInputRefs.value[groupId] = el;
 };
 </script>
 
@@ -72,17 +83,18 @@ const handleToggleWireframe = (id: string, event: Event) => {
         <h2 class="text-lg font-semibold">Textures</h2>
       </div>
 
-      <div class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4">
+      <div
+        class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4"
+      >
         <!-- Action buttons -->
         <div class="flex gap-2">
           <Button variant="default" class="flex-1" @click="handleAddClick">
-            ➕ Add Texture
+            Add Texture
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            class="btn--toggle"
-            :class="{ 'btn--toggle--active': props.autoUpdate }"
+            :class="props.autoUpdate ? 'btn--toggle btn--toggle--active' : 'btn--toggle'"
             title="Auto Update"
             @click="emit('update:autoUpdate', !props.autoUpdate)"
           >
@@ -99,73 +111,117 @@ const handleToggleWireframe = (id: string, event: Event) => {
           </Button>
         </div>
 
-        <!-- Hidden file input -->
+        <!-- Hidden file input for new group -->
         <input
           ref="fileInputRef"
           type="file"
           accept="image/*"
-          @change="handleFileChange"
           style="display: none"
+          @change="handleFileChange"
         />
 
-        <!-- Texture list -->
+        <!-- Texture group list -->
         <div
-          v-if="textureItems.length > 0"
+          v-if="textureGroups.length > 0"
           class="textures-panel__list flex flex-col gap-2"
         >
           <div
-            v-for="item in textureItems"
-            :key="item.id"
-            class="textures-panel__item group relative flex items-center gap-4 p-3 rounded-lg border transition-all cursor-pointer"
+            v-for="group in textureGroups"
+            :key="group.id"
+            class="textures-panel__group rounded-lg border transition-all"
             :class="[
-              selectedTextureId === item.id
+              selectedGroupId === group.id
                 ? 'bg-primary/20 border-primary/60'
                 : 'bg-muted/30 border-border hover:bg-muted/50 hover:border-border',
-              item.hidden && 'opacity-50',
+              group.hidden && 'textures-panel__group--hidden',
             ]"
-            @click="handleSelectTexture(item.id)"
           >
-            <TexturePreview
-              :src="item.url"
-              :alt="item.name"
-              :class="{ 'ring-2 ring-primary ring-offset-1 ring-offset-transparent rounded': selectedTextureId === item.id }"
-            />
-            <div class="textures-panel__info flex-1 min-w-0">
-              <span class="text-[11px] font-medium font-mono truncate block">{{
-                item.name
-              }}</span>
+            <!-- Group header -->
+            <div
+              class="textures-panel__group-header flex items-center gap-3 p-3 cursor-pointer"
+              @click="emit('selectGroup', group.id)"
+            >
+              <div class="textures-panel__info flex-1 min-w-0">
+                <span
+                  class="text-[11px] font-medium font-mono truncate block"
+                  >{{ group.name }}</span
+                >
+              </div>
+              <div class="textures-panel__actions flex gap-1 shrink-0">
+                <Button
+                  :variant="group.hidden ? 'default' : 'ghost'"
+                  size="icon"
+                  :class="
+                    group.hidden
+                      ? 'h-8 w-8 textures-panel__actions-btn--active'
+                      : 'h-8 w-8'
+                  "
+                  :title="group.hidden ? 'Show group' : 'Hide group'"
+                  @click.stop="emit('toggleVisibility', group.id)"
+                >
+                  <EyeOff v-if="group.hidden" class="h-4 w-4" />
+                  <Eye v-else class="h-4 w-4" />
+                </Button>
+                <Button
+                  :variant="group.showWireframe ? 'default' : 'ghost'"
+                  size="icon"
+                  :class="
+                    group.showWireframe
+                      ? 'h-8 w-8 textures-panel__actions-btn--active'
+                      : 'h-8 w-8'
+                  "
+                  :title="
+                    group.showWireframe ? 'Hide wireframe' : 'Show wireframe'
+                  "
+                  @click.stop="emit('toggleWireframe', group.id)"
+                >
+                  <Box class="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8"
+                  title="Delete group"
+                  @click.stop="emit('removeGroup', group.id)"
+                >
+                  <Trash2 class="h-4 w-4 " />
+                </Button>
+              </div>
             </div>
-            <div class="textures-panel__actions flex gap-1 shrink-0">
-              <Button
-                :variant="item.hidden ? 'default' : 'ghost'"
-                size="icon"
-                class="h-8 w-8"
-                :class="{ 'bg-primary/20 hover:bg-primary/30': item.hidden }"
-                :title="item.hidden ? 'Show texture' : 'Hide texture'"
-                @click="(e: Event) => handleToggleVisibility(item.id, e)"
+
+            <!-- Texture previews -->
+            <div class="textures-panel__variants p-3 pt-0">
+              <TexturePreview
+                v-for="texture in group.textures"
+                :key="texture.id"
+                :src="texture.url"
+                :alt="texture.name"
+                class="textures-panel__variant-preview"
               >
-                <EyeOff v-if="item.hidden" class="h-4 w-4" />
-                <Eye v-else class="h-4 w-4" />
-              </Button>
-              <Button
-                :variant="item.showWireframe ? 'default' : 'ghost'"
-                size="icon"
-                class="h-8 w-8"
-                :class="{ 'bg-primary/20 hover:bg-primary/30': item.showWireframe }"
-                :title="item.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
-                @click="(e: Event) => handleToggleWireframe(item.id, e)"
+                <button
+                  class="textures-panel__variant-remove"
+                  title="Remove texture"
+                  @click.stop="
+                    emit('removeTexture', group.id, texture.id)
+                  "
+                >
+                  <Trash2 class="h-2.5 w-2.5" />
+                </button>
+              </TexturePreview>
+              <button
+                class="textures-panel__variant-add"
+                title="Add variant"
+                @click.stop="handleAddTextureToGroup(group.id)"
               >
-                <Box class="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                title="Delete texture"
-                @click="(e: Event) => handleRemoveTexture(item.id, e)"
-              >
-                <Trash2 class="h-4 w-4 text-destructive" />
-              </Button>
+                <Plus class="h-4 w-4" />
+              </button>
+              <input
+                :ref="(el) => setAddToGroupRef(group.id, el)"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="(e) => handleGroupFileChange(group.id, e)"
+              />
             </div>
           </div>
         </div>
@@ -176,7 +232,9 @@ const handleToggleWireframe = (id: string, event: Event) => {
           class="textures-panel__empty flex flex-col items-center justify-center gap-2 py-12 text-center"
         >
           <p class="text-sm text-white/50">No textures added yet</p>
-          <p class="text-xs text-white/30">Click "Add Texture" to get started</p>
+          <p class="text-xs text-white/30">
+            Click "Add Texture" to get started
+          </p>
         </div>
       </div>
     </div>
@@ -196,8 +254,82 @@ const handleToggleWireframe = (id: string, event: Event) => {
   min-height: 0;
 }
 
+.textures-panel__group--hidden {
+  opacity: 0.5;
+}
+
+.textures-panel__variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.textures-panel__variant-preview {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+}
+
+.textures-panel__variant-remove {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(0 0% 0% / 0.6);
+  color: hsl(0 80% 65%);
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  z-index: 2;
+  transition: opacity 0.15s;
+}
+
+.textures-panel__variant-preview:hover .textures-panel__variant-remove {
+  opacity: 1;
+}
+
+.textures-panel__variant-add {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.textures-panel__variant-add:hover {
+  background: var(--color-accent);
+}
+
 :deep(.btn--toggle--active) {
-  background-color: var(--color-accent);
+  background-color: hsl(0 0% 83%);
   color: var(--color-accent-foreground);
+}
+
+:deep(.textures-panel__actions-btn--active) {
+  background-color: hsl(0 0% 83%);
+  color: var(--color-foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  :deep(.btn--toggle--active) {
+    background-color: hsl(0 0% 25%);
+  }
+
+  :deep(.textures-panel__actions-btn--active) {
+    background-color: hsl(0 0% 25%);
+  }
 }
 </style>

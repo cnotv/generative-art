@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 // Panel types including textures for SceneEditor sidebar
-export type PanelType = 'sidebar' | 'config' | 'debug' | 'textures' | 'recording';
+export type PanelType = 'sidebar' | 'config' | 'scene' | 'debug' | 'textures' | 'recording';
 
 const activePanels = ref<Set<PanelType>>(new Set());
 
@@ -19,6 +19,7 @@ export const usePanels = () => {
   const isConfigOpen = computed(() => activePanels.value.has('config'));
   const isDebugOpen = computed(() => activePanels.value.has('debug'));
   const isTexturesOpen = computed(() => activePanels.value.has('textures'));
+  const isSceneOpen = computed(() => activePanels.value.has('scene'));
 
   // Sync panel state with query parameters
   const syncToQuery = () => {
@@ -73,6 +74,7 @@ export const usePanels = () => {
     isConfigOpen,
     isDebugOpen,
     isTexturesOpen,
+    isSceneOpen,
     openPanel,
     closePanel,
     togglePanel,

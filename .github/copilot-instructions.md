@@ -173,6 +173,7 @@ Use format: `<type>/<issue-number>-<description>`
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
+- **Light and dark theme**: Always provide both light and dark mode colors when adding custom styles. Use CSS variables from `_variables.scss` where possible, and add `@media (prefers-color-scheme: dark)` overrides for any hardcoded color values
 
 ### Git Hooks
 - **Never use `--no-verify`**: NEVER use `--no-verify` flag on git commit or git push. If hooks fail, fix the underlying issue instead of bypassing them

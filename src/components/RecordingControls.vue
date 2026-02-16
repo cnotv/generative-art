@@ -69,8 +69,8 @@ const handleSliderChange = (value: number[]) => {
       :class="[
         'recording-controls__button',
         isRecording
-          ? 'bg-red-500 hover:bg-red-600'
-          : 'bg-green-500 hover:bg-green-600',
+          ? 'recording-controls__button--stop'
+          : 'recording-controls__button--start',
       ]"
       @click="handleToggleRecording"
     >
@@ -117,6 +117,40 @@ const handleSliderChange = (value: number[]) => {
 .recording-controls__button {
   color: white;
   font-weight: 500;
+}
+
+.recording-controls__button--start {
+  background-color: hsl(142 71% 45%);
+}
+
+.recording-controls__button--start:hover {
+  background-color: hsl(142 71% 35%);
+}
+
+.recording-controls__button--stop {
+  background-color: hsl(0 84% 60%);
+}
+
+.recording-controls__button--stop:hover {
+  background-color: hsl(0 84% 50%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .recording-controls__button--start {
+    background-color: hsl(142 71% 35%);
+  }
+
+  .recording-controls__button--start:hover {
+    background-color: hsl(142 71% 28%);
+  }
+
+  .recording-controls__button--stop {
+    background-color: hsl(0 62% 45%);
+  }
+
+  .recording-controls__button--stop:hover {
+    background-color: hsl(0 62% 38%);
+  }
 }
 
 .recording-controls__icon {

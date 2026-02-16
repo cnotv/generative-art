@@ -13,7 +13,7 @@ vi.mock('@webgamekit/threejs', async () => {
     getTools: vi.fn(() => Promise.resolve({
       setup: vi.fn((config) => Promise.resolve({ orbit: null, ground: null })),
       animate: vi.fn(),
-      scene: {},
+      scene: { children: [], remove: vi.fn() },
       world: {},
       camera: { position: { x: 0, y: 50, z: 100 } },
     })),
@@ -74,17 +74,18 @@ describe('SceneEditor', () => {
       const event = {
         target: {
           files: [file],
+          value: '',
         },
       } as unknown as Event;
 
       await wrapper.vm.handleFileUpload(event);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.textureItems).toBeDefined();
-      expect(wrapper.vm.textureItems.length).toBeGreaterThan(0);
-      expect(wrapper.vm.textureItems[0]).toHaveProperty('name');
-      expect(wrapper.vm.textureItems[0]).toHaveProperty('url');
-      expect(wrapper.vm.textureItems[0]).toHaveProperty('id');
+      expect(wrapper.vm.textureGroups).toBeDefined();
+      expect(wrapper.vm.textureGroups.length).toBeGreaterThan(0);
+      expect(wrapper.vm.textureGroups[0]).toHaveProperty('name');
+      expect(wrapper.vm.textureGroups[0].textures[0]).toHaveProperty('url');
+      expect(wrapper.vm.textureGroups[0].textures[0]).toHaveProperty('id');
     });
 
     it('should handle adding texture items with names', async () => {
@@ -95,14 +96,15 @@ describe('SceneEditor', () => {
       const event = {
         target: {
           files: [file1],
+          value: '',
         },
       } as unknown as Event;
 
       await wrapper.vm.handleFileUpload(event);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.textureItems.length).toBe(1);
-      expect(wrapper.vm.textureItems[0].name).toBe('grass');
+      expect(wrapper.vm.textureGroups.length).toBe(1);
+      expect(wrapper.vm.textureGroups[0].name).toBe('grass');
     });
   });
 
@@ -150,8 +152,8 @@ describe('SceneEditor', () => {
     it('should allow instance count configuration', () => {
       const wrapper = createWrapper();
 
-      wrapper.vm.reactiveConfig.instances.count = 50;
-      expect(wrapper.vm.reactiveConfig.instances.count).toBe(50);
+      wrapper.vm.reactiveConfig.instances.density = 50;
+      expect(wrapper.vm.reactiveConfig.instances.density).toBe(50);
     });
   });
 
@@ -171,174 +173,91 @@ describe('SceneEditor', () => {
     });
   });
 
-  describe('Per-Texture Configuration', () => {
-    it('should maintain separate configs for different textures', async () => {
+  describe('Per-Group Configuration', () => {
+    it('should maintain separate configs for different groups', async () => {
       const wrapper = createWrapper();
 
-      // Add first texture (grass.png) directly via method
+      // Add first texture group (grass.png)
       const file1 = new File(['texture1'], 'grass.png', { type: 'image/png' });
-      const event1 = { target: { files: [file1] } } as unknown as Event;
+      const event1 = { target: { files: [file1], value: '' } } as unknown as Event;
       wrapper.vm.handleFileUpload(event1);
       await wrapper.vm.$nextTick();
 
-      const grassId = wrapper.vm.textureItems[0].id;
+      const grassGroupId = wrapper.vm.textureGroups[0].id;
 
-      // Select grass texture and verify it has default config
-      wrapper.vm.selectTexture(grassId);
+      // Verify group config was created in registry
+      expect(wrapper.vm.groupConfigRegistry['grass']).toBeDefined();
+
+      // Modify grass config via reactiveConfig (group is auto-selected)
+      wrapper.vm.reactiveConfig.textures.baseSize = [30, 30, 0] as CoordinateTuple;
       await wrapper.vm.$nextTick();
 
-      const grassConfig = wrapper.vm.textureConfigRegistry[grassId];
-      expect(grassConfig).toBeDefined();
-      expect(grassConfig.baseSize).toEqual([20, 20, 0]); // default values
-
-      // Modify grass config
-      wrapper.vm.textureConfigRegistry[grassId].baseSize = [30, 30, 0] as CoordinateTuple;
-      await wrapper.vm.$nextTick();
-
-      // Add second texture (tree.png)
+      // Add second texture group (tree.png) — this saves grass config and selects tree
       const file2 = new File(['texture2'], 'tree.png', { type: 'image/png' });
-      const event2 = { target: { files: [file2] } } as unknown as Event;
+      const event2 = { target: { files: [file2], value: '' } } as unknown as Event;
       wrapper.vm.handleFileUpload(event2);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.textureItems.length).toBe(2);
-      const treeId = wrapper.vm.textureItems[1].id;
+      expect(wrapper.vm.textureGroups.length).toBe(2);
 
-      // Select tree texture - it should be auto-selected after adding
-      await wrapper.vm.$nextTick();
+      // Tree should have default config
+      expect(wrapper.vm.groupConfigRegistry['tree']).toBeDefined();
+      expect(wrapper.vm.groupConfigRegistry['tree'].textures.baseSize).toEqual([20, 20, 0]);
 
-      const treeConfig = wrapper.vm.textureConfigRegistry[treeId];
-      expect(treeConfig).toBeDefined();
-      expect(treeConfig.baseSize).toEqual([20, 20, 0]); // default values, not affected by grass changes
-
-      // Modify tree config
-      wrapper.vm.textureConfigRegistry[treeId].baseSize = [50, 50, 0] as CoordinateTuple;
-      await wrapper.vm.$nextTick();
-
-      // Switch back to grass and verify its config is unchanged
-      wrapper.vm.selectTexture(grassId);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.vm.textureConfigRegistry[grassId].baseSize).toEqual([30, 30, 0]);
-      expect(wrapper.vm.textureConfigRegistry[treeId].baseSize).toEqual([50, 50, 0]);
-
-      // Verify configs are independent
-      expect(grassConfig).not.toBe(treeConfig);
+      // Grass config should have been saved with modified values
+      expect(wrapper.vm.groupConfigRegistry['grass'].textures.baseSize).toEqual([30, 30, 0]);
     });
 
-    it('should register unique config key for each texture by filename', async () => {
+    it('should initialize group config with default values', async () => {
       const wrapper = createWrapper();
 
-      // Mock registerViewConfig to track calls
-      const registerSpy = vi.spyOn(await import('@/composables/useViewConfig'), 'registerViewConfig');
-
-      // Add texture
       const file = new File(['texture'], 'grass.png', { type: 'image/png' });
-      const event = { target: { files: [file] } } as unknown as Event;
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
       wrapper.vm.handleFileUpload(event);
       await wrapper.vm.$nextTick();
 
-      const textureId = wrapper.vm.textureItems[0].id;
-
-      // Texture is auto-selected after adding, wait for config registration
-      await wrapper.vm.$nextTick();
-
-      // Verify registerViewConfig was called with the texture filename in the key
-      expect(registerSpy).toHaveBeenCalledWith(
-        expect.stringContaining(':grass'), // Should be "SceneEditor:grass"
-        expect.any(Object), // textureReactiveConfig
-        expect.objectContaining({
-          textures: expect.any(Object)
-        }), // schema with only textures controls
-        undefined, // no sceneConfig for texture-specific panels
-        undefined, // no sceneSchema for texture-specific panels
-        expect.any(Function) // onChange callback
-      );
+      const groupConfig = wrapper.vm.groupConfigRegistry['grass'];
+      expect(groupConfig).toBeDefined();
+      expect(groupConfig.textures.baseSize).toEqual([20, 20, 0]);
+      expect(groupConfig.instances.density).toBe(0);
+      expect(groupConfig.instances.pattern).toBe('random');
     });
 
-    it('should update textureProperties when texture config changes', async () => {
+    it('should remove group config when group is removed', async () => {
       const wrapper = createWrapper();
 
-      // Add texture
       const file = new File(['texture'], 'grass.png', { type: 'image/png' });
-      const event = { target: { files: [file] } } as unknown as Event;
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
       wrapper.vm.handleFileUpload(event);
       await wrapper.vm.$nextTick();
 
-      const textureId = wrapper.vm.textureItems[0].id;
-      // Texture is auto-selected, wait for it
+      const groupId = wrapper.vm.textureGroups[0].id;
+
+      expect(wrapper.vm.groupConfigRegistry['grass']).toBeDefined();
+
+      wrapper.vm.removeGroup(groupId);
       await wrapper.vm.$nextTick();
 
-      // Modify texture config directly in textureProperties (simpler test)
-      wrapper.vm.reactiveConfig.textureProperties['grass'] = {
-        baseSize: [40, 40, 0] as CoordinateTuple,
-        sizeVariation: [15, 15, 0] as CoordinateTuple,
-        rotationVariation: [1, 1, 1] as CoordinateTuple,
-      };
-      await wrapper.vm.$nextTick();
-
-      // Verify textureProperties is set
-      const textureProperties = wrapper.vm.reactiveConfig.textureProperties['grass'];
-      expect(textureProperties).toBeDefined();
-      expect(textureProperties.baseSize).toEqual([40, 40, 0]);
-      expect(textureProperties.sizeVariation).toEqual([15, 15, 0]);
-      expect(textureProperties.rotationVariation).toEqual([1, 1, 1]);
+      expect(wrapper.vm.groupConfigRegistry['grass']).toBeUndefined();
+      expect(wrapper.vm.textureGroups.length).toBe(0);
     });
 
-    it('should unregister texture config when texture is removed', async () => {
+    it('should deselect group when selecting it again', async () => {
       const wrapper = createWrapper();
 
-      // Mock unregisterViewConfig to track calls
-      const unregisterSpy = vi.spyOn(await import('@/composables/useViewConfig'), 'unregisterViewConfig');
-
-      // Add texture
       const file = new File(['texture'], 'grass.png', { type: 'image/png' });
-      const event = { target: { files: [file] } } as unknown as Event;
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
       wrapper.vm.handleFileUpload(event);
       await wrapper.vm.$nextTick();
 
-      const textureId = wrapper.vm.textureItems[0].id;
+      const groupId = wrapper.vm.textureGroups[0].id;
+      expect(wrapper.vm.selectedGroupId).toBe(groupId);
 
-      // Remove the texture directly
-      wrapper.vm.removeTexture(textureId);
+      // Toggle selection off
+      wrapper.vm.selectGroup(groupId);
       await wrapper.vm.$nextTick();
 
-      // Verify unregisterViewConfig was called with the texture filename in the key
-      expect(unregisterSpy).toHaveBeenCalledWith(
-        expect.stringContaining(':grass') // Should be "SceneEditor:grass"
-      );
-
-      // Verify texture was removed
-      expect(wrapper.vm.textureItems.length).toBe(0);
-    });
-
-    it('should show main config when no texture is selected', async () => {
-      const wrapper = createWrapper();
-
-      // Mock registerViewConfig
-      const registerSpy = vi.spyOn(await import('@/composables/useViewConfig'), 'registerViewConfig');
-      registerSpy.mockClear();
-
-      // Add texture
-      const file = new File(['texture'], 'grass.png', { type: 'image/png' });
-      const event = { target: { files: [file] } } as unknown as Event;
-      wrapper.vm.handleFileUpload(event);
-      await wrapper.vm.$nextTick();
-
-      // Texture is auto-selected
-      const textureId = wrapper.vm.textureItems[0].id;
-      await wrapper.vm.$nextTick();
-
-      registerSpy.mockClear();
-
-      // Deselect by clicking the same texture (toggles)
-      wrapper.vm.selectTexture(textureId);
-      await wrapper.vm.$nextTick();
-
-      // Verify main config is registered when no texture is selected
-      expect(registerSpy).toHaveBeenCalled();
-      const routeNames = registerSpy.mock.calls.map((call: any[]) => call[0]);
-      expect(routeNames).toContain('SceneEditor');
+      expect(wrapper.vm.selectedGroupId).toBeNull();
     });
   });
 });

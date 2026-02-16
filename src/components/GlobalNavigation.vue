@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Menu, Image, Settings, Bug, Video } from 'lucide-vue-next';
+import { Menu, Image, Settings, Layers, Bug, Video } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { usePanels } from '@/composables/usePanels';
 import { useViewPanels } from '@/composables/useViewPanels';
@@ -27,6 +27,10 @@ const allButtons = computed<PanelButton[]>(() => {
 
   if (viewPanels.value.showConfig) {
     buttons.push({ type: 'config', icon: Settings, label: 'Config' });
+  }
+
+  if (viewPanels.value.showScene) {
+    buttons.push({ type: 'scene', icon: Layers, label: 'Scene' });
   }
 
   // Add global panels
@@ -64,7 +68,7 @@ const handleToggle = (panelType: PanelType) => {
       :aria-label="button.label"
       @click="handleToggle(button.type)"
     >
-      <component :is="button.icon" class="h-5 w-5 text-white" />
+      <component :is="button.icon" class="h-5 w-5" />
     </Button>
   </nav>
 </template>
@@ -79,11 +83,13 @@ const handleToggle = (panelType: PanelType) => {
   display: flex;
   gap: 0.5rem;
   padding: 0.5rem;
-  background: rgba(0, 0, 0, 0.7);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
   border-radius: 0.5rem;
   opacity: 0;
   transition: opacity 0.2s;
+  color: var(--color-foreground);
 }
 
 .global-navigation:hover,
@@ -97,10 +103,20 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .global-navigation__button--active {
-  background: rgba(255, 255, 255, 0.2);
+  background-color: hsl(0 0% 83%);
 }
 
 .global-navigation__button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background-color: hsl(0 0% 90%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .global-navigation__button--active {
+    background-color: hsl(0 0% 25%);
+  }
+
+  .global-navigation__button:hover {
+    background-color: hsl(0 0% 20%);
+  }
 }
 </style>

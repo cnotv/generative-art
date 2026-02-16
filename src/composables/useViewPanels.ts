@@ -3,11 +3,13 @@ import { ref } from 'vue';
 interface ViewPanelsConfig {
   showTextures: boolean;
   showConfig: boolean;
+  showScene: boolean;
 }
 
 const viewPanels = ref<ViewPanelsConfig>({
   showTextures: false,
   showConfig: false,
+  showScene: false,
 });
 
 export const useViewPanels = () => {
@@ -15,6 +17,7 @@ export const useViewPanels = () => {
     viewPanels.value = {
       showTextures: config.showTextures ?? false,
       showConfig: config.showConfig ?? false,
+      showScene: config.showScene ?? false,
     };
   };
 
@@ -22,6 +25,7 @@ export const useViewPanels = () => {
     viewPanels.value = {
       showTextures: false,
       showConfig: false,
+      showScene: false,
     };
   };
 

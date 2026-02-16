@@ -14,6 +14,7 @@ defineProps<Props>();
       :alt="alt"
       class="texture-preview__image"
     />
+    <slot />
   </div>
 </template>
 
@@ -27,7 +28,6 @@ defineProps<Props>();
   width: 48px;
   height: 48px;
   border-radius: 4px;
-  overflow: hidden;
   flex-shrink: 0;
 
   /* Checkered background pattern for transparency */
@@ -47,5 +47,6 @@ defineProps<Props>();
   object-fit: contain;
   position: relative;
   z-index: 1;
+  border-radius: inherit;
 }
 </style>

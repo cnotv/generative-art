@@ -4,35 +4,35 @@ import { usePanels } from "@/composables/usePanels";
 import { useViewConfig } from "@/composables/useViewConfig";
 import SchemaControls from "./ConfigControls.vue";
 
-const { isConfigOpen, closePanel } = usePanels();
+const { isSceneOpen, closePanel } = usePanels();
 const viewConfig = useViewConfig();
 
 const handleOpenChange = (open: boolean) => {
   if (!open) {
-    closePanel("config");
+    closePanel("scene");
   }
 };
 </script>
 
 <template>
-  <Sheet :open="isConfigOpen" side="right" @update:open="handleOpenChange">
-    <div class="config-panel__content flex flex-col gap-6">
-      <div v-if="viewConfig.hasConfig.value" class="flex-1 min-h-0">
+  <Sheet :open="isSceneOpen" side="right" @update:open="handleOpenChange">
+    <div class="scene-panel__content flex flex-col gap-6">
+      <div v-if="viewConfig.hasSceneConfig.value" class="flex-1 min-h-0">
         <SchemaControls
-          :schema="viewConfig.currentSchema.value!"
-          :get-value="viewConfig.getConfigValue"
-          :on-update="viewConfig.updateConfig"
+          :schema="viewConfig.currentSceneSchema.value!"
+          :get-value="viewConfig.getSceneConfigValue"
+          :on-update="viewConfig.updateSceneConfig"
         />
       </div>
       <p v-else class="text-sm text-muted-foreground">
-        No configuration available for this view.
+        No scene configuration available for this view.
       </p>
     </div>
   </Sheet>
 </template>
 
 <style scoped>
-.config-panel__content {
+.scene-panel__content {
   height: 100%;
 }
 </style>

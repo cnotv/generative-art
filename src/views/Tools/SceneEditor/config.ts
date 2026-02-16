@@ -20,7 +20,7 @@ export interface SceneEditorConfig {
     [filename: string]: Partial<TextureProperties>;
   };
   instances: {
-    count: number;
+    density: number;
     pattern: 'random' | 'grid' | 'grid-jitter';
     seed: number;
   };
@@ -43,7 +43,7 @@ export const presets = {
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        count: 25,
+        density: 15,
         pattern: 'random' as const,
         seed: 1000,
       },
@@ -62,7 +62,7 @@ export const presets = {
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        count: 30,
+        density: 50,
         pattern: 'grid-jitter' as const,
         seed: 8000,
       },
@@ -81,7 +81,7 @@ export const presets = {
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        count: 300,
+        density: 200,
         pattern: 'grid-jitter' as const,
         seed: 6000,
       },
@@ -93,7 +93,7 @@ export const presets = {
 export const defaultConfig: SceneEditorConfig = {
   area: {
     center: [0, 0, 0] as CoordinateTuple,
-    size: [50, 0, 50] as CoordinateTuple,
+    size: [0, 0, 0] as CoordinateTuple,
   },
   textures: {
     baseSize: [20, 20, 0] as CoordinateTuple,
@@ -102,7 +102,7 @@ export const defaultConfig: SceneEditorConfig = {
   },
   textureProperties: {},
   instances: {
-    count: 1,
+    density: 0,
     pattern: 'random',
     seed: 1000,
   },
@@ -154,7 +154,7 @@ export const configControls = {
     },
   },
   instances: {
-    count: { min: 1, max: 1000, step: 1 },
+    density: { min: 0, max: 1000, step: 1 },
     pattern: {
       label: 'Distribution Pattern',
       options: ['random', 'grid', 'grid-jitter'],
