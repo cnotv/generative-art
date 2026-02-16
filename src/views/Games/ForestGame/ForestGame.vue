@@ -17,6 +17,7 @@ import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
+import { useViewPanels } from "@/composables/useViewPanels";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -31,6 +32,7 @@ import {
 } from "./config";
 
 const route = useRoute();
+const { setViewPanels, clearViewPanels } = useViewPanels();
 
 // Create reactive config for game settings (Config tab)
 const reactiveConfig = createReactiveConfig({
@@ -331,6 +333,11 @@ const init = async (): Promise<void> => {
 };
 
 onMounted(async () => {
+  // Set view-specific panels for GlobalNavigation
+  setViewPanels({
+    showConfig: true,
+  });
+
   // Register both Config and Scene tabs with the config panel
   registerViewConfig(
     route.name as string,
@@ -345,6 +352,9 @@ onMounted(async () => {
   window.addEventListener("resize", init);
 });
 onUnmounted(() => {
+  // Clear view-specific panels
+  clearViewPanels();
+
   stopMusic();
   destroyControls();
   unregisterViewConfig(route.name as string);

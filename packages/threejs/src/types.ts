@@ -22,6 +22,7 @@ export interface CommonOptions {
 }
 
 export interface ModelOptions extends CommonOptions {
+  name?: string;
   color?: number;
   opacity?: number;
   reflectivity?: number;
@@ -43,6 +44,7 @@ export interface ModelOptions extends CommonOptions {
     list: string[];
   };
   origin?: { x?: number; y?: number; z?: number };
+  wireframe?: boolean;
   depthWrite?: boolean;
   alphaTest?: number;
   renderOrder?: number;

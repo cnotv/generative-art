@@ -33,3 +33,50 @@ const emit = defineEmits<{
     </SliderTrack>
   </SliderRoot>
 </template>
+
+<style>
+.slider {
+  position: relative;
+  display: flex;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+  align-items: center;
+}
+
+.slider__track {
+  position: relative;
+  height: 0.5rem;
+  width: 100%;
+  flex-grow: 1;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background-color: var(--color-secondary);
+}
+
+.slider__range {
+  position: absolute;
+  height: 100%;
+  background-color: var(--color-primary);
+}
+
+.slider__thumb {
+  display: block;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-primary);
+  background-color: var(--color-background);
+  transition: colors 150ms;
+}
+
+.slider__thumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-ring);
+}
+
+.slider__thumb:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+</style>

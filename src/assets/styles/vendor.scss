@@ -1,0 +1,12 @@
+// Vendor Styles
+// Third-party library styles and overrides
+
+// Radix UI overrides
+[data-radix-popper-content-wrapper] {
+  z-index: var(--z-popover) !important;
+}
+
+// Radix Vue specific overrides
+[data-radix-vue-collection-item] {
+  outline: none;
+}

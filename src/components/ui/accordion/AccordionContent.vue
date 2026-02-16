@@ -14,3 +14,32 @@ defineProps<{
     </div>
   </AccordionContent>
 </template>
+
+<style>
+.accordion__content {
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.accordion__content[data-state="open"] {
+  animation: accordionDown 200ms ease-out;
+}
+
+.accordion__content[data-state="closed"] {
+  animation: accordionUp 200ms ease-out;
+}
+
+.accordion__content-inner {
+  padding-bottom: 1rem;
+}
+
+@keyframes accordionDown {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordionUp {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+</style>

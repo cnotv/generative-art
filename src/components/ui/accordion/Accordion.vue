@@ -18,3 +18,9 @@ defineProps<{
     <slot />
   </AccordionRoot>
 </template>
+
+<style>
+.accordion {
+  width: 100%;
+}
+</style>

@@ -126,7 +126,24 @@ Use format: `<type>/<issue-number>-<description>`
 - **Type safety**: Use `CoordinateTuple` for position/rotation/scale arrays, avoid `any`
 - **Export types**: Re-export types from package `index.ts` for public APIs
 
+### Style Organization
+- **Variables**: All CSS variables and theme definitions belong in `src/assets/styles/_variables.scss`
+  - Define both light and dark theme colors
+  - Use semantic naming (e.g., `--color-background`, `--color-primary`)
+  - Include spacing, border-radius, typography, shadows, and z-index scales
+- **Panels**: Shared panel/sheet/dialog styles in `src/assets/styles/panels.scss`
+  - Import `_variables.scss` at the top
+  - Only include layout and structural styles shared across panels
+- **Vendor**: Third-party library overrides in `src/assets/styles/vendor.scss`
+  - Radix UI, Tailwind, and other external library customizations
+  - Keep vendor-specific selectors isolated from application styles
+- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped>` section
+  - Never put component-specific styles in global stylesheets
+  - Use CSS variables from `_variables.scss` for theming
+  - Keep styles close to the components that use them
+
 ### Modular Architecture
+- **Reuse existing components**: ALWAYS check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components (Button, Sheet, Tabs, Input, Select, etc.) and other reusable components in `src/components/`. Never reinvent the wheel.
 - **Barrel exports**: Use `index.ts` files to export public APIs (see `packages/*/src/index.ts`)
 - **Package export prefixes**: Functions exported from packages MUST have a prefix matching the package name to avoid namespace collisions. Examples:
   - `recording` package: `recordCreate`, `recordDestroy`, `recordStart`, `recordStop`
@@ -156,12 +173,17 @@ Use format: `<type>/<issue-number>-<description>`
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
+- **Light and dark theme**: Always provide both light and dark mode colors when adding custom styles. Use CSS variables from `_variables.scss` where possible, and add `@media (prefers-color-scheme: dark)` overrides for any hardcoded color values
+
+### Git Hooks
+- **Never use `--no-verify`**: NEVER use `--no-verify` flag on git commit or git push. If hooks fail, fix the underlying issue instead of bypassing them
 
 ### Linting
 - **Run lint before commit**: Husky + lint-staged enforces this automatically
 - **ESLint config**: Follow project's ESLint rules (Vue + TypeScript + Prettier)
 - **Fix on save**: Run `pnpm lint` to auto-fix issues
 - **No warnings**: Address all lint warnings, don't suppress without reason
+- **Never disable ESLint rules**: NEVER use `eslint-disable`, `eslint-disable-next-line`, or `eslint-disable-line` comments. Fix the code to comply with the rules instead
 
 ### Documentation
 - **Use Docusaurus**: All project documentation lives in `documentation/` folder

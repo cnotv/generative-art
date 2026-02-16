@@ -28,3 +28,30 @@ const emit = defineEmits<{
     </CheckboxIndicator>
   </CheckboxRoot>
 </template>
+
+<style>
+.checkbox {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary);
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-ring);
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.checkbox[data-state="checked"] {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+</style>
