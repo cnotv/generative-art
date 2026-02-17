@@ -48,6 +48,8 @@ const isAnimating = shallowRef(false);
 const hasPath = shallowRef(false);
 const showCosts = shallowRef(false);
 const currentScenario = shallowRef<string>("random");
+const isDragging = shallowRef(false);
+const dragAction = shallowRef<"place" | "remove" | null>(null);
 
 const reactiveConfig = createReactiveConfig({
   obstacles: { density: obstacleDensity },
@@ -288,11 +290,66 @@ const buildScene = (
   computeAndDrawPath(state, start, goal, currentGridConfig);
 };
 
-const onCanvasClick = (event: MouseEvent): void => {
-  if (!sceneState || isAnimating.value) return;
-  const { renderer, orthoCamera, scene, world, grid } = sceneState;
-  const currentGridConfig = sceneState.currentGridConfig;
+const stopPathAnimation = (state: SceneState): void => {
+  state.timelineManager
+    .getTimeline()
+    .filter((a) => a.category === "pathfinding")
+    .forEach((a) => { if (a.id) state.timelineManager.removeAction(a.id); });
+  isAnimating.value = false;
+};
 
+const applyObstacleEdit = (
+  state: SceneState,
+  gridPos: { x: number; z: number },
+  action: "place" | "remove"
+): void => {
+  const { scene, world, grid } = state;
+  const currentGridConfig = state.currentGridConfig;
+  const start = defaultStart;
+  const goal = defaultGoal(currentGridConfig.width, currentGridConfig.height);
+
+  if (
+    (gridPos.x === start.x && gridPos.z === start.z) ||
+    (gridPos.x === goal.x && gridPos.z === goal.z)
+  ) return;
+
+  const cell = grid.cells[gridPos.z]?.[gridPos.x];
+  if (!cell) return;
+
+  if (action === "place" && cell.walkable) {
+    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
+    const color = obstacleColors[(gridPos.x + gridPos.z) % obstacleColors.length];
+    const cube = getCube(scene, world, {
+      position: [worldPos[0], 1, worldPos[2]] as CoordinateTuple,
+      size: obstacleSize,
+      color,
+      type: "fixed",
+    });
+    state.obstacleMeshes.push(cube);
+    state.grid = markObstacle(grid, gridPos.x, gridPos.z);
+  } else if (action === "remove" && !cell.walkable) {
+    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
+    const idx = state.obstacleMeshes.findIndex(
+      (m) =>
+        Math.abs(m.position.x - worldPos[0]) < 0.5 &&
+        Math.abs(m.position.z - worldPos[2]) < 0.5
+    );
+    if (idx !== -1) {
+      scene.remove(state.obstacleMeshes[idx]);
+      state.obstacleMeshes.splice(idx, 1);
+    }
+    const remaining = state.obstacleMeshes.map((m) =>
+      worldToGrid([m.position.x, 0, m.position.z], currentGridConfig)
+    );
+    state.grid = markObstacles(createGrid(currentGridConfig), remaining);
+  }
+};
+
+const getGridPosFromEvent = (
+  event: MouseEvent,
+  state: SceneState
+): { x: number; z: number } | null => {
+  const { renderer, orthoCamera } = state;
   const rect = renderer.domElement.getBoundingClientRect();
   const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -304,51 +361,65 @@ const onCanvasClick = (event: MouseEvent): void => {
   const target = new THREE.Vector3();
   raycaster.ray.intersectPlane(groundPlane, target);
 
-  const gridPos = worldToGrid([target.x, 0, target.z], currentGridConfig);
-  if (
-    gridPos.x < 0 || gridPos.x >= currentGridConfig.width ||
-    gridPos.z < 0 || gridPos.z >= currentGridConfig.height
-  ) return;
+  const gridPos = worldToGrid([target.x, 0, target.z], state.currentGridConfig);
+  const { width, height } = state.currentGridConfig;
+  if (gridPos.x < 0 || gridPos.x >= width || gridPos.z < 0 || gridPos.z >= height) {
+    return null;
+  }
+  return gridPos;
+};
 
-  const start = defaultStart;
-  const goal = defaultGoal(currentGridConfig.width, currentGridConfig.height);
-  if (
-    (gridPos.x === start.x && gridPos.z === start.z) ||
-    (gridPos.x === goal.x && gridPos.z === goal.z)
-  ) return;
+const onCanvasClick = (event: MouseEvent): void => {
+  if (!sceneState || isDragging.value) return;
 
-  const cell = grid.cells[gridPos.z]?.[gridPos.x];
+  const gridPos = getGridPosFromEvent(event, sceneState);
+  if (!gridPos) return;
+
+  if (isAnimating.value) stopPathAnimation(sceneState);
+
+  const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x];
   if (!cell) return;
 
-  if (cell.walkable) {
-    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
-    const color = obstacleColors[(gridPos.x + gridPos.z) % obstacleColors.length];
-    const cube = getCube(scene, world, {
-      position: [worldPos[0], 1, worldPos[2]] as CoordinateTuple,
-      size: obstacleSize,
-      color,
-      type: "fixed",
-    });
-    sceneState.obstacleMeshes.push(cube);
-    sceneState.grid = markObstacle(grid, gridPos.x, gridPos.z);
-  } else {
-    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
-    const idx = sceneState.obstacleMeshes.findIndex(
-      (m) =>
-        Math.abs(m.position.x - worldPos[0]) < 0.5 &&
-        Math.abs(m.position.z - worldPos[2]) < 0.5
-    );
-    if (idx !== -1) {
-      scene.remove(sceneState.obstacleMeshes[idx]);
-      sceneState.obstacleMeshes.splice(idx, 1);
-    }
-    const remaining = sceneState.obstacleMeshes.map((m) =>
-      worldToGrid([m.position.x, 0, m.position.z], currentGridConfig)
-    );
-    sceneState.grid = markObstacles(createGrid(currentGridConfig), remaining);
-  }
+  const action: "place" | "remove" = cell.walkable ? "place" : "remove";
+  applyObstacleEdit(sceneState, gridPos, action);
 
-  computeAndDrawPath(sceneState, start, goal, currentGridConfig);
+  const start = defaultStart;
+  const goal = defaultGoal(sceneState.currentGridConfig.width, sceneState.currentGridConfig.height);
+  computeAndDrawPath(sceneState, start, goal, sceneState.currentGridConfig);
+};
+
+const onCanvasMouseDown = (event: MouseEvent): void => {
+  if (!sceneState) return;
+  const gridPos = getGridPosFromEvent(event, sceneState);
+  if (!gridPos) return;
+
+  const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x];
+  if (!cell) return;
+
+  isDragging.value = false;
+  dragAction.value = cell.walkable ? "place" : "remove";
+};
+
+const onCanvasMouseMove = (event: MouseEvent): void => {
+  if (!sceneState || dragAction.value === null || event.buttons === 0) return;
+  isDragging.value = true;
+
+  if (isAnimating.value) stopPathAnimation(sceneState);
+
+  const gridPos = getGridPosFromEvent(event, sceneState);
+  if (!gridPos) return;
+
+  applyObstacleEdit(sceneState, gridPos, dragAction.value);
+};
+
+const onCanvasMouseUp = (): void => {
+  if (dragAction.value !== null && sceneState) {
+    const start = defaultStart;
+    const goal = defaultGoal(sceneState.currentGridConfig.width, sceneState.currentGridConfig.height);
+    computeAndDrawPath(sceneState, start, goal, sceneState.currentGridConfig);
+  }
+  dragAction.value = null;
+  setTimeout(() => { isDragging.value = false; }, 0);
 };
 
 const handleResize = (): void => {
@@ -431,6 +502,9 @@ const init = async (): Promise<void> => {
   runLoop();
 
   canvas.value.addEventListener("click", onCanvasClick);
+  canvas.value.addEventListener("mousedown", onCanvasMouseDown);
+  canvas.value.addEventListener("mousemove", onCanvasMouseMove);
+  canvas.value.addEventListener("mouseup", onCanvasMouseUp);
   window.addEventListener("resize", handleResize);
 };
 
@@ -486,9 +560,22 @@ onMounted(async () => {
   await init();
 });
 
+const clearObstacles = (): void => {
+  if (!sceneState) return;
+  if (isAnimating.value) stopPathAnimation(sceneState);
+  clearSceneMeshes(sceneState.scene, sceneState.obstacleMeshes);
+  sceneState.grid = createGrid(sceneState.currentGridConfig);
+  const start = defaultStart;
+  const goal = defaultGoal(sceneState.currentGridConfig.width, sceneState.currentGridConfig.height);
+  computeAndDrawPath(sceneState, start, goal, sceneState.currentGridConfig);
+};
+
 onUnmounted(() => {
   if (animFrameId !== null) cancelAnimationFrame(animFrameId);
   canvas.value?.removeEventListener("click", onCanvasClick);
+  canvas.value?.removeEventListener("mousedown", onCanvasMouseDown);
+  canvas.value?.removeEventListener("mousemove", onCanvasMouseMove);
+  canvas.value?.removeEventListener("mouseup", onCanvasMouseUp);
   window.removeEventListener("resize", handleResize);
   clearViewPanels();
   unregisterViewConfig(route.name as string);
@@ -518,8 +605,12 @@ onUnmounted(() => {
         <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--obstacle"></span>
         Obstacle
       </li>
+      <li class="pathfinder-viz__legend-item">
+        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--character"></span>
+        Character
+      </li>
     </ul>
-    <p class="pathfinder-viz__legend-hint">Click grid to toggle obstacles</p>
+    <p class="pathfinder-viz__legend-hint">Click or drag to place/remove obstacles</p>
   </aside>
 
   <nav class="pathfinder-viz__scenarios">
@@ -542,6 +633,9 @@ onUnmounted(() => {
     </Button>
     <Button variant="secondary" :disabled="isAnimating" @click="recalculatePath">
       Recalculate
+    </Button>
+    <Button variant="outline" size="sm" @click="clearObstacles">
+      Clear Obstacles
     </Button>
     <Button variant="outline" size="sm" @click="toggleCosts">
       {{ showCosts ? "Hide Costs" : "Show Costs" }}
@@ -609,6 +703,7 @@ canvas {
 .pathfinder-viz__legend-swatch--goal  { background: #e74c3c; }
 .pathfinder-viz__legend-swatch--path  { background: #f39c12; }
 .pathfinder-viz__legend-swatch--obstacle { background: #4ecdc4; }
+.pathfinder-viz__legend-swatch--character { background: #ffffff; border: 1px solid #555; }
 
 .pathfinder-viz__legend-hint {
   color: #888;

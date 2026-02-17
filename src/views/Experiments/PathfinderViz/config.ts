@@ -94,14 +94,35 @@ const makeWall = (
       : { x: from + i, z: fixedValue }
   );
 
-const WALL_A = 4;
-const WALL_B = 8;
-const WALL_C = 12;
-const GRID_MID = 8;
-const WALL_END_LOW = 7;
-const WALL_END_HIGH = 13;
-const CORRIDOR_TOP = 6;
-const CORRIDOR_BOT = 9;
+// Maze: 5 alternating horizontal walls forcing a snake path
+// Gaps alternate: LEFT (x=1-2) → RIGHT (x=12-14) → LEFT → RIGHT → extra blocker
+const MAZE_ROW_1 = 3;
+const MAZE_ROW_2 = 6;
+const MAZE_ROW_3 = 9;
+const MAZE_ROW_4 = 12;
+const MAZE_LEFT_START = 3;   // left-gap walls start at x=3 (gap: x=1-2)
+const MAZE_LEFT_END = 14;
+const MAZE_RIGHT_START = 1;  // right-gap walls start at x=1
+const MAZE_RIGHT_END = 11;   // right-gap walls end at x=11 (gap: x=12-14)
+const MAZE_EXTRA_X = 7;      // extra vertical blocker column
+const MAZE_EXTRA_Z_FROM = 3;
+const MAZE_EXTRA_Z_TO = 5;
+
+// Corridor: two horizontal walls creating a narrow passage
+const CORRIDOR_TOP = 5;
+const CORRIDOR_BOT = 10;
+const CORRIDOR_FROM = 2;
+const CORRIDOR_TO = 13;
+
+// Zigzag: 4 vertical walls with alternating bottom/top gaps
+const ZZ_COL_1 = 3;
+const ZZ_COL_2 = 6;
+const ZZ_COL_3 = 9;
+const ZZ_COL_4 = 12;
+const ZZ_BOTTOM_FROM = 1;
+const ZZ_BOTTOM_TO = 9;    // gap: z=10-14 at bottom
+const ZZ_TOP_FROM = 5;
+const ZZ_TOP_TO = 14;      // gap: z=1-4 at top
 
 /**
  * Pre-defined obstacle scenarios for demonstration.
@@ -109,17 +130,20 @@ const CORRIDOR_BOT = 9;
  */
 export const scenarios: Record<string, Position[]> = {
   maze: [
-    ...makeWall("x", WALL_A, 2, WALL_END_LOW),
-    ...makeWall("x", WALL_B, GRID_MID, WALL_END_HIGH),
-    ...makeWall("x", WALL_C, 2, WALL_END_LOW),
+    ...makeWall("z", MAZE_ROW_1, MAZE_LEFT_START, MAZE_LEFT_END),
+    ...makeWall("z", MAZE_ROW_2, MAZE_RIGHT_START, MAZE_RIGHT_END),
+    ...makeWall("z", MAZE_ROW_3, MAZE_LEFT_START, MAZE_LEFT_END),
+    ...makeWall("z", MAZE_ROW_4, MAZE_RIGHT_START, MAZE_RIGHT_END),
+    ...makeWall("x", MAZE_EXTRA_X, MAZE_EXTRA_Z_FROM, MAZE_EXTRA_Z_TO),
   ],
   corridor: [
-    ...makeWall("z", CORRIDOR_TOP, 2, WALL_END_HIGH),
-    ...makeWall("z", CORRIDOR_BOT, 2, WALL_END_HIGH),
+    ...makeWall("z", CORRIDOR_TOP, CORRIDOR_FROM, CORRIDOR_TO),
+    ...makeWall("z", CORRIDOR_BOT, CORRIDOR_FROM, CORRIDOR_TO),
   ],
   zigzag: [
-    ...makeWall("z", WALL_A, 2, CORRIDOR_TOP),
-    ...makeWall("z", WALL_B, GRID_MID, WALL_END_HIGH),
-    ...makeWall("z", WALL_C, 2, CORRIDOR_TOP),
+    ...makeWall("x", ZZ_COL_1, ZZ_BOTTOM_FROM, ZZ_BOTTOM_TO),
+    ...makeWall("x", ZZ_COL_2, ZZ_TOP_FROM, ZZ_TOP_TO),
+    ...makeWall("x", ZZ_COL_3, ZZ_BOTTOM_FROM, ZZ_BOTTOM_TO),
+    ...makeWall("x", ZZ_COL_4, ZZ_TOP_FROM, ZZ_TOP_TO),
   ],
 };
