@@ -1,4 +1,5 @@
-import type { Grid } from "./grid";
+import type { Grid, CellType } from "./grid";
+import { isCellWalkable } from "./grid";
 
 type Position = { x: number; z: number };
 
@@ -17,11 +18,19 @@ const ORTHOGONAL_NEIGHBORS: Position[] = [
   { x: -1, z: 0 },
 ];
 
+const GRAVEL_COST = 2;
+
 const isInBounds = (pos: Position, grid: Grid): boolean =>
   pos.x >= 0 && pos.x < grid.width && pos.z >= 0 && pos.z < grid.height;
 
+const getCellType = (pos: Position, grid: Grid): CellType =>
+  grid.cells[pos.z][pos.x].type;
+
 const isWalkable = (pos: Position, grid: Grid): boolean =>
-  isInBounds(pos, grid) && grid.cells[pos.z][pos.x].walkable;
+  isInBounds(pos, grid) && isCellWalkable(grid.cells[pos.z][pos.x]);
+
+const getMoveCost = (grid: Grid, toPos: Position): number =>
+  getCellType(toPos, grid) === "gravel" ? GRAVEL_COST : 1;
 
 const manhattanDistance = (a: Position, b: Position): number =>
   Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
@@ -43,21 +52,39 @@ const reconstructPath = (node: PathNode): Position[] =>
     ? [node.position]
     : [...reconstructPath(node.parent), node.position];
 
+const getWormholeNeighbors = (
+  current: PathNode,
+  goal: Position,
+  grid: Grid,
+  closedSet: Set<string>
+): PathNode[] => {
+  if (!isInBounds(current.position, grid)) return [];
+  if (getCellType(current.position, grid) !== "wormholeEntrance") return [];
+
+  return grid.cells
+    .flat()
+    .filter((c) => c.type === "wormholeExit" && !closedSet.has(positionKey(c)))
+    .map((c) => makeNode({ x: c.x, z: c.z }, current.g, goal, current));
+};
+
 const getNeighborNodes = (
   current: PathNode,
   goal: Position,
   grid: Grid,
   closedSet: Set<string>
-): PathNode[] =>
-  ORTHOGONAL_NEIGHBORS.map((offset) => ({
-    x: current.position.x + offset.x,
-    z: current.position.z + offset.z,
-  }))
+): PathNode[] => {
+  const orthogonal = ORTHOGONAL_NEIGHBORS
+    .map((offset) => ({
+      x: current.position.x + offset.x,
+      z: current.position.z + offset.z,
+    }))
     .filter(
-      (pos) =>
-        isWalkable(pos, grid) && !closedSet.has(positionKey(pos))
+      (pos) => isWalkable(pos, grid) && !closedSet.has(positionKey(pos))
     )
-    .map((pos) => makeNode(pos, current.g + 1, goal, current));
+    .map((pos) => makeNode(pos, current.g + getMoveCost(grid, pos), goal, current));
+
+  return [...orthogonal, ...getWormholeNeighbors(current, goal, grid, closedSet)];
+};
 
 const findBestOpenNode = (openList: PathNode[]): PathNode =>
   openList.reduce((best, node) =>
@@ -105,7 +132,8 @@ const astarStep = (
 
 /**
  * A* pathfinding algorithm. Returns the shortest path from start to goal,
- * or null if no path exists.
+ * or null if no path exists. Supports gravel (double cost) and wormholes
+ * (instant teleport from any entrance to any exit).
  */
 export const getBestRoute = (
   grid: Grid,

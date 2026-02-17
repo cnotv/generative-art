@@ -27,6 +27,7 @@ const handleOpenChange = (open: boolean) => {
       <p v-else class="text-sm text-muted-foreground">
         No configuration available for this view.
       </p>
+      <div id="config-panel-extra"></div>
     </div>
   </Sheet>
 </template>

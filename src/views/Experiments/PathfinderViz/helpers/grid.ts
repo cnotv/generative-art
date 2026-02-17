@@ -1,9 +1,11 @@
 import type { CoordinateTuple } from "@webgamekit/animation";
 
+export type CellType = "empty" | "boulder" | "gravel" | "wormholeEntrance" | "wormholeExit";
+
 export type GridCell = {
   x: number;
   z: number;
-  walkable: boolean;
+  type: CellType;
 };
 
 export type Grid = {
@@ -20,9 +22,11 @@ export type GridConfig = {
   centerOffset: CoordinateTuple;
 };
 
+export const isCellWalkable = (cell: GridCell): boolean => cell.type !== "boulder";
+
 export const createGrid = (config: GridConfig): Grid => ({
   cells: Array.from({ length: config.height }, (_, z) =>
-    Array.from({ length: config.width }, (_, x) => ({ x, z, walkable: true }))
+    Array.from({ length: config.width }, (_, x) => ({ x, z, type: "empty" as CellType }))
   ),
   width: config.width,
   height: config.height,
@@ -56,14 +60,22 @@ export const worldToGrid = (
   return { x: gridX, z: gridZ };
 };
 
-export const markObstacle = (grid: Grid, x: number, z: number): Grid => ({
+export const setCellType = (
+  grid: Grid,
+  x: number,
+  z: number,
+  type: CellType
+): Grid => ({
   ...grid,
   cells: grid.cells.map((row, rowZ) =>
     row.map((cell, colX) =>
-      colX === x && rowZ === z ? { ...cell, walkable: false } : cell
+      colX === x && rowZ === z ? { ...cell, type } : cell
     )
   ),
 });
+
+export const markObstacle = (grid: Grid, x: number, z: number): Grid =>
+  setCellType(grid, x, z, "boulder");
 
 export const markObstacles = (
   grid: Grid,

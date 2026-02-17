@@ -9,23 +9,37 @@ export const gridConfig: GridConfig = {
   centerOffset: [0, 0, 0] as CoordinateTuple,
 };
 
-const COLOR_OBSTACLE_RED = 0xff6b6b;
-const COLOR_OBSTACLE_TEAL = 0x4ecdc4;
-const COLOR_OBSTACLE_BLUE = 0x45b7d1;
-const COLOR_OBSTACLE_YELLOW = 0xf7dc6f;
-const COLOR_OBSTACLE_MINT = 0xa8e6cf;
+// Sizes (declared first so they can be used in color/height records below)
+const CELL_FOOTPRINT = 1.8;
+const MARKER_HEIGHT = 0.2;
+const BOULDER_HEIGHT = 2;
+const GRAVEL_HEIGHT = 0.3;
+const WORMHOLE_HEIGHT = 1.5;
+const FRAMES_PER_GRID_CELL = 40;
+
+const COLOR_BOULDER = 0x7f8c8d;
+const COLOR_GRAVEL = 0xa07850;
+const COLOR_WORMHOLE_ENTRANCE = 0x8e44ad;
+const COLOR_WORMHOLE_EXIT = 0x16a085;
 const COLOR_START = 0x2ecc71;
 const COLOR_GOAL = 0xe74c3c;
 const COLOR_PATH = 0xf39c12;
 const COLOR_CHARACTER = 0xffffff;
 
-export const obstacleColors: number[] = [
-  COLOR_OBSTACLE_RED,
-  COLOR_OBSTACLE_TEAL,
-  COLOR_OBSTACLE_BLUE,
-  COLOR_OBSTACLE_YELLOW,
-  COLOR_OBSTACLE_MINT,
-];
+export const cellTypeColors: Record<string, number> = {
+  boulder: COLOR_BOULDER,
+  gravel: COLOR_GRAVEL,
+  wormholeEntrance: COLOR_WORMHOLE_ENTRANCE,
+  wormholeExit: COLOR_WORMHOLE_EXIT,
+};
+
+export const cellTypeHeights: Record<string, number> = {
+  boulder: BOULDER_HEIGHT,
+  gravel: GRAVEL_HEIGHT,
+  wormholeEntrance: WORMHOLE_HEIGHT,
+  wormholeExit: WORMHOLE_HEIGHT,
+};
+
 export const startColor = COLOR_START;
 export const goalColor = COLOR_GOAL;
 export const pathColor = COLOR_PATH;
@@ -46,14 +60,8 @@ export const characterSettings = {
   },
 };
 
-
-const CELL_FOOTPRINT = 1.8;
-const MARKER_HEIGHT = 0.2;
-const OBSTACLE_HEIGHT = 2;
-const FRAMES_PER_GRID_CELL = 40;
-
 export const markerSize: CoordinateTuple = [CELL_FOOTPRINT, MARKER_HEIGHT, CELL_FOOTPRINT];
-export const obstacleSize: CoordinateTuple = [CELL_FOOTPRINT, OBSTACLE_HEIGHT, CELL_FOOTPRINT];
+export const cellFootprint = CELL_FOOTPRINT;
 export const framesPerCell = FRAMES_PER_GRID_CELL;
 
 export const configControls = {

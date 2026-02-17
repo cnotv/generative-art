@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
 import * as THREE from "three";
 import {
@@ -19,14 +19,15 @@ import Button from "@/components/ui/button/Button.vue";
 
 import {
   gridConfig,
-  obstacleColors,
+  cellTypeColors,
+  cellTypeHeights,
+  cellFootprint,
   startColor,
   goalColor,
   pathColor,
   obstacleDensity,
   characterSettings,
   markerSize,
-  obstacleSize,
   framesPerCell,
   configControls,
   sceneControls,
@@ -34,8 +35,8 @@ import {
   defaultGoal,
   scenarios,
 } from "./config";
-import { createGrid, markObstacles, markObstacle, gridToWorld, worldToGrid } from "./helpers/grid";
-import type { Grid, GridConfig } from "./helpers/grid";
+import { createGrid, markObstacles, setCellType, isCellWalkable, gridToWorld, worldToGrid } from "./helpers/grid";
+import type { Grid, GridConfig, CellType } from "./helpers/grid";
 import type { Position } from "./helpers/pathfinding";
 import { getBestRoute } from "./helpers/pathfinding";
 import { animateAlongPath, createPathLine, removePathLine } from "./helpers/pathAnimation";
@@ -49,11 +50,22 @@ const hasPath = shallowRef(false);
 const showCosts = shallowRef(false);
 const currentScenario = shallowRef<string>("random");
 const isDragging = shallowRef(false);
-const dragAction = shallowRef<"place" | "remove" | null>(null);
+const dragAction = shallowRef<CellType | null>(null);
 
 const reactiveConfig = createReactiveConfig({
   obstacles: { density: obstacleDensity },
+  grid: { width: gridConfig.width, height: gridConfig.height },
 });
+
+watch(
+  () => [reactiveConfig.value.grid.width, reactiveConfig.value.grid.height] as const,
+  ([newWidth, newHeight]) => {
+    if (!sceneState) return;
+    const newConfig: GridConfig = { ...gridConfig, width: newWidth, height: newHeight };
+    sceneState.currentGridConfig = newConfig;
+    buildScene(sceneState, reactiveConfig.value.obstacles.density, newConfig);
+  }
+);
 
 const sceneConfig = createReactiveConfig({
   camera: { preset: "top-down" },
@@ -67,7 +79,7 @@ type SceneState = {
   getDelta: () => number;
   timelineManager: ReturnType<typeof createTimelineManager>;
   character: ComplexModel | null;
-  obstacleMeshes: ComplexModel[];
+  obstacleMeshes: Map<string, ComplexModel>;
   pathLine: THREE.Line | null;
   costLabels: THREE.Sprite[];
   grid: Grid;
@@ -125,22 +137,22 @@ const generateObstaclePositions = (
 
 const buildCostSprite = (text: string, position: THREE.Vector3, scene: THREE.Scene): THREE.Sprite => {
   const offscreenCanvas = document.createElement("canvas");
-  offscreenCanvas.width = 64;
-  offscreenCanvas.height = 32;
+  offscreenCanvas.width = 192;
+  offscreenCanvas.height = 96;
   const ctx = offscreenCanvas.getContext("2d");
   if (ctx) {
     ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, 0, 64, 32);
+    ctx.fillRect(0, 0, 192, 96);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 18px monospace";
+    ctx.font = "bold 54px monospace";
     ctx.textAlign = "center";
-    ctx.fillText(text, 32, 22);
+    ctx.fillText(text, 96, 66);
   }
   const texture = new THREE.CanvasTexture(offscreenCanvas);
   const material = new THREE.SpriteMaterial({ map: texture });
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
-  sprite.scale.set(0.8, 0.4, 1);
+  sprite.scale.set(1.8, 0.9, 1);
   scene.add(sprite);
   return sprite;
 };
@@ -167,28 +179,56 @@ const drawCostLabels = (
   });
 };
 
-const buildObstacleMeshes = (
+const CELL_Y_OFFSET = 0.15;
+
+const cellKey = (x: number, z: number): string => `${x},${z}`;
+
+const makeCellMesh = (
   scene: THREE.Scene,
   world: SceneState["world"],
-  positions: Position[],
+  x: number,
+  z: number,
+  type: CellType,
   currentGridConfig: GridConfig
-): ComplexModel[] =>
-  positions.map((pos, index) => {
-    const worldPos = gridToWorld(pos.x, pos.z, currentGridConfig);
-    const color = obstacleColors[index % obstacleColors.length];
-    return getCube(scene, world, {
-      position: [worldPos[0], 1, worldPos[2]] as CoordinateTuple,
-      size: obstacleSize,
-      color,
-      type: "fixed",
-      castShadow: true,
-      receiveShadow: true,
-    });
+): ComplexModel => {
+  const worldPos = gridToWorld(x, z, currentGridConfig);
+  const height = cellTypeHeights[type] ?? 1;
+  const color = cellTypeColors[type] ?? cellTypeColors.boulder;
+  return getCube(scene, world, {
+    position: [worldPos[0], CELL_Y_OFFSET + height / 2, worldPos[2]] as CoordinateTuple,
+    size: [cellFootprint, height, cellFootprint] as CoordinateTuple,
+    color,
+    type: "fixed",
+    castShadow: true,
+    receiveShadow: true,
   });
+};
 
-const clearSceneMeshes = (scene: THREE.Scene, meshes: ComplexModel[]): void => {
+const buildMeshesFromGrid = (
+  scene: THREE.Scene,
+  world: SceneState["world"],
+  grid: Grid,
+  currentGridConfig: GridConfig
+): Map<string, ComplexModel> => {
+  const map = new Map<string, ComplexModel>();
+  grid.cells.flat()
+    .filter((c) => c.type !== "empty")
+    .forEach((c) => {
+      map.set(cellKey(c.x, c.z), makeCellMesh(scene, world, c.x, c.z, c.type, currentGridConfig));
+    });
+  return map;
+};
+
+const clearSceneMeshes = (scene: THREE.Scene, meshes: Map<string, ComplexModel>): void => {
   meshes.forEach((mesh) => scene.remove(mesh));
-  meshes.length = 0;
+  meshes.clear();
+};
+
+const EDITOR_CYCLE: CellType[] = ["empty", "boulder", "gravel", "wormholeEntrance", "wormholeExit"];
+
+const nextCellType = (current: CellType): CellType => {
+  const idx = EDITOR_CYCLE.indexOf(current);
+  return EDITOR_CYCLE[(idx + 1) % EDITOR_CYCLE.length];
 };
 
 const computeAndDrawPath = (
@@ -253,9 +293,9 @@ const buildScene = (
   state.grid = markObstacles(createGrid(currentGridConfig), positions);
 
   clearSceneMeshes(scene, state.obstacleMeshes);
-  buildObstacleMeshes(scene, world, positions, currentGridConfig).forEach((m) =>
-    state.obstacleMeshes.push(m)
-  );
+  buildMeshesFromGrid(scene, world, state.grid, currentGridConfig).forEach((mesh, key) => {
+    state.obstacleMeshes.set(key, mesh);
+  });
 
   if (state.startMarker) scene.remove(state.startMarker);
   if (state.goalMarker) scene.remove(state.goalMarker);
@@ -301,7 +341,7 @@ const stopPathAnimation = (state: SceneState): void => {
 const applyObstacleEdit = (
   state: SceneState,
   gridPos: { x: number; z: number },
-  action: "place" | "remove"
+  targetType: CellType
 ): void => {
   const { scene, world, grid } = state;
   const currentGridConfig = state.currentGridConfig;
@@ -314,34 +354,20 @@ const applyObstacleEdit = (
   ) return;
 
   const cell = grid.cells[gridPos.z]?.[gridPos.x];
-  if (!cell) return;
+  if (!cell || cell.type === targetType) return;
 
-  if (action === "place" && cell.walkable) {
-    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
-    const color = obstacleColors[(gridPos.x + gridPos.z) % obstacleColors.length];
-    const cube = getCube(scene, world, {
-      position: [worldPos[0], 1, worldPos[2]] as CoordinateTuple,
-      size: obstacleSize,
-      color,
-      type: "fixed",
-    });
-    state.obstacleMeshes.push(cube);
-    state.grid = markObstacle(grid, gridPos.x, gridPos.z);
-  } else if (action === "remove" && !cell.walkable) {
-    const worldPos = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
-    const idx = state.obstacleMeshes.findIndex(
-      (m) =>
-        Math.abs(m.position.x - worldPos[0]) < 0.5 &&
-        Math.abs(m.position.z - worldPos[2]) < 0.5
-    );
-    if (idx !== -1) {
-      scene.remove(state.obstacleMeshes[idx]);
-      state.obstacleMeshes.splice(idx, 1);
-    }
-    const remaining = state.obstacleMeshes.map((m) =>
-      worldToGrid([m.position.x, 0, m.position.z], currentGridConfig)
-    );
-    state.grid = markObstacles(createGrid(currentGridConfig), remaining);
+  const key = cellKey(gridPos.x, gridPos.z);
+  const oldMesh = state.obstacleMeshes.get(key);
+  if (oldMesh) {
+    scene.remove(oldMesh);
+    state.obstacleMeshes.delete(key);
+  }
+
+  state.grid = setCellType(grid, gridPos.x, gridPos.z, targetType);
+
+  if (targetType !== "empty") {
+    const mesh = makeCellMesh(scene, world, gridPos.x, gridPos.z, targetType, currentGridConfig);
+    state.obstacleMeshes.set(key, mesh);
   }
 };
 
@@ -380,8 +406,7 @@ const onCanvasClick = (event: MouseEvent): void => {
   const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x];
   if (!cell) return;
 
-  const action: "place" | "remove" = cell.walkable ? "place" : "remove";
-  applyObstacleEdit(sceneState, gridPos, action);
+  applyObstacleEdit(sceneState, gridPos, nextCellType(cell.type));
 
   const start = defaultStart;
   const goal = defaultGoal(sceneState.currentGridConfig.width, sceneState.currentGridConfig.height);
@@ -397,7 +422,7 @@ const onCanvasMouseDown = (event: MouseEvent): void => {
   if (!cell) return;
 
   isDragging.value = false;
-  dragAction.value = cell.walkable ? "place" : "remove";
+  dragAction.value = nextCellType(cell.type);
 };
 
 const onCanvasMouseMove = (event: MouseEvent): void => {
@@ -480,7 +505,7 @@ const init = async (): Promise<void> => {
     getDelta,
     timelineManager,
     character,
-    obstacleMeshes: [],
+    obstacleMeshes: new Map(),
     pathLine: null,
     costLabels: [],
     grid: createGrid(currentGridConfig),
@@ -586,62 +611,78 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
 
-  <aside class="pathfinder-viz__legend">
-    <h3 class="pathfinder-viz__legend-title">Legend</h3>
-    <ul class="pathfinder-viz__legend-list">
-      <li class="pathfinder-viz__legend-item">
-        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--start"></span>
-        Start
-      </li>
-      <li class="pathfinder-viz__legend-item">
-        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--goal"></span>
-        Goal
-      </li>
-      <li class="pathfinder-viz__legend-item">
-        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--path"></span>
-        Path
-      </li>
-      <li class="pathfinder-viz__legend-item">
-        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--obstacle"></span>
-        Obstacle
-      </li>
-      <li class="pathfinder-viz__legend-item">
-        <span class="pathfinder-viz__legend-swatch pathfinder-viz__legend-swatch--character"></span>
-        Character
-      </li>
-    </ul>
-    <p class="pathfinder-viz__legend-hint">Click or drag to place/remove obstacles</p>
-  </aside>
+  <Teleport to="#config-panel-extra">
+    <div class="pf-panel">
+      <!-- Scenarios -->
+      <section class="pf-panel__section">
+        <h4 class="pf-panel__heading">Scenarios</h4>
+        <div class="pf-panel__btn-group">
+          <Button
+            v-for="(_, name) in scenarios"
+            :key="name"
+            size="sm"
+            :variant="currentScenario === name ? 'default' : 'outline'"
+            :disabled="isAnimating"
+            @click="loadScenario(String(name))"
+          >
+            {{ name }}
+          </Button>
+        </div>
+      </section>
 
-  <nav class="pathfinder-viz__scenarios">
-    <span class="pathfinder-viz__scenarios-label">Scenarios:</span>
-    <Button
-      v-for="(_, name) in scenarios"
-      :key="name"
-      size="sm"
-      :variant="currentScenario === name ? 'default' : 'outline'"
-      :disabled="isAnimating"
-      @click="loadScenario(String(name))"
-    >
-      {{ name }}
-    </Button>
-  </nav>
+      <!-- Actions -->
+      <section class="pf-panel__section">
+        <h4 class="pf-panel__heading">Actions</h4>
+        <div class="pf-panel__btn-group">
+          <Button variant="secondary" size="sm" :disabled="isAnimating" @click="generateNewScene">
+            New Scene
+          </Button>
+          <Button variant="secondary" size="sm" :disabled="isAnimating" @click="recalculatePath">
+            Recalculate
+          </Button>
+          <Button variant="outline" size="sm" @click="clearObstacles">
+            Clear
+          </Button>
+          <Button variant="outline" size="sm" @click="toggleCosts">
+            {{ showCosts ? "Hide Costs" : "Show Costs" }}
+          </Button>
+        </div>
+        <p v-if="!hasPath" class="pf-panel__no-path">No path found</p>
+      </section>
 
-  <div class="pathfinder-viz__controls">
-    <Button variant="secondary" :disabled="isAnimating" @click="generateNewScene">
-      New Scene
-    </Button>
-    <Button variant="secondary" :disabled="isAnimating" @click="recalculatePath">
-      Recalculate
-    </Button>
-    <Button variant="outline" size="sm" @click="clearObstacles">
-      Clear Obstacles
-    </Button>
-    <Button variant="outline" size="sm" @click="toggleCosts">
-      {{ showCosts ? "Hide Costs" : "Show Costs" }}
-    </Button>
-    <span v-if="!hasPath" class="pathfinder-viz__no-path">No path found</span>
-  </div>
+      <!-- Legend -->
+      <section class="pf-panel__section">
+        <h4 class="pf-panel__heading">Legend</h4>
+        <ul class="pf-panel__legend">
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--start"></span>Start
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--goal"></span>Goal
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--path"></span>Path
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--boulder"></span>Boulder (impassable)
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--gravel"></span>Gravel (half speed)
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--entrance"></span>Wormhole entrance
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--exit"></span>Wormhole exit
+          </li>
+          <li class="pf-panel__legend-item">
+            <span class="pf-panel__swatch pf-panel__swatch--character"></span>Character
+          </li>
+        </ul>
+        <p class="pf-panel__hint">Click to cycle cell type · Drag to paint</p>
+      </section>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -651,118 +692,76 @@ canvas {
   height: 100vh;
 }
 
-.pathfinder-viz__legend {
-  position: fixed;
-  top: 50%;
-  right: 1rem;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  padding: 1rem;
-  border-radius: 0.5rem;
-  min-width: 8rem;
-  backdrop-filter: blur(4px);
+/* Panel content (teleported into config panel) */
+.pf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.pathfinder-viz__legend-title {
-  color: #ffffff;
-  font-family: monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 0.75rem;
-}
-
-.pathfinder-viz__legend-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.pf-panel__section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.pathfinder-viz__legend-item {
+.pf-panel__heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground, #888);
+  margin: 0;
+}
+
+.pf-panel__btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.pf-panel__no-path {
+  font-size: 0.75rem;
+  color: #e74c3c;
+  margin: 0.25rem 0 0;
+}
+
+.pf-panel__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.pf-panel__legend-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #e0e0e0;
-  font-family: monospace;
   font-size: 0.8rem;
 }
 
-.pathfinder-viz__legend-swatch {
+.pf-panel__swatch {
   display: inline-block;
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   border-radius: 0.125rem;
   flex-shrink: 0;
 }
 
-.pathfinder-viz__legend-swatch--start { background: #2ecc71; }
-.pathfinder-viz__legend-swatch--goal  { background: #e74c3c; }
-.pathfinder-viz__legend-swatch--path  { background: #f39c12; }
-.pathfinder-viz__legend-swatch--obstacle { background: #4ecdc4; }
-.pathfinder-viz__legend-swatch--character { background: #ffffff; border: 1px solid #555; }
+.pf-panel__swatch--start    { background: #2ecc71; }
+.pf-panel__swatch--goal     { background: #e74c3c; }
+.pf-panel__swatch--path     { background: #f39c12; }
+.pf-panel__swatch--boulder  { background: #7f8c8d; }
+.pf-panel__swatch--gravel   { background: #a07850; }
+.pf-panel__swatch--entrance { background: #8e44ad; }
+.pf-panel__swatch--exit     { background: #16a085; }
+.pf-panel__swatch--character { background: #ffffff; border: 1px solid #555; }
 
-.pathfinder-viz__legend-hint {
-  color: #888;
+.pf-panel__hint {
   font-size: 0.7rem;
-  font-family: monospace;
-  margin: 0.75rem 0 0;
-}
-
-.pathfinder-viz__scenarios {
-  position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  backdrop-filter: blur(4px);
-}
-
-.pathfinder-viz__scenarios-label {
-  color: #ccc;
-  font-family: monospace;
-  font-size: 0.75rem;
-}
-
-.pathfinder-viz__controls {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.5rem;
-  backdrop-filter: blur(4px);
-}
-
-.pathfinder-viz__no-path {
-  color: #e74c3c;
-  font-family: monospace;
-  font-size: 0.875rem;
-}
-
-@media (prefers-color-scheme: light) {
-  .pathfinder-viz__legend,
-  .pathfinder-viz__controls,
-  .pathfinder-viz__scenarios {
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .pathfinder-viz__legend-title { color: #1a1a2e; }
-  .pathfinder-viz__legend-item { color: #333; }
-  .pathfinder-viz__legend-hint { color: #666; }
-  .pathfinder-viz__scenarios-label { color: #333; }
-  .pathfinder-viz__no-path { color: #c0392b; }
+  color: var(--muted-foreground, #888);
+  margin: 0.25rem 0 0;
 }
 </style>

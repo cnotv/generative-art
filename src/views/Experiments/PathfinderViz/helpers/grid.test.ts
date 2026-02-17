@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createGrid, gridToWorld, worldToGrid, markObstacle, markObstacles } from "./grid";
+import {
+  createGrid,
+  gridToWorld,
+  worldToGrid,
+  markObstacle,
+  markObstacles,
+  setCellType,
+  isCellWalkable,
+} from "./grid";
 import type { GridConfig } from "./grid";
 
 const baseConfig: GridConfig = {
@@ -18,16 +26,60 @@ describe("createGrid", () => {
     expect(grid.cells[0].length).toBe(10);
   });
 
-  it("all cells start as walkable", () => {
+  it("all cells start as empty type", () => {
     const grid = createGrid(baseConfig);
-    const allWalkable = grid.cells.flat().every((cell) => cell.walkable);
-    expect(allWalkable).toBe(true);
+    const allEmpty = grid.cells.flat().every((cell) => cell.type === "empty");
+    expect(allEmpty).toBe(true);
   });
 
   it("cells have correct grid coordinates", () => {
     const grid = createGrid(baseConfig);
-    expect(grid.cells[0][0]).toEqual({ x: 0, z: 0, walkable: true });
-    expect(grid.cells[3][5]).toEqual({ x: 5, z: 3, walkable: true });
+    expect(grid.cells[0][0]).toEqual({ x: 0, z: 0, type: "empty" });
+    expect(grid.cells[3][5]).toEqual({ x: 5, z: 3, type: "empty" });
+  });
+});
+
+describe("isCellWalkable", () => {
+  it.each([
+    ["empty", true],
+    ["gravel", true],
+    ["wormholeEntrance", true],
+    ["wormholeExit", true],
+    ["boulder", false],
+  ] as const)('returns %s for type "%s"', (type, expected) => {
+    const cell = { x: 0, z: 0, type };
+    expect(isCellWalkable(cell)).toBe(expected);
+  });
+});
+
+describe("setCellType", () => {
+  it("sets the type of the target cell", () => {
+    const grid = createGrid(baseConfig);
+    const updated = setCellType(grid, 3, 4, "gravel");
+    expect(updated.cells[4][3].type).toBe("gravel");
+  });
+
+  it("does not mutate original grid (immutable)", () => {
+    const grid = createGrid(baseConfig);
+    setCellType(grid, 3, 4, "gravel");
+    expect(grid.cells[4][3].type).toBe("empty");
+  });
+
+  it("leaves all other cells unaffected", () => {
+    const grid = createGrid(baseConfig);
+    const updated = setCellType(grid, 2, 2, "wormholeEntrance");
+    const otherCells = updated.cells
+      .flat()
+      .filter((cell) => !(cell.x === 2 && cell.z === 2));
+    expect(otherCells.every((cell) => cell.type === "empty")).toBe(true);
+  });
+
+  it("can set each CellType", () => {
+    const grid = createGrid(baseConfig);
+    expect(setCellType(grid, 0, 0, "boulder").cells[0][0].type).toBe("boulder");
+    expect(setCellType(grid, 0, 0, "gravel").cells[0][0].type).toBe("gravel");
+    expect(setCellType(grid, 0, 0, "wormholeEntrance").cells[0][0].type).toBe("wormholeEntrance");
+    expect(setCellType(grid, 0, 0, "wormholeExit").cells[0][0].type).toBe("wormholeExit");
   });
 });
 
@@ -71,16 +123,16 @@ describe("worldToGrid", () => {
 });
 
 describe("markObstacle", () => {
-  it("marks a cell as non-walkable", () => {
+  it("marks a cell as boulder type", () => {
     const grid = createGrid(baseConfig);
     const updated = markObstacle(grid, 3, 4);
-    expect(updated.cells[4][3].walkable).toBe(false);
+    expect(updated.cells[4][3].type).toBe("boulder");
   });
 
   it("does not mutate original grid (immutable)", () => {
     const grid = createGrid(baseConfig);
     markObstacle(grid, 3, 4);
-    expect(grid.cells[4][3].walkable).toBe(true);
+    expect(grid.cells[4][3].type).toBe("empty");
   });
 
   it("leaves all other cells unaffected", () => {
@@ -89,12 +141,12 @@ describe("markObstacle", () => {
     const otherCells = updated.cells
       .flat()
       .filter((cell) => !(cell.x === 2 && cell.z === 2));
-    expect(otherCells.every((cell) => cell.walkable)).toBe(true);
+    expect(otherCells.every((cell) => cell.type === "empty")).toBe(true);
   });
 });
 
 describe("markObstacles", () => {
-  it("marks multiple cells as non-walkable", () => {
+  it("marks multiple cells as boulder type", () => {
     const grid = createGrid(baseConfig);
     const positions = [
       { x: 1, z: 1 },
@@ -103,13 +155,13 @@ describe("markObstacles", () => {
     ];
     const updated = markObstacles(grid, positions);
     positions.forEach(({ x, z }) => {
-      expect(updated.cells[z][x].walkable).toBe(false);
+      expect(updated.cells[z][x].type).toBe("boulder");
     });
   });
 
   it("does not mutate original grid (immutable)", () => {
     const grid = createGrid(baseConfig);
     markObstacles(grid, [{ x: 1, z: 1 }]);
-    expect(grid.cells[1][1].walkable).toBe(true);
+    expect(grid.cells[1][1].type).toBe("empty");
   });
 });

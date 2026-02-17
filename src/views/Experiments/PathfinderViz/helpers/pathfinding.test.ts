@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getBestRoute } from "./pathfinding";
-import { createGrid, markObstacle } from "./grid";
+import { createGrid, markObstacle, setCellType } from "./grid";
 import type { Grid } from "./grid";
 
 const makeGrid = (width = 5, height = 5): Grid =>
@@ -93,6 +93,57 @@ describe("getBestRoute", () => {
       grid = markObstacle(grid, 0, 0);
       const path = getBestRoute(grid, { x: 0, z: 0 }, { x: 4, z: 4 });
       expect(path).toBeNull();
+    });
+  });
+
+  describe("gravel terrain", () => {
+    it("avoids gravel when a free path exists", () => {
+      let grid = makeGrid(5, 3);
+      // Row z=1 is all gravel — free path above and below
+      [0, 1, 2, 3, 4].forEach((x) => { grid = setCellType(grid, x, 1, "gravel"); });
+      const path = getBestRoute(grid, { x: 0, z: 0 }, { x: 4, z: 0 });
+      expect(path).not.toBeNull();
+      const usesGravel = path!.some((p) => p.z === 1);
+      expect(usesGravel).toBe(false);
+    });
+
+    it("uses gravel when it is the only route", () => {
+      let grid = makeGrid(3, 3);
+      // Block all of z=0 and z=2 rows except start and goal; only path through gravel in z=1
+      grid = markObstacle(grid, 1, 0);
+      grid = markObstacle(grid, 1, 2);
+      grid = setCellType(grid, 1, 1, "gravel");
+      const path = getBestRoute(grid, { x: 0, z: 0 }, { x: 2, z: 0 });
+      expect(path).not.toBeNull();
+      const usesGravel = path!.some((p) => p.z === 1);
+      expect(usesGravel).toBe(true);
+    });
+  });
+
+  describe("wormhole teleportation", () => {
+    it("uses wormhole shortcut when available", () => {
+      let grid = makeGrid(7, 1);
+      // Place entrance at x=1, exit at x=5 — wormhole skips the middle
+      grid = setCellType(grid, 1, 0, "wormholeEntrance");
+      grid = setCellType(grid, 5, 0, "wormholeExit");
+      const path = getBestRoute(grid, { x: 0, z: 0 }, { x: 6, z: 0 });
+      expect(path).not.toBeNull();
+      // Path includes the entrance and the exit (non-adjacent jump)
+      const hasEntrance = path!.some((p) => p.x === 1 && p.z === 0);
+      const hasExit = path!.some((p) => p.x === 5 && p.z === 0);
+      expect(hasEntrance).toBe(true);
+      expect(hasExit).toBe(true);
+    });
+
+    it("reaches goal via wormhole when direct path is blocked", () => {
+      let grid = makeGrid(5, 3);
+      // Block center column entirely
+      [0, 1, 2].forEach((z) => { grid = markObstacle(grid, 2, z); });
+      // Place wormhole across the wall
+      grid = setCellType(grid, 1, 1, "wormholeEntrance");
+      grid = setCellType(grid, 3, 1, "wormholeExit");
+      const path = getBestRoute(grid, { x: 0, z: 1 }, { x: 4, z: 1 });
+      expect(path).not.toBeNull();
     });
   });
 });
