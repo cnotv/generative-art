@@ -1,7 +1,6 @@
 import type { CoordinateTuple } from "@webgamekit/animation";
-import type { SetupConfig } from "@webgamekit/threejs";
-import { CameraPreset } from "@webgamekit/threejs";
 import type { GridConfig } from "./helpers/grid";
+import type { Position } from "./helpers/pathfinding";
 
 export const gridConfig: GridConfig = {
   width: 16,
@@ -19,9 +18,6 @@ const COLOR_START = 0x2ecc71;
 const COLOR_GOAL = 0xe74c3c;
 const COLOR_PATH = 0xf39c12;
 const COLOR_CHARACTER = 0xffffff;
-const COLOR_GROUND = 0x2c3e50;
-const COLOR_SKY = 0x1a1a2e;
-const COLOR_LIGHT = 0xffffff;
 
 export const obstacleColors: number[] = [
   COLOR_OBSTACLE_RED,
@@ -50,36 +46,6 @@ export const characterSettings = {
   },
 };
 
-const CAMERA_HEIGHT = 50;
-const GROUND_SIZE = 200;
-const AMBIENT_INTENSITY = 1.5;
-const DIRECTIONAL_INTENSITY = 2;
-const DIRECTIONAL_X = 20;
-const DIRECTIONAL_Y = 30;
-const DIRECTIONAL_POSITION: CoordinateTuple = [DIRECTIONAL_X, DIRECTIONAL_Y, DIRECTIONAL_X];
-
-export const setupConfig: SetupConfig = {
-  camera: {
-    position: [0, CAMERA_HEIGHT, 0] as CoordinateTuple,
-    lookAt: [0, 0, 0] as CoordinateTuple,
-  },
-  ground: {
-    color: COLOR_GROUND,
-    size: [GROUND_SIZE, 1, GROUND_SIZE],
-  },
-  sky: { color: COLOR_SKY },
-  lights: {
-    ambient: { color: COLOR_LIGHT, intensity: AMBIENT_INTENSITY },
-    directional: {
-      color: COLOR_LIGHT,
-      intensity: DIRECTIONAL_INTENSITY,
-      position: DIRECTIONAL_POSITION,
-    },
-  },
-  orbit: { disabled: true },
-};
-
-export const cameraPreset = CameraPreset.TopDown;
 
 const CELL_FOOTPRINT = 1.8;
 const MARKER_HEIGHT = 0.2;
@@ -115,3 +81,45 @@ export const defaultGoal = (gridWidth: number, gridHeight: number) => ({
   x: gridWidth - 2,
   z: gridHeight - 2,
 });
+
+const makeWall = (
+  fixed: "x" | "z",
+  fixedValue: number,
+  from: number,
+  to: number
+): Position[] =>
+  Array.from({ length: to - from + 1 }, (_, i) =>
+    fixed === "x"
+      ? { x: fixedValue, z: from + i }
+      : { x: from + i, z: fixedValue }
+  );
+
+const WALL_A = 4;
+const WALL_B = 8;
+const WALL_C = 12;
+const GRID_MID = 8;
+const WALL_END_LOW = 7;
+const WALL_END_HIGH = 13;
+const CORRIDOR_TOP = 6;
+const CORRIDOR_BOT = 9;
+
+/**
+ * Pre-defined obstacle scenarios for demonstration.
+ * Each entry maps a scenario name to an array of obstacle positions.
+ */
+export const scenarios: Record<string, Position[]> = {
+  maze: [
+    ...makeWall("x", WALL_A, 2, WALL_END_LOW),
+    ...makeWall("x", WALL_B, GRID_MID, WALL_END_HIGH),
+    ...makeWall("x", WALL_C, 2, WALL_END_LOW),
+  ],
+  corridor: [
+    ...makeWall("z", CORRIDOR_TOP, 2, WALL_END_HIGH),
+    ...makeWall("z", CORRIDOR_BOT, 2, WALL_END_HIGH),
+  ],
+  zigzag: [
+    ...makeWall("z", WALL_A, 2, CORRIDOR_TOP),
+    ...makeWall("z", WALL_B, GRID_MID, WALL_END_HIGH),
+    ...makeWall("z", WALL_C, 2, CORRIDOR_TOP),
+  ],
+};
