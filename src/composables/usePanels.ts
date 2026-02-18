@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 // Panel types including textures for SceneEditor sidebar
-export type PanelType = 'sidebar' | 'config' | 'scene' | 'debug' | 'textures' | 'recording';
+export type PanelType = 'sidebar' | 'config' | 'scene' | 'debug' | 'textures' | 'camera';
 
 const activePanels = ref<Set<PanelType>>(new Set());
 

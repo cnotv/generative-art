@@ -36,7 +36,7 @@ const allButtons = computed<PanelButton[]>(() => {
   // Add global panels
   buttons.push(
     { type: 'debug', icon: Bug, label: 'Debug' },
-    { type: 'recording', icon: Video, label: 'Recording' }
+    { type: 'camera', icon: Video, label: 'Camera' }
   );
 
   return buttons;

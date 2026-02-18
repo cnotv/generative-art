@@ -2,15 +2,26 @@ import { ref, shallowReactive, computed, watch, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { debounce } from '@/utils/lodash';
 
+export type ControlOption = {
+  value: string;
+  label: string;
+  color?: string;
+  disabled?: boolean;
+};
+
 export type ControlSchema = {
   min?: number | { x: number; y: number; z: number };
   max?: number | { x: number; y: number; z: number };
   step?: number | { x: number; y: number; z: number };
   boolean?: boolean;
+  checkbox?: boolean;
   color?: boolean;
   label?: string;
-  options?: string[];
+  options?: string[] | ControlOption[];
   component?: string;
+  direction?: "row" | "column";
+  callback?: string;
+  sectionStart?: boolean;
 };
 
 export type ConfigControlsSchema = {
@@ -27,6 +38,7 @@ type ConfigEntry = {
   onChange?: OnChangeCallback;
   stopWatch?: () => void;
   stopSceneWatch?: () => void;
+  callbacks?: Record<string, () => void>;
 };
 
 // Use shallowReactive to prevent Vue from unwrapping nested refs
@@ -47,6 +59,7 @@ const version = ref(0);
  * @param sceneSchema - Optional schema for scene controls (Scene tab)
  * @param onChange - Optional callback that fires when config changes (auto-debounced)
  * @param debounceDelay - Custom debounce delay in ms (default: 500)
+ * @param callbacks - Named action callbacks invokable from the config panel
  */
 export const registerViewConfig = (
   routeName: string,
@@ -55,7 +68,8 @@ export const registerViewConfig = (
   sceneConfig?: Ref<Record<string, any>>,
   sceneSchema?: ConfigControlsSchema,
   onChange?: OnChangeCallback,
-  debounceDelay: number = DEFAULT_DEBOUNCE_DELAY
+  debounceDelay: number = DEFAULT_DEBOUNCE_DELAY,
+  callbacks?: Record<string, () => void>
 ) => {
   // Clean up any existing watchers
   const existingEntry = registry[routeName];
@@ -92,7 +106,7 @@ export const registerViewConfig = (
   }
 
   // eslint-disable-next-line functional/immutable-data
-  registry[routeName] = { config, schema, sceneConfig, sceneSchema, onChange, stopWatch, stopSceneWatch };
+  registry[routeName] = { config, schema, sceneConfig, sceneSchema, onChange, stopWatch, stopSceneWatch, callbacks };
   version.value++;
 };
 
@@ -220,6 +234,12 @@ export const useViewConfig = () => {
     return object;
   };
 
+  const invokeCallback = (name: string): void => {
+    const routeName = route.name as string;
+    const entry = registry[routeName];
+    entry?.callbacks?.[name]?.();
+  };
+
   return {
     currentConfig,
     currentSchema,
@@ -230,7 +250,8 @@ export const useViewConfig = () => {
     updateConfig,
     updateSceneConfig,
     getConfigValue,
-    getSceneConfigValue
+    getSceneConfigValue,
+    invokeCallback
   };
 };
 
@@ -239,6 +260,17 @@ export const useViewConfig = () => {
  */
 export const createReactiveConfig = <T extends Record<string, any>>(config: T): Ref<T> => {
   return ref(JSON.parse(JSON.stringify(config))) as Ref<T>;
+};
+
+/**
+ * Update the schema for a registered view (e.g. to reflect dynamic disabled states)
+ */
+export const updateViewSchema = (routeName: string, schema: ConfigControlsSchema): void => {
+  const entry = registry[routeName];
+  if (!entry) return;
+  // eslint-disable-next-line functional/immutable-data
+  entry.schema = schema;
+  version.value++;
 };
 
 // Export for testing
