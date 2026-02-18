@@ -116,6 +116,7 @@ let sceneState: SceneState | null = null;
 let animFrameId: number | null = null;
 
 const FRUSTUM_SIZE = 40;
+const GROUND_Y = -1;
 
 const createOrthoCamera = (width: number, height: number): THREE.OrthographicCamera => {
   const aspect = width / height;
@@ -199,13 +200,13 @@ const drawCostLabels = (
 ): void => {
   path.forEach((pos, index) => {
     const [wx, , wz] = gridToWorld(pos.x, pos.z, currentGridConfig);
-    const worldPos = new THREE.Vector3(wx, 0.5, wz);
+    const worldPos = new THREE.Vector3(wx, GROUND_Y + 1.5, wz);
     const sprite = buildCostSprite(String(index), worldPos, scene);
     labels.push(sprite);
   });
 };
 
-const CELL_Y_OFFSET = 0;
+const CELL_Y_OFFSET = GROUND_Y;
 
 const cellKey = (x: number, z: number): string => `${x},${z}`;
 
@@ -326,20 +327,22 @@ const buildScene = (
 
   const startWorld = gridToWorld(start.x, start.z, effectiveGridConfig);
   state.startMarker = getCube(scene, world, {
-    position: [startWorld[0], 0.1, startWorld[2]] as CoordinateTuple,
+    position: [startWorld[0], GROUND_Y + 0.5, startWorld[2]] as CoordinateTuple,
     size: markerSize,
     color: startColor,
     type: "fixed",
     castShadow: true,
+    receiveShadow: false,
   });
 
   const goalWorld = gridToWorld(goal.x, goal.z, effectiveGridConfig);
   state.goalMarker = getCube(scene, world, {
-    position: [goalWorld[0], 0.1, goalWorld[2]] as CoordinateTuple,
+    position: [goalWorld[0], GROUND_Y + 0.5, goalWorld[2]] as CoordinateTuple,
     size: markerSize,
     color: goalColor,
     type: "fixed",
     castShadow: true,
+    receiveShadow: false,
   });
 
   computeAndDrawPath(state, start, goal, effectiveGridConfig);
@@ -414,17 +417,17 @@ const placeMarker = (
   if (which === "start") {
     if (state.startMarker) scene.remove(state.startMarker);
     state.startMarker = getCube(scene, world, {
-      position: [wx, 0.1, wz] as CoordinateTuple,
+      position: [wx, GROUND_Y + 0.5, wz] as CoordinateTuple,
       size: markerSize, color: startColor, type: "fixed",
-      castShadow: true,
+      castShadow: true, receiveShadow: false,
     });
     state.currentStart = { x: gridPos.x, z: gridPos.z };
   } else {
     if (state.goalMarker) scene.remove(state.goalMarker);
     state.goalMarker = getCube(scene, world, {
-      position: [wx, 0.1, wz] as CoordinateTuple,
+      position: [wx, GROUND_Y + 0.5, wz] as CoordinateTuple,
       size: markerSize, color: goalColor, type: "fixed",
-      castShadow: true,
+      castShadow: true, receiveShadow: false,
     });
     state.currentGoal = { x: gridPos.x, z: gridPos.z };
   }

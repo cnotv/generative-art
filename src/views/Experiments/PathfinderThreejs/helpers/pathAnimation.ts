@@ -6,7 +6,8 @@ import type { Position } from "./pathfinding";
 import { gridToWorld } from "./grid";
 import type { GridConfig } from "./grid";
 
-const PATH_LINE_Y_OFFSET = 0.15;
+const GROUND_Y = -1;
+const PATH_LINE_Y_OFFSET = GROUND_Y + 0.1;
 
 type PathAnimationConfig = {
   path: Position[];

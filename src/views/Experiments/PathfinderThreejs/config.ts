@@ -34,10 +34,7 @@ export const gridConfig: GridConfig = {
 
 // Sizes
 const CELL_FOOTPRINT = 1.8;
-const MARKER_HEIGHT = 0.2;
-const BOULDER_HEIGHT = 2;
-const GRAVEL_HEIGHT = 0.3;
-const WORMHOLE_HEIGHT = 1.5;
+const CELL_HEIGHT = 1;
 const FRAMES_PER_GRID_CELL = 40;
 
 const COLOR_BOULDER = 0x7f8c8d;
@@ -57,10 +54,10 @@ export const cellTypeColors: Record<string, number> = {
 };
 
 export const cellTypeHeights: Record<string, number> = {
-  boulder: BOULDER_HEIGHT,
-  gravel: GRAVEL_HEIGHT,
-  wormholeEntrance: WORMHOLE_HEIGHT,
-  wormholeExit: WORMHOLE_HEIGHT,
+  boulder: CELL_HEIGHT,
+  gravel: CELL_HEIGHT,
+  wormholeEntrance: CELL_HEIGHT,
+  wormholeExit: CELL_HEIGHT,
 };
 
 export const startColor = COLOR_START;
@@ -83,7 +80,7 @@ export const characterSettings = {
   },
 };
 
-export const markerSize: CoordinateTuple = [CELL_FOOTPRINT, MARKER_HEIGHT, CELL_FOOTPRINT];
+export const markerSize: CoordinateTuple = [CELL_FOOTPRINT, CELL_HEIGHT, CELL_FOOTPRINT];
 export const cellFootprint = CELL_FOOTPRINT;
 export const framesPerCell = FRAMES_PER_GRID_CELL;
 
