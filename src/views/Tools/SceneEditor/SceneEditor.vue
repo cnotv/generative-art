@@ -7,7 +7,7 @@ import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { TexturesPanel, ConfigPanel, ScenePanel, DebugPanel } from "@/components/panels";
+import { TexturesPanel, DebugPanel } from "@/components/panels";
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -802,9 +802,6 @@ defineExpose({
       @update:auto-update="autoUpdate = $event"
       @manual-update="triggerManualUpdate"
     />
-
-    <ConfigPanel />
-    <ScenePanel />
 
     <DebugPanel
       :scene-elements="sceneElements"

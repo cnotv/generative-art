@@ -210,6 +210,14 @@ Use format: `<type>/<issue-number>-<description>`
    - Router auto-discovers views matching pattern `{Dir}/{Name}/{Name}.vue`
    - Example: `src/views/Games/ForestGame/ForestGame.vue`
 
+**UI Interaction via Panels — MANDATORY**:
+All user-facing controls for a view MUST live inside existing panels (Config panel, Scene panel, etc.), NOT as overlays or floating elements on the canvas. The only exception is content explicitly defined otherwise (e.g., a score HUD that is part of the game scene, or a minimal action toolbar that was explicitly requested).
+
+- Use `registerViewConfig` to expose runtime-adjustable settings through the Config and Scene panels
+- For selection-style controls, use `ButtonSelector` (`component: 'ButtonSelector'` in the schema) for visible multi-option button groups with optional color swatches
+- If a panel requires a new input type not covered by existing components (`Slider`, `Switch`, `Select`, `ColorPicker`, `CoordinateInput`, `ButtonSelector`), **request a new component and describe its requirements before implementing**. Do not build ad-hoc input widgets inside view templates.
+- Never use `<Teleport>` to inject content into panel slots; instead rely on the schema-driven `registerViewConfig` pipeline
+
 **Configuration Panel Setup**:
 When creating a new view, register two separate configurations for the configuration panel:
 
@@ -225,6 +233,8 @@ When creating a new view, register two separate configurations for the configura
    - Lighting
    - Post-processing effects
    - Scene elements (illustration counts, etc.)
+
+**Panels to show by default**: Always call `setViewPanels({ showConfig: true, showScene: true })` in `onMounted` so that both the Config and Scene panels are visible when the view loads. Only omit a panel if it has no content for that view.
 
 **Example registration** (in `onMounted`):
 ```typescript
@@ -297,6 +307,62 @@ onUnmounted(() => {
 **Configuration file structure** (`config.ts`):
 Export both `configControls` (Config tab) and `sceneControls` (Scene tab) schemas separately.
 
+
+### Scene Initialization with `getTools()` + `setup()` Config
+
+**Before writing any THREE.js code**, define the scene layout declaratively via `SetupConfig` in `config.ts`.
+
+**Step 1 — Audit `SetupConfig` options first** (check `packages/threejs/src/types.ts`):
+- `scene.backgroundColor` — background color
+- `lights.ambient`, `lights.directional`, `lights.hemisphere` — all lighting
+- `ground.color`, `ground.size`, `ground.texture` — ground plane
+- `sky.color`, `sky.texture`, `sky.size` — sky/environment
+- `camera.position`, `camera.fov`, `camera.near`, `camera.far` — camera
+- `orbit` — orbit controls (set `false` to disable)
+- `postprocessing` — bloom, SSAO, vignette, etc.
+
+**Step 2 — Declare the layout in `config.ts`** (never inline magic numbers in the component):
+```typescript
+import type { SetupConfig } from "@webgamekit/threejs";
+
+export const sceneSetupConfig: SetupConfig = {
+  scene: { backgroundColor: 0x1a1a2e },
+  lights: {
+    ambient: { color: 0xffffff, intensity: 1.5 },
+    directional: { color: 0xffffff, intensity: 2, position: [20, 30, 20], castShadow: true },
+  },
+  ground: { color: 0x2c3e50, size: 200 },
+  sky: false,   // disable if not needed
+  orbit: false, // disable if using custom camera / controls
+};
+```
+
+**Step 3 — Use `setup()` with `defineSetup` for model loading**:
+```typescript
+const { setup, renderer, scene, world, getDelta } = await getTools({ canvas: canvas.value });
+
+await setup({
+  config: sceneSetupConfig,
+  defineSetup: async () => {
+    // Load models and create physics bodies here
+    character = await getModel(scene, world, "player.glb", playerSettings.model);
+  },
+});
+```
+
+**Step 4 — Only use raw THREE.js for unsupported features**.
+If a feature is not covered by `SetupConfig` (e.g., a custom orthographic camera), **ask the user before writing manual THREE.js code**. Common cases requiring manual code:
+- `OrthographicCamera` (not created by `setup()` — ask if the camera type should be added to the package)
+- Custom geometry that does not map to any `getCube`/`getModel` primitive
+
+**Never do this** (raw THREE.js inline in `init()`):
+```typescript
+// ❌ Wrong — use SetupConfig instead
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+scene.add(ambientLight);
+const groundGeo = new THREE.PlaneGeometry(200, 200);
+scene.add(new THREE.Mesh(groundGeo, new THREE.MeshLambertMaterial({ color: 0x2c3e50 })));
+```
 
 ### Working with @webgamekit Packages
 

@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import { Sheet } from "@/components/ui/sheet";
-import { usePanels } from "@/composables/usePanels";
+import GenericPanel from "./GenericPanel.vue";
 import { useViewConfig } from "@/composables/useViewConfig";
 import SchemaControls from "./ConfigControls.vue";
+import { computed } from "vue";
+import type { ConfigControlsSchema } from "@/composables/useViewConfig";
 
-const { isSceneOpen, closePanel } = usePanels();
 const viewConfig = useViewConfig();
 
-const handleOpenChange = (open: boolean) => {
-  if (!open) {
-    closePanel("scene");
-  }
-};
+const sceneSchemaWithoutCamera = computed((): ConfigControlsSchema | null => {
+  const schema = viewConfig.currentSceneSchema.value;
+  if (!schema) return null;
+  const entries = Object.entries(schema).filter(([key]) => key !== "camera");
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+});
 </script>
 
 <template>
-  <Sheet :open="isSceneOpen" side="right" @update:open="handleOpenChange">
+  <GenericPanel panel-type="scene" side="right">
     <div class="scene-panel__content flex flex-col gap-6">
-      <div v-if="viewConfig.hasSceneConfig.value" class="flex-1 min-h-0">
+      <div v-if="sceneSchemaWithoutCamera" class="flex-1 min-h-0">
         <SchemaControls
-          :schema="viewConfig.currentSceneSchema.value!"
+          :schema="sceneSchemaWithoutCamera"
           :get-value="viewConfig.getSceneConfigValue"
           :on-update="viewConfig.updateSceneConfig"
         />
@@ -28,7 +29,7 @@ const handleOpenChange = (open: boolean) => {
         No scene configuration available for this view.
       </p>
     </div>
-  </Sheet>
+  </GenericPanel>
 </template>
 
 <style scoped>

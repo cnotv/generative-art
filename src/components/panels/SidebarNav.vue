@@ -2,7 +2,9 @@
 import { generatedRoutes as generatedRoutesAll } from "@/config/router";
 import GenericPanel from "./GenericPanel.vue";
 
-const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<typeof route> => {
+const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
+  typeof route
+> => {
   if (!route?.path) return false;
   const slashCount = (route.path.match(/\//g) || []).length;
   return slashCount <= 3;
@@ -10,10 +12,7 @@ const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
 </script>
 
 <template>
-  <GenericPanel
-    panel-type="sidebar"
-    side="left"
-  >
+  <GenericPanel panel-type="sidebar" side="left">
     <div class="sidebar-nav__content flex flex-col gap-6">
       <nav class="sidebar-nav__links flex flex-col gap-1 flex-1 overflow-y-auto min-h-0">
         <template v-for="(route, index) in generatedRoutes" :key="route.path">
@@ -44,5 +43,6 @@ const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
 
 .sidebar-nav__links {
   overflow-x: hidden;
+  padding-bottom: 4rem;
 }
 </style>

@@ -6,25 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CoordinateInput } from "@/components/ui/coordinate-input";
 import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
+import ButtonSelector from "@/components/ui/button-selector/ButtonSelector.vue";
+import Button from "@/components/ui/button/Button.vue";
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import type { ConfigControlsSchema, ControlSchema } from "@/composables/useViewConfig";
+import type { ConfigControlsSchema, ControlSchema, ControlOption } from "@/composables/useViewConfig";
 
 const props = defineProps<{
   schema: ConfigControlsSchema;
   getValue: (path: string) => any;
   onUpdate: (path: string, value: any) => void;
   basePath?: string;
+  onAction?: (name: string) => void;
 }>();
 
 const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "color", "label", "options", "component"];
+  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "label", "options", "component", "direction", "callback", "sectionStart"];
 
   // Empty object is a control schema (will be rendered as input)
   if (keys.length === 0) return true;
@@ -108,6 +111,21 @@ const getColorHex = (path: string): string => {
   }
   return value || '#000000';
 };
+
+const isButtonSelector = (schema: ControlSchema): boolean =>
+  schema.component === 'ButtonSelector';
+
+const isCallback = (schema: ControlSchema): boolean =>
+  schema.callback !== undefined;
+
+const asButtonOptions = (options: string[] | ControlOption[]): ControlOption[] =>
+  options.map((opt) =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  );
+
+const handleButtonSelectorUpdate = (path: string, value: string) => {
+  props.onUpdate(path, value);
+};
 </script>
 
 <template>
@@ -117,8 +135,20 @@ const getColorHex = (path: string): string => {
       v-for="control in groups.controls"
       :key="control.path"
       class="config-controls__item flex flex-col gap-1"
+      :class="{ 'config-controls__item--section': control.schema.sectionStart }"
     >
-      <template v-if="control.schema.component === 'CoordinateInput'">
+      <template v-if="isCallback(control.schema)">
+        <Button
+          size="sm"
+          variant="secondary"
+          class="w-full"
+          @click="onAction?.(control.schema.callback!)"
+        >
+          {{ control.schema.label ?? formatLabel(control.key) }}
+        </Button>
+      </template>
+
+      <template v-else-if="control.schema.component === 'CoordinateInput'">
         <CoordinateInput
           :model-value="getValue(control.path)"
           :label="control.schema.label ?? formatLabel(control.key)"
@@ -129,13 +159,25 @@ const getColorHex = (path: string): string => {
         />
       </template>
 
+      <template v-else-if="control.schema.options !== undefined && isButtonSelector(control.schema)">
+        <label class="text-xs font-medium">
+          {{ control.schema.label ?? formatLabel(control.key) }}
+        </label>
+        <ButtonSelector
+          :model-value="String(getValue(control.path) || '')"
+          :options="asButtonOptions(control.schema.options)"
+          :direction="control.schema.direction"
+          @update:model-value="handleButtonSelectorUpdate(control.path, $event)"
+        />
+      </template>
+
       <template v-else-if="control.schema.options !== undefined">
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>
         <Select
           :model-value="String(getValue(control.path) || '')"
-          :options="control.schema.options.map(opt => ({ value: opt, label: opt }))"
+          :options="(control.schema.options as string[]).map(opt => ({ value: opt, label: opt }))"
           @update:model-value="handleSelectUpdate(control.path, $event)"
           class="h-7 text-xs"
         />
@@ -150,6 +192,21 @@ const getColorHex = (path: string): string => {
           @update:model-value="handleColorUpdate(control.path, $event)"
           class="h-7"
         />
+      </template>
+
+      <template v-else-if="control.schema.checkbox !== undefined">
+        <div class="flex items-center gap-2">
+          <input
+            :id="control.path"
+            type="checkbox"
+            :checked="getValue(control.path) ?? control.schema.checkbox"
+            class="config-controls__checkbox"
+            @change="handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)"
+          />
+          <label :for="control.path" class="text-xs font-medium cursor-pointer">
+            {{ control.schema.label ?? formatLabel(control.key) }}
+          </label>
+        </div>
       </template>
 
       <template v-else-if="control.schema.boolean !== undefined">
@@ -222,6 +279,7 @@ const getColorHex = (path: string): string => {
             :get-value="getValue"
             :on-update="onUpdate"
             :base-path="getFullPath(group.key)"
+            :on-action="onAction"
           />
         </AccordionContent>
       </AccordionItem>
@@ -269,5 +327,19 @@ const getColorHex = (path: string): string => {
 .config-controls__inline-input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+.config-controls__item--section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.config-controls__checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  cursor: pointer;
+  accent-color: hsl(var(--primary));
+  flex-shrink: 0;
 }
 </style>

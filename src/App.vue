@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ToolsPanel, DebugPanel, RecordingPanel } from "@/components/panels";
+import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
 
 const router = useRouter();
@@ -81,15 +81,34 @@ const toggleQuery = (param: string | string[]) => {
   router.push({ path, query: { ...query, ...newQuery } });
   queryStore.setQuery(newQuery);
 };
+
+const isRecording = computed(() => !!route.query.record);
+
+const handleStartRecording = (durationMs: number) => {
+  const fps = 30;
+  const totalFrames = Math.floor((durationMs / 1000) * fps);
+  router.push({ query: { ...route.query, record: String(totalFrames) } });
+};
+
+const handleStopRecording = () => {
+  const query = { ...route.query };
+  delete query.record;
+  router.push({ query });
+};
 </script>
 
 <template>
   <RouterView />
   <GlobalNavigation />
   <SidebarNav />
+  <ConfigPanel />
+  <ScenePanel />
   <DebugPanel />
-  <RecordingPanel />
-  <ToolsPanel />
+  <CameraPanel
+    :is-recording="isRecording"
+    @start="handleStartRecording"
+    @stop="handleStopRecording"
+  />
 </template>
 
 <style>
