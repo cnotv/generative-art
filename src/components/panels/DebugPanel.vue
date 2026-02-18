@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Sheet } from '@/components/ui/sheet';
-import { usePanels } from '@/composables/usePanels';
+import GenericPanel from './GenericPanel.vue';
 import { Box, Lightbulb, Sun, Mountain, Image, Eye, EyeOff, Trash2 } from 'lucide-vue-next';
 import IconPreview from '@/components/IconPreview.vue';
 import { Button } from '@/components/ui/button';
@@ -33,8 +32,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-const { isDebugOpen, closePanel } = usePanels();
-
 const fps = ref(0);
 const memory = ref(0);
 const drawCalls = ref(0);
@@ -59,12 +56,6 @@ const updateStats = () => {
   }
 
   animationFrameId = requestAnimationFrame(updateStats);
-};
-
-const handleOpenChange = (open: boolean) => {
-  if (!open) {
-    closePanel('debug');
-  }
 };
 
 // Get icon component based on element type or name
@@ -115,7 +106,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Sheet :open="isDebugOpen" side="right" @update:open="handleOpenChange">
+  <GenericPanel panel-type="debug" side="right">
       <div class="debug-panel__content flex flex-col gap-4 h-full">
         <div class="debug-panel__header p-4 border-b border-border">
           <h2 class="text-lg font-semibold">Debug</h2>
@@ -206,7 +197,7 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-    </Sheet>
+  </GenericPanel>
 </template>
 
 <style scoped>
