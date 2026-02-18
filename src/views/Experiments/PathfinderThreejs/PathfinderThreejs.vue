@@ -81,7 +81,11 @@ watch(
   () => { refreshCostLabels(); }
 );
 
-// Isometric camera toggle — animate to target position
+// Top-down needs up=[0,0,-1] to avoid lookAt gimbal lock when camera is directly above target
+const TOP_DOWN_UP = new THREE.Vector3(0, 0, -1);
+const ISO_UP = new THREE.Vector3(0, 1, 0);
+
+// Isometric camera toggle — animate to target position and up vector
 watch(
   () => sceneConfig.value.camera.isometric,
   (isIso) => {
@@ -90,6 +94,8 @@ watch(
     sceneState.cameraTransition = {
       from: sceneState.orthoCamera.position.clone(),
       to: new THREE.Vector3(tx, ty, tz),
+      fromUp: sceneState.orthoCamera.up.clone(),
+      toUp: isIso ? ISO_UP : TOP_DOWN_UP,
       t: 0,
     };
   }
@@ -111,7 +117,7 @@ watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
   if (sceneState?.scene.background instanceof THREE.Color) sceneState.scene.background.setHex(val);
 });
 
-type CameraTransition = { from: THREE.Vector3; to: THREE.Vector3; t: number };
+type CameraTransition = { from: THREE.Vector3; to: THREE.Vector3; fromUp: THREE.Vector3; toUp: THREE.Vector3; t: number };
 
 type SceneState = {
   renderer: THREE.WebGLRenderer;
@@ -150,6 +156,7 @@ const createOrthoCamera = (width: number, height: number): THREE.OrthographicCam
     1000
   );
   cam.position.set(0, 50, 0);
+  cam.up.set(0, 0, -1);
   cam.lookAt(0, 0, 0);
   return cam;
 };
@@ -568,6 +575,7 @@ const init = async (): Promise<void> => {
       const newT = Math.min(1, prev.t + 0.04);
       const eased = 1 - (1 - newT) ** 3;
       orthoCamera.position.lerpVectors(prev.from, prev.to, eased);
+      orthoCamera.up.lerpVectors(prev.fromUp, prev.toUp, eased);
       orthoCamera.lookAt(0, 0, 0);
       sceneState.cameraTransition = newT >= 1 ? null : { ...prev, t: newT };
     }
