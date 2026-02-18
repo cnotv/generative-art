@@ -26,6 +26,7 @@ import {
   configControls,
   defaultSceneValues,
   sceneControls,
+  cameraPositions,
   defaultStart,
   defaultGoal,
   scenarios,
@@ -80,21 +81,37 @@ watch(
   () => { refreshCostLabels(); }
 );
 
-// Isometric camera toggle
+// Isometric camera toggle — animate to target position
 watch(
   () => sceneConfig.value.camera.isometric,
   (isIso) => {
     if (!sceneState) return;
-    const { orthoCamera } = sceneState;
-    if (isIso) {
-      orthoCamera.position.set(30, 30, 30);
-    } else {
-      orthoCamera.position.set(0, 50, 0);
-    }
-    orthoCamera.lookAt(0, 0, 0);
-    orthoCamera.updateProjectionMatrix();
+    const [tx, ty, tz] = isIso ? cameraPositions.isometric : cameraPositions.topDown;
+    sceneState.cameraTransition = {
+      from: sceneState.orthoCamera.position.clone(),
+      to: new THREE.Vector3(tx, ty, tz),
+      t: 0,
+    };
   }
 );
+
+watch(() => sceneConfig.value.lights.ambient.intensity, (val) => {
+  if (sceneState?.ambientLight) sceneState.ambientLight.intensity = val;
+});
+
+watch(() => sceneConfig.value.lights.directional.intensity, (val) => {
+  if (sceneState?.directionalLight) sceneState.directionalLight.intensity = val;
+});
+
+watch(() => sceneConfig.value.ground.color, (val) => {
+  if (sceneState?.groundMesh) (sceneState.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(val);
+});
+
+watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
+  if (sceneState?.scene.background instanceof THREE.Color) sceneState.scene.background.setHex(val);
+});
+
+type CameraTransition = { from: THREE.Vector3; to: THREE.Vector3; t: number };
 
 type SceneState = {
   renderer: THREE.WebGLRenderer;
@@ -110,6 +127,10 @@ type SceneState = {
   currentGridConfig: GridConfig;
   currentStart: Position | null;
   currentGoal: Position | null;
+  ambientLight: THREE.AmbientLight | null;
+  directionalLight: THREE.DirectionalLight | null;
+  groundMesh: THREE.Mesh | null;
+  cameraTransition: CameraTransition | null;
 };
 
 let sceneState: SceneState | null = null;
@@ -512,6 +533,10 @@ const init = async (): Promise<void> => {
 
   const currentGridConfig = { ...gridConfig };
 
+  const ambientLight = scene.children.find((c): c is THREE.AmbientLight => c instanceof THREE.AmbientLight) ?? null;
+  const directionalLight = scene.children.find((c): c is THREE.DirectionalLight => c instanceof THREE.DirectionalLight) ?? null;
+  const groundMesh = scene.children.find((c): c is THREE.Mesh => (c as THREE.Mesh).name === "ground") ?? null;
+
   sceneState = {
     renderer,
     scene,
@@ -526,6 +551,10 @@ const init = async (): Promise<void> => {
     currentGridConfig,
     currentStart: null,
     currentGoal: null,
+    ambientLight,
+    directionalLight,
+    groundMesh,
+    cameraTransition: null,
   };
 
   buildScene(sceneState, reactiveConfig.value.density, currentGridConfig);
@@ -533,6 +562,16 @@ const init = async (): Promise<void> => {
   const runLoop = (): void => {
     animFrameId = requestAnimationFrame(runLoop);
     world.step();
+
+    if (sceneState?.cameraTransition) {
+      const prev = sceneState.cameraTransition;
+      const newT = Math.min(1, prev.t + 0.04);
+      const eased = 1 - (1 - newT) ** 3;
+      orthoCamera.position.lerpVectors(prev.from, prev.to, eased);
+      orthoCamera.lookAt(0, 0, 0);
+      sceneState.cameraTransition = newT >= 1 ? null : { ...prev, t: newT };
+    }
+
     renderer.render(scene, orthoCamera);
   };
   runLoop();

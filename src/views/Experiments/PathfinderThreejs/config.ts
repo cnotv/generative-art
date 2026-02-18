@@ -145,14 +145,28 @@ export const configControls = {
   clearObstacles:      { callback: "clearObstacles",      label: "Clear" },
 };
 
+export const cameraPositions = {
+  topDown:   [0, 50, 0]   as CoordinateTuple,
+  isometric: [30, 30, 30] as CoordinateTuple,
+};
+
 export const sceneControls = {
   camera: {
     isometric: { boolean: false, label: "Isometric View" },
   },
+  lights: {
+    ambient:     { intensity: { min: 0, max: 5, step: 0.1, label: "Ambient Intensity",     sectionStart: true } },
+    directional: { intensity: { min: 0, max: 5, step: 0.1, label: "Directional Intensity" } },
+  },
+  ground: { color: { color: true, label: "Ground Color", sectionStart: true } },
+  scene:  { backgroundColor: { color: true, label: "Background Color" } },
 };
 
 export const defaultSceneValues = {
-  camera: { isometric: false },
+  camera:  { isometric: false },
+  lights:  { ambient: { intensity: 1.5 }, directional: { intensity: 2 } },
+  ground:  { color: 0x2c3e50 },
+  scene:   { backgroundColor: 0x1a1a2e },
 };
 
 /** Returns configControls with start/goal brush options disabled when already placed. */
