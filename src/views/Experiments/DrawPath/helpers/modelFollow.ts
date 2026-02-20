@@ -23,7 +23,7 @@ export const modelFollowTick = (
 ): PathFollowResult => {
   const result = logicAdvanceAlongPath(state, speed, delta);
   model.position.set(result.position.x, result.position.y, result.position.z);
-  model.rotation.y = result.rotation + Math.PI;
+  model.rotation.y = result.rotation;
   return result;
 };
 
@@ -32,13 +32,19 @@ export const modelFollowTick = (
  * CharacterController so that static obstacle colliders deflect the ball
  * instead of letting it pass through.
  *
+ * @param includeDynamic - When true (goomba mode), the CC resolves against ALL
+ *   bodies and uses setApplyImpulsesToDynamicBodies to push green cubes aside.
+ *   When false (physics ball mode), the CC only avoids static bodies so the ball
+ *   passes through dynamic cubes and a manual proximity impulse pushes them.
+ *
  * Returns the updated PathFollowState and an isComplete flag.
  */
 export const modelFollowPhysicsTick = (
   model: ComplexModel,
   state: PathFollowState,
   speed: number,
-  delta: number
+  delta: number,
+  includeDynamic: boolean = false
 ): { state: PathFollowState; isComplete: boolean } => {
   const body = model.userData?.body as RAPIER.RigidBody | undefined;
   const collider = model.userData?.collider as RAPIER.Collider | undefined;
@@ -78,12 +84,17 @@ export const modelFollowPhysicsTick = (
   let nextZ: number;
 
   if (cc && collider) {
-    // Let the character controller resolve collisions before applying movement.
-    // Only avoid fixed/static bodies — dynamic (green) cubes are excluded so the
-    // kinematic ball can push them instead of sliding around them.
-    cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ }, undefined, undefined,
-      (otherCollider: RAPIER.Collider) => !otherCollider.parent()?.isDynamic()
-    );
+    if (includeDynamic) {
+      // Goomba: CC resolves against all bodies. setApplyImpulsesToDynamicBodies
+      // (enabled in switchToGoombaMode) makes the CC push dynamic cubes it contacts.
+      cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ });
+    } else {
+      // Physics ball: only avoid fixed/static bodies — dynamic (green) cubes are
+      // excluded so the ball passes through and a manual proximity impulse pushes them.
+      cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ }, undefined, undefined,
+        (otherCollider: RAPIER.Collider) => !otherCollider.parent()?.isDynamic()
+      );
+    }
     const m = cc.computedMovement();
     nextX = pos.x + m.x;
     nextZ = pos.z + m.z;
@@ -99,6 +110,27 @@ export const modelFollowPhysicsTick = (
   model.rotation.y = Math.atan2(dx, dz);
 
   return { state, isComplete: false };
+};
+
+/**
+ * Enable the goomba's CharacterController to apply impulses to dynamic bodies it contacts,
+ * so the goomba physically pushes green cubes aside rather than passing through them.
+ * Must be called once after the goomba model is loaded.
+ */
+export const modelFollowEnableGoombaPhysics = (model: ComplexModel): void => {
+  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined;
+  if (cc) {
+    cc.setApplyImpulsesToDynamicBodies(true);
+  }
+};
+
+/**
+ * Set the character mass used by the CC when computing impulses for dynamic bodies.
+ * Higher mass → stronger push on green cubes. Call each frame (or on slider change).
+ */
+export const modelFollowSetCharacterMass = (model: ComplexModel, mass: number): void => {
+  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined;
+  if (cc) cc.setCharacterMass(mass);
 };
 
 /** Syncs a kinematic Rapier body to the model's current mesh position (mesh mode). */
@@ -203,7 +235,8 @@ export const modelFollowApplyContactImpulses = (
   ball: ComplexModel,
   obstacles: ComplexModel[],
   speed: number,
-  delta: number
+  delta: number,
+  impulseScale: number = 1
 ): void => {
   const bp = ball.position;
   // Collision radius = sphere radius + half the cube's XZ extent
@@ -222,7 +255,7 @@ export const modelFollowApplyContactImpulses = (
 
     const distribution = Math.sqrt(distributionSq);
     const inv = 1 / distribution;
-    const mag = speed * delta;
+    const mag = speed * delta * impulseScale;
     body.applyImpulse({ x: dx * inv * mag, y: 0, z: dz * inv * mag }, true);
   });
 };

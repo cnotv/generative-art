@@ -71,17 +71,24 @@ export const FIXED_OBSTACLE_POSITIONS: [number, number, number][] = [
 export const GOOMBA_ANIMATION_FALLBACK_NAME = "walk";
 export const GOOMBA_SCALE: [number, number, number] = [0.03, 0.03, 0.03];
 export const GOOMBA_GROUND_Y = 0;
+/**
+ * Effective speed threshold (world units/sec) below which the goomba switches to
+ * the idle animation instead of walk. Catches near-zero easing at path endpoints.
+ */
+export const GOOMBA_IDLE_SPEED_THRESHOLD = 0.5;
 
 export type FollowerMode = "mesh" | "physics" | "goomba";
 
 export const defaultConfigValues = {
   mode: "mesh" as FollowerMode,
   speed: DEFAULT_FOLLOW_SPEED,
+  obstacleImpulse: 5,
   pathSteps: DEFAULT_PATH_STEPS,
   easing: "linear" as EasingName,
   easingIntensity: 0.6,
   playing: true,
   loop: true,
+  pingPong: false,
   showPath: true,
   showNodes: false,
 };
@@ -103,11 +110,13 @@ export const configControls = {
     ],
   },
   speed: { min: 1, max: 100, step: 1, label: "Follow Speed" },
+  obstacleImpulse: { min: 0, max: 50, step: 1, label: "Push Force" },
   pathSteps: { min: 10, max: 1000, step: 10, label: "Path Steps" },
   easing: { bezier: true, label: "Easing" },
   easingIntensity: { min: 0, max: 5, step: 0.01, label: "Easing Intensity" },
   playing: { label: "Playing", boolean: true },
   loop: { label: "Loop", boolean: true },
+  pingPong: { label: "Ping Pong", boolean: true },
   showPath: { label: "Show Path", boolean: true },
   showNodes: { label: "Show Nodes", boolean: true },
   clearPath: { callback: "clearPath", label: "Clear Path" },

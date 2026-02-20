@@ -22,6 +22,7 @@ import {
   PHYSICS_FOLLOWER_GROUND_Y,
   GOOMBA_SCALE,
   GOOMBA_GROUND_Y,
+  GOOMBA_IDLE_SPEED_THRESHOLD,
   MIN_WAYPOINT_DISTANCE,
   type EasingName,
   type FollowerMode,
@@ -37,6 +38,8 @@ import {
 import {
   modelFollowTick,
   modelFollowPhysicsTick,
+  modelFollowEnableGoombaPhysics,
+  modelFollowSetCharacterMass,
   modelFollowSyncPhysicsBody,
   modelFollowPlayWalkAnimation,
   modelFollowPlayIdleAnimation,
@@ -304,9 +307,9 @@ const registerGoombaTimelineAction = (): void => {
       if (!sceneState?.followerGoomba) return;
       const delta = sceneState.lastDelta;
       modelFollowUpdateMixer(sceneState.followerGoomba, delta);
-      if (sceneState.isFollowing) {
+      const effectiveSpeed = reactiveConfig.value.speed * sceneState.lastEasingMultiplier;
+      if (sceneState.isFollowing && effectiveSpeed >= GOOMBA_IDLE_SPEED_THRESHOLD) {
         // Drive walk animation directly by effective follow speed so it stays in sync with ground movement
-        const effectiveSpeed = reactiveConfig.value.speed * sceneState.lastEasingMultiplier;
         modelFollowPlayWalkAnimation(sceneState.followerGoomba, delta, effectiveSpeed);
       } else {
         modelFollowPlayIdleAnimation(sceneState.followerGoomba, delta);
@@ -367,7 +370,7 @@ const switchToGoombaMode = async (state: SceneState, pos: THREE.Vector3): Promis
 
   if (!state.followerGoomba) {
     state.followerGoomba = await getModel(state.scene, state.world, "goomba.glb", {
-      position: [pos.x, 0, pos.z],
+      position: [pos.x, 1, pos.z],
       scale: GOOMBA_SCALE,
       type: "kinematicPositionBased",
       castShadow: true,
@@ -377,6 +380,8 @@ const switchToGoombaMode = async (state: SceneState, pos: THREE.Vector3): Promis
     state.goombaGroundY = -box.min.y;
     state.followerGoomba.position.set(pos.x, state.goombaGroundY, pos.z);
     modelFollowSyncPhysicsBody(state.followerGoomba);
+    // Allow the CC to apply impulses to dynamic bodies so goomba pushes green cubes.
+    modelFollowEnableGoombaPhysics(state.followerGoomba);
   } else {
     state.followerGoomba.position.set(pos.x, state.goombaGroundY, pos.z);
     state.followerGoomba.visible = true;
@@ -449,6 +454,11 @@ const runAnimation = (state: SceneState): void => {
   state.world.step();
   modelFollowSyncDynamicObstacles(state.obstacles);
 
+  // Tick the timeline before movement so the mixer runs first and position/rotation
+  // set by the movement tick is the last write before render (prevents animation
+  // keyframes from overriding the facing direction).
+  animateTimeline(timeline, frameRef);
+
   const mode = reactiveConfig.value.mode;
   const follower = getActiveFollower(state);
 
@@ -469,7 +479,15 @@ const runAnimation = (state: SceneState): void => {
       const result = modelFollowPhysicsTick(follower, state.followState, effectiveSpeed, delta);
       state.followState = result.state;
       isComplete = result.isComplete;
-      modelFollowApplyContactImpulses(follower, state.obstacles, effectiveSpeed, delta);
+      // Ball passes through dynamic cubes; manual proximity impulse pushes them.
+      modelFollowApplyContactImpulses(follower, state.obstacles, effectiveSpeed, delta, reactiveConfig.value.obstacleImpulse);
+    } else if (mode === "goomba") {
+      // CC with setApplyImpulsesToDynamicBodies handles pushing green cubes directly.
+      // Update character mass each frame so the Push Force slider takes effect immediately.
+      modelFollowSetCharacterMass(follower, reactiveConfig.value.obstacleImpulse);
+      const result = modelFollowPhysicsTick(follower, state.followState, effectiveSpeed, delta, true);
+      state.followState = result.state;
+      isComplete = result.isComplete;
     } else {
       const result = modelFollowTick(follower, state.followState, effectiveSpeed, delta);
       state.followState = result.state;
@@ -477,16 +495,19 @@ const runAnimation = (state: SceneState): void => {
     }
 
     if (isComplete) {
-      if (reactiveConfig.value.loop && state.smoothWaypoints.length >= 2) {
+      if (reactiveConfig.value.pingPong && state.smoothWaypoints.length >= 2) {
+        // Reverse the smooth waypoints so the follower retraces the path backward.
+        // The follower is already at the last waypoint, which becomes waypoints[0]
+        // after reversal, so startFollowing places it exactly there — no jump.
+        state.smoothWaypoints = [...state.smoothWaypoints].reverse();
+        startFollowing(state);
+      } else if (reactiveConfig.value.loop && state.smoothWaypoints.length >= 2) {
         startFollowing(state);
       } else {
         state.isFollowing = false;
       }
     }
   }
-
-  // Tick the timeline — drives goomba mixer + walk/idle animations
-  animateTimeline(timeline, frameRef);
 
   state.renderer.render(state.scene, state.camera);
 };
