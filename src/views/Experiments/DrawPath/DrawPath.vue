@@ -23,7 +23,6 @@ import {
   GOOMBA_SCALE,
   GOOMBA_GROUND_Y,
   MIN_WAYPOINT_DISTANCE,
-  DEFAULT_FOLLOW_SPEED,
   type EasingName,
   type FollowerMode,
 } from "./config";
@@ -67,6 +66,8 @@ type SceneState = {
   lastDelta: number;
   /** Last easing multiplier computed in the animation loop, used by goomba walk animation. */
   lastEasingMultiplier: number;
+  /** Computed Y offset to sit goomba on the ground (derived from model bounding box). */
+  goombaGroundY: number;
   /** Raw control waypoints placed by the user. */
   controlWaypoints: Waypoint[];
   /** Smooth CatmullRom-interpolated waypoints fed to logicAdvanceAlongPath. */
@@ -136,7 +137,7 @@ const getActiveFollower = (state: SceneState): ComplexModel | null => {
 };
 
 const getFollowerGroundY = (): number => {
-  if (reactiveConfig.value.mode === "goomba") return GOOMBA_GROUND_Y;
+  if (reactiveConfig.value.mode === "goomba") return sceneState?.goombaGroundY ?? GOOMBA_GROUND_Y;
   if (reactiveConfig.value.mode === "physics") return PHYSICS_FOLLOWER_GROUND_Y;
   return FOLLOWER_GROUND_Y;
 };
@@ -221,6 +222,7 @@ const tryAddWaypoint = (event: MouseEvent | TouchEvent): void => {
 };
 
 const onPointerDown = (event: MouseEvent | TouchEvent): void => {
+  if (event instanceof TouchEvent) event.preventDefault();
   if (!canvas.value) return;
   // When nodes are visible, check for node hit before starting path drawing
   if (sceneState && reactiveConfig.value.showNodes && sceneState.waypointNodes.length > 0) {
@@ -242,6 +244,7 @@ const onPointerDown = (event: MouseEvent | TouchEvent): void => {
 };
 
 const onPointerMove = (event: MouseEvent | TouchEvent): void => {
+  if (event instanceof TouchEvent) event.preventDefault();
   if (sceneState && sceneState.selectedNodeIndex !== null) {
     if (!canvas.value) return;
     const ndc = getNdcCoords(event, canvas.value);
@@ -302,9 +305,9 @@ const registerGoombaTimelineAction = (): void => {
       const delta = sceneState.lastDelta;
       modelFollowUpdateMixer(sceneState.followerGoomba, delta);
       if (sceneState.isFollowing) {
-        // Scale animation speed with movement speed and easing so walk matches travel
-        const normSpeed = (reactiveConfig.value.speed * sceneState.lastEasingMultiplier) / DEFAULT_FOLLOW_SPEED;
-        modelFollowPlayWalkAnimation(sceneState.followerGoomba, delta, normSpeed * 3);
+        // Drive walk animation directly by effective follow speed so it stays in sync with ground movement
+        const effectiveSpeed = reactiveConfig.value.speed * sceneState.lastEasingMultiplier;
+        modelFollowPlayWalkAnimation(sceneState.followerGoomba, delta, effectiveSpeed);
       } else {
         modelFollowPlayIdleAnimation(sceneState.followerGoomba, delta);
       }
@@ -364,13 +367,18 @@ const switchToGoombaMode = async (state: SceneState, pos: THREE.Vector3): Promis
 
   if (!state.followerGoomba) {
     state.followerGoomba = await getModel(state.scene, state.world, "goomba.glb", {
-      position: [pos.x, GOOMBA_GROUND_Y, pos.z],
+      position: [pos.x, 0, pos.z],
       scale: GOOMBA_SCALE,
       type: "kinematicPositionBased",
       castShadow: true,
     });
+    // Compute bounding box so the goomba's feet sit exactly on the ground (y=0).
+    const box = new THREE.Box3().setFromObject(state.followerGoomba);
+    state.goombaGroundY = -box.min.y;
+    state.followerGoomba.position.set(pos.x, state.goombaGroundY, pos.z);
+    modelFollowSyncPhysicsBody(state.followerGoomba);
   } else {
-    state.followerGoomba.position.set(pos.x, GOOMBA_GROUND_Y, pos.z);
+    state.followerGoomba.position.set(pos.x, state.goombaGroundY, pos.z);
     state.followerGoomba.visible = true;
   }
 
@@ -517,6 +525,7 @@ const init = async (): Promise<void> => {
     getDelta: () => clock.getDelta(),
     lastDelta: 0,
     lastEasingMultiplier: 1,
+    goombaGroundY: GOOMBA_GROUND_Y,
     controlWaypoints: [],
     smoothWaypoints: [],
     pathLine: null,
@@ -558,8 +567,8 @@ onMounted(async () => {
   canvas.value?.addEventListener("mousedown", onPointerDown);
   canvas.value?.addEventListener("mousemove", onPointerMove);
   canvas.value?.addEventListener("mouseup", onPointerUp);
-  canvas.value?.addEventListener("touchstart", onPointerDown, { passive: true });
-  canvas.value?.addEventListener("touchmove", onPointerMove, { passive: true });
+  canvas.value?.addEventListener("touchstart", onPointerDown, { passive: false });
+  canvas.value?.addEventListener("touchmove", onPointerMove, { passive: false });
   canvas.value?.addEventListener("touchend", onPointerUp);
   window.addEventListener("resize", onResize);
   await init();

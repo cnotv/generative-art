@@ -23,7 +23,7 @@ export const modelFollowTick = (
 ): PathFollowResult => {
   const result = logicAdvanceAlongPath(state, speed, delta);
   model.position.set(result.position.x, result.position.y, result.position.z);
-  model.rotation.y = result.rotation;
+  model.rotation.y = result.rotation + Math.PI;
   return result;
 };
 

@@ -57,6 +57,7 @@ The project is organized as a **pnpm workspace monorepo**:
    - CI will fail if branch is behind main
 3. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
 4. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+5. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
 
 ### PR Description Format
 ```markdown

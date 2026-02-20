@@ -2,8 +2,6 @@ import * as THREE from "three";
 import type { Waypoint } from "@webgamekit/logic";
 import { PATH_LINE_COLOR, PATH_TUBE_RADIUS } from "../config";
 
-const NODE_Y = 0.4;
-
 const PATH_Y_OFFSET = 0.05;
 
 /**
@@ -59,7 +57,7 @@ export const drawCreateWaypointNode = (
   mat: THREE.Material
 ): THREE.Mesh => {
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(waypoint.x, NODE_Y, waypoint.z);
+  mesh.position.set(waypoint.x, waypoint.y, waypoint.z);
   scene.add(mesh);
   return mesh;
 };
@@ -77,7 +75,7 @@ export const drawUpdateWaypointNodePosition = (
   node: THREE.Mesh,
   waypoint: Waypoint
 ): void => {
-  node.position.set(waypoint.x, NODE_Y, waypoint.z);
+  node.position.set(waypoint.x, waypoint.y, waypoint.z);
 };
 
 export const drawRemovePathVisualization = (
