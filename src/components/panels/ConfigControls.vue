@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CoordinateInput } from "@/components/ui/coordinate-input";
 import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
 import ButtonSelector from "@/components/ui/button-selector/ButtonSelector.vue";
 import Button from "@/components/ui/button/Button.vue";
+import { BezierPicker } from "@/components/ui/bezier-picker";
+import type { EasingName } from "@/components/ui/bezier-picker";
 import {
   Accordion,
   AccordionItem,
@@ -27,7 +28,7 @@ const props = defineProps<{
 const isControlSchema = (obj: any): obj is ControlSchema => {
   if (typeof obj !== "object" || obj === null) return false;
   const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "label", "options", "component", "direction", "callback", "sectionStart"];
+  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "bezier", "label", "options", "component", "direction", "callback", "sectionStart"];
 
   // Empty object is a control schema (will be rendered as input)
   if (keys.length === 0) return true;
@@ -210,16 +211,28 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
       </template>
 
       <template v-else-if="control.schema.boolean !== undefined">
-        <div class="flex items-center justify-between">
-          <label :for="control.path" class="text-xs font-medium">
+        <div class="flex items-center gap-2">
+          <input
+            :id="control.path"
+            type="checkbox"
+            :checked="getValue(control.path) ?? control.schema.boolean"
+            class="config-controls__checkbox"
+            @change="handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)"
+          />
+          <label :for="control.path" class="text-xs font-medium cursor-pointer">
             {{ control.schema.label ?? formatLabel(control.key) }}
           </label>
-          <Switch
-            :id="control.path"
-            :model-value="getValue(control.path) ?? control.schema.boolean"
-            @update:model-value="handleCheckboxUpdate(control.path, $event)"
-          />
         </div>
+      </template>
+
+      <template v-else-if="control.schema.bezier !== undefined">
+        <label class="text-xs font-medium">
+          {{ control.schema.label ?? formatLabel(control.key) }}
+        </label>
+        <BezierPicker
+          :model-value="(getValue(control.path) as EasingName) ?? 'linear'"
+          @update:model-value="onUpdate(control.path, $event)"
+        />
       </template>
 
       <template
