@@ -16,6 +16,7 @@ export type ControlSchema = {
   boolean?: boolean;
   checkbox?: boolean;
   color?: boolean;
+  bezier?: boolean;
   label?: string;
   options?: string[] | ControlOption[];
   component?: string;

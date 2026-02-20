@@ -171,10 +171,10 @@ export const getLights = (scene: THREE.Scene, config: any = {}) => {
         camera: {
           near: 0.5,
           far: 500,
-          left: -50,
-          right: 50,
-          top: 50,
-          bottom: -50
+          left: -150,
+          right: 150,
+          top: 150,
+          bottom: -150
         },
         bias: -0.0001,
         radius: 1
@@ -199,30 +199,22 @@ export const getLights = (scene: THREE.Scene, config: any = {}) => {
   directionalLight.name = 'directional-light';
   if (directional.position) directionalLight.position.set(...(directional.position as CoordinateTuple));
   directionalLight.castShadow = directional.castShadow ?? true;
-  
-  if (directional.shadow) {
-    if (directional.shadow.mapSize) {
-      directionalLight.shadow.mapSize.width = directional.shadow.mapSize.width;
-      directionalLight.shadow.mapSize.height = directional.shadow.mapSize.height;
-    }
-    
-    if (directional.shadow.camera) {
-      const cam = directional.shadow.camera;
-      if (cam.near !== undefined) directionalLight.shadow.camera.near = cam.near;
-      if (cam.far !== undefined) directionalLight.shadow.camera.far = cam.far;
-      if (cam.left !== undefined) directionalLight.shadow.camera.left = cam.left;
-      if (cam.right !== undefined) directionalLight.shadow.camera.right = cam.right;
-      if (cam.top !== undefined) directionalLight.shadow.camera.top = cam.top;
-      if (cam.bottom !== undefined) directionalLight.shadow.camera.bottom = cam.bottom;
-    }
-    
-    if (directional.shadow.bias !== undefined) {
-      directionalLight.shadow.bias = directional.shadow.bias;
-    }
-    if (directional.shadow.radius !== undefined) {
-      directionalLight.shadow.radius = directional.shadow.radius;
-    }
-  }
+
+  // Always apply shadow camera defaults so scenes that omit the shadow key
+  // still get a large-enough frustum (Three.js default is only ~±5 units).
+  const shadow = directional.shadow ?? {};
+  const shadowCam = shadow.camera ?? {};
+  const mapSize = shadow.mapSize ?? {};
+  directionalLight.shadow.mapSize.width = mapSize.width ?? 4096;
+  directionalLight.shadow.mapSize.height = mapSize.height ?? 4096;
+  directionalLight.shadow.camera.near = shadowCam.near ?? 0.5;
+  directionalLight.shadow.camera.far = shadowCam.far ?? 500;
+  directionalLight.shadow.camera.left = shadowCam.left ?? -150;
+  directionalLight.shadow.camera.right = shadowCam.right ?? 150;
+  directionalLight.shadow.camera.top = shadowCam.top ?? 150;
+  directionalLight.shadow.camera.bottom = shadowCam.bottom ?? -150;
+  if (shadow.bias !== undefined) directionalLight.shadow.bias = shadow.bias;
+  if (shadow.radius !== undefined) directionalLight.shadow.radius = shadow.radius;
   
   directionalLight.shadow.camera.updateProjectionMatrix();
   scene.add(directionalLight);
