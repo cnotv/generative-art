@@ -107,13 +107,28 @@ describe("logicAdvanceAlongPath", () => {
 
   describe("rotation", () => {
     it.each([
+      // THREE.js Y-rotation convention: 0 = facing -Z (default mesh orientation).
+      // Formula: atan2(dx, -dz) → +X = π/2 ≈ 1.5, -X = -π/2, +Z = π ≈ 3, -Z = 0.
       ["facing positive X", [makeWaypoint(0, 0, 0), makeWaypoint(10, 0, 0)], Math.PI / 2],
       ["facing negative X", [makeWaypoint(10, 0, 0), makeWaypoint(0, 0, 0)], -Math.PI / 2],
-      ["facing positive Z", [makeWaypoint(0, 0, 0), makeWaypoint(0, 0, 10)], 0],
-      ["facing negative Z", [makeWaypoint(0, 0, 10), makeWaypoint(0, 0, 0)], Math.PI],
+      ["facing positive Z", [makeWaypoint(0, 0, 0), makeWaypoint(0, 0, 10)], Math.PI],
+      ["facing negative Z", [makeWaypoint(0, 0, 10), makeWaypoint(0, 0, 0)], 0],
     ] as const)("%s", (_label, waypoints, expectedRotation) => {
       const state = makeState(waypoints as Waypoint[]);
       const result = logicAdvanceAlongPath(state, 1, 0.1);
+      expect(result.rotation).toBeCloseTo(expectedRotation);
+    });
+
+    it.each([
+      // Path: (0,0,0) → (10,0,0) → (10,0,10).
+      // Segment 1 faces +X → π/2 ≈ 1.5. Segment 2 faces +Z → π ≈ 3.
+      ["on first segment facing +X", 1, 1, Math.PI / 2],
+      ["on second segment facing +Z", 11, 1, Math.PI],
+      ["at goal retains final segment direction", 25, 1, Math.PI],
+    ] as const)("3-node path: %s", (_label, speed, delta, expectedRotation) => {
+      const waypoints = [makeWaypoint(0, 0, 0), makeWaypoint(10, 0, 0), makeWaypoint(10, 0, 10)];
+      const state = makeState(waypoints);
+      const result = logicAdvanceAlongPath(state, speed, delta);
       expect(result.rotation).toBeCloseTo(expectedRotation);
     });
   });

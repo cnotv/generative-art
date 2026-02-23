@@ -107,7 +107,7 @@ export const modelFollowPhysicsTick = (
   // (body.translation() still returns the OLD position until world.step() runs)
   body.setNextKinematicTranslation({ x: nextX, y: pos.y, z: nextZ }, true);
   model.position.set(nextX, pos.y, nextZ);
-  model.rotation.y = Math.atan2(dx, dz);
+  model.rotation.y = Math.atan2(dx, -dz);
 
   return { state, isComplete: false };
 };
@@ -257,6 +257,27 @@ export const modelFollowApplyContactImpulses = (
     const inv = 1 / distribution;
     const mag = speed * delta * impulseScale;
     body.applyImpulse({ x: dx * inv * mag, y: 0, z: dz * inv * mag }, true);
+  });
+};
+
+/**
+ * Returns true when the goomba's XZ position is within contact range of any fixed (red) obstacle.
+ * Used to halt path traversal so the goomba stops and plays idle instead of pushing endlessly.
+ */
+export const modelFollowIsBlockedByFixedObstacle = (
+  model: ComplexModel,
+  obstacles: ComplexModel[]
+): boolean => {
+  const mp = model.position;
+  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2;
+  const thresholdSq = threshold * threshold;
+  return obstacles.some((obs) => {
+    const body = obs.userData?.body as RAPIER.RigidBody | undefined;
+    if (!body?.isFixed()) return false;
+    const cp = body.translation();
+    const dx = cp.x - mp.x;
+    const dz = cp.z - mp.z;
+    return dx * dx + dz * dz <= thresholdSq;
   });
 };
 

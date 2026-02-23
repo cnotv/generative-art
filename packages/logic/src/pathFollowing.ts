@@ -14,7 +14,7 @@ const lerpWaypoint = (from: Waypoint, to: Waypoint, t: number): Waypoint => ({
 });
 
 const calculateFacingRotation = (from: Waypoint, to: Waypoint): number =>
-  Math.atan2(to.x - from.x, to.z - from.z);
+  Math.atan2(to.x - from.x, -(to.z - from.z));
 
 type AdvanceAccumulator = {
   index: number;

@@ -31,7 +31,6 @@ export const sceneSetupConfig: SetupConfig = {
 };
 
 export const DEFAULT_FOLLOW_SPEED = 20;
-export const DEFAULT_PATH_STEPS = 80;
 /** Minimum world-unit distance between successive hold-drag waypoints. */
 export const MIN_WAYPOINT_DISTANCE = 1.5;
 
@@ -42,23 +41,36 @@ export const SPHERE_RADIUS = 0.5;
 export const PHYSICS_SPHERE_RADIUS = 1;
 export const MESH_FOLLOWER_COLOR = 0x3498db;
 export const PHYSICS_FOLLOWER_COLOR = 0xe74c3c;
-export const FOLLOWER_GROUND_Y = SPHERE_RADIUS;
-export const PHYSICS_FOLLOWER_GROUND_Y = PHYSICS_SPHERE_RADIUS;
 
 /* eslint-disable no-magic-numbers */
-export const OBSTACLE_SIZE: [number, number, number] = [1.5, 1.5, 1.5];
-/** Centre Y for origin:{} cubes so their bottom sits exactly on the ground. */
-export const OBSTACLE_GROUND_Y = OBSTACLE_SIZE[1] / 2;
+/** Y of the top surface of the ground plane as created by getGround (default position y=-1). */
+export const GROUND_SURFACE_Y = -1;
+/**
+ * Small gap added above the ground surface for all static/kinematic objects.
+ * Prevents coplanar shadow acne between an object's bottom face and the ground.
+ */
+export const GROUND_EPSILON = 0.02;
+export const FOLLOWER_GROUND_Y = GROUND_SURFACE_Y + SPHERE_RADIUS + GROUND_EPSILON;
+export const PHYSICS_FOLLOWER_GROUND_Y = GROUND_SURFACE_Y + PHYSICS_SPHERE_RADIUS + GROUND_EPSILON;
 
-/** Dynamic green obstacle cubes — center-positioned so bottom touches ground. */
+export const OBSTACLE_SIZE: [number, number, number] = [1.5, 1.5, 1.5];
+/** Centre Y for fixed (red) obstacles — slightly above ground to avoid shadow acne. */
+export const OBSTACLE_GROUND_Y = GROUND_SURFACE_Y + OBSTACLE_SIZE[1] / 2 + GROUND_EPSILON;
+/**
+ * Spawn Y for dynamic (green) obstacles. Placed above the ground so Rapier settles them
+ * under gravity — avoids spawning exactly at the resting position which can cause sticking.
+ */
+export const DYNAMIC_OBSTACLE_SPAWN_Y = GROUND_SURFACE_Y + OBSTACLE_SIZE[1] / 2 + 1;
+
+/** Dynamic green obstacle cubes — spawned above ground, physics settles them. */
 export const DYNAMIC_OBSTACLE_COLOR = 0x27ae60;
 export const DYNAMIC_OBSTACLE_POSITIONS: [number, number, number][] = [
-  [-5, OBSTACLE_GROUND_Y, -3],
-  [4, OBSTACLE_GROUND_Y, 2],
-  [-2, OBSTACLE_GROUND_Y, 5],
+  [-5, DYNAMIC_OBSTACLE_SPAWN_Y, -3],
+  [4, DYNAMIC_OBSTACLE_SPAWN_Y, 2],
+  [-2, DYNAMIC_OBSTACLE_SPAWN_Y, 5],
 ];
 
-/** Fixed (static) red obstacle cubes — center-positioned so bottom touches ground. */
+/** Fixed (static) red obstacle cubes — center-positioned so bottom sits just above the ground. */
 export const FIXED_OBSTACLE_COLOR = 0xc0392b;
 export const FIXED_OBSTACLE_POSITIONS: [number, number, number][] = [
   [6, OBSTACLE_GROUND_Y, -6],
@@ -70,7 +82,7 @@ export const FIXED_OBSTACLE_POSITIONS: [number, number, number][] = [
 /** Animation name fallback for goomba.glb — actual name discovered at runtime. */
 export const GOOMBA_ANIMATION_FALLBACK_NAME = "walk";
 export const GOOMBA_SCALE: [number, number, number] = [0.03, 0.03, 0.03];
-export const GOOMBA_GROUND_Y = 0;
+export const GOOMBA_GROUND_Y = GROUND_SURFACE_Y + GROUND_EPSILON;
 /**
  * Effective speed threshold (world units/sec) below which the goomba switches to
  * the idle animation instead of walk. Catches near-zero easing at path endpoints.
@@ -83,7 +95,6 @@ export const defaultConfigValues = {
   mode: "mesh" as FollowerMode,
   speed: DEFAULT_FOLLOW_SPEED,
   obstacleImpulse: 5,
-  pathSteps: DEFAULT_PATH_STEPS,
   easing: "linear" as EasingName,
   easingIntensity: 0.6,
   playing: true,
@@ -111,7 +122,6 @@ export const configControls = {
   },
   speed: { min: 1, max: 100, step: 1, label: "Follow Speed" },
   obstacleImpulse: { min: 0, max: 50, step: 1, label: "Push Force" },
-  pathSteps: { min: 10, max: 1000, step: 10, label: "Path Steps" },
   easing: { bezier: true, label: "Easing" },
   easingIntensity: { min: 0, max: 5, step: 0.01, label: "Easing Intensity" },
   playing: { label: "Playing", boolean: true },

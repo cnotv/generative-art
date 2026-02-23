@@ -6,17 +6,16 @@ const PATH_Y_OFFSET = 0.05;
 
 /**
  * Build a CatmullRom spline through the raw control waypoints and return the
- * interpolated point list at the requested resolution.
+ * interpolated point list.
  */
 export const drawInterpolateWaypoints = (
-  waypoints: Waypoint[],
-  steps: number
+  waypoints: Waypoint[]
 ): Waypoint[] => {
   if (waypoints.length < 2) return waypoints;
   const vectors = waypoints.map(({ x, y, z }) => new THREE.Vector3(x, y, z));
   const curve = new THREE.CatmullRomCurve3(vectors, false, "centripetal");
   return curve
-    .getPoints(Math.max(steps, waypoints.length * 2))
+    .getPoints(waypoints.length * 2)
     .map(({ x, y, z }) => ({ x, y, z }));
 };
 
@@ -24,7 +23,6 @@ export const drawInterpolateWaypoints = (
 export const drawCreatePathVisualization = (
   scene: THREE.Scene,
   waypoints: Waypoint[],
-  steps: number,
   color: number = PATH_LINE_COLOR
 ): THREE.Group => {
   const group = new THREE.Group();
@@ -34,7 +32,7 @@ export const drawCreatePathVisualization = (
       ({ x, y, z }) => new THREE.Vector3(x, y + PATH_Y_OFFSET, z)
     );
     const curve = new THREE.CatmullRomCurve3(vectors, false, "centripetal");
-    const totalPoints = Math.max(steps, waypoints.length * 2);
+    const totalPoints = waypoints.length * 2;
     const material = new THREE.MeshBasicMaterial({
       color,
       transparent: true,

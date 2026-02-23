@@ -23,6 +23,7 @@ import {
   GOOMBA_SCALE,
   GOOMBA_GROUND_Y,
   GOOMBA_IDLE_SPEED_THRESHOLD,
+  GROUND_EPSILON,
   MIN_WAYPOINT_DISTANCE,
   type EasingName,
   type FollowerMode,
@@ -49,6 +50,7 @@ import {
   modelFollowClearObstacles,
   modelFollowSyncDynamicObstacles,
   modelFollowApplyContactImpulses,
+  modelFollowIsBlockedByFixedObstacle,
 } from "./helpers/modelFollow";
 import { getEasingSpeedMultiplier } from "./helpers/easing";
 
@@ -151,15 +153,8 @@ const refreshPathVisualization = (state: SceneState): void => {
     state.pathLine = null;
   }
   if (state.controlWaypoints.length >= 2) {
-    state.smoothWaypoints = drawInterpolateWaypoints(
-      state.controlWaypoints,
-      reactiveConfig.value.pathSteps
-    );
-    state.pathLine = drawCreatePathVisualization(
-      state.scene,
-      state.controlWaypoints,
-      reactiveConfig.value.pathSteps
-    );
+    state.smoothWaypoints = drawInterpolateWaypoints(state.controlWaypoints);
+    state.pathLine = drawCreatePathVisualization(state.scene, state.controlWaypoints);
     if (!reactiveConfig.value.showPath) state.pathLine.visible = false;
   }
 
@@ -259,16 +254,9 @@ const onPointerMove = (event: MouseEvent | TouchEvent): void => {
       drawUpdateWaypointNodePosition(sceneState.waypointNodes[sceneState.selectedNodeIndex], moved);
       // Rebuild smooth path and path line without touching other nodes
       if (sceneState.controlWaypoints.length >= 2) {
-        sceneState.smoothWaypoints = drawInterpolateWaypoints(
-          sceneState.controlWaypoints,
-          reactiveConfig.value.pathSteps
-        );
+        sceneState.smoothWaypoints = drawInterpolateWaypoints(sceneState.controlWaypoints);
         if (sceneState.pathLine) drawRemovePathVisualization(sceneState.scene, sceneState.pathLine);
-        sceneState.pathLine = drawCreatePathVisualization(
-          sceneState.scene,
-          sceneState.controlWaypoints,
-          reactiveConfig.value.pathSteps
-        );
+        sceneState.pathLine = drawCreatePathVisualization(sceneState.scene, sceneState.controlWaypoints);
         if (!reactiveConfig.value.showPath) sceneState.pathLine.visible = false;
       }
     }
@@ -305,10 +293,12 @@ const registerGoombaTimelineAction = (): void => {
     category: "goomba",
     action: () => {
       if (!sceneState?.followerGoomba) return;
+      // No active path — freeze animation in place by not advancing the mixer.
+      if (!sceneState.isFollowing) return;
       const delta = sceneState.lastDelta;
       modelFollowUpdateMixer(sceneState.followerGoomba, delta);
       const effectiveSpeed = reactiveConfig.value.speed * sceneState.lastEasingMultiplier;
-      if (sceneState.isFollowing && effectiveSpeed >= GOOMBA_IDLE_SPEED_THRESHOLD) {
+      if (effectiveSpeed >= GOOMBA_IDLE_SPEED_THRESHOLD) {
         // Drive walk animation directly by effective follow speed so it stays in sync with ground movement
         modelFollowPlayWalkAnimation(sceneState.followerGoomba, delta, effectiveSpeed);
       } else {
@@ -377,7 +367,7 @@ const switchToGoombaMode = async (state: SceneState, pos: THREE.Vector3): Promis
     });
     // Compute bounding box so the goomba's feet sit exactly on the ground (y=0).
     const box = new THREE.Box3().setFromObject(state.followerGoomba);
-    state.goombaGroundY = -box.min.y;
+    state.goombaGroundY = -box.min.y + GROUND_EPSILON;
     state.followerGoomba.position.set(pos.x, state.goombaGroundY, pos.z);
     modelFollowSyncPhysicsBody(state.followerGoomba);
     // Allow the CC to apply impulses to dynamic bodies so goomba pushes green cubes.
@@ -413,12 +403,6 @@ watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
   if (sceneState?.scene.background instanceof THREE.Color) {
     sceneState.scene.background.setHex(val);
   }
-});
-
-watch(() => reactiveConfig.value.pathSteps, () => {
-  if (!sceneState || sceneState.controlWaypoints.length < 2) return;
-  refreshPathVisualization(sceneState);
-  if (sceneState.isFollowing && sceneState.followState) startFollowing(sceneState);
 });
 
 watch(() => reactiveConfig.value.showPath, (show) => {
@@ -488,6 +472,10 @@ const runAnimation = (state: SceneState): void => {
       const result = modelFollowPhysicsTick(follower, state.followState, effectiveSpeed, delta, true);
       state.followState = result.state;
       isComplete = result.isComplete;
+      // Stop when the goomba reaches a fixed (red) obstacle — idle animation kicks in via isFollowing.
+      if (modelFollowIsBlockedByFixedObstacle(follower, state.obstacles)) {
+        state.isFollowing = false;
+      }
     } else {
       const result = modelFollowTick(follower, state.followState, effectiveSpeed, delta);
       state.followState = result.state;
