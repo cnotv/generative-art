@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { SwitchRoot, SwitchThumb } from 'radix-vue';
-import { computed } from 'vue';
-import { cn } from '@/lib/utilities';
 
-const props = defineProps<{
+defineProps<{
   modelValue?: boolean;
   disabled?: boolean;
   name?: string;
@@ -13,20 +11,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
-
-const classes = computed(() =>
-  cn(
-    'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
-    'data-[state=checked]:bg-primary data-[state=unchecked]:bg-input'
-  )
-);
-
-const thumbClasses = computed(() =>
-  cn(
-    'pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform',
-    'data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0'
-  )
-);
 </script>
 
 <template>
@@ -35,9 +19,57 @@ const thumbClasses = computed(() =>
     :name="name"
     :checked="modelValue"
     :disabled="disabled"
-    :class="classes"
+    class="switch"
     @update:checked="emit('update:modelValue', $event)"
   >
-    <SwitchThumb :class="thumbClasses" />
+    <SwitchThumb class="switch__thumb" />
   </SwitchRoot>
 </template>
+
+<style scoped>
+.switch {
+  display: inline-flex;
+  height: 20px;
+  width: 36px;
+  flex-shrink: 0;
+  cursor: pointer;
+  align-items: center;
+  border-radius: 9999px;
+  border: none;
+  transition: background-color 0.2s;
+  outline: none;
+  background-color: var(--color-muted);
+}
+
+.switch:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-ring);
+}
+
+.switch[data-state='checked'] {
+  background-color: var(--color-primary);
+}
+
+.switch[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.switch__thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: var(--color-background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.switch__thumb[data-state='checked'] {
+  transform: translateX(16px);
+}
+
+.switch__thumb[data-state='unchecked'] {
+  transform: translateX(2px);
+}
+</style>
