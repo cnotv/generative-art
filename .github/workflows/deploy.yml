@@ -78,8 +78,8 @@ jobs:
             # Pull the new image
             docker compose pull
             
-            # Restart containers
-            docker compose up -d
+            # Restart containers with the newly pulled image
+            docker compose up -d --force-recreate
             
             # Optional: Clean up old images to save disk space
             docker image prune -f
