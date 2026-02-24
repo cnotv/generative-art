@@ -61,6 +61,19 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USERNAME }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          port: ${{ secrets.HETZNER_PORT || '22' }}
+          source: docker-compose.yml
+          target: ${{ secrets.HETZNER_TARGET_DIR }}
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -78,8 +91,8 @@ jobs:
             # Pull the new image
             docker compose pull
             
-            # Restart containers
-            docker compose up -d
+            # Restart containers with the newly pulled image; remove orphaned containers from old service names
+            docker compose up -d --force-recreate --remove-orphans
             
             # Optional: Clean up old images to save disk space
             docker image prune -f

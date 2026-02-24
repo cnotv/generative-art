@@ -1,5 +1,6 @@
 services:
   website:
+    image: ghcr.io/cnotv/generative-art:latest
     build:
       context: .
     environment:
