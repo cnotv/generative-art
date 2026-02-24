@@ -79,10 +79,6 @@ const setAddToGroupRef = (groupId: string, el: any) => {
 <template>
   <GenericPanel panel-type="textures" side="left">
     <div class="textures-panel flex flex-col h-full">
-      <div class="textures-panel__header p-4 border-b border-border">
-        <h2 class="text-lg font-semibold">Textures</h2>
-      </div>
-
       <div
         class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4"
       >

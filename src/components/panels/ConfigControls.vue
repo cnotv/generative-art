@@ -303,7 +303,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 <style scoped>
 .config-controls {
   overflow-x: hidden;
-  padding-bottom: 1rem;
+  padding-bottom: 0.25rem;
 }
 
 .config-controls__inline-input {

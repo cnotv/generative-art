@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
+import { useDebugScene } from '@/composables/useDebugScene';
 
 interface SceneElement {
   name: string;
@@ -17,20 +18,7 @@ interface SceneElement {
   hidden?: boolean;
 }
 
-interface Props {
-  sceneElements?: SceneElement[];
-}
-
-interface Emits {
-  (e: 'toggleVisibility', name: string): void;
-  (e: 'remove', name: string): void;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  sceneElements: () => [],
-});
-
-const emit = defineEmits<Emits>();
+const { sceneElements, handleToggleVisibility: toggleVisibility, handleRemove: removeElement } = useDebugScene();
 
 const fps = ref(0);
 const memory = ref(0);
@@ -86,12 +74,12 @@ const getElementColor = (element: SceneElement) => {
 
 const handleToggleVisibility = (name: string, event: Event) => {
   event.stopPropagation();
-  emit('toggleVisibility', name);
+  toggleVisibility(name);
 };
 
 const handleRemove = (name: string, event: Event) => {
   event.stopPropagation();
-  emit('remove', name);
+  removeElement(name);
 };
 
 onMounted(() => {
@@ -107,12 +95,8 @@ onUnmounted(() => {
 
 <template>
   <GenericPanel panel-type="debug" side="right">
-      <div class="debug-panel__content flex flex-col gap-4 h-full">
-        <div class="debug-panel__header p-4 border-b border-border">
-          <h2 class="text-lg font-semibold">Debug</h2>
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-4">
+      <div class="debug-panel__content flex flex-col gap-1 h-full">
+<div class="flex-1 overflow-y-auto px-2">
           <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
             <!-- Stats Section -->
             <AccordionItem value="stats">
@@ -120,18 +104,18 @@ onUnmounted(() => {
                 Performance Stats
               </AccordionTrigger>
               <AccordionContent>
-                <div class="debug-panel__stats grid gap-3 pb-2">
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                <div class="debug-panel__stats grid gap-1 pb-1">
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
                     <span class="text-xs font-medium">FPS</span>
                     <span class="font-mono text-xs">{{ fps }}</span>
                   </div>
 
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
                     <span class="text-xs font-medium">Memory (MB)</span>
                     <span class="font-mono text-xs">{{ memory }}</span>
                   </div>
 
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-2.5">
+                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
                     <span class="text-xs font-medium">Draw Calls</span>
                     <span class="font-mono text-xs">{{ drawCalls }}</span>
                   </div>
@@ -145,11 +129,11 @@ onUnmounted(() => {
                 Scene Elements ({{ sceneElements.length }})
               </AccordionTrigger>
               <AccordionContent>
-                <div class="scene-elements flex flex-col gap-2 pb-2">
+                <div class="scene-elements flex flex-col gap-1 pb-1">
                   <div
                     v-for="(element, index) in sceneElements"
                     :key="index"
-                    class="element-item group flex items-center gap-4 p-3 rounded-lg border border-border bg-muted/30 transition-colors"
+                    class="element-item group flex items-center gap-2 p-1.5 rounded border border-border bg-muted/30 transition-colors"
                     :class="{ 'opacity-50': element.hidden }"
                   >
                     <IconPreview
@@ -192,7 +176,7 @@ onUnmounted(() => {
             </AccordionItem>
           </Accordion>
 
-          <div class="debug-panel__additional mt-4">
+          <div class="debug-panel__additional mt-2">
             <slot />
           </div>
         </div>

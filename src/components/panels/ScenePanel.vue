@@ -17,7 +17,7 @@ const sceneSchemaWithoutCamera = computed((): ConfigControlsSchema | null => {
 
 <template>
   <GenericPanel panel-type="scene" side="right">
-    <div class="scene-panel__content flex flex-col gap-6">
+    <div class="scene-panel__content flex flex-col gap-1">
       <div v-if="sceneSchemaWithoutCamera" class="flex-1 min-h-0">
         <SchemaControls
           :schema="sceneSchemaWithoutCamera"

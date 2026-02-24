@@ -6,9 +6,6 @@ const mockQuery = ref<Record<string, string | undefined>>({});
 const mockPath = ref('/test');
 const mockPush = vi.fn();
 
-// Reset module state between tests
-const activePanelReset: (() => void) | null = null;
-
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -26,12 +23,21 @@ vi.mock('vue-router', () => ({
 // Import after mocking
 import { usePanels, resetPanelState } from './usePanels';
 
+// All panel keys synced to URL; closed panels use 'false'
+const allPanelsClosed = {
+  sidebar: 'false',
+  config: 'false',
+  scene: 'false',
+  debug: 'false',
+  textures: 'false',
+  camera: 'false',
+};
+
 describe('usePanels', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQuery.value = {};
     mockPath.value = '/test';
-    // Reset panel state
     resetPanelState();
   });
 
@@ -45,12 +51,11 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(true);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'true' },
+        query: { ...allPanelsClosed, config: 'true' },
       });
     });
 
     it('should close config panel and remove query param', async () => {
-      // Start with config open
       mockQuery.value = { config: 'true' };
       const { togglePanel, isConfigOpen } = usePanels();
 
@@ -65,7 +70,7 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(false);
       expect(mockPush).toHaveBeenLastCalledWith({
         path: '/test',
-        query: { config: 'false' },
+        query: { ...allPanelsClosed },
       });
     });
   });
@@ -85,7 +90,7 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(false);
       expect(mockPush).toHaveBeenLastCalledWith({
         path: '/test',
-        query: { config: 'false' },
+        query: { ...allPanelsClosed },
       });
     });
 
@@ -98,7 +103,7 @@ describe('usePanels', () => {
 
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'false', other: 'value' },
+        query: { ...allPanelsClosed, other: 'value' },
       });
     });
   });
@@ -113,23 +118,22 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(true);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'true' },
+        query: { ...allPanelsClosed, config: 'true' },
       });
     });
   });
 
   describe('sidebar panel', () => {
-    it('should not add query param for sidebar', async () => {
+    it('should sync sidebar query param', async () => {
       const { togglePanel, isSidebarOpen } = usePanels();
 
       togglePanel('sidebar');
       await nextTick();
 
       expect(isSidebarOpen.value).toBe(true);
-      // Should still push but with config: 'false' (no sidebar param)
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'false' },
+        query: { ...allPanelsClosed, sidebar: 'true' },
       });
     });
   });
@@ -138,7 +142,6 @@ describe('usePanels', () => {
     it('should open config panel if query param is present on init', async () => {
       mockQuery.value = { config: 'true' };
 
-      // Re-import to test initialization
       const { isConfigOpen } = usePanels();
       await nextTick();
 
@@ -156,7 +159,7 @@ describe('usePanels', () => {
       expect(isConfigOpen.value).toBe(true);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'true' },
+        query: { ...allPanelsClosed, config: 'true' },
       });
 
       vi.clearAllMocks();
@@ -165,13 +168,11 @@ describe('usePanels', () => {
       closePanel('config');
       await nextTick();
 
-      // Panel should be closed
       expect(isConfigOpen.value).toBe(false);
-      // URL should be updated with config: 'false'
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { config: 'false' },
+        query: { ...allPanelsClosed },
       });
     });
 
@@ -204,25 +205,21 @@ describe('usePanels', () => {
     it('should allow multiple panels to be open simultaneously', async () => {
       const { togglePanel, isConfigOpen, isSidebarOpen, isTexturesOpen } = usePanels();
 
-      // Open config panel
       togglePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
 
-      // Open sidebar without closing config
       togglePanel('sidebar');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
       expect(isSidebarOpen.value).toBe(true);
 
-      // Open textures without closing others
       togglePanel('textures');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
       expect(isSidebarOpen.value).toBe(true);
       expect(isTexturesOpen.value).toBe(true);
 
-      // Close only config
       togglePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
@@ -233,18 +230,51 @@ describe('usePanels', () => {
     it('should close specific panel with closePanel', async () => {
       const { openPanel, closePanel, isConfigOpen, isSidebarOpen } = usePanels();
 
-      // Open both panels
       openPanel('config');
       openPanel('sidebar');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
       expect(isSidebarOpen.value).toBe(true);
 
-      // Close only config
       closePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
       expect(isSidebarOpen.value).toBe(true);
     });
+  });
+
+  describe('getPanelOffset', () => {
+    it.each([
+      // Right-side panels — single panel open always has offset 0
+      ['debug', ['debug'], 0],
+      ['camera', ['camera'], 0],
+      ['scene', ['scene'], 0],
+      ['config', ['config'], 0],
+      // Right-side panels — multiple open, offset by count of panels closer to edge
+      ['config', ['debug', 'config'], 1],
+      ['config', ['camera', 'config'], 1],
+      ['config', ['debug', 'camera', 'config'], 2],
+      ['scene', ['debug', 'scene'], 1],
+      ['camera', ['debug', 'camera'], 1],
+      ['debug', ['debug', 'camera', 'scene', 'config'], 0],
+      ['camera', ['debug', 'camera', 'scene', 'config'], 1],
+      ['scene', ['debug', 'camera', 'scene', 'config'], 2],
+      ['config', ['debug', 'camera', 'scene', 'config'], 3],
+      // Left-side panels
+      ['sidebar', ['sidebar'], 0],
+      ['textures', ['textures'], 0],
+      ['textures', ['sidebar', 'textures'], 1],
+      ['sidebar', ['sidebar', 'textures'], 0],
+    ] as const)(
+      'getPanelOffset(%s) with open panels %j → %d',
+      async (panelType, openPanels, expectedOffset) => {
+        const { openPanel, getPanelOffset } = usePanels();
+
+        openPanels.forEach(p => openPanel(p));
+        await nextTick();
+
+        expect(getPanelOffset(panelType)).toBe(expectedOffset);
+      }
+    );
   });
 });

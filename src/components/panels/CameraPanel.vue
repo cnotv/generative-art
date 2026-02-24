@@ -39,11 +39,8 @@ const handleStop = () => {
 <template>
   <GenericPanel panel-type="camera" side="right">
     <div class="camera-panel flex flex-col h-full">
-      <div class="camera-panel__header p-4 border-b border-white/10">
-        <h2 class="text-lg font-semibold text-white">Camera</h2>
-      </div>
 
-      <div class="camera-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-6">
+      <div class="camera-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-2">
         <div v-if="cameraSchema">
           <SchemaControls
             :schema="cameraSchema"

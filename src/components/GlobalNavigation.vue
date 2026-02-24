@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Menu, Image, Settings, Layers, Bug, Video } from 'lucide-vue-next';
+import { Menu, Image, Settings, Layers, Bug, Video, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { usePanels } from '@/composables/usePanels';
 import { useViewPanels } from '@/composables/useViewPanels';
@@ -12,8 +12,10 @@ interface PanelButton {
   label: string;
 }
 
-const { activePanels, togglePanel } = usePanels();
+const { activePanels, togglePanel, closeAllPanels } = usePanels();
 const { viewPanels } = useViewPanels();
+
+const hasOpenPanels = computed(() => activePanels.value.size > 0);
 
 const allButtons = computed<PanelButton[]>(() => {
   const buttons: PanelButton[] = [
@@ -42,8 +44,6 @@ const allButtons = computed<PanelButton[]>(() => {
   return buttons;
 });
 
-const hasActivePanels = computed(() => activePanels.value.size > 0);
-
 const isPanelOpen = (panelType: PanelType) => {
   return activePanels.value.has(panelType);
 };
@@ -56,7 +56,7 @@ const handleToggle = (panelType: PanelType) => {
 <template>
   <nav
     class="global-navigation"
-    :class="{ 'global-navigation--visible': hasActivePanels }"
+    :class="{ 'global-navigation--visible': hasOpenPanels }"
   >
     <Button
       v-for="button in allButtons"
@@ -70,26 +70,40 @@ const handleToggle = (panelType: PanelType) => {
     >
       <component :is="button.icon" class="h-5 w-5" />
     </Button>
+
+    <Button
+      v-if="hasOpenPanels"
+      variant="ghost"
+      size="icon"
+      class="global-navigation__button global-navigation__close-all"
+      aria-label="Close all panels"
+      @click="closeAllPanels"
+    >
+      <X class="h-5 w-5" />
+    </Button>
   </nav>
 </template>
 
 <style scoped>
 .global-navigation {
   position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--nav-height);
   z-index: 50;
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem;
+  padding: 0 0.5rem;
   background-color: var(--color-background);
-  border: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
-  border-radius: 0.5rem;
+  color: var(--color-foreground);
   opacity: 0;
   transition: opacity 0.2s;
-  color: var(--color-foreground);
 }
 
 .global-navigation:hover,
@@ -108,6 +122,11 @@ const handleToggle = (panelType: PanelType) => {
 
 .global-navigation__button:hover {
   background-color: hsl(0 0% 90%);
+}
+
+.global-navigation__close-all {
+  position: absolute;
+  right: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {

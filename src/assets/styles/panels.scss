@@ -43,50 +43,51 @@
   }
 }
 
-// Sheet/Dialog content
-.sheet-content {
+// Panel containers — fixed anchors, panels are flex children
+.panel-container {
   position: fixed;
+  top: 0;
+  height: 100%;
+  padding-top: var(--nav-height);
+  display: flex;
+  flex-direction: row;
   z-index: calc(var(--z-overlay) + 1);
-  gap: var(--spacing-3);
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.panel-container--right {
+  right: 0;
+}
+
+.panel-container--left {
+  left: 0;
+}
+
+// Sheet/Dialog content — flex item, no individual positioning
+.sheet-content {
+  position: relative;
+  height: 100%;
+  flex-shrink: 0;
+  gap: var(--spacing-1);
   background-color: var(--color-background);
-  padding: var(--spacing-4);
-  box-shadow: none;
-  transition: all 0.3s ease-in-out;
+  padding: var(--spacing-2);
   overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 
   &--left {
-    inset: 0 auto 0 0;
-    height: 100%;
-    width: 50%;
-    max-width: 20rem;
+    width: var(--panel-width, 20rem);
     border-right: 1px solid var(--color-border);
-
-    &[data-state="open"] {
-      animation: slideInFromLeft 500ms ease-out;
-    }
-
-    &[data-state="closed"] {
-      animation: slideOutToLeft 300ms ease-in;
-    }
   }
 
   &--right {
-    inset: 0 0 0 auto;
-    height: 100%;
-    width: 50%;
-    max-width: 20rem;
+    width: var(--panel-width, 20rem);
     border-left: 1px solid var(--color-border);
-
-    &[data-state="open"] {
-      animation: slideInFromRight 500ms ease-out;
-    }
-
-    &[data-state="closed"] {
-      animation: slideOutToRight 300ms ease-in;
-    }
   }
 }
 
@@ -127,26 +128,6 @@
 @keyframes fadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
-}
-
-@keyframes slideInFromLeft {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideOutToLeft {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
-}
-
-@keyframes slideInFromRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideOutToRight {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
 }
 
 @keyframes accordionDown {

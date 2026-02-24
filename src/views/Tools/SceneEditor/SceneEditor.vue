@@ -7,12 +7,13 @@ import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { TexturesPanel, DebugPanel } from "@/components/panels";
+import { TexturesPanel } from "@/components/panels";
 import {
   registerViewConfig,
   unregisterViewConfig,
   createReactiveConfig,
 } from "@/composables/useViewConfig";
+import { useDebugScene } from "@/composables/useDebugScene";
 import { defaultConfig, presets, configControls, sceneControls } from "./config";
 import type { SceneEditorConfig } from "./config";
 
@@ -20,6 +21,7 @@ const route = useRoute();
 const canvas = ref<HTMLCanvasElement | null>(null);
 const { openPanel } = usePanels();
 const { setViewPanels, clearViewPanels } = useViewPanels();
+const { setSceneElements, clearSceneElements } = useDebugScene();
 
 // Texture item within a group
 interface TextureItem {
@@ -44,22 +46,21 @@ const selectedGroupId = ref<string | null>(null);
 // Auto-update toggle
 const autoUpdate = ref(true);
 
-// Scene debugging - list of all elements in the scene
-interface SceneElement {
-  name: string;
-  type: string;
-  hidden?: boolean;
-}
-const sceneElements = ref<SceneElement[]>([]);
 const hiddenElements = ref<Set<string>>(new Set());
 
 // Update scene elements list for debugging
 const updateSceneElements = (scene: THREE.Scene) => {
-  sceneElements.value = scene.children.map((child: any) => ({
-    name: child.name || "(unnamed)",
-    type: child.type,
-    hidden: hiddenElements.value.has(child.name),
-  }));
+  setSceneElements(
+    scene.children.map((child: any) => ({
+      name: child.name || "(unnamed)",
+      type: child.type,
+      hidden: hiddenElements.value.has(child.name),
+    })),
+    {
+      onToggleVisibility: toggleElementVisibility,
+      onRemove: removeSceneElement,
+    }
+  );
 };
 
 // Toggle element visibility in scene
@@ -324,6 +325,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // Clear view-specific panels
   clearViewPanels();
+
+  // Clear debug scene elements
+  clearSceneElements();
 
   // Unregister config
   unregisterViewConfig(route.name as string);
@@ -803,11 +807,6 @@ defineExpose({
       @manual-update="triggerManualUpdate"
     />
 
-    <DebugPanel
-      :scene-elements="sceneElements"
-      @toggle-visibility="toggleElementVisibility"
-      @remove="removeSceneElement"
-    />
   </div>
 </template>
 

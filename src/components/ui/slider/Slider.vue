@@ -46,7 +46,7 @@ const emit = defineEmits<{
 
 .slider__track {
   position: relative;
-  height: 0.5rem;
+  height: 0.25rem;
   width: 100%;
   flex-grow: 1;
   overflow: hidden;

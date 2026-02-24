@@ -23,7 +23,7 @@ defineProps<{
   flex: 1;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 0;
+  padding: 0.375rem 0;
   font-weight: 500;
   transition: all 150ms;
   cursor: pointer;
