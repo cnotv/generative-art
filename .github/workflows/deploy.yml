@@ -92,8 +92,8 @@ jobs:
             # Pull the new image
             docker compose pull
             
-            # Restart containers with the newly pulled image
-            docker compose up -d --force-recreate
+            # Restart containers with the newly pulled image; remove orphaned containers from old service names
+            docker compose up -d --force-recreate --remove-orphans
             
             # Optional: Clean up old images to save disk space
             docker image prune -f
