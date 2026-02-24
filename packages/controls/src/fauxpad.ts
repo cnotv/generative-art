@@ -188,18 +188,18 @@ export function createFauxPadController(
     if (!isActive) return;
     event.preventDefault();
 
-    let xDistance = event.touches[0].clientX - initialPosition.x;
-    let yDistance = event.touches[0].clientY - initialPosition.y;
+    const rawX = event.touches[0].clientX - initialPosition.x;
+    const rawY = event.touches[0].clientY - initialPosition.y;
 
-    // Limit movement to threshold
-    xDistance = Math.max(Math.min(xDistance, threshold.x), -threshold.x);
-    yDistance = Math.max(Math.min(yDistance, threshold.y), -threshold.y);
+    // Radial clamp: keep inside element within the circular edge boundary
+    const distance = Math.hypot(rawX, rawY);
+    const scale = distance > threshold.x ? threshold.x / distance : 1;
 
-    currentPosition = { x: xDistance, y: yDistance };
+    currentPosition = { x: rawX * scale, y: rawY * scale };
 
     // Update visual position
     if (insideElement_) {
-      insideElement_.style.transform = `translate(${xDistance}px, ${yDistance}px)`;
+      insideElement_.style.transform = `translate(${currentPosition.x}px, ${currentPosition.y}px)`;
     }
 
     // Update directional actions
@@ -213,10 +213,10 @@ export function createFauxPadController(
   function bind(edgeElement: HTMLElement, insideElement: HTMLElement) {
     insideElement_ = insideElement;
     
-    // Calculate threshold based on edge element size
+    // Clamp the inside element's center to stay within the edge circle boundary
     threshold = {
-      x: edgeElement.offsetWidth / 2,
-      y: edgeElement.offsetHeight / 2
+      x: edgeElement.offsetWidth / 2 - insideElement.offsetWidth / 2,
+      y: edgeElement.offsetHeight / 2 - insideElement.offsetHeight / 2
     };
 
     // Bind to inside element - touch events stay attached even when finger moves outside
