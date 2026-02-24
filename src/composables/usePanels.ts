@@ -10,10 +10,12 @@ const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'camera', 'scene', 'config'];
 const LEFT_PANEL_ORDER: PanelType[] = ['sidebar', 'textures'];
 
 const activePanels = ref<Set<PanelType>>(new Set());
+let syncInitialized = false;
 
 // Reset function for testing - resets module-level state
 export const resetPanelState = () => {
   activePanels.value = new Set();
+  syncInitialized = false;
 };
 
 export const usePanels = () => {
@@ -49,26 +51,31 @@ export const usePanels = () => {
     router.push({ path, query: { ...query, ...panelQuery } });
   };
 
-  // Initialize from query on first call
-  const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
-  if (initialOpen.length > 0) {
-    activePanels.value = new Set([...activePanels.value, ...initialOpen]);
-  }
+  // Run initialization and route watchers only once across all usePanels() callers.
+  // Multiple components calling usePanels() would otherwise create duplicate watchers
+  // that all fire on every route.query change and create competing reactive updates.
+  if (!syncInitialized) {
+    syncInitialized = true;
 
-  // Watch for external query changes for all panel types
-  ALL_PANEL_TYPES.forEach(panel => {
-    watch(
-      () => route.query[panel],
-      (value) => {
-        const isOpen = activePanels.value.has(panel);
-        if (value === 'true' && !isOpen) {
-          activePanels.value = new Set([...activePanels.value, panel]);
-        } else if (value !== 'true' && isOpen) {
-          activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
+    const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
+    if (initialOpen.length > 0) {
+      activePanels.value = new Set([...activePanels.value, ...initialOpen]);
+    }
+
+    ALL_PANEL_TYPES.forEach(panel => {
+      watch(
+        () => route.query[panel],
+        (value) => {
+          const isOpen = activePanels.value.has(panel);
+          if (value === 'true' && !isOpen) {
+            activePanels.value = new Set([...activePanels.value, panel]);
+          } else if (value !== 'true' && isOpen) {
+            activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
+          }
         }
-      }
-    );
-  });
+      );
+    });
+  }
 
   const openPanel = (panel: PanelType) => {
     activePanels.value = new Set([...activePanels.value, panel]);
