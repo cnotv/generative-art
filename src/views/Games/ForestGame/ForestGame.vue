@@ -381,7 +381,7 @@ onUnmounted(() => {
       up: 'move-up',
       down: 'move-down',
     }"
-    :options="{ deadzone: 0.15 }"
+    :options="{ deadzone: 0.15, enableEightWay: true }"
     :current-actions="currentActions"
     :on-action="bindings.onAction"
   />
@@ -389,7 +389,7 @@ onUnmounted(() => {
     v-if="isMobileDevice"
     style="right: 25px; bottom: 25px"
     mode="button"
-    :mapping="{ click: 'jump' }"
+    :mapping="{ '': 'jump' }"
     :on-action="bindings.onAction"
   />
 </template>

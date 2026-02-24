@@ -13,6 +13,7 @@ import { createControls, isMobile } from "@webgamekit/controls";
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
+import { getActionName } from "./MixamoPlayground.helpers";
 
 const playerSettings = {
   model: {
@@ -132,17 +133,6 @@ const logs = shallowRef<string[]>([]);
 const showLogs = true;
 const isMobileDevice = isMobile();
 
-const getActionName = (actions: Record<string, any>): string => {
-  if (actions["kick"]) return "kick";
-  if (actions["punch"]) return "punch";
-  if (actions["jump"]) return "jump";
-  if (actions["move-up"] || actions["move-down"] || actions["move-left"] || actions["move-right"]) {
-    if (actions["roll"]) return "roll";
-    if (actions["run"]) return "running";
-    return "walk2";
-  }
-  return "idle";
-};
 
 const getActionData = (player: ComplexModel, currentActions: Record<string, any>, basicDistance: number, getDelta: () => number): AnimationData => {
   const actionName = getActionName(currentActions);
@@ -171,19 +161,10 @@ const bindings = {
     logs.value = getLogs(currentActions);
 
     switch (action) {
-      case "kick":
-        handleBlockingAction("kick");
-        break;
-      case "punch":
-        handleBlockingAction("punch");
-        break;
-      case "jump":
-        handleBlockingAction("jump");
-        break;
-      case "roll":
-        handleBlockingAction("roll");
-        break;
       case "print-log":
+        break;
+      default:
+        handleBlockingAction(action);
         break;
     }
   },
@@ -289,14 +270,14 @@ onUnmounted(() => {
         up: 'move-up',
         down: 'move-down',
       }"
-      :options="{ deadzone: 0.15 }"
+      :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"
       :on-action="bindings.onAction"
     />
     <TouchControl
       style="right: 25px; bottom: 25px"
       mode="button"
-      :mapping="{ click: 'jump' }"
+      :mapping="{ Kick: 'kick', Punch: 'punch', Jump: 'jump', Roll: 'roll' }"
       :on-action="bindings.onAction"
     />
   </template>

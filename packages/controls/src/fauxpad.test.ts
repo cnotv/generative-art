@@ -258,22 +258,51 @@ describe('createFauxPadController', () => {
     it('should not trigger action within deadzone', () => {
       const edgeElement = createMockElement(100, 100);
       const insideElement = createMockElement(50, 50);
-      
+
       const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.5 });
       controller.bind(edgeElement, insideElement);
-      
+
       // Start at center
       const touchStart = createTouchEvent('touchstart', 50, 50);
       insideElement.dispatchEvent(touchStart);
-      
+
       // Move only slightly (within deadzone)
       const touchMove = createTouchEvent('touchmove', 55, 50);
       insideElement.dispatchEvent(touchMove);
-      
+
       console.log('[TEST] Deadzone test - onAction calls:', onActionMock.mock.calls);
       console.log('[TEST] Position:', controller.getPosition());
-      
+
       expect(onActionMock).not.toHaveBeenCalled();
+    });
+
+    describe('8-way direction detection', () => {
+      it.each([
+        // [label, moveToX, moveToY, expectedDirections]
+        // touchstart at (50,50); move-to coords relative to a 100×100 edge element
+        ['up-right diagonal', 100, 0, ['up', 'right']],
+        ['down-right diagonal', 100, 100, ['down', 'right']],
+        ['down-left diagonal', 0, 100, ['down', 'left']],
+        ['up-left diagonal', 0, 0, ['up', 'left']],
+      ] as const)('triggers both directions for %s', (_label, moveX, moveY, expectedDirections) => {
+        const edgeElement = createMockElement(100, 100);
+        const insideElement = createMockElement(50, 50);
+
+        const controller = createFauxPadController(mappingReference, handlers, {
+          deadzone: 0.1,
+          enableEightWay: true,
+        });
+        controller.bind(edgeElement, insideElement);
+
+        insideElement.dispatchEvent(createTouchEvent('touchstart', 50, 50));
+        insideElement.dispatchEvent(createTouchEvent('touchmove', moveX, moveY));
+
+        const triggeredDirections = onActionMock.mock.calls.map((call: [string, string, string]) => call[1]);
+        expectedDirections.forEach((direction) => {
+          expect(triggeredDirections).toContain(direction);
+        });
+        expect(onActionMock).toHaveBeenCalledTimes(expectedDirections.length);
+      });
     });
   });
 });
