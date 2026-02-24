@@ -66,6 +66,8 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ### PR Description Format
 ```markdown
+Closes #<issue-number>
+
 ## Summary
 - Brief bullet points of what was implemented
 
@@ -77,6 +79,8 @@ The project is organized as a **pnpm workspace monorepo**:
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
+
+**ALWAYS include `Closes #<issue-number>` at the top of every PR body** to automatically link and close the related issue on merge.
 
 ### Issue Comment Format
 ```markdown
@@ -112,6 +116,8 @@ All user-facing controls for a view MUST live inside existing panels (Config pan
 - For selection-style controls, use `ButtonSelector` (`component: 'ButtonSelector'` in the schema) for visible multi-option button groups with optional color swatches
 - If a panel requires a new input type not covered by existing components (`Slider`, `Switch`, `Select`, `ColorPicker`, `CoordinateInput`, `ButtonSelector`), **request a new component and describe its requirements before implementing**. Do not build ad-hoc input widgets inside view templates.
 - Never use `<Teleport>` to inject content into panel slots; instead rely on the schema-driven `registerViewConfig` pipeline
+- **Never nest Accordions**: panel content must have at most one level of Accordion. Sub-groups inside an `AccordionContent` must be rendered as plain labeled sections, not another `Accordion`.
+- **No intermediate wrappers**: panel slot content goes directly inside `GenericPanel` with no extra wrapper `div`s between the sheet container and the controls.
 
 **Configuration Panel Setup**:
 When creating a new view, register two separate configurations for the configuration panel:

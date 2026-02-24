@@ -46,7 +46,6 @@ const updateStats = () => {
   animationFrameId = requestAnimationFrame(updateStats);
 };
 
-// Get icon component based on element type or name
 const getElementIcon = (element: SceneElement) => {
   const name = element.name.toLowerCase();
   const type = element.type.toLowerCase();
@@ -60,7 +59,6 @@ const getElementIcon = (element: SceneElement) => {
   return Image;
 };
 
-// Get color class based on element type
 const getElementColor = (element: SceneElement) => {
   const name = element.name.toLowerCase();
 
@@ -95,95 +93,81 @@ onUnmounted(() => {
 
 <template>
   <GenericPanel panel-type="debug" side="right">
-      <div class="debug-panel__content flex flex-col gap-1 h-full">
-<div class="flex-1 overflow-y-auto px-2">
-          <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
-            <!-- Stats Section -->
-            <AccordionItem value="stats">
-              <AccordionTrigger class="text-sm font-medium py-2">
-                Performance Stats
-              </AccordionTrigger>
-              <AccordionContent>
-                <div class="debug-panel__stats grid gap-1 pb-1">
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-                    <span class="text-xs font-medium">FPS</span>
-                    <span class="font-mono text-xs">{{ fps }}</span>
-                  </div>
-
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-                    <span class="text-xs font-medium">Memory (MB)</span>
-                    <span class="font-mono text-xs">{{ memory }}</span>
-                  </div>
-
-                  <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-                    <span class="text-xs font-medium">Draw Calls</span>
-                    <span class="font-mono text-xs">{{ drawCalls }}</span>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <!-- Scene Elements Section -->
-            <AccordionItem value="scene" v-if="sceneElements && sceneElements.length > 0">
-              <AccordionTrigger class="text-sm font-medium py-2">
-                Scene Elements ({{ sceneElements.length }})
-              </AccordionTrigger>
-              <AccordionContent>
-                <div class="scene-elements flex flex-col gap-1 pb-1">
-                  <div
-                    v-for="(element, index) in sceneElements"
-                    :key="index"
-                    class="element-item group flex items-center gap-2 p-1.5 rounded border border-border bg-muted/30 transition-colors"
-                    :class="{ 'opacity-50': element.hidden }"
-                  >
-                    <IconPreview
-                      :icon="getElementIcon(element)"
-                      :color="getElementColor(element)"
-                    />
-                    <div class="element-info flex-1 min-w-0 flex flex-col gap-0.5">
-                      <span class="text-[11px] font-medium font-mono truncate block">
-                        {{ element.name }}
-                      </span>
-                      <span class="text-[9px] text-muted-foreground truncate block">
-                        {{ element.type }}
-                      </span>
-                    </div>
-                    <div class="element-actions flex gap-1 shrink-0">
-                      <Button
-                        :variant="element.hidden ? 'default' : 'ghost'"
-                        size="icon"
-                        class="h-8 w-8"
-                        :class="{ 'bg-primary/20 hover:bg-primary/30': element.hidden }"
-                        :title="element.hidden ? 'Show element' : 'Hide element'"
-                        @click="(e: Event) => handleToggleVisibility(element.name, e)"
-                      >
-                        <EyeOff v-if="element.hidden" class="h-4 w-4" />
-                        <Eye v-else class="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-8 w-8"
-                        title="Remove element"
-                        @click="(e: Event) => handleRemove(element.name, e)"
-                      >
-                        <Trash2 class="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <div class="debug-panel__additional mt-2">
-            <slot />
+    <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
+      <AccordionItem value="stats">
+        <AccordionTrigger class="text-sm font-medium py-2">
+          Performance Stats
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="debug-panel__stats grid gap-1 pb-1">
+            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
+              <span class="text-xs font-medium">FPS</span>
+              <span class="font-mono text-xs">{{ fps }}</span>
+            </div>
+            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
+              <span class="text-xs font-medium">Memory (MB)</span>
+              <span class="font-mono text-xs">{{ memory }}</span>
+            </div>
+            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
+              <span class="text-xs font-medium">Draw Calls</span>
+              <span class="font-mono text-xs">{{ drawCalls }}</span>
+            </div>
           </div>
-        </div>
-      </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="scene" v-if="sceneElements && sceneElements.length > 0">
+        <AccordionTrigger class="text-sm font-medium py-2">
+          Scene Elements ({{ sceneElements.length }})
+        </AccordionTrigger>
+        <AccordionContent>
+          <div class="scene-elements flex flex-col gap-1 pb-1">
+            <div
+              v-for="(element, index) in sceneElements"
+              :key="index"
+              class="element-item group flex items-center gap-2 p-1.5 rounded border border-border bg-muted/30 transition-colors"
+              :class="{ 'opacity-50': element.hidden }"
+            >
+              <IconPreview
+                :icon="getElementIcon(element)"
+                :color="getElementColor(element)"
+              />
+              <div class="element-info flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-[11px] font-medium font-mono truncate block">
+                  {{ element.name }}
+                </span>
+                <span class="text-[9px] text-muted-foreground truncate block">
+                  {{ element.type }}
+                </span>
+              </div>
+              <div class="element-actions flex gap-1 shrink-0">
+                <Button
+                  :variant="element.hidden ? 'default' : 'ghost'"
+                  size="icon"
+                  class="h-8 w-8"
+                  :class="{ 'bg-primary/20 hover:bg-primary/30': element.hidden }"
+                  :title="element.hidden ? 'Show element' : 'Hide element'"
+                  @click="(e: Event) => handleToggleVisibility(element.name, e)"
+                >
+                  <EyeOff v-if="element.hidden" class="h-4 w-4" />
+                  <Eye v-else class="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8"
+                  title="Remove element"
+                  @click="(e: Event) => handleRemove(element.name, e)"
+                >
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+
+    <slot />
   </GenericPanel>
 </template>
-
-<style scoped>
-/* No additional styles needed - using TexturesPanel structure */
-</style>

@@ -423,18 +423,10 @@ export const configControls = {
     maxJump: { min: 1, max: 20 },
   },
   illustrations: {
-    grass: {
-      count: { min: 100, max: 1000, step: 50 },
-    },
-    treesBack: {
-      count: { min: 10, max: 100, step: 5 },
-    },
-    treesFront: {
-      count: { min: 10, max: 100, step: 5 },
-    },
-    clouds: {
-      count: { min: 1, max: 20 },
-    },
+    grass: { min: 100, max: 1000, step: 50, label: 'Grass' },
+    treesBack: { min: 10, max: 100, step: 5, label: 'Trees Back' },
+    treesFront: { min: 10, max: 100, step: 5, label: 'Trees Front' },
+    clouds: { min: 1, max: 20, label: 'Clouds' },
   },
 };
 

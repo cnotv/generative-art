@@ -26,15 +26,6 @@ const handleOpenChange = (open: boolean) => {
 
 <template>
   <Sheet :open="isOpen" :side="side" @update:open="handleOpenChange">
-    <div class="generic-panel__content">
-      <slot />
-    </div>
+    <slot />
   </Sheet>
 </template>
-
-<style scoped>
-.generic-panel__content {
-  height: 100%;
-  overflow-x: hidden;
-}
-</style>

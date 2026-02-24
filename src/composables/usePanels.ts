@@ -50,42 +50,40 @@ export const usePanels = () => {
   };
 
   // Initialize from query on first call
-  ALL_PANEL_TYPES.forEach(panel => {
-    if (route.query[panel] === 'true' && !activePanels.value.has(panel)) {
-      activePanels.value.add(panel);
-    }
-  });
+  const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
+  if (initialOpen.length > 0) {
+    activePanels.value = new Set([...activePanels.value, ...initialOpen]);
+  }
 
   // Watch for external query changes for all panel types
   ALL_PANEL_TYPES.forEach(panel => {
     watch(
       () => route.query[panel],
       (value) => {
-        if (value === 'true' && !activePanels.value.has(panel)) {
-          activePanels.value.add(panel);
-        } else if (value !== 'true' && activePanels.value.has(panel)) {
-          activePanels.value.delete(panel);
+        const isOpen = activePanels.value.has(panel);
+        if (value === 'true' && !isOpen) {
+          activePanels.value = new Set([...activePanels.value, panel]);
+        } else if (value !== 'true' && isOpen) {
+          activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
         }
       }
     );
   });
 
   const openPanel = (panel: PanelType) => {
-    activePanels.value.add(panel);
+    activePanels.value = new Set([...activePanels.value, panel]);
     syncToQuery();
   };
 
   const closePanel = (panel: PanelType) => {
-    activePanels.value.delete(panel);
+    activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
     syncToQuery();
   };
 
   const togglePanel = (panel: PanelType) => {
-    if (activePanels.value.has(panel)) {
-      activePanels.value.delete(panel);
-    } else {
-      activePanels.value.add(panel);
-    }
+    activePanels.value = activePanels.value.has(panel)
+      ? new Set([...activePanels.value].filter(p => p !== panel))
+      : new Set([...activePanels.value, panel]);
     syncToQuery();
   };
 

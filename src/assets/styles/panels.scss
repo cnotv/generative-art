@@ -43,14 +43,15 @@
   }
 }
 
-// Panel containers — fixed anchors, panels are flex children
+// Panel containers — fixed anchors, panels stack vertically and wrap into new columns when full
 .panel-container {
   position: fixed;
-  top: 0;
-  height: 100%;
-  padding-top: var(--nav-height);
+  top: var(--nav-height);
+  height: calc(100% - var(--nav-height));
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
 
@@ -67,11 +68,11 @@
   left: 0;
 }
 
-// Sheet/Dialog content — flex item, no individual positioning
+// Sheet/Dialog content — flex item, natural height, capped by column
 .sheet-content {
   position: relative;
-  height: 100%;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  max-height: 100%;
   gap: var(--spacing-1);
   background-color: var(--color-background);
   padding: var(--spacing-2);
