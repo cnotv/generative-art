@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - fix/7-deployment-server-not-updating # TODO: remove after verifying deployment works
 
 env:
   # Use GitHub Container Registry
