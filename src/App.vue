@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel } from "@/components/panels";
+import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
 import { usePanels } from "@/composables/usePanels";
 
@@ -113,8 +113,8 @@ const handleStopRecording = () => {
 <template>
   <RouterView />
   <GlobalNavigation />
-  <div id="left-panels" class="panel-container panel-container--left"></div>
-  <div id="right-panels" class="panel-container panel-container--right"></div>
+  <PanelContainer side="left" />
+  <PanelContainer side="right" />
   <SidebarNav />
   <ConfigPanel />
   <ScenePanel />
