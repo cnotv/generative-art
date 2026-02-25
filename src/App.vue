@@ -3,13 +3,26 @@ import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel } from "@/components/panels";
+import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
+import { usePanels } from "@/composables/usePanels";
 
 const router = useRouter();
 const route = useRoute();
 const queryStore = useQueryStore();
 queryStore.setQuery(route.query);
+
+const { activePanels } = usePanels();
+watch(
+  () => activePanels.value.size > 0,
+  (hasOpen) => {
+    document.documentElement.style.setProperty(
+      '--canvas-top',
+      hasOpen ? 'var(--nav-height)' : '0px'
+    );
+  },
+  { immediate: true }
+);
 
 // Watch for changes in the router query and update the store
 watch(
@@ -100,15 +113,17 @@ const handleStopRecording = () => {
 <template>
   <RouterView />
   <GlobalNavigation />
+  <PanelContainer side="left" />
+  <PanelContainer side="right" />
   <SidebarNav />
   <ConfigPanel />
   <ScenePanel />
-  <DebugPanel />
   <CameraPanel
     :is-recording="isRecording"
     @start="handleStartRecording"
     @stop="handleStopRecording"
   />
+  <DebugPanel />
 </template>
 
 <style>
@@ -116,7 +131,7 @@ canvas {
   width: 100%;
   height: 100%;
   position: absolute;
-  top: 0;
+  top: var(--canvas-top, 0px);
   left: 0;
 }
 </style>

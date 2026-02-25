@@ -39,6 +39,8 @@ const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
 .sidebar-nav__content {
   height: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
+  padding-left: var(--spacing-2);
 }
 
 .sidebar-nav__links {

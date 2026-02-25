@@ -49,6 +49,7 @@ describe('SceneEditor', () => {
           // Stub panel components to avoid radix-vue focus trap crash in jsdom
           TexturesPanel: { template: '<div data-stub="textures-panel"><slot /></div>' },
           ConfigPanel: { template: '<div data-stub="config-panel"><slot /></div>' },
+          DebugPanel: { template: '<div data-stub="debug-panel"><slot /></div>' },
         },
       },
     });

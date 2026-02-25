@@ -38,6 +38,10 @@ const sideClasses: Record<SheetSide, string> = {
 const contentClasses = computed(() =>
   cn("panel-ui", "sheet-content", sideClasses[props.side])
 );
+
+const portalTarget = computed(() =>
+  props.side === "left" ? "#left-panels" : "#right-panels"
+);
 </script>
 
 <template>
@@ -48,7 +52,7 @@ const contentClasses = computed(() =>
       </DialogTrigger>
     </slot>
 
-    <DialogPortal>
+    <DialogPortal :to="portalTarget">
       <DialogContent
         :class="contentClasses"
         @interact-outside.prevent

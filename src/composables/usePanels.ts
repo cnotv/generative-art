@@ -1,14 +1,21 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-// Panel types including textures for SceneEditor sidebar
 export type PanelType = 'sidebar' | 'config' | 'scene' | 'debug' | 'textures' | 'camera';
 
+const ALL_PANEL_TYPES: PanelType[] = ['sidebar', 'config', 'scene', 'debug', 'textures', 'camera'];
+
+// Panels stacked from edge inward; index 0 = closest to viewport edge
+const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'camera', 'scene', 'config'];
+const LEFT_PANEL_ORDER: PanelType[] = ['sidebar', 'textures'];
+
 const activePanels = ref<Set<PanelType>>(new Set());
+let syncInitialized = false;
 
 // Reset function for testing - resets module-level state
 export const resetPanelState = () => {
   activePanels.value = new Set();
+  syncInitialized = false;
 };
 
 export const usePanels = () => {
@@ -21,50 +28,74 @@ export const usePanels = () => {
   const isTexturesOpen = computed(() => activePanels.value.has('textures'));
   const isSceneOpen = computed(() => activePanels.value.has('scene'));
 
-  // Sync panel state with query parameters
-  const syncToQuery = () => {
-    const { path, query } = route;
-    const newQuery = {
-      ...query,
-      config: activePanels.value.has('config') ? 'true' : 'false',
-    };
-
-    router.push({ path, query: newQuery });
+  // Returns the number of open panels stacked closer to the viewport edge on the same side.
+  // Used to offset panels so they appear side-by-side instead of overlapping.
+  const getPanelOffset = (panelType: PanelType): number => {
+    const rightIndex = RIGHT_PANEL_ORDER.indexOf(panelType);
+    if (rightIndex !== -1) {
+      return RIGHT_PANEL_ORDER.slice(0, rightIndex).filter(p => activePanels.value.has(p)).length;
+    }
+    const leftIndex = LEFT_PANEL_ORDER.indexOf(panelType);
+    if (leftIndex !== -1) {
+      return LEFT_PANEL_ORDER.slice(0, leftIndex).filter(p => activePanels.value.has(p)).length;
+    }
+    return 0;
   };
 
-  // Initialize from query on first call
-  if (route.query.config === 'true' && !activePanels.value.has('config')) {
-    activePanels.value.add('config');
+  const syncToQuery = () => {
+    const { path, query } = route;
+    const panelQuery = ALL_PANEL_TYPES.reduce<Record<string, string>>(
+      (accumulator, panel) => ({ ...accumulator, [panel]: activePanels.value.has(panel) ? 'true' : 'false' }),
+      {}
+    );
+    router.push({ path, query: { ...query, ...panelQuery } });
+  };
+
+  // Run initialization and route watchers only once across all usePanels() callers.
+  // Multiple components calling usePanels() would otherwise create duplicate watchers
+  // that all fire on every route.query change and create competing reactive updates.
+  if (!syncInitialized) {
+    syncInitialized = true;
+
+    const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
+    if (initialOpen.length > 0) {
+      activePanels.value = new Set([...activePanels.value, ...initialOpen]);
+    }
+
+    ALL_PANEL_TYPES.forEach(panel => {
+      watch(
+        () => route.query[panel],
+        (value) => {
+          const isOpen = activePanels.value.has(panel);
+          if (value === 'true' && !isOpen) {
+            activePanels.value = new Set([...activePanels.value, panel]);
+          } else if (value !== 'true' && isOpen) {
+            activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
+          }
+        }
+      );
+    });
   }
 
-  // Watch for external query changes
-  watch(
-    () => route.query.config,
-    (configQuery) => {
-      if (configQuery === 'true' && !activePanels.value.has('config')) {
-        activePanels.value.add('config');
-      } else if (configQuery !== 'true' && activePanels.value.has('config')) {
-        activePanels.value.delete('config');
-      }
-    }
-  );
-
   const openPanel = (panel: PanelType) => {
-    activePanels.value.add(panel);
+    activePanels.value = new Set([...activePanels.value, panel]);
     syncToQuery();
   };
 
   const closePanel = (panel: PanelType) => {
-    activePanels.value.delete(panel);
+    activePanels.value = new Set([...activePanels.value].filter(p => p !== panel));
     syncToQuery();
   };
 
   const togglePanel = (panel: PanelType) => {
-    if (activePanels.value.has(panel)) {
-      activePanels.value.delete(panel);
-    } else {
-      activePanels.value.add(panel);
-    }
+    activePanels.value = activePanels.value.has(panel)
+      ? new Set([...activePanels.value].filter(p => p !== panel))
+      : new Set([...activePanels.value, panel]);
+    syncToQuery();
+  };
+
+  const closeAllPanels = () => {
+    activePanels.value = new Set();
     syncToQuery();
   };
 
@@ -75,8 +106,10 @@ export const usePanels = () => {
     isDebugOpen,
     isTexturesOpen,
     isSceneOpen,
+    getPanelOffset,
     openPanel,
     closePanel,
     togglePanel,
+    closeAllPanels,
   };
 };

@@ -17,23 +17,14 @@ const sceneSchemaWithoutCamera = computed((): ConfigControlsSchema | null => {
 
 <template>
   <GenericPanel panel-type="scene" side="right">
-    <div class="scene-panel__content flex flex-col gap-6">
-      <div v-if="sceneSchemaWithoutCamera" class="flex-1 min-h-0">
-        <SchemaControls
-          :schema="sceneSchemaWithoutCamera"
-          :get-value="viewConfig.getSceneConfigValue"
-          :on-update="viewConfig.updateSceneConfig"
-        />
-      </div>
-      <p v-else class="text-sm text-muted-foreground">
-        No scene configuration available for this view.
-      </p>
-    </div>
+    <SchemaControls
+      v-if="sceneSchemaWithoutCamera"
+      :schema="sceneSchemaWithoutCamera"
+      :get-value="viewConfig.getSceneConfigValue"
+      :on-update="viewConfig.updateSceneConfig"
+    />
+    <p v-else class="text-sm text-muted-foreground">
+      No scene configuration available for this view.
+    </p>
   </GenericPanel>
 </template>
-
-<style scoped>
-.scene-panel__content {
-  height: 100%;
-}
-</style>

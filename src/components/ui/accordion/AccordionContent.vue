@@ -30,7 +30,7 @@ defineProps<{
 }
 
 .accordion__content-inner {
-  padding-bottom: 1rem;
+  padding-bottom: 0.375rem;
 }
 
 @keyframes accordionDown {

@@ -41,10 +41,10 @@ const reactiveConfig = createReactiveConfig({
     maxJump: playerSettings.game.maxJump,
   },
   illustrations: {
-    grass: { count: 500 },
-    treesBack: { count: 30 },
-    treesFront: { count: 40 },
-    clouds: { count: 5 },
+    grass: 500,
+    treesBack: 30,
+    treesFront: 40,
+    clouds: 5,
   },
 });
 

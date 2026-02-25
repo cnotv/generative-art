@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <AccordionHeader class="flex">
+  <AccordionHeader as="div" class="flex">
     <AccordionTrigger :class="cn('accordion__trigger', $props.class)">
       <slot />
       <ChevronDown class="accordion__chevron" />
@@ -23,8 +23,8 @@ defineProps<{
   flex: 1;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 0;
-  font-weight: 500;
+  padding: 0.375rem 0;
+  font-weight: 700;
   transition: all 150ms;
   cursor: pointer;
   background: none;

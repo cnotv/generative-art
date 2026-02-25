@@ -78,14 +78,6 @@ const setAddToGroupRef = (groupId: string, el: any) => {
 
 <template>
   <GenericPanel panel-type="textures" side="left">
-    <div class="textures-panel flex flex-col h-full">
-      <div class="textures-panel__header p-4 border-b border-border">
-        <h2 class="text-lg font-semibold">Textures</h2>
-      </div>
-
-      <div
-        class="textures-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-4"
-      >
         <!-- Action buttons -->
         <div class="flex gap-2">
           <Button variant="default" class="flex-1" @click="handleAddClick">
@@ -236,20 +228,10 @@ const setAddToGroupRef = (groupId: string, el: any) => {
             Click "Add Texture" to get started
           </p>
         </div>
-      </div>
-    </div>
   </GenericPanel>
 </template>
 
 <style scoped>
-.textures-panel {
-  min-height: 0;
-}
-
-.textures-panel__content {
-  min-height: 0;
-}
-
 .textures-panel__list {
   min-height: 0;
 }

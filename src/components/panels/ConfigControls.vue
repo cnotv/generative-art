@@ -23,6 +23,7 @@ const props = defineProps<{
   onUpdate: (path: string, value: any) => void;
   basePath?: string;
   onAction?: (name: string) => void;
+  nested?: boolean;
 }>();
 
 const isControlSchema = (obj: any): obj is ControlSchema => {
@@ -275,35 +276,57 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
       </template>
     </div>
 
-    <!-- Nested groups (open by default) -->
-    <Accordion
-      v-if="groups.groups.length > 0"
-      type="multiple"
-      :default-value="defaultOpenGroups"
-      class="w-full"
-    >
-      <AccordionItem v-for="group in groups.groups" :key="group.key" :value="group.key">
-        <AccordionTrigger class="text-xs font-medium py-1">
-          {{ formatLabel(group.key) }}
-        </AccordionTrigger>
-        <AccordionContent>
+    <!-- Sub-groups: accordion at top level, plain sections when already nested -->
+    <template v-if="groups.groups.length > 0">
+      <template v-if="nested">
+        <div
+          v-for="group in groups.groups"
+          :key="group.key"
+          class="config-controls__section"
+        >
+          <div class="config-controls__section-label text-xs font-medium mt-2 mb-1 text-muted-foreground">
+            {{ formatLabel(group.key) }}
+          </div>
           <ConfigControls
             :schema="group.schema"
             :get-value="getValue"
             :on-update="onUpdate"
             :base-path="getFullPath(group.key)"
             :on-action="onAction"
+            nested
           />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+        </div>
+      </template>
+      <Accordion
+        v-else
+        type="multiple"
+        :default-value="defaultOpenGroups"
+        class="w-full"
+      >
+        <AccordionItem v-for="group in groups.groups" :key="group.key" :value="group.key">
+          <AccordionTrigger class="text-xs font-medium py-1">
+            {{ formatLabel(group.key) }}
+          </AccordionTrigger>
+          <AccordionContent>
+            <ConfigControls
+              :schema="group.schema"
+              :get-value="getValue"
+              :on-update="onUpdate"
+              :base-path="getFullPath(group.key)"
+              :on-action="onAction"
+              nested
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </template>
   </div>
 </template>
 
 <style scoped>
 .config-controls {
   overflow-x: hidden;
-  padding-bottom: 1rem;
+  padding-bottom: 0.25rem;
 }
 
 .config-controls__inline-input {

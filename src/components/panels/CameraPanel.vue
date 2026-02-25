@@ -38,36 +38,18 @@ const handleStop = () => {
 
 <template>
   <GenericPanel panel-type="camera" side="right">
-    <div class="camera-panel flex flex-col h-full">
-      <div class="camera-panel__header p-4 border-b border-white/10">
-        <h2 class="text-lg font-semibold text-white">Camera</h2>
-      </div>
-
-      <div class="camera-panel__content flex-1 p-4 overflow-y-auto flex flex-col gap-6">
-        <div v-if="cameraSchema">
-          <SchemaControls
-            :schema="cameraSchema"
-            :get-value="viewConfig.getSceneConfigValue"
-            :on-update="viewConfig.updateSceneConfig"
-          />
-        </div>
-
-        <div class="camera-panel__recording">
-          <RecordingControls
-            :is-recording="isRecording"
-            :min-duration-ms="minDurationMs"
-            :max-duration-ms="maxDurationMs"
-            @start="handleStart"
-            @stop="handleStop"
-          />
-        </div>
-      </div>
-    </div>
+    <SchemaControls
+      v-if="cameraSchema"
+      :schema="cameraSchema"
+      :get-value="viewConfig.getSceneConfigValue"
+      :on-update="viewConfig.updateSceneConfig"
+    />
+    <RecordingControls
+      :is-recording="isRecording"
+      :min-duration-ms="minDurationMs"
+      :max-duration-ms="maxDurationMs"
+      @start="handleStart"
+      @stop="handleStop"
+    />
   </GenericPanel>
 </template>
-
-<style scoped>
-.camera-panel__content {
-  min-height: 0;
-}
-</style>
