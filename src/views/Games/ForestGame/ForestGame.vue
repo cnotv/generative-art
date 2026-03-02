@@ -18,6 +18,8 @@ import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
 import { useViewPanels } from "@/composables/useViewPanels";
+import { useDebugScene } from "@/composables/useDebugScene";
+import { useElementProperties } from "@/composables/useElementProperties";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -29,10 +31,21 @@ import {
   illustrationAreas,
   configControls,
   sceneControls,
+  areaSchema,
 } from "./config";
 
 const route = useRoute();
 const { setViewPanels, clearViewPanels } = useViewPanels();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerElementProperties, clearAllElementProperties } = useElementProperties();
+
+const getNestedValue = (obj: Record<string, unknown> | null | undefined, path: string): unknown => {
+  if (!obj) return undefined;
+  return path.split('.').reduce((current: unknown, key) => {
+    if (current === null || current === undefined) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, obj as unknown);
+};
 
 // Create reactive config for game settings (Config tab)
 const reactiveConfig = createReactiveConfig({
@@ -330,6 +343,26 @@ const init = async (): Promise<void> => {
       });
     },
   });
+
+  const sceneObjects = scene.children.filter(c => c.type.includes('Light'));
+  const illustrationElements = Object.keys(illustrationAreas).map(name => ({
+    name,
+    type: 'IllustrationArea',
+  }));
+  registerSceneElements(camera, [...sceneObjects, { name: 'Player', type: 'Group' }, ...illustrationElements]);
+
+  Object.entries(illustrationAreas).forEach(([name, variants]) => {
+    const firstVariant = variants[0];
+    if (!firstVariant) return;
+    const areaData = { size: firstVariant.size } as Record<string, unknown>;
+    registerElementProperties(name, {
+      title: name,
+      type: 'group',
+      schema: areaSchema,
+      getValue: (path) => getNestedValue(areaData, path),
+      updateValue: () => {},
+    });
+  });
 };
 
 onMounted(async () => {
@@ -354,6 +387,8 @@ onMounted(async () => {
 onUnmounted(() => {
   // Clear view-specific panels
   clearViewPanels();
+  clearSceneElements();
+  clearAllElementProperties();
 
   stopMusic();
   destroyControls();

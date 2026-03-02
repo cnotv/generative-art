@@ -21,6 +21,7 @@ import "@/assets/prevents.css";
 import "./styles.css";
 
 import { handleJumpGoomba } from "./helpers/events";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 import {
   prevents,
@@ -114,6 +115,8 @@ const endGame = () => {
   remapControlsOptions(bindings["game-over"]);
 };
 
+const { registerSceneElements, clearSceneElements } = useDebugScene();
+
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   const createScene = async () => {
@@ -127,6 +130,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     await setup({
       config: setupConfig,
     });
+    registerSceneElements(camera, scene.children);
     animate({
       timeline: await createTimeline({
         scene,
@@ -166,6 +170,7 @@ onUnmounted(() => {
   destroyControls();
   stopMusic();
   window.removeEventListener("resize", initInstance);
+  clearSceneElements();
 });
 </script>
 

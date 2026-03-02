@@ -5,13 +5,16 @@ import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
 import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import Stats from "three/addons/libs/stats.module.js";
 
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 
 // Movement input
 const movement = { forward: 0, right: 0, up: 0 };
+
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 onMounted(() => {
   init(
@@ -20,6 +23,7 @@ onMounted(() => {
   ),
     statsEl.value!;
 });
+onUnmounted(() => clearSceneElements());
 
 function random(min: number, max: number) {
   return Math.random() * (max - min) + min;
@@ -255,6 +259,7 @@ const init = async (canvasEl: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     const { physics, physicsHelper } = await initPhysics(scene);
     const { player, characterController } = await addCharacterController(scene, physics);
+    registerSceneElements(camera, scene.children);
     renderer.setAnimationLoop(() =>
       animate(
         player,

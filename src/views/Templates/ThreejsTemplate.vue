@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
+import { useDebugScene } from '@/composables/useDebugScene';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
@@ -11,6 +12,7 @@ const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const animationId = ref(0);
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 onMounted(() => {
   init(
@@ -23,6 +25,7 @@ onBeforeUnmount(() => {
   if (animationId.value) {
     cancelAnimationFrame(animationId.value);
   }
+  clearSceneElements();
 });
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
@@ -56,6 +59,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 
     // Create and add model
     const cube = getCube(scene);
+    registerSceneElements(camera, scene.children);
     orbit.target.copy(cube.position); // Copy position of the model as camera target
 
     // Start recording video if URL has query string ?video=true

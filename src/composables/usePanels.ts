@@ -1,31 +1,30 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-export type PanelType = 'sidebar' | 'config' | 'scene' | 'debug' | 'textures' | 'camera';
+export type PanelType = 'navigation' | 'config' | 'scene' | 'debug' | 'elements';
 
-const ALL_PANEL_TYPES: PanelType[] = ['sidebar', 'config', 'scene', 'debug', 'textures', 'camera'];
+const ALL_PANEL_TYPES: PanelType[] = ['navigation', 'config', 'scene', 'debug', 'elements'];
 
 // Panels stacked from edge inward; index 0 = closest to viewport edge
-const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'camera', 'scene', 'config'];
-const LEFT_PANEL_ORDER: PanelType[] = ['sidebar', 'textures'];
+const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'scene', 'config'];
+const LEFT_PANEL_ORDER: PanelType[] = ['elements'];
 
 const activePanels = ref<Set<PanelType>>(new Set());
-let syncInitialized = false;
+const syncInitialized = ref(false);
 
 // Reset function for testing - resets module-level state
 export const resetPanelState = () => {
   activePanels.value = new Set();
-  syncInitialized = false;
+  syncInitialized.value = false;
 };
 
 export const usePanels = () => {
   const router = useRouter();
   const route = useRoute();
 
-  const isSidebarOpen = computed(() => activePanels.value.has('sidebar'));
+  const isNavigationOpen = computed(() => activePanels.value.has('navigation'));
   const isConfigOpen = computed(() => activePanels.value.has('config'));
   const isDebugOpen = computed(() => activePanels.value.has('debug'));
-  const isTexturesOpen = computed(() => activePanels.value.has('textures'));
   const isSceneOpen = computed(() => activePanels.value.has('scene'));
 
   // Returns the number of open panels stacked closer to the viewport edge on the same side.
@@ -54,8 +53,8 @@ export const usePanels = () => {
   // Run initialization and route watchers only once across all usePanels() callers.
   // Multiple components calling usePanels() would otherwise create duplicate watchers
   // that all fire on every route.query change and create competing reactive updates.
-  if (!syncInitialized) {
-    syncInitialized = true;
+  if (!syncInitialized.value) {
+    syncInitialized.value = true;
 
     const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
     if (initialOpen.length > 0) {
@@ -77,8 +76,14 @@ export const usePanels = () => {
     });
   }
 
+  // Navigation is mutually exclusive: opening it closes all others, and vice versa.
+  const withMutualExclusion = (panel: PanelType, current: Set<PanelType>): Set<PanelType> => {
+    if (panel === 'navigation') return new Set(['navigation']);
+    return new Set([...[...current].filter(p => p !== 'navigation'), panel]);
+  };
+
   const openPanel = (panel: PanelType) => {
-    activePanels.value = new Set([...activePanels.value, panel]);
+    activePanels.value = withMutualExclusion(panel, activePanels.value);
     syncToQuery();
   };
 
@@ -90,7 +95,7 @@ export const usePanels = () => {
   const togglePanel = (panel: PanelType) => {
     activePanels.value = activePanels.value.has(panel)
       ? new Set([...activePanels.value].filter(p => p !== panel))
-      : new Set([...activePanels.value, panel]);
+      : withMutualExclusion(panel, activePanels.value);
     syncToQuery();
   };
 
@@ -101,10 +106,9 @@ export const usePanels = () => {
 
   return {
     activePanels: computed(() => activePanels.value),
-    isSidebarOpen,
+    isNavigationOpen,
     isConfigOpen,
     isDebugOpen,
-    isTexturesOpen,
     isSceneOpen,
     getPanelOffset,
     openPanel,

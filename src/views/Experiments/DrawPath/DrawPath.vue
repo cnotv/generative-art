@@ -7,6 +7,8 @@ import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import type { Waypoint, PathFollowState } from "@webgamekit/logic";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
 import { useViewPanels } from "@/composables/useViewPanels";
+import { useDebugScene } from "@/composables/useDebugScene";
+import { useElementProperties } from "@/composables/useElementProperties";
 
 import {
   sceneSetupConfig,
@@ -56,6 +58,8 @@ import { getEasingSpeedMultiplier } from "./helpers/easing";
 
 const route = useRoute();
 const { setViewPanels, clearViewPanels } = useViewPanels();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerElementProperties, clearAllElementProperties } = useElementProperties();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const reactiveConfig = createReactiveConfig(defaultConfigValues);
@@ -98,6 +102,7 @@ type SceneState = {
 };
 
 let sceneState: SceneState | null = null;
+let groundMaterial: THREE.MeshStandardMaterial | null = null;
 let animFrameId: number | null = null;
 let frameRef = 0;
 let isPointerDown = false;
@@ -405,6 +410,18 @@ watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
   }
 });
 
+watch(() => sceneConfig.value.camera.fov, (fov) => {
+  const cam = sceneState?.camera;
+  if (cam instanceof THREE.PerspectiveCamera) {
+    cam.fov = fov;
+    cam.updateProjectionMatrix();
+  }
+});
+
+watch(() => sceneConfig.value.ground.color, (color) => {
+  groundMaterial?.color.setHex(color);
+});
+
 watch(() => reactiveConfig.value.showPath, (show) => {
   if (!sceneState?.pathLine) return;
   sceneState.pathLine.visible = show;
@@ -513,7 +530,32 @@ const init = async (): Promise<void> => {
   // Use our own clock so delta is correct in our requestAnimationFrame loop.
   const clock = new THREE.Clock();
 
-  await setup({ config: sceneSetupConfig });
+  const { elements, ground } = await setup({ config: sceneSetupConfig });
+
+  if (ground) groundMaterial = ground.mesh.material as THREE.MeshStandardMaterial;
+
+  registerSceneElements(camera, elements);
+
+  registerElementProperties('Camera', {
+    title: 'Camera',
+    type: 'camera',
+    schema: { fov: { min: 30, max: 120, label: 'FOV' } },
+    getValue: (path: string) => (sceneConfig.value.camera as Record<string, unknown>)[path],
+    updateValue: (path: string, value: unknown) => {
+      (sceneConfig.value.camera as Record<string, unknown>)[path] = value;
+    },
+  });
+
+  if (ground) {
+    registerElementProperties('Ground', {
+      title: 'Ground',
+      schema: { color: { color: true, label: 'Color' } },
+      getValue: (path: string) => (sceneConfig.value.ground as Record<string, unknown>)[path],
+      updateValue: (path: string, value: unknown) => {
+        (sceneConfig.value.ground as Record<string, unknown>)[path] = value;
+      },
+    });
+  }
 
   const followerMesh = getBall(scene, world, {
     size: SPHERE_RADIUS,
@@ -561,7 +603,7 @@ const onResize = (): void => {
 };
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true, showScene: true });
+  setViewPanels({ showConfig: true });
   registerViewConfig(
     route.name as string,
     reactiveConfig,
@@ -586,6 +628,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (animFrameId !== null) cancelAnimationFrame(animFrameId);
   unregisterGoombaTimelineAction();
+  clearSceneElements();
+  clearAllElementProperties();
   sceneState?.waypointNodeGeo.dispose();
   sceneState?.waypointNodeMat.dispose();
   canvas.value?.removeEventListener("mousedown", onPointerDown);

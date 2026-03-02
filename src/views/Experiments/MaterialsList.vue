@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
@@ -9,6 +9,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
 import { getLights } from "@webgamekit/threejs";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 type ProjectConfig = any;
 
@@ -16,6 +17,11 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const cubes = [] as THREE.Mesh<any>[];
+const { registerSceneElements, clearSceneElements } = useDebugScene();
+
+onUnmounted(() => {
+  clearSceneElements();
+});
 
 /**
  * Reflection
@@ -132,6 +138,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       cubes.push(createCube(cubeSize, position, scene, meshType, config));
       createText(meshType, position, scene, config);
     });
+
+    registerSceneElements(camera, scene.children);
 
     video.record(canvas, route);
 

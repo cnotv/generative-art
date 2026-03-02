@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
@@ -9,12 +9,15 @@ import { animateTimeline, createTimelineManager } from "@webgamekit/animation";
 import { getLights } from "@webgamekit/threejs";
 import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
 const cubes = [] as THREE.Mesh<any>[];
+
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 /**
  * Reflection
@@ -40,6 +43,10 @@ onBeforeUnmount(() => {
   if (animationId.value) {
     cancelAnimationFrame(animationId.value);
   }
+});
+
+onUnmounted(() => {
+  clearSceneElements();
 });
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -121,6 +128,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       )
     );
     getLights(scene, { directionalLightIntensity: 10 });
+
+    registerSceneElements(camera, scene.children);
 
     // Start recording video if URL has query string ?video=true
     video.record(canvas, route);

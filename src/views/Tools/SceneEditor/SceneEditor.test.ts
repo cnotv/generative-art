@@ -13,7 +13,7 @@ vi.mock('@webgamekit/threejs', async () => {
     getTools: vi.fn(() => Promise.resolve({
       setup: vi.fn((config) => Promise.resolve({ orbit: null, ground: null })),
       animate: vi.fn(),
-      scene: { children: [], remove: vi.fn() },
+      scene: { children: [], remove: vi.fn(), getObjectByName: vi.fn(() => null) },
       world: {},
       camera: { position: { x: 0, y: 50, z: 100 } },
     })),

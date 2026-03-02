@@ -18,12 +18,14 @@ import {
   createReactiveConfig,
 } from "@/composables/useViewConfig";
 import { useViewPanels } from "@/composables/useViewPanels";
+import { useDebugScene } from "@/composables/useDebugScene";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
 const { setViewPanels, clearViewPanels } = useViewPanels();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 // Create reactive config for the panel
 const reactiveConfig = createReactiveConfig({
@@ -35,26 +37,14 @@ const reactiveConfig = createReactiveConfig({
     points: 10,
   },
   lengthCurve: {
-    baseX: 0,
-    baseY: 0,
-    baseZ: 0,
-    midX: 0,
-    midY: 0.28,
-    midZ: 0.04,
-    tipX: 0,
-    tipY: 0.5,
-    tipZ: -0.07,
+    base: { x: 0, y: 0, z: 0 },
+    mid: { x: 0, y: 0.28, z: 0.04 },
+    tip: { x: 0, y: 0.5, z: -0.07 },
   },
   sideCurve: {
-    baseX: 0.04,
-    baseY: 0,
-    baseZ: 0,
-    midX: 0.04,
-    midY: 0,
-    midZ: 0,
-    tipX: 0,
-    tipY: 0.5,
-    tipZ: 0,
+    base: { x: 0.04, y: 0, z: 0 },
+    mid: { x: 0.04, y: 0, z: 0 },
+    tip: { x: 0, y: 0.5, z: 0 },
   },
 });
 
@@ -68,26 +58,14 @@ const configSchema = {
     points: { min: 3, max: 20, step: 1 },
   },
   lengthCurve: {
-    baseX: { min: -0.2, max: 0.2, step: 0.01 },
-    baseY: { min: -0.2, max: 0.2, step: 0.01 },
-    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
-    midX: { min: -0.3, max: 0.3, step: 0.01 },
-    midY: { min: 0, max: 1, step: 0.01 },
-    midZ: { min: -0.3, max: 0.3, step: 0.01 },
-    tipX: { min: -0.3, max: 0.3, step: 0.01 },
-    tipY: { min: 0, max: 1, step: 0.01 },
-    tipZ: { min: -0.3, max: 0.3, step: 0.01 },
+    base: { component: 'CoordinateInput', label: 'Base', min: { x: -0.2, y: -0.2, z: -0.2 }, max: { x: 0.2, y: 0.2, z: 0.2 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
+    mid: { component: 'CoordinateInput', label: 'Mid', min: { x: -0.3, y: 0, z: -0.3 }, max: { x: 0.3, y: 1, z: 0.3 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
+    tip: { component: 'CoordinateInput', label: 'Tip', min: { x: -0.3, y: 0, z: -0.3 }, max: { x: 0.3, y: 1, z: 0.3 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
   },
   sideCurve: {
-    baseX: { min: 0, max: 0.2, step: 0.01 },
-    baseY: { min: -0.2, max: 0.2, step: 0.01 },
-    baseZ: { min: -0.2, max: 0.2, step: 0.01 },
-    midX: { min: 0, max: 0.2, step: 0.01 },
-    midY: { min: -0.2, max: 0.2, step: 0.01 },
-    midZ: { min: -0.2, max: 0.2, step: 0.01 },
-    tipX: { min: 0, max: 0.2, step: 0.01 },
-    tipY: { min: 0, max: 1, step: 0.01 },
-    tipZ: { min: -0.2, max: 0.2, step: 0.01 },
+    base: { component: 'CoordinateInput', label: 'Base', min: { x: 0, y: -0.2, z: -0.2 }, max: { x: 0.2, y: 0.2, z: 0.2 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
+    mid: { component: 'CoordinateInput', label: 'Mid', min: { x: 0, y: -0.2, z: -0.2 }, max: { x: 0.2, y: 0.2, z: 0.2 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
+    tip: { component: 'CoordinateInput', label: 'Tip', min: { x: 0, y: 0, z: -0.2 }, max: { x: 0.2, y: 1, z: 0.2 }, step: { x: 0.01, y: 0.01, z: 0.01 } },
   },
 };
 
@@ -109,7 +87,7 @@ onMounted(() => {
   });
 
   // Register config with the config panel (onChange callback is auto-debounced)
-  registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
+  registerViewConfig(route.name as string, reactiveConfig, configSchema, undefined, undefined, reinitScene);
   window.addEventListener("resize", reinitScene);
 
   init(
@@ -121,6 +99,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // Clear view-specific panels
   clearViewPanels();
+  clearSceneElements();
 
   unregisterViewConfig(route.name as string);
   window.removeEventListener("resize", reinitScene);
@@ -137,8 +116,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       offsetX: -2,
       offsetY: 0,
       offsetZ: 0,
-      lengthCurve: { ...reactiveConfig.value.lengthCurve },
-      sideCurve: { ...reactiveConfig.value.sideCurve },
+      lengthCurve: reactiveConfig.value.lengthCurve,
+      sideCurve: reactiveConfig.value.sideCurve,
     },
     camera: {
       fixed: true,
@@ -204,6 +183,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     camera.position.set(-30, 25, 30);
     getLights(scene);
+
+    const lights = scene.children.filter(c => c.type.includes('Light'));
+    registerSceneElements(camera, [...lights, { name: 'Grass Field', type: 'InstancedMesh' }]);
 
     // Populate grass
     const grass = getGrass(config.grass);
@@ -271,45 +253,17 @@ const getGrass = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)
   // Vector values respectively: bend sides, blade silhouette, bend front
   const lengthCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(
-      config.lengthCurve.baseX,
-      config.lengthCurve.baseY,
-      config.lengthCurve.baseZ
-    ), // Base
-    new THREE.Vector3(
-      config.lengthCurve.midX,
-      config.lengthCurve.midY,
-      config.lengthCurve.midZ
-    ), // Midpoint 1
-    // new THREE.Vector3(0, 0.50, 0.1),  // Midpoint 2
-    // new THREE.Vector3(0, 0.60, 0.1),  // Midpoint 3
-    new THREE.Vector3(
-      config.lengthCurve.tipX,
-      config.lengthCurve.tipY,
-      config.lengthCurve.tipZ
-    ), // Tip
+    new THREE.Vector3(config.lengthCurve.base.x, config.lengthCurve.base.y, config.lengthCurve.base.z), // Base
+    new THREE.Vector3(config.lengthCurve.mid.x, config.lengthCurve.mid.y, config.lengthCurve.mid.z),   // Midpoint
+    new THREE.Vector3(config.lengthCurve.tip.x, config.lengthCurve.tip.y, config.lengthCurve.tip.z),   // Tip
   ]);
 
   // Define the control points for the side curve (curvature on the sides)
   // Vector values respectively: Width blade
   const sideCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(
-      config.sideCurve.baseX,
-      config.sideCurve.baseY,
-      config.sideCurve.baseZ
-    ), // Base
-    new THREE.Vector3(
-      config.sideCurve.midX,
-      config.sideCurve.midY,
-      config.sideCurve.midZ
-    ), // Midpoint 1
-    // new THREE.Vector3(0.03, 0.5, 0),  // Midpoint 2
-    // new THREE.Vector3(0.02, 0.75, 0),  // Midpoint 3
-    new THREE.Vector3(
-      config.sideCurve.tipX,
-      config.sideCurve.tipY,
-      config.sideCurve.tipZ
-    ), // Tip
+    new THREE.Vector3(config.sideCurve.base.x, config.sideCurve.base.y, config.sideCurve.base.z), // Base
+    new THREE.Vector3(config.sideCurve.mid.x, config.sideCurve.mid.y, config.sideCurve.mid.z),   // Midpoint
+    new THREE.Vector3(config.sideCurve.tip.x, config.sideCurve.tip.y, config.sideCurve.tip.z),   // Tip
   ]);
 
   // Define the control points for the length curve (curvature along the length)

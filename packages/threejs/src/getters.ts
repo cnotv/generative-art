@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { times } from './utils/lodash';
 import { CoordinateTuple, Model } from '@webgamekit/animation';
 import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types';
+import { SCENE_DEFAULTS } from './defaults';
 
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
@@ -11,8 +12,8 @@ import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
  * @returns 
  */
 export const getEnvironment = async (canvas: HTMLCanvasElement, options: any = {
-  camera: { position: [0, 20, 150], distance: 75 },
-  scene: { background: 0xbfd1e5 },
+  camera: { position: SCENE_DEFAULTS.camera.position, distance: SCENE_DEFAULTS.camera.distance },
+  scene: { background: SCENE_DEFAULTS.scene.background },
 }) => {
   await RAPIER.init();
   const gravity = { x: 0.0, y: -9.81, z: 0.0 };
@@ -20,7 +21,7 @@ export const getEnvironment = async (canvas: HTMLCanvasElement, options: any = {
   const renderer = getRenderer(canvas);
   const scene = new THREE.Scene();
   const clock = new THREE.Clock();
-  scene.background = new THREE.Color(options.scene?.background || 0xbfd1e5);
+  scene.background = new THREE.Color(options.scene?.background || SCENE_DEFAULTS.scene.background);
 
   const camera = new THREE.PerspectiveCamera(options.camera.distance, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(...(options.camera.position as CoordinateTuple));
@@ -39,13 +40,13 @@ export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
   {
-    size = [1000, 0.01, 1000],
-    position = [1, -1, 1],
+    size = SCENE_DEFAULTS.ground.size,
+    position = SCENE_DEFAULTS.ground.position,
     helpers,
-    color = 0x333333,
+    color = SCENE_DEFAULTS.ground.color,
     texture,
-    textureRepeat = [10, 10],
-    textureOffset = [0, 0],
+    textureRepeat = SCENE_DEFAULTS.ground.textureRepeat,
+    textureOffset = SCENE_DEFAULTS.ground.textureOffset,
   }: {
     size?: CoordinateTuple | number,
     position?: CoordinateTuple,
@@ -160,12 +161,9 @@ export const getInstanceConfig = ({
  */
 export const getLights = (scene: THREE.Scene, config: any = {}) => {
   const {
-    ambient = { color: 0xffffff, intensity: 2 },
+    ambient = SCENE_DEFAULTS.lights.ambient,
     directional = {
-      color: 0xffffff,
-      intensity: 4.0,
-      position: [20, 30, 20],
-      castShadow: true,
+      ...SCENE_DEFAULTS.lights.directional,
       shadow: {
         mapSize: { width: 4096, height: 4096 },
         camera: {
@@ -321,8 +319,8 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
 export const getSky = (
   scene: THREE.Scene,
   {
-    color = 0xaaaaff,
-    size = 1000,
+    color = SCENE_DEFAULTS.sky.color,
+    size = SCENE_DEFAULTS.sky.size,
     texture
   }: {
     color?: number,

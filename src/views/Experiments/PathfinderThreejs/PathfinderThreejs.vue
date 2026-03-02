@@ -10,6 +10,7 @@ import {
 import { type CoordinateTuple } from "@webgamekit/animation";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
 import { useViewPanels } from "@/composables/useViewPanels";
+import { useDebugScene } from "@/composables/useDebugScene";
 
 import {
   gridConfig,
@@ -40,6 +41,7 @@ import { createPathLine, removePathLine } from "./helpers/pathAnimation";
 
 const route = useRoute();
 const { setViewPanels, clearViewPanels } = useViewPanels();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const hasPath = shallowRef(false);
@@ -544,6 +546,9 @@ const init = async (): Promise<void> => {
   const directionalLight = scene.children.find((c): c is THREE.DirectionalLight => c instanceof THREE.DirectionalLight) ?? null;
   const groundMesh = scene.children.find((c): c is THREE.Mesh => (c as THREE.Mesh).name === "ground") ?? null;
 
+  const sceneObjects = [ambientLight, directionalLight, groundMesh].filter((c): c is THREE.Object3D => c !== null);
+  registerSceneElements(orthoCamera, sceneObjects);
+
   sceneState = {
     renderer,
     scene,
@@ -626,7 +631,7 @@ const clearObstacles = (): void => {
 };
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true, showScene: true });
+  setViewPanels({ showConfig: true });
   registerViewConfig(
     route.name as string,
     reactiveConfig,
@@ -651,6 +656,7 @@ onUnmounted(() => {
   canvas.value?.removeEventListener("mousemove", onCanvasMouseMove);
   canvas.value?.removeEventListener("mouseup", onCanvasMouseUp);
   window.removeEventListener("resize", handleResize);
+  clearSceneElements();
   clearViewPanels();
   unregisterViewConfig(route.name as string);
   sceneState = null;

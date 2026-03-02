@@ -25,12 +25,11 @@ import { usePanels, resetPanelState } from './usePanels';
 
 // All panel keys synced to URL; closed panels use 'false'
 const allPanelsClosed = {
-  sidebar: 'false',
+  navigation: 'false',
   config: 'false',
   scene: 'false',
   debug: 'false',
-  textures: 'false',
-  camera: 'false',
+  elements: 'false',
 };
 
 describe('usePanels', () => {
@@ -123,18 +122,65 @@ describe('usePanels', () => {
     });
   });
 
-  describe('sidebar panel', () => {
-    it('should sync sidebar query param', async () => {
-      const { togglePanel, isSidebarOpen } = usePanels();
+  describe('navigation panel', () => {
+    it('should sync navigation query param', async () => {
+      const { togglePanel, isNavigationOpen } = usePanels();
 
-      togglePanel('sidebar');
+      togglePanel('navigation');
       await nextTick();
 
-      expect(isSidebarOpen.value).toBe(true);
+      expect(isNavigationOpen.value).toBe(true);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { ...allPanelsClosed, sidebar: 'true' },
+        query: { ...allPanelsClosed, navigation: 'true' },
       });
+    });
+  });
+
+  describe('mutual exclusion', () => {
+    it('should close all other panels when navigation is opened', async () => {
+      const { openPanel, togglePanel, isNavigationOpen, isConfigOpen, isSceneOpen } = usePanels();
+
+      openPanel('config');
+      openPanel('scene');
+      await nextTick();
+      expect(isConfigOpen.value).toBe(true);
+      expect(isSceneOpen.value).toBe(true);
+
+      togglePanel('navigation');
+      await nextTick();
+
+      expect(isNavigationOpen.value).toBe(true);
+      expect(isConfigOpen.value).toBe(false);
+      expect(isSceneOpen.value).toBe(false);
+    });
+
+    it('should close navigation when any other panel is opened', async () => {
+      const { openPanel, togglePanel, isNavigationOpen, isConfigOpen } = usePanels();
+
+      togglePanel('navigation');
+      await nextTick();
+      expect(isNavigationOpen.value).toBe(true);
+
+      openPanel('config');
+      await nextTick();
+
+      expect(isNavigationOpen.value).toBe(false);
+      expect(isConfigOpen.value).toBe(true);
+    });
+
+    it('should close navigation when toggling another panel open', async () => {
+      const { togglePanel, isNavigationOpen, isDebugOpen } = usePanels();
+
+      togglePanel('navigation');
+      await nextTick();
+      expect(isNavigationOpen.value).toBe(true);
+
+      togglePanel('debug');
+      await nextTick();
+
+      expect(isNavigationOpen.value).toBe(false);
+      expect(isDebugOpen.value).toBe(true);
     });
   });
 
@@ -202,44 +248,37 @@ describe('usePanels', () => {
   });
 
   describe('multiple panels', () => {
-    it('should allow multiple panels to be open simultaneously', async () => {
-      const { togglePanel, isConfigOpen, isSidebarOpen, isTexturesOpen } = usePanels();
+    it('should allow multiple non-navigation panels to be open simultaneously', async () => {
+      const { togglePanel, isConfigOpen, isSceneOpen } = usePanels();
 
       togglePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
 
-      togglePanel('sidebar');
+      togglePanel('scene');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
-      expect(isSidebarOpen.value).toBe(true);
-
-      togglePanel('textures');
-      await nextTick();
-      expect(isConfigOpen.value).toBe(true);
-      expect(isSidebarOpen.value).toBe(true);
-      expect(isTexturesOpen.value).toBe(true);
+      expect(isSceneOpen.value).toBe(true);
 
       togglePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
-      expect(isSidebarOpen.value).toBe(true);
-      expect(isTexturesOpen.value).toBe(true);
+      expect(isSceneOpen.value).toBe(true);
     });
 
     it('should close specific panel with closePanel', async () => {
-      const { openPanel, closePanel, isConfigOpen, isSidebarOpen } = usePanels();
+      const { openPanel, closePanel, isConfigOpen, isSceneOpen } = usePanels();
 
       openPanel('config');
-      openPanel('sidebar');
+      openPanel('scene');
       await nextTick();
       expect(isConfigOpen.value).toBe(true);
-      expect(isSidebarOpen.value).toBe(true);
+      expect(isSceneOpen.value).toBe(true);
 
       closePanel('config');
       await nextTick();
       expect(isConfigOpen.value).toBe(false);
-      expect(isSidebarOpen.value).toBe(true);
+      expect(isSceneOpen.value).toBe(true);
     });
   });
 
@@ -247,24 +286,18 @@ describe('usePanels', () => {
     it.each([
       // Right-side panels — single panel open always has offset 0
       ['debug', ['debug'], 0],
-      ['camera', ['camera'], 0],
       ['scene', ['scene'], 0],
       ['config', ['config'], 0],
       // Right-side panels — multiple open, offset by count of panels closer to edge
       ['config', ['debug', 'config'], 1],
-      ['config', ['camera', 'config'], 1],
-      ['config', ['debug', 'camera', 'config'], 2],
+      ['config', ['scene', 'config'], 1],
+      ['config', ['debug', 'scene', 'config'], 2],
       ['scene', ['debug', 'scene'], 1],
-      ['camera', ['debug', 'camera'], 1],
-      ['debug', ['debug', 'camera', 'scene', 'config'], 0],
-      ['camera', ['debug', 'camera', 'scene', 'config'], 1],
-      ['scene', ['debug', 'camera', 'scene', 'config'], 2],
-      ['config', ['debug', 'camera', 'scene', 'config'], 3],
-      // Left-side panels
-      ['sidebar', ['sidebar'], 0],
-      ['textures', ['textures'], 0],
-      ['textures', ['sidebar', 'textures'], 1],
-      ['sidebar', ['sidebar', 'textures'], 0],
+      ['debug', ['debug', 'scene', 'config'], 0],
+      ['scene', ['debug', 'scene', 'config'], 1],
+      ['config', ['debug', 'scene', 'config'], 2],
+      // Left-side panels — single panel open always has offset 0
+      ['elements', ['elements'], 0],
     ] as const)(
       'getPanelOffset(%s) with open panels %j → %d',
       async (panelType, openPanels, expectedOffset) => {

@@ -1,65 +1,77 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onBeforeUnmount, watch } from "vue";
-import { useRoute } from "vue-router";
+import { ref, nextTick, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { usePanels } from "@/composables/usePanels";
 import { useViewPanels } from "@/composables/useViewPanels";
-import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
+import { useCameraConfig } from "@/composables/useCameraConfig";
+import type { CameraSlot } from "@/composables/useCameraConfig";
+import {
+  getTools,
+  getCube,
+  generateAreaPositions,
+  CameraPreset,
+  cameraPresets,
+  setCameraPreset,
+} from "@webgamekit/threejs";
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { TexturesPanel } from "@/components/panels";
-import {
-  registerViewConfig,
-  unregisterViewConfig,
-  createReactiveConfig,
-} from "@/composables/useViewConfig";
+import { createReactiveConfig } from "@/composables/useViewConfig";
 import { useDebugScene } from "@/composables/useDebugScene";
-import { defaultConfig, presets, configControls, sceneControls } from "./config";
+import { useElementProperties } from "@/composables/useElementProperties";
+import { useSceneConfig } from "./useSceneConfig";
+import { useTextureGroupsStore } from "@/stores/textureGroups";
+import type { TextureGroup } from "@/stores/textureGroups";
+import { defaultConfig, presets, configControls, cameraSchema, groundSchema, lightsSchema, skySchema } from "./config";
 import type { SceneEditorConfig } from "./config";
 
-const route = useRoute();
 const canvas = ref<HTMLCanvasElement | null>(null);
 const { openPanel } = usePanels();
 const { setViewPanels, clearViewPanels } = useViewPanels();
 const { setSceneElements, clearSceneElements } = useDebugScene();
+const { registerCameraHandlers, unregisterCameraHandlers, cameraSlots, activeSlot, updateActiveSlotField, syncActiveSlotPosition } = useCameraConfig();
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties, openElementProperties, selectedElementName } = useElementProperties();
+const textureStore = useTextureGroupsStore();
 
-// Texture item within a group
-interface TextureItem {
-  id: string;
-  name: string;
-  filename: string;
-  url: string;
-}
-
-// Group of textures that share config and area
-interface TextureGroup {
-  id: string;
-  name: string;
-  textures: TextureItem[];
-  hidden?: boolean;
-  showWireframe?: boolean;
-}
-
-const textureGroups = ref<TextureGroup[]>([]);
-const selectedGroupId = ref<string | null>(null);
-
-// Auto-update toggle
-const autoUpdate = ref(true);
+// Derived refs from store for convenience
+const textureGroups = computed({
+  get: () => textureStore.groups,
+  set: (value) => { textureStore.groups = value; },
+});
+const selectedGroupId = computed({
+  get: () => textureStore.selectedGroupId,
+  set: (value) => { textureStore.selectedGroupId = value; },
+});
+const autoUpdate = computed({
+  get: () => textureStore.autoUpdate,
+  set: (value) => { textureStore.autoUpdate = value; },
+});
 
 const hiddenElements = ref<Set<string>>(new Set());
 
 // Update scene elements list for debugging
 const updateSceneElements = (scene: THREE.Scene) => {
+  const cameraElements = cameraSlots.value.map(slot => ({
+    name: slot.label,
+    type: 'Camera',
+    hidden: false,
+  }));
   setSceneElements(
-    scene.children.map((child: any) => ({
-      name: child.name || "(unnamed)",
-      type: child.type,
-      hidden: hiddenElements.value.has(child.name),
-    })),
+    [
+      ...cameraElements,
+      ...scene.children.map((child: any) => ({
+        name: child.name || "(unnamed)",
+        type: child.type,
+        hidden: hiddenElements.value.has(child.name),
+        groupId: textureGroups.value.find(g =>
+          child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
+        )?.id,
+      })),
+    ],
     {
       onToggleVisibility: toggleElementVisibility,
       onRemove: removeSceneElement,
-    }
+    },
+    Object.fromEntries(textureGroups.value.map(g => [g.id, g.name]))
   );
 };
 
@@ -91,6 +103,25 @@ const removeSceneElement = (name: string) => {
     hiddenElements.value.delete(name);
     updateSceneElements(currentScene);
   }
+};
+
+// Navigate a dot-separated path on a plain object
+const getNestedValue = (obj: Record<string, unknown> | null | undefined, path: string): unknown => {
+  if (!obj) return undefined;
+  return path.split('.').reduce((current: unknown, key) => {
+    if (current === null || current === undefined) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, obj as unknown);
+};
+
+const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+  const keys = path.split('.');
+  const lastKey = keys[keys.length - 1];
+  const target = keys.slice(0, -1).reduce((current: unknown, key) => {
+    if (current === null || current === undefined) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, obj as unknown) as Record<string, unknown>;
+  if (target) target[lastKey] = value;
 };
 
 // Guard flag to suppress auto-update during group config loading
@@ -198,6 +229,14 @@ watch(selectedGroupId, (groupId, oldGroupId) => {
   }
 });
 
+// Sync selectedGroupId when a group element is selected in ElementsPanel
+watch(selectedElementName, (name) => {
+  const group = textureGroups.value.find(g => g.id === name);
+  if (group) {
+    selectedGroupId.value = group.id;
+  }
+});
+
 // Watch for preset changes and apply them
 watch(
   () => reactiveConfig.value.preset,
@@ -226,116 +265,112 @@ watch(
   { deep: true }
 );
 
-// Scene configuration
-const sceneConfig = createReactiveConfig({
-  camera: {
-    position: [0, 50, 100] as CoordinateTuple,
-    target: [0, 0, 0] as CoordinateTuple,
-    fov: 60,
-  },
-  ground: {
-    enabled: true,
-    color: 0x98887d,
-  },
-  sky: {
-    enabled: true,
-    color: 0x87ceeb,
-  },
-});
+// Scene element configs via reactive composable
+const { groundConfig, lightsConfig, skyConfig, registerSceneHandlers, unregisterSceneHandlers, updateGroundField, updateLightsField, updateSkyField } = useSceneConfig();
 
 let animationId = 0;
 let orbitControls: any = null;
+let isApplyingUpdate = false;
 let currentScene: any = null;
 let currentCamera: any = null;
 let currentWorld: any = null;
 let currentGround: any = null;
+let currentAmbientLight: THREE.Light | null = null;
+let currentDirectionalLight: THREE.Light | null = null;
 let previousGroundEnabled = false;
 let previousSkyEnabled = false;
 
-// Manual update trigger
-const triggerManualUpdate = () => {
-  reinitScene();
-};
 
-// Update only scene properties without regenerating textures
-const updateSceneProperties = () => {
-  // If ground/sky enabled state changed, reinit scene instead
-  if (
-    sceneConfig.value.ground.enabled !== previousGroundEnabled ||
-    sceneConfig.value.sky.enabled !== previousSkyEnabled
-  ) {
-    previousGroundEnabled = sceneConfig.value.ground.enabled;
-    previousSkyEnabled = sceneConfig.value.sky.enabled;
+// Live-update ground properties without reinit
+const applyGroundUpdate = (field: string, value: unknown) => {
+  if (field === 'enabled' || field === 'size') {
+    previousGroundEnabled = groundConfig.value.enabled;
     reinitScene();
     return;
   }
-
-  if (!currentScene || !currentCamera) return;
-
-  // Update background color
-  currentScene.background = sceneConfig.value.sky.enabled
-    ? new THREE.Color(sceneConfig.value.sky.color)
-    : new THREE.Color(0x000000);
-
-  // Update ground color
-  if (sceneConfig.value.ground.enabled && currentGround?.mesh?.material) {
-    currentGround.mesh.material.color = new THREE.Color(sceneConfig.value.ground.color);
-  }
-
-  // Update camera properties
-  currentCamera.position.set(...sceneConfig.value.camera.position);
-  if (currentCamera.fov !== undefined) {
-    currentCamera.fov = sceneConfig.value.camera.fov;
-    currentCamera.updateProjectionMatrix();
-  }
-
-  // Update orbit target
-  if (orbitControls) {
-    orbitControls.target.set(...sceneConfig.value.camera.target);
-    orbitControls.update();
+  if (field === 'color' && currentGround?.mesh?.material) {
+    (currentGround.mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(value as number);
   }
 };
 
-// Register configuration panel with onChange callback (auto-debounced)
-onMounted(() => {
-  // Set view-specific panels for GlobalNavigation
-  setViewPanels({
-    showTextures: true,
-    showConfig: true,
-    showScene: true,
-  });
+// Live-update lights without reinit
+const applyLightsUpdate = (path: string, value: unknown) => {
+  const parts = path.split('.');
+  const group = parts[0];
+  const field = parts[1];
+  if (group === 'ambient') {
+    if (!currentAmbientLight) return;
+    const light = currentAmbientLight as THREE.Light;
+    if (field === 'intensity') light.intensity = value as number;
+    else if (field === 'color') light.color.set(value as number);
+  } else if (group === 'directional') {
+    if (!currentDirectionalLight) return;
+    const light = currentDirectionalLight as THREE.Light;
+    if (field === 'intensity') light.intensity = value as number;
+    else if (field === 'color') light.color.set(value as number);
+    else if (field === 'position') light.position.set(...(value as [number, number, number]));
+  }
+};
 
-  registerViewConfig(
-    route.name as string,
-    reactiveConfig,
-    configControls,
-    sceneConfig,
-    sceneControls,
-    updateSceneProperties
-  );
+// Live-update sky without reinit
+const applySkyUpdate = (field: string, value: unknown) => {
+  if (field === 'enabled' || field === 'size') {
+    previousSkyEnabled = skyConfig.value.enabled;
+    reinitScene();
+    return;
+  }
+  if (field === 'color') {
+    const skyMesh = currentScene?.getObjectByName('sky') as THREE.Mesh | undefined;
+    if (skyMesh?.material) {
+      (skyMesh.material as THREE.MeshBasicMaterial).color = new THREE.Color(value as number);
+    }
+    if (currentScene) {
+      currentScene.background = new THREE.Color(value as number);
+    }
+  }
+};
+
+onMounted(() => {
+  setViewPanels({});
+
+  textureStore.registerHandlers({
+    onSelectGroup: selectGroup,
+    onRemoveGroup: removeGroup,
+    onRemoveTexture: removeTextureFromGroup,
+    onToggleVisibility: toggleGroupVisibility,
+    onToggleWireframe: toggleGroupWireframe,
+    onAddTextureToGroup: handleAddTextureToGroup,
+    onAddNewGroup: handleFileUpload,
+    onManualUpdate: () => { if (selectedGroupId.value) regenerateGroupMeshes(selectedGroupId.value); },
+    onAddElement: () => {},
+  });
 
   if (canvas.value) {
     initScene();
   }
 
-  // Open textures panel on page load
-  openPanel("textures");
+  openPanel("elements");
 });
 
 onBeforeUnmount(() => {
-  // Clear view-specific panels
   clearViewPanels();
-
-  // Clear debug scene elements
   clearSceneElements();
-
-  // Unregister config
-  unregisterViewConfig(route.name as string);
-
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
+  unregisterCameraHandlers();
+  unregisterSceneHandlers();
+  clearAllElementProperties();
+  textureStore.clear();
 });
+
+// Register element properties for a texture group
+const registerGroupElementProperties = (group: TextureGroup) => {
+  registerElementProperties(group.id, {
+    title: group.name,
+    type: 'group',
+    schema: configControls,
+    getValue: (path) => getNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => setNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path, value),
+  });
+};
 
 // Handle file upload - creates a new group with the uploaded texture
 const handleFileUpload = (event: Event) => {
@@ -369,10 +404,11 @@ const handleFileUpload = (event: Event) => {
       groupConfigRegistry.value[filename] = createDefaultGroupConfig();
     }
 
-    // Auto-select the newly added group (watcher will load its config)
+    // Register group element properties and open properties panel
+    registerGroupElementProperties(newGroup);
     selectedGroupId.value = groupId;
-    // Open config panel for the new group
-    openPanel("config");
+    openElementProperties(groupId);
+    openPanel("properties");
 
     // Wait for watcher to process selection, then add only the new group
     nextTick(() => addGroupMeshes(newGroup));
@@ -413,9 +449,9 @@ const handleAddTextureToGroup = (groupId: string, event: Event) => {
 // Select group
 const selectGroup = (id: string) => {
   selectedGroupId.value = selectedGroupId.value === id ? null : id;
-  // Open config panel when selecting a group
   if (selectedGroupId.value) {
-    openPanel("config");
+    openElementProperties(selectedGroupId.value);
+    openPanel("properties");
   }
 };
 
@@ -447,6 +483,7 @@ const removeGroup = (id: string) => {
     if (selectedGroupId.value === id) {
       selectedGroupId.value = null;
     }
+    unregisterElementProperties(id);
   }
   textureGroups.value = textureGroups.value.filter((g) => g.id !== id);
   if (currentScene) updateSceneElements(currentScene);
@@ -675,37 +712,41 @@ const initScene = async () => {
   currentCamera = camera;
   currentWorld = world;
 
+  const initialSlot = cameraSlots.value[0];
+  const initialPosition: CoordinateTuple = initialSlot?.position ?? [0, 50, 100];
+  const initialFov = initialSlot?.fov ?? 60;
+
   const { orbit, ground } = await setup({
     config: {
       camera: {
-        position: sceneConfig.value.camera.position,
-        fov: sceneConfig.value.camera.fov,
+        position: initialPosition,
+        fov: initialFov,
       },
       orbit: {
-        target: new THREE.Vector3(...sceneConfig.value.camera.target),
+        target: new THREE.Vector3(0, 0, 0),
       },
       lights: {
         ambient: {
-          color: 0xffffff,
-          intensity: 1.0,
+          color: lightsConfig.value.ambient.color,
+          intensity: lightsConfig.value.ambient.intensity,
         },
         directional: {
-          color: 0xffffff,
-          intensity: 1.0,
-          position: [20, 30, 20],
+          color: lightsConfig.value.directional.color,
+          intensity: lightsConfig.value.directional.intensity,
+          position: lightsConfig.value.directional.position,
           castShadow: false,
         },
       },
-      ground: sceneConfig.value.ground.enabled
+      ground: groundConfig.value.enabled
         ? {
-            size: [1000, 100, 1000],
-            color: sceneConfig.value.ground.color,
+            size: groundConfig.value.size,
+            color: groundConfig.value.color,
           }
         : false,
-      sky: sceneConfig.value.sky.enabled
+      sky: skyConfig.value.enabled
         ? {
-            size: 500,
-            color: sceneConfig.value.sky.color,
+            size: skyConfig.value.size,
+            color: skyConfig.value.color,
           }
         : false,
     },
@@ -725,25 +766,111 @@ const initScene = async () => {
     ground.mesh.castShadow = false;
   }
 
-  // Sync orbit control changes back to camera config (after setup completes)
   if (orbit) {
     orbitControls = orbit;
-
-    const syncCameraToConfig = () => {
-      sceneConfig.value.camera.position = [
-        camera.position.x,
-        camera.position.y,
-        camera.position.z,
-      ] as CoordinateTuple;
-      sceneConfig.value.camera.target = [
-        orbit.target.x,
-        orbit.target.y,
-        orbit.target.z,
-      ] as CoordinateTuple;
-    };
-
-    orbit.addEventListener("change", syncCameraToConfig);
+    orbitControls.addEventListener('change', () => {
+      if (isApplyingUpdate || !currentCamera) return;
+      syncActiveSlotPosition([
+        currentCamera.position.x,
+        currentCamera.position.y,
+        currentCamera.position.z,
+      ] as CoordinateTuple);
+    });
   }
+
+  // Register camera handlers — views call this after scene init
+  registerCameraHandlers(
+    [{ id: 'cam-1', label: 'Camera 1', preset: CameraPreset.Perspective, position: [0, 50, 100], fov: 60, orbitTarget: [0, 0, 0] }],
+    {
+      onPresetChange: (_slotId, preset) => {
+        if (!currentCamera) return;
+        const nextType = cameraPresets[preset].type;
+        const currentType = currentCamera instanceof THREE.PerspectiveCamera ? 'perspective' : 'orthographic';
+        if (currentType !== nextType) {
+          reinitScene();
+        } else {
+          setCameraPreset(currentCamera, preset, window.innerWidth / window.innerHeight);
+        }
+      },
+      onSlotActivate: (slotId) => {
+        const slot = cameraSlots.value.find(s => s.id === slotId);
+        if (!slot || !currentCamera) return;
+        setCameraPreset(currentCamera, slot.preset, window.innerWidth / window.innerHeight);
+      },
+      onCleanup: () => {
+        if (animationId) cancelAnimationFrame(animationId);
+        if (orbitControls) {
+          orbitControls.dispose();
+          orbitControls = null;
+        }
+      },
+      onUpdate: (slotId) => {
+        const slot = cameraSlots.value.find(s => s.id === slotId);
+        if (!slot || !currentCamera) return;
+        isApplyingUpdate = true;
+        currentCamera.position.set(...slot.position);
+        if (currentCamera instanceof THREE.PerspectiveCamera) {
+          currentCamera.fov = slot.fov;
+          currentCamera.updateProjectionMatrix();
+        }
+        if (orbitControls) {
+          orbitControls.target.set(...slot.orbitTarget);
+          orbitControls.update();
+        }
+        isApplyingUpdate = false;
+      },
+    }
+  );
+
+  // Register camera element properties
+  const cameraLabel = cameraSlots.value[0]?.label ?? 'Camera 1';
+  registerElementProperties(cameraLabel, {
+    title: 'Camera',
+    type: 'camera',
+    schema: cameraSchema,
+    getValue: (path) => getNestedValue(activeSlot.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => updateActiveSlotField(path as keyof CameraSlot, value),
+  });
+
+  // Find and store light references for live updates
+  currentAmbientLight = scene.getObjectByName('ambient-light') as THREE.Light ?? null;
+  currentDirectionalLight = scene.getObjectByName('directional-light') as THREE.Light ?? null;
+
+  // Register scene config handlers for live updates
+  registerSceneHandlers({
+    onGroundUpdate: applyGroundUpdate,
+    onLightsUpdate: applyLightsUpdate,
+    onSkyUpdate: applySkyUpdate,
+    onCleanup: () => {},
+  });
+
+  // Register ground element properties if enabled
+  if (groundConfig.value.enabled) {
+    registerElementProperties('ground', {
+      title: 'Ground',
+      schema: groundSchema,
+      getValue: (path) => getNestedValue(groundConfig.value as unknown as Record<string, unknown>, path),
+      updateValue: (path, value) => updateGroundField(path as keyof typeof groundConfig.value, value),
+    });
+  }
+
+  // Register sky element properties if enabled
+  if (skyConfig.value.enabled) {
+    registerElementProperties('sky', {
+      title: 'Sky',
+      schema: skySchema,
+      getValue: (path) => getNestedValue(skyConfig.value as unknown as Record<string, unknown>, path),
+      updateValue: (path, value) => updateSkyField(path as keyof typeof skyConfig.value, value),
+    });
+  }
+
+  // Register lights element properties
+  registerElementProperties('lights', {
+    title: 'Lights',
+    schema: lightsSchema,
+    getValue: (path) => getNestedValue(lightsConfig.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => updateLightsField(path, value),
+  });
 
   // Create an empty timeline manager (no animations needed for static textures)
   const timelineManager = createTimelineManager();
@@ -790,22 +917,6 @@ defineExpose({
 <template>
   <div class="texture-editor">
     <canvas ref="canvas"></canvas>
-
-    <!-- Panel Components (rendered without individual triggers) -->
-    <TexturesPanel
-      :texture-groups="textureGroups"
-      :selected-group-id="selectedGroupId"
-      :auto-update="autoUpdate"
-      @select-group="selectGroup"
-      @remove-group="removeGroup"
-      @remove-texture="removeTextureFromGroup"
-      @toggle-visibility="toggleGroupVisibility"
-      @toggle-wireframe="toggleGroupWireframe"
-      @file-change="handleFileUpload"
-      @add-texture="handleAddTextureToGroup"
-      @update:auto-update="autoUpdate = $event"
-      @manual-update="triggerManualUpdate"
-    />
 
   </div>
 </template>

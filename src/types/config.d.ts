@@ -8,25 +8,13 @@ interface GenerateConfig {
   offsetY: number;
   offsetZ: number;
   lengthCurve: {
-    baseX: number;
-    baseY: number;
-    baseZ: number;
-    midX: number;
-    midY: number;
-    midZ: number;
-    tipX: number;
-    tipY: number;
-    tipZ: number;
+    base: { x: number; y: number; z: number };
+    mid: { x: number; y: number; z: number };
+    tip: { x: number; y: number; z: number };
   };
   sideCurve: {
-    baseX: number;
-    baseY: number;
-    baseZ: number;
-    midX: number;
-    midY: number;
-    midZ: number;
-    tipX: number;
-    tipY: number;
-    tipZ: number;
+    base: { x: number; y: number; z: number };
+    mid: { x: number; y: number; z: number };
+    tip: { x: number; y: number; z: number };
   };
 }

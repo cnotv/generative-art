@@ -9,6 +9,7 @@ import { bindAnimatedElements, bodyJump, updateAnimation, createTimelineManager,
 import { useUiStore } from "@/stores/ui";
 import { getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -45,6 +46,8 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", keyUp);
   window.removeEventListener("keyup", keyDown);
+  const { clearSceneElements } = useDebugScene();
+  clearSceneElements();
 });
 
 onUnmounted(() => window.removeEventListener("resize", initInstance));
@@ -58,12 +61,13 @@ const config = {
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+  const { registerSceneElements, clearSceneElements } = useDebugScene();
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as ComplexModel[];
     const obstacles = [] as ComplexModel[];
-    const { animate, setup, world, scene, getDelta } = await getTools({
+    const { animate, setup, world, scene, getDelta, camera } = await getTools({
       stats,
       route,
       canvas,
@@ -151,6 +155,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         });
       },
     });
+    registerSceneElements(camera, scene.children.filter(c => c !== camera));
   };
   createScene();
 };

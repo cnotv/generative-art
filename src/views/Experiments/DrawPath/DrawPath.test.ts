@@ -26,7 +26,7 @@ vi.mock('@webgamekit/threejs', async () => {
     ...actual,
     getTools: vi.fn(() =>
       Promise.resolve({
-        setup: vi.fn(() => Promise.resolve({ orbit: null, ground: null })),
+        setup: vi.fn(() => Promise.resolve({ orbit: null, ground: null, elements: [] })),
         renderer: {
           setSize: vi.fn(),
           domElement: document.createElement('canvas'),

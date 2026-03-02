@@ -165,29 +165,63 @@ export const configControls = {
 
 // Scene panel controls schema
 export const sceneControls = {
-  camera: {
-    position: {
-      label: 'Camera Position',
-      component: 'CoordinateInput',
-      min: { x: -200, y: 0, z: 10 },
-      max: { x: 200, y: 200, z: 200 },
-      step: { x: 5, y: 5, z: 5 },
-    },
-    target: {
-      label: 'Orbit Target',
-      component: 'CoordinateInput',
-      min: { x: -200, y: -100, z: -200 },
-      max: { x: 200, y: 100, z: 200 },
-      step: { x: 5, y: 5, z: 5 },
-    },
-    fov: { min: 30, max: 120, step: 5 },
-  },
   ground: {
-    enabled: { label: 'Show Ground', boolean: false },
     color: { color: true },
   },
   sky: {
-    enabled: { label: 'Show Sky', boolean: false },
     color: { color: true, label: 'Sky Color' },
   },
+};
+
+// Full element property schemas (used in Properties panel)
+export const cameraSchema = {
+  position: {
+    component: 'CoordinateInput',
+    label: 'Position',
+    min: { x: -500, y: -500, z: -500 },
+    max: { x: 500, y: 500, z: 500 },
+    step: { x: 1, y: 1, z: 1 },
+  },
+  fov: { min: 10, max: 170, step: 1, label: 'FOV' },
+  orbitTarget: {
+    component: 'CoordinateInput',
+    label: 'Orbit Target',
+    min: { x: -500, y: -500, z: -500 },
+    max: { x: 500, y: 500, z: 500 },
+    step: { x: 1, y: 1, z: 1 },
+  },
+};
+
+export const groundSchema = {
+  color: { color: true, label: 'Color' },
+  size: {
+    component: 'CoordinateInput',
+    label: 'Size',
+    min: { x: 1, y: 0.001, z: 1 },
+    max: { x: 5000, y: 100, z: 5000 },
+    step: { x: 10, y: 0.01, z: 10 },
+  },
+};
+
+export const lightsSchema = {
+  ambient: {
+    color: { color: true, label: 'Color' },
+    intensity: { min: 0, max: 10, step: 0.1, label: 'Intensity' },
+  },
+  directional: {
+    color: { color: true, label: 'Color' },
+    intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' },
+    position: {
+      component: 'CoordinateInput',
+      label: 'Position',
+      min: { x: -500, y: 0, z: -500 },
+      max: { x: 500, y: 500, z: 500 },
+      step: { x: 1, y: 1, z: 1 },
+    },
+  },
+};
+
+export const skySchema = {
+  color: { color: true, label: 'Color' },
+  size: { min: 100, max: 5000, step: 100, label: 'Size' },
 };

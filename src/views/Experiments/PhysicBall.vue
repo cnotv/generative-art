@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useDebugScene } from "@/composables/useDebugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -15,6 +16,7 @@ type ProjectConfig = any;
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 const models = [] as {
   mesh: THREE.Mesh<
     THREE.SphereGeometry,
@@ -36,6 +38,10 @@ onMounted(() => {
     (statsEl.value as unknown) as HTMLElement
   ),
     statsEl.value!;
+});
+
+onUnmounted(() => {
+  clearSceneElements();
 });
 
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -133,6 +139,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     createLights(scene, config);
     getGround(groundSize, groundPosition, scene, world);
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world));
+
+    registerSceneElements(camera, scene.children);
 
     // Change mesh position
     document.addEventListener("click", (event) => {

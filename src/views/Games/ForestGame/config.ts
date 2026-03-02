@@ -412,6 +412,17 @@ export const illustrationAreas = {
   }]
 };
 
+// Schema for illustration area element properties
+export const areaSchema = {
+  size: {
+    component: 'CoordinateInput',
+    label: 'Sprite Size',
+    min: { x: 0, y: 0, z: 0 },
+    max: { x: 1000, y: 1000, z: 1000 },
+    step: { x: 1, y: 1, z: 1 },
+  },
+};
+
 // Config tab - reactive game settings
 export const configControls = {
   player: {

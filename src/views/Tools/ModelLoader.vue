@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref } from "vue";
 import * as THREE from "three";
 import { getTools, getModel } from "@webgamekit/threejs";
 import { updateAnimation, createTimelineManager } from "@webgamekit/animation";
+import { useDebugScene } from '@/composables/useDebugScene';
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -287,6 +288,8 @@ const init = async () => {
       });
     },
   });
+  const { registerSceneElements } = useDebugScene();
+  registerSceneElements(cameraRef, sceneRef.children.filter(c => c !== cameraRef));
 };
 
 const removeModel = () => {
@@ -667,6 +670,11 @@ const reloadModel = async () => {
   removeModel();
   await loadModel();
 };
+
+onBeforeUnmount(() => {
+  const { clearSceneElements } = useDebugScene();
+  clearSceneElements();
+});
 
 onMounted(async () => init());
 </script>

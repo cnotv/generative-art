@@ -17,6 +17,14 @@
 - **No redundant comments**: Avoid comments that repeat what the code already says (e.g., `// Set rotation` before `setRotation()`)
 - **JSDoc for public APIs**: Use JSDoc for exported functions with `@param` and `@returns`, but keep descriptions concise
 
+## State Management
+
+- **Pinia for global state**: When state is shared by many unrelated components (scene elements, texture groups, camera config, active panels), use a Pinia store (`defineStore` in `src/stores/`). This provides Vue DevTools visibility, consistent structure, and automatic SSR behavior.
+- **Composables for logic and local state**: Composables (`use*`) are for reusable behavior and state scoped to one feature or component tree. Local state in composables cleans up automatically on unmount.
+- **Never use module-level refs in composables**: Avoid `const x = ref()` at the top of a composable file to share state globally. This pattern is invisible to DevTools, never cleans up, and causes stale state in tests. Use Pinia instead.
+- **Configuration-driven panels**: Panel visibility and content are driven by a central reactive store, not wired per component. Any view registers its panel configuration once and all panels update automatically.
+- **Full reactivity everywhere**: Every change — panel slider, color picker, 3D viewport interaction, orbit controls — must immediately reflect in all open panels. No manual refresh required.
+
 ## Functional Programming
 
 - **NEVER use classes**: ALWAYS use functional programming patterns. Use functions, types, and composition instead of classes
@@ -54,12 +62,23 @@
   - Use CSS variables from `_variables.scss` for theming
   - Keep styles close to the components that use them
 
+## Accessibility
+
+- **Always add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
+
 ## CSS Conventions
 
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
 - **Light and dark theme**: Always provide both light and dark mode colors. Use CSS variables from `_variables.scss` where possible, and add `@media (prefers-color-scheme: dark)` overrides for any hardcoded color values
+
+## DRY and KISS Principles
+
+- **Don't Repeat Yourself (DRY)**: Extract shared logic into reusable functions, composables, or utilities. If the same pattern appears more than once, abstract it into a shared helper
+- **Keep It Simple, Stupid (KISS)**: Prefer the simplest solution that solves the problem. Avoid over-engineering, unnecessary abstractions, or premature optimization
+- **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
+- **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 
 ## Modular Architecture
 

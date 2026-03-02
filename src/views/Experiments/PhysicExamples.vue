@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useDebugScene } from "@/composables/useDebugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -25,6 +26,7 @@ import type { CoordinateTuple } from "@/types/three";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugScene();
 
 onMounted(() => {
   init(
@@ -32,6 +34,10 @@ onMounted(() => {
     (statsEl.value as unknown) as HTMLElement
   ),
     statsEl.value!;
+});
+
+onUnmounted(() => {
+  clearSceneElements();
 });
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -59,6 +65,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     getLights(scene, { directionalLightIntensity: config.directional.intensity });
     getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 150, depth: 0.2 });
+
+    registerSceneElements(camera, scene.children);
 
     let experiments = [] as any[];
     const balls = [
