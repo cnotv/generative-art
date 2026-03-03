@@ -10,14 +10,14 @@ import { animateTimeline, createTimelineManager } from "@webgamekit/animation";
 import { getLights, instanceMatrixMesh } from "@webgamekit/threejs";
 import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 /**
  * Reflection

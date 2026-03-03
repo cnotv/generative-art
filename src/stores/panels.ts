@@ -1,3 +1,4 @@
+import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
@@ -9,18 +10,9 @@ const ALL_PANEL_TYPES: PanelType[] = ['navigation', 'config', 'scene', 'debug', 
 const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'scene', 'config'];
 const LEFT_PANEL_ORDER: PanelType[] = ['elements'];
 
-const activePanels = ref<Set<PanelType>>(new Set());
-const syncInitialized = ref(false);
-
-// Reset function for testing - resets module-level state
-export const resetPanelState = () => {
-  activePanels.value = new Set();
-  syncInitialized.value = false;
-};
-
-export const usePanels = () => {
-  const router = useRouter();
-  const route = useRoute();
+export const usePanelsStore = defineStore('panels', () => {
+  const activePanels = ref<Set<PanelType>>(new Set());
+  const syncInitialized = ref(false);
 
   const isNavigationOpen = computed(() => activePanels.value.has('navigation'));
   const isConfigOpen = computed(() => activePanels.value.has('config'));
@@ -41,7 +33,14 @@ export const usePanels = () => {
     return 0;
   };
 
+  const withMutualExclusion = (panel: PanelType, current: Set<PanelType>): Set<PanelType> => {
+    if (panel === 'navigation') return new Set(['navigation']);
+    return new Set([...[...current].filter(p => p !== 'navigation'), panel]);
+  };
+
   const syncToQuery = () => {
+    const router = useRouter();
+    const route = useRoute();
     const { path, query } = route;
     const panelQuery = ALL_PANEL_TYPES.reduce<Record<string, string>>(
       (accumulator, panel) => ({ ...accumulator, [panel]: activePanels.value.has(panel) ? 'true' : 'false' }),
@@ -50,13 +49,16 @@ export const usePanels = () => {
     router.push({ path, query: { ...query, ...panelQuery } });
   };
 
-  // Run initialization and route watchers only once across all usePanels() callers.
-  // Multiple components calling usePanels() would otherwise create duplicate watchers
-  // that all fire on every route.query change and create competing reactive updates.
-  if (!syncInitialized.value) {
+  // Call once from App.vue to sync store state with URL query params.
+  // Uses useRoute() which requires a component context — must be called from a component setup.
+  const initRouteSync = () => {
+    if (syncInitialized.value) return;
     syncInitialized.value = true;
 
-    const initialOpen = ALL_PANEL_TYPES.filter(panel => route.query[panel] === 'true' && !activePanels.value.has(panel));
+    const route = useRoute();
+    const initialOpen = ALL_PANEL_TYPES.filter(
+      panel => route.query[panel] === 'true' && !activePanels.value.has(panel)
+    );
     if (initialOpen.length > 0) {
       activePanels.value = new Set([...activePanels.value, ...initialOpen]);
     }
@@ -74,12 +76,6 @@ export const usePanels = () => {
         }
       );
     });
-  }
-
-  // Navigation is mutually exclusive: opening it closes all others, and vice versa.
-  const withMutualExclusion = (panel: PanelType, current: Set<PanelType>): Set<PanelType> => {
-    if (panel === 'navigation') return new Set(['navigation']);
-    return new Set([...[...current].filter(p => p !== 'navigation'), panel]);
   };
 
   const openPanel = (panel: PanelType) => {
@@ -104,16 +100,24 @@ export const usePanels = () => {
     syncToQuery();
   };
 
+  const resetState = () => {
+    activePanels.value = new Set();
+    syncInitialized.value = false;
+  };
+
   return {
-    activePanels: computed(() => activePanels.value),
+    activePanels,
+    syncInitialized,
     isNavigationOpen,
     isConfigOpen,
     isDebugOpen,
     isSceneOpen,
     getPanelOffset,
+    initRouteSync,
     openPanel,
     closePanel,
     togglePanel,
     closeAllPanels,
+    resetState,
   };
-};
+});

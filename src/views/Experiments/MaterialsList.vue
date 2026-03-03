@@ -9,7 +9,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
 import { getLights } from "@webgamekit/threejs";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 type ProjectConfig = any;
 
@@ -17,7 +17,7 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const cubes = [] as THREE.Mesh<any>[];
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onUnmounted(() => {
   clearSceneElements();

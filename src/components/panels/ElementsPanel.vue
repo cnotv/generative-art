@@ -21,19 +21,18 @@ import {
   Eye,
   EyeOff,
   Trash2,
-  ChevronRight,
-  ChevronDown,
   Plus,
   RefreshCw,
   Play,
   Camera,
 } from 'lucide-vue-next';
-import { useDebugScene } from '@/composables/useDebugScene';
-import { useElementProperties } from '@/composables/useElementProperties';
+import { useDebugSceneStore } from '@/stores/debugScene';
+import { useElementPropertiesStore } from '@/stores/elementProperties';
+import { storeToRefs } from 'pinia';
 import { useTextureGroupsStore } from '@/stores/textureGroups';
-import { useCameraConfig } from '@/composables/useCameraConfig';
+import { useCameraConfigStore } from '@/stores/cameraConfig';
 import { CameraPreset, cameraPresets } from '@webgamekit/threejs';
-import type { SceneElement } from '@/composables/useDebugScene';
+import type { SceneElement } from '@/stores/debugScene';
 
 interface Props {
   isRecording?: boolean;
@@ -49,16 +48,18 @@ interface Emits {
 defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const {
-  sceneElements,
-  sceneGroups,
-  handleToggleVisibility: toggleElementVisibility,
-  handleRemove: removeElement,
-} = useDebugScene();
+const debugSceneStore = useDebugSceneStore();
+const { sceneElements, sceneGroups } = storeToRefs(debugSceneStore);
+const toggleElementVisibility = debugSceneStore.handleToggleVisibility;
+const removeElement = debugSceneStore.handleRemove;
 
-const { openElementProperties, selectedElementName, activeProperties } = useElementProperties();
+const elementPropertiesStore = useElementPropertiesStore();
+const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore);
+const { openElementProperties } = elementPropertiesStore;
 const textureStore = useTextureGroupsStore();
-const { activeSlot, applyPresetToActiveSlot } = useCameraConfig();
+const cameraConfigStore = useCameraConfigStore();
+const { activeSlot } = storeToRefs(cameraConfigStore);
+const { applyPresetToActiveSlot } = cameraConfigStore;
 
 // File inputs for texture uploads
 const addGroupInputRef = ref<HTMLInputElement | null>(null);
@@ -76,7 +77,6 @@ const handleGroupToggle = (groupId: string) => {
   expandedName.value = expandedName.value === groupId ? null : groupId;
   if (expandedName.value) {
     openElementProperties(groupId);
-    textureStore.selectedGroupId = groupId;
     textureStore.handlers?.onSelectGroup(groupId);
   }
 };
@@ -242,7 +242,6 @@ const getElementColor = (element: SceneElement) => {
           :class="{ 'elements-panel__item-header--selected': selectedElementName === element.name }"
           @click="handleElementClick(element)"
         >
-          <component :is="expandedName === element.name ? ChevronDown : ChevronRight" class="elements-panel__chevron" />
           <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
           <div class="flex-1 min-w-0 flex flex-col gap-0.5">
             <span class="text-[11px] font-medium font-mono truncate block">{{ element.name }}</span>
@@ -346,8 +345,7 @@ const getElementColor = (element: SceneElement) => {
           }"
           @click="handleGroupToggle(groupId)"
         >
-          <component :is="expandedName === groupId ? ChevronDown : ChevronRight" class="elements-panel__chevron" />
-          <Box class="elements-panel__group-icon" />
+          <IconPreview :icon="Box" color="text-gray-400" />
           <span class="elements-panel__group-label">
             {{ sceneGroups[groupId] ?? `Group ${groupId.slice(0, 6)}` }}
           </span>
@@ -541,13 +539,6 @@ const getElementColor = (element: SceneElement) => {
   background: hsl(0 0% 97%);
 }
 
-.elements-panel__chevron {
-  width: 0.75rem;
-  height: 0.75rem;
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
 .elements-panel__type-toggle {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -592,13 +583,6 @@ const getElementColor = (element: SceneElement) => {
 .elements-panel__group-header--selected,
 .elements-panel__group-header--expanded {
   background-color: hsl(0 0% 90%);
-}
-
-.elements-panel__group-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  flex-shrink: 0;
-  opacity: 0.5;
 }
 
 .elements-panel__group-label {

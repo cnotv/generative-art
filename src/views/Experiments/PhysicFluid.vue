@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { useDebugScene } from "@/composables/useDebugScene";
+import { useDebugSceneStore } from "@/stores/debugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -13,7 +13,7 @@ import { times } from "@/utils/lodash";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(

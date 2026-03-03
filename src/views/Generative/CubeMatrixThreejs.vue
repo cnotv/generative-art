@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null)
 const canvas = ref(null)
@@ -13,7 +13,7 @@ const route = useRoute();
     let amountX = 3
     let amountY = 3
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(

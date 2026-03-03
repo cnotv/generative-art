@@ -2,9 +2,9 @@
 import { computed } from 'vue';
 import { Menu, Settings, Layers, Bug, Box, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { usePanels } from '@/composables/usePanels';
-import { useViewPanels } from '@/composables/useViewPanels';
-import type { PanelType } from '@/composables/usePanels';
+import { usePanelsStore } from '@/stores/panels';
+import { useViewPanelsStore } from '@/stores/viewPanels';
+import type { PanelType } from '@/stores/panels';
 
 interface PanelButton {
   type: PanelType;
@@ -12,10 +12,10 @@ interface PanelButton {
   label: string;
 }
 
-const { activePanels, togglePanel, closeAllPanels } = usePanels();
-const { viewPanels } = useViewPanels();
+const panelsStore = usePanelsStore();
+const viewPanelsStore = useViewPanelsStore();
 
-const hasOpenPanels = computed(() => activePanels.value.size > 0);
+const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0);
 
 const navigationButton = computed<PanelButton>(() => ({
   type: 'navigation',
@@ -24,7 +24,7 @@ const navigationButton = computed<PanelButton>(() => ({
 }));
 
 const panelButtons = computed<PanelButton[]>(() => {
-  const configButton = viewPanels.value.showConfig
+  const configButton = viewPanelsStore.viewPanels.showConfig
     ? [{ type: 'config' as PanelType, icon: Settings, label: 'Config' }]
     : [];
 
@@ -36,10 +36,10 @@ const panelButtons = computed<PanelButton[]>(() => {
   ];
 });
 
-const isPanelOpen = (panelType: PanelType) => activePanels.value.has(panelType);
+const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType);
 
 const handleToggle = (panelType: PanelType) => {
-  togglePanel(panelType);
+  panelsStore.togglePanel(panelType);
 };
 </script>
 
@@ -83,7 +83,7 @@ const handleToggle = (panelType: PanelType) => {
         size="icon"
         class="global-navigation__button"
         aria-label="Close all panels"
-        @click="closeAllPanels"
+        @click="panelsStore.closeAllPanels"
       >
         <X class="h-5 w-5" />
       </Button>

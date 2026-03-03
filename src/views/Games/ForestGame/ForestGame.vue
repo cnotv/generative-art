@@ -16,10 +16,10 @@ import { controllerForward, type CoordinateTuple, type AnimationData, updateAnim
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { useDebugScene } from "@/composables/useDebugScene";
-import { useElementProperties } from "@/composables/useElementProperties";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useDebugSceneStore } from "@/stores/debugScene";
+import { useElementPropertiesStore } from "@/stores/elementProperties";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -30,14 +30,13 @@ import {
   assets,
   illustrationAreas,
   configControls,
-  sceneControls,
   areaSchema,
 } from "./config";
 
 const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
-const { registerElementProperties, clearAllElementProperties } = useElementProperties();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const { registerElementProperties, clearAllElementProperties } = useElementPropertiesStore();
 
 const getNestedValue = (obj: Record<string, unknown> | null | undefined, path: string): unknown => {
   if (!obj) return undefined;
@@ -371,13 +370,10 @@ onMounted(async () => {
     showConfig: true,
   });
 
-  // Register both Config and Scene tabs with the config panel
   registerViewConfig(
     route.name as string,
     reactiveConfig,
-    configControls,
-    sceneConfig,
-    sceneControls
+    configControls
   );
 
   await init();

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onBeforeUnmount, watch, computed } from "vue";
-import { usePanels } from "@/composables/usePanels";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { useCameraConfig } from "@/composables/useCameraConfig";
-import type { CameraSlot } from "@/composables/useCameraConfig";
+import { usePanelsStore } from "@/stores/panels";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useCameraConfigStore } from "@/stores/cameraConfig";
+import type { CameraSlot } from "@/stores/cameraConfig";
 import {
   getTools,
   getCube,
@@ -15,9 +15,10 @@ import {
 import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { createReactiveConfig } from "@/composables/useViewConfig";
-import { useDebugScene } from "@/composables/useDebugScene";
-import { useElementProperties } from "@/composables/useElementProperties";
+import { createReactiveConfig } from "@/stores/viewConfig";
+import { useDebugSceneStore } from "@/stores/debugScene";
+import { useElementPropertiesStore } from "@/stores/elementProperties";
+import { storeToRefs } from "pinia";
 import { useSceneConfig } from "./useSceneConfig";
 import { useTextureGroupsStore } from "@/stores/textureGroups";
 import type { TextureGroup } from "@/stores/textureGroups";
@@ -25,11 +26,15 @@ import { defaultConfig, presets, configControls, cameraSchema, groundSchema, lig
 import type { SceneEditorConfig } from "./config";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
-const { openPanel } = usePanels();
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { setSceneElements, clearSceneElements } = useDebugScene();
-const { registerCameraHandlers, unregisterCameraHandlers, cameraSlots, activeSlot, updateActiveSlotField, syncActiveSlotPosition } = useCameraConfig();
-const { registerElementProperties, unregisterElementProperties, clearAllElementProperties, openElementProperties, selectedElementName } = useElementProperties();
+const { openPanel } = usePanelsStore();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { setSceneElements, clearSceneElements } = useDebugSceneStore();
+const cameraConfigStore = useCameraConfigStore();
+const { cameraSlots, activeSlot } = storeToRefs(cameraConfigStore);
+const { registerCameraHandlers, unregisterCameraHandlers, updateActiveSlotField, syncActiveSlotPosition } = cameraConfigStore;
+const elementPropertiesStore = useElementPropertiesStore();
+const { selectedElementName } = storeToRefs(elementPropertiesStore);
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties, openElementProperties } = elementPropertiesStore;
 const textureStore = useTextureGroupsStore();
 
 // Derived refs from store for convenience
@@ -404,11 +409,11 @@ const handleFileUpload = (event: Event) => {
       groupConfigRegistry.value[filename] = createDefaultGroupConfig();
     }
 
-    // Register group element properties and open properties panel
+    // Register group element properties and open elements panel
     registerGroupElementProperties(newGroup);
     selectedGroupId.value = groupId;
     openElementProperties(groupId);
-    openPanel("properties");
+    openPanel("elements");
 
     // Wait for watcher to process selection, then add only the new group
     nextTick(() => addGroupMeshes(newGroup));
@@ -451,7 +456,7 @@ const selectGroup = (id: string) => {
   selectedGroupId.value = selectedGroupId.value === id ? null : id;
   if (selectedGroupId.value) {
     openElementProperties(selectedGroupId.value);
-    openPanel("properties");
+    openPanel("elements");
   }
 };
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { createPinia, setActivePinia, storeToRefs } from 'pinia';
 import { SCENE_DEFAULTS } from '@webgamekit/threejs';
-import { useElementProperties } from '@/composables/useElementProperties';
+import { useElementPropertiesStore } from '@/stores/elementProperties';
 import { cameraSchema, groundSchema, lightsSchema, skySchema } from './config';
 
 // Standard scene elements that must always show properties when selected.
@@ -17,6 +18,9 @@ const STANDARD_ELEMENT_SCHEMAS = {
 type StandardElementKey = keyof typeof STANDARD_ELEMENT_SCHEMAS;
 
 describe('SceneEditor element schemas — Properties panel contract', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
   describe('all standard element schemas are non-empty', () => {
     it.each(Object.entries(STANDARD_ELEMENT_SCHEMAS) as [StandardElementKey, Record<string, unknown>][])(
       '"%s" schema has at least one property',
@@ -128,8 +132,9 @@ describe('SceneEditor element schemas — Properties panel contract', () => {
       '"%s" element has non-empty activeProperties.schema when selected',
       (name, schema) => {
         // Arrange
-        const { registerElementProperties, openElementProperties, activeProperties, clearAllElementProperties } =
-          useElementProperties();
+        const store = useElementPropertiesStore();
+        const { activeProperties } = storeToRefs(store);
+        const { registerElementProperties, openElementProperties, clearAllElementProperties } = store;
 
         registerElementProperties(name, {
           title: name,

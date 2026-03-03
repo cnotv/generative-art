@@ -1,5 +1,6 @@
+import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { ConfigControlsSchema } from './useViewConfig';
+import type { ConfigControlsSchema } from '@/stores/viewConfig';
 
 export interface ElementPropertiesConfig {
   title: string;
@@ -9,10 +10,10 @@ export interface ElementPropertiesConfig {
   updateValue: (path: string, value: unknown) => void;
 }
 
-const selectedElementName = ref<string | null>(null);
-const elementPropertiesRegistry = ref<Record<string, ElementPropertiesConfig>>({});
+export const useElementPropertiesStore = defineStore('elementProperties', () => {
+  const selectedElementName = ref<string | null>(null);
+  const elementPropertiesRegistry = ref<Record<string, ElementPropertiesConfig>>({});
 
-export const useElementProperties = () => {
   const activeProperties = computed<ElementPropertiesConfig | null>(() => {
     if (selectedElementName.value === null) return null;
     return (
@@ -54,4 +55,4 @@ export const useElementProperties = () => {
     clearAllElementProperties,
     openElementProperties,
   };
-};
+});

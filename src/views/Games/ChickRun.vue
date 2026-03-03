@@ -9,7 +9,7 @@ import { bindAnimatedElements, bodyJump, updateAnimation, createTimelineManager,
 import { useUiStore } from "@/stores/ui";
 import { getCube } from "@webgamekit/threejs";
 import brickTexture from "@/assets/images/textures/brick.jpg";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 // Set UI controls
 const uiStore = useUiStore();
@@ -46,7 +46,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", keyUp);
   window.removeEventListener("keyup", keyDown);
-  const { clearSceneElements } = useDebugScene();
+  const { clearSceneElements } = useDebugSceneStore();
   clearSceneElements();
 });
 
@@ -61,7 +61,7 @@ const config = {
 };
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  const { registerSceneElements, clearSceneElements } = useDebugScene();
+  const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {

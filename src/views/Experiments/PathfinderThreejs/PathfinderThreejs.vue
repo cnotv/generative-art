@@ -8,9 +8,9 @@ import {
   type ComplexModel,
 } from "@webgamekit/threejs";
 import { type CoordinateTuple } from "@webgamekit/animation";
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { useDebugScene } from "@/composables/useDebugScene";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useDebugSceneStore } from "@/stores/debugScene";
 
 import {
   gridConfig,
@@ -26,7 +26,6 @@ import {
   obstacleCubeBase,
   configControls,
   defaultSceneValues,
-  sceneControls,
   cameraPositions,
   defaultStart,
   defaultGoal,
@@ -40,8 +39,8 @@ import { getBestRoute } from "./helpers/pathfinding";
 import { createPathLine, removePathLine } from "./helpers/pathAnimation";
 
 const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const hasPath = shallowRef(false);
@@ -636,9 +635,6 @@ onMounted(async () => {
     route.name as string,
     reactiveConfig,
     configControls,
-    sceneConfig,
-    sceneControls,
-    undefined,
     undefined,
     {
       generateNewScene,

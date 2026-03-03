@@ -1,3 +1,4 @@
+import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { CameraPreset } from '@webgamekit/threejs';
 import type { CoordinateTuple } from '@webgamekit/threejs';
@@ -32,21 +33,20 @@ const DEFAULT_CAMERA_SLOT: CameraSlot = {
   orbitTarget: DEFAULT_CAMERA_ORBIT_TARGET,
 };
 
-// Module-level state — shared across all composable calls (same pattern as useDebugScene)
-const cameraSlots = ref<CameraSlot[]>([DEFAULT_CAMERA_SLOT]);
-const activeSlotId = ref<string | null>(DEFAULT_CAMERA_SLOT_ID);
-const handlers = ref<CameraConfigHandlers | null>(null);
+export const useCameraConfigStore = defineStore('cameraConfig', () => {
+  const cameraSlots = ref<CameraSlot[]>([DEFAULT_CAMERA_SLOT]);
+  const activeSlotId = ref<string | null>(DEFAULT_CAMERA_SLOT_ID);
+  const handlers = ref<CameraConfigHandlers | null>(null);
 
-export const _resetCameraConfig = () => {
-  cameraSlots.value = [DEFAULT_CAMERA_SLOT];
-  activeSlotId.value = DEFAULT_CAMERA_SLOT_ID;
-  handlers.value = null;
-};
-
-export const useCameraConfig = () => {
   const activeSlot = computed<CameraSlot | null>(
     () => cameraSlots.value.find(s => s.id === activeSlotId.value) ?? null
   );
+
+  const resetState = () => {
+    cameraSlots.value = [DEFAULT_CAMERA_SLOT];
+    activeSlotId.value = DEFAULT_CAMERA_SLOT_ID;
+    handlers.value = null;
+  };
 
   const registerCameraHandlers = (
     initialSlots: CameraSlot[],
@@ -131,6 +131,7 @@ export const useCameraConfig = () => {
     cameraSlots,
     activeSlotId,
     activeSlot,
+    resetState,
     registerCameraHandlers,
     unregisterCameraHandlers,
     addCameraSlot,
@@ -141,4 +142,4 @@ export const useCameraConfig = () => {
     updateActiveSlotField,
     syncActiveSlotPosition,
   };
-};
+});

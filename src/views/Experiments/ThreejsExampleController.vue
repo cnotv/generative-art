@@ -6,7 +6,7 @@ import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
 import Stats from "three/addons/libs/stats.module.js";
 
 import { ref, onMounted, onUnmounted } from "vue";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
@@ -14,7 +14,7 @@ const canvas = ref(null);
 // Movement input
 const movement = { forward: 0, right: 0, up: 0 };
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(

@@ -2,8 +2,8 @@
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Image, Settings } from 'lucide-vue-next';
-import { usePanels } from '@/composables/usePanels';
-import type { PanelType } from '@/composables/usePanels';
+import { usePanelsStore } from '@/stores/panels';
+import type { PanelType } from '@/stores/panels';
 
 interface PanelButton {
   type: PanelType;
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
   showConfig: false,
 });
 
-const { activePanels, togglePanel } = usePanels();
+const panelsStore = usePanelsStore();
 
 const panelButtons = computed<PanelButton[]>(() => {
   const buttons: PanelButton[] = [];
@@ -37,14 +37,12 @@ const panelButtons = computed<PanelButton[]>(() => {
   return buttons;
 });
 
-const hasActivePanels = computed(() => activePanels.value.size > 0);
+const hasActivePanels = computed(() => panelsStore.activePanels.size > 0);
 
-const isPanelOpen = (panelType: PanelType) => {
-  return activePanels.value.has(panelType);
-};
+const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType);
 
 const handleToggle = (panelType: PanelType) => {
-  togglePanel(panelType);
+  panelsStore.togglePanel(panelType);
 };
 </script>
 

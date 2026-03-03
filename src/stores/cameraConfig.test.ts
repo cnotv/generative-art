@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { setActivePinia, createPinia } from 'pinia';
 import { CameraPreset } from '@webgamekit/threejs';
 import type { CoordinateTuple } from '@webgamekit/threejs';
-
-// Import after — composable doesn't exist yet so tests will fail
-import { useCameraConfig, _resetCameraConfig } from './useCameraConfig';
+import { useCameraConfigStore } from './cameraConfig';
 
 const makeHandlers = () => ({
   onPresetChange: vi.fn(),
@@ -20,67 +19,66 @@ const makeSlot = (id: string, label: string, preset = CameraPreset.Perspective) 
   fov: 60,
 });
 
-describe('useCameraConfig', () => {
+describe('useCameraConfigStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    _resetCameraConfig();
+    setActivePinia(createPinia());
   });
 
   describe('registerCameraHandlers', () => {
     it('populates slots and sets activeSlotId to first slot', async () => {
-      const { registerCameraHandlers, cameraSlots, activeSlotId } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
       const slot = makeSlot('cam-1', 'Camera 1');
 
-      registerCameraHandlers([slot], handlers);
+      store.registerCameraHandlers([slot], handlers);
       await nextTick();
 
-      expect(cameraSlots.value).toHaveLength(1);
-      expect(cameraSlots.value[0]).toEqual(slot);
-      expect(activeSlotId.value).toBe('cam-1');
+      expect(store.cameraSlots).toHaveLength(1);
+      expect(store.cameraSlots[0]).toEqual(slot);
+      expect(store.activeSlotId).toBe('cam-1');
     });
 
     it('handles empty slots array — activeSlotId is null', async () => {
-      const { registerCameraHandlers, cameraSlots, activeSlotId } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers([], makeHandlers());
+      store.registerCameraHandlers([], makeHandlers());
       await nextTick();
 
-      expect(cameraSlots.value).toHaveLength(0);
-      expect(activeSlotId.value).toBeNull();
+      expect(store.cameraSlots).toHaveLength(0);
+      expect(store.activeSlotId).toBeNull();
     });
 
     it('sets activeSlotId to first slot when multiple slots provided', async () => {
-      const { registerCameraHandlers, activeSlotId } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2', CameraPreset.Orbit)],
         makeHandlers()
       );
       await nextTick();
 
-      expect(activeSlotId.value).toBe('cam-1');
+      expect(store.activeSlotId).toBe('cam-1');
     });
   });
 
   describe('unregisterCameraHandlers', () => {
     it('calls onCleanup once and restores default slot', async () => {
-      const { registerCameraHandlers, unregisterCameraHandlers, cameraSlots, activeSlotId } =
-        useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], handlers);
-      unregisterCameraHandlers();
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], handlers);
+      store.unregisterCameraHandlers();
       await nextTick();
 
       expect(handlers.onCleanup).toHaveBeenCalledTimes(1);
-      expect(cameraSlots.value).toHaveLength(1);
-      expect(activeSlotId.value).toBe('cam-default');
+      expect(store.cameraSlots).toHaveLength(1);
+      expect(store.activeSlotId).toBe('cam-default');
     });
 
     it('does not throw when called before register', () => {
-      const { unregisterCameraHandlers } = useCameraConfig();
-      expect(() => unregisterCameraHandlers()).not.toThrow();
+      const store = useCameraConfigStore();
+      expect(() => store.unregisterCameraHandlers()).not.toThrow();
     });
   });
 
@@ -92,87 +90,87 @@ describe('useCameraConfig', () => {
     ])(
       'appends slot with label "Camera N" when %d slots already exist',
       async (existingCount, expectedLabel) => {
-        const { registerCameraHandlers, addCameraSlot, cameraSlots } = useCameraConfig();
+        const store = useCameraConfigStore();
         const slots = Array.from({ length: existingCount }, (_, i) =>
           makeSlot(`cam-${i + 1}`, `Camera ${i + 1}`)
         );
 
-        registerCameraHandlers(slots, makeHandlers());
-        addCameraSlot();
+        store.registerCameraHandlers(slots, makeHandlers());
+        store.addCameraSlot();
         await nextTick();
 
-        const newSlot = cameraSlots.value[cameraSlots.value.length - 1];
+        const newSlot = store.cameraSlots[store.cameraSlots.length - 1];
         expect(newSlot.label).toBe(expectedLabel);
-        expect(cameraSlots.value).toHaveLength(existingCount + 1);
+        expect(store.cameraSlots).toHaveLength(existingCount + 1);
       }
     );
 
     it('new slot has a unique id', async () => {
-      const { registerCameraHandlers, addCameraSlot, cameraSlots } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
-      addCameraSlot();
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
+      store.addCameraSlot();
       await nextTick();
 
-      const ids = cameraSlots.value.map(s => s.id);
+      const ids = store.cameraSlots.map(s => s.id);
       expect(new Set(ids).size).toBe(ids.length);
     });
   });
 
   describe('removeCameraSlot', () => {
     it('removes the specified slot', async () => {
-      const { registerCameraHandlers, removeCameraSlot, cameraSlots } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2')],
         makeHandlers()
       );
-      removeCameraSlot('cam-2');
+      store.removeCameraSlot('cam-2');
       await nextTick();
 
-      expect(cameraSlots.value).toHaveLength(1);
-      expect(cameraSlots.value[0].id).toBe('cam-1');
+      expect(store.cameraSlots).toHaveLength(1);
+      expect(store.cameraSlots[0].id).toBe('cam-1');
     });
 
     it('activates first remaining slot and calls onSlotActivate when active slot is removed', async () => {
-      const { registerCameraHandlers, removeCameraSlot, activeSlotId } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2')],
         handlers
       );
 
-      removeCameraSlot('cam-1');
+      store.removeCameraSlot('cam-1');
       await nextTick();
 
-      expect(activeSlotId.value).toBe('cam-2');
+      expect(store.activeSlotId).toBe('cam-2');
       expect(handlers.onSlotActivate).toHaveBeenCalledWith('cam-2');
     });
 
     it('does not call onSlotActivate when a non-active slot is removed', async () => {
-      const { registerCameraHandlers, removeCameraSlot } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2')],
         handlers
       );
 
-      removeCameraSlot('cam-2');
+      store.removeCameraSlot('cam-2');
       await nextTick();
 
       expect(handlers.onSlotActivate).not.toHaveBeenCalled();
     });
 
     it('does not crash when removing a nonexistent id', async () => {
-      const { registerCameraHandlers, removeCameraSlot, cameraSlots } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
-      expect(() => removeCameraSlot('nonexistent')).not.toThrow();
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
+      expect(() => store.removeCameraSlot('nonexistent')).not.toThrow();
       await nextTick();
 
-      expect(cameraSlots.value).toHaveLength(1);
+      expect(store.cameraSlots).toHaveLength(1);
     });
   });
 
@@ -183,57 +181,57 @@ describe('useCameraConfig', () => {
       [''],
       ['A very long camera name that describes the view in detail'],
     ])('renames slot label to "%s"', async newLabel => {
-      const { registerCameraHandlers, renameCameraSlot, cameraSlots } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
-      renameCameraSlot('cam-1', newLabel);
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers());
+      store.renameCameraSlot('cam-1', newLabel);
       await nextTick();
 
-      expect(cameraSlots.value[0].label).toBe(newLabel);
+      expect(store.cameraSlots[0].label).toBe(newLabel);
     });
 
     it('only renames the targeted slot', async () => {
-      const { registerCameraHandlers, renameCameraSlot, cameraSlots } = useCameraConfig();
+      const store = useCameraConfigStore();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2')],
         makeHandlers()
       );
-      renameCameraSlot('cam-1', 'Renamed');
+      store.renameCameraSlot('cam-1', 'Renamed');
       await nextTick();
 
-      expect(cameraSlots.value[0].label).toBe('Renamed');
-      expect(cameraSlots.value[1].label).toBe('Camera 2');
+      expect(store.cameraSlots[0].label).toBe('Renamed');
+      expect(store.cameraSlots[1].label).toBe('Camera 2');
     });
   });
 
   describe('activateCameraSlot', () => {
     it('updates activeSlotId and calls onSlotActivate', async () => {
-      const { registerCameraHandlers, activateCameraSlot, activeSlotId } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2')],
         handlers
       );
 
-      activateCameraSlot('cam-2');
+      store.activateCameraSlot('cam-2');
       await nextTick();
 
-      expect(activeSlotId.value).toBe('cam-2');
+      expect(store.activeSlotId).toBe('cam-2');
       expect(handlers.onSlotActivate).toHaveBeenCalledWith('cam-2');
     });
 
     it('calls onSlotActivate with the correct id', async () => {
-      const { registerCameraHandlers, activateCameraSlot } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      registerCameraHandlers(
+      store.registerCameraHandlers(
         [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2'), makeSlot('cam-3', 'Camera 3')],
         handlers
       );
 
-      activateCameraSlot('cam-3');
+      store.activateCameraSlot('cam-3');
       await nextTick();
 
       expect(handlers.onSlotActivate).toHaveBeenCalledTimes(1);
@@ -245,25 +243,24 @@ describe('useCameraConfig', () => {
     it.each(Object.values(CameraPreset))(
       'applies preset "%s" to active slot and calls onPresetChange',
       async preset => {
-        const { registerCameraHandlers, applyPresetToActiveSlot, activeSlot } = useCameraConfig();
+        const store = useCameraConfigStore();
         const handlers = makeHandlers();
 
-        registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], handlers);
-        applyPresetToActiveSlot(preset);
+        store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], handlers);
+        store.applyPresetToActiveSlot(preset);
         await nextTick();
 
-        expect(activeSlot.value?.preset).toBe(preset);
+        expect(store.activeSlot?.preset).toBe(preset);
         expect(handlers.onPresetChange).toHaveBeenCalledWith('cam-1', preset);
       }
     );
 
     it('is a no-op and does not call onPresetChange when activeSlotId is null', async () => {
-      const { registerCameraHandlers, applyPresetToActiveSlot } = useCameraConfig();
+      const store = useCameraConfigStore();
       const handlers = makeHandlers();
 
-      // Register empty slots to force null activeSlotId
-      registerCameraHandlers([], handlers);
-      applyPresetToActiveSlot(CameraPreset.Perspective);
+      store.registerCameraHandlers([], handlers);
+      store.applyPresetToActiveSlot(CameraPreset.Perspective);
       await nextTick();
 
       expect(handlers.onPresetChange).not.toHaveBeenCalled();
@@ -272,20 +269,20 @@ describe('useCameraConfig', () => {
 
   describe('activeSlot computed', () => {
     it('returns the slot matching activeSlotId', async () => {
-      const { registerCameraHandlers, activateCameraSlot, activeSlot } = useCameraConfig();
+      const store = useCameraConfigStore();
       const slot2 = makeSlot('cam-2', 'Camera 2', CameraPreset.TopDown);
 
-      registerCameraHandlers([makeSlot('cam-1', 'Camera 1'), slot2], makeHandlers());
-      activateCameraSlot('cam-2');
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1'), slot2], makeHandlers());
+      store.activateCameraSlot('cam-2');
       await nextTick();
 
-      expect(activeSlot.value).toEqual(slot2);
+      expect(store.activeSlot).toEqual(slot2);
     });
 
     it('returns the default slot on init', () => {
-      const { activeSlot } = useCameraConfig();
-      expect(activeSlot.value).not.toBeNull();
-      expect(activeSlot.value?.id).toBe('cam-default');
+      const store = useCameraConfigStore();
+      expect(store.activeSlot).not.toBeNull();
+      expect(store.activeSlot?.id).toBe('cam-default');
     });
   });
 });

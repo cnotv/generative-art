@@ -21,7 +21,7 @@ import "@/assets/prevents.css";
 import "./styles.css";
 
 import { handleJumpGoomba } from "./helpers/events";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 import {
   prevents,
@@ -115,7 +115,7 @@ const endGame = () => {
   remapControlsOptions(bindings["game-over"]);
 };
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);

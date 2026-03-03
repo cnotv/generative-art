@@ -8,13 +8,13 @@ import { getLights, getEnvironment, getGround, removeElements } from "@webgameki
 import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
 import { getBall } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(

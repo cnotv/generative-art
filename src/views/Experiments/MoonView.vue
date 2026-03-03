@@ -7,12 +7,12 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import moon from '@/assets/images/textures/moon.jpg';
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onUnmounted(() => {
   clearSceneElements();

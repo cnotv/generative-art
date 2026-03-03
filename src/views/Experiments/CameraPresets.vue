@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref, onUnmounted } from "vue";
 import * as THREE from "three";
-import { useDebugScene } from "@/composables/useDebugScene";
+import { useDebugSceneStore } from "@/stores/debugScene";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -9,7 +9,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { createZigzagTexture } from "@webgamekit/threejs";
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 const canvas = ref(null);
 const canvas1 = ref(null);
 const canvas2 = ref(null);

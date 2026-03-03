@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
 import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
-import { usePanels } from "@/composables/usePanels";
+import { usePanelsStore } from "@/stores/panels";
 
 const router = useRouter();
 const route = useRoute();
-const queryStore = useQueryStore();
-queryStore.setQuery(route.query);
 
-const { activePanels } = usePanels();
+const panelsStore = usePanelsStore();
+panelsStore.initRouteSync();
 watch(
-  () => activePanels.value.size > 0,
+  () => panelsStore.activePanels.size > 0,
   (hasOpen) => {
     document.documentElement.style.setProperty(
       '--canvas-top',
@@ -22,23 +20,6 @@ watch(
     );
   },
   { immediate: true }
-);
-
-// Watch for changes in the router query and update the store
-watch(
-  () => route.query,
-  (newQuery) => {
-    queryStore.setQuery(newQuery);
-  }
-);
-
-// Watch for changes in the store and update the router query
-watch(
-  () => queryStore.query,
-  (newQuery) => {
-    router.push({ query: newQuery });
-  },
-  { deep: true }
 );
 
 onMounted(() => {
@@ -92,7 +73,6 @@ const toggleQuery = (param: string | string[]) => {
     {}
   );
   router.push({ path, query: { ...query, ...newQuery } });
-  queryStore.setQuery(newQuery);
 };
 
 const isRecording = computed(() => !!route.query.record);

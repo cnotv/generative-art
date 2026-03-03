@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { useDebugScene } from "@/composables/useDebugScene";
+import { useDebugSceneStore } from "@/stores/debugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -27,7 +27,7 @@ import type { CoordinateTuple } from "@webgamekit/animation";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(async () => {
   init(

@@ -14,7 +14,7 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
 import { getActionName } from "./MixamoPlayground.helpers";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const playerSettings = {
   model: {
@@ -175,7 +175,7 @@ const bindings = {
 };
 const { destroyControls, currentActions } = createControls(bindings);
 
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {

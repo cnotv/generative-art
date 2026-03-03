@@ -1,3 +1,4 @@
+import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export interface SceneElement {
@@ -12,11 +13,11 @@ export interface DebugSceneHandlers {
   onRemove: (name: string) => void;
 }
 
-const sceneElements = ref<SceneElement[]>([]);
-const sceneGroups = ref<Record<string, string>>({});
-const handlers = ref<DebugSceneHandlers | null>(null);
+export const useDebugSceneStore = defineStore('debugScene', () => {
+  const sceneElements = ref<SceneElement[]>([]);
+  const sceneGroups = ref<Record<string, string>>({});
+  const handlers = ref<DebugSceneHandlers | null>(null);
 
-export const useDebugScene = () => {
   const setSceneElements = (
     elements: SceneElement[],
     newHandlers: DebugSceneHandlers,
@@ -67,4 +68,4 @@ export const useDebugScene = () => {
     handleToggleVisibility,
     handleRemove,
   };
-};
+});

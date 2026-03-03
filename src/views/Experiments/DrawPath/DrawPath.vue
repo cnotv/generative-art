@@ -5,15 +5,14 @@ import * as THREE from "three";
 import { getTools, getBall, getModel, type ComplexModel } from "@webgamekit/threejs";
 import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import type { Waypoint, PathFollowState } from "@webgamekit/logic";
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { useDebugScene } from "@/composables/useDebugScene";
-import { useElementProperties } from "@/composables/useElementProperties";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useDebugSceneStore } from "@/stores/debugScene";
+import { useElementPropertiesStore } from "@/stores/elementProperties";
 
 import {
   sceneSetupConfig,
   configControls,
-  sceneControls,
   defaultConfigValues,
   defaultSceneValues,
   MESH_FOLLOWER_COLOR,
@@ -57,9 +56,9 @@ import {
 import { getEasingSpeedMultiplier } from "./helpers/easing";
 
 const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
-const { registerElementProperties, clearAllElementProperties } = useElementProperties();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const { registerElementProperties, clearAllElementProperties } = useElementPropertiesStore();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const reactiveConfig = createReactiveConfig(defaultConfigValues);
@@ -608,9 +607,6 @@ onMounted(async () => {
     route.name as string,
     reactiveConfig,
     configControls,
-    sceneConfig,
-    sceneControls,
-    undefined,
     undefined,
     { clearPath }
   );

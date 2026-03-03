@@ -1,14 +1,15 @@
+import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-interface ViewPanelsConfig {
+export interface ViewPanelsConfig {
   showConfig: boolean;
 }
 
-const viewPanels = ref<ViewPanelsConfig>({
-  showConfig: false,
-});
+export const useViewPanelsStore = defineStore('viewPanels', () => {
+  const viewPanels = ref<ViewPanelsConfig>({
+    showConfig: false,
+  });
 
-export const useViewPanels = () => {
   const setViewPanels = (config: Partial<ViewPanelsConfig>) => {
     viewPanels.value = {
       showConfig: config.showConfig ?? false,
@@ -21,9 +22,5 @@ export const useViewPanels = () => {
     };
   };
 
-  return {
-    viewPanels,
-    setViewPanels,
-    clearViewPanels,
-  };
-};
+  return { viewPanels, setViewPanels, clearViewPanels };
+});

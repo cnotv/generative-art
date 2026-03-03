@@ -16,16 +16,16 @@ import {
   registerViewConfig,
   unregisterViewConfig,
   createReactiveConfig,
-} from "@/composables/useViewConfig";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { useDebugScene } from "@/composables/useDebugScene";
+} from "@/stores/viewConfig";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useDebugSceneStore } from "@/stores/debugScene";
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 // Create reactive config for the panel
 const reactiveConfig = createReactiveConfig({
@@ -87,7 +87,7 @@ onMounted(() => {
   });
 
   // Register config with the config panel (onChange callback is auto-debounced)
-  registerViewConfig(route.name as string, reactiveConfig, configSchema, undefined, undefined, reinitScene);
+  registerViewConfig(route.name as string, reactiveConfig, configSchema, reinitScene);
   window.addEventListener("resize", reinitScene);
 
   init(

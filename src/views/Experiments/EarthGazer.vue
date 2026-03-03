@@ -9,12 +9,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import moonTextureAsset from "@/assets/images/textures/moon.jpg";
 import earthDay from "@/assets/images/textures/earth_day.jpg";
 import earthNight from "@/assets/images/textures/earth_night.jpg";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onUnmounted(() => {
   clearSceneElements();

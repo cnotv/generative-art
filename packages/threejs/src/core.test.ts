@@ -57,7 +57,8 @@ describe('resolveSetupConfig', () => {
     ] as const)('overrides ground.%s while keeping other SCENE_DEFAULTS', (field, partial) => {
       const result = resolveSetupConfig({ ground: partial });
       const ground = result.ground as Record<string, unknown>;
-      expect(ground[field]).toEqual(partial[field]);
+      const expected = (partial as unknown as Record<string, unknown>)[field];
+      expect(ground[field]).toEqual(expected);
     });
 
     it('preserves SCENE_DEFAULTS.ground.color when only size is overridden', () => {
@@ -84,7 +85,8 @@ describe('resolveSetupConfig', () => {
     ] as const)('overrides sky.%s while keeping other SCENE_DEFAULTS', (field, partial) => {
       const result = resolveSetupConfig({ sky: partial });
       const sky = result.sky as Record<string, unknown>;
-      expect(sky[field]).toEqual(partial[field]);
+      const expected = (partial as unknown as Record<string, unknown>)[field];
+      expect(sky[field]).toEqual(expected);
     });
 
     it('preserves SCENE_DEFAULTS.sky.color when only size is overridden', () => {

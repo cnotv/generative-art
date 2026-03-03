@@ -7,7 +7,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
-import { useDebugScene } from '@/composables/useDebugScene';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 import { getTools } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
@@ -15,7 +15,7 @@ import { createTimelineManager } from "@webgamekit/animation";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugScene();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const config = {
   directional: {

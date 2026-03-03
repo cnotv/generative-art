@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Sheet } from '@/components/ui/sheet';
-import { usePanels } from '@/composables/usePanels';
-import type { PanelType } from '@/composables/usePanels';
+import { usePanelsStore } from '@/stores/panels';
+import type { PanelType } from '@/stores/panels';
 
 interface Props {
   panelType: PanelType;
@@ -13,13 +13,13 @@ const props = withDefaults(defineProps<Props>(), {
   side: 'right',
 });
 
-const { activePanels, closePanel } = usePanels();
+const panelsStore = usePanelsStore();
 
-const isOpen = computed(() => activePanels.value.has(props.panelType));
+const isOpen = computed(() => panelsStore.activePanels.has(props.panelType));
 
 const handleOpenChange = (open: boolean) => {
   if (!open) {
-    closePanel(props.panelType);
+    panelsStore.closePanel(props.panelType);
   }
 };
 </script>
