@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
@@ -8,6 +8,8 @@ import ElementsPanel from './ElementsPanel.vue';
 import { useDebugSceneStore } from '@/stores/debugScene';
 import { storeToRefs } from 'pinia';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
+import { useTextureGroupsStore } from '@/stores/textureGroups';
+import { usePanelsStore } from '@/stores/panels';
 
 const EXPECTED_ELEMENT_NAMES = [
   'Camera',
@@ -123,6 +125,24 @@ const FauxPage = defineComponent({
   },
 });
 
+const getSheetContent = () => document.body.querySelector('.sheet-content');
+
+// Shared setup helpers
+const buildRouter = async () => {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', component: { template: '<div />' } }],
+  });
+  await router.push('/');
+  await router.isReady();
+  return router;
+};
+
+const openElementsPanel = () => {
+  const panelsStore = usePanelsStore();
+  panelsStore.activePanels = new Set(['elements']);
+};
+
 describe('ElementsPanel - E2E browser test', () => {
   let wrapper: VueWrapper;
   let leftPanelsContainer: HTMLDivElement;
@@ -135,13 +155,7 @@ describe('ElementsPanel - E2E browser test', () => {
     const pinia = createPinia();
     setActivePinia(pinia);
 
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [{ path: '/', component: { template: '<div />' } }],
-    });
-
-    await router.push('/?elements=true');
-    await router.isReady();
+    const router = await buildRouter();
 
     const TestWrapper = defineComponent({
       setup: () => () => h('div', [h(FauxPage), h(ElementsPanel)]),
@@ -152,6 +166,7 @@ describe('ElementsPanel - E2E browser test', () => {
       attachTo: document.body,
     });
 
+    openElementsPanel();
     await nextTick();
     await new Promise<void>(r => setTimeout(r, 100));
   });
@@ -162,7 +177,7 @@ describe('ElementsPanel - E2E browser test', () => {
   });
 
   it('shows all expected scene elements when panel is open', () => {
-    const panelContent = document.querySelector('#left-panels .sheet-content');
+    const panelContent = getSheetContent();
     expect(panelContent).not.toBeNull();
 
     const text = panelContent!.textContent ?? '';
@@ -174,7 +189,7 @@ describe('ElementsPanel - E2E browser test', () => {
   it.each(
     EXPECTED_ELEMENT_NAMES.map(name => [name] as [ExpectedElementName])
   )('clicking "%s" expands its properties section', async (elementName) => {
-    const panelContent = document.querySelector('#left-panels .sheet-content');
+    const panelContent = getSheetContent();
     expect(panelContent).not.toBeNull();
 
     const headers = [...panelContent!.querySelectorAll('.elements-panel__item-header')];
@@ -202,5 +217,192 @@ describe('ElementsPanel - E2E browser test', () => {
     activeProperties.value!.updateValue('color', '#ff0000');
 
     expect(activeProperties.value!.getValue('color')).toBe('#ff0000');
+  });
+});
+
+// Shared setup for reactivity tests (no FauxPage — stores start empty)
+const setupEmptyPanel = async () => {
+  const leftPanelsContainer = document.createElement('div');
+  leftPanelsContainer.id = 'left-panels';
+  document.body.appendChild(leftPanelsContainer);
+
+  const pinia = createPinia();
+  setActivePinia(pinia);
+
+  const router = await buildRouter();
+
+  const wrapper = mount(ElementsPanel, {
+    global: { plugins: [pinia, router] },
+    attachTo: document.body,
+  });
+
+  openElementsPanel();
+  await nextTick();
+  await new Promise<void>(r => setTimeout(r, 100));
+
+  return { wrapper, leftPanelsContainer };
+};
+
+describe('ElementsPanel - scene elements reactivity', () => {
+  let wrapper: VueWrapper;
+  let leftPanelsContainer: HTMLDivElement;
+
+  beforeEach(async () => {
+    ({ wrapper, leftPanelsContainer } = await setupEmptyPanel());
+  });
+
+  afterEach(() => {
+    wrapper.unmount();
+    document.body.removeChild(leftPanelsContainer);
+  });
+
+  it('shows "No scene elements" when stores are empty', () => {
+    const panelContent = getSheetContent();
+    expect(panelContent).not.toBeNull();
+    expect(panelContent!.textContent).toContain('No scene elements');
+  });
+
+  it('panel updates reactively when sceneElements are added', async () => {
+    const debugStore = useDebugSceneStore();
+    const panelContent = getSheetContent();
+
+    expect(panelContent!.textContent).toContain('No scene elements');
+
+    debugStore.registerSceneElements(
+      { type: 'PerspectiveCamera' },
+      [{ name: 'ReactiveBox', type: 'Mesh' }]
+    );
+    await nextTick();
+
+    expect(panelContent!.textContent).toContain('ReactiveBox');
+    expect(panelContent!.textContent).not.toContain('No scene elements');
+  });
+
+  it('panel removes element from list when clearSceneElements is called', async () => {
+    const debugStore = useDebugSceneStore();
+    const panelContent = getSheetContent();
+
+    debugStore.registerSceneElements(
+      { type: 'PerspectiveCamera' },
+      [{ name: 'TemporaryMesh', type: 'Mesh' }]
+    );
+    await nextTick();
+    expect(panelContent!.textContent).toContain('TemporaryMesh');
+
+    debugStore.clearSceneElements();
+    await nextTick();
+
+    expect(panelContent!.textContent).toContain('No scene elements');
+  });
+
+  it('shows texture group header when elements with groupId are registered', async () => {
+    const debugStore = useDebugSceneStore();
+    const textureStore = useTextureGroupsStore();
+    const panelContent = getSheetContent();
+
+    textureStore.groups = [{ id: 'group-abc', name: 'My Texture Group', textures: [] }];
+    debugStore.setSceneElements(
+      [{ name: 'cube-1', type: 'Mesh', groupId: 'group-abc', hidden: false }],
+      { onToggleVisibility: vi.fn(), onRemove: vi.fn() },
+      { 'group-abc': 'My Texture Group' }
+    );
+    await nextTick();
+
+    expect(panelContent!.textContent).toContain('My Texture Group');
+  });
+
+  it('texture group disappears from panel when cleared from store', async () => {
+    const debugStore = useDebugSceneStore();
+    const textureStore = useTextureGroupsStore();
+    const panelContent = getSheetContent();
+
+    textureStore.groups = [{ id: 'group-xyz', name: 'Removable Group', textures: [] }];
+    debugStore.setSceneElements(
+      [{ name: 'mesh-1', type: 'Mesh', groupId: 'group-xyz', hidden: false }],
+      { onToggleVisibility: vi.fn(), onRemove: vi.fn() },
+      { 'group-xyz': 'Removable Group' }
+    );
+    await nextTick();
+    expect(panelContent!.textContent).toContain('Removable Group');
+
+    textureStore.groups = [];
+    debugStore.clearSceneElements();
+    await nextTick();
+
+    expect(panelContent!.textContent).toContain('No scene elements');
+  });
+});
+
+describe('ElementsPanel - texture upload handler', () => {
+  let wrapper: VueWrapper;
+  let leftPanelsContainer: HTMLDivElement;
+
+  beforeEach(async () => {
+    ({ wrapper, leftPanelsContainer } = await setupEmptyPanel());
+  });
+
+  afterEach(() => {
+    wrapper.unmount();
+    document.body.removeChild(leftPanelsContainer);
+    vi.restoreAllMocks();
+  });
+
+  it('clicking Add Texture Area button creates a file input and clicks it', async () => {
+    const mockInput = {
+      type: '',
+      accept: '',
+      onchange: null as ((e: Event) => void) | null,
+      click: vi.fn(),
+    };
+    const spy = vi.spyOn(document, 'createElement').mockImplementationOnce(() => mockInput as unknown as HTMLElement);
+
+    const panelContent = getSheetContent();
+    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])]
+      .find(b => b.getAttribute('title') === 'Add Texture Area');
+    expect(textureButton).toBeDefined();
+
+    textureButton!.click();
+    await nextTick();
+
+    expect(spy).toHaveBeenCalledWith('input');
+    expect(mockInput.type).toBe('file');
+    expect(mockInput.accept).toBe('image/*');
+    expect(mockInput.click).toHaveBeenCalled();
+  });
+
+  it('clicking Add Texture Area and selecting a file calls onAddNewGroup handler', async () => {
+    const textureStore = useTextureGroupsStore();
+    const mockOnAddNewGroup = vi.fn();
+    textureStore.registerHandlers({
+      onAddNewGroup: mockOnAddNewGroup,
+      onAddElement: vi.fn(),
+      onSelectGroup: vi.fn(),
+      onRemoveGroup: vi.fn(),
+      onRemoveTexture: vi.fn(),
+      onToggleVisibility: vi.fn(),
+      onToggleWireframe: vi.fn(),
+      onAddTextureToGroup: vi.fn(),
+      onManualUpdate: vi.fn(),
+    });
+
+    let capturedOnChange: ((e: Event) => void) | null = null;
+    const mockInput = {
+      type: '',
+      accept: '',
+      set onchange(handler: (e: Event) => void) { capturedOnChange = handler; },
+      click: vi.fn(),
+    };
+    vi.spyOn(document, 'createElement').mockImplementationOnce(() => mockInput as unknown as HTMLElement);
+
+    const panelContent = getSheetContent();
+    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])]
+      .find(b => b.getAttribute('title') === 'Add Texture Area');
+    textureButton!.click();
+    await nextTick();
+
+    expect(capturedOnChange).not.toBeNull();
+    capturedOnChange!(new Event('change'));
+
+    expect(mockOnAddNewGroup).toHaveBeenCalledOnce();
   });
 });
