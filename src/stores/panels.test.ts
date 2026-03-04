@@ -24,13 +24,13 @@ vi.mock('vue-router', () => ({
 // Import after mocking
 import { usePanelsStore } from './panels';
 
-// All panel keys synced to URL; closed panels use 'false'
+// Closed panels are omitted from URL (undefined removes the param)
 const allPanelsClosed = {
-  navigation: 'false',
-  config: 'false',
-  scene: 'false',
-  debug: 'false',
-  elements: 'false',
+  navigation: undefined,
+  config: undefined,
+  scene: undefined,
+  debug: undefined,
+  elements: undefined,
 };
 
 describe('usePanelsStore', () => {
@@ -285,7 +285,7 @@ describe('usePanelsStore', () => {
       expect(store.isConfigOpen).toBe(true);
       expect(mockPush).toHaveBeenCalledWith({
         path: '/test',
-        query: { elements: 'false', ...allPanelsClosed, config: 'true' },
+        query: { ...allPanelsClosed, config: 'true' },
       });
     });
 
