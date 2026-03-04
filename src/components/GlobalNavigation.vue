@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Menu, Settings, Layers, Bug, Box, X } from 'lucide-vue-next';
+import { Menu, Settings, Bug, Box, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { usePanelsStore } from '@/stores/panels';
-import { useViewPanelsStore } from '@/stores/viewPanels';
 import type { PanelType } from '@/stores/panels';
 
 interface PanelButton {
@@ -13,7 +12,6 @@ interface PanelButton {
 }
 
 const panelsStore = usePanelsStore();
-const viewPanelsStore = useViewPanelsStore();
 
 const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0);
 
@@ -23,18 +21,11 @@ const navigationButton = computed<PanelButton>(() => ({
   label: 'Navigation',
 }));
 
-const panelButtons = computed<PanelButton[]>(() => {
-  const configButton = viewPanelsStore.viewPanels.showConfig
-    ? [{ type: 'config' as PanelType, icon: Settings, label: 'Config' }]
-    : [];
-
-  return [
-    ...configButton,
-    { type: 'elements', icon: Box, label: 'Elements' },
-    { type: 'scene', icon: Layers, label: 'Scene' },
-    { type: 'debug', icon: Bug, label: 'Debug' },
-  ];
-});
+const panelButtons = computed<PanelButton[]>(() => [
+  { type: 'config', icon: Settings, label: 'Config' },
+  { type: 'elements', icon: Box, label: 'Elements' },
+  { type: 'debug', icon: Bug, label: 'Debug' },
+]);
 
 const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType);
 

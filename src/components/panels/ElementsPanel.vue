@@ -61,12 +61,16 @@ const cameraConfigStore = useCameraConfigStore();
 const { activeSlot } = storeToRefs(cameraConfigStore);
 const { applyPresetToActiveSlot } = cameraConfigStore;
 
-// File inputs for texture uploads
-const addGroupInputRef = ref<HTMLInputElement | null>(null);
-const addToGroupInputRefs = ref<Record<string, HTMLInputElement | null>>({});
-
 // Which element/group is currently expanded (single at a time)
 const expandedName = ref<string | null>(null);
+
+const triggerFileUpload = (onchange: (event: Event) => void) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = onchange;
+  input.click();
+};
 
 const handleElementClick = (element: SceneElement) => {
   expandedName.value = expandedName.value === element.name ? null : element.name;
@@ -93,18 +97,14 @@ const handleRemove = (name: string, event: Event) => {
 
 const addElement = (type: 'camera' | 'mesh' | 'textureArea') => {
   if (type === 'textureArea') {
-    addGroupInputRef.value?.click();
+    triggerFileUpload((e) => textureStore.handlers?.onAddNewGroup(e));
   } else {
     textureStore.handlers?.onAddElement(type);
   }
 };
 
-const setAddToGroupRef = (groupId: string, el: unknown) => {
-  addToGroupInputRefs.value[groupId] = el as HTMLInputElement | null;
-};
-
 const handleAddTextureVariant = (groupId: string) => {
-  addToGroupInputRefs.value[groupId]?.click();
+  triggerFileUpload((e) => textureStore.handlers?.onAddTextureToGroup(groupId, e));
 };
 
 // Camera preset logic
@@ -216,15 +216,6 @@ const getElementColor = (element: SceneElement) => {
         <Image class="h-3 w-3 mr-1" />Texture
       </Button>
     </div>
-
-    <!-- Hidden file input for new texture group -->
-    <input
-      ref="addGroupInputRef"
-      type="file"
-      accept="image/*"
-      style="display: none"
-      @change="(e) => textureStore.handlers?.onAddNewGroup(e)"
-    />
 
     <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
 
@@ -398,13 +389,6 @@ const getElementColor = (element: SceneElement) => {
               <button class="elements-panel__variant-add" title="Add variant" @click.stop="handleAddTextureVariant(groupId)">
                 <Plus class="h-4 w-4" />
               </button>
-              <input
-                :ref="(el) => setAddToGroupRef(groupId, el)"
-                type="file"
-                accept="image/*"
-                style="display: none"
-                @change="(e) => textureStore.handlers?.onAddTextureToGroup(groupId, e)"
-              />
             </div>
 
             <!-- Update controls inside the texture area -->

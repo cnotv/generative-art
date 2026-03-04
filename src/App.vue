@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
+import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
 import { usePanelsStore } from "@/stores/panels";
 
@@ -34,7 +34,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
   const { name, query } = router.currentRoute.value;
   const page =
     typeof name === "string"
-      ? generatedRoutes.map((route) => route.name).indexOf(name)
+      ? generatedRoutes.map((r) => r?.name).indexOf(name)
       : 0;
 
   switch (event.key) {
@@ -97,7 +97,6 @@ const handleStopRecording = () => {
   <PanelContainer side="right" />
   <SidebarNav />
   <ConfigPanel />
-  <ScenePanel />
   <DebugPanel />
   <ElementsPanel
     :is-recording="isRecording"
