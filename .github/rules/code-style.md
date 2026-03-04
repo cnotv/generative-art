@@ -57,10 +57,11 @@
 - **Vendor**: Third-party library overrides in `src/assets/styles/vendor.scss`
   - Radix UI, Tailwind, and other external library customizations
   - Keep vendor-specific selectors isolated from application styles
-- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped>` section
+- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped lang="scss">` section
   - Never put component-specific styles in global stylesheets
   - Use CSS variables from `_variables.scss` for theming
   - Keep styles close to the components that use them
+  - **No arbitrary values**: Every hardcoded measurement, size, spacing, opacity, transition, or color used more than once (or likely to need adjustment) MUST be extracted as a named SCSS variable (`$name: value`) at the top of the `<style scoped lang="scss">` block. Group variables by category (Layout, Typography, Sizes, Transitions, Colors — light/dark). This applies to: spacing (`0.375rem`), font sizes, component dimensions (`40px`), transition durations (`150ms`), background colors (`hsl(...)`), opacity values, z-index values, border-radius overrides.
 
 ## Accessibility
 
@@ -102,6 +103,7 @@
   - `documentation/docs/guides/` — How-to guides and tutorials
 - **Run docs locally**: `cd documentation && pnpm start`
 - **Adding new docs**: Create `.md` files in the appropriate `docs/` subfolder with frontmatter:
+
   ```markdown
   ---
   sidebar_position: 1

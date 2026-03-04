@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import GenericPanel from './GenericPanel.vue';
-import SchemaControls from './ConfigControls.vue';
-import RecordingControls from '@/components/RecordingControls.vue';
-import TexturePreview from '@/components/TexturePreview.vue';
-import IconPreview from '@/components/IconPreview.vue';
-import { Button } from '@/components/ui/button';
+import { computed, ref } from "vue";
+import GenericPanel from "./GenericPanel.vue";
+import SchemaControls from "./ConfigControls.vue";
+import RecordingControls from "@/components/RecordingControls.vue";
+import TexturePreview from "@/components/TexturePreview.vue";
+import IconPreview from "@/components/IconPreview.vue";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from '@/components/ui/accordion';
+} from "@/components/ui/accordion";
 import {
   Box,
   Lightbulb,
@@ -25,14 +25,14 @@ import {
   RefreshCw,
   Play,
   Camera,
-} from 'lucide-vue-next';
-import { useDebugSceneStore } from '@/stores/debugScene';
-import { useElementPropertiesStore } from '@/stores/elementProperties';
-import { storeToRefs } from 'pinia';
-import { useTextureGroupsStore } from '@/stores/textureGroups';
-import { useCameraConfigStore } from '@/stores/cameraConfig';
-import { CameraPreset, cameraPresets } from '@webgamekit/threejs';
-import type { SceneElement } from '@/stores/debugScene';
+} from "lucide-vue-next";
+import { useDebugSceneStore } from "@/stores/debugScene";
+import { useElementPropertiesStore } from "@/stores/elementProperties";
+import { storeToRefs } from "pinia";
+import { useTextureGroupsStore } from "@/stores/textureGroups";
+import { useCameraConfigStore } from "@/stores/cameraConfig";
+import { CameraPreset, cameraPresets } from "@webgamekit/threejs";
+import type { SceneElement } from "@/stores/debugScene";
 
 interface Props {
   isRecording?: boolean;
@@ -41,8 +41,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'start', durationMs: number): void;
-  (e: 'stop'): void;
+  (e: "start", durationMs: number): void;
+  (e: "stop"): void;
 }
 
 defineProps<Props>();
@@ -65,9 +65,9 @@ const { applyPresetToActiveSlot } = cameraConfigStore;
 const expandedName = ref<string | null>(null);
 
 const triggerFileUpload = (onchange: (event: Event) => void) => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
   input.onchange = onchange;
   input.click();
 };
@@ -95,8 +95,8 @@ const handleRemove = (name: string, event: Event) => {
   removeElement(name);
 };
 
-const addElement = (type: 'camera' | 'mesh' | 'textureArea') => {
-  if (type === 'textureArea') {
+const addElement = (type: "camera" | "mesh" | "textureArea") => {
+  if (type === "textureArea") {
     triggerFileUpload((e) => textureStore.handlers?.onAddNewGroup(e));
   } else {
     textureStore.handlers?.onAddElement(type);
@@ -110,42 +110,49 @@ const handleAddTextureVariant = (groupId: string) => {
 // Camera preset logic
 const isCameraExpanded = computed(() => {
   if (!expandedName.value) return false;
-  if (activeProperties.value?.type === 'camera') return true;
-  return sceneElements.value.find(e => e.name === expandedName.value)?.type.includes('Camera') ?? false;
+  if (activeProperties.value?.type === "camera") return true;
+  return (
+    sceneElements.value
+      .find((e) => e.name === expandedName.value)
+      ?.type.includes("Camera") ?? false
+  );
 });
 
 const presetLabels: Record<CameraPreset, string> = {
-  [CameraPreset.Perspective]: 'Perspective',
-  [CameraPreset.Fisheye]: 'Fisheye',
-  [CameraPreset.Cinematic]: 'Cinematic',
-  [CameraPreset.Orbit]: 'Orbit',
-  [CameraPreset.Orthographic]: 'Orthographic',
-  [CameraPreset.OrthographicFollowing]: 'Ortho Follow',
-  [CameraPreset.TopDown]: 'Top Down',
+  [CameraPreset.Perspective]: "Perspective",
+  [CameraPreset.Fisheye]: "Fisheye",
+  [CameraPreset.Cinematic]: "Cinematic",
+  [CameraPreset.Orbit]: "Orbit",
+  [CameraPreset.Orthographic]: "Orthographic",
+  [CameraPreset.OrthographicFollowing]: "Ortho Follow",
+  [CameraPreset.TopDown]: "Top Down",
 };
 
-const activePresetType = computed<'perspective' | 'orthographic'>(() =>
-  activeSlot.value ? cameraPresets[activeSlot.value.preset].type : 'perspective'
+const activePresetType = computed<"perspective" | "orthographic">(() =>
+  activeSlot.value ? cameraPresets[activeSlot.value.preset].type : "perspective"
 );
 
 const perspectivePresets = computed(() =>
   (Object.entries(presetLabels) as [CameraPreset, string][]).filter(
-    ([preset]) => cameraPresets[preset].type === 'perspective'
+    ([preset]) => cameraPresets[preset].type === "perspective"
   )
 );
 
 const orthographicPresets = computed(() =>
   (Object.entries(presetLabels) as [CameraPreset, string][]).filter(
-    ([preset]) => cameraPresets[preset].type === 'orthographic'
+    ([preset]) => cameraPresets[preset].type === "orthographic"
   )
 );
 
 const filteredPresets = computed(() =>
-  activePresetType.value === 'perspective' ? perspectivePresets.value : orthographicPresets.value
+  activePresetType.value === "perspective"
+    ? perspectivePresets.value
+    : orthographicPresets.value
 );
 
-const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
-  const presets = type === 'perspective' ? perspectivePresets.value : orthographicPresets.value;
+const handleTypeToggle = (type: "perspective" | "orthographic") => {
+  const presets =
+    type === "perspective" ? perspectivePresets.value : orthographicPresets.value;
   if (presets.length > 0) applyPresetToActiveSlot(presets[0][0]);
 };
 
@@ -154,7 +161,7 @@ const grouped = computed(() => {
   const ungrouped: SceneElement[] = [];
   const meshGroups = new Map<string, SceneElement[]>();
 
-  sceneElements.value.forEach(el => {
+  sceneElements.value.forEach((el) => {
     if (el.groupId !== undefined) {
       const existing = meshGroups.get(el.groupId) ?? [];
       meshGroups.set(el.groupId, [...existing, el]);
@@ -167,7 +174,7 @@ const grouped = computed(() => {
 });
 
 const getTextureGroup = (groupId: string) =>
-  textureStore.groups.find(g => g.id === groupId);
+  textureStore.groups.find((g) => g.id === groupId);
 
 const hasContent = computed(
   () => sceneElements.value.length > 0 || textureStore.groups.length > 0
@@ -180,39 +187,56 @@ const hasExpandedSchema = computed(
 const getElementIcon = (element: SceneElement) => {
   const name = element.name.toLowerCase();
   const type = element.type.toLowerCase();
-  if (name.includes('camera') || type.includes('camera')) return Camera;
-  if (name.includes('light') || type.includes('light')) return Lightbulb;
-  if (name.includes('sky')) return Sun;
-  if (name.includes('ground')) return Mountain;
-  if (type.includes('mesh') || name.includes('wireframe')) return Box;
+  if (name.includes("camera") || type.includes("camera")) return Camera;
+  if (name.includes("light") || type.includes("light")) return Lightbulb;
+  if (name.includes("sky")) return Sun;
+  if (name.includes("ground")) return Mountain;
+  if (type.includes("mesh") || name.includes("wireframe")) return Box;
   return Image;
 };
 
 const getElementColor = (element: SceneElement) => {
   const name = element.name.toLowerCase();
   const type = element.type.toLowerCase();
-  if (name.includes('camera') || type.includes('camera')) return 'text-blue-300';
-  if (name.includes('light') || type.includes('light')) return 'text-yellow-400';
-  if (name.includes('sky')) return 'text-blue-400';
-  if (name.includes('ground')) return 'text-green-600';
-  if (name.includes('wireframe')) return 'text-green-400';
-  return 'text-gray-400';
+  if (name.includes("camera") || type.includes("camera")) return "text-blue-300";
+  if (name.includes("light") || type.includes("light")) return "text-yellow-400";
+  if (name.includes("sky")) return "text-blue-400";
+  if (name.includes("ground")) return "text-green-600";
+  if (name.includes("wireframe")) return "text-green-400";
+  return "text-gray-400";
 };
 </script>
 
 <template>
   <GenericPanel panel-type="elements" side="left">
-
     <!-- Add bar -->
     <div class="elements-panel__add-bar">
       <span class="elements-panel__add-label">Add</span>
-      <Button variant="outline" size="sm" class="elements-panel__add-btn" title="Add Camera" @click="addElement('camera')">
+      <Button
+        variant="outline"
+        size="sm"
+        class="elements-panel__add-btn"
+        title="Add Camera"
+        @click="addElement('camera')"
+      >
         <Camera class="h-3 w-3 mr-1" />Camera
       </Button>
-      <Button variant="outline" size="sm" class="elements-panel__add-btn" title="Add Mesh" @click="addElement('mesh')">
+      <Button
+        variant="outline"
+        size="sm"
+        class="elements-panel__add-btn"
+        title="Add Mesh"
+        @click="addElement('mesh')"
+      >
         <Box class="h-3 w-3 mr-1" />Mesh
       </Button>
-      <Button variant="outline" size="sm" class="elements-panel__add-btn" title="Add Texture Area" @click="addElement('textureArea')">
+      <Button
+        variant="outline"
+        size="sm"
+        class="elements-panel__add-btn"
+        title="Add Texture Area"
+        @click="addElement('textureArea')"
+      >
         <Image class="h-3 w-3 mr-1" />Texture
       </Button>
     </div>
@@ -220,23 +244,34 @@ const getElementColor = (element: SceneElement) => {
     <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
 
     <div v-else class="elements-panel__list">
-
       <!-- Ungrouped scene elements -->
       <div
         v-for="(element, index) in grouped.ungrouped"
         :key="index"
         class="elements-panel__item"
-        :class="{ 'elements-panel__item--expanded': expandedName === element.name, 'opacity-50': element.hidden }"
+        :class="{
+          'elements-panel__item--expanded': expandedName === element.name,
+          'opacity-50': element.hidden,
+        }"
       >
         <div
           class="elements-panel__item-header"
-          :class="{ 'elements-panel__item-header--selected': selectedElementName === element.name }"
+          :class="{
+            'elements-panel__item-header--selected': selectedElementName === element.name,
+          }"
           @click="handleElementClick(element)"
         >
-          <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
+          <IconPreview
+            :icon="getElementIcon(element)"
+            :color="getElementColor(element)"
+          />
           <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-            <span class="text-[11px] font-medium font-mono truncate block">{{ element.name }}</span>
-            <span class="text-[9px] text-muted-foreground truncate block">{{ element.type }}</span>
+            <span class="text-[11px] font-medium font-mono truncate block">{{
+              element.name
+            }}</span>
+            <span class="text-[9px] text-muted-foreground truncate block">{{
+              element.type
+            }}</span>
           </div>
           <div class="flex gap-1 shrink-0">
             <Button
@@ -249,7 +284,13 @@ const getElementColor = (element: SceneElement) => {
               <EyeOff v-if="element.hidden" class="h-3.5 w-3.5" />
               <Eye v-else class="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7" title="Remove element" @click="(e: Event) => handleRemove(element.name, e)">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7"
+              title="Remove element"
+              @click="(e: Event) => handleRemove(element.name, e)"
+            >
               <Trash2 class="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -258,30 +299,43 @@ const getElementColor = (element: SceneElement) => {
         <!-- Inline expanded content -->
         <div v-if="expandedName === element.name" class="elements-panel__item-content">
           <template v-if="isCameraExpanded">
-            <Accordion type="multiple" :default-value="['presets', 'properties', 'recording']">
+            <Accordion
+              type="multiple"
+              :default-value="['presets', 'properties', 'recording']"
+            >
               <AccordionItem value="presets">
                 <AccordionTrigger>Presets</AccordionTrigger>
                 <AccordionContent>
                   <div class="elements-panel__type-toggle">
                     <Button
-                      :variant="activePresetType === 'perspective' ? 'default' : 'outline'"
-                      size="sm" class="w-full text-xs"
+                      :variant="
+                        activePresetType === 'perspective' ? 'default' : 'outline'
+                      "
+                      size="sm"
+                      class="w-full text-xs"
                       @click="handleTypeToggle('perspective')"
-                    >Perspective</Button>
+                      >Perspective</Button
+                    >
                     <Button
-                      :variant="activePresetType === 'orthographic' ? 'default' : 'outline'"
-                      size="sm" class="w-full text-xs"
+                      :variant="
+                        activePresetType === 'orthographic' ? 'default' : 'outline'
+                      "
+                      size="sm"
+                      class="w-full text-xs"
                       @click="handleTypeToggle('orthographic')"
-                    >Orthographic</Button>
+                      >Orthographic</Button
+                    >
                   </div>
                   <div class="elements-panel__preset-grid">
                     <Button
                       v-for="[preset, label] in filteredPresets"
                       :key="preset"
                       :variant="activeSlot?.preset === preset ? 'default' : 'outline'"
-                      size="sm" class="text-xs"
+                      size="sm"
+                      class="text-xs"
                       @click="applyPresetToActiveSlot(preset)"
-                    >{{ label }}</Button>
+                      >{{ label }}</Button
+                    >
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -343,7 +397,8 @@ const getElementColor = (element: SceneElement) => {
           <template v-if="getTextureGroup(groupId)">
             <Button
               :variant="getTextureGroup(groupId)?.hidden ? 'default' : 'ghost'"
-              size="icon" class="h-7 w-7 shrink-0"
+              size="icon"
+              class="h-7 w-7 shrink-0"
               :title="getTextureGroup(groupId)?.hidden ? 'Show group' : 'Hide group'"
               @click.stop="textureStore.handlers?.onToggleVisibility(groupId)"
             >
@@ -352,13 +407,22 @@ const getElementColor = (element: SceneElement) => {
             </Button>
             <Button
               :variant="getTextureGroup(groupId)?.showWireframe ? 'default' : 'ghost'"
-              size="icon" class="h-7 w-7 shrink-0"
-              :title="getTextureGroup(groupId)?.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
+              size="icon"
+              class="h-7 w-7 shrink-0"
+              :title="
+                getTextureGroup(groupId)?.showWireframe
+                  ? 'Hide wireframe'
+                  : 'Show wireframe'
+              "
               @click.stop="textureStore.handlers?.onToggleWireframe(groupId)"
             >
               <Box class="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" title="Delete group"
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 shrink-0"
+              title="Delete group"
               @click.stop="textureStore.handlers?.onRemoveGroup(groupId)"
             >
               <Trash2 class="h-3.5 w-3.5" />
@@ -381,12 +445,18 @@ const getElementColor = (element: SceneElement) => {
                 <button
                   class="elements-panel__variant-remove"
                   title="Remove texture"
-                  @click.stop="textureStore.handlers?.onRemoveTexture(groupId, texture.id)"
+                  @click.stop="
+                    textureStore.handlers?.onRemoveTexture(groupId, texture.id)
+                  "
                 >
                   <Trash2 class="h-2.5 w-2.5" />
                 </button>
               </TexturePreview>
-              <button class="elements-panel__variant-add" title="Add variant" @click.stop="handleAddTextureVariant(groupId)">
+              <button
+                class="elements-panel__variant-add"
+                title="Add variant"
+                @click.stop="handleAddTextureVariant(groupId)"
+              >
                 <Plus class="h-4 w-4" />
               </button>
             </div>
@@ -402,7 +472,12 @@ const getElementColor = (element: SceneElement) => {
               >
                 <RefreshCw class="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Update Now" @click="textureStore.handlers?.onManualUpdate()">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Update Now"
+                @click="textureStore.handlers?.onManualUpdate()"
+              >
                 <Play class="h-4 w-4" />
               </Button>
             </div>
@@ -425,10 +500,17 @@ const getElementColor = (element: SceneElement) => {
                 class="flex items-center gap-2 p-1.5 rounded border border-border bg-muted/30"
                 :class="{ 'opacity-50': child.hidden }"
               >
-                <IconPreview :icon="getElementIcon(child)" :color="getElementColor(child)" />
+                <IconPreview
+                  :icon="getElementIcon(child)"
+                  :color="getElementColor(child)"
+                />
                 <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span class="text-[11px] font-medium font-mono truncate block">{{ child.name }}</span>
-                  <span class="text-[9px] text-muted-foreground truncate block">{{ child.type }}</span>
+                  <span class="text-[11px] font-medium font-mono truncate block">{{
+                    child.name
+                  }}</span>
+                  <span class="text-[9px] text-muted-foreground truncate block">{{
+                    child.type
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -441,55 +523,97 @@ const getElementColor = (element: SceneElement) => {
           </template>
         </div>
       </div>
-
     </div>
   </GenericPanel>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+// ─── Layout ───────────────────────────────────────────────────────────────────
+$gap-xs:  0.25rem;
+$gap-sm:  0.375rem;
+$gap-md:  0.5rem;
+
+// ─── Typography ───────────────────────────────────────────────────────────────
+$font-size-label:  0.6875rem;
+$font-size-empty:  0.875rem;
+$font-size-group:  0.75rem;
+$font-weight-group: 500;
+
+// ─── Component sizes ──────────────────────────────────────────────────────────
+$btn-height:       1.75rem;
+$variant-size:     40px;
+$variant-gap:      6px;
+$variant-radius:   4px;
+$variant-remove-z: 2;
+
+// ─── Transitions ──────────────────────────────────────────────────────────────
+$transition-bg:      background-color 150ms;
+$transition-bg-full: background 0.15s;
+$transition-opacity: opacity 0.15s;
+
+// ─── Opacity ──────────────────────────────────────────────────────────────────
+$opacity-muted: 0.5;
+
+// ─── Colors — light ───────────────────────────────────────────────────────────
+$bg-item:          hsl(0 0% 98%);
+$bg-hover:         hsl(0 0% 94%);
+$bg-selected:      hsl(0 0% 90%);
+$bg-content:       hsl(0 0% 97%);
+$bg-toggle-active: hsl(0 0% 83%);
+$bg-overlay:       hsl(0 0% 0% / 0.6);
+$color-remove:     hsl(0 80% 65%);
+
+// ─── Colors — dark ────────────────────────────────────────────────────────────
+$bg-item-dark:          hsl(0 0% 12%);
+$bg-hover-dark:         hsl(0 0% 18%);
+$bg-selected-dark:      hsl(0 0% 22%);
+$bg-content-dark:       hsl(0 0% 10%);
+$bg-toggle-active-dark: hsl(0 0% 25%);
+
+// ─── Rules ────────────────────────────────────────────────────────────────────
 .elements-panel__add-bar {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding-bottom: 0.5rem;
+  gap: $gap-sm;
+  padding-bottom: $gap-md;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 0.375rem;
+  margin-bottom: $gap-sm;
   flex-wrap: wrap;
 }
 
 .elements-panel__add-label {
-  font-size: 0.6875rem;
+  font-size: $font-size-label;
   color: var(--color-muted-foreground);
   flex-shrink: 0;
 }
 
 .elements-panel__add-btn {
-  height: 1.75rem;
-  padding: 0 0.5rem;
-  font-size: 0.6875rem;
-  gap: 0.25rem;
+  height: $btn-height;
+  padding: 0 $gap-md;
+  font-size: $font-size-label;
+  gap: $gap-xs;
 }
 
 .elements-panel__empty {
-  font-size: 0.875rem;
+  font-size: $font-size-empty;
   color: var(--color-foreground);
-  opacity: 0.5;
+  opacity: $opacity-muted;
   margin: 0;
-  padding: 0.5rem 0;
+  padding: $gap-md 0;
 }
 
 .elements-panel__no-props {
-  font-size: 0.75rem;
+  font-size: $font-size-group;
   color: var(--color-foreground);
-  opacity: 0.5;
-  padding: 0.5rem 0.25rem;
+  opacity: $opacity-muted;
+  padding: $gap-md $gap-xs;
   margin: 0;
 }
 
 .elements-panel__list {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $gap-xs;
 }
 
 .elements-panel__item {
@@ -501,39 +625,39 @@ const getElementColor = (element: SceneElement) => {
 .elements-panel__item-header {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.5rem;
+  gap: $gap-sm;
+  padding: $gap-sm $gap-md;
   cursor: pointer;
-  background: hsl(0 0% 98%);
-  transition: background-color 150ms;
+  background: $bg-item;
+  transition: $transition-bg;
 }
 
 .elements-panel__item-header:hover {
-  background-color: hsl(0 0% 94%);
+  background-color: $bg-hover;
 }
 
 .elements-panel__item-header--selected,
 .elements-panel__item--expanded > .elements-panel__item-header {
-  background-color: hsl(0 0% 90%);
+  background-color: $bg-selected;
 }
 
 .elements-panel__item-content {
   border-top: 1px solid var(--color-border);
-  padding: 0.5rem;
-  background: hsl(0 0% 97%);
+  padding: $gap-md;
+  background: $bg-content;
 }
 
 .elements-panel__type-toggle {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.25rem;
-  margin-bottom: 0.25rem;
+  gap: $gap-xs;
+  margin-bottom: $gap-xs;
 }
 
 .elements-panel__preset-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.25rem;
+  gap: $gap-xs;
 }
 
 .elements-panel__group {
@@ -547,26 +671,26 @@ const getElementColor = (element: SceneElement) => {
 .elements-panel__group-header {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.5rem;
+  gap: $gap-sm;
+  padding: $gap-sm $gap-md;
   background: transparent;
   border: none;
   cursor: pointer;
   width: 100%;
   text-align: left;
   color: var(--color-foreground);
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: background-color 150ms;
+  font-size: $font-size-group;
+  font-weight: $font-weight-group;
+  transition: $transition-bg;
 }
 
 .elements-panel__group-header:hover {
-  background-color: hsl(0 0% 94%);
+  background-color: $bg-hover;
 }
 
 .elements-panel__group-header--selected,
 .elements-panel__group-header--expanded {
-  background-color: hsl(0 0% 90%);
+  background-color: $bg-selected;
 }
 
 .elements-panel__group-label {
@@ -579,32 +703,32 @@ const getElementColor = (element: SceneElement) => {
 
 .elements-panel__group-content {
   border-top: 1px solid var(--color-border);
-  padding: 0.5rem;
-  background: hsl(0 0% 97%);
+  padding: $gap-md;
+  background: $bg-content;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: $gap-md;
 }
 
 .elements-panel__group-children {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $gap-xs;
 }
 
 .elements-panel__variants {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: $variant-gap;
 }
 
 .elements-panel__variant-preview {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  max-width: 40px;
-  max-height: 40px;
+  width: $variant-size;
+  height: $variant-size;
+  min-width: $variant-size;
+  min-height: $variant-size;
+  max-width: $variant-size;
+  max-height: $variant-size;
 }
 
 .elements-panel__variant-remove {
@@ -613,14 +737,14 @@ const getElementColor = (element: SceneElement) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: hsl(0 0% 0% / 0.6);
-  color: hsl(0 80% 65%);
+  background: $bg-overlay;
+  color: $color-remove;
   opacity: 0;
   cursor: pointer;
   border: none;
   padding: 0;
-  z-index: 2;
-  transition: opacity 0.15s;
+  z-index: $variant-remove-z;
+  transition: $transition-opacity;
 }
 
 .elements-panel__variant-preview:hover .elements-panel__variant-remove {
@@ -628,8 +752,8 @@ const getElementColor = (element: SceneElement) => {
 }
 
 .elements-panel__variant-add {
-  width: 40px;
-  height: 40px;
+  width: $variant-size;
+  height: $variant-size;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -637,10 +761,10 @@ const getElementColor = (element: SceneElement) => {
   color: var(--color-muted-foreground);
   cursor: pointer;
   border: 1px dashed var(--color-border);
-  border-radius: 4px;
+  border-radius: $variant-radius;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: $transition-bg-full;
 }
 
 .elements-panel__variant-add:hover {
@@ -649,39 +773,39 @@ const getElementColor = (element: SceneElement) => {
 
 .elements-panel__update-bar {
   display: flex;
-  gap: 0.25rem;
+  gap: $gap-xs;
   align-items: center;
 }
 
 .elements-panel__toggle--active {
-  background-color: hsl(0 0% 83%);
+  background-color: $bg-toggle-active;
   color: var(--color-accent-foreground);
 }
 
 @media (prefers-color-scheme: dark) {
   .elements-panel__item-header {
-    background: hsl(0 0% 12%);
+    background: $bg-item-dark;
   }
 
   .elements-panel__item-header:hover,
   .elements-panel__group-header:hover {
-    background-color: hsl(0 0% 18%);
+    background-color: $bg-hover-dark;
   }
 
   .elements-panel__item-header--selected,
   .elements-panel__item--expanded > .elements-panel__item-header,
   .elements-panel__group-header--selected,
   .elements-panel__group-header--expanded {
-    background-color: hsl(0 0% 22%);
+    background-color: $bg-selected-dark;
   }
 
   .elements-panel__item-content,
   .elements-panel__group-content {
-    background: hsl(0 0% 10%);
+    background: $bg-content-dark;
   }
 
   .elements-panel__toggle--active {
-    background-color: hsl(0 0% 25%);
+    background-color: $bg-toggle-active-dark;
   }
 }
 </style>
