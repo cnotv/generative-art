@@ -127,6 +127,14 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
     );
   };
 
+  const syncActiveSlotOrbitTarget = (orbitTarget: CoordinateTuple) => {
+    if (!activeSlotId.value) return;
+    const slotId = activeSlotId.value;
+    cameraSlots.value = cameraSlots.value.map(s =>
+      s.id === slotId ? { ...s, orbitTarget } : s
+    );
+  };
+
   return {
     cameraSlots,
     activeSlotId,
@@ -141,5 +149,6 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
     applyPresetToActiveSlot,
     updateActiveSlotField,
     syncActiveSlotPosition,
+    syncActiveSlotOrbitTarget,
   };
 });

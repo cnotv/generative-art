@@ -267,6 +267,43 @@ describe('useCameraConfigStore', () => {
     });
   });
 
+  describe('syncActiveSlotPosition', () => {
+    it('updates position in store without calling onUpdate', async () => {
+      const store = useCameraConfigStore();
+      const handlers = { ...makeHandlers(), onUpdate: vi.fn() };
+
+      store.registerCameraHandlers([{ ...makeSlot('cam-1', 'Camera 1'), orbitTarget: [0, 0, 0] as CoordinateTuple }], handlers);
+      store.syncActiveSlotPosition([10, 20, 30]);
+      await nextTick();
+
+      expect(store.activeSlot?.position).toEqual([10, 20, 30]);
+      expect(handlers.onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('syncActiveSlotOrbitTarget', () => {
+    it('updates orbitTarget in store without calling onUpdate', async () => {
+      const store = useCameraConfigStore();
+      const handlers = { ...makeHandlers(), onUpdate: vi.fn() };
+
+      store.registerCameraHandlers([{ ...makeSlot('cam-1', 'Camera 1'), orbitTarget: [0, 0, 0] as CoordinateTuple }], handlers);
+      store.syncActiveSlotOrbitTarget([5, 10, 15]);
+      await nextTick();
+
+      expect(store.activeSlot?.orbitTarget).toEqual([5, 10, 15]);
+      expect(handlers.onUpdate).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when activeSlotId is null', async () => {
+      const store = useCameraConfigStore();
+      store.registerCameraHandlers([], makeHandlers());
+      store.syncActiveSlotOrbitTarget([1, 2, 3]);
+      await nextTick();
+
+      expect(store.cameraSlots).toHaveLength(0);
+    });
+  });
+
   describe('activeSlot computed', () => {
     it('returns the slot matching activeSlotId', async () => {
       const store = useCameraConfigStore();

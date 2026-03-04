@@ -31,7 +31,7 @@ const { setViewPanels, clearViewPanels } = useViewPanelsStore();
 const { setSceneElements, clearSceneElements } = useDebugSceneStore();
 const cameraConfigStore = useCameraConfigStore();
 const { cameraSlots, activeSlot } = storeToRefs(cameraConfigStore);
-const { registerCameraHandlers, unregisterCameraHandlers, updateActiveSlotField, syncActiveSlotPosition } = cameraConfigStore;
+const { registerCameraHandlers, unregisterCameraHandlers, updateActiveSlotField, syncActiveSlotPosition, syncActiveSlotOrbitTarget } = cameraConfigStore;
 const elementPropertiesStore = useElementPropertiesStore();
 const { selectedElementName } = storeToRefs(elementPropertiesStore);
 const { registerElementProperties, unregisterElementProperties, clearAllElementProperties, openElementProperties } = elementPropertiesStore;
@@ -779,6 +779,11 @@ const initScene = async () => {
         currentCamera.position.x,
         currentCamera.position.y,
         currentCamera.position.z,
+      ] as CoordinateTuple);
+      syncActiveSlotOrbitTarget([
+        orbitControls.target.x,
+        orbitControls.target.y,
+        orbitControls.target.z,
       ] as CoordinateTuple);
     });
   }
