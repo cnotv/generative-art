@@ -309,7 +309,7 @@ const init = async (): Promise<void> => {
             );
             cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
           } else {
-            updateAnimation(animationData);
+            updateAnimation({ ...animationData, speed: 5 });
           }
         },
       });

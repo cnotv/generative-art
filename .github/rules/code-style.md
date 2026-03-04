@@ -8,6 +8,7 @@
 - **Three.js debug helpers**: Use AxesHelper, ArrowHelper, BoxHelper, or Rapier debug renderer to visualize 3D issues
 - **Validate assumptions**: For movement, collision, or animation issues, request screenshots, video, or specific numeric values (positions, distances, angles)
 - **Iterative approach**: Complex 3D behaviors often need iterative refinement — propose small testable changes rather than large rewrites
+- **Persistent bugs → add logs**: When the user reports that a bug is still present after a fix attempt, add `console.log` statements (or `debugger` if in a browser context) at the relevant code paths to surface the actual runtime values before attempting another fix
 
 ## Comments
 
@@ -57,11 +58,12 @@
 - **Vendor**: Third-party library overrides in `src/assets/styles/vendor.scss`
   - Radix UI, Tailwind, and other external library customizations
   - Keep vendor-specific selectors isolated from application styles
-- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped lang="scss">` section
+- **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped>` section
   - Never put component-specific styles in global stylesheets
-  - Use CSS variables from `_variables.scss` for theming
+  - Use CSS custom properties (`var(--...)`) from `src/assets/styles/_variables.scss` for all values — never hardcode fonts, spacing, colors, z-index, border-radius, or border widths directly in a component's `<style>` block
   - Keep styles close to the components that use them
-  - **No arbitrary values**: Every hardcoded measurement, size, spacing, opacity, transition, or color used more than once (or likely to need adjustment) MUST be extracted as a named SCSS variable (`$name: value`) at the top of the `<style scoped lang="scss">` block. Group variables by category (Layout, Typography, Sizes, Transitions, Colors — light/dark). This applies to: spacing (`0.375rem`), font sizes, component dimensions (`40px`), transition durations (`150ms`), background colors (`hsl(...)`), opacity values, z-index values, border-radius overrides.
+  - **No arbitrary values**: Never define fonts, spacing, colors, z-index, radiuses, or borders directly inside a component style block. Always use `var(--...)` referencing a token defined in `_variables.scss`. If a needed token is missing, add it to `_variables.scss` first (including dark-theme overrides in `.dark` / `@media (prefers-color-scheme: dark)`).
+  - **No SCSS variables in components**: Do not use `$name: value` SCSS variables inside `<style scoped>`. CSS custom properties are the single source of truth for design tokens.
 
 ## Accessibility
 
@@ -72,7 +74,7 @@
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
-- **Light and dark theme**: Always provide both light and dark mode colors. Use CSS variables from `_variables.scss` where possible, and add `@media (prefers-color-scheme: dark)` overrides for any hardcoded color values
+- **Light and dark theme**: Always provide both light and dark mode colors. Define both in `src/assets/styles/_variables.scss` under `.dark / [data-theme="dark"]` and `@media (prefers-color-scheme: dark)`. Never add dark-mode overrides inside a component's `<style scoped>` — use CSS custom properties so theming is centralized.
 
 ## DRY and KISS Principles
 

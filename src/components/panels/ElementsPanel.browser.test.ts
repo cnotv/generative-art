@@ -192,7 +192,7 @@ describe('ElementsPanel - E2E browser test', () => {
     const panelContent = getSheetContent();
     expect(panelContent).not.toBeNull();
 
-    const headers = [...panelContent!.querySelectorAll('.elements-panel__item-header')];
+    const headers = [...panelContent!.querySelectorAll('.element-item')];
     const header = headers.find(h => h.textContent?.includes(elementName));
     expect(header).toBeDefined();
 
@@ -404,5 +404,57 @@ describe('ElementsPanel - texture upload handler', () => {
     capturedOnChange!(new Event('change'));
 
     expect(mockOnAddNewGroup).toHaveBeenCalledOnce();
+  });
+
+  it('after file selection, texture group appears in panel when store is updated by handler', async () => {
+    const textureStore = useTextureGroupsStore();
+    const debugStore = useDebugSceneStore();
+    const panelContent = getSheetContent();
+
+    const GROUP_ID = 'uploaded-group';
+    const GROUP_NAME = 'Uploaded Texture';
+
+    textureStore.registerHandlers({
+      onAddNewGroup: vi.fn().mockImplementation(() => {
+        textureStore.groups = [
+          { id: GROUP_ID, name: GROUP_NAME, textures: [{ id: 't1', name: 'tex.png', filename: 'tex.png', url: 'blob:fake' }] },
+        ];
+        debugStore.setSceneElements(
+          [{ name: 'cube-1', type: 'Mesh', groupId: GROUP_ID, hidden: false }],
+          { onToggleVisibility: vi.fn(), onRemove: vi.fn() },
+          { [GROUP_ID]: GROUP_NAME }
+        );
+      }),
+      onAddElement: vi.fn(),
+      onSelectGroup: vi.fn(),
+      onRemoveGroup: vi.fn(),
+      onRemoveTexture: vi.fn(),
+      onToggleVisibility: vi.fn(),
+      onToggleWireframe: vi.fn(),
+      onAddTextureToGroup: vi.fn(),
+      onManualUpdate: vi.fn(),
+    });
+
+    expect(panelContent!.textContent).toContain('No scene elements');
+
+    let capturedOnChange: ((e: Event) => void) | null = null;
+    const mockInput = {
+      type: '',
+      accept: '',
+      set onchange(handler: (e: Event) => void) { capturedOnChange = handler; },
+      click: vi.fn(),
+    };
+    vi.spyOn(document, 'createElement').mockImplementationOnce(() => mockInput as unknown as HTMLElement);
+
+    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])]
+      .find(b => b.getAttribute('title') === 'Add Texture Area');
+    textureButton!.click();
+    await nextTick();
+
+    capturedOnChange!(new Event('change'));
+    await nextTick();
+
+    expect(panelContent!.textContent).toContain(GROUP_NAME);
+    expect(panelContent!.textContent).not.toContain('No scene elements');
   });
 });

@@ -14,10 +14,7 @@ panelsStore.initRouteSync();
 watch(
   () => panelsStore.activePanels.size > 0,
   (hasOpen) => {
-    document.documentElement.style.setProperty(
-      '--canvas-top',
-      hasOpen ? 'var(--nav-height)' : '0px'
-    );
+    document.documentElement.classList.toggle('panels-open', hasOpen);
   },
   { immediate: true }
 );
@@ -110,7 +107,14 @@ canvas {
   width: 100%;
   height: 100%;
   position: absolute;
-  top: var(--canvas-top, 0px);
+  top: 0;
   left: 0;
+  transition: top 0.2s;
+}
+
+html.panels-open canvas,
+html:has(.global-navigation:hover) canvas,
+html:has(.global-navigation:focus-within) canvas {
+  top: var(--nav-height);
 }
 </style>

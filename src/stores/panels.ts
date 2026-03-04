@@ -14,6 +14,11 @@ export const usePanelsStore = defineStore('panels', () => {
   const activePanels = ref<Set<PanelType>>(new Set());
   const syncInitialized = ref(false);
 
+  // Captured once from initRouteSync (called in App.vue setup context).
+  // useRouter/useRoute cannot be called outside component setup, so we store refs here.
+  let _router: ReturnType<typeof useRouter> | null = null;
+  let _route: ReturnType<typeof useRoute> | null = null;
+
   const isNavigationOpen = computed(() => activePanels.value.has('navigation'));
   const isConfigOpen = computed(() => activePanels.value.has('config'));
   const isDebugOpen = computed(() => activePanels.value.has('debug'));
@@ -39,25 +44,26 @@ export const usePanelsStore = defineStore('panels', () => {
   };
 
   const syncToQuery = () => {
-    const router = useRouter();
-    const route = useRoute();
-    const { path, query } = route;
-    const panelQuery = ALL_PANEL_TYPES.reduce<Record<string, string>>(
-      (accumulator, panel) => ({ ...accumulator, [panel]: activePanels.value.has(panel) ? 'true' : 'false' }),
+    if (!_router || !_route) return;
+    const { path, query } = _route;
+    const panelQuery = ALL_PANEL_TYPES.reduce<Record<string, string | undefined>>(
+      (accumulator, panel) => ({ ...accumulator, [panel]: activePanels.value.has(panel) ? 'true' : undefined }),
       {}
     );
-    router.push({ path, query: { ...query, ...panelQuery } });
+    _router.push({ path, query: { ...query, ...panelQuery } });
   };
 
   // Call once from App.vue to sync store state with URL query params.
-  // Uses useRoute() which requires a component context — must be called from a component setup.
+  // Uses useRoute/useRouter which require a component context — must be called from a component setup.
   const initRouteSync = () => {
     if (syncInitialized.value) return;
     syncInitialized.value = true;
 
-    const route = useRoute();
+    _router = useRouter();
+    _route = useRoute();
+
     const initialOpen = ALL_PANEL_TYPES.filter(
-      panel => route.query[panel] === 'true' && !activePanels.value.has(panel)
+      panel => _route!.query[panel] === 'true' && !activePanels.value.has(panel)
     );
     if (initialOpen.length > 0) {
       activePanels.value = new Set([...activePanels.value, ...initialOpen]);
@@ -65,7 +71,7 @@ export const usePanelsStore = defineStore('panels', () => {
 
     ALL_PANEL_TYPES.forEach(panel => {
       watch(
-        () => route.query[panel],
+        () => _route!.query[panel],
         (value) => {
           const isOpen = activePanels.value.has(panel);
           if (value === 'true' && !isOpen) {
@@ -103,6 +109,8 @@ export const usePanelsStore = defineStore('panels', () => {
   const resetState = () => {
     activePanels.value = new Set();
     syncInitialized.value = false;
+    _router = null;
+    _route = null;
   };
 
   return {
