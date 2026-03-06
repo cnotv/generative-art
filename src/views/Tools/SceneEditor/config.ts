@@ -126,7 +126,7 @@ export const configControls = {
       label: 'Area Size',
       component: 'CoordinateInput',
       min: { x: 1, y: 0, z: 0 },
-      max: { x: 2000, y: 200, z: 2000 },
+      max: { x: 1000, y: 200, z: 1000 },
       step: { x: 1, y: 1, z: 1 },
     },
   },
@@ -135,14 +135,14 @@ export const configControls = {
       label: 'Base Size',
       component: 'CoordinateInput',
       min: { x: 1, y: 1, z: 0 },
-      max: { x: 500, y: 500, z: 10 },
+      max: { x: 200, y: 200, z: 10 },
       step: { x: 1, y: 1, z: 0.1 },
     },
     sizeVariation: {
       label: 'Size Variation',
       component: 'CoordinateInput',
       min: { x: 0, y: 0, z: 0 },
-      max: { x: 200, y: 200, z: 10 },
+      max: { x: 50, y: 50, z: 50 },
       step: { x: 1, y: 1, z: 0.1 },
     },
     rotationVariation: {
@@ -154,7 +154,7 @@ export const configControls = {
     },
   },
   instances: {
-    density: { min: 0, max: 1000, step: 1 },
+    density: { min: 0, max: 200, step: 1 },
     pattern: {
       label: 'Distribution Pattern',
       options: ['random', 'grid', 'grid-jitter'],

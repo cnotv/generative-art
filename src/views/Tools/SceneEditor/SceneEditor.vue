@@ -63,14 +63,17 @@ const updateSceneElements = (scene: THREE.Scene) => {
   setSceneElements(
     [
       ...cameraElements,
-      ...scene.children.map((child: any) => ({
-        name: child.name || "(unnamed)",
-        type: child.type,
-        hidden: hiddenElements.value.has(child.name),
-        groupId: textureGroups.value.find(g =>
+      ...scene.children.map((child: any) => {
+        const groupId = textureGroups.value.find(g =>
           child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
-        )?.id,
-      })),
+        )?.id;
+        return {
+          name: child.name || "(unnamed)",
+          type: groupId ? 'TextureArea' : child.type,
+          hidden: hiddenElements.value.has(child.name),
+          groupId,
+        };
+      }),
     ],
     {
       onToggleVisibility: toggleElementVisibility,
@@ -282,14 +285,9 @@ let currentWorld: any = null;
 let currentGround: any = null;
 let currentAmbientLight: THREE.Light | null = null;
 let currentDirectionalLight: THREE.Light | null = null;
-let previousGroundEnabled = false;
-let previousSkyEnabled = false;
-
-
 // Live-update ground properties without reinit
 const applyGroundUpdate = (field: string, value: unknown) => {
   if (field === 'enabled' || field === 'size') {
-    previousGroundEnabled = groundConfig.value.enabled;
     reinitScene();
     return;
   }
@@ -320,7 +318,6 @@ const applyLightsUpdate = (path: string, value: unknown) => {
 // Live-update sky without reinit
 const applySkyUpdate = (field: string, value: unknown) => {
   if (field === 'enabled' || field === 'size') {
-    previousSkyEnabled = skyConfig.value.enabled;
     reinitScene();
     return;
   }
@@ -373,7 +370,14 @@ const registerGroupElementProperties = (group: TextureGroup) => {
     type: 'group',
     schema: configControls,
     getValue: (path) => getNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path),
-    updateValue: (path, value) => setNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path, value),
+    updateValue: (path, value) => {
+      setNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path, value);
+      if (autoUpdate.value && !isLoadingGroupConfig) {
+        const name = getGroupName(group.id);
+        groupConfigRegistry.value[name] = snapshotGroupConfig();
+        regenerateGroupMeshes(group.id);
+      }
+    },
   });
 };
 

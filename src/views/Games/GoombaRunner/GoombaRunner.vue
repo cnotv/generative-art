@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
@@ -15,13 +15,14 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { setupConfig } from "./config";
+import { config, setupConfig } from "./config";
 import { createTimeline } from "./animation";
 import "@/assets/prevents.css";
 import "./styles.css";
 
 import { handleJumpGoomba } from "./helpers/events";
 import { useDebugSceneStore } from '@/stores/debugScene';
+import { useElementPropertiesStore } from '@/stores/elementProperties';
 
 import {
   prevents,
@@ -115,7 +116,8 @@ const endGame = () => {
   remapControlsOptions(bindings["game-over"]);
 };
 
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const { setSceneElements, clearSceneElements } = useDebugSceneStore();
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties } = useElementPropertiesStore();
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
@@ -127,10 +129,77 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       canvas,
     });
     remapControlsOptions(bindings["idle"]);
-    await setup({
+    const { elements } = await setup({
       config: setupConfig,
     });
-    registerSceneElements(camera, scene.children);
+
+    type LightObject = { color: { getHex: () => number; set: (v: number) => void }; intensity: number };
+    const lightSchema = {
+      intensity: { min: 0, max: 5, step: 0.1, label: 'Intensity' },
+      color: { color: true, label: 'Color' },
+    };
+
+    const elementVisibility = new Map<string, boolean>();
+
+    let sceneHandlers: { onToggleVisibility: (name: string) => void; onRemove: (name: string) => void };
+
+    const textureAreaNames = new Set(config.backgrounds.textureAreaLayers.map(l => l.name));
+    const textureAreaGroups = Object.fromEntries(
+      [...textureAreaNames].map(name => [name, name.charAt(0).toUpperCase() + name.slice(1)])
+    );
+
+    const refreshElements = () => {
+      setSceneElements(
+        [
+          { name: 'Camera', type: camera.type, hidden: false },
+          ...scene.children.map(child => ({
+            name: child.name || child.type,
+            type: textureAreaNames.has(child.name) ? 'TextureArea' : child.type,
+            hidden: elementVisibility.get(child.name || child.type) ?? false,
+            groupId: textureAreaNames.has(child.name) ? child.name : undefined,
+          })),
+        ],
+        sceneHandlers,
+        textureAreaGroups
+      );
+    };
+
+    sceneHandlers = {
+      onToggleVisibility: (name: string) => {
+        const obj = scene.getObjectByName(name);
+        if (!obj) return;
+        obj.visible = !obj.visible;
+        elementVisibility.set(name, !obj.visible);
+        refreshElements();
+      },
+      onRemove: (name: string) => {
+        const obj = scene.getObjectByName(name);
+        if (obj) scene.remove(obj);
+        elementVisibility.delete(name);
+        unregisterElementProperties(name);
+        refreshElements();
+      },
+    };
+
+    const makeLightRegistration = (light: LightObject, name: string, title: string) => {
+      const lightState = reactive({ intensity: light.intensity, color: light.color.getHex() });
+      registerElementProperties(name, {
+        title,
+        schema: lightSchema,
+        getValue: (path: string) => (lightState as Record<string, unknown>)[path],
+        updateValue: (path: string, value: unknown) => {
+          (lightState as Record<string, unknown>)[path] = value;
+          if (path === 'color') light.color.set(value as number);
+          else (light as Record<string, unknown>)[path] = value;
+        },
+      });
+    };
+
+    const ambientLight = elements.find(e => e.name === 'ambient-light') as unknown as LightObject | undefined;
+    if (ambientLight) makeLightRegistration(ambientLight, 'ambient-light', 'Ambient Light');
+
+    const directionalLight = elements.find(e => e.name === 'directional-light') as unknown as LightObject | undefined;
+    if (directionalLight) makeLightRegistration(directionalLight, 'directional-light', 'Directional Light');
     animate({
       timeline: await createTimeline({
         scene,
@@ -142,6 +211,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         endGame,
       }),
     });
+    refreshElements();
   };
   createScene();
 };
@@ -171,6 +241,7 @@ onUnmounted(() => {
   stopMusic();
   window.removeEventListener("resize", initInstance);
   clearSceneElements();
+  clearAllElementProperties();
 });
 </script>
 

@@ -143,7 +143,7 @@ const hasExpandedSchema = computed(
         v-for="(element, index) in grouped.ungrouped"
         :key="index"
         class="elements-panel__item"
-        :class="{ 'opacity-50': element.hidden }"
+        :class="[`elements-panel__item--${element.type.toLowerCase()}`, { 'opacity-50': element.hidden }]"
       >
         <ElementItem
           :element="element"
@@ -153,7 +153,8 @@ const hasExpandedSchema = computed(
           @remove="debugSceneStore.handleRemove(element.name)"
         />
 
-        <div v-if="expandedName === element.name" class="elements-panel__item-content">
+        <div v-if="expandedName === element.name" class="elements-panel__item-content" :class="`elements-panel__item-content--${element.type.toLowerCase()}`">
+          <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">Texture Area</p>
           <ElementCamera
             v-if="isCameraExpanded"
             :is-recording="isRecording"
@@ -245,5 +246,13 @@ const hasExpandedSchema = computed(
   border-top: 1px solid var(--color-border);
   padding: var(--spacing-2);
   background: var(--panel-content-bg);
+}
+
+.elements-panel__type-description {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--spacing-2);
 }
 </style>

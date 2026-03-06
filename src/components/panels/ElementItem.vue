@@ -26,29 +26,29 @@ const emit = defineEmits<{
     @click="emit('click')"
   >
     <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
-    <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-      <span class="text-[11px] font-medium font-mono truncate block">{{ element.name }}</span>
-      <span class="text-[9px] text-muted-foreground truncate block">{{ element.type }}</span>
+    <div class="element-item__info">
+      <span class="element-item__name">{{ element.name }}</span>
+      <span class="element-item__type">{{ element.type }}</span>
     </div>
-    <div class="flex gap-1 shrink-0">
+    <div class="element-item__actions">
       <Button
         :variant="element.hidden ? 'default' : 'ghost'"
         size="icon"
-        class="h-7 w-7"
+        class="element-item__action-btn"
         :title="element.hidden ? 'Show element' : 'Hide element'"
         @click.stop="emit('toggle-visibility')"
       >
-        <EyeOff v-if="element.hidden" class="h-3.5 w-3.5" />
-        <Eye v-else class="h-3.5 w-3.5" />
+        <EyeOff v-if="element.hidden" class="element-item__action-icon" />
+        <Eye v-else class="element-item__action-icon" />
       </Button>
       <Button
         variant="ghost"
         size="icon"
-        class="h-7 w-7"
+        class="element-item__action-btn"
         title="Remove element"
         @click.stop="emit('remove')"
       >
-        <Trash2 class="h-3.5 w-3.5" />
+        <Trash2 class="element-item__action-icon" />
       </Button>
     </div>
   </div>
@@ -71,5 +71,48 @@ const emit = defineEmits<{
 
 .element-item--selected {
   background-color: var(--panel-item-bg-selected);
+}
+
+.element-item__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+}
+
+.element-item__name {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  font-family: monospace;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-item__type {
+  font-size: var(--font-size-2xs);
+  color: var(--color-muted-foreground);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-item__actions {
+  display: flex;
+  gap: var(--spacing-1);
+  flex-shrink: 0;
+}
+
+.element-item__action-btn {
+  width: var(--btn-sm-height);
+  height: var(--btn-sm-height);
+}
+
+.element-item__action-icon {
+  width: var(--font-size-base);
+  height: var(--font-size-base);
 }
 </style>

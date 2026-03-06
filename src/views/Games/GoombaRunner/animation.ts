@@ -8,7 +8,10 @@ import {
   createBackgrounds,
   moveBackgrounds,
   resetBackgrounds,
+  createTextureAreaBackgroundLayer,
+  moveAndRecycleTextureAreaBackgrounds,
   type BackgroundElement,
+  type TextureAreaElement,
 } from "./helpers/background";
 import { moveBlocks, resetObstacles, createCubes } from "./helpers/block";
 import { moveGround, resetGround, getGround } from "./helpers/ground";
@@ -84,6 +87,10 @@ const createTimeline = async ({
   const backgroundTimers = config.backgrounds.layers.map(() => 0);
   const loggedCollisions = new Set<string>();
 
+  const textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
+    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
+  );
+
   let backgroundsPopulated = false;
   const horizonLine = addHorizonLine(scene);
 
@@ -107,6 +114,7 @@ const createTimeline = async ({
           backgroundsPopulated = true;
         }
         updateFallingBackgrounds(getDelta(), backgrounds, scene);
+        updateFallingBackgrounds(getDelta(), textureAreaBackgrounds, scene);
         if (shouldClearObstacles.value) {
           resetObstacles(obstacles, scene, physics);
           resetBackgrounds(scene, world, backgrounds);
@@ -146,6 +154,7 @@ const createTimeline = async ({
             gameScore.value
           );
           moveBackgrounds(scene, camera, backgrounds, gameScore.value);
+          moveAndRecycleTextureAreaBackgrounds(textureAreaBackgrounds, gameScore.value);
         }
       },
     },
@@ -168,6 +177,7 @@ const createTimeline = async ({
           player,
           obstacles,
           backgrounds,
+          textureAreaBackgrounds,
           scene,
           endGame,
           loggedCollisions,
