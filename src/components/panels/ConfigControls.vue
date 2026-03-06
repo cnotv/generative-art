@@ -15,7 +15,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import type { ConfigControlsSchema, ControlSchema, ControlOption } from "@/composables/useViewConfig";
+import type { ConfigControlsSchema, ControlSchema, ControlOption } from "@/stores/viewConfig";
 
 const props = defineProps<{
   schema: ConfigControlsSchema;

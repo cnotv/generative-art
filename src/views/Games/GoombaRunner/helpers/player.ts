@@ -516,6 +516,7 @@ const checkCollisions = (
   player: ComplexModel,
   obstacles: { mesh: ComplexModel; characterController: any; collider: any }[],
   backgrounds: any[],
+  textureAreaBackgrounds: any[],
   scene: THREE.Scene,
   endGameCallback: () => void,
   loggedCollisions: Set<string>,
@@ -559,6 +560,7 @@ const checkCollisions = (
 
         // Start background falling animation
         startBackgroundFalling(backgrounds);
+        startBackgroundFalling(textureAreaBackgrounds);
 
         endGameCallback();
       }

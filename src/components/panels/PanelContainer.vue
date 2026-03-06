@@ -13,8 +13,6 @@ defineProps<{
 </template>
 
 <style lang="scss">
-@import '@/assets/styles/variables';
-
 .sr-only {
   position: absolute;
   width: 1px;

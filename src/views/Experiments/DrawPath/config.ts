@@ -30,7 +30,7 @@ export const sceneSetupConfig: SetupConfig = {
   },
 };
 
-export const DEFAULT_FOLLOW_SPEED = 20;
+export const DEFAULT_FOLLOW_SPEED = 10;
 /** Minimum world-unit distance between successive hold-drag waypoints. */
 export const MIN_WAYPOINT_DISTANCE = 1.5;
 
@@ -98,7 +98,7 @@ export const defaultConfigValues = {
   easing: "linear" as EasingName,
   easingIntensity: 0.6,
   playing: true,
-  loop: true,
+  loop: false,
   pingPong: false,
   showPath: true,
   showNodes: false,

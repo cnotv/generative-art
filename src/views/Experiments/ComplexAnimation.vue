@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useDebugSceneStore } from "@/stores/debugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -26,6 +27,7 @@ import type { CoordinateTuple } from "@webgamekit/animation";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(async () => {
   init(
@@ -33,6 +35,10 @@ onMounted(async () => {
     (statsEl.value as unknown) as HTMLElement
   ),
     statsEl.value!;
+});
+
+onUnmounted(() => {
+  clearSceneElements();
 });
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -125,6 +131,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       const { model: mushroom } = await loadGLTF("cute_mushrooms.glb");
       cloneModel(mushroom, scene, instancedModels.mushroom);
     }
+
+    registerSceneElements(camera, scene.children);
 
     video.record(canvas, route);
 

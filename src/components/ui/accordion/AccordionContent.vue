@@ -30,6 +30,7 @@ defineProps<{
 }
 
 .accordion__content-inner {
+  padding-top: 0.375rem;
   padding-bottom: 0.375rem;
 }
 

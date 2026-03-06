@@ -1,24 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import GenericPanel from './GenericPanel.vue';
-import { Box, Lightbulb, Sun, Mountain, Image, Eye, EyeOff, Trash2 } from 'lucide-vue-next';
-import IconPreview from '@/components/IconPreview.vue';
-import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
-import { useDebugScene } from '@/composables/useDebugScene';
-
-interface SceneElement {
-  name: string;
-  type: string;
-  hidden?: boolean;
-}
-
-const { sceneElements, handleToggleVisibility: toggleVisibility, handleRemove: removeElement } = useDebugScene();
 
 const fps = ref(0);
 const memory = ref(0);
@@ -46,40 +34,6 @@ const updateStats = () => {
   animationFrameId = requestAnimationFrame(updateStats);
 };
 
-const getElementIcon = (element: SceneElement) => {
-  const name = element.name.toLowerCase();
-  const type = element.type.toLowerCase();
-
-  if (name.includes('light')) return Lightbulb;
-  if (name.includes('sky')) return Sun;
-  if (name.includes('ground')) return Mountain;
-  if (type.includes('mesh')) return Box;
-  if (name.includes('wireframe')) return Box;
-
-  return Image;
-};
-
-const getElementColor = (element: SceneElement) => {
-  const name = element.name.toLowerCase();
-
-  if (name.includes('light')) return 'text-yellow-400';
-  if (name.includes('sky')) return 'text-blue-400';
-  if (name.includes('ground')) return 'text-green-600';
-  if (name.includes('wireframe')) return 'text-green-400';
-
-  return 'text-gray-400';
-};
-
-const handleToggleVisibility = (name: string, event: Event) => {
-  event.stopPropagation();
-  toggleVisibility(name);
-};
-
-const handleRemove = (name: string, event: Event) => {
-  event.stopPropagation();
-  removeElement(name);
-};
-
 onMounted(() => {
   updateStats();
 });
@@ -93,7 +47,7 @@ onUnmounted(() => {
 
 <template>
   <GenericPanel panel-type="debug" side="right">
-    <Accordion type="multiple" :default-value="['stats', 'scene']" class="w-full">
+    <Accordion type="multiple" :default-value="['stats']" class="w-full">
       <AccordionItem value="stats">
         <AccordionTrigger class="text-sm font-medium py-2">
           Performance Stats
@@ -111,57 +65,6 @@ onUnmounted(() => {
             <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
               <span class="text-xs font-medium">Draw Calls</span>
               <span class="font-mono text-xs">{{ drawCalls }}</span>
-            </div>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-
-      <AccordionItem value="scene" v-if="sceneElements && sceneElements.length > 0">
-        <AccordionTrigger class="text-sm font-medium py-2">
-          Scene Elements ({{ sceneElements.length }})
-        </AccordionTrigger>
-        <AccordionContent>
-          <div class="scene-elements flex flex-col gap-1 pb-1">
-            <div
-              v-for="(element, index) in sceneElements"
-              :key="index"
-              class="element-item group flex items-center gap-2 p-1.5 rounded border border-border bg-muted/30 transition-colors"
-              :class="{ 'opacity-50': element.hidden }"
-            >
-              <IconPreview
-                :icon="getElementIcon(element)"
-                :color="getElementColor(element)"
-              />
-              <div class="element-info flex-1 min-w-0 flex flex-col gap-0.5">
-                <span class="text-[11px] font-medium font-mono truncate block">
-                  {{ element.name }}
-                </span>
-                <span class="text-[9px] text-muted-foreground truncate block">
-                  {{ element.type }}
-                </span>
-              </div>
-              <div class="element-actions flex gap-1 shrink-0">
-                <Button
-                  :variant="element.hidden ? 'default' : 'ghost'"
-                  size="icon"
-                  class="h-8 w-8"
-                  :class="{ 'bg-primary/20 hover:bg-primary/30': element.hidden }"
-                  :title="element.hidden ? 'Show element' : 'Hide element'"
-                  @click="(e: Event) => handleToggleVisibility(element.name, e)"
-                >
-                  <EyeOff v-if="element.hidden" class="h-4 w-4" />
-                  <Eye v-else class="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-8 w-8"
-                  title="Remove element"
-                  @click="(e: Event) => handleRemove(element.name, e)"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </Button>
-              </div>
             </div>
           </div>
         </AccordionContent>

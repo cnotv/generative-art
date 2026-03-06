@@ -4,9 +4,44 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { EffectComposer, setupPostprocessing } from './postprocessing';
 import { video } from './utils/video';
 import { animateTimeline, CoordinateTuple, type TimelineManager } from '@webgamekit/animation';
-import { ToolsConfig, SetupConfig, ModelOptions, ComplexModel } from './types';
+import { ToolsConfig, SetupConfig, ModelOptions, ComplexModel, LightsConfig, GroundConfig, CameraConfig } from './types';
 import { getEnvironment, getLights, getGround, getSky } from './getters';
 import { updateCamera } from './camera';
+import { deepMerge } from './utils/lodash';
+import { SCENE_DEFAULTS } from './defaults';
+
+/**
+ * Merge a partial SetupConfig over SCENE_DEFAULTS so every section has complete values.
+ * Sections disabled with `false` are preserved as `false`.
+ * Camera is only merged when the caller provides camera config.
+ */
+export const resolveSetupConfig = (config: SetupConfig): SetupConfig => ({
+  ...config,
+  lights: config.lights === false
+    ? false
+    : deepMerge(
+        SCENE_DEFAULTS.lights as Record<string, unknown>,
+        (config.lights ?? {}) as Record<string, unknown>
+      ) as LightsConfig,
+  ground: config.ground === false
+    ? false
+    : deepMerge(
+        SCENE_DEFAULTS.ground as Record<string, unknown>,
+        (config.ground ?? {}) as Record<string, unknown>
+      ) as GroundConfig,
+  sky: config.sky === false
+    ? false
+    : deepMerge(
+        SCENE_DEFAULTS.sky as Record<string, unknown>,
+        (config.sky ?? {}) as Record<string, unknown>
+      ) as SetupConfig['sky'],
+  camera: config.camera
+    ? deepMerge(
+        SCENE_DEFAULTS.camera as Record<string, unknown>,
+        config.camera as Record<string, unknown>
+      ) as CameraConfig
+    : config.camera,
+});
 
 export const defaultModelOptions: ModelOptions = {
   position: [0, 0, 0],
@@ -75,28 +110,32 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     config?: SetupConfig,
     defineSetup?: (context: { ground: ReturnType<typeof getGround> | null }) => Promise<void> | void
   }) => {
-    frameRate = config?.global?.frameRate || frameRate;
-    if (config.scene?.backgroundColor) scene.background = new THREE.Color(config.scene.backgroundColor);
-    if (config.orbit !== false) {
+    const resolved = resolveSetupConfig(config);
+    const childrenCountBefore = scene.children.length;
+    frameRate = resolved?.global?.frameRate || frameRate;
+    if (resolved.scene?.backgroundColor) scene.background = new THREE.Color(resolved.scene.backgroundColor);
+    if (resolved.orbit !== false) {
       orbit = new OrbitControls(camera, renderer.domElement);
-      if (config.orbit?.target) {
-        orbit.target.copy(config.orbit.target as THREE.Vector3);
+      if (resolved.orbit?.target) {
+        orbit.target.copy(resolved.orbit.target as THREE.Vector3);
       }
-      orbit.enabled = !(config.orbit?.disabled === true);
+      orbit.enabled = !(resolved.orbit?.disabled === true);
     }
-    if (config.lights !== false) getLights(scene, config.lights);
-    const ground = config.ground !== false ? getGround(scene, world, config?.ground || {}) : null;
-    if (config.sky !== false) getSky(scene, config?.sky || {});
-    
-    if (config?.camera) {
-      updateCamera(camera, config.camera);
+    if (resolved.lights !== false) getLights(scene, resolved.lights);
+    const ground = resolved.ground !== false ? getGround(scene, world, resolved.ground ?? {}) : null;
+    if (resolved.sky !== false) getSky(scene, resolved.sky ?? {});
+
+    if (resolved.camera) {
+      updateCamera(camera, resolved.camera);
     }
 
     // Initialize postprocessing if configured
     if (config.postprocessing) composer = await setupPostprocessing({ renderer, scene, camera, config: config.postprocessing });
     if (defineSetup) await defineSetup({ ground });
-    
-    return { orbit, ground };
+
+    const elements = scene.children.slice(childrenCountBefore);
+
+    return { orbit, ground, elements };
   };
 
   /**

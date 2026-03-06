@@ -14,6 +14,7 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import grassTextureImg from "@/assets/images/textures/grass.jpg";
 import { getActionName } from "./MixamoPlayground.helpers";
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const playerSettings = {
   model: {
@@ -174,13 +175,14 @@ const bindings = {
 };
 const { destroyControls, currentActions } = createControls(bindings);
 
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+
 const canvas = ref<HTMLCanvasElement | null>(null);
 const init = async (): Promise<void> => {
   if (!canvas.value) return;
   const { setup, animate, scene, world, camera, getDelta } = await getTools({
     canvas: canvas.value,
   });
-
   const { orbit } = await setup({
     config: setupConfig,
     defineSetup: async ({ ground }) => {
@@ -245,6 +247,7 @@ const init = async (): Promise<void> => {
       });
     },
   });
+  registerSceneElements(camera, scene.children.filter(c => c !== camera));
 };
 
 onMounted(async () => {
@@ -254,6 +257,7 @@ onMounted(async () => {
 onUnmounted(() => {
   destroyControls();
   window.removeEventListener("resize", init);
+  clearSceneElements();
 });
 </script>
 

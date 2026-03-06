@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useDebugSceneStore } from '@/stores/debugScene';
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -15,6 +16,8 @@ type Model = THREE.Group<THREE.Object3DEventMap>;
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
@@ -22,6 +25,7 @@ onMounted(() => {
   ),
     statsEl.value!;
 });
+onUnmounted(() => clearSceneElements());
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const config = {
@@ -61,6 +65,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     );
     const { model, mixer } = await loadAnimatedModel();
     scene.add(model);
+    registerSceneElements(camera, scene.children);
 
     video.record(canvas, route);
 

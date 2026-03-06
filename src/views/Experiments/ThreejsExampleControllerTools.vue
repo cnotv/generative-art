@@ -7,6 +7,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 import { getTools } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
@@ -14,6 +15,7 @@ import { createTimelineManager } from "@webgamekit/animation";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const config = {
   directional: {
@@ -210,13 +212,16 @@ onMounted(() => {
   initInstance();
   window.addEventListener("resize", initInstance);
 });
-onUnmounted(() => window.removeEventListener("resize", initInstance));
+onUnmounted(() => {
+  window.removeEventListener("resize", initInstance);
+  clearSceneElements();
+});
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
-    const { animate, setup, world, getDelta, scene } = await getTools({
+    const { animate, setup, world, getDelta, scene, camera } = await getTools({
       stats,
       route,
       canvas,
@@ -240,6 +245,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         );
 
         setControls(movement);
+        registerSceneElements(camera, scene.children);
 
         const timelineManager = createTimelineManager();
 
