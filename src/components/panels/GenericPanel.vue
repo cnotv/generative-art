@@ -83,7 +83,6 @@ const toggleCollapse = () => {
   padding: var(--spacing-1) 0;
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--spacing-1);
   color: var(--color-foreground);
   font-size: var(--font-size-xs);
