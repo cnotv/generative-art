@@ -9,8 +9,6 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), { size: 'md', variant: 'ghost', active: false });
-
-defineEmits<{ click: [] }>();
 </script>
 
 <template>
@@ -20,7 +18,6 @@ defineEmits<{ click: [] }>();
     class="icon-btn"
     :class="`icon-btn--${size}`"
     :title="title"
-    @click="$emit('click')"
   >
     <slot />
   </Button>

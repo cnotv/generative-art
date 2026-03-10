@@ -6,13 +6,11 @@ import { useCameraConfigStore } from "@/stores/cameraConfig";
 import type { CameraSlot } from "@/stores/cameraConfig";
 import {
   getTools,
-  getCube,
-  generateAreaPositions,
   CameraPreset,
   cameraPresets,
   setCameraPreset,
 } from "@webgamekit/threejs";
-import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
+import type { CoordinateTuple } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
 import { createReactiveConfig } from "@/stores/viewConfig";
@@ -21,7 +19,8 @@ import { useElementPropertiesStore } from "@/stores/elementProperties";
 import { storeToRefs } from "pinia";
 import { useSceneConfig } from "./useSceneConfig";
 import { useTextureGroupsStore } from "@/stores/textureGroups";
-import type { TextureGroup } from "@/stores/textureGroups";
+import type { TextureGroup, GroupConfig } from "@/stores/textureGroups";
+import { addGroupMeshes, removeGroupMeshes } from "@/utils/groupMeshes";
 import { defaultConfig, presets, configControls, cameraSchema, groundSchema, lightsSchema, skySchema } from "./config";
 import type { SceneEditorConfig } from "./config";
 
@@ -135,26 +134,6 @@ const setNestedValue = (obj: Record<string, unknown>, path: string, value: unkno
 // Guard flag to suppress auto-update during group config loading
 let isLoadingGroupConfig = false;
 
-// Per-group config stored by group name
-interface GroupConfig {
-  area: {
-    center: CoordinateTuple;
-    size: CoordinateTuple;
-  };
-  textures: {
-    baseSize: CoordinateTuple;
-    sizeVariation: CoordinateTuple;
-    rotationVariation: CoordinateTuple;
-  };
-  instances: {
-    density: number;
-    pattern: "random" | "grid" | "grid-jitter";
-    seed: number;
-  };
-}
-
-const groupConfigRegistry = ref<Record<string, GroupConfig>>({});
-
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<SceneEditorConfig>(defaultConfig);
 
@@ -163,20 +142,6 @@ const getGroupName = (groupId: string) => {
   const group = textureGroups.value.find((g) => g.id === groupId);
   return group?.name ?? groupId;
 };
-
-// Create a new GroupConfig from default values
-const createDefaultGroupConfig = (): GroupConfig => ({
-  area: {
-    center: [...defaultConfig.area.center] as CoordinateTuple,
-    size: [...defaultConfig.area.size] as CoordinateTuple,
-  },
-  textures: {
-    baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
-    sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
-    rotationVariation: [...defaultConfig.textures.rotationVariation] as CoordinateTuple,
-  },
-  instances: { ...defaultConfig.instances },
-});
 
 // Snapshot current reactiveConfig into a GroupConfig
 const snapshotGroupConfig = (): GroupConfig => ({
@@ -221,19 +186,19 @@ watch(selectedGroupId, (groupId, oldGroupId) => {
   // Save current config back to the previous group
   if (oldGroupId) {
     const oldName = getGroupName(oldGroupId);
-    groupConfigRegistry.value[oldName] = snapshotGroupConfig();
+    textureStore.groupConfigRegistry[oldName] = snapshotGroupConfig();
   }
 
   if (groupId) {
     const name = getGroupName(groupId);
 
     // Initialize config for this group if it doesn't exist
-    if (!groupConfigRegistry.value[name]) {
-      groupConfigRegistry.value[name] = createDefaultGroupConfig();
+    if (!textureStore.groupConfigRegistry[name]) {
+      textureStore.groupConfigRegistry[name] = textureStore.createDefaultGroupConfig();
     }
 
     // Load group config into reactiveConfig
-    loadGroupConfig(groupConfigRegistry.value[name]);
+    loadGroupConfig(textureStore.groupConfigRegistry[name]);
   }
 });
 
@@ -266,7 +231,7 @@ watch(
     if (autoUpdate.value && !isLoadingGroupConfig && selectedGroupId.value) {
       // Save updated config to registry before regenerating
       const name = getGroupName(selectedGroupId.value);
-      groupConfigRegistry.value[name] = snapshotGroupConfig();
+      textureStore.groupConfigRegistry[name] = snapshotGroupConfig();
       regenerateGroupMeshes(selectedGroupId.value);
     }
   },
@@ -374,7 +339,7 @@ const registerGroupElementProperties = (group: TextureGroup) => {
       setNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path, value);
       if (autoUpdate.value && !isLoadingGroupConfig) {
         const name = getGroupName(group.id);
-        groupConfigRegistry.value[name] = snapshotGroupConfig();
+        textureStore.groupConfigRegistry[name] = snapshotGroupConfig();
         regenerateGroupMeshes(group.id);
       }
     },
@@ -409,8 +374,8 @@ const handleFileUpload = (event: Event) => {
     textureGroups.value.push(newGroup);
 
     // Initialize config for this group by name if it doesn't exist
-    if (!groupConfigRegistry.value[filename]) {
-      groupConfigRegistry.value[filename] = createDefaultGroupConfig();
+    if (!textureStore.groupConfigRegistry[filename]) {
+      textureStore.groupConfigRegistry[filename] = textureStore.createDefaultGroupConfig();
     }
 
     // Register group element properties and open elements panel
@@ -420,7 +385,9 @@ const handleFileUpload = (event: Event) => {
     openPanel("elements");
 
     // Wait for watcher to process selection, then add only the new group
-    nextTick(() => addGroupMeshes(newGroup));
+    nextTick(() => {
+      if (currentScene && currentWorld) addGroupMeshes(currentScene, currentWorld, newGroup, getGroupConfig, () => updateSceneElements(currentScene));
+    });
 
     // Reset file input to allow re-uploading the same file
     target.value = "";
@@ -486,9 +453,8 @@ const toggleGroupWireframe = (id: string) => {
 const removeGroup = (id: string) => {
   const group = textureGroups.value.find((g) => g.id === id);
   if (group) {
-    // Remove from group config registry by name
-    delete groupConfigRegistry.value[group.name];
-    removeGroupMeshes(id);
+    textureStore.deleteGroupConfig(group.name);
+    if (currentScene) removeGroupMeshes(currentScene, id);
     if (selectedGroupId.value === id) {
       selectedGroupId.value = null;
     }
@@ -521,162 +487,9 @@ const getGroupConfig = (groupId: string): GroupConfig => {
     return snapshotGroupConfig();
   }
   const name = getGroupName(groupId);
-  return groupConfigRegistry.value[name] ?? createDefaultGroupConfig();
+  return textureStore.groupConfigRegistry[name] ?? textureStore.createDefaultGroupConfig();
 };
 
-// Convert density to count. Density is used directly as the instance count.
-// Density 0 = 1 position.
-const MAX_INSTANCES = 2000;
-const densityToCount = (density: number): number => {
-  if (density <= 0) return 1;
-  return Math.min(MAX_INSTANCES, Math.max(1, Math.round(density)));
-};
-
-// Create texture instances following ForestGame pattern - per group
-const createTextureInstances = (groups: TextureGroup[]) => {
-  const allVariantData: Array<{
-    texture: string;
-    filename: string;
-    groupId: string;
-    groupConfig: GroupConfig;
-    positions: CoordinateTuple[];
-    instances: Array<{
-      position: CoordinateTuple;
-      scale: CoordinateTuple;
-      rotation: CoordinateTuple;
-    }>;
-  }> = [];
-
-  // Filter out hidden groups
-  const visibleGroups = groups.filter((g) => !g.hidden);
-
-  visibleGroups.forEach((group) => {
-    if (group.textures.length === 0) return;
-
-    const gc = getGroupConfig(group.id);
-
-    const areaConfig: AreaConfig = {
-      center: gc.area.center,
-      size: gc.area.size,
-      count: densityToCount(gc.instances.density),
-      pattern: gc.instances.pattern,
-      seed: gc.instances.seed,
-      sizeVariation: gc.textures.sizeVariation,
-      rotationVariation: gc.textures.rotationVariation,
-    };
-
-    const allPositions = generateAreaPositions(areaConfig);
-
-    // Initialize arrays for each texture in the group
-    const variantData = group.textures.map((item) => ({
-      texture: item.url,
-      filename: item.filename,
-      groupId: group.id,
-      groupConfig: gc,
-      positions: [] as CoordinateTuple[],
-      instances: [] as Array<{
-        position: CoordinateTuple;
-        scale: CoordinateTuple;
-        rotation: CoordinateTuple;
-      }>,
-    }));
-
-    // Randomly assign each position to a texture variant within the group
-    allPositions.forEach((position: CoordinateTuple) => {
-      const randomIndex = Math.floor(Math.random() * group.textures.length);
-      const variant = variantData[randomIndex];
-      variant.positions.push(position);
-
-      // Generate instance with variations using group properties
-      const { sizeVariation, rotationVariation, baseSize } = gc.textures;
-      const hasVariation =
-        sizeVariation.some((v) => v !== 0) || rotationVariation.some((v) => v !== 0);
-
-      if (hasVariation) {
-        variant.instances.push({
-          position,
-          scale: [
-            baseSize[0] + (Math.random() - 0.5) * sizeVariation[0],
-            baseSize[1] + (Math.random() - 0.5) * sizeVariation[1],
-            baseSize[2] + (Math.random() - 0.5) * sizeVariation[2],
-          ] as CoordinateTuple,
-          rotation: [
-            (Math.random() - 0.5) * rotationVariation[0],
-            (Math.random() - 0.5) * rotationVariation[1],
-            (Math.random() - 0.5) * rotationVariation[2],
-          ] as CoordinateTuple,
-        });
-      }
-    });
-
-    allVariantData.push(...variantData);
-  });
-
-  return allVariantData;
-};
-
-// Remove all meshes belonging to a group from the scene
-const removeGroupMeshes = (groupId: string) => {
-  if (!currentScene) return;
-  const prefix = `grp-${groupId}-`;
-  const wireframeName = `wireframe-${groupId}`;
-  const toRemove = currentScene.children.filter(
-    (child: any) => child.name?.startsWith(prefix) || child.name === wireframeName
-  );
-  toRemove.forEach((child: any) => currentScene.remove(child));
-};
-
-// Add meshes for a single group to the existing scene
-const addGroupMeshes = (group: TextureGroup) => {
-  if (!currentScene || !currentWorld) return;
-  if (group.hidden || group.textures.length === 0) return;
-
-  const gc = getGroupConfig(group.id);
-
-  // Add wireframe if enabled
-  if (group.showWireframe) {
-    getCube(currentScene, currentWorld, {
-      name: `wireframe-${group.id}`,
-      size: gc.area.size,
-      position: gc.area.center,
-      color: 0x00ff00,
-      material: "MeshBasicMaterial",
-      wireframe: true,
-      type: "fixed" as const,
-      castShadow: false,
-      receiveShadow: false,
-      physics: false,
-    });
-  }
-
-  const variantData = createTextureInstances([group]);
-
-  variantData.forEach((variant) => {
-    const elementsData =
-      variant.instances.length > 0
-        ? variant.instances
-        : variant.positions.map((pos: CoordinateTuple) => ({ position: pos }));
-
-    elementsData.forEach((elementData: any, index: number) => {
-      getCube(currentScene, currentWorld, {
-        name: `grp-${group.id}-${variant.filename}-${index}`,
-        size: elementData.scale || variant.groupConfig.textures.baseSize,
-        position: elementData.position,
-        rotation: elementData.rotation || ([0, 0, 0] as CoordinateTuple),
-        texture: variant.texture,
-        material: "MeshBasicMaterial",
-        opacity: 1,
-        color: 0xffffff,
-        type: "fixed" as const,
-        castShadow: false,
-        physics: false,
-        receiveShadow: false,
-      });
-    });
-  });
-
-  updateSceneElements(currentScene);
-};
 
 // Regenerate only a specific group's meshes in the scene
 const regenerateGroupMeshes = (groupId: string) => {
@@ -687,8 +500,8 @@ const regenerateGroupMeshes = (groupId: string) => {
   const group = textureGroups.value.find((g) => g.id === groupId);
   if (!group) return;
 
-  removeGroupMeshes(groupId);
-  addGroupMeshes(group);
+  removeGroupMeshes(currentScene, groupId);
+  addGroupMeshes(currentScene, currentWorld, group, getGroupConfig, () => updateSceneElements(currentScene));
 };
 
 // Reinitialize scene
@@ -761,7 +574,7 @@ const initScene = async () => {
     },
     defineSetup: () => {
       // Add meshes for all groups
-      textureGroups.value.forEach((group) => addGroupMeshes(group));
+      textureGroups.value.forEach((group) => addGroupMeshes(scene, world, group, getGroupConfig));
 
       // Update debugging area with scene elements
       updateSceneElements(scene);
@@ -918,7 +731,7 @@ defineExpose({
   exportConfiguration,
   reactiveConfig,
   textureGroups,
-  groupConfigRegistry,
+  groupConfigRegistry: textureStore.groupConfigRegistry,
   selectedGroupId,
   handleFileUpload,
   handleAddTextureToGroup,

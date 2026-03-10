@@ -183,7 +183,7 @@ const hasExpandedSchema = computed(
         :label="sceneGroups[groupId] ?? `Group ${groupId.slice(0, 6)}`"
         :is-expanded="expandedName === groupId"
         :is-selected="selectedElementName === groupId"
-        :children="grouped.meshGroups.get(groupId)"
+
         @toggle="handleGroupToggle(groupId)"
       />
     </div>

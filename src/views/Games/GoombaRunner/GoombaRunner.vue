@@ -36,6 +36,8 @@ import {
 } from "./helpers/setup";
 import type { ControlsOptions } from "packages/controls/dist";
 
+type LightObject = { color: { getHex: () => number; set: (v: number) => void }; intensity: number };
+
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
 const shouldClearObstacles = ref(false);
@@ -133,7 +135,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       config: setupConfig,
     });
 
-    type LightObject = { color: { getHex: () => number; set: (v: number) => void }; intensity: number };
     const lightSchema = {
       intensity: { min: 0, max: 5, step: 0.1, label: 'Intensity' },
       color: { color: true, label: 'Color' },
@@ -149,15 +150,24 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     );
 
     const refreshElements = () => {
+      const textureGroupEntries = [...textureAreaNames].map(groupName => ({
+        name: groupName,
+        type: 'TextureArea',
+        hidden: elementVisibility.get(groupName) ?? false,
+        groupId: groupName,
+      }));
+
       setSceneElements(
         [
           { name: 'Camera', type: camera.type, hidden: false },
-          ...scene.children.map(child => ({
-            name: child.name || child.type,
-            type: textureAreaNames.has(child.name) ? 'TextureArea' : child.type,
-            hidden: elementVisibility.get(child.name || child.type) ?? false,
-            groupId: textureAreaNames.has(child.name) ? child.name : undefined,
-          })),
+          ...scene.children
+            .filter(child => !textureAreaNames.has(child.name))
+            .map(child => ({
+              name: child.name || child.type,
+              type: child.type,
+              hidden: elementVisibility.get(child.name || child.type) ?? false,
+            })),
+          ...textureGroupEntries,
         ],
         sceneHandlers,
         textureAreaGroups
@@ -166,17 +176,28 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     sceneHandlers = {
       onToggleVisibility: (name: string) => {
-        const obj = scene.getObjectByName(name);
-        if (!obj) return;
-        obj.visible = !obj.visible;
-        elementVisibility.set(name, !obj.visible);
+        if (textureAreaNames.has(name)) {
+          const isHidden = elementVisibility.get(name) ?? false;
+          scene.children.filter(c => c.name === name).forEach(m => { m.visible = isHidden; });
+          elementVisibility.set(name, !isHidden);
+        } else {
+          const obj = scene.getObjectByName(name);
+          if (!obj) return;
+          obj.visible = !obj.visible;
+          elementVisibility.set(name, !obj.visible);
+        }
         refreshElements();
       },
       onRemove: (name: string) => {
-        const obj = scene.getObjectByName(name);
-        if (obj) scene.remove(obj);
-        elementVisibility.delete(name);
-        unregisterElementProperties(name);
+        if (textureAreaNames.has(name)) {
+          scene.children.filter(c => c.name === name).forEach(m => scene.remove(m));
+          elementVisibility.delete(name);
+        } else {
+          const obj = scene.getObjectByName(name);
+          if (obj) scene.remove(obj);
+          elementVisibility.delete(name);
+          unregisterElementProperties(name);
+        }
         refreshElements();
       },
     };

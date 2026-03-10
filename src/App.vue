@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { generatedRoutes } from "@/config/router";
 import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
@@ -11,13 +11,6 @@ const route = useRoute();
 
 const panelsStore = usePanelsStore();
 panelsStore.initRouteSync();
-watch(
-  () => panelsStore.activePanels.size > 0,
-  (hasOpen) => {
-    document.documentElement.classList.toggle('panels-open', hasOpen);
-  },
-  { immediate: true }
-);
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyPress);
@@ -112,9 +105,4 @@ canvas {
   transition: top 0.2s;
 }
 
-html.panels-open canvas,
-html:has(.global-navigation:hover) canvas,
-html:has(.global-navigation:focus-within) canvas {
-  top: var(--nav-height);
-}
 </style>

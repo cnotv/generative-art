@@ -8,22 +8,18 @@ import { Box, Eye, EyeOff, Plus, Play, RefreshCw, Trash2 } from 'lucide-vue-next
 import { useTextureGroupsStore } from '@/stores/textureGroups';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
 import { storeToRefs } from 'pinia';
-import type { SceneElement } from '@/stores/debugScene';
-import { getElementIcon, getElementColor } from './elementUtilities';
 
 interface Props {
   groupId: string;
   label: string;
   isExpanded: boolean;
   isSelected: boolean;
-  children?: SceneElement[];
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   toggle: [];
-  'add-variant': [];
 }>();
 
 const textureStore = useTextureGroupsStore();
@@ -51,22 +47,28 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
 
 <template>
   <div class="element-group">
-    <button
+    <div
       class="element-group__header"
       :class="{
         'element-group__header--active': isSelected || isExpanded,
         'element-group__header--hidden': group?.hidden,
       }"
+      role="button"
+      tabindex="0"
       @click="emit('toggle')"
+      @keydown.enter.space.prevent="emit('toggle')"
     >
       <IconPreview :icon="Box" color="text-gray-400" />
-      <span class="element-group__label">{{ label }}</span>
-      <template v-if="group">
+      <div class="element-group__info">
+        <span class="element-group__label">{{ label }}</span>
+        <span class="element-group__type">TextureArea</span>
+      </div>
+      <div v-if="group" class="element-group__actions">
         <IconButton
           :active="group.hidden"
           size="sm"
           :title="group.hidden ? 'Show group' : 'Hide group'"
-          @click="textureStore.handlers?.onToggleVisibility(groupId)"
+          @click.stop="textureStore.handlers?.onToggleVisibility(groupId)"
         >
           <EyeOff v-if="group.hidden" />
           <Eye v-else />
@@ -75,19 +77,19 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
           :active="group.showWireframe"
           size="sm"
           :title="group.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
-          @click="textureStore.handlers?.onToggleWireframe(groupId)"
+          @click.stop="textureStore.handlers?.onToggleWireframe(groupId)"
         >
           <Box />
         </IconButton>
         <IconButton
           size="sm"
           title="Delete group"
-          @click="textureStore.handlers?.onRemoveGroup(groupId)"
+          @click.stop="textureStore.handlers?.onRemoveGroup(groupId)"
         >
           <Trash2 />
         </IconButton>
-      </template>
-    </button>
+      </div>
+    </div>
 
     <div v-if="isExpanded" class="element-group__content">
       <template v-if="group">
@@ -136,29 +138,6 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
           :on-update="activeProperties!.updateValue"
         />
       </template>
-
-      <template v-else>
-        <div class="element-group__children">
-          <div
-            v-for="(child, index) in children"
-            :key="index"
-            class="element-group__child"
-            :class="{ 'element-group__child--hidden': child.hidden }"
-          >
-            <IconPreview :icon="getElementIcon(child)" :color="getElementColor(child)" />
-            <div class="element-group__child-info">
-              <span class="element-group__child-name">{{ child.name }}</span>
-              <span class="element-group__child-type">{{ child.type }}</span>
-            </div>
-          </div>
-        </div>
-        <SchemaControls
-          v-if="hasExpandedSchema"
-          :schema="activeProperties!.schema"
-          :get-value="activeProperties!.getValue"
-          :on-update="activeProperties!.updateValue"
-        />
-      </template>
     </div>
   </div>
 </template>
@@ -177,7 +156,7 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
   align-items: center;
   gap: var(--spacing-1-5);
   padding: var(--spacing-1-5) var(--spacing-2);
-  background: transparent;
+  background: var(--panel-item-bg);
   border: none;
   cursor: pointer;
   width: 100%;
@@ -200,9 +179,28 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
   opacity: var(--opacity-muted);
 }
 
-.element-group__label {
+.element-group__info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+}
+
+.element-group__label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  font-family: monospace;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-group__type {
+  font-size: var(--font-size-2xs);
+  color: var(--color-muted-foreground);
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -327,6 +325,12 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
 .element-group__variant-add-icon {
   width: var(--font-size-md);
   height: var(--font-size-md);
+}
+
+.element-group__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-0-5);
 }
 
 .element-group__update-bar {

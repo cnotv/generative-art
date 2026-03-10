@@ -49,21 +49,21 @@ export const presets = {
       },
     },
   },
-  decals: {
-    name: 'Scattered Decals',
+  trees: {
+    name: 'Scattered Trees',
     config: {
       area: {
-        center: [0, -1, 20] as CoordinateTuple,
-        size: [1000, 0, 0] as CoordinateTuple,
+        center: [0, -1, -20] as CoordinateTuple,
+        size: [200, 0, 1] as CoordinateTuple,
       },
       textures: {
-        baseSize: [10, 7, 0] as CoordinateTuple,
+        baseSize: [7, 10, 0] as CoordinateTuple,
         sizeVariation: [5, 3, 0] as CoordinateTuple,
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },
       instances: {
-        density: 50,
-        pattern: 'grid-jitter' as const,
+        density: 20,
+        pattern: 'random' as const,
         seed: 8000,
       },
     },
@@ -112,7 +112,7 @@ export const defaultConfig: SceneEditorConfig = {
 export const configControls = {
   preset: {
     label: 'Preset',
-    options: ['clouds', 'decals', 'grass'],
+    options: ['clouds', 'trees', 'grass'],
   },
   area: {
     center: {

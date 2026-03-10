@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Menu, Settings, Bug, Box, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { usePanelsStore } from '@/stores/panels';
 import type { PanelType } from '@/stores/panels';
+
+const NAV_HEIGHT_PX = 48; // matches --nav-height: 3rem
 
 interface PanelButton {
   type: PanelType;
@@ -12,8 +14,15 @@ interface PanelButton {
 }
 
 const panelsStore = usePanelsStore();
-
+const isNearTop = ref(false);
 const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0);
+
+const onMouseMove = (e: MouseEvent) => {
+  isNearTop.value = e.clientY <= NAV_HEIGHT_PX;
+};
+
+onMounted(() => window.addEventListener('mousemove', onMouseMove));
+onUnmounted(() => window.removeEventListener('mousemove', onMouseMove));
 
 const navigationButton = computed<PanelButton>(() => ({
   type: 'navigation',
@@ -37,7 +46,7 @@ const handleToggle = (panelType: PanelType) => {
 <template>
   <nav
     class="global-navigation"
-    :class="{ 'global-navigation--visible': hasOpenPanels }"
+    :class="{ 'global-navigation--visible': isNearTop || hasOpenPanels }"
   >
     <div class="global-navigation__left">
       <Button
@@ -69,7 +78,6 @@ const handleToggle = (panelType: PanelType) => {
 
     <div class="global-navigation__right">
       <Button
-        v-if="hasOpenPanels"
         variant="ghost"
         size="icon"
         class="global-navigation__button"
@@ -89,7 +97,7 @@ const handleToggle = (panelType: PanelType) => {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  z-index: 50;
+  z-index: var(--z-nav);
   display: flex;
   align-items: center;
   padding: 0 0.5rem;
@@ -98,13 +106,13 @@ const handleToggle = (panelType: PanelType) => {
   backdrop-filter: blur(10px);
   color: var(--color-foreground);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.2s;
 }
 
-.global-navigation:hover,
-.global-navigation:focus-within,
 .global-navigation--visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .global-navigation__left {
@@ -128,7 +136,7 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .global-navigation__button {
-  transition: all 0.2s;
+  transition: background-color 0.2s;
 }
 
 .global-navigation__button--active {
