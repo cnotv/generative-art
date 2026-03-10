@@ -59,6 +59,7 @@ defineProps<{
   align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
+  overflow-y: auto;
 
   > * {
     pointer-events: auto;
@@ -75,13 +76,11 @@ defineProps<{
 
 .sheet-content {
   position: relative;
-  flex: 1 1 0;
-  min-height: 0;
+  flex: 0 0 auto;
   gap: var(--spacing-1);
   background-color: var(--color-background);
   padding: var(--spacing-2);
   overflow-x: hidden;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
@@ -95,10 +94,6 @@ defineProps<{
     border-left: 1px solid var(--color-border);
   }
 
-  &:has(.generic-panel--collapsed) {
-    flex: 0 0 auto;
-    overflow-y: hidden;
-  }
 }
 
 .sheet-close {

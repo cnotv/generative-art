@@ -68,12 +68,6 @@ const toggleCollapse = () => {
 .generic-panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.generic-panel--collapsed {
-  flex: 0 0 auto;
 }
 
 .generic-panel__header {
@@ -109,8 +103,5 @@ const toggleCollapse = () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 </style>
