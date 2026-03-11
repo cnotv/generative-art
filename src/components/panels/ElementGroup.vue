@@ -159,12 +159,12 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
   background: var(--panel-item-bg);
   border: none;
   cursor: pointer;
-  width: 100%;
   text-align: left;
   color: var(--color-foreground);
   font-size: var(--font-size-sm);
   font-weight: 500;
   transition: background-color 150ms;
+  overflow: hidden;
 }
 
 .element-group__header:hover {
@@ -330,6 +330,7 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
 .element-group__actions {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: nowrap;
   gap: var(--spacing-0-5);
 }
 
