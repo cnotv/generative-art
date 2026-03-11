@@ -2,23 +2,45 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useSceneViewStore } from "@/stores/sceneView";
 import { presets } from "@/views/Tools/SceneEditor/config";
+import { getCube } from "@webgamekit/threejs";
+import type { SetupConfig } from "@webgamekit/threejs";
+import { createTimelineManager } from "@webgamekit/animation";
 import cloudImageUrl from "@/assets/images/illustrations/cloud1.webp";
 import treeImageUrl from "@/assets/images/illustrations/Tree1-1.webp";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const store = useSceneViewStore();
+const setupConfig: SetupConfig = {
+  camera: { position: [0, 5, 10], fov: 75 },
+  ground: { color: 0x888888, size: [100, 0.1, 100] },
+  lights: {
+    ambient: { color: 0xffffff, intensity: 1 },
+    directional: { color: 0xffffff, intensity: 2, position: [50, 100, 50] },
+  },
+  sky: { color: 0xaaaaff, size: 800 },
+};
 
 onMounted(async () => {
   if (!canvas.value) return;
 
-  await store.init(canvas.value, {
-    camera: { position: [0, 5, 10], fov: 75 },
-    ground: { color: 0x888888, size: [100, 0.1, 100] },
-    lights: {
-      ambient: { color: 0xffffff, intensity: 1 },
-      directional: { color: 0xffffff, intensity: 2, position: [50, 100, 50] },
+  await store.init(canvas.value, setupConfig, {
+    defineSetup: ({ scene, world, clock, animate }) => {
+      const cube = getCube(scene, world, { name: "test", size: [1, 1, 0.1] });
+      const BOUNCE_SPEED = 2;
+      const BOUNCE_HEIGHT = 1;
+      const timeline = createTimelineManager();
+      timeline.addAction({
+        name: "rotate-cube",
+        action: () => {
+          const elapsed = clock.getElapsedTime();
+          cube.position.y =
+            1 + BOUNCE_HEIGHT * Math.abs(Math.sin(elapsed * BOUNCE_SPEED));
+          cube.rotation.y = elapsed;
+        },
+      });
+
+      animate({ timeline });
     },
-    sky: { color: 0xaaaaff, size: 1000 },
   });
 
   store.initTextureGroups(

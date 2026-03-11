@@ -95,7 +95,6 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   let composer: EffectComposer | null = null;
   if (video && route) video.record(canvas, route);
   const getDelta = () => delta;
-  const getFrame = () => frame;
   let orbit: OrbitControls | null = null;
 
   /**
@@ -163,16 +162,23 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       }
     }
   }) => {
+    let accumulator = 0;
+
     function runAnimation() {
       if (stats?.start && route) stats.start(route);
       delta = clock.getDelta();
       frame = requestAnimationFrame(runAnimation);
+
+      accumulator += delta;
+      if (accumulator < frameRate) return;
+      accumulator -= frameRate;
+
       world.step();
 
       beforeTimeline();
       animateTimeline(timeline, frame, undefined, { enableAutoRemoval: true });
       afterTimeline();
-      
+
       if (orbit) {
         orbit.update();
         if (config.orbit?.debug) console.log(camera);
@@ -197,7 +203,6 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     animate,
     clock,
     getDelta,
-    getFrame,
     renderer,
     scene,
     camera,

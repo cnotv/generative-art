@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, X } from 'lucide-vue-next';
 import { Sheet } from '@/components/ui/sheet';
 import { usePanelsStore } from '@/stores/panels';
 import type { PanelType } from '@/stores/panels';
@@ -41,6 +41,10 @@ const handleOpenChange = (open: boolean) => {
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value;
 };
+
+const closePanel = () => {
+  panelsStore.closePanel(props.panelType);
+};
 </script>
 
 <template>
@@ -56,6 +60,14 @@ const toggleCollapse = () => {
       >
         <component :is="collapsed ? ChevronRight : ChevronDown" class="generic-panel__chevron" />
         <span class="generic-panel__title">{{ panelTitle }}</span>
+        <button
+          class="generic-panel__close"
+          aria-label="Close panel"
+          @click.stop="closePanel"
+          @keydown.enter.space.prevent.stop="closePanel"
+        >
+          <X class="generic-panel__close-icon" />
+        </button>
       </div>
       <div v-show="!collapsed" class="generic-panel__content">
         <slot />
@@ -97,6 +109,28 @@ const toggleCollapse = () => {
 
 .generic-panel__title {
   flex: 1;
+}
+
+.generic-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: var(--spacing-0-5);
+  cursor: pointer;
+  color: var(--color-muted-foreground);
+  border-radius: var(--radius-sm);
+  transition: color 150ms;
+}
+
+.generic-panel__close:hover {
+  color: var(--color-foreground);
+}
+
+.generic-panel__close-icon {
+  width: var(--font-size-sm);
+  height: var(--font-size-sm);
 }
 
 .generic-panel__content {

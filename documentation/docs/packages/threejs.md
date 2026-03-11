@@ -78,7 +78,6 @@ Initialize ThreeJS and Rapier environment.
   animate: Function,
   clock: THREE.Clock,
   getDelta: () => number,
-  getFrame: () => number,
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,

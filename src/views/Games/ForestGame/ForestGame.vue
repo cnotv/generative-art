@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { useRoute } from "vue-router";
-import * as THREE from 'three';
 import {
-  getTools,
   getModel,
   getCube,
   cameraFollowPlayer,
-  generateAreaPositions,
-  setCameraPreset,
-  CameraPreset,
   type ComplexModel
 } from "@webgamekit/threejs";
 import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, createPopUpBounce, createSlideInFromSides, sortOrder, calculateSequentialDelays } from "@webgamekit/animation";
@@ -17,9 +12,7 @@ import { createGame, type GameState } from "@webgamekit/game";
 import { createControls, isMobile } from "@webgamekit/controls";
 import { initializeAudio, stopMusic, playAudioFile } from "@webgamekit/audio";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
-import { useViewPanelsStore } from "@/stores/viewPanels";
-import { useDebugSceneStore } from "@/stores/debugScene";
-import { useElementPropertiesStore } from "@/stores/elementProperties";
+import { useSceneViewStore } from "@/stores/sceneView";
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
@@ -29,22 +22,12 @@ import {
   controlBindings,
   assets,
   illustrationAreas,
+  illustrationAreaGroupConfigs,
   configControls,
-  areaSchema,
 } from "./config";
 
 const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanelsStore();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
-const { registerElementProperties, clearAllElementProperties } = useElementPropertiesStore();
-
-const getNestedValue = (obj: Record<string, unknown> | null | undefined, path: string): unknown => {
-  if (!obj) return undefined;
-  return path.split('.').reduce((current: unknown, key) => {
-    if (current === null || current === undefined) return undefined;
-    return (current as Record<string, unknown>)[key];
-  }, obj as unknown);
-};
+const store = useSceneViewStore();
 
 // Create reactive config for game settings (Config tab)
 const reactiveConfig = createReactiveConfig({
@@ -60,28 +43,6 @@ const reactiveConfig = createReactiveConfig({
   },
 });
 
-// Create reactive scene config for setupConfig-related settings (Scene tab)
-const sceneConfig = createReactiveConfig({
-  camera: {
-    preset: 'perspective',
-    fov: setupConfig.camera?.fov ?? 80,
-    position: {
-      x: (setupConfig.camera?.position as CoordinateTuple)?.[0] ?? 0,
-      y: (setupConfig.camera?.position as CoordinateTuple)?.[1] ?? 7,
-      z: (setupConfig.camera?.position as CoordinateTuple)?.[2] ?? 35,
-    },
-  },
-  ground: {
-    color: setupConfig.ground && typeof setupConfig.ground === 'object' ? setupConfig.ground.color : 0x98887d,
-  },
-  sky: {
-    color: setupConfig.sky && typeof setupConfig.sky === 'object' ? setupConfig.sky.color : 0x00aaff,
-  },
-});
-
-// import { times } from "@/utils/lodash";
-
-// Use correct GameState type and initialization
 const gameState = shallowRef<GameState>();
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
@@ -98,12 +59,14 @@ const handleJump = (): void => {
   canJump.value = false;
 };
 
-const getLogs = (actions: Record<string, any>): string[] =>
+interface ActionEntry { trigger: string; device: string }
+
+const getLogs = (actions: Record<string, ActionEntry | null>): string[] =>
   Object.keys(actions)
     .filter((action) => !!actions[action])
     .map(
       (action) =>
-        `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
+        `${action} triggered by ${actions[action]!.trigger} ${actions[action]!.device}`
     );
 
 const logControllerForward = (
@@ -121,7 +84,7 @@ const logControllerForward = (
 const bindings = {
   ...controlBindings,
   onAction: (action: string) => {
-    logs.value = getLogs(currentActions);
+    logs.value = getLogs(currentActions as Record<string, ActionEntry | null>);
 
     switch (action) {
       case "jump":
@@ -132,7 +95,7 @@ const bindings = {
     }
   },
   onRelease: () => {
-    logs.value = getLogs(currentActions);
+    logs.value = getLogs(currentActions as Record<string, ActionEntry | null>);
   },
 };
 const { destroyControls, currentActions, remapControlsOptions } = createControls(
@@ -141,109 +104,46 @@ const { destroyControls, currentActions, remapControlsOptions } = createControls
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 
-// Store references to scene objects for live config updates
-const sceneRefs = shallowRef<{
-  camera?: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-  scene?: THREE.Scene;
-} | null>(null);
-
-// Track previous camera preset to detect when it changes
-const previousCameraPreset = ref<string>('perspective');
-
-// Watch scene camera config and apply changes
-watch(
-  () => sceneConfig.value.camera,
-  (newCameraConfig) => {
-    const presetChanged = newCameraConfig.preset !== previousCameraPreset.value;
-
-    // If preset changed, apply the new camera preset
-    if (presetChanged && sceneRefs.value?.camera) {
-      previousCameraPreset.value = newCameraConfig.preset;
-
-      // Apply the camera preset
-      const aspect = window.innerWidth / window.innerHeight;
-      setCameraPreset(
-        sceneRefs.value.camera,
-        newCameraConfig.preset as CameraPreset,
-        aspect
-      );
-    } else if (sceneRefs.value?.camera && sceneRefs.value.camera instanceof THREE.PerspectiveCamera) {
-      // For perspective camera, update FOV and position without preset
-      const camera = sceneRefs.value.camera;
-      camera.fov = newCameraConfig.fov;
-      camera.position.set(
-        newCameraConfig.position.x,
-        newCameraConfig.position.y,
-        newCameraConfig.position.z
-      );
-      camera.updateProjectionMatrix();
-    }
-  },
-  { deep: true }
-);
-
-const init = async (): Promise<void> => {
+onMounted(async () => {
   if (!canvas.value) return;
-  const { setup, animate, scene, world, getDelta, camera } = await getTools({
-    canvas: canvas.value,
-  });
 
-  // Store references for live updates
-  sceneRefs.value = {
-    camera: camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
-    scene,
-  };
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    configControls
+  );
 
-  // Initialize camera with the configured preset
-  if (sceneRefs.value.camera) {
-    const aspect = window.innerWidth / window.innerHeight;
-    setCameraPreset(
-      sceneRefs.value.camera,
-      sceneConfig.value.camera.preset as CameraPreset,
-      aspect
-    );
-  }
-
-  // Track initial preset value
-  previousCameraPreset.value = sceneConfig.value.camera.preset;
-
-  const { orbit } = await setup({
-    config: setupConfig,
-    defineSetup: async ({ ground }) => {
+  await store.init(canvas.value, setupConfig, {
+    viewPanels: { showConfig: true },
+    playMode: true,
+    defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
       const { distance, speed, maxJump } = playerSettings.game;
       const { movement } = playerSettings;
       const obstacles: ComplexModel[] = [];
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
 
       const player = await getModel(scene, world, "mushroom.glb", playerSettings.model);
-      // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
+      player.name = 'Player';
 
-      // Add ground mesh for ground detection (if ground exists)
       const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
       remapControlsOptions(bindings);
 
+
       const timelineManager = createTimelineManager();
 
-      // Populate all illustrations using pre-generated positions with pop-up animations
+      // Populate all illustrations with mesh naming for panel tracking
       let animationIndex = 0;
       Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
         configs.forEach((config) => {
-          // Use instances with variations if available, otherwise use positions
           const elementsData = config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }));
 
-          // Calculate sequential delays based on Z-position
-          // For grass: animate from middle Z outward (creates expanding effect)
-          // For other elements: animate back to front (depth reveal)
-          let sortFunction;
-          if (categoryName === 'grass') {
-            sortFunction = sortOrder.byDistanceFromZ(elementsData, 'middle');
-          } else {
-            sortFunction = sortOrder.zBackToFront;
-          }
+          const sortFunction = categoryName === 'grass'
+            ? sortOrder.byDistanceFromZ(elementsData, 'middle')
+            : sortOrder.zBackToFront;
           const delays = calculateSequentialDelays(elementsData, sortFunction, 2);
 
-          elementsData.forEach((elementData: any, index: number) => {
+          elementsData.forEach((elementData: { position: CoordinateTuple; scale?: CoordinateTuple; rotation?: CoordinateTuple }, index: number) => {
             const position = elementData.position;
             const elementConfig = {
               ...config,
@@ -252,28 +152,23 @@ const init = async (): Promise<void> => {
               ...(elementData.rotation && { rotation: elementData.rotation })
             };
             const element = getCube(scene, world, elementConfig);
+            element.name = `area-${categoryName}-${animationIndex}`;
 
-            // Choose animation type based on category
-            let animation;
-            if (categoryName === 'clouds') {
-              // Clouds slide in from the sides
-              animation = createSlideInFromSides({
-                object: element,
-                startY: position[1],
-                endY: position[1],
-                duration: 60,
-                delay: delays[index]
-              });
-            } else {
-              // Other elements use pop-up animation
-              animation = createPopUpBounce({
-                object: element,
-                startY: position[1] - 3,
-                endY: position[1],
-                duration: 30,
-                delay: delays[index]
-              });
-            }
+            const animation = categoryName === 'clouds'
+              ? createSlideInFromSides({
+                  object: element,
+                  startY: position[1],
+                  endY: position[1],
+                  duration: 60,
+                  delay: delays[index]
+                })
+              : createPopUpBounce({
+                  object: element,
+                  startY: position[1] - 3,
+                  endY: position[1],
+                  duration: 30,
+                  delay: delays[index]
+                });
 
             timelineManager.addAction({
               name: `${categoryName}-${animationIndex}-popup`,
@@ -286,8 +181,6 @@ const init = async (): Promise<void> => {
           });
         });
       });
-
-      // times(200, (i) => getCube(scene, world, {...undergroundConfig, position: [(i - 100) * 10, -10.3, 27]}) )
 
       timelineManager.addAction({
         frequency: speed.movement,
@@ -307,7 +200,7 @@ const init = async (): Promise<void> => {
               animationData,
               movement
             );
-            cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+            cameraFollowPlayer(camera, player, cameraOffset, store.orbitReference as Parameters<typeof cameraFollowPlayer>[3], ['x', 'z']);
           } else {
             updateAnimation({ ...animationData, speed: 5 });
           }
@@ -328,7 +221,6 @@ const init = async (): Promise<void> => {
             player.position.y -= speed.jump * 0.1;
           }
 
-          // Fake gravity
           if (player.position.y <= playerSettings.model.position[1] + 0.1) {
             canJump.value = true;
             player.position.y = playerSettings.model.position[1];
@@ -343,54 +235,33 @@ const init = async (): Promise<void> => {
     },
   });
 
-  const sceneObjects = scene.children.filter(c => c.type.includes('Light'));
-  const illustrationElements = Object.keys(illustrationAreas).map(name => ({
-    name,
-    type: 'IllustrationArea',
-  }));
-  registerSceneElements(camera, [...sceneObjects, { name: 'Player', type: 'Group' }, ...illustrationElements]);
-
-  Object.entries(illustrationAreas).forEach(([name, variants]) => {
-    const firstVariant = variants[0];
-    if (!firstVariant) return;
-    const areaData = { size: firstVariant.size } as Record<string, unknown>;
-    registerElementProperties(name, {
-      title: name,
-      type: 'group',
-      schema: areaSchema,
-      getValue: (path) => getNestedValue(areaData, path),
-      updateValue: () => {},
-    });
-  });
-};
-
-onMounted(async () => {
-  // Set view-specific panels for GlobalNavigation
-  setViewPanels({
-    showConfig: true,
-  });
-
-  registerViewConfig(
-    route.name as string,
-    reactiveConfig,
-    configControls
+  // Register illustration areas as TextureArea elements
+  store.registerTextureAreas(
+    Object.entries(illustrationAreas).map(([name, variants]) => {
+      const uniqueTextures = [...new Set(variants.map(v => v.texture))];
+      return {
+        name,
+        schema: {},
+        initialData: illustrationAreaGroupConfigs[name] ?? {},
+        meshPrefix: `area-${name}`,
+        textures: uniqueTextures.map((url, index) => ({
+          id: `${name}-tex-${index}`,
+          name: `${name}-${index}`,
+          filename: `${name}-${index}`,
+          url,
+        })),
+      };
+    })
   );
 
-  await init();
   await initializeAudio();
-  window.addEventListener("resize", init);
 });
-onUnmounted(() => {
-  // Clear view-specific panels
-  clearViewPanels();
-  clearSceneElements();
-  clearAllElementProperties();
 
+onUnmounted(() => {
+  store.cleanup();
   stopMusic();
   destroyControls();
   unregisterViewConfig(route.name as string);
-  window.removeEventListener("resize", init);
-  sceneRefs.value = null;
 });
 </script>
 

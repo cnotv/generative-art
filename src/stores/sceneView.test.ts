@@ -42,16 +42,25 @@ const mockGround = {
 };
 
 // Mock getTools
+const mockSetup = vi.fn(async (options?: { config?: unknown; defineSetup?: (context: { ground: unknown }) => Promise<void> | void }) => {
+  if (options?.defineSetup) {
+    await options.defineSetup({ ground: mockGround });
+  }
+  return { orbit: mockOrbit, ground: mockGround };
+});
+const mockAnimate = vi.fn();
+
 vi.mock('@webgamekit/threejs', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>;
   return {
     ...actual,
     getTools: vi.fn(() => Promise.resolve({
-      setup: vi.fn(() => Promise.resolve({ orbit: mockOrbit, ground: mockGround })),
-      animate: vi.fn(),
+      setup: mockSetup,
+      animate: mockAnimate,
       scene: mockScene,
       camera: mockCamera,
       world: {},
+      getDelta: vi.fn(() => 0.016),
     })),
   };
 });
@@ -103,6 +112,18 @@ describe('useSceneViewStore', () => {
 
       expect(viewPanelsStore.viewPanels).toEqual({ showConfig: false });
       expect(panelsStore.activePanels.has('elements')).toBe(true);
+    });
+
+    it('should pass custom viewPanels from options', async () => {
+      const store = useSceneViewStore();
+      const viewPanelsStore = useViewPanelsStore();
+      const canvas = document.createElement('canvas');
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } }, {
+        viewPanels: { showConfig: true },
+      });
+
+      expect(viewPanelsStore.viewPanels).toEqual({ showConfig: true });
     });
 
     it('should register element properties for camera when camera config is provided', async () => {
@@ -202,6 +223,112 @@ describe('useSceneViewStore', () => {
       expect(textureStore.handlers).not.toBe(null);
       expect(textureStore.handlers?.onToggleVisibility).toBeDefined();
       expect(textureStore.handlers?.onToggleWireframe).toBeDefined();
+    });
+  });
+
+  describe('init with defineSetup', () => {
+    it('should call defineSetup with context during init', async () => {
+      const store = useSceneViewStore();
+      const canvas = document.createElement('canvas');
+      const defineSetup = vi.fn();
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } }, { defineSetup });
+
+      expect(defineSetup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scene: mockScene,
+          camera: mockCamera,
+          world: expect.anything(),
+          getDelta: expect.any(Function),
+          animate: expect.any(Function),
+        })
+      );
+    });
+
+    it('should not call animate when defineSetup is provided', async () => {
+      const store = useSceneViewStore();
+      const canvas = document.createElement('canvas');
+      mockAnimate.mockClear();
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } }, {
+        defineSetup: vi.fn(),
+      });
+
+      expect(mockAnimate).not.toHaveBeenCalled();
+    });
+
+    it('should pass defineSetup to setup call', async () => {
+      const store = useSceneViewStore();
+      const canvas = document.createElement('canvas');
+      mockSetup.mockClear();
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } }, {
+        defineSetup: vi.fn(),
+      });
+
+      expect(mockSetup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          defineSetup: expect.any(Function),
+        })
+      );
+    });
+  });
+
+  describe('registerTextureAreas', () => {
+    it('should register texture area element properties', async () => {
+      const store = useSceneViewStore();
+      const elementPropertiesStore = useElementPropertiesStore();
+      const canvas = document.createElement('canvas');
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } });
+      store.registerTextureAreas([{
+        name: 'clouds',
+        schema: { size: { component: 'CoordinateInput', label: 'Size' } },
+        initialData: { size: { x: 200, y: 100, z: 0 } },
+        meshPrefix: 'area-clouds',
+      }]);
+
+      elementPropertiesStore.openElementProperties('clouds');
+      expect(elementPropertiesStore.activeProperties?.title).toBe('clouds');
+      expect(elementPropertiesStore.activeProperties?.type).toBe('TextureArea');
+    });
+
+    it('should add texture areas to scene elements', async () => {
+      const store = useSceneViewStore();
+      const debugSceneStore = useDebugSceneStore();
+      const canvas = document.createElement('canvas');
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } });
+      store.registerTextureAreas([
+        { name: 'clouds', schema: {}, initialData: {}, meshPrefix: 'area-clouds' },
+        { name: 'trees', schema: {}, initialData: {}, meshPrefix: 'area-trees' },
+      ]);
+
+      const areaElements = debugSceneStore.sceneElements.filter(e => e.type === 'TextureArea');
+      expect(areaElements).toHaveLength(2);
+      expect(areaElements.map(e => e.name)).toEqual(['clouds', 'trees']);
+    });
+
+    it('should filter individual area meshes from scene elements', async () => {
+      const store = useSceneViewStore();
+      const debugSceneStore = useDebugSceneStore();
+      const canvas = document.createElement('canvas');
+
+      mockScene.children = [
+        { name: 'area-clouds-0', type: 'Mesh', visible: true },
+        { name: 'area-clouds-1', type: 'Mesh', visible: true },
+        { name: 'Player', type: 'Group', visible: true },
+      ];
+
+      await store.init(canvas, { camera: { position: [0, 5, 10] } });
+      store.registerTextureAreas([
+        { name: 'clouds', schema: {}, initialData: {}, meshPrefix: 'area-clouds' },
+      ]);
+
+      const meshElements = debugSceneStore.sceneElements.filter(e => e.name.startsWith('area-clouds'));
+      expect(meshElements).toHaveLength(0);
+      const playerElements = debugSceneStore.sceneElements.filter(e => e.name === 'Player');
+      expect(playerElements).toHaveLength(1);
     });
   });
 

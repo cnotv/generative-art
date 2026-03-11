@@ -5,6 +5,7 @@ import SchemaControls from "./ConfigControls.vue";
 import ElementItem from "./ElementItem.vue";
 import ElementCamera from "./ElementCamera.vue";
 import ElementGroup from "./ElementGroup.vue";
+import IconButton from "@/components/IconButton.vue";
 import { Button } from "@/components/ui/button";
 import { Box, Camera, Image } from "lucide-vue-next";
 import type { Component } from "vue";
@@ -13,6 +14,8 @@ import { useElementPropertiesStore } from "@/stores/elementProperties";
 import { storeToRefs } from "pinia";
 import { useTextureGroupsStore } from "@/stores/textureGroups";
 import type { SceneElement } from "@/stores/debugScene";
+import { ELEMENT_CATEGORIES, getElementCategory } from "./elementUtilities";
+import type { ElementCategory } from "./elementUtilities";
 
 interface Props {
   isRecording?: boolean;
@@ -37,6 +40,20 @@ const { openElementProperties } = elementPropertiesStore;
 const textureStore = useTextureGroupsStore();
 
 const expandedName = ref<string | null>(null);
+const hiddenCategories = ref<Set<ElementCategory>>(new Set());
+
+const toggleCategory = (category: ElementCategory) => {
+  const next = new Set(hiddenCategories.value);
+  if (next.has(category)) {
+    next.delete(category);
+  } else {
+    next.add(category);
+  }
+  hiddenCategories.value = next;
+};
+
+const isElementVisible = (element: SceneElement): boolean =>
+  !hiddenCategories.value.has(getElementCategory(element));
 
 const triggerFileUpload = (onchange: (event: Event) => void) => {
   const input = document.createElement("input");
@@ -93,10 +110,11 @@ const isCameraExpanded = computed(() => {
 });
 
 const grouped = computed(() => {
+  const filtered = sceneElements.value.filter(isElementVisible);
   const ungrouped: SceneElement[] = [];
   const meshGroups = new Map<string, SceneElement[]>();
 
-  sceneElements.value.forEach((el) => {
+  filtered.forEach((el) => {
     if (el.groupId !== undefined) {
       const existing = meshGroups.get(el.groupId) ?? [];
       meshGroups.set(el.groupId, [...existing, el]);
@@ -133,6 +151,20 @@ const hasExpandedSchema = computed(
       >
         <component :is="btn.icon" class="h-3 w-3 mr-1" />{{ btn.label }}
       </Button>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="elements-panel__filter-bar">
+      <IconButton
+        v-for="cat in ELEMENT_CATEGORIES"
+        :key="cat.category"
+        size="sm"
+        :active="!hiddenCategories.has(cat.category)"
+        :title="hiddenCategories.has(cat.category) ? `Show ${cat.label}` : `Hide ${cat.label}`"
+        @click="toggleCategory(cat.category)"
+      >
+        <component :is="cat.icon" />
+      </IconButton>
     </div>
 
     <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
@@ -212,6 +244,15 @@ const hasExpandedSchema = computed(
   padding: 0 var(--spacing-2);
   font-size: var(--font-size-xs);
   gap: var(--spacing-1);
+}
+
+.elements-panel__filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-1-5);
 }
 
 .elements-panel__empty {
