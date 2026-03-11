@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import * as THREE from 'three';
-import { getTools, getCube, generateAreaPositions } from '@webgamekit/threejs';
+import { getTools, getCube, generateAreaPositions, SCENE_DEFAULTS } from '@webgamekit/threejs';
 import type { SetupConfig, CoordinateTuple, AreaConfig } from '@webgamekit/threejs';
 import { createTimelineManager } from '@webgamekit/animation';
 import { usePanelsStore } from '@/stores/panels';
@@ -262,8 +262,6 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   };
 
   const registerCameraProperties = () => {
-    if (Object.keys(cameraConfig.value).length === 0) return;
-
     elementPropertiesStore.registerElementProperties('Camera', {
       title: 'Camera',
       type: 'camera',
@@ -293,13 +291,26 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const registerLightsProperties = () => {
     if (Object.keys(lightsConfig.value).length === 0) return;
 
-    elementPropertiesStore.registerElementProperties('lights', {
-      title: 'Lights',
-      schema: lightsSchema,
-      getValue: (path) => getNestedValue(lightsConfig.value, path),
+    const ambientSchema = lightsSchema.ambient;
+    const directionalSchema = lightsSchema.directional;
+
+    elementPropertiesStore.registerElementProperties('ambient-light', {
+      title: 'Ambient Light',
+      schema: ambientSchema,
+      getValue: (path) => getNestedValue(lightsConfig.value.ambient as Record<string, unknown>, path),
       updateValue: (path, value) => {
-        lightsConfig.value = setNestedValueImmutable(lightsConfig.value, path, value);
-        applyLightsUpdate(path, value);
+        lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `ambient.${path}`, value);
+        applyLightsUpdate(`ambient.${path}`, value);
+      },
+    });
+
+    elementPropertiesStore.registerElementProperties('directional-light', {
+      title: 'Directional Light',
+      schema: directionalSchema,
+      getValue: (path) => getNestedValue(lightsConfig.value.directional as Record<string, unknown>, path),
+      updateValue: (path, value) => {
+        lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `directional.${path}`, value);
+        applyLightsUpdate(`directional.${path}`, value);
       },
     });
   };
@@ -548,30 +559,43 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const init = async (canvas: HTMLCanvasElement, config: SetupConfig, options?: InitOptions) => {
     playMode.value = options?.playMode ?? false;
 
-    // Build reactive config sections from SetupConfig
-    if (config.camera) {
-      const position = config.camera.position as number[] | undefined;
-      cameraConfig.value = {
-        position: { x: position?.[0] ?? 0, y: position?.[1] ?? 20, z: position?.[2] ?? 150 },
-        fov: config.camera.fov ?? 75,
-        orbitTarget: { x: 0, y: 0, z: 0 },
-      };
-    }
-    if (config.ground && config.ground !== false) {
-      const ground = config.ground as { color?: number; size?: number | number[] };
-      const size = ground.size;
+    // Build reactive config sections from SetupConfig, always using defaults
+    const cameraPosition = (config.camera?.position ?? SCENE_DEFAULTS.camera.position) as number[];
+    cameraConfig.value = {
+      position: { x: cameraPosition[0], y: cameraPosition[1], z: cameraPosition[2] },
+      fov: config.camera?.fov ?? SCENE_DEFAULTS.camera.fov,
+      orbitTarget: { x: 0, y: 0, z: 0 },
+    };
+
+    if (config.ground !== false) {
+      const groundOverrides = (config.ground && typeof config.ground === 'object' ? config.ground : {}) as { color?: number; size?: number | number[] };
+      const size = groundOverrides.size ?? SCENE_DEFAULTS.ground.size;
       groundConfig.value = {
-        color: ground.color ?? 0x333333,
+        color: groundOverrides.color ?? SCENE_DEFAULTS.ground.color,
         size: Array.isArray(size)
           ? { x: size[0], y: size[1], z: size[2] }
           : { x: size ?? 100, y: 0.1, z: size ?? 100 },
       };
     }
-    if (config.lights && config.lights !== false) {
-      lightsConfig.value = JSON.parse(JSON.stringify(config.lights));
+
+    if (config.lights !== false) {
+      const lightsOverrides = (config.lights && typeof config.lights === 'object' ? config.lights : {}) as Record<string, unknown>;
+      const ambientOverrides = (lightsOverrides.ambient ?? {}) as Record<string, unknown>;
+      const directionalOverrides = (lightsOverrides.directional ?? {}) as Record<string, unknown>;
+      const directionalPosition = (directionalOverrides.position ?? SCENE_DEFAULTS.lights.directional.position) as number[];
+      lightsConfig.value = {
+        ambient: { ...SCENE_DEFAULTS.lights.ambient, ...ambientOverrides },
+        directional: {
+          ...SCENE_DEFAULTS.lights.directional,
+          ...directionalOverrides,
+          position: { x: directionalPosition[0], y: directionalPosition[1], z: directionalPosition[2] },
+        },
+      };
     }
-    if (config.sky && config.sky !== false) {
-      skyConfig.value = JSON.parse(JSON.stringify(config.sky));
+
+    if (config.sky !== false) {
+      const skyOverrides = (config.sky && typeof config.sky === 'object' ? config.sky : {}) as Record<string, unknown>;
+      skyConfig.value = { ...SCENE_DEFAULTS.sky, ...skyOverrides };
     }
 
     const { setup, animate: toolsAnimate, scene, camera, world, getDelta, clock } = await getTools({ canvas });

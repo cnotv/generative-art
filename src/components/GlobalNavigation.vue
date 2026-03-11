@@ -31,8 +31,8 @@ const navigationButton = computed<PanelButton>(() => ({
 }));
 
 const panelButtons = computed<PanelButton[]>(() => [
-  { type: 'config', icon: Settings, label: 'Config' },
   { type: 'elements', icon: Box, label: 'Elements' },
+  { type: 'config', icon: Settings, label: 'Config' },
   { type: 'debug', icon: Bug, label: 'Debug' },
 ]);
 

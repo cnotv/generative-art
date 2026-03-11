@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { onMounted, onUnmounted, ref, shallowRef, toRaw } from "vue";
 import { useRoute } from "vue-router";
 import {
   getModel,
@@ -129,6 +129,8 @@ onMounted(async () => {
 
       remapControlsOptions(bindings);
 
+      // Lazy-captured orbit ref to avoid per-frame reactive access
+      let orbitRef: Parameters<typeof cameraFollowPlayer>[3] | null = null;
 
       const timelineManager = createTimelineManager();
 
@@ -200,7 +202,8 @@ onMounted(async () => {
               animationData,
               movement
             );
-            cameraFollowPlayer(camera, player, cameraOffset, store.orbitReference as Parameters<typeof cameraFollowPlayer>[3], ['x', 'z']);
+            if (!orbitRef) orbitRef = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3];
+            cameraFollowPlayer(camera, player, cameraOffset, orbitRef, ['x', 'z']);
           } else {
             updateAnimation({ ...animationData, speed: 5 });
           }

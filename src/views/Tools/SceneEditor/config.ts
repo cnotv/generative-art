@@ -57,7 +57,7 @@ export const presets = {
         size: [200, 0, 1] as CoordinateTuple,
       },
       textures: {
-        baseSize: [7, 10, 0] as CoordinateTuple,
+        baseSize: [30, 40, 0] as CoordinateTuple,
         sizeVariation: [5, 3, 0] as CoordinateTuple,
         rotationVariation: [0, 0, 0] as CoordinateTuple,
       },

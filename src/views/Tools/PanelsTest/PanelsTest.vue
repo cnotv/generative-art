@@ -11,8 +11,8 @@ import treeImageUrl from "@/assets/images/illustrations/Tree1-1.webp";
 const canvas = ref<HTMLCanvasElement | null>(null);
 const store = useSceneViewStore();
 const setupConfig: SetupConfig = {
-  camera: { position: [0, 5, 10], fov: 75 },
-  ground: { color: 0x888888, size: [100, 0.1, 100] },
+  camera: { position: [0, 40, 75], fov: 75 },
+  ground: { color: 0x888888, size: [500, 0.1, 500] },
   lights: {
     ambient: { color: 0xffffff, intensity: 1 },
     directional: { color: 0xffffff, intensity: 2, position: [50, 100, 50] },
@@ -25,9 +25,9 @@ onMounted(async () => {
 
   await store.init(canvas.value, setupConfig, {
     defineSetup: ({ scene, world, clock, animate }) => {
-      const cube = getCube(scene, world, { name: "test", size: [1, 1, 0.1] });
+      const cube = getCube(scene, world, { name: "test", size: [10, 10, 0.1] });
       const BOUNCE_SPEED = 2;
-      const BOUNCE_HEIGHT = 1;
+      const BOUNCE_HEIGHT = 5;
       const timeline = createTimelineManager();
       timeline.addAction({
         name: "rotate-cube",

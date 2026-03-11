@@ -7,7 +7,7 @@ import ElementCamera from "./ElementCamera.vue";
 import ElementGroup from "./ElementGroup.vue";
 import IconButton from "@/components/IconButton.vue";
 import { Button } from "@/components/ui/button";
-import { Box, Camera, Image } from "lucide-vue-next";
+import { Box, Camera, CheckSquare, Image, Square } from "lucide-vue-next";
 import type { Component } from "vue";
 import { useDebugSceneStore } from "@/stores/debugScene";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
@@ -42,6 +42,8 @@ const textureStore = useTextureGroupsStore();
 const expandedName = ref<string | null>(null);
 const hiddenCategories = ref<Set<ElementCategory>>(new Set());
 
+const allVisible = computed(() => hiddenCategories.value.size === 0);
+
 const toggleCategory = (category: ElementCategory) => {
   const next = new Set(hiddenCategories.value);
   if (next.has(category)) {
@@ -50,6 +52,14 @@ const toggleCategory = (category: ElementCategory) => {
     next.add(category);
   }
   hiddenCategories.value = next;
+};
+
+const showAllCategories = () => {
+  hiddenCategories.value = new Set();
+};
+
+const hideAllCategories = () => {
+  hiddenCategories.value = new Set(ELEMENT_CATEGORIES.map(c => c.category));
 };
 
 const isElementVisible = (element: SceneElement): boolean =>
@@ -156,6 +166,16 @@ const hasExpandedSchema = computed(
     <!-- Filter bar -->
     <div class="elements-panel__filter-bar">
       <IconButton
+        size="sm"
+        :active="allVisible"
+        :title="allVisible ? 'Hide all' : 'Show all'"
+        @click="allVisible ? hideAllCategories() : showAllCategories()"
+      >
+        <CheckSquare v-if="allVisible" />
+        <Square v-else />
+      </IconButton>
+      <span class="elements-panel__filter-separator" />
+      <IconButton
         v-for="cat in ELEMENT_CATEGORIES"
         :key="cat.category"
         size="sm"
@@ -253,6 +273,13 @@ const hasExpandedSchema = computed(
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--spacing-1-5);
+}
+
+.elements-panel__filter-separator {
+  width: 1px;
+  height: var(--btn-sm-height);
+  background: var(--color-border);
+  flex-shrink: 0;
 }
 
 .elements-panel__empty {

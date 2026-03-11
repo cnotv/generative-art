@@ -155,7 +155,10 @@ describe('useSceneViewStore', () => {
       expect(elementPropertiesStore.activeProperties?.title).toBe(expectedTitle);
     });
 
-    it('should register lights element properties', async () => {
+    it.each([
+      ['ambient-light', 'Ambient Light'],
+      ['directional-light', 'Directional Light'],
+    ])('should register %s element properties', async (elementName, expectedTitle) => {
       const store = useSceneViewStore();
       const elementPropertiesStore = useElementPropertiesStore();
       const canvas = document.createElement('canvas');
@@ -164,8 +167,8 @@ describe('useSceneViewStore', () => {
         lights: { ambient: { color: 0xffffff, intensity: 1 } },
       });
 
-      elementPropertiesStore.openElementProperties('lights');
-      expect(elementPropertiesStore.activeProperties?.title).toBe('Lights');
+      elementPropertiesStore.openElementProperties(elementName);
+      expect(elementPropertiesStore.activeProperties?.title).toBe(expectedTitle);
     });
 
     it('should set scene elements in debug store', async () => {
