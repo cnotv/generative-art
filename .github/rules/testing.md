@@ -1,5 +1,12 @@
 # Testing Conventions
 
+## Git Workflow — MANDATORY
+
+1. **Before branching**: Always run `git fetch origin main && git rebase origin/main` to start from the latest main
+2. **Before pushing**: Always run `git fetch origin main && git rebase origin/main` to incorporate upstream changes
+3. **Rebase, never merge**: Always use `git rebase` instead of `git merge`. Never use `git pull` (which merges by default)
+4. **Force push safely**: After a rebase, use `git push --force-with-lease` (never `--force`)
+
 ## TDD Workflow — MANDATORY
 
 1. Write test specifications FIRST describing expected behavior

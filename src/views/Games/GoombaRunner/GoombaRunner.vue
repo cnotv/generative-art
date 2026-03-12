@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
@@ -7,6 +7,7 @@ import ScoreDisplay from "./screens/ScoreDisplay.vue";
 import { createControls } from "@webgamekit/controls";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgamekit/audio";
+import * as THREE from "three";
 import { getTools } from "@webgamekit/threejs";
 import { useUiStore } from "@/stores/ui";
 import {
@@ -15,12 +16,15 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { setupConfig } from "./config";
+import { config, setupConfig } from "./config";
 import { createTimeline } from "./animation";
 import "@/assets/prevents.css";
 import "./styles.css";
 
 import { handleJumpGoomba } from "./helpers/events";
+import { useDebugSceneStore } from '@/stores/debugScene';
+import { useElementPropertiesStore } from '@/stores/elementProperties';
+import { useTextureGroupsStore } from '@/stores/textureGroups';
 
 import {
   prevents,
@@ -33,6 +37,8 @@ import {
   setScore,
 } from "./helpers/setup";
 import type { ControlsOptions } from "packages/controls/dist";
+
+type LightObject = { color: { getHex: () => number; set: (v: number) => void }; intensity: number };
 
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
@@ -114,6 +120,11 @@ const endGame = () => {
   remapControlsOptions(bindings["game-over"]);
 };
 
+const { setSceneElements, clearSceneElements } = useDebugSceneStore();
+const elementPropertiesStore = useElementPropertiesStore();
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties } = elementPropertiesStore;
+const textureStore = useTextureGroupsStore();
+
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
   const createScene = async () => {
@@ -124,8 +135,157 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       canvas,
     });
     remapControlsOptions(bindings["idle"]);
-    await setup({
+    const { elements } = await setup({
       config: setupConfig,
+    });
+
+    const lightSchema = {
+      intensity: { min: 0, max: 5, step: 0.1, label: 'Intensity' },
+      color: { color: true, label: 'Color' },
+    };
+
+    const elementVisibility = new Map<string, boolean>();
+
+    let sceneHandlers: { onToggleVisibility: (name: string) => void; onRemove: (name: string) => void };
+
+    const textureAreaNames = new Set(config.backgrounds.textureAreaLayers.map(l => l.name));
+    const textureAreaGroups = Object.fromEntries(
+      [...textureAreaNames].map(name => [name, name.charAt(0).toUpperCase() + name.slice(1)])
+    );
+
+    const refreshElements = () => {
+      const textureGroupEntries = [...textureAreaNames].map(groupName => ({
+        name: groupName,
+        type: 'TextureArea',
+        hidden: elementVisibility.get(groupName) ?? false,
+        groupId: groupName,
+      }));
+
+      setSceneElements(
+        [
+          { name: 'Camera', type: camera.type, hidden: false },
+          ...scene.children
+            .filter(child => !textureAreaNames.has(child.name))
+            .map(child => ({
+              name: child.name || child.type,
+              type: child.type,
+              hidden: elementVisibility.get(child.name || child.type) ?? false,
+            })),
+          ...textureGroupEntries,
+        ],
+        sceneHandlers,
+        textureAreaGroups
+      );
+    };
+
+    sceneHandlers = {
+      onToggleVisibility: (name: string) => {
+        if (textureAreaNames.has(name)) {
+          const isHidden = elementVisibility.get(name) ?? false;
+          scene.children.filter(c => c.name === name).forEach(m => { m.visible = isHidden; });
+          elementVisibility.set(name, !isHidden);
+        } else {
+          const obj = scene.getObjectByName(name);
+          if (!obj) return;
+          obj.visible = !obj.visible;
+          elementVisibility.set(name, !obj.visible);
+        }
+        refreshElements();
+      },
+      onRemove: (name: string) => {
+        if (textureAreaNames.has(name)) {
+          scene.children.filter(c => c.name === name).forEach(m => scene.remove(m));
+          elementVisibility.delete(name);
+        } else {
+          const obj = scene.getObjectByName(name);
+          if (obj) scene.remove(obj);
+          elementVisibility.delete(name);
+          unregisterElementProperties(name);
+        }
+        refreshElements();
+      },
+    };
+
+    const makeLightRegistration = (light: LightObject, name: string, title: string) => {
+      const lightState = reactive({ intensity: light.intensity, color: light.color.getHex() });
+      registerElementProperties(name, {
+        title,
+        schema: lightSchema,
+        getValue: (path: string) => (lightState as Record<string, unknown>)[path],
+        updateValue: (path: string, value: unknown) => {
+          (lightState as Record<string, unknown>)[path] = value;
+          if (path === 'color') light.color.set(value as number);
+          else (light as Record<string, unknown>)[path] = value;
+        },
+      });
+    };
+
+    const ambientLight = elements.find(e => e.name === 'ambient-light') as unknown as LightObject | undefined;
+    if (ambientLight) makeLightRegistration(ambientLight, 'ambient-light', 'Ambient Light');
+
+    const directionalLight = elements.find(e => e.name === 'directional-light') as unknown as LightObject | undefined;
+    if (directionalLight) makeLightRegistration(directionalLight, 'directional-light', 'Directional Light');
+
+    const textureAreaSchema = {
+      opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity' },
+      speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
+    };
+
+    // Register texture area groups in texture store for ElementGroup rendering
+    textureStore.$patch({
+      groups: [...textureAreaNames].map(areaName => {
+        const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
+        return {
+          id: areaName,
+          name: areaName.charAt(0).toUpperCase() + areaName.slice(1),
+          textures: layers.map((layer, index) => ({
+            id: `${areaName}-tex-${index}`,
+            name: `${areaName}-${index}`,
+            filename: `${areaName}-${index}`,
+            url: layer.texture,
+          })),
+        };
+      }),
+    });
+
+    textureStore.registerHandlers({
+      onSelectGroup: (id) => elementPropertiesStore.openElementProperties(id),
+      onToggleVisibility: (id) => sceneHandlers.onToggleVisibility(id),
+      onRemoveGroup: (id) => sceneHandlers.onRemove(id),
+      onRemoveTexture: () => {},
+      onToggleWireframe: () => {},
+      onAddTextureToGroup: () => {},
+      onAddNewGroup: () => {},
+      onManualUpdate: () => {},
+      onAddElement: () => {},
+    });
+
+    [...textureAreaNames].forEach(areaName => {
+      const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
+      if (layers.length === 0) return;
+
+      const areaState = reactive({
+        opacity: layers[0].opacity,
+        speed: layers[0].speed,
+      });
+
+      registerElementProperties(areaName, {
+        title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
+        type: 'TextureArea',
+        schema: textureAreaSchema,
+        getValue: (path: string) => (areaState as Record<string, unknown>)[path],
+        updateValue: (path: string, value: unknown) => {
+          (areaState as Record<string, unknown>)[path] = value;
+          const meshes = scene.children.filter(c => c.name === areaName);
+          if (path === 'opacity') {
+            meshes.forEach(mesh => {
+              if ((mesh as THREE.Mesh).material instanceof THREE.MeshBasicMaterial) {
+                ((mesh as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = value as number;
+              }
+            });
+          }
+        },
+      });
     });
     animate({
       timeline: await createTimeline({
@@ -136,8 +296,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera,
         uiStore,
         endGame,
+        onReset: refreshElements,
       }),
     });
+    refreshElements();
   };
   createScene();
 };
@@ -166,6 +328,9 @@ onUnmounted(() => {
   destroyControls();
   stopMusic();
   window.removeEventListener("resize", initInstance);
+  clearSceneElements();
+  clearAllElementProperties();
+  textureStore.$reset();
 });
 </script>
 

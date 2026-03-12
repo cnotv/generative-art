@@ -8,6 +8,7 @@
 - **Three.js debug helpers**: Use AxesHelper, ArrowHelper, BoxHelper, or Rapier debug renderer to visualize 3D issues
 - **Validate assumptions**: For movement, collision, or animation issues, request screenshots, video, or specific numeric values (positions, distances, angles)
 - **Iterative approach**: Complex 3D behaviors often need iterative refinement — propose small testable changes rather than large rewrites
+- **Persistent bugs → add logs**: When the user reports that a bug is still present after a fix attempt, add `console.log` statements (or `debugger` if in a browser context) at the relevant code paths to surface the actual runtime values before attempting another fix
 
 ## Comments
 
@@ -16,6 +17,14 @@
 - **No debug comments**: Never commit commented-out debug notes, thought processes, or "was X, now Y" annotations
 - **No redundant comments**: Avoid comments that repeat what the code already says (e.g., `// Set rotation` before `setRotation()`)
 - **JSDoc for public APIs**: Use JSDoc for exported functions with `@param` and `@returns`, but keep descriptions concise
+
+## State Management
+
+- **Pinia for global state**: When state is shared by many unrelated components (scene elements, texture groups, camera config, active panels), use a Pinia store (`defineStore` in `src/stores/`). This provides Vue DevTools visibility, consistent structure, and automatic SSR behavior.
+- **Composables for logic and local state**: Composables (`use*`) are for reusable behavior and state scoped to one feature or component tree. Local state in composables cleans up automatically on unmount.
+- **Never use module-level refs in composables**: Avoid `const x = ref()` at the top of a composable file to share state globally. This pattern is invisible to DevTools, never cleans up, and causes stale state in tests. Use Pinia instead.
+- **Configuration-driven panels**: Panel visibility and content are driven by a central reactive store, not wired per component. Any view registers its panel configuration once and all panels update automatically.
+- **Full reactivity everywhere**: Every change — panel slider, color picker, 3D viewport interaction, orbit controls — must immediately reflect in all open panels. No manual refresh required.
 
 ## Functional Programming
 
@@ -51,15 +60,29 @@
   - Keep vendor-specific selectors isolated from application styles
 - **Component styles**: Component-specific styles MUST be in the Vue SFC `<style scoped>` section
   - Never put component-specific styles in global stylesheets
-  - Use CSS variables from `_variables.scss` for theming
+  - Use CSS custom properties (`var(--...)`) from `src/assets/styles/_variables.scss` for all values — never hardcode fonts, spacing, colors, z-index, border-radius, or border widths directly in a component's `<style>` block
   - Keep styles close to the components that use them
+  - **No arbitrary values**: Never define fonts, spacing, colors, z-index, radiuses, or borders directly inside a component style block. Always use `var(--...)` referencing a token defined in `_variables.scss`. If a needed token is missing, add it to `_variables.scss` first (including dark-theme overrides in `.dark` / `@media (prefers-color-scheme: dark)`).
+  - **No SCSS variables in components**: Do not use `$name: value` SCSS variables inside `<style scoped>`. CSS custom properties are the single source of truth for design tokens.
+
+## Accessibility
+
+- **Always add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
 
 ## CSS Conventions
 
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
-- **Light and dark theme**: Always provide both light and dark mode colors. Use CSS variables from `_variables.scss` where possible, and add `@media (prefers-color-scheme: dark)` overrides for any hardcoded color values
+- **Light and dark theme**: Always provide both light and dark mode colors. Define both in `src/assets/styles/_variables.scss` under `.dark / [data-theme="dark"]` and `@media (prefers-color-scheme: dark)`. Never add dark-mode overrides inside a component's `<style scoped>` — use CSS custom properties so theming is centralized.
+- **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
+
+## DRY and KISS Principles
+
+- **Don't Repeat Yourself (DRY)**: Extract shared logic into reusable functions, composables, or utilities. If the same pattern appears more than once, abstract it into a shared helper
+- **Keep It Simple, Stupid (KISS)**: Prefer the simplest solution that solves the problem. Avoid over-engineering, unnecessary abstractions, or premature optimization
+- **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
+- **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 
 ## Modular Architecture
 
@@ -83,6 +106,7 @@
   - `documentation/docs/guides/` — How-to guides and tutorials
 - **Run docs locally**: `cd documentation && pnpm start`
 - **Adding new docs**: Create `.md` files in the appropriate `docs/` subfolder with frontmatter:
+
   ```markdown
   ---
   sidebar_position: 1

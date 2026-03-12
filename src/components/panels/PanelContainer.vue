@@ -13,8 +13,6 @@ defineProps<{
 </template>
 
 <style lang="scss">
-@import '@/assets/styles/variables';
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -58,10 +56,10 @@ defineProps<{
   height: calc(100% - var(--nav-height));
   display: flex;
   flex-direction: column;
-  flex-wrap: wrap;
   align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
+  overflow-y: auto;
 
   > * {
     pointer-events: auto;
@@ -79,12 +77,10 @@ defineProps<{
 .sheet-content {
   position: relative;
   flex: 0 0 auto;
-  max-height: 100%;
   gap: var(--spacing-1);
   background-color: var(--color-background);
   padding: var(--spacing-2);
   overflow-x: hidden;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
@@ -97,6 +93,7 @@ defineProps<{
     width: var(--panel-width, 20rem);
     border-left: 1px solid var(--color-border);
   }
+
 }
 
 .sheet-close {

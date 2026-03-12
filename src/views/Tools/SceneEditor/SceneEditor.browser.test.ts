@@ -67,12 +67,12 @@ describe('SceneEditor - Component Rendering', () => {
 
     // Verify hidden test buttons exist (for testing preset functionality)
     const presetClouds = wrapper.find('[data-testid="preset-clouds"]');
-    const presetDecals = wrapper.find('[data-testid="preset-decals"]');
+    const presetTrees = wrapper.find('[data-testid="preset-trees"]');
     const presetGrass = wrapper.find('[data-testid="preset-grass"]');
     const exportButton = wrapper.find('[data-testid="export-config"]');
     const copyButton = wrapper.find('[data-testid="copy-config"]');
     expect(presetClouds.exists()).toBe(true);
-    expect(presetDecals.exists()).toBe(true);
+    expect(presetTrees.exists()).toBe(true);
     expect(presetGrass.exists()).toBe(true);
     expect(exportButton.exists()).toBe(true);
     expect(copyButton.exists()).toBe(true);

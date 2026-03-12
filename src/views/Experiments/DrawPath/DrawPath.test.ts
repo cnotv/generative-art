@@ -1,23 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { computed } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import DrawPath from './DrawPath.vue';
 
-vi.mock('@/composables/usePanels', () => ({
-  usePanels: () => ({
-    isConfigOpen: computed(() => true),
+vi.mock('@/stores/panels', () => ({
+  usePanelsStore: () => ({
+    isConfigOpen: true,
     openPanel: vi.fn(),
     closePanel: vi.fn(),
     togglePanel: vi.fn(),
-    activePanels: computed(() => new Set(['config'])),
-    isSidebarOpen: computed(() => false),
-    isDebugOpen: computed(() => false),
-    isTexturesOpen: computed(() => false),
-    isSceneOpen: computed(() => false),
+    activePanels: new Set(['config']),
+    isDebugOpen: false,
+    isSceneOpen: false,
+    initRouteSync: vi.fn(),
   }),
-  resetPanelState: vi.fn(),
 }));
 
 vi.mock('@webgamekit/threejs', async () => {
@@ -26,7 +23,7 @@ vi.mock('@webgamekit/threejs', async () => {
     ...actual,
     getTools: vi.fn(() =>
       Promise.resolve({
-        setup: vi.fn(() => Promise.resolve({ orbit: null, ground: null })),
+        setup: vi.fn(() => Promise.resolve({ orbit: null, ground: null, elements: [] })),
         renderer: {
           setSize: vi.fn(),
           domElement: document.createElement('canvas'),

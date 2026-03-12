@@ -8,7 +8,11 @@ import {
   createBackgrounds,
   moveBackgrounds,
   resetBackgrounds,
+  createTextureAreaBackgroundLayer,
+  moveAndRecycleTextureAreaBackgrounds,
+  resetTextureAreaBackgrounds,
   type BackgroundElement,
+  type TextureAreaElement,
 } from "./helpers/background";
 import { moveBlocks, resetObstacles, createCubes } from "./helpers/block";
 import { moveGround, resetGround, getGround } from "./helpers/ground";
@@ -61,6 +65,7 @@ const createTimeline = async ({
   camera,
   uiStore,
   endGame,
+  onReset,
 }: {
   scene: THREE.Scene;
   getDelta: () => number;
@@ -69,6 +74,7 @@ const createTimeline = async ({
   camera: THREE.PerspectiveCamera;
   uiStore: any;
   endGame: () => void;
+  onReset?: () => void;
 }) => {
   const { physics, physicsHelper } = await initPhysics(scene);
   const { player, playerController, model } = await createPlayer(
@@ -83,6 +89,10 @@ const createTimeline = async ({
   const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
   const backgroundTimers = config.backgrounds.layers.map(() => 0);
   const loggedCollisions = new Set<string>();
+
+  let textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
+    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
+  );
 
   let backgroundsPopulated = false;
   const horizonLine = addHorizonLine(scene);
@@ -107,13 +117,17 @@ const createTimeline = async ({
           backgroundsPopulated = true;
         }
         updateFallingBackgrounds(getDelta(), backgrounds, scene);
+        updateFallingBackgrounds(getDelta(), textureAreaBackgrounds, scene);
         if (shouldClearObstacles.value) {
           resetObstacles(obstacles, scene, physics);
           resetBackgrounds(scene, world, backgrounds);
+          textureAreaBackgrounds = resetTextureAreaBackgrounds(scene, world, textureAreaBackgrounds);
           backgroundsPopulated = true;
           resetPlayer(player, scene);
           resetGround(groundTexture);
+          loggedCollisions.clear();
           shouldClearObstacles.value = false;
+          onReset?.();
         }
       },
     },
@@ -146,6 +160,7 @@ const createTimeline = async ({
             gameScore.value
           );
           moveBackgrounds(scene, camera, backgrounds, gameScore.value);
+          moveAndRecycleTextureAreaBackgrounds(textureAreaBackgrounds, gameScore.value);
         }
       },
     },
@@ -168,6 +183,7 @@ const createTimeline = async ({
           player,
           obstacles,
           backgrounds,
+          textureAreaBackgrounds,
           scene,
           endGame,
           loggedCollisions,

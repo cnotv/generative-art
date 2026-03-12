@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
@@ -8,10 +8,16 @@ import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import earthDay from '@/assets/images/textures/earth_day.jpg';
 import earthNight from '@/assets/images/textures/earth_night.jpg';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+
+onUnmounted(() => {
+  clearSceneElements();
+})
 
 onMounted(() => {
   init(
@@ -94,6 +100,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     ); // soft white light
     scene.add(light);
     scene.add( mesh );
+
+    registerSceneElements(camera, scene.children);
 
     video.record(canvas, route);
 

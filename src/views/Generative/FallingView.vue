@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
@@ -8,10 +8,13 @@ import { getLights, getEnvironment, getGround, removeElements } from "@webgameki
 import { bindAnimatedElements, animateTimeline } from "@webgamekit/animation";
 import { getBall } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(
@@ -73,6 +76,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       });
     };
 
+    registerSceneElements(camera, scene.children);
+
     video.record(canvas, route);
     function animate() {
       stats.start(route);
@@ -100,6 +105,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   };
   setup();
 };
+
+onUnmounted(() => {
+  clearSceneElements();
+});
 </script>
 
 <template>

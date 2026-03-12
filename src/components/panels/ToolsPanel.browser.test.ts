@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mount, VueWrapper } from '@vue/test-utils';
-import { createPinia } from 'pinia';
+import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { nextTick, defineComponent, h } from 'vue';
 import ToolsPanel from './ToolsPanel.vue';
-import { resetPanelState } from '@/composables/usePanels';
 
 // Minimal view component for testing
 const TestView = defineComponent({
@@ -19,10 +18,8 @@ describe('ToolsPanel - Sidebar Open/Close', () => {
   let router: ReturnType<typeof createRouter>;
 
   beforeEach(async () => {
-    // Reset module-level panel state before each test
-    resetPanelState();
-
     const pinia = createPinia();
+    setActivePinia(pinia);
     router = createRouter({
       history: createMemoryHistory(),
       routes: [

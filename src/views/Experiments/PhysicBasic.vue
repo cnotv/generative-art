@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useDebugSceneStore } from "@/stores/debugScene";
 import { video } from "@/utils/video";
 import { controls } from "@/utils/control";
 import { stats } from "@/utils/stats";
@@ -11,6 +12,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 const cubes = [] as {
   cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>;
   rigidBody: RAPIER.RigidBody;
@@ -89,6 +91,10 @@ onMounted(() => {
     statsEl.value!;
 });
 
+onUnmounted(() => {
+  clearSceneElements();
+});
+
 const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   const config = {
     // size: 50,
@@ -138,6 +144,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     createGround(groundSize, groundPosition, scene, world);
     cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world));
+
+    registerSceneElements(camera, scene.children);
 
     // Change cube position
     document.addEventListener("click", (event) => {
