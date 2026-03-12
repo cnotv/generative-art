@@ -110,7 +110,7 @@ describe('useSceneViewStore', () => {
       panelsStore.initRouteSync();
       await store.init(canvas, { camera: { position: [0, 5, 10] } });
 
-      expect(viewPanelsStore.viewPanels).toEqual({ showConfig: false });
+      expect(viewPanelsStore.viewPanels).toEqual({ showConfig: false, showElements: true });
       expect(panelsStore.activePanels.has('elements')).toBe(true);
     });
 
@@ -123,7 +123,7 @@ describe('useSceneViewStore', () => {
         viewPanels: { showConfig: true },
       });
 
-      expect(viewPanelsStore.viewPanels).toEqual({ showConfig: true });
+      expect(viewPanelsStore.viewPanels).toEqual({ showConfig: true, showElements: true });
     });
 
     it('should register element properties for camera when camera config is provided', async () => {

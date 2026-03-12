@@ -114,7 +114,7 @@ onMounted(async () => {
   );
 
   await store.init(canvas.value, setupConfig, {
-    viewPanels: { showConfig: true },
+    viewPanels: { showConfig: true, showElements: false },
     playMode: true,
     defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
       const { distance, speed, maxJump } = playerSettings.game;

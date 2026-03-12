@@ -18,6 +18,22 @@ import { cameraSchema, groundSchema, lightsSchema, skySchema, configControls } f
 type Vec3 = { x: number; y: number; z: number };
 type OrbitControls = { target: THREE.Vector3; update: () => void; addEventListener: (event: string, callback: () => void) => void };
 
+const DEBOUNCE_DELAY = 150;
+const createDebouncedMap = () => {
+  let timers: Record<string, ReturnType<typeof setTimeout>> = {};
+  return (key: string, callback: () => void) => {
+    if (timers[key]) clearTimeout(timers[key]);
+    timers = {
+      ...timers,
+      [key]: setTimeout(() => {
+        const { [key]: _completed, ...remaining } = timers;
+        timers = remaining;
+        callback();
+      }, DEBOUNCE_DELAY),
+    };
+  };
+};
+
 const getNestedValue = (object: Record<string, unknown>, path: string): unknown =>
   path.split('.').reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], object);
 
@@ -101,6 +117,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const debugSceneStore = useDebugSceneStore();
   const elementPropertiesStore = useElementPropertiesStore();
   const textureStore = useTextureGroupsStore();
+  const debouncedRegenerate = createDebouncedMap();
 
   const getAreaMeshes = (areaName: string): THREE.Object3D[] =>
     areaMeshCache.value[areaName] ?? [];
@@ -109,15 +126,22 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     const scene = threeScene.value;
     if (!scene) return;
 
-    areaMeshCache.value = textureAreaDefinitions.value.reduce<Record<string, THREE.Object3D[]>>(
-      (cache, area) => {
-        const prefix = `${area.meshPrefix}-`;
-        return {
-          ...cache,
-          [area.name]: scene.children.filter(child => child.name?.startsWith(prefix)),
-        };
+    // Build prefix→name lookup, then single pass over scene.children
+    const prefixToName = Object.fromEntries(
+      textureAreaDefinitions.value.map(area => [`${area.meshPrefix}-`, area.name])
+    );
+    const prefixes = Object.keys(prefixToName);
+
+    areaMeshCache.value = scene.children.reduce<Record<string, THREE.Object3D[]>>(
+      (cache, child) => {
+        const matchedPrefix = child.name ? prefixes.find(prefix => child.name.startsWith(prefix)) : undefined;
+        if (matchedPrefix) {
+          const areaName = prefixToName[matchedPrefix];
+          return { ...cache, [areaName]: [...(cache[areaName] ?? []), child] };
+        }
+        return cache;
       },
-      {}
+      Object.fromEntries(textureAreaDefinitions.value.map(area => [area.name, [] as THREE.Object3D[]]))
     );
   };
 
@@ -357,7 +381,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
           [group.id]: setNestedValueImmutable(groupConfigs.value[group.id], path, value),
         };
         if (textureStore.autoUpdate) {
-          regenerateGroup(group.id);
+          debouncedRegenerate(group.id, () => regenerateGroup(group.id));
         }
       },
     });
@@ -542,7 +566,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
             [area.name]: setNestedValueImmutable(textureAreaConfigs.value[area.name], path, value),
           };
           if (textureStore.autoUpdate) {
-            regenerateTextureArea(area);
+            debouncedRegenerate(area.name, () => regenerateTextureArea(area));
           }
         },
       });
@@ -661,9 +685,10 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     // Open panels
     viewPanelsStore.setViewPanels(options?.viewPanels ?? {});
-    panelsStore.openPanel('elements');
-
-    updateSceneElements();
+    if (viewPanelsStore.viewPanels.showElements) {
+      panelsStore.openPanel('elements');
+      updateSceneElements();
+    }
     isInitialized.value = true;
   };
 
