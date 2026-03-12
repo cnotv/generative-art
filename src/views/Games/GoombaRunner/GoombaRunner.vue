@@ -7,6 +7,7 @@ import ScoreDisplay from "./screens/ScoreDisplay.vue";
 import { createControls } from "@webgamekit/controls";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgamekit/audio";
+import * as THREE from "three";
 import { getTools } from "@webgamekit/threejs";
 import { useUiStore } from "@/stores/ui";
 import {
@@ -221,6 +222,39 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     const directionalLight = elements.find(e => e.name === 'directional-light') as unknown as LightObject | undefined;
     if (directionalLight) makeLightRegistration(directionalLight, 'directional-light', 'Directional Light');
+
+    const textureAreaSchema = {
+      opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity' },
+      speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
+    };
+
+    [...textureAreaNames].forEach(areaName => {
+      const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
+      if (layers.length === 0) return;
+
+      const areaState = reactive({
+        opacity: layers[0].opacity,
+        speed: layers[0].speed,
+      });
+
+      registerElementProperties(areaName, {
+        title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
+        type: 'TextureArea',
+        schema: textureAreaSchema,
+        getValue: (path: string) => (areaState as Record<string, unknown>)[path],
+        updateValue: (path: string, value: unknown) => {
+          (areaState as Record<string, unknown>)[path] = value;
+          const meshes = scene.children.filter(c => c.name === areaName);
+          if (path === 'opacity') {
+            meshes.forEach(mesh => {
+              if ((mesh as THREE.Mesh).material instanceof THREE.MeshBasicMaterial) {
+                ((mesh as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = value as number;
+              }
+            });
+          }
+        },
+      });
+    });
     animate({
       timeline: await createTimeline({
         scene,
