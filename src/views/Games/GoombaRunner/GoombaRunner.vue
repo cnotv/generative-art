@@ -24,6 +24,7 @@ import "./styles.css";
 import { handleJumpGoomba } from "./helpers/events";
 import { useDebugSceneStore } from '@/stores/debugScene';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
+import { useTextureGroupsStore } from '@/stores/textureGroups';
 
 import {
   prevents,
@@ -120,7 +121,9 @@ const endGame = () => {
 };
 
 const { setSceneElements, clearSceneElements } = useDebugSceneStore();
-const { registerElementProperties, unregisterElementProperties, clearAllElementProperties } = useElementPropertiesStore();
+const elementPropertiesStore = useElementPropertiesStore();
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties } = elementPropertiesStore;
+const textureStore = useTextureGroupsStore();
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   stats.init(route, statsEl);
@@ -228,6 +231,35 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
     };
 
+    // Register texture area groups in texture store for ElementGroup rendering
+    textureStore.$patch({
+      groups: [...textureAreaNames].map(areaName => {
+        const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
+        return {
+          id: areaName,
+          name: areaName.charAt(0).toUpperCase() + areaName.slice(1),
+          textures: layers.map((layer, index) => ({
+            id: `${areaName}-tex-${index}`,
+            name: `${areaName}-${index}`,
+            filename: `${areaName}-${index}`,
+            url: layer.texture,
+          })),
+        };
+      }),
+    });
+
+    textureStore.registerHandlers({
+      onSelectGroup: (id) => elementPropertiesStore.openElementProperties(id),
+      onToggleVisibility: (id) => sceneHandlers.onToggleVisibility(id),
+      onRemoveGroup: (id) => sceneHandlers.onRemove(id),
+      onRemoveTexture: () => {},
+      onToggleWireframe: () => {},
+      onAddTextureToGroup: () => {},
+      onAddNewGroup: () => {},
+      onManualUpdate: () => {},
+      onAddElement: () => {},
+    });
+
     [...textureAreaNames].forEach(areaName => {
       const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
       if (layers.length === 0) return;
@@ -298,6 +330,7 @@ onUnmounted(() => {
   window.removeEventListener("resize", initInstance);
   clearSceneElements();
   clearAllElementProperties();
+  textureStore.$reset();
 });
 </script>
 
