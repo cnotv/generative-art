@@ -10,6 +10,7 @@ import {
   resetBackgrounds,
   createTextureAreaBackgroundLayer,
   moveAndRecycleTextureAreaBackgrounds,
+  resetTextureAreaBackgrounds,
   type BackgroundElement,
   type TextureAreaElement,
 } from "./helpers/background";
@@ -64,6 +65,7 @@ const createTimeline = async ({
   camera,
   uiStore,
   endGame,
+  onReset,
 }: {
   scene: THREE.Scene;
   getDelta: () => number;
@@ -72,6 +74,7 @@ const createTimeline = async ({
   camera: THREE.PerspectiveCamera;
   uiStore: any;
   endGame: () => void;
+  onReset?: () => void;
 }) => {
   const { physics, physicsHelper } = await initPhysics(scene);
   const { player, playerController, model } = await createPlayer(
@@ -87,7 +90,7 @@ const createTimeline = async ({
   const backgroundTimers = config.backgrounds.layers.map(() => 0);
   const loggedCollisions = new Set<string>();
 
-  const textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
+  let textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
     (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
   );
 
@@ -118,10 +121,13 @@ const createTimeline = async ({
         if (shouldClearObstacles.value) {
           resetObstacles(obstacles, scene, physics);
           resetBackgrounds(scene, world, backgrounds);
+          textureAreaBackgrounds = resetTextureAreaBackgrounds(scene, world, textureAreaBackgrounds);
           backgroundsPopulated = true;
           resetPlayer(player, scene);
           resetGround(groundTexture);
+          loggedCollisions.clear();
           shouldClearObstacles.value = false;
+          onReset?.();
         }
       },
     },

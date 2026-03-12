@@ -308,6 +308,18 @@ export const createTextureAreaBackgroundLayer = (
   });
 };
 
+export const resetTextureAreaBackgrounds = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  elements: TextureAreaElement[],
+): TextureAreaElement[] => {
+  elements.forEach(element => scene.remove(element.mesh));
+
+  return config.backgrounds.textureAreaLayers.flatMap(
+    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
+  );
+};
+
 export const moveAndRecycleTextureAreaBackgrounds = (
   elements: TextureAreaElement[],
   gameScore: number,

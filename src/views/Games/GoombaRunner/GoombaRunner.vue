@@ -230,6 +230,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
         camera,
         uiStore,
         endGame,
+        onReset: refreshElements,
       }),
     });
     refreshElements();
