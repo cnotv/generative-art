@@ -1,45 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useQueryStore } from "./stores/queryStore";
 import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ConfigPanel, ScenePanel, DebugPanel, CameraPanel, PanelContainer } from "@/components/panels";
+import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
-import { usePanels } from "@/composables/usePanels";
+import { usePanelsStore } from "@/stores/panels";
 
 const router = useRouter();
 const route = useRoute();
-const queryStore = useQueryStore();
-queryStore.setQuery(route.query);
 
-const { activePanels } = usePanels();
-watch(
-  () => activePanels.value.size > 0,
-  (hasOpen) => {
-    document.documentElement.style.setProperty(
-      '--canvas-top',
-      hasOpen ? 'var(--nav-height)' : '0px'
-    );
-  },
-  { immediate: true }
-);
-
-// Watch for changes in the router query and update the store
-watch(
-  () => route.query,
-  (newQuery) => {
-    queryStore.setQuery(newQuery);
-  }
-);
-
-// Watch for changes in the store and update the router query
-watch(
-  () => queryStore.query,
-  (newQuery) => {
-    router.push({ query: newQuery });
-  },
-  { deep: true }
-);
+const panelsStore = usePanelsStore();
+panelsStore.initRouteSync();
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyPress);
@@ -53,7 +24,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
   const { name, query } = router.currentRoute.value;
   const page =
     typeof name === "string"
-      ? generatedRoutes.map((route) => route.name).indexOf(name)
+      ? generatedRoutes.map((r) => r?.name).indexOf(name)
       : 0;
 
   switch (event.key) {
@@ -92,7 +63,6 @@ const toggleQuery = (param: string | string[]) => {
     {}
   );
   router.push({ path, query: { ...query, ...newQuery } });
-  queryStore.setQuery(newQuery);
 };
 
 const isRecording = computed(() => !!route.query.record);
@@ -117,13 +87,12 @@ const handleStopRecording = () => {
   <PanelContainer side="right" />
   <SidebarNav />
   <ConfigPanel />
-  <ScenePanel />
-  <CameraPanel
+  <DebugPanel />
+  <ElementsPanel
     :is-recording="isRecording"
     @start="handleStartRecording"
     @stop="handleStopRecording"
   />
-  <DebugPanel />
 </template>
 
 <style>
@@ -131,7 +100,9 @@ canvas {
   width: 100%;
   height: 100%;
   position: absolute;
-  top: var(--canvas-top, 0px);
+  top: 0;
   left: 0;
+  transition: top 0.2s;
 }
+
 </style>

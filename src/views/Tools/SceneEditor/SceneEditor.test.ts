@@ -5,6 +5,18 @@ import { createRouter, createMemoryHistory } from 'vue-router';
 import SceneEditor from './SceneEditor.vue';
 import type { CoordinateTuple } from '@webgamekit/threejs';
 
+vi.mock('@/stores/panels', () => ({
+  usePanelsStore: () => ({
+    openPanel: vi.fn(),
+    closePanel: vi.fn(),
+    togglePanel: vi.fn(),
+    activePanels: new Set(),
+    isDebugOpen: false,
+    isSceneOpen: false,
+    initRouteSync: vi.fn(),
+  }),
+}));
+
 //Mock threejs functions
 vi.mock('@webgamekit/threejs', async () => {
   const actual = await vi.importActual<typeof import('@webgamekit/threejs')>('@webgamekit/threejs');
@@ -13,7 +25,7 @@ vi.mock('@webgamekit/threejs', async () => {
     getTools: vi.fn(() => Promise.resolve({
       setup: vi.fn((config) => Promise.resolve({ orbit: null, ground: null })),
       animate: vi.fn(),
-      scene: { children: [], remove: vi.fn() },
+      scene: { children: [], remove: vi.fn(), getObjectByName: vi.fn(() => null) },
       world: {},
       camera: { position: { x: 0, y: 50, z: 100 } },
     })),

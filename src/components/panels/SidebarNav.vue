@@ -12,7 +12,7 @@ const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
 </script>
 
 <template>
-  <GenericPanel panel-type="sidebar" side="left">
+  <GenericPanel panel-type="navigation" side="left">
     <div class="sidebar-nav__content flex flex-col gap-6">
       <nav class="sidebar-nav__links flex flex-col gap-1 flex-1 overflow-y-auto min-h-0">
         <template v-for="(route, index) in generatedRoutes" :key="route.path">

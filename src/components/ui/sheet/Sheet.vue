@@ -6,8 +6,6 @@ import {
   DialogOverlay,
   DialogContent,
   DialogClose,
-  DialogTitle,
-  DialogDescription,
 } from "radix-vue";
 import { computed } from "vue";
 import { cn } from "@/lib/utilities";
@@ -58,8 +56,6 @@ const portalTarget = computed(() =>
         @interact-outside.prevent
         @escape-key-down.prevent
       >
-        <DialogTitle class="sr-only">Sheet</DialogTitle>
-        <DialogDescription class="sr-only">Sheet content</DialogDescription>
         <slot />
       </DialogContent>
     </DialogPortal>

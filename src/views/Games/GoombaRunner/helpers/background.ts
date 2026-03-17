@@ -1,23 +1,28 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getCube } from "@webgamekit/threejs";
+import { getCube, generateAreaPositions } from "@webgamekit/threejs";
+import type { CoordinateTuple, ComplexModel } from "@webgamekit/threejs";
 import { config } from "../config";
 import { preventGlitches, getSpeed } from "./setup";
-import type { ComplexModel } from "@webgamekit/threejs";
+
+export interface FallAnimation {
+  isActive: boolean;
+  startTime: number;
+  delay: number;
+  fallSpeed: number;
+  rotationSpeed: number;
+}
+
+export interface FallingElement {
+  mesh: ComplexModel;
+  fallAnimation?: FallAnimation;
+}
 
 /**
  * Background element with mesh and movement properties
  */
-export interface BackgroundElement {
-  mesh: ComplexModel;
+export interface BackgroundElement extends FallingElement {
   speed: number;
-  fallAnimation?: {
-    isActive: boolean;
-    startTime: number;
-    delay: number;
-    fallSpeed: number;
-    rotationSpeed: number;
-  };
 }
 
 /**
@@ -79,6 +84,7 @@ export const addBackground = (
 
   // Create the main textured layer
   const result = getCube(scene, world, {
+    name: 'fire',
     texture: options.texture,
     size: [width, height, 0],
     position: finalPosition,
@@ -114,7 +120,7 @@ export const populateInitialBackgrounds = (
 };
 
 export const startBackgroundFalling = (
-  backgrounds: BackgroundElement[]
+  backgrounds: FallingElement[]
 ) => {
   const currentTime = Date.now();
 
@@ -138,7 +144,7 @@ export const startBackgroundFalling = (
 
 export const updateFallingBackgrounds = (
   deltaTime: number,
-  backgrounds: BackgroundElement[],
+  backgrounds: FallingElement[],
   scene: THREE.Scene
 ) => {
   const currentTime = Date.now();
@@ -241,4 +247,89 @@ export const resetBackgrounds = (
 
   // Repopulate backgrounds for restart
   populateInitialBackgrounds(scene, world, backgrounds);
+};
+
+export interface TextureAreaElement extends FallingElement {
+  speed: number;
+  centerX: number;
+  halfWidth: number;
+}
+
+export interface TextureAreaLayerConfig {
+  name: string;
+  texture: string;
+  baseSize: CoordinateTuple;
+  sizeVariation?: CoordinateTuple;
+  center: CoordinateTuple;
+  size: CoordinateTuple;
+  density: number;
+  seed?: number;
+  pattern?: 'random' | 'grid' | 'grid-jitter';
+  speed: number;
+  opacity: number;
+}
+
+export const createTextureAreaBackgroundLayer = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  layerConfig: TextureAreaLayerConfig,
+): TextureAreaElement[] => {
+  const count = Math.ceil(layerConfig.density * layerConfig.size[0] / 1000);
+  const positions = generateAreaPositions({ ...layerConfig, count });
+
+  const halfWidth = layerConfig.size[0] / 2;
+
+  return positions.map((position) => {
+    const sizeX = layerConfig.baseSize[0] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[0] ?? 0);
+    const sizeY = layerConfig.baseSize[1] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[1] ?? 0);
+
+    const mesh = getCube(scene, world, {
+      name: layerConfig.name,
+      texture: layerConfig.texture,
+      size: [sizeX, sizeY, 0] as CoordinateTuple,
+      position,
+      castShadow: false,
+      receiveShadow: false,
+      color: 0xffffff,
+      opacity: layerConfig.opacity,
+      material: 'MeshBasicMaterial',
+      type: 'fixed',
+    });
+
+    if (layerConfig.opacity < 1) {
+      mesh.renderOrder = -Math.abs(layerConfig.center[2]) / 10;
+      if (mesh.material instanceof THREE.MeshBasicMaterial) {
+        mesh.material.depthTest = true;
+        mesh.material.depthWrite = layerConfig.opacity >= 0.9;
+        mesh.material.alphaTest = 0.01;
+      }
+    }
+
+    return { mesh, speed: layerConfig.speed, centerX: layerConfig.center[0], halfWidth };
+  });
+};
+
+export const resetTextureAreaBackgrounds = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  elements: TextureAreaElement[],
+): TextureAreaElement[] => {
+  elements.forEach(element => scene.remove(element.mesh));
+
+  return config.backgrounds.textureAreaLayers.flatMap(
+    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
+  );
+};
+
+export const moveAndRecycleTextureAreaBackgrounds = (
+  elements: TextureAreaElement[],
+  gameScore: number,
+): void => {
+  elements.forEach((element) => {
+    if (element.fallAnimation?.isActive) return;
+    element.mesh.position.x -= getSpeed(element.speed, gameScore);
+    if (element.mesh.position.x < element.centerX - element.halfWidth) {
+      element.mesh.position.x += element.halfWidth * 2;
+    }
+  });
 };

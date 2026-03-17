@@ -1,23 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { computed } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import PathfinderThreejs from './PathfinderThreejs.vue';
 
-vi.mock('@/composables/usePanels', () => ({
-  usePanels: () => ({
-    isConfigOpen: computed(() => true),
+vi.mock('@/stores/panels', () => ({
+  usePanelsStore: () => ({
+    isConfigOpen: true,
     openPanel: vi.fn(),
     closePanel: vi.fn(),
     togglePanel: vi.fn(),
-    activePanels: computed(() => new Set(['config'])),
-    isSidebarOpen: computed(() => false),
-    isDebugOpen: computed(() => false),
-    isTexturesOpen: computed(() => false),
-    isSceneOpen: computed(() => false),
+    activePanels: new Set(['config']),
+    isDebugOpen: false,
+    isSceneOpen: false,
+    initRouteSync: vi.fn(),
   }),
-  resetPanelState: vi.fn(),
 }));
 
 vi.mock('@webgamekit/threejs', async () => {

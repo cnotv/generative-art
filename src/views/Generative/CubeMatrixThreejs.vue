@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import * as THREE from 'three';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
+import { useDebugSceneStore } from '@/stores/debugScene';
 
 const statsEl = ref(null)
 const canvas = ref(null)
 const route = useRoute();
     let amountX = 3
     let amountY = 3
+
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 onMounted(() => {
   init(
@@ -84,6 +87,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       }
     }
 
+    registerSceneElements(camera, scene.children);
+
     video.record(canvas, route);
 
     function animate() {
@@ -109,6 +114,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
   }
   setup();
 }
+
+onUnmounted(() => {
+  clearSceneElements();
+});
 </script>
 
 <template>

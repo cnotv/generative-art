@@ -119,8 +119,9 @@ export function createControls(options: ControlsOptions): ControlsExtras {
   function autoBind() {
     // Keyboard
     if (options.keyboard !== false) {
-      keyboardController.bind();
-      boundControllers.push(() => keyboardController.unbind());
+      const keyboardTarget = options.keyboardTarget ?? null;
+      keyboardController.bind(keyboardTarget);
+      boundControllers.push(() => keyboardController.unbind(keyboardTarget));
     }
 
     // Gamepad

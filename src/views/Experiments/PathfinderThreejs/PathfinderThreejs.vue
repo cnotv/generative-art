@@ -8,8 +8,9 @@ import {
   type ComplexModel,
 } from "@webgamekit/threejs";
 import { type CoordinateTuple } from "@webgamekit/animation";
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/composables/useViewConfig";
-import { useViewPanels } from "@/composables/useViewPanels";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useDebugSceneStore } from "@/stores/debugScene";
 
 import {
   gridConfig,
@@ -25,7 +26,6 @@ import {
   obstacleCubeBase,
   configControls,
   defaultSceneValues,
-  sceneControls,
   cameraPositions,
   defaultStart,
   defaultGoal,
@@ -39,7 +39,8 @@ import { getBestRoute } from "./helpers/pathfinding";
 import { createPathLine, removePathLine } from "./helpers/pathAnimation";
 
 const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanels();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const hasPath = shallowRef(false);
@@ -544,6 +545,9 @@ const init = async (): Promise<void> => {
   const directionalLight = scene.children.find((c): c is THREE.DirectionalLight => c instanceof THREE.DirectionalLight) ?? null;
   const groundMesh = scene.children.find((c): c is THREE.Mesh => (c as THREE.Mesh).name === "ground") ?? null;
 
+  const sceneObjects = [ambientLight, directionalLight, groundMesh].filter((c): c is THREE.Object3D => c !== null);
+  registerSceneElements(orthoCamera, sceneObjects);
+
   sceneState = {
     renderer,
     scene,
@@ -626,14 +630,11 @@ const clearObstacles = (): void => {
 };
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true, showScene: true });
+  setViewPanels({ showConfig: true });
   registerViewConfig(
     route.name as string,
     reactiveConfig,
     configControls,
-    sceneConfig,
-    sceneControls,
-    undefined,
     undefined,
     {
       generateNewScene,
@@ -651,6 +652,7 @@ onUnmounted(() => {
   canvas.value?.removeEventListener("mousemove", onCanvasMouseMove);
   canvas.value?.removeEventListener("mouseup", onCanvasMouseUp);
   window.removeEventListener("resize", handleResize);
+  clearSceneElements();
   clearViewPanels();
   unregisterViewConfig(route.name as string);
   sceneState = null;

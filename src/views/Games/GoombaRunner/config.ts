@@ -6,7 +6,7 @@ import type { SetupConfig } from "@webgamekit/threejs";
 export const config = {
   camera: {
     position: {
-      x: 40,
+      x: 0,
       y: 20,
       z: 150,
     },
@@ -46,59 +46,54 @@ export const config = {
     },
   },
   backgrounds: {
-    layers: [
+    textureAreaLayers: [
       {
+        name: 'cloud',
         texture: cloudTexture,
+        baseSize: [200, 80, 0] as [number, number, number],
+        center: [0, 130, -300] as [number, number, number],
+        size: [4800, 40, 0] as [number, number, number],
+        density: 3,
+        seed: 1000,
         speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 130,
-        xVariation: 300,
-        yVariation: 20,
-        zPosition: -300,
-        count: 4,
-        spacing: 600,
         opacity: 0.5,
       },
       {
+        name: 'cloud',
         texture: cloudTexture,
+        baseSize: [200, 80, 0] as [number, number, number],
+        center: [0, 150, -100] as [number, number, number],
+        size: [4800, 40, 0] as [number, number, number],
+        density: 2.5,
+        seed: 2000,
         speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 150,
-        xVariation: 300,
-        yVariation: 20,
-        zPosition: -100,
-        count: 3,
-        spacing: 600,
         opacity: 0.5,
       },
       {
+        name: 'cloud',
         texture: cloudTexture,
+        baseSize: [200, 80, 0] as [number, number, number],
+        center: [0, 140, 20] as [number, number, number],
+        size: [4800, 20, 0] as [number, number, number],
+        density: 2.5,
+        seed: 3000,
         speed: 2,
-        size: 200,
-        ratio: 2.5,
-        yPosition: 140,
-        xVariation: 300,
-        yVariation: 10,
-        zPosition: 20,
-        count: 3,
-        spacing: 600,
         opacity: 0.7,
       },
       {
+        name: 'hill',
         texture: hillTexture,
+        baseSize: [1000, 1000, 0] as [number, number, number],
+        sizeVariation: [0, 140, 0] as [number, number, number],
+        center: [0, -400, -800] as [number, number, number],
+        size: [8000, 140, 0] as [number, number, number],
+        density: 0.875,
+        seed: 4000,
         speed: 2,
-        size: 1000,
-        ratio: 1,
-        xVariation: 100,
-        yPosition: -400,
-        yVariation: 70,
-        zPosition: -800,
-        count: 10,
-        spacing: 1000,
         opacity: 0.5,
       },
+    ],
+    layers: [
       {
         texture: fireTexture,
         speed: 2,
@@ -132,19 +127,6 @@ export const config = {
 };
 
 export const configControls = {
-  camera: {
-    fov: {},
-    position: {
-      x: {},
-      y: {},
-      z: {},
-    },
-    rotation: {
-      x: {step: 0.01},
-      y: {step: 0.01},
-      z: {step: 0.01},
-    },
-  },
   game: {
     helper: { boolean: false },
     speed: { min: 0.5, max: 3 },
@@ -160,6 +142,42 @@ export const configControls = {
   },
 };
 
+export const textureAreaControls = {
+  area: {
+    center: {
+      label: 'Center Position',
+      component: 'CoordinateInput',
+      min: { x: -5000, y: -500, z: -1000 },
+      max: { x: 5000, y: 500, z: 1000 },
+      step: { x: 10, y: 1, z: 10 },
+    },
+    size: {
+      label: 'Area Size',
+      component: 'CoordinateInput',
+      min: { x: 1, y: 0, z: 0 },
+      max: { x: 10000, y: 500, z: 1000 },
+      step: { x: 10, y: 1, z: 10 },
+    },
+  },
+  textures: {
+    baseSize: {
+      label: 'Base Size',
+      component: 'CoordinateInput',
+      min: { x: 1, y: 1, z: 0 },
+      max: { x: 2000, y: 2000, z: 10 },
+      step: { x: 10, y: 10, z: 0.1 },
+    },
+  },
+  instances: {
+    density: { min: 0, max: 50, step: 0.5, label: 'Density' },
+    seed: { min: 0, max: 10000, step: 1, label: 'Seed' },
+  },
+  rendering: {
+    opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity' },
+    speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
+  },
+};
+
 export const setupConfig = {
   camera: config.camera as any,
   scene: {
@@ -172,5 +190,5 @@ export const setupConfig = {
       intensity: config.directional.intensity * 1.5,
     },
   },
-  orbit: false,
+  orbit: { disabled: true },
 } as SetupConfig;

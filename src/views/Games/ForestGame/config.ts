@@ -412,6 +412,69 @@ export const illustrationAreas = {
   }]
 };
 
+// GroupConfig-shaped data for each illustration area (mirrors createTextureVariants params)
+export const illustrationAreaGroupConfigs: Record<string, {
+  area: { center: CoordinateTuple; size: CoordinateTuple };
+  textures: { baseSize: CoordinateTuple; sizeVariation: CoordinateTuple; rotationVariation: CoordinateTuple };
+  instances: { density: number; pattern: 'random' | 'grid' | 'grid-jitter'; seed: number };
+}> = {
+  clouds: {
+    area: { center: [0, 85, -80], size: [1000, 60, 100] },
+    textures: { baseSize: [200, 100, 0], sizeVariation: [100, 50, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 5, pattern: 'random', seed: 1000 },
+  },
+  mountains1: {
+    area: { center: [0, -20, -100], size: [1000, 0, 0] },
+    textures: { baseSize: [240, 120, 0], sizeVariation: [120, 60, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 4, pattern: 'grid-jitter', seed: 2000 },
+  },
+  mountains2: {
+    area: { center: [0, -20, -50], size: [1000, 0, 0] },
+    textures: { baseSize: [120, 60, 0], sizeVariation: [60, 30, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 4, pattern: 'grid-jitter', seed: 3000 },
+  },
+  treesBack: {
+    area: { center: [0, -1, -20], size: [1000, 0, 0] },
+    textures: { baseSize: [30, 50, 0], sizeVariation: [15, 25, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 4000 },
+  },
+  treesFront: {
+    area: { center: [0, -1, -10], size: [1000, 0, 0] },
+    textures: { baseSize: [20, 40, 0], sizeVariation: [10, 20, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 40, pattern: 'grid-jitter', seed: 5000 },
+  },
+  grass: {
+    area: { center: [0, -16, 10], size: [1000, 0, 30] },
+    textures: { baseSize: [10, 17, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 500, pattern: 'random', seed: 6000 },
+  },
+  rocks: {
+    area: { center: [0, -1, 5], size: [1000, 0, 40] },
+    textures: { baseSize: [7, 3, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 60, pattern: 'random', seed: 7000 },
+  },
+  bushesBack: {
+    area: { center: [0, -1, -15], size: [1000, 0, 0] },
+    textures: { baseSize: [15, 10, 0], sizeVariation: [5, 3, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 },
+  },
+  bushesFront: {
+    area: { center: [0, -1, 20], size: [1000, 0, 0] },
+    textures: { baseSize: [10, 7, 0], sizeVariation: [5, 3, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 },
+  },
+  flowersBack: {
+    area: { center: [50, -1, -15], size: [1000, 0, 10] },
+    textures: { baseSize: [10, 7, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 25, pattern: 'grid-jitter', seed: 9000 },
+  },
+  flowersFront: {
+    area: { center: [50, -1, 20], size: [1000, 0, 10] },
+    textures: { baseSize: [8, 5, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
+    instances: { density: 40, pattern: 'grid-jitter', seed: 9000 },
+  },
+};
+
 // Config tab - reactive game settings
 export const configControls = {
   player: {

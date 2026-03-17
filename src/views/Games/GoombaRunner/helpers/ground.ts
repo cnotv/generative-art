@@ -17,12 +17,16 @@ export const getGround = (scene: THREE.Scene, physics?: any) => {
     repeatY: 30,
   });
 
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+
   const material = new THREE.MeshStandardMaterial({
     map: texture,
-    color: 0x68b469, // Use white to show natural texture colors
+    color: 0x68b469,
   });
 
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = 'Ground';
   mesh.receiveShadow = true;
 
   // Position ground at y = 0, with the top surface at y = 0.25

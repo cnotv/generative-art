@@ -384,6 +384,13 @@ export default [
     rules: {
       // Disable type-aware rules for Vue files (no projectService)
       // vue-tsc handles type checking for Vue files
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'BlockStatement > TSTypeAliasDeclaration',
+          message: 'Type aliases must be defined at the top level of <script setup>, not inside functions.',
+        },
+      ],
       'functional/immutable-data': 'off',
       'functional/no-let': 'off',
       '@typescript-eslint/naming-convention': 'off',

@@ -1,65 +1,85 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onBeforeUnmount, watch } from "vue";
-import { useRoute } from "vue-router";
-import { usePanels } from "@/composables/usePanels";
-import { useViewPanels } from "@/composables/useViewPanels";
-import { getTools, getCube, generateAreaPositions } from "@webgamekit/threejs";
-import type { CoordinateTuple, AreaConfig } from "@webgamekit/threejs";
+import { ref, nextTick, onMounted, onBeforeUnmount, watch, computed } from "vue";
+import { usePanelsStore } from "@/stores/panels";
+import { useViewPanelsStore } from "@/stores/viewPanels";
+import { useCameraConfigStore } from "@/stores/cameraConfig";
+import type { CameraSlot } from "@/stores/cameraConfig";
+import {
+  getTools,
+  CameraPreset,
+  cameraPresets,
+  setCameraPreset,
+} from "@webgamekit/threejs";
+import type { CoordinateTuple } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 import * as THREE from "three";
-import { TexturesPanel } from "@/components/panels";
-import {
-  registerViewConfig,
-  unregisterViewConfig,
-  createReactiveConfig,
-} from "@/composables/useViewConfig";
-import { useDebugScene } from "@/composables/useDebugScene";
-import { defaultConfig, presets, configControls, sceneControls } from "./config";
+import { createReactiveConfig } from "@/stores/viewConfig";
+import { useDebugSceneStore } from "@/stores/debugScene";
+import { useElementPropertiesStore } from "@/stores/elementProperties";
+import { storeToRefs } from "pinia";
+import { useSceneConfig } from "./useSceneConfig";
+import { useTextureGroupsStore } from "@/stores/textureGroups";
+import type { TextureGroup, GroupConfig } from "@/stores/textureGroups";
+import { addGroupMeshes, removeGroupMeshes } from "@/utils/groupMeshes";
+import { defaultConfig, presets, configControls, cameraSchema, groundSchema, lightsSchema, skySchema } from "./config";
 import type { SceneEditorConfig } from "./config";
+import { getNestedValue } from "@/utils/nestedObjects";
 
-const route = useRoute();
 const canvas = ref<HTMLCanvasElement | null>(null);
-const { openPanel } = usePanels();
-const { setViewPanels, clearViewPanels } = useViewPanels();
-const { setSceneElements, clearSceneElements } = useDebugScene();
+const { openPanel } = usePanelsStore();
+const { setViewPanels, clearViewPanels } = useViewPanelsStore();
+const { setSceneElements, clearSceneElements } = useDebugSceneStore();
+const cameraConfigStore = useCameraConfigStore();
+const { cameraSlots, activeSlot } = storeToRefs(cameraConfigStore);
+const { registerCameraHandlers, unregisterCameraHandlers, updateActiveSlotField, syncActiveSlotPosition, syncActiveSlotOrbitTarget } = cameraConfigStore;
+const elementPropertiesStore = useElementPropertiesStore();
+const { selectedElementName } = storeToRefs(elementPropertiesStore);
+const { registerElementProperties, unregisterElementProperties, clearAllElementProperties, openElementProperties } = elementPropertiesStore;
+const textureStore = useTextureGroupsStore();
 
-// Texture item within a group
-interface TextureItem {
-  id: string;
-  name: string;
-  filename: string;
-  url: string;
-}
-
-// Group of textures that share config and area
-interface TextureGroup {
-  id: string;
-  name: string;
-  textures: TextureItem[];
-  hidden?: boolean;
-  showWireframe?: boolean;
-}
-
-const textureGroups = ref<TextureGroup[]>([]);
-const selectedGroupId = ref<string | null>(null);
-
-// Auto-update toggle
-const autoUpdate = ref(true);
+// Derived refs from store for convenience
+const textureGroups = computed({
+  get: () => textureStore.groups,
+  set: (value) => { textureStore.groups = value; },
+});
+const selectedGroupId = computed({
+  get: () => textureStore.selectedGroupId,
+  set: (value) => { textureStore.selectedGroupId = value; },
+});
+const autoUpdate = computed({
+  get: () => textureStore.autoUpdate,
+  set: (value) => { textureStore.autoUpdate = value; },
+});
 
 const hiddenElements = ref<Set<string>>(new Set());
 
 // Update scene elements list for debugging
 const updateSceneElements = (scene: THREE.Scene) => {
+  const cameraElements = cameraSlots.value.map(slot => ({
+    name: slot.label,
+    type: 'Camera',
+    hidden: false,
+  }));
   setSceneElements(
-    scene.children.map((child: any) => ({
-      name: child.name || "(unnamed)",
-      type: child.type,
-      hidden: hiddenElements.value.has(child.name),
-    })),
+    [
+      ...cameraElements,
+      ...scene.children.map((child: any) => {
+        const groupId = textureGroups.value.find(g =>
+          child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
+        )?.id;
+        return {
+          name: child.name || "(unnamed)",
+          type: groupId ? 'TextureArea' : child.type,
+          hidden: hiddenElements.value.has(child.name),
+          groupId,
+        };
+      }),
+    ],
     {
       onToggleVisibility: toggleElementVisibility,
       onRemove: removeSceneElement,
-    }
+    },
+    Object.fromEntries(textureGroups.value.map(g => [g.id, g.name]))
   );
 };
 
@@ -93,28 +113,18 @@ const removeSceneElement = (name: string) => {
   }
 };
 
+const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+  const keys = path.split('.');
+  const lastKey = keys[keys.length - 1];
+  const target = keys.slice(0, -1).reduce((current: unknown, key) => {
+    if (current === null || current === undefined) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, obj as unknown) as Record<string, unknown>;
+  if (target) target[lastKey] = value;
+};
+
 // Guard flag to suppress auto-update during group config loading
 let isLoadingGroupConfig = false;
-
-// Per-group config stored by group name
-interface GroupConfig {
-  area: {
-    center: CoordinateTuple;
-    size: CoordinateTuple;
-  };
-  textures: {
-    baseSize: CoordinateTuple;
-    sizeVariation: CoordinateTuple;
-    rotationVariation: CoordinateTuple;
-  };
-  instances: {
-    density: number;
-    pattern: "random" | "grid" | "grid-jitter";
-    seed: number;
-  };
-}
-
-const groupConfigRegistry = ref<Record<string, GroupConfig>>({});
 
 // Create reactive configuration
 const reactiveConfig = createReactiveConfig<SceneEditorConfig>(defaultConfig);
@@ -124,20 +134,6 @@ const getGroupName = (groupId: string) => {
   const group = textureGroups.value.find((g) => g.id === groupId);
   return group?.name ?? groupId;
 };
-
-// Create a new GroupConfig from default values
-const createDefaultGroupConfig = (): GroupConfig => ({
-  area: {
-    center: [...defaultConfig.area.center] as CoordinateTuple,
-    size: [...defaultConfig.area.size] as CoordinateTuple,
-  },
-  textures: {
-    baseSize: [...defaultConfig.textures.baseSize] as CoordinateTuple,
-    sizeVariation: [...defaultConfig.textures.sizeVariation] as CoordinateTuple,
-    rotationVariation: [...defaultConfig.textures.rotationVariation] as CoordinateTuple,
-  },
-  instances: { ...defaultConfig.instances },
-});
 
 // Snapshot current reactiveConfig into a GroupConfig
 const snapshotGroupConfig = (): GroupConfig => ({
@@ -182,19 +178,27 @@ watch(selectedGroupId, (groupId, oldGroupId) => {
   // Save current config back to the previous group
   if (oldGroupId) {
     const oldName = getGroupName(oldGroupId);
-    groupConfigRegistry.value[oldName] = snapshotGroupConfig();
+    textureStore.groupConfigRegistry[oldName] = snapshotGroupConfig();
   }
 
   if (groupId) {
     const name = getGroupName(groupId);
 
     // Initialize config for this group if it doesn't exist
-    if (!groupConfigRegistry.value[name]) {
-      groupConfigRegistry.value[name] = createDefaultGroupConfig();
+    if (!textureStore.groupConfigRegistry[name]) {
+      textureStore.groupConfigRegistry[name] = textureStore.createDefaultGroupConfig();
     }
 
     // Load group config into reactiveConfig
-    loadGroupConfig(groupConfigRegistry.value[name]);
+    loadGroupConfig(textureStore.groupConfigRegistry[name]);
+  }
+});
+
+// Sync selectedGroupId when a group element is selected in ElementsPanel
+watch(selectedElementName, (name) => {
+  const group = textureGroups.value.find(g => g.id === name);
+  if (group) {
+    selectedGroupId.value = group.id;
   }
 });
 
@@ -219,123 +223,120 @@ watch(
     if (autoUpdate.value && !isLoadingGroupConfig && selectedGroupId.value) {
       // Save updated config to registry before regenerating
       const name = getGroupName(selectedGroupId.value);
-      groupConfigRegistry.value[name] = snapshotGroupConfig();
+      textureStore.groupConfigRegistry[name] = snapshotGroupConfig();
       regenerateGroupMeshes(selectedGroupId.value);
     }
   },
   { deep: true }
 );
 
-// Scene configuration
-const sceneConfig = createReactiveConfig({
-  camera: {
-    position: [0, 50, 100] as CoordinateTuple,
-    target: [0, 0, 0] as CoordinateTuple,
-    fov: 60,
-  },
-  ground: {
-    enabled: true,
-    color: 0x98887d,
-  },
-  sky: {
-    enabled: true,
-    color: 0x87ceeb,
-  },
-});
+// Scene element configs via reactive composable
+const { groundConfig, lightsConfig, skyConfig, registerSceneHandlers, unregisterSceneHandlers, updateGroundField, updateLightsField, updateSkyField } = useSceneConfig();
 
 let animationId = 0;
 let orbitControls: any = null;
+let isApplyingUpdate = false;
 let currentScene: any = null;
 let currentCamera: any = null;
 let currentWorld: any = null;
 let currentGround: any = null;
-let previousGroundEnabled = false;
-let previousSkyEnabled = false;
-
-// Manual update trigger
-const triggerManualUpdate = () => {
-  reinitScene();
-};
-
-// Update only scene properties without regenerating textures
-const updateSceneProperties = () => {
-  // If ground/sky enabled state changed, reinit scene instead
-  if (
-    sceneConfig.value.ground.enabled !== previousGroundEnabled ||
-    sceneConfig.value.sky.enabled !== previousSkyEnabled
-  ) {
-    previousGroundEnabled = sceneConfig.value.ground.enabled;
-    previousSkyEnabled = sceneConfig.value.sky.enabled;
+let currentAmbientLight: THREE.Light | null = null;
+let currentDirectionalLight: THREE.Light | null = null;
+// Live-update ground properties without reinit
+const applyGroundUpdate = (field: string, value: unknown) => {
+  if (field === 'enabled' || field === 'size') {
     reinitScene();
     return;
   }
-
-  if (!currentScene || !currentCamera) return;
-
-  // Update background color
-  currentScene.background = sceneConfig.value.sky.enabled
-    ? new THREE.Color(sceneConfig.value.sky.color)
-    : new THREE.Color(0x000000);
-
-  // Update ground color
-  if (sceneConfig.value.ground.enabled && currentGround?.mesh?.material) {
-    currentGround.mesh.material.color = new THREE.Color(sceneConfig.value.ground.color);
-  }
-
-  // Update camera properties
-  currentCamera.position.set(...sceneConfig.value.camera.position);
-  if (currentCamera.fov !== undefined) {
-    currentCamera.fov = sceneConfig.value.camera.fov;
-    currentCamera.updateProjectionMatrix();
-  }
-
-  // Update orbit target
-  if (orbitControls) {
-    orbitControls.target.set(...sceneConfig.value.camera.target);
-    orbitControls.update();
+  if (field === 'color' && currentGround?.mesh?.material) {
+    (currentGround.mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(value as number);
   }
 };
 
-// Register configuration panel with onChange callback (auto-debounced)
-onMounted(() => {
-  // Set view-specific panels for GlobalNavigation
-  setViewPanels({
-    showTextures: true,
-    showConfig: true,
-    showScene: true,
-  });
+// Live-update lights without reinit
+const applyLightsUpdate = (path: string, value: unknown) => {
+  const parts = path.split('.');
+  const group = parts[0];
+  const field = parts[1];
+  if (group === 'ambient') {
+    if (!currentAmbientLight) return;
+    const light = currentAmbientLight as THREE.Light;
+    if (field === 'intensity') light.intensity = value as number;
+    else if (field === 'color') light.color.set(value as number);
+  } else if (group === 'directional') {
+    if (!currentDirectionalLight) return;
+    const light = currentDirectionalLight as THREE.Light;
+    if (field === 'intensity') light.intensity = value as number;
+    else if (field === 'color') light.color.set(value as number);
+    else if (field === 'position') light.position.set(...(value as [number, number, number]));
+  }
+};
 
-  registerViewConfig(
-    route.name as string,
-    reactiveConfig,
-    configControls,
-    sceneConfig,
-    sceneControls,
-    updateSceneProperties
-  );
+// Live-update sky without reinit
+const applySkyUpdate = (field: string, value: unknown) => {
+  if (field === 'enabled' || field === 'size') {
+    reinitScene();
+    return;
+  }
+  if (field === 'color') {
+    const skyMesh = currentScene?.getObjectByName('sky') as THREE.Mesh | undefined;
+    if (skyMesh?.material) {
+      (skyMesh.material as THREE.MeshBasicMaterial).color = new THREE.Color(value as number);
+    }
+    if (currentScene) {
+      currentScene.background = new THREE.Color(value as number);
+    }
+  }
+};
+
+onMounted(() => {
+  setViewPanels({});
+
+  textureStore.registerHandlers({
+    onSelectGroup: selectGroup,
+    onRemoveGroup: removeGroup,
+    onRemoveTexture: removeTextureFromGroup,
+    onToggleVisibility: toggleGroupVisibility,
+    onToggleWireframe: toggleGroupWireframe,
+    onAddTextureToGroup: handleAddTextureToGroup,
+    onAddNewGroup: handleFileUpload,
+    onManualUpdate: () => { if (selectedGroupId.value) regenerateGroupMeshes(selectedGroupId.value); },
+    onAddElement: () => {},
+  });
 
   if (canvas.value) {
     initScene();
   }
 
-  // Open textures panel on page load
-  openPanel("textures");
+  openPanel("elements");
 });
 
 onBeforeUnmount(() => {
-  // Clear view-specific panels
   clearViewPanels();
-
-  // Clear debug scene elements
   clearSceneElements();
-
-  // Unregister config
-  unregisterViewConfig(route.name as string);
-
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
+  unregisterCameraHandlers();
+  unregisterSceneHandlers();
+  clearAllElementProperties();
+  textureStore.clear();
 });
+
+// Register element properties for a texture group
+const registerGroupElementProperties = (group: TextureGroup) => {
+  registerElementProperties(group.id, {
+    title: group.name,
+    type: 'group',
+    schema: configControls,
+    getValue: (path) => getNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => {
+      setNestedValue(reactiveConfig.value as unknown as Record<string, unknown>, path, value);
+      if (autoUpdate.value && !isLoadingGroupConfig) {
+        const name = getGroupName(group.id);
+        textureStore.groupConfigRegistry[name] = snapshotGroupConfig();
+        regenerateGroupMeshes(group.id);
+      }
+    },
+  });
+};
 
 // Handle file upload - creates a new group with the uploaded texture
 const handleFileUpload = (event: Event) => {
@@ -365,17 +366,20 @@ const handleFileUpload = (event: Event) => {
     textureGroups.value.push(newGroup);
 
     // Initialize config for this group by name if it doesn't exist
-    if (!groupConfigRegistry.value[filename]) {
-      groupConfigRegistry.value[filename] = createDefaultGroupConfig();
+    if (!textureStore.groupConfigRegistry[filename]) {
+      textureStore.groupConfigRegistry[filename] = textureStore.createDefaultGroupConfig();
     }
 
-    // Auto-select the newly added group (watcher will load its config)
+    // Register group element properties and open elements panel
+    registerGroupElementProperties(newGroup);
     selectedGroupId.value = groupId;
-    // Open config panel for the new group
-    openPanel("config");
+    openElementProperties(groupId);
+    openPanel("elements");
 
     // Wait for watcher to process selection, then add only the new group
-    nextTick(() => addGroupMeshes(newGroup));
+    nextTick(() => {
+      if (currentScene && currentWorld) addGroupMeshes(currentScene, currentWorld, newGroup, getGroupConfig, () => updateSceneElements(currentScene));
+    });
 
     // Reset file input to allow re-uploading the same file
     target.value = "";
@@ -413,9 +417,9 @@ const handleAddTextureToGroup = (groupId: string, event: Event) => {
 // Select group
 const selectGroup = (id: string) => {
   selectedGroupId.value = selectedGroupId.value === id ? null : id;
-  // Open config panel when selecting a group
   if (selectedGroupId.value) {
-    openPanel("config");
+    openElementProperties(selectedGroupId.value);
+    openPanel("elements");
   }
 };
 
@@ -441,12 +445,12 @@ const toggleGroupWireframe = (id: string) => {
 const removeGroup = (id: string) => {
   const group = textureGroups.value.find((g) => g.id === id);
   if (group) {
-    // Remove from group config registry by name
-    delete groupConfigRegistry.value[group.name];
-    removeGroupMeshes(id);
+    textureStore.deleteGroupConfig(group.name);
+    if (currentScene) removeGroupMeshes(currentScene, id);
     if (selectedGroupId.value === id) {
       selectedGroupId.value = null;
     }
+    unregisterElementProperties(id);
   }
   textureGroups.value = textureGroups.value.filter((g) => g.id !== id);
   if (currentScene) updateSceneElements(currentScene);
@@ -475,162 +479,9 @@ const getGroupConfig = (groupId: string): GroupConfig => {
     return snapshotGroupConfig();
   }
   const name = getGroupName(groupId);
-  return groupConfigRegistry.value[name] ?? createDefaultGroupConfig();
+  return textureStore.groupConfigRegistry[name] ?? textureStore.createDefaultGroupConfig();
 };
 
-// Convert density to count. Density is used directly as the instance count.
-// Density 0 = 1 position.
-const MAX_INSTANCES = 2000;
-const densityToCount = (density: number): number => {
-  if (density <= 0) return 1;
-  return Math.min(MAX_INSTANCES, Math.max(1, Math.round(density)));
-};
-
-// Create texture instances following ForestGame pattern - per group
-const createTextureInstances = (groups: TextureGroup[]) => {
-  const allVariantData: Array<{
-    texture: string;
-    filename: string;
-    groupId: string;
-    groupConfig: GroupConfig;
-    positions: CoordinateTuple[];
-    instances: Array<{
-      position: CoordinateTuple;
-      scale: CoordinateTuple;
-      rotation: CoordinateTuple;
-    }>;
-  }> = [];
-
-  // Filter out hidden groups
-  const visibleGroups = groups.filter((g) => !g.hidden);
-
-  visibleGroups.forEach((group) => {
-    if (group.textures.length === 0) return;
-
-    const gc = getGroupConfig(group.id);
-
-    const areaConfig: AreaConfig = {
-      center: gc.area.center,
-      size: gc.area.size,
-      count: densityToCount(gc.instances.density),
-      pattern: gc.instances.pattern,
-      seed: gc.instances.seed,
-      sizeVariation: gc.textures.sizeVariation,
-      rotationVariation: gc.textures.rotationVariation,
-    };
-
-    const allPositions = generateAreaPositions(areaConfig);
-
-    // Initialize arrays for each texture in the group
-    const variantData = group.textures.map((item) => ({
-      texture: item.url,
-      filename: item.filename,
-      groupId: group.id,
-      groupConfig: gc,
-      positions: [] as CoordinateTuple[],
-      instances: [] as Array<{
-        position: CoordinateTuple;
-        scale: CoordinateTuple;
-        rotation: CoordinateTuple;
-      }>,
-    }));
-
-    // Randomly assign each position to a texture variant within the group
-    allPositions.forEach((position: CoordinateTuple) => {
-      const randomIndex = Math.floor(Math.random() * group.textures.length);
-      const variant = variantData[randomIndex];
-      variant.positions.push(position);
-
-      // Generate instance with variations using group properties
-      const { sizeVariation, rotationVariation, baseSize } = gc.textures;
-      const hasVariation =
-        sizeVariation.some((v) => v !== 0) || rotationVariation.some((v) => v !== 0);
-
-      if (hasVariation) {
-        variant.instances.push({
-          position,
-          scale: [
-            baseSize[0] + (Math.random() - 0.5) * sizeVariation[0],
-            baseSize[1] + (Math.random() - 0.5) * sizeVariation[1],
-            baseSize[2] + (Math.random() - 0.5) * sizeVariation[2],
-          ] as CoordinateTuple,
-          rotation: [
-            (Math.random() - 0.5) * rotationVariation[0],
-            (Math.random() - 0.5) * rotationVariation[1],
-            (Math.random() - 0.5) * rotationVariation[2],
-          ] as CoordinateTuple,
-        });
-      }
-    });
-
-    allVariantData.push(...variantData);
-  });
-
-  return allVariantData;
-};
-
-// Remove all meshes belonging to a group from the scene
-const removeGroupMeshes = (groupId: string) => {
-  if (!currentScene) return;
-  const prefix = `grp-${groupId}-`;
-  const wireframeName = `wireframe-${groupId}`;
-  const toRemove = currentScene.children.filter(
-    (child: any) => child.name?.startsWith(prefix) || child.name === wireframeName
-  );
-  toRemove.forEach((child: any) => currentScene.remove(child));
-};
-
-// Add meshes for a single group to the existing scene
-const addGroupMeshes = (group: TextureGroup) => {
-  if (!currentScene || !currentWorld) return;
-  if (group.hidden || group.textures.length === 0) return;
-
-  const gc = getGroupConfig(group.id);
-
-  // Add wireframe if enabled
-  if (group.showWireframe) {
-    getCube(currentScene, currentWorld, {
-      name: `wireframe-${group.id}`,
-      size: gc.area.size,
-      position: gc.area.center,
-      color: 0x00ff00,
-      material: "MeshBasicMaterial",
-      wireframe: true,
-      type: "fixed" as const,
-      castShadow: false,
-      receiveShadow: false,
-      physics: false,
-    });
-  }
-
-  const variantData = createTextureInstances([group]);
-
-  variantData.forEach((variant) => {
-    const elementsData =
-      variant.instances.length > 0
-        ? variant.instances
-        : variant.positions.map((pos: CoordinateTuple) => ({ position: pos }));
-
-    elementsData.forEach((elementData: any, index: number) => {
-      getCube(currentScene, currentWorld, {
-        name: `grp-${group.id}-${variant.filename}-${index}`,
-        size: elementData.scale || variant.groupConfig.textures.baseSize,
-        position: elementData.position,
-        rotation: elementData.rotation || ([0, 0, 0] as CoordinateTuple),
-        texture: variant.texture,
-        material: "MeshBasicMaterial",
-        opacity: 1,
-        color: 0xffffff,
-        type: "fixed" as const,
-        castShadow: false,
-        physics: false,
-        receiveShadow: false,
-      });
-    });
-  });
-
-  updateSceneElements(currentScene);
-};
 
 // Regenerate only a specific group's meshes in the scene
 const regenerateGroupMeshes = (groupId: string) => {
@@ -641,8 +492,8 @@ const regenerateGroupMeshes = (groupId: string) => {
   const group = textureGroups.value.find((g) => g.id === groupId);
   if (!group) return;
 
-  removeGroupMeshes(groupId);
-  addGroupMeshes(group);
+  removeGroupMeshes(currentScene, groupId);
+  addGroupMeshes(currentScene, currentWorld, group, getGroupConfig, () => updateSceneElements(currentScene));
 };
 
 // Reinitialize scene
@@ -675,43 +526,47 @@ const initScene = async () => {
   currentCamera = camera;
   currentWorld = world;
 
+  const initialSlot = cameraSlots.value[0];
+  const initialPosition: CoordinateTuple = initialSlot?.position ?? [0, 50, 100];
+  const initialFov = initialSlot?.fov ?? 60;
+
   const { orbit, ground } = await setup({
     config: {
       camera: {
-        position: sceneConfig.value.camera.position,
-        fov: sceneConfig.value.camera.fov,
+        position: initialPosition,
+        fov: initialFov,
       },
       orbit: {
-        target: new THREE.Vector3(...sceneConfig.value.camera.target),
+        target: new THREE.Vector3(0, 0, 0),
       },
       lights: {
         ambient: {
-          color: 0xffffff,
-          intensity: 1.0,
+          color: lightsConfig.value.ambient.color,
+          intensity: lightsConfig.value.ambient.intensity,
         },
         directional: {
-          color: 0xffffff,
-          intensity: 1.0,
-          position: [20, 30, 20],
+          color: lightsConfig.value.directional.color,
+          intensity: lightsConfig.value.directional.intensity,
+          position: lightsConfig.value.directional.position,
           castShadow: false,
         },
       },
-      ground: sceneConfig.value.ground.enabled
+      ground: groundConfig.value.enabled
         ? {
-            size: [1000, 100, 1000],
-            color: sceneConfig.value.ground.color,
+            size: groundConfig.value.size,
+            color: groundConfig.value.color,
           }
         : false,
-      sky: sceneConfig.value.sky.enabled
+      sky: skyConfig.value.enabled
         ? {
-            size: 500,
-            color: sceneConfig.value.sky.color,
+            size: skyConfig.value.size,
+            color: skyConfig.value.color,
           }
         : false,
     },
     defineSetup: () => {
       // Add meshes for all groups
-      textureGroups.value.forEach((group) => addGroupMeshes(group));
+      textureGroups.value.forEach((group) => addGroupMeshes(scene, world, group, getGroupConfig));
 
       // Update debugging area with scene elements
       updateSceneElements(scene);
@@ -725,25 +580,116 @@ const initScene = async () => {
     ground.mesh.castShadow = false;
   }
 
-  // Sync orbit control changes back to camera config (after setup completes)
   if (orbit) {
     orbitControls = orbit;
-
-    const syncCameraToConfig = () => {
-      sceneConfig.value.camera.position = [
-        camera.position.x,
-        camera.position.y,
-        camera.position.z,
-      ] as CoordinateTuple;
-      sceneConfig.value.camera.target = [
-        orbit.target.x,
-        orbit.target.y,
-        orbit.target.z,
-      ] as CoordinateTuple;
-    };
-
-    orbit.addEventListener("change", syncCameraToConfig);
+    orbitControls.addEventListener('change', () => {
+      if (isApplyingUpdate || !currentCamera) return;
+      syncActiveSlotPosition([
+        currentCamera.position.x,
+        currentCamera.position.y,
+        currentCamera.position.z,
+      ] as CoordinateTuple);
+      syncActiveSlotOrbitTarget([
+        orbitControls.target.x,
+        orbitControls.target.y,
+        orbitControls.target.z,
+      ] as CoordinateTuple);
+    });
   }
+
+  // Register camera handlers — views call this after scene init
+  registerCameraHandlers(
+    [{ id: 'cam-1', label: 'Camera 1', preset: CameraPreset.Perspective, position: [0, 50, 100], fov: 60, orbitTarget: [0, 0, 0] }],
+    {
+      onPresetChange: (_slotId, preset) => {
+        if (!currentCamera) return;
+        const nextType = cameraPresets[preset].type;
+        const currentType = currentCamera instanceof THREE.PerspectiveCamera ? 'perspective' : 'orthographic';
+        if (currentType !== nextType) {
+          reinitScene();
+        } else {
+          setCameraPreset(currentCamera, preset, window.innerWidth / window.innerHeight);
+        }
+      },
+      onSlotActivate: (slotId) => {
+        const slot = cameraSlots.value.find(s => s.id === slotId);
+        if (!slot || !currentCamera) return;
+        setCameraPreset(currentCamera, slot.preset, window.innerWidth / window.innerHeight);
+      },
+      onCleanup: () => {
+        if (animationId) cancelAnimationFrame(animationId);
+        if (orbitControls) {
+          orbitControls.dispose();
+          orbitControls = null;
+        }
+      },
+      onUpdate: (slotId) => {
+        const slot = cameraSlots.value.find(s => s.id === slotId);
+        if (!slot || !currentCamera) return;
+        isApplyingUpdate = true;
+        currentCamera.position.set(...slot.position);
+        if (currentCamera instanceof THREE.PerspectiveCamera) {
+          currentCamera.fov = slot.fov;
+          currentCamera.updateProjectionMatrix();
+        }
+        if (orbitControls) {
+          orbitControls.target.set(...slot.orbitTarget);
+          orbitControls.update();
+        }
+        isApplyingUpdate = false;
+      },
+    }
+  );
+
+  // Register camera element properties
+  const cameraLabel = cameraSlots.value[0]?.label ?? 'Camera 1';
+  registerElementProperties(cameraLabel, {
+    title: 'Camera',
+    type: 'camera',
+    schema: cameraSchema,
+    getValue: (path) => getNestedValue(activeSlot.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => updateActiveSlotField(path as keyof CameraSlot, value),
+  });
+
+  // Find and store light references for live updates
+  currentAmbientLight = scene.getObjectByName('ambient-light') as THREE.Light ?? null;
+  currentDirectionalLight = scene.getObjectByName('directional-light') as THREE.Light ?? null;
+
+  // Register scene config handlers for live updates
+  registerSceneHandlers({
+    onGroundUpdate: applyGroundUpdate,
+    onLightsUpdate: applyLightsUpdate,
+    onSkyUpdate: applySkyUpdate,
+    onCleanup: () => {},
+  });
+
+  // Register ground element properties if enabled
+  if (groundConfig.value.enabled) {
+    registerElementProperties('ground', {
+      title: 'Ground',
+      schema: groundSchema,
+      getValue: (path) => getNestedValue(groundConfig.value as unknown as Record<string, unknown>, path),
+      updateValue: (path, value) => updateGroundField(path as keyof typeof groundConfig.value, value),
+    });
+  }
+
+  // Register sky element properties if enabled
+  if (skyConfig.value.enabled) {
+    registerElementProperties('sky', {
+      title: 'Sky',
+      schema: skySchema,
+      getValue: (path) => getNestedValue(skyConfig.value as unknown as Record<string, unknown>, path),
+      updateValue: (path, value) => updateSkyField(path as keyof typeof skyConfig.value, value),
+    });
+  }
+
+  // Register lights element properties
+  registerElementProperties('lights', {
+    title: 'Lights',
+    schema: lightsSchema,
+    getValue: (path) => getNestedValue(lightsConfig.value as unknown as Record<string, unknown>, path),
+    updateValue: (path, value) => updateLightsField(path, value),
+  });
 
   // Create an empty timeline manager (no animations needed for static textures)
   const timelineManager = createTimelineManager();
@@ -777,7 +723,7 @@ defineExpose({
   exportConfiguration,
   reactiveConfig,
   textureGroups,
-  groupConfigRegistry,
+  groupConfigRegistry: textureStore.groupConfigRegistry,
   selectedGroupId,
   handleFileUpload,
   handleAddTextureToGroup,
@@ -790,22 +736,6 @@ defineExpose({
 <template>
   <div class="texture-editor">
     <canvas ref="canvas"></canvas>
-
-    <!-- Panel Components (rendered without individual triggers) -->
-    <TexturesPanel
-      :texture-groups="textureGroups"
-      :selected-group-id="selectedGroupId"
-      :auto-update="autoUpdate"
-      @select-group="selectGroup"
-      @remove-group="removeGroup"
-      @remove-texture="removeTextureFromGroup"
-      @toggle-visibility="toggleGroupVisibility"
-      @toggle-wireframe="toggleGroupWireframe"
-      @file-change="handleFileUpload"
-      @add-texture="handleAddTextureToGroup"
-      @update:auto-update="autoUpdate = $event"
-      @manual-update="triggerManualUpdate"
-    />
 
   </div>
 </template>

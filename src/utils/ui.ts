@@ -22,7 +22,7 @@ const enableZoomPrevention = () => {
       touch-action: manipulation;
     }
     input, textarea, select {
-      font-size: 16px !important;
+      font-size: max(16px, inherit);
     }
   `;
   document.head.appendChild(preventZoomStyleElement);

@@ -10,7 +10,7 @@ const props = withDefaults(
     variant?: ButtonVariant;
     size?: ButtonSize;
     asChild?: boolean;
-    class?: string;
+    class?: string | Record<string, boolean>;
   }>(),
   {
     variant: 'default',
