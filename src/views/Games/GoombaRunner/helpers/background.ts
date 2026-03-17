@@ -84,6 +84,7 @@ export const addBackground = (
 
   // Create the main textured layer
   const result = getCube(scene, world, {
+    name: 'fire',
     texture: options.texture,
     size: [width, height, 0],
     position: finalPosition,

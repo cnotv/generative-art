@@ -23,6 +23,7 @@ import type { TextureGroup, GroupConfig } from "@/stores/textureGroups";
 import { addGroupMeshes, removeGroupMeshes } from "@/utils/groupMeshes";
 import { defaultConfig, presets, configControls, cameraSchema, groundSchema, lightsSchema, skySchema } from "./config";
 import type { SceneEditorConfig } from "./config";
+import { getNestedValue } from "@/utils/nestedObjects";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const { openPanel } = usePanelsStore();
@@ -110,15 +111,6 @@ const removeSceneElement = (name: string) => {
     hiddenElements.value.delete(name);
     updateSceneElements(currentScene);
   }
-};
-
-// Navigate a dot-separated path on a plain object
-const getNestedValue = (obj: Record<string, unknown> | null | undefined, path: string): unknown => {
-  if (!obj) return undefined;
-  return path.split('.').reduce((current: unknown, key) => {
-    if (current === null || current === undefined) return undefined;
-    return (current as Record<string, unknown>)[key];
-  }, obj as unknown);
 };
 
 const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {

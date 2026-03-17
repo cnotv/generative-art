@@ -13,8 +13,9 @@ import {
   resetTextureAreaBackgrounds,
   type BackgroundElement,
   type TextureAreaElement,
+  type TextureAreaLayerConfig,
 } from "./helpers/background";
-import { moveBlocks, resetObstacles, createCubes } from "./helpers/block";
+import { moveBlocks, resetObstacles, createCubes, createObstaclesGroup } from "./helpers/block";
 import { moveGround, resetGround, getGround } from "./helpers/ground";
 import {
   ensurePlayerAboveGround,
@@ -47,6 +48,7 @@ const addHorizonLine = (scene: THREE.Scene) => {
   });
 
   const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial);
+  horizonLine.name = 'Horizon';
 
   // Position the horizon line slightly above the ground level
   horizonLine.position.set(0, 11, -200); // Y=11 for horizon height, Z back a bit for depth
@@ -84,6 +86,7 @@ const createTimeline = async ({
   );
 
   const obstacles: any[] = [];
+  createObstaclesGroup(scene);
   const backgrounds: BackgroundElement[] = [];
   const groundTexture = getGround(scene, physics);
   const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
@@ -93,6 +96,21 @@ const createTimeline = async ({
   let textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
     (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
   );
+
+  const regenerateTextureArea = (areaName: string, layerConfigs: TextureAreaLayerConfig[]) => {
+    // Remove old meshes for this area name
+    const removed = textureAreaBackgrounds.filter(element => element.mesh.name === areaName);
+    removed.forEach(element => scene.remove(element.mesh));
+
+    const remaining = textureAreaBackgrounds.filter(element => element.mesh.name !== areaName);
+
+    // Create new meshes from updated configs
+    const newElements = layerConfigs.flatMap(
+      lc => createTextureAreaBackgroundLayer(scene, world, lc)
+    );
+
+    textureAreaBackgrounds = [...remaining, ...newElements];
+  };
 
   let backgroundsPopulated = false;
   const horizonLine = addHorizonLine(scene);
@@ -217,7 +235,7 @@ const createTimeline = async ({
     },
   ]);
 
-  return timelineManager;
+  return { timelineManager, regenerateTextureArea };
 };
 
 export { createTimeline };

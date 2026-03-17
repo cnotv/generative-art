@@ -76,6 +76,7 @@
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`
 - **Light and dark theme**: Always provide both light and dark mode colors. Define both in `src/assets/styles/_variables.scss` under `.dark / [data-theme="dark"]` and `@media (prefers-color-scheme: dark)`. Never add dark-mode overrides inside a component's `<style scoped>` — use CSS custom properties so theming is centralized.
 - **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
+- **No `!important`**: Never use `!important` in CSS unless it is in a utility class specifically designed to override styles (e.g., vendor overrides in `vendor.scss`). If a style isn't applying, fix the specificity or selector instead.
 
 ## DRY and KISS Principles
 
@@ -93,6 +94,7 @@
   - `animation` package: `animateTimeline`, `animationCreate`
   - `controls` package: `controlsCreate`, `controlsDestroy`
 - **Abstract functions**: Extract reusable logic into separate functions/modules
+- **Reuse shared utilities first**: Before implementing Three.js patterns (camera properties, orbit controls, element registration), check `src/utils/` and `src/stores/` for existing shared utilities. Extend them if needed rather than duplicating logic inline. Key utilities: `src/utils/cameraProperties.ts` (camera + orbit), `src/utils/threeObjectUpdaters.ts` (lint-safe mutations), `src/stores/sceneView.ts` (full scene lifecycle)
 - **Single responsibility**: Keep functions focused on one task
 - **Framework-agnostic packages**: `@webgamekit/*` packages must not depend on Vue/React
 

@@ -1,8 +1,8 @@
 import type { ControlMapping, ControlHandlers } from './types';
 
 export interface KeyboardController {
-  bind: () => void;
-  unbind: () => void;
+  bind: (target?: HTMLElement | null) => void;
+  unbind: (target?: HTMLElement | null) => void;
 }
 
 export function createKeyboardController(
@@ -21,14 +21,16 @@ export function createKeyboardController(
     if (handlers.onInput) handlers.onInput(action, event.key, 'keyboard');
   }
 
-  function bind() {
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+  function bind(target?: HTMLElement | null) {
+    const eventTarget: EventTarget = target ?? window;
+    eventTarget.addEventListener('keydown', handleKeyDown as EventListener);
+    eventTarget.addEventListener('keyup', handleKeyUp as EventListener);
   }
 
-  function unbind() {
-    window.removeEventListener('keydown', handleKeyDown);
-    window.removeEventListener('keyup', handleKeyUp);
+  function unbind(target?: HTMLElement | null) {
+    const eventTarget: EventTarget = target ?? window;
+    eventTarget.removeEventListener('keydown', handleKeyDown as EventListener);
+    eventTarget.removeEventListener('keyup', handleKeyUp as EventListener);
   }
 
   return { bind, unbind };

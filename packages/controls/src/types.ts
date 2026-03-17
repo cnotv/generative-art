@@ -17,6 +17,7 @@ export interface ControlsOptions {
   gamepad?: boolean;
   touch?: boolean;
   mouse?: boolean;
+  keyboardTarget?: HTMLElement | null;
   touchTarget?: HTMLElement | null;
   mouseTarget?: HTMLElement | null;
   buttonMap?: string[]; // Optional: custom button names by index

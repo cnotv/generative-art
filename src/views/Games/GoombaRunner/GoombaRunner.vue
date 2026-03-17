@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import StartScreen from "./screens/StartScreen.vue";
 import GameOver from "./screens/GameOver.vue";
@@ -7,7 +7,6 @@ import ScoreDisplay from "./screens/ScoreDisplay.vue";
 import { createControls } from "@webgamekit/controls";
 import { stats } from "@/utils/stats";
 import { initializeAudio, stopMusic } from "@webgamekit/audio";
-import * as THREE from "three";
 import { getTools } from "@webgamekit/threejs";
 import { useUiStore } from "@/stores/ui";
 import {
@@ -16,7 +15,11 @@ import {
   removeGoogleFont,
   disableZoomPrevention,
 } from "@/utils/ui";
-import { config, setupConfig } from "./config";
+import { config, setupConfig, configControls, textureAreaControls } from "./config";
+import { registerCameraProperties as registerCameraPropertiesUtil } from "@/utils/cameraProperties";
+import { registerLightProperties } from "@/utils/lightProperties";
+import { registerTextureAreaProperties } from "@/utils/textureAreaProperties";
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
 import { createTimeline } from "./animation";
 import "@/assets/prevents.css";
 import "./styles.css";
@@ -47,6 +50,23 @@ const statsEl = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { originalViewport, preventZoomStyleElement } = enableZoomPrevention();
+
+// Reactive config for Config panel (game/player settings)
+const reactiveConfig = createReactiveConfig({
+  game: {
+    helper: config.game.helper,
+    speed: config.game.speed,
+  },
+  player: {
+    helper: config.player.helper,
+    speed: config.player.speed,
+    maxJump: config.player.maxJump,
+    jump: {
+      height: config.player.jump.height,
+      duration: config.player.jump.duration,
+    },
+  },
+});
 
 const bindings: Record<string, ControlsOptions> = {
   playing: {
@@ -99,30 +119,41 @@ const bindings: Record<string, ControlsOptions> = {
   },
 };
 
-const { remapControlsOptions, destroyControls } = createControls(bindings["idle"]);
+// Create controls with keyboard disabled initially — canvas target is set on mount via remap
+const { remapControlsOptions, destroyControls } = createControls({ ...bindings["idle"], keyboard: false });
+
+const getBindingsWithTarget = (key: string) => ({
+  ...bindings[key],
+  keyboardTarget: canvas.value as unknown as HTMLCanvasElement | null,
+});
+
+const focusCanvas = () => {
+  (canvas.value as unknown as HTMLCanvasElement)?.focus();
+};
 
 const handleStartGame = async () => {
   setStatus("playing");
   setScore(0);
-  remapControlsOptions(bindings["playing"]);
+  remapControlsOptions(getBindingsWithTarget("playing"));
+  focusCanvas();
 };
 
 const handleRestartGame = () => {
   handleStartGame();
   shouldClearObstacles.value = true;
-  remapControlsOptions(bindings["playing"]);
+  remapControlsOptions(getBindingsWithTarget("playing"));
 };
 
 const endGame = () => {
   stopMusic();
   checkHighScore();
   setStatus("game-over");
-  remapControlsOptions(bindings["game-over"]);
+  remapControlsOptions(getBindingsWithTarget("game-over"));
 };
 
 const { setSceneElements, clearSceneElements } = useDebugSceneStore();
 const elementPropertiesStore = useElementPropertiesStore();
-const { registerElementProperties, unregisterElementProperties, clearAllElementProperties } = elementPropertiesStore;
+const { unregisterElementProperties, clearAllElementProperties } = elementPropertiesStore;
 const textureStore = useTextureGroupsStore();
 
 const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
@@ -134,44 +165,57 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       route,
       canvas,
     });
-    remapControlsOptions(bindings["idle"]);
-    const { elements } = await setup({
+    remapControlsOptions(getBindingsWithTarget("idle"));
+    const { elements, orbit } = await setup({
       config: setupConfig,
     });
 
-    const lightSchema = {
-      intensity: { min: 0, max: 5, step: 0.1, label: 'Intensity' },
-      color: { color: true, label: 'Color' },
-    };
+    if (orbit) {
+      orbit.target.y = 35;
+      orbit.update();
+    }
+    registerCameraPropertiesUtil({ camera, orbit });
 
     const elementVisibility = new Map<string, boolean>();
 
     let sceneHandlers: { onToggleVisibility: (name: string) => void; onRemove: (name: string) => void };
 
     const textureAreaNames = new Set(config.backgrounds.textureAreaLayers.map(l => l.name));
+    // Names hidden from the elements panel (ephemeral backgrounds, grouped areas)
+    const hiddenFromPanel = new Set([...textureAreaNames, 'fire']);
     const textureAreaGroups = Object.fromEntries(
       [...textureAreaNames].map(name => [name, name.charAt(0).toUpperCase() + name.slice(1)])
     );
 
     const refreshElements = () => {
-      const textureGroupEntries = [...textureAreaNames].map(groupName => ({
+      const groupEntries = [...textureAreaNames].map(groupName => ({
         name: groupName,
         type: 'TextureArea',
         hidden: elementVisibility.get(groupName) ?? false,
         groupId: groupName,
       }));
 
+      // Deduplicate scene children — show one entry per unique name, skip hidden/grouped/unnamed elements
+      const seenNames = new Set<string>();
+      const uniqueChildren = scene.children
+        .filter(child => {
+          if (!child.name) return false;
+          if (hiddenFromPanel.has(child.name)) return false;
+          if (seenNames.has(child.name)) return false;
+          seenNames.add(child.name);
+          return true;
+        })
+        .map(child => ({
+          name: child.name || child.type,
+          type: child.type,
+          hidden: elementVisibility.get(child.name || child.type) ?? false,
+        }));
+
       setSceneElements(
         [
           { name: 'Camera', type: camera.type, hidden: false },
-          ...scene.children
-            .filter(child => !textureAreaNames.has(child.name))
-            .map(child => ({
-              name: child.name || child.type,
-              type: child.type,
-              hidden: elementVisibility.get(child.name || child.type) ?? false,
-            })),
-          ...textureGroupEntries,
+          ...uniqueChildren,
+          ...groupEntries,
         ],
         sceneHandlers,
         textureAreaGroups
@@ -206,30 +250,12 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       },
     };
 
-    const makeLightRegistration = (light: LightObject, name: string, title: string) => {
-      const lightState = reactive({ intensity: light.intensity, color: light.color.getHex() });
-      registerElementProperties(name, {
-        title,
-        schema: lightSchema,
-        getValue: (path: string) => (lightState as Record<string, unknown>)[path],
-        updateValue: (path: string, value: unknown) => {
-          (lightState as Record<string, unknown>)[path] = value;
-          if (path === 'color') light.color.set(value as number);
-          else (light as Record<string, unknown>)[path] = value;
-        },
-      });
-    };
-
+    // Register light properties using shared utility
     const ambientLight = elements.find(e => e.name === 'ambient-light') as unknown as LightObject | undefined;
-    if (ambientLight) makeLightRegistration(ambientLight, 'ambient-light', 'Ambient Light');
+    if (ambientLight) registerLightProperties({ light: ambientLight, name: 'ambient-light', title: 'Ambient Light' });
 
     const directionalLight = elements.find(e => e.name === 'directional-light') as unknown as LightObject | undefined;
-    if (directionalLight) makeLightRegistration(directionalLight, 'directional-light', 'Directional Light');
-
-    const textureAreaSchema = {
-      opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity' },
-      speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
-    };
+    if (directionalLight) registerLightProperties({ light: directionalLight, name: 'directional-light', title: 'Directional Light' });
 
     // Register texture area groups in texture store for ElementGroup rendering
     textureStore.$patch({
@@ -260,45 +286,95 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       onAddElement: () => {},
     });
 
+    // Create timeline and get regeneration function
+    const { timelineManager, regenerateTextureArea } = await createTimeline({
+      scene,
+      getDelta,
+      world,
+      shouldClearObstacles,
+      camera,
+      uiStore,
+      endGame,
+      onReset: refreshElements,
+    });
+
+    // Debounced regeneration for property changes (same pattern as sceneView store)
+    const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+    const DEBOUNCE_DELAY = 150;
+    const debouncedRegenerate = (areaName: string, callback: () => void) => {
+      if (debounceTimers[areaName]) clearTimeout(debounceTimers[areaName]);
+      debounceTimers[areaName] = setTimeout(() => {
+        delete debounceTimers[areaName];
+        callback();
+      }, DEBOUNCE_DELAY);
+    };
+
+    // Build updated layer configs from reactive config for a given area
+    const buildLayerConfigs = (areaName: string, areaConfig: Record<string, unknown>) => {
+      const originalLayers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
+      if (originalLayers.length === 0) return [];
+
+      const area = areaConfig.area as { center: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } };
+      const textures = areaConfig.textures as { baseSize: { x: number; y: number; z: number } };
+      const instances = areaConfig.instances as { density: number; seed: number };
+      const rendering = areaConfig.rendering as { opacity: number; speed: number };
+
+      // Calculate delta from first layer to preserve per-layer offsets for center/size
+      const firstOriginal = originalLayers[0];
+      const centerDelta = [
+        area.center.x - firstOriginal.center[0],
+        area.center.y - firstOriginal.center[1],
+        area.center.z - firstOriginal.center[2],
+      ];
+      const sizeDelta = [
+        area.size.x - firstOriginal.size[0],
+        area.size.y - firstOriginal.size[1],
+        area.size.z - firstOriginal.size[2],
+      ];
+
+      return originalLayers.map(layer => ({
+        ...layer,
+        center: [
+          layer.center[0] + centerDelta[0],
+          layer.center[1] + centerDelta[1],
+          layer.center[2] + centerDelta[2],
+        ] as [number, number, number],
+        size: [
+          layer.size[0] + sizeDelta[0],
+          layer.size[1] + sizeDelta[1],
+          layer.size[2] + sizeDelta[2],
+        ] as [number, number, number],
+        baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z] as [number, number, number],
+        density: instances.density,
+        opacity: rendering.opacity,
+        speed: rendering.speed,
+      }));
+    };
+
+    // Register texture area properties using shared utility
+    const areaConfigs = ref<Record<string, Record<string, unknown>>>({});
     [...textureAreaNames].forEach(areaName => {
       const layers = config.backgrounds.textureAreaLayers.filter(l => l.name === areaName);
       if (layers.length === 0) return;
 
-      const areaState = reactive({
-        opacity: layers[0].opacity,
-        speed: layers[0].speed,
-      });
+      registerTextureAreaProperties({
+        areaName,
+        layers,
+        schema: textureAreaControls,
+        areaConfigs,
+        onUpdate: (updatedAreaName, _path, _value) => {
+          const areaConfig = areaConfigs.value[updatedAreaName];
+          if (!areaConfig) return;
 
-      registerElementProperties(areaName, {
-        title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
-        type: 'TextureArea',
-        schema: textureAreaSchema,
-        getValue: (path: string) => (areaState as Record<string, unknown>)[path],
-        updateValue: (path: string, value: unknown) => {
-          (areaState as Record<string, unknown>)[path] = value;
-          const meshes = scene.children.filter(c => c.name === areaName);
-          if (path === 'opacity') {
-            meshes.forEach(mesh => {
-              if ((mesh as THREE.Mesh).material instanceof THREE.MeshBasicMaterial) {
-                ((mesh as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = value as number;
-              }
-            });
-          }
+          debouncedRegenerate(updatedAreaName, () => {
+            const layerConfigs = buildLayerConfigs(updatedAreaName, areaConfig);
+            regenerateTextureArea(updatedAreaName, layerConfigs);
+          });
         },
       });
     });
-    animate({
-      timeline: await createTimeline({
-        scene,
-        getDelta,
-        world,
-        shouldClearObstacles,
-        camera,
-        uiStore,
-        endGame,
-        onReset: refreshElements,
-      }),
-    });
+
+    animate({ timeline: timelineManager });
     refreshElements();
   };
   createScene();
@@ -312,6 +388,7 @@ onMounted(() => {
   );
   loadHighScore();
   prevents();
+  registerViewConfig(route.name as string, reactiveConfig, configControls);
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
@@ -319,6 +396,8 @@ onMounted(() => {
     );
   };
   initInstance();
+  // Focus canvas so keyboard controls are scoped to the game
+  (canvas.value as unknown as HTMLCanvasElement)?.focus();
   window.addEventListener("resize", initInstance);
 });
 
@@ -331,12 +410,13 @@ onUnmounted(() => {
   clearSceneElements();
   clearAllElementProperties();
   textureStore.$reset();
+  unregisterViewConfig(route.name as string);
 });
 </script>
 
 <template>
   <div ref="statsEl"></div>
-  <canvas ref="canvas" style="position: relative; z-index: 0"></canvas>
+  <canvas ref="canvas" tabindex="0" style="position: relative; z-index: 0; outline: none"></canvas>
   <StartScreen v-if="isGameStart" @start="handleStartGame" />
   <GameOver v-if="isGameOver" @restart="handleRestartGame" />
   <ScoreDisplay v-if="isGamePlaying || isGameOver" />

@@ -37,6 +37,7 @@ const createPlayer = async (
   }
 
   const player = goombaModel;
+  player.name = 'Player';
   player.castShadow = true;
 
   // Update colors

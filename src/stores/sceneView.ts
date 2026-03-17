@@ -12,11 +12,13 @@ import { useElementPropertiesStore } from '@/stores/elementProperties';
 import { useTextureGroupsStore } from '@/stores/textureGroups';
 import type { TextureGroup, GroupConfig } from '@/stores/textureGroups';
 import { addGroupMeshes, removeGroupMeshes } from '@/utils/groupMeshes';
-import { toggleObjectVisibility, updateCameraFov, replaceGeometry } from '@/utils/threeObjectUpdaters';
-import { cameraSchema, groundSchema, lightsSchema, skySchema, configControls } from '@/views/Tools/SceneEditor/config';
+import { toggleObjectVisibility, replaceGeometry } from '@/utils/threeObjectUpdaters';
+import { groundSchema, lightsSchema, skySchema, configControls } from '@/views/Tools/SceneEditor/config';
+import { registerCameraProperties as registerCameraPropertiesShared } from '@/utils/cameraProperties';
+import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects';
 
 type Vec3 = { x: number; y: number; z: number };
-type OrbitControls = { target: THREE.Vector3; update: () => void; addEventListener: (event: string, callback: () => void) => void };
+type OrbitControls = { target: THREE.Vector3; enabled: boolean; update: () => void; addEventListener: (event: string, callback: () => void) => void };
 
 const DEBOUNCE_DELAY = 150;
 const createDebouncedMap = () => {
@@ -31,28 +33,6 @@ const createDebouncedMap = () => {
         callback();
       }, DEBOUNCE_DELAY),
     };
-  };
-};
-
-const getNestedValue = (object: Record<string, unknown>, path: string): unknown =>
-  path.split('.').reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], object);
-
-const setNestedValueImmutable = (
-  object: Record<string, unknown>,
-  path: string,
-  value: unknown
-): Record<string, unknown> => {
-  const [first, ...rest] = path.split('.');
-  if (rest.length === 0) {
-    return { ...object, [first]: value };
-  }
-  return {
-    ...object,
-    [first]: setNestedValueImmutable(
-      ((object[first] ?? {}) as Record<string, unknown>),
-      rest.join('.'),
-      value
-    ),
   };
 };
 
@@ -233,21 +213,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     );
   };
 
-  const applyCameraUpdate = (path: string, value: unknown) => {
-    const camera = threeCamera.value;
-    const orbit = orbitReference.value;
-    if (!camera) return;
-    if (path === 'fov' && camera instanceof THREE.PerspectiveCamera) {
-      updateCameraFov(camera, value as number);
-    } else if (path === 'position') {
-      const pos = value as Vec3;
-      camera.position.set(pos.x, pos.y, pos.z);
-    } else if (path === 'orbitTarget' && orbit) {
-      const target = value as Vec3;
-      orbit.target.set(target.x, target.y, target.z);
-      orbit.update();
-    }
-  };
+  // applyCameraUpdate is handled by registerCameraPropertiesShared
 
   const applyGroundUpdate = (path: string, value: unknown) => {
     const ground = groundReference.value;
@@ -286,15 +252,15 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   };
 
   const registerCameraProperties = () => {
-    elementPropertiesStore.registerElementProperties('Camera', {
-      title: 'Camera',
-      type: 'camera',
-      schema: cameraSchema,
-      getValue: (path) => getNestedValue(cameraConfig.value, path),
-      updateValue: (path, value) => {
-        cameraConfig.value = setNestedValueImmutable(cameraConfig.value, path, value);
-        applyCameraUpdate(path, value);
-      },
+    const camera = threeCamera.value;
+    const orbit = orbitReference.value;
+    if (!camera || !('fov' in camera)) return;
+
+    registerCameraPropertiesShared({
+      camera: camera as THREE.PerspectiveCamera,
+      orbit,
+      cameraConfig,
+      skipOrbitSync: playMode.value,
     });
   };
 
@@ -585,10 +551,12 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     // Build reactive config sections from SetupConfig, always using defaults
     const cameraPosition = (config.camera?.position ?? SCENE_DEFAULTS.camera.position) as number[];
+    const orbitDisabledFromConfig = config.orbit && typeof config.orbit === 'object' && 'disabled' in config.orbit && config.orbit.disabled === true;
     cameraConfig.value = {
       position: { x: cameraPosition[0], y: cameraPosition[1], z: cameraPosition[2] },
       fov: config.camera?.fov ?? SCENE_DEFAULTS.camera.fov,
       orbitTarget: { x: 0, y: 0, z: 0 },
+      orbitEnabled: config.orbit !== false && !orbitDisabledFromConfig,
     };
 
     if (config.ground !== false) {
@@ -666,22 +634,6 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     if (config.ground !== false) registerGroundProperties();
     if (config.lights !== false) registerLightsProperties();
     if (config.sky !== false) registerSkyProperties();
-
-    // Sync orbit controls → camera config (skip in play mode to avoid per-frame reactivity)
-    if (!playMode.value) {
-      const orbitDisabled = config.orbit && 'disabled' in config.orbit && config.orbit.disabled;
-      if (!orbitDisabled) {
-        orbit?.addEventListener('change', () => {
-          cameraConfig.value = {
-            ...cameraConfig.value,
-            position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-            orbitTarget: orbit
-              ? { x: orbit.target.x, y: orbit.target.y, z: orbit.target.z }
-              : cameraConfig.value.orbitTarget,
-          };
-        });
-      }
-    }
 
     // Open panels
     viewPanelsStore.setViewPanels(options?.viewPanels ?? {});

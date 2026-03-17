@@ -190,6 +190,7 @@ export const cameraSchema = {
     max: { x: 500, y: 500, z: 500 },
     step: { x: 1, y: 1, z: 1 },
   },
+  orbitEnabled: { boolean: true, label: 'Orbit Controls' },
 };
 
 export const groundSchema = {

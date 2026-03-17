@@ -4,6 +4,20 @@ import { getModel } from "@webgamekit/threejs";
 import { config } from "../config";
 import { getSpeed } from "./setup";
 
+let obstacleCounter = 0;
+let obstaclesGroup: THREE.Group | null = null;
+
+export const resetObstacleCounter = () => {
+  obstacleCounter = 0;
+};
+
+export const createObstaclesGroup = (scene: THREE.Scene): THREE.Group => {
+  obstaclesGroup = new THREE.Group();
+  obstaclesGroup.name = 'Obstacles';
+  scene.add(obstaclesGroup);
+  return obstaclesGroup;
+};
+
 export const addBlock = async (
   scene: THREE.Scene,
   position: [number, number],
@@ -20,8 +34,23 @@ export const addBlock = async (
   });
 
   const mesh = sandBlockModel;
+  mesh.name = `obstacle-${obstacleCounter}`;
+  obstacleCounter += 1;
   mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
   mesh.position.set(position[0], position[1], 0);
+
+  // Move from scene root into obstacles group
+  if (obstaclesGroup) {
+    scene.remove(mesh);
+    obstaclesGroup.add(mesh);
+  }
 
   if (physics) {
     // Create character controller for controlled movement
@@ -75,13 +104,14 @@ export const removeBlock = (
   obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
   obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
   index: number,
-  scene: THREE.Scene,
   physics: any
 ) => {
   const { mesh, collider } = obstacle;
 
-  // Remove from scene and physics world (scoring now happens when block passes behind player)
-  scene.remove(mesh);
+  // Remove from group (or scene) and physics world
+  if (obstaclesGroup) {
+    obstaclesGroup.remove(mesh);
+  }
   physics.world.removeCollider(collider, true);
 
   // Remove from obstacles array
@@ -113,7 +143,7 @@ export const moveBlocks = (
 
     // Check if block should be removed and remove it
     if (obstacle.mesh.position.x < -300 - config.blocks.size) {
-      removeBlock(obstacle, obstacles, i, scene, physics);
+      removeBlock(obstacle, obstacles, i, physics);
     }
   }
 };
@@ -123,13 +153,18 @@ export const resetObstacles = (
   scene: THREE.Scene,
   physics: any
 ) => {
-  // Remove all obstacles from scene and physics
+  // Remove all obstacles from group and physics
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const obstacle = obstacles[i];
-    scene.remove(obstacle.mesh);
+    if (obstaclesGroup) {
+      obstaclesGroup.remove(obstacle.mesh);
+    } else {
+      scene.remove(obstacle.mesh);
+    }
     physics.world.removeCollider(obstacle.collider, true);
   }
   obstacles.length = 0;
+  resetObstacleCounter();
 };
 
 export const createCubes = async (

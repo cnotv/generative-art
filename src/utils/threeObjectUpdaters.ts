@@ -13,3 +13,7 @@ export const replaceGeometry = (mesh: { geometry: THREE.BufferGeometry }, geomet
   mesh.geometry.dispose();
   mesh.geometry = geometry;
 };
+
+export const setOrbitEnabled = (orbit: { enabled: boolean }, enabled: boolean): void => {
+  orbit.enabled = enabled;
+};

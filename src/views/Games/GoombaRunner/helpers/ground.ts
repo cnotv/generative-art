@@ -26,6 +26,7 @@ export const getGround = (scene: THREE.Scene, physics?: any) => {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = 'Ground';
   mesh.receiveShadow = true;
 
   // Position ground at y = 0, with the top surface at y = 0.25

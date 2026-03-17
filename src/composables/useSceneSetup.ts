@@ -1,6 +1,7 @@
 import { ref, type Ref, onBeforeUnmount } from 'vue';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
 import type { ConfigControlsSchema } from '@/stores/viewConfig';
+import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects';
 
 export interface SceneElementDefinition {
   title?: string;
@@ -9,28 +10,6 @@ export interface SceneElementDefinition {
   initialValues: Record<string, unknown>;
   onUpdate?: (path: string, value: unknown) => void;
 }
-
-const getNestedValue = (object: Record<string, unknown>, path: string): unknown =>
-  path.split('.').reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], object);
-
-const setNestedValueImmutable = (
-  object: Record<string, unknown>,
-  path: string,
-  value: unknown
-): Record<string, unknown> => {
-  const [first, ...rest] = path.split('.');
-  if (rest.length === 0) {
-    return { ...object, [first]: value };
-  }
-  return {
-    ...object,
-    [first]: setNestedValueImmutable(
-      ((object[first] ?? {}) as Record<string, unknown>),
-      rest.join('.'),
-      value
-    ),
-  };
-};
 
 export const useSceneSetup = (
   elementDefinitions: Record<string, SceneElementDefinition>

@@ -30,6 +30,7 @@ const mockCamera = {
 
 const mockOrbit = {
   target: new THREE.Vector3(0, 0, 0),
+  enabled: true,
   update: vi.fn(),
   addEventListener: vi.fn(),
 };
