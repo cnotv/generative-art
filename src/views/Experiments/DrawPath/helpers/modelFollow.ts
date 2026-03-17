@@ -186,8 +186,9 @@ export const modelFollowSpawnDynamicObstacles = (
       position,
       origin: {},
       type: "dynamic",
-      restitution: 0.2,
-      friction: 1.0,
+      restitution: 0,
+      friction: 2,
+      weight: 2,
       castShadow: true,
       receiveShadow: true,
     })
@@ -239,8 +240,10 @@ export const modelFollowApplyContactImpulses = (
   impulseScale: number = 1
 ): void => {
   const bp = ball.position;
-  // Collision radius = sphere radius + half the cube's XZ extent
-  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2;
+  // Extra buffer accounts for the CharacterController keeping the ball slightly
+  // outside the geometric contact distance.
+  const proximityBuffer = 0.5;
+  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2 + proximityBuffer;
   const thresholdSq = threshold * threshold;
 
   obstacles.forEach((obs) => {
@@ -251,12 +254,15 @@ export const modelFollowApplyContactImpulses = (
     const dx = cp.x - bp.x;
     const dz = cp.z - bp.z;
     const distributionSq = dx * dx + dz * dz;
+
     if (distributionSq > thresholdSq || distributionSq < 0.0001) return;
 
     const distribution = Math.sqrt(distributionSq);
     const inv = 1 / distribution;
     const mag = speed * delta * impulseScale;
-    body.applyImpulse({ x: dx * inv * mag, y: 0, z: dz * inv * mag }, true);
+    const upwardFraction = 0.4;
+    const impulse = { x: dx * inv * mag, y: mag * upwardFraction, z: dz * inv * mag };
+    body.applyImpulse(impulse, true);
   });
 };
 

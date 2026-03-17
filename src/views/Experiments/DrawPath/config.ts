@@ -94,7 +94,7 @@ export type FollowerMode = "mesh" | "physics" | "goomba";
 export const defaultConfigValues = {
   mode: "mesh" as FollowerMode,
   speed: DEFAULT_FOLLOW_SPEED,
-  obstacleImpulse: 5,
+  obstacleImpulse: 20,
   easing: "linear" as EasingName,
   easingIntensity: 0.6,
   playing: true,

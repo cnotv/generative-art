@@ -9,6 +9,9 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "
 import { useViewPanelsStore } from "@/stores/viewPanels";
 import { useDebugSceneStore } from "@/stores/debugScene";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
+import { toggleObjectVisibility } from "@/utils/threeObjectUpdaters";
+import { registerCameraProperties } from "@/utils/cameraProperties";
+import { registerLightProperties } from "@/utils/lightProperties";
 
 import {
   sceneSetupConfig,
@@ -101,7 +104,6 @@ type SceneState = {
 };
 
 let sceneState: SceneState | null = null;
-let groundMaterial: THREE.MeshStandardMaterial | null = null;
 let animFrameId: number | null = null;
 let frameRef = 0;
 let isPointerDown = false;
@@ -409,17 +411,6 @@ watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
   }
 });
 
-watch(() => sceneConfig.value.camera.fov, (fov) => {
-  const cam = sceneState?.camera;
-  if (cam instanceof THREE.PerspectiveCamera) {
-    cam.fov = fov;
-    cam.updateProjectionMatrix();
-  }
-});
-
-watch(() => sceneConfig.value.ground.color, (color) => {
-  groundMaterial?.color.setHex(color);
-});
 
 watch(() => reactiveConfig.value.showPath, (show) => {
   if (!sceneState?.pathLine) return;
@@ -531,28 +522,52 @@ const init = async (): Promise<void> => {
 
   const { elements, ground } = await setup({ config: sceneSetupConfig });
 
-  if (ground) groundMaterial = ground.mesh.material as THREE.MeshStandardMaterial;
-
-  registerSceneElements(camera, elements);
-
-  registerElementProperties('Camera', {
-    title: 'Camera',
-    type: 'camera',
-    schema: { fov: { min: 30, max: 120, label: 'FOV' } },
-    getValue: (path: string) => (sceneConfig.value.camera as Record<string, unknown>)[path],
-    updateValue: (path: string, value: unknown) => {
-      (sceneConfig.value.camera as Record<string, unknown>)[path] = value;
+  registerSceneElements(camera, elements, {
+    onToggleVisibility: (name: string) => {
+      const object = name === 'Camera'
+        ? (camera as unknown as THREE.Object3D)
+        : scene.getObjectByName(name);
+      if (object) toggleObjectVisibility(object);
+    },
+    onRemove: (name: string) => {
+      const object = scene.getObjectByName(name);
+      if (object) scene.remove(object);
     },
   });
 
+  // Camera properties (position, fov, orbit target, orbit enabled)
+  registerCameraProperties({ camera: camera as THREE.PerspectiveCamera });
+
+  // Ground properties (color)
   if (ground) {
-    registerElementProperties('Ground', {
+    const groundMesh = ground.mesh;
+    const groundMat = groundMesh.material as THREE.MeshStandardMaterial;
+    registerElementProperties('ground', {
       title: 'Ground',
       schema: { color: { color: true, label: 'Color' } },
-      getValue: (path: string) => (sceneConfig.value.ground as Record<string, unknown>)[path],
-      updateValue: (path: string, value: unknown) => {
-        (sceneConfig.value.ground as Record<string, unknown>)[path] = value;
+      getValue: () => groundMat.color.getHex(),
+      updateValue: (_path: string, value: unknown) => {
+        groundMat.color.set(value as number);
       },
+    });
+  }
+
+  // Light properties (intensity, color)
+  const ambientLight = elements.find(e => e.name === 'ambient-light');
+  if (ambientLight) {
+    registerLightProperties({
+      light: ambientLight as unknown as { color: { getHex: () => number; set: (v: number) => void }; intensity: number },
+      name: 'ambient-light',
+      title: 'Ambient Light',
+    });
+  }
+
+  const directionalLight = elements.find(e => e.name === 'directional-light');
+  if (directionalLight) {
+    registerLightProperties({
+      light: directionalLight as unknown as { color: { getHex: () => number; set: (v: number) => void }; intensity: number },
+      name: 'directional-light',
+      title: 'Directional Light',
     });
   }
 
@@ -602,7 +617,7 @@ const onResize = (): void => {
 };
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true });
+  setViewPanels({ showConfig: true, showElements: true });
   registerViewConfig(
     route.name as string,
     reactiveConfig,
