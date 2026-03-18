@@ -19,6 +19,7 @@ interface RegisterCameraOptions {
   orbit?: OrbitControls | null;
   cameraConfig?: Ref<Record<string, unknown>>;
   skipOrbitSync?: boolean;
+  schema?: Record<string, unknown>;
 }
 
 /**
@@ -32,7 +33,7 @@ interface RegisterCameraOptions {
  *   If not provided, creates an internal one from current camera/orbit values.
  * @returns The cameraConfig ref (same as passed in, or newly created)
  */
-export const registerCameraProperties = ({ camera, orbit, cameraConfig: externalConfig, skipOrbitSync }: RegisterCameraOptions) => {
+export const registerCameraProperties = ({ camera, orbit, cameraConfig: externalConfig, skipOrbitSync, schema }: RegisterCameraOptions) => {
   const elementPropertiesStore = useElementPropertiesStore();
 
   const cameraConfig = externalConfig ?? ref<Record<string, unknown>>({
@@ -62,7 +63,7 @@ export const registerCameraProperties = ({ camera, orbit, cameraConfig: external
   elementPropertiesStore.registerElementProperties('Camera', {
     title: 'Camera',
     type: 'camera',
-    schema: cameraSchema,
+    schema: schema ?? cameraSchema,
     getValue: (path) => getNestedValue(cameraConfig.value, path),
     updateValue: (path, value) => {
       cameraConfig.value = setNestedValueImmutable(cameraConfig.value, path, value);

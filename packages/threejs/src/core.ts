@@ -90,6 +90,7 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let frame = 0;
+  let simulationFrame = 0;
   let frameRate = 1 / 60;
   const { renderer, scene, camera, world } = await getEnvironment(canvas);
   let composer: EffectComposer | null = null;
@@ -172,11 +173,12 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
       accumulator += delta;
       if (accumulator < frameRate) return;
       accumulator -= frameRate;
+      simulationFrame += 1;
 
       world.step();
 
       beforeTimeline();
-      animateTimeline(timeline, frame, undefined, { enableAutoRemoval: true });
+      animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true });
       afterTimeline();
 
       if (orbit) {
