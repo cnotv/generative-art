@@ -193,12 +193,9 @@ const disposeObject = (object: THREE.Object3D, scene: THREE.Scene): void => {
 
 export const disposeChunk = (chunk: ChunkData, scene: THREE.Scene): void => {
   if (chunk.terrain) disposeObject(chunk.terrain, scene);
-  if (chunk.trees) disposeGroupChildren(chunk.trees, scene);
+  if (chunk.trees) scene.remove(chunk.trees); // shared geometry/materials — don't dispose per chunk
   if (chunk.ground) disposeObject(chunk.ground, scene);
-  if (chunk.grass) {
-    scene.remove(chunk.grass);
-    // Grass geometry/material are shared — don't dispose them per chunk
-  }
+  if (chunk.grass) scene.remove(chunk.grass); // shared geometry/material — don't dispose per chunk
 };
 
 interface UpdateChunksOptions {

@@ -39,8 +39,8 @@ import {
   DIRECTIONAL_LIGHT_NAME,
   configControls,
   baseConfigControls,
-  proceduralConfigControls,
   densityControl,
+  proceduralConfigControls,
 } from "./config";
 import { updateChunks, rebuildAllChunks, applyWorldCaseToAllChunks } from "./chunkManager";
 import { createGrassBladeGeometry, createGrassMaterial } from "./grassGenerator";
@@ -152,10 +152,7 @@ const buildGeneratorConfig = () => {
   };
 };
 
-const buildConfigSchema = (worldCase: WorldCase) =>
-  worldCase === 'terrain'
-    ? { ...baseConfigControls, ...proceduralConfigControls }
-    : baseConfigControls;
+const buildConfigSchema = (_worldCase: WorldCase) => baseConfigControls;
 
 const SPAWN_ID = 'world-generator'; // used for filtering chunk objects from elements panel
 const SPAWN_ID_TERRAIN = 'world-terrain';

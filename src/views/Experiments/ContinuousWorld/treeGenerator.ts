@@ -41,9 +41,13 @@ const allTextures = [
 ];
 
 const SIZE_VARIATION = 0.4;
+
+/** One unit plane reused for every tree — scaled per-mesh via mesh.scale. */
+const sharedPlaneGeometry = new THREE.PlaneGeometry(1, 1);
+
 const textureLoader = new THREE.TextureLoader();
 
-/** Shared texture cache to avoid reloading the same image per chunk. */
+/** Texture cache: url → THREE.Texture */
 const textureCache = new Map<string, THREE.Texture>();
 
 const loadTexture = (url: string): THREE.Texture => {
@@ -54,9 +58,22 @@ const loadTexture = (url: string): THREE.Texture => {
   return texture;
 };
 
-/**
- * Simple seeded random number generator (mulberry32).
- */
+/** Material cache: url → THREE.MeshBasicMaterial (shared across all chunks). */
+const materialCache = new Map<string, THREE.MeshBasicMaterial>();
+
+const getOrCreateMaterial = (url: string): THREE.MeshBasicMaterial => {
+  const cached = materialCache.get(url);
+  if (cached) return cached;
+  const material = new THREE.MeshBasicMaterial({
+    map: loadTexture(url),
+    // alphaTest-only cutout: opaque for the renderer → no per-frame depth sorting
+    transparent: false,
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+  });
+  materialCache.set(url, material);
+  return material;
+};
 
 const createSeededRandom = (seed: number): (() => number) => {
   let state = seed | 0;
@@ -73,6 +90,7 @@ const computeChunkSeed = (chunkX: number, chunkZ: number): number =>
 
 /**
  * Creates a group of textured tree/bush/rock billboards for a chunk.
+ * Shares geometry and materials across all chunks to minimise draw-call overhead.
  */
 export const createTreesChunk = (
   chunkX: number,
@@ -100,18 +118,8 @@ export const createTreesChunk = (
     const spriteWidth = textureEntry.width * sizeScale;
     const spriteHeight = textureEntry.height * sizeScale;
 
-    const geometry = new THREE.PlaneGeometry(spriteWidth, spriteHeight);
-    const texture = loadTexture(textureEntry.url);
-
-    const material = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      depthWrite: false,
-      alphaTest: 0.1,
-      side: THREE.DoubleSide,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(sharedPlaneGeometry, getOrCreateMaterial(textureEntry.url));
+    mesh.scale.set(spriteWidth, spriteHeight, 1);
     mesh.position.set(positionX, spriteHeight / 2, positionZ);
     mesh.name = `tree-sprite-${chunkX},${chunkZ}-${index}`;
 
