@@ -12,7 +12,7 @@ import { useDebugSceneStore } from '@/stores/debugScene';
 import { getTools } from "@webgamekit/threejs";
 import { createTimelineManager } from "@webgamekit/animation";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -205,7 +205,7 @@ onMounted(() => {
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
+      (statsElement.value as unknown) as HTMLElement
     );
   };
 
@@ -217,8 +217,8 @@ onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  stats.init(route, statsEl);
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const { animate, setup, world, getDelta, scene, camera } = await getTools({
@@ -273,6 +273,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

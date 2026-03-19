@@ -13,14 +13,14 @@ const PANEL_TITLES: Record<PanelType, string> = {
   elements: 'Elements',
 };
 
-interface Props {
+interface Properties {
   panelType: PanelType;
   side?: 'left' | 'right' | 'top' | 'bottom';
   title?: string;
   collapsible?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Properties>(), {
   side: 'right',
   title: undefined,
   collapsible: true,

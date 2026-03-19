@@ -9,14 +9,14 @@ import { useTextureGroupsStore } from '@/stores/textureGroups';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
 import { storeToRefs } from 'pinia';
 
-interface Props {
+interface Properties {
   groupId: string;
   label: string;
   isExpanded: boolean;
   isSelected: boolean;
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Properties>();
 
 const emit = defineEmits<{
   toggle: [];

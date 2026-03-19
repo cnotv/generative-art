@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>();
 
 const internalValue = ref(props.modelValue ?? '#000000');
-const colorInputRef = ref<HTMLInputElement | null>(null);
+const colorInputReference = ref<HTMLInputElement | null>(null);
 
 watch(
   () => props.modelValue,
@@ -31,8 +31,8 @@ const handleColorChange = (event: Event) => {
 };
 
 const handleClick = () => {
-  if (!props.disabled && colorInputRef.value) {
-    colorInputRef.value.click();
+  if (!props.disabled && colorInputReference.value) {
+    colorInputReference.value.click();
   }
 };
 
@@ -66,7 +66,7 @@ const selectPreset = (color: string) => {
 
     <!-- Hidden color input that opens native color picker -->
     <input
-      ref="colorInputRef"
+      ref="colorInputReference"
       type="color"
       :value="internalValue"
       :disabled="disabled"

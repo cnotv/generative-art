@@ -23,7 +23,7 @@ import { times } from "@/utils/lodash";
 import bowlingTexture from "@/assets/images/textures/bowling.png";
 import type { CoordinateTuple } from "@/types/three";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -31,16 +31,16 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
 onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     directional: {
       enabled: true,
@@ -52,7 +52,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       intensity: 2,
     },
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => {
     setup();
   });
@@ -201,6 +201,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

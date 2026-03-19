@@ -21,7 +21,7 @@ const character = {
   jump: 3,
 };
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
@@ -30,7 +30,7 @@ onMounted(() => {
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
+      (statsElement.value as unknown) as HTMLElement
     );
   };
 
@@ -60,9 +60,9 @@ const config = {
   },
 };
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as ComplexModel[];
@@ -162,6 +162,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

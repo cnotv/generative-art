@@ -5,12 +5,12 @@ import { Eye, EyeOff, Trash2 } from 'lucide-vue-next';
 import type { SceneElement } from '@/stores/debugScene';
 import { getElementIcon, getElementColor } from './elementUtilities';
 
-interface Props {
+interface Properties {
   element: SceneElement;
   selected?: boolean;
 }
 
-defineProps<Props>();
+defineProps<Properties>();
 
 const emit = defineEmits<{
   click: [];

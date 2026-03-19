@@ -99,16 +99,16 @@ const meshProperties = ref({
 });
 
 let chameleonModel = null;
-let sceneRef = null;
-let worldRef = null;
-let getDeltaRef = null;
-let cameraRef = null;
+let sceneReference = null;
+let worldReference = null;
+let getDeltaReference = null;
+let cameraReference = null;
 
 const closePanel = () => {
   panelsVisible.value = false;
   selectedMesh.value = null;
-  if (meshHelper.value && sceneRef) {
-    sceneRef.remove(meshHelper.value);
+  if (meshHelper.value && sceneReference) {
+    sceneReference.remove(meshHelper.value);
     meshHelper.value = null;
   }
 };
@@ -118,10 +118,10 @@ const init = async () => {
     canvas: canvas.value,
   });
 
-  sceneRef = scene;
-  worldRef = world;
-  getDeltaRef = getDelta;
-  cameraRef = camera;
+  sceneReference = scene;
+  worldReference = world;
+  getDeltaReference = getDelta;
+  cameraReference = camera;
 
   await setup({
     config: setupConfig,
@@ -139,10 +139,10 @@ const init = async () => {
         pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         // Update the raycaster
-        raycaster.setFromCamera(pointer, cameraRef);
+        raycaster.setFromCamera(pointer, cameraReference);
 
         // Calculate objects intersecting the ray
-        const intersects = raycaster.intersectObjects(sceneRef.children, true);
+        const intersects = raycaster.intersectObjects(sceneReference.children, true);
 
         if (intersects.length > 0) {
           const intersectedObject = intersects[0].object;
@@ -157,7 +157,7 @@ const init = async () => {
 
         // Remove previous helper if exists
         if (meshHelper.value) {
-          sceneRef.remove(meshHelper.value);
+          sceneReference.remove(meshHelper.value);
           meshHelper.value = null;
         }
 
@@ -166,7 +166,7 @@ const init = async () => {
 
         // Create and add new helper
         meshHelper.value = new THREE.BoxHelper(mesh, 0x00ff00);
-        sceneRef.add(meshHelper.value);
+        sceneReference.add(meshHelper.value);
 
         // Compute bounding box and sphere if not already computed
         if (!mesh.geometry.boundingBox) {
@@ -270,7 +270,7 @@ const init = async () => {
             updateAnimation({
               player: chameleonModel,
               actionName,
-              delta: getDeltaRef(),
+              delta: getDeltaReference(),
               speed: 4
             });
           }
@@ -289,14 +289,14 @@ const init = async () => {
     },
   });
   const { registerSceneElements } = useDebugSceneStore();
-  registerSceneElements(cameraRef, sceneRef.children.filter(c => c !== cameraRef));
+  registerSceneElements(cameraReference, sceneReference.children.filter(c => c !== cameraReference));
 };
 
 const removeModel = () => {
   if (chameleonModel) {
     // Remove from scene
-    if (chameleonModel.mesh && sceneRef) {
-      sceneRef.remove(chameleonModel.mesh);
+    if (chameleonModel.mesh && sceneReference) {
+      sceneReference.remove(chameleonModel.mesh);
 
       // Dispose of geometries and materials
       chameleonModel.mesh.traverse((child) => {
@@ -316,8 +316,8 @@ const removeModel = () => {
     }
 
     // Remove from physics world
-    if (chameleonModel.rigidBody && worldRef) {
-      worldRef.removeRigidBody(chameleonModel.rigidBody);
+    if (chameleonModel.rigidBody && worldReference) {
+      worldReference.removeRigidBody(chameleonModel.rigidBody);
     }
 
     // Stop all animations
@@ -365,7 +365,7 @@ const loadModelViaToolkit = async () => {
     animations: !animPathIsGLTF ? animationPath.value : undefined,
   };
 
-  chameleonModel = await getModel(sceneRef, worldRef, modelPath.value, config);
+  chameleonModel = await getModel(sceneReference, worldReference, modelPath.value, config);
 };
 
 const loadModelManually = async () => {
@@ -390,21 +390,21 @@ const loadModelManually = async () => {
               }
             });
 
-            sceneRef.add(mesh);
+            sceneReference.add(mesh);
 
             // Create physics body
-            const RAPIER = worldRef.constructor;
+            const RAPIER = worldReference.constructor;
             const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
               ...chameleonConfig.position
             );
-            const rigidBody = worldRef.createRigidBody(bodyDesc);
+            const rigidBody = worldReference.createRigidBody(bodyDesc);
 
             const colliderDesc = RAPIER.ColliderDesc.cuboid(
               chameleonConfig.boundary,
               chameleonConfig.boundary,
               chameleonConfig.boundary
             );
-            const collider = worldRef.createCollider(colliderDesc, rigidBody);
+            const collider = worldReference.createCollider(colliderDesc, rigidBody);
 
             // Setup animations
             const mixer = new THREE.AnimationMixer(mesh);
@@ -450,21 +450,21 @@ const loadModelManually = async () => {
               }
             });
 
-            sceneRef.add(mesh);
+            sceneReference.add(mesh);
 
             // Create physics body
-            const RAPIER = worldRef.constructor;
+            const RAPIER = worldReference.constructor;
             const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
               ...chameleonConfig.position
             );
-            const rigidBody = worldRef.createRigidBody(bodyDesc);
+            const rigidBody = worldReference.createRigidBody(bodyDesc);
 
             const colliderDesc = RAPIER.ColliderDesc.cuboid(
               chameleonConfig.boundary,
               chameleonConfig.boundary,
               chameleonConfig.boundary
             );
-            const collider = worldRef.createCollider(colliderDesc, rigidBody);
+            const collider = worldReference.createCollider(colliderDesc, rigidBody);
 
             // Setup animations
             const mixer = new THREE.AnimationMixer(mesh);
@@ -527,10 +527,10 @@ const extractMeshColors = () => {
             firstMat &&
             (firstMat.isMeshStandardMaterial || firstMat.isMeshPhongMaterial)
           ) {
-            color = "#" + firstMat.color.getHexString();
+            color = `#${  firstMat.color.getHexString()}`;
           }
         } else if (material.isMeshStandardMaterial || material.isMeshPhongMaterial) {
-          color = "#" + material.color.getHexString();
+          color = `#${  material.color.getHexString()}`;
         }
 
         if (color) {
@@ -622,9 +622,9 @@ const onAnimationFileChange = async (event) => {
             }
 
             // Create new actions from loaded animations
-            const newActions = gltf.animations.reduce((acc, animation) => {
+            const newActions = gltf.animations.reduce((accumulator, animation) => {
               return {
-                ...acc,
+                ...accumulator,
                 [animation.name]: chameleonModel.mixer.clipAction(animation),
               };
             }, {});
@@ -648,9 +648,9 @@ const onAnimationFileChange = async (event) => {
           }
 
           // Create new actions from loaded animations
-          const newActions = animationFbx.animations.reduce((acc, animation) => {
+          const newActions = animationFbx.animations.reduce((accumulator, animation) => {
             return {
-              ...acc,
+              ...accumulator,
               [animation.name]: chameleonModel.mixer.clipAction(animation),
             };
           }, {});

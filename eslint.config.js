@@ -26,7 +26,7 @@ export default [
 
   // Main configuration for JS/TS files (Vue handled separately)
   {
-    files: ['**/*.{js,mjs,cjs,ts,mts}'],
+    files: ['**/*.{js,mjs,cjs,ts,mts,vue}'],
 
     plugins: {
       '@typescript-eslint': tseslint,

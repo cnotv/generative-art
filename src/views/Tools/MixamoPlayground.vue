@@ -117,16 +117,16 @@ const actionConfig = {
 };
 
 // Store references for blocking actions
-let timelineManagerRef: ReturnType<typeof createTimelineManager> | null = null;
-let playerRef: ComplexModel | null = null;
-let getDeltaRef: (() => number) | null = null;
+let timelineManagerReference: ReturnType<typeof createTimelineManager> | null = null;
+let playerReference: ComplexModel | null = null;
+let getDeltaReference: (() => number) | null = null;
 
 const handleBlockingAction = (actionName: string): void => {
-  if (!timelineManagerRef || !playerRef || !getDeltaRef) return;
+  if (!timelineManagerReference || !playerReference || !getDeltaReference) return;
 
   const config = actionConfig[actionName as keyof typeof actionConfig];
   if (config) {
-    playActionTimeline(timelineManagerRef, playerRef, actionName, getDeltaRef, config);
+    playActionTimeline(timelineManagerReference, playerReference, actionName, getDeltaReference, config);
   }
 };
 
@@ -198,9 +198,9 @@ const init = async (): Promise<void> => {
       const timelineManager = createTimelineManager();
 
       // Set refs for blocking actions
-      timelineManagerRef = timelineManager;
-      playerRef = player;
-      getDeltaRef = getDelta;
+      timelineManagerReference = timelineManager;
+      playerReference = player;
+      getDeltaReference = getDelta;
       timelineManager.addAction({
         frequency: speed.movement,
         name: "Walk",

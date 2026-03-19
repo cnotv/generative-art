@@ -8,7 +8,7 @@ import Stats from "three/addons/libs/stats.module.js";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 
 // Movement input
@@ -19,9 +19,9 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 onUnmounted(() => clearSceneElements());
 
@@ -225,7 +225,7 @@ function animate(
   stats.update();
 }
 
-const init = async (canvasEl: HTMLCanvasElement, statsElement: HTMLElement) => {
+const init = async (canvasElement: HTMLCanvasElement, statsElement: HTMLElement) => {
   initScene();
 
   async function initScene() {
@@ -242,7 +242,7 @@ const init = async (canvasEl: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     getLight(scene);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvasEl });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvasElement });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -282,6 +282,6 @@ const init = async (canvasEl: HTMLCanvasElement, statsElement: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

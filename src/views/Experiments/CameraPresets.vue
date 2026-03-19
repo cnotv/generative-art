@@ -132,10 +132,10 @@ const init = async () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
 
-  const canvasRefs = [canvas1, canvas2, canvas3, canvas4];
-  renderers = canvasRefs.map((canvasRef) => {
+  const canvasReferences = [canvas1, canvas2, canvas3, canvas4];
+  renderers = canvasReferences.map((canvasReference) => {
     const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.value,
+      canvas: canvasReference.value,
       antialias: true,
     });
     renderer.setSize(viewportWidth, viewportHeight);
@@ -231,9 +231,9 @@ const init = async () => {
 
   // Create obstacle sand blocks on a grid
   const gltfLoader = new GLTFLoader();
-  const numCubes = 20;
+  const numberCubes = 20;
 
-  for (let i = 0; i < numCubes; i++) {
+  for (let i = 0; i < numberCubes; i++) {
     const gridX = Math.floor(Math.random() * 10) - 5;
     const gridZ = Math.floor(Math.random() * 10) - 5;
     const x = gridX * (cubeSize + gridGap);
@@ -318,7 +318,7 @@ const init = async () => {
       const x = Math.random() * 20 - 10;
       const z = Math.random() * 20 - 10;
       const clearOfObstacles = obstacles.every(
-        (obs) => Math.sqrt((obs.x - x) ** 2 + (obs.z - z) ** 2) > cubeSize * 1.5
+        (obs) => Math.hypot((obs.x - x), (obs.z - z)) > cubeSize * 1.5
       );
       if (clearOfObstacles) {
         validPos = { x, y: 1, z };
@@ -408,13 +408,13 @@ const init = async () => {
       ).normalize();
 
       // Check if there's an obstacle ahead and jump if needed
-      const lookAheadDist = 2;
-      const futureX = position.x + direction.x * lookAheadDist;
-      const futureZ = position.z + direction.z * lookAheadDist;
+      const lookAheadDistribution = 2;
+      const futureX = position.x + direction.x * lookAheadDistribution;
+      const futureZ = position.z + direction.z * lookAheadDistribution;
 
       const obstacleAhead = obstacles.some((obs) => {
-        const dist = Math.sqrt((obs.x - futureX) ** 2 + (obs.z - futureZ) ** 2);
-        return dist < cubeSize;
+        const distribution = Math.hypot((obs.x - futureX), (obs.z - futureZ));
+        return distribution < cubeSize;
       });
 
       if (obstacleAhead && position.y <= 0.1) {
@@ -505,7 +505,7 @@ const init = async () => {
           const x = Math.random() * 20 - 10;
           const z = Math.random() * 20 - 10;
           const clearOfObstacles = obstacles.every(
-            (obs) => Math.sqrt((obs.x - x) ** 2 + (obs.z - z) ** 2) > cubeSize * 1.5
+            (obs) => Math.hypot((obs.x - x), (obs.z - z)) > cubeSize * 1.5
           );
           if (clearOfObstacles) {
             validPos = { x, y: 1, z };

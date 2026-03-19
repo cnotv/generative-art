@@ -20,7 +20,7 @@ import {
 import { useViewPanelsStore } from "@/stores/viewPanels";
 import { useDebugSceneStore } from "@/stores/debugScene";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
@@ -76,7 +76,7 @@ const reinitScene = () => {
   }
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   );
 };
 
@@ -92,7 +92,7 @@ onMounted(() => {
 
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   );
 });
 
@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
   }
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   // Merge reactive config with static config
   const config = {
     grass: {
@@ -138,7 +138,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     },
   };
   // Set stats
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
 
   const setup = async () => {
     const renderer = getRenderer(canvas);
@@ -150,8 +150,8 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     );
     const scene = new THREE.Scene();
     const orbit = new OrbitControls(camera, renderer.domElement);
-    const matrixProps = [
-      ...generateProps(config.grass),
+    const matrixProperties = [
+      ...generateProperties(config.grass),
       {
         position: [3, 1, 0],
         rotation: [0, -0.45, 0],
@@ -189,7 +189,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 
     // Populate grass
     const grass = getGrass(config.grass);
-    instanceMatrixMesh(grass, scene, matrixProps);
+    instanceMatrixMesh(grass, scene, matrixProperties);
 
     video.record(canvas, route);
 
@@ -211,7 +211,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
   setup();
 };
 
-const generateProps = (config: GenerateConfig) =>
+const generateProperties = (config: GenerateConfig) =>
   times(config.density * config.area, () => {
     const size = Math.random() * config.scale + config.scaleMin;
     const getPosition = () => Math.random() * config.area - config.area / 2;
@@ -311,6 +311,6 @@ const getGrass = (config: GenerateConfig) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

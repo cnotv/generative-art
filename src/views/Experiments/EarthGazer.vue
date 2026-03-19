@@ -11,7 +11,7 @@ import earthDay from "@/assets/images/textures/earth_day.jpg";
 import earthNight from "@/assets/images/textures/earth_night.jpg";
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -23,12 +23,12 @@ onUnmounted(() => {
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     moonSize: 200,
     earthSize: 20,
@@ -46,7 +46,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     fill: [0, 0, 255],
     light: [255, 255, 255],
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(
     config,
     route,
@@ -203,6 +203,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

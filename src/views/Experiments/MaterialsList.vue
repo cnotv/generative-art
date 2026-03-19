@@ -13,7 +13,7 @@ import { useDebugSceneStore } from '@/stores/debugScene';
 
 type ProjectConfig = any;
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const cubes = [] as THREE.Mesh<any>[];
@@ -52,12 +52,12 @@ const meshTypes = [
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     size: 1,
     exposure: 5,
@@ -70,7 +70,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     metalness: 0.8,
     transmission: 1,
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(
     config,
     route,
@@ -265,6 +265,6 @@ const createCube = (
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

@@ -13,7 +13,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 type Model = THREE.Group<THREE.Object3DEventMap>;
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -21,17 +21,17 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 onUnmounted(() => clearSceneElements());
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     // size: 50,
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => {
     setup();
   });
@@ -52,9 +52,9 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     scene.fog = new THREE.Fog(0xaaaaff, 1);
     const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
     const groundPosition = [1, -1, 1] as CoordinateTuple;
-    let gravity = { x: 0.0, y: -9.81, z: 0.0 };
+    const gravity = { x: 0.0, y: -9.81, z: 0.0 };
     await RAPIER.init();
-    let world = new RAPIER.World(gravity);
+    const world = new RAPIER.World(gravity);
 
     createLights(scene);
     const { texture: groundTexture } = getGround(
@@ -166,8 +166,8 @@ const getGround = (
   scene.add(ground);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  let collider = world.createCollider(colliderDesc);
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
+  const collider = world.createCollider(colliderDesc);
 
   return { ground, collider, texture };
 };
@@ -213,6 +213,6 @@ const loadAnimatedModel = async () => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

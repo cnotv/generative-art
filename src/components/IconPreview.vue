@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 
-interface Props {
+interface Properties {
   icon: Component;
   color?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Properties>(), {
   color: 'text-gray-400',
 });
 </script>

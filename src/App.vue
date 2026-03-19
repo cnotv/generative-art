@@ -55,11 +55,11 @@ const handleKeyPress = (event: KeyboardEvent) => {
   }
 };
 
-const toggleQuery = (param: string | string[]) => {
+const toggleQuery = (parameter: string | string[]) => {
   const { path, query } = router.currentRoute.value;
-  const params = typeof param === "string" ? [param] : param;
+  const params = typeof parameter === "string" ? [parameter] : parameter;
   const newQuery = params.reduce(
-    (acc, key) => ({ ...acc, [key]: query[key] === "true" ? undefined : "true" }),
+    (accumulator, key) => ({ ...accumulator, [key]: query[key] === "true" ? undefined : "true" }),
     {}
   );
   router.push({ path, query: { ...query, ...newQuery } });

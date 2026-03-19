@@ -11,7 +11,7 @@ import { getRoundedBox } from "@/utils/custom-models";
 import { times } from "@/utils/lodash";
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const animationId = ref(0);
@@ -34,9 +34,9 @@ const reflection = new THREE.CubeTextureLoader().load(urls);
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
 onBeforeUnmount(() => {
@@ -49,7 +49,7 @@ onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     size: 20,
     intervals: 90,
@@ -61,7 +61,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     transmission: 1,
   };
   // Set stats
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
 
   // Set configuration and start setup
   controls.create(
@@ -198,6 +198,6 @@ const getCube = (
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

@@ -24,6 +24,8 @@ export type ControlSchema = {
   direction?: 'row' | 'column';
   callback?: string;
   sectionStart?: boolean;
+  /** When set, syncs this config value to a URL query parameter with the given name. */
+  queryParam?: string;
 };
 
 export type ConfigControlsSchema = {

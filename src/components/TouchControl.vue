@@ -26,7 +26,7 @@ onMounted(() => {
   if (!touchControlEdge.value || !touchControlInside.value) return;
 
   // Faux-pad mode: directional control
-  const mappingRef = { current: { 'faux-pad': props.mapping } };
+  const mappingReference = { current: { 'faux-pad': props.mapping } };
   const handlers = {
     onAction: (action: string, trigger: string, device: string) => {
       // Update currentActions so the game loop can read them (intentional mutation of shared state)
@@ -45,7 +45,7 @@ onMounted(() => {
     },
   };
 
-  padController = createFauxPadController(mappingRef, handlers, props.options);
+  padController = createFauxPadController(mappingReference, handlers, props.options);
   // Bind touch events to edge (larger area), visual feedback to inside
   padController.bind(touchControlEdge.value, touchControlInside.value);
 });

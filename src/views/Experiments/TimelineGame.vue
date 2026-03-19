@@ -22,7 +22,7 @@ import brickTexture from "@/assets/images/textures/brick.jpg";
 import { getCoinBlock } from "@/utils/custom-models";
 import type { RotationMap } from "@/types/three";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
@@ -31,7 +31,7 @@ onMounted(() => {
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
+      (statsElement.value as unknown) as HTMLElement
     );
   };
 
@@ -68,8 +68,8 @@ const createGoombaAnimData = (model: ComplexModel, getDelta: () => number): Anim
   distance: character.speed,
 });
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  stats.init(route, statsEl);
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => createScene());
   const createScene = async () => {
     const elements = [] as any[];
@@ -391,6 +391,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

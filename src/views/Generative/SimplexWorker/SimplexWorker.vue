@@ -8,17 +8,17 @@ import { video } from '@/utils/video';
 import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement)
+    statsElement.value as unknown as HTMLElement)
 })
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void => {
   const config = {
     pixelSize: 4,
     noiseSize: 0.03,
@@ -36,7 +36,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
   const offscreen = canvas.transferControlToOffscreen();
   const worker = new MyWorker();
 
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   const onChangeConfig = () => worker.postMessage({ workerConfig: config });
   controls.create(config, route, {
     pixelSize: { min: 1, max: 10 },
@@ -76,5 +76,5 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement): void => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
 </template>

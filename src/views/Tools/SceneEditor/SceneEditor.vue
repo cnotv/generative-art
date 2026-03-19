@@ -113,13 +113,13 @@ const removeSceneElement = (name: string) => {
   }
 };
 
-const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+const setNestedValue = (object: Record<string, unknown>, path: string, value: unknown): void => {
   const keys = path.split('.');
   const lastKey = keys[keys.length - 1];
   const target = keys.slice(0, -1).reduce((current: unknown, key) => {
     if (current === null || current === undefined) return undefined;
     return (current as Record<string, unknown>)[key];
-  }, obj as unknown) as Record<string, unknown>;
+  }, object as unknown) as Record<string, unknown>;
   if (target) target[lastKey] = value;
 };
 
@@ -233,7 +233,7 @@ watch(
 // Scene element configs via reactive composable
 const { groundConfig, lightsConfig, skyConfig, registerSceneHandlers, unregisterSceneHandlers, updateGroundField, updateLightsField, updateSkyField } = useSceneConfig();
 
-let animationId = 0;
+const animationId = 0;
 let orbitControls: any = null;
 let isApplyingUpdate = false;
 let currentScene: any = null;
@@ -346,7 +346,7 @@ const handleFileUpload = (event: Event) => {
   if (files && files.length > 0) {
     const file = files[0];
     const url = URL.createObjectURL(file);
-    const filename = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+    const filename = file.name.replace(/\.[^./]+$/, ""); // Remove extension
     const textureId = `texture-${Date.now()}`;
     const groupId = `group-${Date.now()}`;
 
@@ -394,7 +394,7 @@ const handleAddTextureToGroup = (groupId: string, event: Event) => {
   if (files && files.length > 0) {
     const file = files[0];
     const url = URL.createObjectURL(file);
-    const filename = file.name.replace(/\.[^/.]+$/, "");
+    const filename = file.name.replace(/\.[^./]+$/, "");
     const textureId = `texture-${Date.now()}`;
 
     const group = textureGroups.value.find((g) => g.id === groupId);

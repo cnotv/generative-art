@@ -13,7 +13,7 @@ import type { CoordinateTuple } from "@/types/three";
 
 type ProjectConfig = any;
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -29,22 +29,22 @@ const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple;
 const sphereSize = () => Math.random() * 0.5 + 0.5;
 const modelPosition = [0.0, 5.0, 0.0] as CoordinateTuple;
 const groundPosition = [1, -1, 1] as CoordinateTuple;
-let gravity = { x: 0.0, y: -9.81, z: 0.0 };
+const gravity = { x: 0.0, y: -9.81, z: 0.0 };
 let world;
 
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
 onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     directional: {
       enabled: true,
@@ -79,7 +79,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     },
     // size: 50,
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(
     config,
     route,
@@ -163,9 +163,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       world.step();
 
       models.forEach(({ mesh, rigidBody }) => {
-        let position = rigidBody.translation();
+        const position = rigidBody.translation();
         mesh.position.set(position.x, position.y, position.z);
-        let rotation = rigidBody.rotation();
+        const rotation = rigidBody.rotation();
         mesh.rotation.set(rotation.x, rotation.y, rotation.z);
       });
 
@@ -363,8 +363,8 @@ const getGround = (
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  let collider = world.createCollider(colliderDesc);
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
+  const collider = world.createCollider(colliderDesc);
 
   return { ground, collider };
 };
@@ -404,21 +404,21 @@ const getModel = (
   scene.add(mesh);
 
   // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
-  let rigidBody = world.createRigidBody(rigidBodyDesc);
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.ball(size)
+  const colliderDesc = RAPIER.ColliderDesc.ball(size)
     .setRestitution(1 / size / 3)
     .setFriction(5 * size);
-  let collider = world.createCollider(colliderDesc, rigidBody);
+  const collider = world.createCollider(colliderDesc, rigidBody);
 
   return { mesh, rigidBody, collider };
 };
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

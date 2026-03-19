@@ -3,7 +3,7 @@ import { computed } from "vue";
 import type { CoordinateTuple } from "@webgamekit/threejs";
 import Slider from "../slider/Slider.vue";
 
-interface Props {
+interface Properties {
   modelValue: CoordinateTuple | { x: number; y: number; z: number };
   label?: string;
   min?: number | { x: number; y: number; z: number };
@@ -11,7 +11,7 @@ interface Props {
   step?: number | { x: number; y: number; z: number };
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Properties>(), {
   label: "Coordinates",
   min: 0,
   max: 100,
@@ -31,8 +31,8 @@ const isArray = computed(() => Array.isArray(props.modelValue));
 // Normalize values to always work with x, y, z
 const values = computed(() => {
   if (isArray.value) {
-    const arr = props.modelValue as CoordinateTuple;
-    return { x: arr[0], y: arr[1], z: arr[2] };
+    const array = props.modelValue as CoordinateTuple;
+    return { x: array[0], y: array[1], z: array[2] };
   }
   return props.modelValue as { x: number; y: number; z: number };
 });

@@ -24,7 +24,7 @@ import { complexAnimation as config } from "@/config/scenes";
 import { getBlade } from "@/utils/custom-models";
 import type { CoordinateTuple } from "@webgamekit/animation";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -32,17 +32,17 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(async () => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
 onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  stats.init(route, statsEl);
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
+  stats.init(route, statsElement);
   controls.create(
     config,
     route,
@@ -77,7 +77,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     await RAPIER.init();
     const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
     const groundPosition = [1, 0, 1] as CoordinateTuple;
-    let world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
+    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
     const renderer = getRenderer(canvas);
     const camera = new THREE.PerspectiveCamera(
       config.camera.fov,
@@ -166,6 +166,6 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

@@ -102,20 +102,20 @@ watch(
   }
 );
 
-watch(() => sceneConfig.value.lights.ambient.intensity, (val) => {
-  if (sceneState?.ambientLight) sceneState.ambientLight.intensity = val;
+watch(() => sceneConfig.value.lights.ambient.intensity, (value) => {
+  if (sceneState?.ambientLight) sceneState.ambientLight.intensity = value;
 });
 
-watch(() => sceneConfig.value.lights.directional.intensity, (val) => {
-  if (sceneState?.directionalLight) sceneState.directionalLight.intensity = val;
+watch(() => sceneConfig.value.lights.directional.intensity, (value) => {
+  if (sceneState?.directionalLight) sceneState.directionalLight.intensity = value;
 });
 
-watch(() => sceneConfig.value.ground.color, (val) => {
-  if (sceneState?.groundMesh) (sceneState.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(val);
+watch(() => sceneConfig.value.ground.color, (value) => {
+  if (sceneState?.groundMesh) (sceneState.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value);
 });
 
-watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
-  if (sceneState?.scene.background instanceof THREE.Color) sceneState.scene.background.setHex(val);
+watch(() => sceneConfig.value.scene.backgroundColor, (value) => {
+  if (sceneState?.scene.background instanceof THREE.Color) sceneState.scene.background.setHex(value);
 });
 
 type CameraTransition = { from: THREE.Vector3; to: THREE.Vector3; fromUp: THREE.Vector3; toUp: THREE.Vector3; t: number };
@@ -575,13 +575,13 @@ const init = async (): Promise<void> => {
     world.step();
 
     if (sceneState?.cameraTransition) {
-      const prev = sceneState.cameraTransition;
-      const newT = Math.min(1, prev.t + 0.04);
+      const previous = sceneState.cameraTransition;
+      const newT = Math.min(1, previous.t + 0.04);
       const eased = 1 - (1 - newT) ** 3;
-      orthoCamera.position.lerpVectors(prev.from, prev.to, eased);
-      orthoCamera.up.lerpVectors(prev.fromUp, prev.toUp, eased);
+      orthoCamera.position.lerpVectors(previous.from, previous.to, eased);
+      orthoCamera.up.lerpVectors(previous.fromUp, previous.toUp, eased);
       orthoCamera.lookAt(0, 0, 0);
-      sceneState.cameraTransition = newT >= 1 ? null : { ...prev, t: newT };
+      sceneState.cameraTransition = newT >= 1 ? null : { ...previous, t: newT };
     }
 
     renderer.render(scene, orthoCamera);
