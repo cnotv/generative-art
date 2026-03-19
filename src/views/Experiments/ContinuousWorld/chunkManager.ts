@@ -116,8 +116,8 @@ export const createChunk = ({
   const key = computeChunkKey(chunkX, chunkZ);
   const { chunkSize, noiseConfig, grassPerChunk } = config;
 
-  // Case 'procedural': procedural terrain + scattered geometry elements
-  const terrain = worldCase === 'terrain'
+  // Case 'terrain' / 'all': procedural terrain heightmap
+  const terrain = (worldCase === 'terrain' || worldCase === 'all')
     ? createTerrainChunk(chunkX, chunkZ, chunkSize, noiseConfig)
     : null;
   tagSpawn(terrain, spawnId);
@@ -139,9 +139,10 @@ export const createChunk = ({
     scene.add(ground);
   }
 
-  // Case 'trees': textured tree/bush/rock billboards
-  const trees = worldCase === 'trees'
-    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk)
+  // Case 'trees': textured tree/bush/rock billboards on flat ground
+  // Case 'all': textured tree/bush/rock billboards placed on terrain height
+  const trees = (worldCase === 'trees' || worldCase === 'all')
+    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk, worldCase === 'all' ? noiseConfig : undefined)
     : null;
   tagSpawn(trees, spawnId);
   if (trees) {
@@ -359,6 +360,26 @@ const setChunkWorldCaseVisibility = (
       scene.add(chunk.terrain);
     }
     chunk.terrain.visible = true;
+  } else if (worldCase === 'all') {
+    if (!chunk.terrain) {
+      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig);
+      if (spawnId) chunk.terrain.userData.spawnId = spawnId;
+      scene.add(chunk.terrain);
+    }
+    chunk.terrain.visible = true;
+
+    // Recreate trees if they were placed at flat height (from 'trees' case)
+    if (chunk.trees && !chunk.trees.userData.hasTerrainHeight) {
+      scene.remove(chunk.trees);
+      chunk.trees = null;
+    }
+    if (!chunk.trees) {
+      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, noiseConfig);
+      chunk.trees.userData.hasTerrainHeight = true;
+      if (spawnId) chunk.trees.userData.spawnId = spawnId;
+      scene.add(chunk.trees);
+    }
+    chunk.trees.visible = true;
   } else if (worldCase === 'trees') {
     if (!chunk.ground) {
       chunk.ground = createChunkGround(chunk.chunkX, chunk.chunkZ, chunkSize, groundColor);
@@ -367,6 +388,11 @@ const setChunkWorldCaseVisibility = (
     }
     chunk.ground.visible = true;
 
+    // Recreate trees if they were placed at terrain height (from 'all' case)
+    if (chunk.trees && chunk.trees.userData.hasTerrainHeight) {
+      scene.remove(chunk.trees);
+      chunk.trees = null;
+    }
     if (!chunk.trees) {
       chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk);
       if (spawnId) chunk.trees.userData.spawnId = spawnId;

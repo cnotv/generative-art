@@ -62,7 +62,7 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 const store = useSceneViewStore();
 const { setViewPanels, clearViewPanels } = useViewPanelsStore();
 
-const worldCases: WorldCase[] = ['terrain', 'trees', 'grass'];
+const worldCases: WorldCase[] = ['terrain', 'trees', 'grass', 'all'];
 
 const { destroyControls, currentActions } = createControls({
   ...controlBindings,
@@ -419,6 +419,21 @@ onMounted(async () => {
       const terrainRaycaster = new THREE.Raycaster();
       terrainRaycaster.ray.direction.set(0, -1, 0);
 
+      const applyEnvironmentUpdate = () => {
+        const worldCase = reactiveConfig.value.worldCase as WorldCase;
+        if (worldCase === 'terrain' || worldCase === 'all') {
+          const chunkSize = (reactiveConfig.value.chunkSize as number | undefined) ?? CHUNK_SIZE;
+          snapToTerrain(playerMesh, activeChunks, chunkSize, terrainRaycaster, playerBottomOffset);
+        }
+        if (!orbitReference) orbitReference = toRaw(store.orbitReference);
+        cameraFollowPlayer(camera, playerMesh, CAMERA_OFFSET, orbitReference as Parameters<typeof cameraFollowPlayer>[3], ["x", "z"]);
+        store.cameraConfig.value = {
+          ...(store.cameraConfig.value as Record<string, unknown>),
+          position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        };
+        if (directionalLight) updateDirectionalLight(directionalLight, playerMesh);
+      };
+
       const timelineManager = createTimelineManager();
 
       timelineManager.addAction({
@@ -427,9 +442,7 @@ onMounted(async () => {
         category: "user-input",
         action: () => {
           const targetRotation = getRotation(currentActions, true);
-          if (targetRotation !== null) {
-            applyRotation(playerMesh, targetRotation);
-          }
+          if (targetRotation !== null) applyRotation(playerMesh, targetRotation);
 
           const isMoving = reactiveConfig.value.autoWalk || targetRotation !== null;
           updateAnimation({
@@ -443,22 +456,7 @@ onMounted(async () => {
             moveForward(playerMesh, ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * MOVEMENT_SPEED_SCALE);
           }
 
-          if (reactiveConfig.value.worldCase === 'terrain') {
-            const chunkSize = (reactiveConfig.value.chunkSize as number | undefined) ?? CHUNK_SIZE;
-            snapToTerrain(playerMesh, activeChunks, chunkSize, terrainRaycaster, playerBottomOffset);
-          }
-
-          if (!orbitReference) orbitReference = toRaw(store.orbitReference);
-          cameraFollowPlayer(camera, playerMesh, CAMERA_OFFSET, orbitReference, [
-            "x",
-            "z",
-          ]);
-          store.cameraConfig.value = {
-            ...(store.cameraConfig.value as Record<string, unknown>),
-            position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-          };
-
-          if (directionalLight) updateDirectionalLight(directionalLight, playerMesh);
+          applyEnvironmentUpdate();
         },
       });
 

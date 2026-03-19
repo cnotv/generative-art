@@ -138,6 +138,7 @@ export const baseConfigControls = {
       { value: 'terrain', label: 'Terrain' },
       { value: 'trees', label: 'Trees' },
       { value: 'grass', label: 'Grass' },
+      { value: 'all', label: 'All' },
     ],
   },
   treesGroundColor: { color: true, label: 'Trees Ground Color' },

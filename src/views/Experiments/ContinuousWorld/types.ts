@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 
-export type WorldCase = 'terrain' | 'trees' | 'grass';
+export type WorldCase = 'terrain' | 'trees' | 'grass' | 'all';
 
 export type ChunkKey = `${number},${number}`;
 
