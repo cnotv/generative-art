@@ -37,7 +37,8 @@ import {
   TREES_PER_CHUNK,
   MOVEMENT_SPEED_SCALE,
   GRASS_DENSITY_MULTIPLIER,
-  GROUND_COLOR,
+  TREES_GROUND_COLOR,
+  GRASS_GROUND_COLOR,
   DIRECTIONAL_LIGHT_OFFSET,
   AMBIENT_LIGHT_NAME,
   DIRECTIONAL_LIGHT_NAME,
@@ -61,7 +62,18 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 const store = useSceneViewStore();
 const { setViewPanels, clearViewPanels } = useViewPanelsStore();
 
-const { destroyControls, currentActions } = createControls(controlBindings);
+const worldCases: WorldCase[] = ['terrain', 'trees', 'grass'];
+
+const { destroyControls, currentActions } = createControls({
+  ...controlBindings,
+  onAction: (action) => {
+    if (action === 'toggle-case') {
+      const current = reactiveConfig.value.worldCase as WorldCase;
+      const nextIndex = (worldCases.indexOf(current) + 1) % worldCases.length;
+      reactiveConfig.value = { ...reactiveConfig.value, worldCase: worldCases[nextIndex] };
+    }
+  },
+});
 
 const { readQueryParameters, syncQueryParameters } = useQueryParameters(configControls);
 
@@ -72,6 +84,8 @@ const defaultConfig = {
   viewRadius: VIEW_RADIUS,
   treeDensity: TREES_PER_CHUNK,
   grassDensity: 20,
+  treesGroundColor: TREES_GROUND_COLOR,
+  grassGroundColor: GRASS_GROUND_COLOR,
   worldCase: DEFAULT_WORLD_CASE,
   procedural: {
     seed: noiseConfig.seed,
@@ -249,11 +263,17 @@ const spawnVisibility = computed((): Record<string, boolean> =>
   )
 );
 
+const getGroundColor = (worldCase: WorldCase): number => {
+  const treesColor = (reactiveConfig.value.treesGroundColor as number | undefined) ?? TREES_GROUND_COLOR;
+  const grassColor = (reactiveConfig.value.grassGroundColor as number | undefined) ?? GRASS_GROUND_COLOR;
+  return worldCase === 'grass' ? grassColor : treesColor;
+};
+
 const buildChunkOptions = () => ({
   sharedGrassGeometry: sharedGrassGeometry!,
   sharedGrassMaterial: sharedGrassMaterial!,
   treesPerChunk: (reactiveConfig.value.treeDensity as number | undefined) ?? TREES_PER_CHUNK,
-  groundColor: GROUND_COLOR,
+  groundColor: getGroundColor(reactiveConfig.value.worldCase as WorldCase),
   spawnId: SPAWN_ID,
   spawnVisibility: spawnVisibility.value,
   terrainSpawnId: SPAWN_ID_TERRAIN,
@@ -323,7 +343,7 @@ const buildApplyWorldCaseOptions = (worldCase: WorldCase) => ({
   sharedGrassGeometry: sharedGrassGeometry!,
   sharedGrassMaterial: sharedGrassMaterial!,
   treesPerChunk: (reactiveConfig.value.treeDensity as number | undefined) ?? TREES_PER_CHUNK,
-  groundColor: GROUND_COLOR,
+  groundColor: getGroundColor(worldCase),
   spawnId: SPAWN_ID,
 });
 
@@ -356,6 +376,8 @@ watch(() => reactiveConfig.value.worldCase, (worldCase) => {
 watch(() => JSON.stringify(reactiveConfig.value.procedural), rebuildIfReady);
 watch(() => reactiveConfig.value.treeDensity, rebuildIfReady);
 watch(() => reactiveConfig.value.grassDensity, rebuildIfReady);
+watch(() => reactiveConfig.value.treesGroundColor, rebuildIfReady);
+watch(() => reactiveConfig.value.grassGroundColor, rebuildIfReady);
 watch(() => reactiveConfig.value.chunkSize, rebuildIfReady);
 watch(() => reactiveConfig.value.viewRadius, rebuildIfReady);
 

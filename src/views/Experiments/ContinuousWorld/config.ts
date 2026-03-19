@@ -52,7 +52,8 @@ export const setupConfig: SetupConfig = {
   ground: false,
 };
 
-export const GROUND_COLOR = 0x4a7c3f;
+export const TREES_GROUND_COLOR = 0x8b7355;
+export const GRASS_GROUND_COLOR = 0x4a7c3f;
 export const DIRECTIONAL_LIGHT_OFFSET: CoordinateTuple = [50, 100, 50];
 export const AMBIENT_LIGHT_NAME = 'ambient-light';
 export const DIRECTIONAL_LIGHT_NAME = 'directional-light';
@@ -92,14 +93,14 @@ export const playerSettings = {
 export const controlBindings = {
   mapping: {
     keyboard: {
-      ' ': 'jump',
+      ' ': 'toggle-case',
       a: 'move-left',
       d: 'move-right',
       w: 'move-down',
       s: 'move-up',
     },
     gamepad: {
-      cross: 'jump',
+      cross: 'toggle-case',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
       'dpad-down': 'move-down',
@@ -114,7 +115,7 @@ export const controlBindings = {
       right: 'move-right',
       up: 'move-up',
       down: 'move-down',
-      click: 'jump',
+      click: 'toggle-case',
     },
   },
   axisThreshold: 0.5,
@@ -139,6 +140,8 @@ export const baseConfigControls = {
       { value: 'grass', label: 'Grass' },
     ],
   },
+  treesGroundColor: { color: true, label: 'Trees Ground Color' },
+  grassGroundColor: { color: true, label: 'Grass Ground Color' },
 };
 
 export const proceduralConfigControls = {
