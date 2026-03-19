@@ -61,7 +61,7 @@ const createChunkGround = (
 ): THREE.Mesh => {
   const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize);
   geometry.rotateX(-Math.PI / 2);
-  const material = new THREE.MeshStandardMaterial({ color: groundColor });
+  const material = new THREE.MeshLambertMaterial({ color: groundColor });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(chunkX * chunkSize, GROUND_Y_OFFSET, chunkZ * chunkSize);
   mesh.receiveShadow = true;

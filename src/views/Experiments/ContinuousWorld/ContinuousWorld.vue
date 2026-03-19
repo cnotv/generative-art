@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRaw, watch } from "vue";
 import { useRoute } from "vue-router";
-import { cameraFollowPlayer } from "@webgamekit/threejs";
-import { getRotation, createTimelineManager } from "@webgamekit/animation";
+import { cameraFollowPlayer, getModel } from "@webgamekit/threejs";
+import {
+  getRotation,
+  createTimelineManager,
+  updateAnimation,
+} from "@webgamekit/animation";
 import { createControls } from "@webgamekit/controls";
 import { useSceneViewStore } from "@/stores/sceneView";
 import { useDebugSceneStore } from "@/stores/debugScene";
@@ -42,7 +46,12 @@ import {
   densityControl,
   proceduralConfigControls,
 } from "./config";
-import { updateChunks, rebuildAllChunks, applyWorldCaseToAllChunks } from "./chunkManager";
+import {
+  updateChunks,
+  rebuildAllChunks,
+  applyWorldCaseToAllChunks,
+  computeChunkKey,
+} from "./chunkManager";
 import { createGrassBladeGeometry, createGrassMaterial } from "./grassGenerator";
 import type { ChunkKey, ChunkData, WorldCase } from "./types";
 import * as THREE from "three";
@@ -90,18 +99,66 @@ let sharedGrassGeometry: THREE.BufferGeometry | null = null;
 let sharedGrassMaterial: THREE.MeshPhysicalMaterial | null = null;
 let sceneReference: THREE.Scene | null = null;
 let activeChunksReference: Map<ChunkKey, ChunkData> | null = null;
+let playerMeshReference: THREE.Object3D | null = null;
+let playerBottomOffsetReference: number | null = null;
 
-const createPlayerMesh = (scene: THREE.Scene) => {
-  const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
-  const playerMaterial = new THREE.MeshStandardMaterial({
-    color: playerSettings.model.color,
+const initializeWorld = async (
+  scene: THREE.Scene,
+  world: Parameters<typeof getModel>[1]
+) => {
+  const playerMesh = await getModel(scene, world, playerSettings.model.path, {
+    name: "Player",
+    position: playerSettings.model.position,
+    rotation: playerSettings.model.rotation,
+    scale: playerSettings.model.scale,
+    castShadow: true,
   });
-  const playerMesh = new THREE.Mesh(playerGeometry, playerMaterial);
-  playerMesh.position.set(...playerSettings.model.position);
-  playerMesh.castShadow = true;
-  playerMesh.name = "Player";
-  scene.add(playerMesh);
-  return playerMesh;
+
+  sharedGrassGeometry = createGrassBladeGeometry();
+  sharedGrassMaterial = createGrassMaterial();
+  sceneReference = scene;
+
+  const activeChunks = new Map<ChunkKey, ChunkData>();
+  activeChunksReference = activeChunks;
+
+  updateChunks({
+    playerPosition: playerMesh.position,
+    activeChunks,
+    scene,
+    generatorConfig: buildGeneratorConfig(),
+    worldCase: reactiveConfig.value.worldCase as WorldCase,
+    viewRadius: (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS,
+    unloadRadius: UNLOAD_RADIUS,
+    ...buildChunkOptions(),
+  });
+
+  const playerBBox = new THREE.Box3().setFromObject(playerMesh);
+  const playerBottomOffset = -playerBBox.min.y + playerSettings.model.groundOffset;
+  playerMesh.position.y = playerBottomOffset;
+
+  const directionalLight = scene.getObjectByName(DIRECTIONAL_LIGHT_NAME) as
+    | THREE.DirectionalLight
+    | undefined;
+  return { playerMesh, activeChunks, directionalLight, playerBottomOffset };
+};
+
+const updateDirectionalLight = (
+  light: THREE.DirectionalLight,
+  target: THREE.Object3D
+): void => {
+  light.position.set(
+    target.position.x + DIRECTIONAL_LIGHT_OFFSET[0],
+    target.position.y + DIRECTIONAL_LIGHT_OFFSET[1],
+    target.position.z + DIRECTIONAL_LIGHT_OFFSET[2]
+  );
+  light.target.position.copy(target.position);
+  light.target.updateMatrixWorld();
+};
+
+const initializeSceneRegistrations = (scene: THREE.Scene) => {
+  registerSceneLights(scene);
+  registerWorldSpawns();
+  registerWorldElementProperties();
 };
 
 const registerSceneLights = (scene: THREE.Scene) => {
@@ -127,15 +184,36 @@ const registerSceneLights = (scene: THREE.Scene) => {
 
 const HALF_CIRCLE_DEGREES = 180;
 const DEGREES_TO_RADIANS = Math.PI / HALF_CIRCLE_DEGREES;
+const TERRAIN_RAYCAST_ORIGIN_Y = 200;
 
-const applyRotation = (mesh: THREE.Mesh, degrees: number) => {
+const applyRotation = (mesh: THREE.Object3D, degrees: number) => {
   mesh.rotation.y = degrees * DEGREES_TO_RADIANS;
 };
 
-const moveForward = (mesh: THREE.Mesh, distance: number) => {
+const moveForward = (mesh: THREE.Object3D, distance: number) => {
   const direction = new THREE.Vector3(0, 0, -1);
   direction.applyQuaternion(mesh.quaternion);
   mesh.position.addScaledVector(direction, distance);
+};
+
+const snapToTerrain = (
+  playerMesh: THREE.Object3D,
+  activeChunks: Map<ChunkKey, ChunkData>,
+  chunkSize: number,
+  raycaster: THREE.Raycaster,
+  bottomOffset: number,
+): void => {
+  const cx = Math.round(playerMesh.position.x / chunkSize);
+  const cz = Math.round(playerMesh.position.z / chunkSize);
+  const terrainMesh = activeChunks.get(computeChunkKey(cx, cz))?.terrain;
+  if (!terrainMesh) return;
+  raycaster.ray.origin.set(
+    playerMesh.position.x,
+    TERRAIN_RAYCAST_ORIGIN_Y,
+    playerMesh.position.z
+  );
+  const hits = raycaster.intersectObject(terrainMesh, false);
+  if (hits.length > 0) playerMesh.position.y = hits[0].point.y + bottomOffset;
 };
 
 const buildGeneratorConfig = () => {
@@ -154,7 +232,7 @@ const buildGeneratorConfig = () => {
 
 const buildConfigSchema = (_worldCase: WorldCase) => baseConfigControls;
 
-const SPAWN_ID = 'world-generator'; // used for filtering chunk objects from elements panel
+const SPAWN_ID = 'world-generator';
 const SPAWN_ID_TERRAIN = 'world-terrain';
 const SPAWN_ID_TREES = 'world-trees';
 const SPAWN_ID_GRASS = 'world-grass';
@@ -271,6 +349,9 @@ watch(() => reactiveConfig.value.worldCase, (worldCase) => {
   if (sceneReference && activeChunksReference && sharedGrassGeometry && sharedGrassMaterial) {
     applyWorldCaseToAllChunks(activeChunksReference, buildApplyWorldCaseOptions(worldCase as WorldCase));
   }
+  if (playerMeshReference && playerBottomOffsetReference !== null) {
+    playerMeshReference.position.y = playerBottomOffsetReference;
+  }
 });
 watch(() => JSON.stringify(reactiveConfig.value.procedural), rebuildIfReady);
 watch(() => reactiveConfig.value.treeDensity, rebuildIfReady);
@@ -299,36 +380,22 @@ onMounted(async () => {
 
   await store.init(canvas.value, setupConfig, {
     playMode: true,
-    defineSetup: async ({ scene, camera, animate }) => {
-      const playerMesh = createPlayerMesh(scene);
-
-      sharedGrassGeometry = createGrassBladeGeometry();
-      sharedGrassMaterial = createGrassMaterial();
-      sceneReference = scene;
-
-      const activeChunks = new Map<ChunkKey, ChunkData>();
-      activeChunksReference = activeChunks;
-
-      updateChunks({
-        playerPosition: playerMesh.position,
-        activeChunks,
+    defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
+      const { playerMesh, activeChunks, directionalLight, playerBottomOffset } = await initializeWorld(
         scene,
-        generatorConfig: buildGeneratorConfig(),
-        worldCase: reactiveConfig.value.worldCase as WorldCase,
-        viewRadius: (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS,
-        unloadRadius: UNLOAD_RADIUS,
-        ...buildChunkOptions(),
-      });
+        world
+      );
+      playerMeshReference = playerMesh;
+      playerBottomOffsetReference = playerBottomOffset;
 
       let orbitReference = toRaw(store.orbitReference);
       const { game } = playerSettings;
       const { speed } = game;
-      const directionalLight = scene.getObjectByName(DIRECTIONAL_LIGHT_NAME) as THREE.DirectionalLight | undefined;
 
-      registerSceneLights(scene);
+      initializeSceneRegistrations(scene);
 
-      registerWorldSpawns();
-      registerWorldElementProperties();
+      const terrainRaycaster = new THREE.Raycaster();
+      terrainRaycaster.ray.direction.set(0, -1, 0);
 
       const timelineManager = createTimelineManager();
 
@@ -342,8 +409,21 @@ onMounted(async () => {
             applyRotation(playerMesh, targetRotation);
           }
 
-          if (reactiveConfig.value.autoWalk) {
+          const isMoving = reactiveConfig.value.autoWalk || targetRotation !== null;
+          updateAnimation({
+            actionName: isMoving ? 'walk' : 'idle',
+            player: playerMesh,
+            delta: getDelta(),
+            speed: ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * 10,
+          });
+
+          if (isMoving) {
             moveForward(playerMesh, ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * MOVEMENT_SPEED_SCALE);
+          }
+
+          if (reactiveConfig.value.worldCase === 'terrain') {
+            const chunkSize = (reactiveConfig.value.chunkSize as number | undefined) ?? CHUNK_SIZE;
+            snapToTerrain(playerMesh, activeChunks, chunkSize, terrainRaycaster, playerBottomOffset);
           }
 
           if (!orbitReference) orbitReference = toRaw(store.orbitReference);
@@ -356,14 +436,7 @@ onMounted(async () => {
             position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
           };
 
-          if (directionalLight) {
-            directionalLight.position.set(
-              playerMesh.position.x + DIRECTIONAL_LIGHT_OFFSET[0],
-              playerMesh.position.y + DIRECTIONAL_LIGHT_OFFSET[1],
-              playerMesh.position.z + DIRECTIONAL_LIGHT_OFFSET[2],
-            );
-            directionalLight.target.position.copy(playerMesh.position);
-          }
+          if (directionalLight) updateDirectionalLight(directionalLight, playerMesh);
         },
       });
 
@@ -405,6 +478,8 @@ onUnmounted(() => {
   if (sharedGrassMaterial) sharedGrassMaterial.dispose();
   sceneReference = null;
   activeChunksReference = null;
+  playerMeshReference = null;
+  playerBottomOffsetReference = null;
 });
 </script>
 
