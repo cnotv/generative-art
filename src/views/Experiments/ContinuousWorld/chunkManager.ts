@@ -207,6 +207,8 @@ interface UpdateChunksOptions {
   worldCase: WorldCase;
   viewRadius: number;
   unloadRadius: number;
+  /** Chunk offset applied to the load/unload center on the Z axis (negative = forward in world space). */
+  viewZOffset?: number;
   sharedGrassGeometry: THREE.BufferGeometry;
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
@@ -230,6 +232,7 @@ export const updateChunks = ({
   worldCase,
   viewRadius,
   unloadRadius,
+  viewZOffset = 0,
   sharedGrassGeometry,
   sharedGrassMaterial,
   treesPerChunk,
@@ -245,9 +248,10 @@ export const updateChunks = ({
     config.chunkSize
   );
 
-  const requiredChunks = computeRequiredChunks(playerChunkX, playerChunkZ, viewRadius);
+  const centerZ = playerChunkZ + viewZOffset;
+  const requiredChunks = computeRequiredChunks(playerChunkX, centerZ, viewRadius);
   const chunksToLoad = computeChunksToLoad(requiredChunks, activeChunks);
-  const chunksToUnload = computeChunksToUnload(activeChunks, playerChunkX, playerChunkZ, unloadRadius);
+  const chunksToUnload = computeChunksToUnload(activeChunks, playerChunkX, centerZ, unloadRadius);
 
   chunksToUnload.forEach((key) => {
     const chunk = activeChunks.get(key);

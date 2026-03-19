@@ -123,6 +123,8 @@ export const controlBindings = {
 
 export const DEFAULT_WORLD_CASE: WorldCase = 'terrain';
 
+export const FORWARD_BIAS = VIEW_RADIUS - 1;
+
 export const densityControl = { min: 1, max: 100, step: 1, label: 'Density' };
 
 export const baseConfigControls = {
@@ -130,6 +132,7 @@ export const baseConfigControls = {
   movementSpeed: { min: 0.5, max: 20, step: 0.5, label: 'Speed' },
   chunkSize: { min: 10, max: 200, step: 10, label: 'Chunk Size' },
   viewRadius: { min: 1, max: 10, step: 1, label: 'Load Offset' },
+  forwardBias: { min: 0, max: 10, step: 1, label: 'Forward Bias' },
   worldCase: {
     label: 'Case',
     component: 'ButtonSelector' as const,

@@ -34,6 +34,7 @@ import {
   CAMERA_OFFSET,
   CHUNK_UPDATE_FREQUENCY,
   DEFAULT_WORLD_CASE,
+  FORWARD_BIAS,
   TREES_PER_CHUNK,
   MOVEMENT_SPEED_SCALE,
   GRASS_DENSITY_MULTIPLIER,
@@ -84,6 +85,7 @@ const defaultConfig = {
   viewRadius: VIEW_RADIUS,
   treeDensity: TREES_PER_CHUNK,
   grassDensity: 20,
+  forwardBias: FORWARD_BIAS,
   treesGroundColor: TREES_GROUND_COLOR,
   grassGroundColor: GRASS_GROUND_COLOR,
   worldCase: DEFAULT_WORLD_CASE,
@@ -135,14 +137,16 @@ const initializeWorld = async (
   const activeChunks = new Map<ChunkKey, ChunkData>();
   activeChunksReference = activeChunks;
 
+  const initialViewRadius = (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS;
   updateChunks({
     playerPosition: playerMesh.position,
     activeChunks,
     scene,
     generatorConfig: buildGeneratorConfig(),
     worldCase: reactiveConfig.value.worldCase as WorldCase,
-    viewRadius: (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS,
+    viewRadius: initialViewRadius,
     unloadRadius: UNLOAD_RADIUS,
+    viewZOffset: getViewZOffset(),
     ...buildChunkOptions(),
   });
 
@@ -229,6 +233,8 @@ const snapToTerrain = (
   const hits = raycaster.intersectObject(terrainMesh, false);
   if (hits.length > 0) playerMesh.position.y = hits[0].point.y + bottomOffset;
 };
+
+const getViewZOffset = (): number => -((reactiveConfig.value.forwardBias as number | undefined) ?? FORWARD_BIAS);
 
 const buildGeneratorConfig = () => {
   const procedural = reactiveConfig.value.procedural as Record<string, number> | undefined;
@@ -465,14 +471,16 @@ onMounted(async () => {
         name: "ChunkUpdate",
         category: "world",
         action: () => {
+          const currentViewRadius = (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS;
           updateChunks({
             playerPosition: playerMesh.position,
             activeChunks,
             scene,
             generatorConfig: buildGeneratorConfig(),
             worldCase: reactiveConfig.value.worldCase as WorldCase,
-            viewRadius: (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS,
+            viewRadius: currentViewRadius,
             unloadRadius: UNLOAD_RADIUS,
+            viewZOffset: getViewZOffset(),
             ...buildChunkOptions(),
           });
         },
