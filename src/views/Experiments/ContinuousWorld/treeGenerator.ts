@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import type { NoiseConfig } from './types';
-import { fractalNoise } from './noise';
+import type { HeightSampler } from './types';
 
 import illustrationTree11Img from '@/assets/images/illustrations/Tree1-1.webp';
 import illustrationTree12Img from '@/assets/images/illustrations/Tree1-2.webp';
@@ -100,7 +99,7 @@ export const createTreesChunk = (
   chunkZ: number,
   chunkSize: number,
   treesPerChunk: number,
-  noiseConfig?: NoiseConfig,
+  heightSampler?: HeightSampler,
   sizeScale = DEFAULT_SIZE_SCALE,
   sizeVariation = DEFAULT_SIZE_VARIATION,
 ): THREE.Group => {
@@ -124,7 +123,7 @@ export const createTreesChunk = (
     const spriteWidth = textureEntry.width * instanceScale;
     const spriteHeight = textureEntry.height * instanceScale;
 
-    const terrainY = noiseConfig ? fractalNoise(positionX, positionZ, noiseConfig) : 0;
+    const terrainY = heightSampler ? heightSampler(positionX, positionZ) : 0;
 
     const mesh = new THREE.Mesh(sharedPlaneGeometry, getOrCreateMaterial(textureEntry.url));
     mesh.scale.set(spriteWidth, spriteHeight, 1);

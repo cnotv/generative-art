@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { NoiseConfig } from './types';
+import type { NoiseConfig, HeightSampler } from './types';
 import { fractalNoise } from './noise';
 
 const TERRAIN_SEGMENTS = 16;
@@ -81,4 +81,45 @@ export const createTerrainChunk = (
   mesh.name = `terrain-${chunkX},${chunkZ}`;
 
   return mesh;
+};
+
+/**
+ * Builds a bilinear height sampler from an existing terrain mesh's vertex buffer.
+ * Reading directly from the geometry avoids redundant fractalNoise calls when
+ * placing grass blades or trees on the same chunk.
+ */
+export const buildHeightSampler = (
+  terrain: THREE.Mesh,
+  chunkX: number,
+  chunkZ: number,
+  chunkSize: number,
+): HeightSampler => {
+  const gridSize = TERRAIN_SEGMENTS + 1;
+  const positionAttribute = terrain.geometry.getAttribute('position');
+  const heights = new Float32Array(gridSize * gridSize);
+  Array.from({ length: gridSize * gridSize }).forEach((_, index) => {
+    heights[index] = positionAttribute.getY(index);
+  });
+
+  const worldOffsetX = chunkX * chunkSize;
+  const worldOffsetZ = chunkZ * chunkSize;
+  const halfSize = chunkSize / 2;
+
+  return (worldX: number, worldZ: number): number => {
+    const u = Math.max(0, Math.min(1, (worldX - worldOffsetX + halfSize) / chunkSize));
+    const v = Math.max(0, Math.min(1, (worldZ - worldOffsetZ + halfSize) / chunkSize));
+    const gx = u * TERRAIN_SEGMENTS;
+    const gz = v * TERRAIN_SEGMENTS;
+    const col0 = Math.floor(gx);
+    const row0 = Math.floor(gz);
+    const col1 = Math.min(col0 + 1, TERRAIN_SEGMENTS);
+    const row1 = Math.min(row0 + 1, TERRAIN_SEGMENTS);
+    const fx = gx - col0;
+    const fz = gz - row0;
+    const h00 = heights[row0 * gridSize + col0];
+    const h10 = heights[row0 * gridSize + col1];
+    const h01 = heights[row1 * gridSize + col0];
+    const h11 = heights[row1 * gridSize + col1];
+    return h00 * (1 - fx) * (1 - fz) + h10 * fx * (1 - fz) + h01 * (1 - fx) * fz + h11 * fx * fz;
+  };
 };

@@ -79,7 +79,7 @@ describe('chunkManager', () => {
     it('excludes already loaded chunks', () => {
       const required: ChunkKey[] = ['0,0', '1,0', '0,1'];
       const active = new Map<ChunkKey, ChunkData>([
-        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, elements: null, grass: null, trees: null, ground: null }],
+        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
       ]);
       const toLoad = computeChunksToLoad(required, active);
       expect(toLoad).toEqual(['1,0', '0,1']);
@@ -89,9 +89,9 @@ describe('chunkManager', () => {
   describe('computeChunksToUnload', () => {
     it('returns chunks beyond unload radius', () => {
       const active = new Map<ChunkKey, ChunkData>([
-        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, elements: null, grass: null, trees: null, ground: null }],
-        ['5,0', { key: '5,0', chunkX: 5, chunkZ: 0, terrain: null, elements: null, grass: null, trees: null, ground: null }],
-        ['0,5', { key: '0,5', chunkX: 0, chunkZ: 5, terrain: null, elements: null, grass: null, trees: null, ground: null }],
+        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
+        ['5,0', { key: '5,0', chunkX: 5, chunkZ: 0, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
+        ['0,5', { key: '0,5', chunkX: 0, chunkZ: 5, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
       ]);
       const toUnload = computeChunksToUnload(active, 0, 0, 3);
       expect(toUnload).toContain('5,0');
@@ -101,8 +101,8 @@ describe('chunkManager', () => {
 
     it('returns empty when all chunks are within radius', () => {
       const active = new Map<ChunkKey, ChunkData>([
-        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, elements: null, grass: null, trees: null, ground: null }],
-        ['1,1', { key: '1,1', chunkX: 1, chunkZ: 1, terrain: null, elements: null, grass: null, trees: null, ground: null }],
+        ['0,0', { key: '0,0', chunkX: 0, chunkZ: 0, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
+        ['1,1', { key: '1,1', chunkX: 1, chunkZ: 1, terrain: null, heightSampler: null, elements: null, grass: null, trees: null, ground: null }],
       ]);
       const toUnload = computeChunksToUnload(active, 0, 0, 3);
       expect(toUnload).toHaveLength(0);

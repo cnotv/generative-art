@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { ChunkKey, ChunkData, GeneratorConfig, WorldCase } from './types';
-import { createTerrainChunk } from './terrainGenerator';
+import type { ChunkKey, ChunkData, GeneratorConfig, WorldCase, HeightSampler } from './types';
+import { createTerrainChunk, buildHeightSampler } from './terrainGenerator';
 import { createGrassChunk } from './grassGenerator';
 import { createTreesChunk } from './treeGenerator';
 
@@ -134,6 +134,12 @@ export const createChunk = ({
     scene.add(terrain);
   }
 
+  // Build height sampler from terrain vertex data — reused by trees and grass
+  // to avoid redundant fractalNoise calls per instance.
+  const heightSampler: HeightSampler | null = terrain
+    ? buildHeightSampler(terrain, chunkX, chunkZ, chunkSize)
+    : null;
+
   // Flat ground plane for trees and grass cases
   const ground = (worldCase === 'trees' || worldCase === 'grass')
     ? createChunkGround(chunkX, chunkZ, chunkSize, groundColor)
@@ -147,10 +153,10 @@ export const createChunk = ({
     scene.add(ground);
   }
 
-  // Case 'trees': textured tree/bush/rock billboards on flat ground
-  // Case 'all': textured tree/bush/rock billboards placed on terrain height
+  // Case 'trees': textured billboards on flat ground
+  // Case 'all': billboards placed at terrain height via sampler
   const trees = (worldCase === 'trees' || worldCase === 'all')
-    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk, worldCase === 'all' ? noiseConfig : undefined, treeSizeScale, treeSizeVariation)
+    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk, heightSampler ?? undefined, treeSizeScale, treeSizeVariation)
     : null;
   tagSpawn(trees, spawnId);
   if (trees) {
@@ -158,22 +164,22 @@ export const createChunk = ({
     scene.add(trees);
   }
 
-  // Case 'grass' / 'all': instanced grass blades
+  // Case 'grass' / 'all': instanced grass blades at terrain height via sampler
   const grass = (worldCase === 'grass' || worldCase === 'all')
     ? createGrassChunk(
         chunkX, chunkZ, chunkSize, grassPerChunk,
         sharedGrassGeometry, sharedGrassMaterial,
-        worldCase === 'all' ? noiseConfig : undefined
+        heightSampler ?? undefined
       )
     : null;
-  if (grass && worldCase === 'all') grass.userData.hasTerrainHeight = true;
+  if (grass && heightSampler) grass.userData.hasTerrainHeight = true;
   tagSpawn(grass, spawnId);
   if (grass) {
     grass.visible = resolveVisibility(grassSpawnId, spawnVisibility);
     scene.add(grass);
   }
 
-  return { key, chunkX, chunkZ, terrain, elements: null, grass, trees, ground };
+  return { key, chunkX, chunkZ, terrain, heightSampler, elements: null, grass, trees, ground };
 };
 
 const disposeGroupChildren = (group: THREE.Group, scene: THREE.Scene): void => {
@@ -409,20 +415,23 @@ const setChunkWorldCaseVisibility = (
   if (chunk.grass) chunk.grass.visible = false;
   if (chunk.ground) chunk.ground.visible = false;
 
+  const ensureTerrain = (): void => {
+    if (!chunk.terrain) {
+      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor);
+      if (spawnId) chunk.terrain.userData.spawnId = spawnId;
+      scene.add(chunk.terrain);
+    }
+    if (!chunk.heightSampler && chunk.terrain) {
+      chunk.heightSampler = buildHeightSampler(chunk.terrain, chunk.chunkX, chunk.chunkZ, chunkSize);
+    }
+  };
+
   if (worldCase === 'terrain') {
-    if (!chunk.terrain) {
-      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor);
-      if (spawnId) chunk.terrain.userData.spawnId = spawnId;
-      scene.add(chunk.terrain);
-    }
-    chunk.terrain.visible = true;
+    ensureTerrain();
+    chunk.terrain!.visible = true;
   } else if (worldCase === 'all') {
-    if (!chunk.terrain) {
-      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor);
-      if (spawnId) chunk.terrain.userData.spawnId = spawnId;
-      scene.add(chunk.terrain);
-    }
-    chunk.terrain.visible = true;
+    ensureTerrain();
+    chunk.terrain!.visible = true;
 
     // Recreate trees if they were placed at flat height (from 'trees' case)
     if (chunk.trees && !chunk.trees.userData.hasTerrainHeight) {
@@ -430,7 +439,7 @@ const setChunkWorldCaseVisibility = (
       chunk.trees = null;
     }
     if (!chunk.trees) {
-      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, noiseConfig, treeSizeScale, treeSizeVariation);
+      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, chunk.heightSampler ?? undefined, treeSizeScale, treeSizeVariation);
       chunk.trees.userData.hasTerrainHeight = true;
       if (spawnId) chunk.trees.userData.spawnId = spawnId;
       scene.add(chunk.trees);
@@ -444,7 +453,7 @@ const setChunkWorldCaseVisibility = (
     if (!chunk.grass) {
       chunk.grass = createGrassChunk(
         chunk.chunkX, chunk.chunkZ, chunkSize, grassPerChunk,
-        sharedGrassGeometry, sharedGrassMaterial, noiseConfig
+        sharedGrassGeometry, sharedGrassMaterial, chunk.heightSampler ?? undefined
       );
       chunk.grass.userData.hasTerrainHeight = true;
       if (spawnId) chunk.grass.userData.spawnId = spawnId;

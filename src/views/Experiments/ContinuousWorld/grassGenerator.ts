@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import type { NoiseConfig } from './types';
-import { fractalNoise } from './noise';
+import type { HeightSampler } from './types';
 
 const BLADE_POINTS = 10;
 const DEFAULT_BLADE_SCALE = 2;
@@ -87,7 +86,7 @@ export const createGrassChunk = (
   grassPerChunk: number,
   sharedGeometry: THREE.BufferGeometry,
   sharedMaterial: THREE.Material,
-  noiseConfig?: NoiseConfig,
+  heightSampler?: HeightSampler,
 ): THREE.InstancedMesh => {
   const instancedMesh = new THREE.InstancedMesh(
     sharedGeometry,
@@ -113,7 +112,7 @@ export const createGrassChunk = (
     const yRotation = random() * Math.PI * 2;
     const scaleVariation = 0.6 + random() * 0.8;
 
-    const terrainY = noiseConfig ? fractalNoise(positionX, positionZ, noiseConfig) : 0;
+    const terrainY = heightSampler ? heightSampler(positionX, positionZ) : 0;
     position.set(positionX, terrainY, positionZ);
     rotationEuler.set(0, yRotation, 0);
     quaternion.setFromEuler(rotationEuler);
