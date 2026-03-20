@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { generatedRoutes } from "@/config/router";
 import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
 import { usePanelsStore } from "@/stores/panels";
+import { useSceneConfigStore } from "@/stores/sceneConfig";
 
 const router = useRouter();
 const route = useRoute();
 
 const panelsStore = usePanelsStore();
 panelsStore.initRouteSync();
+
+const sceneConfigStore = useSceneConfigStore();
+watchEffect(() => {
+  document.body.style.userSelect = sceneConfigStore.getValue("global.textSelection") ? "" : "none";
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyPress);

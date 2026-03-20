@@ -84,7 +84,7 @@ const defaultConfig = {
   chunkSize: CHUNK_SIZE,
   viewRadius: VIEW_RADIUS,
   treeDensity: TREES_PER_CHUNK,
-  grassDensity: 20,
+  grassDensity: 60,
   forwardBias: FORWARD_BIAS,
   treesGroundColor: TREES_GROUND_COLOR,
   grassGroundColor: GRASS_GROUND_COLOR,

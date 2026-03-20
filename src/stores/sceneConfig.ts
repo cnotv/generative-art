@@ -12,6 +12,7 @@ export interface SceneConfigRegistration {
 export const globalSceneSchema: ConfigControlsSchema = {
   global: {
     frameRate: { min: 1, max: 120, step: 1, label: 'Frame Rate' },
+    textSelection: { boolean: true, label: 'Allow Text Selection' },
   },
   orbit: {
     disabled: { boolean: false, label: 'Disable Orbit Controls' },
