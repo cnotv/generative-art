@@ -260,6 +260,7 @@ const applyTerrainSnap = (): void => {
 
 const applyCameraFollow = (): void => {
   if (!cameraReference || !playerMeshReference || !getDeltaReference) return;
+  if (reactiveConfig.value.freeCamera) return;
   const orbit = toRaw(store.orbitReference);
   cameraFollowPlayer(cameraReference, playerMeshReference, CAMERA_OFFSET, orbit as Parameters<typeof cameraFollowPlayer>[3], ["x", "z"]);
   const targetCameraY = playerMeshReference.position.y + CAMERA_OFFSET[1];
