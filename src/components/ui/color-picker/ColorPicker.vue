@@ -46,6 +46,7 @@ const handleClick = () => {
       class="color-picker__swatch"
       :style="{ backgroundColor: internalValue }"
     />
+    <span class="color-picker__hex">{{ internalValue }}</span>
     <input
       ref="colorInputReference"
       type="color"
@@ -74,6 +75,12 @@ const handleClick = () => {
   height: 1.25rem;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+}
+
+.color-picker__hex {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
 }
 
 .color-picker__input {
