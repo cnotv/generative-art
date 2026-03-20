@@ -100,14 +100,12 @@ export const playerSettings = {
 export const controlBindings = {
   mapping: {
     keyboard: {
-      ' ': 'toggle-case',
       a: 'move-left',
       d: 'move-right',
       w: 'move-down',
       s: 'move-up',
     },
     gamepad: {
-      cross: 'toggle-case',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
       'dpad-down': 'move-down',
@@ -122,7 +120,6 @@ export const controlBindings = {
       right: 'move-right',
       up: 'move-up',
       down: 'move-down',
-      click: 'toggle-case',
     },
   },
   axisThreshold: 0.5,

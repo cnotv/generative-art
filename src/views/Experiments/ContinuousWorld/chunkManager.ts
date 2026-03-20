@@ -158,13 +158,15 @@ export const createChunk = ({
     scene.add(trees);
   }
 
-  // Case 'grass': instanced grass blades
-  const grass = worldCase === 'grass'
+  // Case 'grass' / 'all': instanced grass blades
+  const grass = (worldCase === 'grass' || worldCase === 'all')
     ? createGrassChunk(
         chunkX, chunkZ, chunkSize, grassPerChunk,
-        sharedGrassGeometry, sharedGrassMaterial
+        sharedGrassGeometry, sharedGrassMaterial,
+        worldCase === 'all' ? noiseConfig : undefined
       )
     : null;
+  if (grass && worldCase === 'all') grass.userData.hasTerrainHeight = true;
   tagSpawn(grass, spawnId);
   if (grass) {
     grass.visible = resolveVisibility(grassSpawnId, spawnVisibility);
@@ -420,6 +422,21 @@ const setChunkWorldCaseVisibility = (
       scene.add(chunk.trees);
     }
     chunk.trees.visible = true;
+
+    if (chunk.grass && !chunk.grass.userData.hasTerrainHeight) {
+      scene.remove(chunk.grass);
+      chunk.grass = null;
+    }
+    if (!chunk.grass) {
+      chunk.grass = createGrassChunk(
+        chunk.chunkX, chunk.chunkZ, chunkSize, grassPerChunk,
+        sharedGrassGeometry, sharedGrassMaterial, noiseConfig
+      );
+      chunk.grass.userData.hasTerrainHeight = true;
+      if (spawnId) chunk.grass.userData.spawnId = spawnId;
+      scene.add(chunk.grass);
+    }
+    chunk.grass.visible = true;
   } else if (worldCase === 'trees') {
     if (!chunk.ground) {
       chunk.ground = createChunkGround(chunk.chunkX, chunk.chunkZ, chunkSize, groundColor);

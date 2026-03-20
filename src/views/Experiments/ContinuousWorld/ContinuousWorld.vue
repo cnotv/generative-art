@@ -70,18 +70,7 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 const store = useSceneViewStore();
 const { setViewPanels, clearViewPanels } = useViewPanelsStore();
 
-const worldCases: WorldCase[] = ['terrain', 'trees', 'grass', 'all'];
-
-const { destroyControls, currentActions } = createControls({
-  ...controlBindings,
-  onAction: (action) => {
-    if (action === 'toggle-case') {
-      const current = reactiveConfig.value.worldCase as WorldCase;
-      const nextIndex = (worldCases.indexOf(current) + 1) % worldCases.length;
-      reactiveConfig.value = { ...reactiveConfig.value, worldCase: worldCases[nextIndex] };
-    }
-  },
-});
+const { destroyControls, currentActions } = createControls(controlBindings);
 
 const { readQueryParameters, syncQueryParameters } = useQueryParameters(configControls);
 
@@ -270,12 +259,6 @@ const SPAWN_ID_TERRAIN = 'world-terrain';
 const SPAWN_ID_TREES = 'world-trees';
 const SPAWN_ID_GRASS = 'world-grass';
 
-const SPAWN_TO_WORLD_CASE: Record<string, WorldCase> = {
-  [SPAWN_ID_TERRAIN]: 'terrain',
-  [SPAWN_ID_TREES]: 'trees',
-  [SPAWN_ID_GRASS]: 'grass',
-};
-
 const spawnVisibility = computed((): Record<string, boolean> =>
   Object.fromEntries(
     useDebugSceneStore().spawns.map(spawn => [spawn.id, !(spawn.hidden ?? false)])
@@ -446,11 +429,6 @@ watch(() => reactiveConfig.value.grassBladeScale, () => {
 watch(() => reactiveConfig.value.chunkSize, rebuildIfReady);
 watch(() => reactiveConfig.value.viewRadius, rebuildIfReady);
 
-const elementPropertiesStore = useElementPropertiesStore();
-watch(() => elementPropertiesStore.selectedElementName, (name) => {
-  const worldCase = name ? SPAWN_TO_WORLD_CASE[name] : undefined;
-  if (worldCase) reactiveConfig.value = { ...reactiveConfig.value, worldCase };
-});
 
 onMounted(async () => {
   if (!canvas.value) return;
