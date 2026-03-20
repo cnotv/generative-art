@@ -5,6 +5,8 @@ import type { NoiseConfig, GeneratorConfig, WorldCase } from './types';
 
 export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25];
 export const CAMERA_Y_LERP_SPEED = 2;
+/** Camera follow update every N frames (frame % N === 0). 1 = every frame (smooth). */
+export const CAMERA_FOLLOW_FREQUENCY = 1;
 /** Fire chunk update every N frames (frame % N === 0). Lower = more frequent. */
 export const CHUNK_UPDATE_FREQUENCY = 3;
 export const MAX_CHUNKS_PER_UPDATE = 5;
@@ -19,7 +21,7 @@ export const GRASS_DENSITY_MULTIPLIER = 200;
 export const PLAYER_MODEL_SCALE = 4;
 
 export const noiseConfig: NoiseConfig = {
-  seed: 42,
+  seed: 50,
   octaves: 3,
   frequency: 0.004,
   amplitude: 8.5,
@@ -135,7 +137,9 @@ export const densityControl = { min: 1, max: 100, step: 1, label: 'Density' };
 
 export const baseConfigControls = {
   autoWalk: { boolean: true, label: 'Auto Walk' },
+  freeCamera: { boolean: true, label: 'Free Camera' },
   movementSpeed: { min: 0.5, max: 20, step: 0.5, label: 'Speed' },
+  cameraFollowFrequency: { min: 1, max: 30, step: 1, label: 'Camera Freq' },
   chunkSize: { min: 10, max: 200, step: 10, label: 'Chunk Size' },
   viewRadius: { min: 1, max: 10, step: 1, label: 'Load Offset' },
   forwardBias: { min: 0, max: 10, step: 1, label: 'Forward Bias' },

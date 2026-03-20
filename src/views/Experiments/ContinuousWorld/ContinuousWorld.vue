@@ -32,6 +32,7 @@ import {
   CHUNK_SIZE,
   UNLOAD_RADIUS,
   CAMERA_OFFSET,
+  CAMERA_FOLLOW_FREQUENCY,
   CHUNK_UPDATE_FREQUENCY,
   MAX_CHUNKS_PER_UPDATE,
   DEFAULT_WORLD_CASE,
@@ -77,7 +78,9 @@ const { readQueryParameters, syncQueryParameters } = useQueryParameters(configCo
 
 const defaultConfig = {
   autoWalk: true,
+  freeCamera: false,
   movementSpeed: 8,
+  cameraFollowFrequency: CAMERA_FOLLOW_FREQUENCY,
   chunkSize: CHUNK_SIZE,
   viewRadius: VIEW_RADIUS,
   treeDensity: TREES_PER_CHUNK,
@@ -118,8 +121,15 @@ let sharedGrassGeometry: THREE.BufferGeometry | null = null;
 let sharedGrassMaterial: THREE.MeshPhysicalMaterial | null = null;
 let sceneReference: THREE.Scene | null = null;
 let activeChunksReference: Map<ChunkKey, ChunkData> | null = null;
-let playerMeshReference: THREE.Object3D | null = null;
+let playerMeshReference: Awaited<ReturnType<typeof getModel>> | null = null;
 let playerBottomOffsetReference: number | null = null;
+let cameraReference: THREE.PerspectiveCamera | null = null;
+let getDeltaReference: (() => number) | null = null;
+let directionalLightReference: THREE.DirectionalLight | undefined;
+const terrainRaycaster = new THREE.Raycaster();
+terrainRaycaster.ray.direction.set(0, -1, 0);
+let cameraFrameCounter = 0;
+let freeCameraRotationY = 0;
 
 const initializeWorld = async (
   scene: THREE.Scene,
@@ -236,6 +246,59 @@ const snapToTerrain = (
   );
   const hits = raycaster.intersectObject(terrainMesh, false);
   if (hits.length > 0) playerMesh.position.y = hits[0].point.y + bottomOffset;
+};
+
+const applyTerrainSnap = (): void => {
+  if (!playerMeshReference || !activeChunksReference) return;
+  const worldCase = reactiveConfig.value.worldCase as WorldCase;
+  if (worldCase === 'terrain' || worldCase === 'all') {
+    const chunkSize = (reactiveConfig.value.chunkSize as number | undefined) ?? CHUNK_SIZE;
+    snapToTerrain(playerMeshReference, activeChunksReference, chunkSize, terrainRaycaster, playerBottomOffsetReference ?? 0);
+  }
+  if (directionalLightReference) updateDirectionalLight(directionalLightReference, playerMeshReference);
+};
+
+const applyCameraFollow = (): void => {
+  if (!cameraReference || !playerMeshReference || !getDeltaReference) return;
+  const orbit = toRaw(store.orbitReference);
+  cameraFollowPlayer(cameraReference, playerMeshReference, CAMERA_OFFSET, orbit as Parameters<typeof cameraFollowPlayer>[3], ["x", "z"]);
+  const targetCameraY = playerMeshReference.position.y + CAMERA_OFFSET[1];
+  const cameraYDiff = targetCameraY - cameraReference.position.y;
+  const cameraYStep = cameraYDiff * Math.abs(cameraYDiff) * CAMERA_Y_LERP_SPEED * getDeltaReference();
+  cameraReference.position.y += Math.abs(cameraYStep) > Math.abs(cameraYDiff) ? cameraYDiff : cameraYStep;
+  store.cameraConfig = {
+    ...(store.cameraConfig as Record<string, unknown>),
+    position: { x: cameraReference.position.x, y: cameraReference.position.y, z: cameraReference.position.z },
+  };
+};
+
+const applyFreeCameraMovement = (moveSpeed: number, targetRotation: number | null): void => {
+  if (!cameraReference) return;
+  if (targetRotation !== null) freeCameraRotationY = targetRotation * DEGREES_TO_RADIANS;
+  const orbit = toRaw(store.orbitReference);
+  const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, freeCameraRotationY, 0));
+  cameraReference.position.addScaledVector(forward, moveSpeed);
+  (orbit as { target: THREE.Vector3 } | null)?.target.addScaledVector(forward, moveSpeed);
+  store.cameraConfig = {
+    ...(store.cameraConfig as Record<string, unknown>),
+    position: { x: cameraReference.position.x, y: cameraReference.position.y, z: cameraReference.position.z },
+  };
+};
+
+const applyPlayerMove = (targetRotation: number | null, moveSpeed: number, isMoving: boolean): void => {
+  if (!playerMeshReference || !getDeltaReference) return;
+  if (targetRotation !== null) applyRotation(playerMeshReference, targetRotation);
+  updateAnimation({
+    actionName: isMoving ? 'walk' : 'idle',
+    player: playerMeshReference,
+    delta: getDeltaReference(),
+    speed: ((reactiveConfig.value.movementSpeed as number | undefined) ?? playerSettings.game.distance) * 10,
+  });
+  if (isMoving) moveForward(playerMeshReference, moveSpeed);
+  applyTerrainSnap();
+  cameraFrameCounter++;
+  const followFrequency = (reactiveConfig.value.cameraFollowFrequency as number | undefined) ?? CAMERA_FOLLOW_FREQUENCY;
+  if (cameraFrameCounter % followFrequency === 0) applyCameraFollow();
 };
 
 const getViewZOffset = (): number => -((reactiveConfig.value.forwardBias as number | undefined) ?? FORWARD_BIAS);
@@ -454,34 +517,14 @@ onMounted(async () => {
       );
       playerMeshReference = playerMesh;
       playerBottomOffsetReference = playerBottomOffset;
+      cameraReference = camera as THREE.PerspectiveCamera;
+      getDeltaReference = getDelta;
+      directionalLightReference = directionalLight;
 
-      let orbitReference = toRaw(store.orbitReference);
       const { game } = playerSettings;
       const { speed } = game;
 
       initializeSceneRegistrations(scene);
-
-      const terrainRaycaster = new THREE.Raycaster();
-      terrainRaycaster.ray.direction.set(0, -1, 0);
-
-      const applyEnvironmentUpdate = () => {
-        const worldCase = reactiveConfig.value.worldCase as WorldCase;
-        if (worldCase === 'terrain' || worldCase === 'all') {
-          const chunkSize = (reactiveConfig.value.chunkSize as number | undefined) ?? CHUNK_SIZE;
-          snapToTerrain(playerMesh, activeChunks, chunkSize, terrainRaycaster, playerBottomOffset);
-        }
-        if (!orbitReference) orbitReference = toRaw(store.orbitReference);
-        cameraFollowPlayer(camera, playerMesh, CAMERA_OFFSET, orbitReference as Parameters<typeof cameraFollowPlayer>[3], ["x", "z"]);
-        const targetCameraY = playerMesh.position.y + CAMERA_OFFSET[1];
-        const cameraYDiff = targetCameraY - camera.position.y;
-        const cameraYStep = cameraYDiff * Math.abs(cameraYDiff) * CAMERA_Y_LERP_SPEED * getDelta();
-        camera.position.y += Math.abs(cameraYStep) > Math.abs(cameraYDiff) ? cameraYDiff : cameraYStep;
-        store.cameraConfig = {
-          ...(store.cameraConfig as Record<string, unknown>),
-          position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-        };
-        if (directionalLight) updateDirectionalLight(directionalLight, playerMesh);
-      };
 
       const timelineManager = createTimelineManager();
 
@@ -490,22 +533,12 @@ onMounted(async () => {
         name: "Move",
         category: "user-input",
         action: () => {
+          const isFreeCamera = reactiveConfig.value.freeCamera as boolean;
           const targetRotation = getRotation(currentActions, true);
-          if (targetRotation !== null) applyRotation(playerMesh, targetRotation);
-
-          const isMoving = reactiveConfig.value.autoWalk || targetRotation !== null;
-          updateAnimation({
-            actionName: isMoving ? 'walk' : 'idle',
-            player: playerMesh,
-            delta: getDelta(),
-            speed: ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * 10,
-          });
-
-          if (isMoving) {
-            moveForward(playerMesh, ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * MOVEMENT_SPEED_SCALE);
-          }
-
-          applyEnvironmentUpdate();
+          const moveSpeed = ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * MOVEMENT_SPEED_SCALE;
+          const isMoving = (reactiveConfig.value.autoWalk as boolean) || targetRotation !== null;
+          if (!isFreeCamera) applyPlayerMove(targetRotation, moveSpeed, isMoving);
+          else if (isMoving) applyFreeCameraMovement(moveSpeed, targetRotation);
         },
       });
 
@@ -514,9 +547,10 @@ onMounted(async () => {
         name: "ChunkUpdate",
         category: "world",
         action: () => {
+          const isFreeCamera = reactiveConfig.value.freeCamera as boolean;
           const currentViewRadius = (reactiveConfig.value.viewRadius as number | undefined) ?? VIEW_RADIUS;
           updateChunks({
-            playerPosition: playerMesh.position,
+            playerPosition: isFreeCamera ? (cameraReference?.position ?? playerMesh.position) : playerMesh.position,
             activeChunks,
             scene,
             generatorConfig: buildGeneratorConfig(),
@@ -552,6 +586,11 @@ onUnmounted(() => {
   activeChunksReference = null;
   playerMeshReference = null;
   playerBottomOffsetReference = null;
+  cameraReference = null;
+  getDeltaReference = null;
+  directionalLightReference = undefined;
+  cameraFrameCounter = 0;
+  freeCameraRotationY = 0;
 });
 </script>
 
