@@ -8,12 +8,12 @@ export const CAMERA_Y_LERP_SPEED = 2;
 /** Fire chunk update every N frames (frame % N === 0). Lower = more frequent. */
 export const CHUNK_UPDATE_FREQUENCY = 3;
 export const MAX_CHUNKS_PER_UPDATE = 5;
-export const CHUNK_SIZE = 50;
-export const VIEW_RADIUS = 8;
-export const UNLOAD_RADIUS = 10;
+export const CHUNK_SIZE = 30;
+export const VIEW_RADIUS = 4;
+export const UNLOAD_RADIUS = 6;
 export const ELEMENTS_PER_CHUNK = 8;
 export const GRASS_PER_CHUNK = 1000;
-export const TREES_PER_CHUNK = 6;
+export const TREES_PER_CHUNK = 3;
 export const MOVEMENT_SPEED_SCALE = 1 / 8;
 export const GRASS_DENSITY_MULTIPLIER = 200;
 export const PLAYER_MODEL_SCALE = 4;
