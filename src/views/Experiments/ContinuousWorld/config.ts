@@ -5,11 +5,12 @@ import type { NoiseConfig, GeneratorConfig, WorldCase } from './types';
 
 export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25];
 export const CAMERA_Y_LERP_SPEED = 2;
-export const CHUNK_UPDATE_FREQUENCY = 0.1;
+/** Fire chunk update every N frames (frame % N === 0). Lower = more frequent. */
+export const CHUNK_UPDATE_FREQUENCY = 3;
 export const MAX_CHUNKS_PER_UPDATE = 5;
 export const CHUNK_SIZE = 50;
-export const VIEW_RADIUS = 6;
-export const UNLOAD_RADIUS = 8;
+export const VIEW_RADIUS = 8;
+export const UNLOAD_RADIUS = 10;
 export const ELEMENTS_PER_CHUNK = 8;
 export const GRASS_PER_CHUNK = 1000;
 export const TREES_PER_CHUNK = 6;
@@ -44,7 +45,7 @@ export const setupConfig: SetupConfig = {
     fov: 75,
     up: new THREE.Vector3(0, 1, 0),
     near: 0.1,
-    far: 500,
+    far: 800,
   },
   lights: {
     ambient: { color: 0xffffff, intensity: 0.6 },
@@ -128,7 +129,7 @@ export const controlBindings = {
 
 export const DEFAULT_WORLD_CASE: WorldCase = 'terrain';
 
-export const FORWARD_BIAS = VIEW_RADIUS - 1;
+export const FORWARD_BIAS = 3;
 
 export const densityControl = { min: 1, max: 100, step: 1, label: 'Density' };
 
