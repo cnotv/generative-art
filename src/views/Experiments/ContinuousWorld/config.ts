@@ -5,7 +5,8 @@ import type { NoiseConfig, GeneratorConfig, WorldCase } from './types';
 
 export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25];
 export const CAMERA_Y_LERP_SPEED = 2;
-export const CHUNK_UPDATE_FREQUENCY = 0.5;
+export const CHUNK_UPDATE_FREQUENCY = 0.1;
+export const MAX_CHUNKS_PER_UPDATE = 3;
 export const CHUNK_SIZE = 50;
 export const VIEW_RADIUS = 4;
 export const UNLOAD_RADIUS = 5;

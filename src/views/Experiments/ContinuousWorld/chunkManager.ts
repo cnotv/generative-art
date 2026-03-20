@@ -219,6 +219,8 @@ interface UpdateChunksOptions {
   unloadRadius: number;
   /** Chunk offset applied to the load/unload center on the Z axis (negative = forward in world space). */
   viewZOffset?: number;
+  /** Maximum number of new chunks to create per call. Defaults to all. */
+  maxChunksPerUpdate?: number;
   sharedGrassGeometry: THREE.BufferGeometry;
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
@@ -247,6 +249,7 @@ export const updateChunks = ({
   viewRadius,
   unloadRadius,
   viewZOffset = 0,
+  maxChunksPerUpdate,
   sharedGrassGeometry,
   sharedGrassMaterial,
   treesPerChunk,
@@ -268,7 +271,6 @@ export const updateChunks = ({
 
   const centerZ = playerChunkZ + viewZOffset;
   const requiredChunks = computeRequiredChunks(playerChunkX, centerZ, viewRadius);
-  const chunksToLoad = computeChunksToLoad(requiredChunks, activeChunks);
   const chunksToUnload = computeChunksToUnload(activeChunks, playerChunkX, centerZ, unloadRadius);
 
   chunksToUnload.forEach((key) => {
@@ -278,6 +280,18 @@ export const updateChunks = ({
       activeChunks.delete(key);
     }
   });
+
+  const allChunksToLoad = computeChunksToLoad(requiredChunks, activeChunks)
+    .sort((a, b) => {
+      const [ax, az] = parseChunkKey(a);
+      const [bx, bz] = parseChunkKey(b);
+      return (Math.abs(ax - playerChunkX) + Math.abs(az - centerZ))
+           - (Math.abs(bx - playerChunkX) + Math.abs(bz - centerZ));
+    });
+
+  const chunksToLoad = maxChunksPerUpdate !== undefined
+    ? allChunksToLoad.slice(0, maxChunksPerUpdate)
+    : allChunksToLoad;
 
   chunksToLoad.forEach((key) => {
     const [chunkX, chunkZ] = parseChunkKey(key);

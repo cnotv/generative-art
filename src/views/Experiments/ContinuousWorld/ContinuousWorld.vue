@@ -33,6 +33,7 @@ import {
   UNLOAD_RADIUS,
   CAMERA_OFFSET,
   CHUNK_UPDATE_FREQUENCY,
+  MAX_CHUNKS_PER_UPDATE,
   DEFAULT_WORLD_CASE,
   FORWARD_BIAS,
   CAMERA_Y_LERP_SPEED,
@@ -149,6 +150,7 @@ const initializeWorld = async (
     viewRadius: initialViewRadius,
     unloadRadius: UNLOAD_RADIUS,
     viewZOffset: getViewZOffset(),
+    maxChunksPerUpdate: MAX_CHUNKS_PER_UPDATE,
     ...buildChunkOptions(),
   });
 
@@ -522,6 +524,7 @@ onMounted(async () => {
             viewRadius: currentViewRadius,
             unloadRadius: UNLOAD_RADIUS,
             viewZOffset: getViewZOffset(),
+            maxChunksPerUpdate: MAX_CHUNKS_PER_UPDATE,
             ...buildChunkOptions(),
           });
         },
