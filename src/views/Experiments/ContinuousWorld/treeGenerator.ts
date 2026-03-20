@@ -42,7 +42,8 @@ const allTextures = [
   { url: illustrationRockImg, width: 5, height: 3 },
 ];
 
-const SIZE_VARIATION = 0.4;
+const DEFAULT_SIZE_VARIATION = 0.4;
+const DEFAULT_SIZE_SCALE = 1;
 
 /** One unit plane reused for every tree — scaled per-mesh via mesh.scale. */
 const sharedPlaneGeometry = new THREE.PlaneGeometry(1, 1);
@@ -100,6 +101,8 @@ export const createTreesChunk = (
   chunkSize: number,
   treesPerChunk: number,
   noiseConfig?: NoiseConfig,
+  sizeScale = DEFAULT_SIZE_SCALE,
+  sizeVariation = DEFAULT_SIZE_VARIATION,
 ): THREE.Group => {
   const group = new THREE.Group();
   group.name = `trees-${chunkX},${chunkZ}`;
@@ -117,9 +120,9 @@ export const createTreesChunk = (
     const textureIndex = Math.floor(random() * allTextures.length);
     const textureEntry = allTextures[textureIndex];
 
-    const sizeScale = 1 + (random() - 0.5) * SIZE_VARIATION;
-    const spriteWidth = textureEntry.width * sizeScale;
-    const spriteHeight = textureEntry.height * sizeScale;
+    const instanceScale = sizeScale * (1 + (random() - 0.5) * sizeVariation);
+    const spriteWidth = textureEntry.width * instanceScale;
+    const spriteHeight = textureEntry.height * instanceScale;
 
     const terrainY = noiseConfig ? fractalNoise(positionX, positionZ, noiseConfig) : 0;
 

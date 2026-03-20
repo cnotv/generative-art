@@ -80,6 +80,8 @@ interface CreateChunkOptions {
   groundColor: number;
   terrainBaseColor?: number;
   terrainPeakColor?: number;
+  treeSizeScale?: number;
+  treeSizeVariation?: number;
   spawnId?: string;
   spawnVisibility?: Record<string, boolean>;
   terrainSpawnId?: string;
@@ -111,6 +113,8 @@ export const createChunk = ({
   groundColor,
   terrainBaseColor,
   terrainPeakColor,
+  treeSizeScale,
+  treeSizeVariation,
   spawnId,
   spawnVisibility,
   terrainSpawnId,
@@ -146,7 +150,7 @@ export const createChunk = ({
   // Case 'trees': textured tree/bush/rock billboards on flat ground
   // Case 'all': textured tree/bush/rock billboards placed on terrain height
   const trees = (worldCase === 'trees' || worldCase === 'all')
-    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk, worldCase === 'all' ? noiseConfig : undefined)
+    ? createTreesChunk(chunkX, chunkZ, chunkSize, treesPerChunk, worldCase === 'all' ? noiseConfig : undefined, treeSizeScale, treeSizeVariation)
     : null;
   tagSpawn(trees, spawnId);
   if (trees) {
@@ -219,6 +223,8 @@ interface UpdateChunksOptions {
   groundColor: number;
   terrainBaseColor?: number;
   terrainPeakColor?: number;
+  treeSizeScale?: number;
+  treeSizeVariation?: number;
   spawnId?: string;
   spawnVisibility?: Record<string, boolean>;
   terrainSpawnId?: string;
@@ -245,6 +251,8 @@ export const updateChunks = ({
   groundColor,
   terrainBaseColor,
   terrainPeakColor,
+  treeSizeScale,
+  treeSizeVariation,
   spawnId,
   spawnVisibility,
   terrainSpawnId,
@@ -283,6 +291,8 @@ export const updateChunks = ({
       groundColor,
       terrainBaseColor,
       terrainPeakColor,
+      treeSizeScale,
+      treeSizeVariation,
       spawnId,
       spawnVisibility,
       terrainSpawnId,
@@ -304,6 +314,8 @@ interface RebuildAllChunksOptions {
   groundColor: number;
   terrainBaseColor?: number;
   terrainPeakColor?: number;
+  treeSizeScale?: number;
+  treeSizeVariation?: number;
   spawnId?: string;
 }
 
@@ -318,6 +330,8 @@ export const rebuildAllChunks = ({
   groundColor,
   terrainBaseColor,
   terrainPeakColor,
+  treeSizeScale,
+  treeSizeVariation,
   spawnId,
 }: RebuildAllChunksOptions): void => {
   const keys = [...activeChunks.keys()];
@@ -344,6 +358,8 @@ export const rebuildAllChunks = ({
       groundColor,
       terrainBaseColor,
       terrainPeakColor,
+      treeSizeScale,
+      treeSizeVariation,
       spawnId,
     });
     activeChunks.set(key, chunk);
@@ -360,6 +376,8 @@ interface ApplyWorldCaseOptions {
   groundColor: number;
   terrainBaseColor?: number;
   terrainPeakColor?: number;
+  treeSizeScale?: number;
+  treeSizeVariation?: number;
   spawnId?: string;
 }
 
@@ -367,7 +385,7 @@ const setChunkWorldCaseVisibility = (
   chunk: ChunkData,
   options: ApplyWorldCaseOptions,
 ): void => {
-  const { scene, generatorConfig, worldCase, sharedGrassGeometry, sharedGrassMaterial, treesPerChunk, groundColor, terrainBaseColor, terrainPeakColor, spawnId } = options;
+  const { scene, generatorConfig, worldCase, sharedGrassGeometry, sharedGrassMaterial, treesPerChunk, groundColor, terrainBaseColor, terrainPeakColor, treeSizeScale, treeSizeVariation, spawnId } = options;
   const { chunkSize, noiseConfig, grassPerChunk } = generatorConfig;
 
   if (chunk.terrain) chunk.terrain.visible = false;
@@ -396,7 +414,7 @@ const setChunkWorldCaseVisibility = (
       chunk.trees = null;
     }
     if (!chunk.trees) {
-      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, noiseConfig);
+      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, noiseConfig, treeSizeScale, treeSizeVariation);
       chunk.trees.userData.hasTerrainHeight = true;
       if (spawnId) chunk.trees.userData.spawnId = spawnId;
       scene.add(chunk.trees);
@@ -418,7 +436,7 @@ const setChunkWorldCaseVisibility = (
       chunk.trees = null;
     }
     if (!chunk.trees) {
-      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk);
+      chunk.trees = createTreesChunk(chunk.chunkX, chunk.chunkZ, chunkSize, treesPerChunk, undefined, treeSizeScale, treeSizeVariation);
       if (spawnId) chunk.trees.userData.spawnId = spawnId;
       scene.add(chunk.trees);
     }

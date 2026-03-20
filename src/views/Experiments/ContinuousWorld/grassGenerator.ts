@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 
 const BLADE_POINTS = 10;
-const BLADE_SCALE = 2;
+const DEFAULT_BLADE_SCALE = 2;
 
-const DEFAULT_LENGTH_CURVE_POINTS = [
+const BASE_LENGTH_CURVE_POINTS = [
   new THREE.Vector3(0, 0, 0),
   new THREE.Vector3(0, 0.28, 0.04),
   new THREE.Vector3(0, 0.5, -0.07),
-].map(v => v.multiplyScalar(BLADE_SCALE));
+];
 
-const DEFAULT_SIDE_CURVE_POINTS = [
+const BASE_SIDE_CURVE_POINTS = [
   new THREE.Vector3(0.04, 0, 0),
   new THREE.Vector3(0.04, 0, 0),
   new THREE.Vector3(0, 0.5, 0),
-].map(v => v.multiplyScalar(BLADE_SCALE));
+];
 
 /**
  * Simple seeded random number generator (mulberry32).
@@ -32,9 +32,11 @@ const createSeededRandom = (seed: number): (() => number) => {
  * Creates the shared grass blade BufferGeometry using CatmullRom curves,
  * matching the GrassGenerator tool's blade shape.
  */
-export const createGrassBladeGeometry = (): THREE.BufferGeometry => {
-  const lengthCurve = new THREE.CatmullRomCurve3(DEFAULT_LENGTH_CURVE_POINTS);
-  const sideCurve = new THREE.CatmullRomCurve3(DEFAULT_SIDE_CURVE_POINTS);
+export const createGrassBladeGeometry = (bladeScale = DEFAULT_BLADE_SCALE): THREE.BufferGeometry => {
+  const scaledLengthPoints = BASE_LENGTH_CURVE_POINTS.map(v => v.clone().multiplyScalar(bladeScale));
+  const scaledSidePoints = BASE_SIDE_CURVE_POINTS.map(v => v.clone().multiplyScalar(bladeScale));
+  const lengthCurve = new THREE.CatmullRomCurve3(scaledLengthPoints);
+  const sideCurve = new THREE.CatmullRomCurve3(scaledSidePoints);
 
   const lengthPoints = lengthCurve.getPoints(BLADE_POINTS);
   const sidePoints = sideCurve.getPoints(BLADE_POINTS);
@@ -66,9 +68,9 @@ export const createGrassBladeGeometry = (): THREE.BufferGeometry => {
 /**
  * Creates the shared grass material.
  */
-export const createGrassMaterial = (): THREE.MeshPhysicalMaterial =>
+export const createGrassMaterial = (color = 0x33bb33): THREE.MeshPhysicalMaterial =>
   new THREE.MeshPhysicalMaterial({
-    color: 0x33bb33,
+    color,
     side: THREE.DoubleSide,
   });
 

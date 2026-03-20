@@ -43,6 +43,10 @@ import {
   GRASS_GROUND_COLOR,
   TERRAIN_BASE_COLOR,
   TERRAIN_PEAK_COLOR,
+  GRASS_COLOR,
+  GRASS_BLADE_SCALE,
+  TREE_SIZE_SCALE,
+  TREE_SIZE_VARIATION,
   DIRECTIONAL_LIGHT_OFFSET,
   AMBIENT_LIGHT_NAME,
   DIRECTIONAL_LIGHT_NAME,
@@ -93,6 +97,10 @@ const defaultConfig = {
   grassGroundColor: GRASS_GROUND_COLOR,
   terrainBaseColor: TERRAIN_BASE_COLOR,
   terrainPeakColor: TERRAIN_PEAK_COLOR,
+  grassColor: GRASS_COLOR,
+  grassBladeScale: GRASS_BLADE_SCALE,
+  treeSizeScale: TREE_SIZE_SCALE,
+  treeSizeVariation: TREE_SIZE_VARIATION,
   worldCase: DEFAULT_WORLD_CASE,
   procedural: {
     seed: noiseConfig.seed,
@@ -135,8 +143,8 @@ const initializeWorld = async (
     castShadow: true,
   });
 
-  sharedGrassGeometry = createGrassBladeGeometry();
-  sharedGrassMaterial = createGrassMaterial();
+  sharedGrassGeometry = createGrassBladeGeometry((reactiveConfig.value.grassBladeScale as number | undefined) ?? GRASS_BLADE_SCALE);
+  sharedGrassMaterial = createGrassMaterial((reactiveConfig.value.grassColor as number | undefined) ?? GRASS_COLOR);
   sceneReference = scene;
 
   const activeChunks = new Map<ChunkKey, ChunkData>();
@@ -287,6 +295,8 @@ const buildChunkOptions = () => ({
   groundColor: getGroundColor(reactiveConfig.value.worldCase as WorldCase),
   terrainBaseColor: (reactiveConfig.value.terrainBaseColor as number | undefined) ?? TERRAIN_BASE_COLOR,
   terrainPeakColor: (reactiveConfig.value.terrainPeakColor as number | undefined) ?? TERRAIN_PEAK_COLOR,
+  treeSizeScale: (reactiveConfig.value.treeSizeScale as number | undefined) ?? TREE_SIZE_SCALE,
+  treeSizeVariation: (reactiveConfig.value.treeSizeVariation as number | undefined) ?? TREE_SIZE_VARIATION,
   spawnId: SPAWN_ID,
   spawnVisibility: spawnVisibility.value,
   terrainSpawnId: SPAWN_ID_TERRAIN,
@@ -348,6 +358,8 @@ const registerWorldElementProperties = () => {
     schema: {
       treesGroundColor: { color: true, label: 'Ground Color' },
       treeDensity: densityControl,
+      treeSizeScale: { min: 0.1, max: 5, step: 0.1, label: 'Size Scale' },
+      treeSizeVariation: { min: 0, max: 1, step: 0.05, label: 'Size Variation' },
     },
     getValue: (path) => reactiveConfig.value[path],
     updateValue: (path, value) => {
@@ -359,7 +371,9 @@ const registerWorldElementProperties = () => {
     type: 'spawn',
     schema: {
       grassGroundColor: { color: true, label: 'Ground Color' },
+      grassColor: { color: true, label: 'Grass Color' },
       grassDensity: densityControl,
+      grassBladeScale: { min: 0.5, max: 8, step: 0.5, label: 'Blade Scale' },
     },
     getValue: (path) => reactiveConfig.value[path],
     updateValue: (path, value) => {
@@ -378,6 +392,8 @@ const buildApplyWorldCaseOptions = (worldCase: WorldCase) => ({
   groundColor: getGroundColor(worldCase),
   terrainBaseColor: (reactiveConfig.value.terrainBaseColor as number | undefined) ?? TERRAIN_BASE_COLOR,
   terrainPeakColor: (reactiveConfig.value.terrainPeakColor as number | undefined) ?? TERRAIN_PEAK_COLOR,
+  treeSizeScale: (reactiveConfig.value.treeSizeScale as number | undefined) ?? TREE_SIZE_SCALE,
+  treeSizeVariation: (reactiveConfig.value.treeSizeVariation as number | undefined) ?? TREE_SIZE_VARIATION,
   spawnId: SPAWN_ID,
 });
 
@@ -414,6 +430,19 @@ watch(() => reactiveConfig.value.treesGroundColor, rebuildIfReady);
 watch(() => reactiveConfig.value.grassGroundColor, rebuildIfReady);
 watch(() => reactiveConfig.value.terrainBaseColor, rebuildIfReady);
 watch(() => reactiveConfig.value.terrainPeakColor, rebuildIfReady);
+watch(() => reactiveConfig.value.treeSizeScale, rebuildIfReady);
+watch(() => reactiveConfig.value.treeSizeVariation, rebuildIfReady);
+watch(() => reactiveConfig.value.grassColor, (newColor) => {
+  if (sharedGrassMaterial) {
+    (sharedGrassMaterial as THREE.MeshPhysicalMaterial).color.set((newColor as number | undefined) ?? GRASS_COLOR);
+  }
+});
+watch(() => reactiveConfig.value.grassBladeScale, () => {
+  if (!sharedGrassGeometry) return;
+  sharedGrassGeometry.dispose();
+  sharedGrassGeometry = createGrassBladeGeometry((reactiveConfig.value.grassBladeScale as number | undefined) ?? GRASS_BLADE_SCALE);
+  rebuildIfReady();
+});
 watch(() => reactiveConfig.value.chunkSize, rebuildIfReady);
 watch(() => reactiveConfig.value.viewRadius, rebuildIfReady);
 
