@@ -89,7 +89,7 @@ export const defaultModelOptions: ModelOptions = {
 export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
   const clock = new THREE.Clock();
   let delta = 0;
-  let frame = 0;
+  let simulationFrame = 0;
   let frameRate = 1 / 60;
   const { renderer, scene, camera, world } = await getEnvironment(canvas);
   let composer: EffectComposer | null = null;
@@ -167,16 +167,17 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     function runAnimation() {
       if (stats?.start && route) stats.start(route);
       delta = clock.getDelta();
-      frame = requestAnimationFrame(runAnimation);
+      requestAnimationFrame(runAnimation);
 
       accumulator += delta;
       if (accumulator < frameRate) return;
       accumulator -= frameRate;
+      simulationFrame += 1;
 
       world.step();
 
       beforeTimeline();
-      animateTimeline(timeline, frame, undefined, { enableAutoRemoval: true });
+      animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true });
       afterTimeline();
 
       if (orbit) {

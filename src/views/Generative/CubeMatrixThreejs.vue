@@ -7,7 +7,7 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
     let amountX = 3
@@ -18,18 +18,18 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+    statsElement.value as unknown as HTMLElement,
+  ), statsElement.value!;
 })
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
   const config = {
     size: 10,
     gap: 2,
     amplitude: 8,
     speed: 10,
   }
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {
     size: { min: 1, max: 100 },
     gap: { min: 1, max: 10 },
@@ -75,13 +75,13 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     
     const cubes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>[] = []; // Array to hold the cubes
     for (let i = 0; i < amountX; i++) {
-      for (let j = 0; j < amountY; j++) {
+      for (let index = 0; index < amountY; index++) {
         // Create a cube
         const geometry = new THREE.BoxGeometry(size, size, size);
         const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
         const cube = new THREE.Mesh(geometry, material);
         cube.position.x = i * (size + gap * 2);
-        cube.position.y = j * (size + gap * 2);
+        cube.position.y = index * (size + gap * 2);
         scene.add(cube);
         cubes.push(cube);
       }
@@ -97,10 +97,10 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
       const time = Date.now() * 0.0001 * config.speed; // Adjust speed of the wave
 
       for (let i = 0; i < amountX; i++) {
-        for (let j = 0; j < amountY; j++) {
-          const cube = cubes[i * amountY + j];
+        for (let index = 0; index < amountY; index++) {
+          const cube = cubes[i * amountY + index];
           const horizontal = amountX / 2 > i ? i : -i;
-          const vertical = amountY / 2 > j ? j : -j;
+          const vertical = amountY / 2 > index ? index : -index;
           const pos = Math.sin(vertical) + Math.sin(horizontal) + Math.sin(time) * (config.amplitude / 10);
           cube.scale.set(pos, pos, pos);
         }
@@ -121,7 +121,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>
 

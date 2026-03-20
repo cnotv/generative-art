@@ -6,27 +6,27 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { useRoute } from 'vue-router';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 
 onMounted(() => {
   new P5((p: P5) => init(
     p,
-    statsEl.value as unknown as HTMLElement,
+    statsElement.value as unknown as HTMLElement,
     canvas.value as unknown as HTMLCanvasElement,
-  ), statsEl.value!);
+  ), statsElement.value!);
 })
 
-const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
-  let offsetX = -50;
-  let offsetY = -220;
+const init = (p: P5, statsElement: HTMLElement, canvas: HTMLCanvasElement): void => {
+  const offsetX = -50;
+  const offsetY = -220;
     
   const config = {
     size: 25,
     gap: 1.5
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {
     size: { min: 10, max: 50 },
     gap: { min: 1, max: 3 }
@@ -75,6 +75,6 @@ const init = (p: P5, statsEl: HTMLElement, canvas: HTMLCanvasElement): void => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

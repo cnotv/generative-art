@@ -10,7 +10,7 @@ import { getBall } from "@webgamekit/threejs";
 import { times } from "@/utils/lodash";
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 
@@ -19,12 +19,12 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     directional: {
       enabled: true,
@@ -36,7 +36,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       intensity: 2,
     },
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => {
     setup();
   });
@@ -112,6 +112,6 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

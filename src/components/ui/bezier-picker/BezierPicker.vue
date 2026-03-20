@@ -31,7 +31,7 @@ const emit = defineEmits<{ "update:modelValue": [value: EasingName] }>();
 // Internal mutable control points — synced from modelValue, also draggable
 const cp1 = ref({ x: 0.5, y: 0.5 });
 const cp2 = ref({ x: 0.5, y: 0.5 });
-const svgRef = ref<SVGSVGElement | null>(null);
+const svgReference = ref<SVGSVGElement | null>(null);
 const dragging = ref<1 | 2 | null>(null);
 
 const syncFromPreset = (name: EasingName) => {
@@ -64,8 +64,8 @@ const curvePath = computed(() =>
 );
 
 const getPointerInSvg = (event: MouseEvent | TouchEvent): { x: number; y: number } | null => {
-  if (!svgRef.value) return null;
-  const rect = svgRef.value.getBoundingClientRect();
+  if (!svgReference.value) return null;
+  const rect = svgReference.value.getBoundingClientRect();
   // The chart area spans [5, 105] px (viewBox offset −5) → map to [0, 100]
   const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
   const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY;
@@ -126,7 +126,7 @@ onUnmounted(() => {
 
     <!-- Bezier graph: viewBox shows chart [0..100]×[0..100] with padding for out-of-range handles -->
     <svg
-      ref="svgRef"
+      ref="svgReference"
       class="bezier-picker__svg"
       viewBox="-5 -30 110 160"
       xmlns="http://www.w3.org/2000/svg"

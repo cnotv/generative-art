@@ -16,7 +16,7 @@ import {
   disableZoomPrevention,
 } from "@/utils/ui";
 import { config, setupConfig, configControls, textureAreaControls } from "./config";
-import { registerCameraProperties as registerCameraPropertiesUtil } from "@/utils/cameraProperties";
+import { registerCameraProperties as registerCameraPropertiesUtility } from "@/utils/cameraProperties";
 import { registerLightProperties } from "@/utils/lightProperties";
 import { registerTextureAreaProperties } from "@/utils/textureAreaProperties";
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
@@ -46,7 +46,7 @@ type LightObject = { color: { getHex: () => number; set: (v: number) => void }; 
 const uiStore = useUiStore();
 const fontName = "goomba-runner-font";
 const shouldClearObstacles = ref(false);
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { originalViewport, preventZoomStyleElement } = enableZoomPrevention();
@@ -156,8 +156,8 @@ const elementPropertiesStore = useElementPropertiesStore();
 const { unregisterElementProperties, clearAllElementProperties } = elementPropertiesStore;
 const textureStore = useTextureGroupsStore();
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  stats.init(route, statsEl);
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
+  stats.init(route, statsElement);
   const createScene = async () => {
     initializeAudio();
     const { animate, setup, world, scene, getDelta, camera } = await getTools({
@@ -174,11 +174,11 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       orbit.target.y = 35;
       orbit.update();
     }
-    registerCameraPropertiesUtil({ camera, orbit });
+    registerCameraPropertiesUtility({ camera, orbit });
 
     const elementVisibility = new Map<string, boolean>();
 
-    let sceneHandlers: { onToggleVisibility: (name: string) => void; onRemove: (name: string) => void };
+    let sceneHandlers: { onToggleVisibility: (name: string) => void; onRemove: (name: string) => void } = { onToggleVisibility: () => {}, onRemove: () => {} };
 
     const textureAreaNames = new Set(config.backgrounds.textureAreaLayers.map(l => l.name));
     // Names hidden from the elements panel (ephemeral backgrounds, grouped areas)
@@ -229,10 +229,10 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           scene.children.filter(c => c.name === name).forEach(m => { m.visible = isHidden; });
           elementVisibility.set(name, !isHidden);
         } else {
-          const obj = scene.getObjectByName(name);
-          if (!obj) return;
-          obj.visible = !obj.visible;
-          elementVisibility.set(name, !obj.visible);
+          const object = scene.getObjectByName(name);
+          if (!object) return;
+          object.visible = !object.visible;
+          elementVisibility.set(name, !object.visible);
         }
         refreshElements();
       },
@@ -241,8 +241,8 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
           scene.children.filter(c => c.name === name).forEach(m => scene.remove(m));
           elementVisibility.delete(name);
         } else {
-          const obj = scene.getObjectByName(name);
-          if (obj) scene.remove(obj);
+          const object = scene.getObjectByName(name);
+          if (object) scene.remove(object);
           elementVisibility.delete(name);
           unregisterElementProperties(name);
         }
@@ -392,7 +392,7 @@ onMounted(() => {
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
+      (statsElement.value as unknown) as HTMLElement
     );
   };
   initInstance();
@@ -415,7 +415,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas" tabindex="0" style="position: relative; z-index: 0; outline: none"></canvas>
   <StartScreen v-if="isGameStart" @start="handleStartGame" />
   <GameOver v-if="isGameOver" @restart="handleRestartGame" />

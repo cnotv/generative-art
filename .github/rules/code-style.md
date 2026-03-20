@@ -69,6 +69,10 @@
 
 - **Always add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
 
+## Accessibility
+
+- **Always add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
+
 ## CSS Conventions
 
 - **BEM methodology**: Use Block__Element--Modifier naming for all CSS classes
@@ -77,6 +81,13 @@
 - **Light and dark theme**: Always provide both light and dark mode colors. Define both in `src/assets/styles/_variables.scss` under `.dark / [data-theme="dark"]` and `@media (prefers-color-scheme: dark)`. Never add dark-mode overrides inside a component's `<style scoped>` — use CSS custom properties so theming is centralized.
 - **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
 - **No `!important`**: Never use `!important` in CSS unless it is in a utility class specifically designed to override styles (e.g., vendor overrides in `vendor.scss`). If a style isn't applying, fix the specificity or selector instead.
+
+## DRY and KISS Principles
+
+- **Don't Repeat Yourself (DRY)**: Extract shared logic into reusable functions, composables, or utilities. If the same pattern appears more than once, abstract it into a shared helper
+- **Keep It Simple, Stupid (KISS)**: Prefer the simplest solution that solves the problem. Avoid over-engineering, unnecessary abstractions, or premature optimization
+- **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
+- **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 
 ## DRY and KISS Principles
 

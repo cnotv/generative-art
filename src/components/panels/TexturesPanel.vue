@@ -21,7 +21,7 @@ interface TextureGroup {
   showWireframe?: boolean;
 }
 
-interface Props {
+interface Properties {
   textureGroups: TextureGroup[];
   selectedGroupId: string | null;
   autoUpdate?: boolean;
@@ -39,16 +39,16 @@ interface Emits {
   (e: "manualUpdate"): void;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Properties>(), {
   autoUpdate: true,
 });
 const emit = defineEmits<Emits>();
 
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const addToGroupInputRefs = ref<Record<string, HTMLInputElement | null>>({});
+const fileInputReference = ref<HTMLInputElement | null>(null);
+const addToGroupInputReferences = ref<Record<string, HTMLInputElement | null>>({});
 
 const handleAddClick = () => {
-  fileInputRef.value?.click();
+  fileInputReference.value?.click();
 };
 
 const handleFileChange = (event: Event) => {
@@ -56,7 +56,7 @@ const handleFileChange = (event: Event) => {
 };
 
 const handleAddTextureToGroup = (groupId: string) => {
-  const input = addToGroupInputRefs.value[groupId];
+  const input = addToGroupInputReferences.value[groupId];
   input?.click();
 };
 
@@ -64,8 +64,8 @@ const handleGroupFileChange = (groupId: string, event: Event) => {
   emit("addTexture", groupId, event);
 };
 
-const setAddToGroupRef = (groupId: string, el: unknown) => {
-  addToGroupInputRefs.value[groupId] = el as HTMLInputElement | null;
+const setAddToGroupReference = (groupId: string, element: unknown) => {
+  addToGroupInputReferences.value[groupId] = element as HTMLInputElement | null;
 };
 </script>
 
@@ -88,7 +88,7 @@ const setAddToGroupRef = (groupId: string, el: unknown) => {
     </div>
 
     <input
-      ref="fileInputRef"
+      ref="fileInputReference"
       type="file"
       accept="image/*"
       style="display: none"
@@ -164,7 +164,7 @@ const setAddToGroupRef = (groupId: string, el: unknown) => {
             <Plus class="textures-panel__variant-add-icon" />
           </button>
           <input
-            :ref="(el) => setAddToGroupRef(group.id, el)"
+            :ref="(el) => setAddToGroupReference(group.id, el)"
             type="file"
             accept="image/*"
             style="display: none"

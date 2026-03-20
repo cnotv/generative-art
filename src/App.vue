@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { generatedRoutes } from "@/config/router";
 import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
 import GlobalNavigation from "@/components/GlobalNavigation.vue";
 import { usePanelsStore } from "@/stores/panels";
+import { useSceneConfigStore } from "@/stores/sceneConfig";
 
 const router = useRouter();
 const route = useRoute();
 
 const panelsStore = usePanelsStore();
 panelsStore.initRouteSync();
+
+const sceneConfigStore = useSceneConfigStore();
+watchEffect(() => {
+  document.body.style.userSelect = sceneConfigStore.getValue("global.textSelection") ? "" : "none";
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyPress);
@@ -55,11 +61,11 @@ const handleKeyPress = (event: KeyboardEvent) => {
   }
 };
 
-const toggleQuery = (param: string | string[]) => {
+const toggleQuery = (parameter: string | string[]) => {
   const { path, query } = router.currentRoute.value;
-  const params = typeof param === "string" ? [param] : param;
+  const params = typeof parameter === "string" ? [parameter] : parameter;
   const newQuery = params.reduce(
-    (acc, key) => ({ ...acc, [key]: query[key] === "true" ? undefined : "true" }),
+    (accumulator, key) => ({ ...accumulator, [key]: query[key] === "true" ? undefined : "true" }),
     {}
   );
   router.push({ path, query: { ...query, ...newQuery } });
@@ -96,6 +102,10 @@ const handleStopRecording = () => {
 </template>
 
 <style>
+body {
+  background-color: var(--color-background);
+}
+
 canvas {
   width: 100%;
   height: 100%;

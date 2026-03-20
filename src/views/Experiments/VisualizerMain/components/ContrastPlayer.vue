@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 
-interface Props {
+interface Properties {
   songTitle: string;
   artist: string;
   artistLink: string;
@@ -92,7 +92,7 @@ interface Props {
   audioSrc?: string;
 }
 
-withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Properties>(), {
   showAudio: false,
   audioSrc: ''
 });

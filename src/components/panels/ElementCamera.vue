@@ -14,13 +14,13 @@ import { useCameraConfigStore } from '@/stores/cameraConfig';
 import { useElementPropertiesStore } from '@/stores/elementProperties';
 import { storeToRefs } from 'pinia';
 
-interface Props {
+interface Properties {
   isRecording?: boolean;
   minDurationMs?: number;
   maxDurationMs?: number;
 }
 
-defineProps<Props>();
+defineProps<Properties>();
 
 const emit = defineEmits<{
   start: [durationMs: number];

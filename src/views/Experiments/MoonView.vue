@@ -9,7 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import moon from '@/assets/images/textures/moon.jpg';
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -21,11 +21,11 @@ onUnmounted(() => {
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+    statsElement.value as unknown as HTMLElement,
+  ), statsElement.value!;
 })
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
   const config = {
     size: 40,
     speed: 2,
@@ -42,7 +42,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     fill: [0, 0, 255],
     light: [255, 255, 255],
   }
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {
     size: {  },
     speed: {  },
@@ -130,7 +130,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>
 

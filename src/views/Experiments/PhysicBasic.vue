@@ -9,7 +9,7 @@ import { stats } from "@/utils/stats";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -47,8 +47,8 @@ const createGround = (
   RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  let collider = world.createCollider(colliderDesc);
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
+  const collider = world.createCollider(colliderDesc);
 
   return { ground, collider };
 };
@@ -70,15 +70,15 @@ const createCube = (
   scene.add(cube);
 
   // Create a dynamic rigid-body.
-  let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
-  let rigidBody = world.createRigidBody(rigidBodyDesc);
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  let colliderDesc = RAPIER.ColliderDesc.cuboid(
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(
     ...(size.map((x) => x * 0.6) as CoordinateTuple)
   );
-  let collider = world.createCollider(colliderDesc, rigidBody);
+  const collider = world.createCollider(colliderDesc, rigidBody);
 
   return { cube, rigidBody, collider };
 };
@@ -86,27 +86,27 @@ const createCube = (
 onMounted(() => {
   init(
     (canvas.value as unknown) as HTMLCanvasElement,
-    (statsEl.value as unknown) as HTMLElement
+    (statsElement.value as unknown) as HTMLElement
   ),
-    statsEl.value!;
+    statsElement.value!;
 });
 
 onUnmounted(() => {
   clearSceneElements();
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     // size: 50,
   };
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => {
     setup();
   });
 
   const setup = async () => {
     await RAPIER.init();
-    let world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
+    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
     const groundSize = [100.0, 0.1, 20.0] as CoordinateTuple;
     const cubeSize = [1.0, 1.0, 1.0] as CoordinateTuple;
     const cubePosition = [0.0, 5.0, 0.0] as CoordinateTuple;
@@ -162,9 +162,9 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
       world.step();
 
       cubes.forEach(({ cube, rigidBody }) => {
-        let position = rigidBody.translation();
+        const position = rigidBody.translation();
         cube.position.set(position.x, position.y, position.z);
-        let rotation = rigidBody.rotation();
+        const rotation = rigidBody.rotation();
         cube.rotation.set(rotation.x, rotation.y, rotation.z);
       });
 
@@ -181,6 +181,6 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { cn } from '@/lib/utilities';
 
 const props = defineProps<{
   modelValue?: string;
@@ -13,7 +12,7 @@ const emit = defineEmits<{
 }>();
 
 const internalValue = ref(props.modelValue ?? '#000000');
-const colorInputRef = ref<HTMLInputElement | null>(null);
+const colorInputReference = ref<HTMLInputElement | null>(null);
 
 watch(
   () => props.modelValue,
@@ -31,47 +30,64 @@ const handleColorChange = (event: Event) => {
 };
 
 const handleClick = () => {
-  if (!props.disabled && colorInputRef.value) {
-    colorInputRef.value.click();
+  if (!props.disabled && colorInputReference.value) {
+    colorInputReference.value.click();
   }
-};
-
-const presetColors = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#000000', '#ffffff',
-];
-
-const selectPreset = (color: string) => {
-  internalValue.value = color;
-  emit('update:modelValue', color);
 };
 </script>
 
 <template>
   <div
-    :class="
-      cn(
-        'flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors',
-        disabled && 'cursor-not-allowed opacity-50',
-        $props.class
-      )
-    "
+    class="color-picker"
+    :class="[$props.class, { 'color-picker--disabled': disabled }]"
     @click="handleClick"
   >
     <div
-      class="h-5 w-5 rounded border flex-shrink-0"
+      class="color-picker__swatch"
       :style="{ backgroundColor: internalValue }"
     />
-    <span class="font-mono text-xs flex-1">{{ internalValue }}</span>
-
-    <!-- Hidden color input that opens native color picker -->
+    <span class="color-picker__hex">{{ internalValue }}</span>
     <input
-      ref="colorInputRef"
+      ref="colorInputReference"
       type="color"
       :value="internalValue"
       :disabled="disabled"
-      class="absolute opacity-0 pointer-events-none w-0 h-0"
+      class="color-picker__input"
       @input="handleColorChange"
     />
   </div>
 </template>
+
+<style scoped>
+.color-picker {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.color-picker--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.color-picker__swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.color-picker__hex {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground));
+}
+
+.color-picker__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+</style>

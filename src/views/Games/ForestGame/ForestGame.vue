@@ -130,7 +130,7 @@ onMounted(async () => {
       remapControlsOptions(bindings);
 
       // Lazy-captured orbit ref to avoid per-frame reactive access
-      let orbitRef: Parameters<typeof cameraFollowPlayer>[3] | null = null;
+      let orbitReference: Parameters<typeof cameraFollowPlayer>[3] | null = null;
 
       const timelineManager = createTimelineManager();
 
@@ -202,8 +202,8 @@ onMounted(async () => {
               animationData,
               movement
             );
-            if (!orbitRef) orbitRef = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3];
-            cameraFollowPlayer(camera, player, cameraOffset, orbitRef, ['x', 'z']);
+            if (!orbitReference) orbitReference = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3];
+            cameraFollowPlayer(camera, player, cameraOffset, orbitReference, ['x', 'z']);
           } else {
             updateAnimation({ ...animationData, speed: 5 });
           }

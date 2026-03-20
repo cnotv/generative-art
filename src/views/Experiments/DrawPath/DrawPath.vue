@@ -105,7 +105,7 @@ type SceneState = {
 
 let sceneState: SceneState | null = null;
 let animFrameId: number | null = null;
-let frameRef = 0;
+let frameReference = 0;
 let isPointerDown = false;
 
 const timeline = createTimelineManager();
@@ -117,8 +117,8 @@ const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 // Input helpers
 // ---------------------------------------------------------------------------
 
-const getNdcCoords = (event: MouseEvent | TouchEvent, canvasEl: HTMLCanvasElement): THREE.Vector2 => {
-  const rect = canvasEl.getBoundingClientRect();
+const getNdcCoords = (event: MouseEvent | TouchEvent, canvasElement: HTMLCanvasElement): THREE.Vector2 => {
+  const rect = canvasElement.getBoundingClientRect();
   const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
   const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY;
   return new THREE.Vector2(
@@ -211,11 +211,11 @@ const tryAddWaypoint = (event: MouseEvent | TouchEvent): void => {
   if (!worldPos) return;
 
   // Enforce minimum distance between control waypoints
-  const prev = sceneState.controlWaypoints.at(-1);
-  if (prev) {
-    const dx = worldPos.x - prev.x;
-    const dz = worldPos.z - prev.z;
-    if (Math.sqrt(dx * dx + dz * dz) < MIN_WAYPOINT_DISTANCE) return;
+  const previous = sceneState.controlWaypoints.at(-1);
+  if (previous) {
+    const dx = worldPos.x - previous.x;
+    const dz = worldPos.z - previous.z;
+    if (Math.hypot(dx, dz) < MIN_WAYPOINT_DISTANCE) return;
   }
 
   const groundY = getFollowerGroundY();
@@ -235,9 +235,9 @@ const onPointerDown = (event: MouseEvent | TouchEvent): void => {
     raycaster.setFromCamera(ndc, sceneState.camera);
     const intersects = raycaster.intersectObjects(sceneState.waypointNodes);
     if (intersects.length > 0) {
-      const idx = sceneState.waypointNodes.indexOf(intersects[0].object as THREE.Mesh);
-      if (idx !== -1) {
-        sceneState.selectedNodeIndex = idx;
+      const index = sceneState.waypointNodes.indexOf(intersects[0].object as THREE.Mesh);
+      if (index !== -1) {
+        sceneState.selectedNodeIndex = index;
         return; // Enter node-drag mode; do not draw
       }
     }
@@ -405,9 +405,9 @@ const applyModeSwitch = async (mode: FollowerMode): Promise<void> => {
 
 watch(() => reactiveConfig.value.mode, applyModeSwitch);
 
-watch(() => sceneConfig.value.scene.backgroundColor, (val) => {
+watch(() => sceneConfig.value.scene.backgroundColor, (value) => {
   if (sceneState?.scene.background instanceof THREE.Color) {
-    sceneState.scene.background.setHex(val);
+    sceneState.scene.background.setHex(value);
   }
 });
 
@@ -435,7 +435,7 @@ watch(() => reactiveConfig.value.showNodes, (show) => {
 
 const runAnimation = (state: SceneState): void => {
   animFrameId = requestAnimationFrame(() => runAnimation(state));
-  frameRef++;
+  frameReference++;
   // Measure delta first so we can sync the physics timestep to the actual render rate.
   // Without this, world.step() always advances by its fixed 1/60 s regardless of frame time,
   // causing physics to run faster at high refresh rates and slower on frame-rate spikes.
@@ -448,7 +448,7 @@ const runAnimation = (state: SceneState): void => {
   // Tick the timeline before movement so the mixer runs first and position/rotation
   // set by the movement tick is the last write before render (prevents animation
   // keyframes from overriding the facing direction).
-  animateTimeline(timeline, frameRef);
+  animateTimeline(timeline, frameReference);
 
   const mode = reactiveConfig.value.mode;
   const follower = getActiveFollower(state);

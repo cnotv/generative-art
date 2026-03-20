@@ -47,11 +47,11 @@ const genericFlatConfig = {
   physic: false,
 }
 
-const illustrations = times(3, (i) => times(3, (j) => ({
+const illustrations = times(3, (i) => times(3, (index) => ({
   ...genericFlatConfig,
   texture: flatFlowerImg,
   size: [2.5 * (i * 2 + 1), 3 * (i * 2 + 1), 0],
-  position: [-20 + j * 20, 0, -5 * (i + 2)],
+  position: [-20 + index * 20, 0, -5 * (i + 2)],
 }))).flat();
 
 const setupConfig: SetupConfig = {
@@ -112,14 +112,14 @@ let cameraPreset: any = null; // TODO: Identified issue for tooling block scopin
 
 // Return binding 1 to x for each preset
 const cameraPresetBindings = Object.values(CameraPreset).reduce(
-  (acc, preset, index) => ({ ...acc, [index + 1]: preset }),
+  (accumulator, preset, index) => ({ ...accumulator, [index + 1]: preset }),
   {}
 );
 const cameraSideBindings = Object.values(CameraSide).reduce(
-  (acc, preset) => {
+  (accumulator, preset) => {
     const [capital, ...rest] = preset.replace('camera-', '')
     const key = `Arrow${capital.toUpperCase()}${rest.join('')}`
-    return { ...acc, [key]: preset }
+    return { ...accumulator, [key]: preset }
   },
   {}
 );

@@ -3,6 +3,7 @@ import type { CoordinateTuple } from '@webgamekit/animation';
 export const GLOBAL_SCENE_DEFAULTS = {
   global: {
     frameRate: 60,
+    textSelection: false,
   },
   orbit: {
     disabled: false,

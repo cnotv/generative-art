@@ -8,7 +8,7 @@ import { controls } from '@/utils/control';
 import { stats } from '@/utils/stats';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const animationId = ref(0);
@@ -17,8 +17,8 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+    statsElement.value as unknown as HTMLElement,
+  ), statsElement.value!;
 })
 
 onBeforeUnmount(() => {
@@ -28,12 +28,12 @@ onBeforeUnmount(() => {
   clearSceneElements();
 });
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
   const config = {
     size: 50,
   }
   // Set stats
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
 
   // Set configuration and start setup
   controls.create(config, route, {
@@ -99,7 +99,7 @@ const getCube = (scene: THREE.Scene) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>
 

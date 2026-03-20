@@ -6,6 +6,13 @@ export interface SceneElement {
   type: string;
   hidden?: boolean;
   groupId?: string;
+  spawnId?: string;
+}
+
+export interface SpawnEntry {
+  id: string;
+  label: string;
+  hidden?: boolean;
 }
 
 export interface DebugSceneHandlers {
@@ -16,7 +23,9 @@ export interface DebugSceneHandlers {
 export const useDebugSceneStore = defineStore('debugScene', () => {
   const sceneElements = ref<SceneElement[]>([]);
   const sceneGroups = ref<Record<string, string>>({});
+  const spawns = ref<SpawnEntry[]>([]);
   const handlers = ref<DebugSceneHandlers | null>(null);
+  const spawnHandlers = ref<Record<string, () => void>>({});
 
   const setSceneElements = (
     elements: SceneElement[],
@@ -45,9 +54,30 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     );
   };
 
+  const registerSpawn = (id: string, label: string, onToggleVisibility?: () => void) => {
+    spawns.value = [...spawns.value.filter(s => s.id !== id), { id, label }];
+    if (onToggleVisibility) {
+      spawnHandlers.value = { ...spawnHandlers.value, [id]: onToggleVisibility };
+    }
+  };
+
+  const toggleSpawnVisibility = (id: string) => {
+    spawns.value = spawns.value.map(s =>
+      s.id === id ? { ...s, hidden: !s.hidden } : s
+    );
+    spawnHandlers.value[id]?.();
+  };
+
+  const unregisterSpawn = (id: string) => {
+    spawns.value = spawns.value.filter(s => s.id !== id);
+    const { [id]: _removed, ...rest } = spawnHandlers.value;
+    spawnHandlers.value = rest;
+  };
+
   const clearSceneElements = () => {
     sceneElements.value = [];
     sceneGroups.value = {};
+    spawns.value = [];
     handlers.value = null;
   };
 
@@ -62,8 +92,12 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   return {
     sceneElements,
     sceneGroups,
+    spawns,
     setSceneElements,
     registerSceneElements,
+    registerSpawn,
+    unregisterSpawn,
+    toggleSpawnVisibility,
     clearSceneElements,
     handleToggleVisibility,
     handleRemove,

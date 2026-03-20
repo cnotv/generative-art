@@ -11,12 +11,12 @@ interface PanelButton {
   label: string;
 }
 
-interface Props {
+interface Properties {
   showTextures?: boolean;
   showConfig?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Properties>(), {
   showTextures: false,
   showConfig: false,
 });

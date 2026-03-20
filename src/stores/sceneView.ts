@@ -138,6 +138,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     const sceneChildren: SceneElement[] = scene.children
       .filter(child => !cachedMeshNames.has(child.name))
+      .filter(child => !child.userData?.spawnId)
       .map(child => {
         const groupId = textureGroups.find(g =>
           child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
@@ -546,6 +547,23 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     updateSceneElements();
   };
 
+  const unregisterTextureArea = (areaName: string) => {
+    const scene = threeScene.value;
+    if (scene) {
+      getAreaMeshes(areaName).forEach(mesh => scene.remove(mesh));
+    }
+    const { [areaName]: _removed, ...remainingCache } = areaMeshCache.value;
+    areaMeshCache.value = remainingCache;
+    const { [areaName]: _removedConfig, ...remainingConfigs } = textureAreaConfigs.value;
+    textureAreaConfigs.value = remainingConfigs;
+    textureStore.$patch({
+      groups: textureStore.groups.filter(g => g.id !== areaName),
+    });
+    textureAreaDefinitions.value = textureAreaDefinitions.value.filter(a => a.name !== areaName);
+    elementPropertiesStore.unregisterElementProperties(areaName);
+    updateSceneElements();
+  };
+
   const init = async (canvas: HTMLCanvasElement, config: SetupConfig, options?: InitOptions) => {
     playMode.value = options?.playMode ?? false;
 
@@ -840,6 +858,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     init,
     initTextureGroups,
     registerTextureAreas,
+    unregisterTextureArea,
     cleanup,
     getGroupConfig,
     regenerateGroup,

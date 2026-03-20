@@ -18,7 +18,7 @@ import {
 import MinimalPlayer from "./components/MinimalPlayer.vue";
 import ContrastPlayer from "./components/ContrastPlayer.vue";
 
-const statsEl = ref(null);
+const statsElement = ref(null);
 const canvas = ref(null);
 const audioElement = ref<HTMLAudioElement>();
 const route = useRoute();
@@ -67,7 +67,7 @@ const currentAudioSource = ref<'song' | 'microphone' | 'selected-output'>('song'
 
 // Custom dropdown state
 const isDropdownOpen = ref(false);
-const dropdownRef = ref<HTMLElement>();
+const dropdownReference = ref<HTMLElement>();
 
 // Get available visualizer names for dropdown
 const availableVisualizers = computed(() => {
@@ -208,7 +208,7 @@ const selectVisualizer = (visualizerValue: string) => {
 };
 
 const closeDropdown = (event: Event) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+  if (dropdownReference.value && !dropdownReference.value.contains(event.target as Node)) {
     isDropdownOpen.value = false;
   }
 };
@@ -223,7 +223,7 @@ onMounted(() => {
   initInstance = () => {
     init(
       (canvas.value as unknown) as HTMLCanvasElement,
-      (statsEl.value as unknown) as HTMLElement
+      (statsElement.value as unknown) as HTMLElement
     );
   };
 
@@ -254,8 +254,8 @@ const config = {
   },
 };
 
-const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
-  stats.init(route, statsEl);
+const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
+  stats.init(route, statsElement);
   controls.create(config, route, {}, () => createScene());
   if (audioElement.value) {
     setupAudio(audioElement.value);
@@ -300,7 +300,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
                 child.type !== "AmbientLight" &&
                 child.type !== "HemisphereLight"
             );
-            objectsToRemove.forEach((obj) => scene.remove(obj));
+            objectsToRemove.forEach((object) => scene.remove(object));
           }
         };
 
@@ -346,7 +346,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 
   <div class="header">
@@ -381,7 +381,7 @@ const init = async (canvas: HTMLCanvasElement, statsEl: HTMLElement) => {
     />
 
     <!-- Custom Visualizer selector -->
-    <div class="visualizer" ref="dropdownRef">
+    <div class="visualizer" ref="dropdownReference">
       <button
         @click="toggleDropdown"
         class="visualizer__button"

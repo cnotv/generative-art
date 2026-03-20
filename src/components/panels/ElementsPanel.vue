@@ -5,6 +5,7 @@ import SchemaControls from "./ConfigControls.vue";
 import ElementItem from "./ElementItem.vue";
 import ElementCamera from "./ElementCamera.vue";
 import ElementGroup from "./ElementGroup.vue";
+import ElementSpawn from "./ElementSpawn.vue";
 import IconButton from "@/components/IconButton.vue";
 import { Button } from "@/components/ui/button";
 import { Box, Camera, CheckSquare, Image, Square } from "lucide-vue-next";
@@ -17,7 +18,7 @@ import type { SceneElement } from "@/stores/debugScene";
 import { ELEMENT_CATEGORIES, getElementCategory } from "./elementUtilities";
 import type { ElementCategory } from "./elementUtilities";
 
-interface Props {
+interface Properties {
   isRecording?: boolean;
   minDurationMs?: number;
   maxDurationMs?: number;
@@ -28,11 +29,11 @@ interface Emits {
   (e: "stop"): void;
 }
 
-defineProps<Props>();
+defineProps<Properties>();
 const emit = defineEmits<Emits>();
 
 const debugSceneStore = useDebugSceneStore();
-const { sceneElements, sceneGroups } = storeToRefs(debugSceneStore);
+const { sceneElements, sceneGroups, spawns } = storeToRefs(debugSceneStore);
 
 const elementPropertiesStore = useElementPropertiesStore();
 const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore);
@@ -63,7 +64,7 @@ const hideAllCategories = () => {
 };
 
 const isElementVisible = (element: SceneElement): boolean =>
-  !hiddenCategories.value.has(getElementCategory(element));
+  !hiddenCategories.value.has(getElementCategory(element)) && element.spawnId === undefined;
 
 const triggerFileUpload = (onchange: (event: Event) => void) => {
   const input = document.createElement("input");
@@ -124,12 +125,12 @@ const grouped = computed(() => {
   const ungrouped: SceneElement[] = [];
   const meshGroups = new Map<string, SceneElement[]>();
 
-  filtered.forEach((el) => {
-    if (el.groupId !== undefined) {
-      const existing = meshGroups.get(el.groupId) ?? [];
-      meshGroups.set(el.groupId, [...existing, el]);
+  filtered.forEach((element) => {
+    if (element.groupId !== undefined) {
+      const existing = meshGroups.get(element.groupId) ?? [];
+      meshGroups.set(element.groupId, [...existing, element]);
     } else {
-      ungrouped.push(el);
+      ungrouped.push(element);
     }
   });
 
@@ -137,7 +138,7 @@ const grouped = computed(() => {
 });
 
 const hasContent = computed(
-  () => sceneElements.value.length > 0 || textureStore.groups.length > 0
+  () => sceneElements.value.length > 0 || textureStore.groups.length > 0 || spawns.value.length > 0
 );
 
 const hasExpandedSchema = computed(
@@ -237,6 +238,18 @@ const hasExpandedSchema = computed(
         :is-selected="selectedElementName === groupId"
 
         @toggle="handleGroupToggle(groupId)"
+      />
+
+      <!-- Spawns -->
+      <ElementSpawn
+        v-for="spawn in spawns"
+        :key="spawn.id"
+        :spawn-id="spawn.id"
+        :label="spawn.label"
+        :is-expanded="expandedName === spawn.id"
+        :is-selected="selectedElementName === spawn.id"
+        :hidden="spawn.hidden ?? false"
+        @toggle="expandedName === spawn.id ? (expandedName = null) : (expandedName = spawn.id, openElementProperties(spawn.id))"
       />
     </div>
   </GenericPanel>

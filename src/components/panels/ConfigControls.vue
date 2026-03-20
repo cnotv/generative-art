@@ -26,10 +26,10 @@ const props = defineProps<{
   nested?: boolean;
 }>();
 
-const isControlSchema = (obj: any): obj is ControlSchema => {
-  if (typeof obj !== "object" || obj === null) return false;
-  const keys = Object.keys(obj);
-  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "bezier", "label", "options", "component", "direction", "callback", "sectionStart"];
+const isControlSchema = (object: any): object is ControlSchema => {
+  if (typeof object !== "object" || object === null) return false;
+  const keys = Object.keys(object);
+  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "bezier", "label", "options", "component", "direction", "callback", "sectionStart", "queryParam"];
 
   // Empty object is a control schema (will be rendered as input)
   if (keys.length === 0) return true;
@@ -43,7 +43,7 @@ const isControlSchema = (obj: any): obj is ControlSchema => {
   // BUT allow min/max/step to be objects (for per-coordinate values in CoordinateInput)
   const hasNestedObjects = keys.some((k) => {
     if (k === 'min' || k === 'max' || k === 'step') return false; // Allow these to be objects
-    const value = obj[k];
+    const value = object[k];
     return typeof value === "object" && value !== null && !Array.isArray(value);
   });
 
@@ -54,7 +54,7 @@ const isControlSchema = (obj: any): obj is ControlSchema => {
 const formatLabel = (key: string): string => {
   return key
     .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (str) => str.toUpperCase())
+    .replace(/^./, (string_) => string_.toUpperCase())
     .trim();
 };
 
@@ -85,9 +85,9 @@ const handleSliderUpdate = (path: string, value: number[]) => {
 };
 
 const handleInputUpdate = (path: string, value: string | number) => {
-  const numValue = typeof value === "string" ? parseFloat(value) : value;
-  if (!isNaN(numValue)) {
-    props.onUpdate(path, numValue);
+  const numberValue = typeof value === "string" ? parseFloat(value) : value;
+  if (!isNaN(numberValue)) {
+    props.onUpdate(path, numberValue);
   }
 };
 
@@ -109,7 +109,7 @@ const getColorHex = (path: string): string => {
   const value = props.getValue(path);
   if (typeof value === 'number') {
     // Convert integer to hex string (e.g., 0x98887d -> #98887d)
-    return '#' + value.toString(16).padStart(6, '0');
+    return `#${  value.toString(16).padStart(6, '0')}`;
   }
   return value || '#000000';
 };
@@ -186,14 +186,15 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
       </template>
 
       <template v-else-if="control.schema.color !== undefined">
-        <label :for="control.path" class="text-xs font-medium">
-          {{ control.schema.label ?? formatLabel(control.key) }}
-        </label>
-        <ColorPicker
-          :model-value="getColorHex(control.path)"
-          @update:model-value="handleColorUpdate(control.path, $event)"
-          class="h-7"
-        />
+        <div class="config-controls__color-row">
+          <label :for="control.path" class="text-xs font-medium">
+            {{ control.schema.label ?? formatLabel(control.key) }}
+          </label>
+          <ColorPicker
+            :model-value="getColorHex(control.path)"
+            @update:model-value="handleColorUpdate(control.path, $event)"
+          />
+        </div>
       </template>
 
       <template v-else-if="control.schema.checkbox !== undefined">
@@ -363,6 +364,12 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 .config-controls__inline-input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+.config-controls__color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .config-controls__item--section {

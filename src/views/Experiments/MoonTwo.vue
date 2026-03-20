@@ -10,7 +10,7 @@ import moonImage from '@/assets/images/textures/moon.jpg';
 import spaceImage from '@/assets/images/generic/space.png';
 import { useDebugSceneStore } from '@/stores/debugScene';
 
-const statsEl = ref(null)
+const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute();
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
@@ -22,11 +22,11 @@ onUnmounted(() => {
 onMounted(() => {
   init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsEl.value as unknown as HTMLElement,
-  ), statsEl.value!;
+    statsElement.value as unknown as HTMLElement,
+  ), statsElement.value!;
 })
 
-const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
   const config = {
     size: 20,
     speed: 1,
@@ -45,7 +45,7 @@ const init = (canvas: HTMLCanvasElement, statsEl: HTMLElement, ) => {
     light: [255, 255, 255],
     cameraDistance: 100,
   }
-  stats.init(route, statsEl);
+  stats.init(route, statsElement);
   controls.create(config, route, {
     size: {  },
     speed: {  },
@@ -187,7 +187,7 @@ const loadMoon = (
 </script>
 
 <template>
-  <div ref="statsEl"></div>
+  <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>
 
