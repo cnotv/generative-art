@@ -534,11 +534,15 @@ onMounted(async () => {
         category: "user-input",
         action: () => {
           const isFreeCamera = reactiveConfig.value.freeCamera as boolean;
+          const autoWalk = reactiveConfig.value.autoWalk as boolean;
           const targetRotation = getRotation(currentActions, true);
           const moveSpeed = ((reactiveConfig.value.movementSpeed as number | undefined) ?? game.distance) * MOVEMENT_SPEED_SCALE;
-          const isMoving = (reactiveConfig.value.autoWalk as boolean) || targetRotation !== null;
-          if (!isFreeCamera) applyPlayerMove(targetRotation, moveSpeed, isMoving);
-          else if (isMoving) applyFreeCameraMovement(moveSpeed, targetRotation);
+          if (isFreeCamera) {
+            applyPlayerMove(null, moveSpeed, autoWalk);
+            if (targetRotation !== null) applyFreeCameraMovement(moveSpeed, targetRotation);
+          } else {
+            applyPlayerMove(targetRotation, moveSpeed, autoWalk || targetRotation !== null);
+          }
         },
       });
 
