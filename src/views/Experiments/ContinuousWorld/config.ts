@@ -53,10 +53,10 @@ export const setupConfig: SetupConfig = {
   ground: false,
 };
 
-export const TREES_GROUND_COLOR = 0x8b7355;
-export const GRASS_GROUND_COLOR = 0x4a7c3f;
-export const TERRAIN_BASE_COLOR = 0x4a7c3f;
-export const TERRAIN_PEAK_COLOR = 0x8b7355;
+export const TERRAIN_BASE_COLOR = 0x3a6b29;
+export const TERRAIN_PEAK_COLOR = 0x5aaa3f;
+export const TREES_GROUND_COLOR = TERRAIN_PEAK_COLOR;
+export const GRASS_GROUND_COLOR = TERRAIN_PEAK_COLOR;
 export const GRASS_COLOR = 0x33bb33;
 export const GRASS_BLADE_SCALE = 2;
 export const TREE_SIZE_SCALE = 1;
