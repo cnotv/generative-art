@@ -96,6 +96,10 @@ const handleStopRecording = () => {
 </template>
 
 <style>
+body {
+  background-color: var(--color-background);
+}
+
 canvas {
   width: 100%;
   height: 100%;
