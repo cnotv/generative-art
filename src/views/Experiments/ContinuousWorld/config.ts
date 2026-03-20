@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { NoiseConfig, GeneratorConfig, WorldCase } from './types';
 
 export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25];
+export const CAMERA_Y_LERP_SPEED = 2;
 export const CHUNK_UPDATE_FREQUENCY = 0.5;
 export const CHUNK_SIZE = 50;
 export const VIEW_RADIUS = 4;
@@ -54,6 +55,8 @@ export const setupConfig: SetupConfig = {
 
 export const TREES_GROUND_COLOR = 0x8b7355;
 export const GRASS_GROUND_COLOR = 0x4a7c3f;
+export const TERRAIN_BASE_COLOR = 0x4a7c3f;
+export const TERRAIN_PEAK_COLOR = 0x8b7355;
 export const DIRECTIONAL_LIGHT_OFFSET: CoordinateTuple = [50, 100, 50];
 export const AMBIENT_LIGHT_NAME = 'ambient-light';
 export const DIRECTIONAL_LIGHT_NAME = 'directional-light';
@@ -144,8 +147,6 @@ export const baseConfigControls = {
       { value: 'all', label: 'All' },
     ],
   },
-  treesGroundColor: { color: true, label: 'Trees Ground Color' },
-  grassGroundColor: { color: true, label: 'Grass Ground Color' },
 };
 
 export const proceduralConfigControls = {

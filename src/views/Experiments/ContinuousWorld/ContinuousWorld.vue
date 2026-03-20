@@ -35,11 +35,14 @@ import {
   CHUNK_UPDATE_FREQUENCY,
   DEFAULT_WORLD_CASE,
   FORWARD_BIAS,
+  CAMERA_Y_LERP_SPEED,
   TREES_PER_CHUNK,
   MOVEMENT_SPEED_SCALE,
   GRASS_DENSITY_MULTIPLIER,
   TREES_GROUND_COLOR,
   GRASS_GROUND_COLOR,
+  TERRAIN_BASE_COLOR,
+  TERRAIN_PEAK_COLOR,
   DIRECTIONAL_LIGHT_OFFSET,
   AMBIENT_LIGHT_NAME,
   DIRECTIONAL_LIGHT_NAME,
@@ -88,6 +91,8 @@ const defaultConfig = {
   forwardBias: FORWARD_BIAS,
   treesGroundColor: TREES_GROUND_COLOR,
   grassGroundColor: GRASS_GROUND_COLOR,
+  terrainBaseColor: TERRAIN_BASE_COLOR,
+  terrainPeakColor: TERRAIN_PEAK_COLOR,
   worldCase: DEFAULT_WORLD_CASE,
   procedural: {
     seed: noiseConfig.seed,
@@ -280,6 +285,8 @@ const buildChunkOptions = () => ({
   sharedGrassMaterial: sharedGrassMaterial!,
   treesPerChunk: (reactiveConfig.value.treeDensity as number | undefined) ?? TREES_PER_CHUNK,
   groundColor: getGroundColor(reactiveConfig.value.worldCase as WorldCase),
+  terrainBaseColor: (reactiveConfig.value.terrainBaseColor as number | undefined) ?? TERRAIN_BASE_COLOR,
+  terrainPeakColor: (reactiveConfig.value.terrainPeakColor as number | undefined) ?? TERRAIN_PEAK_COLOR,
   spawnId: SPAWN_ID,
   spawnVisibility: spawnVisibility.value,
   terrainSpawnId: SPAWN_ID_TERRAIN,
@@ -308,36 +315,55 @@ const registerWorldSpawns = () => {
   });
 };
 
+const TERRAIN_COLOR_KEYS = ['terrainBaseColor', 'terrainPeakColor'] as const;
+
 const registerWorldElementProperties = () => {
   const elementPropertiesStore = useElementPropertiesStore();
   elementPropertiesStore.registerElementProperties(SPAWN_ID_TERRAIN, {
     title: 'Terrain',
     type: 'spawn',
-    schema: proceduralConfigControls.procedural,
-    getValue: (path) => (reactiveConfig.value.procedural as Record<string, unknown>)?.[path],
+    schema: {
+      terrainBaseColor: { color: true, label: 'Base Color' },
+      terrainPeakColor: { color: true, label: 'Peak Color' },
+      ...proceduralConfigControls.procedural,
+    },
+    getValue: (path) => {
+      if ((TERRAIN_COLOR_KEYS as readonly string[]).includes(path)) return reactiveConfig.value[path];
+      return (reactiveConfig.value.procedural as Record<string, unknown>)?.[path];
+    },
     updateValue: (path, value) => {
-      reactiveConfig.value = {
-        ...reactiveConfig.value,
-        procedural: setNestedValueImmutable(reactiveConfig.value.procedural as Record<string, unknown>, path, value),
-      };
+      if ((TERRAIN_COLOR_KEYS as readonly string[]).includes(path)) {
+        reactiveConfig.value = { ...reactiveConfig.value, [path]: value };
+      } else {
+        reactiveConfig.value = {
+          ...reactiveConfig.value,
+          procedural: setNestedValueImmutable(reactiveConfig.value.procedural as Record<string, unknown>, path, value),
+        };
+      }
     },
   });
   elementPropertiesStore.registerElementProperties(SPAWN_ID_TREES, {
     title: 'Trees',
     type: 'spawn',
-    schema: { treeDensity: densityControl },
-    getValue: (_path) => reactiveConfig.value.treeDensity,
-    updateValue: (_path, value) => {
-      reactiveConfig.value = { ...reactiveConfig.value, treeDensity: value };
+    schema: {
+      treesGroundColor: { color: true, label: 'Ground Color' },
+      treeDensity: densityControl,
+    },
+    getValue: (path) => reactiveConfig.value[path],
+    updateValue: (path, value) => {
+      reactiveConfig.value = { ...reactiveConfig.value, [path]: value };
     },
   });
   elementPropertiesStore.registerElementProperties(SPAWN_ID_GRASS, {
     title: 'Grass',
     type: 'spawn',
-    schema: { grassDensity: densityControl },
-    getValue: (_path) => reactiveConfig.value.grassDensity,
-    updateValue: (_path, value) => {
-      reactiveConfig.value = { ...reactiveConfig.value, grassDensity: value };
+    schema: {
+      grassGroundColor: { color: true, label: 'Ground Color' },
+      grassDensity: densityControl,
+    },
+    getValue: (path) => reactiveConfig.value[path],
+    updateValue: (path, value) => {
+      reactiveConfig.value = { ...reactiveConfig.value, [path]: value };
     },
   });
 };
@@ -350,6 +376,8 @@ const buildApplyWorldCaseOptions = (worldCase: WorldCase) => ({
   sharedGrassMaterial: sharedGrassMaterial!,
   treesPerChunk: (reactiveConfig.value.treeDensity as number | undefined) ?? TREES_PER_CHUNK,
   groundColor: getGroundColor(worldCase),
+  terrainBaseColor: (reactiveConfig.value.terrainBaseColor as number | undefined) ?? TERRAIN_BASE_COLOR,
+  terrainPeakColor: (reactiveConfig.value.terrainPeakColor as number | undefined) ?? TERRAIN_PEAK_COLOR,
   spawnId: SPAWN_ID,
 });
 
@@ -384,6 +412,8 @@ watch(() => reactiveConfig.value.treeDensity, rebuildIfReady);
 watch(() => reactiveConfig.value.grassDensity, rebuildIfReady);
 watch(() => reactiveConfig.value.treesGroundColor, rebuildIfReady);
 watch(() => reactiveConfig.value.grassGroundColor, rebuildIfReady);
+watch(() => reactiveConfig.value.terrainBaseColor, rebuildIfReady);
+watch(() => reactiveConfig.value.terrainPeakColor, rebuildIfReady);
 watch(() => reactiveConfig.value.chunkSize, rebuildIfReady);
 watch(() => reactiveConfig.value.viewRadius, rebuildIfReady);
 
@@ -433,8 +463,12 @@ onMounted(async () => {
         }
         if (!orbitReference) orbitReference = toRaw(store.orbitReference);
         cameraFollowPlayer(camera, playerMesh, CAMERA_OFFSET, orbitReference as Parameters<typeof cameraFollowPlayer>[3], ["x", "z"]);
-        store.cameraConfig.value = {
-          ...(store.cameraConfig.value as Record<string, unknown>),
+        const targetCameraY = playerMesh.position.y + CAMERA_OFFSET[1];
+        const cameraYDiff = targetCameraY - camera.position.y;
+        const cameraYStep = cameraYDiff * Math.abs(cameraYDiff) * CAMERA_Y_LERP_SPEED * getDelta();
+        camera.position.y += Math.abs(cameraYStep) > Math.abs(cameraYDiff) ? cameraYDiff : cameraYStep;
+        store.cameraConfig = {
+          ...(store.cameraConfig as Record<string, unknown>),
           position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
         };
         if (directionalLight) updateDirectionalLight(directionalLight, playerMesh);

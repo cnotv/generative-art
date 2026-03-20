@@ -78,6 +78,8 @@ interface CreateChunkOptions {
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
   groundColor: number;
+  terrainBaseColor?: number;
+  terrainPeakColor?: number;
   spawnId?: string;
   spawnVisibility?: Record<string, boolean>;
   terrainSpawnId?: string;
@@ -107,6 +109,8 @@ export const createChunk = ({
   sharedGrassMaterial,
   treesPerChunk,
   groundColor,
+  terrainBaseColor,
+  terrainPeakColor,
   spawnId,
   spawnVisibility,
   terrainSpawnId,
@@ -118,7 +122,7 @@ export const createChunk = ({
 
   // Case 'terrain' / 'all': procedural terrain heightmap
   const terrain = (worldCase === 'terrain' || worldCase === 'all')
-    ? createTerrainChunk(chunkX, chunkZ, chunkSize, noiseConfig)
+    ? createTerrainChunk(chunkX, chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor)
     : null;
   tagSpawn(terrain, spawnId);
   if (terrain) {
@@ -213,6 +217,8 @@ interface UpdateChunksOptions {
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
   groundColor: number;
+  terrainBaseColor?: number;
+  terrainPeakColor?: number;
   spawnId?: string;
   spawnVisibility?: Record<string, boolean>;
   terrainSpawnId?: string;
@@ -237,6 +243,8 @@ export const updateChunks = ({
   sharedGrassMaterial,
   treesPerChunk,
   groundColor,
+  terrainBaseColor,
+  terrainPeakColor,
   spawnId,
   spawnVisibility,
   terrainSpawnId,
@@ -273,6 +281,8 @@ export const updateChunks = ({
       sharedGrassMaterial,
       treesPerChunk,
       groundColor,
+      terrainBaseColor,
+      terrainPeakColor,
       spawnId,
       spawnVisibility,
       terrainSpawnId,
@@ -292,6 +302,8 @@ interface RebuildAllChunksOptions {
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
   groundColor: number;
+  terrainBaseColor?: number;
+  terrainPeakColor?: number;
   spawnId?: string;
 }
 
@@ -304,6 +316,8 @@ export const rebuildAllChunks = ({
   sharedGrassMaterial,
   treesPerChunk,
   groundColor,
+  terrainBaseColor,
+  terrainPeakColor,
   spawnId,
 }: RebuildAllChunksOptions): void => {
   const keys = [...activeChunks.keys()];
@@ -328,6 +342,8 @@ export const rebuildAllChunks = ({
       sharedGrassMaterial,
       treesPerChunk,
       groundColor,
+      terrainBaseColor,
+      terrainPeakColor,
       spawnId,
     });
     activeChunks.set(key, chunk);
@@ -342,6 +358,8 @@ interface ApplyWorldCaseOptions {
   sharedGrassMaterial: THREE.Material;
   treesPerChunk: number;
   groundColor: number;
+  terrainBaseColor?: number;
+  terrainPeakColor?: number;
   spawnId?: string;
 }
 
@@ -349,7 +367,7 @@ const setChunkWorldCaseVisibility = (
   chunk: ChunkData,
   options: ApplyWorldCaseOptions,
 ): void => {
-  const { scene, generatorConfig, worldCase, sharedGrassGeometry, sharedGrassMaterial, treesPerChunk, groundColor, spawnId } = options;
+  const { scene, generatorConfig, worldCase, sharedGrassGeometry, sharedGrassMaterial, treesPerChunk, groundColor, terrainBaseColor, terrainPeakColor, spawnId } = options;
   const { chunkSize, noiseConfig, grassPerChunk } = generatorConfig;
 
   if (chunk.terrain) chunk.terrain.visible = false;
@@ -359,14 +377,14 @@ const setChunkWorldCaseVisibility = (
 
   if (worldCase === 'terrain') {
     if (!chunk.terrain) {
-      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig);
+      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor);
       if (spawnId) chunk.terrain.userData.spawnId = spawnId;
       scene.add(chunk.terrain);
     }
     chunk.terrain.visible = true;
   } else if (worldCase === 'all') {
     if (!chunk.terrain) {
-      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig);
+      chunk.terrain = createTerrainChunk(chunk.chunkX, chunk.chunkZ, chunkSize, noiseConfig, terrainBaseColor, terrainPeakColor);
       if (spawnId) chunk.terrain.userData.spawnId = spawnId;
       scene.add(chunk.terrain);
     }
@@ -389,6 +407,8 @@ const setChunkWorldCaseVisibility = (
       chunk.ground = createChunkGround(chunk.chunkX, chunk.chunkZ, chunkSize, groundColor);
       if (spawnId) chunk.ground.userData.spawnId = spawnId;
       scene.add(chunk.ground);
+    } else {
+      (chunk.ground.material as THREE.MeshLambertMaterial).color.set(groundColor);
     }
     chunk.ground.visible = true;
 
@@ -408,6 +428,8 @@ const setChunkWorldCaseVisibility = (
       chunk.ground = createChunkGround(chunk.chunkX, chunk.chunkZ, chunkSize, groundColor);
       if (spawnId) chunk.ground.userData.spawnId = spawnId;
       scene.add(chunk.ground);
+    } else {
+      (chunk.ground.material as THREE.MeshLambertMaterial).color.set(groundColor);
     }
     chunk.ground.visible = true;
 

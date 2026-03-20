@@ -186,14 +186,15 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
       </template>
 
       <template v-else-if="control.schema.color !== undefined">
-        <label :for="control.path" class="text-xs font-medium">
-          {{ control.schema.label ?? formatLabel(control.key) }}
-        </label>
-        <ColorPicker
-          :model-value="getColorHex(control.path)"
-          @update:model-value="handleColorUpdate(control.path, $event)"
-          class="h-7"
-        />
+        <div class="config-controls__color-row">
+          <label :for="control.path" class="text-xs font-medium">
+            {{ control.schema.label ?? formatLabel(control.key) }}
+          </label>
+          <ColorPicker
+            :model-value="getColorHex(control.path)"
+            @update:model-value="handleColorUpdate(control.path, $event)"
+          />
+        </div>
       </template>
 
       <template v-else-if="control.schema.checkbox !== undefined">
@@ -363,6 +364,12 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 .config-controls__inline-input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+.config-controls__color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .config-controls__item--section {

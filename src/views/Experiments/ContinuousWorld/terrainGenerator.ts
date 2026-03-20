@@ -3,8 +3,8 @@ import type { NoiseConfig } from './types';
 import { fractalNoise } from './noise';
 
 const TERRAIN_SEGMENTS = 16;
-const TERRAIN_BASE_COLOR = new THREE.Color(0x4a7c3f);
-const TERRAIN_PEAK_COLOR = new THREE.Color(0x8b7355);
+const DEFAULT_TERRAIN_BASE_COLOR = 0x4a7c3f;
+const DEFAULT_TERRAIN_PEAK_COLOR = 0x8b7355;
 const HEIGHT_COLOR_THRESHOLD = 0.6;
 
 /**
@@ -16,8 +16,12 @@ export const createTerrainChunk = (
   chunkX: number,
   chunkZ: number,
   chunkSize: number,
-  noiseConfig: NoiseConfig
+  noiseConfig: NoiseConfig,
+  baseColor = DEFAULT_TERRAIN_BASE_COLOR,
+  peakColor = DEFAULT_TERRAIN_PEAK_COLOR,
 ): THREE.Mesh => {
+  const terrainBaseColor = new THREE.Color(baseColor);
+  const terrainPeakColor = new THREE.Color(peakColor);
   const geometry = new THREE.PlaneGeometry(
     chunkSize, chunkSize,
     TERRAIN_SEGMENTS, TERRAIN_SEGMENTS
@@ -52,7 +56,7 @@ export const createTerrainChunk = (
     const height = positionAttribute.getY(vertexIndex);
     const heightNormalized = Math.abs(height) / normalizedMax;
     const blendFactor = Math.min(heightNormalized / HEIGHT_COLOR_THRESHOLD, 1);
-    const vertexColor = TERRAIN_BASE_COLOR.clone().lerp(TERRAIN_PEAK_COLOR, blendFactor);
+    const vertexColor = terrainBaseColor.clone().lerp(terrainPeakColor, blendFactor);
 
     colors[vertexIndex * 3] = vertexColor.r;
     colors[vertexIndex * 3 + 1] = vertexColor.g;
