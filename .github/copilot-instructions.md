@@ -74,6 +74,9 @@ Closes #<issue-number>
 ## Key Changes
 - File-by-file or module-by-module breakdown of changes
 
+## Faced Difficulties and Learned Lessons
+- **Title**: description. Lesson: takeaway. *(omit section if nothing notable)*
+
 ## Test Plan
 - [ ] Checklist of testing performed
 
@@ -81,6 +84,14 @@ Closes #<issue-number>
 ```
 
 **ALWAYS include `Closes #<issue-number>` at the top of every PR body** to automatically link and close the related issue on merge.
+
+### Journey Documentation
+
+After merging a PR, update `documentation/docs/journey/overview.md`:
+- Add any **new architectural pattern** introduced by the PR to the Key Patterns section
+- Add any **key technical lesson** to the relevant domain group in Technical Complexities
+- Add any **new planned items** (from newly opened issues) to the Planned Investigations table
+- Update the **Timeline gantt** if a new issue is closed or a new significant issue is opened
 
 ### Issue Comment Format
 ```markdown
