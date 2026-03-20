@@ -291,8 +291,9 @@ export const updateChunks = ({
     .sort((a, b) => {
       const [ax, az] = parseChunkKey(a);
       const [bx, bz] = parseChunkKey(b);
-      return (Math.abs(ax - playerChunkX) + Math.abs(az - centerZ))
-           - (Math.abs(bx - playerChunkX) + Math.abs(bz - centerZ));
+      const distributionA = (ax - playerChunkX) ** 2 + (az - playerChunkZ) ** 2;
+      const distributionB = (bx - playerChunkX) ** 2 + (bz - playerChunkZ) ** 2;
+      return distributionA - distributionB;
     });
 
   const chunksToLoad = maxChunksPerUpdate !== undefined
