@@ -492,6 +492,11 @@ const setChunkWorldCaseVisibility = (
     }
     chunk.ground.visible = true;
 
+    // Recreate grass if it was placed at terrain height (from 'all' case)
+    if (chunk.grass && chunk.grass.userData.hasTerrainHeight) {
+      scene.remove(chunk.grass);
+      chunk.grass = null;
+    }
     if (!chunk.grass) {
       chunk.grass = createGrassChunk(
         chunk.chunkX, chunk.chunkZ, chunkSize, grassPerChunk,
