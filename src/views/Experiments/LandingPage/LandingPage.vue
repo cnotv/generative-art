@@ -26,10 +26,9 @@ const WHITE = 0xffffff;
 const AMBIENT_INTENSITY = 0.3;
 const DIR_LIGHT_INTENSITY = 1.5;
 const DIR_LIGHT_POS = 5;
-const TEXT_SIZE = 1.2;
-const TEXT_HEIGHT = 0.3;
-const LOGO_TARGET_SIZE = 3;
-const LOGO_Y_OFFSET = 1.5;
+const TARGET_WIDTH = 8;
+const TEXT_DEPTH = 0.3;
+const GAP = 0.6;
 
 onMounted(async () => {
   const canvasElement = canvas.value!;
@@ -78,19 +77,20 @@ onMounted(async () => {
     metalness: 0.6,
   });
 
-  // GLB logo
+  // GLB logo — scale to TARGET_WIDTH, place above text
   const gltfLoader = new GLTFLoader();
   gltfLoader.load('/cnotv.glb', (gltf) => {
     const model = gltf.scene;
+
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    model.scale.setScalar(LOGO_TARGET_SIZE / maxDim);
+    model.scale.setScalar(TARGET_WIDTH / size.x);
 
     box.setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
-    const newSize = box.getSize(new THREE.Vector3());
-    model.position.set(-center.x, -center.y + newSize.y / 2 + LOGO_Y_OFFSET, -center.z);
+    const scaledSize = box.getSize(new THREE.Vector3());
+    // centre horizontally, sit bottom of logo at y=0 + GAP above text
+    model.position.set(-center.x, -center.y + scaledSize.y / 2 + GAP, -center.z);
 
     model.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -103,20 +103,20 @@ onMounted(async () => {
     scene.add(model);
   });
 
-  // 3D text
+  // 3D text — create at size 1, then scale to TARGET_WIDTH
   const fontLoader = new FontLoader();
   fontLoader.load(
     '/node_modules/three/examples/fonts/helvetiker_bold.typeface.json',
     (font) => {
       const textGeometry = new TextGeometry('CNOTV', {
         font,
-        size: TEXT_SIZE,
-        depth: TEXT_HEIGHT,
-        curveSegments: 6,
+        size: 1,
+        depth: TEXT_DEPTH,
+        curveSegments: 8,
         bevelEnabled: true,
-        bevelThickness: 0.03,
+        bevelThickness: 0.04,
         bevelSize: 0.02,
-        bevelSegments: 3,
+        bevelSegments: 4,
       });
 
       textGeometry.computeBoundingBox();
@@ -124,8 +124,15 @@ onMounted(async () => {
       const textWidth = textBox.max.x - textBox.min.x;
       const textHeight = textBox.max.y - textBox.min.y;
 
+      const textScale = TARGET_WIDTH / textWidth;
       const textMesh = new THREE.Mesh(textGeometry, contentMaterial);
-      textMesh.position.set(-textWidth / 2, textHeight / 2, 0);
+      textMesh.scale.setScalar(textScale);
+      // centre horizontally, sit top of text at y=0 (logo sits above)
+      textMesh.position.set(
+        (-textWidth / 2) * textScale,
+        (-textHeight / 2) * textScale,
+        0,
+      );
       textMesh.castShadow = true;
       scene.add(textMesh);
     },
