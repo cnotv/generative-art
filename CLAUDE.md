@@ -5,12 +5,24 @@
 
 For project architecture, GitHub workflow, and development patterns, read `.github/copilot-instructions.md`.
 
-## GitHub Issue Workflow
+## WHEN THE USER LINKS A GITHUB ISSUE — MANDATORY SEQUENCE
 
-**Before writing any code for a GitHub issue:**
+When the user's message contains a `github.com/.*/issues/\d+` URL, execute these steps **in order** before writing a single line of code or documentation:
 
-1. Post the implementation plan as a comment on the issue using `gh issue comment <number> --body "..."`)
-2. The plan must include: files to create/modify, approach, key references, verification steps
+```sh
+STEP 1  gh issue view <number>          -- read the issue
+STEP 2  git checkout main
+        git fetch origin main
+        git rebase origin/main          -- sync local main
+STEP 3  git checkout -b <type>/<number>-<slug>
+        # type = feat | fix | docs | chore
+        # slug = 2-3 word kebab-case summary of the issue title
+STEP 4  gh issue comment <number> --body "..."
+        # post implementation plan: files, approach, key references, verification
+STEP 5  implement
+```
+
+**This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
 
 @.github/rules/code-style.md
 @.github/rules/testing.md
