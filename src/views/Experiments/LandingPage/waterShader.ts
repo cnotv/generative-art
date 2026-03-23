@@ -28,10 +28,12 @@ export const createWaterMaterial = (): WaterMaterial => {
       void main() {
         float v = sin(vUv.x * 12.0 + uTime) * sin(vUv.y * 8.0 + uTime * 0.6);
         float g = 0.07 + v * 0.04;
-        gl_FragColor = vec4(g, g, g, 1.0);
+        gl_FragColor = vec4(g, g, g, 0.5);
       }
     `,
     side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: false,
   });
 
   const update = (time: number): void => {
