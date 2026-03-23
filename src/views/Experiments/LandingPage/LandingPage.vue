@@ -6,7 +6,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import type { Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
-import { getTools } from "@webgamekit/threejs";
+import { getTools, getWalls } from "@webgamekit/threejs";
+import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import { registerLightProperties } from "@/utils/lightProperties";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
 import { useDebugSceneStore } from "@/stores/debugScene";
@@ -39,6 +40,13 @@ const PHYSICS_STEP = 1 / PHYSICS_FPS;
 const DEFAULT_IMPULSE = 90;
 const LOGO_IMPULSE_MULTIPLIER = 10;
 const DEFAULT_TORQUE = 7.5;
+const RESET_DURATION_FRAMES = 60;
+const RESET_INTERVAL_FRAMES = 300;
+const WALL_LENGTH = 22;
+const WALL_HEIGHT = 14;
+const WALL_DEPTH = 0.3;
+const WALL_TILT_SECTIONS = 6;
+const WALL_ROTATION_X = -Math.PI / WALL_TILT_SECTIONS;
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight;
@@ -83,18 +91,17 @@ const createLights = (scene: THREE.Scene) => {
   return { ambientLight, dirLight };
 };
 
-type PhysicsBodies = Map<THREE.Object3D, RAPIER.RigidBody>;
+type BodyEntry = { body: RAPIER.RigidBody; originalPos: THREE.Vector3 };
+type PhysicsBodies = Map<THREE.Object3D, BodyEntry>;
 
 const createDynamicBody = (
   world: RAPIER.World,
-  bodies: PhysicsBodies,
-  mesh: THREE.Object3D,
+  position: THREE.Vector3,
   halfExtents: THREE.Vector3
 ): RAPIER.RigidBody => {
-  const { x, y, z } = mesh.position;
   const body = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(x, y, z)
+      .setTranslation(position.x, position.y, position.z)
       .setGravityScale(0.0)
       .setLinearDamping(LINEAR_DAMPING)
       .setAngularDamping(ANGULAR_DAMPING)
@@ -105,7 +112,6 @@ const createDynamicBody = (
       .setFriction(COLLIDER_FRICTION),
     body
   );
-  bodies.set(mesh, body);
   return body;
 };
 
@@ -134,12 +140,12 @@ const loadLogo = (
     });
 
     scene.add(model);
-    createDynamicBody(
+    const body = createDynamicBody(
       world,
-      bodies,
-      model,
+      model.position,
       new THREE.Vector3(scaledSize.x / 2, scaledSize.y / 2, scaledSize.z / 2)
     );
+    bodies.set(model, { body, originalPos: model.position.clone() });
   });
 };
 
@@ -154,6 +160,9 @@ const buildTextOptions = (font: Font) => ({
   bevelSegments: 6,
 });
 
+const getSpacingAfter = (index: number): number =>
+  index === 2 || index === 3 ? LETTER_SPACING / 2 : LETTER_SPACING;
+
 const loadText = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -166,48 +175,60 @@ const loadText = (
   const fullWidth =
     referenceGeometry.boundingBox!.max.x - referenceGeometry.boundingBox!.min.x;
   referenceGeometry.dispose();
-  const textScale = TARGET_WIDTH / fullWidth;
+  const baseTextScale = TARGET_WIDTH / fullWidth;
 
   const letters = ["C", "N", "O", "T", "V"];
-  const { meshes, currentX: finalX } = letters.reduce(
-    ({ meshes, currentX }, letter) => {
-      const geometry = new TextGeometry(letter, buildTextOptions(font));
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      const letterWidth = (box.max.x - box.min.x) * textScale;
-      const letterHeight = (box.max.y - box.min.y) * textScale;
-      const letterDepth = (box.max.z - box.min.z) * textScale;
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.scale.setScalar(textScale);
-      mesh.position.set(currentX - box.min.x * textScale, -(letterHeight / 2), 0);
-      mesh.castShadow = true;
-      scene.add(mesh);
-      return {
-        meshes: [...meshes, { mesh, letterWidth, letterHeight, letterDepth }],
-        currentX: currentX + letterWidth + LETTER_SPACING,
-      };
-    },
-    {
-      meshes: [] as {
-        mesh: THREE.Mesh;
-        letterWidth: number;
-        letterHeight: number;
-        letterDepth: number;
-      }[],
-      currentX: 0,
-    }
-  );
+  const letterGeometries = letters.map((letter) => {
+    const geometry = new TextGeometry(letter, buildTextOptions(font));
+    geometry.computeBoundingBox();
+    return geometry;
+  });
 
-  const totalWidth = finalX - LETTER_SPACING;
-  const centerX = totalWidth / 2;
-  meshes.forEach(({ mesh, letterWidth, letterHeight, letterDepth }) => {
+  const letterMeasurements = letterGeometries.map((geometry) => {
+    const box = geometry.boundingBox!;
+    return {
+      width: (box.max.x - box.min.x) * baseTextScale,
+      height: (box.max.y - box.min.y) * baseTextScale,
+      depth: (box.max.z - box.min.z) * baseTextScale,
+      minX: box.min.x * baseTextScale,
+    };
+  });
+
+  const totalSpacings = letters
+    .slice(0, -1)
+    .reduce((sum, _, i) => sum + getSpacingAfter(i), 0);
+  const totalLetterWidth = letterMeasurements.reduce((sum, { width }) => sum + width, 0);
+  const sizeCorrection = (TARGET_WIDTH - totalSpacings) / totalLetterWidth;
+  const textScale = baseTextScale * sizeCorrection;
+
+  let currentX = 0;
+  const meshes = letterGeometries.map((geometry, i) => {
+    const { width, height, depth, minX } = letterMeasurements[i];
+    const scaledWidth = width * sizeCorrection;
+    const scaledHeight = height * sizeCorrection;
+    const scaledDepth = depth * sizeCorrection;
+    const scaledMinX = minX * sizeCorrection;
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.scale.setScalar(textScale);
+    mesh.position.set(currentX - scaledMinX, -(scaledHeight / 2), 0);
+    mesh.castShadow = true;
+    scene.add(mesh);
+
+    currentX += scaledWidth + (i < letters.length - 1 ? getSpacingAfter(i) : 0);
+
+    return { mesh, scaledWidth, scaledHeight, scaledDepth };
+  });
+
+  const centerX = currentX / 2;
+  meshes.forEach(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
     mesh.position.x -= centerX;
-    createDynamicBody(
+    const body = createDynamicBody(
       world,
-      bodies,
-      mesh,
-      new THREE.Vector3(letterWidth / 2, letterHeight / 2, letterDepth / 2)
+      mesh.position,
+      new THREE.Vector3(scaledWidth / 2, scaledHeight / 2, scaledDepth / 2)
     );
+    bodies.set(mesh, { body, originalPos: mesh.position.clone() });
   });
 };
 
@@ -219,7 +240,7 @@ const findBodyForObject = (
   bodies: PhysicsBodies
 ): RAPIER.RigidBody | null =>
   getAncestors(object).reduce<RAPIER.RigidBody | null>(
-    (found, ancestor) => found ?? bodies.get(ancestor) ?? null,
+    (found, ancestor) => found ?? bodies.get(ancestor)?.body ?? null,
     null
   );
 
@@ -254,7 +275,7 @@ const createClickHandler = (
     hit.point.z - center.z
   );
   const direction = offset.clone().negate().normalize();
-  const bodyOwner = [...bodies.entries()].find(([, b]) => b === body)?.[0];
+  const bodyOwner = [...bodies.entries()].find(([, entry]) => entry.body === body)?.[0];
   const impulseScale = bodyOwner instanceof THREE.Group ? LOGO_IMPULSE_MULTIPLIER : 1;
   const magnitude = config.impulse * impulseScale;
 
@@ -277,6 +298,46 @@ const createClickHandler = (
     },
     true
   );
+};
+
+const createResetTimeline = (bodies: PhysicsBodies) => {
+  const timelineManager = createTimelineManager();
+  let resetFrame = 0;
+  const resetStartPositions = new Map<THREE.Object3D, THREE.Vector3>();
+  const resetStartRotations = new Map<THREE.Object3D, THREE.Quaternion>();
+
+  timelineManager.addAction({
+    interval: [RESET_DURATION_FRAMES, RESET_INTERVAL_FRAMES - RESET_DURATION_FRAMES],
+    actionStart: () => {
+      resetFrame = 0;
+      resetStartPositions.clear();
+      resetStartRotations.clear();
+      bodies.forEach(({ body }, mesh) => {
+        const pos = body.translation();
+        const rot = body.rotation();
+        resetStartPositions.set(mesh, new THREE.Vector3(pos.x, pos.y, pos.z));
+        resetStartRotations.set(mesh, new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w));
+      });
+    },
+    action: () => {
+      resetFrame++;
+      const progress = Math.min(1, resetFrame / RESET_DURATION_FRAMES);
+      const identityQuat = new THREE.Quaternion();
+      bodies.forEach(({ body, originalPos }, mesh) => {
+        const startPos = resetStartPositions.get(mesh);
+        const startRot = resetStartRotations.get(mesh);
+        if (!startPos || !startRot) return;
+        const newPos = startPos.clone().lerp(originalPos, progress);
+        const newRot = startRot.clone().slerp(identityQuat, progress);
+        body.setTranslation({ x: newPos.x, y: newPos.y, z: newPos.z }, true);
+        body.setRotation({ x: newRot.x, y: newRot.y, z: newRot.z, w: newRot.w }, true);
+        body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      });
+    },
+  });
+
+  return timelineManager;
 };
 
 const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
@@ -307,6 +368,13 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       loadText(scene, world, bodies, contentMaterial, font);
     }
   );
+
+  const wallsGroup = getWalls(scene, world, {
+    length: WALL_LENGTH,
+    height: WALL_HEIGHT,
+    depth: WALL_DEPTH,
+  });
+  wallsGroup.rotation.x = WALL_ROTATION_X;
 
   registerLightProperties({
     light: ambientLight,
@@ -339,6 +407,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     },
   });
 
+  const timelineManager = createResetTimeline(bodies);
+
   const onResize = createResizeHandler(camera, renderer);
   const onPointerDown = createClickHandler(camera, bodies, physicsConfig);
   window.addEventListener("resize", onResize);
@@ -346,9 +416,11 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
   const clock = new THREE.Clock();
   let accumulator = 0;
+  let frame = 0;
 
   const runAnimation = () => {
     animationId = requestAnimationFrame(runAnimation);
+    frame++;
     const delta = clock.getDelta();
 
     accumulator += delta;
@@ -356,7 +428,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     Array.from({ length: steps }).forEach(() => world.step());
     accumulator -= steps * PHYSICS_STEP;
 
-    bodies.forEach((body, mesh) => {
+    animateTimeline(timelineManager, frame);
+
+    bodies.forEach(({ body }, mesh) => {
       const pos = body.translation();
       const rot = body.rotation();
       mesh.position.set(pos.x, pos.y, pos.z);

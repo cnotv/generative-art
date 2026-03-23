@@ -645,7 +645,7 @@ export const getCube = (
 };
 
 /**
- * Create walls around a space
+ * Create walls around a space and return them as a single group
  * @param scene
  * @param world
  * @param options
@@ -660,21 +660,27 @@ export const getWalls = (
     depth = 0.2,
     opacity = 1,
   }: { name?: string; length?: number; height?: number; depth?: number; opacity?: number } = {},
-): ComplexModel[] => {
-  return [
+): THREE.Group => {
+  const group = new THREE.Group();
+
+  [
     { position: [0, 0, 0], size: [length, depth, length], suffix: 'floor' },
-    { position: [-length/2, 0, 0], size: [depth, height, length], suffix: 'left' },
-    { position: [length/2, 0, 0], size: [depth, height, length], suffix: 'right' },
-    { position: [0, 0, length/2], size: [length, height, depth], suffix: 'front' },
-    { position: [0, 0, -length/2], size: [length, height, depth], suffix: 'back' },
-  ].map(({ position, size, suffix }) =>
-    getCube(scene, world, {
+    { position: [-length / 2, 0, 0], size: [depth, height, length], suffix: 'left' },
+    { position: [length / 2, 0, 0], size: [depth, height, length], suffix: 'right' },
+    { position: [0, 0, -length / 2], size: [length, height, depth], suffix: 'back' },
+  ].forEach(({ position, size, suffix }) => {
+    const wall = getCube(scene, world, {
       name: name ? `${name}-${suffix}` : undefined,
       color: 0xcccccc,
       opacity,
       size: size as CoordinateTuple,
       position: position as CoordinateTuple,
       type: 'fixed',
-    })
-  );
+    });
+    scene.remove(wall);
+    group.add(wall);
+  });
+
+  scene.add(group);
+  return group;
 };
