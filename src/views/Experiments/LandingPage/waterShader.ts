@@ -16,9 +16,7 @@ export const createWaterMaterial = (): WaterMaterial => {
 
       void main() {
         vUv = uv;
-        vec3 pos = position;
-        pos.z += sin(pos.x * 3.0 + uTime) * 0.05 + sin(pos.y * 2.0 + uTime * 0.7) * 0.05;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
@@ -26,8 +24,7 @@ export const createWaterMaterial = (): WaterMaterial => {
       varying vec2 vUv;
 
       void main() {
-        float v = sin(vUv.x * 12.0 + uTime) * sin(vUv.y * 8.0 + uTime * 0.6);
-        float g = 0.07 + v * 0.04;
+        float g = 0.04 + abs(sin((vUv.y + sin(vUv.x * 6.0) * 0.1) * 20.0 - uTime * 2.0)) * 0.09;
         gl_FragColor = vec4(g, g, g, 0.5);
       }
     `,

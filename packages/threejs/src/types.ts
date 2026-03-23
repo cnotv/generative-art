@@ -71,6 +71,7 @@ export interface ToolsConfig {
   };
   route?: any;
   canvas: HTMLCanvasElement;
+  resize?: boolean;
 }
 
 export interface LightsConfig {
