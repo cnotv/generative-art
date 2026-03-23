@@ -27,8 +27,8 @@ const AMBIENT_INTENSITY = 0.3;
 const DIR_LIGHT_INTENSITY = 1.5;
 const DIR_LIGHT_POS = 5;
 const TARGET_WIDTH = 8;
-const TEXT_DEPTH = 0.3;
-const GAP = 0.6;
+const TEXT_DEPTH = 0.8;
+const GAP = 1.4;
 
 onMounted(async () => {
   const canvasElement = canvas.value!;
@@ -114,9 +114,9 @@ onMounted(async () => {
         depth: TEXT_DEPTH,
         curveSegments: 8,
         bevelEnabled: true,
-        bevelThickness: 0.04,
-        bevelSize: 0.02,
-        bevelSegments: 4,
+        bevelThickness: 0.08,
+        bevelSize: 0.05,
+        bevelSegments: 6,
       });
 
       textGeometry.computeBoundingBox();
