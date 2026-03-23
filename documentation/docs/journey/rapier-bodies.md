@@ -108,6 +108,35 @@ const gravity = grounded ? 0 : accumulatedFallSpeed;
 const movement = { x: dx, y: -gravity, z: dz };
 ```
 
+### Three.js frame rate vs Rapier step rate
+
+Three.js renders as fast as `requestAnimationFrame` allows (typically 60 or 120 fps, variable). Rapier expects to be stepped at a **fixed, consistent rate** — usually 60 Hz. Running Rapier's `world.step()` at the raw render delta causes physics to behave differently at different frame rates: a character jumps higher at 30 fps than at 120 fps because each step integrates more velocity.
+
+**Fix — fixed timestep with accumulator**:
+
+```ts
+const PHYSICS_STEP = 1 / 60;
+let accumulator = 0;
+
+// In the animation loop:
+accumulator += delta;
+while (accumulator >= PHYSICS_STEP) {
+  world.step();
+  accumulator -= PHYSICS_STEP;
+}
+```
+
+The accumulator absorbs render-rate jitter and fires as many physics steps per frame as needed to stay caught up. At 60 fps, it fires once per frame. At 30 fps, it fires twice. At 120 fps, it fires every other frame.
+
+**Interpolation for smooth visuals**: at sub-step render rates the visual position of a physics object snaps between steps. Fix by lerping the mesh position between the previous and current physics position using the accumulator remainder as the alpha:
+
+```ts
+const alpha = accumulator / PHYSICS_STEP;
+mesh.position.lerpVectors(previousPosition, currentPosition, alpha);
+```
+
+**Timeline integration**: the project's `TimelineManager` supports per-action update frequencies (every N frames). Physics actions should declare their own step frequency and never share the delta with the render-rate actions.
+
 ### Reactive proxy breaking `instanceof` checks in Rapier
 
 Storing a Rapier `RigidBody` or `Collider` inside a Vue `reactive()` object wraps it in a Proxy. Rapier's internal WASM bindings use `instanceof` to identify its own objects and fail silently when they receive a Proxy instead. Always use `markRaw` or `toRaw` before passing Rapier objects to physics API calls — the same rule applies as for Three.js objects.
