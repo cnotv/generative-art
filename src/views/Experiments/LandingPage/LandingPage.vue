@@ -6,6 +6,9 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { createWaterMaterial } from './waterShader';
 import { createBorderCorners } from './borderCorners';
+import { registerCameraProperties } from '@/utils/cameraProperties';
+import { registerLightProperties } from '@/utils/lightProperties';
+import { useElementPropertiesStore } from '@/stores/elementProperties';
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const showMessage = ref(false);
@@ -67,6 +70,12 @@ onMounted(async () => {
   const rimLight = new THREE.DirectionalLight(WHITE, 0.4);
   rimLight.position.set(-DIR_LIGHT_X, -2, -DIR_LIGHT_X);
   scene.add(rimLight);
+
+  // Register panel properties
+  registerCameraProperties({ camera, skipOrbitSync: true });
+  registerLightProperties({ light: ambientLight, name: 'ambient-light', title: 'Ambient Light' });
+  registerLightProperties({ light: dirLight, name: 'directional-light', title: 'Directional Light' });
+  registerLightProperties({ light: rimLight, name: 'rim-light', title: 'Rim Light' });
 
   // Water background
   const { material: waterMaterial, update: updateWater } = createWaterMaterial();
@@ -229,6 +238,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cancelAnimationFrame(animationId);
+  useElementPropertiesStore().clearAllElementProperties();
   const canvasElement = canvas.value as unknown as { _cleanup?: () => void } | null;
   canvasElement?._cleanup?.();
   renderer = null;
