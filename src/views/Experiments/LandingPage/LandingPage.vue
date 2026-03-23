@@ -2,12 +2,15 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { ref, onMounted, onUnmounted } from "vue";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import type { Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import { getTools, getWalls, getModel } from "@webgamekit/threejs";
 import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import { registerLightProperties } from "@/utils/lightProperties";
+import { registerCameraProperties } from "@/utils/cameraProperties";
+import { cameraSchema } from "@/views/Tools/SceneEditor/config";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
 import { useDebugSceneStore } from "@/stores/debugScene";
 
@@ -302,6 +305,37 @@ const createClickHandler = (
   );
 };
 
+const registerPanels = (
+  camera: THREE.OrthographicCamera,
+  orbit: OrbitControls,
+  ambientLight: THREE.AmbientLight,
+  dirLight: THREE.DirectionalLight,
+  physicsConfig: PhysicsConfig
+): void => {
+  const orthoCameraSchema = {
+    position: cameraSchema.position,
+    orbitTarget: cameraSchema.orbitTarget,
+    orbitEnabled: cameraSchema.orbitEnabled,
+  };
+  registerCameraProperties({ camera, orbit, schema: orthoCameraSchema });
+
+  registerLightProperties({ light: ambientLight, name: "ambient-light", title: "Ambient Light" });
+  registerLightProperties({ light: dirLight, name: "directional-light", title: "Directional Light" });
+  useDebugSceneStore().registerSceneElements((camera as unknown) as THREE.Camera, [ambientLight, dirLight]);
+
+  useElementPropertiesStore().registerElementProperties("physics", {
+    title: "Physics",
+    schema: {
+      impulse: { label: "Movement Speed", min: 0, max: 500, step: 1 },
+      torque: { label: "Rotation Speed", min: 0, max: 100, step: 0.5 },
+    },
+    getValue: (path) => physicsConfig[path as keyof PhysicsConfig],
+    updateValue: (path, value) => {
+      physicsConfig[path as keyof PhysicsConfig] = value as number;
+    },
+  });
+};
+
 const createResetTimeline = (bodies: PhysicsBodies) => {
   const timelineManager = createTimelineManager();
   let resetFrame = 0;
@@ -380,36 +414,15 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   });
   wallsGroup.rotation.z = Math.PI / 2;
 
-  registerLightProperties({
-    light: ambientLight,
-    name: "ambient-light",
-    title: "Ambient Light",
-  });
-  registerLightProperties({
-    light: dirLight,
-    name: "directional-light",
-    title: "Directional Light",
-  });
-  useDebugSceneStore().registerSceneElements((camera as unknown) as THREE.Camera, [
-    ambientLight,
-    dirLight,
-  ]);
+  const orbit = new OrbitControls(camera, renderer.domElement);
+  orbit.target.set(0, CAMERA_Y, 0);
+  orbit.enabled = false;
 
   const physicsConfig: PhysicsConfig = {
     impulse: DEFAULT_IMPULSE,
     torque: DEFAULT_TORQUE,
   };
-  useElementPropertiesStore().registerElementProperties("physics", {
-    title: "Physics",
-    schema: {
-      impulse: { label: "Movement Speed", min: 0, max: 500, step: 1 },
-      torque: { label: "Rotation Speed", min: 0, max: 100, step: 0.5 },
-    },
-    getValue: (path) => physicsConfig[path as keyof PhysicsConfig],
-    updateValue: (path, value) => {
-      physicsConfig[path as keyof PhysicsConfig] = value as number;
-    },
-  });
+  registerPanels(camera, orbit, ambientLight, dirLight, physicsConfig);
 
   const timelineManager = createResetTimeline(bodies);
 

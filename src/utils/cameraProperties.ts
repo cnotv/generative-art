@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Ref } from 'vue';
 import { ref } from 'vue';
 import { cameraSchema } from '@/views/Tools/SceneEditor/config';
@@ -7,15 +8,8 @@ import { updateCameraFov, setOrbitEnabled } from '@/utils/threeObjectUpdaters';
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects';
 
 type Vec3 = { x: number; y: number; z: number };
-type OrbitControls = {
-  target: THREE.Vector3;
-  enabled: boolean;
-  update: () => void;
-  addEventListener: (event: string, callback: () => void) => void;
-};
-
 interface RegisterCameraOptions {
-  camera: THREE.PerspectiveCamera;
+  camera: THREE.Camera;
   orbit?: OrbitControls | null;
   cameraConfig?: Ref<Record<string, unknown>>;
   skipOrbitSync?: boolean;
@@ -38,7 +32,7 @@ export const registerCameraProperties = ({ camera, orbit, cameraConfig: external
 
   const cameraConfig = externalConfig ?? ref<Record<string, unknown>>({
     position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-    fov: camera.fov,
+    fov: (camera as THREE.PerspectiveCamera).fov,
     orbitTarget: orbit
       ? { x: orbit.target.x, y: orbit.target.y, z: orbit.target.z }
       : { x: 0, y: 0, z: 0 },
