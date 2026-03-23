@@ -71,14 +71,3 @@ registerLightProperties(ambientLight, directionalLight);
 ```
 
 The global `globalSceneSchema` (frame rate, text selection, bloom, vignette) is always present in every view's Config panel without any per-view registration.
-
----
-
-## Functional Programming Conventions
-
-| Rule | Reason |
-|------|--------|
-| No classes — use functions + types | Simpler composition, no `this` binding issues |
-| No `for` loops — use `map`/`filter`/`reduce`/`flatMap` | Enforced by ESLint `functional/no-loop` |
-| No module-level `ref()` in composables | Invisible to DevTools, never cleans up, stale state in tests |
-| Deterministic seeds for procedural generation | Revisiting a chunk always produces the same result |
