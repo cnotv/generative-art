@@ -5,32 +5,21 @@ import { Sheet } from '@/components/ui/sheet';
 import { usePanelsStore } from '@/stores/panels';
 import type { PanelType } from '@/stores/panels';
 
-const PANEL_TITLES: Record<PanelType, string> = {
-  navigation: 'Navigation',
-  config: 'Config',
-  scene: 'Scene',
-  debug: 'Debug',
-  elements: 'Elements',
-};
-
 interface Properties {
   panelType: PanelType;
   side?: 'left' | 'right' | 'top' | 'bottom';
   title?: string;
-  collapsible?: boolean;
 }
 
 const props = withDefaults(defineProps<Properties>(), {
   side: 'right',
   title: undefined,
-  collapsible: true,
 });
 
 const panelsStore = usePanelsStore();
 const collapsed = ref(false);
 
 const isOpen = computed(() => panelsStore.activePanels.has(props.panelType));
-const panelTitle = computed(() => props.title ?? PANEL_TITLES[props.panelType]);
 
 const handleOpenChange = (open: boolean) => {
   if (!open) {
@@ -51,7 +40,7 @@ const closePanel = () => {
   <Sheet :open="isOpen" :side="side" @update:open="handleOpenChange">
     <div class="generic-panel" :class="{ 'generic-panel--collapsed': collapsed }">
       <div
-        v-if="collapsible"
+        v-if="title"
         class="generic-panel__header"
         role="button"
         tabindex="0"
@@ -59,7 +48,7 @@ const closePanel = () => {
         @keydown.enter.space.prevent="toggleCollapse"
       >
         <component :is="collapsed ? ChevronRight : ChevronDown" class="generic-panel__chevron" />
-        <span class="generic-panel__title">{{ panelTitle }}</span>
+        <span class="generic-panel__title">{{ title }}</span>
         <button
           class="generic-panel__close"
           aria-label="Close panel"

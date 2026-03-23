@@ -9,7 +9,7 @@ const { schema } = storeToRefs(store);
 </script>
 
 <template>
-  <GenericPanel panel-type="scene" side="right">
+  <GenericPanel panel-type="scene" side="right" title="Scene">
     <SchemaControls
       :schema="schema"
       :get-value="store.getValue"

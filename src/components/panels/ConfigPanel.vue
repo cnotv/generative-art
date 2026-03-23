@@ -29,7 +29,7 @@ const invokeCallback = (name: string) =>
 </script>
 
 <template>
-  <GenericPanel panel-type="config" side="right">
+  <GenericPanel panel-type="config" side="right" title="Config">
     <SchemaControls
       v-if="hasViewConfig"
       :schema="currentSchema!"

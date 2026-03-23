@@ -147,7 +147,7 @@ const hasExpandedSchema = computed(
 </script>
 
 <template>
-  <GenericPanel panel-type="elements" side="left">
+  <GenericPanel panel-type="elements" side="left" title="Elements">
     <!-- Add bar -->
     <div class="elements-panel__add-bar">
       <span class="elements-panel__add-label">Add</span>
