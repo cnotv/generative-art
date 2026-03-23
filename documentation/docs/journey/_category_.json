@@ -2,6 +2,7 @@
   "label": "Journey",
   "position": 3,
   "link": {
-    "type": "generated-index"
+    "type": "generated-index",
+    "description": "Findings, discoveries, and hard-won lessons from building with Three.js, Rapier, and the surrounding toolchain. Each page captures what was learned while solving a real problem in this project. When a PR introduces a notable technical finding — especially something non-obvious or that caused a bug — add it to the relevant page, or create a new one."
   }
 }
