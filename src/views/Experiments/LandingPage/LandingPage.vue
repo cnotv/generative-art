@@ -2,11 +2,10 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { ref, onMounted, onUnmounted } from "vue";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import type { Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
-import { getTools, getWalls } from "@webgamekit/threejs";
+import { getTools, getWalls, getModel } from "@webgamekit/threejs";
 import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import { registerLightProperties } from "@/utils/lightProperties";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
@@ -42,11 +41,7 @@ const LOGO_IMPULSE_MULTIPLIER = 10;
 const DEFAULT_TORQUE = 7.5;
 const RESET_DURATION_FRAMES = 60;
 const RESET_INTERVAL_FRAMES = 300;
-const WALL_LENGTH = 22;
-const WALL_HEIGHT = 14;
 const WALL_DEPTH = 0.3;
-const WALL_TILT_SECTIONS = 6;
-const WALL_ROTATION_X = -Math.PI / WALL_TILT_SECTIONS;
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight;
@@ -115,38 +110,45 @@ const createDynamicBody = (
   return body;
 };
 
-const loadLogo = (
+const loadLogo = async (
   scene: THREE.Scene,
   world: RAPIER.World,
   bodies: PhysicsBodies,
   material: THREE.Material
-): void => {
-  new GLTFLoader().load("/cnotv.glb", (gltf) => {
-    const model = gltf.scene;
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3());
-    model.scale.setScalar(TARGET_WIDTH / size.x);
-
-    box.setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    const scaledSize = box.getSize(new THREE.Vector3());
-    model.position.set(-center.x, -center.y + scaledSize.y / 2 + GAP, -center.z);
-
-    model.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).material = material;
-        (child as THREE.Mesh).castShadow = true;
-      }
-    });
-
-    scene.add(model);
-    const body = createDynamicBody(
-      world,
-      model.position,
-      new THREE.Vector3(scaledSize.x / 2, scaledSize.y / 2, scaledSize.z / 2)
-    );
-    bodies.set(model, { body, originalPos: model.position.clone() });
+): Promise<void> => {
+  const model = await getModel(scene, world, "cnotv.glb", {
+    type: "dynamic",
+    weight: 0,
+    damping: LINEAR_DAMPING,
+    angular: ANGULAR_DAMPING,
+    restitution: COLLIDER_RESTITUTION,
+    friction: COLLIDER_FRICTION,
+    castShadow: true,
   });
+
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  model.scale.setScalar(TARGET_WIDTH / size.x);
+
+  box.setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const scaledSize = box.getSize(new THREE.Vector3());
+  const logoPos = new THREE.Vector3(
+    -center.x,
+    -center.y + scaledSize.y / 2 + GAP,
+    -center.z
+  );
+  model.position.copy(logoPos);
+
+  model.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      (child as THREE.Mesh).material = material;
+      (child as THREE.Mesh).castShadow = true;
+    }
+  });
+
+  model.userData.body.setTranslation({ x: logoPos.x, y: logoPos.y, z: logoPos.z }, true);
+  bodies.set(model, { body: model.userData.body, originalPos: logoPos.clone() });
 };
 
 const buildTextOptions = (font: Font) => ({
@@ -360,7 +362,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   });
 
   const bodies: PhysicsBodies = new Map();
-  loadLogo(scene, world, bodies, contentMaterial);
+  await loadLogo(scene, world, bodies, contentMaterial);
 
   new FontLoader().load(
     "/node_modules/three/examples/fonts/helvetiker_bold.typeface.json",
@@ -369,12 +371,14 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     }
   );
 
+  const wallAspect = window.innerWidth / window.innerHeight;
+  const wallLength = Math.ceil(FRUSTUM_HEIGHT * wallAspect);
   const wallsGroup = getWalls(scene, world, {
-    length: WALL_LENGTH,
-    height: WALL_HEIGHT,
+    length: wallLength,
+    height: FRUSTUM_HEIGHT,
     depth: WALL_DEPTH,
   });
-  wallsGroup.rotation.x = WALL_ROTATION_X;
+  wallsGroup.rotation.z = Math.PI / 2;
 
   registerLightProperties({
     light: ambientLight,
