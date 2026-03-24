@@ -11,28 +11,29 @@ export const WALL_CELL_SIZE = 4;
 export const WALL_SCALE: CoordinateTuple = [0.02, 0.02, 0.02];
 export const OFFICE_WALL_HEIGHT = 10;
 
-// Office models
-export const OFFICE_MODEL = "minimal_office.glb";
-const OFFICE_SCALE = 0.5;
-export const OFFICE_MODEL_SCALE: CoordinateTuple = [OFFICE_SCALE, OFFICE_SCALE, OFFICE_SCALE];
-const OFFICE_CORNER = 25;
-const OFFICE_SIDE = 28;
-const OFFICE_FRONT = 22;
-export const OFFICE_POSITIONS: CoordinateTuple[] = [
-  [-OFFICE_CORNER, 0, -OFFICE_CORNER],
-  [0, 0, -OFFICE_SIDE],
-  [OFFICE_CORNER, 0, -OFFICE_CORNER],
-  [-OFFICE_SIDE, 0, 0],
-  [OFFICE_SIDE, 0, 0],
-  [-OFFICE_FRONT, 0, OFFICE_FRONT],
-  [OFFICE_FRONT, 0, OFFICE_FRONT],
+// Desk models
+export const DESK_MODEL = "minimal_office.glb";
+const DESK_SCALE = 2.5;
+export const DESK_MODEL_SCALE: CoordinateTuple = [DESK_SCALE, DESK_SCALE, DESK_SCALE];
+const DESK_CORNER = 25;
+const DESK_SIDE = 28;
+const DESK_FRONT = 22;
+const DESK_Y = 0.2;
+export const DESK_POSITIONS: CoordinateTuple[] = [
+  [-DESK_CORNER, DESK_Y, -DESK_CORNER],
+  [0, DESK_Y, -DESK_SIDE],
+  [DESK_CORNER, DESK_Y, -DESK_CORNER],
+  [-DESK_SIDE, DESK_Y, 0],
+  [DESK_SIDE, DESK_Y, 0],
+  [-DESK_FRONT, DESK_Y, DESK_FRONT],
+  [DESK_FRONT, DESK_Y, DESK_FRONT],
 ];
 
 // Player
 export const PLAYER_SPEED = 20;
 export const PLAYER_DISTANCE = 0.5;
 export const PLAYER_MODEL = "stickboy.glb";
-export const PLAYER_START: CoordinateTuple = [0, -2, 0];
+export const PLAYER_START: CoordinateTuple = [0, -1.15, 0];
 export const PLAYER_MODEL_SCALE = 2.5;
 
 export const playerModelOptions: ModelOptions = {
@@ -91,11 +92,11 @@ export const setupConfig: SetupConfig = {
   camera: {
     position: CAMERA_OFFSET,
     lookAt: [0, 0, 0],
-    fov: 50,
+    fov: 45,
     near: 0.1,
     far: 500,
   },
-  ground: { size: ISLAND_SIZE, color: ISLAND_COLOR },
+  ground: false,
   sky: { color: 0x87ceeb },
   lights: {
     ambient: { intensity: 0.6 },

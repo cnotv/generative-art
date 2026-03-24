@@ -13,7 +13,7 @@ import {
 } from "@/stores/viewConfig";
 import { useSceneViewStore } from "@/stores/sceneView";
 
-import { createWalls, createOfficeWalls, createOfficeModels } from "./helpers/island";
+import { createOfficeWalls, createDeskModels } from "./helpers/island";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
 import { spawnWasps, updateWaspChase } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
@@ -57,19 +57,20 @@ onMounted(async () => {
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: false, showElements: false },
     playMode: true,
-    defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
+    defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
       const obstacles: ComplexModel[] = [];
       const cameraOffset = CAMERA_OFFSET as CoordinateTuple;
 
       // Walls
-      const walls = await createWalls(scene, world);
-      walls.forEach((wall) => obstacles.push(wall));
       createOfficeWalls(scene, world);
-      await createOfficeModels(scene, world);
+
+      // Desks
+      const desks = await createDeskModels(scene, world);
+      desks.forEach((desk) => obstacles.push(desk));
 
       // Player
       const player = await createPlayer(scene, world);
-      const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
+      const groundBodies: ComplexModel[] = [];
 
       // Coins
       let coins = spawnCoins(scene, world, COIN_POSITIONS);
