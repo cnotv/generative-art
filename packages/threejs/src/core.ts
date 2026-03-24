@@ -86,7 +86,7 @@ export const defaultModelOptions: ModelOptions = {
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
-export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
+export const getTools = async ({ stats, route, canvas, resize = true }: ToolsConfig) => {
   const clock = new THREE.Clock();
   let delta = 0;
   let simulationFrame = 0;
@@ -199,6 +199,27 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     runAnimation();
   };
   
+  const handleResize = () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    if (camera instanceof THREE.OrthographicCamera) {
+      const halfH = camera.top;
+      const newHalfW = halfH * (window.innerWidth / window.innerHeight);
+      camera.left = -newHalfW;
+      camera.right = newHalfW;
+    } else {
+      (camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight;
+    }
+    camera.updateProjectionMatrix();
+  };
+
+  if (resize !== false) {
+    window.addEventListener('resize', handleResize);
+  }
+
+  const cleanup = () => {
+    if (resize !== false) window.removeEventListener('resize', handleResize);
+  };
+
   return {
     setup,
     animate,
@@ -208,7 +229,8 @@ export const getTools = async ({ stats, route, canvas }: ToolsConfig) => {
     scene,
     camera,
     orbit,
-    world
+    world,
+    cleanup,
   };
 };
 

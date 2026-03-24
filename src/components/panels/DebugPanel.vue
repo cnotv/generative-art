@@ -46,7 +46,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <GenericPanel panel-type="debug" side="right">
+  <GenericPanel panel-type="debug" side="right" title="Debug">
     <Accordion type="multiple" :default-value="['stats']" class="w-full">
       <AccordionItem value="stats">
         <AccordionTrigger class="text-sm font-medium py-2">

@@ -70,7 +70,7 @@ const setAddToGroupReference = (groupId: string, element: unknown) => {
 </script>
 
 <template>
-  <GenericPanel panel-type="elements" side="left">
+  <GenericPanel panel-type="elements" side="left" title="Textures">
     <div class="textures-panel__toolbar">
       <Button variant="default" class="textures-panel__add-btn" @click="handleAddClick">
         Add Texture
