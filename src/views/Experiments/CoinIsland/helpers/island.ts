@@ -14,6 +14,8 @@ export const createWalls = async (
   world: RAPIER.World
 ): Promise<ComplexModel[]> => {
   const positions = generateWallPositions(ISLAND_SIZE, WALL_CELL_SIZE);
+  const wallsGroup = Object.assign(new THREE.Group(), { name: 'Walls' });
+  scene.add(wallsGroup);
 
   const walls = await Promise.all(
     positions.map(async (position: CoordinateTuple, i) => {
@@ -27,6 +29,8 @@ export const createWalls = async (
         receiveShadow: true,
       });
       wall.name = `Wall ${i + 1}`;
+      scene.remove(wall);
+      wallsGroup.add(wall);
       return wall;
     })
   );
