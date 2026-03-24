@@ -13,9 +13,9 @@ import {
 } from "@/stores/viewConfig";
 import { useSceneViewStore } from "@/stores/sceneView";
 
-import { createWalls } from "./helpers/island";
+import { createWalls, createOfficeWalls, createOfficeModels } from "./helpers/island";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
-import { spawnWasps, updateWaspChase, checkWaspCatch } from "./helpers/enemies";
+import { spawnWasps, updateWaspChase } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
 import {
   setupConfig,
@@ -27,7 +27,6 @@ import {
   WASP_SPEED,
   PLAYER_SPEED,
   COLLECTION_RADIUS,
-  CATCH_RADIUS,
   COIN_SPIN_SPEED,
 } from "./config";
 
@@ -42,7 +41,6 @@ const reactiveConfig = createReactiveConfig({
 const gameState = shallowRef<GameState>();
 createGame({ data: { score: 0 } }, gameState, onUnmounted);
 
-const gameOver = ref(false);
 const canvas = ref<HTMLCanvasElement | null>(null);
 
 const { destroyControls, currentActions } = createControls(controlBindings);
@@ -57,7 +55,7 @@ onMounted(async () => {
   );
 
   await store.init(canvas.value, setupConfig, {
-    viewPanels: { showConfig: true, showElements: true },
+    viewPanels: { showConfig: false, showElements: false },
     playMode: true,
     defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
       const obstacles: ComplexModel[] = [];
@@ -66,6 +64,8 @@ onMounted(async () => {
       // Walls
       const walls = await createWalls(scene, world);
       walls.forEach((wall) => obstacles.push(wall));
+      createOfficeWalls(scene, world);
+      await createOfficeModels(scene, world);
 
       // Player
       const player = await createPlayer(scene, world);
@@ -88,7 +88,6 @@ onMounted(async () => {
         name: "player-movement",
         category: "user-input",
         action: () => {
-          if (gameOver.value) return;
           updatePlayerMovement(
             player,
             currentActions,
@@ -117,7 +116,6 @@ onMounted(async () => {
         name: "wasp-chase",
         category: "ai",
         action: () => {
-          if (gameOver.value) return;
           const speed = (reactiveConfig.value as Record<string, Record<string, number>>).wasp.speed;
           wasps.forEach((wasp) =>
             updateWaspChase(wasp, player.position, speed, getDelta())
@@ -131,7 +129,7 @@ onMounted(async () => {
         name: "coin-collection",
         category: "physics",
         action: () => {
-          if (gameOver.value || coins.length === 0) return;
+          if (coins.length === 0) return;
           const collected = checkCoinCollection(player.position, coins, COLLECTION_RADIUS);
           if (collected.length === 0) return;
 
@@ -146,19 +144,6 @@ onMounted(async () => {
             'score',
             (gameState.value?.data.score ?? 0) + collected.length
           );
-        },
-      });
-
-      // Wasp catch check
-      timelineManager.addAction({
-        frequency: 4,
-        name: "wasp-catch",
-        category: "physics",
-        action: () => {
-          if (gameOver.value) return;
-          if (checkWaspCatch(player.position, wasps, CATCH_RADIUS)) {
-            gameOver.value = true;
-          }
         },
       });
 
@@ -179,17 +164,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" />
-  <div v-if="gameState" class="coin-island__score">
-    Coins: {{ gameState.data.score }}
-  </div>
-  <div v-if="gameOver" class="coin-island__game-over">
-    <div class="coin-island__game-over-content">
-      <h2 class="coin-island__game-over-title">Game Over!</h2>
-      <p class="coin-island__game-over-score">
-        You collected {{ gameState?.data.score ?? 0 }} coins
-      </p>
-    </div>
-  </div>
+  <div v-if="gameState" class="coin-island__score">Coins: {{ gameState.data.score }}</div>
 </template>
 
 <style scoped>
@@ -206,31 +181,5 @@ onUnmounted(() => {
   font-size: var(--font-size-lg);
   z-index: var(--z-overlay);
   pointer-events: none;
-}
-
-.coin-island__game-over {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-overlay);
-  z-index: var(--z-modal);
-}
-
-.coin-island__game-over-content {
-  text-align: center;
-  color: var(--color-text-primary);
-}
-
-.coin-island__game-over-title {
-  font-size: var(--font-size-xxl);
-  font-family: var(--font-mono);
-  margin-bottom: var(--spacing-md);
-}
-
-.coin-island__game-over-score {
-  font-size: var(--font-size-lg);
-  font-family: var(--font-mono);
 }
 </style>

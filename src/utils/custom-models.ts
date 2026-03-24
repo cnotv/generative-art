@@ -116,6 +116,8 @@ export const getCoinBlock = (
   const geometry = new THREE.CylinderGeometry(1, 1, 0.3, 32)
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   scene.add(mesh)
   const initialValues = { position, size, color, rotation: mesh.rotation.toArray() as CoordinateTuple }
   mesh.rotation.x = Math.PI / 2

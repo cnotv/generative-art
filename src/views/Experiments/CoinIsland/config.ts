@@ -3,18 +3,36 @@ import type { CoordinateTuple } from "@webgamekit/animation";
 import type { SetupConfig, ModelOptions } from "@webgamekit/threejs";
 
 // Island
-export const ISLAND_SIZE = 40;
+export const ISLAND_SIZE = 80;
 export const ISLAND_COLOR = 0xc2b280;
 
 // Walls
 export const WALL_CELL_SIZE = 4;
 export const WALL_SCALE: CoordinateTuple = [0.02, 0.02, 0.02];
+export const OFFICE_WALL_HEIGHT = 10;
+
+// Office models
+export const OFFICE_MODEL = "minimal_office.glb";
+const OFFICE_SCALE = 0.5;
+export const OFFICE_MODEL_SCALE: CoordinateTuple = [OFFICE_SCALE, OFFICE_SCALE, OFFICE_SCALE];
+const OFFICE_CORNER = 25;
+const OFFICE_SIDE = 28;
+const OFFICE_FRONT = 22;
+export const OFFICE_POSITIONS: CoordinateTuple[] = [
+  [-OFFICE_CORNER, 0, -OFFICE_CORNER],
+  [0, 0, -OFFICE_SIDE],
+  [OFFICE_CORNER, 0, -OFFICE_CORNER],
+  [-OFFICE_SIDE, 0, 0],
+  [OFFICE_SIDE, 0, 0],
+  [-OFFICE_FRONT, 0, OFFICE_FRONT],
+  [OFFICE_FRONT, 0, OFFICE_FRONT],
+];
 
 // Player
 export const PLAYER_SPEED = 20;
 export const PLAYER_DISTANCE = 0.5;
 export const PLAYER_MODEL = "stickboy.glb";
-export const PLAYER_START: CoordinateTuple = [0, 0, 0];
+export const PLAYER_START: CoordinateTuple = [0, -2, 0];
 export const PLAYER_MODEL_SCALE = 2.5;
 
 export const playerModelOptions: ModelOptions = {
@@ -31,12 +49,13 @@ export const playerMovement = {
   maxGroundDistance: 5,
   maxStepHeight: 0.5,
   characterRadius: 2,
+  collisionDistance: 2,
 };
 
 // Enemies
 export const WASP_COUNT = 3;
-export const WASP_SPEED = 4;
-export const WASP_MODEL = "wasp.glb";
+export const WASP_SPEED = 10;
+export const WASP_MODEL = "paper_airplane.glb";
 export const CATCH_RADIUS = 2;
 
 export const waspModelOptions: ModelOptions = {
@@ -72,7 +91,7 @@ export const setupConfig: SetupConfig = {
   camera: {
     position: CAMERA_OFFSET,
     lookAt: [0, 0, 0],
-    fov: 35,
+    fov: 50,
     near: 0.1,
     far: 500,
   },

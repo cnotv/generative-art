@@ -655,9 +655,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     // Open panels
     viewPanelsStore.setViewPanels(options?.viewPanels ?? {});
+    updateSceneElements();
     if (viewPanelsStore.viewPanels.showElements) {
       panelsStore.openPanel('elements');
-      updateSceneElements();
     }
     isInitialized.value = true;
   };

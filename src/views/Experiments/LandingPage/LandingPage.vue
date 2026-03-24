@@ -33,7 +33,7 @@ const ORBIT_TARGET_Y = 1.89;
 const ORBIT_TARGET_Z = -0.08;
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 200;
-const FRUSTUM_HEIGHT = 14;
+const FRUSTUM_HEIGHT = 20;
 const BACKGROUND_COLOR = 0x0a0a0a;
 const WHITE = 0xffffff;
 const AMBIENT_INTENSITY = 5;
@@ -57,6 +57,7 @@ const RESET_DURATION_FRAMES = 60;
 const RESET_INTERVAL_FRAMES = 300;
 const WALL_DEPTH = 0.3;
 const WALL_Z = -2;
+const WALL_SIZE_MULTIPLIER = 10;
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight;
@@ -461,8 +462,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const wallAspect = window.innerWidth / window.innerHeight;
   const wallLength = Math.ceil(FRUSTUM_HEIGHT * wallAspect);
   const wallsGroup = getWalls(scene, world, {
-    length: wallLength,
-    height: FRUSTUM_HEIGHT,
+    length: wallLength * WALL_SIZE_MULTIPLIER,
+    height: FRUSTUM_HEIGHT * WALL_SIZE_MULTIPLIER,
     depth: WALL_DEPTH,
   });
   wallsGroup.rotation.x = Math.PI / 2;

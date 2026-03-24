@@ -7,7 +7,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: homePath
+      name: 'Landing Page',
+      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue'),
     },
     {
       path: '/:pathMatch(.*)*',
