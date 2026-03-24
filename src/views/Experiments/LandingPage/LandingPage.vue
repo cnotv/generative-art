@@ -1,32 +1,42 @@
 <script setup lang="ts">
 import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d-compat";
 import { ref, onMounted, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import type { Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
-import { getTools, getWalls, getModel } from "@webgamekit/threejs";
+import { getTools, getWalls, getModel, getPhysic } from "@webgamekit/threejs";
 import { createTimelineManager, animateTimeline } from "@webgamekit/animation";
 import { registerLightProperties } from "@/utils/lightProperties";
 import { registerCameraProperties } from "@/utils/cameraProperties";
 import { cameraSchema } from "@/views/Tools/SceneEditor/config";
 import { useElementPropertiesStore } from "@/stores/elementProperties";
 import { useDebugSceneStore } from "@/stores/debugScene";
+import {
+  registerViewConfig,
+  unregisterViewConfig,
+  createReactiveConfig,
+} from "@/stores/viewConfig";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
+const route = useRoute();
 
 let animationId = 0;
 let cleanupReference: (() => void) | null = null;
 
-const CAMERA_Z = 14;
-const CAMERA_Y = 2;
+const CAMERA_X = -0.03;
+const CAMERA_Y = 3.81;
+const CAMERA_Z = 13.79;
+const ORBIT_TARGET_X = -0.2;
+const ORBIT_TARGET_Y = 1.89;
+const ORBIT_TARGET_Z = -0.08;
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 200;
 const FRUSTUM_HEIGHT = 14;
 const BACKGROUND_COLOR = 0x0a0a0a;
 const WHITE = 0xffffff;
-const AMBIENT_INTENSITY = 2;
+const AMBIENT_INTENSITY = 5;
 const DIR_LIGHT_INTENSITY = 4;
 const DIR_LIGHT_POS = 5;
 const TARGET_WIDTH = 8;
@@ -39,12 +49,14 @@ const LINEAR_DAMPING = 2.0;
 const ANGULAR_DAMPING = 2.0;
 const PHYSICS_FPS = 60;
 const PHYSICS_STEP = 1 / PHYSICS_FPS;
-const DEFAULT_IMPULSE = 90;
-const LOGO_IMPULSE_MULTIPLIER = 10;
-const DEFAULT_TORQUE = 7.5;
+const DEFAULT_IMPULSE = 2;
+const IMPULSE_SCALE = 0.1;
+const LOGO_IMPULSE_MULTIPLIER = 0.1;
+const DEFAULT_TORQUE = 3;
 const RESET_DURATION_FRAMES = 60;
 const RESET_INTERVAL_FRAMES = 300;
 const WALL_DEPTH = 0.3;
+const WALL_Z = -2;
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight;
@@ -58,8 +70,8 @@ const createOrthographicCamera = (): THREE.OrthographicCamera => {
     CAMERA_NEAR,
     CAMERA_FAR
   );
-  camera.position.set(0, CAMERA_Y, CAMERA_Z);
-  camera.lookAt(0, CAMERA_Y, 0);
+  camera.position.set(CAMERA_X, CAMERA_Y, CAMERA_Z);
+  camera.lookAt(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z);
   return camera;
 };
 
@@ -89,33 +101,23 @@ const createLights = (scene: THREE.Scene) => {
   return { ambientLight, dirLight };
 };
 
-type BodyEntry = { body: RAPIER.RigidBody; originalPos: THREE.Vector3 };
+type PhysicsWorld = Parameters<typeof getPhysic>[0];
+interface PhysicsBody {
+  translation(): { x: number; y: number; z: number };
+  rotation(): { x: number; y: number; z: number; w: number };
+  setTranslation(t: { x: number; y: number; z: number }, wake: boolean): void;
+  setRotation(r: { x: number; y: number; z: number; w: number }, wake: boolean): void;
+  setLinvel(v: { x: number; y: number; z: number }, wake: boolean): void;
+  setAngvel(v: { x: number; y: number; z: number }, wake: boolean): void;
+  applyImpulse(impulse: { x: number; y: number; z: number }, wake: boolean): void;
+  applyTorqueImpulse(torque: { x: number; y: number; z: number }, wake: boolean): void;
+}
+type BodyEntry = { body: PhysicsBody; originalPos: THREE.Vector3 };
 type PhysicsBodies = Map<THREE.Object3D, BodyEntry>;
-
-const createDynamicBody = (
-  world: RAPIER.World,
-  position: THREE.Vector3,
-  halfExtents: THREE.Vector3
-): RAPIER.RigidBody => {
-  const body = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(position.x, position.y, position.z)
-      .setGravityScale(0.0)
-      .setLinearDamping(LINEAR_DAMPING)
-      .setAngularDamping(ANGULAR_DAMPING)
-  );
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
-      .setRestitution(COLLIDER_RESTITUTION)
-      .setFriction(COLLIDER_FRICTION),
-    body
-  );
-  return body;
-};
 
 const loadLogo = async (
   scene: THREE.Scene,
-  world: RAPIER.World,
+  world: PhysicsWorld,
   bodies: PhysicsBodies,
   material: THREE.Material
 ): Promise<void> => {
@@ -150,8 +152,9 @@ const loadLogo = async (
     }
   });
 
-  model.userData.body.setTranslation({ x: logoPos.x, y: logoPos.y, z: logoPos.z }, true);
-  bodies.set(model, { body: model.userData.body, originalPos: logoPos.clone() });
+  const logoBody = model.userData.body as PhysicsBody;
+  logoBody.setTranslation({ x: logoPos.x, y: logoPos.y, z: logoPos.z }, true);
+  bodies.set(model, { body: logoBody, originalPos: logoPos.clone() });
 };
 
 const buildTextOptions = (font: Font) => ({
@@ -170,7 +173,7 @@ const getSpacingAfter = (index: number): number =>
 
 const loadText = (
   scene: THREE.Scene,
-  world: RAPIER.World,
+  world: PhysicsWorld,
   bodies: PhysicsBodies,
   material: THREE.Material,
   font: Font
@@ -228,12 +231,21 @@ const loadText = (
   const centerX = currentX / 2;
   meshes.forEach(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
     mesh.position.x -= centerX;
-    const body = createDynamicBody(
-      world,
-      mesh.position,
-      new THREE.Vector3(scaledWidth / 2, scaledHeight / 2, scaledDepth / 2)
-    );
-    bodies.set(mesh, { body, originalPos: mesh.position.clone() });
+    const { rigidBody } = getPhysic(world, {
+      type: "dynamic",
+      position: [mesh.position.x, mesh.position.y, mesh.position.z],
+      size: [scaledWidth, scaledHeight, scaledDepth],
+      boundary: 0.35,
+      weight: 0,
+      damping: LINEAR_DAMPING,
+      angular: ANGULAR_DAMPING,
+      restitution: COLLIDER_RESTITUTION,
+      friction: COLLIDER_FRICTION,
+    });
+    bodies.set(mesh, {
+      body: rigidBody as PhysicsBody,
+      originalPos: mesh.position.clone(),
+    });
   });
 };
 
@@ -243,18 +255,23 @@ const getAncestors = (object: THREE.Object3D): THREE.Object3D[] =>
 const findBodyForObject = (
   object: THREE.Object3D,
   bodies: PhysicsBodies
-): RAPIER.RigidBody | null =>
-  getAncestors(object).reduce<RAPIER.RigidBody | null>(
+): PhysicsBody | null =>
+  getAncestors(object).reduce<PhysicsBody | null>(
     (found, ancestor) => found ?? bodies.get(ancestor)?.body ?? null,
     null
   );
 
 type PhysicsConfig = { impulse: number; torque: number };
 
+const physicsConfigSchema = {
+  impulse: { label: "Movement Speed", min: 0, max: 500, step: 1 },
+  torque: { label: "Rotation Speed", min: 0, max: 100, step: 0.5 },
+};
+
 const createClickHandler = (
   camera: THREE.OrthographicCamera,
   bodies: PhysicsBodies,
-  config: PhysicsConfig
+  config: { value: PhysicsConfig }
 ) => (event: PointerEvent): void => {
   const pointer = new THREE.Vector2(
     (event.clientX / window.innerWidth) * 2 - 1,
@@ -281,8 +298,9 @@ const createClickHandler = (
   );
   const direction = offset.clone().negate().normalize();
   const bodyOwner = [...bodies.entries()].find(([, entry]) => entry.body === body)?.[0];
-  const impulseScale = bodyOwner instanceof THREE.Group ? LOGO_IMPULSE_MULTIPLIER : 1;
-  const magnitude = config.impulse * impulseScale;
+  const impulseScale =
+    (bodyOwner instanceof THREE.Group ? LOGO_IMPULSE_MULTIPLIER : 1) * IMPULSE_SCALE;
+  const magnitude = config.value.impulse * impulseScale;
 
   body.applyImpulse(
     {
@@ -294,7 +312,7 @@ const createClickHandler = (
   );
 
   const offsetLength = offset.length();
-  const torque = offsetLength * config.torque * impulseScale;
+  const torque = offsetLength * config.value.torque * impulseScale;
   body.applyTorqueImpulse(
     {
       x: offset.y * torque,
@@ -305,13 +323,21 @@ const createClickHandler = (
   );
 };
 
-const registerPanels = (
-  camera: THREE.OrthographicCamera,
-  orbit: OrbitControls,
-  ambientLight: THREE.AmbientLight,
-  dirLight: THREE.DirectionalLight,
-  physicsConfig: PhysicsConfig
-): void => {
+interface RegisterPanelsOptions {
+  camera: THREE.OrthographicCamera;
+  orbit: OrbitControls;
+  ambientLight: THREE.AmbientLight;
+  dirLight: THREE.DirectionalLight;
+  wallsGroup: THREE.Group;
+}
+
+const registerPanels = ({
+  camera,
+  orbit,
+  ambientLight,
+  dirLight,
+  wallsGroup,
+}: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
     orbitTarget: cameraSchema.orbitTarget,
@@ -319,19 +345,46 @@ const registerPanels = (
   };
   registerCameraProperties({ camera, orbit, schema: orthoCameraSchema });
 
-  registerLightProperties({ light: ambientLight, name: "ambient-light", title: "Ambient Light" });
-  registerLightProperties({ light: dirLight, name: "directional-light", title: "Directional Light" });
-  useDebugSceneStore().registerSceneElements((camera as unknown) as THREE.Camera, [ambientLight, dirLight]);
+  registerLightProperties({
+    light: ambientLight,
+    name: "ambient-light",
+    title: "Ambient Light",
+  });
+  registerLightProperties({
+    light: dirLight,
+    name: "directional-light",
+    title: "Directional Light",
+  });
+  useDebugSceneStore().registerSceneElements((camera as unknown) as THREE.Camera, [
+    ambientLight,
+    dirLight,
+  ]);
 
-  useElementPropertiesStore().registerElementProperties("physics", {
-    title: "Physics",
+  const elementStore = useElementPropertiesStore();
+  elementStore.registerElementProperties("walls", {
+    title: "Walls",
     schema: {
-      impulse: { label: "Movement Speed", min: 0, max: 500, step: 1 },
-      torque: { label: "Rotation Speed", min: 0, max: 100, step: 0.5 },
+      position: {
+        label: "Position",
+        x: { label: "X", min: -20, max: 20, step: 0.1 },
+        y: { label: "Y", min: -20, max: 20, step: 0.1 },
+        z: { label: "Z", min: -20, max: 20, step: 0.1 },
+      },
     },
-    getValue: (path) => physicsConfig[path as keyof PhysicsConfig],
+    getValue: (path) => {
+      if (path === "position")
+        return {
+          x: wallsGroup.position.x,
+          y: wallsGroup.position.y,
+          z: wallsGroup.position.z,
+        };
+      return undefined;
+    },
     updateValue: (path, value) => {
-      physicsConfig[path as keyof PhysicsConfig] = value as number;
+      if (path === "position") {
+        const pos = value as { x: number; y: number; z: number };
+        wallsGroup.position.set(pos.x, pos.y, pos.z);
+      }
     },
   });
 };
@@ -412,17 +465,24 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     height: FRUSTUM_HEIGHT,
     depth: WALL_DEPTH,
   });
-  wallsGroup.rotation.z = Math.PI / 2;
+  wallsGroup.rotation.x = Math.PI / 2;
+  wallsGroup.position.z = WALL_Z;
 
   const orbit = new OrbitControls(camera, renderer.domElement);
-  orbit.target.set(0, CAMERA_Y, 0);
+  orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z);
+  orbit.update();
   orbit.enabled = false;
 
-  const physicsConfig: PhysicsConfig = {
+  const physicsConfig = createReactiveConfig<PhysicsConfig>({
     impulse: DEFAULT_IMPULSE,
     torque: DEFAULT_TORQUE,
-  };
-  registerPanels(camera, orbit, ambientLight, dirLight, physicsConfig);
+  });
+  registerViewConfig(
+    route.name as string,
+    physicsConfig as ReturnType<typeof createReactiveConfig>,
+    physicsConfigSchema
+  );
+  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup });
 
   const timelineManager = createResetTimeline(bodies);
 
@@ -472,6 +532,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelAnimationFrame(animationId);
+  unregisterViewConfig(route.name as string);
   useElementPropertiesStore().clearAllElementProperties();
   useDebugSceneStore().clearSceneElements();
   cleanupReference?.();
