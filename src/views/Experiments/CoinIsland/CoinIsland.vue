@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, shallowRef, toRaw } from "vue";
 import { useRoute } from "vue-router";
 import { cameraFollowPlayer, removeElements, type ComplexModel } from "@webgamekit/threejs";
-import type { CoordinateTuple, AnimationData } from "@webgamekit/animation";
+import type { CoordinateTuple } from "@webgamekit/animation";
 import { createTimelineManager } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
@@ -57,7 +57,7 @@ onMounted(async () => {
   );
 
   await store.init(canvas.value, setupConfig, {
-    viewPanels: { showConfig: true, showElements: false },
+    viewPanels: { showConfig: true, showElements: true },
     playMode: true,
     defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
       const obstacles: ComplexModel[] = [];
@@ -145,7 +145,8 @@ onMounted(async () => {
             coins = [...coins.slice(0, index), ...coins.slice(index + 1)];
           });
 
-          gameState.value?.setScore(
+          gameState.value?.setData(
+            'score',
             (gameState.value?.data.score ?? 0) + collected.length
           );
         },

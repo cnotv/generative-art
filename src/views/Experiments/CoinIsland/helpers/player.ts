@@ -28,7 +28,7 @@ export const createPlayer = async (
 
 export const updatePlayerMovement = (
   player: ComplexModel,
-  currentActions: Map<string, Set<string>>,
+  currentActions: Record<string, unknown>,
   obstacles: ComplexModel[],
   groundBodies: ComplexModel[],
   getDelta: () => number,
