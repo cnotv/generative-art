@@ -7,3 +7,4 @@ export * from './models';
 export * from './core';
 export * from './textures';
 export * from './area-population';
+export * from './controller';

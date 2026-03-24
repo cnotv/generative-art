@@ -123,5 +123,11 @@ export const getCoinBlock = (
   const { rigidBody, collider } = getPhysic(world, { position, size, boundary: 0.8, type: 'kinematicPositionBased' })
   rigidBody.setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 }, true)
 
-  return { mesh, rigidBody, collider, initialValues }
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+    },
+  })
 }
