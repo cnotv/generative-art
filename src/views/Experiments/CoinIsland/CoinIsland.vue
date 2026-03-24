@@ -13,7 +13,7 @@ import {
 } from "@/stores/viewConfig";
 import { useSceneViewStore } from "@/stores/sceneView";
 
-import { createIslandGround, createWaterPlane, createWalls } from "./helpers/island";
+import { createWalls } from "./helpers/island";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
 import { spawnWasps, updateWaspChase, checkWaspCatch } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
@@ -59,20 +59,17 @@ onMounted(async () => {
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showElements: true },
     playMode: true,
-    defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
+    defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
       const obstacles: ComplexModel[] = [];
       const cameraOffset = CAMERA_OFFSET as CoordinateTuple;
 
-      // Environment
-      const ground = createIslandGround(scene, world);
-      obstacles.push(ground);
-      const water = createWaterPlane(scene);
+      // Walls
       const walls = await createWalls(scene, world);
       walls.forEach((wall) => obstacles.push(wall));
 
       // Player
       const player = await createPlayer(scene, world);
-      const groundBodies: ComplexModel[] = [ground];
+      const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
 
       // Coins
       let coins = spawnCoins(scene, world, COIN_POSITIONS);
@@ -162,15 +159,6 @@ onMounted(async () => {
           if (checkWaspCatch(player.position, wasps, CATCH_RADIUS)) {
             gameOver.value = true;
           }
-        },
-      });
-
-      // Water animation
-      timelineManager.addAction({
-        name: "water-animation",
-        category: "visual",
-        action: () => {
-          water.update(getDelta());
         },
       });
 

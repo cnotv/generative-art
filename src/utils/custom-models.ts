@@ -113,7 +113,7 @@ export const getCoinBlock = (
   const color = 0xffff00
   const size: CoordinateTuple = [1.25, 1.25, 1.25]
   const material = new THREE.MeshPhysicalMaterial({ color })
-  const geometry = new THREE.CylinderGeometry(10, 10, 1, 32)
+  const geometry = new THREE.CylinderGeometry(1, 1, 0.3, 32)
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
   scene.add(mesh)

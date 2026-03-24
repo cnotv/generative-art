@@ -4,35 +4,26 @@ import type { SetupConfig, ModelOptions } from "@webgamekit/threejs";
 
 // Island
 export const ISLAND_SIZE = 40;
-export const ISLAND_HEIGHT = 0.5;
 export const ISLAND_COLOR = 0xc2b280;
-export const WATER_SIZE = 200;
-export const WATER_Y = -0.3;
 
 // Walls
 export const WALL_CELL_SIZE = 4;
-export const WALL_SCALE: CoordinateTuple = [0.15, 0.15, 0.15];
+export const WALL_SCALE: CoordinateTuple = [0.02, 0.02, 0.02];
 
 // Player
 export const PLAYER_SPEED = 20;
 export const PLAYER_DISTANCE = 0.5;
-export const IDLE_ANIMATION_SPEED = 5;
-export const PLAYER_MODEL = "character2.fbx";
-export const PLAYER_ANIMATIONS = [
-  "animations/walk2.fbx",
-  "animations/idle.fbx",
-  "animations/running.fbx",
-];
-export const PLAYER_START: CoordinateTuple = [0, 0.5, 0];
+export const PLAYER_MODEL = "stickboy.glb";
+export const PLAYER_START: CoordinateTuple = [0, 0, 0];
+export const PLAYER_MODEL_SCALE = 2.5;
 
 export const playerModelOptions: ModelOptions = {
   position: PLAYER_START,
-  scale: [0.01, 0.01, 0.01] as CoordinateTuple,
+  scale: [PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE] as CoordinateTuple,
   type: "kinematicPositionBased",
   hasGravity: false,
   castShadow: true,
-  boundary: 2,
-  animations: PLAYER_ANIMATIONS,
+  boundary: 0.5,
 };
 
 export const playerMovement = {
@@ -49,7 +40,7 @@ export const WASP_MODEL = "wasp.glb";
 export const CATCH_RADIUS = 2;
 
 export const waspModelOptions: ModelOptions = {
-  scale: [2, 2, 2] as CoordinateTuple,
+  scale: [0.66, 0.66, 0.66] as CoordinateTuple,
   type: "kinematicPositionBased",
   hasGravity: false,
   castShadow: true,
@@ -60,24 +51,23 @@ export const waspModelOptions: ModelOptions = {
 export const COLLECTION_RADIUS = 3;
 export const COIN_SPIN_SPEED = 2;
 export const COIN_POSITIONS: CoordinateTuple[] = [
-  [8, 1, 8],
-  [-8, 1, -8],
-  [12, 1, -4],
-  [-12, 1, 4],
-  [0, 1, 14],
-  [0, 1, -14],
-  [10, 1, 10],
-  [-10, 1, -10],
+  [8, 3, 8],
+  [-8, 3, -8],
+  [12, 3, -4],
+  [-12, 3, 4],
+  [0, 3, 14],
+  [0, 3, -14],
+  [10, 3, 10],
+  [-10, 3, -10],
 ];
 
 // Camera
-export const CAMERA_OFFSET: CoordinateTuple = [20, 25, 20];
+export const CAMERA_OFFSET: CoordinateTuple = [0, 25, 30];
 
 // Scene setup
 export const setupConfig: SetupConfig = {
   orbit: {
     target: new THREE.Vector3(0, 0, 0),
-    disabled: true,
   },
   camera: {
     position: CAMERA_OFFSET,
@@ -86,7 +76,7 @@ export const setupConfig: SetupConfig = {
     near: 0.1,
     far: 500,
   },
-  ground: false,
+  ground: { size: ISLAND_SIZE, color: ISLAND_COLOR },
   sky: { color: 0x87ceeb },
   lights: {
     ambient: { intensity: 0.6 },
@@ -104,8 +94,8 @@ export const controlBindings = {
     keyboard: {
       a: "move-left",
       d: "move-right",
-      w: "move-up",
-      s: "move-down",
+      w: "move-down",
+      s: "move-up",
     },
     gamepad: {
       "dpad-left": "move-left",

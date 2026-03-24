@@ -9,7 +9,11 @@ export const spawnCoins = (
   world: RAPIER.World,
   positions: CoordinateTuple[]
 ): ComplexModel[] =>
-  positions.map((position) => getCoinBlock(scene, world, { position }));
+  positions.map((position, i) => {
+    const coin = getCoinBlock(scene, world, { position });
+    coin.name = `Coin ${i + 1}`;
+    return coin;
+  });
 
 export const updateCoinSpin = (
   coins: ComplexModel[],
@@ -17,7 +21,7 @@ export const updateCoinSpin = (
   speed: number
 ): void => {
   coins.forEach((coin) => {
-    coin.rotation.y += delta * speed;
+    coin.rotation.z += delta * speed;
   });
 };
 

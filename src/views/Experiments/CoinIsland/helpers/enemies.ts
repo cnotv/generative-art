@@ -32,15 +32,20 @@ export const spawnWasps = async (
       const angle = (i / count) * Math.PI * 2;
       const position: [number, number, number] = [
         Math.cos(angle) * half * 0.7,
-        1,
+        3,
         Math.sin(angle) * half * 0.7,
       ];
       return getModel(scene, world, WASP_MODEL, {
         ...waspModelOptions,
         position,
+        name: `Wasp ${i + 1}`,
       });
     })
   );
+
+  wasps.forEach((wasp, i) => {
+    wasp.name = `Wasp ${i + 1}`;
+  });
 
   return wasps;
 };

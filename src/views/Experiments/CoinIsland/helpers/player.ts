@@ -14,7 +14,6 @@ import {
   playerMovement,
   PLAYER_SPEED,
   PLAYER_DISTANCE,
-  IDLE_ANIMATION_SPEED,
 } from '../config';
 
 export const createPlayer = async (
@@ -34,9 +33,9 @@ export const updatePlayerMovement = (
   getDelta: () => number,
   speed: number = PLAYER_SPEED
 ): void => {
-  const targetRotation = getRotation(currentActions, true);
+  const targetRotation = getRotation(currentActions, false);
   const isMoving = targetRotation !== null;
-  const actionName = 'Armature|mixamo.com|Layer0';
+  const actionName = isMoving ? 'walk' : 'idle';
 
   const animationData: AnimationData = {
     actionName,
@@ -50,6 +49,6 @@ export const updatePlayerMovement = (
     setRotation(player, targetRotation);
     controllerForward(obstacles, groundBodies, animationData, playerMovement);
   } else {
-    updateAnimation({ ...animationData, speed: IDLE_ANIMATION_SPEED });
+    updateAnimation(animationData);
   }
 };

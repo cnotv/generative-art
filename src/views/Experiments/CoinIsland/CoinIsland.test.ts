@@ -60,10 +60,10 @@ describe('checkCoinCollection', () => {
 });
 
 describe('updateCoinSpin', () => {
-  it('rotates coin meshes around Y axis', () => {
-    const coin = { rotation: { y: 0 } } as unknown as ComplexModel;
+  it('rotates coin meshes around Z axis', () => {
+    const coin = { rotation: { z: 0 } } as unknown as ComplexModel;
     updateCoinSpin([coin], 0.5, 2);
-    expect(coin.rotation.y).toBeCloseTo(1);
+    expect(coin.rotation.z).toBeCloseTo(1);
   });
 });
 
