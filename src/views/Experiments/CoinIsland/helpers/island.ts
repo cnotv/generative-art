@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { getModel, getWalls, type ComplexModel } from '@webgamekit/threejs';
+import { getModel, getWalls, getPhysic, type ComplexModel } from '@webgamekit/threejs';
 import type { CoordinateTuple } from '@webgamekit/animation';
 import {
   ISLAND_SIZE,
@@ -8,6 +8,7 @@ import {
   DESK_MODEL,
   DESK_MODEL_SCALE,
   DESK_POSITIONS,
+  DESK_PHYSICS_SIZE,
 } from '../config';
 
 export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THREE.Group =>
@@ -27,6 +28,13 @@ export const createDeskModels = (
         castShadow: true,
         receiveShadow: true,
         name: `Desk ${i + 1}`,
+      }).then((desk) => {
+        getPhysic(world, {
+          position: desk.position.toArray() as CoordinateTuple,
+          size: DESK_PHYSICS_SIZE,
+          type: 'fixed',
+        });
+        return desk;
       })
     )
   );

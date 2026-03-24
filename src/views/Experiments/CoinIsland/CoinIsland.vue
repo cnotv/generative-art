@@ -14,6 +14,7 @@ import {
 import { useSceneViewStore } from "@/stores/sceneView";
 
 import { createOfficeWalls, createDeskModels } from "./helpers/island";
+import { createScorePoster } from "./helpers/scorePoster";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
 import { spawnWasps, updateWaspChase } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
@@ -62,7 +63,8 @@ onMounted(async () => {
       const cameraOffset = CAMERA_OFFSET as CoordinateTuple;
 
       // Walls
-      createOfficeWalls(scene, world);
+      const wallsGroup = createOfficeWalls(scene, world);
+      (wallsGroup.children as ComplexModel[]).forEach((wall) => obstacles.push(wall));
 
       // Desks
       const desks = await createDeskModels(scene, world);
@@ -70,7 +72,9 @@ onMounted(async () => {
 
       // Player
       const player = await createPlayer(scene, world);
-      const groundBodies: ComplexModel[] = [];
+
+      // Score poster
+      const updatePoster = createScorePoster(scene, 0);
 
       // Coins
       let coins = spawnCoins(scene, world, COIN_POSITIONS);
@@ -92,8 +96,6 @@ onMounted(async () => {
           updatePlayerMovement(
             player,
             currentActions,
-            obstacles,
-            groundBodies,
             getDelta,
             (reactiveConfig.value as Record<string, Record<string, number>>).player.speed
           );
@@ -119,7 +121,7 @@ onMounted(async () => {
         action: () => {
           const speed = (reactiveConfig.value as Record<string, Record<string, number>>).wasp.speed;
           wasps.forEach((wasp) =>
-            updateWaspChase(wasp, player.position, speed, getDelta())
+            updateWaspChase(wasp, player.position, speed, getDelta(), obstacles)
           );
         },
       });
@@ -141,10 +143,9 @@ onMounted(async () => {
             coins = [...coins.slice(0, index), ...coins.slice(index + 1)];
           });
 
-          gameState.value?.setData(
-            'score',
-            (gameState.value?.data.score ?? 0) + collected.length
-          );
+          const newScore = (gameState.value?.data.score ?? 0) + collected.length;
+          gameState.value?.setData('score', newScore);
+          updatePoster(newScore);
         },
       });
 
@@ -165,22 +166,4 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" />
-  <div v-if="gameState" class="coin-island__score">Coins: {{ gameState.data.score }}</div>
 </template>
-
-<style scoped>
-.coin-island__score {
-  position: fixed;
-  top: var(--spacing-md);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: var(--color-surface-overlay);
-  color: var(--color-text-primary);
-  border-radius: var(--radius-md);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-lg);
-  z-index: var(--z-overlay);
-  pointer-events: none;
-}
-</style>

@@ -1,17 +1,16 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
-import { getModel, type ComplexModel } from '@webgamekit/threejs';
+import { getModel, moveController, type ComplexModel } from '@webgamekit/threejs';
 import {
-  controllerForward,
   updateAnimation,
   setRotation,
   getRotation,
+  getMovementDirection,
   type AnimationData,
 } from '@webgamekit/animation';
 import {
   PLAYER_MODEL,
   playerModelOptions,
-  playerMovement,
   PLAYER_SPEED,
   PLAYER_DISTANCE,
 } from '../config';
@@ -28,27 +27,30 @@ export const createPlayer = async (
 export const updatePlayerMovement = (
   player: ComplexModel,
   currentActions: Record<string, unknown>,
-  obstacles: ComplexModel[],
-  groundBodies: ComplexModel[],
   getDelta: () => number,
   speed: number = PLAYER_SPEED
 ): void => {
   const targetRotation = getRotation(currentActions, false);
   const isMoving = targetRotation !== null;
-  const actionName = isMoving ? 'walk' : 'idle';
+  const delta = getDelta();
 
   const animationData: AnimationData = {
-    actionName,
+    actionName: isMoving ? 'walk' : 'idle',
     player,
-    delta: getDelta() * 2,
+    delta: delta * 2,
     speed,
     distance: PLAYER_DISTANCE,
   };
 
   if (isMoving) {
     setRotation(player, targetRotation);
-    controllerForward(obstacles, groundBodies, animationData, playerMovement);
-  } else {
-    updateAnimation(animationData);
+    const { direction } = getMovementDirection(player, 1, false);
+    moveController(player, {
+      x: direction.x * speed * delta,
+      y: 0,
+      z: direction.z * speed * delta,
+    });
   }
+
+  updateAnimation(animationData);
 };

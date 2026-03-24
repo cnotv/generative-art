@@ -15,6 +15,9 @@ export const OFFICE_WALL_HEIGHT = 10;
 export const DESK_MODEL = "minimal_office.glb";
 const DESK_SCALE = 2.5;
 export const DESK_MODEL_SCALE: CoordinateTuple = [DESK_SCALE, DESK_SCALE, DESK_SCALE];
+const DESK_PHYSICS_WIDTH = 6;
+const DESK_PHYSICS_HEIGHT = 5;
+export const DESK_PHYSICS_SIZE: CoordinateTuple = [DESK_PHYSICS_WIDTH, DESK_PHYSICS_HEIGHT, DESK_PHYSICS_WIDTH];
 const DESK_CORNER = 25;
 const DESK_SIDE = 28;
 const DESK_FRONT = 22;
@@ -58,6 +61,7 @@ export const WASP_COUNT = 3;
 export const WASP_SPEED = 10;
 export const WASP_MODEL = "paper_airplane.glb";
 export const CATCH_RADIUS = 2;
+export const WASP_COLLISION_DISTANCE = 2;
 
 export const waspModelOptions: ModelOptions = {
   scale: [0.66, 0.66, 0.66] as CoordinateTuple,
@@ -80,6 +84,18 @@ export const COIN_POSITIONS: CoordinateTuple[] = [
   [10, 3, 10],
   [-10, 3, -10],
 ];
+
+// Score poster
+export const POSTER_CANVAS_SIZE = 512;
+export const POSTER_WIDTH = 6;
+export const POSTER_HEIGHT = 6;
+export const POSTER_WALL_OFFSET = 0.2;
+export const POSTER_FRAME_THICKNESS = 0.3;
+export const POSTER_FRAME_DEPTH = 0.1;
+const POSTER_LABEL_FONT_DIVISOR = 6;
+const POSTER_NUMBER_FONT_DIVISOR = 1.5;
+export const POSTER_LABEL_FONT_SIZE = Math.round(POSTER_CANVAS_SIZE / POSTER_LABEL_FONT_DIVISOR);
+export const POSTER_NUMBER_FONT_SIZE = Math.round(POSTER_CANVAS_SIZE / POSTER_NUMBER_FONT_DIVISOR);
 
 // Camera
 export const CAMERA_OFFSET: CoordinateTuple = [0, 25, 30];
@@ -120,12 +136,12 @@ export const controlBindings = {
     gamepad: {
       "dpad-left": "move-left",
       "dpad-right": "move-right",
-      "dpad-down": "move-down",
-      "dpad-up": "move-up",
+      "dpad-down": "move-up",
+      "dpad-up": "move-down",
       "axis0-left": "move-left",
       "axis0-right": "move-right",
-      "axis1-up": "move-up",
-      "axis1-down": "move-down",
+      "axis1-up": "move-down",
+      "axis1-down": "move-up",
     },
   },
   axisThreshold: 0.5,
