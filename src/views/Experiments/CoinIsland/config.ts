@@ -71,6 +71,15 @@ export const waspModelOptions: ModelOptions = {
   boundary: 1,
 };
 
+// Maze
+export const MAZE_SIZE = 16;
+export const MAZE_CELL_SIZE = 4;
+export const MAZE_WALL_HEIGHT = 3;
+export const MAZE_WALL_THICKNESS = 0.5;
+export const MAZE_WALL_COLOR = 0xd4c5a9;
+export const WASP_REPLAN_INTERVAL = 0.5;
+export const WASP_WAYPOINT_REACH_DISTANCE = 2;
+
 // Coins
 export const COLLECTION_RADIUS = 3;
 export const COIN_SPIN_SPEED = 2;

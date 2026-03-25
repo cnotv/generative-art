@@ -13,10 +13,10 @@ import {
 } from "@/stores/viewConfig";
 import { useSceneViewStore } from "@/stores/sceneView";
 
-import { createOfficeWalls, createDeskModels } from "./helpers/island";
+import { createOfficeWalls, createDeskModels, createMazesAroundDesks } from "./helpers/island";
 import { createScorePoster } from "./helpers/scorePoster";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
-import { spawnWasps, updateWaspChase } from "./helpers/enemies";
+import { spawnWasps, updateWaspChase, buildNavigationGrid, createInitialWaspPathState, type WaspPathState } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
 import {
   setupConfig,
@@ -70,6 +70,11 @@ onMounted(async () => {
       const desks = await createDeskModels(scene, world);
       desks.forEach((desk) => obstacles.push(desk));
 
+      // Mazes
+      const { walls: mazeWalls, mazeData } = createMazesAroundDesks(scene, world);
+      mazeWalls.forEach((wall) => obstacles.push(wall));
+      const navGrid = buildNavigationGrid(mazeData);
+
       // Player
       const player = await createPlayer(scene, world);
 
@@ -81,6 +86,7 @@ onMounted(async () => {
 
       // Enemies
       const wasps = await spawnWasps(scene, world, WASP_COUNT);
+      let waspPathStates: WaspPathState[] = wasps.map(() => createInitialWaspPathState());
 
       // Lazy orbit ref
       let orbitReference: Parameters<typeof cameraFollowPlayer>[3] | null = null;
@@ -120,8 +126,8 @@ onMounted(async () => {
         category: "ai",
         action: () => {
           const speed = (reactiveConfig.value as Record<string, Record<string, number>>).wasp.speed;
-          wasps.forEach((wasp) =>
-            updateWaspChase(wasp, player.position, speed, getDelta(), obstacles)
+          waspPathStates = wasps.map((wasp, i) =>
+            updateWaspChase(wasp, player.position, speed, getDelta(), obstacles, navGrid, waspPathStates[i])
           );
         },
       });

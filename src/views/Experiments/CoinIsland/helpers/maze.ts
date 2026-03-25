@@ -497,6 +497,68 @@ const algorithmMap: Record<MazeAlgorithm, (rows: number, cols: number) => MazeGr
 
 // --- Grid to 3D positions ---
 
+export interface MazeWallSegment {
+  position: CoordinateTuple;
+  /** true = wall runs along X axis (N/S wall); false = runs along Z axis (E/W wall) */
+  horizontal: boolean;
+}
+
+/**
+ * Convert a maze grid into oriented wall segments for 3D scene construction.
+ * Entrance at top-left, exit at bottom-right.
+ */
+export const generateMazeWallSegments = (
+  islandSize: number,
+  cellSize: number,
+  algorithm: MazeAlgorithm = 'recursive-backtracker',
+  wallY: number = 0
+): MazeWallSegment[] => {
+  const cols = Math.floor(islandSize / cellSize);
+  const rows = cols;
+  if (rows <= 0 || cols <= 0) return [];
+
+  const grid = algorithmMap[algorithm](rows, cols);
+  const half = islandSize / 2;
+
+  const cellToWorld = (row: number, col: number): [number, number] => [
+    -half + col * cellSize + cellSize / 2,
+    -half + row * cellSize + cellSize / 2,
+  ];
+
+  type SegmentWithKey = MazeWallSegment & { key: string };
+  const segments: SegmentWithKey[] = [];
+
+  grid.forEach((row) =>
+    row.forEach((cell) => {
+      const [wx, wz] = cellToWorld(cell.row, cell.col);
+      const wallOffset = cellSize / 2;
+      const rx = Math.round(wx * 100);
+      const rz = Math.round(wz * 100);
+      const ro = Math.round(wallOffset * 100);
+
+      if (cell.walls.north) segments.push({ position: [wx, wallY, wz - wallOffset], horizontal: true, key: `${rx},${rz - ro},H` });
+      if (cell.walls.south) segments.push({ position: [wx, wallY, wz + wallOffset], horizontal: true, key: `${rx},${rz + ro},H` });
+      if (cell.walls.west) segments.push({ position: [wx - wallOffset, wallY, wz], horizontal: false, key: `${rx - ro},${rz},V` });
+      if (cell.walls.east) segments.push({ position: [wx + wallOffset, wallY, wz], horizontal: false, key: `${rx + ro},${rz},V` });
+    })
+  );
+
+  const unique = new Map<string, MazeWallSegment>();
+  segments.forEach(({ key, position, horizontal }) => unique.set(key, { position, horizontal }));
+
+  const half2 = islandSize / 2;
+  const entranceX = -half2 + cellSize / 2;
+  const entranceZ = -half2;
+  const exitX = half2 - cellSize / 2;
+  const exitZ = half2;
+
+  return [...unique.values()].filter(({ position: pos }) => {
+    const isEntrance = Math.abs(pos[0] - entranceX) < cellSize / 2 && Math.abs(pos[2] - entranceZ) < cellSize / 2;
+    const isExit = Math.abs(pos[0] - exitX) < cellSize / 2 && Math.abs(pos[2] - exitZ) < cellSize / 2;
+    return !isEntrance && !isExit;
+  });
+};
+
 /**
  * Convert a maze grid into wall positions for the 3D scene.
  * Entrance at top-left, exit at bottom-right.

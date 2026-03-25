@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { getModel, getWalls, getPhysic, type ComplexModel } from '@webgamekit/threejs';
+import { getModel, getWalls, getPhysic, getCube, type ComplexModel } from '@webgamekit/threejs';
 import type { CoordinateTuple } from '@webgamekit/animation';
 import {
   ISLAND_SIZE,
@@ -9,7 +9,45 @@ import {
   DESK_MODEL_SCALE,
   DESK_POSITIONS,
   DESK_PHYSICS_SIZE,
+  MAZE_SIZE,
+  MAZE_CELL_SIZE,
+  MAZE_WALL_HEIGHT,
+  MAZE_WALL_THICKNESS,
+  MAZE_WALL_COLOR,
 } from '../config';
+import { generateMazeWallSegments, type MazeWallSegment } from './maze';
+
+export interface DeskMazeData {
+  deskPos: CoordinateTuple;
+  segments: MazeWallSegment[];
+}
+
+export const createMazesAroundDesks = (
+  scene: THREE.Scene,
+  world: RAPIER.World
+): { walls: ComplexModel[]; mazeData: DeskMazeData[] } => {
+  const mazeData: DeskMazeData[] = DESK_POSITIONS.map((deskPos) => ({
+    deskPos,
+    segments: generateMazeWallSegments(MAZE_SIZE, MAZE_CELL_SIZE),
+  }));
+
+  const walls = mazeData.flatMap(({ deskPos, segments }) =>
+    segments.map(({ position: [wx, , wz], horizontal }) =>
+      getCube(scene, world, {
+        position: [deskPos[0] + wx, MAZE_WALL_HEIGHT / 2, deskPos[2] + wz],
+        size: horizontal
+          ? [MAZE_CELL_SIZE, MAZE_WALL_HEIGHT, MAZE_WALL_THICKNESS]
+          : [MAZE_WALL_THICKNESS, MAZE_WALL_HEIGHT, MAZE_CELL_SIZE],
+        color: MAZE_WALL_COLOR,
+        type: 'fixed',
+        castShadow: true,
+        receiveShadow: true,
+      })
+    )
+  );
+
+  return { walls, mazeData };
+};
 
 export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THREE.Group =>
   getWalls(scene, world, { name: 'office-wall', length: ISLAND_SIZE, height: OFFICE_WALL_HEIGHT });

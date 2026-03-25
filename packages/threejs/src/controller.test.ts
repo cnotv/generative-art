@@ -63,7 +63,7 @@ describe('moveController', () => {
     const model = createMockModel(startPos, computed);
     const result = moveController(model, direction);
 
-    expect(model.userData.characterController.computeColliderMovement).toHaveBeenCalledWith(
+    expect(model.userData.characterController!.computeColliderMovement).toHaveBeenCalledWith(
       model.userData.collider,
       direction
     );
@@ -83,7 +83,7 @@ describe('moveController', () => {
 
   it('returns zero movement when collider is missing', () => {
     const model = createMockModel();
-    model.userData.collider = undefined;
+    model.userData.collider = undefined as unknown as typeof model.userData.collider;
     const result = moveController(model, { x: 1, y: 0, z: 0 });
 
     expect(result).toEqual({ x: 0, y: 0, z: 0 });
