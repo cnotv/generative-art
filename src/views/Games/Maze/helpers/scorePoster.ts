@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import {
   ISLAND_SIZE,
-  OFFICE_WALL_HEIGHT,
   POSTER_CANVAS_SIZE,
   POSTER_WIDTH,
   POSTER_HEIGHT,
+  POSTER_Y,
   POSTER_WALL_OFFSET,
   POSTER_FRAME_THICKNESS,
   POSTER_FRAME_DEPTH,
@@ -12,7 +12,6 @@ import {
   POSTER_NUMBER_FONT_SIZE,
 } from '../config';
 
-const POSTER_Y = OFFICE_WALL_HEIGHT / 2;
 
 const drawPoster = (ctx: CanvasRenderingContext2D, score: number): void => {
   ctx.fillStyle = '#ffffff';

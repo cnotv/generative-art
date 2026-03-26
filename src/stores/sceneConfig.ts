@@ -14,22 +14,6 @@ export const globalSceneSchema: ConfigControlsSchema = {
     frameRate: { min: 1, max: 120, step: 1, label: 'Frame Rate' },
     textSelection: { boolean: true, label: 'Allow Text Selection' },
   },
-  orbit: {
-    disabled: { boolean: false, label: 'Disable Orbit Controls' },
-  },
-  postprocessing: {
-    bloom: {
-      enabled: { boolean: false, label: 'Bloom' },
-      strength: { min: 0, max: 5, step: 0.1, label: 'Strength' },
-      threshold: { min: 0, max: 1, step: 0.01, label: 'Threshold' },
-      radius: { min: 0, max: 1, step: 0.01, label: 'Radius' },
-    },
-    vignette: {
-      enabled: { boolean: false, label: 'Vignette' },
-      offset: { min: 0, max: 1, step: 0.01, label: 'Offset' },
-      darkness: { min: 0, max: 1, step: 0.01, label: 'Darkness' },
-    },
-  },
 };
 
 export const useSceneConfigStore = defineStore('sceneConfig', () => {

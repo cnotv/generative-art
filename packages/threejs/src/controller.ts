@@ -13,11 +13,16 @@ const ZERO_VEC: Vec3 = { x: 0, y: 0, z: 0 };
 export const moveController = (
   model: ComplexModel,
   direction: Vec3,
+  filterPredicate?: (collider: object) => boolean,
 ): Vec3 => {
   const { characterController, collider } = model.userData;
   if (!characterController || !collider) return ZERO_VEC;
 
-  characterController.computeColliderMovement(collider, direction);
+  if (filterPredicate) {
+    characterController.computeColliderMovement(collider, direction, undefined, undefined, filterPredicate);
+  } else {
+    characterController.computeColliderMovement(collider, direction);
+  }
   const translation = characterController.computedMovement();
   const position = collider.translation();
 

@@ -151,10 +151,8 @@ const generatePrims = (rows: number, cols: number): MazeGrid => {
       cell.row < rows - 1 ? grid[cell.row + 1][cell.col] : null,
       cell.col > 0 ? grid[cell.row][cell.col - 1] : null,
       cell.col < cols - 1 ? grid[cell.row][cell.col + 1] : null,
-    ].filter((n): n is MazeCell => {
-      const key = `${n.row},${n.col}`;
-      return n !== null && !n.visited && !inFrontier.has(key);
-    }).forEach((n) => {
+    ].filter((n): n is MazeCell => n !== null && !n.visited && !inFrontier.has(`${n.row},${n.col}`))
+     .forEach((n) => {
       frontier.push(n);
       inFrontier.add(`${n.row},${n.col}`);
     });
@@ -497,6 +495,32 @@ const algorithmMap: Record<MazeAlgorithm, (rows: number, cols: number) => MazeGr
 
 // --- Grid to 3D positions ---
 
+/**
+ * Returns world-space cell centre positions for coin/item placement.
+ * @param step  pick every Nth cell in each axis (default 5 → 4×4 = 16 positions for a 20-cell grid)
+ * @param height  Y position for the returned coordinates
+ */
+export const getMazeCellCenters = (
+  islandSize: number,
+  cellSize: number,
+  step = 5,
+  height = 3,
+): CoordinateTuple[] => {
+  const totalCells = Math.floor(islandSize / cellSize);
+  const half = islandSize / 2;
+  const indices = Array.from(
+    { length: Math.floor(totalCells / step) },
+    (_, i) => i * step + Math.floor(step / 2)
+  );
+  return indices.flatMap((row) =>
+    indices.map((col): CoordinateTuple => [
+      -half + col * cellSize + cellSize / 2,
+      height,
+      -half + row * cellSize + cellSize / 2,
+    ])
+  );
+};
+
 export interface MazeWallSegment {
   position: CoordinateTuple;
   /** true = wall runs along X axis (N/S wall); false = runs along Z axis (E/W wall) */
@@ -507,50 +531,43 @@ export interface MazeWallSegment {
  * Convert a maze grid into oriented wall segments for 3D scene construction.
  * Entrance at top-left, exit at bottom-right.
  */
-export const generateMazeWallSegments = (
+const mazeGridToSegments = (
+  grid: MazeGrid,
   islandSize: number,
   cellSize: number,
-  algorithm: MazeAlgorithm = 'recursive-backtracker',
-  wallY: number = 0
+  wallY = 0,
 ): MazeWallSegment[] => {
-  const cols = Math.floor(islandSize / cellSize);
-  const rows = cols;
-  if (rows <= 0 || cols <= 0) return [];
-
-  const grid = algorithmMap[algorithm](rows, cols);
   const half = islandSize / 2;
-
   const cellToWorld = (row: number, col: number): [number, number] => [
     -half + col * cellSize + cellSize / 2,
     -half + row * cellSize + cellSize / 2,
   ];
 
   type SegmentWithKey = MazeWallSegment & { key: string };
-  const segments: SegmentWithKey[] = [];
 
-  grid.forEach((row) =>
-    row.forEach((cell) => {
+  const raw = grid.flatMap((row) =>
+    row.flatMap((cell) => {
       const [wx, wz] = cellToWorld(cell.row, cell.col);
       const wallOffset = cellSize / 2;
       const rx = Math.round(wx * 100);
       const rz = Math.round(wz * 100);
       const ro = Math.round(wallOffset * 100);
-
-      if (cell.walls.north) segments.push({ position: [wx, wallY, wz - wallOffset], horizontal: true, key: `${rx},${rz - ro},H` });
-      if (cell.walls.south) segments.push({ position: [wx, wallY, wz + wallOffset], horizontal: true, key: `${rx},${rz + ro},H` });
-      if (cell.walls.west) segments.push({ position: [wx - wallOffset, wallY, wz], horizontal: false, key: `${rx - ro},${rz},V` });
-      if (cell.walls.east) segments.push({ position: [wx + wallOffset, wallY, wz], horizontal: false, key: `${rx + ro},${rz},V` });
+      return [
+        cell.walls.north ? { position: [wx, wallY, wz - wallOffset] as CoordinateTuple, horizontal: true, key: `${rx},${rz - ro},H` } : null,
+        cell.walls.south ? { position: [wx, wallY, wz + wallOffset] as CoordinateTuple, horizontal: true, key: `${rx},${rz + ro},H` } : null,
+        cell.walls.west  ? { position: [wx - wallOffset, wallY, wz] as CoordinateTuple, horizontal: false, key: `${rx - ro},${rz},V` } : null,
+        cell.walls.east  ? { position: [wx + wallOffset, wallY, wz] as CoordinateTuple, horizontal: false, key: `${rx + ro},${rz},V` } : null,
+      ].filter((s): s is SegmentWithKey => s !== null);
     })
   );
 
   const unique = new Map<string, MazeWallSegment>();
-  segments.forEach(({ key, position, horizontal }) => unique.set(key, { position, horizontal }));
+  raw.forEach(({ key, position, horizontal }) => unique.set(key, { position, horizontal }));
 
-  const half2 = islandSize / 2;
-  const entranceX = -half2 + cellSize / 2;
-  const entranceZ = -half2;
-  const exitX = half2 - cellSize / 2;
-  const exitZ = half2;
+  const entranceX = -half + cellSize / 2;
+  const entranceZ = -half;
+  const exitX = half - cellSize / 2;
+  const exitZ = half;
 
   return [...unique.values()].filter(({ position: pos }) => {
     const isEntrance = Math.abs(pos[0] - entranceX) < cellSize / 2 && Math.abs(pos[2] - entranceZ) < cellSize / 2;
@@ -558,6 +575,26 @@ export const generateMazeWallSegments = (
     return !isEntrance && !isExit;
   });
 };
+
+export const generateMazeAndSegments = (
+  islandSize: number,
+  cellSize: number,
+  algorithm: MazeAlgorithm = 'recursive-backtracker',
+  wallY = 0,
+): { grid: MazeGrid; segments: MazeWallSegment[] } => {
+  const cols = Math.floor(islandSize / cellSize);
+  const rows = cols;
+  if (rows <= 0 || cols <= 0) return { grid: [], segments: [] };
+  const grid = algorithmMap[algorithm](rows, cols);
+  return { grid, segments: mazeGridToSegments(grid, islandSize, cellSize, wallY) };
+};
+
+export const generateMazeWallSegments = (
+  islandSize: number,
+  cellSize: number,
+  algorithm: MazeAlgorithm = 'recursive-backtracker',
+  wallY = 0,
+): MazeWallSegment[] => generateMazeAndSegments(islandSize, cellSize, algorithm, wallY).segments;
 
 /**
  * Convert a maze grid into wall positions for the 3D scene.

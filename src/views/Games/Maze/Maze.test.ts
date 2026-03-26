@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { generateWallPositions, ISLAND_SIZE, WALL_CELL_SIZE } from './config';
+import { generateWallPositions, ISLAND_SIZE, WALL_CELL_SIZE, MAZE_CELL_SIZE } from './config';
 import { checkCoinCollection, updateCoinSpin } from './helpers/coins';
-import { computeChaseDirection, checkWaspCatch } from './helpers/enemies';
+import { computeChaseDirection, checkPaperPlaneCatch, buildNavigationGrid } from './helpers/enemies';
+import { generateMazeAndSegments } from './helpers/maze';
+import { logicGetBestRoute } from '@webgamekit/logic';
 import type { ComplexModel } from '@webgamekit/threejs';
 
 describe('generateWallPositions', () => {
@@ -70,35 +72,51 @@ describe('updateCoinSpin', () => {
 describe('computeChaseDirection', () => {
   it.each([
     {
-      waspPos: new THREE.Vector3(0, 0, 0),
+      planePos: new THREE.Vector3(0, 0, 0),
       playerPos: new THREE.Vector3(10, 0, 0),
       expectedX: 1,
       expectedZ: 0,
       description: 'returns normalized direction toward player along X',
     },
     {
-      waspPos: new THREE.Vector3(5, 0, 5),
+      planePos: new THREE.Vector3(5, 0, 5),
       playerPos: new THREE.Vector3(5, 0, 5),
       expectedX: 0,
       expectedZ: 0,
-      description: 'returns zero when wasp is at player position',
+      description: 'returns zero when plane is at player position',
     },
-  ])('$description', ({ waspPos, playerPos, expectedX, expectedZ }) => {
-    const dir = computeChaseDirection(waspPos, playerPos);
+  ])('$description', ({ planePos, playerPos, expectedX, expectedZ }) => {
+    const dir = computeChaseDirection(planePos, playerPos);
     expect(dir.x).toBeCloseTo(expectedX);
     expect(dir.z).toBeCloseTo(expectedZ);
     expect(dir.y).toBe(0);
   });
 });
 
-describe('checkWaspCatch', () => {
-  it('returns true when wasp is within catch radius', () => {
-    const wasp = { position: new THREE.Vector3(1, 0, 0) } as unknown as ComplexModel;
-    expect(checkWaspCatch(new THREE.Vector3(0, 0, 0), [wasp], 2)).toBe(true);
+describe('maze pathfinding reachability', () => {
+  const TOTAL_CELLS = Math.floor(ISLAND_SIZE / MAZE_CELL_SIZE);
+  const EXIT_GRID = (TOTAL_CELLS - 1) * 2;
+
+  it.each(Array.from({ length: 10 }, (_, i) => ({ run: i + 1 })))(
+    'can navigate from entrance to exit (run $run)',
+    () => {
+      const { grid: mazeGrid } = generateMazeAndSegments(ISLAND_SIZE, MAZE_CELL_SIZE);
+      const navGrid = buildNavigationGrid(mazeGrid);
+      const path = logicGetBestRoute(navGrid, { x: 0, z: 0 }, { x: EXIT_GRID, z: EXIT_GRID });
+      expect(path).not.toBeNull();
+      expect(path!.length).toBeGreaterThan(0);
+    }
+  );
+});
+
+describe('checkPaperPlaneCatch', () => {
+  it('returns true when plane is within catch radius', () => {
+    const plane = { position: new THREE.Vector3(1, 0, 0) } as unknown as ComplexModel;
+    expect(checkPaperPlaneCatch(new THREE.Vector3(0, 0, 0), [plane], 2)).toBe(true);
   });
 
-  it('returns false when all wasps are far away', () => {
-    const wasp = { position: new THREE.Vector3(50, 0, 0) } as unknown as ComplexModel;
-    expect(checkWaspCatch(new THREE.Vector3(0, 0, 0), [wasp], 2)).toBe(false);
+  it('returns false when all planes are far away', () => {
+    const plane = { position: new THREE.Vector3(50, 0, 0) } as unknown as ComplexModel;
+    expect(checkPaperPlaneCatch(new THREE.Vector3(0, 0, 0), [plane], 2)).toBe(false);
   });
 });

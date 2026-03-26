@@ -28,7 +28,8 @@ export const updatePlayerMovement = (
   player: ComplexModel,
   currentActions: Record<string, unknown>,
   getDelta: () => number,
-  speed: number = PLAYER_SPEED
+  speed: number = PLAYER_SPEED,
+  filterPredicate?: (collider: object) => boolean,
 ): void => {
   const targetRotation = getRotation(currentActions, false);
   const isMoving = targetRotation !== null;
@@ -49,7 +50,7 @@ export const updatePlayerMovement = (
       x: direction.x * speed * delta,
       y: 0,
       z: direction.z * speed * delta,
-    });
+    }, filterPredicate);
   }
 
   updateAnimation(animationData);
