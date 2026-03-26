@@ -39,15 +39,12 @@ export interface PaperPlanePathState {
   path: Position2D[] | null;
   currentIndex: number;
   timeSinceReplan: number;
-  /** Alternates each update: true = move directly to target, false = follow next waypoint */
-  useDirectTarget: boolean;
 }
 
 export const createInitialPaperPlanePathState = (): PaperPlanePathState => ({
   path: null,
   currentIndex: 0,
   timeSinceReplan: Infinity,
-  useDirectTarget: false,
 });
 
 export const buildNavigationGrid = (mazeGrid: MazeGrid): Grid => {
@@ -148,15 +145,8 @@ export const updatePaperPlaneChase = (
     ? skipReachedWaypoints(newPath, plane.position)
     : pathState.currentIndex;
 
-  // Alternate between following the next waypoint and moving directly toward the target.
-  // This superset approach breaks oscillation: waypoint mode follows the safe path,
-  // direct mode pulls the entity toward the goal when it gets stuck near a node.
-  const nextUseDirectTarget = !pathState.useDirectTarget;
-
   const [targetX, targetZ] = (() => {
-    if (pathState.useDirectTarget || !newPath || newPath.length === 0) {
-      return [playerPosition.x, playerPosition.z];
-    }
+    if (!newPath || newPath.length === 0) return [playerPosition.x, playerPosition.z];
     const waypoint = newPath[baseIndex] ?? newPath[newPath.length - 1];
     const [wx, , wz] = logicGridToWorld(waypoint.x, waypoint.z, NAVIGATION_GRID_CONFIG);
     return [wx, wz];
@@ -166,7 +156,7 @@ export const updatePaperPlaneChase = (
   const dz = targetZ - plane.position.z;
   const distance = Math.hypot(dx, dz);
 
-  const newIndex = !shouldReplan && newPath && !pathState.useDirectTarget && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE
+  const newIndex = !shouldReplan && newPath && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE
     ? Math.min(baseIndex + 1, newPath.length - 1)
     : baseIndex;
 
@@ -183,7 +173,6 @@ export const updatePaperPlaneChase = (
     path: newPath,
     currentIndex: newIndex,
     timeSinceReplan: shouldReplan ? 0 : newTimeSinceReplan,
-    useDirectTarget: nextUseDirectTarget,
   };
 };
 

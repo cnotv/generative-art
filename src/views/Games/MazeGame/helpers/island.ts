@@ -13,12 +13,8 @@ import {
   SHELF_MODEL,
   SHELF_MODEL_SCALE,
   SHELF_WALL_GAP,
-  PLAYER_START,
-  MAZE_EXIT_POSITION,
-  MARKER_SIZE,
-  MARKER_HEIGHT,
-  MARKER_START_COLOR,
-  MARKER_END_COLOR,
+  MAZE_ENTRANCE_OFFSET,
+  HELPER_COLOR_DESK,
 } from '../config';
 import { generateMazeAndSegments, type MazeWallSegment, type MazeGrid } from './maze';
 
@@ -35,9 +31,9 @@ export const createIslandMaze = async (
   const extraBodies: RAPIER.RigidBody[] = [];
 
   const wallObjects = await Promise.all(
-    innerSegments.map(async ({ position, horizontal }: MazeWallSegment) => {
+    innerSegments.map(async ({ position, horizontal }: MazeWallSegment, index: number) => {
       const group = new THREE.Group();
-      group.name = 'WallDesk';
+      group.name = `WallDesk ${index + 1}`;
       scene.add(group);
 
       const deskConfigs = horizontal
@@ -62,6 +58,8 @@ export const createIslandMaze = async (
             type: 'fixed',
             hasGravity: false,
             castShadow: true,
+            showHelper: true,
+            helperColor: HELPER_COLOR_DESK,
           }).then((desk) => {
             desk.name = 'Desk';
             desk.rotation.y = ry;
@@ -147,6 +145,8 @@ export const createOfficeShelves = async (
 
   const shelfY = 4.0;
   const hasPoster = (offset: number) => Math.abs(offset) < 1;
+  const isStartCorner = (offset: number) => Math.abs(offset + MAZE_ENTRANCE_OFFSET) < 1;
+  const isExitCorner = (offset: number) => Math.abs(offset - MAZE_ENTRANCE_OFFSET) < 1;
 
   const wallConfigs = positions.flatMap((offset) => {
     const northShelf = { x: offset, z: -half + SHELF_WALL_GAP, ry: 0, physicsSize: [MAZE_CELL_SIZE / 2, 8, 1] as CoordinateTuple };
@@ -154,8 +154,8 @@ export const createOfficeShelves = async (
     const westShelf = { x: -half + SHELF_WALL_GAP, z: offset, ry: Math.PI / 2, physicsSize: [1, 8, MAZE_CELL_SIZE / 2] as CoordinateTuple };
     const eastShelf = { x: half - SHELF_WALL_GAP, z: offset, ry: -Math.PI / 2, physicsSize: [1, 8, MAZE_CELL_SIZE / 2] as CoordinateTuple };
     return [
-      hasPoster(offset) ? null : northShelf,
-      southShelf,
+      hasPoster(offset) || isStartCorner(offset) ? null : northShelf,
+      isExitCorner(offset) ? null : southShelf,
       hasPoster(offset) ? null : westShelf,
       hasPoster(offset) ? null : eastShelf,
     ].filter((c): c is NonNullable<typeof c> => c !== null);
@@ -186,8 +186,11 @@ export const createOfficeShelves = async (
   );
 };
 
-export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THREE.Group =>
-  getWalls(scene, world, { name: 'office-wall', length: ISLAND_SIZE, height: OFFICE_WALL_HEIGHT });
+export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THREE.Group => {
+  const group = getWalls(scene, world, { name: 'office-wall', length: ISLAND_SIZE, height: OFFICE_WALL_HEIGHT });
+  group.name = 'Walls';
+  return group;
+};
 
 export const createDeskModels = (
   scene: THREE.Scene,
@@ -214,27 +217,3 @@ export const createDeskModels = (
     )
   );
 
-export const createLevelMarkers = (scene: THREE.Scene): { disposeMarkers: () => void } => {
-  const [sx, , sz] = PLAYER_START as [number, number, number];
-  const [ex, , ez] = MAZE_EXIT_POSITION as [number, number, number];
-
-  const makeMarker = (x: number, z: number, color: number): THREE.Mesh => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(MARKER_SIZE, MARKER_HEIGHT, MARKER_SIZE),
-      new THREE.MeshBasicMaterial({ color })
-    );
-    mesh.position.set(x, 0, z);
-    scene.add(mesh);
-    return mesh;
-  };
-
-  const startMarker = makeMarker(sx, sz, MARKER_START_COLOR);
-  const endMarker = makeMarker(ex, ez, MARKER_END_COLOR);
-
-  return {
-    disposeMarkers: () => {
-      scene.remove(startMarker);
-      scene.remove(endMarker);
-    },
-  };
-};

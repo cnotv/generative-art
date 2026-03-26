@@ -18,7 +18,7 @@ export const DESK_MODEL = "minimal_office.glb";
 export const SHELF_MODEL = "office-shelf.glb";
 const SHELF_SCALE = 2.5;
 export const SHELF_MODEL_SCALE: CoordinateTuple = [SHELF_SCALE, SHELF_SCALE, SHELF_SCALE];
-const SHELF_WALL_OFFSET = 1.5;
+const SHELF_WALL_OFFSET = 0.75;
 export const SHELF_WALL_GAP = SHELF_WALL_OFFSET;
 const DESK_SCALE = 2.5;
 export const DESK_MODEL_SCALE: CoordinateTuple = [DESK_SCALE, DESK_SCALE, DESK_SCALE];
@@ -39,13 +39,18 @@ export const DESK_POSITIONS: CoordinateTuple[] = [
   [DESK_FRONT, DESK_Y, DESK_FRONT],
 ];
 
+// Collision helpers
+export const HELPER_COLOR_PLAYER = 0x00ff88;
+export const HELPER_COLOR_PLANE = 0xff4444;
+export const HELPER_COLOR_DESK = 0xff8800;
+
 // Player
 export const PLAYER_SPEED = 10;
 export const PLAYER_DISTANCE = 0.5;
 export const PLAYER_MODEL = "stickboy.glb";
 const PLAYER_Y = -1.15;
 const MAZE_HALF = ISLAND_SIZE / 2;
-const MAZE_ENTRANCE_OFFSET = MAZE_HALF - MAZE_CELL_SIZE / 2;
+export const MAZE_ENTRANCE_OFFSET = MAZE_HALF - MAZE_CELL_SIZE / 2;
 export const PLAYER_START: CoordinateTuple = [-MAZE_ENTRANCE_OFFSET, PLAYER_Y, -MAZE_ENTRANCE_OFFSET];
 export const MAZE_EXIT_POSITION: CoordinateTuple = [MAZE_ENTRANCE_OFFSET, PLAYER_Y, MAZE_ENTRANCE_OFFSET];
 export const PLAYER_MODEL_SCALE = 2.5;
@@ -57,6 +62,8 @@ export const playerModelOptions: ModelOptions = {
   hasGravity: false,
   castShadow: true,
   boundary: 0.5,
+  showHelper: true,
+  helperColor: HELPER_COLOR_PLAYER,
 };
 
 export const playerMovement = {
@@ -66,6 +73,23 @@ export const playerMovement = {
   characterRadius: 2,
   collisionDistance: 2,
 };
+
+// Elevator
+export const ELEVATOR_MODEL = 'office_elevator_door.glb';
+const ELEVATOR_SCALE = 4;
+export const ELEVATOR_MODEL_SCALE: CoordinateTuple = [ELEVATOR_SCALE, ELEVATOR_SCALE, ELEVATOR_SCALE];
+export const ELEVATOR_Y = 0;
+export const ELEVATOR_OPEN_ANIM = 'Open';
+export const ELEVATOR_CLOSE_ANIM = 'Close';
+export const ELEVATOR_CLOSE_DELAY = 4;
+export const ELEVATOR_TRIGGER_RADIUS = 8;
+export const ELEVATOR_OPEN_FALLBACK_DELAY = 2;
+export const ELEVATOR_START_COLOR = 0x88ff88;
+export const ELEVATOR_EXIT_COLOR = 0xff8888;
+const ELEVATOR_PHYSICS_WIDTH = 6;
+const ELEVATOR_PHYSICS_HEIGHT = 10;
+const ELEVATOR_PHYSICS_DEPTH = 1;
+export const ELEVATOR_PHYSICS_SIZE: CoordinateTuple = [ELEVATOR_PHYSICS_WIDTH, ELEVATOR_PHYSICS_HEIGHT, ELEVATOR_PHYSICS_DEPTH];
 
 // Enemies
 export const PAPER_PLANE_COUNT = 3;
@@ -80,6 +104,8 @@ export const paperPlaneModelOptions: ModelOptions = {
   hasGravity: false,
   castShadow: true,
   boundary: 1,
+  showHelper: true,
+  helperColor: HELPER_COLOR_PLANE,
 };
 
 // Maze
@@ -115,8 +141,9 @@ export const POSTER_Y = OFFICE_WALL_HEIGHT * POSTER_Y_FACTOR;
 export const POSTER_WALL_OFFSET = 0.2;
 export const POSTER_FRAME_THICKNESS = 0.3;
 export const POSTER_FRAME_DEPTH = 0.1;
-export const MARKER_SIZE = MAZE_CELL_SIZE - 4;
-export const MARKER_HEIGHT = 0.05;
+export const MARKER_PILLAR_WIDTH = 0.8;
+export const MARKER_PILLAR_HEIGHT = 10;
+export const MARKER_SPREAD = (MAZE_CELL_SIZE - 4) / 2;
 export const MARKER_START_COLOR = 0x00ff88;
 export const MARKER_END_COLOR = 0xffd700;
 const POSTER_LABEL_FONT_DIVISOR = 6;
@@ -182,6 +209,7 @@ export const controlBindings = {
       "axis0-right": "move-right",
       "axis1-up": "move-down",
       "axis1-down": "move-up",
+      "cross": "toggle-auto",
     },
   },
   axisThreshold: 0.5,
@@ -200,6 +228,8 @@ export const configControls = {
   },
   debug: {
     showPath: { boolean: true, label: "Show Path" },
+    showColliders: { boolean: true, label: "Show Colliders" },
+    showDesks: { boolean: true, label: "Show Desks" },
   },
 };
 

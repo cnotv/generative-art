@@ -139,6 +139,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     const sceneChildren: SceneElement[] = scene.children
       .filter(child => !cachedMeshNames.has(child.name))
       .filter(child => !child.userData?.spawnId)
+      .filter(child => !(child instanceof THREE.BoxHelper))
       .map(child => {
         const groupId = textureGroups.find(g =>
           child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`

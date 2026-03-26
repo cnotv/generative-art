@@ -40,6 +40,7 @@ export interface ModelOptions extends CommonOptions {
   receiveShadow?: boolean;
   hasGravity?: boolean;
   showHelper?: boolean;
+  helperColor?: number;
   texture?: string;
   textures?: {
     random: boolean;

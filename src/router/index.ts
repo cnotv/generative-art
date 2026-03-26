@@ -6,13 +6,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'Landing Page',
       component: () => import('@/views/Experiments/LandingPage/LandingPage.vue'),
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      redirect: '/'
+      redirect: '/experiments/LandingPage'
     },
     ...generatedRoutes.filter((r) => r !== null)
   ]
