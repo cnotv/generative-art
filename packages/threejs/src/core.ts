@@ -243,8 +243,8 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
  */
 export const removeElements = (scene: THREE.Scene, world: RAPIER.World, meshes: ComplexModel[]) => {
   meshes.forEach((mesh) => {
-    scene.remove(mesh);
-    if (mesh.userData.helper) scene.remove(mesh.userData.helper);
+    mesh.removeFromParent();
+    if (mesh.userData.helper) (mesh.userData.helper as THREE.Object3D).removeFromParent();
     if (mesh.userData.body) {
       world.removeRigidBody(mesh.userData.body);
     }

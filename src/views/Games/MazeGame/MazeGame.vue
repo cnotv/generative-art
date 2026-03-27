@@ -8,7 +8,7 @@ import { createTimelineManager } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
 import { createControls } from "@webgamekit/controls";
 import { updateAnimation } from "@webgamekit/animation";
-import type { Grid, Position2D } from "@webgamekit/logic";
+import type { Grid } from "@webgamekit/logic";
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -17,14 +17,14 @@ import {
 import { useSceneViewStore } from "@/stores/sceneView";
 
 import { createOfficeWalls, createIslandMaze, createOfficeShelves } from "./helpers/island";
-import { createStartElevator, createExitElevator, openElevator, updateElevatorMixer, updateElevatorAutoClose, type ElevatorState } from "./helpers/elevator";
+import { createStartElevator, createExitElevator, openElevator, updateElevatorMixer, isPlayerNearElevator, type ElevatorState } from "./helpers/elevator";
 import { createMinimap } from "./helpers/minimap";
 import { createScorePoster } from "./helpers/scorePoster";
 import { spawnCoins, updateCoinSpin, checkCoinCollection } from "./helpers/coins";
 import { spawnPaperPlanes, updatePaperPlaneChase, buildNavigationGrid, createInitialPaperPlanePathState, NAVIGATION_GRID_CONFIG, type PaperPlanePathState } from "./helpers/enemies";
 import { createPlayer, updatePlayerMovement } from "./helpers/player";
 import { getMazeCellCenters } from "./helpers/maze";
-import { createPathDebug } from "./helpers/pathDebug";
+import { createPathDebug, type PathEntry } from "./helpers/pathDebug";
 import type { ComplexModel } from "@webgamekit/threejs";
 import {
   setupConfig,
@@ -45,7 +45,6 @@ import {
   PATH_COLORS_PLANES,
   PATH_Y_STEP,
   ELEVATOR_TRIGGER_RADIUS,
-  ELEVATOR_CLOSE_DELAY,
 } from "./config";
 
 type ReactiveConfigShape = { player: { speed: number }; autoMode: { enabled: boolean }; debug: { showPath: boolean; showColliders: boolean; showDesks: boolean } };
@@ -61,7 +60,7 @@ const reactiveConfig = createReactiveConfig({
 });
 
 const gameState = shallowRef<GameState>();
-createGame({ data: { score: 0 } }, gameState, onUnmounted);
+createGame({ data: { score: 0, level: 1 } }, gameState, onUnmounted);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const minimapCanvas = ref<HTMLCanvasElement | null>(null);
@@ -125,7 +124,7 @@ const buildGameLevel = async (
 
   state.levelDispose();
 
-  const { walls, segments, mazeGrid, extraBodies } = await createIslandMaze(scene, world);
+  const { walls, segments, mazeGrid, extraBodies, desksGroup } = await createIslandMaze(scene, world);
   const shelves = await createOfficeShelves(scene, world);
   const [startElev, exitElev] = await Promise.all([
     createStartElevator(scene, world),
@@ -147,6 +146,8 @@ const buildGameLevel = async (
 
   state.levelDispose = () => {
     removeElements(scene, world, [...walls, ...shelves, ...state.coins, startElev.model, exitElev.model]);
+    desksGroup.removeFromParent();
+    state.coins[0]?.parent?.removeFromParent();
     state.deskModels = [];
     extraBodies.forEach((b) => world.removeRigidBody(b));
     state.coins = [];
@@ -155,7 +156,8 @@ const buildGameLevel = async (
   };
 
   const [sx, sy, sz] = PLAYER_START as [number, number, number];
-  player.userData.body.setNextKinematicTranslation({ x: sx, y: sy, z: sz });
+  (player.userData.collider as { setTranslation: (v: { x: number; y: number; z: number }) => void })
+    .setTranslation({ x: sx, y: sy, z: sz });
   player.position.set(sx, sy, sz);
 
   openElevator(startElev);
@@ -175,9 +177,8 @@ type TimelineAssets = {
   getDelta: () => number;
   cameraOffset: CoordinateTuple;
   exitPosition: THREE.Vector3;
-  updatePoster: (score: number) => void;
-  updatePlayerPath: (path: Position2D[] | null, show: boolean) => void;
-  updatePlanePaths: ((path: Position2D[] | null, show: boolean) => void)[];
+  updatePoster: (score: number, level: number) => void;
+  updatePaths: (entries: PathEntry[], show: boolean) => void;
   playerFilter: (col: object) => boolean;
   planeFilter: (col: object) => boolean;
   buildLevel: () => Promise<void>;
@@ -191,23 +192,27 @@ const registerGameTimeline = (
   assets: TimelineAssets,
 ): void => {
   const { player, paperPlanes, camera, scene, world, getDelta, cameraOffset, exitPosition,
-    updatePoster, updatePlayerPath, updatePlanePaths,
+    updatePoster, updatePaths,
     playerFilter, planeFilter, buildLevel, getOrbitReference, setOrbitReference } = assets;
 
   timelineManager.addAction({
     name: "player-movement", category: "user-input",
     action: () => {
+      if (state.isResettingLevel) return;
       const cfg = reactiveConfig.value as unknown as ReactiveConfigShape;
       const isMovingManually = DIRECTIONAL_ACTIONS.some((key) => currentActions[key]);
       if (cfg.autoMode.enabled && isMovingManually) cfg.autoMode.enabled = false;
       if (cfg.autoMode.enabled && !isMovingManually) {
         const delta = getDelta();
         state.playerPathState = updatePaperPlaneChase(player, exitPosition, cfg.player.speed, delta, state.navGrid, state.playerPathState, playerFilter);
-        updatePlayerPath(state.playerPathState.path, cfg.debug.showPath);
         updateAnimation({ actionName: state.playerPathState.path ? 'walk' : 'idle', player, delta: delta * 2, speed: cfg.player.speed, distance: PLAYER_DISTANCE });
       } else {
         updatePlayerMovement(player, currentActions, getDelta, cfg.player.speed, playerFilter);
       }
+      updatePaths([
+        { path: state.playerPathState.path, color: PATH_COLOR_PLAYER },
+        ...state.paperPlanePathStates.map((s, i) => ({ path: s.path, color: PATH_COLORS_PLANES[i % PATH_COLORS_PLANES.length], yOffset: PATH_Y_STEP * (i + 1) })),
+      ], cfg.debug.showPath);
       let orbitReference = getOrbitReference();
       if (!orbitReference) { orbitReference = toRaw(store.orbitReference) as OrbitReference; setOrbitReference(orbitReference); }
       cameraFollowPlayer(camera, player, cameraOffset, orbitReference, ["x", "z"]);
@@ -225,11 +230,9 @@ const registerGameTimeline = (
     action: () => {
       const cfg = reactiveConfig.value as unknown as ReactiveConfigShape & { paperPlane: { speed: number } };
       const delta = getDelta();
-      state.paperPlanePathStates = paperPlanes.map((plane, i) => {
-        const planeState = updatePaperPlaneChase(plane, player.position, cfg.paperPlane.speed, delta, state.navGrid, state.paperPlanePathStates[i], planeFilter);
-        updatePlanePaths[i](planeState.path, cfg.debug.showPath);
-        return planeState;
-      });
+      state.paperPlanePathStates = paperPlanes.map((plane, i) =>
+        updatePaperPlaneChase(plane, player.position, cfg.paperPlane.speed, delta, state.navGrid, state.paperPlanePathStates[i], planeFilter)
+      );
     },
   });
 
@@ -245,7 +248,7 @@ const registerGameTimeline = (
       });
       const newScore = (gameState.value?.data.score ?? 0) + collected.length;
       gameState.value?.setData('score', newScore);
-      updatePoster(newScore);
+      updatePoster(newScore, gameState.value?.data.level ?? 1);
     },
   });
 
@@ -271,10 +274,7 @@ const registerGameTimeline = (
     name: "elevator-update", category: "visual",
     action: () => {
       const delta = getDelta();
-      if (state.startElevatorState) {
-        updateElevatorMixer(state.startElevatorState, delta);
-        updateElevatorAutoClose(state.startElevatorState, delta, ELEVATOR_CLOSE_DELAY);
-      }
+      if (state.startElevatorState) updateElevatorMixer(state.startElevatorState, delta);
       if (state.exitElevatorState) updateElevatorMixer(state.exitElevatorState, delta);
     },
   });
@@ -283,16 +283,21 @@ const registerGameTimeline = (
     frequency: 4, name: "level-exit", category: "physics",
     action: () => {
       if (state.isResettingLevel || !state.exitElevatorState) return;
-      if (!state.exitElevatorState.isOpen) {
-        const dx = player.position.x - state.exitElevatorState.model.position.x;
-        const dz = player.position.z - state.exitElevatorState.model.position.z;
-        const distribution = Math.hypot(dx, dz);
-        console.log('[level-exit] door closed, dist:', distribution.toFixed(2), 'trigger:', ELEVATOR_TRIGGER_RADIUS, 'pos:', player.position.x.toFixed(1), player.position.z.toFixed(1), 'door:', state.exitElevatorState.model.position.x.toFixed(1), state.exitElevatorState.model.position.z.toFixed(1));
-        if (distribution <= ELEVATOR_TRIGGER_RADIUS) openElevator(state.exitElevatorState);
+      const exit = state.exitElevatorState;
+
+      if (exit.isOpening) return;
+
+      const playerNear = isPlayerNearElevator(player.position, exit, ELEVATOR_TRIGGER_RADIUS);
+
+      if (!exit.isOpen) {
+        if (playerNear) openElevator(exit);
         return;
       }
-      console.log('[level-exit] door open, coins remaining:', state.coins.length);
-      if (state.coins.length > 0) return;
+
+      if (!playerNear || state.coins.length > 0) return;
+      const newLevel = (gameState.value?.data.level ?? 1) + 1;
+      gameState.value?.setData('level', newLevel);
+      updatePoster(gameState.value?.data.score ?? 0, newLevel);
       player.visible = false;
       buildLevel().then(() => {
         player.visible = true;
@@ -316,12 +321,9 @@ onMounted(async () => {
       const cameraOffset = CAMERA_OFFSET as CoordinateTuple;
       createOfficeWalls(scene, world);
       const player = await createPlayer(scene, world);
-      const updatePoster = createScorePoster(scene, 0);
+      const updatePoster = createScorePoster(scene);
       const paperPlanes = await spawnPaperPlanes(scene, world, PAPER_PLANE_COUNT);
-      const updatePlayerPath = createPathDebug(scene, NAVIGATION_GRID_CONFIG, PATH_COLOR_PLAYER, 0);
-      const updatePlanePaths = paperPlanes.map((_, i) =>
-        createPathDebug(scene, NAVIGATION_GRID_CONFIG, PATH_COLORS_PLANES[i % PATH_COLORS_PLANES.length], PATH_Y_STEP * (i + 1))
-      );
+      const updatePaths = createPathDebug(scene, NAVIGATION_GRID_CONFIG);
       const planeColliders = new Set<object>(paperPlanes.map((p) => p.userData.collider as object));
       const playerCollider = player.userData.collider as object;
       if (player.userData.helper) (player.userData.helper as THREE.BoxHelper).visible = false;
@@ -336,9 +338,9 @@ onMounted(async () => {
         col !== playerCollider && !state.coins.some((c) => (c.userData.collider as object) === col);
 
       const buildLevel = async () => {
-        updatePlayerPath(null, false);
-        updatePlanePaths.forEach((fn) => fn(null, false));
+        updatePaths([], false);
         await buildGameLevel(scene, world, player, paperPlanes, state);
+        store.refreshElements();
       };
       await buildLevel();
 
@@ -348,7 +350,7 @@ onMounted(async () => {
 
       registerGameTimeline(timelineManager, state, {
         player, paperPlanes, camera, scene, world, getDelta, cameraOffset, exitPosition,
-        updatePoster, updatePlayerPath, updatePlanePaths,
+        updatePoster, updatePaths,
         playerFilter, planeFilter, buildLevel,
         getOrbitReference: () => orbitReference,
         setOrbitReference: (ref) => { orbitReference = ref; },

@@ -4,7 +4,7 @@ import type { SetupConfig, ModelOptions } from "@webgamekit/threejs";
 
 // Island
 export const ISLAND_SIZE = 80;
-export const ISLAND_COLOR = 0xc2b280;
+export const ISLAND_COLOR = 0xffffff;
 export const MAZE_CELL_SIZE = 16;
 
 
@@ -81,7 +81,7 @@ export const ELEVATOR_MODEL_SCALE: CoordinateTuple = [ELEVATOR_SCALE, ELEVATOR_S
 export const ELEVATOR_Y = 0;
 export const ELEVATOR_OPEN_ANIM = 'Open';
 export const ELEVATOR_CLOSE_ANIM = 'Close';
-export const ELEVATOR_CLOSE_DELAY = 4;
+export const ELEVATOR_CLOSE_DELAY = 1;
 export const ELEVATOR_TRIGGER_RADIUS = 8;
 export const ELEVATOR_OPEN_FALLBACK_DELAY = 2;
 export const ELEVATOR_START_COLOR = 0x88ff88;

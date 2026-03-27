@@ -8,12 +8,17 @@ export const spawnCoins = (
   scene: THREE.Scene,
   world: RAPIER.World,
   positions: CoordinateTuple[]
-): ComplexModel[] =>
-  positions.map((position, i) => {
+): ComplexModel[] => {
+  const group = new THREE.Group();
+  group.name = 'Coins';
+  scene.add(group);
+  return positions.map((position, i) => {
     const coin = getCoinBlock(scene, world, { position });
     coin.name = `Coin ${i + 1}`;
+    group.add(coin);
     return coin;
   });
+};
 
 export const updateCoinSpin = (
   coins: ComplexModel[],

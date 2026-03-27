@@ -4,6 +4,7 @@ import { getModel, getWalls, getPhysic, getCube, type ComplexModel } from '@webg
 import type { CoordinateTuple } from '@webgamekit/animation';
 import {
   ISLAND_SIZE,
+  ISLAND_COLOR,
   OFFICE_WALL_HEIGHT,
   DESK_MODEL,
   DESK_MODEL_SCALE,
@@ -21,37 +22,56 @@ import { generateMazeAndSegments, type MazeWallSegment, type MazeGrid } from './
 export const createIslandMaze = async (
   scene: THREE.Scene,
   world: RAPIER.World
-): Promise<{ walls: ComplexModel[]; segments: MazeWallSegment[]; mazeGrid: MazeGrid; extraBodies: RAPIER.RigidBody[] }> => {
+): Promise<{ walls: ComplexModel[]; segments: MazeWallSegment[]; mazeGrid: MazeGrid; extraBodies: RAPIER.RigidBody[]; desksGroup: THREE.Group }> => {
   const { grid: mazeGrid, segments } = generateMazeAndSegments(ISLAND_SIZE, MAZE_CELL_SIZE);
   const half = ISLAND_SIZE / 2;
   const innerSegments = segments.filter(({ position }) =>
     Math.abs(position[0]) < half && Math.abs(position[2]) < half
   );
 
+  const desksGroup = new THREE.Group();
+  desksGroup.name = 'Desks';
+  scene.add(desksGroup);
+
   const extraBodies: RAPIER.RigidBody[] = [];
+
+  // Pre-compute all desk positions across all segments to detect cross-segment overlaps
+  const allDeskConfigs = innerSegments.flatMap(({ position, horizontal }, segmentIndex) => {
+    const configs: { x: number; z: number; ry: number }[] = horizontal
+      ? [
+          { x: position[0] - WALL_DESK_SPREAD, z: position[2] - WALL_DESK_OFFSET, ry: 0 },
+          { x: position[0] + WALL_DESK_SPREAD, z: position[2] - WALL_DESK_OFFSET, ry: 0 },
+          { x: position[0] - WALL_DESK_SPREAD, z: position[2] + WALL_DESK_OFFSET, ry: Math.PI },
+          { x: position[0] + WALL_DESK_SPREAD, z: position[2] + WALL_DESK_OFFSET, ry: Math.PI },
+        ]
+      : [
+          { x: position[0] - WALL_DESK_OFFSET, z: position[2] - WALL_DESK_SPREAD, ry: Math.PI / 2 },
+          { x: position[0] - WALL_DESK_OFFSET, z: position[2] + WALL_DESK_SPREAD, ry: Math.PI / 2 },
+          { x: position[0] + WALL_DESK_OFFSET, z: position[2] - WALL_DESK_SPREAD, ry: -Math.PI / 2 },
+          { x: position[0] + WALL_DESK_OFFSET, z: position[2] + WALL_DESK_SPREAD, ry: -Math.PI / 2 },
+        ];
+    return configs.map((config) => ({ ...config, segmentIndex }));
+  });
+
+  const keptDeskConfigs = allDeskConfigs.reduce<typeof allDeskConfigs>((kept, config) => {
+    const tooClose = kept.some(
+      (previous) => Math.abs(previous.x - config.x) < DESK_MIN_DISTANCE && Math.abs(previous.z - config.z) < DESK_MIN_DISTANCE
+    );
+    return tooClose ? kept : [...kept, config];
+  }, []);
+
+  const deskConfigsBySegment = innerSegments.map((_, i) =>
+    keptDeskConfigs.filter((c) => c.segmentIndex === i)
+  );
 
   const wallObjects = await Promise.all(
     innerSegments.map(async ({ position, horizontal }: MazeWallSegment, index: number) => {
       const group = new THREE.Group();
       group.name = `WallDesk ${index + 1}`;
-      scene.add(group);
-
-      const deskConfigs = horizontal
-        ? [
-            { x: position[0] - WALL_DESK_SPREAD, z: position[2] - WALL_DESK_OFFSET, ry: Math.PI },
-            { x: position[0] + WALL_DESK_SPREAD, z: position[2] - WALL_DESK_OFFSET, ry: Math.PI },
-            { x: position[0] - WALL_DESK_SPREAD, z: position[2] + WALL_DESK_OFFSET, ry: 0 },
-            { x: position[0] + WALL_DESK_SPREAD, z: position[2] + WALL_DESK_OFFSET, ry: 0 },
-          ]
-        : [
-            { x: position[0] - WALL_DESK_OFFSET, z: position[2] - WALL_DESK_SPREAD, ry: Math.PI / 2 },
-            { x: position[0] - WALL_DESK_OFFSET, z: position[2] + WALL_DESK_SPREAD, ry: Math.PI / 2 },
-            { x: position[0] + WALL_DESK_OFFSET, z: position[2] - WALL_DESK_SPREAD, ry: -Math.PI / 2 },
-            { x: position[0] + WALL_DESK_OFFSET, z: position[2] + WALL_DESK_SPREAD, ry: -Math.PI / 2 },
-          ];
+      desksGroup.add(group);
 
       const desks = await Promise.all(
-        deskConfigs.map(({ x, z, ry }) =>
+        deskConfigsBySegment[index].map(({ x, z, ry }) =>
           getModel(scene, world, DESK_MODEL, {
             scale: DESK_MODEL_SCALE,
             position: [x, OFFICE_DESK_Y, z] as CoordinateTuple,
@@ -120,15 +140,16 @@ export const createIslandMaze = async (
     })
   );
 
-  return { walls: wallObjects.flat(), segments, mazeGrid, extraBodies };
+  return { walls: wallObjects.flat(), segments, mazeGrid, extraBodies, desksGroup };
 };
 
 const WALL_DESK_OFFSET = 3;
+const DESK_MIN_DISTANCE = 6;
 
 const OFFICE_DESK_Y = 0.2;
 const OFFICE_DIVIDER_HEIGHT = 3;
 const OFFICE_DIVIDER_THICKNESS = 0.2;
-const OFFICE_DIVIDER_COLOR = 0xe8ddd0;
+const OFFICE_DIVIDER_COLOR = ISLAND_COLOR;
 const DIVIDER_GAP = 0;
 const WALL_DESK_SPREAD = MAZE_CELL_SIZE / 4;
 
@@ -152,7 +173,7 @@ export const createOfficeShelves = async (
     const northShelf = { x: offset, z: -half + SHELF_WALL_GAP, ry: 0, physicsSize: [MAZE_CELL_SIZE / 2, 8, 1] as CoordinateTuple };
     const southShelf = { x: offset, z: half - SHELF_WALL_GAP, ry: Math.PI, physicsSize: [MAZE_CELL_SIZE / 2, 8, 1] as CoordinateTuple };
     const westShelf = { x: -half + SHELF_WALL_GAP, z: offset, ry: Math.PI / 2, physicsSize: [1, 8, MAZE_CELL_SIZE / 2] as CoordinateTuple };
-    const eastShelf = { x: half - SHELF_WALL_GAP, z: offset, ry: -Math.PI / 2, physicsSize: [1, 8, MAZE_CELL_SIZE / 2] as CoordinateTuple };
+    const eastShelf = { x: half - SHELF_WALL_GAP, z: offset, ry: Math.PI / 2, physicsSize: [1, 8, MAZE_CELL_SIZE / 2] as CoordinateTuple };
     return [
       hasPoster(offset) || isStartCorner(offset) ? null : northShelf,
       isExitCorner(offset) ? null : southShelf,

@@ -13,28 +13,34 @@ import {
 } from '../config';
 
 
-const drawPoster = (ctx: CanvasRenderingContext2D, score: number): void => {
+const drawPoster = (ctx: CanvasRenderingContext2D, score: number, level: number): void => {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, POSTER_CANVAS_SIZE, POSTER_CANVAS_SIZE);
 
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
   ctx.font = `bold ${POSTER_LABEL_FONT_SIZE}px Impact, 'Arial Black', sans-serif`;
-  ctx.fillText('COINS', POSTER_CANVAS_SIZE / 2, POSTER_CANVAS_SIZE / 4);
 
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('COINS', POSTER_CANVAS_SIZE / 2, Math.round(POSTER_CANVAS_SIZE * 0.17));
+
   ctx.font = `bold ${POSTER_NUMBER_FONT_SIZE}px Impact, 'Arial Black', sans-serif`;
-  ctx.fillText(String(score), POSTER_CANVAS_SIZE / 2, (POSTER_CANVAS_SIZE * 2) / 3);
+  ctx.textBaseline = 'top';
+  ctx.fillText(String(score), POSTER_CANVAS_SIZE / 2, Math.round(POSTER_CANVAS_SIZE * 0.18));
+
+  ctx.font = `bold ${POSTER_LABEL_FONT_SIZE}px Impact, 'Arial Black', sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(`LEVEL ${level}`, POSTER_CANVAS_SIZE / 2, POSTER_CANVAS_SIZE - 8);
 };
 
 const addPosterGroup = (
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   texture: THREE.CanvasTexture,
   position: THREE.Vector3,
   rotationY: number
 ): void => {
   const group = new THREE.Group();
+  group.name = 'ScorePoster';
   group.position.copy(position);
   group.rotation.y = rotationY;
 
@@ -56,26 +62,30 @@ const addPosterGroup = (
     group.add(bar);
   });
 
-  scene.add(group);
+  parent.add(group);
 };
 
-export const createScorePoster = (scene: THREE.Scene, initialScore: number) => {
+export const createScorePoster = (scene: THREE.Scene) => {
   const canvas = Object.assign(document.createElement('canvas'), {
     width: POSTER_CANVAS_SIZE,
     height: POSTER_CANVAS_SIZE,
   });
   const ctx = canvas.getContext('2d')!;
 
-  drawPoster(ctx, initialScore);
+  drawPoster(ctx, 0, 1);
   const texture = new THREE.CanvasTexture(canvas);
 
   const half = ISLAND_SIZE / 2;
-  addPosterGroup(scene, texture, new THREE.Vector3(0, POSTER_Y, -half + POSTER_WALL_OFFSET), 0);
-  addPosterGroup(scene, texture, new THREE.Vector3(-half + POSTER_WALL_OFFSET, POSTER_Y, 0), Math.PI / 2);
-  addPosterGroup(scene, texture, new THREE.Vector3(half - POSTER_WALL_OFFSET, POSTER_Y, 0), -Math.PI / 2);
+  const postersGroup = new THREE.Group();
+  postersGroup.name = 'ScorePosters';
+  scene.add(postersGroup);
 
-  return (score: number): void => {
-    drawPoster(ctx, score);
+  addPosterGroup(postersGroup, texture, new THREE.Vector3(0, POSTER_Y, -half + POSTER_WALL_OFFSET), 0);
+  addPosterGroup(postersGroup, texture, new THREE.Vector3(-half + POSTER_WALL_OFFSET, POSTER_Y, 0), Math.PI / 2);
+  addPosterGroup(postersGroup, texture, new THREE.Vector3(half - POSTER_WALL_OFFSET, POSTER_Y, 0), -Math.PI / 2);
+
+  return (score: number, level: number): void => {
+    drawPoster(ctx, score, level);
     texture.needsUpdate = true;
   };
 };

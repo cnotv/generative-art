@@ -19,7 +19,9 @@ import {
 export interface ElevatorState {
   model: ComplexModel;
   isOpen: boolean;
-  autoCloseTimer: number;
+  isOpening: boolean;
+  isClosing: boolean;
+  closeTimer: ReturnType<typeof setTimeout> | null;
 }
 
 type MixerFinishedEvent = { action: THREE.AnimationAction; direction: number };
@@ -29,12 +31,6 @@ const getOpenAction = (model: ComplexModel): THREE.AnimationAction | undefined =
   return actions ? Object.values(actions)[0] : undefined;
 };
 
-const getCloseAction = (model: ComplexModel): THREE.AnimationAction | undefined => {
-  const actions = model.userData.actions as Record<string, THREE.AnimationAction> | undefined;
-  if (!actions) return undefined;
-  const all = Object.values(actions);
-  return all.length > 1 ? all[1] : all[0];
-};
 
 const tintModel = (model: ComplexModel, color: THREE.ColorRepresentation): void => {
   const tintColor = new THREE.Color(color);
@@ -67,8 +63,7 @@ const createElevator = async (
     receiveShadow: true,
   });
   model.name = name;
-  console.warn('[elevator] animation clips:', Object.keys(model.userData.actions ?? {}));
-  return { model, isOpen: false, autoCloseTimer: 0 };
+  return { model, isOpen: false, isOpening: false, isClosing: false, closeTimer: null };
 };
 
 export const createStartElevator = async (
@@ -104,88 +99,96 @@ export const createExitElevator = async (
 };
 
 export const openElevator = (elevator: ElevatorState, onComplete?: () => void): void => {
-  if (elevator.isOpen) return;
+  if (elevator.isOpen || elevator.isOpening || elevator.isClosing) return;
+  if (elevator.closeTimer !== null) { clearTimeout(elevator.closeTimer); elevator.closeTimer = null; }
   elevator.isOpen = true;
-  elevator.autoCloseTimer = 0;
+  elevator.isOpening = true;
+  elevator.isClosing = false;
 
   const action = getOpenAction(elevator.model);
   const mixer = elevator.model.userData.mixer as THREE.AnimationMixer | undefined;
 
   if (!action || !mixer) {
-    console.warn('[elevator] openElevator: no action or mixer found');
+    elevator.isOpening = false;
     onComplete?.();
     return;
   }
 
-  action.stop();
+  const allActions = Object.values(elevator.model.userData.actions as Record<string, THREE.AnimationAction>);
+  allActions.forEach((a) => a.stop());
+
   action.setLoop(THREE.LoopOnce, 1);
   action.clampWhenFinished = true;
-  action.timeScale = 1;
+  action.timeScale = 3;
   action.reset().play();
 
-  if (onComplete) {
-    let completed = false;
-    const fireOnce = () => {
-      if (completed) return;
-      completed = true;
-      onComplete();
-    };
+  let completed = false;
+  const fireOnce = () => {
+    if (completed) return;
+    completed = true;
+    elevator.isOpening = false;
+    elevator.closeTimer = setTimeout(() => closeElevator(elevator), ELEVATOR_CLOSE_DELAY * 1000);
+    onComplete?.();
+  };
 
-    const handler = ({ action: finished }: MixerFinishedEvent) => {
-      if (finished === action) {
-        mixer.removeEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
-        fireOnce();
-      }
-    };
-    mixer.addEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
-    setTimeout(fireOnce, ELEVATOR_OPEN_FALLBACK_DELAY * 1000);
-  }
+  const handler = ({ action: finished }: MixerFinishedEvent) => {
+    if (finished === action) {
+      mixer.removeEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
+      fireOnce();
+    }
+  };
+  mixer.addEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
+  setTimeout(fireOnce, (ELEVATOR_OPEN_FALLBACK_DELAY / 3) * 1000);
 };
 
 export const closeElevator = (elevator: ElevatorState): void => {
   if (!elevator.isOpen) return;
+  if (elevator.closeTimer !== null) { clearTimeout(elevator.closeTimer); elevator.closeTimer = null; }
   elevator.isOpen = false;
-  elevator.autoCloseTimer = 0;
+  elevator.isOpening = false;
+  elevator.isClosing = true;
 
   const mixer = elevator.model.userData.mixer as THREE.AnimationMixer | undefined;
-  if (!mixer) return;
+  if (!mixer) { elevator.isClosing = false; return; }
 
-  const closeAction = getCloseAction(elevator.model);
-  if (!closeAction) return;
+  const openAction = getOpenAction(elevator.model);
+  if (!openAction) { elevator.isClosing = false; return; }
 
   const allActions = Object.values(elevator.model.userData.actions as Record<string, THREE.AnimationAction>);
-  const hasSeparateCloseAnim = allActions.length > 1;
+  allActions.forEach((a) => a.stop());
 
-  if (hasSeparateCloseAnim) {
-    closeAction.stop();
-    closeAction.setLoop(THREE.LoopOnce, 1);
-    closeAction.clampWhenFinished = true;
-    closeAction.reset().play();
-  } else {
-    // Reverse the open animation
-    closeAction.stop();
-    closeAction.setLoop(THREE.LoopOnce, 1);
-    closeAction.clampWhenFinished = true;
-    closeAction.timeScale = -1;
-    closeAction.time = closeAction.getClip().duration;
-    closeAction.play();
-  }
+  openAction.setLoop(THREE.LoopOnce, 1);
+  openAction.clampWhenFinished = true;
+  openAction.timeScale = -3;
+  openAction.time = openAction.getClip().duration;
+  openAction.play();
+
+  let completed = false;
+  const fireOnce = () => {
+    if (completed) return;
+    completed = true;
+    elevator.isClosing = false;
+  };
+
+  const handler = ({ action: finished }: MixerFinishedEvent) => {
+    if (finished === openAction) {
+      mixer.removeEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
+      fireOnce();
+    }
+  };
+  mixer.addEventListener('finished', handler as THREE.EventListener<MixerFinishedEvent, 'finished', THREE.AnimationMixer>);
+  setTimeout(fireOnce, (openAction.getClip().duration + 0.5) * 1000);
 };
 
 export const updateElevatorMixer = (elevator: ElevatorState, delta: number): void => {
   (elevator.model.userData.mixer as THREE.AnimationMixer | undefined)?.update(delta);
 };
 
-export const updateElevatorAutoClose = (
-  elevator: ElevatorState,
-  delta: number,
-  closeDelay: number = ELEVATOR_CLOSE_DELAY,
-): void => {
-  if (!elevator.isOpen) return;
-  elevator.autoCloseTimer += delta;
-  if (elevator.autoCloseTimer >= closeDelay) {
-    closeElevator(elevator);
-  }
+
+export const cancelElevatorClose = (elevator: ElevatorState): void => {
+  if (elevator.closeTimer === null) return;
+  clearTimeout(elevator.closeTimer);
+  elevator.closeTimer = null;
 };
 
 export const isPlayerNearElevator = (
