@@ -16,11 +16,10 @@ pnpm add @webgamekit/threejs three @dimforge/rapier3d-compat
 
 ```typescript
 import { getTools } from '@webgamekit/threejs';
+import { createTimelineManager } from '@webgamekit/animation';
 
 const { setup, animate, scene, camera, world } = await getTools({
   canvas: canvasRef.value!,
-  stats,
-  route
 });
 
 await setup({
@@ -43,35 +42,31 @@ await setup({
   }
 });
 
-animate({
-  beforeTimeline: () => {
-    // Pre-update logic
-  },
-  timeline: [
-    // Animation loops
-  ],
-  afterTimeline: () => {
-    // Post-update logic
-  }
-});
+const timeline = createTimelineManager();
+timeline.addAction({ id: 'update', action: () => { /* per-frame logic */ } });
+
+animate({ timeline });
 ```
 
 ## Core Functions
 
 ### getTools(config)
 
-Initialize ThreeJS and Rapier environment.
+Initialize a Three.js + Rapier environment.
 
-**Parameters**:
+**Parameters:**
+
 ```typescript
 {
   canvas: HTMLCanvasElement,
   stats?: StatsInterface,
-  route?: string
+  route?: string,
+  resize?: boolean  // default: true
 }
 ```
 
-**Returns**:
+**Returns:**
+
 ```typescript
 {
   setup: Function,
@@ -90,7 +85,8 @@ Initialize ThreeJS and Rapier environment.
 
 Configure scene with camera, lights, ground, and sky.
 
-**Parameters**:
+**Parameters:**
+
 ```typescript
 {
   config?: SetupConfig,
@@ -98,7 +94,8 @@ Configure scene with camera, lights, ground, and sky.
 }
 ```
 
-**SetupConfig**:
+**SetupConfig:**
+
 ```typescript
 {
   camera?: {
@@ -118,59 +115,85 @@ Configure scene with camera, lights, ground, and sky.
       castShadow?: boolean
     }
   },
-  ground?: {
+  ground?: false | {
     size?: CoordinateTuple,
     color?: number,
     position?: CoordinateTuple,
     texture?: string
   },
-  sky?: {
-    color?: number,
-    gradient?: [number, number]
-  },
-  orbit?: {
-    target?: THREE.Vector3,
-    disabled?: boolean
-  },
+  sky?: { color?: number },
+  orbit?: { target?: THREE.Vector3, disabled?: boolean },
   postprocessing?: PostProcessingConfig
 }
 ```
 
 ### animate(options)
 
-Start the animation loop with timeline support.
+Start the animation loop.
 
-**Parameters**:
+**Parameters:**
+
 ```typescript
 {
+  timeline: TimelineManager,  // from createTimelineManager()
   beforeTimeline?: () => void,
   afterTimeline?: () => void,
-  timeline: TimelineManager,  // Required: Use createTimelineManager()
-  config?: {
-    orbit?: { debug?: boolean }
-  }
 }
 ```
 
-**Example**:
+**Example:**
+
 ```typescript
 import { createTimelineManager } from '@webgamekit/animation';
 
-const timelineManager = createTimelineManager();
-timelineManager.addAction({
-  frequency: 2,
-  category: 'user-input',
-  action: () => {
-    // Your animation logic
-  }
+const timeline = createTimelineManager();
+timeline.addAction({
+  id: 'game-tick',
+  action: () => { /* update logic */ }
 });
 
-animate({
-  timeline: timelineManager,
-});
+animate({ timeline });
 ```
 
 ## Model Loading
+
+### getModel(scene, world, filename, options)
+
+Load a GLTF/FBX model with optional physics body.
+
+```typescript
+import { getModel } from '@webgamekit/threejs';
+
+const player = await getModel(scene, world, 'character.glb', {
+  position: [0, 0, 0],
+  scale: [1, 1, 1],
+  type: 'kinematicPositionBased',
+  hasGravity: false,
+  castShadow: true,
+  boundary: 0.5,
+  showHelper: true,
+  helperColor: 0x00ff88,
+});
+```
+
+**ModelOptions:**
+
+```typescript
+{
+  position?: CoordinateTuple,
+  rotation?: CoordinateTuple,
+  scale?: CoordinateTuple | number,
+  size?: CoordinateTuple,        // Physics collider size
+  boundary?: number,             // Collider boundary margin
+  type?: 'fixed' | 'dynamic' | 'kinematicPositionBased',
+  hasGravity?: boolean,
+  castShadow?: boolean,
+  receiveShadow?: boolean,
+  showHelper?: boolean,
+  helperColor?: number,
+  name?: string,
+}
+```
 
 ### getCube(scene, world, options)
 
@@ -183,8 +206,7 @@ const cube = getCube(scene, world, {
   size: [2, 2, 2],
   position: [0, 5, 0],
   color: 0xff0000,
-  mass: 1,
-  friction: 0.5
+  type: 'dynamic',
 });
 ```
 
@@ -197,29 +219,72 @@ const ball = getBall(scene, world, {
   size: 1,
   position: [0, 10, 0],
   color: 0x00ff00,
-  mass: 2,
-  restitution: 0.8 // Bounciness
+  type: 'dynamic',
 });
 ```
 
-### loadModel(path, scene, world, options)
+### getWalls(scene, world, positions, options)
 
-Load GLTF models.
+Create multiple wall segments from an array of positions.
 
 ```typescript
-const model = await loadModel('/models/character.glb', scene, world, {
-  position: [0, 0, 0],
-  scale: [1, 1, 1],
-  castShadow: true,
-  receiveShadow: true
+import { getWalls } from '@webgamekit/threejs';
+
+const walls = getWalls(scene, world, wallPositions, {
+  size: [4, 3, 0.25],
+  color: 0xffffff,
+  type: 'fixed',
+});
+```
+
+## Physics Controller
+
+### moveController(model, direction, filterPredicate?)
+
+Move a kinematic character controller with collision sliding. Uses Rapier's character controller to compute collider movement and syncs the mesh position.
+
+```typescript
+import { moveController } from '@webgamekit/threejs';
+
+// In animation loop
+moveController(playerModel, {
+  x: velocityX,
+  y: 0,
+  z: velocityZ,
+});
+
+// With collision filter (exclude specific colliders)
+moveController(playerModel, direction, (collider) => {
+  return collider !== elevatorCollider;
 });
 ```
 
 ## Camera Utilities
 
+### cameraFollowPlayer(camera, player, offset, orbit?)
+
+Make camera follow a player model.
+
+```typescript
+import { cameraFollowPlayer } from '@webgamekit/threejs';
+
+// In animation loop
+cameraFollowPlayer(camera, playerModel, [0, 5, 10], orbit);
+```
+
+### setCameraPreset(camera, preset)
+
+Apply a camera preset configuration.
+
+```typescript
+import { setCameraPreset, CameraPreset } from '@webgamekit/threejs';
+
+setCameraPreset(camera, CameraPreset.TopDown);
+```
+
 ### updateCamera(camera, config)
 
-Update camera properties.
+Update camera properties at runtime.
 
 ```typescript
 import { updateCamera } from '@webgamekit/threejs';
@@ -231,22 +296,34 @@ updateCamera(camera, {
 });
 ```
 
-### cameraFollowPlayer(camera, player, offset, orbit)
+## Scene Management
 
-Make camera follow a player model.
+### removeElements(world, meshes)
+
+Remove objects from the scene and their Rapier physics bodies.
 
 ```typescript
-import { cameraFollowPlayer } from '@webgamekit/threejs';
+import { removeElements } from '@webgamekit/threejs';
 
-// In animation loop
-cameraFollowPlayer(camera, player, [0, 5, 10], orbit);
+// Cleans up Three.js objects and Rapier bodies
+removeElements(world, [coin1, coin2, coin3]);
+```
+
+### instanceMatrixMesh(scene, geometry, material, options)
+
+Create an instanced mesh for rendering many identical objects efficiently.
+
+```typescript
+import { instanceMatrixMesh } from '@webgamekit/threejs';
+
+const trees = instanceMatrixMesh(scene, geometry, material, treePositions);
 ```
 
 ## Texture Utilities
 
 ### createZigzagTexture(options)
 
-Create procedural zigzag pattern texture.
+Create a procedural zigzag pattern texture.
 
 ```typescript
 import { createZigzagTexture } from '@webgamekit/threejs';
@@ -264,140 +341,21 @@ material.map = texture;
 
 ## Post-Processing Effects
 
-Configure visual effects in setup:
+Configure visual effects in `setup`:
 
 ```typescript
 await setup({
   config: {
     postprocessing: {
-      bloom: {
-        strength: 0.8,
-        threshold: 0.2,
-        radius: 1.0
-      },
-      vignette: {
-        offset: 1.2,
-        darkness: 1.3
-      },
-      pixelate: {
-        size: 8
-      }
+      bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },
+      vignette: { offset: 1.2, darkness: 1.3 },
+      pixelate: { size: 8 }
     }
   }
 });
 ```
 
-**Available effects**:
-- `bloom`: Glow effect
-- `vignette`: Dark edges
-- `pixelate`: Retro pixel look
-- `fxaa`: Anti-aliasing
-- `dotScreen`: Dot matrix effect
-- `rgbShift`: Color separation
-- `film`: Grain and scanlines
-- `glitch`: Digital glitch
-- `afterimage`: Motion trails
-- `ssao`: Ambient occlusion
-- `colorCorrection`: Contrast/saturation/brightness
-
-## Physics
-
-### Creating Physics Bodies
-
-```typescript
-const cube = getCube(scene, world, {
-  position: [0, 5, 0],
-  mass: 1,            // 0 for static objects
-  friction: 0.5,
-  restitution: 0.3,   // Bounciness
-  damping: 0.1,       // Slow down over time
-  hasGravity: true
-});
-
-// Access physics body
-cube.userData.body.applyImpulse({ x: 0, y: 10, z: 0 }, true);
-```
-
-### Removing Objects
-
-```typescript
-import { removeElements } from '@webgamekit/threejs';
-
-const cubes = [cube1, cube2, cube3];
-removeElements(scene, world, cubes); // Cleans up Three.js and Rapier
-```
-
-## Timeline System
-
-Create animation loops:
-
-```typescript
-animate({
-  timeline: [
-    {
-      id: 'physics-update',
-      every: 1, // Every frame
-      do: () => {
-        // Update physics
-      }
-    },
-    {
-      id: 'spawn-cubes',
-      every: 60, // Every 60 frames
-      do: () => {
-        // Spawn new cube
-      }
-    }
-  ]
-});
-```
-
-## Best Practices
-
-### Performance
-
-- **Instancing**: Use `instanceMatrixMesh` for many similar objects
-- **LOD**: Reduce detail for distant objects
-- **Object pooling**: Reuse objects instead of creating/destroying
-- **Limit physics**: Keep physics objects count reasonable
-
-### Code Organization
-
-```typescript
-// config.ts - Separate configuration
-export const setupConfig = {
-  camera: { position: [0, 5, 20] },
-  lights: { ambient: { intensity: 0.5 } }
-};
-
-export const playerConfig = {
-  size: [1, 2, 1],
-  speed: 5,
-  jumpForce: 10
-};
-
-// scene.vue - Main component
-import { setupConfig, playerConfig } from './config';
-```
-
-### Cleanup
-
-```vue
-<script setup lang="ts">
-import { onUnmounted } from 'vue';
-
-onUnmounted(() => {
-  // Cancel animation frame
-  cancelAnimationFrame(frame);
-  
-  // Dispose geometries and materials
-  scene.traverse((object) => {
-    if (object.geometry) object.geometry.dispose();
-    if (object.material) object.material.dispose();
-  });
-});
-</script>
-```
+**Available effects:** `bloom`, `vignette`, `pixelate`, `fxaa`, `dotScreen`, `rgbShift`, `film`, `glitch`, `afterimage`, `ssao`, `colorCorrection`.
 
 ## TypeScript Types
 
@@ -406,14 +364,8 @@ import type {
   CoordinateTuple,
   ModelOptions,
   SetupConfig,
-  ToolsConfig
+  ToolsConfig,
+  ComplexModel,
+  Model,
 } from '@webgamekit/threejs';
-
-const position: CoordinateTuple = [0, 5, 0];
-
-const modelOptions: ModelOptions = {
-  position: [0, 0, 0],
-  color: 0xff0000,
-  mass: 1
-};
 ```

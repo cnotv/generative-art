@@ -6,7 +6,7 @@ title: WebGameKit Documentation
 
 Framework-agnostic toolkit for creating 3D games, environments, and generative art with Three.js and Rapier physics.
 
-[**Get Started →**](./docs/getting-started) &nbsp;&nbsp; [**Journey →**](./docs/journey/overview)
+[**Get Started →**](./docs/getting-started) &nbsp;&nbsp; [**Journey →**](./docs/journey/animation)
 
 ---
 
@@ -38,8 +38,8 @@ import { animateTimeline, controllerForward } from '@webgamekit/animation';
 Unified input controller for keyboard, gamepad, touch (faux-pad joystick), and mouse. Maps raw inputs to named actions; supports 8-way directional input and configurable axis thresholds.
 
 ```ts
-import { controlsCreate } from '@webgamekit/controls';
-const { currentActions } = controlsCreate({ mapping: { keyboard: { w: 'move-forward' } } });
+import { createControls } from '@webgamekit/controls';
+const { currentActions } = createControls({ mapping: { keyboard: { w: 'move-forward' } } });
 ```
 
 ---
@@ -68,12 +68,13 @@ playSound(sfx);
 
 ---
 
-### [@webgamekit/logic](./docs/packages/threejs)
+### [@webgamekit/logic](./docs/packages/logic)
 
 Pathfinding and path-following utilities. Provides A\* on a grid with obstacle support, smooth path interpolation, and node-height snapping for 3D terrains.
 
 ```ts
-import { findPath, followPath } from '@webgamekit/logic';
+import { logicCreateGrid, logicGetBestRoute } from '@webgamekit/logic';
+const path = logicGetBestRoute(navGrid, start, goal);
 ```
 
 ---
