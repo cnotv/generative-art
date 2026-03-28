@@ -55,7 +55,7 @@ const store = useSceneViewStore();
 const reactiveConfig = createReactiveConfig({
   player: { speed: PLAYER_SPEED },
   paperPlane: { speed: PAPER_PLANE_SPEED },
-  autoMode: { enabled: false },
+  autoMode: { enabled: true },
   debug: { showPath: false, showColliders: false, showDesks: true },
 });
 
@@ -164,6 +164,46 @@ const buildGameLevel = async (
   state.isResettingLevel = false;
 };
 
+// ── Timeline Helpers ─────────────────────────────────────────────────────────
+
+// Returns true only when the player is at the open exit with all coins collected.
+const isReadyToAdvance = (state: LevelState, player: ComplexModel): boolean => {
+  const exit = state.exitElevatorState;
+  if (!exit || exit.isOpening) return false;
+  const playerNear = isPlayerNearElevator(player.position, exit, ELEVATOR_TRIGGER_RADIUS);
+  if (!exit.isOpen) {
+    if (playerNear) openElevator(exit);
+    return false;
+  }
+  return playerNear && state.coins.length === 0;
+};
+
+const advanceToNextLevel = (
+  state: LevelState,
+  player: ComplexModel,
+  updatePoster: (score: number, level: number) => void,
+  buildLevel: () => Promise<void>,
+): void => {
+  const newLevel = (gameState.value?.data.level ?? 1) + 1;
+  gameState.value?.setData('level', newLevel);
+  updatePoster(gameState.value?.data.score ?? 0, newLevel);
+  player.visible = false;
+  buildLevel().then(() => {
+    player.visible = true;
+    if (state.startElevatorState) openElevator(state.startElevatorState);
+  });
+};
+
+const handleLevelExit = (
+  state: LevelState,
+  player: ComplexModel,
+  updatePoster: (score: number, level: number) => void,
+  buildLevel: () => Promise<void>,
+): void => {
+  if (state.isResettingLevel || !isReadyToAdvance(state, player)) return;
+  advanceToNextLevel(state, player, updatePoster, buildLevel);
+};
+
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
 type OrbitReference = Parameters<typeof cameraFollowPlayer>[3];
@@ -204,7 +244,16 @@ const registerGameTimeline = (
       if (cfg.autoMode.enabled && isMovingManually) cfg.autoMode.enabled = false;
       if (cfg.autoMode.enabled && !isMovingManually) {
         const delta = getDelta();
-        state.playerPathState = updatePaperPlaneChase(player, exitPosition, cfg.player.speed, delta, state.navGrid, state.playerPathState, playerFilter);
+        const autoTarget = state.coins.length > 0
+          ? state.coins.reduce((nearest, coin) => {
+              const dnx = nearest.x - player.position.x;
+              const dnz = nearest.z - player.position.z;
+              const dcx = coin.position.x - player.position.x;
+              const dcz = coin.position.z - player.position.z;
+              return dcx * dcx + dcz * dcz < dnx * dnx + dnz * dnz ? coin.position : nearest;
+            }, state.coins[0].position)
+          : exitPosition;
+        state.playerPathState = updatePaperPlaneChase(player, autoTarget, cfg.player.speed, delta, state.navGrid, state.playerPathState, playerFilter);
         updateAnimation({ actionName: state.playerPathState.path ? 'walk' : 'idle', player, delta: delta * 2, speed: cfg.player.speed, distance: PLAYER_DISTANCE });
       } else {
         updatePlayerMovement(player, currentActions, getDelta, cfg.player.speed, playerFilter);
@@ -266,6 +315,8 @@ const registerGameTimeline = (
       applyHelper(player);
       paperPlanes.forEach(applyHelper);
       state.deskModels.forEach(applyHelper);
+      if (state.startElevatorState) applyHelper(state.startElevatorState.model);
+      if (state.exitElevatorState) applyHelper(state.exitElevatorState.model);
       state.deskModels.forEach((desk) => { desk.visible = cfg.debug.showDesks; });
     },
   });
@@ -281,29 +332,7 @@ const registerGameTimeline = (
 
   timelineManager.addAction({
     frequency: 4, name: "level-exit", category: "physics",
-    action: () => {
-      if (state.isResettingLevel || !state.exitElevatorState) return;
-      const exit = state.exitElevatorState;
-
-      if (exit.isOpening) return;
-
-      const playerNear = isPlayerNearElevator(player.position, exit, ELEVATOR_TRIGGER_RADIUS);
-
-      if (!exit.isOpen) {
-        if (playerNear) openElevator(exit);
-        return;
-      }
-
-      if (!playerNear || state.coins.length > 0) return;
-      const newLevel = (gameState.value?.data.level ?? 1) + 1;
-      gameState.value?.setData('level', newLevel);
-      updatePoster(gameState.value?.data.score ?? 0, newLevel);
-      player.visible = false;
-      buildLevel().then(() => {
-        player.visible = true;
-        if (state.startElevatorState) openElevator(state.startElevatorState);
-      });
-    },
+    action: () => handleLevelExit(state, player, updatePoster, buildLevel),
   });
 };
 
@@ -333,7 +362,9 @@ onMounted(async () => {
 
       const state = createLevelState();
       const playerFilter = (col: object): boolean =>
-        !planeColliders.has(col) && !state.coins.some((c) => (c.userData.collider as object) === col);
+        !planeColliders.has(col) &&
+        !state.coins.some((c) => (c.userData.collider as object) === col) &&
+        col !== (state.startElevatorState?.model.userData.collider as object | undefined);
       const planeFilter = (col: object): boolean =>
         col !== playerCollider && !state.coins.some((c) => (c.userData.collider as object) === col);
 
@@ -371,12 +402,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" />
-  <canvas
-    ref="minimapCanvas"
-    class="maze__minimap"
-    width="160"
-    height="160"
-  />
+  <canvas ref="minimapCanvas" class="maze__minimap" width="160" height="160" />
 </template>
 
 <style scoped>

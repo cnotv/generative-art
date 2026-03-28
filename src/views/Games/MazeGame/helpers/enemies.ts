@@ -7,6 +7,7 @@ import {
   logicGridToWorld,
   logicMarkObstacle,
   logicGetBestRoute,
+  logicIsCellWalkable,
   type Grid,
   type GridConfig,
   type Position2D,
@@ -18,6 +19,7 @@ import {
   MAZE_CELL_SIZE,
   PAPER_PLANE_REPLAN_INTERVAL,
   PAPER_PLANE_WAYPOINT_REACH_DISTANCE,
+  PAPER_PLANE_TURN_SPEED,
 } from '../config';
 import type { MazeGrid } from './maze';
 
@@ -39,12 +41,14 @@ export interface PaperPlanePathState {
   path: Position2D[] | null;
   currentIndex: number;
   timeSinceReplan: number;
+  stuckTime: number;
 }
 
 export const createInitialPaperPlanePathState = (): PaperPlanePathState => ({
   path: null,
   currentIndex: 0,
   timeSinceReplan: Infinity,
+  stuckTime: 0,
 });
 
 export const buildNavigationGrid = (mazeGrid: MazeGrid): Grid => {
@@ -113,8 +117,50 @@ export const spawnPaperPlanes = async (
   return planes;
 };
 
+// Math.round maps the agent to the nearest grid cell, not the one it just left.
+// Math.floor (used by logicWorldToGrid) can pick the cell behind the agent at the
+// midpoint between cells, causing A* to route backward on every replan.
+const worldToGridNearest = (worldX: number, worldZ: number): Position2D => ({
+  x: Math.max(0, Math.min(
+    NAVIGATION_GRID_CONFIG.width - 1,
+    Math.round((worldX - NAVIGATION_GRID_CONFIG.centerOffset[0]) / NAVIGATION_GRID_CONFIG.cellSize + NAVIGATION_GRID_CONFIG.width / 2)
+  )),
+  z: Math.max(0, Math.min(
+    NAVIGATION_GRID_CONFIG.height - 1,
+    Math.round((worldZ - NAVIGATION_GRID_CONFIG.centerOffset[2]) / NAVIGATION_GRID_CONFIG.cellSize + NAVIGATION_GRID_CONFIG.height / 2)
+  )),
+});
+
+const findNearestWalkableCell = (pos: Position2D, navGrid: Grid): Position2D => {
+  const candidates = [
+    pos,
+    { x: pos.x - 1, z: pos.z },
+    { x: pos.x + 1, z: pos.z },
+    { x: pos.x, z: pos.z - 1 },
+    { x: pos.x, z: pos.z + 1 },
+    { x: pos.x - 1, z: pos.z - 1 },
+    { x: pos.x + 1, z: pos.z - 1 },
+    { x: pos.x - 1, z: pos.z + 1 },
+    { x: pos.x + 1, z: pos.z + 1 },
+  ];
+  return (
+    candidates.find(
+      (c) =>
+        c.x >= 0 &&
+        c.x < navGrid.width &&
+        c.z >= 0 &&
+        c.z < navGrid.height &&
+        logicIsCellWalkable(navGrid.cells[c.z][c.x])
+    ) ?? pos
+  );
+};
+
 const skipReachedWaypoints = (path: Position2D[], worldPos: THREE.Vector3): number => {
-  const firstUnreached = path.findIndex((wp) => {
+  if (path.length <= 1) return 0;
+  // Always skip path[0]: it's the agent's current grid cell (already occupied/leaving).
+  // Math.floor mapping can place it *behind* the agent, causing backward movement.
+  const firstUnreached = path.findIndex((wp, i) => {
+    if (i === 0) return false;
     const [wx, , wz] = logicGridToWorld(wp.x, wp.z, NAVIGATION_GRID_CONFIG);
     return Math.hypot(wx - worldPos.x, wz - worldPos.z) >= PAPER_PLANE_WAYPOINT_REACH_DISTANCE;
   });
@@ -136,8 +182,8 @@ export const updatePaperPlaneChase = (
   const newPath = shouldReplan
     ? logicGetBestRoute(
         navGrid,
-        logicWorldToGrid([plane.position.x, 0, plane.position.z], NAVIGATION_GRID_CONFIG),
-        logicWorldToGrid([playerPosition.x, 0, playerPosition.z], NAVIGATION_GRID_CONFIG)
+        findNearestWalkableCell(worldToGridNearest(plane.position.x, plane.position.z), navGrid),
+        findNearestWalkableCell(worldToGridNearest(playerPosition.x, playerPosition.z), navGrid)
       )
     : pathState.path;
 
@@ -156,12 +202,41 @@ export const updatePaperPlaneChase = (
   const dz = targetZ - plane.position.z;
   const distance = Math.hypot(dx, dz);
 
-  const newIndex = !shouldReplan && newPath && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE
-    ? Math.min(baseIndex + 1, newPath.length - 1)
-    : baseIndex;
+  const atLastWaypoint = !newPath || baseIndex >= newPath.length - 1;
+  const canAdvance = !shouldReplan && !atLastWaypoint && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE;
+  const newIndex = canAdvance ? baseIndex + 1 : baseIndex;
+
+  if (shouldReplan) {
+    console.log('[pathfinder] REPLAN', {
+      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
+      pathLen: newPath?.length ?? 0,
+      startIndex: baseIndex,
+    });
+  } else if (canAdvance) {
+    console.log('[pathfinder] ADVANCE', { from: baseIndex, to: newIndex, distWas: distance.toFixed(2) });
+  }
+
+  // Stuck = not replanning, not progressing through waypoints, and agent barely moving
+  const isProgressing = shouldReplan || canAdvance || (atLastWaypoint && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE);
+  const newStuckTime = isProgressing ? 0 : pathState.stuckTime + delta;
+
+  if (newStuckTime > 1 && Math.round(newStuckTime * 10) % 10 === 0) {
+    console.warn('[pathfinder] STUCK', {
+      index: baseIndex,
+      pathLen: newPath?.length ?? 0,
+      distance: distance.toFixed(2),
+      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
+      target: `(${targetX.toFixed(1)}, ${targetZ.toFixed(1)})`,
+    });
+  }
 
   if (distance > 0.01) {
-    plane.rotation.y = Math.atan2(dx, -dz);
+    const targetAngle = Math.atan2(dx, -dz);
+    let angleDiff = targetAngle - plane.rotation.y;
+    // Normalize to [-PI, PI] to always take the shortest arc
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    plane.rotation.y += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), PAPER_PLANE_TURN_SPEED * delta);
     moveController(plane, {
       x: (dx / distance) * speed * delta,
       y: 0,
@@ -173,6 +248,7 @@ export const updatePaperPlaneChase = (
     path: newPath,
     currentIndex: newIndex,
     timeSinceReplan: shouldReplan ? 0 : newTimeSinceReplan,
+    stuckTime: newStuckTime,
   };
 };
 

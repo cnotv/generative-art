@@ -11,6 +11,7 @@ import {
   ELEVATOR_OPEN_FALLBACK_DELAY,
   ELEVATOR_START_COLOR,
   ELEVATOR_EXIT_COLOR,
+  HELPER_COLOR_ELEVATOR,
   ISLAND_SIZE,
   MAZE_ENTRANCE_OFFSET,
   SHELF_WALL_GAP,
@@ -61,6 +62,8 @@ const createElevator = async (
     hasGravity: false,
     castShadow: true,
     receiveShadow: true,
+    showHelper: true,
+    helperColor: HELPER_COLOR_ELEVATOR,
   });
   model.name = name;
   return { model, isOpen: false, isOpening: false, isClosing: false, closeTimer: null };

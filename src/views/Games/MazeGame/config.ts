@@ -43,6 +43,7 @@ export const DESK_POSITIONS: CoordinateTuple[] = [
 export const HELPER_COLOR_PLAYER = 0x00ff88;
 export const HELPER_COLOR_PLANE = 0xff4444;
 export const HELPER_COLOR_DESK = 0xff8800;
+export const HELPER_COLOR_ELEVATOR = 0x0088ff;
 
 // Player
 export const PLAYER_SPEED = 10;
@@ -112,11 +113,12 @@ export const paperPlaneModelOptions: ModelOptions = {
 export const MAZE_WALL_HEIGHT = 3;
 export const MAZE_WALL_THICKNESS = 0.25;
 export const MAZE_WALL_COLOR = 0xffffff;
-export const PAPER_PLANE_REPLAN_INTERVAL = 0.5;
-export const PAPER_PLANE_WAYPOINT_REACH_DISTANCE = 2;
+export const PAPER_PLANE_REPLAN_INTERVAL = 1.0;
+export const PAPER_PLANE_WAYPOINT_REACH_DISTANCE = 5;
+export const PAPER_PLANE_TURN_SPEED = 8; // radians per second — limits rotation snap
 
 // Coins
-export const COLLECTION_RADIUS = 1.5;
+export const COLLECTION_RADIUS = 3;
 export const LEVEL_COMPLETE_RADIUS = 3;
 export const COIN_SPIN_SPEED = 2;
 export const COIN_POSITIONS: CoordinateTuple[] = [
