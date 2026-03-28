@@ -224,6 +224,7 @@ export const getModel = async (
     castShadow = false,
     receiveShadow = false,
     showHelper = false,
+    helperColor,
     enabledRotations = [true, true, true],
     texture,
     animations,
@@ -261,7 +262,7 @@ export const getModel = async (
 
   let helper;
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0xff0000);
+    helper = new THREE.BoxHelper(mesh, helperColor);
     scene.add(helper);
   }
 
@@ -548,6 +549,7 @@ export const getCube = (
     texture,
     hasGravity = false,
     showHelper = false,
+    helperColor,
     material = 'MeshPhysicalMaterial',
     type = 'dynamic',
     transparent = false,
@@ -617,7 +619,7 @@ export const getCube = (
 
   let helper;
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0x000000);
+    helper = new THREE.BoxHelper(mesh, helperColor);
     scene.add(helper);
   }
 

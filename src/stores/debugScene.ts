@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 export interface SceneElement {
   name: string;
+  label?: string;
   type: string;
   hidden?: boolean;
   groupId?: string;

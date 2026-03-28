@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getModel } from "@webgamekit/threejs";
+import { getModel, moveController } from "@webgamekit/threejs";
 import { config } from "../config";
 import { getSpeed } from "./setup";
 
@@ -77,27 +77,10 @@ export const addBlock = async (
 
 export const moveBlock = (
   obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
-  physics: any,
   gameScore: number
 ) => {
-  const { mesh, characterController, collider } = obstacle;
-
-  // Use character controller to move the block
   const speed = getSpeed(config.game.speed, gameScore);
-  const moveVector = new physics.RAPIER.Vector3(-speed, 0, 0);
-
-  characterController.computeColliderMovement(collider, moveVector);
-  const translation = characterController.computedMovement();
-  const position = collider.translation();
-
-  position.x += translation.x;
-  position.y += translation.y;
-  position.z += translation.z;
-
-  collider.setTranslation(position);
-
-  // Sync Three.js mesh with Rapier collider
-  mesh.position.set(position.x, position.y, position.z);
+  moveController(obstacle.mesh, { x: -speed, y: 0, z: 0 });
 };
 
 export const removeBlock = (
@@ -130,7 +113,7 @@ export const moveBlocks = (
     const obstacle = obstacles[i];
 
     // Move the block
-    moveBlock(obstacle, physics, gameScore);
+    moveBlock(obstacle, gameScore);
 
     // Award score when block passes behind Goomba (only once per block)
     if (

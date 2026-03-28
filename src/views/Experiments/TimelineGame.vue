@@ -359,7 +359,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
           start: 0,
           category: "visual-effects",
           action: () => {
-            coins.forEach((coin) => (coin.mesh.rotation.z += 0.05));
+            coins.forEach((coin) => (coin.rotation.z += 0.05));
           },
         });
 

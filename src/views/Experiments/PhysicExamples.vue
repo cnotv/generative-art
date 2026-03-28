@@ -170,7 +170,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     timelineManager.addAction({
       interval: [1, 500],
       actionStart: (loop) => {
-        experiments = removeElements(scene, world, experiments);
+        experiments = removeElements(world, experiments);
         generateBalls(500, [balls[loop % balls.length]]);
       },
       action: () => {

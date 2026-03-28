@@ -79,6 +79,12 @@
   --nav-height:  3rem;
   --panel-width: 20rem;
 
+  // Minimap
+  --minimap-size: 160px;
+  --minimap-margin: 12px;
+  --minimap-border-radius: var(--radius-sm, 4px);
+  --minimap-opacity: 0.85;
+
   // Z-index scale
   --z-base:     0;
   --z-dropdown: 10;

@@ -236,14 +236,14 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
 
 /**
  * Remove elements from the threeJS scene and Rapier world, then return the emptied list
- * @param scene 
- * @param world 
- * @param elements 
- * @returns 
+ * @param world
+ * @param elements
+ * @returns
  */
-export const removeElements = (scene: THREE.Scene, world: RAPIER.World, meshes: ComplexModel[]) => {
+export const removeElements = (world: RAPIER.World, meshes: ComplexModel[]) => {
   meshes.forEach((mesh) => {
-    scene.remove(mesh);
+    mesh.removeFromParent();
+    if (mesh.userData.helper) (mesh.userData.helper as THREE.Object3D).removeFromParent();
     if (mesh.userData.body) {
       world.removeRigidBody(mesh.userData.body);
     }

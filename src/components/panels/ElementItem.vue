@@ -27,7 +27,7 @@ const emit = defineEmits<{
   >
     <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
     <div class="element-item__info">
-      <span class="element-item__name">{{ element.name }}</span>
+      <span class="element-item__name">{{ element.label ?? element.name }}</span>
       <span class="element-item__type">{{ element.type }}</span>
     </div>
     <div class="element-item__actions">

@@ -4,6 +4,8 @@ import type { CoordinateTuple, ModelType } from '@webgamekit/animation';
 // Re-export for convenience
 export type { CoordinateTuple, ModelType, ComplexModel, Model } from '@webgamekit/animation';
 
+export type Vec3 = { x: number; y: number; z: number };
+
 export interface CommonOptions {
   boundary?: number;
   damping?: number;
@@ -38,6 +40,7 @@ export interface ModelOptions extends CommonOptions {
   receiveShadow?: boolean;
   hasGravity?: boolean;
   showHelper?: boolean;
+  helperColor?: number;
   texture?: string;
   textures?: {
     random: boolean;

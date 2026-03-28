@@ -91,7 +91,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         [
           {
             interval: [1, 300],
-            action: () => (elements = removeElements(scene, world, elements)),
+            action: () => (elements = removeElements(world, elements)),
           },
         ],
         frame

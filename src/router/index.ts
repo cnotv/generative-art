@@ -1,25 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { generatedRoutes } from '@/config/router'
 
-const homePath = '/experiments/LandingPage';
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: homePath
+      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue'),
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      redirect: homePath
+      redirect: '/experiments/LandingPage'
     },
-    ...generatedRoutes
+    ...generatedRoutes.filter((r) => r !== null)
   ]
 })
 
 // Add navigation guard to update page title
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // Set page title based on route name
   if (to.name && typeof to.name === 'string') {
     document.title = `${to.name} | Generative Art`;

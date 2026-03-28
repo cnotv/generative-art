@@ -139,12 +139,18 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     const sceneChildren: SceneElement[] = scene.children
       .filter(child => !cachedMeshNames.has(child.name))
       .filter(child => !child.userData?.spawnId)
+      .filter(child => !(child instanceof THREE.BoxHelper))
+      .filter(child => child.name !== 'PathDebug')
       .map(child => {
         const groupId = textureGroups.find(g =>
           child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
         )?.id;
+        const childCount = child instanceof THREE.Group && child.children.length > 0
+          ? child.children.length
+          : null;
         return {
           name: child.name || child.type,
+          label: childCount !== null ? `${child.name || child.type} [${childCount}]` : undefined,
           type: groupId ? 'TextureArea' : child.type,
           hidden: false,
           groupId,
@@ -193,19 +199,35 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         },
         onRemove: (name: string) => {
           const scene = threeScene.value;
+          const world = threeWorld.value as { removeRigidBody: (body: unknown) => void } | null;
           if (!scene) return;
+
+          const removePhysicsBodies = (object: THREE.Object3D) => {
+            if (!world) return;
+            object.traverse((child) => {
+              if ((child as THREE.Mesh).userData?.body) {
+                world.removeRigidBody((child as THREE.Mesh).userData.body);
+              }
+            });
+          };
 
           // Check if it's a texture area
           const cachedMeshes = getAreaMeshes(name);
           if (cachedMeshes.length > 0) {
-            cachedMeshes.forEach(mesh => scene.remove(mesh));
+            cachedMeshes.forEach(mesh => {
+              removePhysicsBodies(mesh);
+              mesh.removeFromParent();
+            });
             const { [name]: _removed, ...remainingCache } = areaMeshCache.value;
             areaMeshCache.value = remainingCache;
             textureAreaDefinitions.value = textureAreaDefinitions.value.filter(a => a.name !== name);
             elementPropertiesStore.unregisterElementProperties(name);
           } else {
             const object = scene.getObjectByName(name);
-            if (object) scene.remove(object);
+            if (object) {
+              removePhysicsBodies(object);
+              object.removeFromParent();
+            }
           }
           updateSceneElements();
         },
@@ -655,9 +677,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     // Open panels
     viewPanelsStore.setViewPanels(options?.viewPanels ?? {});
+    updateSceneElements();
     if (viewPanelsStore.viewPanels.showElements) {
       panelsStore.openPanel('elements');
-      updateSceneElements();
     }
     isInitialized.value = true;
   };
@@ -862,5 +884,6 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     cleanup,
     getGroupConfig,
     regenerateGroup,
+    refreshElements: updateSceneElements,
   };
 });

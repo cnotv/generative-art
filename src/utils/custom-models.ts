@@ -105,17 +105,23 @@ export const getRoundedBox = (size: CoordinateTuple, radius: number, smoothness:
   return geometry;
 };
 
+const COIN_RADIUS = 0.33;
+const COIN_THICKNESS = 0.1;
+const COIN_PHYSICS_SIZE = 0.42;
+
 export const getCoinBlock = (
   scene: THREE.Scene,
   world: RAPIER.World,
   { position = [1, 1, 1] }: { position: CoordinateTuple }
 ): ComplexModel => {
   const color = 0xffff00
-  const size: CoordinateTuple = [1.25, 1.25, 1.25]
+  const size: CoordinateTuple = [COIN_PHYSICS_SIZE, COIN_PHYSICS_SIZE, COIN_PHYSICS_SIZE]
   const material = new THREE.MeshPhysicalMaterial({ color })
-  const geometry = new THREE.CylinderGeometry(10, 10, 1, 32)
+  const geometry = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32)
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   scene.add(mesh)
   const initialValues = { position, size, color, rotation: mesh.rotation.toArray() as CoordinateTuple }
   mesh.rotation.x = Math.PI / 2
@@ -123,5 +129,11 @@ export const getCoinBlock = (
   const { rigidBody, collider } = getPhysic(world, { position, size, boundary: 0.8, type: 'kinematicPositionBased' })
   rigidBody.setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 }, true)
 
-  return { mesh, rigidBody, collider, initialValues }
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+    },
+  })
 }
