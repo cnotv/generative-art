@@ -114,7 +114,7 @@ const createLevelState = (): LevelState => ({
 
 const buildGameLevel = async (
   scene: THREE.Scene,
-  world: Parameters<typeof removeElements>[1],
+  world: Parameters<typeof removeElements>[0],
   player: ComplexModel,
   paperPlanes: ComplexModel[],
   state: LevelState,
@@ -145,7 +145,7 @@ const buildGameLevel = async (
   });
 
   state.levelDispose = () => {
-    removeElements(scene, world, [...walls, ...shelves, ...state.coins, startElev.model, exitElev.model]);
+    removeElements(world, [...walls, ...shelves, ...state.coins, startElev.model, exitElev.model]);
     desksGroup.removeFromParent();
     state.coins[0]?.parent?.removeFromParent();
     state.deskModels = [];
@@ -213,7 +213,7 @@ type TimelineAssets = {
   paperPlanes: ComplexModel[];
   camera: THREE.Camera;
   scene: THREE.Scene;
-  world: Parameters<typeof removeElements>[1];
+  world: Parameters<typeof removeElements>[0];
   getDelta: () => number;
   cameraOffset: CoordinateTuple;
   exitPosition: THREE.Vector3;
@@ -292,7 +292,7 @@ const registerGameTimeline = (
       const collected = checkCoinCollection(player.position, state.coins, COLLECTION_RADIUS);
       if (collected.length === 0) return;
       [...collected].reverse().forEach((index) => {
-        removeElements(scene, world, [state.coins[index]]);
+        removeElements(world, [state.coins[index]]);
         state.coins = [...state.coins.slice(0, index), ...state.coins.slice(index + 1)];
       });
       const newScore = (gameState.value?.data.score ?? 0) + collected.length;
