@@ -6,7 +6,8 @@ import { cameraFollowPlayer, removeElements } from "@webgamekit/threejs";
 import type { CoordinateTuple } from "@webgamekit/animation";
 import { createTimelineManager } from "@webgamekit/animation";
 import { createGame, type GameState } from "@webgamekit/game";
-import { createControls } from "@webgamekit/controls";
+import { createControls, isMobile } from "@webgamekit/controls";
+import TouchControl from "@/components/TouchControl.vue";
 import { updateAnimation } from "@webgamekit/animation";
 import type { Grid } from "@webgamekit/logic";
 import {
@@ -70,9 +71,15 @@ const toggleAutoMode = () => {
   cfg.autoMode.enabled = !cfg.autoMode.enabled;
 };
 
+const isMobileDevice = isMobile();
+
+const handleAction = (action: string) => {
+  if (action === 'toggle-auto') toggleAutoMode();
+};
+
 const { destroyControls, currentActions } = createControls({
   ...controlBindings,
-  onAction: (action) => { if (action === 'toggle-auto') toggleAutoMode(); },
+  onAction: handleAction,
 });
 
 const DIRECTIONAL_ACTIONS = ['move-left', 'move-right', 'move-up', 'move-down'];
@@ -403,6 +410,19 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas" />
   <canvas ref="minimapCanvas" class="maze__minimap" width="160" height="160" />
+  <TouchControl
+    v-if="isMobileDevice"
+    style="left: 25px; bottom: 25px"
+    :mapping="{
+      left: 'move-left',
+      right: 'move-right',
+      up: 'move-down',
+      down: 'move-up',
+    }"
+    :options="{ deadzone: 0.15, enableEightWay: true }"
+    :current-actions="currentActions"
+    :on-action="handleAction"
+  />
 </template>
 
 <style scoped>
