@@ -24,6 +24,16 @@ STEP 5  implement
 
 **This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
 
+## WHEN INFORMATION IS INSUFFICIENT — ASK FIRST
+
+Before implementing any task where the intent, scope, or expected behavior is unclear, **ask the user for clarification**. Do not assume or guess. This applies especially to:
+
+- Bug reports with no reproduction steps or error messages
+- Feature requests with ambiguous acceptance criteria
+- Issues that could be solved in multiple ways with different trade-offs
+
+Ask a single focused question covering all missing details. Do not start implementation until you have enough information to proceed confidently.
+
 @.github/rules/code-style.md
 @.github/rules/testing.md
 @.github/rules/security.md
