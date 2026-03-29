@@ -14,47 +14,69 @@ pnpm add @webgamekit/animation
 
 ## Timeline System
 
-The timeline system allows you to define frame-based animations with intervals, delays, and frequency controls.
+The timeline system allows you to define named actions and run them per-frame via a `TimelineManager`.
 
 ### Basic Usage
 
 ```typescript
-import { animateTimeline } from '@webgamekit/animation';
+import { createTimelineManager } from '@webgamekit/animation';
 
-// In your animation loop
-animate({
-  timeline: [
-    {
-      id: 'rotate',
-      every: 1,  // Every frame
-      do: () => {
-        mesh.rotation.y += 0.01;
-      }
-    },
-    {
-      id: 'spawn',
-      every: 60,  // Every 60 frames
-      do: () => {
-        spawnEnemy();
-      }
-    }
-  ]
+const timeline = createTimelineManager();
+
+timeline.addAction({
+  id: 'rotate',
+  action: (delta) => {
+    mesh.rotation.y += 0.01;
+  }
 });
+
+timeline.addAction({
+  id: 'enemy-ai',
+  frequency: 2, // every 2 frames
+  action: () => {
+    updateEnemyAI();
+  }
+});
+
+// Pass to animate()
+animate({ timeline });
 ```
 
-### Timeline Options
+### Timeline Action Options
 
 ```typescript
 interface Timeline {
   id?: string;           // Unique identifier
   start?: number;        // Start frame
   end?: number;          // End frame
+  duration?: number;     // Duration in frames (alternative to end)
   frequency?: number;    // Execute every N frames
   delay?: number;        // Delay before starting
   interval?: [number, number];  // [active, pause] frame counts
-  action?: (args?: T) => void;  // Main action
+  priority?: number;     // Execution order (higher = first)
+  enabled?: boolean;     // Toggle action on/off
+  action?: (args?: T) => void;  // Main action callback
   actionStart?: (loop: number, args?: T) => void;  // Called at interval start
+  onComplete?: () => void;  // Called when end/duration is reached
 }
+```
+
+### TimelineManager API
+
+```typescript
+const timeline = createTimelineManager();
+
+// Add a named action
+timeline.addAction({ id: 'my-action', action: () => {} });
+
+// Remove by id
+timeline.removeAction('my-action');
+
+// Toggle enabled state
+timeline.setActionEnabled('my-action', false);
+
+// Get all actions
+timeline.getTimeline();
 ```
 
 ### Interval Animations
@@ -62,79 +84,57 @@ interface Timeline {
 Create animations that alternate between active and paused states:
 
 ```typescript
-const timeline = [
-  // Active for 100 frames, pause for 50 frames, repeat
-  {
-    interval: [100, 50],
-    action: () => {
-      enemy.move();
-    },
-    actionStart: (loop) => {
-      console.log(`Starting loop ${loop}`);
-    }
-  }
-];
+timeline.addAction({
+  id: 'patrol',
+  interval: [100, 50], // Active for 100 frames, pause for 50 frames
+  action: () => { enemy.move(); },
+  actionStart: (loop) => { console.log(`Patrol loop ${loop}`); }
+});
 ```
 
 ### Sequenced Animations
 
 ```typescript
-const timeline = [
-  // First animation: frames 0-100
-  { start: 0, end: 100, action: () => mesh.rotation.x += 0.01 },
-  
-  // Second animation: frames 100-200
-  { start: 100, end: 200, action: () => mesh.rotation.y += 0.01 },
-  
-  // Third animation: frames 200-300
-  { start: 200, end: 300, action: () => mesh.rotation.z += 0.01 },
-];
+timeline.addAction({ id: 'phase-1', start: 0, end: 100, action: () => mesh.rotation.x += 0.01 });
+timeline.addAction({ id: 'phase-2', start: 100, end: 200, action: () => mesh.rotation.y += 0.01 });
+timeline.addAction({ id: 'phase-3', start: 200, end: 300, action: () => mesh.rotation.z += 0.01 });
 ```
 
 ## Physics-Based Movement
 
-Utilities for moving characters with Rapier physics.
+Utilities for moving characters with Rapier physics character controllers.
 
-### moveCharacter
+### controllerForward
 
-Apply movement to a physics body based on direction.
+Move a character controller forward/backward with collision detection and step climbing.
 
 ```typescript
-import { moveCharacter, Direction } from '@webgamekit/animation';
+import { controllerForward } from '@webgamekit/animation';
 
 // In animation loop
-moveCharacter(playerBody, {
-  direction: Direction.Forward,
-  speed: 5,
-  deltaTime: delta
+controllerForward(obstacles, groundBodies, {
+  player: playerModel,
+  actionName: 'walk',
+  delta: delta,
+  distance: PLAYER_SPEED * delta,
+}, {
+  requireGround: false,
+  maxGroundDistance: 5,
+  maxStepHeight: 0.5,
+  characterRadius: 2,
+  collisionDistance: 2,
 });
 ```
 
-### Direction Enum
+### moveCharacter
+
+Teleport a model to a specific world position (syncs both Three.js mesh and Rapier body).
 
 ```typescript
-enum Direction {
-  Forward = 'forward',
-  Backward = 'backward',
-  Left = 'left',
-  Right = 'right',
-  Up = 'up',
-  Down = 'down'
-}
-```
+import { moveCharacter } from '@webgamekit/animation';
 
-## Types
-
-### CoordinateTuple
-
-Standard type for 3D coordinates:
-
-```typescript
-type CoordinateTuple = [number, number, number];
-
-// Usage
-const position: CoordinateTuple = [0, 5, 10];
-const rotation: CoordinateTuple = [0, Math.PI, 0];
+// Snap model to position (bypasses physics simulation)
+moveCharacter(playerModel, new THREE.Vector3(0, 0, 0));
 ```
 
 ## Rotation Utilities
@@ -151,18 +151,15 @@ import { getRotation } from '@webgamekit/animation';
 // currentActions is typically from createControls()
 const targetRotation = getRotation(currentActions);
 // Returns: number | null
-// - 0: move-up (forward/W) - faces -Z
-// - 180: move-down (backward/S) - faces +Z
+// - 0: move-up (W) - faces -Z
+// - 180: move-down (S) - faces +Z
 // - 90: move-left (A) - faces -X
 // - 270: move-right (D) - faces +X
-// - 45: move-up + move-left (W+A)
-// - 315: move-up + move-right (W+D)
-// - 135: move-down + move-left (S+A)
-// - 225: move-down + move-right (S+D)
 // - null: no movement or opposing directions cancel
 ```
 
 **Expected action keys:**
+
 - `move-up`: Forward movement (typically W key)
 - `move-down`: Backward movement (typically S key)
 - `move-left`: Left strafe (typically A key)
@@ -175,49 +172,109 @@ Set the model's Y-axis rotation to face a specific direction.
 ```typescript
 import { setRotation, getRotation } from '@webgamekit/animation';
 
-// Set rotation based on input
 const targetRotation = getRotation(currentActions);
 if (targetRotation !== null) {
   setRotation(player, targetRotation);
-  // Player now faces the movement direction
 }
 ```
 
 ### Usage Example: 8-Directional Movement
 
 ```typescript
-import { getRotation, setRotation, controllerForward } from '@webgamekit/animation';
+import { getRotation, setRotation, controllerForward, createTimelineManager } from '@webgamekit/animation';
 import { createControls } from '@webgamekit/controls';
 
-const controlBindings = {
-  mapping: {
-    keyboard: {
-      w: 'move-up',
-      s: 'move-down',
-      a: 'move-left',
-      d: 'move-right',
-    },
-  },
-};
-
 const { currentActions } = createControls(controlBindings);
+const timeline = createTimelineManager();
 
-// In animation loop
-animate({
-  timeline: [{
-    action: () => {
-      const targetRotation = getRotation(currentActions);
-      const isMoving = targetRotation !== null;
+timeline.addAction({
+  id: 'player-movement',
+  action: () => {
+    const targetRotation = getRotation(currentActions);
+    const isMoving = targetRotation !== null;
 
-      if (isMoving) {
-        // Rotate to face movement direction
-        setRotation(player, targetRotation);
-        // Move forward in that direction
-        controllerForward(player, obstacles, distance, delta, 'walk', true);
-      }
-    },
-  }],
+    if (isMoving) {
+      setRotation(player, targetRotation);
+      controllerForward(obstacles, groundBodies, {
+        player,
+        actionName: 'walk',
+        delta,
+        distance: speed * delta,
+      });
+    }
+  },
 });
+
+animate({ timeline });
+```
+
+## Model Animation
+
+### updateAnimation
+
+Switch animation clips on a model loaded with `getModel`.
+
+```typescript
+import { updateAnimation } from '@webgamekit/animation';
+
+// Switch to walk animation
+updateAnimation(playerModel, 'walk');
+
+// Switch to idle
+updateAnimation(playerModel, 'idle');
+```
+
+### getAnimationsModel
+
+Load a model with multiple animation files.
+
+```typescript
+import { getAnimationsModel } from '@webgamekit/animation';
+
+const player = await getAnimationsModel(scene, world, 'character.fbx', {
+  animationFiles: ['walk.fbx', 'idle.fbx', 'run.fbx'],
+  position: [0, 0, 0],
+  scale: [1, 1, 1],
+});
+```
+
+## Pop-Up Animations
+
+Utility functions for entrance/exit animations on 3D objects.
+
+```typescript
+import { createPopUpBounce, createPopUpFade, createPopUpScale } from '@webgamekit/animation';
+
+// Bounce in from below
+const bounceAction = createPopUpBounce(mesh, { duration: 30, height: 2 });
+timeline.addAction(bounceAction);
+
+// Fade in
+const fadeAction = createPopUpFade(mesh, { duration: 20 });
+timeline.addAction(fadeAction);
+```
+
+## Types
+
+### AnimationData
+
+```typescript
+interface AnimationData {
+  player: ComplexModel;
+  actionName: string;
+  delta: number;
+  distance?: number;
+  backward?: boolean;
+}
+```
+
+### CoordinateTuple
+
+```typescript
+type CoordinateTuple = [number, number, number];
+
+const position: CoordinateTuple = [0, 5, 10];
+const rotation: CoordinateTuple = [0, Math.PI, 0];
 ```
 
 ### Model Types
@@ -235,48 +292,7 @@ interface ComplexModel extends Model {
   userData: {
     body: RAPIER.RigidBody;
     collider: RAPIER.Collider;
+    characterController?: RAPIER.KinematicCharacterController;
   };
 }
-```
-
-## Integration Example
-
-Complete example using animation with Three.js:
-
-```typescript
-import { getTools } from '@webgamekit/threejs';
-import { animateTimeline, Direction, moveCharacter } from '@webgamekit/animation';
-
-const { setup, animate, world } = await getTools({ canvas });
-
-await setup({
-  config: { /* ... */ },
-  defineSetup: async () => {
-    // Create player with physics
-  }
-});
-
-animate({
-  beforeTimeline: () => {
-    // Handle input
-    if (keys.w) {
-      moveCharacter(player.userData.body, {
-        direction: Direction.Forward,
-        speed: 5
-      });
-    }
-  },
-  timeline: [
-    {
-      id: 'enemy-spawn',
-      every: 120,
-      do: () => spawnEnemy()
-    },
-    {
-      id: 'score-update',
-      every: 60,
-      do: () => updateScore()
-    }
-  ]
-});
 ```

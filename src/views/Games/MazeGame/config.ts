@@ -213,6 +213,12 @@ export const controlBindings = {
       "axis1-down": "move-up",
       "cross": "toggle-auto",
     },
+    'faux-pad': {
+      left: "move-left",
+      right: "move-right",
+      up: "move-down",
+      down: "move-up",
+    },
   },
   axisThreshold: 0.5,
 };
