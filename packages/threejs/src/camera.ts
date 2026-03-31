@@ -104,8 +104,10 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
  * @param config
  */
 export const getLookAt = (model: Model, config: CameraConfig) => {
-  const { x, y, z } = config.lookAt
-  const lookAt = new THREE.Vector3(x, y, z)
+  const lookAt =
+    config.lookAt instanceof THREE.Vector3
+      ? config.lookAt.clone()
+      : new THREE.Vector3(...((config.lookAt as CoordinateTuple) ?? [0, 0, 0]))
   lookAt.applyQuaternion(model.quaternion)
   lookAt.add(model.position)
   return lookAt
