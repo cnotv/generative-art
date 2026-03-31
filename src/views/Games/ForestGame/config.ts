@@ -4,7 +4,6 @@ import * as THREE from 'three'
 
 import { generateAreaPositions } from '@webgamekit/threejs'
 
-// Assets
 import jumpSound from '@/assets/audio/jump.wav'
 
 import illustrationCloud1Img from '@/assets/images/illustrations/cloud1.webp'
@@ -163,19 +162,30 @@ export const assets = {
   jumpSound
 }
 
-// Helper to randomly distribute positions across texture variants
-// Generates positions and assigns them randomly to texture variants
-const createTextureVariants = (textures: string[], baseConfig: any, area: AreaConfig) => {
-  // Generate positions for total count
+type TextureBaseConfig = {
+  size: CoordinateTuple
+  [key: string]: unknown
+}
+
+type TextureInstance = {
+  position: CoordinateTuple
+  scale: CoordinateTuple
+  rotation: CoordinateTuple
+}
+
+const createTextureVariants = (
+  textures: string[],
+  baseConfig: TextureBaseConfig,
+  area: AreaConfig
+) => {
   const allPositions = generateAreaPositions(area)
   const { sizeVariation, rotationVariation } = area
 
-  // Initialize arrays for each texture variant
   const variantData = textures.map((texture) => ({
     texture,
     ...baseConfig,
     positions: [] as CoordinateTuple[],
-    instances: [] as any[]
+    instances: [] as TextureInstance[]
   }))
 
   // Randomly assign each position to a texture variant
