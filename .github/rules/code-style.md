@@ -86,6 +86,13 @@
 - **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
 - **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 
+## Three.js Performance
+
+- **No `new` in the animation loop**: Do not instantiate Three.js objects (`new Vector3()`, `new Matrix4()`, `new Quaternion()`, etc.) inside timeline actions or `requestAnimationFrame` callbacks. Each call allocates memory that the GC must collect every frame. Create objects once outside the loop and mutate them with `.set()`, `.copy()`, or `.multiplyScalars()`.
+- **No `.clone()` in the animation loop**: `.clone()` allocates a new object. Use `.copy()` on a pre-allocated instance instead.
+- **Dispose resources**: Call `.dispose()` on geometries, materials, textures, and render targets when removing objects from the scene. Undisposed GPU resources leak VRAM.
+- **Object pooling for projectiles/particles**: When many short-lived objects are created and destroyed each frame, use an object pool — allocate a fixed array upfront and recycle instances rather than creating and garbage-collecting them.
+
 ## Modular Architecture
 
 - **Reuse existing components**: Check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components and other reusables in `src/components/`. Never reinvent the wheel.

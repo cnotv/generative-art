@@ -1,22 +1,17 @@
 import cloudTexture from '@/assets/images/goomba/cloud.png'
 import hillTexture from '@/assets/images/goomba/hill.png'
 import fireTexture from '@/assets/images/goomba/fire.png'
-import type { SetupConfig } from '@webgamekit/threejs'
+import type { SetupConfig, CameraConfig } from '@webgamekit/threejs'
+import type { CoordinateTuple } from '@webgamekit/animation'
+
+const cameraConfig: CameraConfig = {
+  position: [0, 20, 150] as CoordinateTuple,
+  fov: 80,
+  rotation: [0, 0, 0] as CoordinateTuple
+}
 
 export const config = {
-  camera: {
-    position: {
-      x: 0,
-      y: 20,
-      z: 150
-    },
-    fov: 80,
-    rotation: {
-      x: 0,
-      y: 0,
-      z: 0
-    }
-  },
+  camera: cameraConfig,
   game: {
     helper: false,
     speed: 2
@@ -178,17 +173,17 @@ export const textureAreaControls = {
   }
 }
 
-export const setupConfig = {
-  camera: config.camera as any,
+export const setupConfig: SetupConfig = {
+  camera: config.camera,
   scene: {
     backgroundColor: 0x87ceeb
   },
   ground: false,
-  sky: false, // Disable sky sphere to avoid hiding UI elements
+  sky: false,
   lights: {
     directional: {
       intensity: config.directional.intensity * 1.5
     }
   },
   orbit: { disabled: true }
-} as SetupConfig
+}

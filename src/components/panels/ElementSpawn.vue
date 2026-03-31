@@ -24,6 +24,11 @@ const emit = defineEmits<{
 
 const debugSceneStore = useDebugSceneStore()
 const elementPropertiesStore = useElementPropertiesStore()
+
+const handleToggle = () => {
+  emit('toggle')
+  if (!props.isExpanded) elementPropertiesStore.openElementProperties(props.spawnId)
+}
 const { activeProperties } = storeToRefs(elementPropertiesStore)
 
 const hasExpandedSchema = computed(
@@ -41,14 +46,8 @@ const hasExpandedSchema = computed(
       }"
       role="button"
       tabindex="0"
-      @click="
-        emit('toggle')
-        if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)
-      "
-      @keydown.enter.space.prevent="
-        emit('toggle')
-        if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)
-      "
+      @click="handleToggle"
+      @keydown.enter.space.prevent="handleToggle"
     >
       <IconPreview :icon="Cpu" color="text-purple-400" />
       <div class="element-spawn__info">

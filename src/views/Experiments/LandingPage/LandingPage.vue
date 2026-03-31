@@ -370,6 +370,9 @@ const createResetTimeline = (bodies: PhysicsBodies) => {
   let resetFrame = 0
   const resetStartPositions = new Map<THREE.Object3D, THREE.Vector3>()
   const resetStartRotations = new Map<THREE.Object3D, THREE.Quaternion>()
+  const identityQuat = new THREE.Quaternion()
+  const scratchPos = new THREE.Vector3()
+  const scratchRot = new THREE.Quaternion()
 
   timelineManager.addAction({
     interval: [RESET_DURATION_FRAMES, RESET_INTERVAL_FRAMES - RESET_DURATION_FRAMES],
@@ -387,15 +390,17 @@ const createResetTimeline = (bodies: PhysicsBodies) => {
     action: () => {
       resetFrame++
       const progress = Math.min(1, resetFrame / RESET_DURATION_FRAMES)
-      const identityQuat = new THREE.Quaternion()
       bodies.forEach(({ body, originalPos }, mesh) => {
         const startPos = resetStartPositions.get(mesh)
         const startRot = resetStartRotations.get(mesh)
         if (!startPos || !startRot) return
-        const newPos = startPos.clone().lerp(originalPos, progress)
-        const newRot = startRot.clone().slerp(identityQuat, progress)
-        body.setTranslation({ x: newPos.x, y: newPos.y, z: newPos.z }, true)
-        body.setRotation({ x: newRot.x, y: newRot.y, z: newRot.z, w: newRot.w }, true)
+        scratchPos.copy(startPos).lerp(originalPos, progress)
+        scratchRot.copy(startRot).slerp(identityQuat, progress)
+        body.setTranslation({ x: scratchPos.x, y: scratchPos.y, z: scratchPos.z }, true)
+        body.setRotation(
+          { x: scratchRot.x, y: scratchRot.y, z: scratchRot.z, w: scratchRot.w },
+          true
+        )
         body.setLinvel({ x: 0, y: 0, z: 0 }, true)
         body.setAngvel({ x: 0, y: 0, z: 0 }, true)
       })

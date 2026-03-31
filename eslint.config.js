@@ -6,6 +6,7 @@ import vueParser from 'vue-eslint-parser'
 import functional from 'eslint-plugin-functional'
 import unicorn from 'eslint-plugin-unicorn'
 import prettierConfig from 'eslint-config-prettier'
+import noAllocInAnimationLoop from './rules/no-alloc-in-animation-loop.js'
 
 export default [
   // Base recommended configs
@@ -31,7 +32,8 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       functional,
-      unicorn
+      unicorn,
+      local: { rules: { 'no-alloc-in-animation-loop': noAllocInAnimationLoop } }
     },
 
     languageOptions: {
@@ -304,7 +306,8 @@ export default [
       // VUE-SPECIFIC OVERRIDES
       // ====================
 
-      'vue/multi-word-component-names': 'off' // Allow single-word components
+      'vue/multi-word-component-names': 'off',
+      'local/no-alloc-in-animation-loop': 'error'
     }
   },
 
@@ -463,9 +466,6 @@ export default [
   // Utility files often need to mutate state
   {
     files: [
-      'src/utils/**/*.ts',
-      'src/router/**/*.ts',
-      'src/config/**/*.ts',
       'packages/controls/**/*.ts',
       'packages/audio/**/*.ts',
       'packages/game/**/*.ts',
@@ -511,11 +511,7 @@ export default [
       }
     },
     rules: {
-      // Relax rules for config files
-      'no-magic-numbers': 'off',
-      '@typescript-eslint/naming-convention': 'off',
-      'unicorn/prevent-abbreviations': 'off',
-      'no-undef': 'off'
+      'no-magic-numbers': 'off'
     }
   },
 
@@ -528,11 +524,7 @@ export default [
       }
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      'no-undef': 'off',
-      'functional/immutable-data': 'off', // Can't use type info on JS files
-      'consistent-return': 'off'
+      'functional/immutable-data': 'off'
     }
   },
 
