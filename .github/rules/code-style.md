@@ -17,7 +17,7 @@
 - **No debug comments**: Never commit commented-out debug notes, thought processes, or "was X, now Y" annotations
 - **No redundant comments**: Avoid comments that repeat what the code already says (e.g., `// Set rotation` before `setRotation()`)
 - **No section label comments**: Do not add comments that only name what follows (e.g., `// Player` before `PLAYER_*` constants, `// Assets` before imports). Let variable and function names speak for themselves
-- **JSDoc for public APIs**: Use JSDoc for exported functions with `@param` and `@returns`, but keep descriptions concise
+- **JSDoc for package exports**: Every exported function in `packages/*/src/` must have a JSDoc comment with `@param` and `@returns` tags. This is enforced by `eslint-plugin-jsdoc` (`jsdoc/require-jsdoc`, `jsdoc/require-param`, `jsdoc/require-returns`). Keep descriptions concise — one line is enough
 
 ## State Management
 

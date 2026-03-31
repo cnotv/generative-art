@@ -41,6 +41,12 @@ const THREE_CONSTRUCTORS = new Set([
   'Points'
 ])
 
+/**
+ * Extracts the function name from a callee node.
+ * Handles both direct calls (`addAction(...)`) and method calls (`manager.addAction(...)`).
+ * @param {import('eslint').Rule.Node} callee - The callee node of a CallExpression
+ * @returns {string | null} The function name, or null if it cannot be determined
+ */
 const getCalleeName = (callee) => {
   if (callee.type === 'Identifier') return callee.name
   if (callee.type === 'MemberExpression') return callee.property?.name ?? null
