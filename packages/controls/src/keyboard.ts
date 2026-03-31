@@ -5,6 +5,12 @@ export interface KeyboardController {
   unbind: (target?: HTMLElement | null) => void
 }
 
+/**
+ *
+ * @param mappingReference
+ * @param mappingReference.current
+ * @param handlers
+ */
 export function createKeyboardController(
   mappingReference: { current: ControlMapping },
   handlers: ControlHandlers

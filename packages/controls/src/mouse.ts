@@ -5,6 +5,12 @@ export interface MouseController {
   unbind: (target: HTMLElement) => void
 }
 
+/**
+ *
+ * @param mappingReference
+ * @param mappingReference.current
+ * @param handlers
+ */
 export function createMouseController(
   mappingReference: { current: ControlMapping },
   handlers: ControlHandlers

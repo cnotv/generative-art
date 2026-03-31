@@ -122,6 +122,9 @@ const astarStep = (
  * A* pathfinding algorithm. Returns the shortest path from start to goal,
  * or null if no path exists. Supports gravel (double cost) and wormholes
  * (instant teleport from any entrance to any exit).
+ * @param grid
+ * @param start
+ * @param goal
  */
 export const logicGetBestRoute = (
   grid: Grid,

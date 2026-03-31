@@ -1,7 +1,15 @@
 import type { CellType, Grid, GridCell, GridConfig, NumberTriple, Position2D } from './types'
 
+/**
+ *
+ * @param cell
+ */
 export const logicIsCellWalkable = (cell: GridCell): boolean => cell.type !== 'boulder'
 
+/**
+ *
+ * @param config
+ */
 export const logicCreateGrid = (config: GridConfig): Grid => ({
   cells: Array.from({ length: config.height }, (_, z) =>
     Array.from({ length: config.width }, (_, x) => ({ x, z, type: 'empty' as CellType }))
@@ -11,6 +19,12 @@ export const logicCreateGrid = (config: GridConfig): Grid => ({
   cellSize: config.cellSize
 })
 
+/**
+ *
+ * @param gridX
+ * @param gridZ
+ * @param config
+ */
 export const logicGridToWorld = (
   gridX: number,
   gridZ: number,
@@ -21,6 +35,11 @@ export const logicGridToWorld = (
   return [worldX, config.centerOffset[1], worldZ]
 }
 
+/**
+ *
+ * @param worldPos
+ * @param config
+ */
 export const logicWorldToGrid = (worldPos: NumberTriple, config: GridConfig): Position2D => {
   const gridX = Math.floor(
     (worldPos[0] - config.centerOffset[0]) / config.cellSize + config.width / 2
@@ -31,6 +50,13 @@ export const logicWorldToGrid = (worldPos: NumberTriple, config: GridConfig): Po
   return { x: gridX, z: gridZ }
 }
 
+/**
+ *
+ * @param grid
+ * @param x
+ * @param z
+ * @param type
+ */
 export const logicSetCellType = (grid: Grid, x: number, z: number, type: CellType): Grid => ({
   ...grid,
   cells: grid.cells.map((row, rowZ) =>
@@ -38,8 +64,19 @@ export const logicSetCellType = (grid: Grid, x: number, z: number, type: CellTyp
   )
 })
 
+/**
+ *
+ * @param grid
+ * @param x
+ * @param z
+ */
 export const logicMarkObstacle = (grid: Grid, x: number, z: number): Grid =>
   logicSetCellType(grid, x, z, 'boulder')
 
+/**
+ *
+ * @param grid
+ * @param positions
+ */
 export const logicMarkObstacles = (grid: Grid, positions: Position2D[]): Grid =>
   positions.reduce((accumulator, { x, z }) => logicMarkObstacle(accumulator, x, z), grid)

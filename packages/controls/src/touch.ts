@@ -6,6 +6,12 @@ export interface TouchController {
   isSupported: () => boolean
 }
 
+/**
+ *
+ * @param mappingReference
+ * @param mappingReference.current
+ * @param handlers
+ */
 export function createTouchController(
   mappingReference: { current: ControlMapping },
   handlers: ControlHandlers

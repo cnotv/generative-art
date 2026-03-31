@@ -1,4 +1,9 @@
-export const times = (n: number, fn: (i: number) => any) => {
+/**
+ *
+ * @param n
+ * @param fn
+ */
+export const times = <T>(n: number, fn: (i: number) => T): T[] => {
   return Array.from({ length: n }, (_, i) => fn(i))
 }
 

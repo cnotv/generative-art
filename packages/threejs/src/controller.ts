@@ -8,6 +8,7 @@ const ZERO_VEC: Vec3 = { x: 0, y: 0, z: 0 }
  *
  * @param model - A ComplexModel with characterController and collider in userData
  * @param direction - Movement vector to apply
+ * @param filterPredicate
  * @returns The computed movement vector after physics resolution
  */
 export const moveController = (

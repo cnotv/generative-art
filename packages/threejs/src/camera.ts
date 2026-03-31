@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
 import { getOffset } from './getters'
 import { OrbitControls } from 'three/examples/jsm/Addons.js'
+import type { CameraConfig } from './types'
 
 /**
  * Camera preset configurations for different viewing styles
@@ -97,7 +98,12 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
   }
 }
 
-export const getLookAt = (model: Model, config: any) => {
+/**
+ *
+ * @param model
+ * @param config
+ */
+export const getLookAt = (model: Model, config: CameraConfig) => {
   const { x, y, z } = config.lookAt
   const lookAt = new THREE.Vector3(x, y, z)
   lookAt.applyQuaternion(model.quaternion)
@@ -148,6 +154,15 @@ export const setCameraPreset = (
   return camera
 }
 
+/**
+ *
+ * @param camera
+ * @param root0
+ * @param root0.x
+ * @param root0.y
+ * @param root0.z
+ * @param value
+ */
 export const setCameraSide = (
   camera: THREE.PerspectiveCamera,
   { x, y, z }: THREE.Vector3,
@@ -180,7 +195,7 @@ export const setCameraSide = (
  */
 export const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
-  config: any,
+  config: CameraConfig,
   model: Model | null
 ) => {
   if (model) {
@@ -196,6 +211,8 @@ export const setThirdPersonCamera = (
  * @param camera - The Three.js camera to update
  * @param player - The player model to follow
  * @param offset - Camera offset from player [x, y, z]
+ * @param orbit
+ * @param coordinates
  * @returns Updated camera position as CoordinateTuple
  */
 export const cameraFollowPlayer = (
@@ -252,7 +269,7 @@ export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor:
  */
 export const updateCamera = (
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
-  config: any
+  config: CameraConfig
 ): void => {
   if (config.position) {
     if (config.position instanceof Array) {
@@ -270,7 +287,7 @@ export const updateCamera = (
   if (camera instanceof THREE.PerspectiveCamera) {
     if (config.fov !== undefined) camera.fov = config.fov
     if (config.aspect !== undefined) camera.aspect = config.aspect
-    if (config.focus !== undefined) (camera as any).focus = config.focus
+    if (config.focus !== undefined) (camera as THREE.PerspectiveCamera).focus = config.focus
   }
 
   if (config.rotation) {
