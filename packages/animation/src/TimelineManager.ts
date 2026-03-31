@@ -1,22 +1,22 @@
-import type { Timeline } from './types';
-import { createTimelineLogger, type TimelineLogger } from './TimelineLogger';
-import { generateTimelineId } from './actions';
+import type { Timeline } from './types'
+import { createTimelineLogger, type TimelineLogger } from './TimelineLogger'
+import { generateTimelineId } from './actions'
 
 export interface TimelineManager {
-  addAction: (action: Timeline) => string;
-  removeAction: (id: string) => boolean;
-  updateAction: (id: string, updates: Partial<Timeline>) => boolean;
-  hasAction: (id: string) => boolean;
-  getAction: (id: string) => Timeline | undefined;
-  addActions: (actions: Timeline[]) => string[];
-  removeByCategory: (category: string) => number;
-  removeCompleted: () => number;
-  clearAll: () => void;
-  getActiveActions: () => Timeline[];
-  getActionsByCategory: (category: string) => Timeline[];
-  getTimeline: () => Timeline[];
-  _markCompleted: (id: string) => void;
-  getLogger: () => TimelineLogger | null;
+  addAction: (action: Timeline) => string
+  removeAction: (id: string) => boolean
+  updateAction: (id: string, updates: Partial<Timeline>) => boolean
+  hasAction: (id: string) => boolean
+  getAction: (id: string) => Timeline | undefined
+  addActions: (actions: Timeline[]) => string[]
+  removeByCategory: (category: string) => number
+  removeCompleted: () => number
+  clearAll: () => void
+  getActiveActions: () => Timeline[]
+  getActionsByCategory: (category: string) => Timeline[]
+  getTimeline: () => Timeline[]
+  _markCompleted: (id: string) => void
+  getLogger: () => TimelineLogger | null
 }
 
 /**
@@ -25,18 +25,18 @@ export interface TimelineManager {
  * @returns Manager instance with methods
  */
 export const createTimelineManager = (options?: {
-  enableLogging?: boolean;
-  logCategories?: string[];
+  enableLogging?: boolean
+  logCategories?: string[]
 }): TimelineManager => {
-  let timeline: Timeline[] = [];
-  const activeActions = new Map<string, Timeline>();
-  const completedActions = new Set<string>();
+  let timeline: Timeline[] = []
+  const activeActions = new Map<string, Timeline>()
+  const completedActions = new Set<string>()
   const logger = options?.enableLogging
     ? createTimelineLogger({
         categories: options.logCategories,
-        consoleOutput: true,
+        consoleOutput: true
       })
-    : null;
+    : null
 
   /**
    * Add a timeline action
@@ -44,11 +44,11 @@ export const createTimelineManager = (options?: {
    * @returns Generated or provided ID
    */
   const addAction = (action: Timeline): string => {
-    const id = action.id || generateTimelineId();
-    const actionWithId: Timeline = { ...action, id };
+    const id = action.id || generateTimelineId()
+    const actionWithId: Timeline = { ...action, id }
 
-    timeline.push(actionWithId);
-    activeActions.set(id, actionWithId);
+    timeline.push(actionWithId)
+    activeActions.set(id, actionWithId)
 
     if (logger) {
       logger.log({
@@ -56,12 +56,12 @@ export const createTimelineManager = (options?: {
         actionId: id,
         actionName: action.name,
         category: action.category,
-        type: 'start',
-      });
+        type: 'start'
+      })
     }
 
-    return id;
-  };
+    return id
+  }
 
   /**
    * Remove a timeline action by ID
@@ -69,13 +69,13 @@ export const createTimelineManager = (options?: {
    * @returns True if removed, false if not found
    */
   const removeAction = (id: string): boolean => {
-    const index = timeline.findIndex(a => a.id === id);
-    if (index === -1) return false;
+    const index = timeline.findIndex((a) => a.id === id)
+    if (index === -1) return false
 
-    const action = activeActions.get(id);
-    timeline.splice(index, 1);
-    activeActions.delete(id);
-    completedActions.add(id);
+    const action = activeActions.get(id)
+    timeline.splice(index, 1)
+    activeActions.delete(id)
+    completedActions.add(id)
 
     if (logger) {
       logger.log({
@@ -83,12 +83,12 @@ export const createTimelineManager = (options?: {
         actionId: id,
         actionName: action?.name,
         category: action?.category,
-        type: 'remove',
-      });
+        type: 'remove'
+      })
     }
 
-    return true;
-  };
+    return true
+  }
 
   /**
    * Update a timeline action
@@ -97,20 +97,20 @@ export const createTimelineManager = (options?: {
    * @returns True if updated, false if not found
    */
   const updateAction = (id: string, updates: Partial<Timeline>): boolean => {
-    const action = activeActions.get(id);
-    if (!action) return false;
+    const action = activeActions.get(id)
+    if (!action) return false
 
-    const updatedAction = { ...action, ...updates, id };
-    const index = timeline.findIndex(a => a.id === id);
+    const updatedAction = { ...action, ...updates, id }
+    const index = timeline.findIndex((a) => a.id === id)
 
     if (index !== -1) {
-      timeline[index] = updatedAction;
-      activeActions.set(id, updatedAction);
-      return true;
+      timeline[index] = updatedAction
+      activeActions.set(id, updatedAction)
+      return true
     }
 
-    return false;
-  };
+    return false
+  }
 
   /**
    * Check if action exists
@@ -118,8 +118,8 @@ export const createTimelineManager = (options?: {
    * @returns True if action exists
    */
   const hasAction = (id: string): boolean => {
-    return activeActions.has(id);
-  };
+    return activeActions.has(id)
+  }
 
   /**
    * Get action by ID
@@ -127,8 +127,8 @@ export const createTimelineManager = (options?: {
    * @returns Timeline action or undefined
    */
   const getAction = (id: string): Timeline | undefined => {
-    return activeActions.get(id);
-  };
+    return activeActions.get(id)
+  }
 
   /**
    * Add multiple actions
@@ -136,8 +136,8 @@ export const createTimelineManager = (options?: {
    * @returns Array of generated IDs
    */
   const addActions = (actions: Timeline[]): string[] => {
-    return actions.map(action => addAction(action));
-  };
+    return actions.map((action) => addAction(action))
+  }
 
   /**
    * Remove all actions in a category
@@ -146,51 +146,51 @@ export const createTimelineManager = (options?: {
    */
   const removeByCategory = (category: string): number => {
     const toRemove = timeline
-      .filter(a => a.category === category)
-      .map(a => a.id!)
-      .filter(id => id !== undefined);
+      .filter((a) => a.category === category)
+      .map((a) => a.id!)
+      .filter((id) => id !== undefined)
 
-    toRemove.forEach(id => removeAction(id));
-    return toRemove.length;
-  };
+    toRemove.forEach((id) => removeAction(id))
+    return toRemove.length
+  }
 
   /**
    * Remove all completed actions
    * @returns Number of actions removed
    */
   const removeCompleted = (): number => {
-    const count = completedActions.size;
-    completedActions.forEach(id => {
-      const index = timeline.findIndex(a => a.id === id);
+    const count = completedActions.size
+    completedActions.forEach((id) => {
+      const index = timeline.findIndex((a) => a.id === id)
       if (index !== -1) {
-        timeline.splice(index, 1);
-        activeActions.delete(id);
+        timeline.splice(index, 1)
+        activeActions.delete(id)
       }
-    });
-    completedActions.clear();
-    return count;
-  };
+    })
+    completedActions.clear()
+    return count
+  }
 
   /**
    * Clear all actions
    */
   const clearAll = (): void => {
-    timeline = [];
-    activeActions.clear();
-    completedActions.clear();
+    timeline = []
+    activeActions.clear()
+    completedActions.clear()
 
     if (logger) {
-      logger.clearLogs();
+      logger.clearLogs()
     }
-  };
+  }
 
   /**
    * Get all active actions
    * @returns Array of active timeline actions
    */
   const getActiveActions = (): Timeline[] => {
-    return [...timeline].filter(a => !completedActions.has(a.id!));
-  };
+    return [...timeline].filter((a) => !completedActions.has(a.id!))
+  }
 
   /**
    * Get actions by category
@@ -198,43 +198,43 @@ export const createTimelineManager = (options?: {
    * @returns Array of timeline actions in category
    */
   const getActionsByCategory = (category: string): Timeline[] => {
-    return timeline.filter(a => a.category === category);
-  };
+    return timeline.filter((a) => a.category === category)
+  }
 
   /**
    * Get the timeline array (used by animateTimeline)
    * @returns Copy of timeline array
    */
   const getTimeline = (): Timeline[] => {
-    return [...timeline];
-  };
+    return [...timeline]
+  }
 
   /**
    * Mark action as completed (internal use)
    * @param id Action ID
    */
   const _markCompleted = (id: string): void => {
-    completedActions.add(id);
+    completedActions.add(id)
 
     if (logger) {
-      const action = activeActions.get(id);
+      const action = activeActions.get(id)
       logger.log({
         frame: 0,
         actionId: id,
         actionName: action?.name,
         category: action?.category,
-        type: 'complete',
-      });
+        type: 'complete'
+      })
     }
-  };
+  }
 
   /**
    * Get logger instance
    * @returns TimelineLogger or null
    */
   const getLogger = (): TimelineLogger | null => {
-    return logger;
-  };
+    return logger
+  }
 
   return {
     addAction,
@@ -250,6 +250,6 @@ export const createTimelineManager = (options?: {
     getActionsByCategory,
     getTimeline,
     _markCompleted,
-    getLogger,
-  };
-};
+    getLogger
+  }
+}

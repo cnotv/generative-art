@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { generatedRoutes as generatedRoutesAll } from "@/config/router";
-import GenericPanel from "./GenericPanel.vue";
+import { generatedRoutes as generatedRoutesAll } from '@/config/router'
+import GenericPanel from './GenericPanel.vue'
 
-const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<
-  typeof route
-> => {
-  if (!route?.path) return false;
-  const slashCount = (route.path.match(/\//g) || []).length;
-  return slashCount <= 3;
-});
+const generatedRoutes = generatedRoutesAll.filter((route): route is NonNullable<typeof route> => {
+  if (!route?.path) return false
+  const slashCount = (route.path.match(/\//g) || []).length
+  return slashCount <= 3
+})
 </script>
 
 <template>

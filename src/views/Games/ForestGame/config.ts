@@ -1,43 +1,43 @@
-import type { CoordinateTuple } from "@webgamekit/animation";
-import type { SetupConfig, PostProcessingConfig, AreaConfig } from "@webgamekit/threejs";
-import * as THREE from "three";
+import type { CoordinateTuple } from '@webgamekit/animation'
+import type { SetupConfig, PostProcessingConfig, AreaConfig } from '@webgamekit/threejs'
+import * as THREE from 'three'
 
-import { generateAreaPositions } from "@webgamekit/threejs";
+import { generateAreaPositions } from '@webgamekit/threejs'
 
 // Assets
-import jumpSound from "@/assets/audio/jump.wav";
+import jumpSound from '@/assets/audio/jump.wav'
 
-import illustrationCloud1Img from "@/assets/images/illustrations/cloud1.webp";
-import illustrationCloud2Img from "@/assets/images/illustrations/cloud2.webp";
-import illustrationCloud3Img from "@/assets/images/illustrations/cloud3.webp";
-import illustrationCloud4Img from "@/assets/images/illustrations/cloud4.webp";
+import illustrationCloud1Img from '@/assets/images/illustrations/cloud1.webp'
+import illustrationCloud2Img from '@/assets/images/illustrations/cloud2.webp'
+import illustrationCloud3Img from '@/assets/images/illustrations/cloud3.webp'
+import illustrationCloud4Img from '@/assets/images/illustrations/cloud4.webp'
 
-import illustrationMountain11Img from "@/assets/images/illustrations/Mountain1-1.webp";
-import illustrationMountain12Img from "@/assets/images/illustrations/Mountain1-2.webp";
-import illustrationMountain21Img from "@/assets/images/illustrations/Mountain2-1.webp";
-import illustrationMountain22Img from "@/assets/images/illustrations/Mountain2-2.webp";
+import illustrationMountain11Img from '@/assets/images/illustrations/Mountain1-1.webp'
+import illustrationMountain12Img from '@/assets/images/illustrations/Mountain1-2.webp'
+import illustrationMountain21Img from '@/assets/images/illustrations/Mountain2-1.webp'
+import illustrationMountain22Img from '@/assets/images/illustrations/Mountain2-2.webp'
 
-import illustrationTree11Img from "@/assets/images/illustrations/Tree1-1.webp";
-import illustrationTree12Img from "@/assets/images/illustrations/Tree1-2.webp";
-import illustrationTree13Img from "@/assets/images/illustrations/Tree1-3.webp";
-import illustrationTree14Img from "@/assets/images/illustrations/Tree1-4.webp";
-import illustrationTree15Img from "@/assets/images/illustrations/Tree1-5.webp";
-import illustrationTree16Img from "@/assets/images/illustrations/Tree1-6.webp";
-import illustrationTree17Img from "@/assets/images/illustrations/Tree1-7.webp";
-import illustrationTree18Img from "@/assets/images/illustrations/Tree1-8.webp";
-import illustrationTree19Img from "@/assets/images/illustrations/Tree1-9.webp";
+import illustrationTree11Img from '@/assets/images/illustrations/Tree1-1.webp'
+import illustrationTree12Img from '@/assets/images/illustrations/Tree1-2.webp'
+import illustrationTree13Img from '@/assets/images/illustrations/Tree1-3.webp'
+import illustrationTree14Img from '@/assets/images/illustrations/Tree1-4.webp'
+import illustrationTree15Img from '@/assets/images/illustrations/Tree1-5.webp'
+import illustrationTree16Img from '@/assets/images/illustrations/Tree1-6.webp'
+import illustrationTree17Img from '@/assets/images/illustrations/Tree1-7.webp'
+import illustrationTree18Img from '@/assets/images/illustrations/Tree1-8.webp'
+import illustrationTree19Img from '@/assets/images/illustrations/Tree1-9.webp'
 
-import illustrationTree21Img from "@/assets/images/illustrations/Tree2-1.webp";
-import illustrationTree22Img from "@/assets/images/illustrations/Tree2-2.webp";
-import illustrationTree23Img from "@/assets/images/illustrations/Tree2-3.webp";
-import illustrationTree24Img from "@/assets/images/illustrations/Tree2-4.webp";
-import illustrationTree25Img from "@/assets/images/illustrations/Tree2-5.webp";
-import illustrationTree26Img from "@/assets/images/illustrations/Tree2-6.webp";
+import illustrationTree21Img from '@/assets/images/illustrations/Tree2-1.webp'
+import illustrationTree22Img from '@/assets/images/illustrations/Tree2-2.webp'
+import illustrationTree23Img from '@/assets/images/illustrations/Tree2-3.webp'
+import illustrationTree24Img from '@/assets/images/illustrations/Tree2-4.webp'
+import illustrationTree25Img from '@/assets/images/illustrations/Tree2-5.webp'
+import illustrationTree26Img from '@/assets/images/illustrations/Tree2-6.webp'
 
-import illustrationRock1Img from "@/assets/images/illustrations/Rock.webp";
-import illustrationFlower1Img from "@/assets/images/illustrations/flowers1.webp";
-import illustrationBush11Img from "@/assets/images/illustrations/Bush1-1.webp";
-import illustrationBush12Img from "@/assets/images/illustrations/Bush1-2.webp";
+import illustrationRock1Img from '@/assets/images/illustrations/Rock.webp'
+import illustrationFlower1Img from '@/assets/images/illustrations/flowers1.webp'
+import illustrationBush11Img from '@/assets/images/illustrations/Bush1-1.webp'
+import illustrationBush12Img from '@/assets/images/illustrations/Bush1-2.webp'
 
 // import illustrationUndergroundImg from "@/assets/images/illustrations/underground.webp";
 
@@ -52,46 +52,46 @@ export const playerSettings = {
     boundary: 0.5,
     hasGravity: false,
     castShadow: true,
-    material: "MeshLambertMaterial",
-    color: 0xffffff,
+    material: 'MeshLambertMaterial',
+    color: 0xffffff
   },
   movement: {
     requireGround: true,
     maxGroundDistance: 5,
     maxStepHeight: 0.5,
     characterRadius: 20,
-    debug: false,
+    debug: false
   },
   game: {
     distance: 0.5,
     speed: {
       movement: 2,
       turning: 4,
-      jump: 4,
+      jump: 4
     },
-    maxJump: 4,
-  },
-};
+    maxJump: 4
+  }
+}
 
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
   color: 0x000000,
   // opacity: 0.95,
-  material: "MeshBasicMaterial",
+  material: 'MeshBasicMaterial',
   physic: false,
-  transparent: true,
-};
+  transparent: true
+}
 
 const glitchFix = {
   depthWrite: false,
-  alphaTest: 0,
+  alphaTest: 0
 }
 
 export const setupConfig: SetupConfig = {
   orbit: {
     target: new THREE.Vector3(0, 15, 0),
-    disabled: true,
+    disabled: true
   },
   camera: {
     position: [0, 7, 35],
@@ -101,13 +101,13 @@ export const setupConfig: SetupConfig = {
     near: 0.1,
     far: 1000,
     zoom: 1,
-    focus: 10,
+    focus: 10
   },
   ground: {
     size: [1000, 100, 50],
     // texture: illustrationUndergroundImg,
     // textureRepeat: [50, 4] as [number, number],
-    color: 0x98887d,
+    color: 0x98887d
     // color: 0xcccccc,
   },
   sky: { size: 500, color: 0x00aaff },
@@ -123,74 +123,70 @@ export const setupConfig: SetupConfig = {
     // ssao: {},
     // vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
     // colorCorrection: { contrast: 1, saturation: 1, brightness: 1.0 },
-  } as PostProcessingConfig,
-};
+  } as PostProcessingConfig
+}
 
 export const controlBindings = {
   mapping: {
     keyboard: {
-      " ": "jump",
-      a: "move-left",
-      d: "move-right",
-      w: "move-up",
-      s: "move-down",
-      p: "print-log",
+      ' ': 'jump',
+      a: 'move-left',
+      d: 'move-right',
+      w: 'move-up',
+      s: 'move-down',
+      p: 'print-log'
     },
     gamepad: {
       // Buttons
-      cross: "jump",
-      "dpad-left": "move-left",
-      "dpad-right": "move-right",
-      "dpad-down": "move-down",
-      "dpad-up": "move-up",
-      "axis0-left": "move-left",
-      "axis0-right": "move-right",
-      "axis1-up": "move-up",
-      "axis1-down": "move-down",
+      cross: 'jump',
+      'dpad-left': 'move-left',
+      'dpad-right': 'move-right',
+      'dpad-down': 'move-down',
+      'dpad-up': 'move-up',
+      'axis0-left': 'move-left',
+      'axis0-right': 'move-right',
+      'axis1-up': 'move-up',
+      'axis1-down': 'move-down'
     },
     'faux-pad': {
-      left: "move-left",
-      right: "move-right",
-      up: "move-up",
-      down: "move-down",
-      click: "jump",
-    },
+      left: 'move-left',
+      right: 'move-right',
+      up: 'move-up',
+      down: 'move-down',
+      click: 'jump'
+    }
   },
-  axisThreshold: 0.5,
-};
+  axisThreshold: 0.5
+}
 
 export const assets = {
-  jumpSound,
-};
+  jumpSound
+}
 
 // Helper to randomly distribute positions across texture variants
 // Generates positions and assigns them randomly to texture variants
-const createTextureVariants = (
-  textures: string[],
-  baseConfig: any,
-  area: AreaConfig
-) => {
+const createTextureVariants = (textures: string[], baseConfig: any, area: AreaConfig) => {
   // Generate positions for total count
-  const allPositions = generateAreaPositions(area);
-  const { sizeVariation, rotationVariation } = area;
+  const allPositions = generateAreaPositions(area)
+  const { sizeVariation, rotationVariation } = area
 
   // Initialize arrays for each texture variant
-  const variantData = textures.map(texture => ({
+  const variantData = textures.map((texture) => ({
     texture,
     ...baseConfig,
     positions: [] as CoordinateTuple[],
     instances: [] as any[]
-  }));
+  }))
 
   // Randomly assign each position to a texture variant
   allPositions.forEach((position: CoordinateTuple) => {
-    const randomIndex = Math.floor(Math.random() * textures.length);
-    variantData[randomIndex].positions.push(position);
+    const randomIndex = Math.floor(Math.random() * textures.length)
+    variantData[randomIndex].positions.push(position)
 
     // Generate instance with variations if specified
     if (sizeVariation || rotationVariation) {
-      const sizeVariable = sizeVariation || [0, 0, 0] as CoordinateTuple;
-      const rotVariable = rotationVariation || [0, 0, 0] as CoordinateTuple;
+      const sizeVariable = sizeVariation || ([0, 0, 0] as CoordinateTuple)
+      const rotVariable = rotationVariation || ([0, 0, 0] as CoordinateTuple)
 
       variantData[randomIndex].instances.push({
         position,
@@ -204,26 +200,21 @@ const createTextureVariants = (
           (Math.random() - 0.5) * rotVariable[1],
           (Math.random() - 0.5) * rotVariable[2]
         ] as CoordinateTuple
-      });
+      })
     }
-  });
+  })
 
   // Clean up empty instances arrays
-  return variantData.map(variant => ({
+  return variantData.map((variant) => ({
     ...variant,
     instances: variant.instances.length > 0 ? variant.instances : undefined
-  }));
-};
+  }))
+}
 
 // Area population configurations for illustrations with pop-up animations
 export const illustrationAreas = {
   clouds: createTextureVariants(
-    [
-      illustrationCloud1Img,
-      illustrationCloud2Img,
-      illustrationCloud3Img,
-      illustrationCloud4Img,
-    ],
+    [illustrationCloud1Img, illustrationCloud2Img, illustrationCloud3Img, illustrationCloud4Img],
     {
       size: [200, 100, 0] as CoordinateTuple,
       ...genericFlatConfig
@@ -238,10 +229,7 @@ export const illustrationAreas = {
     }
   ),
   mountains1: createTextureVariants(
-    [
-      illustrationMountain11Img,
-      illustrationMountain12Img,
-    ],
+    [illustrationMountain11Img, illustrationMountain12Img],
     {
       size: [240, 120, 0] as CoordinateTuple,
       ...glitchFix,
@@ -257,10 +245,7 @@ export const illustrationAreas = {
     }
   ),
   mountains2: createTextureVariants(
-    [
-      illustrationMountain21Img,
-      illustrationMountain22Img,
-    ],
+    [illustrationMountain21Img, illustrationMountain22Img],
     {
       size: [120, 60, 0] as CoordinateTuple,
       ...glitchFix,
@@ -285,7 +270,7 @@ export const illustrationAreas = {
       illustrationTree16Img,
       illustrationTree17Img,
       illustrationTree18Img,
-      illustrationTree19Img,
+      illustrationTree19Img
     ],
     {
       size: [30, 50, 0] as CoordinateTuple,
@@ -308,7 +293,7 @@ export const illustrationAreas = {
       illustrationTree23Img,
       illustrationTree24Img,
       illustrationTree25Img,
-      illustrationTree26Img,
+      illustrationTree26Img
     ],
     {
       size: [20, 40, 0] as CoordinateTuple,
@@ -324,35 +309,36 @@ export const illustrationAreas = {
       sizeVariation: [10, 20, 0] as CoordinateTuple
     }
   ),
-  grass: [{
-    texture: illustrationTree23Img,
-    size: [10, 17, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    positions: generateAreaPositions({
-      center: [0, -16, 10] as CoordinateTuple,
-      size: [1000, 0, 30] as CoordinateTuple,
-      count: 500,
-      pattern: 'random' as const,
-      seed: 6000
-    })
-  }],
-  rocks: [{
-    texture: illustrationRock1Img,
-    size: [7, 3, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    positions: generateAreaPositions({
-      center: [0, -1, 5] as CoordinateTuple,
-      size: [1000, 0, 40] as CoordinateTuple,
-      count: 60,
-      pattern: 'random' as const,
-      seed: 7000
-    })
-  }],
+  grass: [
+    {
+      texture: illustrationTree23Img,
+      size: [10, 17, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      positions: generateAreaPositions({
+        center: [0, -16, 10] as CoordinateTuple,
+        size: [1000, 0, 30] as CoordinateTuple,
+        count: 500,
+        pattern: 'random' as const,
+        seed: 6000
+      })
+    }
+  ],
+  rocks: [
+    {
+      texture: illustrationRock1Img,
+      size: [7, 3, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      positions: generateAreaPositions({
+        center: [0, -1, 5] as CoordinateTuple,
+        size: [1000, 0, 40] as CoordinateTuple,
+        count: 60,
+        pattern: 'random' as const,
+        seed: 7000
+      })
+    }
+  ],
   bushesBack: createTextureVariants(
-    [
-      illustrationBush11Img,
-      illustrationBush12Img,
-    ],
+    [illustrationBush11Img, illustrationBush12Img],
     {
       size: [15, 10, 0] as CoordinateTuple,
       ...genericFlatConfig,
@@ -368,10 +354,7 @@ export const illustrationAreas = {
     }
   ),
   bushesFront: createTextureVariants(
-    [
-      illustrationBush11Img,
-      illustrationBush12Img,
-    ],
+    [illustrationBush11Img, illustrationBush12Img],
     {
       size: [10, 7, 0] as CoordinateTuple,
       ...genericFlatConfig,
@@ -386,94 +369,113 @@ export const illustrationAreas = {
       sizeVariation: [5, 3, 0] as CoordinateTuple
     }
   ),
-  flowersBack: [{
-    texture: illustrationFlower1Img,
-    size: [10, 7, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    positions: generateAreaPositions({
-      center: [50, -1, -15] as CoordinateTuple,
-      size: [1000, 0, 10] as CoordinateTuple,
-      count: 25,
-      pattern: 'grid-jitter' as const,
-      seed: 9000
-    })
-  }],
-  flowersFront: [{
-    texture: illustrationFlower1Img,
-    size: [8, 5, 0] as CoordinateTuple,
-    ...genericFlatConfig,
-    positions: generateAreaPositions({
-      center: [50, -1, 20] as CoordinateTuple,
-      size: [1000, 0, 10] as CoordinateTuple,
-      count: 40,
-      pattern: 'grid-jitter' as const,
-      seed: 9000
-    })
-  }]
-};
+  flowersBack: [
+    {
+      texture: illustrationFlower1Img,
+      size: [10, 7, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      positions: generateAreaPositions({
+        center: [50, -1, -15] as CoordinateTuple,
+        size: [1000, 0, 10] as CoordinateTuple,
+        count: 25,
+        pattern: 'grid-jitter' as const,
+        seed: 9000
+      })
+    }
+  ],
+  flowersFront: [
+    {
+      texture: illustrationFlower1Img,
+      size: [8, 5, 0] as CoordinateTuple,
+      ...genericFlatConfig,
+      positions: generateAreaPositions({
+        center: [50, -1, 20] as CoordinateTuple,
+        size: [1000, 0, 10] as CoordinateTuple,
+        count: 40,
+        pattern: 'grid-jitter' as const,
+        seed: 9000
+      })
+    }
+  ]
+}
 
 // GroupConfig-shaped data for each illustration area (mirrors createTextureVariants params)
-export const illustrationAreaGroupConfigs: Record<string, {
-  area: { center: CoordinateTuple; size: CoordinateTuple };
-  textures: { baseSize: CoordinateTuple; sizeVariation: CoordinateTuple; rotationVariation: CoordinateTuple };
-  instances: { density: number; pattern: 'random' | 'grid' | 'grid-jitter'; seed: number };
-}> = {
+export const illustrationAreaGroupConfigs: Record<
+  string,
+  {
+    area: { center: CoordinateTuple; size: CoordinateTuple }
+    textures: {
+      baseSize: CoordinateTuple
+      sizeVariation: CoordinateTuple
+      rotationVariation: CoordinateTuple
+    }
+    instances: { density: number; pattern: 'random' | 'grid' | 'grid-jitter'; seed: number }
+  }
+> = {
   clouds: {
     area: { center: [0, 85, -80], size: [1000, 60, 100] },
-    textures: { baseSize: [200, 100, 0], sizeVariation: [100, 50, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 5, pattern: 'random', seed: 1000 },
+    textures: {
+      baseSize: [200, 100, 0],
+      sizeVariation: [100, 50, 0],
+      rotationVariation: [0, 0, 0]
+    },
+    instances: { density: 5, pattern: 'random', seed: 1000 }
   },
   mountains1: {
     area: { center: [0, -20, -100], size: [1000, 0, 0] },
-    textures: { baseSize: [240, 120, 0], sizeVariation: [120, 60, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 4, pattern: 'grid-jitter', seed: 2000 },
+    textures: {
+      baseSize: [240, 120, 0],
+      sizeVariation: [120, 60, 0],
+      rotationVariation: [0, 0, 0]
+    },
+    instances: { density: 4, pattern: 'grid-jitter', seed: 2000 }
   },
   mountains2: {
     area: { center: [0, -20, -50], size: [1000, 0, 0] },
     textures: { baseSize: [120, 60, 0], sizeVariation: [60, 30, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 4, pattern: 'grid-jitter', seed: 3000 },
+    instances: { density: 4, pattern: 'grid-jitter', seed: 3000 }
   },
   treesBack: {
     area: { center: [0, -1, -20], size: [1000, 0, 0] },
     textures: { baseSize: [30, 50, 0], sizeVariation: [15, 25, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 30, pattern: 'grid-jitter', seed: 4000 },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 4000 }
   },
   treesFront: {
     area: { center: [0, -1, -10], size: [1000, 0, 0] },
     textures: { baseSize: [20, 40, 0], sizeVariation: [10, 20, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 40, pattern: 'grid-jitter', seed: 5000 },
+    instances: { density: 40, pattern: 'grid-jitter', seed: 5000 }
   },
   grass: {
     area: { center: [0, -16, 10], size: [1000, 0, 30] },
     textures: { baseSize: [10, 17, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 500, pattern: 'random', seed: 6000 },
+    instances: { density: 500, pattern: 'random', seed: 6000 }
   },
   rocks: {
     area: { center: [0, -1, 5], size: [1000, 0, 40] },
     textures: { baseSize: [7, 3, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 60, pattern: 'random', seed: 7000 },
+    instances: { density: 60, pattern: 'random', seed: 7000 }
   },
   bushesBack: {
     area: { center: [0, -1, -15], size: [1000, 0, 0] },
     textures: { baseSize: [15, 10, 0], sizeVariation: [5, 3, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 }
   },
   bushesFront: {
     area: { center: [0, -1, 20], size: [1000, 0, 0] },
     textures: { baseSize: [10, 7, 0], sizeVariation: [5, 3, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 },
+    instances: { density: 30, pattern: 'grid-jitter', seed: 8000 }
   },
   flowersBack: {
     area: { center: [50, -1, -15], size: [1000, 0, 10] },
     textures: { baseSize: [10, 7, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 25, pattern: 'grid-jitter', seed: 9000 },
+    instances: { density: 25, pattern: 'grid-jitter', seed: 9000 }
   },
   flowersFront: {
     area: { center: [50, -1, 20], size: [1000, 0, 10] },
     textures: { baseSize: [8, 5, 0], sizeVariation: [0, 0, 0], rotationVariation: [0, 0, 0] },
-    instances: { density: 40, pattern: 'grid-jitter', seed: 9000 },
-  },
-};
+    instances: { density: 40, pattern: 'grid-jitter', seed: 9000 }
+  }
+}
 
 // Config tab - reactive game settings
 export const configControls = {
@@ -481,36 +483,36 @@ export const configControls = {
     speed: {
       movement: { min: 0.5, max: 5, step: 0.5 },
       turning: { min: 1, max: 10 },
-      jump: { min: 1, max: 10 },
+      jump: { min: 1, max: 10 }
     },
-    maxJump: { min: 1, max: 20 },
+    maxJump: { min: 1, max: 20 }
   },
   illustrations: {
     grass: { min: 100, max: 1000, step: 50, label: 'Grass' },
     treesBack: { min: 10, max: 100, step: 5, label: 'Trees Back' },
     treesFront: { min: 10, max: 100, step: 5, label: 'Trees Front' },
-    clouds: { min: 1, max: 20, label: 'Clouds' },
-  },
-};
+    clouds: { min: 1, max: 20, label: 'Clouds' }
+  }
+}
 
 // Scene tab - setupConfig-related settings
 export const sceneControls = {
   camera: {
     preset: {
       label: 'Camera Preset',
-      options: ['perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit'],
+      options: ['perspective', 'orthographic', 'fisheye', 'cinematic', 'orbit']
     },
     fov: { min: 30, max: 120 },
     position: {
       x: { min: -50, max: 50 },
       y: { min: 0, max: 50 },
-      z: { min: 10, max: 100 },
-    },
+      z: { min: 10, max: 100 }
+    }
   },
   ground: {
-    color: { color: true },
+    color: { color: true }
   },
   sky: {
-    color: { color: true },
-  },
-};
+    color: { color: true }
+  }
+}

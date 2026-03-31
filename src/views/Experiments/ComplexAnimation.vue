@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import * as THREE from "three";
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { useDebugSceneStore } from "@/stores/debugScene";
-import { video } from "@/utils/video";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import RAPIER from "@dimforge/rapier3d-compat";
+import * as THREE from 'three'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { video } from '@/utils/video'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import RAPIER from '@dimforge/rapier3d-compat'
 import {
   getLights,
   getGround,
@@ -18,31 +18,31 @@ import {
   setThirdPersonCamera,
   cloneModel,
   instanceMatrixMesh,
-  getInstanceConfig,
-} from "@webgamekit/threejs";
-import { complexAnimation as config } from "@/config/scenes";
-import { getBlade } from "@/utils/custom-models";
-import type { CoordinateTuple } from "@webgamekit/animation";
+  getInstanceConfig
+} from '@webgamekit/threejs'
+import { complexAnimation as config } from '@/config/scenes'
+import { getBlade } from '@/utils/custom-models'
+import type { CoordinateTuple } from '@webgamekit/animation'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 onMounted(async () => {
-  init(
-    (canvas.value as unknown) as HTMLCanvasElement,
-    (statsElement.value as unknown) as HTMLElement
+  ;(init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsElement.value as unknown as HTMLElement
   ),
-    statsElement.value!;
-});
+    statsElement.value!)
+})
 
 onUnmounted(() => {
-  clearSceneElements();
-});
+  clearSceneElements()
+})
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
-  stats.init(route, statsElement);
+  stats.init(route, statsElement)
   controls.create(
     config,
     route,
@@ -53,116 +53,114 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         near: {},
         aspect: {},
         far: {},
-        fov: {},
+        fov: {}
       },
       tree: {
         show: {},
-        amount: {},
+        amount: {}
       },
       grass: {
         show: {},
-        amount: {},
+        amount: {}
       },
       mushroom: {
         show: {},
-        amount: {},
-      },
+        amount: {}
+      }
     },
     () => {
-      setup();
+      setup()
     }
-  );
+  )
 
   const setup = async () => {
-    await RAPIER.init();
-    const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple;
-    const groundPosition = [1, 0, 1] as CoordinateTuple;
-    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
-    const renderer = getRenderer(canvas);
+    await RAPIER.init()
+    const groundSize = [500.0, 0.1, 500.0] as CoordinateTuple
+    const groundPosition = [1, 0, 1] as CoordinateTuple
+    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 })
+    const renderer = getRenderer(canvas)
     const camera = new THREE.PerspectiveCamera(
       config.camera.fov,
       config.camera.aspect,
       config.camera.near,
       config.camera.far
-    );
-    const scene = new THREE.Scene();
-    const orbit = new OrbitControls(camera, renderer.domElement);
-    const clock = new THREE.Clock();
+    )
+    const scene = new THREE.Scene()
+    const orbit = new OrbitControls(camera, renderer.domElement)
+    const clock = new THREE.Clock()
     const instancedModels = {
       tree: config.tree.show ? getInstanceConfig(config.tree, groundSize) : {},
       grass: config.grass.show ? getInstanceConfig(config.grass, groundSize) : {},
-      mushroom: config.mushroom.show
-        ? getInstanceConfig(config.mushroom, groundSize)
-        : {},
-    };
+      mushroom: config.mushroom.show ? getInstanceConfig(config.mushroom, groundSize) : {}
+    }
 
-    camera.position.set(-30, 25, 30);
-    scene.fog = new THREE.Fog(0xaaaaff, 1);
+    camera.position.set(-30, 25, 30)
+    scene.fog = new THREE.Fog(0xaaaaff, 1)
 
-    const { directionalLight } = getLights(scene);
+    const { directionalLight } = getLights(scene)
     getGround(scene, world, {
       size: groundSize[0],
       position: groundPosition,
-      color: 0x33aa00,
-    });
+      color: 0x33aa00
+    })
 
     // Add girl
-    const girl = await loadFBX("character.fbx", {
+    const girl = await loadFBX('character.fbx', {
       position: [0, 0, 0],
-      scale: [0.1, 0.1, 0.1],
-    });
-    const animationWalk = await loadAnimation(girl, "walk.fbx");
-    scene.add(girl);
+      scale: [0.1, 0.1, 0.1]
+    })
+    const animationWalk = await loadAnimation(girl, 'walk.fbx')
+    scene.add(girl)
 
     // Populate trees
     if (config.tree.show) {
-      const { model: tree } = await loadGLTF("tree.glb");
-      cloneModel(tree, scene, instancedModels.tree);
+      const { model: tree } = await loadGLTF('tree.glb')
+      cloneModel(tree, scene, instancedModels.tree)
     }
 
     // Populate grass
     if (config.grass.show) {
-      const grass = getBlade(config.grass);
-      instanceMatrixMesh(grass, scene, instancedModels.grass);
+      const grass = getBlade(config.grass)
+      instanceMatrixMesh(grass, scene, instancedModels.grass)
     }
 
     // Populate mushrooms
     if (config.mushroom.show) {
-      const { model: mushroom } = await loadGLTF("cute_mushrooms.glb");
-      cloneModel(mushroom, scene, instancedModels.mushroom);
+      const { model: mushroom } = await loadGLTF('cute_mushrooms.glb')
+      cloneModel(mushroom, scene, instancedModels.mushroom)
     }
 
-    registerSceneElements(camera, scene.children);
+    registerSceneElements(camera, scene.children)
 
-    video.record(canvas, route);
+    video.record(canvas, route)
 
     function animate() {
-      stats.start(route);
-      const frame = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      stats.start(route)
+      const frame = requestAnimationFrame(animate)
+      const delta = clock.getDelta()
       if (config.walk) {
-        animationWalk.update(delta);
-        girl.position.z += 0.15;
+        animationWalk.update(delta)
+        girl.position.z += 0.15
       }
       directionalLight.position.copy({
         x: girl.position.x + 5,
         y: girl.position.y + 5,
-        z: girl.position.z + 5,
-      });
+        z: girl.position.z + 5
+      })
       if (config.camera.fixed) {
-        setThirdPersonCamera(camera, config.camera, girl);
+        setThirdPersonCamera(camera, config.camera, girl)
       }
 
-      orbit.update();
+      orbit.update()
 
-      renderer.render(scene, camera);
-      video.stop(renderer.info.render.frame, route);
-      stats.end(route);
+      renderer.render(scene, camera)
+      video.stop(renderer.info.render.frame, route)
+      stats.end(route)
     }
-    animate();
-  };
-  setup();
-};
+    animate()
+  }
+  setup()
+}
 </script>
 
 <template>

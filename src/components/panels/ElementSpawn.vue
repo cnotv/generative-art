@@ -1,45 +1,54 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import SchemaControls from './ConfigControls.vue';
-import IconPreview from '@/components/IconPreview.vue';
-import IconButton from '@/components/IconButton.vue';
-import { Cpu, Eye, EyeOff, Trash2 } from 'lucide-vue-next';
-import { useDebugSceneStore } from '@/stores/debugScene';
-import { useElementPropertiesStore } from '@/stores/elementProperties';
-import { storeToRefs } from 'pinia';
+import { computed } from 'vue'
+import SchemaControls from './ConfigControls.vue'
+import IconPreview from '@/components/IconPreview.vue'
+import IconButton from '@/components/IconButton.vue'
+import { Cpu, Eye, EyeOff, Trash2 } from 'lucide-vue-next'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { storeToRefs } from 'pinia'
 
 interface Properties {
-  spawnId: string;
-  label: string;
-  isExpanded: boolean;
-  isSelected: boolean;
-  hidden: boolean;
+  spawnId: string
+  label: string
+  isExpanded: boolean
+  isSelected: boolean
+  hidden: boolean
 }
 
-const props = defineProps<Properties>();
+const props = defineProps<Properties>()
 
 const emit = defineEmits<{
-  toggle: [];
-}>();
+  toggle: []
+}>()
 
-const debugSceneStore = useDebugSceneStore();
-const elementPropertiesStore = useElementPropertiesStore();
-const { activeProperties } = storeToRefs(elementPropertiesStore);
+const debugSceneStore = useDebugSceneStore()
+const elementPropertiesStore = useElementPropertiesStore()
+const { activeProperties } = storeToRefs(elementPropertiesStore)
 
 const hasExpandedSchema = computed(
   () => Object.keys(activeProperties.value?.schema ?? {}).length > 0
-);
+)
 </script>
 
 <template>
   <div class="element-spawn">
     <div
       class="element-spawn__header"
-      :class="{ 'element-spawn__header--active': isSelected || isExpanded, 'element-spawn__header--hidden': hidden }"
+      :class="{
+        'element-spawn__header--active': isSelected || isExpanded,
+        'element-spawn__header--hidden': hidden
+      }"
       role="button"
       tabindex="0"
-      @click="emit('toggle'); if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)"
-      @keydown.enter.space.prevent="emit('toggle'); if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)"
+      @click="
+        emit('toggle')
+        if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)
+      "
+      @keydown.enter.space.prevent="
+        emit('toggle')
+        if (!isExpanded) elementPropertiesStore.openElementProperties(spawnId)
+      "
     >
       <IconPreview :icon="Cpu" color="text-purple-400" />
       <div class="element-spawn__info">

@@ -1,89 +1,92 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watchEffect } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { generatedRoutes } from "@/config/router";
-import { SidebarNav, ConfigPanel, DebugPanel, ElementsPanel, PanelContainer } from "@/components/panels";
-import GlobalNavigation from "@/components/GlobalNavigation.vue";
-import { usePanelsStore } from "@/stores/panels";
-import { useSceneConfigStore } from "@/stores/sceneConfig";
+import { computed, onMounted, onUnmounted, watchEffect } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { generatedRoutes } from '@/config/router'
+import {
+  SidebarNav,
+  ConfigPanel,
+  DebugPanel,
+  ElementsPanel,
+  PanelContainer
+} from '@/components/panels'
+import GlobalNavigation from '@/components/GlobalNavigation.vue'
+import { usePanelsStore } from '@/stores/panels'
+import { useSceneConfigStore } from '@/stores/sceneConfig'
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const panelsStore = usePanelsStore();
-panelsStore.initRouteSync();
+const panelsStore = usePanelsStore()
+panelsStore.initRouteSync()
 
-const sceneConfigStore = useSceneConfigStore();
+const sceneConfigStore = useSceneConfigStore()
 watchEffect(() => {
-  document.body.style.userSelect = sceneConfigStore.getValue("global.textSelection") ? "" : "none";
-});
+  document.body.style.userSelect = sceneConfigStore.getValue('global.textSelection') ? '' : 'none'
+})
 
 onMounted(() => {
-  window.addEventListener("keydown", handleKeyPress);
-});
+  window.addEventListener('keydown', handleKeyPress)
+})
 
 onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyPress);
-});
+  window.removeEventListener('keydown', handleKeyPress)
+})
 
 const handleKeyPress = (event: KeyboardEvent) => {
-  const { name, query } = router.currentRoute.value;
-  const page =
-    typeof name === "string"
-      ? generatedRoutes.map((r) => r?.name).indexOf(name)
-      : 0;
+  const { name, query } = router.currentRoute.value
+  const page = typeof name === 'string' ? generatedRoutes.map((r) => r?.name).indexOf(name) : 0
 
   switch (event.key) {
-    case "PageDown": {
-      const path = generatedRoutes[page + 1]?.path;
-      if (page < generatedRoutes.length - 1) router.push({ query, path });
-      break;
+    case 'PageDown': {
+      const path = generatedRoutes[page + 1]?.path
+      if (page < generatedRoutes.length - 1) router.push({ query, path })
+      break
     }
 
-    case "PageUp": {
-      const path = generatedRoutes[page - 1]?.path;
-      if (page > 0) router.push({ query, path });
-      break;
+    case 'PageUp': {
+      const path = generatedRoutes[page - 1]?.path
+      if (page > 0) router.push({ query, path })
+      break
     }
 
-    case "Home": {
-      toggleQuery("record");
-      break;
+    case 'Home': {
+      toggleQuery('record')
+      break
     }
 
-    case "End": {
-      toggleQuery(["control", "stats"]);
-      break;
+    case 'End': {
+      toggleQuery(['control', 'stats'])
+      break
     }
 
     default:
-      break;
+      break
   }
-};
+}
 
 const toggleQuery = (parameter: string | string[]) => {
-  const { path, query } = router.currentRoute.value;
-  const params = typeof parameter === "string" ? [parameter] : parameter;
+  const { path, query } = router.currentRoute.value
+  const params = typeof parameter === 'string' ? [parameter] : parameter
   const newQuery = params.reduce(
-    (accumulator, key) => ({ ...accumulator, [key]: query[key] === "true" ? undefined : "true" }),
+    (accumulator, key) => ({ ...accumulator, [key]: query[key] === 'true' ? undefined : 'true' }),
     {}
-  );
-  router.push({ path, query: { ...query, ...newQuery } });
-};
+  )
+  router.push({ path, query: { ...query, ...newQuery } })
+}
 
-const isRecording = computed(() => !!route.query.record);
+const isRecording = computed(() => !!route.query.record)
 
 const handleStartRecording = (durationMs: number) => {
-  const fps = 30;
-  const totalFrames = Math.floor((durationMs / 1000) * fps);
-  router.push({ query: { ...route.query, record: String(totalFrames) } });
-};
+  const fps = 30
+  const totalFrames = Math.floor((durationMs / 1000) * fps)
+  router.push({ query: { ...route.query, record: String(totalFrames) } })
+}
 
 const handleStopRecording = () => {
-  const query = { ...route.query };
-  delete query.record;
-  router.push({ query });
-};
+  const query = { ...route.query }
+  delete query.record
+  router.push({ query })
+}
 </script>
 
 <template>
@@ -114,5 +117,4 @@ canvas {
   left: 0;
   transition: top 0.2s;
 }
-
 </style>

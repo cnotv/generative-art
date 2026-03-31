@@ -1,46 +1,46 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { Menu, Settings, Bug, Box, X } from 'lucide-vue-next';
-import { Button } from '@/components/ui/button';
-import { usePanelsStore } from '@/stores/panels';
-import type { PanelType } from '@/stores/panels';
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { Menu, Settings, Bug, Box, X } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { usePanelsStore } from '@/stores/panels'
+import type { PanelType } from '@/stores/panels'
 
-const NAV_HEIGHT_PX = 48; // matches --nav-height: 3rem
+const NAV_HEIGHT_PX = 48 // matches --nav-height: 3rem
 
 interface PanelButton {
-  type: PanelType;
-  icon: any;
-  label: string;
+  type: PanelType
+  icon: any
+  label: string
 }
 
-const panelsStore = usePanelsStore();
-const isNearTop = ref(false);
-const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0);
+const panelsStore = usePanelsStore()
+const isNearTop = ref(false)
+const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0)
 
 const onMouseMove = (e: MouseEvent) => {
-  isNearTop.value = e.clientY <= NAV_HEIGHT_PX;
-};
+  isNearTop.value = e.clientY <= NAV_HEIGHT_PX
+}
 
-onMounted(() => window.addEventListener('mousemove', onMouseMove));
-onUnmounted(() => window.removeEventListener('mousemove', onMouseMove));
+onMounted(() => window.addEventListener('mousemove', onMouseMove))
+onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
 const navigationButton = computed<PanelButton>(() => ({
   type: 'navigation',
   icon: Menu,
-  label: 'Navigation',
-}));
+  label: 'Navigation'
+}))
 
 const panelButtons = computed<PanelButton[]>(() => [
   { type: 'elements', icon: Box, label: 'Elements' },
   { type: 'config', icon: Settings, label: 'Config' },
-  { type: 'debug', icon: Bug, label: 'Debug' },
-]);
+  { type: 'debug', icon: Bug, label: 'Debug' }
+])
 
-const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType);
+const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType)
 
 const handleToggle = (panelType: PanelType) => {
-  panelsStore.togglePanel(panelType);
-};
+  panelsStore.togglePanel(panelType)
+}
 </script>
 
 <template>

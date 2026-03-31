@@ -3,14 +3,17 @@
  */
 const enableZoomPrevention = () => {
   // Store original viewport and modify it
-  const originalViewport = document.querySelector('meta[name="viewport"]');
+  const originalViewport = document.querySelector('meta[name="viewport"]')
   if (originalViewport) {
-    originalViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    originalViewport.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    )
   }
 
   // Add CSS for zoom prevention
-  const preventZoomStyleElement = document.createElement('style');
-  preventZoomStyleElement.id = 'zoom-prevention';
+  const preventZoomStyleElement = document.createElement('style')
+  preventZoomStyleElement.id = 'zoom-prevention'
   preventZoomStyleElement.textContent = `
     html, body {
       touch-action: manipulation;
@@ -24,52 +27,50 @@ const enableZoomPrevention = () => {
     input, textarea, select {
       font-size: max(16px, inherit);
     }
-  `;
-  document.head.appendChild(preventZoomStyleElement);
+  `
+  document.head.appendChild(preventZoomStyleElement)
 
-  return {originalViewport, preventZoomStyleElement}
-};
+  return { originalViewport, preventZoomStyleElement }
+}
 
 /**
  * Restore normal zoom functionality
  */
-const disableZoomPrevention = (originalViewport: Element | null, preventZoomStyleElement: HTMLStyleElement | null) => {
+const disableZoomPrevention = (
+  originalViewport: Element | null,
+  preventZoomStyleElement: HTMLStyleElement | null
+) => {
   // Restore original viewport
   if (originalViewport) {
-    originalViewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    originalViewport.setAttribute('content', 'width=device-width, initial-scale=1.0')
   }
 
   // Remove zoom prevention CSS
   if (preventZoomStyleElement) {
-    document.head.removeChild(preventZoomStyleElement);
-    preventZoomStyleElement = null;
+    document.head.removeChild(preventZoomStyleElement)
+    preventZoomStyleElement = null
   }
-};
+}
 
 /**
  * Load Google Fonts for this route only
  */
 const loadGoogleFont = (url: string, id: string) => {
-  const link = document.createElement("link");
-  link.href = url;
-  link.rel = "stylesheet";
-  link.id = id;
-  document.head.appendChild(link);
-};
+  const link = document.createElement('link')
+  link.href = url
+  link.rel = 'stylesheet'
+  link.id = id
+  document.head.appendChild(link)
+}
 
 /**
  * Remove Google Font from the document
  */
 const removeGoogleFont = (id: string) => {
-  const existingLink = document.getElementById(id);
+  const existingLink = document.getElementById(id)
   if (existingLink) {
-    document.head.removeChild(existingLink);
+    document.head.removeChild(existingLink)
   }
-};
+}
 
-export {
-  enableZoomPrevention,
-  disableZoomPrevention,
-  loadGoogleFont,
-  removeGoogleFont,
-};
+export { enableZoomPrevention, disableZoomPrevention, loadGoogleFont, removeGoogleFont }

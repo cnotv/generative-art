@@ -1,9 +1,9 @@
 export const times = (n: number, fn: (i: number) => any) => {
-  return Array.from({ length: n }, (_, i) => fn(i));
-};
+  return Array.from({ length: n }, (_, i) => fn(i))
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
+  value !== null && typeof value === 'object' && !Array.isArray(value)
 
 /**
  * Recursively merge two plain objects. Arrays are replaced, not merged element-by-element.
@@ -15,9 +15,9 @@ export const deepMerge = <T extends Record<string, unknown>>(
   base: T,
   override: Partial<Record<string, unknown>>
 ): T => {
-  const allKeys = [...new Set([...Object.keys(base), ...Object.keys(override)])];
+  const allKeys = [...new Set([...Object.keys(base), ...Object.keys(override)])]
   return Object.fromEntries(
-    allKeys.map(key => [
+    allKeys.map((key) => [
       key,
       override[key] !== undefined
         ? isPlainObject(override[key])
@@ -26,7 +26,7 @@ export const deepMerge = <T extends Record<string, unknown>>(
               override[key] as Record<string, unknown>
             )
           : override[key]
-        : base[key],
+        : base[key]
     ])
-  ) as T;
-};
+  ) as T
+}

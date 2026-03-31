@@ -1,32 +1,33 @@
 <script setup lang="ts">
-import * as THREE from 'three';
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { video } from '@/utils/video';
-import { controls } from '@/utils/control';
-import { stats } from '@/utils/stats';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import moonImage from '@/assets/images/textures/moon.jpg';
-import spaceImage from '@/assets/images/generic/space.png';
-import { useDebugSceneStore } from '@/stores/debugScene';
+import * as THREE from 'three'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { video } from '@/utils/video'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import moonImage from '@/assets/images/textures/moon.jpg'
+import spaceImage from '@/assets/images/generic/space.png'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
 const statsElement = ref(null)
 const canvas = ref(null)
-const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 onUnmounted(() => {
-  clearSceneElements();
+  clearSceneElements()
 })
 
 onMounted(() => {
-  init(
+  ;(init(
     canvas.value as unknown as HTMLCanvasElement,
-    statsElement.value as unknown as HTMLElement,
-  ), statsElement.value!;
+    statsElement.value as unknown as HTMLElement
+  ),
+    statsElement.value!)
 })
 
-const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
+const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     size: 20,
     speed: 1,
@@ -43,86 +44,96 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement, ) => {
     color: false,
     fill: [0, 0, 255],
     light: [255, 255, 255],
-    cameraDistance: 100,
+    cameraDistance: 100
   }
-  stats.init(route, statsElement);
-  controls.create(config, route, {
-    size: {  },
-    speed: {  },
-    details: {},
-    opacity: {},
-    reflectivity: {},
-    texture: {},
-    offsetX: {},
-    offsetY: {},
-    repeatX: {},
-    repeatY: {},
-    wireframe: {},
-    color: {},
-  }, () => {
-    setup()
-  });
+  stats.init(route, statsElement)
+  controls.create(
+    config,
+    route,
+    {
+      size: {},
+      speed: {},
+      details: {},
+      opacity: {},
+      reflectivity: {},
+      texture: {},
+      offsetX: {},
+      offsetY: {},
+      repeatX: {},
+      repeatY: {},
+      wireframe: {},
+      color: {}
+    },
+    () => {
+      setup()
+    }
+  )
 
   const setup = () => {
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`),); // Set background color to black
-    renderer.shadowMap.enabled = true; // Enable shadow maps
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`)) // Set background color to black
+    renderer.shadowMap.enabled = true // Enable shadow maps
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap // Use soft shadows
 
     // Load the texture
-    const textureLoader = new THREE.TextureLoader();
+    const textureLoader = new THREE.TextureLoader()
 
-    const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    )
+    const scene = new THREE.Scene()
 
-    const moon = loadMoon(scene, textureLoader, config);
-    loadSky(scene, textureLoader, config, spaceImage);
-    
-    const orbit = new OrbitControls(camera, renderer.domElement);
+    const moon = loadMoon(scene, textureLoader, config)
+    loadSky(scene, textureLoader, config, spaceImage)
+
+    const orbit = new OrbitControls(camera, renderer.domElement)
     // Set the target to the position of the moon
-    orbit.target.copy(moon.position);
+    orbit.target.copy(moon.position)
 
-    camera.position.set( 0, 0, config.cameraDistance );
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 0, config.cameraDistance)
+    camera.lookAt(0, 0, 0)
 
-    const directionalLight = loadLight(scene, config);
+    const directionalLight = loadLight(scene, config)
 
-    let count = 0;
+    let count = 0
     setInterval(() => {
-      count += 0.01;
-    }, 50);
+      count += 0.01
+    }, 50)
 
     // Create a sphere to represent the light position
-    const sunGeometry = new THREE.SphereGeometry(0.5, 100, 32);
-    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-    scene.add(sun);
+    const sunGeometry = new THREE.SphereGeometry(0.5, 100, 32)
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial)
+    scene.add(sun)
 
-    registerSceneElements(camera, scene.children);
+    registerSceneElements(camera, scene.children)
 
-    video.record(canvas, route);
+    video.record(canvas, route)
 
     function animate() {
-      stats.start(route);
-      requestAnimationFrame(animate);
+      stats.start(route)
+      requestAnimationFrame(animate)
 
       // mesh.rotation.x += (0.001 * config.speed);
-      moon.rotation.y += (0.001 * config.speed);
-      directionalLight.position.set(Math.sin(count) * 2, 0, Math.cos(count) * 2);
-      sun.position.copy(directionalLight.position);
-      camera.position.set(Math.sin(count) * 2, 0, Math.cos(count) * 2 - config.cameraDistance / 2);
+      moon.rotation.y += 0.001 * config.speed
+      directionalLight.position.set(Math.sin(count) * 2, 0, Math.cos(count) * 2)
+      sun.position.copy(directionalLight.position)
+      camera.position.set(Math.sin(count) * 2, 0, Math.cos(count) * 2 - config.cameraDistance / 2)
 
       // Update the controls
-      orbit.update();
-  
-      renderer.render( scene, camera );
-      video.stop(renderer.info.render.frame ,route);
-      stats.end(route);
+      orbit.update()
+
+      renderer.render(scene, camera)
+      video.stop(renderer.info.render.frame, route)
+      stats.end(route)
     }
-    animate();
+    animate()
   }
-  setup();
+  setup()
 }
 
 const loadLight = (scene: THREE.Scene, config: any) => {
@@ -130,22 +141,17 @@ const loadLight = (scene: THREE.Scene, config: any) => {
   const ambientLight = new THREE.AmbientLight(
     new THREE.Color(`rgb(${config.light.map(Math.round).join(',')})`),
     0.01
-  );
-  scene.add(ambientLight);
+  )
+  scene.add(ambientLight)
 
   // Add a point light behind the moon
-  const directionalLight = new THREE.DirectionalLight(0xffddcc, 2);
-  scene.add(directionalLight);
-  
-  return directionalLight;
+  const directionalLight = new THREE.DirectionalLight(0xffddcc, 2)
+  scene.add(directionalLight)
+
+  return directionalLight
 }
 
-const loadSky = (
-  scene: THREE.Scene,
-  loader: THREE.TextureLoader,
-  config: any,
-  path: string
-) => {
+const loadSky = (scene: THREE.Scene, loader: THREE.TextureLoader, config: any, path: string) => {
   const skyTexture = loader.load(new URL(path, import.meta.url) as unknown as string)
   const skyGeometry = new THREE.SphereGeometry(500, 32, 32)
   const skyMaterial = new THREE.MeshBasicMaterial({
@@ -156,33 +162,31 @@ const loadSky = (
   scene.add(sky)
 }
 
-const loadMoon = (
-  scene: THREE.Scene,
-  textureLoader: THREE.TextureLoader,
-  config: any
-) => {
+const loadMoon = (scene: THREE.Scene, textureLoader: THREE.TextureLoader, config: any) => {
   // https://www.solarsystemscope.com/textures/
-  const moonTexture = textureLoader.load(moonImage);
+  const moonTexture = textureLoader.load(moonImage)
   // Adjust the texture offset and repeat
-  moonTexture.wrapS = THREE.RepeatWrapping;
-  moonTexture.wrapT = THREE.RepeatWrapping;
-  moonTexture.offset.set(config.offsetX, config.offsetY); // Offset the texture by 50%
-  moonTexture.repeat.set(config.repeatX, config.repeatY); // Repeat the texture 0.5 times in both directions
+  moonTexture.wrapS = THREE.RepeatWrapping
+  moonTexture.wrapT = THREE.RepeatWrapping
+  moonTexture.offset.set(config.offsetX, config.offsetY) // Offset the texture by 50%
+  moonTexture.repeat.set(config.repeatX, config.repeatY) // Repeat the texture 0.5 times in both directions
 
-  const moonGeometry = new THREE.DodecahedronGeometry(config.size, config.details);
+  const moonGeometry = new THREE.DodecahedronGeometry(config.size, config.details)
   const moonMaterial = new THREE.MeshStandardMaterial({
     map: config.texture ? moonTexture : null,
     wireframe: config.wireframe,
     opacity: config.opacity,
     transparent: true,
-    color: config.color ? new THREE.Color(`rgb(${config.fill.map(Math.round).join(',')})`) : undefined,
-  });
-  const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-  moon.castShadow = true;
-  moon.receiveShadow = true;
-  scene.add(moon);
+    color: config.color
+      ? new THREE.Color(`rgb(${config.fill.map(Math.round).join(',')})`)
+      : undefined
+  })
+  const moon = new THREE.Mesh(moonGeometry, moonMaterial)
+  moon.castShadow = true
+  moon.receiveShadow = true
+  scene.add(moon)
 
-  return moon;
+  return moon
 }
 </script>
 
@@ -190,4 +194,3 @@ const loadMoon = (
   <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
 </template>
-

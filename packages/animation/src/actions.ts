@@ -1,12 +1,12 @@
-import type { Timeline, ComplexModel } from './types';
+import type { Timeline, ComplexModel } from './types'
 
 /**
  * Generate unique ID for timeline actions
  * @returns Unique identifier string
  */
 export const generateTimelineId = (): string => {
-  return `timeline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+  return `timeline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
 
 /**
  * Create timeline action with duration
@@ -26,8 +26,8 @@ export const createDurationAction = (
   duration,
   action,
   id: generateTimelineId(),
-  ...options,
-});
+  ...options
+})
 
 /**
  * Create one-shot action that runs once then auto-removes
@@ -46,8 +46,8 @@ export const createOneShotAction = (
   action,
   autoRemove: true,
   id: generateTimelineId(),
-  ...options,
-});
+  ...options
+})
 
 /**
  * Create interval-based action with auto-naming
@@ -65,8 +65,8 @@ export const createIntervalAction = (
   action,
   id: generateTimelineId(),
   name: options?.name || `interval_${interval[0]}_${interval[1]}`,
-  ...options,
-});
+  ...options
+})
 
 /**
  * Check if action can be added (not blocked by performing state)
@@ -74,11 +74,8 @@ export const createIntervalAction = (
  * @param blocking Blocking duration in milliseconds
  * @returns True if action can be added, false if blocked
  */
-export const canAddAction = (
-  player: ComplexModel,
-  blocking: number = 0
-): boolean => {
-  const currentAction = player.userData.actions?.[player.userData.currentAction];
-  if (!currentAction) return true;
-  return currentAction.time >= blocking;
-};
+export const canAddAction = (player: ComplexModel, blocking: number = 0): boolean => {
+  const currentAction = player.userData.actions?.[player.userData.currentAction]
+  if (!currentAction) return true
+  return currentAction.time >= blocking
+}

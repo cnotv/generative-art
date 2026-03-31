@@ -1,22 +1,22 @@
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from "vue";
-import * as THREE from "three";
-import { getTools, getModel } from "@webgamekit/threejs";
-import { updateAnimation, createTimelineManager } from "@webgamekit/animation";
-import { useDebugSceneStore } from '@/stores/debugScene';
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+import * as THREE from 'three'
+import { getTools, getModel } from '@webgamekit/threejs'
+import { updateAnimation, createTimelineManager } from '@webgamekit/animation'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
   scale: [0.05, 0.05, 0.05],
   restitution: -10,
   boundary: 0.5,
-  type: "kinematicPositionBased",
+  type: 'kinematicPositionBased',
   hasGravity: false,
   castShadow: true,
   receiveShadow: true,
-  animations: "chameleon_animations.fbx",
-  material: "MeshLambertMaterial",
-};
+  animations: 'chameleon_animations.fbx',
+  material: 'MeshLambertMaterial'
+}
 
 const setupConfig = {
   camera: { position: [0, 5, 20] },
@@ -25,7 +25,7 @@ const setupConfig = {
   lights: {
     ambient: {
       color: 0xffffff,
-      intensity: 2,
+      intensity: 2
     },
     directional: {
       color: 0xffffff,
@@ -40,167 +40,167 @@ const setupConfig = {
           left: -50,
           right: 50,
           top: 50,
-          bottom: -50,
+          bottom: -50
         },
         bias: -0.0001,
-        radius: 1,
-      },
-    },
-  },
-};
+        radius: 1
+      }
+    }
+  }
+}
 
-const canvas = ref(null);
-const availableAnimations = ref([]);
-const selectedAnimation = ref("");
-const modelFile = ref(null);
-const animationFile = ref(null);
-const modelPath = ref("chameleon.fbx");
-const animationPath = ref("chameleon_animations.fbx");
-const meshColors = ref([]);
-const modelScale = ref([0.05, 0.05, 0.05]);
+const canvas = ref(null)
+const availableAnimations = ref([])
+const selectedAnimation = ref('')
+const modelFile = ref(null)
+const animationFile = ref(null)
+const modelPath = ref('chameleon.fbx')
+const animationPath = ref('chameleon_animations.fbx')
+const meshColors = ref([])
+const modelScale = ref([0.05, 0.05, 0.05])
 
 // Mesh inspector panel state
-const selectedMesh = ref(null);
-const panelsVisible = ref(false);
-const meshHelper = ref(null);
+const selectedMesh = ref(null)
+const panelsVisible = ref(false)
+const meshHelper = ref(null)
 
 const meshProperties = ref({
-  name: "",
+  name: '',
   position: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0 },
   scale: { x: 0, y: 0, z: 0 },
-  material: "",
-  color: "",
+  material: '',
+  color: '',
   opacity: 1,
   visible: true,
   castShadow: false,
   receiveShadow: false,
-  geometry: "",
+  geometry: '',
   vertexCount: 0,
   faceCount: 0,
-  uuid: "",
-  type: "",
+  uuid: '',
+  type: '',
   frustumCulled: true,
   renderOrder: 0,
-  layers: "",
+  layers: '',
   matrixAutoUpdate: true,
   // Material properties
   metalness: 0,
   roughness: 1,
   transparent: false,
-  side: "",
+  side: '',
   flatShading: false,
   wireframe: false,
   vertexColors: false,
   fog: true,
   // Geometry properties
   boundingSphere: null,
-  boundingBox: null,
-});
+  boundingBox: null
+})
 
-let chameleonModel = null;
-let sceneReference = null;
-let worldReference = null;
-let getDeltaReference = null;
-let cameraReference = null;
+let chameleonModel = null
+let sceneReference = null
+let worldReference = null
+let getDeltaReference = null
+let cameraReference = null
 
 const closePanel = () => {
-  panelsVisible.value = false;
-  selectedMesh.value = null;
+  panelsVisible.value = false
+  selectedMesh.value = null
   if (meshHelper.value && sceneReference) {
-    sceneReference.remove(meshHelper.value);
-    meshHelper.value = null;
+    sceneReference.remove(meshHelper.value)
+    meshHelper.value = null
   }
-};
+}
 
 const init = async () => {
   const { setup, animate, scene, world, getDelta, camera } = await getTools({
-    canvas: canvas.value,
-  });
+    canvas: canvas.value
+  })
 
-  sceneReference = scene;
-  worldReference = world;
-  getDeltaReference = getDelta;
-  cameraReference = camera;
+  sceneReference = scene
+  worldReference = world
+  getDeltaReference = getDelta
+  cameraReference = camera
 
   await setup({
     config: setupConfig,
     defineSetup: async () => {
-      await loadModel();
+      await loadModel()
 
       // Raycaster for mesh selection
-      const raycaster = new THREE.Raycaster();
-      const pointer = new THREE.Vector2();
+      const raycaster = new THREE.Raycaster()
+      const pointer = new THREE.Vector2()
 
       const onPointerClick = (event) => {
         // Calculate pointer position in normalized device coordinates
-        const rect = canvas.value.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        const rect = canvas.value.getBoundingClientRect()
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
         // Update the raycaster
-        raycaster.setFromCamera(pointer, cameraReference);
+        raycaster.setFromCamera(pointer, cameraReference)
 
         // Calculate objects intersecting the ray
-        const intersects = raycaster.intersectObjects(sceneReference.children, true);
+        const intersects = raycaster.intersectObjects(sceneReference.children, true)
 
         if (intersects.length > 0) {
-          const intersectedObject = intersects[0].object;
+          const intersectedObject = intersects[0].object
           if (intersectedObject.isMesh) {
-            updateMeshProperties(intersectedObject);
+            updateMeshProperties(intersectedObject)
           }
         }
-      };
+      }
 
       const updateMeshProperties = (mesh) => {
-        if (!mesh) return;
+        if (!mesh) return
 
         // Remove previous helper if exists
         if (meshHelper.value) {
-          sceneReference.remove(meshHelper.value);
-          meshHelper.value = null;
+          sceneReference.remove(meshHelper.value)
+          meshHelper.value = null
         }
 
-        selectedMesh.value = mesh;
-        panelsVisible.value = true;
+        selectedMesh.value = mesh
+        panelsVisible.value = true
 
         // Create and add new helper
-        meshHelper.value = new THREE.BoxHelper(mesh, 0x00ff00);
-        sceneReference.add(meshHelper.value);
+        meshHelper.value = new THREE.BoxHelper(mesh, 0x00ff00)
+        sceneReference.add(meshHelper.value)
 
         // Compute bounding box and sphere if not already computed
         if (!mesh.geometry.boundingBox) {
-          mesh.geometry.computeBoundingBox();
+          mesh.geometry.computeBoundingBox()
         }
         if (!mesh.geometry.boundingSphere) {
-          mesh.geometry.computeBoundingSphere();
+          mesh.geometry.computeBoundingSphere()
         }
 
         const getSideName = (side) => {
-          if (side === THREE.FrontSide) return "Front";
-          if (side === THREE.BackSide) return "Back";
-          if (side === THREE.DoubleSide) return "Double";
-          return "Unknown";
-        };
+          if (side === THREE.FrontSide) return 'Front'
+          if (side === THREE.BackSide) return 'Back'
+          if (side === THREE.DoubleSide) return 'Double'
+          return 'Unknown'
+        }
 
         meshProperties.value = {
-          name: mesh.name || "Unnamed",
+          name: mesh.name || 'Unnamed',
           uuid: mesh.uuid,
           type: mesh.type,
           position: {
             x: mesh.position.x.toFixed(2),
             y: mesh.position.y.toFixed(2),
-            z: mesh.position.z.toFixed(2),
+            z: mesh.position.z.toFixed(2)
           },
           rotation: {
             x: ((mesh.rotation.x * 180) / Math.PI).toFixed(2),
             y: ((mesh.rotation.y * 180) / Math.PI).toFixed(2),
-            z: ((mesh.rotation.z * 180) / Math.PI).toFixed(2),
+            z: ((mesh.rotation.z * 180) / Math.PI).toFixed(2)
           },
           scale: {
             x: mesh.scale.x.toFixed(2),
             y: mesh.scale.y.toFixed(2),
-            z: mesh.scale.z.toFixed(2),
+            z: mesh.scale.z.toFixed(2)
           },
           visible: mesh.visible,
           frustumCulled: mesh.frustumCulled,
@@ -210,27 +210,26 @@ const init = async () => {
           castShadow: mesh.castShadow,
           receiveShadow: mesh.receiveShadow,
           // Material properties
-          material: mesh.material?.type || "N/A",
-          color: mesh.material?.color ? `#${mesh.material.color.getHexString()}` : "N/A",
+          material: mesh.material?.type || 'N/A',
+          color: mesh.material?.color ? `#${mesh.material.color.getHexString()}` : 'N/A',
           opacity: mesh.material?.opacity?.toFixed(2) || 1,
           transparent: mesh.material?.transparent || false,
-          metalness: mesh.material?.metalness?.toFixed(2) || "N/A",
-          roughness: mesh.material?.roughness?.toFixed(2) || "N/A",
-          side:
-            mesh.material?.side !== undefined ? getSideName(mesh.material.side) : "N/A",
+          metalness: mesh.material?.metalness?.toFixed(2) || 'N/A',
+          roughness: mesh.material?.roughness?.toFixed(2) || 'N/A',
+          side: mesh.material?.side !== undefined ? getSideName(mesh.material.side) : 'N/A',
           flatShading: mesh.material?.flatShading || false,
           wireframe: mesh.material?.wireframe || false,
           vertexColors: mesh.material?.vertexColors || false,
           fog: mesh.material?.fog !== undefined ? mesh.material.fog : true,
           // Geometry properties
-          geometry: mesh.geometry?.type || "N/A",
+          geometry: mesh.geometry?.type || 'N/A',
           vertexCount: mesh.geometry?.attributes?.position?.count || 0,
           faceCount: mesh.geometry?.index
             ? mesh.geometry.index.count / 3
             : (mesh.geometry?.attributes?.position?.count || 0) / 3,
           boundingSphere: mesh.geometry?.boundingSphere
             ? `radius: ${mesh.geometry.boundingSphere.radius.toFixed(2)}`
-            : "N/A",
+            : 'N/A',
           boundingBox: mesh.geometry?.boundingBox
             ? `${mesh.geometry.boundingBox.min.x.toFixed(
                 1
@@ -243,177 +242,180 @@ const init = async () => {
               )},${mesh.geometry.boundingBox.max.y.toFixed(
                 1
               )},${mesh.geometry.boundingBox.max.z.toFixed(1)}`
-            : "N/A",
-        };
-      };
+            : 'N/A'
+        }
+      }
 
       // Add click and touch event listeners
-      canvas.value.addEventListener("click", onPointerClick);
-      canvas.value.addEventListener("touchend", (event) => {
+      canvas.value.addEventListener('click', onPointerClick)
+      canvas.value.addEventListener('touchend', (event) => {
         if (event.changedTouches.length > 0) {
-          const touch = event.changedTouches[0];
-          onPointerClick(touch);
+          const touch = event.changedTouches[0]
+          onPointerClick(touch)
         }
-      });
+      })
 
-      const timelineManager = createTimelineManager();
+      const timelineManager = createTimelineManager()
 
       timelineManager.addAction({
-        category: "animation",
+        category: 'animation',
         action: () => {
           if (
             chameleonModel &&
             selectedAnimation.value &&
             chameleonModel.actions[selectedAnimation.value]
           ) {
-            const actionName = selectedAnimation.value;
+            const actionName = selectedAnimation.value
             updateAnimation({
               player: chameleonModel,
               actionName,
               delta: getDeltaReference(),
               speed: 4
-            });
+            })
           }
-        },
-      });
+        }
+      })
 
       animate({
         beforeTimeline: () => {
           // Update helper if mesh is selected
           if (meshHelper.value && selectedMesh.value) {
-            meshHelper.value.update();
+            meshHelper.value.update()
           }
         },
-        timeline: timelineManager,
-      });
-    },
-  });
-  const { registerSceneElements } = useDebugSceneStore();
-  registerSceneElements(cameraReference, sceneReference.children.filter(c => c !== cameraReference));
-};
+        timeline: timelineManager
+      })
+    }
+  })
+  const { registerSceneElements } = useDebugSceneStore()
+  registerSceneElements(
+    cameraReference,
+    sceneReference.children.filter((c) => c !== cameraReference)
+  )
+}
 
 const removeModel = () => {
   if (chameleonModel) {
     // Remove from scene
     if (chameleonModel.mesh && sceneReference) {
-      sceneReference.remove(chameleonModel.mesh);
+      sceneReference.remove(chameleonModel.mesh)
 
       // Dispose of geometries and materials
       chameleonModel.mesh.traverse((child) => {
         if (child.isMesh) {
           if (child.geometry) {
-            child.geometry.dispose();
+            child.geometry.dispose()
           }
           if (child.material) {
             if (Array.isArray(child.material)) {
-              child.material.forEach((mat) => mat.dispose());
+              child.material.forEach((mat) => mat.dispose())
             } else {
-              child.material.dispose();
+              child.material.dispose()
             }
           }
         }
-      });
+      })
     }
 
     // Remove from physics world
     if (chameleonModel.rigidBody && worldReference) {
-      worldReference.removeRigidBody(chameleonModel.rigidBody);
+      worldReference.removeRigidBody(chameleonModel.rigidBody)
     }
 
     // Stop all animations
     if (chameleonModel.actions) {
-      Object.values(chameleonModel.actions).forEach((action) => action.stop());
+      Object.values(chameleonModel.actions).forEach((action) => action.stop())
     }
 
     // Clear reference
-    chameleonModel = null;
+    chameleonModel = null
   }
 
   // Clear UI state
-  meshColors.value = [];
-  availableAnimations.value = [];
-  selectedAnimation.value = "";
-};
+  meshColors.value = []
+  availableAnimations.value = []
+  selectedAnimation.value = ''
+}
 
 const loadModel = async () => {
   // Remove existing model first
-  removeModel();
+  removeModel()
 
   // For blob URLs (uploaded files), we need to load manually
   // because toolkit prepends "/" which breaks blob URLs
-  if (modelFile.value && modelPath.value.startsWith("blob:")) {
-    await loadModelManually();
+  if (modelFile.value && modelPath.value.startsWith('blob:')) {
+    await loadModelManually()
   } else {
-    await loadModelViaToolkit();
+    await loadModelViaToolkit()
   }
 
   // Extract mesh colors
-  extractMeshColors();
+  extractMeshColors()
 
   // Reload animations
-  reloadAnimations();
-};
+  reloadAnimations()
+}
 
 const loadModelViaToolkit = async () => {
   const animPathIsGLTF =
-    animationPath.value.toLowerCase().endsWith(".glb") ||
-    animationPath.value.toLowerCase().endsWith(".gltf");
+    animationPath.value.toLowerCase().endsWith('.glb') ||
+    animationPath.value.toLowerCase().endsWith('.gltf')
 
   const config = {
     ...chameleonConfig,
     scale: modelScale.value,
-    animations: !animPathIsGLTF ? animationPath.value : undefined,
-  };
+    animations: !animPathIsGLTF ? animationPath.value : undefined
+  }
 
-  chameleonModel = await getModel(sceneReference, worldReference, modelPath.value, config);
-};
+  chameleonModel = await getModel(sceneReference, worldReference, modelPath.value, config)
+}
 
 const loadModelManually = async () => {
-  const fileName = modelFile.value.name.toLowerCase();
-  const isGLTF = fileName.endsWith(".glb") || fileName.endsWith(".gltf");
+  const fileName = modelFile.value.name.toLowerCase()
+  const isGLTF = fileName.endsWith('.glb') || fileName.endsWith('.gltf')
 
   return new Promise((resolve, reject) => {
     if (isGLTF) {
-      import("three/examples/jsm/loaders/GLTFLoader").then(({ GLTFLoader }) => {
-        const loader = new GLTFLoader();
+      import('three/examples/jsm/loaders/GLTFLoader').then(({ GLTFLoader }) => {
+        const loader = new GLTFLoader()
         loader.load(
           modelPath.value,
           (gltf) => {
-            const mesh = gltf.scene;
-            mesh.position.set(...chameleonConfig.position);
-            mesh.scale.set(...modelScale.value);
+            const mesh = gltf.scene
+            mesh.position.set(...chameleonConfig.position)
+            mesh.scale.set(...modelScale.value)
 
             mesh.traverse((child) => {
               if (child.isMesh) {
-                child.castShadow = chameleonConfig.castShadow;
-                child.receiveShadow = chameleonConfig.receiveShadow;
+                child.castShadow = chameleonConfig.castShadow
+                child.receiveShadow = chameleonConfig.receiveShadow
               }
-            });
+            })
 
-            sceneReference.add(mesh);
+            sceneReference.add(mesh)
 
             // Create physics body
-            const RAPIER = worldReference.constructor;
+            const RAPIER = worldReference.constructor
             const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
               ...chameleonConfig.position
-            );
-            const rigidBody = worldReference.createRigidBody(bodyDesc);
+            )
+            const rigidBody = worldReference.createRigidBody(bodyDesc)
 
             const colliderDesc = RAPIER.ColliderDesc.cuboid(
               chameleonConfig.boundary,
               chameleonConfig.boundary,
               chameleonConfig.boundary
-            );
-            const collider = worldReference.createCollider(colliderDesc, rigidBody);
+            )
+            const collider = worldReference.createCollider(colliderDesc, rigidBody)
 
             // Setup animations
-            const mixer = new THREE.AnimationMixer(mesh);
-            const actions = {};
+            const mixer = new THREE.AnimationMixer(mesh)
+            const actions = {}
 
             if (gltf.animations && gltf.animations.length > 0) {
               gltf.animations.forEach((clip) => {
-                actions[clip.name] = mixer.clipAction(clip);
-              });
+                actions[clip.name] = mixer.clipAction(clip)
+              })
             }
 
             chameleonModel = {
@@ -423,57 +425,57 @@ const loadModelManually = async () => {
               mixer,
               actions,
               type: chameleonConfig.type,
-              hasGravity: chameleonConfig.hasGravity,
-            };
+              hasGravity: chameleonConfig.hasGravity
+            }
 
-            resolve();
+            resolve()
           },
           undefined,
           reject
-        );
-      });
+        )
+      })
     } else {
       // FBX file
-      import("three/examples/jsm/loaders/FBXLoader").then(({ FBXLoader }) => {
-        const loader = new FBXLoader();
+      import('three/examples/jsm/loaders/FBXLoader').then(({ FBXLoader }) => {
+        const loader = new FBXLoader()
         loader.load(
           modelPath.value,
           (fbx) => {
-            const mesh = fbx;
-            mesh.position.set(...chameleonConfig.position);
-            mesh.scale.set(...modelScale.value);
+            const mesh = fbx
+            mesh.position.set(...chameleonConfig.position)
+            mesh.scale.set(...modelScale.value)
 
             mesh.traverse((child) => {
               if (child.isMesh) {
-                child.castShadow = chameleonConfig.castShadow;
-                child.receiveShadow = chameleonConfig.receiveShadow;
+                child.castShadow = chameleonConfig.castShadow
+                child.receiveShadow = chameleonConfig.receiveShadow
               }
-            });
+            })
 
-            sceneReference.add(mesh);
+            sceneReference.add(mesh)
 
             // Create physics body
-            const RAPIER = worldReference.constructor;
+            const RAPIER = worldReference.constructor
             const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
               ...chameleonConfig.position
-            );
-            const rigidBody = worldReference.createRigidBody(bodyDesc);
+            )
+            const rigidBody = worldReference.createRigidBody(bodyDesc)
 
             const colliderDesc = RAPIER.ColliderDesc.cuboid(
               chameleonConfig.boundary,
               chameleonConfig.boundary,
               chameleonConfig.boundary
-            );
-            const collider = worldReference.createCollider(colliderDesc, rigidBody);
+            )
+            const collider = worldReference.createCollider(colliderDesc, rigidBody)
 
             // Setup animations
-            const mixer = new THREE.AnimationMixer(mesh);
-            const actions = {};
+            const mixer = new THREE.AnimationMixer(mesh)
+            const actions = {}
 
             if (fbx.animations && fbx.animations.length > 0) {
               fbx.animations.forEach((clip) => {
-                actions[clip.name] = mixer.clipAction(clip);
-              });
+                actions[clip.name] = mixer.clipAction(clip)
+              })
             }
 
             chameleonModel = {
@@ -483,54 +485,51 @@ const loadModelManually = async () => {
               mixer,
               actions,
               type: chameleonConfig.type,
-              hasGravity: chameleonConfig.hasGravity,
-            };
+              hasGravity: chameleonConfig.hasGravity
+            }
 
-            resolve();
+            resolve()
           },
           undefined,
           reject
-        );
-      });
+        )
+      })
     }
-  });
-};
+  })
+}
 
 const reloadAnimations = () => {
   // Extract animation names
   if (chameleonModel && chameleonModel.actions) {
-    availableAnimations.value = Object.keys(chameleonModel.actions);
+    availableAnimations.value = Object.keys(chameleonModel.actions)
     if (availableAnimations.value.length > 0) {
-      selectedAnimation.value = availableAnimations.value[0];
-      chameleonModel.actions[selectedAnimation.value].play();
+      selectedAnimation.value = availableAnimations.value[0]
+      chameleonModel.actions[selectedAnimation.value].play()
     }
   } else {
-    availableAnimations.value = [];
-    selectedAnimation.value = "";
+    availableAnimations.value = []
+    selectedAnimation.value = ''
   }
-};
+}
 
 const extractMeshColors = () => {
-  const colors = [];
-  let meshIndex = 0;
+  const colors = []
+  let meshIndex = 0
 
   if (chameleonModel && chameleonModel.mesh) {
     chameleonModel.mesh.traverse((child) => {
       if (child.isMesh && child.material) {
-        const material = child.material;
-        let color = null;
+        const material = child.material
+        let color = null
 
         if (Array.isArray(material)) {
           // Get color from first material in array
-          const firstMat = material[0];
-          if (
-            firstMat &&
-            (firstMat.isMeshStandardMaterial || firstMat.isMeshPhongMaterial)
-          ) {
-            color = `#${  firstMat.color.getHexString()}`;
+          const firstMat = material[0]
+          if (firstMat && (firstMat.isMeshStandardMaterial || firstMat.isMeshPhongMaterial)) {
+            color = `#${firstMat.color.getHexString()}`
           }
         } else if (material.isMeshStandardMaterial || material.isMeshPhongMaterial) {
-          color = `#${  material.color.getHexString()}`;
+          color = `#${material.color.getHexString()}`
         }
 
         if (color) {
@@ -538,145 +537,141 @@ const extractMeshColors = () => {
             index: meshIndex,
             name: child.name || `Mesh ${meshIndex}`,
             color: color,
-            material: material,
-          });
+            material: material
+          })
         }
 
-        meshIndex++;
+        meshIndex++
       }
-    });
+    })
   }
 
-  meshColors.value = colors;
-};
+  meshColors.value = colors
+}
 
 const onColorChange = (meshItem, newColor) => {
-  const hexColor = parseInt(newColor.replace("#", ""), 16);
+  const hexColor = parseInt(newColor.replace('#', ''), 16)
 
   if (Array.isArray(meshItem.material)) {
     meshItem.material.forEach((mat) => {
       if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial) {
-        mat.color.setHex(hexColor);
+        mat.color.setHex(hexColor)
       }
-    });
-  } else if (
-    meshItem.material.isMeshStandardMaterial ||
-    meshItem.material.isMeshPhongMaterial
-  ) {
-    meshItem.material.color.setHex(hexColor);
+    })
+  } else if (meshItem.material.isMeshStandardMaterial || meshItem.material.isMeshPhongMaterial) {
+    meshItem.material.color.setHex(hexColor)
   }
 
   // Update the stored color
-  meshItem.color = newColor;
-};
+  meshItem.color = newColor
+}
 
 const onAnimationChange = () => {
   if (chameleonModel && chameleonModel.actions) {
     // Stop all animations
-    Object.values(chameleonModel.actions).forEach((action) => action.stop());
+    Object.values(chameleonModel.actions).forEach((action) => action.stop())
     // Play selected animation
     if (selectedAnimation.value && chameleonModel.actions[selectedAnimation.value]) {
-      chameleonModel.actions[selectedAnimation.value].play();
+      chameleonModel.actions[selectedAnimation.value].play()
     }
   }
-};
+}
 
 const onScaleChange = () => {
   if (chameleonModel && chameleonModel.mesh) {
-    chameleonModel.mesh.scale.set(...modelScale.value);
+    chameleonModel.mesh.scale.set(...modelScale.value)
   }
-};
+}
 
 const onModelFileChange = async (event) => {
-  const file = event.target.files[0];
+  const file = event.target.files[0]
   if (file) {
-    modelFile.value = file;
+    modelFile.value = file
     // For GLB/GLTF files, use the blob URL directly
     // For FBX files, also use the blob URL
-    modelPath.value = URL.createObjectURL(file);
-    await reloadModel();
+    modelPath.value = URL.createObjectURL(file)
+    await reloadModel()
   }
-};
+}
 
 const onAnimationFileChange = async (event) => {
-  const file = event.target.files[0];
+  const file = event.target.files[0]
   if (file) {
-    animationFile.value = file;
-    const fileUrl = URL.createObjectURL(file);
+    animationFile.value = file
+    const fileUrl = URL.createObjectURL(file)
     const isGLTF =
-      file.name.toLowerCase().endsWith(".glb") ||
-      file.name.toLowerCase().endsWith(".gltf");
+      file.name.toLowerCase().endsWith('.glb') || file.name.toLowerCase().endsWith('.gltf')
 
     // Load new animations and replace existing ones
     if (chameleonModel && chameleonModel.mixer) {
       if (isGLTF) {
         // Load GLTF/GLB animations
-        const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader");
-        const loader = new GLTFLoader();
+        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
+        const loader = new GLTFLoader()
 
         loader.load(fileUrl, (gltf) => {
           if (gltf.animations && gltf.animations.length > 0) {
             // Stop all current animations
             if (chameleonModel.actions) {
-              Object.values(chameleonModel.actions).forEach((action) => action.stop());
+              Object.values(chameleonModel.actions).forEach((action) => action.stop())
             }
 
             // Create new actions from loaded animations
             const newActions = gltf.animations.reduce((accumulator, animation) => {
               return {
                 ...accumulator,
-                [animation.name]: chameleonModel.mixer.clipAction(animation),
-              };
-            }, {});
+                [animation.name]: chameleonModel.mixer.clipAction(animation)
+              }
+            }, {})
 
             // Replace actions
-            chameleonModel.actions = newActions;
+            chameleonModel.actions = newActions
 
             // Reload animations
-            reloadAnimations();
+            reloadAnimations()
           }
-        });
+        })
       } else {
         // Load FBX animations
-        const { FBXLoader } = await import("three/examples/jsm/loaders/FBXLoader");
-        const loader = new FBXLoader();
+        const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader')
+        const loader = new FBXLoader()
 
         loader.load(fileUrl, (animationFbx) => {
           // Stop all current animations
           if (chameleonModel.actions) {
-            Object.values(chameleonModel.actions).forEach((action) => action.stop());
+            Object.values(chameleonModel.actions).forEach((action) => action.stop())
           }
 
           // Create new actions from loaded animations
           const newActions = animationFbx.animations.reduce((accumulator, animation) => {
             return {
               ...accumulator,
-              [animation.name]: chameleonModel.mixer.clipAction(animation),
-            };
-          }, {});
+              [animation.name]: chameleonModel.mixer.clipAction(animation)
+            }
+          }, {})
 
           // Replace actions
-          chameleonModel.actions = newActions;
+          chameleonModel.actions = newActions
 
           // Reload animations
-          reloadAnimations();
-        });
+          reloadAnimations()
+        })
       }
     }
   }
-};
+}
 
 const reloadModel = async () => {
-  removeModel();
-  await loadModel();
-};
+  removeModel()
+  await loadModel()
+}
 
 onBeforeUnmount(() => {
-  const { clearSceneElements } = useDebugSceneStore();
-  clearSceneElements();
-});
+  const { clearSceneElements } = useDebugSceneStore()
+  clearSceneElements()
+})
 
-onMounted(async () => init());
+onMounted(async () => init())
 </script>
 
 <template>
@@ -735,8 +730,8 @@ onMounted(async () => init());
           <div class="property">
             <span class="label">Rotation (deg):</span>
             <span class="value"
-              >x: {{ meshProperties.rotation.x }}°, y: {{ meshProperties.rotation.y }}°,
-              z: {{ meshProperties.rotation.z }}°</span
+              >x: {{ meshProperties.rotation.x }}°, y: {{ meshProperties.rotation.y }}°, z:
+              {{ meshProperties.rotation.z }}°</span
             >
           </div>
           <div class="property">
@@ -761,10 +756,7 @@ onMounted(async () => init());
           <div class="property">
             <span class="label">Color:</span>
             <span class="value">
-              <span
-                class="color-swatch"
-                :style="{ backgroundColor: meshProperties.color }"
-              ></span>
+              <span class="color-swatch" :style="{ backgroundColor: meshProperties.color }"></span>
               {{ meshProperties.color }}
             </span>
           </div>
@@ -838,9 +830,7 @@ onMounted(async () => init());
           </div>
           <div class="property">
             <span class="label">Bounding Box:</span>
-            <span class="value" style="font-size: 11px">{{
-              meshProperties.boundingBox
-            }}</span>
+            <span class="value" style="font-size: 11px">{{ meshProperties.boundingBox }}</span>
           </div>
         </div>
       </div>
@@ -872,16 +862,8 @@ onMounted(async () => init());
 
       <div v-if="availableAnimations.length > 0" class="animation-select">
         <label for="animation-dropdown">Animation:</label>
-        <select
-          id="animation-dropdown"
-          v-model="selectedAnimation"
-          @change="onAnimationChange"
-        >
-          <option
-            v-for="animName in availableAnimations"
-            :key="animName"
-            :value="animName"
-          >
+        <select id="animation-dropdown" v-model="selectedAnimation" @change="onAnimationChange">
+          <option v-for="animName in availableAnimations" :key="animName" :value="animName">
             {{ animName }}
           </option>
         </select>
@@ -974,7 +956,7 @@ onMounted(async () => init());
 
     <!-- Mobile toggle button -->
     <button class="mobile-toggle" @click="panelsVisible = !panelsVisible">
-      {{ panelsVisible ? "Hide" : "Show" }} Panel
+      {{ panelsVisible ? 'Hide' : 'Show' }} Panel
     </button>
   </div>
 </template>
@@ -1027,7 +1009,7 @@ canvas {
   color: #aaa;
 }
 
-.input-group input[type="file"] {
+.input-group input[type='file'] {
   padding: 5px;
   border-radius: 4px;
   border: 1px solid #555;
@@ -1038,7 +1020,7 @@ canvas {
   cursor: pointer;
 }
 
-.input-group input[type="file"]::file-selector-button {
+.input-group input[type='file']::file-selector-button {
   background: #444;
   border: 1px solid #666;
   color: white;
@@ -1048,7 +1030,7 @@ canvas {
   margin-right: 8px;
 }
 
-.input-group input[type="file"]::file-selector-button:hover {
+.input-group input[type='file']::file-selector-button:hover {
   background: #555;
 }
 
@@ -1101,7 +1083,7 @@ canvas {
   font-weight: 500;
 }
 
-.scale-input-group input[type="range"] {
+.scale-input-group input[type='range'] {
   width: 100%;
   height: 6px;
   border-radius: 3px;
@@ -1110,7 +1092,7 @@ canvas {
   cursor: pointer;
 }
 
-.scale-input-group input[type="range"]::-webkit-slider-thumb {
+.scale-input-group input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -1121,11 +1103,11 @@ canvas {
   transition: background 0.2s;
 }
 
-.scale-input-group input[type="range"]::-webkit-slider-thumb:hover {
+.scale-input-group input[type='range']::-webkit-slider-thumb:hover {
   background: #aaa;
 }
 
-.scale-input-group input[type="range"]::-moz-range-thumb {
+.scale-input-group input[type='range']::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -1135,7 +1117,7 @@ canvas {
   transition: background 0.2s;
 }
 
-.scale-input-group input[type="range"]::-moz-range-thumb:hover {
+.scale-input-group input[type='range']::-moz-range-thumb:hover {
   background: #aaa;
 }
 
@@ -1197,7 +1179,7 @@ canvas {
   white-space: nowrap;
 }
 
-.color-item input[type="color"] {
+.color-item input[type='color'] {
   width: 40px;
   height: 28px;
   border: 1px solid #555;
@@ -1206,11 +1188,11 @@ canvas {
   background: transparent;
 }
 
-.color-item input[type="color"]::-webkit-color-swatch-wrapper {
+.color-item input[type='color']::-webkit-color-swatch-wrapper {
   padding: 2px;
 }
 
-.color-item input[type="color"]::-webkit-color-swatch {
+.color-item input[type='color']::-webkit-color-swatch {
   border: none;
   border-radius: 2px;
 }
@@ -1227,7 +1209,7 @@ canvas {
   padding: 20px;
   overflow-y: auto;
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.5);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   z-index: 999;
 }
 
@@ -1306,7 +1288,7 @@ canvas {
   font-size: 13px;
   color: #fff;
   text-align: right;
-  font-family: "Courier New", monospace;
+  font-family: 'Courier New', monospace;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 
 interface Properties {
-  title: string;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'ghost' | 'default' | 'outline';
-  active?: boolean;
+  title: string
+  size?: 'sm' | 'md' | 'lg'
+  variant?: 'ghost' | 'default' | 'outline'
+  active?: boolean
 }
 
-withDefaults(defineProps<Properties>(), { size: 'md', variant: 'ghost', active: false });
+withDefaults(defineProps<Properties>(), { size: 'md', variant: 'ghost', active: false })
 </script>
 
 <template>

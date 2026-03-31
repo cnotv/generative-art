@@ -1,0 +1,9 @@
+dist
+node_modules
+coverage
+.docusaurus
+documentation/build
+documentation/node_modules
+pnpm-lock.yaml
+*.min.js
+*.d.ts

@@ -1,87 +1,90 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
 
-import { getModel, getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements, bodyJump, updateAnimation, createTimelineManager, type AnimationData } from "@webgamekit/animation";
-import { useUiStore } from "@/stores/ui";
-import { getCube } from "@webgamekit/threejs";
-import brickTexture from "@/assets/images/textures/brick.jpg";
-import { useDebugSceneStore } from '@/stores/debugScene';
+import { getModel, getTools } from '@webgamekit/threejs'
+import {
+  bindAnimatedElements,
+  bodyJump,
+  updateAnimation,
+  createTimelineManager,
+  type AnimationData
+} from '@webgamekit/animation'
+import { useUiStore } from '@/stores/ui'
+import { getCube } from '@webgamekit/threejs'
+import brickTexture from '@/assets/images/textures/brick.jpg'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
 // Set UI controls
-const uiStore = useUiStore();
-const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true);
-const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false);
+const uiStore = useUiStore()
+const keyUp = (event: KeyboardEvent) => uiStore.setKeyState(event.key, true)
+const keyDown = (event: KeyboardEvent) => uiStore.setKeyState(event.key, false)
 
 const character = {
   speed: 0.5,
-  jump: 3,
-};
+  jump: 3
+}
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
 
-let initInstance: () => void;
+let initInstance: () => void
 onMounted(() => {
   initInstance = () => {
-    init(
-      (canvas.value as unknown) as HTMLCanvasElement,
-      (statsElement.value as unknown) as HTMLElement
-    );
-  };
+    init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
+  }
 
-  initInstance();
-  window.addEventListener("resize", initInstance);
-});
+  initInstance()
+  window.addEventListener('resize', initInstance)
+})
 
 onMounted(() => {
-  window.addEventListener("keydown", keyUp);
-  window.addEventListener("keyup", keyDown);
-});
+  window.addEventListener('keydown', keyUp)
+  window.addEventListener('keyup', keyDown)
+})
 
 onUnmounted(() => {
-  window.removeEventListener("keydown", keyUp);
-  window.removeEventListener("keyup", keyDown);
-  const { clearSceneElements } = useDebugSceneStore();
-  clearSceneElements();
-});
+  window.removeEventListener('keydown', keyUp)
+  window.removeEventListener('keyup', keyDown)
+  const { clearSceneElements } = useDebugSceneStore()
+  clearSceneElements()
+})
 
-onUnmounted(() => window.removeEventListener("resize", initInstance));
+onUnmounted(() => window.removeEventListener('resize', initInstance))
 
 const config = {
   directional: {
     enabled: true,
     helper: false,
-    intensity: 2,
-  },
-};
+    intensity: 2
+  }
+}
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
-  const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
-  stats.init(route, statsElement);
-  controls.create(config, route, {}, () => createScene());
+  const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+  stats.init(route, statsElement)
+  controls.create(config, route, {}, () => createScene())
   const createScene = async () => {
-    const elements = [] as ComplexModel[];
-    const obstacles = [] as ComplexModel[];
+    const elements = [] as ComplexModel[]
+    const obstacles = [] as ComplexModel[]
     const { animate, setup, world, scene, getDelta, camera } = await getTools({
       stats,
       route,
-      canvas,
-    });
+      canvas
+    })
     setup({
       config: {
         camera: { position: [0, 20, 150] },
         ground: { size: 100000, color: 0x227755 },
         sky: { size: 700 },
         lights: { directional: { intensity: config.directional.intensity } },
-        orbit: false,
+        orbit: false
       },
       defineSetup: async () => {
-        const chickModel = await getModel(scene, world, "goomba.glb", {
+        const chickModel = await getModel(scene, world, 'goomba.glb', {
           scale: [0.3, 0.3, 0.3],
           rotation: [0, 1, 0],
           size: 3,
@@ -91,16 +94,16 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
           angular: 10,
           showHelper: false,
           enabledRotations: [false, true, false],
-          hasGravity: true,
-        });
-        elements.push(chickModel);
+          hasGravity: true
+        })
+        elements.push(chickModel)
 
-        const timelineManager = createTimelineManager();
+        const timelineManager = createTimelineManager()
 
         // Make Goomba run
         timelineManager.addAction({
-          name: "Run animation",
-          category: "animation",
+          name: 'Run animation',
+          category: 'animation',
           action: () => {
             if (chickModel.userData.mixer && chickModel.userData.actions?.run) {
               const animData: AnimationData = {
@@ -108,57 +111,60 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
                 actionName: 'run',
                 delta: getDelta(),
                 speed: 1
-              };
-              updateAnimation(animData);
+              }
+              updateAnimation(animData)
             }
-          },
-        });
+          }
+        })
 
         // Generate cubes
         timelineManager.addAction({
-          name: "Generate obstacles",
+          name: 'Generate obstacles',
           frequency: 75,
-          category: "game-logic",
+          category: 'game-logic',
           action: () => {
             const cube = getCube(scene, world, {
               size: [30, 30, 30],
               restitution: -1,
               position: [30 * 8, 15 * Math.floor(Math.random() * 3) + 15, 0],
-              type: "fixed",
+              type: 'fixed',
               texture: brickTexture,
               boundary: 0.5,
-              color: 0x888888,
-            }) as ComplexModel;
-            obstacles.push(cube);
-          },
-        });
+              color: 0x888888
+            }) as ComplexModel
+            obstacles.push(cube)
+          }
+        })
 
         // Move obstacles
         timelineManager.addAction({
-          name: "Move obstacles",
-          category: "physics",
+          name: 'Move obstacles',
+          category: 'physics',
           action: () => {
             obstacles.forEach((obstacle: ComplexModel) => {
-              obstacle.mesh.position.x -= character.speed * 3;
-            });
-          },
-        });
+              obstacle.mesh.position.x -= character.speed * 3
+            })
+          }
+        })
 
         animate({
           beforeTimeline: () => {
-            bindAnimatedElements([...elements, ...obstacles], world, getDelta());
+            bindAnimatedElements([...elements, ...obstacles], world, getDelta())
             if (uiStore.controls.jump) {
-              bodyJump(chickModel, [], character.speed, character.jump);
+              bodyJump(chickModel, [], character.speed, character.jump)
             }
           },
-          timeline: timelineManager,
-        });
-      },
-    });
-    registerSceneElements(camera, scene.children.filter(c => c !== camera));
-  };
-  createScene();
-};
+          timeline: timelineManager
+        })
+      }
+    })
+    registerSceneElements(
+      camera,
+      scene.children.filter((c) => c !== camera)
+    )
+  }
+  createScene()
+}
 </script>
 
 <template>

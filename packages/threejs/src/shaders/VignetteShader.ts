@@ -3,10 +3,10 @@
 
 export const VignetteShader = {
   uniforms: {
-    'tDiffuse': { value: null },
-    'offset': { value: 1.1 },
-    'darkness': { value: 1.2 },
-    'vignetteColor': { value: [0, 0, 0] }, // RGB array, default black
+    tDiffuse: { value: null },
+    offset: { value: 1.1 },
+    darkness: { value: 1.2 },
+    vignetteColor: { value: [0, 0, 0] } // RGB array, default black
   },
   vertexShader: `
     varying vec2 vUv;
@@ -33,4 +33,4 @@ export const VignetteShader = {
       gl_FragColor = texel;
     }
   `
-};
+}

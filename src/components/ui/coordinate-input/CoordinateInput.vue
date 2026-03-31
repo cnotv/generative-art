@@ -1,95 +1,92 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import type { CoordinateTuple } from "@webgamekit/threejs";
-import Slider from "../slider/Slider.vue";
+import { computed } from 'vue'
+import type { CoordinateTuple } from '@webgamekit/threejs'
+import Slider from '../slider/Slider.vue'
 
 interface Properties {
-  modelValue: CoordinateTuple | { x: number; y: number; z: number };
-  label?: string;
-  min?: number | { x: number; y: number; z: number };
-  max?: number | { x: number; y: number; z: number };
-  step?: number | { x: number; y: number; z: number };
+  modelValue: CoordinateTuple | { x: number; y: number; z: number }
+  label?: string
+  min?: number | { x: number; y: number; z: number }
+  max?: number | { x: number; y: number; z: number }
+  step?: number | { x: number; y: number; z: number }
 }
 
 const props = withDefaults(defineProps<Properties>(), {
-  label: "Coordinates",
+  label: 'Coordinates',
   min: 0,
   max: 100,
-  step: 1,
-});
+  step: 1
+})
 
 const emit = defineEmits<{
-  (
-    e: "update:modelValue",
-    value: CoordinateTuple | { x: number; y: number; z: number }
-  ): void;
-}>();
+  (e: 'update:modelValue', value: CoordinateTuple | { x: number; y: number; z: number }): void
+}>()
 
 // Determine if we're working with array or object format
-const isArray = computed(() => Array.isArray(props.modelValue));
+const isArray = computed(() => Array.isArray(props.modelValue))
 
 // Normalize values to always work with x, y, z
 const values = computed(() => {
   if (isArray.value) {
-    const array = props.modelValue as CoordinateTuple;
-    return { x: array[0], y: array[1], z: array[2] };
+    const array = props.modelValue as CoordinateTuple
+    return { x: array[0], y: array[1], z: array[2] }
   }
-  return props.modelValue as { x: number; y: number; z: number };
-});
+  return props.modelValue as { x: number; y: number; z: number }
+})
 
 // Helper to get min/max/step for a coordinate
-const getCoordValue = (coord: "x" | "y" | "z", type: "min" | "max" | "step") => {
-  const value = props[type];
-  if (typeof value === "number") return value;
-  return value[coord];
-};
+const getCoordValue = (coord: 'x' | 'y' | 'z', type: 'min' | 'max' | 'step') => {
+  const value = props[type]
+  if (typeof value === 'number') return value
+  return value[coord]
+}
 
 // Update handlers
 const updateX = (value: number) => {
   if (isArray.value) {
-    emit("update:modelValue", [value, values.value.y, values.value.z] as CoordinateTuple);
+    emit('update:modelValue', [value, values.value.y, values.value.z] as CoordinateTuple)
   } else {
-    emit("update:modelValue", { ...values.value, x: value });
+    emit('update:modelValue', { ...values.value, x: value })
   }
-};
+}
 
 const updateY = (value: number) => {
   if (isArray.value) {
-    emit("update:modelValue", [values.value.x, value, values.value.z] as CoordinateTuple);
+    emit('update:modelValue', [values.value.x, value, values.value.z] as CoordinateTuple)
   } else {
-    emit("update:modelValue", { ...values.value, y: value });
+    emit('update:modelValue', { ...values.value, y: value })
   }
-};
+}
 
 const updateZ = (value: number) => {
   if (isArray.value) {
-    emit("update:modelValue", [values.value.x, values.value.y, value] as CoordinateTuple);
+    emit('update:modelValue', [values.value.x, values.value.y, value] as CoordinateTuple)
   } else {
-    emit("update:modelValue", { ...values.value, z: value });
+    emit('update:modelValue', { ...values.value, z: value })
   }
-};
+}
 
 // Direct input handlers
 const handleInputX = (event: Event) => {
-  const value = Number((event.target as HTMLInputElement).value);
+  const value = Number((event.target as HTMLInputElement).value)
   if (!isNaN(value)) {
-    updateX(value);
+    updateX(value)
   }
-};
+}
 
 const handleInputY = (event: Event) => {
-  const value = Number((event.target as HTMLInputElement).value);
+  const value = Number((event.target as HTMLInputElement).value)
   if (!isNaN(value)) {
-    updateY(value);
+    updateY(value)
   }
-};
+}
 
 const handleInputZ = (event: Event) => {
-  const value = Number((event.target as HTMLInputElement).value);
+  const value = Number((event.target as HTMLInputElement).value)
   if (!isNaN(value)) {
-    updateZ(value);
+    updateZ(value)
   }
-};
+}
 </script>
 
 <template>
@@ -220,7 +217,7 @@ const handleInputZ = (event: Event) => {
   margin: 0;
 }
 
-.coordinate-input__input[type="number"] {
+.coordinate-input__input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
 }

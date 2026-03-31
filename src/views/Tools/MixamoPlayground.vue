@@ -1,20 +1,24 @@
 <script setup lang="ts">
-import * as THREE from 'three';
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import * as THREE from 'three'
+import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { getTools, getModel, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
 import {
-  getTools,
-  getModel,
-  cameraFollowPlayer,
-  type ComplexModel
-} from "@webgamekit/threejs";
-import { controllerForward, type CoordinateTuple, type AnimationData, updateAnimation, setRotation, getRotation, createTimelineManager, playActionTimeline } from "@webgamekit/animation";
-import { createControls, isMobile } from "@webgamekit/controls";
+  controllerForward,
+  type CoordinateTuple,
+  type AnimationData,
+  updateAnimation,
+  setRotation,
+  getRotation,
+  createTimelineManager,
+  playActionTimeline
+} from '@webgamekit/animation'
+import { createControls, isMobile } from '@webgamekit/controls'
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
-import grassTextureImg from "@/assets/images/textures/grass.jpg";
-import { getActionName } from "./MixamoPlayground.helpers";
-import { useDebugSceneStore } from '@/stores/debugScene';
+import grassTextureImg from '@/assets/images/textures/grass.jpg'
+import { getActionName } from './MixamoPlayground.helpers'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
 const playerSettings = {
   model: {
@@ -25,30 +29,38 @@ const playerSettings = {
     boundary: 0.5,
     hasGravity: false,
     castShadow: true,
-    material: "MeshLambertMaterial",
-    animations: ["animations/walk2.fbx", "animations/idle.fbx", 'animations/running.fbx', 'animations/roll.fbx', 'animations/kick.fbx', 'animations/punch.fbx', 'animations/jump.fbx'],
-    color: 0xffffff,
+    material: 'MeshLambertMaterial',
+    animations: [
+      'animations/walk2.fbx',
+      'animations/idle.fbx',
+      'animations/running.fbx',
+      'animations/roll.fbx',
+      'animations/kick.fbx',
+      'animations/punch.fbx',
+      'animations/jump.fbx'
+    ],
+    color: 0xffffff
   },
   movement: {
     requireGround: true,
     maxGroundDistance: 5,
     maxStepHeight: 0.5,
     characterRadius: 4,
-    debug: false,
+    debug: false
   },
   game: {
     distance: 0.5,
     speed: {
       movement: 2,
-      turning: 4,
-    },
-  },
-};
+      turning: 4
+    }
+  }
+}
 
 const setupConfig = {
   orbit: {
     target: new THREE.Vector3(0, 15, 0),
-    disabled: true,
+    disabled: true
   },
   camera: {
     position: [0, 7, 35],
@@ -58,207 +70,219 @@ const setupConfig = {
     near: 0.1,
     far: 1000,
     zoom: 1,
-    focus: 10,
+    focus: 10
   },
   ground: {
     size: [1000, 100, 1000],
     texture: grassTextureImg,
     textureRepeat: [100, 100] as [number, number],
-    color: 0x80b966,
+    color: 0x80b966
   },
-  sky: { size: 500, color: 0x00aaff },
-};
+  sky: { size: 500, color: 0x00aaff }
+}
 
 const controlBindings = {
   mapping: {
     keyboard: {
-      a: "move-left",
-      d: "move-right",
-      w: "move-up",
-      s: "move-down",
-      p: "print-log",
-      Enter: "run",
-      " ": "jump",
-      ArrowUp: "jump",
-      ArrowLeft: "kick",
-      ArrowRight: "punch",
-      ArrowDown: "roll",
+      a: 'move-left',
+      d: 'move-right',
+      w: 'move-up',
+      s: 'move-down',
+      p: 'print-log',
+      Enter: 'run',
+      ' ': 'jump',
+      ArrowUp: 'jump',
+      ArrowLeft: 'kick',
+      ArrowRight: 'punch',
+      ArrowDown: 'roll'
     },
     gamepad: {
       // Buttons
-      cross: "jump",
-      square: "kick",
-      triangle: "punch",
-      circle: "roll",
-      "dpad-left": "move-left",
-      "dpad-right": "move-right",
-      "dpad-down": "move-down",
-      "dpad-up": "move-up",
-      "axis0-left": "move-left",
-      "axis0-right": "move-right",
-      "axis1-up": "move-up",
-      "axis1-down": "move-down",
+      cross: 'jump',
+      square: 'kick',
+      triangle: 'punch',
+      circle: 'roll',
+      'dpad-left': 'move-left',
+      'dpad-right': 'move-right',
+      'dpad-down': 'move-down',
+      'dpad-up': 'move-up',
+      'axis0-left': 'move-left',
+      'axis0-right': 'move-right',
+      'axis1-up': 'move-up',
+      'axis1-down': 'move-down'
     },
     'faux-pad': {
-      left: "move-left",
-      right: "move-right",
-      up: "move-up",
-      down: "move-down",
-    },
+      left: 'move-left',
+      right: 'move-right',
+      up: 'move-up',
+      down: 'move-down'
+    }
   },
-  axisThreshold: 0.5,
-};
+  axisThreshold: 0.5
+}
 
 const actionConfig = {
   kick: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
   punch: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
   jump: { allowMovement: true, allowRotation: false, allowActions: ['roll'], speed: 2 },
-  roll: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
-};
+  roll: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 }
+}
 
 // Store references for blocking actions
-let timelineManagerReference: ReturnType<typeof createTimelineManager> | null = null;
-let playerReference: ComplexModel | null = null;
-let getDeltaReference: (() => number) | null = null;
+let timelineManagerReference: ReturnType<typeof createTimelineManager> | null = null
+let playerReference: ComplexModel | null = null
+let getDeltaReference: (() => number) | null = null
 
 const handleBlockingAction = (actionName: string): void => {
-  if (!timelineManagerReference || !playerReference || !getDeltaReference) return;
+  if (!timelineManagerReference || !playerReference || !getDeltaReference) return
 
-  const config = actionConfig[actionName as keyof typeof actionConfig];
+  const config = actionConfig[actionName as keyof typeof actionConfig]
   if (config) {
-    playActionTimeline(timelineManagerReference, playerReference, actionName, getDeltaReference, config);
+    playActionTimeline(
+      timelineManagerReference,
+      playerReference,
+      actionName,
+      getDeltaReference,
+      config
+    )
   }
-};
+}
 
-const logs = shallowRef<string[]>([]);
-const showLogs = true;
-const isMobileDevice = isMobile();
+const logs = shallowRef<string[]>([])
+const showLogs = true
+const isMobileDevice = isMobile()
 
-
-const getActionData = (player: ComplexModel, currentActions: Record<string, any>, basicDistance: number, getDelta: () => number): AnimationData => {
-  const actionName = getActionName(currentActions);
-  const distance = currentActions["run"] ? basicDistance * 2 : basicDistance;
+const getActionData = (
+  player: ComplexModel,
+  currentActions: Record<string, any>,
+  basicDistance: number,
+  getDelta: () => number
+): AnimationData => {
+  const actionName = getActionName(currentActions)
+  const distance = currentActions['run'] ? basicDistance * 2 : basicDistance
   return {
     actionName,
     player,
     delta: getDelta() * 2,
     speed: 20,
     backward: false,
-    distance,
-  };
+    distance
+  }
 }
 
 const getLogs = (actions: Record<string, any>): string[] =>
   Object.keys(actions)
     .filter((action) => !!actions[action])
-    .map(
-      (action) =>
-        `${action} triggered by ${actions[action].trigger} ${actions[action].device}`
-    );
+    .map((action) => `${action} triggered by ${actions[action].trigger} ${actions[action].device}`)
 
 const bindings = {
   ...controlBindings,
   onAction: (action: string) => {
-    logs.value = getLogs(currentActions);
+    logs.value = getLogs(currentActions)
 
     switch (action) {
-      case "print-log":
-        break;
+      case 'print-log':
+        break
       default:
-        handleBlockingAction(action);
-        break;
+        handleBlockingAction(action)
+        break
     }
   },
   onRelease: () => {
-    logs.value = getLogs(currentActions);
-  },
-};
-const { destroyControls, currentActions } = createControls(bindings);
+    logs.value = getLogs(currentActions)
+  }
+}
+const { destroyControls, currentActions } = createControls(bindings)
 
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
-const canvas = ref<HTMLCanvasElement | null>(null);
+const canvas = ref<HTMLCanvasElement | null>(null)
 const init = async (): Promise<void> => {
-  if (!canvas.value) return;
+  if (!canvas.value) return
   const { setup, animate, scene, world, camera, getDelta } = await getTools({
-    canvas: canvas.value,
-  });
+    canvas: canvas.value
+  })
   const { orbit } = await setup({
     config: setupConfig,
     defineSetup: async ({ ground }) => {
-      const { distance, speed } = playerSettings.game;
-      const { movement } = playerSettings;
-      const obstacles: ComplexModel[] = [];
-      const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple;
+      const { distance, speed } = playerSettings.game
+      const { movement } = playerSettings
+      const obstacles: ComplexModel[] = []
+      const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple
 
-      const player = await getModel(scene, world, "character2.fbx", playerSettings.model);
+      const player = await getModel(scene, world, 'character2.fbx', playerSettings.model)
       // console.log(player.userData.actions)
-      const groundBodies: ComplexModel[] = ground?.mesh ? [ground.mesh as unknown as ComplexModel] : [];
+      const groundBodies: ComplexModel[] = ground?.mesh
+        ? [ground.mesh as unknown as ComplexModel]
+        : []
 
-      const timelineManager = createTimelineManager();
+      const timelineManager = createTimelineManager()
 
       // Set refs for blocking actions
-      timelineManagerReference = timelineManager;
-      playerReference = player;
-      getDeltaReference = getDelta;
+      timelineManagerReference = timelineManager
+      playerReference = player
+      getDeltaReference = getDelta
       timelineManager.addAction({
         frequency: speed.movement,
-        name: "Walk",
-        category: "user-input",
+        name: 'Walk',
+        category: 'user-input',
         action: () => {
           // Skip movement/animation updates when a blocking action is performing
           if (player.userData.performing) {
             // Only allow movement/rotation if the blocking action permits it
             if (!player.userData.allowMovement && !player.userData.allowRotation) {
-              return;
+              return
             }
           }
 
-          const targetRotation = getRotation(currentActions);
-          const isMoving = targetRotation !== null;
-          const animationData: AnimationData = getActionData(player, currentActions, distance, getDelta);
+          const targetRotation = getRotation(currentActions)
+          const isMoving = targetRotation !== null
+          const animationData: AnimationData = getActionData(
+            player,
+            currentActions,
+            distance,
+            getDelta
+          )
 
           if (isMoving) {
             // Only rotate if allowed
             if (player.userData.allowRotation || !player.userData.performing) {
-              setRotation(player, targetRotation);
+              setRotation(player, targetRotation)
             }
 
             // Only move if allowed
             if (player.userData.allowMovement || !player.userData.performing) {
-              controllerForward(
-                obstacles,
-                groundBodies,
-                animationData,
-                movement
-              );
-              cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z']);
+              controllerForward(obstacles, groundBodies, animationData, movement)
+              cameraFollowPlayer(camera, player, cameraOffset, orbit, ['x', 'z'])
             }
           } else if (!player.userData.performing) {
             // Only update idle animation if not performing a blocking action
-            updateAnimation(animationData);
+            updateAnimation(animationData)
           }
-        },
-      });
+        }
+      })
 
       animate({
         beforeTimeline: () => {},
-        timeline: timelineManager,
-      });
-    },
-  });
-  registerSceneElements(camera, scene.children.filter(c => c !== camera));
-};
+        timeline: timelineManager
+      })
+    }
+  })
+  registerSceneElements(
+    camera,
+    scene.children.filter((c) => c !== camera)
+  )
+}
 
 onMounted(async () => {
-  await init();
-  window.addEventListener("resize", init);
-});
+  await init()
+  window.addEventListener('resize', init)
+})
 onUnmounted(() => {
-  destroyControls();
-  window.removeEventListener("resize", init);
-  clearSceneElements();
-});
+  destroyControls()
+  window.removeEventListener('resize', init)
+  clearSceneElements()
+})
 </script>
 
 <template>
@@ -272,7 +296,7 @@ onUnmounted(() => {
         left: 'move-left',
         right: 'move-right',
         up: 'move-up',
-        down: 'move-down',
+        down: 'move-down'
       }"
       :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"

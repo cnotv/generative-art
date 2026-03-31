@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TabsList } from 'radix-vue';
+import { TabsList } from 'radix-vue'
 </script>
 
 <template>

@@ -1,39 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ChevronDown, ChevronRight, X } from 'lucide-vue-next';
-import { Sheet } from '@/components/ui/sheet';
-import { usePanelsStore } from '@/stores/panels';
-import type { PanelType } from '@/stores/panels';
+import { computed, ref } from 'vue'
+import { ChevronDown, ChevronRight, X } from 'lucide-vue-next'
+import { Sheet } from '@/components/ui/sheet'
+import { usePanelsStore } from '@/stores/panels'
+import type { PanelType } from '@/stores/panels'
 
 interface Properties {
-  panelType: PanelType;
-  side?: 'left' | 'right' | 'top' | 'bottom';
-  title?: string;
+  panelType: PanelType
+  side?: 'left' | 'right' | 'top' | 'bottom'
+  title?: string
 }
 
 const props = withDefaults(defineProps<Properties>(), {
   side: 'right',
-  title: undefined,
-});
+  title: undefined
+})
 
-const panelsStore = usePanelsStore();
-const collapsed = ref(false);
+const panelsStore = usePanelsStore()
+const collapsed = ref(false)
 
-const isOpen = computed(() => panelsStore.activePanels.has(props.panelType));
+const isOpen = computed(() => panelsStore.activePanels.has(props.panelType))
 
 const handleOpenChange = (open: boolean) => {
   if (!open) {
-    panelsStore.closePanel(props.panelType);
+    panelsStore.closePanel(props.panelType)
   }
-};
+}
 
 const toggleCollapse = () => {
-  collapsed.value = !collapsed.value;
-};
+  collapsed.value = !collapsed.value
+}
 
 const closePanel = () => {
-  panelsStore.closePanel(props.panelType);
-};
+  panelsStore.closePanel(props.panelType)
+}
 </script>
 
 <template>

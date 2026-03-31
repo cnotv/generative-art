@@ -1,70 +1,66 @@
 <script setup lang="ts">
-import * as THREE from "three";
-import { RapierPhysics } from "three/addons/physics/RapierPhysics.js";
-import { RapierHelper } from "three/addons/helpers/RapierHelper.js";
+import * as THREE from 'three'
+import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js'
+import { RapierHelper } from 'three/addons/helpers/RapierHelper.js'
 
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import { useDebugSceneStore } from '@/stores/debugScene';
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
-import { getTools } from "@webgamekit/threejs";
-import { createTimelineManager } from "@webgamekit/animation";
+import { getTools } from '@webgamekit/threejs'
+import { createTimelineManager } from '@webgamekit/animation'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 const config = {
   directional: {
     enabled: true,
     helper: false,
-    intensity: 2,
-  },
-};
+    intensity: 2
+  }
+}
 
-const movement = { forward: 0, right: 0, up: 0 };
+const movement = { forward: 0, right: 0, up: 0 }
 
 function random(min: number, max: number) {
-  return Math.random() * (max - min) + min;
+  return Math.random() * (max - min) + min
 }
 
 async function initPhysics(scene: THREE.Scene) {
   //Initialize physics engine using the script in the jsm/physics folder
-  const physics: RapierPhysics = await RapierPhysics();
+  const physics: RapierPhysics = await RapierPhysics()
 
   //Optionally display collider outlines
-  const physicsHelper: RapierHelper = new RapierHelper(physics.world);
-  scene.add(physicsHelper);
+  const physicsHelper: RapierHelper = new RapierHelper(physics.world)
+  scene.add(physicsHelper)
 
-  physics.addScene(scene);
+  physics.addScene(scene)
 
-  return { physics, physicsHelper };
+  return { physics, physicsHelper }
 }
 
 function addCharacterController(scene: THREE.Scene, physics: any) {
   // Character Capsule
-  const geometry = new THREE.CapsuleGeometry(0.3, 1, 8, 8);
-  const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-  const player = new THREE.Mesh(geometry, material);
-  player.castShadow = true;
-  player.position.set(0, 0.8, 0);
-  scene.add(player);
+  const geometry = new THREE.CapsuleGeometry(0.3, 1, 8, 8)
+  const material = new THREE.MeshStandardMaterial({ color: 0x0000ff })
+  const player = new THREE.Mesh(geometry, material)
+  player.castShadow = true
+  player.position.set(0, 0.8, 0)
+  scene.add(player)
 
   // Rapier Character Controller
-  const characterController = physics.world.createCharacterController(0.01);
-  characterController.setApplyImpulsesToDynamicBodies(true);
-  characterController.setCharacterMass(3);
-  const colliderDesc = physics.RAPIER.ColliderDesc.capsule(0.5, 0.3).setTranslation(
-    0,
-    0.8,
-    0
-  );
-  player.userData.collider = physics.world.createCollider(colliderDesc);
+  const characterController = physics.world.createCharacterController(0.01)
+  characterController.setApplyImpulsesToDynamicBodies(true)
+  characterController.setCharacterMass(3)
+  const colliderDesc = physics.RAPIER.ColliderDesc.capsule(0.5, 0.3).setTranslation(0, 0.8, 0)
+  player.userData.collider = physics.world.createCollider(colliderDesc)
 
-  return { player, characterController };
+  return { player, characterController }
 }
 
 function animatePlayer(
@@ -74,202 +70,194 @@ function animatePlayer(
   movement = { forward: 0, right: 0, up: 0 }
 ) {
   if (physics && characterController) {
-    const deltaTime = 1 / 60;
+    const deltaTime = 1 / 60
 
     // Character movement
-    const speed = 4 * deltaTime;
+    const speed = 4 * deltaTime
     const moveVector = new physics.RAPIER.Vector3(
       movement.right * speed,
       0,
       -movement.forward * speed
-    );
+    )
 
-    characterController.computeColliderMovement(player.userData.collider, moveVector);
+    characterController.computeColliderMovement(player.userData.collider, moveVector)
 
     // Read the result.
-    const translation = characterController.computedMovement();
-    const position = player.userData.collider.translation();
+    const translation = characterController.computedMovement()
+    const position = player.userData.collider.translation()
 
-    position.x += translation.x;
-    position.y += translation.y;
-    position.z += translation.z;
+    position.x += translation.x
+    position.y += translation.y
+    position.z += translation.z
 
-    player.userData.collider.setTranslation(position);
+    player.userData.collider.setTranslation(position)
 
     // Sync Three.js mesh with Rapier collider
-    player.position.set(position.x, position.y, position.z);
+    player.position.set(position.x, position.y, position.z)
   }
 
-  return player;
+  return player
 }
 
 function addBody(scene: THREE.Scene, fixed = true, physics?: RapierPhysics) {
-  const geometry = fixed
-    ? new THREE.BoxGeometry(1, 1, 1)
-    : new THREE.SphereGeometry(0.25);
+  const geometry = fixed ? new THREE.BoxGeometry(1, 1, 1) : new THREE.SphereGeometry(0.25)
   const material = new THREE.MeshStandardMaterial({
-    color: fixed ? 0xff0000 : 0x00ff00,
-  });
+    color: fixed ? 0xff0000 : 0x00ff00
+  })
 
-  const mesh = new THREE.Mesh(geometry, material);
-  const mass = fixed ? 0 : 0.5;
-  const restitution = fixed ? 0 : 0.3;
-  mesh.castShadow = true;
+  const mesh = new THREE.Mesh(geometry, material)
+  const mass = fixed ? 0 : 0.5
+  const restitution = fixed ? 0 : 0.3
+  mesh.castShadow = true
 
-  mesh.position.set(random(-10, 10), 1.5, random(-10, 10));
+  mesh.position.set(random(-10, 10), 1.5, random(-10, 10))
   mesh.userData.physics = {
     mass,
-    restitution,
-  };
+    restitution
+  }
   if (physics) {
-    physics.addMesh(mesh, mass, restitution);
+    physics.addMesh(mesh, mass, restitution)
   }
 
-  scene.add(mesh);
+  scene.add(mesh)
 }
 
 function addBodies(scene: THREE.Scene, count: number) {
-  for (let i = 0; i < count; i++) addBody(scene, Math.random() > 0.7);
+  for (let i = 0; i < count; i++) addBody(scene, Math.random() > 0.7)
 }
 
 function getLight(scene: THREE.Scene) {
-  const ambient = new THREE.HemisphereLight(0x555555, 0xffffff);
+  const ambient = new THREE.HemisphereLight(0x555555, 0xffffff)
 
-  scene.add(ambient);
+  scene.add(ambient)
 
-  const light = new THREE.DirectionalLight(0xffffff, 3);
+  const light = new THREE.DirectionalLight(0xffffff, 3)
 
-  light.position.set(0, 12.5, 12.5);
-  light.castShadow = true;
-  light.shadow.radius = 3;
-  light.shadow.blurSamples = 8;
-  light.shadow.mapSize.width = 1024;
-  light.shadow.mapSize.height = 1024;
+  light.position.set(0, 12.5, 12.5)
+  light.castShadow = true
+  light.shadow.radius = 3
+  light.shadow.blurSamples = 8
+  light.shadow.mapSize.width = 1024
+  light.shadow.mapSize.height = 1024
 
-  const size = 10;
-  light.shadow.camera.left = -size;
-  light.shadow.camera.bottom = -size;
-  light.shadow.camera.right = size;
-  light.shadow.camera.top = size;
-  light.shadow.camera.near = 1;
-  light.shadow.camera.far = 50;
+  const size = 10
+  light.shadow.camera.left = -size
+  light.shadow.camera.bottom = -size
+  light.shadow.camera.right = size
+  light.shadow.camera.top = size
+  light.shadow.camera.near = 1
+  light.shadow.camera.far = 50
 
-  scene.add(light);
+  scene.add(light)
 
-  return { light, ambient };
+  return { light, ambient }
 }
 
 function setControls(movement: { forward: number; right: number; up: number }) {
-  window.addEventListener("keydown", (event) => {
-    if (event.key === "space") movement.up = 1;
-    if (event.key === "w" || event.key === "ArrowUp") movement.forward = 1;
-    if (event.key === "s" || event.key === "ArrowDown") movement.forward = -1;
-    if (event.key === "a" || event.key === "ArrowLeft") movement.right = -1;
-    if (event.key === "d" || event.key === "ArrowRight") movement.right = 1;
-  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'space') movement.up = 1
+    if (event.key === 'w' || event.key === 'ArrowUp') movement.forward = 1
+    if (event.key === 's' || event.key === 'ArrowDown') movement.forward = -1
+    if (event.key === 'a' || event.key === 'ArrowLeft') movement.right = -1
+    if (event.key === 'd' || event.key === 'ArrowRight') movement.right = 1
+  })
 
-  window.addEventListener("keyup", (event) => {
-    if (event.key === "space") movement.up = 0;
+  window.addEventListener('keyup', (event) => {
+    if (event.key === 'space') movement.up = 0
     if (
-      event.key === "w" ||
-      event.key === "s" ||
-      event.key === "ArrowUp" ||
-      event.key === "ArrowDown"
+      event.key === 'w' ||
+      event.key === 's' ||
+      event.key === 'ArrowUp' ||
+      event.key === 'ArrowDown'
     )
-      movement.forward = 0;
+      movement.forward = 0
     if (
-      event.key === "a" ||
-      event.key === "d" ||
-      event.key === "ArrowLeft" ||
-      event.key === "ArrowRight"
+      event.key === 'a' ||
+      event.key === 'd' ||
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight'
     )
-      movement.right = 0;
-  });
+      movement.right = 0
+  })
 }
 
 function getGround(scene: THREE.Scene) {
-  const geometry = new THREE.BoxGeometry(20, 0.5, 20);
-  const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const geometry = new THREE.BoxGeometry(20, 0.5, 20)
+  const material = new THREE.MeshStandardMaterial({ color: 0xffffff })
 
-  const ground = new THREE.Mesh(geometry, material);
-  ground.receiveShadow = true;
+  const ground = new THREE.Mesh(geometry, material)
+  ground.receiveShadow = true
 
-  ground.position.y = -0.25;
-  ground.userData.physics = { mass: 0 };
+  ground.position.y = -0.25
+  ground.userData.physics = { mass: 0 }
 
-  scene.add(ground);
+  scene.add(ground)
 }
 
-let initInstance: () => void;
+let initInstance: () => void
 onMounted(() => {
   initInstance = () => {
-    init(
-      (canvas.value as unknown) as HTMLCanvasElement,
-      (statsElement.value as unknown) as HTMLElement
-    );
-  };
+    init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
+  }
 
-  initInstance();
-  window.addEventListener("resize", initInstance);
-});
+  initInstance()
+  window.addEventListener('resize', initInstance)
+})
 onUnmounted(() => {
-  window.removeEventListener("resize", initInstance);
-  clearSceneElements();
-});
+  window.removeEventListener('resize', initInstance)
+  clearSceneElements()
+})
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
-  stats.init(route, statsElement);
-  controls.create(config, route, {}, () => createScene());
+  stats.init(route, statsElement)
+  controls.create(config, route, {}, () => createScene())
   const createScene = async () => {
     const { animate, setup, world, getDelta, scene, camera } = await getTools({
       stats,
       route,
-      canvas,
-    });
+      canvas
+    })
     setup({
       config: {
         camera: { position: [-2, 5, 15] },
         ground: false,
         sky: false,
-        lights: false,
+        lights: false
       },
       defineSetup: async () => {
-        getLight(scene);
-        getGround(scene);
-        addBodies(scene, 10);
+        getLight(scene)
+        getGround(scene)
+        addBodies(scene, 10)
 
-        const { physics, physicsHelper } = await initPhysics(scene);
-        const { player, characterController } = await addCharacterController(
-          scene,
-          physics
-        );
+        const { physics, physicsHelper } = await initPhysics(scene)
+        const { player, characterController } = await addCharacterController(scene, physics)
 
-        setControls(movement);
-        registerSceneElements(camera, scene.children);
+        setControls(movement)
+        registerSceneElements(camera, scene.children)
 
-        const timelineManager = createTimelineManager();
+        const timelineManager = createTimelineManager()
 
         timelineManager.addAction({
-          name: "Add bodies",
+          name: 'Add bodies',
           frequency: 75,
-          category: "physics",
+          category: 'physics',
           action: () => {
-            addBody(scene, false, physics);
-          },
-        });
+            addBody(scene, false, physics)
+          }
+        })
 
         animate({
           beforeTimeline: () => {
-            if (physicsHelper) physicsHelper.update();
-            animatePlayer(player, characterController, physics, movement);
+            if (physicsHelper) physicsHelper.update()
+            animatePlayer(player, characterController, physics, movement)
           },
-          timeline: timelineManager,
-        });
-      },
-    });
-  };
-  createScene();
-};
+          timeline: timelineManager
+        })
+      }
+    })
+  }
+  createScene()
+}
 </script>
 
 <template>

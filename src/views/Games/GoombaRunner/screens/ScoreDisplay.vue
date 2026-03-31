@@ -6,9 +6,9 @@
 </template>
 
 <script setup lang="ts">
-import { gameScore, highestScore } from "../helpers/setup";
+import { gameScore, highestScore } from '../helpers/setup'
 </script>
 
 <style scoped>
-@import "../styles.css";
+@import '../styles.css';
 </style>

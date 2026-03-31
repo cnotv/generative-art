@@ -33,10 +33,24 @@ defineEmits<{
   /* Text outline using webkit-text-stroke */
   -webkit-text-stroke: 3px #fff;
   /* Fallback text outline using multiple text shadows */
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
-    4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000,
-    0 -4px 0 #000, 0 4px 0 #000, var(--shadow-text-mario-large);
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    -1px 0 0 #fff,
+    1px 0 0 #fff,
+    0 -1px 0 #fff,
+    0 1px 0 #fff,
+    -4px -4px 0 #000,
+    4px -4px 0 #000,
+    -4px 4px 0 #000,
+    4px 4px 0 #000,
+    -4px 0 0 #000,
+    4px 0 0 #000,
+    0 -4px 0 #000,
+    0 4px 0 #000,
+    var(--shadow-text-mario-large);
 }
 
 .game--start .game__title > span {

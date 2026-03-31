@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { cn } from '@/lib/utilities';
+import { cn } from '@/lib/utilities'
 
 defineProps<{
-  modelValue?: string | number;
-  type?: 'text' | 'number' | 'password' | 'email';
-  placeholder?: string;
-  disabled?: boolean;
-  id?: string;
-  class?: string;
-  step?: number;
-}>();
+  modelValue?: string | number
+  type?: 'text' | 'number' | 'password' | 'email'
+  placeholder?: string
+  disabled?: boolean
+  id?: string
+  class?: string
+  step?: number
+}>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string | number];
-}>();
+  'update:modelValue': [value: string | number]
+}>()
 </script>
 
 <template>

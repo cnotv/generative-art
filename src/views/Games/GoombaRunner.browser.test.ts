@@ -11,10 +11,12 @@ describe('GoombaRunner - Component Loading', () => {
     const pinia = createPinia()
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{
-        path: '/',
-        component: GoombaRunner
-      }]
+      routes: [
+        {
+          path: '/',
+          component: GoombaRunner
+        }
+      ]
     })
 
     const wrapper = mount(GoombaRunner, {
@@ -34,14 +36,16 @@ describe('GoombaRunner - Component Loading', () => {
 
     // Wait for Three.js scene to initialize and render multiple frames
     // WebGL needs time to compile shaders, load models, and render
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    await new Promise((resolve) => setTimeout(resolve, 3000))
 
     // Wait for animation frames to ensure rendering happened
-    await new Promise(resolve => requestAnimationFrame(() => {
+    await new Promise((resolve) =>
       requestAnimationFrame(() => {
-        requestAnimationFrame(resolve)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve)
+        })
       })
-    }))
+    )
 
     // Take screenshot for visual verification
     const screenshot = await page.screenshot()

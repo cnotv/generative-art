@@ -172,7 +172,7 @@ describe('generateAreaPositions', () => {
       if (pattern === 'grid') {
         // Grid should create evenly spaced positions
         // Verify all positions are unique and within bounds
-        const uniquePositions = new Set(positions.map(p => `${p[0]},${p[2]}`))
+        const uniquePositions = new Set(positions.map((p) => `${p[0]},${p[2]}`))
         expect(uniquePositions.size).toBe(positions.length)
 
         // Verify positions are evenly distributed

@@ -1,42 +1,42 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import SchemaControls from './ConfigControls.vue';
-import RecordingControls from '@/components/RecordingControls.vue';
-import { Button } from '@/components/ui/button';
+import { computed } from 'vue'
+import SchemaControls from './ConfigControls.vue'
+import RecordingControls from '@/components/RecordingControls.vue'
+import { Button } from '@/components/ui/button'
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion';
-import { CameraPreset, cameraPresets } from '@webgamekit/threejs';
-import { useCameraConfigStore } from '@/stores/cameraConfig';
-import { useElementPropertiesStore } from '@/stores/elementProperties';
-import { storeToRefs } from 'pinia';
+  AccordionContent
+} from '@/components/ui/accordion'
+import { CameraPreset, cameraPresets } from '@webgamekit/threejs'
+import { useCameraConfigStore } from '@/stores/cameraConfig'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { storeToRefs } from 'pinia'
 
 interface Properties {
-  isRecording?: boolean;
-  minDurationMs?: number;
-  maxDurationMs?: number;
+  isRecording?: boolean
+  minDurationMs?: number
+  maxDurationMs?: number
 }
 
-defineProps<Properties>();
+defineProps<Properties>()
 
 const emit = defineEmits<{
-  start: [durationMs: number];
-  stop: [];
-}>();
+  start: [durationMs: number]
+  stop: []
+}>()
 
-const cameraConfigStore = useCameraConfigStore();
-const { activeSlot } = storeToRefs(cameraConfigStore);
-const { applyPresetToActiveSlot } = cameraConfigStore;
+const cameraConfigStore = useCameraConfigStore()
+const { activeSlot } = storeToRefs(cameraConfigStore)
+const { applyPresetToActiveSlot } = cameraConfigStore
 
-const elementPropertiesStore = useElementPropertiesStore();
-const { activeProperties } = storeToRefs(elementPropertiesStore);
+const elementPropertiesStore = useElementPropertiesStore()
+const { activeProperties } = storeToRefs(elementPropertiesStore)
 
 const hasExpandedSchema = computed(
   () => Object.keys(activeProperties.value?.schema ?? {}).length > 0
-);
+)
 
 const presetLabels: Record<CameraPreset, string> = {
   [CameraPreset.Perspective]: 'Perspective',
@@ -45,36 +45,33 @@ const presetLabels: Record<CameraPreset, string> = {
   [CameraPreset.Orbit]: 'Orbit',
   [CameraPreset.Orthographic]: 'Orthographic',
   [CameraPreset.OrthographicFollowing]: 'Ortho Follow',
-  [CameraPreset.TopDown]: 'Top Down',
-};
+  [CameraPreset.TopDown]: 'Top Down'
+}
 
 const activePresetType = computed<'perspective' | 'orthographic'>(() =>
   activeSlot.value ? cameraPresets[activeSlot.value.preset].type : 'perspective'
-);
+)
 
 const perspectivePresets = computed(() =>
   (Object.entries(presetLabels) as [CameraPreset, string][]).filter(
     ([preset]) => cameraPresets[preset].type === 'perspective'
   )
-);
+)
 
 const orthographicPresets = computed(() =>
   (Object.entries(presetLabels) as [CameraPreset, string][]).filter(
     ([preset]) => cameraPresets[preset].type === 'orthographic'
   )
-);
+)
 
 const filteredPresets = computed(() =>
-  activePresetType.value === 'perspective'
-    ? perspectivePresets.value
-    : orthographicPresets.value
-);
+  activePresetType.value === 'perspective' ? perspectivePresets.value : orthographicPresets.value
+)
 
 const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
-  const presets =
-    type === 'perspective' ? perspectivePresets.value : orthographicPresets.value;
-  if (presets.length > 0) applyPresetToActiveSlot(presets[0][0]);
-};
+  const presets = type === 'perspective' ? perspectivePresets.value : orthographicPresets.value
+  if (presets.length > 0) applyPresetToActiveSlot(presets[0][0])
+}
 </script>
 
 <template>

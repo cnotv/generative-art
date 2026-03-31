@@ -1,49 +1,49 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Image, Settings } from 'lucide-vue-next';
-import { usePanelsStore } from '@/stores/panels';
-import type { PanelType } from '@/stores/panels';
+import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Image, Settings } from 'lucide-vue-next'
+import { usePanelsStore } from '@/stores/panels'
+import type { PanelType } from '@/stores/panels'
 
 interface PanelButton {
-  type: PanelType;
-  icon: any;
-  label: string;
+  type: PanelType
+  icon: any
+  label: string
 }
 
 interface Properties {
-  showTextures?: boolean;
-  showConfig?: boolean;
+  showTextures?: boolean
+  showConfig?: boolean
 }
 
 const props = withDefaults(defineProps<Properties>(), {
   showTextures: false,
-  showConfig: false,
-});
+  showConfig: false
+})
 
-const panelsStore = usePanelsStore();
+const panelsStore = usePanelsStore()
 
 const panelButtons = computed<PanelButton[]>(() => {
-  const buttons: PanelButton[] = [];
+  const buttons: PanelButton[] = []
 
   if (props.showTextures) {
-    buttons.push({ type: 'textures', icon: Image, label: 'Textures' });
+    buttons.push({ type: 'textures', icon: Image, label: 'Textures' })
   }
 
   if (props.showConfig) {
-    buttons.push({ type: 'config', icon: Settings, label: 'Config' });
+    buttons.push({ type: 'config', icon: Settings, label: 'Config' })
   }
 
-  return buttons;
-});
+  return buttons
+})
 
-const hasActivePanels = computed(() => panelsStore.activePanels.size > 0);
+const hasActivePanels = computed(() => panelsStore.activePanels.size > 0)
 
-const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType);
+const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType)
 
 const handleToggle = (panelType: PanelType) => {
-  panelsStore.togglePanel(panelType);
-};
+  panelsStore.togglePanel(panelType)
+}
 </script>
 
 <template>

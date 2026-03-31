@@ -1,7 +1,7 @@
-import * as THREE from "three";
-import type { Ref } from "vue";
-import { createTimelineManager } from "@webgamekit/animation";
-import { config } from "./config";
+import * as THREE from 'three'
+import type { Ref } from 'vue'
+import { createTimelineManager } from '@webgamekit/animation'
+import { config } from './config'
 import {
   populateInitialBackgrounds,
   updateFallingBackgrounds,
@@ -13,10 +13,10 @@ import {
   resetTextureAreaBackgrounds,
   type BackgroundElement,
   type TextureAreaElement,
-  type TextureAreaLayerConfig,
-} from "./helpers/background";
-import { moveBlocks, resetObstacles, createCubes, createObstaclesGroup } from "./helpers/block";
-import { moveGround, resetGround, getGround } from "./helpers/ground";
+  type TextureAreaLayerConfig
+} from './helpers/background'
+import { moveBlocks, resetObstacles, createCubes, createObstaclesGroup } from './helpers/block'
+import { moveGround, resetGround, getGround } from './helpers/ground'
 import {
   ensurePlayerAboveGround,
   movePlayer,
@@ -26,38 +26,33 @@ import {
   updateExplosionParticles,
   updatePlayerAnimation,
   resetPlayer,
-  type PlayerMovement,
-} from "./helpers/player";
+  type PlayerMovement
+} from './helpers/player'
 
-import { getSpeed, initPhysics } from "./helpers/setup";
-import { createPlayer } from "./helpers/player";
-import {
-  incrementGameScore,
-  isGamePlaying,
-  isGameStart,
-  gameScore,
-} from "./helpers/setup";
+import { getSpeed, initPhysics } from './helpers/setup'
+import { createPlayer } from './helpers/player'
+import { incrementGameScore, isGamePlaying, isGameStart, gameScore } from './helpers/setup'
 
 const addHorizonLine = (scene: THREE.Scene) => {
   // Create a dark grey horizontal bar/line for cartoonish horizon effect
-  const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2); // Wide, thin bar
+  const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2) // Wide, thin bar
   const horizonMaterial = new THREE.MeshBasicMaterial({
     color: 0x333333, // Dark grey
     transparent: true,
-    opacity: 0.8,
-  });
+    opacity: 0.8
+  })
 
-  const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial);
-  horizonLine.name = 'Horizon';
+  const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial)
+  horizonLine.name = 'Horizon'
 
   // Position the horizon line slightly above the ground level
-  horizonLine.position.set(0, 11, -200); // Y=11 for horizon height, Z back a bit for depth
-  horizonLine.receiveShadow = false;
-  horizonLine.castShadow = false;
+  horizonLine.position.set(0, 11, -200) // Y=11 for horizon height, Z back a bit for depth
+  horizonLine.receiveShadow = false
+  horizonLine.castShadow = false
 
-  scene.add(horizonLine);
-  return horizonLine; // Return the horizon line so we can manipulate it during jumps
-};
+  scene.add(horizonLine)
+  return horizonLine // Return the horizon line so we can manipulate it during jumps
+}
 
 const createTimeline = async ({
   scene,
@@ -67,136 +62,119 @@ const createTimeline = async ({
   camera,
   uiStore,
   endGame,
-  onReset,
+  onReset
 }: {
-  scene: THREE.Scene;
-  getDelta: () => number;
-  world: any;
-  shouldClearObstacles: Ref<boolean>;
-  camera: THREE.PerspectiveCamera;
-  uiStore: any;
-  endGame: () => void;
-  onReset?: () => void;
+  scene: THREE.Scene
+  getDelta: () => number
+  world: any
+  shouldClearObstacles: Ref<boolean>
+  camera: THREE.PerspectiveCamera
+  uiStore: any
+  endGame: () => void
+  onReset?: () => void
 }) => {
-  const { physics, physicsHelper } = await initPhysics(scene);
-  const { player, playerController, model } = await createPlayer(
-    scene,
-    physics,
-    world
-  );
+  const { physics, physicsHelper } = await initPhysics(scene)
+  const { player, playerController, model } = await createPlayer(scene, physics, world)
 
-  const obstacles: any[] = [];
-  createObstaclesGroup(scene);
-  const backgrounds: BackgroundElement[] = [];
-  const groundTexture = getGround(scene, physics);
-  const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 };
-  const backgroundTimers = config.backgrounds.layers.map(() => 0);
-  const loggedCollisions = new Set<string>();
+  const obstacles: any[] = []
+  createObstaclesGroup(scene)
+  const backgrounds: BackgroundElement[] = []
+  const groundTexture = getGround(scene, physics)
+  const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 }
+  const backgroundTimers = config.backgrounds.layers.map(() => 0)
+  const loggedCollisions = new Set<string>()
 
   let textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
     (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
-  );
+  )
 
   const regenerateTextureArea = (areaName: string, layerConfigs: TextureAreaLayerConfig[]) => {
     // Remove old meshes for this area name
-    const removed = textureAreaBackgrounds.filter(element => element.mesh.name === areaName);
-    removed.forEach(element => scene.remove(element.mesh));
+    const removed = textureAreaBackgrounds.filter((element) => element.mesh.name === areaName)
+    removed.forEach((element) => scene.remove(element.mesh))
 
-    const remaining = textureAreaBackgrounds.filter(element => element.mesh.name !== areaName);
+    const remaining = textureAreaBackgrounds.filter((element) => element.mesh.name !== areaName)
 
     // Create new meshes from updated configs
-    const newElements = layerConfigs.flatMap(
-      lc => createTextureAreaBackgroundLayer(scene, world, lc)
-    );
+    const newElements = layerConfigs.flatMap((lc) =>
+      createTextureAreaBackgroundLayer(scene, world, lc)
+    )
 
-    textureAreaBackgrounds = [...remaining, ...newElements];
-  };
+    textureAreaBackgrounds = [...remaining, ...newElements]
+  }
 
-  let backgroundsPopulated = false;
-  const horizonLine = addHorizonLine(scene);
+  let backgroundsPopulated = false
+  const horizonLine = addHorizonLine(scene)
 
-  const timelineManager = createTimelineManager();
+  const timelineManager = createTimelineManager()
 
   timelineManager.addActions([
     {
-      name: "Cleanup and reset",
-      category: "game-logic",
+      name: 'Cleanup and reset',
+      category: 'game-logic',
       action: () => {
-        if (physicsHelper) physicsHelper.update();
-        updateExplosionParticles(scene, getDelta());
-      },
+        if (physicsHelper) physicsHelper.update()
+        updateExplosionParticles(scene, getDelta())
+      }
     },
     {
-      name: "Reset background",
-      category: "game-logic",
+      name: 'Reset background',
+      category: 'game-logic',
       action: () => {
         if (isGameStart && !backgroundsPopulated) {
-          populateInitialBackgrounds(scene, world, backgrounds);
-          backgroundsPopulated = true;
+          populateInitialBackgrounds(scene, world, backgrounds)
+          backgroundsPopulated = true
         }
-        updateFallingBackgrounds(getDelta(), backgrounds, scene);
-        updateFallingBackgrounds(getDelta(), textureAreaBackgrounds, scene);
+        updateFallingBackgrounds(getDelta(), backgrounds, scene)
+        updateFallingBackgrounds(getDelta(), textureAreaBackgrounds, scene)
         if (shouldClearObstacles.value) {
-          resetObstacles(obstacles, scene, physics);
-          resetBackgrounds(scene, world, backgrounds);
-          textureAreaBackgrounds = resetTextureAreaBackgrounds(scene, world, textureAreaBackgrounds);
-          backgroundsPopulated = true;
-          resetPlayer(player, scene);
-          resetGround(groundTexture);
-          loggedCollisions.clear();
-          shouldClearObstacles.value = false;
-          onReset?.();
+          resetObstacles(obstacles, scene, physics)
+          resetBackgrounds(scene, world, backgrounds)
+          textureAreaBackgrounds = resetTextureAreaBackgrounds(scene, world, textureAreaBackgrounds)
+          backgroundsPopulated = true
+          resetPlayer(player, scene)
+          resetGround(groundTexture)
+          loggedCollisions.clear()
+          shouldClearObstacles.value = false
+          onReset?.()
         }
-      },
+      }
     },
     {
-      name: "Generate cubes",
-      category: "game-logic",
+      name: 'Generate cubes',
+      category: 'game-logic',
       frequency: config.blocks.spacing,
       action: async () => {
-        if (!isGamePlaying.value) return;
-        await createCubes(scene, world, physics, obstacles);
-      },
+        if (!isGamePlaying.value) return
+        await createCubes(scene, world, physics, obstacles)
+      }
     },
     {
-      name: "Move ground",
-      category: "game-logic",
+      name: 'Move ground',
+      category: 'game-logic',
       action: () => {
-        moveGround(groundTexture, isGamePlaying.value, gameScore.value);
-      },
+        moveGround(groundTexture, isGamePlaying.value, gameScore.value)
+      }
     },
     {
-      name: "Move background",
-      category: "visual-effects",
+      name: 'Move background',
+      category: 'visual-effects',
       action: () => {
         if (isGamePlaying.value) {
-          createBackgrounds(
-            scene,
-            world,
-            backgrounds,
-            backgroundTimers,
-            gameScore.value
-          );
-          moveBackgrounds(scene, camera, backgrounds, gameScore.value);
-          moveAndRecycleTextureAreaBackgrounds(textureAreaBackgrounds, gameScore.value);
+          createBackgrounds(scene, world, backgrounds, backgroundTimers, gameScore.value)
+          moveBackgrounds(scene, camera, backgrounds, gameScore.value)
+          moveAndRecycleTextureAreaBackgrounds(textureAreaBackgrounds, gameScore.value)
         }
-      },
+      }
     },
     {
-      name: "Make Goomba run",
-      category: "user-input",
+      name: 'Make Goomba run',
+      category: 'user-input',
       action: () => {
-        ensurePlayerAboveGround(player);
-        movePlayer(
-          player,
-          playerController,
-          physics,
-          playerMovement,
-          isGamePlaying.value,
-          config
-        );
-        handleJump(player, isGamePlaying.value, uiStore, camera, horizonLine, config);
-        handleArcMovement(player);
+        ensurePlayerAboveGround(player)
+        movePlayer(player, playerController, physics, playerMovement, isGamePlaying.value, config)
+        handleJump(player, isGamePlaying.value, uiStore, camera, horizonLine, config)
+        handleArcMovement(player)
         checkCollisions(
           player,
           obstacles,
@@ -206,7 +184,7 @@ const createTimeline = async ({
           endGame,
           loggedCollisions,
           config
-        );
+        )
         updatePlayerAnimation(
           model,
           isGamePlaying.value,
@@ -214,28 +192,23 @@ const createTimeline = async ({
           getDelta,
           getSpeed,
           config
-        );
-      },
+        )
+      }
     },
 
     {
-      name: "Move obstacles",
-      category: "game-logic",
+      name: 'Move obstacles',
+      category: 'game-logic',
       action: () => {
-        if (!isGamePlaying.value) return;
-        moveBlocks(
-          obstacles,
-          physics,
-          gameScore.value,
-          player,
-          scene,
-          (points) => incrementGameScore(points)
-        );
-      },
-    },
-  ]);
+        if (!isGamePlaying.value) return
+        moveBlocks(obstacles, physics, gameScore.value, player, scene, (points) =>
+          incrementGameScore(points)
+        )
+      }
+    }
+  ])
 
-  return { timelineManager, regenerateTextureArea };
-};
+  return { timelineManager, regenerateTextureArea }
+}
 
-export { createTimeline };
+export { createTimeline }

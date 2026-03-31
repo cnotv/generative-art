@@ -1,30 +1,26 @@
 <script setup lang="ts">
-import IconPreview from '@/components/IconPreview.vue';
-import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Trash2 } from 'lucide-vue-next';
-import type { SceneElement } from '@/stores/debugScene';
-import { getElementIcon, getElementColor } from './elementUtilities';
+import IconPreview from '@/components/IconPreview.vue'
+import { Button } from '@/components/ui/button'
+import { Eye, EyeOff, Trash2 } from 'lucide-vue-next'
+import type { SceneElement } from '@/stores/debugScene'
+import { getElementIcon, getElementColor } from './elementUtilities'
 
 interface Properties {
-  element: SceneElement;
-  selected?: boolean;
+  element: SceneElement
+  selected?: boolean
 }
 
-defineProps<Properties>();
+defineProps<Properties>()
 
 const emit = defineEmits<{
-  click: [];
-  'toggle-visibility': [];
-  remove: [];
-}>();
+  click: []
+  'toggle-visibility': []
+  remove: []
+}>()
 </script>
 
 <template>
-  <div
-    class="element-item"
-    :class="{ 'element-item--selected': selected }"
-    @click="emit('click')"
-  >
+  <div class="element-item" :class="{ 'element-item--selected': selected }" @click="emit('click')">
     <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
     <div class="element-item__info">
       <span class="element-item__name">{{ element.label ?? element.name }}</span>

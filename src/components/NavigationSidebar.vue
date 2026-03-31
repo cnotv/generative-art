@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { generatedRoutes as generatedRoutesAll } from "@/config/router";
+import { generatedRoutes as generatedRoutesAll } from '@/config/router'
 const generatedRoutes = generatedRoutesAll.filter((route) => {
-  const slashCount = (route.path.match(/\//g) || []).length;
-  return slashCount <= 3;
-});
+  const slashCount = (route.path.match(/\//g) || []).length
+  return slashCount <= 3
+})
 </script>
 
 <template>
@@ -17,10 +17,7 @@ const generatedRoutes = generatedRoutesAll.filter((route) => {
         class="sidebar__link"
         active-class="sidebar__link--active"
       >
-        <div
-          class="sidebar__link__group"
-          v-if="generatedRoutes[index - 1]?.group !== route.group"
-        >
+        <div class="sidebar__link__group" v-if="generatedRoutes[index - 1]?.group !== route.group">
           {{ route.group }}
         </div>
         <span class="sidebar__link__text">{{ route.name }}</span>

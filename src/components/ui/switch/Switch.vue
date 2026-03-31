@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { SwitchRoot, SwitchThumb } from 'radix-vue';
+import { SwitchRoot, SwitchThumb } from 'radix-vue'
 
 defineProps<{
-  modelValue?: boolean;
-  disabled?: boolean;
-  name?: string;
-  id?: string;
-}>();
+  modelValue?: boolean
+  disabled?: boolean
+  name?: string
+  id?: string
+}>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean];
-}>();
+  'update:modelValue': [value: boolean]
+}>()
 </script>
 
 <template>

@@ -20,33 +20,33 @@
   --color-ring: hsl(0 0% 3.9%);
 
   // Panel item colors
-  --panel-item-bg:          hsl(0 0% 98%);
-  --panel-item-bg-hover:    hsl(0 0% 94%);
+  --panel-item-bg: hsl(0 0% 98%);
+  --panel-item-bg-hover: hsl(0 0% 94%);
   --panel-item-bg-selected: hsl(0 0% 90%);
-  --panel-content-bg:       hsl(0 0% 97%);
+  --panel-content-bg: hsl(0 0% 97%);
   --panel-toggle-active-bg: hsl(0 0% 83%);
-  --panel-overlay-bg:       hsl(0 0% 0% / 0.6);
-  --panel-remove-color:     hsl(0 80% 65%);
+  --panel-overlay-bg: hsl(0 0% 0% / 0.6);
+  --panel-remove-color: hsl(0 80% 65%);
 
   // Spacing scale
-  --spacing-0-5: 0.125rem;  // 2px
-  --spacing-1:   0.25rem;   // 4px
-  --spacing-1-5: 0.375rem;  // 6px
-  --spacing-2:   0.5rem;    // 8px
-  --spacing-3:   0.75rem;   // 12px
-  --spacing-4:   1rem;      // 16px
-  --spacing-5:   1.25rem;   // 20px
-  --spacing-6:   1.5rem;    // 24px
-  --spacing-8:   2rem;      // 32px
-  --spacing-10:  2.5rem;    // 40px
-  --spacing-12:  3rem;      // 48px
+  --spacing-0-5: 0.125rem; // 2px
+  --spacing-1: 0.25rem; // 4px
+  --spacing-1-5: 0.375rem; // 6px
+  --spacing-2: 0.5rem; // 8px
+  --spacing-3: 0.75rem; // 12px
+  --spacing-4: 1rem; // 16px
+  --spacing-5: 1.25rem; // 20px
+  --spacing-6: 1.5rem; // 24px
+  --spacing-8: 2rem; // 32px
+  --spacing-10: 2.5rem; // 40px
+  --spacing-12: 3rem; // 48px
 
   // Border radius scale
-  --radius-sm:   0.125rem;  // 2px
-  --radius-md:   0.375rem;  // 6px
-  --radius-lg:   0.5rem;    // 8px
-  --radius-xl:   0.75rem;   // 12px
-  --radius-2xl:  1rem;      // 16px
+  --radius-sm: 0.125rem; // 2px
+  --radius-md: 0.375rem; // 6px
+  --radius-lg: 0.5rem; // 8px
+  --radius-xl: 0.75rem; // 12px
+  --radius-2xl: 1rem; // 16px
   --radius-full: 9999px;
 
   // Typography — font families
@@ -54,20 +54,20 @@
   --font-mono: 'Monaco', 'Courier New', monospace;
 
   // Typography — font sizes
-  --font-size-2xs: 0.5625rem;  // 9px
-  --font-size-xs:  0.6875rem;  // 11px
-  --font-size-sm:  0.75rem;    // 12px
-  --font-size-base: 0.875rem;  // 14px
-  --font-size-md:  1rem;       // 16px
+  --font-size-2xs: 0.5625rem; // 9px
+  --font-size-xs: 0.6875rem; // 11px
+  --font-size-sm: 0.75rem; // 12px
+  --font-size-base: 0.875rem; // 14px
+  --font-size-md: 1rem; // 16px
 
   // Opacity
   --opacity-muted: 0.5;
 
   // Component sizes
-  --btn-sm-height:  1.75rem;  // 28px
-  --btn-md-height:  2rem;     // 32px
-  --btn-lg-height:  2.5rem;   // 40px
-  --thumbnail-size: 2.5rem;   // 40px
+  --btn-sm-height: 1.75rem; // 28px
+  --btn-md-height: 2rem; // 32px
+  --btn-lg-height: 2.5rem; // 40px
+  --thumbnail-size: 2.5rem; // 40px
 
   // Shadows
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -76,7 +76,7 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
   // Layout dimensions
-  --nav-height:  3rem;
+  --nav-height: 3rem;
   --panel-width: 20rem;
 
   // Minimap
@@ -86,25 +86,25 @@
   --minimap-opacity: 0.85;
 
   // Z-index scale
-  --z-base:     0;
+  --z-base: 0;
   --z-dropdown: 10;
-  --z-sticky:   20;
-  --z-fixed:    30;
-  --z-overlay:  40;
-  --z-modal:    50;
-  --z-popover:  60;
-  --z-toast:    70;
-  --z-tooltip:  80;
-  --z-nav:      90;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+  --z-nav: 90;
 }
 
 // Dark theme - manual toggle
 .dark,
-[data-theme="dark"] {
-  --panel-item-bg:          hsl(0 0% 12%);
-  --panel-item-bg-hover:    hsl(0 0% 18%);
+[data-theme='dark'] {
+  --panel-item-bg: hsl(0 0% 12%);
+  --panel-item-bg-hover: hsl(0 0% 18%);
   --panel-item-bg-selected: hsl(0 0% 22%);
-  --panel-content-bg:       hsl(0 0% 10%);
+  --panel-content-bg: hsl(0 0% 10%);
   --panel-toggle-active-bg: hsl(0 0% 25%);
 
   --color-background: hsl(0 0% 9%);
@@ -132,11 +132,11 @@
 
 // Dark theme - system preference auto-detection
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --panel-item-bg:          hsl(0 0% 12%);
-    --panel-item-bg-hover:    hsl(0 0% 18%);
+  :root:not([data-theme='light']) {
+    --panel-item-bg: hsl(0 0% 12%);
+    --panel-item-bg-hover: hsl(0 0% 18%);
     --panel-item-bg-selected: hsl(0 0% 22%);
-    --panel-content-bg:       hsl(0 0% 10%);
+    --panel-content-bg: hsl(0 0% 10%);
     --panel-toggle-active-bg: hsl(0 0% 25%);
 
     --color-background: hsl(0 0% 9%);

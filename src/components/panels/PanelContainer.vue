@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
-  side: 'left' | 'right';
-}>();
+  side: 'left' | 'right'
+}>()
 </script>
 
 <template>
@@ -93,7 +93,6 @@ defineProps<{
     width: var(--panel-width, 20rem);
     border-left: 1px solid var(--color-border);
   }
-
 }
 
 .sheet-close {

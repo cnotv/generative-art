@@ -1,19 +1,19 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
 
 /**
  * Configuration interface for zigzag texture parameters
  */
 interface ZigzagTextureOptions {
-  size?: number;
-  backgroundColor?: string;
-  zigzagColor?: string;
-  secondaryColor?: string;
-  zigzagHeight?: number;
-  zigzagWidth?: number;
-  primaryThickness?: number;
-  secondaryThickness?: number;
-  repeatX?: number;
-  repeatY?: number;
+  size?: number
+  backgroundColor?: string
+  zigzagColor?: string
+  secondaryColor?: string
+  zigzagHeight?: number
+  zigzagWidth?: number
+  primaryThickness?: number
+  secondaryThickness?: number
+  repeatX?: number
+  repeatY?: number
 }
 
 /**
@@ -31,39 +31,39 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
     primaryThickness = 3,
     repeatX = 50,
     repeatY = 50
-  } = options;
+  } = options
 
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
 
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = backgroundColor
+  ctx.fillRect(0, 0, size, size)
 
-  ctx.strokeStyle = zigzagColor;
-  ctx.lineWidth = primaryThickness;
-  ctx.beginPath();
+  ctx.strokeStyle = zigzagColor
+  ctx.lineWidth = primaryThickness
+  ctx.beginPath()
 
-  const numberZigzags = Math.ceil(size / zigzagWidth);
+  const numberZigzags = Math.ceil(size / zigzagWidth)
 
   for (let i = 0; i <= numberZigzags; i++) {
-    const x = i * zigzagWidth;
-    const y = (i % 2 === 0) ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2;
-    
+    const x = i * zigzagWidth
+    const y = i % 2 === 0 ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2
+
     if (i === 0) {
-      ctx.moveTo(x, y);
+      ctx.moveTo(x, y)
     } else {
-      ctx.lineTo(x, y);
+      ctx.lineTo(x, y)
     }
   }
-  
-  ctx.stroke();
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeatX, repeatY);
-  
-  return texture;
-};
+  ctx.stroke()
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(repeatX, repeatY)
+
+  return texture
+}

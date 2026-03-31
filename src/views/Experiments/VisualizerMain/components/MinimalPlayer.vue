@@ -35,7 +35,7 @@
           class="control-button play-button"
           :title="isPlaying ? 'Pause' : 'Play'"
         >
-          {{ isPlaying ? "⏸" : "▶" }}
+          {{ isPlaying ? '⏸' : '▶' }}
         </button>
 
         <!-- Progress bar -->
@@ -57,7 +57,7 @@
             class="control-button volume-button"
             :title="isMuted ? 'Unmute' : 'Mute'"
           >
-            {{ isMuted ? "🔇" : "🔊" }}
+            {{ isMuted ? '🔇' : '🔊' }}
           </button>
           <input
             type="range"
@@ -75,118 +75,117 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch } from 'vue'
 
 interface Properties {
-  songTitle: string;
-  artist: string;
-  artistLink: string;
-  showAudio?: boolean;
-  audioSrc?: string;
+  songTitle: string
+  artist: string
+  artistLink: string
+  showAudio?: boolean
+  audioSrc?: string
 }
 
 withDefaults(defineProps<Properties>(), {
   showAudio: false,
-  audioSrc: "",
-});
+  audioSrc: ''
+})
 
 const emit = defineEmits<{
-  audioReady: [element: HTMLAudioElement];
-}>();
+  audioReady: [element: HTMLAudioElement]
+}>()
 
 // Audio player state
-const audioElement = ref<HTMLAudioElement>();
-const isPlaying = ref(false);
-const currentTime = ref(0);
-const duration = ref(0);
-const volume = ref(1);
-const isMuted = ref(false);
-const progressPercent = ref(0);
+const audioElement = ref<HTMLAudioElement>()
+const isPlaying = ref(false)
+const currentTime = ref(0)
+const duration = ref(0)
+const volume = ref(1)
+const isMuted = ref(false)
+const progressPercent = ref(0)
 
 const handleLoadedData = () => {
   if (audioElement.value) {
-    emit("audioReady", audioElement.value);
+    emit('audioReady', audioElement.value)
   }
-};
+}
 
 const togglePlayPause = () => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
   if (isPlaying.value) {
-    audioElement.value.pause();
+    audioElement.value.pause()
   } else {
-    audioElement.value.play();
+    audioElement.value.play()
   }
-};
+}
 
 const updateTime = () => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
-  currentTime.value = audioElement.value.currentTime;
-  progressPercent.value =
-    duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0;
-};
+  currentTime.value = audioElement.value.currentTime
+  progressPercent.value = duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
+}
 
 const updateDuration = () => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
-  duration.value = audioElement.value.duration;
-};
+  duration.value = audioElement.value.duration
+}
 
 const seek = (event: MouseEvent) => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
-  const progressContainer = event.currentTarget as HTMLElement;
-  const rect = progressContainer.getBoundingClientRect();
-  const clickX = event.clientX - rect.left;
-  const percent = clickX / rect.width;
-  const newTime = percent * duration.value;
+  const progressContainer = event.currentTarget as HTMLElement
+  const rect = progressContainer.getBoundingClientRect()
+  const clickX = event.clientX - rect.left
+  const percent = clickX / rect.width
+  const newTime = percent * duration.value
 
-  audioElement.value.currentTime = newTime;
-};
+  audioElement.value.currentTime = newTime
+}
 
 const toggleMute = () => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
-  isMuted.value = !isMuted.value;
-  audioElement.value.muted = isMuted.value;
-};
+  isMuted.value = !isMuted.value
+  audioElement.value.muted = isMuted.value
+}
 
 const updateVolume = () => {
-  if (!audioElement.value) return;
+  if (!audioElement.value) return
 
-  audioElement.value.volume = volume.value;
+  audioElement.value.volume = volume.value
   if (volume.value === 0) {
-    isMuted.value = true;
-    audioElement.value.muted = true;
+    isMuted.value = true
+    audioElement.value.muted = true
   } else if (isMuted.value) {
-    isMuted.value = false;
-    audioElement.value.muted = false;
+    isMuted.value = false
+    audioElement.value.muted = false
   }
-};
+}
 
 const formatTime = (seconds: number): string => {
-  if (isNaN(seconds)) return "0:00";
+  if (isNaN(seconds)) return '0:00'
 
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-};
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
 
 const handleEnded = () => {
   // Since we're using loop="true" in the template, this will rarely trigger
   // but we'll reset playing state just in case
-  isPlaying.value = false;
-};
+  isPlaying.value = false
+}
 
 // Watch for volume changes
-watch(volume, updateVolume);
+watch(volume, updateVolume)
 
 onMounted(() => {
   if (audioElement.value) {
-    audioElement.value.volume = volume.value;
+    audioElement.value.volume = volume.value
   }
-});
+})
 </script>
 
 <style scoped>

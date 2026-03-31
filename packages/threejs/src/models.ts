@@ -1,11 +1,11 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import RAPIER from '@dimforge/rapier3d-compat';
-import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation';
-import { ModelOptions, ComplexModel, Model } from './types';
-import { getPhysic } from './getters';
-import { applyOriginTranslation } from './core';
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import RAPIER from '@dimforge/rapier3d-compat'
+import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation'
+import { ModelOptions, ComplexModel, Model } from './types'
+import { getPhysic } from './getters'
+import { applyOriginTranslation } from './core'
 
 /**
  * Apply material properties to a mesh
@@ -30,13 +30,13 @@ export const applyMaterial = (
     clearcoatRoughness,
     ior,
     thickness,
-    envMapIntensity,
+    envMapIntensity
   }: ModelOptions
 ) => {
   if (material) {
-    const oldMaterial = mesh.material as any;
-    const meshColor = color || (oldMaterial?.color || 0xffffff);
-    const isTransparent = transparent ?? (opacity ?? 1) < 1;
+    const oldMaterial = mesh.material as any
+    const meshColor = color || oldMaterial?.color || 0xffffff
+    const isTransparent = transparent ?? (opacity ?? 1) < 1
 
     // Common properties for all materials that support them
     const baseProperties: any = {
@@ -45,111 +45,116 @@ export const applyMaterial = (
       depthWrite: depthWrite ?? (isTransparent ? false : true),
       alphaTest: alphaTest ?? 0,
       wireframe: wireframe ?? false,
-      color: meshColor,
-    };
+      color: meshColor
+    }
 
     if (oldMaterial?.map) {
-      baseProperties.map = oldMaterial.map;
+      baseProperties.map = oldMaterial.map
     }
 
     if (material === 'MeshPhysicalMaterial') {
       const physicalMaterialProperties: any = {
-        ...baseProperties,
-      };
+        ...baseProperties
+      }
 
-      if (reflectivity !== undefined) physicalMaterialProperties.reflectivity = reflectivity;
-      if (roughness !== undefined) physicalMaterialProperties.roughness = roughness;
-      if (transmission !== undefined) physicalMaterialProperties.transmission = transmission;
-      if (metalness !== undefined) physicalMaterialProperties.metalness = metalness;
-      if (clearcoat !== undefined) physicalMaterialProperties.clearcoat = clearcoat;
-      if (clearcoatRoughness !== undefined) physicalMaterialProperties.clearcoatRoughness = clearcoatRoughness;
-      if (ior !== undefined) physicalMaterialProperties.ior = ior;
-      if (thickness !== undefined) physicalMaterialProperties.thickness = thickness;
-      if (envMapIntensity !== undefined) physicalMaterialProperties.envMapIntensity = envMapIntensity;
+      if (reflectivity !== undefined) physicalMaterialProperties.reflectivity = reflectivity
+      if (roughness !== undefined) physicalMaterialProperties.roughness = roughness
+      if (transmission !== undefined) physicalMaterialProperties.transmission = transmission
+      if (metalness !== undefined) physicalMaterialProperties.metalness = metalness
+      if (clearcoat !== undefined) physicalMaterialProperties.clearcoat = clearcoat
+      if (clearcoatRoughness !== undefined)
+        physicalMaterialProperties.clearcoatRoughness = clearcoatRoughness
+      if (ior !== undefined) physicalMaterialProperties.ior = ior
+      if (thickness !== undefined) physicalMaterialProperties.thickness = thickness
+      if (envMapIntensity !== undefined)
+        physicalMaterialProperties.envMapIntensity = envMapIntensity
 
-      mesh.material = new THREE.MeshPhysicalMaterial(physicalMaterialProperties);
+      mesh.material = new THREE.MeshPhysicalMaterial(physicalMaterialProperties)
     } else if (material === 'MeshStandardMaterial') {
       const standardMaterialProperties: any = {
-        ...baseProperties,
-      };
+        ...baseProperties
+      }
 
-      if (roughness !== undefined) standardMaterialProperties.roughness = roughness;
-      if (metalness !== undefined) standardMaterialProperties.metalness = metalness;
+      if (roughness !== undefined) standardMaterialProperties.roughness = roughness
+      if (metalness !== undefined) standardMaterialProperties.metalness = metalness
 
-      mesh.material = new THREE.MeshStandardMaterial(standardMaterialProperties);
+      mesh.material = new THREE.MeshStandardMaterial(standardMaterialProperties)
     } else if (material === 'MeshLambertMaterial') {
       mesh.material = new THREE.MeshLambertMaterial({
         ...baseProperties,
-        flatShading: false,
-      });
+        flatShading: false
+      })
     } else if (material === 'MeshPhongMaterial') {
       mesh.material = new THREE.MeshPhongMaterial({
         ...baseProperties,
-        shininess: 30,
-      });
+        shininess: 30
+      })
     } else if (material === 'MeshBasicMaterial') {
       mesh.material = new THREE.MeshBasicMaterial({
-        ...baseProperties,
-      });
+        ...baseProperties
+      })
     }
   }
 
-  return mesh;
-};
+  return mesh
+}
 
 export const cloneModel = (model: Model, scene: THREE.Scene, options: ModelOptions[]): void => {
   options.forEach(({ position, rotation, scale }) => {
-    const clone = model.clone();
-    clone.position.set(...position!);
-    clone.rotation.set(...rotation!);
-    clone.scale.set(...scale!);
-    scene.add(clone);
-  });
-};
+    const clone = model.clone()
+    clone.position.set(...position!)
+    clone.rotation.set(...rotation!)
+    clone.scale.set(...scale!)
+    scene.add(clone)
+  })
+}
 
 /**
  * Change colors of children contained in a mesh
- * @param mesh 
- * @param materialColors 
+ * @param mesh
+ * @param materialColors
  */
 export const colorModel = (mesh: Model, materialColors: number[] = []) => {
-  let meshIndex = 0;
+  let meshIndex = 0
   mesh.traverse((child: any) => {
     if (child.isMesh && child.material) {
-      const material = child.material;
-      const targetColor = materialColors[meshIndex % materialColors.length];
+      const material = child.material
+      const targetColor = materialColors[meshIndex % materialColors.length]
 
       if (Array.isArray(material)) {
         material.forEach((mat: any) => {
           if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial) {
-            mat.color.setHex(targetColor);
+            mat.color.setHex(targetColor)
           }
-        });
+        })
       } else if (material.isMeshStandardMaterial || material.isMeshPhongMaterial) {
-        material.color.setHex(targetColor);
+        material.color.setHex(targetColor)
       }
 
-      meshIndex++;
+      meshIndex++
     }
-  });
+  })
 
-  return mesh;
-};
+  return mesh
+}
 
 /**
  * Return all the animations for given filename
- * @param filename 
- * @returns 
+ * @param filename
+ * @returns
  */
-export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | string[]): Promise<Record<string, THREE.AnimationAction>> => {
-  const files = Array.isArray(filenames) ? filenames : [filenames];
+export const getAnimations = (
+  mixer: THREE.AnimationMixer,
+  filenames: string | string[]
+): Promise<Record<string, THREE.AnimationAction>> => {
+  const files = Array.isArray(filenames) ? filenames : [filenames]
   return new Promise((resolve, reject) => {
-    const loader = new FBXLoader();
-    const allActions: Record<string, THREE.AnimationAction> = {};
-    let loadedCount = 0;
+    const loader = new FBXLoader()
+    const allActions: Record<string, THREE.AnimationAction> = {}
+    let loadedCount = 0
     if (files.length === 0) {
-      resolve(allActions);
-      return;
+      resolve(allActions)
+      return
     }
     files.forEach((filename) => {
       loader.load(
@@ -157,36 +162,36 @@ export const getAnimations = (mixer: THREE.AnimationMixer, filenames: string | s
         (animation) => {
           animation.animations.forEach((anim) => {
             // Use filename (without extension) as base name
-            let baseName = filename.split('/').pop() || filename;
-            baseName = baseName.replace(/\.[^./]+$/, "");
-            let name = baseName;
-            let index = 1;
+            let baseName = filename.split('/').pop() || filename
+            baseName = baseName.replace(/\.[^./]+$/, '')
+            let name = baseName
+            let index = 1
             while (Object.prototype.hasOwnProperty.call(allActions, name)) {
-              name = `${baseName}_${index++}`;
+              name = `${baseName}_${index++}`
             }
-            allActions[name] = mixer.clipAction(anim);
-          });
-          loadedCount++;
+            allActions[name] = mixer.clipAction(anim)
+          })
+          loadedCount++
           if (loadedCount === files.length) {
-            resolve(allActions);
+            resolve(allActions)
           }
         },
         undefined,
         (error) => {
-          reject(error);
+          reject(error)
         }
-      );
-    });
-  });
-};
+      )
+    })
+  })
+}
 
 /**
  * Load any type of mode, apply default values and add physic to it
- * @param scene 
- * @param world 
+ * @param scene
+ * @param world
  * @param path Path of the file to be loaded
- * @param {ModelOptions} options Options for the model 
- * @returns 
+ * @param {ModelOptions} options Options for the model
+ * @returns
  */
 export const getModel = async (
   scene: THREE.Scene,
@@ -230,49 +235,87 @@ export const getModel = async (
     animations,
     shape = 'cuboid',
     materialColors,
-    onSpawn,
-  }: ModelOptions = {},
+    onSpawn
+  }: ModelOptions = {}
 ): Promise<ComplexModel> => {
-  const initialValues = { size, rotation, position, color };
-  const isGLTF = ['glb', '.gltf'].some(extension => path.includes(extension));
-  let mesh: Model;
-  let gltf: any = {};
+  const initialValues = { size, rotation, position, color }
+  const isGLTF = ['glb', '.gltf'].some((extension) => path.includes(extension))
+  let mesh: Model
+  let gltf: any = {}
 
   if (isGLTF) {
-    const result = await loadGLTF(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow});
-    mesh = result.model;
-    gltf = result.gltf;
+    const result = await loadGLTF(path, {
+      clearcoat,
+      clearcoatRoughness,
+      ior,
+      thickness,
+      envMapIntensity,
+      position,
+      scale,
+      rotation,
+      color,
+      opacity,
+      material,
+      reflectivity,
+      roughness,
+      metalness,
+      transmission,
+      texture,
+      castShadow,
+      receiveShadow
+    })
+    mesh = result.model
+    gltf = result.gltf
   } else {
-    mesh = await loadFBX(path, { clearcoat, clearcoatRoughness, ior, thickness, envMapIntensity, position, scale, rotation, color, opacity, material, reflectivity, roughness, metalness, transmission, texture, castShadow, receiveShadow });
+    mesh = await loadFBX(path, {
+      clearcoat,
+      clearcoatRoughness,
+      ior,
+      thickness,
+      envMapIntensity,
+      position,
+      scale,
+      rotation,
+      color,
+      opacity,
+      material,
+      reflectivity,
+      roughness,
+      metalness,
+      transmission,
+      texture,
+      castShadow,
+      receiveShadow
+    })
   }
 
   mesh.traverse((child: any) => {
     if (child.isMesh) {
-      child.castShadow = castShadow;
-      child.receiveShadow = receiveShadow;
+      child.castShadow = castShadow
+      child.receiveShadow = receiveShadow
     }
-  });
+  })
 
   if (materialColors && materialColors.length > 0) {
-    colorModel(mesh, materialColors);
+    colorModel(mesh, materialColors)
   }
 
-  if (name) mesh.name = name;
-  scene.add(mesh);
+  if (name) mesh.name = name
+  scene.add(mesh)
 
-  let helper;
+  let helper
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, helperColor);
-    scene.add(helper);
+    helper = new THREE.BoxHelper(mesh, helperColor)
+    scene.add(helper)
   }
 
-  const mixer = new THREE.AnimationMixer(mesh);
-  let actions = {};
+  const mixer = new THREE.AnimationMixer(mesh)
+  let actions = {}
   if (animations) {
-    actions = {...actions, ...await getAnimations(mixer, animations)};
+    actions = { ...actions, ...(await getAnimations(mixer, animations)) }
   }
   if (gltf.animations?.length) {
-    actions = {...actions, ...getAnimationsModel(mixer, mesh, gltf)};
+    actions = { ...actions, ...getAnimationsModel(mixer, mesh, gltf) }
   }
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
@@ -290,8 +333,8 @@ export const getModel = async (
     mass,
     shape,
     type,
-    enabledRotations,
-  });
+    enabledRotations
+  })
 
   const complexModel = Object.assign(mesh, {
     userData: {
@@ -306,65 +349,73 @@ export const getModel = async (
       hasGravity,
       onSpawn
     }
-  });
+  })
 
   // Invoke onSpawn callback if provided
   if (onSpawn) {
-    onSpawn();
+    onSpawn()
   }
 
-  return complexModel;
-};
+  return complexModel
+}
 
 /**
  * Attach animations to a model
- * @param model 
- * @param fileName 
- * @returns 
+ * @param model
+ * @param fileName
+ * @returns
  */
-export const loadAnimation = (model: Model, fileName: string, index: number = 0): Promise<THREE.AnimationMixer> => {
-  return new Promise((resolve) => {
-    const loader = new FBXLoader();
-    loader.load(`/${fileName}`, (animation) => {
-      const mixer = new THREE.AnimationMixer(model);
-      const action = mixer.clipAction((model?.animations?.length ? model : animation).animations[index]);
-      action.play();
-      resolve(mixer);
-    });
-  });
-};
-
-export const loadFBX = (
+export const loadAnimation = (
+  model: Model,
   fileName: string,
-  options: ModelOptions = {}
-): Promise<Model> => {
+  index: number = 0
+): Promise<THREE.AnimationMixer> => {
+  return new Promise((resolve) => {
+    const loader = new FBXLoader()
+    loader.load(`/${fileName}`, (animation) => {
+      const mixer = new THREE.AnimationMixer(model)
+      const action = mixer.clipAction(
+        (model?.animations?.length ? model : animation).animations[index]
+      )
+      action.play()
+      resolve(mixer)
+    })
+  })
+}
+
+export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<Model> => {
   const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
     castShadow = false,
-    receiveShadow = false,
-  } = options;
+    receiveShadow = false
+  } = options
 
   return new Promise((resolve, reject) => {
-    const loader = new FBXLoader();
-    loader.load(`/${fileName}`, (model) => {
-      model.position.set(...position);
-      model.scale.set(...scale);
-      model.rotation.set(...rotation);
-      model.castShadow = castShadow;
-      model.receiveShadow = receiveShadow;
- 
-      model.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          applyMaterial(child as THREE.Mesh, options);
-        }
-      });
-      
-      resolve(model);
-    }, undefined, reject);
-  });
-};
+    const loader = new FBXLoader()
+    loader.load(
+      `/${fileName}`,
+      (model) => {
+        model.position.set(...position)
+        model.scale.set(...scale)
+        model.rotation.set(...rotation)
+        model.castShadow = castShadow
+        model.receiveShadow = receiveShadow
+
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            applyMaterial(child as THREE.Mesh, options)
+          }
+        })
+
+        resolve(model)
+      },
+      undefined,
+      reject
+    )
+  })
+}
 
 /**
  * Return threeJS valid 3D model
@@ -372,35 +423,40 @@ export const loadFBX = (
 export const loadGLTF = (
   fileName: string,
   options: ModelOptions = {}
-): Promise<{ model: Model, gltf: any }> => {
+): Promise<{ model: Model; gltf: any }> => {
   const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
     scale = [1, 1, 1],
     castShadow = false,
-    receiveShadow = false,
-  } = options;
+    receiveShadow = false
+  } = options
 
   return new Promise((resolve, reject) => {
-    const loader = new GLTFLoader();
-    loader.load(`/${fileName}`, (gltf) => {
-      const model = gltf.scene;
-      model.castShadow = castShadow;
-      model.receiveShadow = receiveShadow;
-      model.position.set(...position);
-      model.scale.set(...scale);
-      model.rotation.set(...rotation);
-      
-      model.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          applyMaterial(child as THREE.Mesh, options);
-        }
-      });
-      
-      resolve({ model, gltf });
-    }, undefined, reject);
-  });
-};
+    const loader = new GLTFLoader()
+    loader.load(
+      `/${fileName}`,
+      (gltf) => {
+        const model = gltf.scene
+        model.castShadow = castShadow
+        model.receiveShadow = receiveShadow
+        model.position.set(...position)
+        model.scale.set(...scale)
+        model.rotation.set(...rotation)
+
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            applyMaterial(child as THREE.Mesh, options)
+          }
+        })
+
+        resolve({ model, gltf })
+      },
+      undefined,
+      reject
+    )
+  })
+}
 
 /**
  * Create a ball with physics, texture, and shadow
@@ -436,13 +492,13 @@ export const getBall = (
     receiveShadow = true,
     material = 'MeshPhysicalMaterial',
     texture,
-    onSpawn,
-  }: ModelOptions = {},
+    onSpawn
+  }: ModelOptions = {}
 ): ComplexModel => {
-  const initialValues = { size, rotation: [0, 0, 0] as CoordinateTuple, position, color };
+  const initialValues = { size, rotation: [0, 0, 0] as CoordinateTuple, position, color }
 
   // Create and add model
-  const geometry = new THREE.SphereGeometry(size as number);
+  const geometry = new THREE.SphereGeometry(size as number)
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
     transmission,
@@ -451,23 +507,23 @@ export const getBall = (
     reflectivity,
     roughness,
     metalness,
-    material,
-  });
+    material
+  })
 
   if (texture) {
-    const textureLoader = new THREE.TextureLoader();
+    const textureLoader = new THREE.TextureLoader()
     if (Array.isArray(mesh.material)) {
-      (mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+      ;(mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture)
     } else {
-      (mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture);
+      ;(mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture)
     }
   }
 
-  if (name) mesh.name = name;
-  mesh.position.set(...(position as CoordinateTuple));
-  mesh.castShadow = castShadow;
-  mesh.receiveShadow = receiveShadow;
-  scene.add(mesh);
+  if (name) mesh.name = name
+  mesh.position.set(...(position as CoordinateTuple))
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
+  scene.add(mesh)
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     position,
@@ -482,13 +538,13 @@ export const getBall = (
     angular,
     mass,
     shape: 'ball',
-    type,
-  });
+    type
+  })
 
-  let helper;
+  let helper
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, 0x000000);
-    scene.add(helper);
+    helper = new THREE.BoxHelper(mesh, 0x000000)
+    scene.add(helper)
   }
 
   const complexModel = Object.assign(mesh, {
@@ -504,15 +560,15 @@ export const getBall = (
       hasGravity,
       onSpawn
     }
-  });
+  })
 
   // Invoke onSpawn callback if provided
   if (onSpawn) {
-    onSpawn();
+    onSpawn()
   }
 
-  return complexModel;
-};
+  return complexModel
+}
 
 /**
  * Create a cube with physics, texture, and shadow
@@ -559,17 +615,17 @@ export const getCube = (
     wireframe = false,
     renderOrder = 0,
     side,
-    onSpawn,
-  }: ModelOptions = {},
+    onSpawn
+  }: ModelOptions = {}
 ): ComplexModel => {
-  const initialValues = { size, rotation, position, color };
+  const initialValues = { size, rotation, position, color }
 
   // Create and add model
-  const sizeArray = typeof size === 'number' ? [size, size, size] as CoordinateTuple : size;
-  const geometry = new THREE.BoxGeometry(...sizeArray);
+  const sizeArray = typeof size === 'number' ? ([size, size, size] as CoordinateTuple) : size
+  const geometry = new THREE.BoxGeometry(...sizeArray)
 
   // Apply origin translation to position edges at specified coordinates
-  applyOriginTranslation(geometry, sizeArray, origin);
+  applyOriginTranslation(geometry, sizeArray, origin)
 
   const mesh = applyMaterial(new THREE.Mesh(geometry), {
     color,
@@ -583,22 +639,22 @@ export const getCube = (
     depthWrite,
     alphaTest,
     side,
-    wireframe,
-  });
+    wireframe
+  })
 
   if (texture) {
-    const textureLoader = new THREE.TextureLoader();
-    const loadedTexture = textureLoader.load(texture);
-    (mesh.material as THREE.MeshStandardMaterial).map = loadedTexture;
+    const textureLoader = new THREE.TextureLoader()
+    const loadedTexture = textureLoader.load(texture)
+    ;(mesh.material as THREE.MeshStandardMaterial).map = loadedTexture
   }
 
-  if (name) mesh.name = name;
-  mesh.position.set(...(position as CoordinateTuple));
-  mesh.rotation.set(...rotation);
-  mesh.castShadow = castShadow;
-  mesh.receiveShadow = receiveShadow;
-  mesh.renderOrder = renderOrder;
-  scene.add(mesh);
+  if (name) mesh.name = name
+  mesh.position.set(...(position as CoordinateTuple))
+  mesh.rotation.set(...rotation)
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
+  mesh.renderOrder = renderOrder
+  scene.add(mesh)
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     position,
@@ -614,13 +670,13 @@ export const getCube = (
     boundary,
     mass,
     shape: 'cuboid',
-    type,
-  });
+    type
+  })
 
-  let helper;
+  let helper
   if (showHelper) {
-    helper = new THREE.BoxHelper(mesh, helperColor);
-    scene.add(helper);
+    helper = new THREE.BoxHelper(mesh, helperColor)
+    scene.add(helper)
   }
 
   const complexModel = Object.assign(mesh, {
@@ -636,15 +692,15 @@ export const getCube = (
       hasGravity,
       onSpawn
     }
-  });
+  })
 
   // Invoke onSpawn callback if provided
   if (onSpawn) {
-    onSpawn();
+    onSpawn()
   }
 
-  return complexModel;
-};
+  return complexModel
+}
 
 /**
  * Create walls around a space and return them as a single group
@@ -660,16 +716,16 @@ export const getWalls = (
     length = 200,
     height = 50,
     depth = 0.2,
-    opacity = 1,
-  }: { name?: string; length?: number; height?: number; depth?: number; opacity?: number } = {},
+    opacity = 1
+  }: { name?: string; length?: number; height?: number; depth?: number; opacity?: number } = {}
 ): THREE.Group => {
-  const group = new THREE.Group();
+  const group = new THREE.Group()
 
-  [
+  ;[
     { position: [0, 0, 0], size: [length, depth, length], suffix: 'floor' },
     { position: [-length / 2, 0, 0], size: [depth, height, length], suffix: 'left' },
     { position: [length / 2, 0, 0], size: [depth, height, length], suffix: 'right' },
-    { position: [0, 0, -length / 2], size: [length, height, depth], suffix: 'back' },
+    { position: [0, 0, -length / 2], size: [length, height, depth], suffix: 'back' }
   ].forEach(({ position, size, suffix }) => {
     const wall = getCube(scene, world, {
       name: name ? `${name}-${suffix}` : undefined,
@@ -677,12 +733,12 @@ export const getWalls = (
       opacity,
       size: size as CoordinateTuple,
       position: position as CoordinateTuple,
-      type: 'fixed',
-    });
-    scene.remove(wall);
-    group.add(wall);
-  });
+      type: 'fixed'
+    })
+    scene.remove(wall)
+    group.add(wall)
+  })
 
-  scene.add(group);
-  return group;
-};
+  scene.add(group)
+  return group
+}

@@ -1,133 +1,144 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { CoordinateInput } from "@/components/ui/coordinate-input";
-import ColorPicker from "@/components/ui/color-picker/ColorPicker.vue";
-import ButtonSelector from "@/components/ui/button-selector/ButtonSelector.vue";
-import Button from "@/components/ui/button/Button.vue";
-import { BezierPicker } from "@/components/ui/bezier-picker";
-import type { EasingName } from "@/components/ui/bezier-picker";
+import { computed } from 'vue'
+import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { CoordinateInput } from '@/components/ui/coordinate-input'
+import ColorPicker from '@/components/ui/color-picker/ColorPicker.vue'
+import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
+import Button from '@/components/ui/button/Button.vue'
+import { BezierPicker } from '@/components/ui/bezier-picker'
+import type { EasingName } from '@/components/ui/bezier-picker'
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
-import type { ConfigControlsSchema, ControlSchema, ControlOption } from "@/stores/viewConfig";
+  AccordionContent
+} from '@/components/ui/accordion'
+import type { ConfigControlsSchema, ControlSchema, ControlOption } from '@/stores/viewConfig'
 
 const props = defineProps<{
-  schema: ConfigControlsSchema;
-  getValue: (path: string) => any;
-  onUpdate: (path: string, value: any) => void;
-  basePath?: string;
-  onAction?: (name: string) => void;
-  nested?: boolean;
-}>();
+  schema: ConfigControlsSchema
+  getValue: (path: string) => any
+  onUpdate: (path: string, value: any) => void
+  basePath?: string
+  onAction?: (name: string) => void
+  nested?: boolean
+}>()
 
 const isControlSchema = (object: any): object is ControlSchema => {
-  if (typeof object !== "object" || object === null) return false;
-  const keys = Object.keys(object);
-  const controlKeys = ["min", "max", "step", "boolean", "checkbox", "color", "bezier", "label", "options", "component", "direction", "callback", "sectionStart", "queryParam"];
+  if (typeof object !== 'object' || object === null) return false
+  const keys = Object.keys(object)
+  const controlKeys = [
+    'min',
+    'max',
+    'step',
+    'boolean',
+    'checkbox',
+    'color',
+    'bezier',
+    'label',
+    'options',
+    'component',
+    'direction',
+    'callback',
+    'sectionStart',
+    'queryParam'
+  ]
 
   // Empty object is a control schema (will be rendered as input)
-  if (keys.length === 0) return true;
+  if (keys.length === 0) return true
 
   // If ALL keys are control keys AND at least one is a control property (not nested config), it's a control schema
   // Check if values are primitive types (number, string, boolean) or arrays for options
-  const allKeysAreControlKeys = keys.every((k) => controlKeys.includes(k));
-  if (!allKeysAreControlKeys) return false;
+  const allKeysAreControlKeys = keys.every((k) => controlKeys.includes(k))
+  if (!allKeysAreControlKeys) return false
 
   // If all keys are control keys, check if any value is an object (meaning it's nested config)
   // BUT allow min/max/step to be objects (for per-coordinate values in CoordinateInput)
   const hasNestedObjects = keys.some((k) => {
-    if (k === 'min' || k === 'max' || k === 'step') return false; // Allow these to be objects
-    const value = object[k];
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-  });
+    if (k === 'min' || k === 'max' || k === 'step') return false // Allow these to be objects
+    const value = object[k]
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+  })
 
   // It's a control schema only if all keys are control keys AND there are no nested objects
-  return !hasNestedObjects;
-};
+  return !hasNestedObjects
+}
 
 const formatLabel = (key: string): string => {
   return key
-    .replace(/([A-Z])/g, " $1")
+    .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (string_) => string_.toUpperCase())
-    .trim();
-};
+    .trim()
+}
 
 const getFullPath = (key: string): string => {
-  return props.basePath ? `${props.basePath}.${key}` : key;
-};
+  return props.basePath ? `${props.basePath}.${key}` : key
+}
 
 const groups = computed(() => {
-  const result: { key: string; schema: ConfigControlsSchema }[] = [];
-  const controls: { key: string; path: string; schema: ControlSchema }[] = [];
+  const result: { key: string; schema: ConfigControlsSchema }[] = []
+  const controls: { key: string; path: string; schema: ControlSchema }[] = []
 
   Object.entries(props.schema).forEach(([key, value]) => {
     if (isControlSchema(value)) {
-      controls.push({ key, path: getFullPath(key), schema: value });
+      controls.push({ key, path: getFullPath(key), schema: value })
     } else {
-      result.push({ key, schema: value as ConfigControlsSchema });
+      result.push({ key, schema: value as ConfigControlsSchema })
     }
-  });
+  })
 
-  return { groups: result, controls };
-});
+  return { groups: result, controls }
+})
 
 // All group keys for default-open accordion
-const defaultOpenGroups = computed(() => groups.value.groups.map((g) => g.key));
+const defaultOpenGroups = computed(() => groups.value.groups.map((g) => g.key))
 
 const handleSliderUpdate = (path: string, value: number[]) => {
-  props.onUpdate(path, value[0]);
-};
+  props.onUpdate(path, value[0])
+}
 
 const handleInputUpdate = (path: string, value: string | number) => {
-  const numberValue = typeof value === "string" ? parseFloat(value) : value;
+  const numberValue = typeof value === 'string' ? parseFloat(value) : value
   if (!isNaN(numberValue)) {
-    props.onUpdate(path, numberValue);
+    props.onUpdate(path, numberValue)
   }
-};
+}
 
 const handleCheckboxUpdate = (path: string, value: boolean) => {
-  props.onUpdate(path, value);
-};
+  props.onUpdate(path, value)
+}
 
 const handleSelectUpdate = (path: string, value: string) => {
-  props.onUpdate(path, value);
-};
+  props.onUpdate(path, value)
+}
 
 const handleColorUpdate = (path: string, hexValue: string) => {
   // Convert hex to integer (e.g., #98887d -> 0x98887d)
-  const colorInt = parseInt(hexValue.replace('#', ''), 16);
-  props.onUpdate(path, colorInt);
-};
+  const colorInt = parseInt(hexValue.replace('#', ''), 16)
+  props.onUpdate(path, colorInt)
+}
 
 const getColorHex = (path: string): string => {
-  const value = props.getValue(path);
+  const value = props.getValue(path)
   if (typeof value === 'number') {
     // Convert integer to hex string (e.g., 0x98887d -> #98887d)
-    return `#${  value.toString(16).padStart(6, '0')}`;
+    return `#${value.toString(16).padStart(6, '0')}`
   }
-  return value || '#000000';
-};
+  return value || '#000000'
+}
 
-const isButtonSelector = (schema: ControlSchema): boolean =>
-  schema.component === 'ButtonSelector';
+const isButtonSelector = (schema: ControlSchema): boolean => schema.component === 'ButtonSelector'
 
-const isCallback = (schema: ControlSchema): boolean =>
-  schema.callback !== undefined;
+const isCallback = (schema: ControlSchema): boolean => schema.callback !== undefined
 
 const asButtonOptions = (options: string[] | ControlOption[]): ControlOption[] =>
-  options.map((opt) =>
-    typeof opt === 'string' ? { value: opt, label: opt } : opt
-  );
+  options.map((opt) => (typeof opt === 'string' ? { value: opt, label: opt } : opt))
 
 const handleButtonSelectorUpdate = (path: string, value: string) => {
-  props.onUpdate(path, value);
-};
+  props.onUpdate(path, value)
+}
 </script>
 
 <template>
@@ -161,7 +172,9 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         />
       </template>
 
-      <template v-else-if="control.schema.options !== undefined && isButtonSelector(control.schema)">
+      <template
+        v-else-if="control.schema.options !== undefined && isButtonSelector(control.schema)"
+      >
         <label class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}
         </label>
@@ -179,7 +192,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         </label>
         <Select
           :model-value="String(getValue(control.path) || '')"
-          :options="(control.schema.options as string[]).map(opt => ({ value: opt, label: opt }))"
+          :options="(control.schema.options as string[]).map((opt) => ({ value: opt, label: opt }))"
           @update:model-value="handleSelectUpdate(control.path, $event)"
           class="h-7 text-xs"
         />
@@ -204,7 +217,9 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
             type="checkbox"
             :checked="getValue(control.path) ?? control.schema.checkbox"
             class="config-controls__checkbox"
-            @change="handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)"
+            @change="
+              handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)
+            "
           />
           <label :for="control.path" class="text-xs font-medium cursor-pointer">
             {{ control.schema.label ?? formatLabel(control.key) }}
@@ -219,7 +234,9 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
             type="checkbox"
             :checked="getValue(control.path) ?? control.schema.boolean"
             class="config-controls__checkbox"
-            @change="handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)"
+            @change="
+              handleCheckboxUpdate(control.path, ($event.target as HTMLInputElement).checked)
+            "
           />
           <label :for="control.path" class="text-xs font-medium cursor-pointer">
             {{ control.schema.label ?? formatLabel(control.key) }}
@@ -237,9 +254,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         />
       </template>
 
-      <template
-        v-else-if="control.schema.min !== undefined || control.schema.max !== undefined"
-      >
+      <template v-else-if="control.schema.min !== undefined || control.schema.max !== undefined">
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
           <input
@@ -254,7 +269,10 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         </label>
         <Slider
           :id="control.path"
-          :model-value="[getValue(control.path) ?? (typeof control.schema.min === 'number' ? control.schema.min : 0)]"
+          :model-value="[
+            getValue(control.path) ??
+              (typeof control.schema.min === 'number' ? control.schema.min : 0)
+          ]"
           :min="typeof control.schema.min === 'number' ? control.schema.min : 0"
           :max="typeof control.schema.max === 'number' ? control.schema.max : 100"
           :step="typeof control.schema.step === 'number' ? control.schema.step : 1"
@@ -280,12 +298,10 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
     <!-- Sub-groups: accordion at top level, plain sections when already nested -->
     <template v-if="groups.groups.length > 0">
       <template v-if="nested">
-        <div
-          v-for="group in groups.groups"
-          :key="group.key"
-          class="config-controls__section"
-        >
-          <div class="config-controls__section-label text-xs font-medium mt-2 mb-1 text-muted-foreground">
+        <div v-for="group in groups.groups" :key="group.key" class="config-controls__section">
+          <div
+            class="config-controls__section-label text-xs font-medium mt-2 mb-1 text-muted-foreground"
+          >
             {{ formatLabel(group.key) }}
           </div>
           <ConfigControls
@@ -298,12 +314,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
           />
         </div>
       </template>
-      <Accordion
-        v-else
-        type="multiple"
-        :default-value="defaultOpenGroups"
-        class="w-full"
-      >
+      <Accordion v-else type="multiple" :default-value="defaultOpenGroups" class="w-full">
         <AccordionItem v-for="group in groups.groups" :key="group.key" :value="group.key">
           <AccordionTrigger class="text-xs font-medium py-1">
             {{ formatLabel(group.key) }}
@@ -361,7 +372,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
   margin: 0;
 }
 
-.config-controls__inline-input[type="number"] {
+.config-controls__inline-input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
 }
