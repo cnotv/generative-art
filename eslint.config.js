@@ -501,6 +501,8 @@ export default [
       '*.config.{js,ts,mjs,cjs}',
       '.eslintrc.{js,cjs}',
       '**/vite.config.ts',
+      '**/config.ts',
+      'src/config/**/*.ts',
       'scripts/**/*.js'
     ],
     languageOptions: {
