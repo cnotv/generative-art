@@ -511,7 +511,8 @@ export default [
       }
     },
     rules: {
-      'no-magic-numbers': 'off'
+      'no-magic-numbers': 'off',
+      'functional/immutable-data': 'off'
     }
   },
 
