@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { Ref } from 'vue'
+import RAPIER from '@dimforge/rapier3d-compat'
 import { createTimelineManager } from '@webgamekit/animation'
 import { config } from './config'
 import {
@@ -29,30 +30,210 @@ import {
   type PlayerMovement
 } from './helpers/player'
 
-import { getSpeed, initPhysics } from './helpers/setup'
+import { getSpeed, initPhysics, type RapierPhysicsObject } from './helpers/setup'
 import { createPlayer } from './helpers/player'
 import { incrementGameScore, isGamePlaying, isGameStart, gameScore } from './helpers/setup'
+import type { useUiStore } from '@/stores/ui'
 
 const addHorizonLine = (scene: THREE.Scene) => {
-  // Create a dark grey horizontal bar/line for cartoonish horizon effect
-  const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2) // Wide, thin bar
+  const horizonGeometry = new THREE.BoxGeometry(4000, 3, 2)
   const horizonMaterial = new THREE.MeshBasicMaterial({
-    color: 0x333333, // Dark grey
+    color: 0x333333,
     transparent: true,
     opacity: 0.8
   })
 
   const horizonLine = new THREE.Mesh(horizonGeometry, horizonMaterial)
   horizonLine.name = 'Horizon'
-
-  // Position the horizon line slightly above the ground level
-  horizonLine.position.set(0, 11, -200) // Y=11 for horizon height, Z back a bit for depth
+  horizonLine.position.set(0, 11, -200)
   horizonLine.receiveShadow = false
   horizonLine.castShadow = false
 
   scene.add(horizonLine)
-  return horizonLine // Return the horizon line so we can manipulate it during jumps
+  return horizonLine
 }
+
+export interface CreateTimelineOptions {
+  scene: THREE.Scene
+  getDelta: () => number
+  world: RAPIER.World
+  shouldClearObstacles: Ref<boolean>
+  camera: THREE.PerspectiveCamera
+  uiStore: ReturnType<typeof useUiStore>
+  endGame: () => void
+  onReset?: () => void
+}
+
+interface TimelineState {
+  scene: THREE.Scene
+  getDelta: () => number
+  world: RAPIER.World
+  shouldClearObstacles: Ref<boolean>
+  camera: THREE.PerspectiveCamera
+  uiStore: ReturnType<typeof useUiStore>
+  endGame: () => void
+  onReset?: () => void
+  physics: RapierPhysicsObject
+  physicsHelper: { update: () => void } | null
+  player: THREE.Object3D
+  playerController: RAPIER.KinematicCharacterController
+  model: THREE.Group | null
+  obstacles: THREE.Object3D[]
+  backgrounds: BackgroundElement[]
+  groundTexture: ReturnType<typeof getGround>
+  playerMovement: PlayerMovement
+  backgroundTimers: number[]
+  loggedCollisions: Set<string>
+  horizonLine: THREE.Mesh
+  backgroundsPopulated: boolean
+  textureAreaBackgrounds: TextureAreaElement[]
+}
+
+const buildGameLogicActions = (state: TimelineState) => [
+  {
+    name: 'Cleanup and reset',
+    category: 'game-logic',
+    action: () => {
+      if (state.physicsHelper) state.physicsHelper.update()
+      updateExplosionParticles(state.scene, state.getDelta())
+    }
+  },
+  {
+    name: 'Reset background',
+    category: 'game-logic',
+    action: () => {
+      if (isGameStart && !state.backgroundsPopulated) {
+        populateInitialBackgrounds(state.scene, state.world, state.backgrounds)
+        state.backgroundsPopulated = true
+      }
+      updateFallingBackgrounds(state.getDelta(), state.backgrounds, state.scene)
+      updateFallingBackgrounds(state.getDelta(), state.textureAreaBackgrounds, state.scene)
+      if (state.shouldClearObstacles.value) {
+        resetObstacles(state.obstacles, state.scene, state.physics)
+        resetBackgrounds(state.scene, state.world, state.backgrounds)
+        state.textureAreaBackgrounds = resetTextureAreaBackgrounds(
+          state.scene,
+          state.world,
+          state.textureAreaBackgrounds
+        )
+        state.backgroundsPopulated = true
+        resetPlayer(state.player, state.scene)
+        resetGround(state.groundTexture)
+        state.loggedCollisions.clear()
+        state.shouldClearObstacles.value = false
+        state.onReset?.()
+      }
+    }
+  },
+  {
+    name: 'Generate cubes',
+    category: 'game-logic',
+    frequency: config.blocks.spacing,
+    action: async () => {
+      if (!isGamePlaying.value) return
+      await createCubes(state.scene, state.world, state.physics, state.obstacles)
+    }
+  },
+  {
+    name: 'Move ground',
+    category: 'game-logic',
+    action: () => {
+      moveGround(state.groundTexture, isGamePlaying.value, gameScore.value)
+    }
+  }
+]
+
+const buildVisualAndInputActions = (state: TimelineState) => [
+  {
+    name: 'Move background',
+    category: 'visual-effects',
+    action: () => {
+      if (isGamePlaying.value) {
+        createBackgrounds(
+          state.scene,
+          state.world,
+          state.backgrounds,
+          state.backgroundTimers,
+          gameScore.value
+        )
+        moveBackgrounds(state.scene, state.camera, state.backgrounds, gameScore.value)
+        moveAndRecycleTextureAreaBackgrounds(state.textureAreaBackgrounds, gameScore.value)
+      }
+    }
+  },
+  {
+    name: 'Make Goomba run',
+    category: 'user-input',
+    action: () => {
+      ensurePlayerAboveGround(state.player)
+      movePlayer(
+        state.player,
+        state.playerController,
+        state.physics,
+        state.playerMovement,
+        isGamePlaying.value,
+        config
+      )
+      handleJump(
+        state.player,
+        isGamePlaying.value,
+        state.uiStore,
+        state.camera,
+        state.horizonLine,
+        config
+      )
+      handleArcMovement(state.player)
+      checkCollisions(
+        state.player,
+        state.obstacles,
+        state.backgrounds,
+        state.textureAreaBackgrounds,
+        state.scene,
+        state.endGame,
+        state.loggedCollisions,
+        config
+      )
+      updatePlayerAnimation(
+        state.model,
+        isGamePlaying.value,
+        gameScore.value,
+        state.getDelta,
+        getSpeed,
+        config
+      )
+    }
+  },
+  {
+    name: 'Move obstacles',
+    category: 'game-logic',
+    action: () => {
+      if (!isGamePlaying.value) return
+      moveBlocks(
+        state.obstacles,
+        state.physics,
+        gameScore.value,
+        state.player,
+        state.scene,
+        (points) => incrementGameScore(points)
+      )
+    }
+  }
+]
+
+const createRegenerateTextureArea =
+  (state: TimelineState) => (areaName: string, layerConfigs: TextureAreaLayerConfig[]) => {
+    const removed = state.textureAreaBackgrounds.filter((element) => element.mesh.name === areaName)
+    removed.forEach((element) => state.scene.remove(element.mesh))
+
+    const remaining = state.textureAreaBackgrounds.filter(
+      (element) => element.mesh.name !== areaName
+    )
+    const newElements = layerConfigs.flatMap((lc) =>
+      createTextureAreaBackgroundLayer(state.scene, state.world, lc)
+    )
+
+    state.textureAreaBackgrounds = [...remaining, ...newElements]
+  }
 
 const createTimeline = async ({
   scene,
@@ -63,152 +244,46 @@ const createTimeline = async ({
   uiStore,
   endGame,
   onReset
-}: {
-  scene: THREE.Scene
-  getDelta: () => number
-  world: any
-  shouldClearObstacles: Ref<boolean>
-  camera: THREE.PerspectiveCamera
-  uiStore: any
-  endGame: () => void
-  onReset?: () => void
-}) => {
+}: CreateTimelineOptions) => {
   const { physics, physicsHelper } = await initPhysics(scene)
   const { player, playerController, model } = await createPlayer(scene, physics, world)
 
-  const obstacles: any[] = []
   createObstaclesGroup(scene)
-  const backgrounds: BackgroundElement[] = []
-  const groundTexture = getGround(scene, physics)
-  const playerMovement: PlayerMovement = { forward: 0, right: 0, up: 0 }
-  const backgroundTimers = config.backgrounds.layers.map(() => 0)
-  const loggedCollisions = new Set<string>()
 
-  let textureAreaBackgrounds: TextureAreaElement[] = config.backgrounds.textureAreaLayers.flatMap(
-    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
-  )
-
-  const regenerateTextureArea = (areaName: string, layerConfigs: TextureAreaLayerConfig[]) => {
-    // Remove old meshes for this area name
-    const removed = textureAreaBackgrounds.filter((element) => element.mesh.name === areaName)
-    removed.forEach((element) => scene.remove(element.mesh))
-
-    const remaining = textureAreaBackgrounds.filter((element) => element.mesh.name !== areaName)
-
-    // Create new meshes from updated configs
-    const newElements = layerConfigs.flatMap((lc) =>
-      createTextureAreaBackgroundLayer(scene, world, lc)
+  const state: TimelineState = {
+    scene,
+    getDelta,
+    world,
+    shouldClearObstacles,
+    camera,
+    uiStore,
+    endGame,
+    onReset,
+    physics,
+    physicsHelper,
+    player,
+    playerController,
+    model,
+    obstacles: [],
+    backgrounds: [],
+    groundTexture: getGround(scene, physics),
+    playerMovement: { forward: 0, right: 0, up: 0 },
+    backgroundTimers: config.backgrounds.layers.map(() => 0),
+    loggedCollisions: new Set<string>(),
+    horizonLine: addHorizonLine(scene),
+    backgroundsPopulated: false,
+    textureAreaBackgrounds: config.backgrounds.textureAreaLayers.flatMap((layerConfig) =>
+      createTextureAreaBackgroundLayer(scene, world, layerConfig)
     )
-
-    textureAreaBackgrounds = [...remaining, ...newElements]
   }
 
-  let backgroundsPopulated = false
-  const horizonLine = addHorizonLine(scene)
-
   const timelineManager = createTimelineManager()
-
   timelineManager.addActions([
-    {
-      name: 'Cleanup and reset',
-      category: 'game-logic',
-      action: () => {
-        if (physicsHelper) physicsHelper.update()
-        updateExplosionParticles(scene, getDelta())
-      }
-    },
-    {
-      name: 'Reset background',
-      category: 'game-logic',
-      action: () => {
-        if (isGameStart && !backgroundsPopulated) {
-          populateInitialBackgrounds(scene, world, backgrounds)
-          backgroundsPopulated = true
-        }
-        updateFallingBackgrounds(getDelta(), backgrounds, scene)
-        updateFallingBackgrounds(getDelta(), textureAreaBackgrounds, scene)
-        if (shouldClearObstacles.value) {
-          resetObstacles(obstacles, scene, physics)
-          resetBackgrounds(scene, world, backgrounds)
-          textureAreaBackgrounds = resetTextureAreaBackgrounds(scene, world, textureAreaBackgrounds)
-          backgroundsPopulated = true
-          resetPlayer(player, scene)
-          resetGround(groundTexture)
-          loggedCollisions.clear()
-          shouldClearObstacles.value = false
-          onReset?.()
-        }
-      }
-    },
-    {
-      name: 'Generate cubes',
-      category: 'game-logic',
-      frequency: config.blocks.spacing,
-      action: async () => {
-        if (!isGamePlaying.value) return
-        await createCubes(scene, world, physics, obstacles)
-      }
-    },
-    {
-      name: 'Move ground',
-      category: 'game-logic',
-      action: () => {
-        moveGround(groundTexture, isGamePlaying.value, gameScore.value)
-      }
-    },
-    {
-      name: 'Move background',
-      category: 'visual-effects',
-      action: () => {
-        if (isGamePlaying.value) {
-          createBackgrounds(scene, world, backgrounds, backgroundTimers, gameScore.value)
-          moveBackgrounds(scene, camera, backgrounds, gameScore.value)
-          moveAndRecycleTextureAreaBackgrounds(textureAreaBackgrounds, gameScore.value)
-        }
-      }
-    },
-    {
-      name: 'Make Goomba run',
-      category: 'user-input',
-      action: () => {
-        ensurePlayerAboveGround(player)
-        movePlayer(player, playerController, physics, playerMovement, isGamePlaying.value, config)
-        handleJump(player, isGamePlaying.value, uiStore, camera, horizonLine, config)
-        handleArcMovement(player)
-        checkCollisions(
-          player,
-          obstacles,
-          backgrounds,
-          textureAreaBackgrounds,
-          scene,
-          endGame,
-          loggedCollisions,
-          config
-        )
-        updatePlayerAnimation(
-          model,
-          isGamePlaying.value,
-          gameScore.value,
-          getDelta,
-          getSpeed,
-          config
-        )
-      }
-    },
-
-    {
-      name: 'Move obstacles',
-      category: 'game-logic',
-      action: () => {
-        if (!isGamePlaying.value) return
-        moveBlocks(obstacles, physics, gameScore.value, player, scene, (points) =>
-          incrementGameScore(points)
-        )
-      }
-    }
+    ...buildGameLogicActions(state),
+    ...buildVisualAndInputActions(state)
   ])
 
-  return { timelineManager, regenerateTextureArea }
+  return { timelineManager, regenerateTextureArea: createRegenerateTextureArea(state) }
 }
 
 export { createTimeline }

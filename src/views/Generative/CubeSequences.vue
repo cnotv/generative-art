@@ -125,12 +125,11 @@ const init = (p: P5, statsElement: HTMLElement, canvas: HTMLCanvasElement): void
       rotation.z += speed
     }
 
-    // Populate
-    for (let x = 0; x < amountX; x++) {
-      for (let y = 0; y < amountY; y++) {
+    Array.from({ length: amountX }, (_, x) => {
+      Array.from({ length: amountY }, (__, y) => {
         drawGeometry(p, x, y)
-      }
-    }
+      })
+    })
 
     video.stop(p.frameCount, route)
     stats.end(route)

@@ -19,7 +19,7 @@ export const generateTimelineId = (): string => {
 export const createDurationAction = (
   start: number,
   duration: number,
-  action: (element?: any) => void,
+  action: (element?: unknown) => void,
   options?: Partial<Timeline>
 ): Timeline => ({
   start,
@@ -38,7 +38,7 @@ export const createDurationAction = (
  */
 export const createOneShotAction = (
   frame: number,
-  action: (element?: any) => void,
+  action: (element?: unknown) => void,
   options?: Partial<Timeline>
 ): Timeline => ({
   start: frame,
@@ -58,7 +58,7 @@ export const createOneShotAction = (
  */
 export const createIntervalAction = (
   interval: [number, number],
-  action: (element?: any) => void,
+  action: (element?: unknown) => void,
   options?: Partial<Timeline>
 ): Timeline => ({
   interval,
@@ -75,7 +75,7 @@ export const createIntervalAction = (
  * @returns True if action can be added, false if blocked
  */
 export const canAddAction = (player: ComplexModel, blocking: number = 0): boolean => {
-  const currentAction = player.userData.actions?.[player.userData.currentAction]
+  const currentAction = player.userData.actions?.[player.userData.currentAction as string]
   if (!currentAction) return true
   return currentAction.time >= blocking
 }

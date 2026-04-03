@@ -2,17 +2,19 @@ import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import type { Timeline } from '@webgamekit/animation'
 
+export type VisualizerObjects = Record<string, unknown>
+
 export interface VisualizerSetup {
   setup: (
     scene: THREE.Scene,
     world?: RAPIER.World
-  ) => Promise<Record<string, any>> | Record<string, any>
-  getTimeline: (getObjects: () => Record<string, any>) => Timeline[]
+  ) => Promise<VisualizerObjects> | VisualizerObjects
+  getTimeline: (getObjects: () => VisualizerObjects) => Timeline[]
   handleClick?: (
     event: MouseEvent,
     camera: THREE.Camera,
     canvas: HTMLCanvasElement,
-    visualizerObjects: Record<string, any>
+    visualizerObjects: VisualizerObjects
   ) => void
   song?: number
   name: string
@@ -23,33 +25,29 @@ export interface VisualizerSetup {
 }
 
 // Click handler management
-let currentClickHandler: ((event: MouseEvent | TouchEvent) => void) | null = null
-let currentCanvas: HTMLCanvasElement | null = null
+const clickHandlerState = {
+  currentClickHandler: null as ((event: MouseEvent | TouchEvent) => void) | null,
+  currentCanvas: null as HTMLCanvasElement | null
+}
 
 // Setup click and touch handlers for the current visualizer
 export const setupVisualizerClickHandlers = (
   visualizer: VisualizerSetup | null,
   camera: THREE.Camera,
   canvas: HTMLCanvasElement,
-  visualizerObjects: Record<string, any>
+  visualizerObjects: VisualizerObjects
 ) => {
-  // Clear existing handlers first
   clearVisualizerClickHandlers()
 
-  // Store canvas reference
-  currentCanvas = canvas
+  clickHandlerState.currentCanvas = canvas
 
-  // Setup new handler if visualizer supports it
   if (visualizer && visualizer.handleClick) {
-    currentClickHandler = (event: MouseEvent | TouchEvent) => {
-      // Prevent default touch behavior
+    clickHandlerState.currentClickHandler = (event: MouseEvent | TouchEvent) => {
       if (event.type === 'touchstart') {
         event.preventDefault()
-        // Use the first touch point for touch events
         const touchEvent = event as TouchEvent
         if (touchEvent.touches.length > 0) {
           const touch = touchEvent.touches[0]
-          // Create a synthetic mouse event from touch
           const mouseEvent = {
             clientX: touch.clientX,
             clientY: touch.clientY,
@@ -58,25 +56,29 @@ export const setupVisualizerClickHandlers = (
           visualizer.handleClick!(mouseEvent, camera, canvas, visualizerObjects)
         }
       } else {
-        // Handle regular mouse click
         visualizer.handleClick!(event as MouseEvent, camera, canvas, visualizerObjects)
       }
     }
 
-    // Add event listeners
-    canvas.addEventListener('click', currentClickHandler)
-    canvas.addEventListener('touchstart', currentClickHandler, { passive: false })
+    canvas.addEventListener('click', clickHandlerState.currentClickHandler)
+    canvas.addEventListener('touchstart', clickHandlerState.currentClickHandler, { passive: false })
   }
 }
 
 // Clear click and touch handlers
 export const clearVisualizerClickHandlers = () => {
-  if (currentClickHandler && currentCanvas) {
-    currentCanvas.removeEventListener('click', currentClickHandler)
-    currentCanvas.removeEventListener('touchstart', currentClickHandler)
+  if (clickHandlerState.currentClickHandler && clickHandlerState.currentCanvas) {
+    clickHandlerState.currentCanvas.removeEventListener(
+      'click',
+      clickHandlerState.currentClickHandler
+    )
+    clickHandlerState.currentCanvas.removeEventListener(
+      'touchstart',
+      clickHandlerState.currentClickHandler
+    )
   }
-  currentClickHandler = null
-  currentCanvas = null
+  clickHandlerState.currentClickHandler = null
+  clickHandlerState.currentCanvas = null
 }
 
 // Dynamically import all visualizer modules
@@ -90,9 +92,14 @@ export const visualizers: Record<string, VisualizerSetup> = {}
  */
 Object.entries(visualizerModules).forEach(([path, module]) => {
   const fileName = path.replace('./visualizers/', '').replace('.ts', '')
-  const moduleExports = module as Record<string, any>
+  const moduleExports = module as Record<string, unknown>
   const visualizerExport = Object.values(moduleExports).find(
-    (exp: any) => exp && typeof exp === 'object' && exp.name && exp.setup && exp.getTimeline
+    (exp) =>
+      exp &&
+      typeof exp === 'object' &&
+      (exp as VisualizerSetup).name &&
+      (exp as VisualizerSetup).setup &&
+      (exp as VisualizerSetup).getTimeline
   )
 
   if (visualizerExport) {

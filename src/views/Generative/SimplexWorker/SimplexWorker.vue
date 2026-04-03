@@ -71,7 +71,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void => {
       config.frameCount = event.data.frameCount
     }
     if (event.data.message) {
-      console.log(event.data.message)
+      console.warn(event.data.message)
     }
   }
 }

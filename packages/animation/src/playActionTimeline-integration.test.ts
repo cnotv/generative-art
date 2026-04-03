@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   playActionTimeline,
   createTimelineManager,
@@ -90,13 +90,10 @@ describe('playActionTimeline - BUG REPRODUCTION', () => {
     })
 
     // Clear previous update calls
-    ;(player.userData.mixer.update as any).mockClear()
+    ;(player.userData.mixer.update as ReturnType<typeof vi.fn>).mockClear()
 
     // Run timeline once
     animateTimeline(manager, 0)
-
-    console.log('mixer.update call count:', (player.userData.mixer.update as any).mock.calls.length)
-    console.log('mixer.update calls:', (player.userData.mixer.update as any).mock.calls)
 
     // NOW THIS SHOULD PASS: mixer.update() called only once (by blocking action)
     expect(player.userData.mixer.update).toHaveBeenCalledTimes(1)
@@ -142,8 +139,8 @@ describe('playActionTimeline - BUG REPRODUCTION', () => {
     })
 
     // Clear action calls
-    ;(player.userData.actions.walk2.play as any).mockClear()
-    ;(player.userData.actions.walk2.fadeIn as any).mockClear()
+    ;(player.userData.actions.walk2.play as ReturnType<typeof vi.fn>).mockClear()
+    ;(player.userData.actions.walk2.fadeIn as ReturnType<typeof vi.fn>).mockClear()
 
     // Run timeline once
     animateTimeline(manager, 0)

@@ -35,7 +35,7 @@ export function useUmami() {
    * @param eventName - The name of the event (e.g., "signup-button")
    * @param eventData - Optional object with extra details (e.g., { plan: "pro" })
    */
-  const trackEvent = (eventName: string, eventData?: Record<string, any>) => {
+  const trackEvent = (eventName: string, eventData?: Record<string, unknown>) => {
     if (window.umami) {
       window.umami.track(eventName, eventData)
     } else {
@@ -51,7 +51,10 @@ export function useUmami() {
     if (window.umami) {
       // Umami handles page views by sending properties.
       // If url is undefined, it uses the current window location.
-      window.umami.track((props: any) => ({ ...props, url: url || props.url }))
+      window.umami.track((props: Record<string, unknown>) => ({
+        ...props,
+        url: url ?? props['url']
+      }))
     }
   }
 

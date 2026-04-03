@@ -1,37 +1,42 @@
 // Audio module for music visualizer
-let audioContext: AudioContext | null = null
-let analyser: AnalyserNode | null = null
-let audioElement: HTMLAudioElement | null = null
-let microphoneStream: MediaStream | null = null
-let selectedAudioStream: MediaStream | null = null
-let songSource: MediaElementAudioSourceNode | null = null
-let microphoneSource: MediaStreamAudioSourceNode | null = null
-let selectedAudioSource: MediaStreamAudioSourceNode | null = null
-let isInitialized = false
 const barCount = 32
 
 // Audio source settings
 type AudioSourceType = 'song' | 'microphone' | 'selected-output'
-let currentAudioSourceType: AudioSourceType = 'song'
-let isMicrophoneAvailable = false
-let isSelectedAudioAvailable = false
-let availableAudioDevices: MediaDeviceInfo[] = []
+
+const state = {
+  audioContext: null as AudioContext | null,
+  analyser: null as AnalyserNode | null,
+  audioElement: null as HTMLAudioElement | null,
+  microphoneStream: null as MediaStream | null,
+  selectedAudioStream: null as MediaStream | null,
+  songSource: null as MediaElementAudioSourceNode | null,
+  microphoneSource: null as MediaStreamAudioSourceNode | null,
+  selectedAudioSource: null as MediaStreamAudioSourceNode | null,
+  isInitialized: false,
+  currentAudioSourceType: 'song' as AudioSourceType,
+  isMicrophoneAvailable: false,
+  isSelectedAudioAvailable: false,
+  availableAudioDevices: [] as MediaDeviceInfo[]
+}
 
 // Initialize Web Audio API
 const initializeAudioContext = (): void => {
-  if (!audioContext && audioElement) {
+  if (!state.audioContext && state.audioElement) {
     try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      analyser = audioContext.createAnalyser()
-      analyser.fftSize = 2048 // Small for simple visualization
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioContextClass) return
+      state.audioContext = new AudioContextClass()
+      state.analyser = state.audioContext.createAnalyser()
+      state.analyser.fftSize = 2048
 
-      // Create source for the song (audio element)
-      songSource = audioContext.createMediaElementSource(audioElement)
+      state.songSource = state.audioContext.createMediaElementSource(state.audioElement)
 
-      // Initially connect the song source
       connectAudioSource()
 
-      console.log('Audio context initialized successfully')
+      console.warn('Audio context initialized successfully')
     } catch (error) {
       console.error('Failed to initialize audio context:', error)
     }
@@ -40,64 +45,57 @@ const initializeAudioContext = (): void => {
 
 // Connect the appropriate audio source to the analyser
 const connectAudioSource = (): void => {
-  if (!audioContext || !analyser) return
+  if (!state.audioContext || !state.analyser) return
 
-  // Disconnect all sources first
   try {
-    if (songSource) songSource.disconnect()
-    if (microphoneSource) microphoneSource.disconnect()
-    if (selectedAudioSource) selectedAudioSource.disconnect()
-  } catch (e) {
+    if (state.songSource) state.songSource.disconnect()
+    if (state.microphoneSource) state.microphoneSource.disconnect()
+    if (state.selectedAudioSource) state.selectedAudioSource.disconnect()
+  } catch (_e) {
     // Sources may not be connected yet
   }
 
-  if (currentAudioSourceType === 'microphone' && microphoneSource) {
-    // Connect microphone to analyser (no destination for privacy)
-    microphoneSource.connect(analyser)
-    console.log('Switched to microphone input')
-  } else if (currentAudioSourceType === 'selected-output' && selectedAudioSource) {
-    // Connect selected audio output to analyser (no destination for privacy)
-    selectedAudioSource.connect(analyser)
-    console.log('Switched to selected audio output')
-  } else if (songSource) {
-    // Connect song to both analyser and speakers
-    songSource.connect(analyser)
-    analyser.connect(audioContext.destination)
-    console.log('Switched to song playback')
+  if (state.currentAudioSourceType === 'microphone' && state.microphoneSource) {
+    state.microphoneSource.connect(state.analyser)
+    console.warn('Switched to microphone input')
+  } else if (state.currentAudioSourceType === 'selected-output' && state.selectedAudioSource) {
+    state.selectedAudioSource.connect(state.analyser)
+    console.warn('Switched to selected audio output')
+  } else if (state.songSource) {
+    state.songSource.connect(state.analyser)
+    state.analyser.connect(state.audioContext.destination)
+    console.warn('Switched to song playback')
   }
 }
 
 // Reset audio setup for new songs
 export const resetAudio = (): void => {
-  isInitialized = false
-  audioElement = null
+  state.isInitialized = false
+  state.audioElement = null
   // Note: Don't close audioContext as it can be reused
 }
 
 // Setup audio controls and auto-load music
 export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
-  if (isInitialized && audioElement === audioElementReference) return
+  if (state.isInitialized && state.audioElement === audioElementReference) return
 
-  // Reset if we're switching to a new element
-  if (audioElementReference && audioElement !== audioElementReference) {
-    isInitialized = false
+  if (audioElementReference && state.audioElement !== audioElementReference) {
+    state.isInitialized = false
   }
 
-  // Use provided element or find it in the template
-  audioElement = audioElementReference || document.querySelector('audio.player__audio')
+  state.audioElement = audioElementReference || document.querySelector('audio.player__audio')
 
-  if (!audioElement) {
+  if (!state.audioElement) {
     console.error('Audio element not found')
     return
   }
 
-  // Initialize audio context on first user interaction
   const initOnInteraction = (audio?: HTMLAudioElement | null) => {
-    if (!audioContext) {
+    if (!state.audioContext) {
       initializeAudioContext()
     }
-    if (audioContext?.state === 'suspended') {
-      audioContext.resume()
+    if (state.audioContext?.state === 'suspended') {
+      state.audioContext.resume()
     }
 
     if (audio) {
@@ -105,15 +103,14 @@ export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
     }
   }
 
-  // Add event listeners
-  audioElement.addEventListener('canplaythrough', () => {
-    console.log('Audio can play through, initializing context')
+  state.audioElement.addEventListener('canplaythrough', () => {
+    console.warn('Audio can play through, initializing context')
     initializeAudioContext()
   })
 
-  audioElement.addEventListener('play', () => initOnInteraction(audioElement))
+  state.audioElement.addEventListener('play', () => initOnInteraction(state.audioElement))
 
-  audioElement.addEventListener('error', (e) => {
+  state.audioElement.addEventListener('error', (e) => {
     console.error('Audio loading error:', e)
     const audioElement_ = e.target as HTMLAudioElement
     if (audioElement_ && audioElement_.error) {
@@ -123,43 +120,40 @@ export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
     }
   })
 
-  audioElement.addEventListener('loadstart', () => {
-    console.log('Audio loading started')
+  state.audioElement.addEventListener('loadstart', () => {
+    console.warn('Audio loading started')
   })
 
-  audioElement.addEventListener('loadeddata', () => {
-    console.log('Audio data loaded')
+  state.audioElement.addEventListener('loadeddata', () => {
+    console.warn('Audio data loaded')
   })
 
-  // Add click listener to start audio context on user interaction
-  document.addEventListener('click', () => initOnInteraction(audioElement), { once: true })
+  document.addEventListener('click', () => initOnInteraction(state.audioElement), { once: true })
 
-  isInitialized = true
+  state.isInitialized = true
 }
 
 // Get audio frequency data as normalized array
 export const getAudioData = (): number[] => {
-  if (!analyser) {
+  if (!state.analyser) {
     return new Array(barCount).fill(0)
   }
 
-  const dataArray = new Uint8Array(analyser.frequencyBinCount)
-  analyser.getByteFrequencyData(dataArray)
+  const dataArray = new Uint8Array(state.analyser.frequencyBinCount)
+  state.analyser.getByteFrequencyData(dataArray)
 
-  // Convert to normalized values (0-1)
   return [...dataArray].slice(0, barCount).map((value) => value / 255)
 }
 
 // Get audio time domain data (for waveform visualization)
 export const getWaveformData = (): number[] => {
-  if (!analyser) {
+  if (!state.analyser) {
     return new Array(barCount).fill(0)
   }
 
-  const dataArray = new Uint8Array(analyser.fftSize)
-  analyser.getByteTimeDomainData(dataArray)
+  const dataArray = new Uint8Array(state.analyser.fftSize)
+  state.analyser.getByteTimeDomainData(dataArray)
 
-  // Convert to normalized values (-1 to 1)
   return [...dataArray].slice(0, barCount).map((value) => (value - 128) / 128)
 }
 
@@ -210,18 +204,18 @@ export const getFrequencyBands = (bandConfig: {
 
 // Check if audio is playing
 export const isPlaying = (): boolean => {
-  return audioElement ? !audioElement.paused : false
+  return state.audioElement ? !state.audioElement.paused : false
 }
 
 // Initialize microphone access
 const initializeMicrophone = async (): Promise<boolean> => {
   try {
-    if (!audioContext) {
+    if (!state.audioContext) {
       console.error('Audio context not initialized')
       return false
     }
 
-    microphoneStream = await navigator.mediaDevices.getUserMedia({
+    state.microphoneStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
         autoGainControl: false,
@@ -229,13 +223,13 @@ const initializeMicrophone = async (): Promise<boolean> => {
       }
     })
 
-    microphoneSource = audioContext.createMediaStreamSource(microphoneStream)
-    isMicrophoneAvailable = true
-    console.log('Microphone initialized successfully')
+    state.microphoneSource = state.audioContext.createMediaStreamSource(state.microphoneStream)
+    state.isMicrophoneAvailable = true
+    console.warn('Microphone initialized successfully')
     return true
   } catch (error) {
     console.error('Failed to initialize microphone:', error)
-    isMicrophoneAvailable = false
+    state.isMicrophoneAvailable = false
     return false
   }
 }
@@ -244,8 +238,8 @@ const initializeMicrophone = async (): Promise<boolean> => {
 export const getAvailableAudioDevices = async (): Promise<MediaDeviceInfo[]> => {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices()
-    availableAudioDevices = devices.filter((device) => device.kind === 'audioinput')
-    return availableAudioDevices
+    state.availableAudioDevices = devices.filter((device) => device.kind === 'audioinput')
+    return state.availableAudioDevices
   } catch (error) {
     console.error('Failed to get audio devices:', error)
     return []
@@ -255,7 +249,7 @@ export const getAvailableAudioDevices = async (): Promise<MediaDeviceInfo[]> => 
 // Initialize selected audio output
 const initializeSelectedAudio = async (deviceId?: string): Promise<boolean> => {
   try {
-    if (!audioContext) {
+    if (!state.audioContext) {
       console.error('Audio context not initialized')
       return false
     }
@@ -264,23 +258,25 @@ const initializeSelectedAudio = async (deviceId?: string): Promise<boolean> => {
       audio: deviceId ? { deviceId: { exact: deviceId } } : true
     }
 
-    selectedAudioStream = await navigator.mediaDevices.getUserMedia(constraints)
-    selectedAudioSource = audioContext.createMediaStreamSource(selectedAudioStream)
-    isSelectedAudioAvailable = true
-    console.log('Selected audio output initialized successfully')
+    state.selectedAudioStream = await navigator.mediaDevices.getUserMedia(constraints)
+    state.selectedAudioSource = state.audioContext.createMediaStreamSource(
+      state.selectedAudioStream
+    )
+    state.isSelectedAudioAvailable = true
+    console.warn('Selected audio output initialized successfully')
     return true
   } catch (error) {
     console.error('Failed to initialize selected audio output:', error)
-    isSelectedAudioAvailable = false
+    state.isSelectedAudioAvailable = false
     return false
   }
 }
 
 // Switch to song mode
 const switchToSong = async (): Promise<boolean> => {
-  currentAudioSourceType = 'song'
-  if (audioElement) {
-    await audioElement.play().catch(console.error)
+  state.currentAudioSourceType = 'song'
+  if (state.audioElement) {
+    await state.audioElement.play().catch(console.error)
   }
   connectAudioSource()
   return true
@@ -288,16 +284,16 @@ const switchToSong = async (): Promise<boolean> => {
 
 // Switch to microphone mode
 const switchToMicrophone = async (): Promise<boolean> => {
-  if (!isMicrophoneAvailable) {
+  if (!state.isMicrophoneAvailable) {
     const micInitialized = await initializeMicrophone()
     if (!micInitialized) {
       return false
     }
   }
 
-  currentAudioSourceType = 'microphone'
-  if (audioElement) {
-    audioElement.pause()
+  state.currentAudioSourceType = 'microphone'
+  if (state.audioElement) {
+    state.audioElement.pause()
   }
   connectAudioSource()
   return true
@@ -305,16 +301,16 @@ const switchToMicrophone = async (): Promise<boolean> => {
 
 // Switch to selected audio output mode
 const switchToSelectedOutput = async (): Promise<boolean> => {
-  if (!isSelectedAudioAvailable) {
+  if (!state.isSelectedAudioAvailable) {
     const audioInitialized = await initializeSelectedAudio()
     if (!audioInitialized) {
       return false
     }
   }
 
-  currentAudioSourceType = 'selected-output'
-  if (audioElement) {
-    audioElement.pause()
+  state.currentAudioSourceType = 'selected-output'
+  if (state.audioElement) {
+    state.audioElement.pause()
   }
   connectAudioSource()
   return true
@@ -322,13 +318,12 @@ const switchToSelectedOutput = async (): Promise<boolean> => {
 
 // Toggle between song, microphone, and selected audio output
 export const toggleAudioSource = async (): Promise<boolean> => {
-  if (!audioContext) {
+  if (!state.audioContext) {
     console.error('Audio context not initialized')
     return false
   }
 
-  // Cycle through the three modes using switch
-  switch (currentAudioSourceType) {
+  switch (state.currentAudioSourceType) {
     case 'song': {
       return await switchToMicrophone()
     }
@@ -336,7 +331,6 @@ export const toggleAudioSource = async (): Promise<boolean> => {
     case 'microphone': {
       const success = await switchToSelectedOutput()
       if (!success) {
-        // If selected audio fails, fall back to song
         return await switchToSong()
       }
       return true
@@ -357,12 +351,12 @@ export const setAudioSource = async (
   sourceType: AudioSourceType,
   deviceId?: string
 ): Promise<boolean> => {
-  if (!audioContext) {
+  if (!state.audioContext) {
     console.error('Audio context not initialized')
     return false
   }
 
-  if (sourceType === 'microphone' && !isMicrophoneAvailable) {
+  if (sourceType === 'microphone' && !state.isMicrophoneAvailable) {
     const micInitialized = await initializeMicrophone()
     if (!micInitialized) return false
   }
@@ -372,13 +366,12 @@ export const setAudioSource = async (
     if (!audioInitialized) return false
   }
 
-  currentAudioSourceType = sourceType
+  state.currentAudioSourceType = sourceType
 
-  // Handle audio element play/pause
-  if (sourceType === 'song' && audioElement) {
-    audioElement.play().catch(console.error)
-  } else if (audioElement) {
-    audioElement.pause()
+  if (sourceType === 'song' && state.audioElement) {
+    state.audioElement.play().catch(console.error)
+  } else if (state.audioElement) {
+    state.audioElement.pause()
   }
 
   connectAudioSource()
@@ -387,52 +380,47 @@ export const setAudioSource = async (
 
 // Get current audio source
 export const getAudioSource = (): AudioSourceType => {
-  return currentAudioSourceType
+  return state.currentAudioSourceType
 }
 
 // Check if microphone is available
 export const isMicrophoneReady = (): boolean => {
-  return isMicrophoneAvailable
+  return state.isMicrophoneAvailable
 }
 
 // Cleanup when component unmounts
 export const cleanup = (): void => {
-  // Stop microphone stream if active
-  if (microphoneStream) {
-    microphoneStream.getTracks().forEach((track) => track.stop())
-    microphoneStream = null
+  if (state.microphoneStream) {
+    state.microphoneStream.getTracks().forEach((track) => track.stop())
+    state.microphoneStream = null
   }
 
-  // Stop selected audio stream if active
-  if (selectedAudioStream) {
-    selectedAudioStream.getTracks().forEach((track) => track.stop())
-    selectedAudioStream = null
+  if (state.selectedAudioStream) {
+    state.selectedAudioStream.getTracks().forEach((track) => track.stop())
+    state.selectedAudioStream = null
   }
 
-  // Disconnect sources
   try {
-    if (songSource) songSource.disconnect()
-    if (microphoneSource) microphoneSource.disconnect()
-    if (selectedAudioSource) selectedAudioSource.disconnect()
-  } catch (e) {
+    if (state.songSource) state.songSource.disconnect()
+    if (state.microphoneSource) state.microphoneSource.disconnect()
+    if (state.selectedAudioSource) state.selectedAudioSource.disconnect()
+  } catch (_e) {
     // Sources may not be connected
   }
 
-  // Reset state
-  songSource = null
-  microphoneSource = null
-  selectedAudioSource = null
-  currentAudioSourceType = 'song'
-  isMicrophoneAvailable = false
-  isSelectedAudioAvailable = false
-  availableAudioDevices = []
+  state.songSource = null
+  state.microphoneSource = null
+  state.selectedAudioSource = null
+  state.currentAudioSourceType = 'song'
+  state.isMicrophoneAvailable = false
+  state.isSelectedAudioAvailable = false
+  state.availableAudioDevices = []
 
-  if (audioElement) {
-    // Don't remove the element since it's part of the template
-    audioElement = null
+  if (state.audioElement) {
+    state.audioElement = null
   }
 
-  if (audioContext) {
-    audioContext.close()
+  if (state.audioContext) {
+    state.audioContext.close()
   }
 }

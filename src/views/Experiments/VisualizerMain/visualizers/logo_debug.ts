@@ -64,7 +64,7 @@ const setupBars = (scene: THREE.Scene) => {
   return bars
 }
 
-const animateLogo = (logo: any, audioData: number[]) => {
+const animateLogo = (logo: { mesh: { rotation: { x: number } } }, audioData: number[]) => {
   if (!logo) return
   const sensibility = 50
   const sum = audioData.reduce((a: number, b: number) => a + b, 0)
@@ -127,7 +127,7 @@ export const boxVisualizer: VisualizerSetup = {
     return { logo, bars }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()
@@ -148,7 +148,7 @@ export const boxVisualizer: VisualizerSetup = {
     event: MouseEvent,
     camera: THREE.Camera,
     canvas: HTMLCanvasElement,
-    { bars }: Record<string, any>
+    { bars }: Record<string, unknown>
   ) => {
     if (!camera || !canvas || bars.length === 0) return
 

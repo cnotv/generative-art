@@ -92,6 +92,13 @@ const createSeededRandom = (seed: number): (() => number) => {
 const computeChunkSeed = (chunkX: number, chunkZ: number): number =>
   (chunkX * 73856093) ^ (chunkZ * 19349663) ^ 0xabcdef
 
+export interface TreesChunkOptions {
+  treesPerChunk: number
+  heightSampler?: HeightSampler
+  sizeScale?: number
+  sizeVariation?: number
+}
+
 /**
  * Creates a group of textured tree/bush/rock billboards for a chunk.
  * Shares geometry and materials across all chunks to minimise draw-call overhead.
@@ -100,11 +107,14 @@ export const createTreesChunk = (
   chunkX: number,
   chunkZ: number,
   chunkSize: number,
-  treesPerChunk: number,
-  heightSampler?: HeightSampler,
-  sizeScale = DEFAULT_SIZE_SCALE,
-  sizeVariation = DEFAULT_SIZE_VARIATION
+  options: TreesChunkOptions
 ): THREE.Group => {
+  const {
+    treesPerChunk,
+    heightSampler,
+    sizeScale = DEFAULT_SIZE_SCALE,
+    sizeVariation = DEFAULT_SIZE_VARIATION
+  } = options
   const group = new THREE.Group()
   group.name = `trees-${chunkX},${chunkZ}`
 

@@ -89,6 +89,13 @@ export const createGrassMaterial = (color = 0x33bb33): THREE.MeshPhysicalMateria
     side: THREE.DoubleSide
   })
 
+export interface GrassChunkOptions {
+  grassPerChunk: number
+  sharedGeometry: THREE.BufferGeometry
+  sharedMaterial: THREE.Material
+  heightSampler?: HeightSampler
+}
+
 /**
  * Creates an InstancedMesh of grass blades for a single chunk.
  * Uses shared geometry and material; only instance transforms differ per chunk.
@@ -97,11 +104,9 @@ export const createGrassChunk = (
   chunkX: number,
   chunkZ: number,
   chunkSize: number,
-  grassPerChunk: number,
-  sharedGeometry: THREE.BufferGeometry,
-  sharedMaterial: THREE.Material,
-  heightSampler?: HeightSampler
+  options: GrassChunkOptions
 ): THREE.InstancedMesh => {
+  const { grassPerChunk, sharedGeometry, sharedMaterial, heightSampler } = options
   const instancedMesh = new THREE.InstancedMesh(sharedGeometry, sharedMaterial, grassPerChunk)
   instancedMesh.name = `grass-${chunkX},${chunkZ}`
 

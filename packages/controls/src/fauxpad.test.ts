@@ -125,7 +125,7 @@ describe('createFauxPadController', () => {
       insideElement.dispatchEvent(touchStart)
 
       expect(controller.isActive()).toBe(true)
-      console.log('[TEST] touchstart - isActive:', controller.isActive())
+      console.warn('[TEST] touchstart - isActive:', controller.isActive())
     })
 
     it('should trigger RIGHT action when moving right', () => {
@@ -143,8 +143,8 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 100, 50)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Move RIGHT - onAction calls:', onActionMock.mock.calls)
-      console.log('[TEST] Position:', controller.getPosition())
+      console.warn('[TEST] Move RIGHT - onAction calls:', onActionMock.mock.calls)
+      console.warn('[TEST] Position:', controller.getPosition())
 
       expect(onActionMock).toHaveBeenCalledWith('move-right', 'right', 'faux-pad')
     })
@@ -164,8 +164,8 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 0, 50)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Move LEFT - onAction calls:', onActionMock.mock.calls)
-      console.log('[TEST] Position:', controller.getPosition())
+      console.warn('[TEST] Move LEFT - onAction calls:', onActionMock.mock.calls)
+      console.warn('[TEST] Position:', controller.getPosition())
 
       expect(onActionMock).toHaveBeenCalledWith('move-left', 'left', 'faux-pad')
     })
@@ -185,8 +185,8 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 50, 0)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Move UP - onAction calls:', onActionMock.mock.calls)
-      console.log('[TEST] Position:', controller.getPosition())
+      console.warn('[TEST] Move UP - onAction calls:', onActionMock.mock.calls)
+      console.warn('[TEST] Position:', controller.getPosition())
 
       expect(onActionMock).toHaveBeenCalledWith('move-up', 'up', 'faux-pad')
     })
@@ -206,8 +206,8 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 50, 100)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Move DOWN - onAction calls:', onActionMock.mock.calls)
-      console.log('[TEST] Position:', controller.getPosition())
+      console.warn('[TEST] Move DOWN - onAction calls:', onActionMock.mock.calls)
+      console.warn('[TEST] Position:', controller.getPosition())
 
       expect(onActionMock).toHaveBeenCalledWith('move-down', 'down', 'faux-pad')
     })
@@ -225,7 +225,7 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 80, 50)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Inside element transform:', insideElement.style.transform)
+      console.warn('[TEST] Inside element transform:', insideElement.style.transform)
 
       expect(insideElement.style.transform).toContain('translate')
     })
@@ -248,8 +248,8 @@ describe('createFauxPadController', () => {
       const touchEnd = createTouchEvent('touchend', 100, 50)
       insideElement.dispatchEvent(touchEnd)
 
-      console.log('[TEST] touchend - onRelease calls:', onReleaseMock.mock.calls)
-      console.log('[TEST] isActive after touchend:', controller.isActive())
+      console.warn('[TEST] touchend - onRelease calls:', onReleaseMock.mock.calls)
+      console.warn('[TEST] isActive after touchend:', controller.isActive())
 
       expect(onReleaseMock).toHaveBeenCalled()
       expect(controller.isActive()).toBe(false)
@@ -270,8 +270,8 @@ describe('createFauxPadController', () => {
       const touchMove = createTouchEvent('touchmove', 55, 50)
       insideElement.dispatchEvent(touchMove)
 
-      console.log('[TEST] Deadzone test - onAction calls:', onActionMock.mock.calls)
-      console.log('[TEST] Position:', controller.getPosition())
+      console.warn('[TEST] Deadzone test - onAction calls:', onActionMock.mock.calls)
+      console.warn('[TEST] Position:', controller.getPosition())
 
       expect(onActionMock).not.toHaveBeenCalled()
     })

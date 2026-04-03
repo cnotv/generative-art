@@ -46,7 +46,6 @@ export const createElementsChunk = (
 
   const worldOffsetX = chunkX * chunkSize
   const worldOffsetZ = chunkZ * chunkSize
-  const halfChunk = chunkSize / 2
 
   Array.from({ length: elementsPerChunk }).forEach(() => {
     const positionX = worldOffsetX + (random() - 0.5) * chunkSize

@@ -1,38 +1,41 @@
 import { createNoise4D } from '@/utils/simplex.js'
 
-let config
+const state = { config: null }
 const simplex = createNoise4D()
 
 const draw = (canvas) => {
   postMessage({ begin: true })
 
   const ctx = canvas.getContext('2d')
-  config.frameCount++
-  canvas.width = config.width * config.windowSize
-  canvas.height = config.height * config.windowSize
+  state.config.frameCount++
+  canvas.width = state.config.width * state.config.windowSize
+  canvas.height = state.config.height * state.config.windowSize
 
   ctx.fillStyle = '#b4e1e9'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  let x, y
-  const waveLength = (Math.PI * 2 * config.frameCount) / config.speed
-  const z = config.fluidity * Math.cos(waveLength)
-  const w = config.fluidity * Math.sin(waveLength)
+  const waveLength = (Math.PI * 2 * state.config.frameCount) / state.config.speed
+  const z = state.config.fluidity * Math.cos(waveLength)
+  const w = state.config.fluidity * Math.sin(waveLength)
 
-  for (y = 0; y < canvas.height / config.pixelSize; y++) {
-    for (x = 0; x < canvas.width / config.pixelSize; x++) {
+  Array.from({ length: Math.floor(canvas.height / state.config.pixelSize) }, (_, y) => {
+    Array.from({ length: Math.floor(canvas.width / state.config.pixelSize) }, (__, x) => {
       const lightness = Math.round(
-        (simplex(x * config.noiseSize, y * config.noiseSize, z, w) + 1) / config.lightAmount
+        (simplex(x * state.config.noiseSize, y * state.config.noiseSize, z, w) + 1) /
+          state.config.lightAmount
       )
-      // const lightness = Math.round(Math.random());
-      // const lightness = Math.random();
 
       ctx.fillStyle = `rgba(212, 241, 249, ${lightness})`
-      ctx.fillRect(x * config.pixelSize, y * config.pixelSize, config.pixelSize, config.pixelSize)
-    }
-  }
+      ctx.fillRect(
+        x * state.config.pixelSize,
+        y * state.config.pixelSize,
+        state.config.pixelSize,
+        state.config.pixelSize
+      )
+    })
+  })
 
-  postMessage({ frameCount: config.frameCount })
+  postMessage({ frameCount: state.config.frameCount })
   postMessage({ end: true })
 }
 
@@ -41,7 +44,7 @@ onmessage = (event) => {
     const { canvas, workerConfig } = event.data
 
     if (workerConfig) {
-      config = { ...workerConfig }
+      state.config = { ...workerConfig }
     }
 
     if (canvas) {

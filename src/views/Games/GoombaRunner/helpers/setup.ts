@@ -1,21 +1,23 @@
 import * as THREE from 'three'
-import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js'
+import { RapierPhysics, type RapierPhysicsObject } from 'three/addons/physics/RapierPhysics.js'
 import { RapierHelper } from 'three/addons/helpers/RapierHelper.js'
 import { config } from '../config'
-import { createGame } from '@webgamekit/game'
-import { onUnmounted, shallowRef, computed } from 'vue'
+import { createGame, type GameState, type GameStatus } from '@webgamekit/game'
+import { onUnmounted, shallowRef, computed, type ShallowRef } from 'vue'
 import type { ComplexModel } from '@webgamekit/threejs'
 
+export type { RapierPhysicsObject }
+
 // Facade for game state management
-const gameState = shallowRef({ data: { score: 0, highestScore: 0, isNewHighScore: false } })
-createGame({ score: 0, highestScore: 0, isNewHighScore: false }, gameState as any, onUnmounted)
-const isGameStart = computed(() => gameState.value.status === 'idle')
-const isGamePlaying = computed(() => gameState.value.status === 'playing')
-const isGameOver = computed(() => gameState.value.status === 'game-over')
-const isNewHighScore = computed(() => gameState.value.data.isNewHighScore)
-const gameScore = computed(() => gameState.value.data.score)
-const gameStatus = computed(() => gameState.value.status)
-const setStatus = (status: string) => gameState.value.setStatus(status as any)
+const gameState: ShallowRef<GameState | undefined> = shallowRef(undefined)
+createGame({ score: 0, highestScore: 0, isNewHighScore: false }, gameState, onUnmounted)
+const isGameStart = computed(() => gameState.value?.status === 'idle')
+const isGamePlaying = computed(() => gameState.value?.status === 'playing')
+const isGameOver = computed(() => gameState.value?.status === 'game-over')
+const isNewHighScore = computed(() => gameState.value?.data.isNewHighScore as boolean | undefined)
+const gameScore = computed(() => (gameState.value?.data.score as number | undefined) ?? 0)
+const gameStatus = computed(() => gameState.value?.status)
+const setStatus = (status: GameStatus) => gameState.value?.setStatus(status)
 const setScore = (score: number) => gameState.value.setData('score', score)
 const highestScore = computed(() => gameState.value.data.highestScore)
 
@@ -70,7 +72,12 @@ const initPhysics = async (scene: THREE.Scene) => {
   return { physics, physicsHelper }
 }
 
-const preventGlitches = (result: ComplexModel, options: any) => {
+interface GlitchOptions {
+  opacity: number
+  zPosition: number
+}
+
+const preventGlitches = (result: ComplexModel, options: GlitchOptions) => {
   // Fix texture opacity glitches during camera rotation
   if (result.mesh && options.opacity < 1) {
     // Set render order based on depth - farther elements render first
@@ -111,15 +118,15 @@ const prevents = () => {
   )
 
   // Prevent double-tap zoom
-  let lastTouchEnd = 0
+  const touchState = { lastTouchEnd: 0 }
   document.addEventListener(
     'touchend',
     (event) => {
       const now = new Date().getTime()
-      if (now - lastTouchEnd <= 300) {
+      if (now - touchState.lastTouchEnd <= 300) {
         event.preventDefault()
       }
-      lastTouchEnd = now
+      touchState.lastTouchEnd = now
     },
     { passive: false }
   )

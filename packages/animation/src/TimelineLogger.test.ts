@@ -4,10 +4,10 @@ import type { TimelineLogEntry } from './TimelineLogger'
 import type { Timeline } from './types'
 
 describe('TimelineLogger', () => {
-  let consoleLogSpy: any
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    consoleLogSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -256,9 +256,9 @@ describe('TimelineLogger', () => {
       const logger = createTimelineLogger()
 
       // Add 1001 logs
-      for (let i = 0; i < 1001; i++) {
+      Array.from({ length: 1001 }, (_, i) => {
         logger.log({ frame: i, actionId: `id${i}`, type: 'start' })
-      }
+      })
 
       const logs = logger.getLogs()
       expect(logs).toHaveLength(1000)

@@ -94,7 +94,6 @@ describe('animation', () => {
       }) as unknown as ComplexModel
 
       const angle = 90 // degrees per turn
-      const distance = 0.1 // units per forward movement
       const speed = 1 // frequency
       const getDelta = () => 0.016 // ~60fps
 
@@ -129,9 +128,7 @@ describe('animation', () => {
       const cycleFrames = 360 // 4 turns * 90 frames each
 
       // Simulate the animation loop
-      for (let frame = 0; frame < cycleFrames; frame++) {
-        animateTimeline(manager, frame)
-      }
+      Array.from({ length: cycleFrames }, (_, frame) => animateTimeline(manager, frame))
 
       // After 360°, the model should be at approximately the same position with margin of errors
       const finalPosition = {
@@ -184,7 +181,6 @@ describe('animation', () => {
         }
       }) as unknown as ComplexModel
 
-      const distance = 1.0
       const angle = 90
       const getDelta = () => 0.016
 
@@ -213,9 +209,7 @@ describe('animation', () => {
       })
 
       // Simulate 40 frames: 4 sides × 10 steps each
-      for (let frame = 0; frame < 40; frame++) {
-        animateTimeline(manager, frame)
-      }
+      Array.from({ length: 40 }, (_, frame) => animateTimeline(manager, frame))
 
       // After 4 turns of 90°, should have traveled in roughly a square
       expect(positions).toHaveLength(4)
@@ -226,10 +220,24 @@ describe('animation', () => {
   })
 
   describe('updateAnimation', () => {
-    let mockMixer: any
-    let mockAction: any
+    let mockMixer: { update: ReturnType<typeof vi.fn> }
+    let mockAction: {
+      play: ReturnType<typeof vi.fn>
+      stop: ReturnType<typeof vi.fn>
+      reset: ReturnType<typeof vi.fn>
+      fadeIn: ReturnType<typeof vi.fn>
+      fadeOut: ReturnType<typeof vi.fn>
+      isRunning: ReturnType<typeof vi.fn>
+    }
     let mockPlayer: ComplexModel
-    let mockPreviousAction: any
+    let mockPreviousAction: {
+      play: ReturnType<typeof vi.fn>
+      stop: ReturnType<typeof vi.fn>
+      reset: ReturnType<typeof vi.fn>
+      fadeIn: ReturnType<typeof vi.fn>
+      fadeOut: ReturnType<typeof vi.fn>
+      isRunning: ReturnType<typeof vi.fn>
+    }
 
     beforeEach(() => {
       mockAction = {
@@ -1013,7 +1021,10 @@ describe('animation', () => {
       const model = createBlockingModel()
       playAction(model, 'attack')
 
-      const finishedCallback = (model.userData.mixer.addEventListener as any).mock.calls[0][1]
+      const addEventListenerMock = model.userData.mixer.addEventListener as ReturnType<typeof vi.fn>
+      const finishedCallback = addEventListenerMock.mock.calls[0][1] as (event: {
+        action: unknown
+      }) => void
       finishedCallback({ action: model.userData.actions.attack })
 
       expect(model.userData.performing).toBe(false)
@@ -1153,7 +1164,9 @@ describe('animation', () => {
           currentAction: undefined,
           body: {
             translation: () => ({ x: 0, y: 0, z: 0 }),
-            setTranslation: vi.fn((pos: any) => mockMesh.position.set(pos.x, pos.y, pos.z))
+            setTranslation: vi.fn((pos: { x: number; y: number; z: number }) =>
+              mockMesh.position.set(pos.x, pos.y, pos.z)
+            )
           },
           initialValues: { position: [0, 0, 0], rotation: [0, 0, 0], size: 1, color: undefined },
           type: 'dynamic',
@@ -1163,6 +1176,24 @@ describe('animation', () => {
           allowedActions: []
         }
       }) as unknown as ComplexModel
+    }
+
+    type MockActionWithClip = { _clip: { duration: number } }
+    const setClipDuration = (action: unknown, duration: number): void => {
+      ;(action as MockActionWithClip)._clip.duration = duration
+    }
+
+    const runTimelineUntilComplete = (
+      manager: ReturnType<typeof createTimelineManager>,
+      clipDuration: number,
+      deltaPerFrame: number
+    ): number => {
+      const runFrame = (accumulatedTime: number, callCount: number): number => {
+        if (accumulatedTime >= clipDuration || manager.getTimeline().length === 0) return callCount
+        animateTimeline(manager, callCount)
+        return runFrame(accumulatedTime + deltaPerFrame, callCount + 1)
+      }
+      return runFrame(0, 0)
     }
 
     it.each([
@@ -1176,7 +1207,7 @@ describe('animation', () => {
         // Given: Timeline manager, player with action, and getDelta function
         const manager = createTimelineManager()
         const player = createTimelineModel(clipDuration)
-        ;(player.userData.actions[action] as any)._clip.duration = clipDuration
+        setClipDuration(player.userData.actions[action], clipDuration)
         const getDelta = vi.fn().mockReturnValue(deltaPerFrame)
 
         // When: playActionTimeline is called
@@ -1186,13 +1217,7 @@ describe('animation', () => {
         expect(manager.getTimeline()).toHaveLength(1)
 
         // And: Running timeline for expected duration
-        let accumulatedTime = 0
-        let callCount = 0
-        while (accumulatedTime < clipDuration && manager.getTimeline().length > 0) {
-          animateTimeline(manager, callCount)
-          accumulatedTime += deltaPerFrame
-          callCount++
-        }
+        const callCount = runTimelineUntilComplete(manager, clipDuration, deltaPerFrame)
 
         // Then: Should run approximately expectedCalls times
         expect(callCount).toBeGreaterThanOrEqual(expectedCalls - 2)
@@ -1243,7 +1268,7 @@ describe('animation', () => {
       // Given: Timeline manager, player, and getDelta
       const manager = createTimelineManager()
       const player = createTimelineModel(1.0)
-      ;(player.userData.actions[action] as any)._clip.duration = 1.0
+      setClipDuration(player.userData.actions[action], 1.0)
       const getDelta = vi.fn().mockReturnValue(0.016)
 
       // When: playActionTimeline is called with options
@@ -1266,7 +1291,7 @@ describe('animation', () => {
         // Given: Timeline manager with running action
         const manager = createTimelineManager()
         const player = createTimelineModel(clipDuration)
-        ;(player.userData.actions[action] as any)._clip.duration = clipDuration
+        setClipDuration(player.userData.actions[action], clipDuration)
         const getDelta = vi.fn().mockReturnValue(0.016)
 
         // When: playActionTimeline is called
@@ -1278,9 +1303,7 @@ describe('animation', () => {
 
         // And: Timeline runs past clipDuration
         const framesToRun = Math.ceil(clipDuration / 0.016) + 5
-        for (let i = 0; i < framesToRun; i++) {
-          animateTimeline(manager, i)
-        }
+        Array.from({ length: framesToRun }, (_, i) => animateTimeline(manager, i))
 
         // Then: Flags should be cleared
         expect(player.userData.performing).toBe(false)
@@ -1321,8 +1344,8 @@ describe('animation', () => {
         // Given: Timeline manager and player performing currentAction
         const manager = createTimelineManager()
         const player = createTimelineModel(1.0)
-        ;(player.userData.actions[currentAction] as any)._clip.duration = 1.0
-        ;(player.userData.actions[attemptedAction] as any)._clip.duration = 1.0
+        setClipDuration(player.userData.actions[currentAction], 1.0)
+        setClipDuration(player.userData.actions[attemptedAction], 1.0)
         const getDelta = vi.fn().mockReturnValue(0.016)
 
         // Start currentAction

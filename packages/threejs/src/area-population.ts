@@ -216,35 +216,53 @@ const calculateCellDimensions = (
   }
 }
 
+type GridPositionOptions = {
+  rowIndex: number
+  columnIndex: number
+  minimumBounds: CoordinateTuple
+  maximumBounds: CoordinateTuple
+  cellWidth: number
+  cellDepth: number
+}
+
 /**
  * Generate grid position for a specific row and column
  */
-const generateGridPosition = (
-  rowIndex: number,
-  columnIndex: number,
-  minimumBounds: CoordinateTuple,
-  maximumBounds: CoordinateTuple,
-  cellWidth: number,
-  cellDepth: number
-): CoordinateTuple => {
+const generateGridPosition = ({
+  rowIndex,
+  columnIndex,
+  minimumBounds,
+  maximumBounds,
+  cellWidth,
+  cellDepth
+}: GridPositionOptions): CoordinateTuple => {
   const baseXCoordinate = minimumBounds[0] + columnIndex * cellWidth + cellWidth / 2
   const baseZCoordinate = minimumBounds[2] + rowIndex * cellDepth + cellDepth / 2
   const yCoordinate = (minimumBounds[1] + maximumBounds[1]) / 2
   return [baseXCoordinate, yCoordinate, baseZCoordinate]
 }
 
+type JitterOptions = {
+  randomGenerator: SeededRandom
+  basePosition: CoordinateTuple
+  minimumBounds: CoordinateTuple
+  maximumBounds: CoordinateTuple
+  cellWidth: number
+  cellDepth: number
+}
+
 /**
  * Apply jitter to a grid position
  * Returns [newState, jitteredPosition]
  */
-const applyJitterToGridPosition = (
-  randomGenerator: SeededRandom,
-  basePosition: CoordinateTuple,
-  minimumBounds: CoordinateTuple,
-  maximumBounds: CoordinateTuple,
-  cellWidth: number,
-  cellDepth: number
-): [SeededRandom, CoordinateTuple] => {
+const applyJitterToGridPosition = ({
+  randomGenerator,
+  basePosition,
+  minimumBounds,
+  maximumBounds,
+  cellWidth,
+  cellDepth
+}: JitterOptions): [SeededRandom, CoordinateTuple] => {
   const [rng1, xJitter] = randomInRange(randomGenerator, -cellWidth * 0.3, cellWidth * 0.3)
   const [rng2, zJitter] = randomInRange(rng1, -cellDepth * 0.3, cellDepth * 0.3)
   const [rng3, yCoordinate] = randomInRange(rng2, minimumBounds[1], maximumBounds[1])
@@ -291,7 +309,14 @@ const generateGridPositions = (
   const gridCellIndices = generateGridCellIndices(gridColumns, gridRows, elementCount)
 
   return gridCellIndices.map(([rowIndex, columnIndex]) =>
-    generateGridPosition(rowIndex, columnIndex, minimumBounds, maximumBounds, cellWidth, cellDepth)
+    generateGridPosition({
+      rowIndex,
+      columnIndex,
+      minimumBounds,
+      maximumBounds,
+      cellWidth,
+      cellDepth
+    })
   )
 }
 
@@ -319,22 +344,22 @@ const generateGridJitterPositions = (
 
   const { positions } = gridCellIndices.reduce(
     (accumulator, [rowIndex, columnIndex]) => {
-      const basePosition = generateGridPosition(
+      const basePosition = generateGridPosition({
         rowIndex,
         columnIndex,
         minimumBounds,
         maximumBounds,
         cellWidth,
         cellDepth
-      )
-      const [newRandomGenerator, jitteredPosition] = applyJitterToGridPosition(
-        accumulator.randomGenerator,
+      })
+      const [newRandomGenerator, jitteredPosition] = applyJitterToGridPosition({
+        randomGenerator: accumulator.randomGenerator,
         basePosition,
         minimumBounds,
         maximumBounds,
         cellWidth,
         cellDepth
-      )
+      })
       return {
         randomGenerator: newRandomGenerator,
         positions: [...accumulator.positions, jitteredPosition]

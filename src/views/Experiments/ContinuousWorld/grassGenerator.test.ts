@@ -77,7 +77,11 @@ describe('createGrassChunk', () => {
       { chunkX: -4, chunkZ: 3 }
     ])('creates a named InstancedMesh for chunk ($chunkX, $chunkZ)', ({ chunkX, chunkZ }) => {
       const { geometry, material } = createSharedResources()
-      const mesh = createGrassChunk(chunkX, chunkZ, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const mesh = createGrassChunk(chunkX, chunkZ, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       expect(mesh).toBeInstanceOf(THREE.InstancedMesh)
       expect(mesh.name).toBe(`grass-${chunkX},${chunkZ}`)
@@ -85,14 +89,22 @@ describe('createGrassChunk', () => {
 
     it('creates the correct number of instances', () => {
       const { geometry, material } = createSharedResources()
-      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       expect(mesh.count).toBe(GRASS_PER_CHUNK)
     })
 
     it('uses shared geometry and material references', () => {
       const { geometry, material } = createSharedResources()
-      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       expect(mesh.geometry).toBe(geometry)
       expect(mesh.material).toBe(material)
@@ -108,7 +120,11 @@ describe('createGrassChunk', () => {
       const halfChunk = CHUNK_SIZE / 2
 
       const { geometry, material } = createSharedResources()
-      const mesh = createGrassChunk(chunkX, chunkZ, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const mesh = createGrassChunk(chunkX, chunkZ, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       const instanceMatrix = new THREE.Matrix4()
       const instancePosition = new THREE.Vector3()
@@ -127,7 +143,11 @@ describe('createGrassChunk', () => {
 
     it('applies scale variation to instances', () => {
       const { geometry, material } = createSharedResources()
-      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const mesh = createGrassChunk(0, 0, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       const instanceMatrix = new THREE.Matrix4()
       const instanceScale = new THREE.Vector3()
@@ -146,8 +166,16 @@ describe('createGrassChunk', () => {
   describe('determinism', () => {
     it('produces identical instance matrices for the same chunk coordinates', () => {
       const { geometry, material } = createSharedResources()
-      const meshA = createGrassChunk(1, 2, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
-      const meshB = createGrassChunk(1, 2, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const meshA = createGrassChunk(1, 2, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
+      const meshB = createGrassChunk(1, 2, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       const matrixA = new THREE.Matrix4()
       const matrixB = new THREE.Matrix4()
@@ -161,8 +189,16 @@ describe('createGrassChunk', () => {
 
     it('produces different instance matrices for different chunk coordinates', () => {
       const { geometry, material } = createSharedResources()
-      const meshA = createGrassChunk(0, 0, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
-      const meshB = createGrassChunk(5, 5, CHUNK_SIZE, GRASS_PER_CHUNK, geometry, material)
+      const meshA = createGrassChunk(0, 0, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
+      const meshB = createGrassChunk(5, 5, CHUNK_SIZE, {
+        grassPerChunk: GRASS_PER_CHUNK,
+        sharedGeometry: geometry,
+        sharedMaterial: material
+      })
 
       const matrixA = new THREE.Matrix4()
       const matrixB = new THREE.Matrix4()

@@ -2,7 +2,11 @@ import * as THREE from 'three'
 import { createZigzagTexture } from '@webgamekit/threejs'
 import { getSpeed } from './setup'
 
-export const getGround = (scene: THREE.Scene, physics?: any) => {
+interface Physics {
+  addMesh: (mesh: THREE.Mesh) => void
+}
+
+export const getGround = (scene: THREE.Scene, physics?: Physics) => {
   const geometry = new THREE.BoxGeometry(2000, 0.5, 2000)
 
   // Create zigzag pattern texture with custom parameters

@@ -3,7 +3,6 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import { getModel, moveController, type ComplexModel, type Vec3 } from '@webgamekit/threejs'
 import {
   logicCreateGrid,
-  logicWorldToGrid,
   logicGridToWorld,
   logicMarkObstacle,
   logicGetBestRoute,
@@ -174,18 +173,24 @@ const skipReachedWaypoints = (path: Position2D[], worldPos: THREE.Vector3): numb
   return firstUnreached === -1 ? path.length - 1 : firstUnreached
 }
 
-export const updatePaperPlaneChase = (
+export type ChaseOptions = {
+  plane: ComplexModel
+  playerPosition: THREE.Vector3
+  speed: number
+  delta: number
+  navGrid: Grid
+  pathState: PaperPlanePathState
+  filterPredicate?: (collider: object) => boolean
+}
+
+const computeReplanPath = (
   plane: ComplexModel,
   playerPosition: THREE.Vector3,
-  speed: number,
-  delta: number,
   navGrid: Grid,
   pathState: PaperPlanePathState,
-  filterPredicate?: (collider: object) => boolean
-): PaperPlanePathState => {
-  const newTimeSinceReplan = pathState.timeSinceReplan + delta
+  newTimeSinceReplan: number
+): { newPath: Position2D[] | null; shouldReplan: boolean } => {
   const shouldReplan = newTimeSinceReplan >= PAPER_PLANE_REPLAN_INTERVAL || !pathState.path
-
   const newPath = shouldReplan
     ? logicGetBestRoute(
         navGrid,
@@ -193,16 +198,125 @@ export const updatePaperPlaneChase = (
         findNearestWalkableCell(worldToGridNearest(playerPosition.x, playerPosition.z), navGrid)
       )
     : pathState.path
+  return { newPath, shouldReplan }
+}
+
+const resolveWaypointTarget = (
+  newPath: Position2D[] | null,
+  baseIndex: number,
+  playerPosition: THREE.Vector3
+): [number, number] => {
+  if (!newPath || newPath.length === 0) return [playerPosition.x, playerPosition.z]
+  const waypoint = newPath[baseIndex] ?? newPath[newPath.length - 1]
+  const [wx, , wz] = logicGridToWorld(waypoint.x, waypoint.z, NAVIGATION_GRID_CONFIG)
+  return [wx, wz]
+}
+
+type MovementVector = { dx: number; dz: number; distance: number }
+
+type PlaneMovementOptions = {
+  plane: ComplexModel
+  movement: MovementVector
+  speed: number
+  delta: number
+  filterPredicate?: (collider: object) => boolean
+}
+
+const applyPlaneMovement = ({
+  plane,
+  movement,
+  speed,
+  delta,
+  filterPredicate
+}: PlaneMovementOptions): void => {
+  const { dx, dz, distance } = movement
+  const targetAngle = Math.atan2(dx, -dz)
+  const rawDiff = targetAngle - plane.rotation.y
+  // Normalize to [-PI, PI] to always take the shortest arc
+  const angleDiff = rawDiff - Math.PI * 2 * Math.floor((rawDiff + Math.PI) / (Math.PI * 2))
+  plane.rotation.y +=
+    Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), PAPER_PLANE_TURN_SPEED * delta)
+  moveController(
+    plane,
+    { x: (dx / distance) * speed * delta, y: 0, z: (dz / distance) * speed * delta },
+    filterPredicate
+  )
+}
+
+type PathfinderEventOptions = {
+  shouldReplan: boolean
+  canAdvance: boolean
+  newPath: Position2D[] | null
+  baseIndex: number
+  newIndex: number
+  distance: number
+}
+
+const logPathfinderEvent = (
+  plane: ComplexModel,
+  { shouldReplan, canAdvance, newPath, baseIndex, newIndex, distance }: PathfinderEventOptions
+): void => {
+  if (shouldReplan) {
+    console.warn('[pathfinder] REPLAN', {
+      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
+      pathLen: newPath?.length ?? 0,
+      startIndex: baseIndex
+    })
+  } else if (canAdvance) {
+    console.warn('[pathfinder] ADVANCE', {
+      from: baseIndex,
+      to: newIndex,
+      distWas: distance.toFixed(2)
+    })
+  }
+}
+
+type StuckStateOptions = {
+  newStuckTime: number
+  baseIndex: number
+  newPath: Position2D[] | null
+  distance: number
+  targetX: number
+  targetZ: number
+}
+
+const logStuckState = (
+  plane: ComplexModel,
+  { newStuckTime, baseIndex, newPath, distance, targetX, targetZ }: StuckStateOptions
+): void => {
+  if (newStuckTime > 1 && Math.round(newStuckTime * 10) % 10 === 0) {
+    console.warn('[pathfinder] STUCK', {
+      index: baseIndex,
+      pathLen: newPath?.length ?? 0,
+      distance: distance.toFixed(2),
+      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
+      target: `(${targetX.toFixed(1)}, ${targetZ.toFixed(1)})`
+    })
+  }
+}
+
+export const updatePaperPlaneChase = ({
+  plane,
+  playerPosition,
+  speed,
+  delta,
+  navGrid,
+  pathState,
+  filterPredicate
+}: ChaseOptions): PaperPlanePathState => {
+  const newTimeSinceReplan = pathState.timeSinceReplan + delta
+  const { newPath, shouldReplan } = computeReplanPath(
+    plane,
+    playerPosition,
+    navGrid,
+    pathState,
+    newTimeSinceReplan
+  )
 
   const baseIndex =
     shouldReplan && newPath ? skipReachedWaypoints(newPath, plane.position) : pathState.currentIndex
 
-  const [targetX, targetZ] = (() => {
-    if (!newPath || newPath.length === 0) return [playerPosition.x, playerPosition.z]
-    const waypoint = newPath[baseIndex] ?? newPath[newPath.length - 1]
-    const [wx, , wz] = logicGridToWorld(waypoint.x, waypoint.z, NAVIGATION_GRID_CONFIG)
-    return [wx, wz]
-  })()
+  const [targetX, targetZ] = resolveWaypointTarget(newPath, baseIndex, playerPosition)
 
   const dx = targetX - plane.position.x
   const dz = targetZ - plane.position.z
@@ -213,52 +327,17 @@ export const updatePaperPlaneChase = (
     !shouldReplan && !atLastWaypoint && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE
   const newIndex = canAdvance ? baseIndex + 1 : baseIndex
 
-  if (shouldReplan) {
-    console.log('[pathfinder] REPLAN', {
-      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
-      pathLen: newPath?.length ?? 0,
-      startIndex: baseIndex
-    })
-  } else if (canAdvance) {
-    console.log('[pathfinder] ADVANCE', {
-      from: baseIndex,
-      to: newIndex,
-      distWas: distance.toFixed(2)
-    })
-  }
+  logPathfinderEvent(plane, { shouldReplan, canAdvance, newPath, baseIndex, newIndex, distance })
 
   // Stuck = not replanning, not progressing through waypoints, and agent barely moving
   const isProgressing =
     shouldReplan || canAdvance || (atLastWaypoint && distance < PAPER_PLANE_WAYPOINT_REACH_DISTANCE)
   const newStuckTime = isProgressing ? 0 : pathState.stuckTime + delta
 
-  if (newStuckTime > 1 && Math.round(newStuckTime * 10) % 10 === 0) {
-    console.warn('[pathfinder] STUCK', {
-      index: baseIndex,
-      pathLen: newPath?.length ?? 0,
-      distance: distance.toFixed(2),
-      pos: `(${plane.position.x.toFixed(1)}, ${plane.position.z.toFixed(1)})`,
-      target: `(${targetX.toFixed(1)}, ${targetZ.toFixed(1)})`
-    })
-  }
+  logStuckState(plane, { newStuckTime, baseIndex, newPath, distance, targetX, targetZ })
 
   if (distance > 0.01) {
-    const targetAngle = Math.atan2(dx, -dz)
-    let angleDiff = targetAngle - plane.rotation.y
-    // Normalize to [-PI, PI] to always take the shortest arc
-    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2
-    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2
-    plane.rotation.y +=
-      Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), PAPER_PLANE_TURN_SPEED * delta)
-    moveController(
-      plane,
-      {
-        x: (dx / distance) * speed * delta,
-        y: 0,
-        z: (dz / distance) * speed * delta
-      },
-      filterPredicate
-    )
+    applyPlaneMovement({ plane, movement: { dx, dz, distance }, speed, delta, filterPredicate })
   }
 
   return {

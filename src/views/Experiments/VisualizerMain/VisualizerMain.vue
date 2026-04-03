@@ -189,7 +189,7 @@ const handleAudioSourceToggle = async () => {
   const success = await toggleAudioSource()
   if (success) {
     currentAudioSource.value = getAudioSource()
-    console.log(`Switched to ${currentAudioSource.value} input`)
+    console.warn(`Switched to ${currentAudioSource.value} input`)
   } else {
     console.error('Failed to toggle audio source')
   }

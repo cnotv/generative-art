@@ -2,27 +2,37 @@ import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { getModel, moveController } from '@webgamekit/threejs'
 import { config } from '../config'
-import { getSpeed } from './setup'
+import { getSpeed, type RapierPhysicsObject } from './setup'
 
-let obstacleCounter = 0
-let obstaclesGroup: THREE.Group | null = null
+interface ObstacleState {
+  counter: number
+  group: THREE.Group | null
+}
+
+const obstacleState: ObstacleState = { counter: 0, group: null }
+
+export interface Obstacle {
+  mesh: THREE.Mesh
+  characterController: RAPIER.KinematicCharacterController
+  collider: RAPIER.Collider
+}
 
 export const resetObstacleCounter = () => {
-  obstacleCounter = 0
+  obstacleState.counter = 0
 }
 
 export const createObstaclesGroup = (scene: THREE.Scene): THREE.Group => {
-  obstaclesGroup = new THREE.Group()
-  obstaclesGroup.name = 'Obstacles'
-  scene.add(obstaclesGroup)
-  return obstaclesGroup
+  obstacleState.group = new THREE.Group()
+  obstacleState.group.name = 'Obstacles'
+  scene.add(obstacleState.group)
+  return obstacleState.group
 }
 
 export const addBlock = async (
   scene: THREE.Scene,
   position: [number, number],
   world: RAPIER.World,
-  physics?: any
+  physics?: RapierPhysicsObject
 ) => {
   // Load sand block model
   const sandBlockModel = await getModel(scene, world, 'sand_block.glb', {
@@ -34,8 +44,8 @@ export const addBlock = async (
   })
 
   const mesh = sandBlockModel
-  mesh.name = `obstacle-${obstacleCounter}`
-  obstacleCounter += 1
+  mesh.name = `obstacle-${obstacleState.counter}`
+  obstacleState.counter += 1
   mesh.castShadow = true
   mesh.receiveShadow = true
   mesh.traverse((child) => {
@@ -47,9 +57,9 @@ export const addBlock = async (
   mesh.position.set(position[0], position[1], 0)
 
   // Move from scene root into obstacles group
-  if (obstaclesGroup) {
+  if (obstacleState.group) {
     scene.remove(mesh)
-    obstaclesGroup.add(mesh)
+    obstacleState.group.add(mesh)
   }
 
   if (physics) {
@@ -75,25 +85,22 @@ export const addBlock = async (
   return { mesh }
 }
 
-export const moveBlock = (
-  obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
-  gameScore: number
-) => {
+export const moveBlock = (obstacle: Obstacle, gameScore: number) => {
   const speed = getSpeed(config.game.speed, gameScore)
   moveController(obstacle.mesh, { x: -speed, y: 0, z: 0 })
 }
 
 export const removeBlock = (
-  obstacle: { mesh: THREE.Mesh; characterController: any; collider: any },
-  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
+  obstacle: Obstacle,
+  obstacles: Obstacle[],
   index: number,
-  physics: any
+  physics: RapierPhysicsObject
 ) => {
   const { mesh, collider } = obstacle
 
   // Remove from group (or scene) and physics world
-  if (obstaclesGroup) {
-    obstaclesGroup.remove(mesh)
+  if (obstacleState.group) {
+    obstacleState.group.remove(mesh)
   }
   physics.world.removeCollider(collider, true)
 
@@ -101,17 +108,22 @@ export const removeBlock = (
   obstacles.splice(index, 1)
 }
 
-export const moveBlocks = (
-  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
-  physics: any,
-  gameScore: number,
-  player: THREE.Mesh,
-  scene: THREE.Scene,
+interface MoveBlocksOptions {
+  obstacles: Obstacle[]
+  physics: RapierPhysicsObject
+  gameScore: number
+  player: THREE.Mesh
   onScore: (points: number) => void
-) => {
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const obstacle = obstacles[i]
+}
 
+export const moveBlocks = ({
+  obstacles,
+  physics,
+  gameScore,
+  player,
+  onScore
+}: MoveBlocksOptions) => {
+  obstacles.reduceRight((_, obstacle, index) => {
     // Move the block
     moveBlock(obstacle, gameScore)
 
@@ -123,40 +135,39 @@ export const moveBlocks = (
 
     // Check if block should be removed and remove it
     if (obstacle.mesh.position.x < -300 - config.blocks.size) {
-      removeBlock(obstacle, obstacles, i, physics)
+      removeBlock(obstacle, obstacles, index, physics)
     }
-  }
+    return null
+  }, null)
 }
 
 export const resetObstacles = (
-  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[],
-  scene: THREE.Scene,
-  physics: any
+  obstacles: Obstacle[],
+  _scene: THREE.Scene,
+  physics: RapierPhysicsObject
 ) => {
   // Remove all obstacles from group and physics
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const obstacle = obstacles[i]
-    if (obstaclesGroup) {
-      obstaclesGroup.remove(obstacle.mesh)
-    } else {
-      scene.remove(obstacle.mesh)
+  obstacles.reduceRight((_, obstacle, index) => {
+    if (obstacleState.group) {
+      obstacleState.group.remove(obstacle.mesh)
     }
     physics.world.removeCollider(obstacle.collider, true)
-  }
-  obstacles.length = 0
+    obstacles.splice(index, 1)
+    return null
+  }, null)
   resetObstacleCounter()
 }
 
 export const createCubes = async (
   scene: THREE.Scene,
   world: RAPIER.World,
-  physics: any,
-  obstacles: { mesh: THREE.Mesh; characterController: any; collider: any }[]
+  physics: RapierPhysicsObject,
+  obstacles: Obstacle[]
 ) => {
   const position: [number, number] = [
     config.blocks.size * 10,
     (config.blocks.size / 2) * Math.floor(Math.random() * 3) + 15
   ]
   const { mesh, characterController, collider } = await addBlock(scene, position, world, physics)
-  obstacles.push({ mesh, characterController, collider })
+  obstacles.push({ mesh, characterController, collider } as Obstacle)
 }

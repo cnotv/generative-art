@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { getAudioData } from '../audio'
 import type { VisualizerSetup } from '../visualizer'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 
@@ -84,24 +83,19 @@ export const boxVisualizer: VisualizerSetup = {
     const startZ = (-(gridSize - 1) * spacingZ) / 2
     const startY = (-(gridSize - 1) * spacingY) / 2
 
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
+    Array.from({ length: gridSize }, (_, row) => {
+      Array.from({ length: gridSize }, (__, col) => {
         const x = 0
-        // const x = startX + col * spacing;
         const z = startZ + row * spacingZ
         const y = startY + col * spacingY
-        // const y = 0;
 
-        // Alternate orientations in a checkerboard pattern
         const isEven = (row + col) % 2 === 0
-        const rotation: CoordinateTuple = isEven
-          ? [0, Math.PI / 2, 0] // Horizontal orientation
-          : [Math.PI, Math.PI / 2, 0] // Vertical orientation
+        const rotation: CoordinateTuple = isEven ? [0, Math.PI / 2, 0] : [Math.PI, Math.PI / 2, 0]
 
         const pipeInstance = createPipe([x, isEven ? y - 8 : y, z], rotation)
         pipes.push(pipeInstance.pipe)
-      }
-    }
+      })
+    })
 
     // Add subtle ambient light
     const ambientLight = new THREE.AmbientLight(0x222244, 0.2)
@@ -113,17 +107,13 @@ export const boxVisualizer: VisualizerSetup = {
     }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
-        const objects = getObjects()
-        const { pipes, backgroundSphere } = objects
+        const { backgroundSphere } = getObjects() as {
+          backgroundSphere: { rotation: { y: number } } | undefined
+        }
 
-        const audioData = getAudioData()
-        const sum = audioData.reduce((a: number, b: number) => a + b, 0)
-        const average = sum / audioData.length
-
-        // Animate background rotation
         if (backgroundSphere) {
           backgroundSphere.rotation.y += 0.0005
         }

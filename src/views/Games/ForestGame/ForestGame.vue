@@ -86,7 +86,7 @@ const logControllerForward = (
   if (!debug) return
   const activeActions = Object.keys(actions).filter((k) => actions[k])
   if (activeActions.length > 0) {
-    console.log(
+    console.warn(
       '[Controls Debug] Active actions:',
       activeActions,
       'Target rotation:',
@@ -114,6 +114,149 @@ const bindings = {
 }
 const { destroyControls, currentActions, remapControlsOptions } = createControls(bindings)
 
+interface ElementData {
+  position: CoordinateTuple
+  scale?: CoordinateTuple
+  rotation?: CoordinateTuple
+}
+
+type IllustrationScene = Parameters<typeof getCube>[0]
+type IllustrationWorld = Parameters<typeof getCube>[1]
+
+const populateIllustrations = (
+  scene: IllustrationScene,
+  world: IllustrationWorld,
+  timelineManager: ReturnType<typeof createTimelineManager>
+): void => {
+  let animationIndex = 0
+  Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
+    configs.forEach((config) => {
+      const elementsData: ElementData[] =
+        config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }))
+
+      const sortFunction =
+        categoryName === 'grass'
+          ? sortOrder.byDistanceFromZ(elementsData, 'middle')
+          : sortOrder.zBackToFront
+      const delays = calculateSequentialDelays(elementsData, sortFunction, 2)
+
+      elementsData.forEach((elementData: ElementData, index: number) => {
+        const position = elementData.position
+        const elementConfig = {
+          ...config,
+          position,
+          ...(elementData.scale && { size: elementData.scale }),
+          ...(elementData.rotation && { rotation: elementData.rotation })
+        }
+        const element = getCube(scene, world, elementConfig)
+        element.name = `area-${categoryName}-${animationIndex}`
+
+        const animation =
+          categoryName === 'clouds'
+            ? createSlideInFromSides({
+                object: element,
+                startY: position[1],
+                endY: position[1],
+                duration: 60,
+                delay: delays[index]
+              })
+            : createPopUpBounce({
+                object: element,
+                startY: position[1] - 3,
+                endY: position[1],
+                duration: 30,
+                delay: delays[index]
+              })
+
+        timelineManager.addAction({
+          name: `${categoryName}-${animationIndex}-popup`,
+          category: 'visual',
+          action: animation,
+          autoRemove: true
+        })
+
+        animationIndex++
+      })
+    })
+  })
+}
+
+type SetupParameters = Parameters<NonNullable<Parameters<typeof store.init>[2]['defineSetup']>>[0]
+
+type TimelineRegistrationOptions = {
+  params: SetupParameters
+  player: ComplexModel
+  obstacles: ComplexModel[]
+  groundBodies: ComplexModel[]
+  cameraOffset: CoordinateTuple
+}
+
+const registerGameTimeline = (
+  timelineManager: ReturnType<typeof createTimelineManager>,
+  options: TimelineRegistrationOptions
+): void => {
+  const { params, player, obstacles, groundBodies, cameraOffset } = options
+  const { camera, getDelta, animate } = params
+  const { distance, speed, maxJump } = playerSettings.game
+  const { movement } = playerSettings
+  let orbitReference: Parameters<typeof cameraFollowPlayer>[3] | null = null
+
+  timelineManager.addAction({
+    frequency: speed.movement,
+    name: 'Walk',
+    category: 'user-input',
+    action: () => {
+      const targetRotation = getRotation(currentActions, true)
+      const isMoving = targetRotation !== null
+      const actionName = isMoving ? 'Esqueleto|walking' : 'Esqueleto|idle'
+      logControllerForward(movement.debug, currentActions, targetRotation)
+      const animationData: AnimationData = {
+        actionName,
+        player,
+        delta: getDelta() * 2,
+        speed: 20,
+        backward: true,
+        distance
+      }
+      if (isMoving) {
+        setRotation(player, targetRotation)
+        controllerForward(obstacles, groundBodies, animationData, movement)
+        if (!orbitReference)
+          orbitReference = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3]
+        cameraFollowPlayer(camera, player, cameraOffset, orbitReference, ['x', 'z'])
+      } else {
+        updateAnimation({ ...animationData, speed: 5 })
+      }
+    }
+  })
+
+  timelineManager.addAction({
+    name: 'Jump action',
+    category: 'physics',
+    action: () => {
+      if (isJumping.value) {
+        if (player.position.y >= playerSettings.model.position[1] + maxJump) {
+          isJumping.value = false
+        } else {
+          player.position.y += speed.jump * 0.1
+        }
+      } else {
+        player.position.y -= speed.jump * 0.1
+      }
+
+      if (player.position.y <= playerSettings.model.position[1] + 0.1) {
+        canJump.value = true
+        player.position.y = playerSettings.model.position[1]
+      }
+    }
+  })
+
+  animate({
+    beforeTimeline: () => {},
+    timeline: timelineManager
+  })
+}
+
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 onMounted(async () => {
@@ -124,9 +267,8 @@ onMounted(async () => {
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showElements: false },
     playMode: true,
-    defineSetup: async ({ ground, scene, camera, world, getDelta, animate }) => {
-      const { distance, speed, maxJump } = playerSettings.game
-      const { movement } = playerSettings
+    defineSetup: async (params) => {
+      const { ground, scene, world } = params
       const obstacles: ComplexModel[] = []
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple
 
@@ -139,128 +281,15 @@ onMounted(async () => {
 
       remapControlsOptions(bindings)
 
-      // Lazy-captured orbit ref to avoid per-frame reactive access
-      let orbitReference: Parameters<typeof cameraFollowPlayer>[3] | null = null
-
       const timelineManager = createTimelineManager()
 
-      // Populate all illustrations with mesh naming for panel tracking
-      let animationIndex = 0
-      Object.entries(illustrationAreas).forEach(([categoryName, configs]) => {
-        configs.forEach((config) => {
-          const elementsData =
-            config.instances || config.positions.map((pos: CoordinateTuple) => ({ position: pos }))
-
-          const sortFunction =
-            categoryName === 'grass'
-              ? sortOrder.byDistanceFromZ(elementsData, 'middle')
-              : sortOrder.zBackToFront
-          const delays = calculateSequentialDelays(elementsData, sortFunction, 2)
-
-          elementsData.forEach(
-            (
-              elementData: {
-                position: CoordinateTuple
-                scale?: CoordinateTuple
-                rotation?: CoordinateTuple
-              },
-              index: number
-            ) => {
-              const position = elementData.position
-              const elementConfig = {
-                ...config,
-                position,
-                ...(elementData.scale && { size: elementData.scale }),
-                ...(elementData.rotation && { rotation: elementData.rotation })
-              }
-              const element = getCube(scene, world, elementConfig)
-              element.name = `area-${categoryName}-${animationIndex}`
-
-              const animation =
-                categoryName === 'clouds'
-                  ? createSlideInFromSides({
-                      object: element,
-                      startY: position[1],
-                      endY: position[1],
-                      duration: 60,
-                      delay: delays[index]
-                    })
-                  : createPopUpBounce({
-                      object: element,
-                      startY: position[1] - 3,
-                      endY: position[1],
-                      duration: 30,
-                      delay: delays[index]
-                    })
-
-              timelineManager.addAction({
-                name: `${categoryName}-${animationIndex}-popup`,
-                category: 'visual',
-                action: animation,
-                autoRemove: true
-              })
-
-              animationIndex++
-            }
-          )
-        })
-      })
-
-      timelineManager.addAction({
-        frequency: speed.movement,
-        name: 'Walk',
-        category: 'user-input',
-        action: () => {
-          const targetRotation = getRotation(currentActions, true)
-          const isMoving = targetRotation !== null
-          const actionName = isMoving ? 'Esqueleto|walking' : 'Esqueleto|idle'
-          logControllerForward(movement.debug, currentActions, targetRotation)
-          const animationData: AnimationData = {
-            actionName,
-            player,
-            delta: getDelta() * 2,
-            speed: 20,
-            backward: true,
-            distance
-          }
-          if (isMoving) {
-            setRotation(player, targetRotation)
-            controllerForward(obstacles, groundBodies, animationData, movement)
-            if (!orbitReference)
-              orbitReference = toRaw(store.orbitReference) as Parameters<
-                typeof cameraFollowPlayer
-              >[3]
-            cameraFollowPlayer(camera, player, cameraOffset, orbitReference, ['x', 'z'])
-          } else {
-            updateAnimation({ ...animationData, speed: 5 })
-          }
-        }
-      })
-
-      timelineManager.addAction({
-        name: 'Jump action',
-        category: 'physics',
-        action: () => {
-          if (isJumping.value) {
-            if (player.position.y >= playerSettings.model.position[1] + maxJump) {
-              isJumping.value = false
-            } else {
-              player.position.y += speed.jump * 0.1
-            }
-          } else {
-            player.position.y -= speed.jump * 0.1
-          }
-
-          if (player.position.y <= playerSettings.model.position[1] + 0.1) {
-            canJump.value = true
-            player.position.y = playerSettings.model.position[1]
-          }
-        }
-      })
-
-      animate({
-        beforeTimeline: () => {},
-        timeline: timelineManager
+      populateIllustrations(scene, world, timelineManager)
+      registerGameTimeline(timelineManager, {
+        params,
+        player,
+        obstacles,
+        groundBodies,
+        cameraOffset
       })
     }
   })

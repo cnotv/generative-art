@@ -22,6 +22,67 @@ export interface FauxPadOptions {
   debug?: boolean // Enable debug logging (default: false)
 }
 
+interface AngleRange {
+  min: number
+  max: number
+  directions: string[]
+}
+
+const EIGHT_WAY_RANGES: AngleRange[] = [
+  { min: 337.5, max: 360, directions: ['right'] },
+  { min: 0, max: 22.5, directions: ['right'] },
+  { min: 22.5, max: 67.5, directions: ['down', 'right'] },
+  { min: 67.5, max: 112.5, directions: ['down'] },
+  { min: 112.5, max: 157.5, directions: ['down', 'left'] },
+  { min: 157.5, max: 202.5, directions: ['left'] },
+  { min: 202.5, max: 247.5, directions: ['up', 'left'] },
+  { min: 247.5, max: 292.5, directions: ['up'] },
+  { min: 292.5, max: 337.5, directions: ['up', 'right'] }
+]
+
+const getEightWayDirections = (angle: number): string[] => {
+  const match = EIGHT_WAY_RANGES.find((range) => angle >= range.min && angle < range.max)
+  return match?.directions ?? []
+}
+
+const getFourWayDirections = (angle: number, directionThreshold: number): string[] => {
+  if (angle >= 360 - directionThreshold || angle < directionThreshold) return ['right']
+  if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold) return ['down']
+  if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold) return ['left']
+  if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold) return ['up']
+  return []
+}
+
+const getAngle = (x: number, y: number): number => {
+  const rad = Math.atan2(y, x)
+  const deg = rad * (180 / Math.PI)
+  return (deg + 360) % 360
+}
+
+interface DirectionState {
+  mapping: { current: ControlMapping }
+  handlers: ControlHandlers
+  activeDirections: Set<string>
+}
+
+function releaseDirections(state: DirectionState, directions: string[]) {
+  directions.forEach((dir) => {
+    const action = state.mapping.current['faux-pad']?.[dir]
+    if (action) state.handlers.onRelease(action, dir, 'faux-pad')
+    state.activeDirections.delete(dir)
+  })
+}
+
+function activateDirections(state: DirectionState, directions: Set<string>) {
+  directions.forEach((dir) => {
+    if (!state.activeDirections.has(dir)) {
+      const action = state.mapping.current['faux-pad']?.[dir]
+      if (action) state.handlers.onAction(action, dir, 'faux-pad')
+      state.activeDirections.add(dir)
+    }
+  })
+}
+
 /**
  * Create a virtual faux-pad controller that interprets touch/mouse input into directional actions
  *
@@ -52,71 +113,26 @@ export function createFauxPadController(
   const activeDirections = new Set<string>()
   let insideElement_: HTMLElement | null = null
 
-  /**
-   * Calculate angle in degrees (0 = right, 90 = down, 180 = left, 270 = up)
-   */
-  const getAngle = (x: number, y: number): number => {
-    const rad = Math.atan2(y, x)
-    const deg = rad * (180 / Math.PI)
-    return (deg + 360) % 360
-  }
+  const dirState: DirectionState = { mapping: mappingReference, handlers, activeDirections }
 
-  /**
-   * Convert angle to directional action
-   */
-  const getDirectionFromAngle = (angle: number): string[] => {
-    const directions: string[] = []
+  const getDirectionFromAngle = (angle: number): string[] =>
+    enableEightWay ? getEightWayDirections(angle) : getFourWayDirections(angle, directionThreshold)
 
-    if (enableEightWay) {
-      // 8-way directions
-      if (angle >= 337.5 || angle < 22.5) directions.push('right')
-      else if (angle >= 22.5 && angle < 67.5) directions.push('down', 'right')
-      else if (angle >= 67.5 && angle < 112.5) directions.push('down')
-      else if (angle >= 112.5 && angle < 157.5) directions.push('down', 'left')
-      else if (angle >= 157.5 && angle < 202.5) directions.push('left')
-      else if (angle >= 202.5 && angle < 247.5) directions.push('up', 'left')
-      else if (angle >= 247.5 && angle < 292.5) directions.push('up')
-      else if (angle >= 292.5 && angle < 337.5) directions.push('up', 'right')
-    } else {
-      // 4-way directions
-      if (angle >= 360 - directionThreshold || angle < directionThreshold) directions.push('right')
-      else if (angle >= 90 - directionThreshold && angle < 90 + directionThreshold)
-        directions.push('down')
-      else if (angle >= 180 - directionThreshold && angle < 180 + directionThreshold)
-        directions.push('left')
-      else if (angle >= 270 - directionThreshold && angle < 270 + directionThreshold)
-        directions.push('up')
-    }
-
-    return directions
-  }
-
-  /**
-   * Get current faux-pad position and derived values
-   */
   const getPosition = (): FauxPadPosition => {
-    // Handle case when threshold hasn't been set (before bind is called)
-    if (threshold.x === 0 || threshold.y === 0) {
-      return { x: 0, y: 0, distance: 0, angle: 0 }
-    }
-
+    if (threshold.x === 0 || threshold.y === 0) return { x: 0, y: 0, distance: 0, angle: 0 }
     const x = currentPosition.x / threshold.x
     const y = currentPosition.y / threshold.y
     const distance = Math.min(Math.hypot(x, y), 1)
     const angle = getAngle(x, y)
-
     return { x, y, distance, angle }
   }
 
-  /**
-   * Update directional actions based on position
-   */
   const updateDirections = () => {
     const pos = getPosition()
     const directions = getDirectionFromAngle(pos.angle)
 
     if (debug && pos.distance > deadzone) {
-      console.log(
+      console.warn(
         '[FauxPad Debug] position:',
         pos,
         'directions:',
@@ -126,93 +142,45 @@ export function createFauxPadController(
       )
     }
 
-    // Check deadzone
     if (pos.distance < deadzone) {
-      // Release all directions
-      activeDirections.forEach((dir) => {
-        const action = mappingReference.current['faux-pad']?.[dir]
-        if (action) {
-          handlers.onRelease(action, dir, 'faux-pad')
-        }
-      })
+      releaseDirections(dirState, [...activeDirections])
       activeDirections.clear()
       return
     }
 
-    // Get current directions
     const currentDirections = new Set(directions)
-
-    // Release directions that are no longer active
-    activeDirections.forEach((dir) => {
-      if (!currentDirections.has(dir)) {
-        const action = mappingReference.current['faux-pad']?.[dir]
-        if (action) {
-          handlers.onRelease(action, dir, 'faux-pad')
-        }
-        activeDirections.delete(dir)
-      }
-    })
-
-    // Activate new directions
-    currentDirections.forEach((dir) => {
-      if (!activeDirections.has(dir)) {
-        const action = mappingReference.current['faux-pad']?.[dir]
-        if (action) {
-          handlers.onAction(action, dir, 'faux-pad')
-        }
-        activeDirections.add(dir)
-      }
-    })
+    releaseDirections(
+      dirState,
+      [...activeDirections].filter((dir) => !currentDirections.has(dir))
+    )
+    activateDirections(dirState, currentDirections)
   }
 
-  /**
-   * Reset faux-pad to center position
-   */
   const reset = () => {
     currentPosition = { x: 0, y: 0 }
-    if (insideElement_) {
-      insideElement_.style.transform = 'translate(0, 0)'
-    }
-
-    // Release all active directions
-    activeDirections.forEach((dir) => {
-      const action = mappingReference.current['faux-pad']?.[dir]
-      if (action) {
-        handlers.onRelease(action, dir, 'faux-pad')
-      }
-    })
+    if (insideElement_) insideElement_.style.transform = 'translate(0, 0)'
+    releaseDirections(dirState, [...activeDirections])
     activeDirections.clear()
     isActive = false
   }
 
   const onTouchStart = (event: TouchEvent) => {
     event.preventDefault()
-    initialPosition = {
-      x: event.touches[0].clientX,
-      y: event.touches[0].clientY
-    }
+    initialPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY }
     isActive = true
   }
 
   const onTouchMove = (event: TouchEvent) => {
     if (!isActive) return
     event.preventDefault()
-
     const rawX = event.touches[0].clientX - initialPosition.x
     const rawY = event.touches[0].clientY - initialPosition.y
-
-    // Radial clamp: keep inside element within the circular edge boundary
     const distance = Math.hypot(rawX, rawY)
     const scale = distance > threshold.x ? threshold.x / distance : 1
-
     currentPosition = { x: rawX * scale, y: rawY * scale }
-
-    // Update visual position
     if (insideElement_) {
       insideElement_.style.transform = `translate(${currentPosition.x}px, ${currentPosition.y}px)`
     }
-
-    // Update directional actions
     updateDirections()
   }
 
@@ -222,14 +190,10 @@ export function createFauxPadController(
 
   function bind(edgeElement: HTMLElement, insideElement: HTMLElement) {
     insideElement_ = insideElement
-
-    // Clamp the inside element's center to stay within the edge circle boundary
     threshold = {
       x: edgeElement.offsetWidth / 2 - insideElement.offsetWidth / 2,
       y: edgeElement.offsetHeight / 2 - insideElement.offsetHeight / 2
     }
-
-    // Bind to inside element - touch events stay attached even when finger moves outside
     insideElement.addEventListener('touchstart', onTouchStart as EventListener)
     insideElement.addEventListener('touchmove', onTouchMove as EventListener)
     insideElement.addEventListener('touchend', onTouchEnd)
@@ -242,11 +206,5 @@ export function createFauxPadController(
     insideElement_ = null
   }
 
-  return {
-    bind,
-    unbind,
-    getPosition,
-    reset,
-    isActive: () => isActive
-  }
+  return { bind, unbind, getPosition, reset, isActive: () => isActive }
 }

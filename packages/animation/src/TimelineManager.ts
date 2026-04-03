@@ -19,25 +19,45 @@ export interface TimelineManager {
   getLogger: () => TimelineLogger | null
 }
 
-/**
- * Create a timeline manager for dynamic action management
- * @param options Manager configuration
- * @returns Manager instance with methods
- */
-export const createTimelineManager = (options?: {
-  enableLogging?: boolean
-  logCategories?: string[]
-}): TimelineManager => {
-  let timeline: Timeline[] = []
-  const activeActions = new Map<string, Timeline>()
-  const completedActions = new Set<string>()
-  const logger = options?.enableLogging
-    ? createTimelineLogger({
-        categories: options.logCategories,
-        consoleOutput: true
-      })
-    : null
+interface TimelineState {
+  timeline: Timeline[]
+  activeActions: Map<string, Timeline>
+  completedActions: Set<string>
+  logger: TimelineLogger | null
+}
 
+const logActionStart = (state: TimelineState, action: Timeline, id: string): void => {
+  state.logger?.log({
+    frame: action.start || 0,
+    actionId: id,
+    actionName: action.name,
+    category: action.category,
+    type: 'start'
+  })
+}
+
+const logActionRemove = (state: TimelineState, id: string, action: Timeline | undefined): void => {
+  state.logger?.log({
+    frame: 0,
+    actionId: id,
+    actionName: action?.name,
+    category: action?.category,
+    type: 'remove'
+  })
+}
+
+const logActionComplete = (state: TimelineState, id: string): void => {
+  const action = state.activeActions.get(id)
+  state.logger?.log({
+    frame: 0,
+    actionId: id,
+    actionName: action?.name,
+    category: action?.category,
+    type: 'complete'
+  })
+}
+
+const buildActionMethods = (state: TimelineState) => {
   /**
    * Add a timeline action
    * @param action Timeline action to add
@@ -47,18 +67,9 @@ export const createTimelineManager = (options?: {
     const id = action.id || generateTimelineId()
     const actionWithId: Timeline = { ...action, id }
 
-    timeline.push(actionWithId)
-    activeActions.set(id, actionWithId)
-
-    if (logger) {
-      logger.log({
-        frame: action.start || 0,
-        actionId: id,
-        actionName: action.name,
-        category: action.category,
-        type: 'start'
-      })
-    }
+    state.timeline.push(actionWithId)
+    state.activeActions.set(id, actionWithId)
+    logActionStart(state, action, id)
 
     return id
   }
@@ -69,23 +80,14 @@ export const createTimelineManager = (options?: {
    * @returns True if removed, false if not found
    */
   const removeAction = (id: string): boolean => {
-    const index = timeline.findIndex((a) => a.id === id)
+    const index = state.timeline.findIndex((a) => a.id === id)
     if (index === -1) return false
 
-    const action = activeActions.get(id)
-    timeline.splice(index, 1)
-    activeActions.delete(id)
-    completedActions.add(id)
-
-    if (logger) {
-      logger.log({
-        frame: 0,
-        actionId: id,
-        actionName: action?.name,
-        category: action?.category,
-        type: 'remove'
-      })
-    }
+    const action = state.activeActions.get(id)
+    state.timeline.splice(index, 1)
+    state.activeActions.delete(id)
+    state.completedActions.add(id)
+    logActionRemove(state, id, action)
 
     return true
   }
@@ -97,149 +99,86 @@ export const createTimelineManager = (options?: {
    * @returns True if updated, false if not found
    */
   const updateAction = (id: string, updates: Partial<Timeline>): boolean => {
-    const action = activeActions.get(id)
+    const action = state.activeActions.get(id)
     if (!action) return false
 
     const updatedAction = { ...action, ...updates, id }
-    const index = timeline.findIndex((a) => a.id === id)
+    const index = state.timeline.findIndex((a) => a.id === id)
 
     if (index !== -1) {
-      timeline[index] = updatedAction
-      activeActions.set(id, updatedAction)
+      state.timeline[index] = updatedAction
+      state.activeActions.set(id, updatedAction)
       return true
     }
 
     return false
   }
 
-  /**
-   * Check if action exists
-   * @param id Action ID
-   * @returns True if action exists
-   */
-  const hasAction = (id: string): boolean => {
-    return activeActions.has(id)
-  }
+  return { addAction, removeAction, updateAction }
+}
 
-  /**
-   * Get action by ID
-   * @param id Action ID
-   * @returns Timeline action or undefined
-   */
-  const getAction = (id: string): Timeline | undefined => {
-    return activeActions.get(id)
-  }
+const buildQueryMethods = (state: TimelineState) => {
+  /** @returns True if action exists */
+  const hasAction = (id: string): boolean => state.activeActions.has(id)
 
-  /**
-   * Add multiple actions
-   * @param actions Array of timeline actions
-   * @returns Array of generated IDs
-   */
-  const addActions = (actions: Timeline[]): string[] => {
-    return actions.map((action) => addAction(action))
-  }
+  /** @returns Timeline action or undefined */
+  const getAction = (id: string): Timeline | undefined => state.activeActions.get(id)
 
-  /**
-   * Remove all actions in a category
-   * @param category Category name
-   * @returns Number of actions removed
-   */
+  /** @returns Array of generated IDs */
+  const addActions = (actions: Timeline[]): string[] =>
+    actions.map((action) => buildActionMethods(state).addAction(action))
+
+  /** @returns Number of actions removed */
   const removeByCategory = (category: string): number => {
-    const toRemove = timeline
+    const toRemove = state.timeline
       .filter((a) => a.category === category)
       .map((a) => a.id!)
       .filter((id) => id !== undefined)
 
-    toRemove.forEach((id) => removeAction(id))
+    toRemove.forEach((id) => buildActionMethods(state).removeAction(id))
     return toRemove.length
   }
 
-  /**
-   * Remove all completed actions
-   * @returns Number of actions removed
-   */
+  /** @returns Number of actions removed */
   const removeCompleted = (): number => {
-    const count = completedActions.size
-    completedActions.forEach((id) => {
-      const index = timeline.findIndex((a) => a.id === id)
+    const count = state.completedActions.size
+    state.completedActions.forEach((id) => {
+      const index = state.timeline.findIndex((a) => a.id === id)
       if (index !== -1) {
-        timeline.splice(index, 1)
-        activeActions.delete(id)
+        state.timeline.splice(index, 1)
+        state.activeActions.delete(id)
       }
     })
-    completedActions.clear()
+    state.completedActions.clear()
     return count
   }
 
-  /**
-   * Clear all actions
-   */
   const clearAll = (): void => {
-    timeline = []
-    activeActions.clear()
-    completedActions.clear()
-
-    if (logger) {
-      logger.clearLogs()
-    }
+    state.timeline.length = 0
+    state.activeActions.clear()
+    state.completedActions.clear()
+    state.logger?.clearLogs()
   }
 
-  /**
-   * Get all active actions
-   * @returns Array of active timeline actions
-   */
-  const getActiveActions = (): Timeline[] => {
-    return [...timeline].filter((a) => !completedActions.has(a.id!))
-  }
+  /** @returns Array of active timeline actions */
+  const getActiveActions = (): Timeline[] =>
+    [...state.timeline].filter((a) => !state.completedActions.has(a.id!))
 
-  /**
-   * Get actions by category
-   * @param category Category name
-   * @returns Array of timeline actions in category
-   */
-  const getActionsByCategory = (category: string): Timeline[] => {
-    return timeline.filter((a) => a.category === category)
-  }
+  /** @returns Array of timeline actions in category */
+  const getActionsByCategory = (category: string): Timeline[] =>
+    state.timeline.filter((a) => a.category === category)
 
-  /**
-   * Get the timeline array (used by animateTimeline)
-   * @returns Copy of timeline array
-   */
-  const getTimeline = (): Timeline[] => {
-    return [...timeline]
-  }
+  /** @returns Copy of timeline array */
+  const getTimeline = (): Timeline[] => [...state.timeline]
 
-  /**
-   * Mark action as completed (internal use)
-   * @param id Action ID
-   */
   const _markCompleted = (id: string): void => {
-    completedActions.add(id)
-
-    if (logger) {
-      const action = activeActions.get(id)
-      logger.log({
-        frame: 0,
-        actionId: id,
-        actionName: action?.name,
-        category: action?.category,
-        type: 'complete'
-      })
-    }
+    state.completedActions.add(id)
+    logActionComplete(state, id)
   }
 
-  /**
-   * Get logger instance
-   * @returns TimelineLogger or null
-   */
-  const getLogger = (): TimelineLogger | null => {
-    return logger
-  }
+  const getLogger = (): TimelineLogger | null => state.logger
 
   return {
-    addAction,
-    removeAction,
-    updateAction,
     hasAction,
     getAction,
     addActions,
@@ -251,5 +190,59 @@ export const createTimelineManager = (options?: {
     getTimeline,
     _markCompleted,
     getLogger
+  }
+}
+
+/**
+ * Create a timeline manager for dynamic action management
+ * @param options Manager configuration
+ * @returns Manager instance with methods
+ */
+export const createTimelineManager = (options?: {
+  enableLogging?: boolean
+  logCategories?: string[]
+}): TimelineManager => {
+  const state: TimelineState = {
+    timeline: [],
+    activeActions: new Map<string, Timeline>(),
+    completedActions: new Set<string>(),
+    logger: options?.enableLogging
+      ? createTimelineLogger({
+          categories: options.logCategories,
+          consoleOutput: true
+        })
+      : null
+  }
+
+  const { addAction, removeAction, updateAction } = buildActionMethods(state)
+  const queryMethods = buildQueryMethods(state)
+
+  const addActions = (actions: Timeline[]): string[] => actions.map((action) => addAction(action))
+
+  const removeByCategory = (category: string): number => {
+    const toRemove = state.timeline
+      .filter((a) => a.category === category)
+      .map((a) => a.id!)
+      .filter((id) => id !== undefined)
+
+    toRemove.forEach((id) => removeAction(id))
+    return toRemove.length
+  }
+
+  return {
+    addAction,
+    removeAction,
+    updateAction,
+    hasAction: queryMethods.hasAction,
+    getAction: queryMethods.getAction,
+    addActions,
+    removeByCategory,
+    removeCompleted: queryMethods.removeCompleted,
+    clearAll: queryMethods.clearAll,
+    getActiveActions: queryMethods.getActiveActions,
+    getActionsByCategory: queryMethods.getActionsByCategory,
+    getTimeline: queryMethods.getTimeline,
+    _markCompleted: queryMethods._markCompleted,
+    getLogger: queryMethods.getLogger
   }
 }

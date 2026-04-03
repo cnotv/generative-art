@@ -25,6 +25,20 @@ export interface BackgroundElement extends FallingElement {
   speed: number
 }
 
+interface BackgroundLayerOptions {
+  texture: string
+  speed: number
+  size: number
+  ratio?: number
+  xVariation: number
+  yPosition: number
+  yVariation: number
+  zVariation: number
+  zPosition: number
+  opacity: number
+  spacing?: number
+}
+
 /**
  * Calculate Out of Sight (OoS) status for background elements
  * @param camera
@@ -66,7 +80,7 @@ const isOoS = (
 export const addBackground = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  options: any,
+  options: BackgroundLayerOptions,
   initialX?: number
 ): ComplexModel => {
   const getVariation = (variation: number) => (Math.random() - 0.5) * 2 * (variation || 0)
@@ -115,11 +129,11 @@ export const populateInitialBackgrounds = (
   config.backgrounds.layers.forEach((background) => {
     const totalElements = Math.ceil(extendedWidth / background.spacing) + 1
 
-    for (let i = 0; i < totalElements; i++) {
+    Array.from({ length: totalElements }, (_, i) => {
       const initialX = i * background.spacing - extendedWidth / 2
       const mesh = addBackground(scene, world, background, initialX)
       backgrounds.push({ mesh, speed: background.speed })
-    }
+    })
   })
 }
 
@@ -151,9 +165,7 @@ export const updateFallingBackgrounds = (
 ) => {
   const currentTime = Date.now()
 
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i]
-
+  backgrounds.reduceRight((_, background, i) => {
     if (background.fallAnimation) {
       const fallData = background.fallAnimation
       const elapsed = currentTime - fallData.startTime
@@ -178,7 +190,8 @@ export const updateFallingBackgrounds = (
         }
       }
     }
-  }
+    return null
+  }, null)
 }
 
 export const createBackgrounds = (
@@ -211,13 +224,11 @@ export const moveBackgrounds = (
   gameScore: number
 ) => {
   // Move backgrounds and remove off-screen ones
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i]
-
+  backgrounds.reduceRight((_, background, i) => {
     // Safety check - skip if mesh is undefined
     if (!background || !background.mesh) {
       backgrounds.splice(i, 1)
-      continue
+      return null
     }
 
     // Only move horizontally if not falling
@@ -233,7 +244,8 @@ export const moveBackgrounds = (
       scene.remove(background.mesh)
       backgrounds.splice(i, 1)
     }
-  }
+    return null
+  }, null)
 }
 
 export const resetBackgrounds = (
@@ -241,11 +253,11 @@ export const resetBackgrounds = (
   world: RAPIER.World,
   backgrounds: BackgroundElement[]
 ) => {
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i]
+  backgrounds.reduceRight((_, background, i) => {
     scene.remove(background.mesh)
-  }
-  backgrounds.length = 0
+    backgrounds.splice(i, 1)
+    return null
+  }, null)
 
   // Repopulate backgrounds for restart
   populateInitialBackgrounds(scene, world, backgrounds)

@@ -123,7 +123,7 @@ function addBody(scene: THREE.Scene, fixed = true, physics?: RapierPhysics) {
 }
 
 function addBodies(scene: THREE.Scene, count: number) {
-  for (let i = 0; i < count; i++) addBody(scene, Math.random() > 0.7)
+  Array.from({ length: count }).forEach(() => addBody(scene, Math.random() > 0.7))
 }
 
 function getLight(scene: THREE.Scene) {

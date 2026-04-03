@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
@@ -152,9 +152,9 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
 
 describe.each(testCases)('Visual Regression -- $category - $name', ({ component, name, path }) => {
   it(`should render ${name} correctly`, async () => {
-    let wrapper: any
+    let wrapper: ReturnType<typeof mount> | undefined
     let canvasElement: HTMLCanvasElement | null = null
-    let rafStub: any = null
+    let rafStub: ReturnType<typeof vi.fn> | null = null
 
     try {
       // Create required dependencies

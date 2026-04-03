@@ -119,7 +119,8 @@ export default [
             '**.rotation.**',
             '**.scale.**',
             '**.material.**',
-            '**.userData.**'
+            '**.userData.**',
+            'document.title' // Allow setting page title
           ]
         }
       ],
@@ -430,7 +431,7 @@ export default [
 
   // Three.js files - allow necessary mutations for 3D objects
   {
-    files: ['packages/threejs/**/*.ts', 'src/views/**/*.ts'],
+    files: ['packages/threejs/**/*.ts', 'src/views/**/*.ts', 'src/utils/**/*.ts'],
     rules: {
       // Three.js requires mutating objects for position, rotation, etc.
       'functional/immutable-data': 'warn',
@@ -445,6 +446,14 @@ export default [
     rules: {
       'functional/immutable-data': 'warn',
       'functional/no-let': 'warn'
+    }
+  },
+
+  // Pinia stores - defineStore factory functions are inherently long
+  {
+    files: ['src/stores/**/*.ts'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 500 }]
     }
   },
 
@@ -526,6 +535,37 @@ export default [
     },
     rules: {
       'functional/immutable-data': 'off'
+    }
+  },
+
+  // Experiment views - demo/exploration code with inherently complex setups
+  {
+    files: ['src/views/Experiments/**/*.vue'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 350, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', { max: 20 }],
+      'max-params': ['error', { max: 10 }],
+      'functional/no-loop-statements': 'off'
+    }
+  },
+
+  // Tool views - interactive tools with complex UI and scene setup logic
+  {
+    files: ['src/views/Tools/**/*.vue'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', { max: 50 }],
+      'max-params': ['error', { max: 10 }],
+      'functional/no-loop-statements': 'off'
+    }
+  },
+
+  // Vendored algorithm files - exempt from functional and complexity rules
+  {
+    files: ['src/utils/simplex.js'],
+    rules: {
+      'functional/no-loop-statements': 'off',
+      complexity: 'off'
     }
   },
 

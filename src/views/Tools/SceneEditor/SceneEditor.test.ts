@@ -24,7 +24,7 @@ vi.mock('@webgamekit/threejs', async () => {
     ...actual,
     getTools: vi.fn(() =>
       Promise.resolve({
-        setup: vi.fn((config) => Promise.resolve({ orbit: null, ground: null })),
+        setup: vi.fn((_config) => Promise.resolve({ orbit: null, ground: null })),
         animate: vi.fn(),
         scene: { children: [], remove: vi.fn(), getObjectByName: vi.fn(() => null) },
         world: {},
@@ -153,7 +153,10 @@ describe('SceneEditor', () => {
     ])('should support %s pattern', async (patternName, patternValue) => {
       const wrapper = createWrapper()
 
-      wrapper.vm.reactiveConfig.instances.pattern = patternValue as any
+      wrapper.vm.reactiveConfig.instances.pattern = patternValue as
+        | 'random'
+        | 'grid'
+        | 'grid-jitter'
       await wrapper.vm.$nextTick()
 
       expect(wrapper.vm.reactiveConfig.instances.pattern).toBe(patternValue)
@@ -200,7 +203,7 @@ describe('SceneEditor', () => {
       wrapper.vm.handleFileUpload(event1)
       await wrapper.vm.$nextTick()
 
-      const grassGroupId = wrapper.vm.textureGroups[0].id
+      const _grassGroupId = wrapper.vm.textureGroups[0].id
 
       // Verify group config was created in registry
       expect(wrapper.vm.groupConfigRegistry['grass']).toBeDefined()

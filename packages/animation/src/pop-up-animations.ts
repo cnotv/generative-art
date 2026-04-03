@@ -1,4 +1,7 @@
+import * as THREE from 'three'
 import type { PopUpAnimationConfig } from './types'
+
+type MaterialWithOpacity = THREE.Material & { transparent: boolean; opacity: number }
 
 /**
  * Easing functions for animations
@@ -108,8 +111,9 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
 
   // Ensure material is transparent
   if ('material' in object && object.material) {
-    ;(object.material as any).transparent = true
-    ;(object.material as any).opacity = 0
+    const material = object.material as MaterialWithOpacity
+    material.transparent = true
+    material.opacity = 0
   }
 
   let currentFrame = -1
@@ -128,7 +132,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
       if (!hasCompleted) {
         object.position.y = endY
         if ('material' in object && object.material) {
-          ;(object.material as any).opacity = 1
+          ;(object.material as MaterialWithOpacity).opacity = 1
         }
         hasCompleted = true
         onComplete?.()
@@ -142,7 +146,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     object.position.y = startY + (endY - startY) * easedProgress
 
     if ('material' in object && object.material) {
-      ;(object.material as any).opacity = easedProgress
+      ;(object.material as MaterialWithOpacity).opacity = easedProgress
     }
 
     return true

@@ -51,14 +51,17 @@ function pollAxisDirection(
   lastAxesStates[key] = isActive
 }
 
-function pollHorizontalAxis(
-  axesMapping: Record<string, string>,
-  handlers: ControlHandlers,
-  axisValue: number,
-  axisIndex: number,
-  axisThreshold: number,
+interface PollAxisOptions {
+  axesMapping: Record<string, string>
+  handlers: ControlHandlers
+  axisValue: number
+  axisIndex: number
+  axisThreshold: number
   lastAxesStates: Record<string, boolean>
-): void {
+}
+
+function pollHorizontalAxis(options: PollAxisOptions): void {
+  const { axesMapping, handlers, axisValue, axisIndex, axisThreshold, lastAxesStates } = options
   const leftKey = `axis${axisIndex}-left`
   const rightKey = `axis${axisIndex}-right`
 
@@ -69,14 +72,8 @@ function pollHorizontalAxis(
   pollAxisDirection(axesMapping, handlers, rightKey, isRight, lastAxesStates)
 }
 
-function pollVerticalAxis(
-  axesMapping: Record<string, string>,
-  handlers: ControlHandlers,
-  axisValue: number,
-  axisIndex: number,
-  axisThreshold: number,
-  lastAxesStates: Record<string, boolean>
-): void {
+function pollVerticalAxis(options: PollAxisOptions): void {
+  const { axesMapping, handlers, axisValue, axisIndex, axisThreshold, lastAxesStates } = options
   const upKey = `axis${axisIndex}-up`
   const downKey = `axis${axisIndex}-down`
 
@@ -98,12 +95,20 @@ function pollAxes(
   if (!axesMapping) return
 
   gp.axes.forEach((axisValue, axisIndex) => {
+    const axisOptions: PollAxisOptions = {
+      axesMapping,
+      handlers,
+      axisValue,
+      axisIndex,
+      axisThreshold,
+      lastAxesStates
+    }
     // Horizontal axes (usually 0 and 2 for left/right sticks)
     if (axisIndex % 2 === 0) {
-      pollHorizontalAxis(axesMapping, handlers, axisValue, axisIndex, axisThreshold, lastAxesStates)
+      pollHorizontalAxis(axisOptions)
     } else {
       // Vertical axes (usually 1 and 3 for left/right sticks)
-      pollVerticalAxis(axesMapping, handlers, axisValue, axisIndex, axisThreshold, lastAxesStates)
+      pollVerticalAxis(axisOptions)
     }
   })
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import { getOffset, getInstanceConfig } from './index'
-import type { InstanceConfig } from './types'
+import type { InstanceConfig, Model } from './types'
 
 describe('threejs', () => {
   describe('getOffset', () => {
@@ -11,7 +11,7 @@ describe('threejs', () => {
       // No rotation
 
       const config = { offset: { x: 5, y: 0, z: 0 } }
-      const offset = getOffset(model as any, config)
+      const offset = getOffset(model as unknown as Model, config)
 
       // Should be position (10,0,0) + offset (5,0,0) = (15,0,0)
       expect(offset.x).toBe(15)
@@ -29,7 +29,7 @@ describe('threejs', () => {
       // Three.js: x is right, y is up, z is out of screen.
       // Rotate 90 deg Y: x axis points to -z.
       const config = { offset: { x: 5, y: 0, z: 0 } }
-      const offset = getOffset(model as any, config)
+      const offset = getOffset(model as unknown as Model, config)
 
       expect(offset.x).toBeCloseTo(0)
       expect(offset.z).toBeCloseTo(-5)

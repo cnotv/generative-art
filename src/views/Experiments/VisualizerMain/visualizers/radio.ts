@@ -28,7 +28,7 @@ export const boxVisualizer: VisualizerSetup = {
     return { model }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()

@@ -31,7 +31,7 @@ export const barsVisualizer: VisualizerSetup = {
     return { bars }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()

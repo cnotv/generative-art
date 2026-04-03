@@ -70,6 +70,34 @@ export const defaultModelOptions: ModelOptions = {
   transmission: 0
 }
 
+const createOrbitControls = (
+  camera: THREE.Camera,
+  renderer: THREE.WebGLRenderer,
+  orbitConfig: Exclude<SetupConfig['orbit'], false>
+): OrbitControls => {
+  const orbit = new OrbitControls(camera, renderer.domElement)
+  if (orbitConfig?.target) {
+    orbit.target.copy(orbitConfig.target as THREE.Vector3)
+  }
+  orbit.enabled = !(orbitConfig?.disabled === true)
+  return orbit
+}
+
+const applySceneConfig = (
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  world: RAPIER.World,
+  resolved: SetupConfig
+) => {
+  if (resolved.scene?.backgroundColor)
+    scene.background = new THREE.Color(resolved.scene.backgroundColor)
+  if (resolved.lights !== false) getLights(scene, resolved.lights)
+  const ground = resolved.ground !== false ? getGround(scene, world, resolved.ground ?? {}) : null
+  if (resolved.sky !== false) getSky(scene, resolved.sky ?? {})
+  if (resolved.camera) updateCamera(camera, resolved.camera)
+  return ground
+}
+
 /**
  * Initialize ThreeJS and Rapier and retrieve common tools.
  * Add lights, ground, and camera to the scene with default values.
@@ -123,24 +151,8 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
     const resolved = resolveSetupConfig(config)
     const childrenCountBefore = scene.children.length
     frameRate = resolved?.global?.frameRate || frameRate
-    if (resolved.scene?.backgroundColor)
-      scene.background = new THREE.Color(resolved.scene.backgroundColor)
-    if (resolved.orbit !== false) {
-      orbit = new OrbitControls(camera, renderer.domElement)
-      if (resolved.orbit?.target) {
-        orbit.target.copy(resolved.orbit.target as THREE.Vector3)
-      }
-      orbit.enabled = !(resolved.orbit?.disabled === true)
-    }
-    if (resolved.lights !== false) getLights(scene, resolved.lights)
-    const ground = resolved.ground !== false ? getGround(scene, world, resolved.ground ?? {}) : null
-    if (resolved.sky !== false) getSky(scene, resolved.sky ?? {})
-
-    if (resolved.camera) {
-      updateCamera(camera, resolved.camera)
-    }
-
-    // Initialize postprocessing if configured
+    if (resolved.orbit !== false) orbit = createOrbitControls(camera, renderer, resolved.orbit)
+    const ground = applySceneConfig(scene, camera, world, resolved)
     if (config.postprocessing)
       composer = await setupPostprocessing({
         renderer,
@@ -149,9 +161,7 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
         config: config.postprocessing
       })
     if (defineSetup) await defineSetup({ ground })
-
     const elements = scene.children.slice(childrenCountBefore)
-
     return { orbit, ground, elements }
   }
 
@@ -182,8 +192,26 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
   }) => {
     let accumulator = 0
 
+    const renderFrame = () => {
+      if (composer) composer.render()
+      else renderer.render(scene, camera)
+    }
+
+    const tickSimulation = () => {
+      world.step()
+      beforeTimeline()
+      animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true })
+      afterTimeline()
+      if (orbit) {
+        orbit.update()
+        if (config.orbit?.debug) console.warn(camera)
+      }
+      renderFrame()
+      if (video?.stop && route) video.stop(renderer.info.render.frame, route)
+    }
+
     function runAnimation() {
-      if (stats?.start && route) stats.start(route)
+      if (stats?.start && route) stats.start(route.name ?? '')
       delta = clock.getDelta()
       requestAnimationFrame(runAnimation)
 
@@ -192,27 +220,8 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
       accumulator -= frameRate
       simulationFrame += 1
 
-      world.step()
-
-      beforeTimeline()
-      animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true })
-      afterTimeline()
-
-      if (orbit) {
-        orbit.update()
-        if (config.orbit?.debug) console.log(camera)
-      }
-
-      // Switch between composer and renderer based on postprocessing setup
-      if (composer) {
-        composer.render()
-      } else {
-        renderer.render(scene, camera)
-      }
-
-      // Stop video recording if any
-      if (video?.stop && route) video.stop(renderer.info.render.frame, route)
-      if (stats?.end && route) stats.end(route)
+      tickSimulation()
+      if (stats?.end && route) stats.end(route.name ?? '')
     }
     runAnimation()
   }
@@ -289,7 +298,7 @@ export const instanceMatrixMesh = (
   mesh: THREE.Mesh,
   scene: THREE.Scene,
   options: ModelOptions[]
-): THREE.InstancedMesh<any, any>[] => {
+): THREE.InstancedMesh[] => {
   const count = options.length
   const geometry = mesh.geometry
   const material = mesh.material

@@ -16,11 +16,39 @@ const linearPath = [makeWaypoint(0, 0, 0), makeWaypoint(10, 0, 0)]
 describe('logicAdvanceAlongPath', () => {
   describe('movement along a single segment', () => {
     it.each([
-      ['zero delta produces no movement', 5, 0, 0, 0, 0],
-      ['zero speed produces no movement', 0, 1, 0, 0, 0],
-      ['advances halfway through segment', 5, 1, 5, 0, 0],
-      ['advances one quarter through segment', 5, 0.5, 2.5, 0, 0]
-    ])('%s', (_label, speed, delta, expectedX, expectedY, expectedZ) => {
+      {
+        label: 'zero delta produces no movement',
+        speed: 5,
+        delta: 0,
+        expectedX: 0,
+        expectedY: 0,
+        expectedZ: 0
+      },
+      {
+        label: 'zero speed produces no movement',
+        speed: 0,
+        delta: 1,
+        expectedX: 0,
+        expectedY: 0,
+        expectedZ: 0
+      },
+      {
+        label: 'advances halfway through segment',
+        speed: 5,
+        delta: 1,
+        expectedX: 5,
+        expectedY: 0,
+        expectedZ: 0
+      },
+      {
+        label: 'advances one quarter through segment',
+        speed: 5,
+        delta: 0.5,
+        expectedX: 2.5,
+        expectedY: 0,
+        expectedZ: 0
+      }
+    ])('$label', ({ speed, delta, expectedX, expectedY, expectedZ }) => {
       const state = makeState(linearPath)
       const result = logicAdvanceAlongPath(state, speed, delta)
       expect(result.position.x).toBeCloseTo(expectedX)

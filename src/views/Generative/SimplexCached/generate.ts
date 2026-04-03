@@ -45,7 +45,7 @@ export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void
 
   // Function to generate a frame
   function generateFrame(frameCount: number) {
-    console.log(frameCount)
+    console.warn(frameCount)
 
     stats.begin()
 
@@ -58,23 +58,20 @@ export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void
     ctx.fillStyle = '#ccc'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    let x, y
     const waveLength = (Math.PI * 2 * config.frameCount) / config.speed
     const z = config.fluidity * Math.cos(waveLength)
     const w = config.fluidity * Math.sin(waveLength)
 
-    for (y = 0; y < canvas.height / config.pixelSize; y++) {
-      for (x = 0; x < canvas.width / config.pixelSize; x++) {
+    Array.from({ length: Math.floor(canvas.height / config.pixelSize) }, (_, y) => {
+      Array.from({ length: Math.floor(canvas.width / config.pixelSize) }, (__, x) => {
         const lightness = Math.round(
           (simplex(x * config.noiseSize, y * config.noiseSize, z, w) + 1) / config.lightAmount
         )
-        // const lightness = Math.round(Math.random());
-        // const lightness = Math.random();
 
         ctx.fillStyle = `rgba(212, 241, 249, ${lightness})`
         ctx.fillRect(x * config.pixelSize, y * config.pixelSize, config.pixelSize, config.pixelSize)
-      }
-    }
+      })
+    })
 
     stats.end()
 
@@ -82,10 +79,9 @@ export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void
     frameCache[frameCount] = offscreenCanvas.transferToImageBitmap()
   }
 
-  // Generate all frames ahead of time
-  for (let frameCount = 0; frameCount < totalFrames; frameCount++) {
+  Array.from({ length: totalFrames }, (_, frameCount) => {
     generateFrame(frameCount)
-  }
+  })
 
   // Now you can use the pre-calculated frames in your draw function
   function draw() {
@@ -100,7 +96,7 @@ export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void
     ctx.drawImage(frameCache[count], 0, 0)
   }
 
-  const onChangeConfig = () => console.log('ok')
+  const onChangeConfig = () => console.warn('ok')
   control.open()
   control.add(config, 'pixelSize').min(1).max(10).onChange(onChangeConfig)
   control.add(config, 'noiseSize').min(0.0001).max(0.1).onChange(onChangeConfig)

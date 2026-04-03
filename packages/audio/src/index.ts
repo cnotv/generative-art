@@ -12,7 +12,10 @@ let musicPlaying = false
 const initializeAudio = async () => {
   try {
     if (!gameAudioContext) {
-      gameAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      gameAudioContext = new (
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      )()
     }
 
     if (gameAudioContext.state === 'suspended') {
@@ -32,7 +35,7 @@ const initializeAudio = async () => {
     oscillator.start(gameAudioContext.currentTime)
     oscillator.stop(gameAudioContext.currentTime + 0.001)
 
-    console.log('Audio context initialized successfully')
+    console.warn('Audio context initialized successfully')
   } catch (error) {
     console.warn('Failed to initialize audio:', error)
   }
@@ -43,7 +46,10 @@ const createSound = async (config: SoundConfig) => {
   try {
     // Initialize audio context if needed
     if (!gameAudioContext) {
-      gameAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      gameAudioContext = new (
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      )()
     }
 
     // Resume if suspended (browser requirement - especially important for iOS)

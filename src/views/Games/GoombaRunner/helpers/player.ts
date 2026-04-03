@@ -8,6 +8,7 @@ const gameOverSound = new URL('@/assets/gameover.wav', import.meta.url).href
 const starTexture = new URL('@/assets/star1.png', import.meta.url).href
 import { updateAnimation, type AnimationData } from '@webgamekit/animation'
 import type { ComplexModel } from '@webgamekit/threejs'
+import type { RapierPhysicsObject } from './setup'
 
 interface PlayerMovement {
   forward: number
@@ -15,7 +16,31 @@ interface PlayerMovement {
   up: number
 }
 
-const createPlayer = async (scene: THREE.Scene, physics: any, world: RAPIER.World) => {
+interface PlayerConfig {
+  speed: number
+  jump: {
+    height: number
+    duration: number
+    isActive: boolean
+    velocity: number
+    startTime: number
+  }
+  collisionThreshold: number
+}
+
+interface GameConfig {
+  player: PlayerConfig
+}
+
+interface UiStore {
+  controls: { jump: boolean }
+}
+
+const createPlayer = async (
+  scene: THREE.Scene,
+  physics: RapierPhysicsObject,
+  world: RAPIER.World
+) => {
   // Load Goomba model
   const goombaModel = await getModel(scene, world, 'goomba.glb', {
     scale: [0.4, 0.4, 0.4],
@@ -88,14 +113,23 @@ const createPlayer = async (scene: THREE.Scene, physics: any, world: RAPIER.Worl
   return { player, playerController, model: goombaModel }
 }
 
-const handleJump = (
-  player: ComplexModel,
-  isPlaying: boolean,
-  uiStore: any,
-  camera: THREE.Camera,
-  horizonLine: THREE.Mesh,
-  config: any
-) => {
+interface HandleJumpOptions {
+  player: ComplexModel
+  isPlaying: boolean
+  uiStore: UiStore
+  camera: THREE.Camera
+  horizonLine: THREE.Mesh
+  config: GameConfig
+}
+
+const handleJump = ({
+  player,
+  isPlaying,
+  uiStore,
+  camera,
+  horizonLine,
+  config
+}: HandleJumpOptions) => {
   // Always ensure Goomba is at proper ground level, regardless of game state
   const ensureGroundPosition = () => {
     const currentPosition = player.userData.collider.translation()
@@ -216,14 +250,23 @@ const handleJump = (
   }
 }
 
-const movePlayer = (
-  player: ComplexModel,
-  playerController: any,
-  physics: any,
-  playerMovement: PlayerMovement,
-  isPlaying: boolean,
-  config: any
-) => {
+interface MovePlayerOptions {
+  player: ComplexModel
+  playerController: RAPIER.KinematicCharacterController
+  physics: RapierPhysicsObject
+  playerMovement: PlayerMovement
+  isPlaying: boolean
+  config: GameConfig
+}
+
+const movePlayer = ({
+  player,
+  playerController,
+  physics,
+  playerMovement,
+  isPlaying,
+  config
+}: MovePlayerOptions) => {
   if (physics && playerController) {
     const deltaTime = 1 / 60
 
@@ -258,14 +301,23 @@ const movePlayer = (
   }
 }
 
-const updatePlayerAnimation = (
-  model: ComplexModel,
-  isPlaying: boolean,
-  gameScore: number,
-  getDelta: () => number,
-  getSpeed: any,
-  config: any
-) => {
+interface UpdatePlayerAnimationOptions {
+  model: ComplexModel
+  isPlaying: boolean
+  gameScore: number
+  getDelta: () => number
+  getSpeed: (base: number, score: number) => number
+  config: GameConfig
+}
+
+const updatePlayerAnimation = ({
+  model,
+  isPlaying,
+  gameScore,
+  getDelta,
+  getSpeed,
+  config
+}: UpdatePlayerAnimationOptions) => {
   if (!isPlaying || !model.userData.mixer || !model.userData.actions) return
   const animationSpeed = getSpeed(config.player.speed, gameScore)
   const actionName = Object.keys(model.userData.actions)[0] // Take 001
@@ -344,16 +396,16 @@ const handleArcMovement = (player: ComplexModel) => {
 
   // Apply opacity to all materials in the Goomba model
   player.traverse((child: THREE.Object3D) => {
-    if ((child as any).isMesh && (child as any).material) {
+    if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
       const mesh = child as THREE.Mesh
       if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((material: any) => {
-          material.transparent = true
-          material.opacity = opacity
+        mesh.material.forEach((material: THREE.Material) => {
+          ;(material as THREE.MeshStandardMaterial).transparent = true
+          ;(material as THREE.MeshStandardMaterial).opacity = opacity
         })
       } else {
-        ;(mesh.material as any).transparent = true
-        ;(mesh.material as any).opacity = opacity
+        ;(mesh.material as THREE.MeshStandardMaterial).transparent = true
+        ;(mesh.material as THREE.MeshStandardMaterial).opacity = opacity
       }
     }
   })
@@ -369,7 +421,7 @@ const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color:
   const textureLoader = new THREE.TextureLoader()
   const starTextureLoaded = textureLoader.load(starTexture)
 
-  for (let i = 0; i < starCount; i++) {
+  Array.from({ length: starCount }, () => {
     // Create plane geometry for star texture
     const starGeometry = new THREE.PlaneGeometry(16, 16)
 
@@ -420,15 +472,16 @@ const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color:
     star.scale.setScalar(star.userData.initialScale)
     scene.add(star)
     explosionParticles.push(star)
-  }
+  })
 }
 
 const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
   // Clear explosion particles on restart
-  for (let i = explosionParticles.length - 1; i >= 0; i--) {
-    scene.remove(explosionParticles[i])
-  }
-  explosionParticles.length = 0
+  explosionParticles.reduceRight((_, particle, i) => {
+    scene.remove(particle)
+    explosionParticles.splice(i, 1)
+    return null
+  }, null)
 
   // Make Goomba visible again and reset to starting position
   player.visible = true
@@ -438,16 +491,16 @@ const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
 
   // Reset Goomba opacity to full visibility
   player.traverse((child: THREE.Object3D) => {
-    if ((child as any).isMesh && (child as any).material) {
+    if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
       const mesh = child as THREE.Mesh
       if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((material: any) => {
-          material.transparent = false
-          material.opacity = 1.0
+        mesh.material.forEach((material: THREE.Material) => {
+          ;(material as THREE.MeshStandardMaterial).transparent = false
+          ;(material as THREE.MeshStandardMaterial).opacity = 1.0
         })
       } else {
-        ;(mesh.material as any).transparent = false
-        ;(mesh.material as any).opacity = 1.0
+        ;(mesh.material as THREE.MeshStandardMaterial).transparent = false
+        ;(mesh.material as THREE.MeshStandardMaterial).opacity = 1.0
       }
     }
   })
@@ -466,8 +519,7 @@ const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
 }
 
 const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
-  for (let i = explosionParticles.length - 1; i >= 0; i--) {
-    const particle = explosionParticles[i]
+  explosionParticles.reduceRight((_, particle, i) => {
     const userData = particle.userData
 
     // Update velocity with gravity
@@ -500,19 +552,37 @@ const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
       scene.remove(particle)
       explosionParticles.splice(i, 1)
     }
-  }
+    return null
+  }, null)
 }
 
-const checkCollisions = (
-  player: ComplexModel,
-  obstacles: { mesh: ComplexModel; characterController: any; collider: any }[],
-  backgrounds: any[],
-  textureAreaBackgrounds: any[],
-  scene: THREE.Scene,
-  endGameCallback: () => void,
-  loggedCollisions: Set<string>,
-  config: any
-) => {
+interface Obstacle {
+  mesh: ComplexModel
+  characterController: RAPIER.KinematicCharacterController
+  collider: RAPIER.Collider
+}
+
+interface CheckCollisionsOptions {
+  player: ComplexModel
+  obstacles: Obstacle[]
+  backgrounds: { mesh: ComplexModel; fallAnimation?: unknown }[]
+  textureAreaBackgrounds: { mesh: ComplexModel; fallAnimation?: unknown }[]
+  scene: THREE.Scene
+  endGameCallback: () => void
+  loggedCollisions: Set<string>
+  config: GameConfig
+}
+
+const checkCollisions = ({
+  player,
+  obstacles,
+  backgrounds,
+  textureAreaBackgrounds,
+  scene,
+  endGameCallback,
+  loggedCollisions,
+  config
+}: CheckCollisionsOptions) => {
   const goombaColor = 0x8b4513
   const playerPosition = player.position
   obstacles.forEach((obstacle, index) => {

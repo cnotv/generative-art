@@ -10,15 +10,13 @@ export const particlesVisualizer: VisualizerSetup = {
     const particleCount = 1000
     const geometry = new THREE.BufferGeometry()
 
-    // Create particle positions
     const positions = new Float32Array(particleCount * 3)
     const colors = new Float32Array(particleCount * 3)
     const sizes = new Float32Array(particleCount)
 
-    for (let i = 0; i < particleCount; i++) {
+    Array.from({ length: particleCount }, (_, i) => {
       const i3 = i * 3
 
-      // Position particles in a sphere
       const radius = Math.random() * 50
       const theta = Math.random() * Math.PI * 2
       const phi = Math.random() * Math.PI
@@ -27,14 +25,12 @@ export const particlesVisualizer: VisualizerSetup = {
       positions[i3 + 1] = radius * Math.cos(phi)
       positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta)
 
-      // Random colors
       colors[i3] = Math.random()
       colors[i3 + 1] = Math.random()
       colors[i3 + 2] = Math.random()
 
-      // Random sizes
       sizes[i] = Math.random() * 2 + 1
-    }
+    })
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
@@ -110,7 +106,7 @@ export const particlesVisualizer: VisualizerSetup = {
     }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()

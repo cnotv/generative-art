@@ -31,7 +31,7 @@ const packVideo = async () => {
 
 const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Promise<void> => {
   // Convert blob to base64
-  console.log('Preparing file')
+  console.warn('Preparing file')
   const reader = new FileReader()
   const base64Promise = new Promise<string>((resolve, reject) => {
     reader.onload = () => resolve(reader.result as string)
@@ -41,7 +41,7 @@ const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Pro
   const base64Data = await base64Promise
 
   // Send to serverless function for conversion
-  console.log('Requesting conversion')
+  console.warn('Requesting conversion')
   const response = await fetch('/.netlify/functions/convert-video', {
     method: 'POST',
     headers: {

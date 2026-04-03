@@ -84,6 +84,21 @@ const pickRandom = <T>(array: T[]): T => array[Math.floor(Math.random() * array.
 // --- 1. Winding Path Algorithms ---
 
 /** DFS with backtracking — long winding corridors */
+const stepRecursiveBacktracker = (grid: MazeGrid, stack: MazeCell[]): boolean => {
+  if (stack.length === 0) return false
+  const current = stack[stack.length - 1]
+  const neighbors = getUnvisitedNeighbors(grid, current)
+  if (neighbors.length === 0) {
+    stack.pop()
+  } else {
+    const next = pickRandom(neighbors)
+    removeWallBetween(current, next)
+    next.visited = true
+    stack.push(next)
+  }
+  return true
+}
+
 const generateRecursiveBacktracker = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const stack: MazeCell[] = []
@@ -91,61 +106,59 @@ const generateRecursiveBacktracker = (rows: number, cols: number): MazeGrid => {
   start.visited = true
   stack.push(start)
 
-  while (stack.length > 0) {
-    const current = stack[stack.length - 1]
-    const neighbors = getUnvisitedNeighbors(grid, current)
-
-    if (neighbors.length === 0) {
-      stack.pop()
-    } else {
-      const next = pickRandom(neighbors)
-      removeWallBetween(current, next)
-      next.visited = true
-      stack.push(next)
-    }
-  }
+  Array.from({ length: rows * cols }).forEach(() => stepRecursiveBacktracker(grid, stack))
 
   return grid
+}
+
+const huntNextCell = (grid: MazeGrid, rows: number, cols: number): MazeCell | null => {
+  let found: MazeCell | null = null
+  grid.some((row) =>
+    row.some((cell) => {
+      if (cell.visited) return false
+      const visitedAdj = [
+        cell.row > 0 ? grid[cell.row - 1][cell.col] : null,
+        cell.row < rows - 1 ? grid[cell.row + 1][cell.col] : null,
+        cell.col > 0 ? grid[cell.row][cell.col - 1] : null,
+        cell.col < cols - 1 ? grid[cell.row][cell.col + 1] : null
+      ].filter((n): n is MazeCell => n !== null && n.visited)
+
+      if (visitedAdj.length > 0) {
+        removeWallBetween(cell, pickRandom(visitedAdj))
+        cell.visited = true
+        found = cell
+        return true
+      }
+      return false
+    })
+  )
+  return found
+}
+
+const stepHuntAndKill = (
+  grid: MazeGrid,
+  current: MazeCell | null,
+  rows: number,
+  cols: number
+): void => {
+  if (!current) return
+  const neighbors = getUnvisitedNeighbors(grid, current)
+  if (neighbors.length > 0) {
+    const next = pickRandom(neighbors)
+    removeWallBetween(current, next)
+    next.visited = true
+    stepHuntAndKill(grid, next, rows, cols)
+  } else {
+    stepHuntAndKill(grid, huntNextCell(grid, rows, cols), rows, cols)
+  }
 }
 
 /** Like recursive backtracker but scans grid when stuck — memory efficient */
 const generateHuntAndKill = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
-  let current: MazeCell | null = grid[0][0]
-  current.visited = true
-
-  while (current) {
-    const neighbors = getUnvisitedNeighbors(grid, current)
-
-    if (neighbors.length > 0) {
-      const next = pickRandom(neighbors)
-      removeWallBetween(current, next)
-      next.visited = true
-      current = next
-    } else {
-      current = null
-      grid.some((row) =>
-        row.some((cell) => {
-          if (cell.visited) return false
-          const visitedAdj = [
-            cell.row > 0 ? grid[cell.row - 1][cell.col] : null,
-            cell.row < rows - 1 ? grid[cell.row + 1][cell.col] : null,
-            cell.col > 0 ? grid[cell.row][cell.col - 1] : null,
-            cell.col < cols - 1 ? grid[cell.row][cell.col + 1] : null
-          ].filter((n): n is MazeCell => n !== null && n.visited)
-
-          if (visitedAdj.length > 0) {
-            removeWallBetween(cell, pickRandom(visitedAdj))
-            cell.visited = true
-            current = cell
-            return true
-          }
-          return false
-        })
-      )
-    }
-  }
-
+  const start = grid[0][0]
+  start.visited = true
+  stepHuntAndKill(grid, start, rows, cols)
   return grid
 }
 
@@ -177,7 +190,8 @@ const generatePrims = (rows: number, cols: number): MazeGrid => {
   start.visited = true
   addFrontier(start)
 
-  while (frontier.length > 0) {
+  const stepPrims = (): void => {
+    if (frontier.length === 0) return
     const index = Math.floor(Math.random() * frontier.length)
     const cell = frontier[index]
     frontier.splice(index, 1)
@@ -194,8 +208,10 @@ const generatePrims = (rows: number, cols: number): MazeGrid => {
       cell.visited = true
       addFrontier(cell)
     }
+    stepPrims()
   }
 
+  stepPrims()
   return grid
 }
 
@@ -205,11 +221,9 @@ const generateKruskals = (rows: number, cols: number): MazeGrid => {
   const parent: number[] = Array.from({ length: rows * cols }, (_, i) => i)
 
   const find = (x: number): number => {
-    while (parent[x] !== x) {
-      parent[x] = parent[parent[x]]
-      x = parent[x]
-    }
-    return x
+    if (parent[x] === x) return x
+    parent[x] = parent[parent[x]]
+    return find(parent[x])
   }
 
   const union = (a: number, b: number): boolean => {
@@ -249,6 +263,64 @@ const generateKruskals = (rows: number, cols: number): MazeGrid => {
 
 // --- 3. Unbiased Algorithms ---
 
+interface WilsonsContext {
+  grid: MazeGrid
+  rows: number
+  cols: number
+  inMaze: Set<string>
+  cellKey: (r: number, c: number) => string
+}
+
+const wilsonsRandomWalk = (
+  ctx: WilsonsContext,
+  current: MazeCell,
+  path: MazeCell[],
+  pathSet: Map<string, number>
+): void => {
+  if (ctx.inMaze.has(ctx.cellKey(current.row, current.col))) return
+  const neighbors = [
+    current.row > 0 ? ctx.grid[current.row - 1][current.col] : null,
+    current.row < ctx.rows - 1 ? ctx.grid[current.row + 1][current.col] : null,
+    current.col > 0 ? ctx.grid[current.row][current.col - 1] : null,
+    current.col < ctx.cols - 1 ? ctx.grid[current.row][current.col + 1] : null
+  ].filter((n): n is MazeCell => n !== null)
+
+  const next = pickRandom(neighbors)
+  const key = ctx.cellKey(next.row, next.col)
+
+  if (pathSet.has(key)) {
+    const loopStart = pathSet.get(key)!
+    path.splice(loopStart + 1).forEach((c) => pathSet.delete(ctx.cellKey(c.row, c.col)))
+    wilsonsRandomWalk(ctx, path[path.length - 1], path, pathSet)
+  } else {
+    path.push(next)
+    pathSet.set(key, path.length - 1)
+    wilsonsRandomWalk(ctx, next, path, pathSet)
+  }
+}
+
+const wilsonsAddPath = (ctx: WilsonsContext, path: MazeCell[]): void => {
+  Array.from({ length: path.length - 1 }, (_, i) => i).forEach((i) => {
+    removeWallBetween(path[i], path[i + 1])
+    path[i].visited = true
+    ctx.inMaze.add(ctx.cellKey(path[i].row, path[i].col))
+  })
+}
+
+const wilsonsStep = (ctx: WilsonsContext, allCells: MazeCell[]): void => {
+  const remaining = allCells.filter((c) => !ctx.inMaze.has(ctx.cellKey(c.row, c.col)))
+  if (remaining.length === 0) return
+
+  const start = remaining[Math.floor(Math.random() * remaining.length)]
+  const path: MazeCell[] = [start]
+  const pathSet = new Map<string, number>()
+  pathSet.set(ctx.cellKey(start.row, start.col), 0)
+
+  wilsonsRandomWalk(ctx, start, path, pathSet)
+  wilsonsAddPath(ctx, path)
+  wilsonsStep(ctx, allCells)
+}
+
 /** Loop-erased random walks — perfectly unbiased */
 const generateWilsons = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
@@ -258,76 +330,42 @@ const generateWilsons = (rows: number, cols: number): MazeGrid => {
   grid[0][0].visited = true
   inMaze.add(cellKey(0, 0))
 
-  const allCells = grid.flat()
-  let remaining = allCells.filter((c) => !inMaze.has(cellKey(c.row, c.col)))
-
-  while (remaining.length > 0) {
-    const start = remaining[Math.floor(Math.random() * remaining.length)]
-    const path: MazeCell[] = [start]
-    const pathSet = new Map<string, number>()
-    pathSet.set(cellKey(start.row, start.col), 0)
-
-    let current = start
-    while (!inMaze.has(cellKey(current.row, current.col))) {
-      const neighbors = [
-        current.row > 0 ? grid[current.row - 1][current.col] : null,
-        current.row < rows - 1 ? grid[current.row + 1][current.col] : null,
-        current.col > 0 ? grid[current.row][current.col - 1] : null,
-        current.col < cols - 1 ? grid[current.row][current.col + 1] : null
-      ].filter((n): n is MazeCell => n !== null)
-
-      const next = pickRandom(neighbors)
-      const key = cellKey(next.row, next.col)
-
-      if (pathSet.has(key)) {
-        const loopStart = pathSet.get(key)!
-        path.splice(loopStart + 1).forEach((c) => pathSet.delete(cellKey(c.row, c.col)))
-        current = path[path.length - 1]
-      } else {
-        path.push(next)
-        pathSet.set(key, path.length - 1)
-        current = next
-      }
-    }
-
-    Array.from({ length: path.length - 1 }, (_, i) => i).forEach((i) => {
-      removeWallBetween(path[i], path[i + 1])
-      path[i].visited = true
-      inMaze.add(cellKey(path[i].row, path[i].col))
-    })
-
-    remaining = allCells.filter((c) => !inMaze.has(cellKey(c.row, c.col)))
-  }
+  const ctx: WilsonsContext = { grid, rows, cols, inMaze, cellKey }
+  wilsonsStep(ctx, grid.flat())
 
   return grid
+}
+
+const stepAldousBroder = (
+  grid: MazeGrid,
+  rows: number,
+  cols: number,
+  current: MazeCell,
+  unvisitedCount: number
+): void => {
+  if (unvisitedCount === 0) return
+  const neighbors = [
+    current.row > 0 ? grid[current.row - 1][current.col] : null,
+    current.row < rows - 1 ? grid[current.row + 1][current.col] : null,
+    current.col > 0 ? grid[current.row][current.col - 1] : null,
+    current.col < cols - 1 ? grid[current.row][current.col + 1] : null
+  ].filter((n): n is MazeCell => n !== null)
+
+  const next = pickRandom(neighbors)
+  const newCount = next.visited ? unvisitedCount : unvisitedCount - 1
+  if (!next.visited) {
+    removeWallBetween(current, next)
+    next.visited = true
+  }
+  stepAldousBroder(grid, rows, cols, next, newCount)
 }
 
 /** Random walk — extremely simple, extremely slow */
 const generateAldousBroder = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
-  let unvisitedCount = rows * cols - 1
-  let current = grid[0][0]
-  current.visited = true
-
-  while (unvisitedCount > 0) {
-    const neighbors = [
-      current.row > 0 ? grid[current.row - 1][current.col] : null,
-      current.row < rows - 1 ? grid[current.row + 1][current.col] : null,
-      current.col > 0 ? grid[current.row][current.col - 1] : null,
-      current.col < cols - 1 ? grid[current.row][current.col + 1] : null
-    ].filter((n): n is MazeCell => n !== null)
-
-    const next = pickRandom(neighbors)
-
-    if (!next.visited) {
-      removeWallBetween(current, next)
-      next.visited = true
-      unvisitedCount--
-    }
-
-    current = next
-  }
-
+  const start = grid[0][0]
+  start.visited = true
+  stepAldousBroder(grid, rows, cols, start, rows * cols - 1)
   return grid
 }
 
@@ -340,11 +378,9 @@ const generateEllers = (rows: number, cols: number): MazeGrid => {
   const cellSet = (row: number, col: number) => row * cols + col
 
   const find = (x: number): number => {
-    while (sets[x] !== x) {
-      sets[x] = sets[sets[x]]
-      x = sets[x]
-    }
-    return x
+    if (sets[x] === x) return x
+    sets[x] = sets[sets[x]]
+    return find(sets[x])
   }
 
   const union = (a: number, b: number) => {

@@ -36,13 +36,7 @@ declare const bindAnimatedElements: (elements: ComplexModel[], world: RAPIER.Wor
  * @param elements
  */
 declare const resetAnimation: (elements: ComplexModel[]) => ComplexModel[];
-declare const getAnimationsModel: (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
-    run: THREE.AnimationAction;
-};
-/**
- * Update the animation of the model based on given time
- */
-declare const updateAnimation: (mixer: THREE.AnimationMixer, action: THREE.AnimationAction, delta?: number, speed?: number, player?: ComplexModel, actionName?: string) => void;
+declare const getAnimationsModel: (mixer: THREE.AnimationMixer, model: Model, gltf: { animations: THREE.AnimationClip[] }) => Record<string, THREE.AnimationAction>;
 
 /** Animation data for updateAnimation and controllerForward */
 interface AnimationData {

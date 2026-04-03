@@ -302,22 +302,22 @@ const getGrass = (config: GenerateConfig) => {
   // Define the control points for the side curve (curvature on the sides)
   const sidePoints = sideCurve.getPoints(config.points)
 
-  // Define the vertices for the grass blade
-  const vertices = []
-  for (let i = 0; i < lengthPoints.length; i++) {
-    const lengthPoint = lengthPoints[i]
+  const vertices = lengthPoints.flatMap((lengthPoint, i) => {
     const sidePoint = sidePoints[i]
-    vertices.push(lengthPoint.x - sidePoint.x, lengthPoint.y, lengthPoint.z)
-    vertices.push(lengthPoint.x + sidePoint.x, lengthPoint.y, lengthPoint.z)
-  }
+    return [
+      lengthPoint.x - sidePoint.x,
+      lengthPoint.y,
+      lengthPoint.z,
+      lengthPoint.x + sidePoint.x,
+      lengthPoint.y,
+      lengthPoint.z
+    ]
+  })
 
-  // Define the indices for the triangular faces
-  const indices = []
-  for (let i = 0; i < lengthPoints.length - 1; i++) {
+  const indices = Array.from({ length: lengthPoints.length - 1 }, (_, i) => {
     const baseIndex = i * 2
-    indices.push(baseIndex, baseIndex + 1, baseIndex + 2)
-    indices.push(baseIndex + 1, baseIndex + 3, baseIndex + 2)
-  }
+    return [baseIndex, baseIndex + 1, baseIndex + 2, baseIndex + 1, baseIndex + 3, baseIndex + 2]
+  }).flat()
 
   // Define the geometry for the grass blade
   const geometry = new THREE.BufferGeometry()

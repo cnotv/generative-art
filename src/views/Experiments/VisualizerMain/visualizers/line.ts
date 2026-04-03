@@ -18,11 +18,10 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
 
   setup: (scene: THREE.Scene) => {
     // Create points for the spectrum line
-    const points: THREE.Vector3[] = []
-    for (let i = 0; i < config.barCount; i++) {
+    const points: THREE.Vector3[] = Array.from({ length: config.barCount }, (_, i) => {
       const x = (i / (config.barCount - 1)) * config.width - config.width / 2
-      points.push(new THREE.Vector3(x, 0, 0))
-    }
+      return new THREE.Vector3(x, 0, 0)
+    })
 
     // Create curve from points
     const curve = new THREE.CatmullRomCurve3(points)
@@ -40,7 +39,7 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
     return { line, points, curve }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()
@@ -50,10 +49,9 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
         const audioData = getAudioData()
 
         // Update line points based on audio data
-        for (let i = 0; i < config.barCount && i < audioData.length; i++) {
-          const height = audioData[i] * config.height
-          points[i].y = height
-        }
+        Array.from({ length: Math.min(config.barCount, audioData.length) }, (_, i) => {
+          points[i].y = audioData[i] * config.height
+        })
 
         // Update curve with new points
         curve.points = points

@@ -1,10 +1,10 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import * as dat from 'dat.gui'
 
-const create = <T extends Record<string, any>>(
+const create = <T extends Record<string, unknown>>(
   config: T,
   route: RouteLocationNormalizedLoaded,
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   callback = () => {}
 ) => {
   const hasControl = route.query.control === 'true'
@@ -19,10 +19,10 @@ const create = <T extends Record<string, any>>(
   }
 }
 
-const addPanel = <T extends Record<string, any>>(
+const addPanel = <T extends Record<string, unknown>>(
   gui: dat.GUI,
   config: T,
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   callback = () => {},
   panelName: string = 'Controls'
 ) => {

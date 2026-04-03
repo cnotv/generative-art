@@ -47,16 +47,12 @@ export const createZigzagTexture = (options: ZigzagTextureOptions = {}): THREE.C
 
   const numberZigzags = Math.ceil(size / zigzagWidth)
 
-  for (let i = 0; i <= numberZigzags; i++) {
+  Array.from({ length: numberZigzags + 1 }, (_, i) => {
     const x = i * zigzagWidth
     const y = i % 2 === 0 ? size / 2 - zigzagHeight / 2 : size / 2 + zigzagHeight / 2
-
-    if (i === 0) {
-      ctx.moveTo(x, y)
-    } else {
-      ctx.lineTo(x, y)
-    }
-  }
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  })
 
   ctx.stroke()
 

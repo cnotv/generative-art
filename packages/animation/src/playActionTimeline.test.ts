@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { playActionTimeline, createTimelineManager, animateTimeline } from './index'
 import * as THREE from 'three'
 import type { ComplexModel } from './types'
@@ -72,12 +72,10 @@ describe('playActionTimeline - REAL tests', () => {
     playActionTimeline(manager, player, 'kick', getDelta)
 
     // Clear any setup calls
-    ;(player.userData.mixer.update as any).mockClear()
+    ;(player.userData.mixer.update as ReturnType<typeof vi.fn>).mockClear()
 
     // Run timeline 5 times
-    for (let i = 0; i < 5; i++) {
-      animateTimeline(manager, i)
-    }
+    Array.from({ length: 5 }, (_, i) => animateTimeline(manager, i))
 
     // Then: mixer.update MUST be called 5 times
     expect(player.userData.mixer.update).toHaveBeenCalledTimes(5)
@@ -99,9 +97,7 @@ describe('playActionTimeline - REAL tests', () => {
     expect(player.userData.allowMovement).toBe(false)
 
     // Run timeline for 0.1s worth of frames (7 frames at 0.016s each = 0.112s)
-    for (let i = 0; i < 7; i++) {
-      animateTimeline(manager, i)
-    }
+    Array.from({ length: 7 }, (_, i) => animateTimeline(manager, i))
 
     // Then: performing MUST be cleared
     expect(player.userData.performing).toBe(false)
@@ -135,8 +131,8 @@ describe('playActionTimeline - REAL tests', () => {
     })
 
     // Clear play calls
-    ;(player.userData.actions.kick.play as any).mockClear()
-    ;(player.userData.actions.punch.play as any).mockClear()
+    ;(player.userData.actions.kick.play as ReturnType<typeof vi.fn>).mockClear()
+    ;(player.userData.actions.punch.play as ReturnType<typeof vi.fn>).mockClear()
 
     // Try to start punch
     playActionTimeline(manager, player, 'punch', getDelta)
@@ -157,8 +153,8 @@ describe('playActionTimeline - REAL tests', () => {
     })
 
     // Clear play calls
-    ;(player.userData.actions.jump.play as any).mockClear()
-    ;(player.userData.actions.roll.play as any).mockClear()
+    ;(player.userData.actions.jump.play as ReturnType<typeof vi.fn>).mockClear()
+    ;(player.userData.actions.roll.play as ReturnType<typeof vi.fn>).mockClear()
 
     // Try to start roll
     playActionTimeline(manager, player, 'roll', getDelta)

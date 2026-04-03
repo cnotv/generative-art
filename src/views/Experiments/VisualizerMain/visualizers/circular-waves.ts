@@ -17,29 +17,26 @@ export const circularSpectrumVisualizer: VisualizerSetup = {
   },
 
   setup: (scene: THREE.Scene) => {
-    const bars: THREE.Mesh[] = []
-
-    for (let i = 0; i < config.barCount; i++) {
+    const bars: THREE.Mesh[] = Array.from({ length: config.barCount }, (_, i) => {
       const barGeometry = new THREE.BoxGeometry(config.barWidth, 1, config.barWidth)
       const barMaterial = new THREE.MeshBasicMaterial()
       const bar = new THREE.Mesh(barGeometry, barMaterial)
 
-      // Position bars in a circle
       const angle = (i / config.barCount) * Math.PI * 2
       const x = Math.cos(angle) * config.radius
       const z = Math.sin(angle) * config.radius
 
       bar.position.set(x, 0, z)
-      bar.lookAt(0, 0, 0) // Face inward
+      bar.lookAt(0, 0, 0)
 
       scene.add(bar)
-      bars.push(bar)
-    }
+      return bar
+    })
 
     return { bars }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const { bars } = getObjects()

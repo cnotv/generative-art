@@ -166,7 +166,7 @@ const bindings = {
         handleJump()
         break
       case 'print-log':
-        console.log('Current camera:', cameraPreset)
+        console.warn('Current camera:', cameraPreset)
         break
 
       // TODO: Iterate instead of hardcoding

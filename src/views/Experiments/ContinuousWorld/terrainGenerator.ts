@@ -7,6 +7,12 @@ const DEFAULT_TERRAIN_BASE_COLOR = 0x4a7c3f
 const DEFAULT_TERRAIN_PEAK_COLOR = 0x8b7355
 const HEIGHT_COLOR_THRESHOLD = 0.6
 
+export interface TerrainChunkOptions {
+  noiseConfig: NoiseConfig
+  baseColor?: number
+  peakColor?: number
+}
+
 /**
  * Creates a terrain mesh for a single chunk using noise-displaced PlaneGeometry.
  * Vertices are displaced in Y based on fractal noise using world-space coordinates
@@ -16,10 +22,13 @@ export const createTerrainChunk = (
   chunkX: number,
   chunkZ: number,
   chunkSize: number,
-  noiseConfig: NoiseConfig,
-  baseColor = DEFAULT_TERRAIN_BASE_COLOR,
-  peakColor = DEFAULT_TERRAIN_PEAK_COLOR
+  options: TerrainChunkOptions
 ): THREE.Mesh => {
+  const {
+    noiseConfig,
+    baseColor = DEFAULT_TERRAIN_BASE_COLOR,
+    peakColor = DEFAULT_TERRAIN_PEAK_COLOR
+  } = options
   const terrainBaseColor = new THREE.Color(baseColor)
   const terrainPeakColor = new THREE.Color(peakColor)
   const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, TERRAIN_SEGMENTS, TERRAIN_SEGMENTS)

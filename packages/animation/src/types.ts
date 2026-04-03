@@ -8,8 +8,8 @@ export type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinema
 export interface Timeline {
   // Existing fields
   name?: string
-  action?: (element?: any) => void
-  actionStart?: (loop: number, element?: any) => void
+  action?: (element?: unknown) => void
+  actionStart?: (loop: number, element?: unknown) => void
   start?: number
   end?: number
   frequency?: number
@@ -21,14 +21,14 @@ export interface Timeline {
   category?: string // For logging/filtering ("user-input", "ai-behavior", "physics")
   duration?: number // Duration in frames (calculates end = start + duration)
   autoRemove?: boolean // Auto-remove when complete
-  onComplete?: (element?: any) => void // Callback on completion
+  onComplete?: (element?: unknown) => void // Callback on completion
   priority?: number // Execution priority (higher = earlier, default: 0)
   enabled?: boolean // Can be toggled on/off (default: true)
-  metadata?: Record<string, any> // Custom data
+  metadata?: Record<string, unknown> // Custom data
 }
 
 export interface ComplexModel extends Model {
-  userData: Record<string, any> & {
+  userData: Record<string, unknown> & {
     body: RAPIER.RigidBody
     collider: RAPIER.Collider
     initialValues: {
@@ -39,7 +39,7 @@ export interface ComplexModel extends Model {
     }
     type: ModelType
     characterController?: RAPIER.KinematicCharacterController
-    helper?: THREE.SkeletonHelper
+    helper?: THREE.Object3D
     hasGravity?: boolean
     actions: Record<string, THREE.AnimationAction | undefined>
     mixer?: THREE.AnimationMixer

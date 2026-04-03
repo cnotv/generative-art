@@ -29,7 +29,7 @@ const packVideo = async () => {
 
 const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Promise<void> => {
   // Convert blob to base64
-  console.log('Preparing file')
+  console.warn('Preparing file')
   const reader = new FileReader()
   const base64Promise = new Promise<string>((resolve, reject) => {
     reader.onload = () => resolve(reader.result as string)
@@ -39,7 +39,7 @@ const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Pro
   const base64Data = await base64Promise
 
   // Send to serverless function for conversion
-  console.log('Requesting conversion')
+  console.warn('Requesting conversion')
   const response = await fetch('/.netlify/functions/convert-video', {
     method: 'POST',
     headers: {
@@ -54,7 +54,9 @@ const convertToMp4 = async (webmBlob: Blob, filename: string = 'animation'): Pro
   return response.json()
 }
 
-const record = (canvas: HTMLCanvasElement, route: any) => {
+import type { RouteLike } from '../types'
+
+const record = (canvas: HTMLCanvasElement, route: RouteLike) => {
   stop(0, route)
   const shouldRecord = !!route.query.record
   if (shouldRecord) {
@@ -74,7 +76,7 @@ const record = (canvas: HTMLCanvasElement, route: any) => {
   }
 }
 
-const stop = (frameCount: number, route: any) => {
+const stop = (frameCount: number, route: RouteLike) => {
   const shouldRecord = !!route.query.record
   const totalFrames = isNaN(Number(route.query.record)) ? 800 : Number(route.query.record)
   if (shouldRecord) {

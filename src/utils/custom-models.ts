@@ -52,21 +52,23 @@ export const getBlade = (config: GenerateConfig) => {
   const sidePoints = sideCurve.getPoints(10)
 
   // Define the vertices for the grass blade
-  const vertices = []
-  for (let i = 0; i < lengthPoints.length; i++) {
-    const lengthPoint = lengthPoints[i]
+  const vertices = lengthPoints.flatMap((lengthPoint, i) => {
     const sidePoint = sidePoints[i]
-    vertices.push(lengthPoint.x - sidePoint.x, lengthPoint.y, lengthPoint.z)
-    vertices.push(lengthPoint.x + sidePoint.x, lengthPoint.y, lengthPoint.z)
-  }
+    return [
+      lengthPoint.x - sidePoint.x,
+      lengthPoint.y,
+      lengthPoint.z,
+      lengthPoint.x + sidePoint.x,
+      lengthPoint.y,
+      lengthPoint.z
+    ]
+  })
 
   // Define the indices for the triangular faces
-  const indices = []
-  for (let i = 0; i < lengthPoints.length - 1; i++) {
+  const indices = Array.from({ length: lengthPoints.length - 1 }, (_, i) => {
     const baseIndex = i * 2
-    indices.push(baseIndex, baseIndex + 1, baseIndex + 2)
-    indices.push(baseIndex + 1, baseIndex + 3, baseIndex + 2)
-  }
+    return [baseIndex, baseIndex + 1, baseIndex + 2, baseIndex + 1, baseIndex + 3, baseIndex + 2]
+  }).flat()
 
   // Define the geometry for the grass blade
   const geometry = new THREE.BufferGeometry()
@@ -82,10 +84,8 @@ export const getBlade = (config: GenerateConfig) => {
 
   // Create the mesh for the grass blade
   const blade = new THREE.Mesh(geometry, material)
-  blade.castShadow = false
-  blade.receiveShadow = true
 
-  return blade
+  return Object.assign(blade, { castShadow: false, receiveShadow: true })
 }
 
 /**
@@ -132,8 +132,7 @@ export const getCoinBlock = (
   const geometry = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32)
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...position)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
+  Object.assign(mesh, { castShadow: true, receiveShadow: true })
   scene.add(mesh)
   const initialValues = {
     position,
@@ -141,7 +140,7 @@ export const getCoinBlock = (
     color,
     rotation: mesh.rotation.toArray() as CoordinateTuple
   }
-  mesh.rotation.x = Math.PI / 2
+  mesh.rotation.set(Math.PI / 2, mesh.rotation.y, mesh.rotation.z)
 
   const { rigidBody, collider } = getPhysic(world, {
     position,

@@ -115,25 +115,23 @@ const calculateWaveDeformation = (
   return waves.reduce((sum, wave) => sum + wave, 0)
 }
 
+interface DisplacementOptions {
+  x: number
+  y: number
+  z: number
+  totalWave: number
+  bandValue: number
+  band: typeof config.frequencyBands.low
+}
+
 /**
  * Applies radial displacement to vertex positions based on wave deformation
  * Displaces vertices outward from the center based on audio-reactive wave intensity
- * @param x - Original X coordinate
- * @param y - Original Y coordinate
- * @param z - Original Z coordinate
- * @param totalWave - Combined wave deformation value
- * @param bandValue - Audio band intensity value
- * @param band - Frequency band configuration
+ * @param options - Displacement parameters including position, wave, and band config
  * @returns New displaced coordinates
  */
-const applyDisplacement = (
-  x: number,
-  y: number,
-  z: number,
-  totalWave: number,
-  bandValue: number,
-  band: typeof config.frequencyBands.low
-): { x: number; y: number; z: number } => {
+const applyDisplacement = (options: DisplacementOptions): { x: number; y: number; z: number } => {
+  const { x, y, z, totalWave, bandValue, band } = options
   const angle = Math.atan2(y, x)
   const intensity = bandValue * config.maxDeformation * band.effectIntensity
   const displaceX = Math.cos(angle) * totalWave * intensity
@@ -179,18 +177,17 @@ const applySpiralTwist = (
  * @returns Array of indices for triangle rendering
  */
 const generateTorusIndices = (radialSegments: number, tubularSegments: number): number[] => {
-  const indices: number[] = []
-  for (let index = 1; index <= radialSegments; index++) {
-    for (let i = 1; i <= tubularSegments; i++) {
+  return Array.from({ length: radialSegments }, (_, ri) => {
+    const index = ri + 1
+    return Array.from({ length: tubularSegments }, (__, ti) => {
+      const i = ti + 1
       const a = (tubularSegments + 1) * index + i - 1
       const b = (tubularSegments + 1) * (index - 1) + i - 1
       const c = (tubularSegments + 1) * (index - 1) + i
       const d = (tubularSegments + 1) * index + i
-      indices.push(a, b, d)
-      indices.push(b, c, d)
-    }
-  }
-  return indices
+      return [a, b, d, b, c, d]
+    }).flat()
+  }).flat()
 }
 
 /**
@@ -212,32 +209,35 @@ const createFrequencyBandTorusGeometry = (
   const band = config.frequencyBands[bandType]
   const radialSegments = 16
   const tubularSegments = config.segments
-  const vertices: number[] = []
-  const normals: number[] = []
-  const uvs: number[] = []
 
-  for (let index = 0; index <= radialSegments; index++) {
-    for (let i = 0; i <= tubularSegments; i++) {
+  const vertexData = Array.from({ length: radialSegments + 1 }, (_, index) =>
+    Array.from({ length: tubularSegments + 1 }, (__, i) => {
       const u = (i / tubularSegments) * Math.PI * 2
       const v = (index / radialSegments) * Math.PI * 2
       const basePos = calculateTorusCoordinates(u, v)
       const audioValue = getAudioValueForPosition(audioData, basePos.x, basePos.y, band)
       const totalWave = calculateWaveDeformation(u, v, time, audioValue, bandType)
-      const displaced = applyDisplacement(
-        basePos.x,
-        basePos.y,
-        basePos.z,
+      const displaced = applyDisplacement({
+        x: basePos.x,
+        y: basePos.y,
+        z: basePos.z,
         totalWave,
         bandValue,
         band
-      )
+      })
       const twisted = applySpiralTwist(displaced.x, displaced.y, audioValue, v)
-      vertices.push(twisted.x, twisted.y, displaced.z)
       const normal = new THREE.Vector3(basePos.x, basePos.y, basePos.z).normalize()
-      normals.push(normal.x, normal.y, normal.z)
-      uvs.push(i / tubularSegments, index / radialSegments)
-    }
-  }
+      return {
+        vertex: [twisted.x, twisted.y, displaced.z],
+        normal: [normal.x, normal.y, normal.z],
+        uv: [i / tubularSegments, index / radialSegments]
+      }
+    })
+  ).flat()
+
+  const vertices = vertexData.flatMap(({ vertex }) => vertex)
+  const normals = vertexData.flatMap(({ normal }) => normal)
+  const uvs = vertexData.flatMap(({ uv }) => uv)
 
   const indices = generateTorusIndices(radialSegments, tubularSegments)
   geometry.setIndex(indices)
@@ -310,26 +310,23 @@ const getProcessedAudioBands = (): { [key: string]: number } => {
   }
 }
 
+interface UpdateRingOptions {
+  ring: THREE.Mesh
+  material: THREE.MeshStandardMaterial
+  bandType: 'low' | 'mid' | 'high'
+  bandValue: number
+  bandConfig: typeof config.frequencyBands.low
+  audioData: number[]
+  time: number
+}
+
 /**
  * Updates a frequency band ring's geometry, scaling, and material properties
  * Recreates geometry with audio-reactive deformations and updates visual properties
- * @param ring - Three.js mesh representing the frequency band ring
- * @param material - Material to update with new colors and properties
- * @param bandType - Type of frequency band (low, mid, high)
- * @param bandValue - Current audio intensity for this band
- * @param bandConfig - Configuration for this frequency band
- * @param audioData - Array of audio frequency data
- * @param time - Current time for animation
+ * @param options - Ring update parameters including mesh, material, band config, and audio data
  */
-const updateRing = (
-  ring: THREE.Mesh,
-  material: THREE.MeshStandardMaterial,
-  bandType: 'low' | 'mid' | 'high',
-  bandValue: number,
-  bandConfig: typeof config.frequencyBands.low,
-  audioData: number[],
-  time: number
-): void => {
+const updateRing = (options: UpdateRingOptions): void => {
+  const { ring, material, bandType, bandValue, bandConfig, audioData, time } = options
   const newGeometry = createFrequencyBandTorusGeometry(audioData, time, bandType, bandValue)
   if (ring.geometry) {
     ring.geometry.dispose()
@@ -398,7 +395,7 @@ export const circularTubesVisualizer: VisualizerSetup = {
     return { rings, materials, backgroundElements }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const { rings, materials, backgroundElements } = getObjects()
@@ -416,16 +413,15 @@ export const circularTubesVisualizer: VisualizerSetup = {
 
           if (!ring || !material) return
 
-          // Update ring geometry and material
-          updateRing(
+          updateRing({
             ring,
             material,
-            bandType as 'low' | 'mid' | 'high',
+            bandType: bandType as 'low' | 'mid' | 'high',
             bandValue,
             bandConfig,
             audioData,
             time
-          )
+          })
         })
 
         // Update background elements

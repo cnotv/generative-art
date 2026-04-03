@@ -42,7 +42,6 @@ export const PHYSICS_SPHERE_RADIUS = 1
 export const MESH_FOLLOWER_COLOR = 0x3498db
 export const PHYSICS_FOLLOWER_COLOR = 0xe74c3c
 
-/* eslint-disable no-magic-numbers */
 /** Y of the top surface of the ground plane as created by getGround (default position y=-1). */
 export const GROUND_SURFACE_Y = -1
 /**
@@ -77,7 +76,6 @@ export const FIXED_OBSTACLE_POSITIONS: [number, number, number][] = [
   [-7, OBSTACLE_GROUND_Y, 7],
   [0, OBSTACLE_GROUND_Y, -8]
 ]
-/* eslint-enable no-magic-numbers */
 
 /** Animation name fallback for goomba.glb — actual name discovered at runtime. */
 export const GOOMBA_ANIMATION_FALLBACK_NAME = 'walk'

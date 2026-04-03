@@ -253,7 +253,42 @@ type TimelineAssets = {
   setOrbitReference: (ref: OrbitReference) => void
 }
 
-const registerGameTimeline = (
+const applyAutoMovement = (
+  state: LevelState,
+  assets: Pick<TimelineAssets, 'player' | 'getDelta' | 'exitPosition' | 'playerFilter'>
+): void => {
+  const { player, getDelta, exitPosition, playerFilter } = assets
+  const cfg = reactiveConfig.value as unknown as ReactiveConfigShape
+  const delta = getDelta()
+  const autoTarget =
+    state.coins.length > 0
+      ? state.coins.reduce((nearest, coin) => {
+          const dnx = nearest.x - player.position.x
+          const dnz = nearest.z - player.position.z
+          const dcx = coin.position.x - player.position.x
+          const dcz = coin.position.z - player.position.z
+          return dcx * dcx + dcz * dcz < dnx * dnx + dnz * dnz ? coin.position : nearest
+        }, state.coins[0].position)
+      : exitPosition
+  state.playerPathState = updatePaperPlaneChase({
+    plane: player,
+    playerPosition: autoTarget,
+    speed: cfg.player.speed,
+    delta,
+    navGrid: state.navGrid,
+    pathState: state.playerPathState,
+    filterPredicate: playerFilter
+  })
+  updateAnimation({
+    actionName: state.playerPathState.path ? 'walk' : 'idle',
+    player,
+    delta: delta * 2,
+    speed: cfg.player.speed,
+    distance: PLAYER_DISTANCE
+  })
+}
+
+const addPlayerMovementAction = (
   timelineManager: ReturnType<typeof createTimelineManager>,
   state: LevelState,
   assets: TimelineAssets
@@ -262,20 +297,14 @@ const registerGameTimeline = (
     player,
     paperPlanes,
     camera,
-    scene,
-    world,
     getDelta,
     cameraOffset,
     exitPosition,
-    updatePoster,
     updatePaths,
     playerFilter,
-    planeFilter,
-    buildLevel,
     getOrbitReference,
     setOrbitReference
   } = assets
-
   timelineManager.addAction({
     name: 'player-movement',
     category: 'user-input',
@@ -285,33 +314,7 @@ const registerGameTimeline = (
       const isMovingManually = DIRECTIONAL_ACTIONS.some((key) => currentActions[key])
       if (cfg.autoMode.enabled && isMovingManually) cfg.autoMode.enabled = false
       if (cfg.autoMode.enabled && !isMovingManually) {
-        const delta = getDelta()
-        const autoTarget =
-          state.coins.length > 0
-            ? state.coins.reduce((nearest, coin) => {
-                const dnx = nearest.x - player.position.x
-                const dnz = nearest.z - player.position.z
-                const dcx = coin.position.x - player.position.x
-                const dcz = coin.position.z - player.position.z
-                return dcx * dcx + dcz * dcz < dnx * dnx + dnz * dnz ? coin.position : nearest
-              }, state.coins[0].position)
-            : exitPosition
-        state.playerPathState = updatePaperPlaneChase(
-          player,
-          autoTarget,
-          cfg.player.speed,
-          delta,
-          state.navGrid,
-          state.playerPathState,
-          playerFilter
-        )
-        updateAnimation({
-          actionName: state.playerPathState.path ? 'walk' : 'idle',
-          player,
-          delta: delta * 2,
-          speed: cfg.player.speed,
-          distance: PLAYER_DISTANCE
-        })
+        applyAutoMovement(state, { player, getDelta, exitPosition, playerFilter })
       } else {
         updatePlayerMovement(player, currentActions, getDelta, cfg.player.speed, playerFilter)
       }
@@ -326,15 +329,21 @@ const registerGameTimeline = (
         ],
         cfg.debug.showPath
       )
-      let orbitReference = getOrbitReference()
-      if (!orbitReference) {
-        orbitReference = toRaw(store.orbitReference) as OrbitReference
-        setOrbitReference(orbitReference)
-      }
-      cameraFollowPlayer(camera, player, cameraOffset, orbitReference, ['x', 'z'])
+      const resolvedOrbitReference =
+        getOrbitReference() ?? (toRaw(store.orbitReference) as OrbitReference)
+      if (!getOrbitReference()) setOrbitReference(resolvedOrbitReference)
+      cameraFollowPlayer(camera, player, cameraOffset, resolvedOrbitReference, ['x', 'z'])
       state.updateMinimap?.(player.position, state.coins, paperPlanes)
     }
   })
+}
+
+const addAiAndPhysicsActions = (
+  timelineManager: ReturnType<typeof createTimelineManager>,
+  state: LevelState,
+  assets: TimelineAssets
+): void => {
+  const { player, paperPlanes, world, getDelta, updatePoster, planeFilter, buildLevel } = assets
 
   timelineManager.addAction({
     name: 'coin-spin',
@@ -354,15 +363,15 @@ const registerGameTimeline = (
       }
       const delta = getDelta()
       state.paperPlanePathStates = paperPlanes.map((plane, i) =>
-        updatePaperPlaneChase(
+        updatePaperPlaneChase({
           plane,
-          player.position,
-          cfg.paperPlane.speed,
+          playerPosition: player.position,
+          speed: cfg.paperPlane.speed,
           delta,
-          state.navGrid,
-          state.paperPlanePathStates[i],
-          planeFilter
-        )
+          navGrid: state.navGrid,
+          pathState: state.paperPlanePathStates[i],
+          filterPredicate: planeFilter
+        })
       )
     }
   })
@@ -384,6 +393,21 @@ const registerGameTimeline = (
       updatePoster(newScore, gameState.value?.data.level ?? 1)
     }
   })
+
+  timelineManager.addAction({
+    frequency: 4,
+    name: 'level-exit',
+    category: 'physics',
+    action: () => handleLevelExit(state, player, updatePoster, buildLevel)
+  })
+}
+
+const addDebugAndElevatorActions = (
+  timelineManager: ReturnType<typeof createTimelineManager>,
+  state: LevelState,
+  assets: TimelineAssets
+): void => {
+  const { player, paperPlanes, getDelta } = assets
 
   timelineManager.addAction({
     name: 'debug-helpers',
@@ -417,13 +441,16 @@ const registerGameTimeline = (
       if (state.exitElevatorState) updateElevatorMixer(state.exitElevatorState, delta)
     }
   })
+}
 
-  timelineManager.addAction({
-    frequency: 4,
-    name: 'level-exit',
-    category: 'physics',
-    action: () => handleLevelExit(state, player, updatePoster, buildLevel)
-  })
+const registerGameTimeline = (
+  timelineManager: ReturnType<typeof createTimelineManager>,
+  state: LevelState,
+  assets: TimelineAssets
+): void => {
+  addPlayerMovementAction(timelineManager, state, assets)
+  addAiAndPhysicsActions(timelineManager, state, assets)
+  addDebugAndElevatorActions(timelineManager, state, assets)
 }
 
 // ── Mount ────────────────────────────────────────────────────────────────────

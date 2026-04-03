@@ -18,13 +18,12 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
 
   setup: (scene: THREE.Scene) => {
     // Create points for the circular spectrum
-    const points: THREE.Vector3[] = []
-    for (let i = 0; i < config.barCount; i++) {
+    const points: THREE.Vector3[] = Array.from({ length: config.barCount }, (_, i) => {
       const angle = (i / config.barCount) * Math.PI * 2
       const x = Math.cos(angle) * config.radius
       const y = Math.sin(angle) * config.radius
-      points.push(new THREE.Vector3(x, y, 0))
-    }
+      return new THREE.Vector3(x, y, 0)
+    })
     // Close the circle by adding the first point again
     points.push(points[0].clone())
 
@@ -43,7 +42,7 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
     return { line, points, curve }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()
@@ -53,14 +52,13 @@ export const lineSpectrumVisualizer: VisualizerSetup = {
         const audioData = getAudioData()
 
         // Update circular points based on audio data
-        for (let i = 0; i < config.barCount && i < audioData.length; i++) {
+        Array.from({ length: Math.min(config.barCount, audioData.length) }, (_, i) => {
           const angle = (i / config.barCount) * Math.PI * 2
-          // Base radius plus audio-reactive extension
           const radius = config.radius + audioData[i] * config.maxRadius
           const x = Math.cos(angle) * radius
           const y = Math.sin(angle) * radius
           points[i].set(x, y, 0)
-        }
+        })
 
         // Update the closing point to match the first point
         if (points.length > config.barCount) {

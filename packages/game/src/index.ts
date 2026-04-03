@@ -10,12 +10,12 @@ export type { GameStatus, GameState }
  * @returns
  */
 export function createGame(
-  initialConfig: Record<string, any>,
+  initialConfig: Record<string, unknown> | undefined,
   bindTo?: ReferenceLike<GameState | undefined>,
   cleanupHook?: LifecycleHook
 ): GameState {
   let _status: GameStatus = 'idle'
-  let _data = { ...initialConfig }
+  let _data = { ...(initialConfig ?? {}) }
   const _listeners = new Set<(s: GameState) => void>()
 
   const createSnapshot = (): GameState => {
@@ -37,7 +37,7 @@ export function createGame(
     _listeners.forEach((callback) => callback(snapshot))
   }
 
-  const setData = (key: string, value: any) => {
+  const setData = (key: string, value: unknown) => {
     try {
       _data = { ..._data, [key]: value }
     } catch (error) {

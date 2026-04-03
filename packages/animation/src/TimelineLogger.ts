@@ -10,7 +10,7 @@ export interface TimelineLogEntry {
   actionName?: string
   category?: string
   type: 'start' | 'execute' | 'complete' | 'remove'
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 export interface TimelineLogger {
@@ -80,7 +80,7 @@ export const createTimelineLogger = (options?: {
 
     // Console output if enabled
     if (consoleOutput) {
-      console.log(formatConsoleOutput(fullEntry))
+      console.warn(formatConsoleOutput(fullEntry))
     }
   }
 
@@ -133,7 +133,7 @@ export const createTimelineLogger = (options?: {
    * @param frame Current frame number
    */
   const printSummary = (activeActions: Timeline[], frame: number): void => {
-    console.log(`\n[Frame ${frame}] Timeline Summary:`)
+    console.warn(`\n[Frame ${frame}] Timeline Summary:`)
 
     const categories: Record<string, number> = {}
     activeActions.forEach((a) => {
@@ -142,7 +142,7 @@ export const createTimelineLogger = (options?: {
     })
 
     Object.entries(categories).forEach(([cat, count]) => {
-      console.log(`  ${cat}: ${count} active`)
+      console.warn(`  ${cat}: ${count} active`)
     })
   }
 

@@ -15,20 +15,13 @@ export const cubesVisualizer: VisualizerSetup = {
   song: 0,
 
   setup: (scene: THREE.Scene) => {
-    const cubes: THREE.Mesh[] = []
-    const velocities: THREE.Vector3[] = []
-
-    // Create cubes with random positions and velocities
-    for (let i = 0; i < config.cubeCount; i++) {
+    const cubeData = Array.from({ length: config.cubeCount }, () => {
       const cubeGeometry = new THREE.BoxGeometry(config.cubeSize, config.cubeSize, config.cubeSize)
-
       const cubeMaterial = new THREE.MeshLambertMaterial({
         color: new THREE.Color().setHSL(Math.random(), 1, 0.5)
       })
-
       const cube = new THREE.Mesh(cubeGeometry, cubeMaterial)
 
-      // Random position within spawn radius
       const theta = Math.random() * Math.PI * 2
       const phi = Math.random() * Math.PI
       const radius = Math.random() * config.spawnRadius
@@ -39,29 +32,29 @@ export const cubesVisualizer: VisualizerSetup = {
         radius * Math.sin(phi) * Math.sin(theta)
       )
 
-      // Random rotation
       cube.rotation.set(
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
       )
 
-      // Random velocity
       const velocity = new THREE.Vector3(
         (Math.random() - 0.5) * config.maxSpeed,
         (Math.random() - 0.5) * config.maxSpeed,
         (Math.random() - 0.5) * config.maxSpeed
       )
 
-      cubes.push(cube)
-      velocities.push(velocity)
       scene.add(cube)
-    }
+      return { cube, velocity }
+    })
+
+    const cubes = cubeData.map(({ cube }) => cube)
+    const velocities = cubeData.map(({ velocity }) => velocity)
 
     return { cubes, velocities }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
     {
       action: () => {
         const objects = getObjects()

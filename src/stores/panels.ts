@@ -10,6 +10,26 @@ const ALL_PANEL_TYPES: PanelType[] = ['navigation', 'config', 'scene', 'debug', 
 const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'scene', 'config']
 const LEFT_PANEL_ORDER: PanelType[] = ['elements']
 
+const countOpenBefore = (order: PanelType[], index: number, active: Set<PanelType>): number =>
+  order.slice(0, index).filter((p) => active.has(p)).length
+
+const withMutualExclusion = (panel: PanelType, current: Set<PanelType>): Set<PanelType> => {
+  if (panel === 'navigation') return new Set(['navigation'])
+  return new Set([...[...current].filter((p) => p !== 'navigation'), panel])
+}
+
+const buildPanelQuery = (
+  panels: PanelType[],
+  active: Set<PanelType>
+): Record<string, string | undefined> =>
+  panels.reduce<Record<string, string | undefined>>(
+    (accumulator, panel) => ({
+      ...accumulator,
+      [panel]: active.has(panel) ? 'true' : undefined
+    }),
+    {}
+  )
+
 export const usePanelsStore = defineStore('panels', () => {
   const activePanels = ref<Set<PanelType>>(new Set())
   const syncInitialized = ref(false)
@@ -28,32 +48,31 @@ export const usePanelsStore = defineStore('panels', () => {
   // Used to offset panels so they appear side-by-side instead of overlapping.
   const getPanelOffset = (panelType: PanelType): number => {
     const rightIndex = RIGHT_PANEL_ORDER.indexOf(panelType)
-    if (rightIndex !== -1) {
-      return RIGHT_PANEL_ORDER.slice(0, rightIndex).filter((p) => activePanels.value.has(p)).length
-    }
+    if (rightIndex !== -1) return countOpenBefore(RIGHT_PANEL_ORDER, rightIndex, activePanels.value)
     const leftIndex = LEFT_PANEL_ORDER.indexOf(panelType)
-    if (leftIndex !== -1) {
-      return LEFT_PANEL_ORDER.slice(0, leftIndex).filter((p) => activePanels.value.has(p)).length
-    }
+    if (leftIndex !== -1) return countOpenBefore(LEFT_PANEL_ORDER, leftIndex, activePanels.value)
     return 0
-  }
-
-  const withMutualExclusion = (panel: PanelType, current: Set<PanelType>): Set<PanelType> => {
-    if (panel === 'navigation') return new Set(['navigation'])
-    return new Set([...[...current].filter((p) => p !== 'navigation'), panel])
   }
 
   const syncToQuery = () => {
     if (!_router || !_route) return
     const { path, query } = _route
-    const panelQuery = ALL_PANEL_TYPES.reduce<Record<string, string | undefined>>(
-      (accumulator, panel) => ({
-        ...accumulator,
-        [panel]: activePanels.value.has(panel) ? 'true' : undefined
-      }),
-      {}
-    )
+    const panelQuery = buildPanelQuery(ALL_PANEL_TYPES, activePanels.value)
     _router.push({ path, query: { ...query, ...panelQuery } })
+  }
+
+  const watchPanelQuery = (panel: PanelType) => {
+    watch(
+      () => _route!.query[panel],
+      (value) => {
+        const isOpen = activePanels.value.has(panel)
+        if (value === 'true' && !isOpen) {
+          activePanels.value = new Set([...activePanels.value, panel])
+        } else if (value !== 'true' && isOpen) {
+          activePanels.value = new Set([...activePanels.value].filter((p) => p !== panel))
+        }
+      }
+    )
   }
 
   // Call once from App.vue to sync store state with URL query params.
@@ -72,19 +91,7 @@ export const usePanelsStore = defineStore('panels', () => {
       activePanels.value = new Set([...activePanels.value, ...initialOpen])
     }
 
-    ALL_PANEL_TYPES.forEach((panel) => {
-      watch(
-        () => _route!.query[panel],
-        (value) => {
-          const isOpen = activePanels.value.has(panel)
-          if (value === 'true' && !isOpen) {
-            activePanels.value = new Set([...activePanels.value, panel])
-          } else if (value !== 'true' && isOpen) {
-            activePanels.value = new Set([...activePanels.value].filter((p) => p !== panel))
-          }
-        }
-      )
-    })
+    ALL_PANEL_TYPES.forEach(watchPanelQuery)
   }
 
   const openPanel = (panel: PanelType) => {

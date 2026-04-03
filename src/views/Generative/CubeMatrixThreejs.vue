@@ -80,19 +80,17 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     camera.position.set(amountX, amountY, 10)
 
     const cubes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>[] =
-      [] // Array to hold the cubes
-    for (let i = 0; i < amountX; i++) {
-      for (let index = 0; index < amountY; index++) {
-        // Create a cube
-        const geometry = new THREE.BoxGeometry(size, size, size)
-        const material = new THREE.MeshBasicMaterial({ color: 0x333333 })
-        const cube = new THREE.Mesh(geometry, material)
-        cube.position.x = i * (size + gap * 2)
-        cube.position.y = index * (size + gap * 2)
-        scene.add(cube)
-        cubes.push(cube)
-      }
-    }
+      Array.from({ length: amountX }, (_, i) =>
+        Array.from({ length: amountY }, (__, index) => {
+          const geometry = new THREE.BoxGeometry(size, size, size)
+          const material = new THREE.MeshBasicMaterial({ color: 0x333333 })
+          const cube = new THREE.Mesh(geometry, material)
+          cube.position.x = i * (size + gap * 2)
+          cube.position.y = index * (size + gap * 2)
+          scene.add(cube)
+          return cube
+        })
+      ).flat()
 
     registerSceneElements(camera, scene.children)
 
@@ -103,16 +101,16 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       requestAnimationFrame(animate)
       const time = Date.now() * 0.0001 * config.speed // Adjust speed of the wave
 
-      for (let i = 0; i < amountX; i++) {
-        for (let index = 0; index < amountY; index++) {
+      Array.from({ length: amountX }, (_, i) => {
+        Array.from({ length: amountY }, (__, index) => {
           const cube = cubes[i * amountY + index]
           const horizontal = amountX / 2 > i ? i : -i
           const vertical = amountY / 2 > index ? index : -index
           const pos =
             Math.sin(vertical) + Math.sin(horizontal) + Math.sin(time) * (config.amplitude / 10)
           cube.scale.set(pos, pos, pos)
-        }
-      }
+        })
+      })
 
       renderer.render(scene, camera)
       video.stop(renderer.info.render.frame, route)

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { times } from './utils/lodash'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
-import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
+import { GeneratedInstanceConfig, InstanceConfig, LightsConfig, PhysicOptions } from './types'
 import { SCENE_DEFAULTS } from './defaults'
 
 /**
@@ -11,9 +11,14 @@ import { SCENE_DEFAULTS } from './defaults'
  * @param options
  * @returns
  */
+type EnvironmentOptions = {
+  camera?: { position?: CoordinateTuple; distance?: number }
+  scene?: { background?: number }
+}
+
 export const getEnvironment = async (
   canvas: HTMLCanvasElement,
-  options: any = {
+  options: EnvironmentOptions = {
     camera: { position: SCENE_DEFAULTS.camera.position, distance: SCENE_DEFAULTS.camera.distance },
     scene: { background: SCENE_DEFAULTS.scene.background }
   }
@@ -26,13 +31,17 @@ export const getEnvironment = async (
   const clock = new THREE.Clock()
   scene.background = new THREE.Color(options.scene?.background || SCENE_DEFAULTS.scene.background)
 
+  const cameraConfig = options.camera ?? {
+    position: SCENE_DEFAULTS.camera.position,
+    distance: SCENE_DEFAULTS.camera.distance
+  }
   const camera = new THREE.PerspectiveCamera(
-    options.camera.distance,
+    cameraConfig.distance,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
   )
-  camera.position.set(...(options.camera.position as CoordinateTuple))
+  camera.position.set(...(cameraConfig.position as CoordinateTuple))
 
   return { renderer, scene, camera, clock, world }
 }
@@ -161,26 +170,38 @@ export const getInstanceConfig = ({
   return generatedConfig
 }
 
+type DirectionalConfig = NonNullable<LightsConfig['directional']>
+type ShadowConfig = NonNullable<DirectionalConfig['shadow']>
+
+const applyDirectionalShadow = (light: THREE.DirectionalLight, shadow: ShadowConfig) => {
+  const shadowCam = shadow.camera ?? {}
+  const mapSize = shadow.mapSize
+  light.shadow.mapSize.width = mapSize?.width ?? 4096
+  light.shadow.mapSize.height = mapSize?.height ?? 4096
+  light.shadow.camera.near = shadowCam.near ?? 0.5
+  light.shadow.camera.far = shadowCam.far ?? 500
+  light.shadow.camera.left = shadowCam.left ?? -150
+  light.shadow.camera.right = shadowCam.right ?? 150
+  light.shadow.camera.top = shadowCam.top ?? 150
+  light.shadow.camera.bottom = shadowCam.bottom ?? -150
+  if (shadow.bias !== undefined) light.shadow.bias = shadow.bias
+  if (shadow.radius !== undefined) light.shadow.radius = shadow.radius
+  light.shadow.camera.updateProjectionMatrix()
+}
+
 /**
  * Create and return default lights
  * @param scene
  * @returns
  */
-export const getLights = (scene: THREE.Scene, config: any = {}) => {
+export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
   const {
     ambient = SCENE_DEFAULTS.lights.ambient,
     directional = {
       ...SCENE_DEFAULTS.lights.directional,
       shadow: {
         mapSize: { width: 4096, height: 4096 },
-        camera: {
-          near: 0.5,
-          far: 500,
-          left: -150,
-          right: 150,
-          top: 150,
-          bottom: -150
-        },
+        camera: { near: 0.5, far: 500, left: -150, right: 150, top: 150, bottom: -150 },
         bias: -0.0001,
         radius: 1
       }
@@ -205,32 +226,106 @@ export const getLights = (scene: THREE.Scene, config: any = {}) => {
 
   // Always apply shadow camera defaults so scenes that omit the shadow key
   // still get a large-enough frustum (Three.js default is only ~±5 units).
-  const shadow = directional.shadow ?? {}
-  const shadowCam = shadow.camera ?? {}
-  const mapSize = shadow.mapSize ?? {}
-  directionalLight.shadow.mapSize.width = mapSize.width ?? 4096
-  directionalLight.shadow.mapSize.height = mapSize.height ?? 4096
-  directionalLight.shadow.camera.near = shadowCam.near ?? 0.5
-  directionalLight.shadow.camera.far = shadowCam.far ?? 500
-  directionalLight.shadow.camera.left = shadowCam.left ?? -150
-  directionalLight.shadow.camera.right = shadowCam.right ?? 150
-  directionalLight.shadow.camera.top = shadowCam.top ?? 150
-  directionalLight.shadow.camera.bottom = shadowCam.bottom ?? -150
-  if (shadow.bias !== undefined) directionalLight.shadow.bias = shadow.bias
-  if (shadow.radius !== undefined) directionalLight.shadow.radius = shadow.radius
-
-  directionalLight.shadow.camera.updateProjectionMatrix()
+  applyDirectionalShadow(directionalLight, directional.shadow ?? {})
   scene.add(directionalLight)
 
   return { directionalLight, ambientLight }
 }
 
-export const getOffset = (model: Model, config: any) => {
+export const getOffset = (
+  model: Model,
+  config: { offset: { x: number; y: number; z: number } }
+) => {
   const { x, y, z } = config.offset
   const offset = new THREE.Vector3(x, y, z)
   offset.applyQuaternion(model.quaternion)
   offset.add(model.position)
   return offset
+}
+
+type RigidBodyDescOptions = {
+  type: NonNullable<PhysicOptions['type']>
+  position: NonNullable<PhysicOptions['position']>
+  weight: number
+  dominance: number
+  damping: number
+  angular: number
+  enabledRotations: [boolean, boolean, boolean]
+}
+
+const buildRigidBodyDesc = ({
+  type,
+  position,
+  weight,
+  dominance,
+  damping,
+  angular,
+  enabledRotations
+}: RigidBodyDescOptions): RAPIER.RigidBodyDesc =>
+  RAPIER.RigidBodyDesc[type]()
+    .setTranslation(...position)
+    .setGravityScale(weight)
+    .setDominanceGroup(dominance)
+    .setLinearDamping(damping)
+    .setAngularDamping(angular)
+    .enabledRotations(...enabledRotations)
+
+const buildColliderShape = (
+  shape: PhysicOptions['shape'],
+  size: PhysicOptions['size'],
+  boundary: number
+): RAPIER.ColliderDesc => {
+  const sizeValue = size ?? [1, 1, 1]
+  if (shape === 'cuboid') {
+    const halfExtents = Array.isArray(sizeValue)
+      ? (sizeValue.map((x) => x * boundary) as CoordinateTuple)
+      : ([sizeValue * boundary, sizeValue * boundary, sizeValue * boundary] as CoordinateTuple)
+    return RAPIER.ColliderDesc.cuboid(...halfExtents)
+  }
+  return RAPIER.ColliderDesc.ball((Array.isArray(sizeValue) ? sizeValue[0] : sizeValue) as number)
+}
+
+const buildCharacterController = (world: RAPIER.World): RAPIER.KinematicCharacterController => {
+  const controller = world.createCharacterController(0.01)
+  controller.setUp({ x: 0, y: 1, z: 0 })
+  controller.enableSnapToGround(0)
+  controller.setMaxSlopeClimbAngle(45)
+  controller.setMinSlopeSlideAngle(30)
+  return controller
+}
+
+const applyRotationToRigidBody = (
+  rigidBody: RAPIER.RigidBody,
+  rotation: PhysicOptions['rotation']
+) => {
+  if (rotation && rotation instanceof Array) {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation))
+    rigidBody.setRotation(q, true)
+  }
+}
+
+type ColliderOptions = {
+  shape: PhysicOptions['shape']
+  size: PhysicOptions['size']
+  boundary: number
+  restitution: number
+  friction: number
+  mass: number
+  density: number
+}
+
+const buildCollider = (
+  world: RAPIER.World,
+  rigidBody: RAPIER.RigidBody,
+  options: ColliderOptions
+): RAPIER.Collider => {
+  const { shape, size, boundary, restitution, friction, mass, density } = options
+  const colliderDesc = buildColliderShape(shape, size, boundary)
+    .setRestitution(restitution)
+    .setFriction(friction)
+    .setMass(mass)
+    .setDensity(density)
+  return world.createCollider(colliderDesc, rigidBody)
 }
 
 /**
@@ -252,61 +347,94 @@ export const getOffset = (model: Model, config: any) => {
  * @returns {Object} The created rigid body and collider.
  * @returns
  */
-export const getPhysic = (
-  world: RAPIER.World,
-  {
-    rotation = [0, 0, 0],
-    position = [0, 0, 0],
-    size = [1, 1, 1],
-    boundary = 0.5,
-    restitution = 1,
-    friction = 0,
-    damping = 0,
-    angular = 1,
-    mass = 1,
-    density = 1,
-    weight = 1,
-    dominance = 0,
-    shape = 'cuboid',
-    type = 'fixed',
-    enabledRotations = [true, true, true]
-  }: PhysicOptions
-) => {
-  const rigidBodyDesc = RAPIER.RigidBodyDesc[type]()
-    .setTranslation(...position)
-    .setGravityScale(weight)
-    .setDominanceGroup(dominance)
-    .setLinearDamping(damping)
-    .setAngularDamping(angular)
-    .enabledRotations(...(enabledRotations as [boolean, boolean, boolean]))
-  const rigidBody = world.createRigidBody(rigidBodyDesc)
-  if (rotation && rotation instanceof Array) {
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation))
-    rigidBody.setRotation(q, true)
-  }
-  const colliderShape =
-    shape === 'cuboid'
-      ? RAPIER.ColliderDesc.cuboid(
-          ...(Array.isArray(size)
-            ? (size.map((x) => x * boundary) as CoordinateTuple)
-            : ([size * boundary, size * boundary, size * boundary] as CoordinateTuple))
-        )
-      : RAPIER.ColliderDesc.ball((Array.isArray(size) ? size[0] : size) as number)
-  const colliderDesc = colliderShape
-    .setRestitution(restitution)
-    .setFriction(friction)
-    .setMass(mass)
-    .setDensity(density)
-  const collider = world.createCollider(colliderDesc, rigidBody)
 
-  let characterController
-  if (type === 'kinematicPositionBased') {
-    characterController = world.createCharacterController(0.01)
-    characterController.setUp({ x: 0, y: 1, z: 0 })
-    characterController.enableSnapToGround(0)
-    characterController.setMaxSlopeClimbAngle(45)
-    characterController.setMinSlopeSlideAngle(30)
-  }
+type ResolvedPhysicOptions = Required<
+  Pick<
+    PhysicOptions,
+    | 'rotation'
+    | 'position'
+    | 'size'
+    | 'boundary'
+    | 'restitution'
+    | 'friction'
+    | 'damping'
+    | 'angular'
+    | 'mass'
+    | 'density'
+    | 'weight'
+    | 'dominance'
+    | 'shape'
+    | 'type'
+    | 'enabledRotations'
+  >
+>
+
+const resolvePhysicBodyOptions = (options: PhysicOptions) => ({
+  rotation: options.rotation ?? ([0, 0, 0] as NonNullable<PhysicOptions['rotation']>),
+  position: options.position ?? ([0, 0, 0] as NonNullable<PhysicOptions['position']>),
+  weight: options.weight ?? 1,
+  dominance: options.dominance ?? 0,
+  damping: options.damping ?? 0,
+  angular: options.angular ?? 1,
+  enabledRotations: options.enabledRotations ?? ([true, true, true] as [boolean, boolean, boolean]),
+  type: options.type ?? ('fixed' as NonNullable<PhysicOptions['type']>)
+})
+
+const resolvePhysicColliderOptions = (options: PhysicOptions) => ({
+  size: options.size ?? ([1, 1, 1] as NonNullable<PhysicOptions['size']>),
+  boundary: options.boundary ?? 0.5,
+  restitution: options.restitution ?? 1,
+  friction: options.friction ?? 0,
+  mass: options.mass ?? 1,
+  density: options.density ?? 1,
+  shape: options.shape ?? ('cuboid' as NonNullable<PhysicOptions['shape']>)
+})
+
+const resolvePhysicOptions = (options: PhysicOptions): ResolvedPhysicOptions => ({
+  ...resolvePhysicBodyOptions(options),
+  ...resolvePhysicColliderOptions(options)
+})
+
+export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
+  const {
+    rotation,
+    position,
+    size,
+    boundary,
+    restitution,
+    friction,
+    damping,
+    angular,
+    mass,
+    density,
+    weight,
+    dominance,
+    shape,
+    type,
+    enabledRotations
+  } = resolvePhysicOptions(options)
+  const rigidBodyDesc = buildRigidBodyDesc({
+    type,
+    position,
+    weight,
+    dominance,
+    damping,
+    angular,
+    enabledRotations: enabledRotations as [boolean, boolean, boolean]
+  })
+  const rigidBody = world.createRigidBody(rigidBodyDesc)
+  applyRotationToRigidBody(rigidBody, rotation)
+  const collider = buildCollider(world, rigidBody, {
+    shape,
+    size,
+    boundary,
+    restitution,
+    friction,
+    mass,
+    density
+  })
+  const characterController =
+    type === 'kinematicPositionBased' ? buildCharacterController(world) : undefined
 
   return { rigidBody, collider, characterController }
 }

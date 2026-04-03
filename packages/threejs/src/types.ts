@@ -66,13 +66,20 @@ export interface PhysicOptions extends CommonOptions {
   shape?: 'cuboid' | 'ball'
 }
 
+export interface StatsLike {
+  init: (element: HTMLElement) => void
+  start: (route: string) => void
+  end: (route: string) => void
+}
+
+export interface RouteLike {
+  query: Record<string, string | undefined>
+  name?: string
+}
+
 export interface ToolsConfig {
-  stats?: {
-    init: any
-    start: any
-    end: any
-  }
-  route?: any
+  stats?: StatsLike
+  route?: RouteLike
   canvas: HTMLCanvasElement
   resize?: boolean
 }
@@ -144,6 +151,7 @@ export interface PostProcessingConfig {
 }
 
 export interface CameraConfig {
+  offset?: { x: number; y: number; z: number }
   position?: CoordinateTuple | THREE.Vector3
   fov?: number
   rotation?: CoordinateTuple | THREE.Vector3

@@ -2,8 +2,8 @@ export type GameStatus = 'idle' | 'playing' | 'paused' | 'game-over'
 
 export interface GameState {
   status: GameStatus
-  data: Record<string, any>
-  setData: (key: string, value: any) => void
+  data: Record<string, unknown>
+  setData: (key: string, value: unknown) => void
   setStatus: (status: GameStatus) => void
 }
 

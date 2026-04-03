@@ -19,7 +19,7 @@ describe('createTerrainChunk', () => {
       { chunkX: 1, chunkZ: -1 },
       { chunkX: -3, chunkZ: 5 }
     ])('creates a named mesh for chunk ($chunkX, $chunkZ)', ({ chunkX, chunkZ }) => {
-      const mesh = createTerrainChunk(chunkX, chunkZ, 32, defaultNoiseConfig)
+      const mesh = createTerrainChunk(chunkX, chunkZ, 32, { noiseConfig: defaultNoiseConfig })
 
       expect(mesh).toBeInstanceOf(THREE.Mesh)
       expect(mesh.name).toBe(`terrain-${chunkX},${chunkZ}`)
@@ -27,7 +27,7 @@ describe('createTerrainChunk', () => {
 
     it('positions mesh at world-space chunk origin', () => {
       const chunkSize = 32
-      const mesh = createTerrainChunk(2, 3, chunkSize, defaultNoiseConfig)
+      const mesh = createTerrainChunk(2, 3, chunkSize, { noiseConfig: defaultNoiseConfig })
 
       expect(mesh.position.x).toBe(2 * chunkSize)
       expect(mesh.position.y).toBe(0)
@@ -35,7 +35,7 @@ describe('createTerrainChunk', () => {
     })
 
     it('enables receiveShadow', () => {
-      const mesh = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
+      const mesh = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
       expect(mesh.receiveShadow).toBe(true)
     })
   })
@@ -43,7 +43,7 @@ describe('createTerrainChunk', () => {
   describe('geometry', () => {
     it('creates PlaneGeometry with correct dimensions', () => {
       const chunkSize = 32
-      const mesh = createTerrainChunk(0, 0, chunkSize, defaultNoiseConfig)
+      const mesh = createTerrainChunk(0, 0, chunkSize, { noiseConfig: defaultNoiseConfig })
       const geometry = mesh.geometry
 
       expect(geometry).toBeInstanceOf(THREE.PlaneGeometry)
@@ -54,7 +54,7 @@ describe('createTerrainChunk', () => {
     })
 
     it('displaces vertex Y positions using noise (not all flat)', () => {
-      const mesh = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
+      const mesh = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
       const positionAttribute = mesh.geometry.getAttribute('position')
 
       const yValues = Array.from({ length: positionAttribute.count }, (_, index) =>
@@ -66,7 +66,7 @@ describe('createTerrainChunk', () => {
     })
 
     it('has vertex colors attribute', () => {
-      const mesh = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
+      const mesh = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
       const colorAttribute = mesh.geometry.getAttribute('color')
 
       expect(colorAttribute).toBeDefined()
@@ -77,8 +77,8 @@ describe('createTerrainChunk', () => {
 
   describe('determinism', () => {
     it('produces identical meshes for the same inputs', () => {
-      const meshA = createTerrainChunk(1, 2, 32, defaultNoiseConfig)
-      const meshB = createTerrainChunk(1, 2, 32, defaultNoiseConfig)
+      const meshA = createTerrainChunk(1, 2, 32, { noiseConfig: defaultNoiseConfig })
+      const meshB = createTerrainChunk(1, 2, 32, { noiseConfig: defaultNoiseConfig })
 
       const positionsA = meshA.geometry.getAttribute('position')
       const positionsB = meshB.geometry.getAttribute('position')
@@ -89,8 +89,8 @@ describe('createTerrainChunk', () => {
     })
 
     it('produces different meshes for different chunk coordinates', () => {
-      const meshA = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
-      const meshB = createTerrainChunk(5, 5, 32, defaultNoiseConfig)
+      const meshA = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
+      const meshB = createTerrainChunk(5, 5, 32, { noiseConfig: defaultNoiseConfig })
 
       const positionsA = meshA.geometry.getAttribute('position')
       const positionsB = meshB.geometry.getAttribute('position')
@@ -102,8 +102,10 @@ describe('createTerrainChunk', () => {
     })
 
     it('produces different meshes for different seeds', () => {
-      const meshA = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
-      const meshB = createTerrainChunk(0, 0, 32, { ...defaultNoiseConfig, seed: 99 })
+      const meshA = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
+      const meshB = createTerrainChunk(0, 0, 32, {
+        noiseConfig: { ...defaultNoiseConfig, seed: 99 }
+      })
 
       const positionsA = meshA.geometry.getAttribute('position')
       const positionsB = meshB.geometry.getAttribute('position')
@@ -118,8 +120,8 @@ describe('createTerrainChunk', () => {
   describe('seamless edges', () => {
     it('shared edge vertices between adjacent chunks have matching heights', () => {
       const chunkSize = 32
-      const meshLeft = createTerrainChunk(0, 0, chunkSize, defaultNoiseConfig)
-      const meshRight = createTerrainChunk(1, 0, chunkSize, defaultNoiseConfig)
+      const meshLeft = createTerrainChunk(0, 0, chunkSize, { noiseConfig: defaultNoiseConfig })
+      const meshRight = createTerrainChunk(1, 0, chunkSize, { noiseConfig: defaultNoiseConfig })
 
       const positionsLeft = meshLeft.geometry.getAttribute('position')
       const positionsRight = meshRight.geometry.getAttribute('position')
@@ -156,7 +158,7 @@ describe('createTerrainChunk', () => {
 
   describe('material', () => {
     it('uses vertex colors with flat shading', () => {
-      const mesh = createTerrainChunk(0, 0, 32, defaultNoiseConfig)
+      const mesh = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
       const material = mesh.material as THREE.MeshStandardMaterial
 
       expect(material.vertexColors).toBe(true)

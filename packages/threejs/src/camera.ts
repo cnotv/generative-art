@@ -201,9 +201,11 @@ export const setThirdPersonCamera = (
   model: Model | null
 ) => {
   if (model) {
-    const offset = getOffset(model, config)
+    if (config.offset) {
+      const offset = getOffset(model, { offset: config.offset })
+      camera.position.copy(offset)
+    }
     const lookAt = getLookAt(model, config)
-    camera.position.copy(offset)
     camera.lookAt(lookAt)
   }
 }
