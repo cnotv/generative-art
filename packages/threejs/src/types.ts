@@ -1,219 +1,235 @@
-import * as THREE from 'three';
-import type { CoordinateTuple, ModelType } from '@webgamekit/animation';
+import * as THREE from 'three'
+import type { CoordinateTuple, ModelType } from '@webgamekit/animation'
 
 // Re-export for convenience
-export type { CoordinateTuple, ModelType, ComplexModel, Model } from '@webgamekit/animation';
+export type { CoordinateTuple, ModelType, ComplexModel, Model } from '@webgamekit/animation'
 
-export type Vec3 = { x: number; y: number; z: number };
+export type Vec3 = { x: number; y: number; z: number }
 
 export interface CommonOptions {
-  boundary?: number;
-  damping?: number;
-  angular?: number;
-  density?: number;
-  dominance?: number;
-  friction?: number;
-  mass?: number;
-  position?: CoordinateTuple;
-  restitution?: number;
-  rotation?: CoordinateTuple;
-  size?: number | CoordinateTuple;
-  type?: ModelType;
-  weight?: number;
-  enabledRotations?: [boolean, boolean, boolean];
+  boundary?: number
+  damping?: number
+  angular?: number
+  density?: number
+  dominance?: number
+  friction?: number
+  mass?: number
+  position?: CoordinateTuple
+  restitution?: number
+  rotation?: CoordinateTuple
+  size?: number | CoordinateTuple
+  type?: ModelType
+  weight?: number
+  enabledRotations?: [boolean, boolean, boolean]
 }
 
 export interface ModelOptions extends CommonOptions {
-  name?: string;
-  color?: number;
-  opacity?: number;
-  reflectivity?: number;
-  roughness?: number;
-  metalness?: number;
-  transmission?: number;
-  transparent?: boolean;
-  material?: typeof THREE.Material | string | boolean;
-  rotation?: CoordinateTuple;
-  scale?: CoordinateTuple;
-  shape?: 'cuboid' | 'ball';
-  castShadow?: boolean;
-  receiveShadow?: boolean;
-  hasGravity?: boolean;
-  showHelper?: boolean;
-  helperColor?: number;
-  texture?: string;
+  name?: string
+  color?: number
+  opacity?: number
+  reflectivity?: number
+  roughness?: number
+  metalness?: number
+  transmission?: number
+  transparent?: boolean
+  material?: typeof THREE.Material | string | boolean
+  rotation?: CoordinateTuple
+  scale?: CoordinateTuple
+  shape?: 'cuboid' | 'ball'
+  castShadow?: boolean
+  receiveShadow?: boolean
+  hasGravity?: boolean
+  showHelper?: boolean
+  helperColor?: number
+  texture?: string
   textures?: {
-    random: boolean;
-    list: string[];
-  };
-  origin?: { x?: number; y?: number; z?: number };
-  wireframe?: boolean;
-  depthWrite?: boolean;
-  alphaTest?: number;
-  renderOrder?: number;
-  side?: THREE.Side;
-  clearcoat?: number;
-  clearcoatRoughness?: number;
-  ior?: number;
-  thickness?: number;
-  envMapIntensity?: number;
-  animations?: string[];
-  materialColors?: number[];
-  onSpawn?: () => boolean;
+    random: boolean
+    list: string[]
+  }
+  origin?: { x?: number; y?: number; z?: number }
+  wireframe?: boolean
+  depthWrite?: boolean
+  alphaTest?: number
+  renderOrder?: number
+  side?: THREE.Side
+  clearcoat?: number
+  clearcoatRoughness?: number
+  ior?: number
+  thickness?: number
+  envMapIntensity?: number
+  animations?: string[]
+  materialColors?: number[]
+  onSpawn?: () => boolean
 }
 
 export interface PhysicOptions extends CommonOptions {
-  shape?: 'cuboid' | 'ball';
+  shape?: 'cuboid' | 'ball'
+}
+
+export interface StatsLike {
+  init: (element: HTMLElement) => void
+  start: (route: string) => void
+  end: (route: string) => void
+}
+
+export interface RouteLike {
+  query: Record<string, string | undefined>
+  name?: string
 }
 
 export interface ToolsConfig {
-  stats?: {
-    init: any,
-    start: any,
-    end: any
-  };
-  route?: any;
-  canvas: HTMLCanvasElement;
-  resize?: boolean;
+  stats?: StatsLike
+  route?: RouteLike
+  canvas: HTMLCanvasElement
+  resize?: boolean
 }
 
 export interface LightsConfig {
   ambient?: {
-    color?: number;
-    intensity?: number;
-  };
+    color?: number
+    intensity?: number
+  }
   directional?: {
-    color?: number;
-    intensity?: number;
-    position?: CoordinateTuple;
-    castShadow?: boolean;
+    color?: number
+    intensity?: number
+    position?: CoordinateTuple
+    castShadow?: boolean
     shadow?: {
-      mapSize?: { width: number; height: number };
+      mapSize?: { width: number; height: number }
       camera?: {
-        near?: number;
-        far?: number;
-        left?: number;
-        right?: number;
-        top?: number;
-        bottom?: number;
-      };
-      bias?: number;
-      radius?: number;
-    };
-  };
+        near?: number
+        far?: number
+        left?: number
+        right?: number
+        top?: number
+        bottom?: number
+      }
+      bias?: number
+      radius?: number
+    }
+  }
   hemisphere?: {
-    colors?: [number, number];
-  };
+    colors?: [number, number]
+  }
 }
 
 export interface PostProcessingConfig {
   pixelate?: {
-    size?: number;
-  };
+    size?: number
+  }
   bloom?: {
-    strength?: number;
-    threshold?: number;
-    radius?: number;
-  };
-  fxaa?: Record<string, unknown>;
+    strength?: number
+    threshold?: number
+    radius?: number
+  }
+  fxaa?: Record<string, unknown>
   dotScreen?: {
-    scale?: number;
-    angle?: number;
-    center?: [number, number];
-  };
+    scale?: number
+    angle?: number
+    center?: [number, number]
+  }
   rgbShift?: {
-    amount?: number;
-  };
+    amount?: number
+  }
   film?: {
-    noiseIntensity?: number;
-    grayscale?: boolean;
-  };
-  glitch?: Record<string, unknown>;
-  afterimage?: Record<string, unknown>;
-  ssao?: Record<string, unknown>;
+    noiseIntensity?: number
+    grayscale?: boolean
+  }
+  glitch?: Record<string, unknown>
+  afterimage?: Record<string, unknown>
+  ssao?: Record<string, unknown>
   vignette?: {
-    offset?: number;
-    darkness?: number;
-    color?: number | [number, number, number];
-  };
+    offset?: number
+    darkness?: number
+    color?: number | [number, number, number]
+  }
   colorCorrection?: {
-    contrast?: number;
-    saturation?: number;
-    brightness?: number;
-  };
+    contrast?: number
+    saturation?: number
+    brightness?: number
+  }
 }
 
 export interface CameraConfig {
-  position?: CoordinateTuple | THREE.Vector3;
-  fov?: number;
-  rotation?: CoordinateTuple | THREE.Vector3;
-  lookAt?: CoordinateTuple | THREE.Vector3;
-  near?: number;
-  far?: number;
-  up?: THREE.Vector3;
-  aspect?: number;
-  zoom?: number;
-  focus?: number;
-};
+  offset?: { x: number; y: number; z: number }
+  position?: CoordinateTuple | THREE.Vector3
+  fov?: number
+  rotation?: CoordinateTuple | THREE.Vector3
+  lookAt?: CoordinateTuple | THREE.Vector3
+  near?: number
+  far?: number
+  up?: THREE.Vector3
+  aspect?: number
+  zoom?: number
+  focus?: number
+}
 
 export interface GroundConfig {
-  size?: number | CoordinateTuple;
-  color?: number;
-  texture?: string;
-  textureRepeat?: [number, number];
-  textureOffset?: [number, number];
-};
-    
+  size?: number | CoordinateTuple
+  color?: number
+  texture?: string
+  textureRepeat?: [number, number]
+  textureOffset?: [number, number]
+}
+
 export interface SetupConfig {
   global?: {
-    frameRate?: number;
-  };
+    frameRate?: number
+  }
   scene?: {
-    backgroundColor?: number;
-  };
-  camera?: CameraConfig;
-  ground?: GroundConfig | false;
-  sky?: {
-    texture?: string;
-    size?: number;
-    color?: number;
-  } | false;
-  lights?: LightsConfig | false;
-  orbit?: {
-    target?: THREE.Vector3;
-    disabled?: boolean;
-  } | false;
-  postprocessing?: PostProcessingConfig | false;
+    backgroundColor?: number
+  }
+  camera?: CameraConfig
+  ground?: GroundConfig | false
+  sky?:
+    | {
+        texture?: string
+        size?: number
+        color?: number
+      }
+    | false
+  lights?: LightsConfig | false
+  orbit?:
+    | {
+        target?: THREE.Vector3
+        disabled?: boolean
+      }
+    | false
+  postprocessing?: PostProcessingConfig | false
 }
 
 export interface InstanceConfig {
-  show?: boolean;
-  amount?: number;
-  size?: CoordinateTuple;
-  sizeVariation?: CoordinateTuple;
-  position?: CoordinateTuple;
-  positionVariation?: CoordinateTuple;
-  rotation?: CoordinateTuple;
-  rotationVariation?: CoordinateTuple;
-  ratio?: number;
-  spacing?: number;
-  opacity?: number;
+  show?: boolean
+  amount?: number
+  size?: CoordinateTuple
+  sizeVariation?: CoordinateTuple
+  position?: CoordinateTuple
+  positionVariation?: CoordinateTuple
+  rotation?: CoordinateTuple
+  rotationVariation?: CoordinateTuple
+  ratio?: number
+  spacing?: number
+  opacity?: number
   textures?: {
-    random: boolean;
-    list: string[];
-  };
+    random: boolean
+    list: string[]
+  }
 }
 
-export type GeneratedInstanceConfig = Array<{ position: number[]; rotation: number[]; scale: number[]; }>
+export type GeneratedInstanceConfig = Array<{
+  position: number[]
+  rotation: number[]
+  scale: number[]
+}>
 
 export interface AreaConfig {
-  center?: CoordinateTuple;
-  size?: CoordinateTuple;
-  min?: CoordinateTuple;
-  max?: CoordinateTuple;
-  count: number;
-  pattern?: 'random' | 'grid' | 'grid-jitter';
-  seed?: number;
-  sizeVariation?: CoordinateTuple;
-  rotationVariation?: CoordinateTuple;
+  center?: CoordinateTuple
+  size?: CoordinateTuple
+  min?: CoordinateTuple
+  max?: CoordinateTuple
+  count: number
+  pattern?: 'random' | 'grid' | 'grid-jitter'
+  seed?: number
+  sizeVariation?: CoordinateTuple
+  rotationVariation?: CoordinateTuple
 }

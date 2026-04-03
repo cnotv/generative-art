@@ -23,4 +23,4 @@ export const PixelShader = {
       gl_FragColor = texture2D(tDiffuse, coord);
     }
   `
-};
+}

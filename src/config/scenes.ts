@@ -1,4 +1,4 @@
-import type { InstanceConfig } from "@webgamekit/threejs";
+import type { InstanceConfig } from '@webgamekit/threejs'
 
 export const complexAnimation = {
   walk: true,
@@ -17,7 +17,7 @@ export const complexAnimation = {
       x: 0,
       y: 0,
       z: 0
-    },
+    }
   },
   tree: {
     show: true,
@@ -25,7 +25,7 @@ export const complexAnimation = {
     size: [5, 5, 5],
     sizeVariation: [0, 3, 0],
     rotationVariation: [0, Math.PI, 0],
-    area: 1,
+    area: 1
   } as InstanceConfig,
   grass: {
     show: true,
@@ -42,7 +42,7 @@ export const complexAnimation = {
       midZ: 0.04,
       tipX: 0,
       tipY: 0.5,
-      tipZ: -0.07,
+      tipZ: -0.07
     },
     sideCurve: {
       baseX: 0.04,
@@ -53,8 +53,8 @@ export const complexAnimation = {
       midZ: 0,
       tipX: 0,
       tipY: 0.5,
-      tipZ: 0,
-    },
+      tipZ: 0
+    }
   } as InstanceConfig,
   mushroom: {
     show: true,
@@ -62,6 +62,6 @@ export const complexAnimation = {
     size: [5, 5, 5],
     sizeVariation: [0, 3, 0],
     rotationVariation: [0, Math.PI, 0],
-    area: 1,
-  } as InstanceConfig,
+    area: 1
+  } as InstanceConfig
 }

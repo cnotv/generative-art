@@ -1,19 +1,15 @@
 <script setup lang="ts">
 interface Properties {
-  src: string;
-  alt: string;
+  src: string
+  alt: string
 }
 
-defineProps<Properties>();
+defineProps<Properties>()
 </script>
 
 <template>
   <div class="texture-preview">
-    <img
-      :src="src"
-      :alt="alt"
-      class="texture-preview__image"
-    />
+    <img :src="src" :alt="alt" class="texture-preview__image" />
     <slot />
   </div>
 </template>
@@ -38,7 +34,11 @@ defineProps<Properties>();
     linear-gradient(45deg, transparent 75%, #f5f5f5 75%),
     linear-gradient(-45deg, transparent 75%, #f5f5f5 75%);
   background-size: 8px 8px;
-  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+  background-position:
+    0 0,
+    0 4px,
+    4px -4px,
+    -4px 0px;
 }
 
 .texture-preview__image {

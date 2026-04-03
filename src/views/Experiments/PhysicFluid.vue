@@ -1,64 +1,61 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { useDebugSceneStore } from "@/stores/debugScene";
-import { video } from "@/utils/video";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import { getLights, getEnvironment } from "@webgamekit/threejs";
-import { bindAnimatedElements, animateTimeline, createTimelineManager } from "@webgamekit/animation";
-import { getBall, getWalls } from "@webgamekit/threejs";
-import { times } from "@/utils/lodash";
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { video } from '@/utils/video'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { getLights, getEnvironment } from '@webgamekit/threejs'
+import { bindAnimatedElements, animateTimeline, createTimelineManager } from '@webgamekit/animation'
+import { getBall, getWalls } from '@webgamekit/threejs'
+import { times } from '@/utils/lodash'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 onMounted(() => {
-  init(
-    (canvas.value as unknown) as HTMLCanvasElement,
-    (statsElement.value as unknown) as HTMLElement
+  ;(init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsElement.value as unknown as HTMLElement
   ),
-    statsElement.value!;
-});
+    statsElement.value!)
+})
 
 onUnmounted(() => {
-  clearSceneElements();
-});
+  clearSceneElements()
+})
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     directional: {
       enabled: true,
       helper: false,
-      intensity: 2,
+      intensity: 2
     },
     ambient: {
       enabled: true,
-      intensity: 2,
-    },
-  };
-  stats.init(route, statsElement);
+      intensity: 2
+    }
+  }
+  stats.init(route, statsElement)
   controls.create(config, route, {}, async () => {
-    await setup();
-  });
+    await setup()
+  })
 
   const setup = async () => {
-    const length = 25;
-    const { renderer, scene, camera, clock, orbit, world } = await getEnvironment(
-      canvas,
-      {
-        camera: { position: [0, 40, 100] },
-      }
-    );
-    getLights(scene, { directionalLightIntensity: config.directional.intensity });
+    const length = 25
+    const { renderer, scene, camera, clock, orbit, world } = await getEnvironment(canvas, {
+      camera: { position: [0, 40, 100] }
+    })
+    getLights(scene, { directionalLightIntensity: config.directional.intensity })
     // getGround(scene, world, { size: 1000.0 });
-    getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 });
+    getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 })
 
-    registerSceneElements(camera, scene.children);
+    registerSceneElements(camera, scene.children)
 
-    const experiments = [] as any[];
+    const experiments = [] as any[]
     const addBall = (position: CoordinateTuple) => {
       experiments.push(
         getBall(scene, world, {
@@ -68,51 +65,51 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
           restitution: -0.5,
           color: 0x0055ff,
           castShadow: false,
-          receiveShadow: false,
+          receiveShadow: false
         })
-      );
-    };
+      )
+    }
 
     const generateBalls = (amount: number) => {
-      const gaps = { x: length / 4, y: 2, z: length / 4 };
-      const getSign = () => (Math.random() > 0.5 ? 1 : -1);
+      const gaps = { x: length / 4, y: 2, z: length / 4 }
+      const getSign = () => (Math.random() > 0.5 ? 1 : -1)
 
       times(amount, () => {
-        const x = getSign() * Math.floor((Math.random() * length) / 2 - gaps.x);
-        const z = getSign() * Math.floor((Math.random() * length) / 2 - gaps.z);
-        const y = 100;
-        addBall([x, y, z]);
-      });
-    };
+        const x = getSign() * Math.floor((Math.random() * length) / 2 - gaps.x)
+        const z = getSign() * Math.floor((Math.random() * length) / 2 - gaps.z)
+        const y = 100
+        addBall([x, y, z])
+      })
+    }
 
-    const timelineManager = createTimelineManager();
+    const timelineManager = createTimelineManager()
     timelineManager.addAction({
       start: 0,
       end: 2000,
       action: () => {
-        generateBalls(25);
-      },
-    });
+        generateBalls(25)
+      }
+    })
 
-    video.record(canvas, route);
+    video.record(canvas, route)
     function animate() {
-      stats.start(route);
-      const delta = clock.getDelta();
-      const frame = requestAnimationFrame(animate);
-      world.step();
+      stats.start(route)
+      const delta = clock.getDelta()
+      const frame = requestAnimationFrame(animate)
+      world.step()
 
-      bindAnimatedElements(experiments, world, delta);
+      bindAnimatedElements(experiments, world, delta)
 
-      animateTimeline(timelineManager, frame);
+      animateTimeline(timelineManager, frame)
 
-      renderer.render(scene, camera);
-      video.stop(renderer.info.render.frame, route);
-      stats.end(route);
+      renderer.render(scene, camera)
+      video.stop(renderer.info.render.frame, route)
+      stats.end(route)
     }
-    animate();
-  };
-  setup();
-};
+    animate()
+  }
+  setup()
+}
 </script>
 
 <template>

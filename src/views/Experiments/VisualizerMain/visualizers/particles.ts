@@ -1,45 +1,41 @@
-import * as THREE from "three";
-import { getAudioData, getFrequencyRanges } from "../audio";
-import type { VisualizerSetup } from "../visualizer";
+import * as THREE from 'three'
+import { getAudioData, getFrequencyRanges } from '../audio'
+import type { VisualizerSetup } from '../visualizer'
 
 export const particlesVisualizer: VisualizerSetup = {
-  name: "Particles",
+  name: 'Particles',
   song: 0,
-  
+
   setup: (scene: THREE.Scene) => {
-    const particleCount = 1000;
-    const geometry = new THREE.BufferGeometry();
-    
-    // Create particle positions
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    const sizes = new Float32Array(particleCount);
-    
-    for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
-      
-      // Position particles in a sphere
-      const radius = Math.random() * 50;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.random() * Math.PI;
-      
-      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
-      positions[i3 + 1] = radius * Math.cos(phi);
-      positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
-      
-      // Random colors
-      colors[i3] = Math.random();
-      colors[i3 + 1] = Math.random();
-      colors[i3 + 2] = Math.random();
-      
-      // Random sizes
-      sizes[i] = Math.random() * 2 + 1;
-    }
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    
+    const particleCount = 1000
+    const geometry = new THREE.BufferGeometry()
+
+    const positions = new Float32Array(particleCount * 3)
+    const colors = new Float32Array(particleCount * 3)
+    const sizes = new Float32Array(particleCount)
+
+    Array.from({ length: particleCount }, (_, i) => {
+      const i3 = i * 3
+
+      const radius = Math.random() * 50
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.random() * Math.PI
+
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta)
+      positions[i3 + 1] = radius * Math.cos(phi)
+      positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta)
+
+      colors[i3] = Math.random()
+      colors[i3 + 1] = Math.random()
+      colors[i3 + 2] = Math.random()
+
+      sizes[i] = Math.random() * 2 + 1
+    })
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
@@ -98,38 +94,40 @@ export const particlesVisualizer: VisualizerSetup = {
       `,
       transparent: true,
       blending: THREE.AdditiveBlending
-    });
-    
-    const particles = new THREE.Points(geometry, material);
-    scene.add(particles);
-    
-    return { 
-      particles, 
-      material, 
-      geometry,
-    };
+    })
+
+    const particles = new THREE.Points(geometry, material)
+    scene.add(particles)
+
+    return {
+      particles,
+      material,
+      geometry
+    }
   },
 
-  getTimeline: (getObjects: () => Record<string, any>) => [{
-    action: () => {
-      const objects = getObjects();
-      const audioData = getAudioData();
-      const frequencyRanges = getFrequencyRanges();
-      const time = Date.now() * 0.001;
-      
-      // Calculate average audio level
-      const audioLevel = audioData.reduce((sum, value) => sum + value, 0) / audioData.length;
-      
-      // Update shader uniforms
-      objects.material.uniforms.time.value = time;
-      objects.material.uniforms.audioLevel.value = audioLevel;
-      objects.material.uniforms.bassLevel.value = frequencyRanges.bass;
-      objects.material.uniforms.midLevel.value = frequencyRanges.mid;
-      objects.material.uniforms.trebleLevel.value = frequencyRanges.treble;
-      
-      // Rotate the particle system
-      objects.particles.rotation.y = time * 0.1;
-      objects.particles.rotation.x = Math.sin(time * 0.05) * 0.2;
+  getTimeline: (getObjects: () => Record<string, unknown>) => [
+    {
+      action: () => {
+        const objects = getObjects()
+        const audioData = getAudioData()
+        const frequencyRanges = getFrequencyRanges()
+        const time = Date.now() * 0.001
+
+        // Calculate average audio level
+        const audioLevel = audioData.reduce((sum, value) => sum + value, 0) / audioData.length
+
+        // Update shader uniforms
+        objects.material.uniforms.time.value = time
+        objects.material.uniforms.audioLevel.value = audioLevel
+        objects.material.uniforms.bassLevel.value = frequencyRanges.bass
+        objects.material.uniforms.midLevel.value = frequencyRanges.mid
+        objects.material.uniforms.trebleLevel.value = frequencyRanges.treble
+
+        // Rotate the particle system
+        objects.particles.rotation.y = time * 0.1
+        objects.particles.rotation.x = Math.sin(time * 0.05) * 0.2
+      }
     }
-  }]
-};
+  ]
+}

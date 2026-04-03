@@ -1,20 +1,21 @@
-import * as THREE from 'three';
-import { CoordinateTuple, Model } from '@webgamekit/animation';
-import { getOffset } from './getters';
-import { OrbitControls } from 'three/examples/jsm/Addons.js';
+import * as THREE from 'three'
+import { CoordinateTuple, Model } from '@webgamekit/animation'
+import { getOffset } from './getters'
+import { OrbitControls } from 'three/examples/jsm/Addons.js'
+import type { CameraConfig } from './types'
 
 /**
  * Camera preset configurations for different viewing styles
  */
 interface CameraPresetConfig {
-  type: 'perspective' | 'orthographic';
-  fov?: number;
-  position: CoordinateTuple;
-  lookAt?: CoordinateTuple;
-  near?: number;
-  far?: number;
-  frustumSize?: number;
-  verticalOffset?: number;
+  type: 'perspective' | 'orthographic'
+  fov?: number
+  position: CoordinateTuple
+  lookAt?: CoordinateTuple
+  near?: number
+  far?: number
+  frustumSize?: number
+  verticalOffset?: number
 }
 
 /**
@@ -27,14 +28,14 @@ export enum CameraPreset {
   Orbit = 'orbit',
   Orthographic = 'orthographic',
   OrthographicFollowing = 'orthographic-following',
-  TopDown = 'top-down',
+  TopDown = 'top-down'
 }
 
 export enum CameraSide {
   CameraLeft = 'camera-left',
   CameraRight = 'camera-right',
   CameraUp = 'camera-up',
-  CameraDown = 'camera-down',
+  CameraDown = 'camera-down'
 }
 
 /**
@@ -46,28 +47,28 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
     fov: 75,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.Fisheye]: {
     type: 'perspective',
     fov: 120,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.Cinematic]: {
     type: 'perspective',
     fov: 35,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.Orbit]: {
     type: 'perspective',
     fov: 75,
     position: [0, 10, 15],
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.Orthographic]: {
     type: 'orthographic',
@@ -76,7 +77,7 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
     frustumSize: 40,
     verticalOffset: 15,
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.OrthographicFollowing]: {
     type: 'orthographic',
@@ -84,7 +85,7 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
     frustumSize: 30,
     verticalOffset: 10,
     near: 0.1,
-    far: 1000,
+    far: 1000
   },
   [CameraPreset.TopDown]: {
     type: 'orthographic',
@@ -93,17 +94,24 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
     frustumSize: 50,
     verticalOffset: 0,
     near: 0.1,
-    far: 1000,
-  },
-};
+    far: 1000
+  }
+}
 
-export const getLookAt = (model: Model, config: any) => {
-  const { x, y, z } = config.lookAt;
-  const lookAt = new THREE.Vector3(x, y, z);
-  lookAt.applyQuaternion(model.quaternion);
-  lookAt.add(model.position);
-  return lookAt;
-};
+/**
+ *
+ * @param model
+ * @param config
+ */
+export const getLookAt = (model: Model, config: CameraConfig) => {
+  const lookAt =
+    config.lookAt instanceof THREE.Vector3
+      ? config.lookAt.clone()
+      : new THREE.Vector3(...((config.lookAt as CoordinateTuple) ?? [0, 0, 0]))
+  lookAt.applyQuaternion(model.quaternion)
+  lookAt.add(model.position)
+  return lookAt
+}
 
 /**
  * Apply a predefined camera preset to an existing camera
@@ -117,74 +125,98 @@ export const setCameraPreset = (
   presetName: CameraPreset,
   aspect: number = 16 / 9
 ): THREE.Camera | null => {
-  const preset = cameraPresets[presetName];
-  
+  const preset = cameraPresets[presetName]
+
   if (!preset) {
-    console.warn(`Camera preset "${presetName}" not found. Available presets: ${Object.keys(cameraPresets).join(', ')}`);
-    return null;
+    console.warn(
+      `Camera preset "${presetName}" not found. Available presets: ${Object.keys(cameraPresets).join(', ')}`
+    )
+    return null
   }
 
-  const isPerspective = preset.type === 'perspective';
-  const isOrthographic = preset.type === 'orthographic';
-  const frustumSize = preset.frustumSize ?? 40;
-  const verticalOffset = preset.verticalOffset || 15;
-  const lookAt = preset.lookAt || [0, 0, 0];
+  const isPerspective = preset.type === 'perspective'
+  const isOrthographic = preset.type === 'orthographic'
+  const frustumSize = preset.frustumSize ?? 40
+  const verticalOffset = preset.verticalOffset || 15
+  const lookAt = preset.lookAt || [0, 0, 0]
 
   if (isPerspective && camera instanceof THREE.PerspectiveCamera) {
-    camera.position.set(...preset.position);
-    camera.aspect = aspect;
-    if (preset.fov !== undefined) camera.fov = preset.fov;
+    camera.position.set(...preset.position)
+    camera.aspect = aspect
+    if (preset.fov !== undefined) camera.fov = preset.fov
   } else if (isOrthographic && camera instanceof THREE.OrthographicCamera) {
-    camera.left = (frustumSize * aspect) / -2;
-    camera.right = (frustumSize * aspect) / 2;
-    camera.top = frustumSize / 2 + verticalOffset;
-    camera.bottom = frustumSize / -2 + verticalOffset;
+    camera.left = (frustumSize * aspect) / -2
+    camera.right = (frustumSize * aspect) / 2
+    camera.top = frustumSize / 2 + verticalOffset
+    camera.bottom = frustumSize / -2 + verticalOffset
   }
-  camera.lookAt(new THREE.Vector3(...lookAt));
-  camera.updateProjectionMatrix();
+  camera.lookAt(new THREE.Vector3(...lookAt))
+  camera.updateProjectionMatrix()
 
-  return camera;
-};
+  return camera
+}
 
-export const setCameraSide = (camera: THREE.PerspectiveCamera, {x, y, z}: THREE.Vector3, value: CameraSide) => {
-  x = 0; y = 0; z = 0;
+/**
+ *
+ * @param camera
+ * @param root0
+ * @param root0.x
+ * @param root0.y
+ * @param root0.z
+ * @param value
+ */
+export const setCameraSide = (
+  camera: THREE.PerspectiveCamera,
+  { x, y, z }: THREE.Vector3,
+  value: CameraSide
+) => {
+  x = 0
+  y = 0
+  z = 0
   if (value === CameraSide.CameraDown) {
-    y += 5; z += 20;
+    y += 5
+    z += 20
   } else if (value === CameraSide.CameraUp) {
-    y += 5;
+    y += 5
   } else if (value === CameraSide.CameraLeft) {
-    x -= 15; y += 5;
+    x -= 15
+    y += 5
   } else if (value === CameraSide.CameraRight) {
-    x += 15; y += 5;
+    x += 15
+    y += 5
   }
-  camera.position.set(x, y, z);
-  camera.lookAt(x, y, z);
-};
+  camera.position.set(x, y, z)
+  camera.lookAt(x, y, z)
+}
 
 /**
  * Set given camera to third person view
- * @param camera 
- * @param config 
- * @param model 
+ * @param camera
+ * @param config
+ * @param model
  */
 export const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
-  config: any,
+  config: CameraConfig,
   model: Model | null
 ) => {
   if (model) {
-    const offset = getOffset(model, config);
-    const lookAt = getLookAt(model, config);
-    camera.position.copy(offset);
-    camera.lookAt(lookAt);
+    if (config.offset) {
+      const offset = getOffset(model, { offset: config.offset })
+      camera.position.copy(offset)
+    }
+    const lookAt = getLookAt(model, config)
+    camera.lookAt(lookAt)
   }
-};
+}
 
 /**
  * Make camera follow a player/model by updating camera position with offset
  * @param camera - The Three.js camera to update
  * @param player - The player model to follow
  * @param offset - Camera offset from player [x, y, z]
+ * @param orbit
+ * @param coordinates
  * @returns Updated camera position as CoordinateTuple
  */
 export const cameraFollowPlayer = (
@@ -195,22 +227,22 @@ export const cameraFollowPlayer = (
   coordinates: ('x' | 'y' | 'z')[] = ['x', 'y', 'z']
 ): CoordinateTuple => {
   if (coordinates.includes('x')) {
-    camera.position.x = player.position.x + offset[0];
-    if (orbit) orbit.target.x = player.position.x;
+    camera.position.x = player.position.x + offset[0]
+    if (orbit) orbit.target.x = player.position.x
   }
   if (coordinates.includes('y')) {
-    camera.position.y = player.position.y + offset[1];
-    if (orbit) orbit.target.y = player.position.y;
+    camera.position.y = player.position.y + offset[1]
+    if (orbit) orbit.target.y = player.position.y
   }
   if (coordinates.includes('z')) {
-    camera.position.z = player.position.z + offset[2];
-    if (orbit) orbit.target.z = player.position.z;
+    camera.position.z = player.position.z + offset[2]
+    if (orbit) orbit.target.z = player.position.z
   }
-  
-  if (orbit) orbit.update();
-  
-  return [camera.position.x, camera.position.y, camera.position.z];
-};
+
+  if (orbit) orbit.update()
+
+  return [camera.position.x, camera.position.y, camera.position.z]
+}
 
 /**
  * Smoothly tilt the camera for dynamic effects like jump reactions
@@ -224,54 +256,57 @@ export const tiltCamera = (camera: THREE.Camera, targetTilt: number, lerpFactor:
       x: camera.rotation.x,
       y: camera.rotation.y,
       z: camera.rotation.z
-    };
+    }
   }
 
-  const currentTilt = camera.rotation.x - camera.userData.originalRotation.x;
-  const tiltDifference = targetTilt - currentTilt;
-  const newTilt = currentTilt + tiltDifference * lerpFactor;
-  
-  camera.rotation.x = camera.userData.originalRotation.x + newTilt;
-};
+  const currentTilt = camera.rotation.x - camera.userData.originalRotation.x
+  const tiltDifference = targetTilt - currentTilt
+  const newTilt = currentTilt + tiltDifference * lerpFactor
+
+  camera.rotation.x = camera.userData.originalRotation.x + newTilt
+}
 
 /**
  * Update camera properties based on configuration
  * @param camera - The Three.js camera to update
  * @param config - Camera configuration object with position, rotation, lookAt, and other properties
  */
-export const updateCamera = (camera: THREE.PerspectiveCamera | THREE.OrthographicCamera, config: any): void => {
+export const updateCamera = (
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  config: CameraConfig
+): void => {
   if (config.position) {
     if (config.position instanceof Array) {
-      camera.position.set(...(config.position as CoordinateTuple));
+      camera.position.set(...(config.position as CoordinateTuple))
     } else {
-      camera.position.copy(config.position);
+      camera.position.copy(config.position)
     }
   }
-  if (config.near !== undefined) camera.near = config.near;
-  if (config.far !== undefined) camera.far = config.far;
-  if (config.up) camera.up = config.up;
-  if (config.zoom !== undefined) camera.zoom = config.zoom;
-  
+  if (config.near !== undefined) camera.near = config.near
+  if (config.far !== undefined) camera.far = config.far
+  if (config.up) camera.up = config.up
+  if (config.zoom !== undefined) camera.zoom = config.zoom
+
   // PerspectiveCamera specific properties
   if (camera instanceof THREE.PerspectiveCamera) {
-    if (config.fov !== undefined) camera.fov = config.fov;
-    if (config.aspect !== undefined) camera.aspect = config.aspect;
-    if (config.focus !== undefined) (camera as any).focus = config.focus;
+    if (config.fov !== undefined) camera.fov = config.fov
+    if (config.aspect !== undefined) camera.aspect = config.aspect
+    if (config.focus !== undefined) (camera as THREE.PerspectiveCamera).focus = config.focus
   }
-  
+
   if (config.rotation) {
     if (config.rotation instanceof Array) {
-      camera.rotation.set(...(config.rotation as CoordinateTuple));
+      camera.rotation.set(...(config.rotation as CoordinateTuple))
     } else {
-      camera.rotation.setFromVector3(config.rotation as THREE.Vector3);
+      camera.rotation.setFromVector3(config.rotation as THREE.Vector3)
     }
   }
   if (config.lookAt) {
     if (config.lookAt instanceof Array) {
-      camera.lookAt(...(config.lookAt as CoordinateTuple));
+      camera.lookAt(...(config.lookAt as CoordinateTuple))
     } else {
-      camera.lookAt(config.lookAt);
+      camera.lookAt(config.lookAt)
     }
   }
-  camera.updateProjectionMatrix();
-};
+  camera.updateProjectionMatrix()
+}

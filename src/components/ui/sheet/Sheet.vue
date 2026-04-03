@@ -5,41 +5,37 @@ import {
   DialogPortal,
   DialogOverlay,
   DialogContent,
-  DialogClose,
-} from "radix-vue";
-import { computed } from "vue";
-import { cn } from "@/lib/utilities";
+  DialogClose
+} from 'radix-vue'
+import { computed } from 'vue'
+import { cn } from '@/lib/utilities'
 
-type SheetSide = "top" | "bottom" | "left" | "right";
+type SheetSide = 'top' | 'bottom' | 'left' | 'right'
 
 const props = withDefaults(
   defineProps<{
-    open?: boolean;
-    side?: SheetSide;
+    open?: boolean
+    side?: SheetSide
   }>(),
   {
-    side: "right",
+    side: 'right'
   }
-);
+)
 
 const emit = defineEmits<{
-  "update:open": [value: boolean];
-}>();
+  'update:open': [value: boolean]
+}>()
 
 const sideClasses: Record<SheetSide, string> = {
-  top: "sheet-content--top",
-  bottom: "sheet-content--bottom",
-  left: "sheet-content--left",
-  right: "sheet-content--right",
-};
+  top: 'sheet-content--top',
+  bottom: 'sheet-content--bottom',
+  left: 'sheet-content--left',
+  right: 'sheet-content--right'
+}
 
-const contentClasses = computed(() =>
-  cn("panel-ui", "sheet-content", sideClasses[props.side])
-);
+const contentClasses = computed(() => cn('panel-ui', 'sheet-content', sideClasses[props.side]))
 
-const portalTarget = computed(() =>
-  props.side === "left" ? "#left-panels" : "#right-panels"
-);
+const portalTarget = computed(() => (props.side === 'left' ? '#left-panels' : '#right-panels'))
 </script>
 
 <template>
@@ -51,11 +47,7 @@ const portalTarget = computed(() =>
     </slot>
 
     <DialogPortal :to="portalTarget">
-      <DialogContent
-        :class="contentClasses"
-        @interact-outside.prevent
-        @escape-key-down.prevent
-      >
+      <DialogContent :class="contentClasses" @interact-outside.prevent @escape-key-down.prevent>
         <slot />
       </DialogContent>
     </DialogPortal>

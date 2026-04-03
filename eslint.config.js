@@ -1,11 +1,12 @@
-import js from '@eslint/js';
-import pluginVue from 'eslint-plugin-vue';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import vueParser from 'vue-eslint-parser';
-import functional from 'eslint-plugin-functional';
-import unicorn from 'eslint-plugin-unicorn';
-import prettierConfig from 'eslint-config-prettier';
+import js from '@eslint/js'
+import pluginVue from 'eslint-plugin-vue'
+import tseslint from '@typescript-eslint/eslint-plugin'
+import tsparser from '@typescript-eslint/parser'
+import vueParser from 'vue-eslint-parser'
+import functional from 'eslint-plugin-functional'
+import unicorn from 'eslint-plugin-unicorn'
+import prettierConfig from 'eslint-config-prettier'
+import noAllocInAnimationLoop from './rules/no-alloc-in-animation-loop.js'
 
 export default [
   // Base recommended configs
@@ -20,8 +21,8 @@ export default [
       '**/.vite/**',
       '**/documentation/.docusaurus/**',
       '**/documentation/build/**',
-      '**/coverage/**',
-    ],
+      '**/coverage/**'
+    ]
   },
 
   // Main configuration for JS/TS files (Vue handled separately)
@@ -32,6 +33,7 @@ export default [
       '@typescript-eslint': tseslint,
       functional,
       unicorn,
+      local: { rules: { 'no-alloc-in-animation-loop': noAllocInAnimationLoop } }
     },
 
     languageOptions: {
@@ -43,7 +45,7 @@ export default [
         sourceType: 'module',
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
-        extraFileExtensions: ['.vue'],
+        extraFileExtensions: ['.vue']
       },
       globals: {
         process: 'readonly',
@@ -93,8 +95,8 @@ export default [
         ReturnType: 'readonly',
         InstanceType: 'readonly',
         Parameters: 'readonly',
-        ConstructorParameters: 'readonly',
-      },
+        ConstructorParameters: 'readonly'
+      }
     },
 
     rules: {
@@ -106,27 +108,34 @@ export default [
       'functional/no-classes': 'error', // Keep as error - no classes allowed
 
       // Prevent mutations
-      'functional/immutable-data': ['error', {
-        ignoreIdentifierPattern: '^(this|module|exports)',
-        ignoreAccessorPattern: [
-          '**.current.**', // Allow React refs
-          '**.value', // Allow Vue refs
-          '**.position.**', // Allow Three.js mutations
-          '**.rotation.**',
-          '**.scale.**',
-          '**.material.**',
-          '**.userData.**',
-        ],
-      }],
+      'functional/immutable-data': [
+        'error',
+        {
+          ignoreIdentifierPattern: '^(this|module|exports)',
+          ignoreAccessorPattern: [
+            '**.current.**', // Allow React refs
+            '**.value', // Allow Vue refs
+            '**.position.**', // Allow Three.js mutations
+            '**.rotation.**',
+            '**.scale.**',
+            '**.material.**',
+            '**.userData.**',
+            'document.title' // Allow setting page title
+          ]
+        }
+      ],
 
       // Prefer functional alternatives but allow loops when necessary
-      'functional/no-loop-statements': 'warn',
+      'functional/no-loop-statements': 'error',
 
       // Prefer const over let
-      'functional/no-let': ['warn', {
-        allowInForLoopInit: false,
-        allowInFunctions: true, // Allow let in function scope for closures
-      }],
+      'functional/no-let': [
+        'error',
+        {
+          allowInForLoopInit: false,
+          allowInFunctions: true // Allow let in function scope for closures
+        }
+      ],
 
       // Prevent try-catch (use Result types instead)
       'functional/no-try-statements': 'off', // Too strict for real-world apps
@@ -136,44 +145,47 @@ export default [
       // ====================
 
       // Prevent abbreviations (prefer full words)
-      'unicorn/prevent-abbreviations': ['error', {
-        allowList: {
-          // Common abbreviations to allow
-          args: true,
-          db: true,
-          dir: true,
-          e: true,  // Event in catch
-          env: true,
-          fn: true,
-          i: true,  // Index in specific contexts
-          id: true,
-          params: true,
-          props: true,
-          ref: true,
-          refs: true,
-          req: true,
-          res: true,
-          src: true,
-          url: true,
-          http: true,
-          https: true,
-          // Three.js specific
-          ctx: true,
-          x: true,
-          y: true,
-          z: true,
-          // Common dev abbreviations
-          dev: true,
-          prod: true,
-          temp: true,
-          // Game dev & physics
-          max: true,
-          min: true,
-          fps: true,
-          // Ref-like is common pattern
-          RefLike: true,
-        },
-      }],
+      'unicorn/prevent-abbreviations': [
+        'error',
+        {
+          allowList: {
+            // Common abbreviations to allow
+            args: true,
+            db: true,
+            dir: true,
+            e: true, // Event in catch
+            env: true,
+            fn: true,
+            i: true, // Index in specific contexts
+            id: true,
+            params: true,
+            props: true,
+            ref: true,
+            refs: true,
+            req: true,
+            res: true,
+            src: true,
+            url: true,
+            http: true,
+            https: true,
+            // Three.js specific
+            ctx: true,
+            x: true,
+            y: true,
+            z: true,
+            // Common dev abbreviations
+            dev: true,
+            prod: true,
+            temp: true,
+            // Game dev & physics
+            max: true,
+            min: true,
+            fps: true,
+            // Ref-like is common pattern
+            RefLike: true
+          }
+        }
+      ],
 
       // Prefer modern array methods
       'unicorn/prefer-array-flat-map': 'error',
@@ -196,21 +208,24 @@ export default [
       // ====================
 
       // Max cyclomatic complexity (McCabe's recommended max)
-      'complexity': ['warn', { max: 10 }],
+      complexity: ['error', { max: 10 }],
 
       // Max nested callbacks
       'max-depth': ['error', { max: 4 }],
 
       // Max lines per function
-      'max-lines-per-function': ['warn', {
-        max: 100,
-        skipBlankLines: true,
-        skipComments: true,
-        IIFEs: true,
-      }],
+      'max-lines-per-function': [
+        'error',
+        {
+          max: 100,
+          skipBlankLines: true,
+          skipComments: true,
+          IIFEs: true
+        }
+      ],
 
       // Max parameters
-      'max-params': ['warn', { max: 5 }],
+      'max-params': ['error', { max: 5 }],
 
       // ====================
       // TYPESCRIPT NAMING CONVENTIONS
@@ -220,25 +235,31 @@ export default [
       '@typescript-eslint/naming-convention': 'off',
 
       // Use simpler camelcase rule
-      'camelcase': ['warn', {
-        properties: 'never',
-        ignoreDestructuring: true,
-        ignoreImports: true,
-        allow: ['^UNSAFE_', '^unstable_', '^_'], // React conventions and private vars
-      }],
+      camelcase: [
+        'error',
+        {
+          properties: 'never',
+          ignoreDestructuring: true,
+          ignoreImports: true,
+          allow: ['^UNSAFE_', '^unstable_', '^_'] // React conventions and private vars
+        }
+      ],
 
       // ====================
       // MAGIC NUMBERS
       // ====================
 
-      'no-magic-numbers': ['warn', {
-        ignore: [0, 1, -1, 2, 3, 4, 5, 10, 100, 1000], // Common constants
-        ignoreArrayIndexes: true,
-        ignoreDefaultValues: true,
-        ignoreClassFieldInitialValues: true,
-        enforceConst: true,
-        detectObjects: false,
-      }],
+      'no-magic-numbers': [
+        'warn',
+        {
+          ignore: [0, 1, -1, 2, 3, 4, 5, 10, 100, 1000], // Common constants
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          ignoreClassFieldInitialValues: true,
+          enforceConst: true,
+          detectObjects: false
+        }
+      ],
 
       // ====================
       // GENERAL CODE QUALITY
@@ -257,34 +278,38 @@ export default [
       'prefer-template': 'error',
 
       // No console in production
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['error', { allow: ['warn', 'error'] }],
 
       // No debugger in production
-      'no-debugger': 'warn',
+      'no-debugger': 'error',
 
       // Consistent return
-      'consistent-return': 'warn',
+      'consistent-return': 'error',
 
       // No unused vars
       'no-unused-vars': 'off', // Turn off base rule
-      '@typescript-eslint/no-unused-vars': ['warn', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
 
       // Explicit function return types
       '@typescript-eslint/explicit-function-return-type': 'off', // Too verbose for all cases
 
       // No explicit any
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
 
       // ====================
       // VUE-SPECIFIC OVERRIDES
       // ====================
 
-      'vue/multi-word-component-names': 'off', // Allow single-word components
-    },
+      'vue/multi-word-component-names': 'off',
+      'local/no-alloc-in-animation-loop': 'error'
+    }
   },
 
   // Vue files specific configuration
@@ -293,7 +318,7 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       functional,
-      unicorn,
+      unicorn
     },
     languageOptions: {
       parser: vueParser,
@@ -302,7 +327,7 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         projectService: false,
-        extraFileExtensions: ['.vue'],
+        extraFileExtensions: ['.vue']
       },
       globals: {
         process: 'readonly',
@@ -378,8 +403,8 @@ export default [
         XMLSerializer: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
-        prompt: 'readonly',
-      },
+        prompt: 'readonly'
+      }
     },
     rules: {
       // Disable type-aware rules for Vue files (no projectService)
@@ -388,8 +413,9 @@ export default [
         'error',
         {
           selector: 'BlockStatement > TSTypeAliasDeclaration',
-          message: 'Type aliases must be defined at the top level of <script setup>, not inside functions.',
-        },
+          message:
+            'Type aliases must be defined at the top level of <script setup>, not inside functions.'
+        }
       ],
       'functional/immutable-data': 'off',
       'functional/no-let': 'off',
@@ -399,19 +425,19 @@ export default [
       'consistent-return': 'off',
       'vue/multi-word-component-names': 'off',
       'no-undef': 'off', // TypeScript handles this via vue-tsc
-      'no-unused-vars': 'off', // TypeScript handles this via vue-tsc
-    },
+      'no-unused-vars': 'off' // TypeScript handles this via vue-tsc
+    }
   },
 
   // Three.js files - allow necessary mutations for 3D objects
   {
-    files: ['packages/threejs/**/*.ts', 'src/views/**/*.ts'],
+    files: ['packages/threejs/**/*.ts', 'src/views/**/*.ts', 'src/utils/**/*.ts'],
     rules: {
       // Three.js requires mutating objects for position, rotation, etc.
       'functional/immutable-data': 'warn',
-      'max-lines-per-function': ['warn', { max: 150 }],
-      'complexity': ['warn', { max: 15 }],
-    },
+      'max-lines-per-function': ['error', { max: 150 }],
+      complexity: ['error', { max: 15 }]
+    }
   },
 
   // Animation package - timeline management requires mutable state
@@ -419,8 +445,16 @@ export default [
     files: ['packages/animation/**/*.ts'],
     rules: {
       'functional/immutable-data': 'warn',
-      'functional/no-let': 'warn',
-    },
+      'functional/no-let': 'warn'
+    }
+  },
+
+  // Pinia stores - defineStore factory functions are inherently long
+  {
+    files: ['src/stores/**/*.ts'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 500 }]
+    }
   },
 
   // Declaration files - skip type checking and no-undef
@@ -428,23 +462,28 @@ export default [
     files: ['**/*.d.ts'],
     languageOptions: {
       parserOptions: {
-        projectService: false,
-      },
+        projectService: false
+      }
     },
     rules: {
       'no-undef': 'off', // Declaration files define types
       '@typescript-eslint/no-unused-vars': 'off',
-      'no-redeclare': 'off', // Type declarations are redeclaring types
-    },
+      'no-redeclare': 'off' // Type declarations are redeclaring types
+    }
   },
 
   // Utility files often need to mutate state
   {
-    files: ['src/utils/**/*.ts', 'src/router/**/*.ts', 'src/config/**/*.ts', 'packages/controls/**/*.ts', 'packages/audio/**/*.ts', 'packages/game/**/*.ts', 'packages/recording/**/*.ts'],
+    files: [
+      'packages/controls/**/*.ts',
+      'packages/audio/**/*.ts',
+      'packages/game/**/*.ts',
+      'packages/recording/**/*.ts'
+    ],
     rules: {
       'functional/immutable-data': 'warn',
-      'functional/no-let': 'warn',
-    },
+      'functional/no-let': 'warn'
+    }
   },
 
   // Test files specific configuration
@@ -452,8 +491,8 @@ export default [
     files: ['**/*.test.ts', '**/*.test.js', '**/*.spec.ts', '**/*.spec.js'],
     languageOptions: {
       parserOptions: {
-        projectService: false,
-      },
+        projectService: false
+      }
     },
     rules: {
       // Relax some rules for tests
@@ -461,25 +500,29 @@ export default [
       'no-magic-numbers': 'off',
       '@typescript-eslint/naming-convention': 'off',
       'functional/no-let': 'off',
-      'functional/immutable-data': 'off',
-    },
+      'functional/immutable-data': 'off'
+    }
   },
 
   // Config files and scripts - disable type checking
   {
-    files: ['*.config.{js,ts,mjs,cjs}', '.eslintrc.{js,cjs}', '**/vite.config.ts', 'scripts/**/*.js'],
+    files: [
+      '*.config.{js,ts,mjs,cjs}',
+      '.eslintrc.{js,cjs}',
+      '**/vite.config.ts',
+      '**/config.ts',
+      'src/config/**/*.ts',
+      'scripts/**/*.js'
+    ],
     languageOptions: {
       parserOptions: {
-        projectService: false,
-      },
+        projectService: false
+      }
     },
     rules: {
-      // Relax rules for config files
       'no-magic-numbers': 'off',
-      '@typescript-eslint/naming-convention': 'off',
-      'unicorn/prevent-abbreviations': 'off',
-      'no-undef': 'off',
-    },
+      'functional/immutable-data': 'off'
+    }
   },
 
   // JavaScript files - disable TypeScript-specific rules
@@ -487,18 +530,45 @@ export default [
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     languageOptions: {
       parserOptions: {
-        projectService: false,
-      },
+        projectService: false
+      }
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      'no-undef': 'off',
-      'functional/immutable-data': 'off', // Can't use type info on JS files
-      'consistent-return': 'off',
-    },
+      'functional/immutable-data': 'off'
+    }
+  },
+
+  // Experiment views - demo/exploration code with inherently complex setups
+  {
+    files: ['src/views/Experiments/**/*.vue'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 350, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', { max: 20 }],
+      'max-params': ['error', { max: 10 }],
+      'functional/no-loop-statements': 'off'
+    }
+  },
+
+  // Tool views - interactive tools with complex UI and scene setup logic
+  {
+    files: ['src/views/Tools/**/*.vue'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', { max: 50 }],
+      'max-params': ['error', { max: 10 }],
+      'functional/no-loop-statements': 'off'
+    }
+  },
+
+  // Vendored algorithm files - exempt from functional and complexity rules
+  {
+    files: ['src/utils/simplex.js'],
+    rules: {
+      'functional/no-loop-statements': 'off',
+      complexity: 'off'
+    }
   },
 
   // Apply Prettier config (should be last to override formatting rules)
-  prettierConfig,
-];
+  prettierConfig
+]

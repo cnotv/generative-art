@@ -7,10 +7,7 @@ describe('PopUp Animations', () => {
   let object: THREE.Mesh
 
   beforeEach(() => {
-    object = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    )
+    object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial())
     object.position.set(0, 0, 0)
     object.scale.set(1, 1, 1)
     ;(object.material as THREE.MeshBasicMaterial).opacity = 1

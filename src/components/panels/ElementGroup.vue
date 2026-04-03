@@ -1,48 +1,48 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import SchemaControls from './ConfigControls.vue';
-import TexturePreview from '@/components/TexturePreview.vue';
-import IconPreview from '@/components/IconPreview.vue';
-import IconButton from '@/components/IconButton.vue';
-import { Box, Eye, EyeOff, Plus, Play, RefreshCw, Trash2 } from 'lucide-vue-next';
-import { useTextureGroupsStore } from '@/stores/textureGroups';
-import { useElementPropertiesStore } from '@/stores/elementProperties';
-import { storeToRefs } from 'pinia';
+import { computed } from 'vue'
+import SchemaControls from './ConfigControls.vue'
+import TexturePreview from '@/components/TexturePreview.vue'
+import IconPreview from '@/components/IconPreview.vue'
+import IconButton from '@/components/IconButton.vue'
+import { Box, Eye, EyeOff, Plus, Play, RefreshCw, Trash2 } from 'lucide-vue-next'
+import { useTextureGroupsStore } from '@/stores/textureGroups'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { storeToRefs } from 'pinia'
 
 interface Properties {
-  groupId: string;
-  label: string;
-  isExpanded: boolean;
-  isSelected: boolean;
+  groupId: string
+  label: string
+  isExpanded: boolean
+  isSelected: boolean
 }
 
-const props = defineProps<Properties>();
+const props = defineProps<Properties>()
 
 const emit = defineEmits<{
-  toggle: [];
-}>();
+  toggle: []
+}>()
 
-const textureStore = useTextureGroupsStore();
-const elementPropertiesStore = useElementPropertiesStore();
-const { activeProperties } = storeToRefs(elementPropertiesStore);
+const textureStore = useTextureGroupsStore()
+const elementPropertiesStore = useElementPropertiesStore()
+const { activeProperties } = storeToRefs(elementPropertiesStore)
 
 const hasExpandedSchema = computed(
   () => Object.keys(activeProperties.value?.schema ?? {}).length > 0
-);
+)
 
 const triggerFileUpload = (onchange: (event: Event) => void) => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = onchange;
-  input.click();
-};
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = onchange
+  input.click()
+}
 
 const handleAddVariant = () => {
-  triggerFileUpload((e) => textureStore.handlers?.onAddTextureToGroup(props.groupId, e));
-};
+  triggerFileUpload((e) => textureStore.handlers?.onAddTextureToGroup(props.groupId, e))
+}
 
-const group = computed(() => textureStore.groups.find(g => g.id === props.groupId));
+const group = computed(() => textureStore.groups.find((g) => g.id === props.groupId))
 </script>
 
 <template>
@@ -51,7 +51,7 @@ const group = computed(() => textureStore.groups.find(g => g.id === props.groupI
       class="element-group__header"
       :class="{
         'element-group__header--active': isSelected || isExpanded,
-        'element-group__header--hidden': group?.hidden,
+        'element-group__header--hidden': group?.hidden
       }"
       role="button"
       tabindex="0"

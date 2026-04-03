@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue'),
+      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue')
     },
     {
       path: '/:pathMatch(.*)*',
@@ -17,16 +17,16 @@ const router = createRouter({
   ]
 })
 
-// Add navigation guard to update page title
-router.beforeEach((to, _from, next) => {
-  // Set page title based on route name
-  if (to.name && typeof to.name === 'string') {
-    document.title = `${to.name} | Generative Art`;
-  } else {
-    document.title = 'Generative Art';
+const getPageTitle = (name: string | null | symbol): string => {
+  if (name && typeof name === 'string') {
+    return `${name} | Generative Art`
   }
-  
-  next();
-});
+  return 'Generative Art'
+}
+
+router.beforeEach((to, _from, next) => {
+  document.title = getPageTitle(to.name)
+  next()
+})
 
 export default router

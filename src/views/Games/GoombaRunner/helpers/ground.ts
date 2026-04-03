@@ -1,45 +1,49 @@
-import * as THREE from "three";
-import { createZigzagTexture } from "@webgamekit/threejs";
-import { getSpeed } from "./setup";
+import * as THREE from 'three'
+import { createZigzagTexture } from '@webgamekit/threejs'
+import { getSpeed } from './setup'
 
-export const getGround = (scene: THREE.Scene, physics?: any) => {
-  const geometry = new THREE.BoxGeometry(2000, 0.5, 2000);
+interface Physics {
+  addMesh: (mesh: THREE.Mesh) => void
+}
+
+export const getGround = (scene: THREE.Scene, physics?: Physics) => {
+  const geometry = new THREE.BoxGeometry(2000, 0.5, 2000)
 
   // Create zigzag pattern texture with custom parameters
   const texture = createZigzagTexture({
     size: 128,
-    backgroundColor: "#60af2c", // Slightly different green
-    zigzagColor: "#ffff44", // Darker green for primary zigzag
+    backgroundColor: '#60af2c', // Slightly different green
+    zigzagColor: '#ffff44', // Darker green for primary zigzag
     zigzagHeight: 100, // Taller zigzag amplitude
     zigzagWidth: 32, // Wider zigzag segments
     primaryThickness: 2, // Thicker primary line
     repeatX: 30, // Less repetition for larger pattern
-    repeatY: 30,
-  });
+    repeatY: 30
+  })
 
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter
+  texture.minFilter = THREE.NearestFilter
 
   const material = new THREE.MeshStandardMaterial({
     map: texture,
-    color: 0x68b469,
-  });
+    color: 0x68b469
+  })
 
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'Ground';
-  mesh.receiveShadow = true;
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.name = 'Ground'
+  mesh.receiveShadow = true
 
   // Position ground at y = 0, with the top surface at y = 0.25
-  mesh.position.y = 0;
-  mesh.userData.physics = { mass: 0 };
+  mesh.position.y = 0
+  mesh.userData.physics = { mass: 0 }
 
   if (physics) {
-    physics.addMesh(mesh);
+    physics.addMesh(mesh)
   }
-  scene.add(mesh);
+  scene.add(mesh)
 
-  return texture;
-};
+  return texture
+}
 
 export const moveGround = (
   groundTexture: THREE.Texture | null,
@@ -47,13 +51,13 @@ export const moveGround = (
   gameScore: number
 ) => {
   if (groundTexture && isPlaying) {
-    groundTexture.offset.x += 0.03 * getSpeed(1, gameScore);
+    groundTexture.offset.x += 0.03 * getSpeed(1, gameScore)
   }
-};
+}
 
 export const resetGround = (groundTexture: THREE.Texture | null) => {
   if (groundTexture) {
-    groundTexture.offset.x = 0;
-    groundTexture.offset.y = 0;
+    groundTexture.offset.x = 0
+    groundTexture.offset.y = 0
   }
-};
+}

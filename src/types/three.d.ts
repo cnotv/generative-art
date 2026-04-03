@@ -73,8 +73,8 @@ interface ModelConditions {
 
 interface Timeline {
   name?: string;
-  action?: (element?: any) => void;
-  actionStart?: (loop: number, element?: any) => void;
+  action?: (element?: unknown) => void;
+  actionStart?: (loop: number, element?: unknown) => void;
   start?: number;
   end?: number;
   frequency?: number;
@@ -87,7 +87,7 @@ interface PhysicOptions extends CommonOptions {
 }
 
 export interface ComplexModel extends Model {
-  userData: Record<string, any> & {
+  userData: Record<string, unknown> & {
     body: RAPIER.RigidBody;
     collider: RAPIER.Collider;
     initialValues: {

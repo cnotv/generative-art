@@ -1,149 +1,147 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import GenericPanel from "./GenericPanel.vue";
-import SchemaControls from "./ConfigControls.vue";
-import ElementItem from "./ElementItem.vue";
-import ElementCamera from "./ElementCamera.vue";
-import ElementGroup from "./ElementGroup.vue";
-import ElementSpawn from "./ElementSpawn.vue";
-import IconButton from "@/components/IconButton.vue";
-import { Button } from "@/components/ui/button";
-import { Box, Camera, CheckSquare, Image, Square } from "lucide-vue-next";
-import type { Component } from "vue";
-import { useDebugSceneStore } from "@/stores/debugScene";
-import { useElementPropertiesStore } from "@/stores/elementProperties";
-import { storeToRefs } from "pinia";
-import { useTextureGroupsStore } from "@/stores/textureGroups";
-import type { SceneElement } from "@/stores/debugScene";
-import { ELEMENT_CATEGORIES, getElementCategory } from "./elementUtilities";
-import type { ElementCategory } from "./elementUtilities";
+import { computed, ref } from 'vue'
+import GenericPanel from './GenericPanel.vue'
+import SchemaControls from './ConfigControls.vue'
+import ElementItem from './ElementItem.vue'
+import ElementCamera from './ElementCamera.vue'
+import ElementGroup from './ElementGroup.vue'
+import ElementSpawn from './ElementSpawn.vue'
+import IconButton from '@/components/IconButton.vue'
+import { Button } from '@/components/ui/button'
+import { Box, Camera, CheckSquare, Image, Square } from 'lucide-vue-next'
+import type { Component } from 'vue'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { storeToRefs } from 'pinia'
+import { useTextureGroupsStore } from '@/stores/textureGroups'
+import type { SceneElement } from '@/stores/debugScene'
+import { ELEMENT_CATEGORIES, getElementCategory } from './elementUtilities'
+import type { ElementCategory } from './elementUtilities'
 
 interface Properties {
-  isRecording?: boolean;
-  minDurationMs?: number;
-  maxDurationMs?: number;
+  isRecording?: boolean
+  minDurationMs?: number
+  maxDurationMs?: number
 }
 
 interface Emits {
-  (e: "start", durationMs: number): void;
-  (e: "stop"): void;
+  (e: 'start', durationMs: number): void
+  (e: 'stop'): void
 }
 
-defineProps<Properties>();
-const emit = defineEmits<Emits>();
+defineProps<Properties>()
+const emit = defineEmits<Emits>()
 
-const debugSceneStore = useDebugSceneStore();
-const { sceneElements, sceneGroups, spawns } = storeToRefs(debugSceneStore);
+const debugSceneStore = useDebugSceneStore()
+const { sceneElements, sceneGroups, spawns } = storeToRefs(debugSceneStore)
 
-const elementPropertiesStore = useElementPropertiesStore();
-const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore);
-const { openElementProperties } = elementPropertiesStore;
-const textureStore = useTextureGroupsStore();
+const elementPropertiesStore = useElementPropertiesStore()
+const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore)
+const { openElementProperties } = elementPropertiesStore
+const textureStore = useTextureGroupsStore()
 
-const expandedName = ref<string | null>(null);
-const hiddenCategories = ref<Set<ElementCategory>>(new Set());
+const expandedName = ref<string | null>(null)
+const hiddenCategories = ref<Set<ElementCategory>>(new Set())
 
-const allVisible = computed(() => hiddenCategories.value.size === 0);
+const allVisible = computed(() => hiddenCategories.value.size === 0)
 
 const toggleCategory = (category: ElementCategory) => {
-  const next = new Set(hiddenCategories.value);
+  const next = new Set(hiddenCategories.value)
   if (next.has(category)) {
-    next.delete(category);
+    next.delete(category)
   } else {
-    next.add(category);
+    next.add(category)
   }
-  hiddenCategories.value = next;
-};
+  hiddenCategories.value = next
+}
 
 const showAllCategories = () => {
-  hiddenCategories.value = new Set();
-};
+  hiddenCategories.value = new Set()
+}
 
 const hideAllCategories = () => {
-  hiddenCategories.value = new Set(ELEMENT_CATEGORIES.map(c => c.category));
-};
+  hiddenCategories.value = new Set(ELEMENT_CATEGORIES.map((c) => c.category))
+}
 
 const isElementVisible = (element: SceneElement): boolean =>
-  !hiddenCategories.value.has(getElementCategory(element)) && element.spawnId === undefined;
+  !hiddenCategories.value.has(getElementCategory(element)) && element.spawnId === undefined
 
 const triggerFileUpload = (onchange: (event: Event) => void) => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = onchange;
-  input.click();
-};
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = onchange
+  input.click()
+}
 
 const handleElementClick = (element: SceneElement) => {
-  expandedName.value = expandedName.value === element.name ? null : element.name;
-  if (expandedName.value) openElementProperties(element.name);
-};
+  expandedName.value = expandedName.value === element.name ? null : element.name
+  if (expandedName.value) openElementProperties(element.name)
+}
 
 const handleGroupToggle = (groupId: string) => {
-  expandedName.value = expandedName.value === groupId ? null : groupId;
+  expandedName.value = expandedName.value === groupId ? null : groupId
   if (expandedName.value) {
-    openElementProperties(groupId);
-    textureStore.handlers?.onSelectGroup(groupId);
+    openElementProperties(groupId)
+    textureStore.handlers?.onSelectGroup(groupId)
   }
-};
+}
 
-type AddElementType = "camera" | "mesh" | "textureArea";
+type AddElementType = 'camera' | 'mesh' | 'textureArea'
 
 const addElement = (type: AddElementType) => {
-  if (type === "textureArea") {
-    triggerFileUpload((e) => textureStore.handlers?.onAddNewGroup(e));
+  if (type === 'textureArea') {
+    triggerFileUpload((e) => textureStore.handlers?.onAddNewGroup(e))
   } else {
-    textureStore.handlers?.onAddElement(type);
+    textureStore.handlers?.onAddElement(type)
   }
-};
+}
 
 interface AddButton {
-  type: AddElementType;
-  icon: Component;
-  label: string;
-  title: string;
+  type: AddElementType
+  icon: Component
+  label: string
+  title: string
 }
 
 const addButtons: AddButton[] = [
-  { type: "camera", icon: Camera, label: "Camera", title: "Add Camera" },
-  { type: "mesh", icon: Box, label: "Mesh", title: "Add Mesh" },
-  { type: "textureArea", icon: Image, label: "Texture", title: "Add Texture Area" },
-];
+  { type: 'camera', icon: Camera, label: 'Camera', title: 'Add Camera' },
+  { type: 'mesh', icon: Box, label: 'Mesh', title: 'Add Mesh' },
+  { type: 'textureArea', icon: Image, label: 'Texture', title: 'Add Texture Area' }
+]
 
 const isCameraExpanded = computed(() => {
-  if (!expandedName.value) return false;
-  if (activeProperties.value?.type === "camera") return true;
+  if (!expandedName.value) return false
+  if (activeProperties.value?.type === 'camera') return true
   return (
-    sceneElements.value
-      .find((e) => e.name === expandedName.value)
-      ?.type.includes("Camera") ?? false
-  );
-});
+    sceneElements.value.find((e) => e.name === expandedName.value)?.type.includes('Camera') ?? false
+  )
+})
 
 const grouped = computed(() => {
-  const filtered = sceneElements.value.filter(isElementVisible);
-  const ungrouped: SceneElement[] = [];
-  const meshGroups = new Map<string, SceneElement[]>();
+  const filtered = sceneElements.value.filter(isElementVisible)
+  const ungrouped: SceneElement[] = []
+  const meshGroups = new Map<string, SceneElement[]>()
 
   filtered.forEach((element) => {
     if (element.groupId !== undefined) {
-      const existing = meshGroups.get(element.groupId) ?? [];
-      meshGroups.set(element.groupId, [...existing, element]);
+      const existing = meshGroups.get(element.groupId) ?? []
+      meshGroups.set(element.groupId, [...existing, element])
     } else {
-      ungrouped.push(element);
+      ungrouped.push(element)
     }
-  });
+  })
 
-  return { ungrouped, meshGroups };
-});
+  return { ungrouped, meshGroups }
+})
 
 const hasContent = computed(
   () => sceneElements.value.length > 0 || textureStore.groups.length > 0 || spawns.value.length > 0
-);
+)
 
 const hasExpandedSchema = computed(
   () => Object.keys(activeProperties.value?.schema ?? {}).length > 0
-);
+)
 </script>
 
 <template>
@@ -196,7 +194,10 @@ const hasExpandedSchema = computed(
         v-for="(element, index) in grouped.ungrouped"
         :key="index"
         class="elements-panel__item"
-        :class="[`elements-panel__item--${element.type.toLowerCase()}`, { 'opacity-50': element.hidden }]"
+        :class="[
+          `elements-panel__item--${element.type.toLowerCase()}`,
+          { 'opacity-50': element.hidden }
+        ]"
       >
         <ElementItem
           :element="element"
@@ -206,8 +207,14 @@ const hasExpandedSchema = computed(
           @remove="debugSceneStore.handleRemove(element.name)"
         />
 
-        <div v-if="expandedName === element.name" class="elements-panel__item-content" :class="`elements-panel__item-content--${element.type.toLowerCase()}`">
-          <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">Texture Area</p>
+        <div
+          v-if="expandedName === element.name"
+          class="elements-panel__item-content"
+          :class="`elements-panel__item-content--${element.type.toLowerCase()}`"
+        >
+          <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">
+            Texture Area
+          </p>
           <ElementCamera
             v-if="isCameraExpanded"
             :is-recording="isRecording"
@@ -236,7 +243,6 @@ const hasExpandedSchema = computed(
         :label="sceneGroups[groupId] ?? `Group ${groupId.slice(0, 6)}`"
         :is-expanded="expandedName === groupId"
         :is-selected="selectedElementName === groupId"
-
         @toggle="handleGroupToggle(groupId)"
       />
 
@@ -249,7 +255,11 @@ const hasExpandedSchema = computed(
         :is-expanded="expandedName === spawn.id"
         :is-selected="selectedElementName === spawn.id"
         :hidden="spawn.hidden ?? false"
-        @toggle="expandedName === spawn.id ? (expandedName = null) : (expandedName = spawn.id, openElementProperties(spawn.id))"
+        @toggle="
+          expandedName === spawn.id
+            ? (expandedName = null)
+            : ((expandedName = spawn.id), openElementProperties(spawn.id))
+        "
       />
     </div>
   </GenericPanel>

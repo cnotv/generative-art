@@ -3,8 +3,8 @@
 
 export const ColorCorrectionShader = {
   uniforms: {
-    'tDiffuse': { value: null },
-    'powRGB': { value: [1.4, 1.45, 1.45] }, // contrast, saturation, brightness
+    tDiffuse: { value: null },
+    powRGB: { value: [1.4, 1.45, 1.45] } // contrast, saturation, brightness
   },
   vertexShader: `
     varying vec2 vUv;
@@ -23,4 +23,4 @@ export const ColorCorrectionShader = {
       gl_FragColor = texel;
     }
   `
-};
+}

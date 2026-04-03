@@ -1,18 +1,18 @@
-import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { defineConfig } from 'vite'
+import { resolve } from 'path'
 
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       name: 'WebGameToolkitRecording',
-      fileName: 'index',
+      fileName: 'index'
     },
     rollupOptions: {
       external: [],
       output: {
-        globals: {},
-      },
-    },
-  },
-});
+        globals: {}
+      }
+    }
+  }
+})

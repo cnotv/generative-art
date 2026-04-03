@@ -54,7 +54,9 @@ const nextRandom = (randomGenerator: SeededRandom): [SeededRandom, number] => {
 
   // Step 2-3: XOR shifts and multiplication for bit mixing
   let temporaryValue = Math.imul(state ^ (state >>> 15), 1 | state)
-  temporaryValue = (temporaryValue + Math.imul(temporaryValue ^ (temporaryValue >>> 7), 61 | temporaryValue)) ^ temporaryValue
+  temporaryValue =
+    (temporaryValue + Math.imul(temporaryValue ^ (temporaryValue >>> 7), 61 | temporaryValue)) ^
+    temporaryValue
 
   // Step 4: Final XOR shift and normalize to [0, 1)
   const randomValue = ((temporaryValue ^ (temporaryValue >>> 14)) >>> 0) / 4294967296
@@ -82,11 +84,7 @@ const calculateBoundsFromCenterAndSize = (
   centerPosition: CoordinateTuple,
   areaSize: CoordinateTuple
 ): { minimumBounds: CoordinateTuple; maximumBounds: CoordinateTuple } => {
-  const halfSize: CoordinateTuple = [
-    areaSize[0] / 2,
-    areaSize[1] / 2,
-    areaSize[2] / 2
-  ]
+  const halfSize: CoordinateTuple = [areaSize[0] / 2, areaSize[1] / 2, areaSize[2] / 2]
   return {
     minimumBounds: [
       centerPosition[0] - halfSize[0],
@@ -150,13 +148,20 @@ const generateStratifiedPositions = (
       const segmentMaxX = segmentMinX + segmentWidth
 
       // Generate random position within segment
-      const [rng1, xCoordinate] = randomInRange(accumulator.randomGenerator, segmentMinX, segmentMaxX)
+      const [rng1, xCoordinate] = randomInRange(
+        accumulator.randomGenerator,
+        segmentMinX,
+        segmentMaxX
+      )
       const [rng2, yCoordinate] = randomInRange(rng1, minimumBounds[1], maximumBounds[1])
       const [rng3, zCoordinate] = randomInRange(rng2, minimumBounds[2], maximumBounds[2])
 
       return {
         randomGenerator: rng3,
-        positions: [...accumulator.positions, [xCoordinate, yCoordinate, zCoordinate] as CoordinateTuple]
+        positions: [
+          ...accumulator.positions,
+          [xCoordinate, yCoordinate, zCoordinate] as CoordinateTuple
+        ]
       }
     },
     { randomGenerator: { state: randomSeed }, positions: [] as CoordinateTuple[] }
@@ -211,47 +216,58 @@ const calculateCellDimensions = (
   }
 }
 
+type GridPositionOptions = {
+  rowIndex: number
+  columnIndex: number
+  minimumBounds: CoordinateTuple
+  maximumBounds: CoordinateTuple
+  cellWidth: number
+  cellDepth: number
+}
+
 /**
  * Generate grid position for a specific row and column
  */
-const generateGridPosition = (
-  rowIndex: number,
-  columnIndex: number,
-  minimumBounds: CoordinateTuple,
-  maximumBounds: CoordinateTuple,
-  cellWidth: number,
-  cellDepth: number
-): CoordinateTuple => {
+const generateGridPosition = ({
+  rowIndex,
+  columnIndex,
+  minimumBounds,
+  maximumBounds,
+  cellWidth,
+  cellDepth
+}: GridPositionOptions): CoordinateTuple => {
   const baseXCoordinate = minimumBounds[0] + columnIndex * cellWidth + cellWidth / 2
   const baseZCoordinate = minimumBounds[2] + rowIndex * cellDepth + cellDepth / 2
   const yCoordinate = (minimumBounds[1] + maximumBounds[1]) / 2
   return [baseXCoordinate, yCoordinate, baseZCoordinate]
 }
 
+type JitterOptions = {
+  randomGenerator: SeededRandom
+  basePosition: CoordinateTuple
+  minimumBounds: CoordinateTuple
+  maximumBounds: CoordinateTuple
+  cellWidth: number
+  cellDepth: number
+}
+
 /**
  * Apply jitter to a grid position
  * Returns [newState, jitteredPosition]
  */
-const applyJitterToGridPosition = (
-  randomGenerator: SeededRandom,
-  basePosition: CoordinateTuple,
-  minimumBounds: CoordinateTuple,
-  maximumBounds: CoordinateTuple,
-  cellWidth: number,
-  cellDepth: number
-): [SeededRandom, CoordinateTuple] => {
+const applyJitterToGridPosition = ({
+  randomGenerator,
+  basePosition,
+  minimumBounds,
+  maximumBounds,
+  cellWidth,
+  cellDepth
+}: JitterOptions): [SeededRandom, CoordinateTuple] => {
   const [rng1, xJitter] = randomInRange(randomGenerator, -cellWidth * 0.3, cellWidth * 0.3)
   const [rng2, zJitter] = randomInRange(rng1, -cellDepth * 0.3, cellDepth * 0.3)
   const [rng3, yCoordinate] = randomInRange(rng2, minimumBounds[1], maximumBounds[1])
 
-  return [
-    rng3,
-    [
-      basePosition[0] + xJitter,
-      yCoordinate,
-      basePosition[2] + zJitter
-    ]
-  ]
+  return [rng3, [basePosition[0] + xJitter, yCoordinate, basePosition[2] + zJitter]]
 }
 
 /**
@@ -263,8 +279,11 @@ const generateGridCellIndices = (
   elementCount: number
 ): Array<[number, number]> =>
   Array.from({ length: gridRows }, (_, rowIndex) => rowIndex)
-    .flatMap(rowIndex =>
-      Array.from({ length: gridColumns }, (_, columnIndex) => [rowIndex, columnIndex] as [number, number])
+    .flatMap((rowIndex) =>
+      Array.from(
+        { length: gridColumns },
+        (_, columnIndex) => [rowIndex, columnIndex] as [number, number]
+      )
     )
     .slice(0, elementCount)
 
@@ -276,12 +295,28 @@ const generateGridPositions = (
   minimumBounds: CoordinateTuple,
   maximumBounds: CoordinateTuple
 ): CoordinateTuple[] => {
-  const { gridColumns, gridRows } = calculateGridDimensions(elementCount, minimumBounds, maximumBounds)
-  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridColumns, gridRows)
+  const { gridColumns, gridRows } = calculateGridDimensions(
+    elementCount,
+    minimumBounds,
+    maximumBounds
+  )
+  const { cellWidth, cellDepth } = calculateCellDimensions(
+    minimumBounds,
+    maximumBounds,
+    gridColumns,
+    gridRows
+  )
   const gridCellIndices = generateGridCellIndices(gridColumns, gridRows, elementCount)
 
   return gridCellIndices.map(([rowIndex, columnIndex]) =>
-    generateGridPosition(rowIndex, columnIndex, minimumBounds, maximumBounds, cellWidth, cellDepth)
+    generateGridPosition({
+      rowIndex,
+      columnIndex,
+      minimumBounds,
+      maximumBounds,
+      cellWidth,
+      cellDepth
+    })
   )
 }
 
@@ -294,28 +329,37 @@ const generateGridJitterPositions = (
   maximumBounds: CoordinateTuple,
   randomSeed: number
 ): CoordinateTuple[] => {
-  const { gridColumns, gridRows } = calculateGridDimensions(elementCount, minimumBounds, maximumBounds)
-  const { cellWidth, cellDepth } = calculateCellDimensions(minimumBounds, maximumBounds, gridColumns, gridRows)
+  const { gridColumns, gridRows } = calculateGridDimensions(
+    elementCount,
+    minimumBounds,
+    maximumBounds
+  )
+  const { cellWidth, cellDepth } = calculateCellDimensions(
+    minimumBounds,
+    maximumBounds,
+    gridColumns,
+    gridRows
+  )
   const gridCellIndices = generateGridCellIndices(gridColumns, gridRows, elementCount)
 
   const { positions } = gridCellIndices.reduce(
     (accumulator, [rowIndex, columnIndex]) => {
-      const basePosition = generateGridPosition(
+      const basePosition = generateGridPosition({
         rowIndex,
         columnIndex,
         minimumBounds,
         maximumBounds,
         cellWidth,
         cellDepth
-      )
-      const [newRandomGenerator, jitteredPosition] = applyJitterToGridPosition(
-        accumulator.randomGenerator,
+      })
+      const [newRandomGenerator, jitteredPosition] = applyJitterToGridPosition({
+        randomGenerator: accumulator.randomGenerator,
         basePosition,
         minimumBounds,
         maximumBounds,
         cellWidth,
         cellDepth
-      )
+      })
       return {
         randomGenerator: newRandomGenerator,
         positions: [...accumulator.positions, jitteredPosition]
@@ -331,7 +375,11 @@ const generateGridJitterPositions = (
  * Generate positions for elements within a defined area
  */
 export function generateAreaPositions(configuration: AreaConfig): CoordinateTuple[] {
-  const { count: elementCount, pattern: distributionPattern = 'random', seed: randomSeed = Date.now() } = configuration
+  const {
+    count: elementCount,
+    pattern: distributionPattern = 'random',
+    seed: randomSeed = Date.now()
+  } = configuration
 
   if (elementCount === 0) return []
 

@@ -1,22 +1,19 @@
 <script setup lang="ts">
-import type { Component } from 'vue';
+import type { Component } from 'vue'
 
 interface Properties {
-  icon: Component;
-  color?: string;
+  icon: Component
+  color?: string
 }
 
 const props = withDefaults(defineProps<Properties>(), {
-  color: 'text-gray-400',
-});
+  color: 'text-gray-400'
+})
 </script>
 
 <template>
   <div class="icon-preview">
-    <component
-      :is="icon"
-      :class="['icon-preview__icon', color]"
-    />
+    <component :is="icon" :class="['icon-preview__icon', color]" />
   </div>
 </template>
 

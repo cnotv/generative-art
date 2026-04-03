@@ -1,24 +1,24 @@
-import type { CoordinateTuple } from '@webgamekit/animation';
-import type { SetupConfig } from '@webgamekit/threejs';
-import * as THREE from 'three';
-import type { NoiseConfig, GeneratorConfig, WorldCase } from './types';
+import type { CoordinateTuple } from '@webgamekit/animation'
+import type { SetupConfig } from '@webgamekit/threejs'
+import * as THREE from 'three'
+import type { NoiseConfig, GeneratorConfig, WorldCase } from './types'
 
-export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25];
-export const CAMERA_Y_LERP_SPEED = 2;
+export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25]
+export const CAMERA_Y_LERP_SPEED = 2
 /** Camera follow update every N frames (frame % N === 0). 1 = every frame (smooth). */
-export const CAMERA_FOLLOW_FREQUENCY = 1;
+export const CAMERA_FOLLOW_FREQUENCY = 1
 /** Fire chunk update every N frames (frame % N === 0). Lower = more frequent. */
-export const CHUNK_UPDATE_FREQUENCY = 3;
-export const MAX_CHUNKS_PER_UPDATE = 5;
-export const CHUNK_SIZE = 30;
-export const VIEW_RADIUS = 4;
-export const UNLOAD_RADIUS = 6;
-export const ELEMENTS_PER_CHUNK = 8;
-export const GRASS_PER_CHUNK = 1000;
-export const TREES_PER_CHUNK = 2;
-export const MOVEMENT_SPEED_SCALE = 1 / 8;
-export const GRASS_DENSITY_MULTIPLIER = 200;
-export const PLAYER_MODEL_SCALE = 4;
+export const CHUNK_UPDATE_FREQUENCY = 3
+export const MAX_CHUNKS_PER_UPDATE = 5
+export const CHUNK_SIZE = 30
+export const VIEW_RADIUS = 4
+export const UNLOAD_RADIUS = 6
+export const ELEMENTS_PER_CHUNK = 8
+export const GRASS_PER_CHUNK = 1000
+export const TREES_PER_CHUNK = 2
+export const MOVEMENT_SPEED_SCALE = 1 / 8
+export const GRASS_DENSITY_MULTIPLIER = 200
+export const PLAYER_MODEL_SCALE = 4
 
 export const noiseConfig: NoiseConfig = {
   seed: 50,
@@ -26,20 +26,20 @@ export const noiseConfig: NoiseConfig = {
   frequency: 0.004,
   amplitude: 8.5,
   lacunarity: 2.6,
-  persistence: 0.7,
-};
+  persistence: 0.7
+}
 
 export const generatorConfig: GeneratorConfig = {
   chunkSize: CHUNK_SIZE,
   elementsPerChunk: ELEMENTS_PER_CHUNK,
   grassPerChunk: GRASS_PER_CHUNK,
-  noiseConfig,
-};
+  noiseConfig
+}
 
 export const setupConfig: SetupConfig = {
   orbit: {
     target: new THREE.Vector3(0, 0, 0),
-    disabled: false,
+    disabled: false
   },
   camera: {
     position: [0, 10, 25],
@@ -47,27 +47,27 @@ export const setupConfig: SetupConfig = {
     fov: 75,
     up: new THREE.Vector3(0, 1, 0),
     near: 0.1,
-    far: 800,
+    far: 800
   },
   lights: {
     ambient: { color: 0xffffff, intensity: 0.6 },
-    directional: { color: 0xffffff, intensity: 1.2, position: [50, 100, 50] },
+    directional: { color: 0xffffff, intensity: 1.2, position: [50, 100, 50] }
   },
   sky: false,
-  ground: false,
-};
+  ground: false
+}
 
-export const TREES_GROUND_COLOR = 0x6ba86f;
-export const GRASS_GROUND_COLOR = 0x75b376;
-export const TERRAIN_BASE_COLOR = 0x6a9e78;
-export const TERRAIN_PEAK_COLOR = 0x6ba86f;
-export const GRASS_COLOR = 0x6b9f79;
-export const GRASS_BLADE_SCALE = 2;
-export const TREE_SIZE_SCALE = 1;
-export const TREE_SIZE_VARIATION = 0.4;
-export const DIRECTIONAL_LIGHT_OFFSET: CoordinateTuple = [50, 100, 50];
-export const AMBIENT_LIGHT_NAME = 'ambient-light';
-export const DIRECTIONAL_LIGHT_NAME = 'directional-light';
+export const TREES_GROUND_COLOR = 0x6ba86f
+export const GRASS_GROUND_COLOR = 0x75b376
+export const TERRAIN_BASE_COLOR = 0x6a9e78
+export const TERRAIN_PEAK_COLOR = 0x6ba86f
+export const GRASS_COLOR = 0x6b9f79
+export const GRASS_BLADE_SCALE = 2
+export const TREE_SIZE_SCALE = 1
+export const TREE_SIZE_VARIATION = 0.4
+export const DIRECTIONAL_LIGHT_OFFSET: CoordinateTuple = [50, 100, 50]
+export const AMBIENT_LIGHT_NAME = 'ambient-light'
+export const DIRECTIONAL_LIGHT_NAME = 'directional-light'
 
 export const playerSettings = {
   model: {
@@ -81,25 +81,25 @@ export const playerSettings = {
     hasGravity: false,
     castShadow: true,
     material: 'MeshLambertMaterial',
-    color: 0xff6600,
+    color: 0xff6600
   },
   movement: {
     requireGround: false,
     maxGroundDistance: 5,
     maxStepHeight: 0.5,
     characterRadius: 20,
-    debug: false,
+    debug: false
   },
   game: {
     distance: 8,
     speed: {
       movement: 5,
       turning: 4,
-      jump: 4,
+      jump: 4
     },
-    maxJump: 4,
-  },
-};
+    maxJump: 4
+  }
+}
 
 export const controlBindings = {
   mapping: {
@@ -107,7 +107,7 @@ export const controlBindings = {
       a: 'move-left',
       d: 'move-right',
       w: 'move-down',
-      s: 'move-up',
+      s: 'move-up'
     },
     gamepad: {
       'dpad-left': 'move-left',
@@ -117,23 +117,23 @@ export const controlBindings = {
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
       'axis1-up': 'move-up',
-      'axis1-down': 'move-down',
+      'axis1-down': 'move-down'
     },
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
       up: 'move-up',
-      down: 'move-down',
-    },
+      down: 'move-down'
+    }
   },
-  axisThreshold: 0.5,
-};
+  axisThreshold: 0.5
+}
 
-export const DEFAULT_WORLD_CASE: WorldCase = 'terrain';
+export const DEFAULT_WORLD_CASE: WorldCase = 'terrain'
 
-export const FORWARD_BIAS = 3;
+export const FORWARD_BIAS = 3
 
-export const densityControl = { min: 1, max: 100, step: 1, label: 'Density' };
+export const densityControl = { min: 1, max: 100, step: 1, label: 'Density' }
 
 export const baseConfigControls = {
   autoWalk: { boolean: true, label: 'Auto Walk' },
@@ -151,10 +151,10 @@ export const baseConfigControls = {
       { value: 'terrain', label: 'Terrain' },
       { value: 'trees', label: 'Trees' },
       { value: 'grass', label: 'Grass' },
-      { value: 'all', label: 'All' },
-    ],
-  },
-};
+      { value: 'all', label: 'All' }
+    ]
+  }
+}
 
 export const proceduralConfigControls = {
   procedural: {
@@ -163,11 +163,11 @@ export const proceduralConfigControls = {
     amplitude: { min: 1, max: 30, step: 0.5, label: 'Amplitude' },
     octaves: { min: 1, max: 8, step: 1, label: 'Octaves' },
     lacunarity: { min: 1, max: 4, step: 0.1, label: 'Lacunarity' },
-    persistence: { min: 0.1, max: 1, step: 0.05, label: 'Persistence' },
-  },
-};
+    persistence: { min: 0.1, max: 1, step: 0.05, label: 'Persistence' }
+  }
+}
 
 export const configControls = {
   ...baseConfigControls,
-  ...proceduralConfigControls,
-};
+  ...proceduralConfigControls
+}

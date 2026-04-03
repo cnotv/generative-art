@@ -1,5 +1,17 @@
 import { defineStore } from 'pinia'
 
+const isPressed = (button: GamepadButton | undefined): boolean => button?.pressed === true
+
+const getControlsFromButtons = (
+  buttons: Record<string, GamepadButton>
+): Record<string, boolean> => ({
+  left: isPressed(buttons['left']),
+  right: isPressed(buttons['right']),
+  up: isPressed(buttons['up']),
+  down: isPressed(buttons['down']),
+  jump: isPressed(buttons['a'])
+})
+
 export const useUiStore = defineStore('ui', {
   state: () => ({
     keyState: {} as Record<string, boolean>,
@@ -51,12 +63,10 @@ export const useUiStore = defineStore('ui', {
     },
     setGamePadButtons(buttons: Record<string, GamepadButton>) {
       this.gamepad.buttons = buttons
-
-      this.controls.left = this.gamepad.buttons.left?.pressed || false
-      this.controls.right = this.gamepad.buttons.right?.pressed || false
-      this.controls.up = this.gamepad.buttons.up?.pressed || false
-      this.controls.down = this.gamepad.buttons.down?.pressed || false
-      this.controls.jump = this.gamepad.buttons.a?.pressed || false
+      this.controls = {
+        ...this.controls,
+        ...getControlsFromButtons(buttons)
+      }
     }
   }
 })

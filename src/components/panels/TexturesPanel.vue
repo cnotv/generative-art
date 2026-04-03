@@ -1,72 +1,72 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { Eye, EyeOff, Trash2, Box, Play, RefreshCw, Plus } from "lucide-vue-next";
-import GenericPanel from "./GenericPanel.vue";
-import { Button } from "@/components/ui/button";
-import IconButton from "@/components/IconButton.vue";
-import TexturePreview from "@/components/TexturePreview.vue";
+import { ref } from 'vue'
+import { Eye, EyeOff, Trash2, Box, Play, RefreshCw, Plus } from 'lucide-vue-next'
+import GenericPanel from './GenericPanel.vue'
+import { Button } from '@/components/ui/button'
+import IconButton from '@/components/IconButton.vue'
+import TexturePreview from '@/components/TexturePreview.vue'
 
 interface TextureItem {
-  id: string;
-  name: string;
-  filename: string;
-  url: string;
+  id: string
+  name: string
+  filename: string
+  url: string
 }
 
 interface TextureGroup {
-  id: string;
-  name: string;
-  textures: TextureItem[];
-  hidden?: boolean;
-  showWireframe?: boolean;
+  id: string
+  name: string
+  textures: TextureItem[]
+  hidden?: boolean
+  showWireframe?: boolean
 }
 
 interface Properties {
-  textureGroups: TextureGroup[];
-  selectedGroupId: string | null;
-  autoUpdate?: boolean;
+  textureGroups: TextureGroup[]
+  selectedGroupId: string | null
+  autoUpdate?: boolean
 }
 
 interface Emits {
-  (e: "selectGroup", id: string): void;
-  (e: "removeGroup", id: string): void;
-  (e: "removeTexture", groupId: string, textureId: string): void;
-  (e: "toggleVisibility", id: string): void;
-  (e: "toggleWireframe", id: string): void;
-  (e: "fileChange", event: Event): void;
-  (e: "addTexture", groupId: string, event: Event): void;
-  (e: "update:autoUpdate", value: boolean): void;
-  (e: "manualUpdate"): void;
+  (e: 'selectGroup', id: string): void
+  (e: 'removeGroup', id: string): void
+  (e: 'removeTexture', groupId: string, textureId: string): void
+  (e: 'toggleVisibility', id: string): void
+  (e: 'toggleWireframe', id: string): void
+  (e: 'fileChange', event: Event): void
+  (e: 'addTexture', groupId: string, event: Event): void
+  (e: 'update:autoUpdate', value: boolean): void
+  (e: 'manualUpdate'): void
 }
 
 const props = withDefaults(defineProps<Properties>(), {
-  autoUpdate: true,
-});
-const emit = defineEmits<Emits>();
+  autoUpdate: true
+})
+const emit = defineEmits<Emits>()
 
-const fileInputReference = ref<HTMLInputElement | null>(null);
-const addToGroupInputReferences = ref<Record<string, HTMLInputElement | null>>({});
+const fileInputReference = ref<HTMLInputElement | null>(null)
+const addToGroupInputReferences = ref<Record<string, HTMLInputElement | null>>({})
 
 const handleAddClick = () => {
-  fileInputReference.value?.click();
-};
+  fileInputReference.value?.click()
+}
 
 const handleFileChange = (event: Event) => {
-  emit("fileChange", event);
-};
+  emit('fileChange', event)
+}
 
 const handleAddTextureToGroup = (groupId: string) => {
-  const input = addToGroupInputReferences.value[groupId];
-  input?.click();
-};
+  const input = addToGroupInputReferences.value[groupId]
+  input?.click()
+}
 
 const handleGroupFileChange = (groupId: string, event: Event) => {
-  emit("addTexture", groupId, event);
-};
+  emit('addTexture', groupId, event)
+}
 
 const setAddToGroupReference = (groupId: string, element: unknown) => {
-  addToGroupInputReferences.value[groupId] = element as HTMLInputElement | null;
-};
+  addToGroupInputReferences.value[groupId] = element as HTMLInputElement | null
+}
 </script>
 
 <template>
@@ -102,13 +102,10 @@ const setAddToGroupReference = (groupId: string, element: unknown) => {
         class="textures-panel__group"
         :class="{
           'textures-panel__group--selected': selectedGroupId === group.id,
-          'textures-panel__group--hidden': group.hidden,
+          'textures-panel__group--hidden': group.hidden
         }"
       >
-        <div
-          class="textures-panel__group-header"
-          @click="emit('selectGroup', group.id)"
-        >
+        <div class="textures-panel__group-header" @click="emit('selectGroup', group.id)">
           <div class="textures-panel__group-info">
             <span class="textures-panel__group-name">{{ group.name }}</span>
           </div>
@@ -130,11 +127,7 @@ const setAddToGroupReference = (groupId: string, element: unknown) => {
             >
               <Box />
             </IconButton>
-            <IconButton
-              size="md"
-              title="Delete group"
-              @click.stop="emit('removeGroup', group.id)"
-            >
+            <IconButton size="md" title="Delete group" @click.stop="emit('removeGroup', group.id)">
               <Trash2 />
             </IconButton>
           </div>
@@ -204,7 +197,9 @@ const setAddToGroupReference = (groupId: string, element: unknown) => {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-muted) 30%, transparent);
-  transition: background 150ms, border-color 150ms;
+  transition:
+    background 150ms,
+    border-color 150ms;
 }
 
 .textures-panel__group--selected {

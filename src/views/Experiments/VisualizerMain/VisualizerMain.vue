@@ -1,114 +1,116 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import * as THREE from "three";
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import * as THREE from 'three'
 
-import { getTools } from "@webgamekit/threejs";
-import { bindAnimatedElements, createTimelineManager } from "@webgamekit/animation";
-import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from "./audio";
+import { getTools } from '@webgamekit/threejs'
+import { bindAnimatedElements, createTimelineManager } from '@webgamekit/animation'
+import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from './audio'
 import {
   getVisualizer,
   getVisualizerNames,
   type VisualizerSetup,
   setupVisualizerClickHandlers,
   clearVisualizerClickHandlers
-} from "./visualizer";
-import MinimalPlayer from "./components/MinimalPlayer.vue";
-import ContrastPlayer from "./components/ContrastPlayer.vue";
+} from './visualizer'
+import MinimalPlayer from './components/MinimalPlayer.vue'
+import ContrastPlayer from './components/ContrastPlayer.vue'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const audioElement = ref<HTMLAudioElement>();
-const route = useRoute();
-const router = useRouter();
+const statsElement = ref(null)
+const canvas = ref(null)
+const audioElement = ref<HTMLAudioElement>()
+const route = useRoute()
+const router = useRouter()
 
 // Get available visualizer names first
-const availableVisualizerNames = getVisualizerNames();
+const availableVisualizerNames = getVisualizerNames()
 
 // Initialize currentVisualizer based on query params with fallbacks
 const initializeVisualizer = () => {
   // 1. Try to get from query parameter
-  const queryVisualizer = route.query.style as string;
+  const queryVisualizer = route.query.style as string
   if (queryVisualizer && availableVisualizerNames.includes(queryVisualizer)) {
-    return queryVisualizer;
+    return queryVisualizer
   }
 
   // 2. Fallback to default
-  const defaultVisualizer = 'circular-waves';
+  const defaultVisualizer = 'circular-waves'
   if (availableVisualizerNames.includes(defaultVisualizer)) {
-    return defaultVisualizer;
+    return defaultVisualizer
   }
 
   // 3. Fallback to first available visualizer
-  return availableVisualizerNames[0] || defaultVisualizer;
-};
+  return availableVisualizerNames[0] || defaultVisualizer
+}
 
-const currentVisualizer = ref(initializeVisualizer());
-const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup);
-const visualizerObjects = ref({} as Record<string, any>);
-let switchVisualizerFunction: ((name: string) => void) | null = null;
+const currentVisualizer = ref(initializeVisualizer())
+const visualizer = ref(getVisualizer(currentVisualizer.value) as VisualizerSetup)
+const visualizerObjects = ref({} as Record<string, any>)
+let switchVisualizerFunction: ((name: string) => void) | null = null
 
 // Initialize player type from query params
 const initializePlayerType = () => {
-  const queryPlayer = route.query.player as string;
+  const queryPlayer = route.query.player as string
   if (queryPlayer === 'contrast') {
-    return false; // false = contrast player
+    return false // false = contrast player
   }
-  return true; // true = minimal player (default)
-};
+  return true // true = minimal player (default)
+}
 
 // Control which player shows audio (true = minimal, false = contrast)
-const showAudioInMinimal = ref(initializePlayerType());
+const showAudioInMinimal = ref(initializePlayerType())
 
 // Audio source control
-const currentAudioSource = ref<'song' | 'microphone' | 'selected-output'>('song');
+const currentAudioSource = ref<'song' | 'microphone' | 'selected-output'>('song')
 
 // Custom dropdown state
-const isDropdownOpen = ref(false);
-const dropdownReference = ref<HTMLElement>();
+const isDropdownOpen = ref(false)
+const dropdownReference = ref<HTMLElement>()
 
 // Get available visualizer names for dropdown
 const availableVisualizers = computed(() => {
-  return availableVisualizerNames.map(name => ({
+  return availableVisualizerNames.map((name) => ({
     value: name,
     label: name.charAt(0).toUpperCase() + name.slice(1) // Capitalize first letter
-  }));
-});
+  }))
+})
 
 const currentSong = computed((): number => {
-  const song = visualizer.value?.song;
-  const isValid = (typeof song === 'number' && song >= 0 && song < songs.length)
+  const song = visualizer.value?.song
+  const isValid = typeof song === 'number' && song >= 0 && song < songs.length
   if (isValid) {
-    return song;
+    return song
   } else {
-    console.warn(`Visualizer "${visualizer.value?.name}" has invalid song index (${song}). Defaulting to 0.`);
+    console.warn(
+      `Visualizer "${visualizer.value?.name}" has invalid song index (${song}). Defaulting to 0.`
+    )
 
-    return 0;
+    return 0
   }
-});
+})
 
 const songs = [
   {
-    src: "/Danger Mode - Crime Wave - 01 Summit.mp3",
-    title: "Crime Wave",
-    artist: "Danger Mode",
-    link: "https://dangermode.bandcamp.com/album/crime-wave"
+    src: '/Danger Mode - Crime Wave - 01 Summit.mp3',
+    title: 'Crime Wave',
+    artist: 'Danger Mode',
+    link: 'https://dangermode.bandcamp.com/album/crime-wave'
   },
   {
-    src: "/Shotgun Sawyer - You Got to Run (Single) - 01 You Got to Run (Single Version).mp3",
-    title: "You Got to Run",
-    artist: "Shotgun Sawyer",
-    link: "https://shotgunsawyer.bandcamp.com/album/you-got-to-run-single"
+    src: '/Shotgun Sawyer - You Got to Run (Single) - 01 You Got to Run (Single Version).mp3',
+    title: 'You Got to Run',
+    artist: 'Shotgun Sawyer',
+    link: 'https://shotgunsawyer.bandcamp.com/album/you-got-to-run-single'
   },
   {
-    src: "/Zef - Ground Zero - 01 Livewire.mp3",
-    title: "Ground Zero",
-    artist: "Zef",
-    link: "https://zef-music.bandcamp.com/album/ground-zero"
+    src: '/Zef - Ground Zero - 01 Livewire.mp3',
+    title: 'Ground Zero',
+    artist: 'Zef',
+    link: 'https://zef-music.bandcamp.com/album/ground-zero'
   }
-];
+]
 
 // Watch for visualizer changes and update URL
 watch(currentVisualizer, (newVisualizer) => {
@@ -118,47 +120,53 @@ watch(currentVisualizer, (newVisualizer) => {
       ...route.query,
       style: newVisualizer
     }
-  });
+  })
 
   // Switch visualizer
   if (switchVisualizerFunction) {
-    switchVisualizerFunction(newVisualizer);
+    switchVisualizerFunction(newVisualizer)
   }
-});
+})
 
 // Watch for route changes (browser back/forward) and update visualizer
-watch(() => route.query.style, (newQueryVisualizer) => {
-  const queryVisualizer = newQueryVisualizer as string;
-  if (
-    queryVisualizer &&
-    availableVisualizerNames.includes(queryVisualizer) &&
-    queryVisualizer !== currentVisualizer.value
-  ) {
-    currentVisualizer.value = queryVisualizer;
+watch(
+  () => route.query.style,
+  (newQueryVisualizer) => {
+    const queryVisualizer = newQueryVisualizer as string
+    if (
+      queryVisualizer &&
+      availableVisualizerNames.includes(queryVisualizer) &&
+      queryVisualizer !== currentVisualizer.value
+    ) {
+      currentVisualizer.value = queryVisualizer
+    }
   }
-});
+)
 
 // Watch for route changes (browser back/forward) and update player type
-watch(() => route.query.player, (newQueryPlayer) => {
-  const queryPlayer = newQueryPlayer as string;
-  const shouldShowMinimal = queryPlayer !== 'contrast';
+watch(
+  () => route.query.player,
+  (newQueryPlayer) => {
+    const queryPlayer = newQueryPlayer as string
+    const shouldShowMinimal = queryPlayer !== 'contrast'
 
-  if (shouldShowMinimal !== showAudioInMinimal.value) {
-    showAudioInMinimal.value = shouldShowMinimal;
+    if (shouldShowMinimal !== showAudioInMinimal.value) {
+      showAudioInMinimal.value = shouldShowMinimal
+    }
   }
-});
+)
 
-let initInstance: () => void;
+let initInstance: () => void
 
 const handleAudioReady = (element: HTMLAudioElement) => {
-  audioElement.value = element;
+  audioElement.value = element
   if (audioElement.value) {
-    setupAudio(audioElement.value);
+    setupAudio(audioElement.value)
   }
-};
+}
 
 const togglePlayerStyle = () => {
-  showAudioInMinimal.value = !showAudioInMinimal.value;
+  showAudioInMinimal.value = !showAudioInMinimal.value
 
   // Update URL query parameter
   router.push({
@@ -166,129 +174,130 @@ const togglePlayerStyle = () => {
       ...route.query,
       player: showAudioInMinimal.value ? 'minimal' : 'contrast'
     }
-  });
-};
+  })
+}
 
 // Audio source display constants
 const AUDIO_SOURCE_CONFIG = {
-  'song': { icon: '🎵', text: 'Song', nextTitle: 'Switch to Microphone Input' },
-  'microphone': { icon: '🎤', text: 'Mic', nextTitle: 'Switch to Selected Audio Output' },
+  song: { icon: '🎵', text: 'Song', nextTitle: 'Switch to Microphone Input' },
+  microphone: { icon: '🎤', text: 'Mic', nextTitle: 'Switch to Selected Audio Output' },
   'selected-output': { icon: '🔊', text: 'Audio', nextTitle: 'Switch to Song Playback' }
-} as const;
+} as const
 
 // Audio source toggle function
 const handleAudioSourceToggle = async () => {
-  const success = await toggleAudioSource();
+  const success = await toggleAudioSource()
   if (success) {
-    currentAudioSource.value = getAudioSource();
-    console.log(`Switched to ${currentAudioSource.value} input`);
+    currentAudioSource.value = getAudioSource()
+    console.warn(`Switched to ${currentAudioSource.value} input`)
   } else {
-    console.error('Failed to toggle audio source');
+    console.error('Failed to toggle audio source')
   }
-};
+}
 
 // Combined function for audio source display
 const getAudioSourceDisplay = () => {
-  const config = AUDIO_SOURCE_CONFIG[currentAudioSource.value] || AUDIO_SOURCE_CONFIG['song'];
+  const config = AUDIO_SOURCE_CONFIG[currentAudioSource.value] || AUDIO_SOURCE_CONFIG['song']
   return {
     icon: config.icon,
     text: config.text,
     title: config.nextTitle
-  };
-};
+  }
+}
 
 // Custom dropdown functions
 const toggleDropdown = () => {
-  isDropdownOpen.value = !isDropdownOpen.value;
-};
+  isDropdownOpen.value = !isDropdownOpen.value
+}
 
 const selectVisualizer = (visualizerValue: string) => {
-  currentVisualizer.value = visualizerValue;
-  isDropdownOpen.value = false;
-};
+  currentVisualizer.value = visualizerValue
+  isDropdownOpen.value = false
+}
 
 const closeDropdown = (event: Event) => {
   if (dropdownReference.value && !dropdownReference.value.contains(event.target as Node)) {
-    isDropdownOpen.value = false;
+    isDropdownOpen.value = false
   }
-};
+}
 
 // Get current visualizer label for display
 const currentVisualizerLabel = computed(() => {
-  const current = availableVisualizers.value.find(v => v.value === currentVisualizer.value);
-  return current?.label || currentVisualizer.value;
-});
+  const current = availableVisualizers.value.find((v) => v.value === currentVisualizer.value)
+  return current?.label || currentVisualizer.value
+})
 
 onMounted(() => {
   initInstance = () => {
-    init(
-      (canvas.value as unknown) as HTMLCanvasElement,
-      (statsElement.value as unknown) as HTMLElement
-    );
-  };
+    init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
+  }
 
-  initInstance();
-  window.addEventListener("resize", initInstance);
-  document.addEventListener("click", closeDropdown);
+  initInstance()
+  window.addEventListener('resize', initInstance)
+  document.addEventListener('click', closeDropdown)
 
   // Auto-play audio when mounted
   setTimeout(() => {
     if (audioElement.value) {
-      audioElement.value.play().catch();
+      audioElement.value.play().catch()
     }
-  }, 100);
-});
+  }, 100)
+})
 
 onUnmounted(() => {
-  window.removeEventListener("resize", initInstance);
-  document.removeEventListener("click", closeDropdown);
-  clearVisualizerClickHandlers();
-  cleanup();
-});
+  window.removeEventListener('resize', initInstance)
+  document.removeEventListener('click', closeDropdown)
+  clearVisualizerClickHandlers()
+  cleanup()
+})
 
 const config = {
   directional: {
     enabled: true,
     helper: false,
-    intensity: 2,
-  },
-};
+    intensity: 2
+  }
+}
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
-  stats.init(route, statsElement);
-  controls.create(config, route, {}, () => createScene());
+  stats.init(route, statsElement)
+  controls.create(config, route, {}, () => createScene())
   if (audioElement.value) {
-    setupAudio(audioElement.value);
+    setupAudio(audioElement.value)
   }
 
   const createScene = async () => {
-    const elements = [] as any[];
+    const elements = [] as any[]
     const { animate, setup, world, getDelta, scene, camera } = await getTools({
       stats,
       route,
-      canvas,
-    });
+      canvas
+    })
     setup({
       config: {
         camera: { position: [0, 20, 30] },
         ground: { size: 0, color: 0x333333 }, // Disable default ground
         sky: false,
-        lights: { directional: { intensity: config.directional.intensity } },
+        lights: { directional: { intensity: config.directional.intensity } }
       },
       defineSetup: async () => {
         // Helper function to reset camera based on visualizer configuration
         const resetCamera = (visualizerSetup: VisualizerSetup | null) => {
           if (visualizerSetup && visualizerSetup.camera) {
             // Use visualizer-specific camera position if defined
-            camera.position.set(...visualizerSetup?.camera?.position as [number, number, number] || [0, 0, 0]);
-            camera.rotation.set(...(visualizerSetup?.camera?.rotation as [number, number, number]) || [0, 0, 0]);
-            camera.lookAt(10, 10, 10);
+            camera.position.set(
+              ...((visualizerSetup?.camera?.position as [number, number, number]) || [0, 0, 0])
+            )
+            camera.rotation.set(
+              ...((visualizerSetup?.camera?.rotation as [number, number, number]) || [0, 0, 0])
+            )
+            camera.lookAt(10, 10, 10)
           } else {
             // Default camera position for visualizers without camera config
-            camera.position.set(0, 20, 30);
-            camera.lookAt(0, 0, 0);
+            camera.position.set(0, 20, 30)
+            camera.lookAt(0, 0, 0)
           }
-        };
+        }
 
         // Helper function to clear existing visualizer objects from scene
         const clearVisualizerObjects = (currentVisualizer: VisualizerSetup | null) => {
@@ -296,53 +305,53 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
             // Remove all objects from scene except lights and camera
             const objectsToRemove = scene.children.filter(
               (child) =>
-                child.type !== "DirectionalLight" &&
-                child.type !== "AmbientLight" &&
-                child.type !== "HemisphereLight"
-            );
-            objectsToRemove.forEach((object) => scene.remove(object));
+                child.type !== 'DirectionalLight' &&
+                child.type !== 'AmbientLight' &&
+                child.type !== 'HemisphereLight'
+            )
+            objectsToRemove.forEach((object) => scene.remove(object))
           }
-        };
+        }
 
         const switchVisualizer = async (name: string) => {
-          clearVisualizerObjects(visualizer.value);
-          scene.background = new THREE.Color(0x87CEEB); // Default sky blue background
-          visualizer.value = getVisualizer(name);
-          resetCamera(visualizer.value);
+          clearVisualizerObjects(visualizer.value)
+          scene.background = new THREE.Color(0x87ceeb) // Default sky blue background
+          visualizer.value = getVisualizer(name)
+          resetCamera(visualizer.value)
 
           if (visualizer.value) {
             // Setup the visualizer and store the returned objects
-            const setupResult = await visualizer.value.setup(scene, world);
-            visualizerObjects.value = setupResult;
+            const setupResult = await visualizer.value.setup(scene, world)
+            visualizerObjects.value = setupResult
           }
 
           // Setup click/touch handlers for the new visualizer
-          setupVisualizerClickHandlers(visualizer.value, camera, canvas, visualizerObjects.value);
+          setupVisualizerClickHandlers(visualizer.value, camera, canvas, visualizerObjects.value)
 
           // Create timeline manager and add visualizer actions
-          const timelineManager = createTimelineManager();
-          const timelineActions = visualizer.value?.getTimeline(() => visualizerObjects.value) ?? [];
-          timelineManager.addActions(timelineActions);
+          const timelineManager = createTimelineManager()
+          const timelineActions = visualizer.value?.getTimeline(() => visualizerObjects.value) ?? []
+          timelineManager.addActions(timelineActions)
 
           // Reset and update the animation with new timeline
           animate({
             beforeTimeline: () => {
-              bindAnimatedElements(elements, world, getDelta());
+              bindAnimatedElements(elements, world, getDelta())
             },
-            timeline: timelineManager,
-          });
-        };
+            timeline: timelineManager
+          })
+        }
 
         // Store the switch function for the watcher
-        switchVisualizerFunction = switchVisualizer;
+        switchVisualizerFunction = switchVisualizer
 
         // Initialize with default visualizer
-        await switchVisualizer(currentVisualizer.value);
-      },
-    });
-  };
-  createScene();
-};
+        await switchVisualizer(currentVisualizer.value)
+      }
+    })
+  }
+  createScene()
+}
 </script>
 
 <template>
@@ -354,11 +363,9 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     <button
       @click="togglePlayerStyle"
       class="player-toggle"
-      :title="
-        showAudioInMinimal ? 'Switch to Contrast Player' : 'Switch to Minimal Player'
-      "
+      :title="showAudioInMinimal ? 'Switch to Contrast Player' : 'Switch to Minimal Player'"
     >
-      {{ showAudioInMinimal ? "CONTRAST" : "MINIMAL" }}
+      {{ showAudioInMinimal ? 'CONTRAST' : 'MINIMAL' }}
     </button>
 
     <!-- Audio source toggle button -->
@@ -388,7 +395,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         :class="{ 'visualizer__button--open': isDropdownOpen }"
       >
         {{ currentVisualizerLabel }}
-        <span class="visualizer__arrow">{{ isDropdownOpen ? "▲" : "▼" }}</span>
+        <span class="visualizer__arrow">{{ isDropdownOpen ? '▲' : '▼' }}</span>
       </button>
 
       <div v-if="isDropdownOpen" class="visualizer__dropdown">
@@ -398,7 +405,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
           @click="selectVisualizer(visualizer.value)"
           class="visualizer__option"
           :class="{
-            'visualizer__option--active': visualizer.value === currentVisualizer,
+            'visualizer__option--active': visualizer.value === currentVisualizer
           }"
         >
           {{ visualizer.label }}

@@ -4,13 +4,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import wasm from 'vite-plugin-wasm'
 
-const packages = ['animation', 'threejs', 'audio', 'game', 'controls', 'recording', 'logic'];
+const packages = ['animation', 'threejs', 'audio', 'game', 'controls', 'recording', 'logic']
 const packageAliases = Object.fromEntries(
-  packages.map(pkg => [
-    `@webgamekit/${pkg}`,
-    fileURLToPath(new URL(`./packages/${pkg}/src/index.ts`, import.meta.url))
+  packages.map((package_) => [
+    `@webgamekit/${package_}`,
+    fileURLToPath(new URL(`./packages/${package_}/src/index.ts`, import.meta.url))
   ])
-);
+)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -27,13 +27,13 @@ export default defineConfig({
     target: 'esnext',
     sourcemap: true,
     rollupOptions: {
-      treeshake: false,
+      treeshake: false
     }
   },
   optimizeDeps: {
     exclude: ['@dimforge/rapier3d-compat']
   },
   server: {
-    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz'],
-  },
+    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz']
+  }
 })

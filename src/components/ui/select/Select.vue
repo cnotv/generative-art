@@ -8,27 +8,27 @@ import {
   SelectViewport,
   SelectItem,
   SelectItemText,
-  SelectItemIndicator,
-} from 'radix-vue';
-import { cn } from '@/lib/utilities';
-import { Check, ChevronDown } from 'lucide-vue-next';
+  SelectItemIndicator
+} from 'radix-vue'
+import { cn } from '@/lib/utilities'
+import { Check, ChevronDown } from 'lucide-vue-next'
 
 type SelectOption = {
-  value: string;
-  label: string;
-};
+  value: string
+  label: string
+}
 
 defineProps<{
-  modelValue?: string;
-  options: SelectOption[];
-  placeholder?: string;
-  disabled?: boolean;
-  class?: string;
-}>();
+  modelValue?: string
+  options: SelectOption[]
+  placeholder?: string
+  disabled?: boolean
+  class?: string
+}>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
-}>();
+  'update:modelValue': [value: string]
+}>()
 </script>
 
 <template>
@@ -43,11 +43,7 @@ const emit = defineEmits<{
     </SelectTrigger>
 
     <SelectPortal>
-      <SelectContent
-        class="select__content"
-        position="popper"
-        :side-offset="4"
-      >
+      <SelectContent class="select__content" position="popper" :side-offset="4">
         <SelectViewport class="select__viewport">
           <SelectItem
             v-for="option in options"
@@ -115,11 +111,11 @@ const emit = defineEmits<{
   box-shadow: var(--shadow-lg);
 }
 
-.select__content[data-state="open"] {
+.select__content[data-state='open'] {
   animation: fadeIn 150ms ease-out;
 }
 
-.select__content[data-state="closed"] {
+.select__content[data-state='closed'] {
   animation: fadeOut 150ms ease-in;
 }
 
@@ -152,7 +148,7 @@ const emit = defineEmits<{
   opacity: 0.5;
 }
 
-.select__item[data-state="checked"] {
+.select__item[data-state='checked'] {
   font-weight: 500;
 }
 
@@ -167,12 +163,20 @@ const emit = defineEmits<{
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 </style>

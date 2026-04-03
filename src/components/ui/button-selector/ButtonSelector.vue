@@ -1,41 +1,36 @@
 <script setup lang="ts">
-import Button from "@/components/ui/button/Button.vue";
+import Button from '@/components/ui/button/Button.vue'
 
 export interface ButtonOption {
-  value: string;
-  label: string;
-  color?: string;
-  disabled?: boolean;
+  value: string
+  label: string
+  color?: string
+  disabled?: boolean
 }
 
 const props = defineProps<{
-  modelValue: string;
-  options: (string | ButtonOption)[];
-  direction?: "row" | "column";
-}>();
+  modelValue: string
+  options: (string | ButtonOption)[]
+  direction?: 'row' | 'column'
+}>()
 
 const emit = defineEmits<{
-  "update:modelValue": [value: string];
-}>();
+  'update:modelValue': [value: string]
+}>()
 
-const getValue = (opt: string | ButtonOption): string =>
-  typeof opt === "string" ? opt : opt.value;
+const getValue = (opt: string | ButtonOption): string => (typeof opt === 'string' ? opt : opt.value)
 
-const getLabel = (opt: string | ButtonOption): string =>
-  typeof opt === "string" ? opt : opt.label;
+const getLabel = (opt: string | ButtonOption): string => (typeof opt === 'string' ? opt : opt.label)
 
 const getColor = (opt: string | ButtonOption): string | undefined =>
-  typeof opt === "string" ? undefined : opt.color;
+  typeof opt === 'string' ? undefined : opt.color
 
 const getDisabled = (opt: string | ButtonOption): boolean =>
-  typeof opt === "string" ? false : (opt.disabled ?? false);
+  typeof opt === 'string' ? false : (opt.disabled ?? false)
 </script>
 
 <template>
-  <div
-    class="button-selector"
-    :class="{ 'button-selector--column': direction === 'column' }"
-  >
+  <div class="button-selector" :class="{ 'button-selector--column': direction === 'column' }">
     <Button
       v-for="opt in options"
       :key="getValue(opt)"

@@ -1,1 +1,1 @@
-export { default as CoordinateInput } from './CoordinateInput.vue';
+export { default as CoordinateInput } from './CoordinateInput.vue'

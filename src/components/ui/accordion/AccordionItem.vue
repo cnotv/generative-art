@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { AccordionItem } from 'radix-vue';
+import { AccordionItem } from 'radix-vue'
 
 defineProps<{
-  value: string;
-}>();
+  value: string
+}>()
 </script>
 
 <template>

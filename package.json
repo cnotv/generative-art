@@ -20,7 +20,8 @@
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . --fix",
     "lint:staged": "eslint --fix",
-    "format": "prettier --write src/",
+    "format": "prettier --write src/ packages/",
+    "format:check": "prettier --check src/ packages/",
     "prepare": "husky",
     "webp": "node ./scripts/optimize.js",
     "docs:dev": "cd documentation && pnpm install --ignore-workspace && node node_modules/@docusaurus/core/bin/docusaurus.mjs start",
@@ -28,7 +29,11 @@
   },
   "lint-staged": {
     "*.{vue,js,jsx,cjs,mjs,ts,tsx,cts,mts}": [
+      "prettier --write",
       "eslint --fix"
+    ],
+    "*.{json,scss,css,md}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
@@ -74,6 +79,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-cypress": "^2.15.1",
     "eslint-plugin-functional": "^9.0.2",
+    "eslint-plugin-jsdoc": "^62.8.1",
     "eslint-plugin-unicorn": "^62.0.0",
     "eslint-plugin-vue": "^9.17.0",
     "husky": "^9.1.7",

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { AccordionHeader, AccordionTrigger } from 'radix-vue';
-import { ChevronDown } from 'lucide-vue-next';
-import { cn } from '@/lib/utilities';
+import { AccordionHeader, AccordionTrigger } from 'radix-vue'
+import { ChevronDown } from 'lucide-vue-next'
+import { cn } from '@/lib/utilities'
 
 defineProps<{
-  class?: string;
-}>();
+  class?: string
+}>()
 </script>
 
 <template>
@@ -38,7 +38,7 @@ defineProps<{
   text-decoration: underline;
 }
 
-.accordion__trigger[data-state="open"] .accordion__chevron {
+.accordion__trigger[data-state='open'] .accordion__chevron {
   transform: rotate(180deg);
 }
 

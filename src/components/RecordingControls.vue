@@ -1,50 +1,50 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Circle, Square } from 'lucide-vue-next';
+import { ref, computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { Circle, Square } from 'lucide-vue-next'
 
 const emit = defineEmits<{
-  start: [durationMs: number];
-  stop: [];
-}>();
+  start: [durationMs: number]
+  stop: []
+}>()
 
 const props = withDefaults(
   defineProps<{
-    isRecording?: boolean;
-    minDurationMs?: number;
-    maxDurationMs?: number;
+    isRecording?: boolean
+    minDurationMs?: number
+    maxDurationMs?: number
   }>(),
   {
     isRecording: false,
     minDurationMs: 0,
-    maxDurationMs: 300000, // 300 seconds = 5 minutes
+    maxDurationMs: 300000 // 300 seconds = 5 minutes
   }
-);
+)
 
 // Duration in milliseconds
-const recordingDurationMs = ref(10000); // Default 10 seconds
+const recordingDurationMs = ref(10000) // Default 10 seconds
 
 // Display values
-const durationSeconds = computed(() => (recordingDurationMs.value / 1000).toFixed(1));
+const durationSeconds = computed(() => (recordingDurationMs.value / 1000).toFixed(1))
 const durationMinutes = computed(() => {
-  const totalSeconds = recordingDurationMs.value / 1000;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-});
+  const totalSeconds = recordingDurationMs.value / 1000
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = Math.floor(totalSeconds % 60)
+  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+})
 
 const handleToggleRecording = () => {
   if (props.isRecording) {
-    emit('stop');
+    emit('stop')
   } else {
-    emit('start', recordingDurationMs.value);
+    emit('start', recordingDurationMs.value)
   }
-};
+}
 
 const handleSliderChange = (value: number[]) => {
-  recordingDurationMs.value = value[0];
-};
+  recordingDurationMs.value = value[0]
+}
 </script>
 
 <template>
@@ -68,9 +68,7 @@ const handleSliderChange = (value: number[]) => {
       size="sm"
       :class="[
         'recording-controls__button',
-        isRecording
-          ? 'recording-controls__button--stop'
-          : 'recording-controls__button--start',
+        isRecording ? 'recording-controls__button--stop' : 'recording-controls__button--start'
       ]"
       @click="handleToggleRecording"
     >
@@ -78,9 +76,7 @@ const handleSliderChange = (value: number[]) => {
       {{ isRecording ? 'Stop' : 'Start' }}
     </Button>
 
-    <p v-if="isRecording" class="recording-controls__status">
-      Recording in progress...
-    </p>
+    <p v-if="isRecording" class="recording-controls__status">Recording in progress...</p>
   </div>
 </template>
 

@@ -1,9 +1,129 @@
-import RAPIER from '@dimforge/rapier3d-compat';
-import * as THREE from 'three';
-import { Timeline, ComplexModel, Model } from './types';
-import type { TimelineManager } from './TimelineManager';
+import RAPIER from '@dimforge/rapier3d-compat'
+import * as THREE from 'three'
+import { Timeline, ComplexModel, Model } from './types'
+import type { TimelineManager } from './TimelineManager'
 
-export * from './types';
+export * from './types'
+
+/** Compute interval cycle state for a timeline action */
+const computeIntervalState = (
+  interval: [number, number],
+  frame: number,
+  delay: number | undefined,
+  start: number | undefined
+): { cycle: number; frameCycle: number; loop: number } => {
+  const [length, pause] = interval
+  const cycle = length + pause
+  const frameCycle = (frame - (delay ?? 0) + (start ?? 0)) % cycle
+  const loop = frame / cycle
+  return { cycle, frameCycle, loop }
+}
+
+/** Determine if a timeline action has completed */
+const computeActualEnd = (
+  duration: number | undefined,
+  start: number | undefined,
+  end: number | undefined
+): number | undefined => (duration !== undefined && start !== undefined ? start + duration : end)
+
+/** Check if an interval action should be skipped for the current frame */
+const shouldSkipIntervalFrame = (
+  interval: [number, number],
+  frame: number,
+  delay: number | undefined,
+  start: number | undefined
+): boolean => {
+  const [length] = interval
+  const cycleLength = length + interval[1]
+  const currentFrameCycle = (frame - (delay ?? 0) + (start ?? 0)) % cycleLength
+  return currentFrameCycle >= length
+}
+
+type ActionCallbacksParameters<T> = {
+  timelineAction: Timeline
+  frame: number
+  args: T | undefined
+  frameCycle: number
+  loop: number
+  isComplete: boolean
+}
+
+/** Execute action callbacks if frequency and interval conditions are met */
+const executeActionCallbacks = <T>({
+  timelineAction,
+  frame,
+  args,
+  frameCycle,
+  loop,
+  isComplete
+}: ActionCallbacksParameters<T>): void => {
+  const { frequency, action, actionStart } = timelineAction
+  if (frequency && frame % frequency !== 0) return
+  if (actionStart && frameCycle === 0) {
+    actionStart(loop, args)
+  }
+  if (action && !isComplete) action(args)
+}
+
+/** Handle completion: fire onComplete and schedule autoRemove */
+const handleCompletion = <T>(
+  timelineAction: Timeline,
+  args: T | undefined,
+  toRemove: string[],
+  timeline: TimelineManager
+): void => {
+  const { onComplete, autoRemove, id } = timelineAction
+  if (!onComplete) return
+  onComplete(args)
+  if (autoRemove && id) {
+    toRemove.push(id)
+    timeline._markCompleted(id)
+  }
+}
+
+const isActionComplete = (actualEnd: number | undefined, frame: number): boolean =>
+  !!(actualEnd && frame > actualEnd)
+
+const shouldSkipAction = (
+  timelineAction: Timeline,
+  frame: number,
+  actualEnd: number | undefined
+): boolean => {
+  const { start, delay, interval, onComplete } = timelineAction
+  const complete = isActionComplete(actualEnd, frame)
+  const conditions = [
+    timelineAction.enabled === false,
+    !!(start && frame < start),
+    complete && !onComplete,
+    !!(delay && frame < delay),
+    !!(interval && shouldSkipIntervalFrame(interval, frame, delay, start))
+  ]
+  return conditions.some(Boolean)
+}
+
+/** Execute and handle a single timeline action for the given frame */
+const processTimelineAction = <T>(
+  timelineAction: Timeline,
+  frame: number,
+  args: T | undefined,
+  toRemove: string[],
+  timeline: TimelineManager
+): void => {
+  const { end, delay, interval, duration, start, onComplete: _onComplete } = timelineAction
+  const actualEnd = computeActualEnd(duration, start, end)
+  if (shouldSkipAction(timelineAction, frame, actualEnd)) return
+
+  const isComplete = isActionComplete(actualEnd, frame)
+  const { frameCycle, loop } = interval
+    ? computeIntervalState(interval, frame, delay, start)
+    : { frameCycle: 0, loop: 0 }
+
+  executeActionCallbacks<T>({ timelineAction, frame, args, frameCycle, loop, isComplete })
+
+  if (isComplete) {
+    handleCompletion(timelineAction, args, toRemove, timeline)
+  }
+}
 
 /**
  * Animate timeline actions based on the current frame
@@ -24,97 +144,49 @@ const animateTimeline = <T>(
   frame: number,
   args?: T,
   options?: {
-    enableAutoRemoval?: boolean;
-    sortByPriority?: boolean;
+    enableAutoRemoval?: boolean
+    sortByPriority?: boolean
   }
 ) => {
-  const actions = timeline.getTimeline();
+  const actions = timeline.getTimeline()
 
-  // Sort by priority if enabled
   const sortedActions = options?.sortByPriority
     ? [...actions].sort((a, b) => (b.priority || 0) - (a.priority || 0))
-    : actions;
+    : actions
 
-  // Track completed actions for auto-removal
-  const toRemove: string[] = [];
+  const toRemove: string[] = []
 
   sortedActions.forEach((timelineAction: Timeline) => {
-    // Skip if disabled
-    if (timelineAction.enabled === false) return;
+    processTimelineAction(timelineAction, frame, args, toRemove, timeline)
+  })
 
-    const {
-      start, end, frequency, delay, interval,
-      action, actionStart, duration, id, onComplete
-    } = timelineAction;
-
-    // Calculate actual end from duration if provided
-    const actualEnd = duration !== undefined && start !== undefined
-      ? start + duration
-      : end;
-
-    let cycle = 0;
-    let frameCycle = 0;
-    let loop = 0;
-    let isComplete = false;
-
-    if (start && frame < start) return;
-    if (actualEnd && frame > actualEnd) {
-      isComplete = true;
-      if (!onComplete) return;
-    }
-    if (delay && frame < delay) return;
-
-    // Handle interval logic
-    if (interval) {
-      const [length, pause] = interval;
-      cycle = length + pause;
-      frameCycle = (frame - (delay ?? 0) + (start ?? 0)) % cycle;
-      loop = frame / cycle;
-      if (frameCycle >= length) return;
-    }
-
-    // Execute action
-    if (!frequency || (frequency && frame % frequency === 0)) {
-      if (actionStart && frameCycle === 0) {
-        actionStart(loop, args);
-      }
-      if (action && !isComplete) action(args);
-    }
-
-    // Handle completion
-    if (isComplete && onComplete) {
-      onComplete(args);
-      if (timelineAction.autoRemove && id) {
-        toRemove.push(id);
-        timeline._markCompleted(id);
-      }
-    }
-  });
-
-  // Auto-remove completed actions
   if (options?.enableAutoRemoval) {
-    toRemove.forEach(id => timeline.removeAction(id));
+    toRemove.forEach((id) => timeline.removeAction(id))
   }
 }
 
-const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: ComplexModel[]): boolean => {
-  const originPosition = rigidBody.translation();
-  const maxToi = 4.0;
-  const solid = true;
-  
+const isGrounded = (
+  rigidBody: RAPIER.RigidBody,
+  world: RAPIER.World,
+  elements: ComplexModel[]
+): boolean => {
+  const originPosition = rigidBody.translation()
+  const maxToi = 4.0
+  const solid = true
+
   return elements.some((model) => {
-    const rigidBody = model.userData.body;
-    const position = rigidBody.translation();
+    const rigidBody = model.userData.body
+    const position = rigidBody.translation()
     const ray = new RAPIER.Ray(
       { x: originPosition.x, y: 3, z: originPosition.z }, // Origin
-      position, // Direction (ground)
-    );
+      position // Direction (ground)
+    )
 
-    const hit = world.castRay(ray, maxToi, solid);
+    const hit = world.castRay(ray, maxToi, solid)
     if (hit) {
-      const hitPoint = ray.pointAt(hit.timeOfImpact);
-      const distance = originPosition.y - hitPoint.y;
-      return distance < 0.00
+      const hitPoint = ray.pointAt(hit.timeOfImpact)
+      const distance = originPosition.y - hitPoint.y
+      return distance < 0.0
     }
 
     return false
@@ -123,67 +195,135 @@ const isGrounded = (rigidBody: RAPIER.RigidBody, world: RAPIER.World, elements: 
 
 /**
  * Bind physic to models to animate them
- * @param elements 
+ * @param elements
  */
 const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: ComplexModel) => {
-    const mesh = model;
-    const { body: rigidBody, helper, type, hasGravity } = model.userData;
-    if (type === 'fixed') return;
+    const mesh = model
+    const { body: rigidBody, helper, type, hasGravity } = model.userData
+    if (type === 'fixed') return
     if (type === 'kinematicPositionBased') {
-      const grounded = isGrounded(rigidBody, world, elements);
-      const gravity = hasGravity && !grounded ? -9.8 * delta -1 : 0;
-      mesh.position.y += gravity;
-      rigidBody.setNextKinematicTranslation(mesh.position);
+      const grounded = isGrounded(rigidBody, world, elements)
+      const gravity = hasGravity && !grounded ? -9.8 * delta - 1 : 0
+      mesh.position.y += gravity
+      rigidBody.setNextKinematicTranslation(mesh.position)
     } else {
-      const position = rigidBody.translation();
-      mesh.position.set(position.x, position.y, position.z);
-      const rotation = rigidBody.rotation();
-      mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+      const position = rigidBody.translation()
+      mesh.position.set(position.x, position.y, position.z)
+      const rotation = rigidBody.rotation()
+      mesh.rotation.set(rotation.x, rotation.y, rotation.z)
     }
 
     if (helper) {
       // @ts-ignore
-      helper.update();
+      helper.update()
     }
-  });
+  })
 }
 
 /**
  * Reset models and bodies to their initial state (position, rotation, forces, and torques)
- * @param elements 
+ * @param elements
  */
 const resetAnimation = (elements: ComplexModel[]) => {
   elements.forEach((model) => {
-    const rigidBody = model.userData.body;
-    const { position: [x, y, z] } = model.userData.initialValues;
-    rigidBody.resetForces(true);
-    rigidBody.resetTorques(true);
-    rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-    rigidBody.setTranslation({ x, y, z }, true);
-  });
+    const rigidBody = model.userData.body
+    const {
+      position: [x, y, z]
+    } = model.userData.initialValues
+    rigidBody.resetForces(true)
+    rigidBody.resetTorques(true)
+    rigidBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true)
+    rigidBody.setTranslation({ x, y, z }, true)
+  })
 
-  return elements;
+  return elements
 }
 
-const getAnimationsModel = (mixer: THREE.AnimationMixer, model: Model, gltf: any) => {
+const getAnimationsModel = (
+  mixer: THREE.AnimationMixer,
+  model: Model,
+  gltf: { animations: THREE.AnimationClip[] }
+) => {
   // Flip the model
   model.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI)
-  const actions: Record<string, THREE.AnimationAction> = gltf.animations.reduce((accumulator: Record<string, THREE.AnimationAction>, animation: THREE.AnimationClip) => {
-    accumulator[animation.name] = mixer.clipAction(animation);
-    return accumulator;
-  }, {});
+  const actions: Record<string, THREE.AnimationAction> = gltf.animations.reduce(
+    (accumulator: Record<string, THREE.AnimationAction>, animation: THREE.AnimationClip) => {
+      accumulator[animation.name] = mixer.clipAction(animation)
+      return accumulator
+    },
+    {}
+  )
   return actions
 }
 
 /** Animation data for updateAnimation and controllerForward */
 interface AnimationData {
-  actionName: string;
-  player: ComplexModel;
-  delta: number; // Threejs counter for frame time
-  speed?: number;
-  backward?: boolean; // For adjusting model direction
-  distance?: number; // Length of action movement
+  actionName: string
+  player: ComplexModel
+  delta: number // Threejs counter for frame time
+  speed?: number
+  backward?: boolean // For adjusting model direction
+  distance?: number // Length of action movement
+}
+
+interface PlayActionOptions {
+  allowMovement?: boolean
+  allowRotation?: boolean
+  allowActions?: string[]
+  loop?: THREE.AnimationActionLoopStyles
+  onComplete?: () => void
+}
+
+/** Fade out previous action if it differs from the current one */
+const fadePreviousAction = (player: ComplexModel, nextAction: THREE.AnimationAction): void => {
+  const previousAction = player.userData.currentAction
+    ? player.userData.actions?.[player.userData.currentAction as string]
+    : null
+
+  if (previousAction && previousAction !== nextAction) {
+    previousAction.fadeOut(0.2)
+  }
+}
+
+/** Clear blocking flags on the player (restores movement/rotation) */
+const clearBlockingFlags = (player: ComplexModel): void => {
+  player.userData.performing = false
+  player.userData.allowMovement = true
+  player.userData.allowRotation = true
+  player.userData.allowedActions = []
+}
+
+/** Set blocking flags on the player */
+const setBlockingFlags = (
+  player: ComplexModel,
+  actionName: string,
+  allowMovement: boolean,
+  allowRotation: boolean,
+  allowActions: string[]
+): void => {
+  player.userData.currentAction = actionName
+  player.userData.performing = true
+  player.userData.allowMovement = allowMovement
+  player.userData.allowRotation = allowRotation
+  player.userData.allowedActions = allowActions
+}
+
+/** Register a 'finished' listener that clears blocking state and calls onComplete */
+const registerFinishedListener = (
+  mixer: THREE.AnimationMixer,
+  action: THREE.AnimationAction,
+  player: ComplexModel,
+  onComplete: (() => void) | undefined
+): void => {
+  const onFinished = (e: THREE.Event & { action: THREE.AnimationAction }) => {
+    if (e.action === action) {
+      clearBlockingFlags(player)
+      mixer.removeEventListener('finished', onFinished)
+      onComplete?.()
+    }
+  }
+  mixer.addEventListener('finished', onFinished)
 }
 
 /**
@@ -210,59 +350,65 @@ interface AnimationData {
  * playAction(player, 'attack', {
  *   loop: THREE.LoopOnce,
  *   allowMovement: false,
- *   onComplete: () => console.log('Attack finished!')
  * });
  */
+/** Check if an action is blocked by current performing state */
+const isActionBlocked = (player: ComplexModel, actionName: string): boolean =>
+  !!(
+    player.userData.performing &&
+    !(player.userData.allowedActions as string[] | undefined)?.includes(actionName)
+  )
+
+/** Resolve action and mixer from player userData */
+const resolveActionAndMixer = (
+  player: ComplexModel,
+  actionName: string
+): { action: THREE.AnimationAction | undefined; mixer: THREE.AnimationMixer | undefined } => ({
+  action: player.userData.actions?.[actionName] as THREE.AnimationAction | undefined,
+  mixer: player.userData.mixer as THREE.AnimationMixer | undefined
+})
+
+/** Start an animation action with fade in and configure loop */
+const startAction = (
+  action: THREE.AnimationAction,
+  loop: THREE.AnimationActionLoopStyles
+): void => {
+  action.reset().fadeIn(0.2).play()
+  action.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity)
+  action.clampWhenFinished = true
+}
+
 const playAction = (
   player: ComplexModel,
   actionName: string,
-  options: {
-    allowMovement?: boolean;
-    allowRotation?: boolean;
-    allowActions?: string[];
-    loop?: THREE.AnimationActionLoopStyles;
-    onComplete?: () => void;
-  } = {}
+  options: PlayActionOptions = {}
 ): void => {
-  const { allowMovement = false, allowRotation = false, allowActions = [], loop = THREE.LoopOnce, onComplete } = options;
-  const mixer = player.userData.mixer;
-  const action = player.userData.actions?.[actionName];
+  const {
+    allowMovement = false,
+    allowRotation = false,
+    allowActions = [],
+    loop = THREE.LoopOnce,
+    onComplete
+  } = options
 
-  if (!action || !mixer) return;
-  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
+  const { action, mixer } = resolveActionAndMixer(player, actionName)
+  if (!action || !mixer) return
+  if (isActionBlocked(player, actionName)) return
 
-  const previousAction = player.userData.currentAction
-    ? player.userData.actions?.[player.userData.currentAction]
-    : null;
-
-  if (previousAction && previousAction !== action) {
-    previousAction.fadeOut(0.2);
-  }
-
-  action.reset().fadeIn(0.2).play();
-  action.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity);
-  action.clampWhenFinished = true;
-
-  player.userData.currentAction = actionName;
-  player.userData.performing = true;
-  player.userData.allowMovement = allowMovement;
-  player.userData.allowRotation = allowRotation;
-  player.userData.allowedActions = allowActions;
+  fadePreviousAction(player, action)
+  startAction(action, loop)
+  setBlockingFlags(player, actionName, allowMovement, allowRotation, allowActions)
 
   if (loop === THREE.LoopOnce) {
-    const onFinished = (e: any) => {
-      if (e.action === action) {
-        player.userData.performing = false;
-        player.userData.allowMovement = true;
-        player.userData.allowRotation = true;
-        player.userData.allowedActions = [];
-        mixer.removeEventListener('finished', onFinished);
-        if (onComplete) onComplete();
-      }
-    };
-    mixer.addEventListener('finished', onFinished);
+    registerFinishedListener(mixer, action, player, onComplete)
   }
-};
+}
+
+/** Get the clip duration from an animation action (Three.js internal) */
+const getClipDuration = (action: THREE.AnimationAction): number => {
+  const actionWithClip = action as THREE.AnimationAction & { _clip?: { duration: number } }
+  return actionWithClip._clip?.duration ?? 0
+}
 
 /**
  * Play an animation action with blocking behavior (timeline-based approach)
@@ -285,7 +431,7 @@ const playAction = (
  * @param player ComplexModel with animation mixer and actions
  * @param actionName Name of the animation to play
  * @param getDelta Function that returns delta time per frame (from Three.js clock)
- * @param options Configuration for blocking behavior (movement, rotation, allowed interruptions)
+ * @param config Configuration for blocking behavior (movement, rotation, allowed interruptions)
  *
  * @example
  * const manager = createTimelineManager();
@@ -300,130 +446,148 @@ const playAction = (
  *   timeline: manager
  * });
  */
+interface PlayActionTimelineConfig {
+  allowMovement?: boolean
+  allowRotation?: boolean
+  allowActions?: string[]
+  speed?: number
+}
+
+type BlockingActionParameters = {
+  timelineManager: TimelineManager
+  player: ComplexModel
+  actionName: string
+  mixer: THREE.AnimationMixer
+  clipDuration: number
+  getDelta: () => number
+  speed: number
+}
+
+/** Register a blocking timeline action that updates mixer and clears flags when clip finishes */
+const registerBlockingTimelineAction = ({
+  timelineManager,
+  player,
+  actionName,
+  mixer,
+  clipDuration,
+  getDelta,
+  speed
+}: BlockingActionParameters): void => {
+  let accumulatedTime = 0
+  const actionId = timelineManager.addAction({
+    name: `blocking-${actionName}`,
+    category: 'animation',
+    action: () => {
+      const delta = getDelta()
+      accumulatedTime += delta
+      mixer.update(delta * speed)
+      if (accumulatedTime >= clipDuration / speed) {
+        clearBlockingFlags(player)
+        timelineManager.removeAction(actionId)
+      }
+    }
+  })
+}
+
+const canStartActionTimeline = (
+  timelineManager: TimelineManager,
+  player: ComplexModel,
+  actionName: string,
+  action: THREE.AnimationAction | undefined,
+  mixer: THREE.AnimationMixer | undefined
+): boolean => {
+  if (!action || !mixer) return false
+  if (isActionBlocked(player, actionName)) return false
+  if (getClipDuration(action) === 0) return false
+  return !timelineManager.getTimeline().some((a) => a.name === `blocking-${actionName}`)
+}
+
 const playActionTimeline = (
   timelineManager: TimelineManager,
   player: ComplexModel,
   actionName: string,
   getDelta: () => number,
-  config: {
-    allowMovement?: boolean;
-    allowRotation?: boolean;
-    allowActions?: string[];
-    speed?: number;
-  } = {}
+  config: PlayActionTimelineConfig = {}
 ): void => {
-  const { allowMovement = false, allowRotation = false, allowActions = [], speed = 1 } = config;
-  const action = player.userData.actions?.[actionName];
-  const mixer = player.userData.mixer;
+  const { allowMovement = false, allowRotation = false, allowActions = [], speed = 1 } = config
+  const { action, mixer } = resolveActionAndMixer(player, actionName)
 
-  if (!action || !mixer) return;
-  if (player.userData.performing && !player.userData.allowedActions?.includes(actionName)) return;
+  if (!canStartActionTimeline(timelineManager, player, actionName, action, mixer)) return
 
-  const clipDuration = (action as any)._clip?.duration || 0;
-  if (clipDuration === 0) return;
+  const clipDuration = getClipDuration(action!)
+  fadePreviousAction(player, action!)
 
-  // Check if timeline action already exists for this animation
-  const existingAction = timelineManager.getTimeline().find(
-    (a) => a.name === `blocking-${actionName}`
-  );
-  if (existingAction) return;
+  action!.reset().fadeIn(0.2).play()
+  action!.setLoop(THREE.LoopOnce, 1)
+  action!.clampWhenFinished = true
 
-  // Fade out previous action
+  setBlockingFlags(player, actionName, allowMovement, allowRotation, allowActions)
+  registerBlockingTimelineAction({
+    timelineManager,
+    player,
+    actionName,
+    mixer: mixer!,
+    clipDuration,
+    getDelta,
+    speed
+  })
+}
+
+/** Switch from previous animation to a new action with crossfade */
+const switchAction = (
+  player: ComplexModel,
+  action: THREE.AnimationAction,
+  actionName: string
+): void => {
   const previousAction = player.userData.currentAction
-    ? player.userData.actions?.[player.userData.currentAction]
-    : null;
-
+    ? (player.userData.actions?.[player.userData.currentAction as string] as
+        | THREE.AnimationAction
+        | undefined)
+    : null
   if (previousAction && previousAction !== action) {
-    previousAction.fadeOut(0.2);
+    previousAction.fadeOut(0.2)
   }
-
-  // Start the animation
-  action.reset().fadeIn(0.2).play();
-  action.setLoop(THREE.LoopOnce, 1);
-  action.clampWhenFinished = true;
-
-  // Set blocking flags immediately
-  player.userData.performing = true;
-  player.userData.allowMovement = allowMovement;
-  player.userData.allowRotation = allowRotation;
-  player.userData.allowedActions = allowActions;
-  player.userData.currentAction = actionName;
-
-  // Track accumulated time
-  let accumulatedTime = 0;
-
-  // Add timeline action
-  const actionId = timelineManager.addAction({
-    name: `blocking-${actionName}`,
-    category: 'animation',
-    action: () => {
-      const delta = getDelta();
-      accumulatedTime += delta;
-
-      // Update mixer
-      mixer.update(delta * speed);
-
-      // Check if animation completed
-      if (accumulatedTime >= clipDuration / speed) {
-        // Clear blocking flags
-        player.userData.performing = false;
-        player.userData.allowMovement = true;
-        player.userData.allowRotation = true;
-        player.userData.allowedActions = [];
-
-        // Remove this timeline action
-        timelineManager.removeAction(actionId);
-      }
-    },
-  });
-};
+  action.reset().fadeIn(0.2).play()
+  player.userData.currentAction = actionName
+}
 
 /**
  * Update the animation of the model based on given time
  */
 const updateAnimation = (data: AnimationData): void => {
-  const { player, actionName, delta, speed = 10 } = data;
-  const mixer = player.userData.mixer;
-  const action = player.userData.actions?.[actionName];
-  const coefficient = 0.1;
+  const { player, actionName, delta, speed = 10 } = data
+  const mixer = player.userData.mixer as THREE.AnimationMixer | undefined
+  const action = player.userData.actions?.[actionName as string] as
+    | THREE.AnimationAction
+    | undefined
+  const coefficient = 0.1
 
-  if (!action || !mixer) return;
+  if (!action || !mixer) return
 
   if (player.userData.currentAction !== actionName) {
-    const previousAction = player.userData.currentAction
-      ? player.userData.actions?.[player.userData.currentAction]
-      : null;
-
-    if (previousAction && previousAction !== action) {
-      previousAction.fadeOut(0.2);
-    }
-
-    action.reset().fadeIn(0.2).play();
-    player.userData.currentAction = actionName;
-  } else {
-    if (!action.isRunning()) {
-      action.play();
-    }
+    switchAction(player, action, actionName)
+  } else if (!action.isRunning()) {
+    action.play()
   }
 
   if (delta) {
-    mixer.update(delta * speed * coefficient);
+    mixer.update(delta * speed * coefficient)
   } else {
-    action.stop();
+    action.stop()
   }
-};
+}
 
 interface ControllerForwardOptions {
   /** Maximum height the character can step up (for stairs/small obstacles) */
-  maxStepHeight?: number;
+  maxStepHeight?: number
   /** Maximum distance to check for ground below the character */
-  maxGroundDistance?: number;
+  maxGroundDistance?: number
   /** Whether ground is required to move forward (prevents walking off edges) */
-  requireGround?: boolean;
+  requireGround?: boolean
   /** Collision detection distance for obstacles */
-  collisionDistance?: number;
+  collisionDistance?: number
   /** Character radius for ground check offset (checks ground at character's edge, not center) */
-  characterRadius?: number;
+  characterRadius?: number
   /** Debug options for troubleshooting movement issues */
   debug?: boolean
 }
@@ -440,24 +604,24 @@ const checkGroundAtPosition = (
   bodies: ComplexModel[],
   maxDistance: number
 ): { hasGround: boolean; groundHeight: number | null } => {
-  const downward = new THREE.Vector3(0, -1, 0);
-  const raycaster = new THREE.Raycaster(position, downward, 0, maxDistance);
-  const intersects = raycaster.intersectObjects(bodies, true);
-  
+  const downward = new THREE.Vector3(0, -1, 0)
+  const raycaster = new THREE.Raycaster(position, downward, 0, maxDistance)
+  const intersects = raycaster.intersectObjects(bodies, true)
+
   if (intersects.length > 0) {
-    return { hasGround: true, groundHeight: intersects[0].point.y };
+    return { hasGround: true, groundHeight: intersects[0].point.y }
   }
-  return { hasGround: false, groundHeight: null };
-};
+  return { hasGround: false, groundHeight: null }
+}
 
 /** Result of movement direction calculation */
 interface MovementDirectionResult {
   /** The direction vector (scaled by distance) */
-  direction: THREE.Vector3;
+  direction: THREE.Vector3
   /** The old position before movement */
-  oldPosition: THREE.Vector3;
+  oldPosition: THREE.Vector3
   /** The new target position */
-  newPosition: THREE.Vector3;
+  newPosition: THREE.Vector3
 }
 
 /**
@@ -472,26 +636,26 @@ const getMovementDirection = (
   distance: number,
   backward: boolean = false
 ): MovementDirectionResult => {
-  const oldPosition = model.position.clone();
-  const direction = new THREE.Vector3();
-  model.getWorldDirection(direction);
-  
+  const oldPosition = model.position.clone()
+  const direction = new THREE.Vector3()
+  model.getWorldDirection(direction)
+
   if (backward) {
-    direction.negate();
+    direction.negate()
   }
-  direction.multiplyScalar(distance);
-  
-  const newPosition = oldPosition.clone().add(direction);
-  
-  return { direction, oldPosition, newPosition };
-};
+  direction.multiplyScalar(distance)
+
+  const newPosition = oldPosition.clone().add(direction)
+
+  return { direction, oldPosition, newPosition }
+}
 
 /** Result of obstacle check */
 interface ObstacleCheckResult {
   /** Whether the path is clear of obstacles */
-  canMove: boolean;
+  canMove: boolean
   /** Array of intersection points if any */
-  intersections: THREE.Intersection[];
+  intersections: THREE.Intersection[]
 }
 
 /**
@@ -508,43 +672,38 @@ const checkObstacles = (
   bodies: ComplexModel[],
   collisionDistance: number
 ): ObstacleCheckResult => {
-  const normalizedDirection = direction.clone().normalize();
-  const raycaster = new THREE.Raycaster(oldPosition, normalizedDirection, 0, collisionDistance);
-  const intersections = raycaster.intersectObjects(bodies, true);
-  
+  const normalizedDirection = direction.clone().normalize()
+  const raycaster = new THREE.Raycaster(oldPosition, normalizedDirection, 0, collisionDistance)
+  const intersections = raycaster.intersectObjects(bodies, true)
+
   return {
     canMove: intersections.length === 0,
     intersections
-  };
-};
+  }
+}
 
 /** Options for ground movement check */
 interface GroundCheckOptions {
   /** Maximum height the character can step up */
-  maxStepHeight: number;
+  maxStepHeight: number
   /** Maximum distance to check for ground */
-  maxGroundDistance: number;
+  maxGroundDistance: number
   /** Character radius for ground check offset */
-  characterRadius: number;
+  characterRadius: number
 }
 
 /** Result of ground movement validation */
 interface GroundMovementResult {
   /** Whether movement is allowed */
-  canMove: boolean;
+  canMove: boolean
   /** The final position after ground adjustments */
-  finalPosition: THREE.Vector3;
+  finalPosition: THREE.Vector3
   /** Debug info about which path was taken */
-  debugInfo?: string;
+  debugInfo?: string
 }
 
 /**
  * Check ground with character radius offset
- * @param position Position to check
- * @param forwardDir Direction of movement
- * @param bodies Bodies to check against
- * @param options Ground check options
- * @returns Ground check result
  */
 const checkGroundWithRadius = (
   position: THREE.Vector3,
@@ -552,25 +711,119 @@ const checkGroundWithRadius = (
   bodies: ComplexModel[],
   options: GroundCheckOptions
 ): { hasGround: boolean; groundHeight: number | null } => {
-  const { maxStepHeight, maxGroundDistance, characterRadius } = options;
-  const checkPosition = position.clone();
-  checkPosition.y += maxStepHeight;
-  
-  // Add character radius offset in the movement direction (horizontal only)
-  const horizontalForward = new THREE.Vector3(forwardDirection.x, 0, forwardDirection.z).normalize();
-  checkPosition.add(horizontalForward.multiplyScalar(characterRadius));
-  
-  return checkGroundAtPosition(checkPosition, bodies, maxGroundDistance + maxStepHeight);
-};
+  const { maxStepHeight, maxGroundDistance, characterRadius } = options
+  const checkPosition = position.clone()
+  checkPosition.y += maxStepHeight
+
+  const horizontalForward = new THREE.Vector3(forwardDirection.x, 0, forwardDirection.z).normalize()
+  checkPosition.add(horizontalForward.multiplyScalar(characterRadius))
+
+  return checkGroundAtPosition(checkPosition, bodies, maxGroundDistance + maxStepHeight)
+}
+
+type AxisFallbackOptions = {
+  axisCheck: { hasGround: boolean; groundHeight: number | null }
+  axisMovement: number
+  newX: number
+  oldX: number
+  newZ: number
+  oldZ: number
+  isXAxis: boolean
+  debugLabel: string
+}
+
+/** Determine movement result for a single axis fallback */
+const resolveAxisFallback = ({
+  axisCheck,
+  axisMovement,
+  newX,
+  oldX,
+  newZ,
+  oldZ,
+  isXAxis,
+  debugLabel
+}: AxisFallbackOptions): GroundMovementResult | null => {
+  if (!axisCheck.hasGround || axisMovement <= 0.001) return null
+  const finalPosition = new THREE.Vector3(
+    isXAxis ? newX : oldX,
+    axisCheck.groundHeight ?? 0,
+    isXAxis ? oldZ : newZ
+  )
+  return { canMove: true, finalPosition, debugInfo: debugLabel }
+}
+
+/** Resolve axis fallback when full movement has no ground */
+const resolveAxisFallbacks = (
+  oldPosition: THREE.Vector3,
+  newPosition: THREE.Vector3,
+  direction: THREE.Vector3,
+  bodies: ComplexModel[],
+  options: GroundCheckOptions
+): GroundMovementResult => {
+  const xOnlyPosition = oldPosition.clone()
+  xOnlyPosition.x = newPosition.x
+  const xOnlyCheck = checkGroundWithRadius(
+    xOnlyPosition,
+    new THREE.Vector3(Math.sign(direction.x), 0, 0),
+    bodies,
+    options
+  )
+
+  const zOnlyPosition = oldPosition.clone()
+  zOnlyPosition.z = newPosition.z
+  const zOnlyCheck = checkGroundWithRadius(
+    zOnlyPosition,
+    new THREE.Vector3(0, 0, Math.sign(direction.z)),
+    bodies,
+    options
+  )
+
+  const xMovement = Math.abs(newPosition.x - oldPosition.x)
+  const zMovement = Math.abs(newPosition.z - oldPosition.z)
+
+  if (xOnlyCheck.hasGround && zOnlyCheck.hasGround) {
+    const finalPosition = newPosition.clone()
+    if (xMovement >= zMovement) {
+      finalPosition.x = newPosition.x
+      finalPosition.z = oldPosition.z
+      if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight
+    } else {
+      finalPosition.x = oldPosition.x
+      finalPosition.z = newPosition.z
+      if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight
+    }
+    return { canMove: true, finalPosition, debugInfo: 'Using axis with more movement' }
+  }
+
+  const xResult = resolveAxisFallback({
+    axisCheck: xOnlyCheck,
+    axisMovement: xMovement,
+    newX: newPosition.x,
+    oldX: oldPosition.x,
+    newZ: newPosition.z,
+    oldZ: oldPosition.z,
+    isXAxis: true,
+    debugLabel: 'Sliding on X axis'
+  })
+  if (xResult) return xResult
+
+  const zResult = resolveAxisFallback({
+    axisCheck: zOnlyCheck,
+    axisMovement: zMovement,
+    newX: newPosition.x,
+    oldX: oldPosition.x,
+    newZ: newPosition.z,
+    oldZ: oldPosition.z,
+    isXAxis: false,
+    debugLabel: 'Sliding on Z axis'
+  })
+  if (zResult) return zResult
+
+  return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'No ground on any axis' }
+}
 
 /**
  * Validate ground for movement and handle axis fallback for edge walking
- * @param oldPosition Current position
- * @param newPosition Target position
- * @param direction Movement direction
- * @param bodies Bodies to check ground against
- * @param options Ground check options
- * @returns Movement result with final position
  */
 const checkGroundForMovement = (
   oldPosition: THREE.Vector3,
@@ -579,188 +832,175 @@ const checkGroundForMovement = (
   bodies: ComplexModel[],
   options: GroundCheckOptions
 ): GroundMovementResult => {
-  const { maxStepHeight } = options;
-  const finalPosition = newPosition.clone();
-  const forwardNormalized = direction.clone().normalize();
-  const groundCheck = checkGroundWithRadius(newPosition, forwardNormalized, bodies, options);
-  
+  const { maxStepHeight } = options
+  const finalPosition = newPosition.clone()
+  const forwardNormalized = direction.clone().normalize()
+  const groundCheck = checkGroundWithRadius(newPosition, forwardNormalized, bodies, options)
+
   if (groundCheck.hasGround && groundCheck.groundHeight !== null) {
-    // Ground found at full movement - check step height
-    const heightDifference = groundCheck.groundHeight - oldPosition.y;
-    
+    const heightDifference = groundCheck.groundHeight - oldPosition.y
+
     if (heightDifference > maxStepHeight) {
-      return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'Step too high' };
+      return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'Step too high' }
     }
-    
-    finalPosition.y = groundCheck.groundHeight;
-    return { canMove: true, finalPosition, debugInfo: 'Full movement with ground' };
+
+    finalPosition.y = groundCheck.groundHeight
+    return { canMove: true, finalPosition, debugInfo: 'Full movement with ground' }
   }
-  
-  // No ground at full movement position - try axis fallback
-  const xOnlyPosition = oldPosition.clone();
-  xOnlyPosition.x = newPosition.x;
-  const xOnlyCheck = checkGroundWithRadius(
-    xOnlyPosition, 
-    new THREE.Vector3(Math.sign(direction.x), 0, 0), 
-    bodies, 
-    options
-  );
-  
-  const zOnlyPosition = oldPosition.clone();
-  zOnlyPosition.z = newPosition.z;
-  const zOnlyCheck = checkGroundWithRadius(
-    zOnlyPosition, 
-    new THREE.Vector3(0, 0, Math.sign(direction.z)), 
-    bodies, 
-    options
-  );
-  
-  const xMovement = Math.abs(newPosition.x - oldPosition.x);
-  const zMovement = Math.abs(newPosition.z - oldPosition.z);
-  
-  if (xOnlyCheck.hasGround && zOnlyCheck.hasGround) {
-    // Both axes have ground - use the one with more movement
-    if (xMovement >= zMovement) {
-      finalPosition.x = newPosition.x;
-      finalPosition.z = oldPosition.z;
-      if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
-    } else {
-      finalPosition.x = oldPosition.x;
-      finalPosition.z = newPosition.z;
-      if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
-    }
-    return { canMove: true, finalPosition, debugInfo: 'Using axis with more movement' };
-  }
-  
-  if (xOnlyCheck.hasGround && xMovement > 0.001) {
-    finalPosition.x = newPosition.x;
-    finalPosition.z = oldPosition.z;
-    if (xOnlyCheck.groundHeight !== null) finalPosition.y = xOnlyCheck.groundHeight;
-    return { canMove: true, finalPosition, debugInfo: 'Sliding on X axis' };
-  }
-  
-  if (zOnlyCheck.hasGround && zMovement > 0.001) {
-    finalPosition.x = oldPosition.x;
-    finalPosition.z = newPosition.z;
-    if (zOnlyCheck.groundHeight !== null) finalPosition.y = zOnlyCheck.groundHeight;
-    return { canMove: true, finalPosition, debugInfo: 'Sliding on Z axis' };
-  }
-  
-  return { canMove: false, finalPosition: oldPosition.clone(), debugInfo: 'No ground on any axis' };
-};
+
+  return resolveAxisFallbacks(oldPosition, newPosition, direction, bodies, options)
+}
 
 /**
  * Apply movement to model and rigid body
- * @param model The model to move
- * @param position The target position
  */
-const moveCharacter = (
-  model: ComplexModel,
-  position: THREE.Vector3
+const moveCharacter = (model: ComplexModel, position: THREE.Vector3): void => {
+  const rigidBody = model.userData.body
+  model.position.copy(position)
+  rigidBody.setTranslation(position, true)
+}
+
+/** Log debug information for ground check result */
+const logGroundDebug = (
+  groundResult: GroundMovementResult,
+  groundBodies: ComplexModel[],
+  groundOptions: GroundCheckOptions
 ): void => {
-  const rigidBody = model.userData.body;
-  model.position.copy(position);
-  rigidBody.setTranslation(position, true);
-};
+  console.warn('[controllerForward] Ground check:', groundResult.debugInfo)
+  console.warn('[controllerForward] Ground bodies checked:', groundBodies.length)
+  console.warn('[controllerForward] Ground options:', groundOptions)
+  if (groundBodies.length > 0) {
+    console.warn(
+      '[controllerForward] First ground body position:',
+      groundBodies[0].position?.toArray?.() ?? 'N/A'
+    )
+  }
+}
+
+/** Perform ground validation and return updated canMove + finalPosition */
+type GroundCheckMovementOptions = ControllerForwardOptions & { debug?: boolean }
+
+const applyGroundCheck = (
+  oldPosition: THREE.Vector3,
+  newPosition: THREE.Vector3,
+  direction: THREE.Vector3,
+  groundBodies: ComplexModel[],
+  options: GroundCheckMovementOptions
+): { canMove: boolean; finalPosition: THREE.Vector3 } => {
+  const { debug = false } = options
+  const groundOptions: GroundCheckOptions = {
+    maxStepHeight: options.maxStepHeight ?? 0.5,
+    maxGroundDistance: options.maxGroundDistance ?? 2,
+    characterRadius: options.characterRadius ?? 0.5
+  }
+  const groundResult = checkGroundForMovement(
+    oldPosition,
+    newPosition,
+    direction,
+    groundBodies,
+    groundOptions
+  )
+
+  if (debug) {
+    logGroundDebug(groundResult, groundBodies, groundOptions)
+  }
+
+  return { canMove: groundResult.canMove, finalPosition: groundResult.finalPosition }
+}
 
 /**
  * Move forward or backward if no collision is detected
  * Optionally checks for ground ahead and handles step climbing
  * @param obstacles Array of obstacle bodies to check horizontal collisions against
  * @param groundBodies Array of ground bodies to check for ground detection (vertical raycast)
- * @param distance Movement distance
  * @param animationData Animation data containing player, action, delta, etc.
  * @param options Controller forward options for ground and collision checks
  */
+type ForwardMovementInput = {
+  oldPosition: THREE.Vector3
+  newPosition: THREE.Vector3
+  direction: THREE.Vector3
+  obstacles: ComplexModel[]
+  groundBodies: ComplexModel[]
+  options: ControllerForwardOptions & { debug: boolean }
+}
+
+const resolveForwardMovement = ({
+  oldPosition,
+  newPosition,
+  direction,
+  obstacles,
+  groundBodies,
+  options
+}: ForwardMovementInput): { canMove: boolean; finalPosition: THREE.Vector3 } => {
+  const { requireGround = false, collisionDistance = 10, debug } = options
+  const obstacleResult = checkObstacles(oldPosition, direction, obstacles, collisionDistance)
+  if (!obstacleResult.canMove) return { canMove: false, finalPosition: oldPosition.clone() }
+  if (!requireGround) return { canMove: true, finalPosition: newPosition.clone() }
+  return applyGroundCheck(oldPosition, newPosition, direction, groundBodies, { ...options, debug })
+}
+
+const resolveControllerOptions = (raw: ControllerForwardOptions) => ({
+  maxStepHeight: raw.maxStepHeight ?? 0.5,
+  maxGroundDistance: raw.maxGroundDistance ?? 2,
+  requireGround: raw.requireGround ?? false,
+  collisionDistance: raw.collisionDistance ?? 10,
+  characterRadius: raw.characterRadius ?? 0.5,
+  debug: raw.debug ?? false
+})
+
+const applyControllerMovement = (
+  model: ComplexModel,
+  canMove: boolean,
+  finalPosition: THREE.Vector3,
+  debug: boolean
+): void => {
+  if (canMove) {
+    moveCharacter(model, finalPosition)
+    if (debug) console.warn('[controllerForward] Final position:', finalPosition.toArray())
+  } else if (debug) {
+    console.warn('[controllerForward] Movement blocked')
+  }
+}
+
 const controllerForward = (
   obstacles: ComplexModel[],
   groundBodies: ComplexModel[],
   animationData: AnimationData,
-  {
-    maxStepHeight = 0.5,
-    maxGroundDistance = 2,
-    requireGround = false,
-    collisionDistance = 10,
-    characterRadius = 0.5,
-    debug = false
-  }: ControllerForwardOptions = {}
+  rawOptions: ControllerForwardOptions = {}
 ): void => {
-  const { actionName, player: model, backward = false, distance = 0 } = animationData;
+  const options = resolveControllerOptions(rawOptions)
+  const { debug } = options
+  const { actionName, player: model, backward = false, distance = 0 } = animationData
 
-  if (model.userData.performing && model.userData.allowMovement === false) {
-    return;
-  }
+  if (model.userData.performing && model.userData.allowMovement === false) return
 
-  const { actions, mixer } = model.userData;
-  const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward);
+  const { actions, mixer } = model.userData
+  const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward)
 
-  if (debug) {
-    console.log('[controllerForward] Old position:', oldPosition.toArray());
-    console.log('[controllerForward] New position:', newPosition.toArray());
-    console.log('[controllerForward] Forward vector:', direction.toArray());
-  }
+  const { canMove, finalPosition } = resolveForwardMovement({
+    oldPosition,
+    newPosition,
+    direction,
+    obstacles,
+    groundBodies,
+    options
+  })
 
-  // Check for obstacles (horizontal collision)
-  const obstacleResult = checkObstacles(oldPosition, direction, obstacles, collisionDistance);
-  let canMove = obstacleResult.canMove;
-  let finalPosition = newPosition.clone();
+  applyControllerMovement(model, canMove, finalPosition, debug)
 
-  if (debug) {
-    console.log('[controllerForward] Obstacle check - canMove:', obstacleResult.canMove);
-    if (obstacleResult.intersections.length > 0) {
-      console.log('[controllerForward] Hit obstacle:', obstacleResult.intersections[0].object.name || obstacleResult.intersections[0].object.type);
-      console.log('[controllerForward] Hit point:', obstacleResult.intersections[0].point.toArray());
-      console.log('[controllerForward] Hit distance:', obstacleResult.intersections[0].distance);
-    }
-  }
-
-  // If ground is required, validate ground and adjust position (vertical raycast)
-  if (canMove && requireGround) {
-    const groundOptions: GroundCheckOptions = { maxStepHeight, maxGroundDistance, characterRadius };
-    const groundResult = checkGroundForMovement(oldPosition, newPosition, direction, groundBodies, groundOptions);
-    
-    canMove = groundResult.canMove;
-    finalPosition = groundResult.finalPosition;
-    
-    if (debug) {
-      console.log('[controllerForward] Ground check:', groundResult.debugInfo);
-      console.log('[controllerForward] Ground bodies checked:', groundBodies.length);
-      console.log('[controllerForward] Ground options:', groundOptions);
-      if (groundBodies.length > 0) {
-        console.log('[controllerForward] First ground body position:', groundBodies[0].position?.toArray?.() ?? 'N/A');
-      }
-    }
-  }
-
-  if (debug) {
-    console.log('[controllerForward] canMove:', canMove, requireGround ? '(ground required)' : '(no ground check)');
-  }
-  
-  if (canMove) {
-    moveCharacter(model, finalPosition);
-    
-    if (debug) {
-      console.log('[controllerForward] Final position:', finalPosition.toArray());
-    }
-  } else if (debug) {
-    console.log('[controllerForward] Movement blocked');
-  }
-
-  // Update animation
-  const action = actions?.[actionName];
-  if (action && mixer) {
-    updateAnimation(animationData);
-  }
-};
+  const action = (actions as Record<string, THREE.AnimationAction | undefined>)?.[actionName]
+  if (action && mixer) updateAnimation(animationData)
+}
 
 const controllerJump = (
   model: ComplexModel,
   _bodies: ComplexModel[],
   _distance: number,
-  height: number,
+  height: number
 ) => {
-  const mesh = model;
-  mesh.position.y = mesh.position.y + height;
+  const mesh = model
+  mesh.position.y = mesh.position.y + height
 }
 
 /**
@@ -769,17 +1009,14 @@ const controllerJump = (
  * @param angle angle in degrees
  * @returns true if rotation was applied, false if blocked
  */
-const controllerTurn = (
-  model: ComplexModel,
-  angle: number,
-): boolean => {
+const controllerTurn = (model: ComplexModel, angle: number): boolean => {
   if (model.userData.performing && model.userData.allowRotation === false) {
-    return false;
+    return false
   }
-  const radians = THREE.MathUtils.degToRad(angle);
-  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians);
-  return true;
-};
+  const radians = THREE.MathUtils.degToRad(angle)
+  model.rotateOnAxis(new THREE.Vector3(0, 1, 0), radians)
+  return true
+}
 
 /**
  * Set the model's rotation to face a specific direction
@@ -788,41 +1025,37 @@ const controllerTurn = (
  * @param modelOffset Offset in degrees to correct for models facing wrong direction
  * @returns true if rotation was applied, false if blocked
  */
-const setRotation = (
-  model: ComplexModel,
-  degrees: number,
-  modelOffset: number = 0,
-): boolean => {
+const setRotation = (model: ComplexModel, degrees: number, modelOffset: number = 0): boolean => {
   if (model.userData.performing && model.userData.allowRotation === false) {
-    return false;
+    return false
   }
-  const radians = THREE.MathUtils.degToRad(degrees + modelOffset);
-  model.rotation.y = radians;
-  return true;
-};
+  const radians = THREE.MathUtils.degToRad(degrees + modelOffset)
+  model.rotation.y = radians
+  return true
+}
 
 /** Rotation mapping for directional input combinations */
 const ROTATION_MAP: Record<string, number> = {
-  'down': 0,
+  down: 0,
   'down-right': 45,
-  'right': 90,
+  right: 90,
   'up-right': 135,
-  'up': 180,
+  up: 180,
   'up-left': 225,
-  'left': 270,
-  'down-left': 315,
-};
+  left: 270,
+  'down-left': 315
+}
 
 const ROTATION_MAP_MIRRORED: Record<string, number> = {
-  'down': 0,
+  down: 0,
   'down-left': 45,
-  'left': 90,
+  left: 90,
   'up-left': 135,
-  'up': 180,
+  up: 180,
   'up-right': 225,
-  'right': 270,
-  'down-right': 315,
-};
+  right: 270,
+  'down-right': 315
+}
 
 /**
  * Calculate target rotation based on directional input actions
@@ -833,52 +1066,59 @@ const getRotation = (
   currentActions: Record<string, unknown>,
   mirrored: boolean = false
 ): number | null => {
-  const map = mirrored ? ROTATION_MAP_MIRRORED : ROTATION_MAP;
-  const up = !!currentActions["move-up"];
-  const down = !!currentActions["move-down"];
-  const left = !!currentActions["move-left"];
-  const right = !!currentActions["move-right"];
-
+  const map = mirrored ? ROTATION_MAP_MIRRORED : ROTATION_MAP
+  const getAxisKey = (
+    positive: unknown,
+    negative: unknown,
+    posLabel: string,
+    negLabel: string
+  ): string => {
+    if (positive && !negative) return posLabel
+    if (negative && !positive) return negLabel
+    return ''
+  }
   const key = [
-    up && !down ? 'up' : down && !up ? 'down' : '',
-    left && !right ? 'left' : right && !left ? 'right' : '',
-  ].filter(Boolean).join('-');
+    getAxisKey(currentActions['move-up'], currentActions['move-down'], 'up', 'down'),
+    getAxisKey(currentActions['move-left'], currentActions['move-right'], 'left', 'right')
+  ]
+    .filter(Boolean)
+    .join('-')
 
-  return key ? (map[key] ?? null) : null;
-};
+  return key ? (map[key] ?? null) : null
+}
 
 const bodyJump = (
   model: ComplexModel,
   bodies: ComplexModel[],
   distance: number,
-  height: number,
+  height: number
 ) => {
-  const mesh = model;
-  const rigidBody = model.userData.body;
-  const collision = 27;
-  const oldPosition = mesh.position.clone();
+  const mesh = model
+  const rigidBody = model.userData.body
+  const collision = 27
+  const oldPosition = mesh.position.clone()
 
   // Calculate the forward vector
-  const forward = new THREE.Vector3();
-  mesh.getWorldDirection(forward);
-  forward.multiplyScalar(distance);
+  const forward = new THREE.Vector3()
+  mesh.getWorldDirection(forward)
+  forward.multiplyScalar(distance)
 
   // Create an upward vector
-  const upward = new THREE.Vector3(0, height, 0);
+  const upward = new THREE.Vector3(0, height, 0)
 
   // Create a new position by adding the forward and upward vectors to the old position
-  const newPosition = oldPosition.clone().add(upward);
+  const newPosition = oldPosition.clone().add(upward)
 
   // Check for collisions with the new position
   const isColliding = bodies.some((body) => {
-    const difference = body.position.distanceTo(newPosition);
-    return difference < collision; // Adjust this value based on your collision detection needs
-  });
+    const difference = body.position.distanceTo(newPosition)
+    return difference < collision // Adjust this value based on your collision detection needs
+  })
 
   if (!isColliding) {
     // Update the model's position and the rigid body's translation if no collision is detected
-    mesh.position.copy(newPosition);
-    rigidBody.setTranslation(newPosition, true);
+    mesh.position.copy(newPosition)
+    rigidBody.setTranslation(newPosition, true)
   }
 }
 
@@ -901,8 +1141,8 @@ export {
   checkObstacles,
   checkGroundWithRadius,
   checkGroundForMovement,
-  moveCharacter,
-};
+  moveCharacter
+}
 
 export type {
   AnimationData,
@@ -910,23 +1150,23 @@ export type {
   MovementDirectionResult,
   ObstacleCheckResult,
   GroundCheckOptions,
-  GroundMovementResult,
-};
+  GroundMovementResult
+}
 
 // NEW: Timeline management exports
-export { createTimelineManager } from './TimelineManager';
-export type { TimelineManager } from './TimelineManager';
+export { createTimelineManager } from './TimelineManager'
+export type { TimelineManager } from './TimelineManager'
 
-export { createTimelineLogger } from './TimelineLogger';
-export type { TimelineLogger, TimelineLogEntry } from './TimelineLogger';
+export { createTimelineLogger } from './TimelineLogger'
+export type { TimelineLogger, TimelineLogEntry } from './TimelineLogger'
 
 export {
   generateTimelineId,
   createDurationAction,
   createOneShotAction,
   createIntervalAction,
-  canAddAction,
-} from './actions';
+  canAddAction
+} from './actions'
 
 export {
   createPopUpBounce,
@@ -935,5 +1175,5 @@ export {
   createSlideInFromSides,
   easing,
   sortOrder,
-  calculateSequentialDelays,
-} from './pop-up-animations';
+  calculateSequentialDelays
+} from './pop-up-animations'

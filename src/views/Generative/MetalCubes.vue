@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import * as THREE from "three";
-import { ref, onMounted, onBeforeUnmount, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { video } from "@/utils/video";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import { animateTimeline, createTimelineManager } from "@webgamekit/animation";
-import { getLights } from "@webgamekit/threejs";
-import { getRoundedBox } from "@/utils/custom-models";
-import { times } from "@/utils/lodash";
-import { useDebugSceneStore } from '@/stores/debugScene';
+import * as THREE from 'three'
+import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { video } from '@/utils/video'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { animateTimeline, createTimelineManager } from '@webgamekit/animation'
+import { getLights } from '@webgamekit/threejs'
+import { getRoundedBox } from '@/utils/custom-models'
+import { times } from '@/utils/lodash'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
-const animationId = ref(0);
-const cubes = [] as THREE.Mesh<any>[];
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
+const animationId = ref(0)
+const cubes = [] as THREE.Mesh<any>[]
 
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 /**
  * Reflection
@@ -25,29 +25,29 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
  * https://threejs.org/examples/#webgl_animation_skinning_ik
  * https://paulbourke.net/panorama/cubemaps/
  */
-const cubeFaces = ["px", "nx", "py", "ny", "pz", "nz"];
+const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
 const urls = cubeFaces.map(
   (code) => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href
-);
-const reflection = new THREE.CubeTextureLoader().load(urls);
+)
+const reflection = new THREE.CubeTextureLoader().load(urls)
 
 onMounted(() => {
-  init(
-    (canvas.value as unknown) as HTMLCanvasElement,
-    (statsElement.value as unknown) as HTMLElement
+  ;(init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsElement.value as unknown as HTMLElement
   ),
-    statsElement.value!;
-});
+    statsElement.value!)
+})
 
 onBeforeUnmount(() => {
   if (animationId.value) {
-    cancelAnimationFrame(animationId.value);
+    cancelAnimationFrame(animationId.value)
   }
-});
+})
 
 onUnmounted(() => {
-  clearSceneElements();
-});
+  clearSceneElements()
+})
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
@@ -58,10 +58,10 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     reflectivity: 0.2,
     roughness: 0.3,
     metalness: 0.8,
-    transmission: 1,
-  };
+    transmission: 1
+  }
   // Set stats
-  stats.init(route, statsElement);
+  stats.init(route, statsElement)
 
   // Set configuration and start setup
   controls.create(
@@ -72,129 +72,129 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       reflectivity: {},
       roughness: {},
       metalness: {},
-      transmission: {},
+      transmission: {}
     },
     () => {
       if (animationId.value) {
-        cancelAnimationFrame(animationId.value);
+        cancelAnimationFrame(animationId.value)
       }
-      setup();
+      setup()
     }
-  );
-  const positions = generatePositions();
+  )
+  const positions = generatePositions()
 
   const setup = () => {
     // Init canvas
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x000000); // Set background color to black
-    const scene = new THREE.Scene();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setClearColor(0x000000) // Set background color to black
+    const scene = new THREE.Scene()
 
     const camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
       1000
-    );
-    camera.position.set(config.size / 2, 0, config.cameraDistance);
-    camera.lookAt(10, 0, 0);
+    )
+    camera.position.set(config.size / 2, 0, config.cameraDistance)
+    camera.lookAt(10, 0, 0)
 
     // Define the timeline and animations
-    const cubesTimeline = createTimelineManager();
+    const cubesTimeline = createTimelineManager()
     cubesTimeline.addActions([
       {
         interval: [config.intervals, config.intervals],
-        category: "visual-effects",
+        category: 'visual-effects',
         action: (cube) => {
-          cube.rotation.x += THREE.MathUtils.degToRad(1);
-        },
+          cube.rotation.x += THREE.MathUtils.degToRad(1)
+        }
       },
       {
         delay: config.intervals,
         interval: [config.intervals, config.intervals],
-        category: "visual-effects",
+        category: 'visual-effects',
         action: (cube) => {
-          cube.rotation.y += THREE.MathUtils.degToRad(1);
-        },
-      },
-    ]);
+          cube.rotation.y += THREE.MathUtils.degToRad(1)
+        }
+      }
+    ])
 
     positions.forEach((position) =>
       cubes.push(
         getCube(scene, config, {
           position,
-          size: [config.size, config.size, config.size],
+          size: [config.size, config.size, config.size]
         })
       )
-    );
-    getLights(scene, { directionalLightIntensity: 10 });
+    )
+    getLights(scene, { directionalLightIntensity: 10 })
 
-    registerSceneElements(camera, scene.children);
+    registerSceneElements(camera, scene.children)
 
     // Start recording video if URL has query string ?video=true
-    video.record(canvas, route);
+    video.record(canvas, route)
 
     function animate() {
-      stats.start(route); // Stats counter start if URL has query string ?stats=true
-      animationId.value = requestAnimationFrame(animate) / 1;
+      stats.start(route) // Stats counter start if URL has query string ?stats=true
+      animationId.value = requestAnimationFrame(animate) / 1
 
       cubes.forEach((cube, i) => {
-        animateTimeline(cubesTimeline, animationId.value, cube);
-      });
+        animateTimeline(cubesTimeline, animationId.value, cube)
+      })
 
-      renderer.render(scene, camera);
+      renderer.render(scene, camera)
 
       // Stop recording after X frames
-      video.stop(renderer.info.render.frame, route);
+      video.stop(renderer.info.render.frame, route)
 
-      stats.end(route); // Stats counter finish
+      stats.end(route) // Stats counter finish
     }
-    animate();
-  };
-  setup();
-};
+    animate()
+  }
+  setup()
+}
 
 const generatePositions = (): CoordinateTuple[] => {
-  const size = 20;
-  const gap = size * 2;
-  const scale = 15;
-  const xCount = Math.ceil(window.innerWidth / scale / gap) * 2 + 1;
-  const yCount = Math.ceil(window.innerHeight / scale / gap) * 2 + 1;
+  const size = 20
+  const gap = size * 2
+  const scale = 15
+  const xCount = Math.ceil(window.innerWidth / scale / gap) * 2 + 1
+  const yCount = Math.ceil(window.innerHeight / scale / gap) * 2 + 1
 
   const positions = times(xCount, (xi) => {
-    const x = -window.innerWidth / scale + xi * gap;
+    const x = -window.innerWidth / scale + xi * gap
     return times(yCount, (yi) => {
-      const y = -window.innerHeight / scale + yi * gap;
-      return times(10, (i) => [x, y, -i * size * 2]);
-    }).flat();
-  }).flat();
+      const y = -window.innerHeight / scale + yi * gap
+      return times(10, (i) => [x, y, -i * size * 2])
+    }).flat()
+  }).flat()
 
-  return positions;
-};
+  return positions
+}
 
 const getCube = (
   scene: THREE.Scene,
   config: any,
   { size, position }: { size?: CoordinateTuple; position?: CoordinateTuple } = {}
 ) => {
-  const depth = 0.02 * (size ? size[0] : 1);
-  const geometry = getRoundedBox(size ?? [1, 1, 1], depth, 10);
+  const depth = 0.02 * (size ? size[0] : 1)
+  const geometry = getRoundedBox(size ?? [1, 1, 1], depth, 10)
   const material = new THREE.MeshPhysicalMaterial({
     color: 0x333333,
     envMap: reflection,
     reflectivity: config.reflectivity,
     roughness: config.roughness,
     metalness: config.metalness,
-    transmission: config.transmission,
-  });
-  const cube = new THREE.Mesh(geometry, material);
+    transmission: config.transmission
+  })
+  const cube = new THREE.Mesh(geometry, material)
 
-  if (position) cube.position.set(...position);
+  if (position) cube.position.set(...position)
 
-  scene.add(cube);
+  scene.add(cube)
 
-  return cube;
-};
+  return cube
+}
 </script>
 
 <template>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { AccordionContent } from 'radix-vue';
-import { cn } from '@/lib/utilities';
+import { AccordionContent } from 'radix-vue'
+import { cn } from '@/lib/utilities'
 
 defineProps<{
-  class?: string;
-}>();
+  class?: string
+}>()
 </script>
 
 <template>
@@ -21,11 +21,11 @@ defineProps<{
   font-size: 0.875rem;
 }
 
-.accordion__content[data-state="open"] {
+.accordion__content[data-state='open'] {
   animation: accordionDown 200ms ease-out;
 }
 
-.accordion__content[data-state="closed"] {
+.accordion__content[data-state='closed'] {
   animation: accordionUp 200ms ease-out;
 }
 
@@ -35,12 +35,20 @@ defineProps<{
 }
 
 @keyframes accordionDown {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
 }
 
 @keyframes accordionUp {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 </style>

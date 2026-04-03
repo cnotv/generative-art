@@ -1,10 +1,10 @@
-import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d-compat";
-import type { ComplexModel } from "@webgamekit/threejs";
-import { getCube } from "@webgamekit/threejs";
-import { updateAnimation } from "@webgamekit/animation";
-import { logicAdvanceAlongPath } from "@webgamekit/logic";
-import type { PathFollowResult, PathFollowState } from "@webgamekit/logic";
+import * as THREE from 'three'
+import RAPIER from '@dimforge/rapier3d-compat'
+import type { ComplexModel } from '@webgamekit/threejs'
+import { getCube } from '@webgamekit/threejs'
+import { updateAnimation } from '@webgamekit/animation'
+import { logicAdvanceAlongPath } from '@webgamekit/logic'
+import type { PathFollowResult, PathFollowState } from '@webgamekit/logic'
 import {
   GOOMBA_ANIMATION_FALLBACK_NAME,
   DYNAMIC_OBSTACLE_COLOR,
@@ -12,8 +12,8 @@ import {
   FIXED_OBSTACLE_COLOR,
   FIXED_OBSTACLE_POSITIONS,
   OBSTACLE_SIZE,
-  PHYSICS_SPHERE_RADIUS,
-} from "../config";
+  PHYSICS_SPHERE_RADIUS
+} from '../config'
 
 export const modelFollowTick = (
   model: ComplexModel,
@@ -21,11 +21,11 @@ export const modelFollowTick = (
   speed: number,
   delta: number
 ): PathFollowResult => {
-  const result = logicAdvanceAlongPath(state, speed, delta);
-  model.position.set(result.position.x, result.position.y, result.position.z);
-  model.rotation.y = result.rotation;
-  return result;
-};
+  const result = logicAdvanceAlongPath(state, speed, delta)
+  model.position.set(result.position.x, result.position.y, result.position.z)
+  model.rotation.y = result.rotation
+  return result
+}
 
 /**
  * Physics-mode path following: kinematic body moved via the Rapier
@@ -46,71 +46,73 @@ export const modelFollowPhysicsTick = (
   delta: number,
   includeDynamic: boolean = false
 ): { state: PathFollowState; isComplete: boolean } => {
-  const body = model.userData?.body as RAPIER.RigidBody | undefined;
-  const collider = model.userData?.collider as RAPIER.Collider | undefined;
-  const cc = model.userData?.characterController as
-    | RAPIER.KinematicCharacterController
-    | undefined;
+  const body = model.userData?.body as RAPIER.RigidBody | undefined
+  const collider = model.userData?.collider as RAPIER.Collider | undefined
+  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined
 
-  if (!body) return { state, isComplete: state.currentIndex >= state.waypoints.length - 1 };
+  if (!body) return { state, isComplete: state.currentIndex >= state.waypoints.length - 1 }
 
-  const { waypoints, currentIndex } = state;
+  const { waypoints, currentIndex } = state
 
   if (currentIndex >= waypoints.length - 1) {
-    return { state, isComplete: true };
+    return { state, isComplete: true }
   }
 
-  const target = waypoints[currentIndex + 1];
-  const pos = body.translation();
+  const target = waypoints[currentIndex + 1]
+  const pos = body.translation()
 
-  const dx = target.x - pos.x;
-  const dz = target.z - pos.z;
-  const distribution = Math.hypot(dx, dz);
+  const dx = target.x - pos.x
+  const dz = target.z - pos.z
+  const distribution = Math.hypot(dx, dz)
 
   // Advance to next waypoint when close enough
   if (distribution < 0.4) {
-    model.position.set(pos.x, pos.y, pos.z);
+    model.position.set(pos.x, pos.y, pos.z)
     return {
       state: { waypoints, currentIndex: currentIndex + 1, progress: 0 },
-      isComplete: currentIndex + 1 >= waypoints.length - 1,
-    };
+      isComplete: currentIndex + 1 >= waypoints.length - 1
+    }
   }
 
-  const invDistribution = 1 / distribution;
-  const stepX = dx * invDistribution * speed * delta;
-  const stepZ = dz * invDistribution * speed * delta;
+  const invDistribution = 1 / distribution
+  const stepX = dx * invDistribution * speed * delta
+  const stepZ = dz * invDistribution * speed * delta
 
-  let nextX: number;
-  let nextZ: number;
+  let nextX: number
+  let nextZ: number
 
   if (cc && collider) {
     if (includeDynamic) {
       // Goomba: CC resolves against all bodies. setApplyImpulsesToDynamicBodies
       // (enabled in switchToGoombaMode) makes the CC push dynamic cubes it contacts.
-      cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ });
+      cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ })
     } else {
       // Physics ball: only avoid fixed/static bodies — dynamic (green) cubes are
       // excluded so the ball passes through and a manual proximity impulse pushes them.
-      cc.computeColliderMovement(collider, { x: stepX, y: 0, z: stepZ }, undefined, undefined,
+      cc.computeColliderMovement(
+        collider,
+        { x: stepX, y: 0, z: stepZ },
+        undefined,
+        undefined,
         (otherCollider: RAPIER.Collider) => !otherCollider.parent()?.isDynamic()
-      );
+      )
     }
-    const m = cc.computedMovement();
-    nextX = pos.x + m.x;
-    nextZ = pos.z + m.z;
+    const m = cc.computedMovement()
+    nextX = pos.x + m.x
+    nextZ = pos.z + m.z
   } else {
-    nextX = pos.x + stepX;
-    nextZ = pos.z + stepZ;
+    nextX = pos.x + stepX
+    nextZ = pos.z + stepZ
   }
 
   // Set kinematic target for next physics step and immediately mirror to mesh
   // (body.translation() still returns the OLD position until world.step() runs)
-  body.setNextKinematicTranslation({ x: nextX, y: pos.y, z: nextZ }, true);
-  model.position.set(nextX, pos.y, nextZ);
-  model.rotation.y = Math.atan2(dx, -dz);
+  body.setNextKinematicTranslation({ x: nextX, y: pos.y, z: nextZ }, true)
+  model.position.set(nextX, pos.y, nextZ)
+  model.rotation.y = Math.atan2(dx, -dz)
 
-  return { state, isComplete: false };
-};
+  return { state, isComplete: false }
+}
 
 /**
  * Enable the goomba's CharacterController to apply impulses to dynamic bodies it contacts,
@@ -118,57 +120,47 @@ export const modelFollowPhysicsTick = (
  * Must be called once after the goomba model is loaded.
  */
 export const modelFollowEnableGoombaPhysics = (model: ComplexModel): void => {
-  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined;
+  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined
   if (cc) {
-    cc.setApplyImpulsesToDynamicBodies(true);
+    cc.setApplyImpulsesToDynamicBodies(true)
   }
-};
+}
 
 /**
  * Set the character mass used by the CC when computing impulses for dynamic bodies.
  * Higher mass → stronger push on green cubes. Call each frame (or on slider change).
  */
 export const modelFollowSetCharacterMass = (model: ComplexModel, mass: number): void => {
-  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined;
-  if (cc) cc.setCharacterMass(mass);
-};
+  const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined
+  if (cc) cc.setCharacterMass(mass)
+}
 
 /** Syncs a kinematic Rapier body to the model's current mesh position (mesh mode). */
 export const modelFollowSyncPhysicsBody = (model: ComplexModel): void => {
-  const body = model.userData?.body as RAPIER.RigidBody | undefined;
-  if (!body) return;
-  const { x, y, z } = model.position;
-  body.setNextKinematicTranslation({ x, y, z }, true);
-};
+  const body = model.userData?.body as RAPIER.RigidBody | undefined
+  if (!body) return
+  const { x, y, z } = model.position
+  body.setNextKinematicTranslation({ x, y, z }, true)
+}
 
 export const modelFollowPlayWalkAnimation = (
   model: ComplexModel,
   delta: number,
   speed: number = 3
 ): void => {
-  const actionName =
-    Object.keys(model.userData?.actions ?? {})[0] ??
-    GOOMBA_ANIMATION_FALLBACK_NAME;
-  updateAnimation({ actionName, player: model, delta, speed });
-};
+  const actionName = Object.keys(model.userData?.actions ?? {})[0] ?? GOOMBA_ANIMATION_FALLBACK_NAME
+  updateAnimation({ actionName, player: model, delta, speed })
+}
 
-export const modelFollowPlayIdleAnimation = (
-  model: ComplexModel,
-  delta: number
-): void => {
-  const actionName =
-    Object.keys(model.userData?.actions ?? {})[0] ??
-    GOOMBA_ANIMATION_FALLBACK_NAME;
-  updateAnimation({ actionName, player: model, delta, speed: 0.5 });
-};
+export const modelFollowPlayIdleAnimation = (model: ComplexModel, delta: number): void => {
+  const actionName = Object.keys(model.userData?.actions ?? {})[0] ?? GOOMBA_ANIMATION_FALLBACK_NAME
+  updateAnimation({ actionName, player: model, delta, speed: 0.5 })
+}
 
-export const modelFollowUpdateMixer = (
-  model: ComplexModel,
-  delta: number
-): void => {
-  const mixer = model.userData?.mixer as THREE.AnimationMixer | undefined;
-  if (mixer) mixer.update(delta);
-};
+export const modelFollowUpdateMixer = (model: ComplexModel, delta: number): void => {
+  const mixer = model.userData?.mixer as THREE.AnimationMixer | undefined
+  if (mixer) mixer.update(delta)
+}
 
 /**
  * Spawn dynamic (pushable) green cubes for physics/goomba modes.
@@ -185,14 +177,14 @@ export const modelFollowSpawnDynamicObstacles = (
       color: DYNAMIC_OBSTACLE_COLOR,
       position,
       origin: {},
-      type: "dynamic",
+      type: 'dynamic',
       restitution: 0,
       friction: 2,
       weight: 2,
       castShadow: true,
-      receiveShadow: true,
+      receiveShadow: true
     })
-  );
+  )
 
 /**
  * Spawn fixed (static, immovable) red cubes for physics/goomba modes.
@@ -208,24 +200,24 @@ export const modelFollowSpawnFixedObstacles = (
       color: FIXED_OBSTACLE_COLOR,
       position,
       origin: {},
-      type: "fixed",
+      type: 'fixed',
       castShadow: true,
-      receiveShadow: true,
+      receiveShadow: true
     })
-  );
+  )
 
 /** Sync dynamic obstacle mesh positions/rotations from their Rapier physics bodies each frame. */
 export const modelFollowSyncDynamicObstacles = (obstacles: ComplexModel[]): void => {
   obstacles.forEach((obs) => {
-    const body = obs.userData?.body as RAPIER.RigidBody | undefined;
+    const body = obs.userData?.body as RAPIER.RigidBody | undefined
     if (body && body.isDynamic()) {
-      const t = body.translation();
-      obs.position.set(t.x, t.y, t.z);
-      const r = body.rotation();
-      obs.quaternion.set(r.x, r.y, r.z, r.w);
+      const t = body.translation()
+      obs.position.set(t.x, t.y, t.z)
+      const r = body.rotation()
+      obs.quaternion.set(r.x, r.y, r.z, r.w)
     }
-  });
-};
+  })
+}
 
 /**
  * Proximity-based impulse: world.contactPairsWith does not reliably report contacts
@@ -239,32 +231,32 @@ export const modelFollowApplyContactImpulses = (
   delta: number,
   impulseScale: number = 1
 ): void => {
-  const bp = ball.position;
+  const bp = ball.position
   // Extra buffer accounts for the CharacterController keeping the ball slightly
   // outside the geometric contact distance.
-  const proximityBuffer = 0.5;
-  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2 + proximityBuffer;
-  const thresholdSq = threshold * threshold;
+  const proximityBuffer = 0.5
+  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2 + proximityBuffer
+  const thresholdSq = threshold * threshold
 
   obstacles.forEach((obs) => {
-    const body = obs.userData?.body as RAPIER.RigidBody | undefined;
-    if (!body?.isDynamic()) return;
+    const body = obs.userData?.body as RAPIER.RigidBody | undefined
+    if (!body?.isDynamic()) return
 
-    const cp = body.translation();
-    const dx = cp.x - bp.x;
-    const dz = cp.z - bp.z;
-    const distributionSq = dx * dx + dz * dz;
+    const cp = body.translation()
+    const dx = cp.x - bp.x
+    const dz = cp.z - bp.z
+    const distributionSq = dx * dx + dz * dz
 
-    if (distributionSq > thresholdSq || distributionSq < 0.0001) return;
+    if (distributionSq > thresholdSq || distributionSq < 0.0001) return
 
-    const distribution = Math.sqrt(distributionSq);
-    const inv = 1 / distribution;
-    const mag = speed * delta * impulseScale;
-    const upwardFraction = 0.4;
-    const impulse = { x: dx * inv * mag, y: mag * upwardFraction, z: dz * inv * mag };
-    body.applyImpulse(impulse, true);
-  });
-};
+    const distribution = Math.sqrt(distributionSq)
+    const inv = 1 / distribution
+    const mag = speed * delta * impulseScale
+    const upwardFraction = 0.4
+    const impulse = { x: dx * inv * mag, y: mag * upwardFraction, z: dz * inv * mag }
+    body.applyImpulse(impulse, true)
+  })
+}
 
 /**
  * Returns true when the goomba's XZ position is within contact range of any fixed (red) obstacle.
@@ -274,18 +266,18 @@ export const modelFollowIsBlockedByFixedObstacle = (
   model: ComplexModel,
   obstacles: ComplexModel[]
 ): boolean => {
-  const mp = model.position;
-  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2;
-  const thresholdSq = threshold * threshold;
+  const mp = model.position
+  const threshold = PHYSICS_SPHERE_RADIUS + OBSTACLE_SIZE[0] / 2
+  const thresholdSq = threshold * threshold
   return obstacles.some((obs) => {
-    const body = obs.userData?.body as RAPIER.RigidBody | undefined;
-    if (!body?.isFixed()) return false;
-    const cp = body.translation();
-    const dx = cp.x - mp.x;
-    const dz = cp.z - mp.z;
-    return dx * dx + dz * dz <= thresholdSq;
-  });
-};
+    const body = obs.userData?.body as RAPIER.RigidBody | undefined
+    if (!body?.isFixed()) return false
+    const cp = body.translation()
+    const dx = cp.x - mp.x
+    const dz = cp.z - mp.z
+    return dx * dx + dz * dz <= thresholdSq
+  })
+}
 
 /** Remove all obstacle meshes and their physics bodies from the scene. */
 export const modelFollowClearObstacles = (
@@ -294,10 +286,10 @@ export const modelFollowClearObstacles = (
   obstacles: ComplexModel[]
 ): void => {
   obstacles.forEach((obs) => {
-    scene.remove(obs);
-    const body = obs.userData?.body as RAPIER.RigidBody | undefined;
-    if (body) world.removeRigidBody(body);
-    obs.geometry.dispose();
-    (obs.material as THREE.Material).dispose();
-  });
-};
+    scene.remove(obs)
+    const body = obs.userData?.body as RAPIER.RigidBody | undefined
+    if (body) world.removeRigidBody(body)
+    obs.geometry.dispose()
+    ;(obs.material as THREE.Material).dispose()
+  })
+}

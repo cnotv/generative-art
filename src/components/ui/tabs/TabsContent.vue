@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { TabsContent } from 'radix-vue';
+import { TabsContent } from 'radix-vue'
 
 defineProps<{
-  value: string;
-}>();
+  value: string
+}>()
 </script>
 
 <template>

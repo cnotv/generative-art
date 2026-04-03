@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { SliderRoot, SliderTrack, SliderRange, SliderThumb } from "radix-vue";
-import { cn } from "@/lib/utilities";
+import { SliderRoot, SliderTrack, SliderRange, SliderThumb } from 'radix-vue'
+import { cn } from '@/lib/utilities'
 
 const props = defineProps<{
-  modelValue?: number[];
-  defaultValue?: number[];
-  min?: number;
-  max?: number;
-  step?: number;
-  disabled?: boolean;
-  class?: string;
-}>();
+  modelValue?: number[]
+  defaultValue?: number[]
+  min?: number
+  max?: number
+  step?: number
+  disabled?: boolean
+  class?: string
+}>()
 
 const emit = defineEmits<{
-  "update:modelValue": [value: number[]];
-}>();
+  'update:modelValue': [value: number[]]
+}>()
 </script>
 
 <template>

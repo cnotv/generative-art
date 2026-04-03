@@ -5,7 +5,7 @@
 
 For project architecture, GitHub workflow, and development patterns, read `.github/copilot-instructions.md`.
 
-## WHEN THE USER LINKS A GITHUB ISSUE — MANDATORY SEQUENCE
+## When the user links a GitHub issue
 
 When the user's message contains a `github.com/.*/issues/\d+` URL, execute these steps **in order** before writing a single line of code or documentation:
 
@@ -24,7 +24,7 @@ STEP 5  implement
 
 **This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
 
-## WHEN INFORMATION IS INSUFFICIENT — ASK FIRST
+## When information is insufficient — ask first
 
 Before implementing any task where the intent, scope, or expected behavior is unclear, **ask the user for clarification**. Do not assume or guess. This applies especially to:
 

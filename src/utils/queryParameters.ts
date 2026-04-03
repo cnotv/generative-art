@@ -1,5 +1,5 @@
-import { useRoute, useRouter } from 'vue-router';
-import type { ConfigControlsSchema, ControlSchema } from '@/stores/viewConfig';
+import { useRoute, useRouter } from 'vue-router'
+import type { ConfigControlsSchema, ControlSchema } from '@/stores/viewConfig'
 
 /**
  * Traverses a ConfigControlsSchema and returns a map of
@@ -9,12 +9,12 @@ export const collectQueryParameterPaths = (
   schema: ConfigControlsSchema,
   prefix = ''
 ): Map<string, string> => {
-  const result = new Map<string, string>();
+  const result = new Map<string, string>()
   Object.entries(schema).forEach(([key, value]) => {
-    const path = prefix ? `${prefix}.${key}` : key;
-    const control = value as ControlSchema;
+    const path = prefix ? `${prefix}.${key}` : key
+    const control = value as ControlSchema
     if (control.queryParam) {
-      result.set(path, control.queryParam);
+      result.set(path, control.queryParam)
     } else if (
       typeof value === 'object' &&
       value !== null &&
@@ -24,56 +24,51 @@ export const collectQueryParameterPaths = (
     ) {
       collectQueryParameterPaths(value as ConfigControlsSchema, path).forEach(
         (parameterName, configPath) => result.set(configPath, parameterName)
-      );
+      )
     }
-  });
-  return result;
-};
+  })
+  return result
+}
 
 /**
  * Composable that provides helpers for syncing a config object
  * with URL query parameters, driven by a ConfigControlsSchema.
  */
 export const useQueryParameters = (schema: ConfigControlsSchema) => {
-  const route = useRoute();
-  const router = useRouter();
-  const queryParameterPaths = collectQueryParameterPaths(schema);
+  const route = useRoute()
+  const router = useRouter()
+  const queryParameterPaths = collectQueryParameterPaths(schema)
 
-  const readQueryParameters = (
-    defaults: Record<string, unknown>
-  ): Record<string, unknown> => {
-    const config = JSON.parse(JSON.stringify(defaults)) as Record<string, unknown>;
+  const readQueryParameters = (defaults: Record<string, unknown>): Record<string, unknown> => {
+    const config = JSON.parse(JSON.stringify(defaults)) as Record<string, unknown>
     queryParameterPaths.forEach((parameterName, configPath) => {
-      const queryValue = route.query[parameterName];
-      if (queryValue === undefined || queryValue === null) return;
-      const stringValue = String(queryValue);
-      const keys = configPath.split('.');
-      let target = config;
+      const queryValue = route.query[parameterName]
+      if (queryValue === undefined || queryValue === null) return
+      const stringValue = String(queryValue)
+      const keys = configPath.split('.')
+      let target = config
       keys.slice(0, -1).forEach((key) => {
-        if (target[key] === undefined) target[key] = {};
-        target = target[key] as Record<string, unknown>;
-      });
-      const parsed = Number(stringValue);
-      target[keys[keys.length - 1]] = isNaN(parsed) ? stringValue : parsed;
-    });
-    return config;
-  };
+        if (target[key] === undefined) target[key] = {}
+        target = target[key] as Record<string, unknown>
+      })
+      const parsed = Number(stringValue)
+      target[keys[keys.length - 1]] = isNaN(parsed) ? stringValue : parsed
+    })
+    return config
+  }
 
   const syncQueryParameters = (config: Record<string, unknown>) => {
-    const updatedParameters: Record<string, string> = {};
+    const updatedParameters: Record<string, string> = {}
     queryParameterPaths.forEach((parameterName, configPath) => {
       const value = configPath
         .split('.')
-        .reduce<unknown>(
-          (object, key) => (object as Record<string, unknown>)?.[key],
-          config
-        );
+        .reduce<unknown>((object, key) => (object as Record<string, unknown>)?.[key], config)
       if (value !== undefined && value !== null) {
-        updatedParameters[parameterName] = String(value);
+        updatedParameters[parameterName] = String(value)
       }
-    });
-    router.replace({ query: { ...route.query, ...updatedParameters } });
-  };
+    })
+    router.replace({ query: { ...route.query, ...updatedParameters } })
+  }
 
-  return { readQueryParameters, syncQueryParameters };
-};
+  return { readQueryParameters, syncQueryParameters }
+}

@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { TabsRoot } from 'radix-vue';
+import { TabsRoot } from 'radix-vue'
 
 const props = withDefaults(
   defineProps<{
-    defaultValue?: string;
-    modelValue?: string;
-    activationMode?: 'automatic' | 'manual';
+    defaultValue?: string
+    modelValue?: string
+    activationMode?: 'automatic' | 'manual'
   }>(),
   {
-    activationMode: 'automatic',
+    activationMode: 'automatic'
   }
-);
+)
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
-}>();
+  'update:modelValue': [value: string]
+}>()
 </script>
 
 <template>

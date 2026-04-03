@@ -1,39 +1,39 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
-  modelValue?: string;
-  disabled?: boolean;
-  class?: string;
-}>();
+  modelValue?: string
+  disabled?: boolean
+  class?: string
+}>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
-}>();
+  'update:modelValue': [value: string]
+}>()
 
-const internalValue = ref(props.modelValue ?? '#000000');
-const colorInputReference = ref<HTMLInputElement | null>(null);
+const internalValue = ref(props.modelValue ?? '#000000')
+const colorInputReference = ref<HTMLInputElement | null>(null)
 
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue !== undefined) {
-      internalValue.value = newValue;
+      internalValue.value = newValue
     }
   }
-);
+)
 
 const handleColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  internalValue.value = target.value;
-  emit('update:modelValue', target.value);
-};
+  const target = event.target as HTMLInputElement
+  internalValue.value = target.value
+  emit('update:modelValue', target.value)
+}
 
 const handleClick = () => {
   if (!props.disabled && colorInputReference.value) {
-    colorInputReference.value.click();
+    colorInputReference.value.click()
   }
-};
+}
 </script>
 
 <template>
@@ -42,10 +42,7 @@ const handleClick = () => {
     :class="[$props.class, { 'color-picker--disabled': disabled }]"
     @click="handleClick"
   >
-    <div
-      class="color-picker__swatch"
-      :style="{ backgroundColor: internalValue }"
-    />
+    <div class="color-picker__swatch" :style="{ backgroundColor: internalValue }" />
     <span class="color-picker__hex">{{ internalValue }}</span>
     <input
       ref="colorInputReference"

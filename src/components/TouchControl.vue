@@ -1,65 +1,69 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
-import { createFauxPadController, type FauxPadController, type FauxPadOptions } from "@webgamekit/controls";
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import {
+  createFauxPadController,
+  type FauxPadController,
+  type FauxPadOptions
+} from '@webgamekit/controls'
 
 const props = defineProps<{
-  mapping: Record<string, string>;
-  options?: FauxPadOptions;
-  mode?: 'faux-pad' | 'button'; // Default is 'faux-pad'
-  currentActions?: Record<string, any>; // Reference to currentActions from createControls
-  onAction: (action: string) => void;
-}>();
+  mapping: Record<string, string>
+  options?: FauxPadOptions
+  mode?: 'faux-pad' | 'button' // Default is 'faux-pad'
+  currentActions?: Record<string, any> // Reference to currentActions from createControls
+  onAction: (action: string) => void
+}>()
 
-const touchControlInside = ref<HTMLElement | null>(null);
-const touchControlEdge = ref<HTMLElement | null>(null);
+const touchControlInside = ref<HTMLElement | null>(null)
+const touchControlEdge = ref<HTMLElement | null>(null)
 
-let padController: FauxPadController | null = null;
+let padController: FauxPadController | null = null
 
-const isButtonMode = computed(() => props.mode === 'button');
-const buttonEntries = computed(() => Object.entries(props.mapping));
-const isMultiButton = computed(() => buttonEntries.value.length > 1);
-const singleEntry = computed(() => buttonEntries.value[0]);
+const isButtonMode = computed(() => props.mode === 'button')
+const buttonEntries = computed(() => Object.entries(props.mapping))
+const isMultiButton = computed(() => buttonEntries.value.length > 1)
+const singleEntry = computed(() => buttonEntries.value[0])
 
 onMounted(() => {
-  if (isButtonMode.value) return;
+  if (isButtonMode.value) return
 
-  if (!touchControlEdge.value || !touchControlInside.value) return;
+  if (!touchControlEdge.value || !touchControlInside.value) return
 
   // Faux-pad mode: directional control
-  const mappingReference = { current: { 'faux-pad': props.mapping } };
+  const mappingReference = { current: { 'faux-pad': props.mapping } }
   const handlers = {
     onAction: (action: string, trigger: string, device: string) => {
       // Update currentActions so the game loop can read them (intentional mutation of shared state)
       if (props.currentActions) {
         // eslint-disable-next-line vue/no-mutating-props
-        props.currentActions[action] = { trigger, device };
+        props.currentActions[action] = { trigger, device }
       }
-      props.onAction(action);
+      props.onAction(action)
     },
     onRelease: (action: string) => {
       // Remove from currentActions when released
       if (props.currentActions && props.currentActions[action]) {
         // eslint-disable-next-line vue/no-mutating-props
-        delete props.currentActions[action];
+        delete props.currentActions[action]
       }
-    },
-  };
+    }
+  }
 
-  padController = createFauxPadController(mappingReference, handlers, props.options);
+  padController = createFauxPadController(mappingReference, handlers, props.options)
   // Bind touch events to edge (larger area), visual feedback to inside
-  padController.bind(touchControlEdge.value, touchControlInside.value);
-});
+  padController.bind(touchControlEdge.value, touchControlInside.value)
+})
 
 onUnmounted(() => {
   if (padController && touchControlEdge.value && touchControlInside.value) {
-    padController.unbind(touchControlEdge.value, touchControlInside.value);
+    padController.unbind(touchControlEdge.value, touchControlInside.value)
   }
-});
+})
 
 const handleButtonAction = (action: string, event: Event) => {
-  event.preventDefault();
-  props.onAction(action);
-};
+  event.preventDefault()
+  props.onAction(action)
+}
 </script>
 
 <template>

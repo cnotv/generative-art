@@ -5,8 +5,8 @@ export type Model = THREE.Group<THREE.Object3DEventMap>;
 export type ModelType = 'fixed' | 'dynamic' | 'kinematicVelocityBased' | 'kinematicPositionBased';
 export interface Timeline {
   name?: string;
-  action?: (element?: any) => void;
-  actionStart?: (loop: number, element?: any) => void;
+  action?: (element?: unknown) => void;
+  actionStart?: (loop: number, element?: unknown) => void;
   start?: number;
   end?: number;
   frequency?: number;

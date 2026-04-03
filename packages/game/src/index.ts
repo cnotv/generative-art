@@ -1,22 +1,22 @@
-import type { GameStatus, GameState, RefLike as ReferenceLike, LifecycleHook } from './types';
+import type { GameStatus, GameState, RefLike as ReferenceLike, LifecycleHook } from './types'
 
-export type { GameStatus, GameState };
+export type { GameStatus, GameState }
 
 /**
  * Initialize a game state management system
  * @param initialConfig Initial game data configuration in a dictionary format
  * @param bindTo Optional reference to bind the game state to (e.g., Vue Ref, React State)
  * @param cleanupHook Optional lifecycle hook for cleanup for garbage collection
- * @returns 
+ * @returns
  */
 export function createGame(
-  initialConfig: Record<string, any>,
+  initialConfig: Record<string, unknown> | undefined,
   bindTo?: ReferenceLike<GameState | undefined>,
   cleanupHook?: LifecycleHook
 ): GameState {
-  let _status: GameStatus = 'idle';
-  let _data = { ...initialConfig };
-  const _listeners = new Set<(s: GameState) => void>();
+  let _status: GameStatus = 'idle'
+  let _data = { ...(initialConfig ?? {}) }
+  const _listeners = new Set<(s: GameState) => void>()
 
   const createSnapshot = (): GameState => {
     return {
@@ -24,45 +24,45 @@ export function createGame(
       data: _data,
       setData,
       setStatus
-    };
-  };
+    }
+  }
 
   const notify = () => {
-    const snapshot = createSnapshot();
+    const snapshot = createSnapshot()
 
     if (bindTo) {
-      bindTo.value = snapshot;
+      bindTo.value = snapshot
     }
 
-    _listeners.forEach((callback) => callback(snapshot));
-  };
+    _listeners.forEach((callback) => callback(snapshot))
+  }
 
-  const setData = (key: string, value: any) => {
+  const setData = (key: string, value: unknown) => {
     try {
-      _data = { ..._data, [key]: value };
+      _data = { ..._data, [key]: value }
     } catch (error) {
-      console.error(`Error setting data for key ${key} with value ${value}`, error);
+      console.error(`Error setting data for key ${key} with value ${value}`, error)
     }
-    notify();
-  };
+    notify()
+  }
 
   const setStatus = (newStatus: GameStatus) => {
-    _status = newStatus;
-    notify();
-  };
-  
-  const initialState = createSnapshot();
+    _status = newStatus
+    notify()
+  }
+
+  const initialState = createSnapshot()
 
   if (bindTo) {
-    bindTo.value = initialState;
+    bindTo.value = initialState
   }
 
   if (cleanupHook) {
     cleanupHook(() => {
-      _listeners.clear();
-      if(bindTo) bindTo.value = undefined; 
-    });
+      _listeners.clear()
+      if (bindTo) bindTo.value = undefined
+    })
   }
 
-  return initialState;
+  return initialState
 }

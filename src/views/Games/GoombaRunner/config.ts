@@ -1,35 +1,30 @@
-import cloudTexture from "@/assets/images/goomba/cloud.png";
-import hillTexture from "@/assets/images/goomba/hill.png";
-import fireTexture from "@/assets/images/goomba/fire.png";
-import type { SetupConfig } from "@webgamekit/threejs";
+import cloudTexture from '@/assets/images/goomba/cloud.png'
+import hillTexture from '@/assets/images/goomba/hill.png'
+import fireTexture from '@/assets/images/goomba/fire.png'
+import type { SetupConfig, CameraConfig } from '@webgamekit/threejs'
+import type { CoordinateTuple } from '@webgamekit/animation'
+
+const cameraConfig: CameraConfig = {
+  position: [0, 20, 150] as CoordinateTuple,
+  fov: 80,
+  rotation: [0, 0, 0] as CoordinateTuple
+}
 
 export const config = {
-  camera: {
-    position: {
-      x: 0,
-      y: 20,
-      z: 150,
-    },
-    fov: 80,
-    rotation: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-  },
+  camera: cameraConfig,
   game: {
     helper: false,
-    speed: 2,
+    speed: 2
   },
   directional: {
     enabled: true,
     helper: false,
-    intensity: 2,
+    intensity: 2
   },
   blocks: {
     helper: false,
     size: 30,
-    spacing: 150,
+    spacing: 150
   },
   player: {
     helper: true,
@@ -42,8 +37,8 @@ export const config = {
       duration: 1000,
       isActive: false,
       velocity: 0,
-      startTime: 0,
-    },
+      startTime: 0
+    }
   },
   backgrounds: {
     textureAreaLayers: [
@@ -56,7 +51,7 @@ export const config = {
         density: 3,
         seed: 1000,
         speed: 2,
-        opacity: 0.5,
+        opacity: 0.5
       },
       {
         name: 'cloud',
@@ -67,7 +62,7 @@ export const config = {
         density: 2.5,
         seed: 2000,
         speed: 2,
-        opacity: 0.5,
+        opacity: 0.5
       },
       {
         name: 'cloud',
@@ -78,7 +73,7 @@ export const config = {
         density: 2.5,
         seed: 3000,
         speed: 2,
-        opacity: 0.7,
+        opacity: 0.7
       },
       {
         name: 'hill',
@@ -90,8 +85,8 @@ export const config = {
         density: 0.875,
         seed: 4000,
         speed: 2,
-        opacity: 0.5,
-      },
+        opacity: 0.5
+      }
     ],
     layers: [
       {
@@ -106,7 +101,7 @@ export const config = {
         zPosition: -70,
         count: 10,
         spacing: 100,
-        opacity: 0.4,
+        opacity: 0.4
       },
       {
         texture: fireTexture,
@@ -120,16 +115,16 @@ export const config = {
         zPosition: 100,
         count: 10,
         spacing: 300,
-        opacity: 0.4,
-      },
-    ],
-  },
-};
+        opacity: 0.4
+      }
+    ]
+  }
+}
 
 export const configControls = {
   game: {
     helper: { boolean: false },
-    speed: { min: 0.5, max: 3 },
+    speed: { min: 0.5, max: 3 }
   },
   player: {
     helper: { boolean: false },
@@ -137,10 +132,10 @@ export const configControls = {
     maxJump: {},
     jump: {
       height: {},
-      duration: {},
-    },
-  },
-};
+      duration: {}
+    }
+  }
+}
 
 export const textureAreaControls = {
   area: {
@@ -149,15 +144,15 @@ export const textureAreaControls = {
       component: 'CoordinateInput',
       min: { x: -5000, y: -500, z: -1000 },
       max: { x: 5000, y: 500, z: 1000 },
-      step: { x: 10, y: 1, z: 10 },
+      step: { x: 10, y: 1, z: 10 }
     },
     size: {
       label: 'Area Size',
       component: 'CoordinateInput',
       min: { x: 1, y: 0, z: 0 },
       max: { x: 10000, y: 500, z: 1000 },
-      step: { x: 10, y: 1, z: 10 },
-    },
+      step: { x: 10, y: 1, z: 10 }
+    }
   },
   textures: {
     baseSize: {
@@ -165,30 +160,30 @@ export const textureAreaControls = {
       component: 'CoordinateInput',
       min: { x: 1, y: 1, z: 0 },
       max: { x: 2000, y: 2000, z: 10 },
-      step: { x: 10, y: 10, z: 0.1 },
-    },
+      step: { x: 10, y: 10, z: 0.1 }
+    }
   },
   instances: {
     density: { min: 0, max: 50, step: 0.5, label: 'Density' },
-    seed: { min: 0, max: 10000, step: 1, label: 'Seed' },
+    seed: { min: 0, max: 10000, step: 1, label: 'Seed' }
   },
   rendering: {
     opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity' },
-    speed: { min: 0, max: 10, step: 0.5, label: 'Speed' },
-  },
-};
+    speed: { min: 0, max: 10, step: 0.5, label: 'Speed' }
+  }
+}
 
-export const setupConfig = {
-  camera: config.camera as any,
+export const setupConfig: SetupConfig = {
+  camera: config.camera,
   scene: {
-    backgroundColor: 0x87ceeb,
+    backgroundColor: 0x87ceeb
   },
   ground: false,
-  sky: false, // Disable sky sphere to avoid hiding UI elements
+  sky: false,
   lights: {
     directional: {
-      intensity: config.directional.intensity * 1.5,
-    },
+      intensity: config.directional.intensity * 1.5
+    }
   },
-  orbit: { disabled: true },
-} as SetupConfig;
+  orbit: { disabled: true }
+}

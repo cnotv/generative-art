@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
-import { createPinia } from 'pinia';
-import { createRouter, createMemoryHistory } from 'vue-router';
-import DrawPath from './DrawPath.vue';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import DrawPath from './DrawPath.vue'
 
 vi.mock('@/stores/panels', () => ({
   usePanelsStore: () => ({
@@ -13,12 +13,12 @@ vi.mock('@/stores/panels', () => ({
     activePanels: new Set(['config']),
     isDebugOpen: false,
     isSceneOpen: false,
-    initRouteSync: vi.fn(),
-  }),
-}));
+    initRouteSync: vi.fn()
+  })
+}))
 
 vi.mock('@webgamekit/threejs', async () => {
-  const actual = await vi.importActual<typeof import('@webgamekit/threejs')>('@webgamekit/threejs');
+  const actual = await vi.importActual<typeof import('@webgamekit/threejs')>('@webgamekit/threejs')
   return {
     ...actual,
     getTools: vi.fn(() =>
@@ -27,29 +27,29 @@ vi.mock('@webgamekit/threejs', async () => {
         renderer: {
           setSize: vi.fn(),
           domElement: document.createElement('canvas'),
-          render: vi.fn(),
+          render: vi.fn()
         },
         scene: {
           add: vi.fn(),
           remove: vi.fn(),
           background: null,
-          children: [],
+          children: []
         },
         camera: {
           position: { set: vi.fn(), x: 0, y: 15, z: 25 },
           lookAt: vi.fn(),
           updateProjectionMatrix: vi.fn(),
-          fov: 60,
+          fov: 60
         },
         world: { step: vi.fn() },
-        getDelta: vi.fn(() => 0.016),
+        getDelta: vi.fn(() => 0.016)
       })
     ),
     getBall: vi.fn(() => ({
       position: { set: vi.fn(), x: 0, y: 0.5, z: 0 },
       userData: { body: { setNextKinematicTranslation: vi.fn() } },
       rotation: { y: 0 },
-      visible: true,
+      visible: true
     })),
     getCube: vi.fn(() => ({
       position: { set: vi.fn(), x: 0, y: 0.75, z: 0 },
@@ -57,49 +57,50 @@ vi.mock('@webgamekit/threejs', async () => {
       rotation: { y: 0 },
       visible: true,
       geometry: { dispose: vi.fn() },
-      material: { dispose: vi.fn() },
+      material: { dispose: vi.fn() }
     })),
     getModel: vi.fn(() =>
       Promise.resolve({
         position: { set: vi.fn(), x: 0, y: 0.5, z: 0 },
         userData: { body: { setNextKinematicTranslation: vi.fn() }, actions: {}, mixer: null },
         rotation: { y: 0 },
-        visible: false,
+        visible: false
       })
-    ),
-  };
-});
+    )
+  }
+})
 
 vi.mock('@webgamekit/animation', async () => {
-  const actual = await vi.importActual<typeof import('@webgamekit/animation')>('@webgamekit/animation');
+  const actual =
+    await vi.importActual<typeof import('@webgamekit/animation')>('@webgamekit/animation')
   return {
     ...actual,
-    updateAnimation: vi.fn(),
-  };
-});
+    updateAnimation: vi.fn()
+  }
+})
 
 describe('DrawPath', () => {
-  let pinia: ReturnType<typeof createPinia>;
-  let router: ReturnType<typeof createRouter>;
+  let pinia: ReturnType<typeof createPinia>
+  let router: ReturnType<typeof createRouter>
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.clearAllMocks()
 
-    pinia = createPinia();
+    pinia = createPinia()
     router = createRouter({
       history: createMemoryHistory(),
       routes: [
         {
           path: '/experiments/DrawPath',
           name: 'DrawPath',
-          component: DrawPath,
-        },
-      ],
-    });
+          component: DrawPath
+        }
+      ]
+    })
 
-    await router.push('/experiments/DrawPath');
-    await router.isReady();
-  });
+    await router.push('/experiments/DrawPath')
+    await router.isReady()
+  })
 
   const createWrapper = () =>
     mount(DrawPath, {
@@ -107,23 +108,23 @@ describe('DrawPath', () => {
         plugins: [pinia, router],
         stubs: {
           ConfigPanel: { template: '<div data-stub="config-panel" />' },
-          ScenePanel: { template: '<div data-stub="scene-panel" />' },
-        },
+          ScenePanel: { template: '<div data-stub="scene-panel" />' }
+        }
       },
-      attachTo: document.body,
-    });
+      attachTo: document.body
+    })
 
   describe('Component mounting', () => {
     it('mounts with a canvas element', () => {
-      const wrapper = createWrapper();
-      expect(wrapper.find('canvas').exists()).toBe(true);
-    });
-  });
+      const wrapper = createWrapper()
+      expect(wrapper.find('canvas').exists()).toBe(true)
+    })
+  })
 
   describe('Canvas rendering', () => {
     it('renders no action buttons in the view (controls live in config panel)', () => {
-      const wrapper = createWrapper();
-      expect(wrapper.findAll('button')).toHaveLength(0);
-    });
-  });
-});
+      const wrapper = createWrapper()
+      expect(wrapper.findAll('button')).toHaveLength(0)
+    })
+  })
+})

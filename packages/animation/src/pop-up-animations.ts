@@ -1,4 +1,7 @@
+import * as THREE from 'three'
 import type { PopUpAnimationConfig } from './types'
+
+type MaterialWithOpacity = THREE.Material & { transparent: boolean; opacity: number }
 
 /**
  * Easing functions for animations
@@ -108,8 +111,9 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
 
   // Ensure material is transparent
   if ('material' in object && object.material) {
-    (object.material as any).transparent = true;
-    (object.material as any).opacity = 0
+    const material = object.material as MaterialWithOpacity
+    material.transparent = true
+    material.opacity = 0
   }
 
   let currentFrame = -1
@@ -128,7 +132,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
       if (!hasCompleted) {
         object.position.y = endY
         if ('material' in object && object.material) {
-          (object.material as any).opacity = 1
+          ;(object.material as MaterialWithOpacity).opacity = 1
         }
         hasCompleted = true
         onComplete?.()
@@ -142,7 +146,7 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
     object.position.y = startY + (endY - startY) * easedProgress
 
     if ('material' in object && object.material) {
-      (object.material as any).opacity = easedProgress
+      ;(object.material as MaterialWithOpacity).opacity = easedProgress
     }
 
     return true
@@ -286,7 +290,10 @@ export const sortOrder = {
    * Sort by Z position (front to back)
    * Items with higher Z (closer to camera) animate first
    */
-  zFrontToBack: (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+  zFrontToBack: (
+    a: { position: [number, number, number] },
+    b: { position: [number, number, number] }
+  ): number => {
     return b.position[2] - a.position[2]
   },
 
@@ -294,28 +301,40 @@ export const sortOrder = {
    * Sort by Z position (back to front)
    * Items with lower Z (further from camera) animate first
    */
-  zBackToFront: (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+  zBackToFront: (
+    a: { position: [number, number, number] },
+    b: { position: [number, number, number] }
+  ): number => {
     return a.position[2] - b.position[2]
   },
 
   /**
    * Sort by X position (left to right)
    */
-  xLeftToRight: (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+  xLeftToRight: (
+    a: { position: [number, number, number] },
+    b: { position: [number, number, number] }
+  ): number => {
     return a.position[0] - b.position[0]
   },
 
   /**
    * Sort by X position (right to left)
    */
-  xRightToLeft: (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+  xRightToLeft: (
+    a: { position: [number, number, number] },
+    b: { position: [number, number, number] }
+  ): number => {
     return b.position[0] - a.position[0]
   },
 
   /**
    * Sort by distance from origin (closest first)
    */
-  distanceFromOrigin: (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+  distanceFromOrigin: (
+    a: { position: [number, number, number] },
+    b: { position: [number, number, number] }
+  ): number => {
     const distributionA = Math.hypot(a.position[0], a.position[1], a.position[2])
     const distributionB = Math.hypot(b.position[0], b.position[1], b.position[2])
     return distributionA - distributionB
@@ -327,9 +346,12 @@ export const sortOrder = {
    * @param items All items to analyze for min/max Z
    * @param target 'start' (min Z), 'middle', or 'end' (max Z)
    */
-  byDistanceFromZ: (items: Array<{ position: [number, number, number] }>, target: 'start' | 'middle' | 'end') => {
+  byDistanceFromZ: (
+    items: Array<{ position: [number, number, number] }>,
+    target: 'start' | 'middle' | 'end'
+  ) => {
     // Find min and max Z values
-    const zValues = items.map(item => item.position[2])
+    const zValues = items.map((item) => item.position[2])
     const minZ = Math.min(...zValues)
     const maxZ = Math.max(...zValues)
 
@@ -344,7 +366,10 @@ export const sortOrder = {
     }
 
     // Return sort function
-    return (a: { position: [number, number, number] }, b: { position: [number, number, number] }): number => {
+    return (
+      a: { position: [number, number, number] },
+      b: { position: [number, number, number] }
+    ): number => {
       const distributionA = Math.abs(a.position[2] - targetZ)
       const distributionB = Math.abs(b.position[2] - targetZ)
       return distributionA - distributionB
@@ -374,9 +399,8 @@ export function calculateSequentialDelays<T extends { position: [number, number,
 
   // Calculate what the delay increment should be to fit within maxTotalDelay
   const maxPossibleDelay = (items.length - 1) * delayIncrement
-  const actualDelayIncrement = maxPossibleDelay > maxTotalDelay
-    ? maxTotalDelay / (items.length - 1)
-    : delayIncrement
+  const actualDelayIncrement =
+    maxPossibleDelay > maxTotalDelay ? maxTotalDelay / (items.length - 1) : delayIncrement
 
   // Calculate delays for sorted items
   const delays = new Array(items.length).fill(0)

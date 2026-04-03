@@ -1,28 +1,42 @@
-import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d-compat";
-import { getCube, generateAreaPositions } from "@webgamekit/threejs";
-import type { CoordinateTuple, ComplexModel } from "@webgamekit/threejs";
-import { config } from "../config";
-import { preventGlitches, getSpeed } from "./setup";
+import * as THREE from 'three'
+import RAPIER from '@dimforge/rapier3d-compat'
+import { getCube, generateAreaPositions } from '@webgamekit/threejs'
+import type { CoordinateTuple, ComplexModel } from '@webgamekit/threejs'
+import { config } from '../config'
+import { preventGlitches, getSpeed } from './setup'
 
 export interface FallAnimation {
-  isActive: boolean;
-  startTime: number;
-  delay: number;
-  fallSpeed: number;
-  rotationSpeed: number;
+  isActive: boolean
+  startTime: number
+  delay: number
+  fallSpeed: number
+  rotationSpeed: number
 }
 
 export interface FallingElement {
-  mesh: ComplexModel;
-  fallAnimation?: FallAnimation;
+  mesh: ComplexModel
+  fallAnimation?: FallAnimation
 }
 
 /**
  * Background element with mesh and movement properties
  */
 export interface BackgroundElement extends FallingElement {
-  speed: number;
+  speed: number
+}
+
+interface BackgroundLayerOptions {
+  texture: string
+  speed: number
+  size: number
+  ratio?: number
+  xVariation: number
+  yPosition: number
+  yVariation: number
+  zVariation: number
+  zPosition: number
+  opacity: number
+  spacing?: number
 }
 
 /**
@@ -30,30 +44,35 @@ export interface BackgroundElement extends FallingElement {
  * @param camera
  * @param background
  */
-const isOoS = (camera: THREE.PerspectiveCamera, background: {
-  mesh: THREE.Mesh;
-}) => {
+const isOoS = (
+  camera: THREE.PerspectiveCamera,
+  background: {
+    mesh: THREE.Mesh
+  }
+) => {
   // Calculate removal distance based on camera cone vision and element depth
-  const cameraPos = camera.position;
-  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z);
+  const cameraPos = camera.position
+  const elementDepth = Math.abs(background.mesh.position.z - cameraPos.z)
 
   // Account for camera field of view cone - wider cone for farther elements
-  const fov = camera.fov * (Math.PI / 180); // Convert to radians
-  const aspect = window.innerWidth / window.innerHeight;
-  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect;
+  const fov = camera.fov * (Math.PI / 180) // Convert to radians
+  const aspect = window.innerWidth / window.innerHeight
+  const coneWidth = 2 * Math.tan(fov / 2) * elementDepth * aspect
 
   // Add significant offset for safe removal (element width + cone width + buffer)
-  let elementWidth = 200; // Default fallback
+  let elementWidth = 200 // Default fallback
   if (background.mesh.geometry?.boundingBox) {
-    elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+    elementWidth =
+      background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x
   } else {
     // Compute bounding box if not available
-    background.mesh.geometry.computeBoundingBox();
+    background.mesh.geometry.computeBoundingBox()
     if (background.mesh.geometry.boundingBox) {
-      elementWidth = background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x;
+      elementWidth =
+        background.mesh.geometry.boundingBox.max.x - background.mesh.geometry.boundingBox.min.x
     }
   }
-  const removalOffset = (coneWidth / 2) + elementWidth + 500; // Extra 500 units buffer
+  const removalOffset = coneWidth / 2 + elementWidth + 500 // Extra 500 units buffer
 
   return background.mesh.position.x < cameraPos.x - removalOffset
 }
@@ -61,26 +80,25 @@ const isOoS = (camera: THREE.PerspectiveCamera, background: {
 export const addBackground = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  options: any,
+  options: BackgroundLayerOptions,
   initialX?: number
 ): ComplexModel => {
-  const getVariation = (variation: number) =>
-    (Math.random() - 0.5) * 2 * (variation || 0);
+  const getVariation = (variation: number) => (Math.random() - 0.5) * 2 * (variation || 0)
 
   // Calculate height based on ratio (width / ratio = height)
-  const width = options.size;
-  const height = options.ratio ? width / options.ratio : width / 2; // fallback to 2:1 ratio
+  const width = options.size
+  const height = options.ratio ? width / options.ratio : width / 2 // fallback to 2:1 ratio
 
   const xPosition =
     initialX !== undefined
       ? initialX + getVariation(options.xVariation)
-      : window.innerWidth / 2 + width + getVariation(options.xVariation);
+      : window.innerWidth / 2 + width + getVariation(options.xVariation)
 
   const finalPosition: [number, number, number] = [
     xPosition,
     options.yPosition + getVariation(options.yVariation),
-    options.zPosition + getVariation(options.zVariation),
-  ];
+    options.zPosition + getVariation(options.zVariation)
+  ]
 
   // Create the main textured layer
   const result = getCube(scene, world, {
@@ -92,92 +110,89 @@ export const addBackground = (
     receiveShadow: false,
     color: 0xffffff,
     opacity: options.opacity,
-    material: "MeshBasicMaterial",
-  });
+    material: 'MeshBasicMaterial'
+  })
 
-  preventGlitches(result, options);
+  preventGlitches(result, options)
 
-  return result;
-};
+  return result
+}
 
 export const populateInitialBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
   backgrounds: BackgroundElement[]
 ) => {
-  const viewportWidth = window.innerWidth;
-  const extendedWidth = viewportWidth * 2; // Cover more area initially
+  const viewportWidth = window.innerWidth
+  const extendedWidth = viewportWidth * 2 // Cover more area initially
 
   config.backgrounds.layers.forEach((background) => {
-    const totalElements = Math.ceil(extendedWidth / background.spacing) + 1;
+    const totalElements = Math.ceil(extendedWidth / background.spacing) + 1
 
-    for (let i = 0; i < totalElements; i++) {
-      const initialX = i * background.spacing - extendedWidth / 2;
-      const mesh = addBackground(scene, world, background, initialX);
-      backgrounds.push({ mesh, speed: background.speed });
-    }
-  });
-};
+    Array.from({ length: totalElements }, (_, i) => {
+      const initialX = i * background.spacing - extendedWidth / 2
+      const mesh = addBackground(scene, world, background, initialX)
+      backgrounds.push({ mesh, speed: background.speed })
+    })
+  })
+}
 
-export const startBackgroundFalling = (
-  backgrounds: FallingElement[]
-) => {
-  const currentTime = Date.now();
+export const startBackgroundFalling = (backgrounds: FallingElement[]) => {
+  const currentTime = Date.now()
 
   backgrounds.forEach((background) => {
     // Add random delay between 0-3 seconds for each background element
-    const randomDelay = Math.random() * 3000;
+    const randomDelay = Math.random() * 3000
     // Random fall speed between 50-150 pixels per second
-    const randomFallSpeed = 50 + Math.random() * 100;
+    const randomFallSpeed = 50 + Math.random() * 100
     // Random rotation speed
-    const randomRotationSpeed = (Math.random() - 0.5) * 0.02;
+    const randomRotationSpeed = (Math.random() - 0.5) * 0.02
 
     background.fallAnimation = {
       isActive: false, // Will be activated after delay
       startTime: currentTime,
       delay: randomDelay,
       fallSpeed: randomFallSpeed,
-      rotationSpeed: randomRotationSpeed,
-    };
-  });
-};
+      rotationSpeed: randomRotationSpeed
+    }
+  })
+}
 
 export const updateFallingBackgrounds = (
   deltaTime: number,
   backgrounds: FallingElement[],
   scene: THREE.Scene
 ) => {
-  const currentTime = Date.now();
+  const currentTime = Date.now()
 
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i];
-
+  backgrounds.reduceRight((_, background, i) => {
     if (background.fallAnimation) {
-      const fallData = background.fallAnimation;
-      const elapsed = currentTime - fallData.startTime;
+      const fallData = background.fallAnimation
+      const elapsed = currentTime - fallData.startTime
 
       // Check if delay has passed and activate falling
       if (!fallData.isActive && elapsed >= fallData.delay) {
-        fallData.isActive = true;
+        fallData.isActive = true
       }
 
       // Apply falling animation if active
       if (fallData.isActive) {
         // Move downward
-        background.mesh.position.y -= fallData.fallSpeed * deltaTime;
+        background.mesh.position.y -= fallData.fallSpeed * deltaTime
 
         // Add rotation for more dynamic effect
-        background.mesh.rotation.z += fallData.rotationSpeed;
+        background.mesh.rotation.z += fallData.rotationSpeed
 
         // Remove background when it falls completely off screen
         if (background.mesh.position.y < -window.innerHeight) {
-          scene.remove(background.mesh);
-          backgrounds.splice(i, 1);
+          scene.remove(background.mesh)
+          backgrounds.splice(i, 1)
         }
       }
     }
-  }
-};
+    return null
+  }, null)
+}
 
 export const createBackgrounds = (
   scene: THREE.Scene,
@@ -188,19 +203,19 @@ export const createBackgrounds = (
 ) => {
   // Dynamic background generation - create new backgrounds when needed based on speed
   config.backgrounds.layers.forEach((backgroundConfig, layerIndex) => {
-    const currentSpeed = getSpeed(backgroundConfig.speed, gameScore);
-    const adjustedSpacing = backgroundConfig.spacing / getSpeed(1, gameScore); // Adjust spacing based on overall game speed
+    const currentSpeed = getSpeed(backgroundConfig.speed, gameScore)
+    const adjustedSpacing = backgroundConfig.spacing / getSpeed(1, gameScore) // Adjust spacing based on overall game speed
 
     // Check if we need to generate a new background element for this layer
-    backgroundTimers[layerIndex] += currentSpeed;
+    backgroundTimers[layerIndex] += currentSpeed
 
     if (backgroundTimers[layerIndex] >= adjustedSpacing) {
-      backgroundTimers[layerIndex] = 0; // Reset timer
-      const mesh = addBackground(scene, world, backgroundConfig);
-      backgrounds.push({ mesh, speed: backgroundConfig.speed });
+      backgroundTimers[layerIndex] = 0 // Reset timer
+      const mesh = addBackground(scene, world, backgroundConfig)
+      backgrounds.push({ mesh, speed: backgroundConfig.speed })
     }
-  });
-};
+  })
+}
 
 export const moveBackgrounds = (
   scene: THREE.Scene,
@@ -209,18 +224,16 @@ export const moveBackgrounds = (
   gameScore: number
 ) => {
   // Move backgrounds and remove off-screen ones
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i];
-
+  backgrounds.reduceRight((_, background, i) => {
     // Safety check - skip if mesh is undefined
     if (!background || !background.mesh) {
-      backgrounds.splice(i, 1);
-      continue;
+      backgrounds.splice(i, 1)
+      return null
     }
 
     // Only move horizontally if not falling
     if (!background.fallAnimation || !background.fallAnimation.isActive) {
-      background.mesh.position.x -= getSpeed(background.speed, gameScore);
+      background.mesh.position.x -= getSpeed(background.speed, gameScore)
     }
 
     // Remove when element is completely outside the camera cone vision (only if not falling)
@@ -228,60 +241,63 @@ export const moveBackgrounds = (
       (!background.fallAnimation || !background.fallAnimation.isActive) &&
       isOoS(camera, background)
     ) {
-      scene.remove(background.mesh);
-      backgrounds.splice(i, 1);
+      scene.remove(background.mesh)
+      backgrounds.splice(i, 1)
     }
-  }
-};
+    return null
+  }, null)
+}
 
 export const resetBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
   backgrounds: BackgroundElement[]
 ) => {
-  for (let i = backgrounds.length - 1; i >= 0; i--) {
-    const background = backgrounds[i];
-    scene.remove(background.mesh);
-  }
-  backgrounds.length = 0;
+  backgrounds.reduceRight((_, background, i) => {
+    scene.remove(background.mesh)
+    backgrounds.splice(i, 1)
+    return null
+  }, null)
 
   // Repopulate backgrounds for restart
-  populateInitialBackgrounds(scene, world, backgrounds);
-};
+  populateInitialBackgrounds(scene, world, backgrounds)
+}
 
 export interface TextureAreaElement extends FallingElement {
-  speed: number;
-  centerX: number;
-  halfWidth: number;
+  speed: number
+  centerX: number
+  halfWidth: number
 }
 
 export interface TextureAreaLayerConfig {
-  name: string;
-  texture: string;
-  baseSize: CoordinateTuple;
-  sizeVariation?: CoordinateTuple;
-  center: CoordinateTuple;
-  size: CoordinateTuple;
-  density: number;
-  seed?: number;
-  pattern?: 'random' | 'grid' | 'grid-jitter';
-  speed: number;
-  opacity: number;
+  name: string
+  texture: string
+  baseSize: CoordinateTuple
+  sizeVariation?: CoordinateTuple
+  center: CoordinateTuple
+  size: CoordinateTuple
+  density: number
+  seed?: number
+  pattern?: 'random' | 'grid' | 'grid-jitter'
+  speed: number
+  opacity: number
 }
 
 export const createTextureAreaBackgroundLayer = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  layerConfig: TextureAreaLayerConfig,
+  layerConfig: TextureAreaLayerConfig
 ): TextureAreaElement[] => {
-  const count = Math.ceil(layerConfig.density * layerConfig.size[0] / 1000);
-  const positions = generateAreaPositions({ ...layerConfig, count });
+  const count = Math.ceil((layerConfig.density * layerConfig.size[0]) / 1000)
+  const positions = generateAreaPositions({ ...layerConfig, count })
 
-  const halfWidth = layerConfig.size[0] / 2;
+  const halfWidth = layerConfig.size[0] / 2
 
   return positions.map((position) => {
-    const sizeX = layerConfig.baseSize[0] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[0] ?? 0);
-    const sizeY = layerConfig.baseSize[1] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[1] ?? 0);
+    const sizeX =
+      layerConfig.baseSize[0] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[0] ?? 0)
+    const sizeY =
+      layerConfig.baseSize[1] + (Math.random() - 0.5) * (layerConfig.sizeVariation?.[1] ?? 0)
 
     const mesh = getCube(scene, world, {
       name: layerConfig.name,
@@ -293,43 +309,43 @@ export const createTextureAreaBackgroundLayer = (
       color: 0xffffff,
       opacity: layerConfig.opacity,
       material: 'MeshBasicMaterial',
-      type: 'fixed',
-    });
+      type: 'fixed'
+    })
 
     if (layerConfig.opacity < 1) {
-      mesh.renderOrder = -Math.abs(layerConfig.center[2]) / 10;
+      mesh.renderOrder = -Math.abs(layerConfig.center[2]) / 10
       if (mesh.material instanceof THREE.MeshBasicMaterial) {
-        mesh.material.depthTest = true;
-        mesh.material.depthWrite = layerConfig.opacity >= 0.9;
-        mesh.material.alphaTest = 0.01;
+        mesh.material.depthTest = true
+        mesh.material.depthWrite = layerConfig.opacity >= 0.9
+        mesh.material.alphaTest = 0.01
       }
     }
 
-    return { mesh, speed: layerConfig.speed, centerX: layerConfig.center[0], halfWidth };
-  });
-};
+    return { mesh, speed: layerConfig.speed, centerX: layerConfig.center[0], halfWidth }
+  })
+}
 
 export const resetTextureAreaBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
-  elements: TextureAreaElement[],
+  elements: TextureAreaElement[]
 ): TextureAreaElement[] => {
-  elements.forEach(element => scene.remove(element.mesh));
+  elements.forEach((element) => scene.remove(element.mesh))
 
-  return config.backgrounds.textureAreaLayers.flatMap(
-    (layerConfig) => createTextureAreaBackgroundLayer(scene, world, layerConfig)
-  );
-};
+  return config.backgrounds.textureAreaLayers.flatMap((layerConfig) =>
+    createTextureAreaBackgroundLayer(scene, world, layerConfig)
+  )
+}
 
 export const moveAndRecycleTextureAreaBackgrounds = (
   elements: TextureAreaElement[],
-  gameScore: number,
+  gameScore: number
 ): void => {
   elements.forEach((element) => {
-    if (element.fallAnimation?.isActive) return;
-    element.mesh.position.x -= getSpeed(element.speed, gameScore);
+    if (element.fallAnimation?.isActive) return
+    element.mesh.position.x -= getSpeed(element.speed, gameScore)
     if (element.mesh.position.x < element.centerX - element.halfWidth) {
-      element.mesh.position.x += element.halfWidth * 2;
+      element.mesh.position.x += element.halfWidth * 2
     }
-  });
-};
+  })
+}

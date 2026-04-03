@@ -1,2 +1,2 @@
 // Re-export from package
-export { getBall, getCube, getWalls } from '@webgamekit/threejs';
+export { getBall, getCube, getWalls } from '@webgamekit/threejs'

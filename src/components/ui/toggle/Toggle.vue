@@ -1,29 +1,30 @@
 <script setup lang="ts">
-import { Toggle as RadixToggle } from 'radix-vue';
-import { computed } from 'vue';
-import { cn } from '@/lib/utilities';
+import { Toggle as RadixToggle } from 'radix-vue'
+import { computed } from 'vue'
+import { cn } from '@/lib/utilities'
 
 const props = defineProps<{
-  modelValue?: boolean;
-  disabled?: boolean;
-  variant?: 'default' | 'outline';
-  size?: 'default' | 'sm' | 'lg';
-}>();
+  modelValue?: boolean
+  disabled?: boolean
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
+}>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean];
-}>();
+  'update:modelValue': [value: boolean]
+}>()
 
 const variantClasses = {
-  default: 'bg-transparent hover:bg-muted hover:text-muted-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
-  outline: 'border border-input bg-transparent hover:bg-accent hover:text-accent-foreground',
-};
+  default:
+    'bg-transparent hover:bg-muted hover:text-muted-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
+  outline: 'border border-input bg-transparent hover:bg-accent hover:text-accent-foreground'
+}
 
 const sizeClasses = {
   default: 'h-10 px-3',
   sm: 'h-9 px-2.5',
-  lg: 'h-11 px-5',
-};
+  lg: 'h-11 px-5'
+}
 
 const classes = computed(() =>
   cn(
@@ -33,7 +34,7 @@ const classes = computed(() =>
     variantClasses[props.variant || 'default'],
     sizeClasses[props.size || 'default']
   )
-);
+)
 </script>
 
 <template>

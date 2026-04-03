@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import * as THREE from "three";
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
-import { useDebugSceneStore } from "@/stores/debugScene";
-import { video } from "@/utils/video";
-import { controls } from "@/utils/control";
-import { stats } from "@/utils/stats";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import RAPIER from "@dimforge/rapier3d-compat";
+import * as THREE from 'three'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { video } from '@/utils/video'
+import { controls } from '@/utils/control'
+import { stats } from '@/utils/stats'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import RAPIER from '@dimforge/rapier3d-compat'
 
-const statsElement = ref(null);
-const canvas = ref(null);
-const route = useRoute();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const statsElement = ref(null)
+const canvas = ref(null)
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const cubes = [] as {
-  cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>;
-  rigidBody: RAPIER.RigidBody;
-}[];
+  cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>
+  rigidBody: RAPIER.RigidBody
+}[]
 
 const setCubePosition = (
   click: MouseEvent,
   model: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial, THREE.Object3DEventMap>,
   rigidBody: RAPIER.RigidBody
 ) => {
-  const x = -(click.clientX - window.innerWidth / 2) / 50;
-  const y = -(click.clientY - window.innerHeight) / 50;
+  const x = -(click.clientX - window.innerWidth / 2) / 50
+  const y = -(click.clientY - window.innerHeight) / 50
 
-  model.position.set(x, y, 0);
-  rigidBody.setTranslation({ x, y, z: 0 }, true);
-};
+  model.position.set(x, y, 0)
+  rigidBody.setTranslation({ x, y, z: 0 }, true)
+}
 
 const createGround = (
   size: CoordinateTuple,
@@ -37,21 +37,21 @@ const createGround = (
   world: RAPIER.World
 ) => {
   // Create and add model
-  const geometry = new THREE.BoxGeometry(...size);
-  const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
-  const ground = new THREE.Mesh(geometry, material);
-  ground.position.set(...position);
-  scene.add(ground);
+  const geometry = new THREE.BoxGeometry(...size)
+  const material = new THREE.MeshBasicMaterial({ color: 0x333333 })
+  const ground = new THREE.Mesh(geometry, material)
+  ground.position.set(...position)
+  scene.add(ground)
 
   // Create a dynamic rigid-body.
-  RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
+  RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position);
-  const collider = world.createCollider(colliderDesc);
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position)
+  const collider = world.createCollider(colliderDesc)
 
-  return { ground, collider };
-};
+  return { ground, collider }
+}
 
 const createCube = (
   size: CoordinateTuple,
@@ -61,123 +61,121 @@ const createCube = (
   world: RAPIER.World
 ) => {
   // Create and add model
-  const geometry = new THREE.BoxGeometry(...size);
-  const material = new THREE.MeshLambertMaterial({ color: 0xdddddd });
-  const cube = new THREE.Mesh(geometry, material);
-  cube.position.set(...position);
-  cube.rotation.set(0.5, 0.5, 0.5);
-  orbit.target.copy(cube.position);
-  scene.add(cube);
+  const geometry = new THREE.BoxGeometry(...size)
+  const material = new THREE.MeshLambertMaterial({ color: 0xdddddd })
+  const cube = new THREE.Mesh(geometry, material)
+  cube.position.set(...position)
+  cube.rotation.set(0.5, 0.5, 0.5)
+  orbit.target.copy(cube.position)
+  scene.add(cube)
 
   // Create a dynamic rigid-body.
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position);
-  const rigidBody = world.createRigidBody(rigidBodyDesc);
-  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true);
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
+  const rigidBody = world.createRigidBody(rigidBodyDesc)
+  rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true)
 
   // Create a cuboid collider attached to the dynamic rigidBody.
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(
-    ...(size.map((x) => x * 0.6) as CoordinateTuple)
-  );
-  const collider = world.createCollider(colliderDesc, rigidBody);
+  const colliderDesc = RAPIER.ColliderDesc.cuboid(...(size.map((x) => x * 0.6) as CoordinateTuple))
+  const collider = world.createCollider(colliderDesc, rigidBody)
 
-  return { cube, rigidBody, collider };
-};
+  return { cube, rigidBody, collider }
+}
 
 onMounted(() => {
-  init(
-    (canvas.value as unknown) as HTMLCanvasElement,
-    (statsElement.value as unknown) as HTMLElement
+  ;(init(
+    canvas.value as unknown as HTMLCanvasElement,
+    statsElement.value as unknown as HTMLElement
   ),
-    statsElement.value!;
-});
+    statsElement.value!)
+})
 
 onUnmounted(() => {
-  clearSceneElements();
-});
+  clearSceneElements()
+})
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
     // size: 50,
-  };
-  stats.init(route, statsElement);
+  }
+  stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
-    setup();
-  });
+    setup()
+  })
 
   const setup = async () => {
-    await RAPIER.init();
-    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
-    const groundSize = [100.0, 0.1, 20.0] as CoordinateTuple;
-    const cubeSize = [1.0, 1.0, 1.0] as CoordinateTuple;
-    const cubePosition = [0.0, 5.0, 0.0] as CoordinateTuple;
-    const groundPosition = [1, -1, 1] as CoordinateTuple;
+    await RAPIER.init()
+    const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 })
+    const groundSize = [100.0, 0.1, 20.0] as CoordinateTuple
+    const cubeSize = [1.0, 1.0, 1.0] as CoordinateTuple
+    const cubePosition = [0.0, 5.0, 0.0] as CoordinateTuple
+    const groundPosition = [1, -1, 1] as CoordinateTuple
 
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x111111); // Set background color to black
-    renderer.shadowMap.enabled = true; // Enable shadow maps
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setClearColor(0x111111) // Set background color to black
+    renderer.shadowMap.enabled = true // Enable shadow maps
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap // Use soft shadows
 
     const camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
       1000
-    );
-    const scene = new THREE.Scene();
-    const orbit = new OrbitControls(camera, renderer.domElement);
+    )
+    const scene = new THREE.Scene()
+    const orbit = new OrbitControls(camera, renderer.domElement)
 
-    camera.position.set(0, 15, 15);
+    camera.position.set(0, 15, 15)
 
     // Add directional light with shadows
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(5, 5, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.bias = -0.0001;
-    scene.add(directionalLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
+    directionalLight.position.set(5, 5, 5)
+    directionalLight.castShadow = true
+    directionalLight.shadow.mapSize.width = 2048
+    directionalLight.shadow.mapSize.height = 2048
+    directionalLight.shadow.bias = -0.0001
+    scene.add(directionalLight)
 
     // Add hemisphere light
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    scene.add(hemisphereLight);
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1)
+    scene.add(hemisphereLight)
 
-    createGround(groundSize, groundPosition, scene, world);
-    cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world));
+    createGround(groundSize, groundPosition, scene, world)
+    cubes.push(createCube(cubeSize, cubePosition, scene, orbit, world))
 
-    registerSceneElements(camera, scene.children);
+    registerSceneElements(camera, scene.children)
 
     // Change cube position
-    document.addEventListener("click", (event) => {
-      const { cube, rigidBody } = createCube(cubeSize, cubePosition, scene, orbit, world);
-      setCubePosition(event, cube, rigidBody);
-      cubes.push({ cube, rigidBody });
-    });
+    document.addEventListener('click', (event) => {
+      const { cube, rigidBody } = createCube(cubeSize, cubePosition, scene, orbit, world)
+      setCubePosition(event, cube, rigidBody)
+      cubes.push({ cube, rigidBody })
+    })
 
-    video.record(canvas, route);
+    video.record(canvas, route)
 
     function animate() {
-      stats.start(route);
-      requestAnimationFrame(animate);
-      world.step();
+      stats.start(route)
+      requestAnimationFrame(animate)
+      world.step()
 
       cubes.forEach(({ cube, rigidBody }) => {
-        const position = rigidBody.translation();
-        cube.position.set(position.x, position.y, position.z);
-        const rotation = rigidBody.rotation();
-        cube.rotation.set(rotation.x, rotation.y, rotation.z);
-      });
+        const position = rigidBody.translation()
+        cube.position.set(position.x, position.y, position.z)
+        const rotation = rigidBody.rotation()
+        cube.rotation.set(rotation.x, rotation.y, rotation.z)
+      })
 
-      orbit.update();
+      orbit.update()
 
-      renderer.render(scene, camera);
-      video.stop(renderer.info.render.frame, route);
-      stats.end(route);
+      renderer.render(scene, camera)
+      video.stop(renderer.info.render.frame, route)
+      stats.end(route)
     }
-    animate();
-  };
-  setup();
-};
+    animate()
+  }
+  setup()
+}
 </script>
 
 <template>

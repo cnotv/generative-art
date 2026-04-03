@@ -1,53 +1,53 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export type DebugStat = {
-  label: string;
-  value: string | number;
-};
+  label: string
+  value: string | number
+}
 
 defineProps<{
-  stats?: DebugStat[];
-}>();
+  stats?: DebugStat[]
+}>()
 
 // Built-in performance stats
-const fps = ref(0);
-const memory = ref(0);
-const drawCalls = ref(0);
+const fps = ref(0)
+const memory = ref(0)
+const drawCalls = ref(0)
 
-let frameCount = 0;
-let lastTime = performance.now();
-let animationFrameId: number;
+let frameCount = 0
+let lastTime = performance.now()
+let animationFrameId: number
 
 const updateStats = () => {
-  frameCount++;
-  const currentTime = performance.now();
-  const delta = currentTime - lastTime;
+  frameCount++
+  const currentTime = performance.now()
+  const delta = currentTime - lastTime
 
   // Update FPS every second
   if (delta >= 1000) {
-    fps.value = Math.round((frameCount * 1000) / delta);
-    frameCount = 0;
-    lastTime = currentTime;
+    fps.value = Math.round((frameCount * 1000) / delta)
+    frameCount = 0
+    lastTime = currentTime
 
     // Update memory if available
     if (performance.memory) {
-      memory.value = Math.round(performance.memory.usedJSHeapSize / 1048576);
+      memory.value = Math.round(performance.memory.usedJSHeapSize / 1048576)
     }
   }
 
-  animationFrameId = requestAnimationFrame(updateStats);
-};
+  animationFrameId = requestAnimationFrame(updateStats)
+}
 
 onMounted(() => {
-  updateStats();
-});
+  updateStats()
+})
 
 onUnmounted(() => {
   if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
+    cancelAnimationFrame(animationFrameId)
   }
-});
+})
 </script>
 
 <template>
@@ -64,11 +64,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Custom stats -->
-    <div
-      v-for="stat in stats"
-      :key="stat.label"
-      class="debug-stats__item"
-    >
+    <div v-for="stat in stats" :key="stat.label" class="debug-stats__item">
       <span class="debug-stats__label">{{ stat.label }}</span>
       <span class="debug-stats__value">{{ stat.value }}</span>
     </div>

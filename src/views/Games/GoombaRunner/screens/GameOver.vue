@@ -14,15 +14,15 @@
 </template>
 
 <script setup lang="ts">
-import { isNewHighScore, gameScore } from "../helpers/setup";
+import { isNewHighScore, gameScore } from '../helpers/setup'
 
 defineEmits<{
-  restart: [];
-}>();
+  restart: []
+}>()
 </script>
 
 <style scoped>
-@import "../styles.css";
+@import '../styles.css';
 
 .game--over {
   justify-content: center;
@@ -65,11 +65,24 @@ defineEmits<{
   line-height: 0.6;
   letter-spacing: -0.4rem;
   color: var(--color-mario-red);
-  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -4px -4px 0 #000,
-    4px -4px 0 var(--color-text), -4px 4px 0 var(--color-text),
-    4px 4px 0 var(--color-text), -4px 0 0 var(--color-text), 4px 0 0 var(--color-text),
-    0 -4px 0 var(--color-text), 0 4px 0 var(--color-text), var(--shadow-text-mario-large);
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    -1px 0 0 #fff,
+    1px 0 0 #fff,
+    0 -1px 0 #fff,
+    0 1px 0 #fff,
+    -4px -4px 0 #000,
+    4px -4px 0 var(--color-text),
+    -4px 4px 0 var(--color-text),
+    4px 4px 0 var(--color-text),
+    -4px 0 0 var(--color-text),
+    4px 0 0 var(--color-text),
+    0 -4px 0 var(--color-text),
+    0 4px 0 var(--color-text),
+    var(--shadow-text-mario-large);
 }
 
 .gratz-text {

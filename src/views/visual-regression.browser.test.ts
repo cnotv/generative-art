@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
@@ -17,30 +17,31 @@ const componentModules = import.meta.glob('./**/*.vue', { eager: true })
  * Extract test cases from the imported components
  * Filter to match the routing pattern (component name in path)
  */
-const testCases: Array<{ name: string; category: string; path: string; component: Component }> = Object.entries(componentModules)
-  .map(([path, module]) => {
-    // Extract category and component name from path
-    // Pattern: ./{Category}/{ComponentName}/{ComponentName}.vue or ./{Category}/{ComponentName}.vue
-    const match = path.match(/^\.\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
+const testCases: Array<{ name: string; category: string; path: string; component: Component }> =
+  Object.entries(componentModules)
+    .map(([path, module]) => {
+      // Extract category and component name from path
+      // Pattern: ./{Category}/{ComponentName}/{ComponentName}.vue or ./{Category}/{ComponentName}.vue
+      const match = path.match(/^\.\/([^/]+)\/([^/]+)(?:\/\2)?\.vue$/)
 
-    if (!match) return null
+      if (!match) return null
 
-    const [, category, componentName] = match
-    // Skip if category is Templates or Stages (not in router)
-    if (category === 'Templates' || category === 'Stages') return null
+      const [, category, componentName] = match
+      // Skip if category is Templates or Stages (not in router)
+      if (category === 'Templates' || category === 'Stages') return null
 
-    // Convert to readable name (e.g., "GoombaRunner" -> "Goomba Runner")
-    const name = componentName.replace(/([A-Z])/g, ' $1').trim()
+      // Convert to readable name (e.g., "GoombaRunner" -> "Goomba Runner")
+      const name = componentName.replace(/([A-Z])/g, ' $1').trim()
 
-    return {
-      name,
-      category,
-      path: `/${category.toLowerCase()}/${componentName}`,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component: (module as any).default
-    }
-  })
-  .filter((testCase): testCase is NonNullable<typeof testCase> => testCase !== null)
+      return {
+        name,
+        category,
+        path: `/${category.toLowerCase()}/${componentName}`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component: (module as any).default
+      }
+    })
+    .filter((testCase): testCase is NonNullable<typeof testCase> => testCase !== null)
 
 /**
  * Visual Regression Tests
@@ -110,7 +111,7 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
   const checkCanvas = async (): Promise<void> => {
     if (Date.now() - startTime >= timeoutMs) {
       // Timeout reached, proceed anyway (better than failing)
-      await new Promise(resolve => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
       return
     }
 
@@ -118,12 +119,17 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
       const ctx = canvas.getContext('2d')
       if (ctx) {
         // Check a small sample of pixels to see if anything has been rendered
-        const imageData = ctx.getImageData(0, 0, Math.min(canvas.width, 10), Math.min(canvas.height, 10))
-        const hasNonZeroPixels = imageData.data.some(value => value !== 0)
+        const imageData = ctx.getImageData(
+          0,
+          0,
+          Math.min(canvas.width, 10),
+          Math.min(canvas.height, 10)
+        )
+        const hasNonZeroPixels = imageData.data.some((value) => value !== 0)
 
         if (hasNonZeroPixels) {
           // Canvas has rendered content, wait one more frame to be sure
-          await new Promise(resolve => requestAnimationFrame(resolve))
+          await new Promise((resolve) => requestAnimationFrame(resolve))
           return
         }
       }
@@ -131,13 +137,13 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
       // WebGL canvas may not support getContext('2d'), that's okay
       // Fall back to just waiting for dimensions
       if (canvas.width > 0 && canvas.height > 0) {
-        await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise((resolve) => requestAnimationFrame(resolve))
         return
       }
     }
 
     // Wait a bit before checking again
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise((resolve) => setTimeout(resolve, 50))
     await checkCanvas()
   }
 
@@ -146,19 +152,21 @@ async function waitForCanvasRender(canvas: HTMLCanvasElement, timeoutMs = 5000):
 
 describe.each(testCases)('Visual Regression -- $category - $name', ({ component, name, path }) => {
   it(`should render ${name} correctly`, async () => {
-    let wrapper: any
+    let wrapper: ReturnType<typeof mount> | undefined
     let canvasElement: HTMLCanvasElement | null = null
-    let rafStub: any = null
+    let rafStub: ReturnType<typeof vi.fn> | null = null
 
     try {
       // Create required dependencies
       const pinia = createPinia()
       const router = createRouter({
         history: createMemoryHistory(),
-        routes: [{
-          path: path,
-          component
-        }]
+        routes: [
+          {
+            path: path,
+            component
+          }
+        ]
       })
 
       // Navigate to the route
@@ -196,7 +204,7 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
       window.requestAnimationFrame = rafStub
 
       // Execute any pending animation frames at frozen time
-      await new Promise(resolve => originalRAF(resolve))
+      await new Promise((resolve) => originalRAF(resolve))
 
       // Restore RAF before screenshot to avoid issues
       window.requestAnimationFrame = originalRAF
@@ -218,7 +226,7 @@ describe.each(testCases)('Visual Regression -- $category - $name', ({ component,
         wrapper.unmount()
       }
       // Small delay to allow context cleanup
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     }
   }, 1_000) // Increased to 1s to allow for async asset loading in CI
 })

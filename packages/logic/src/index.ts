@@ -7,8 +7,8 @@ export type {
   Position2D,
   Waypoint,
   PathFollowState,
-  PathFollowResult,
-} from "./types";
+  PathFollowResult
+} from './types'
 
 export {
   logicCreateGrid,
@@ -17,9 +17,9 @@ export {
   logicWorldToGrid,
   logicSetCellType,
   logicMarkObstacle,
-  logicMarkObstacles,
-} from "./grid";
+  logicMarkObstacles
+} from './grid'
 
-export { logicGetBestRoute } from "./pathfinding";
+export { logicGetBestRoute } from './pathfinding'
 
-export { logicAdvanceAlongPath } from "./pathFollowing";
+export { logicAdvanceAlongPath } from './pathFollowing'

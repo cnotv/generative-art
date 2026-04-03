@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import { useRoute } from "vue-router";
-import * as THREE from "three";
-import {
-  getTools,
-  getCube,
-  type ComplexModel,
-} from "@webgamekit/threejs";
-import { type CoordinateTuple } from "@webgamekit/animation";
-import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from "@/stores/viewConfig";
-import { useViewPanelsStore } from "@/stores/viewPanels";
-import { useDebugSceneStore } from "@/stores/debugScene";
+import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import * as THREE from 'three'
+import { getTools, getCube, type ComplexModel } from '@webgamekit/threejs'
+import { type CoordinateTuple } from '@webgamekit/animation'
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import { useViewPanelsStore } from '@/stores/viewPanels'
+import { useDebugSceneStore } from '@/stores/debugScene'
 
 import {
   gridConfig,
@@ -30,124 +26,146 @@ import {
   defaultStart,
   defaultGoal,
   scenarios,
-  type ScenarioConfig,
-} from "./config";
-import { createGrid, setCellType, gridToWorld, worldToGrid } from "./helpers/grid";
-import type { Grid, GridConfig, CellType } from "./helpers/grid";
-import type { Position } from "./helpers/pathfinding";
-import { getBestRoute } from "./helpers/pathfinding";
-import { createPathLine, removePathLine } from "./helpers/pathAnimation";
+  type ScenarioConfig
+} from './config'
+import { createGrid, setCellType, gridToWorld, worldToGrid } from './helpers/grid'
+import type { Grid, GridConfig, CellType } from './helpers/grid'
+import type { Position } from './helpers/pathfinding'
+import { getBestRoute } from './helpers/pathfinding'
+import { createPathLine, removePathLine } from './helpers/pathAnimation'
 
-const route = useRoute();
-const { setViewPanels, clearViewPanels } = useViewPanelsStore();
-const { registerSceneElements, clearSceneElements } = useDebugSceneStore();
+const route = useRoute()
+const { setViewPanels, clearViewPanels } = useViewPanelsStore()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
-const canvas = ref<HTMLCanvasElement | null>(null);
-const hasPath = shallowRef(false);
-const isDragging = shallowRef(false);
-const dragAction = shallowRef<CellType | null>(null);
+const canvas = ref<HTMLCanvasElement | null>(null)
+const hasPath = shallowRef(false)
+const isDragging = shallowRef(false)
+const dragAction = shallowRef<CellType | null>(null)
 
 const reactiveConfig = createReactiveConfig({
   density: obstacleDensity,
   width: gridConfig.width,
   height: gridConfig.height,
-  brush: "boulder",
-  scenarios: "simple",
-  showCosts: false,
-});
+  brush: 'boulder',
+  scenarios: 'simple',
+  showCosts: false
+})
 
-const sceneConfig = createReactiveConfig(defaultSceneValues);
+const sceneConfig = createReactiveConfig(defaultSceneValues)
 
 // Sync scenario selection from config panel (value is already the scenario key)
 watch(
   () => reactiveConfig.value.scenarios,
   (name) => {
-    loadScenario(name);
+    loadScenario(name)
   }
-);
+)
 
 // Grid size changes rebuild the scene
 watch(
   () => [reactiveConfig.value.width, reactiveConfig.value.height] as const,
   ([newWidth, newHeight]) => {
-    if (!sceneState) return;
-    const newConfig: GridConfig = { ...gridConfig, width: newWidth, height: newHeight };
-    buildScene(sceneState, reactiveConfig.value.density, newConfig);
+    if (!sceneState) return
+    const newConfig: GridConfig = { ...gridConfig, width: newWidth, height: newHeight }
+    buildScene(sceneState, reactiveConfig.value.density, newConfig)
   }
-);
+)
 
 // Show/hide cost labels when the toggle changes
 watch(
   () => reactiveConfig.value.showCosts,
-  () => { refreshCostLabels(); }
-);
+  () => {
+    refreshCostLabels()
+  }
+)
 
 // Top-down needs up=[0,0,-1] to avoid lookAt gimbal lock when camera is directly above target
-const TOP_DOWN_UP = new THREE.Vector3(0, 0, -1);
-const ISO_UP = new THREE.Vector3(0, 1, 0);
+const TOP_DOWN_UP = new THREE.Vector3(0, 0, -1)
+const ISO_UP = new THREE.Vector3(0, 1, 0)
 
 // Isometric camera toggle — animate to target position and up vector
 watch(
   () => sceneConfig.value.camera.isometric,
   (isIso) => {
-    if (!sceneState) return;
-    const [tx, ty, tz] = isIso ? cameraPositions.isometric : cameraPositions.topDown;
+    if (!sceneState) return
+    const [tx, ty, tz] = isIso ? cameraPositions.isometric : cameraPositions.topDown
     sceneState.cameraTransition = {
       from: sceneState.orthoCamera.position.clone(),
       to: new THREE.Vector3(tx, ty, tz),
       fromUp: sceneState.orthoCamera.up.clone(),
       toUp: isIso ? ISO_UP : TOP_DOWN_UP,
-      t: 0,
-    };
+      t: 0
+    }
   }
-);
+)
 
-watch(() => sceneConfig.value.lights.ambient.intensity, (value) => {
-  if (sceneState?.ambientLight) sceneState.ambientLight.intensity = value;
-});
+watch(
+  () => sceneConfig.value.lights.ambient.intensity,
+  (value) => {
+    if (sceneState?.ambientLight) sceneState.ambientLight.intensity = value
+  }
+)
 
-watch(() => sceneConfig.value.lights.directional.intensity, (value) => {
-  if (sceneState?.directionalLight) sceneState.directionalLight.intensity = value;
-});
+watch(
+  () => sceneConfig.value.lights.directional.intensity,
+  (value) => {
+    if (sceneState?.directionalLight) sceneState.directionalLight.intensity = value
+  }
+)
 
-watch(() => sceneConfig.value.ground.color, (value) => {
-  if (sceneState?.groundMesh) (sceneState.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value);
-});
+watch(
+  () => sceneConfig.value.ground.color,
+  (value) => {
+    if (sceneState?.groundMesh)
+      (sceneState.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value)
+  }
+)
 
-watch(() => sceneConfig.value.scene.backgroundColor, (value) => {
-  if (sceneState?.scene.background instanceof THREE.Color) sceneState.scene.background.setHex(value);
-});
+watch(
+  () => sceneConfig.value.scene.backgroundColor,
+  (value) => {
+    if (sceneState?.scene.background instanceof THREE.Color)
+      sceneState.scene.background.setHex(value)
+  }
+)
 
-type CameraTransition = { from: THREE.Vector3; to: THREE.Vector3; fromUp: THREE.Vector3; toUp: THREE.Vector3; t: number };
+type CameraTransition = {
+  from: THREE.Vector3
+  to: THREE.Vector3
+  fromUp: THREE.Vector3
+  toUp: THREE.Vector3
+  t: number
+}
 
 type SceneState = {
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  world: Parameters<typeof getCube>[1];
-  orthoCamera: THREE.OrthographicCamera;
-  obstacleMeshes: Map<string, ComplexModel>;
-  pathLine: THREE.Group | null;
-  costLabels: THREE.Sprite[];
-  grid: Grid;
-  startMarker: ComplexModel | null;
-  goalMarker: ComplexModel | null;
-  currentGridConfig: GridConfig;
-  currentStart: Position | null;
-  currentGoal: Position | null;
-  ambientLight: THREE.AmbientLight | null;
-  directionalLight: THREE.DirectionalLight | null;
-  groundMesh: THREE.Mesh | null;
-  cameraTransition: CameraTransition | null;
-};
+  renderer: THREE.WebGLRenderer
+  scene: THREE.Scene
+  world: Parameters<typeof getCube>[1]
+  orthoCamera: THREE.OrthographicCamera
+  obstacleMeshes: Map<string, ComplexModel>
+  pathLine: THREE.Group | null
+  costLabels: THREE.Sprite[]
+  grid: Grid
+  startMarker: ComplexModel | null
+  goalMarker: ComplexModel | null
+  currentGridConfig: GridConfig
+  currentStart: Position | null
+  currentGoal: Position | null
+  ambientLight: THREE.AmbientLight | null
+  directionalLight: THREE.DirectionalLight | null
+  groundMesh: THREE.Mesh | null
+  cameraTransition: CameraTransition | null
+}
 
-let sceneState: SceneState | null = null;
-let animFrameId: number | null = null;
+let sceneState: SceneState | null = null
+let animFrameId: number | null = null
 
-const FRUSTUM_SIZE = 40;
-const GROUND_Y = -1;
+const FRUSTUM_SIZE = 40
+const GROUND_Y = -1
 
 const createOrthoCamera = (width: number, height: number): THREE.OrthographicCamera => {
-  const aspect = width / height;
+  const aspect = width / height
   const cam = new THREE.OrthographicCamera(
     (FRUSTUM_SIZE * aspect) / -2,
     (FRUSTUM_SIZE * aspect) / 2,
@@ -155,22 +173,22 @@ const createOrthoCamera = (width: number, height: number): THREE.OrthographicCam
     FRUSTUM_SIZE / -2,
     0.1,
     1000
-  );
-  cam.position.set(0, 50, 0);
-  cam.up.set(0, 0, -1);
-  cam.lookAt(0, 0, 0);
-  return cam;
-};
+  )
+  cam.position.set(0, 50, 0)
+  cam.up.set(0, 0, -1)
+  cam.lookAt(0, 0, 0)
+  return cam
+}
 
-type TypedPosition = { x: number; z: number; type: CellType };
+type TypedPosition = { x: number; z: number; type: CellType }
 
 // One wormhole pair per 8 obstacles; remainder split ~60% boulder / 40% gravel
 const assignObstacleType = (index: number, count: number): CellType => {
-  const pairCount = Math.floor(count / 8);
-  const pairIndex = Math.floor(index / 2);
-  if (pairIndex < pairCount) return index % 2 === 0 ? "wormholeEntrance" : "wormholeExit";
-  return index % 10 < 6 ? "boulder" : "gravel";
-};
+  const pairCount = Math.floor(count / 8)
+  const pairIndex = Math.floor(index / 2)
+  if (pairIndex < pairCount) return index % 2 === 0 ? 'wormholeEntrance' : 'wormholeExit'
+  return index % 10 < 6 ? 'boulder' : 'gravel'
+}
 
 const generateTypedObstacles = (
   width: number,
@@ -179,47 +197,53 @@ const generateTypedObstacles = (
   start: Position,
   goal: Position
 ): TypedPosition[] => {
-  const total = width * height;
-  const count = Math.floor(total * density);
+  const total = width * height
+  const count = Math.floor(total * density)
 
   return Array.from({ length: total }, (_, i) => ({ x: i % width, z: Math.floor(i / width) }))
-    .filter((pos) => !(pos.x === start.x && pos.z === start.z) && !(pos.x === goal.x && pos.z === goal.z))
+    .filter(
+      (pos) => !(pos.x === start.x && pos.z === start.z) && !(pos.x === goal.x && pos.z === goal.z)
+    )
     .map((pos) => ({ pos, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
     .map(({ pos }) => pos)
     .slice(0, count)
-    .map((pos, i) => ({ ...pos, type: assignObstacleType(i, count) }));
-};
+    .map((pos, i) => ({ ...pos, type: assignObstacleType(i, count) }))
+}
 
-const buildCostSprite = (text: string, position: THREE.Vector3, scene: THREE.Scene): THREE.Sprite => {
-  const offscreenCanvas = document.createElement("canvas");
-  offscreenCanvas.width = 192;
-  offscreenCanvas.height = 96;
-  const ctx = offscreenCanvas.getContext("2d");
+const buildCostSprite = (
+  text: string,
+  position: THREE.Vector3,
+  scene: THREE.Scene
+): THREE.Sprite => {
+  const offscreenCanvas = document.createElement('canvas')
+  offscreenCanvas.width = 192
+  offscreenCanvas.height = 96
+  const ctx = offscreenCanvas.getContext('2d')
   if (ctx) {
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, 0, 192, 96);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 54px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(text, 96, 66);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 0, 192, 96)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 54px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(text, 96, 66)
   }
-  const texture = new THREE.CanvasTexture(offscreenCanvas);
-  const material = new THREE.SpriteMaterial({ map: texture });
-  const sprite = new THREE.Sprite(material);
-  sprite.position.copy(position);
-  sprite.scale.set(1.8, 0.9, 1);
-  scene.add(sprite);
-  return sprite;
-};
+  const texture = new THREE.CanvasTexture(offscreenCanvas)
+  const material = new THREE.SpriteMaterial({ map: texture })
+  const sprite = new THREE.Sprite(material)
+  sprite.position.copy(position)
+  sprite.scale.set(1.8, 0.9, 1)
+  scene.add(sprite)
+  return sprite
+}
 
 const clearCostLabels = (scene: THREE.Scene, labels: THREE.Sprite[]): void => {
   labels.forEach((sprite) => {
-    scene.remove(sprite);
-    sprite.material.dispose();
-  });
-  labels.length = 0;
-};
+    scene.remove(sprite)
+    sprite.material.dispose()
+  })
+  labels.length = 0
+}
 
 const drawCostLabels = (
   scene: THREE.Scene,
@@ -228,55 +252,56 @@ const drawCostLabels = (
   labels: THREE.Sprite[]
 ): void => {
   path.forEach((pos, index) => {
-    const [wx, , wz] = gridToWorld(pos.x, pos.z, currentGridConfig);
-    const worldPos = new THREE.Vector3(wx, GROUND_Y + 1.5, wz);
-    const sprite = buildCostSprite(String(index), worldPos, scene);
-    labels.push(sprite);
-  });
-};
+    const [wx, , wz] = gridToWorld(pos.x, pos.z, currentGridConfig)
+    const worldPos = new THREE.Vector3(wx, GROUND_Y + 1.5, wz)
+    const sprite = buildCostSprite(String(index), worldPos, scene)
+    labels.push(sprite)
+  })
+}
 
-const CELL_Y_OFFSET = GROUND_Y;
+const CELL_Y_OFFSET = GROUND_Y
 
-const cellKey = (x: number, z: number): string => `${x},${z}`;
+const cellKey = (x: number, z: number): string => `${x},${z}`
 
 const makeCellMesh = (
   scene: THREE.Scene,
-  world: SceneState["world"],
+  world: SceneState['world'],
   x: number,
   z: number,
   type: CellType,
   currentGridConfig: GridConfig
 ): ComplexModel => {
-  const worldPos = gridToWorld(x, z, currentGridConfig);
-  const height = cellTypeHeights[type] ?? 1;
-  const color = cellTypeColors[type] ?? cellTypeColors.boulder;
+  const worldPos = gridToWorld(x, z, currentGridConfig)
+  const height = cellTypeHeights[type] ?? 1
+  const color = cellTypeColors[type] ?? cellTypeColors.boulder
   return getCube(scene, world, {
     ...obstacleCubeBase,
     position: [worldPos[0], CELL_Y_OFFSET + height / 2, worldPos[2]] as CoordinateTuple,
     size: [cellFootprint, height, cellFootprint] as CoordinateTuple,
-    color,
-  });
-};
+    color
+  })
+}
 
 const buildMeshesFromGrid = (
   scene: THREE.Scene,
-  world: SceneState["world"],
+  world: SceneState['world'],
   grid: Grid,
   currentGridConfig: GridConfig
 ): Map<string, ComplexModel> => {
-  const map = new Map<string, ComplexModel>();
-  grid.cells.flat()
-    .filter((c) => c.type !== "empty")
+  const map = new Map<string, ComplexModel>()
+  grid.cells
+    .flat()
+    .filter((c) => c.type !== 'empty')
     .forEach((c) => {
-      map.set(cellKey(c.x, c.z), makeCellMesh(scene, world, c.x, c.z, c.type, currentGridConfig));
-    });
-  return map;
-};
+      map.set(cellKey(c.x, c.z), makeCellMesh(scene, world, c.x, c.z, c.type, currentGridConfig))
+    })
+  return map
+}
 
 const clearSceneMeshes = (scene: THREE.Scene, meshes: Map<string, ComplexModel>): void => {
-  meshes.forEach((mesh) => scene.remove(mesh));
-  meshes.clear();
-};
+  meshes.forEach((mesh) => scene.remove(mesh))
+  meshes.clear()
+}
 
 const computeAndDrawPath = (
   state: SceneState,
@@ -284,27 +309,27 @@ const computeAndDrawPath = (
   goal: Position | null,
   currentGridConfig: GridConfig
 ): void => {
-  const { scene } = state;
+  const { scene } = state
 
   if (state.pathLine) {
-    removePathLine(scene, state.pathLine);
-    state.pathLine = null;
-    hasPath.value = false;
+    removePathLine(scene, state.pathLine)
+    state.pathLine = null
+    hasPath.value = false
   }
-  clearCostLabels(scene, state.costLabels);
+  clearCostLabels(scene, state.costLabels)
 
-  if (!start || !goal) return;
+  if (!start || !goal) return
 
-  const path = getBestRoute(state.grid, start, goal);
-  if (!path) return;
+  const path = getBestRoute(state.grid, start, goal)
+  if (!path) return
 
-  state.pathLine = createPathLine(scene, path, currentGridConfig, pathColor);
-  hasPath.value = true;
+  state.pathLine = createPathLine(scene, path, currentGridConfig, pathColor)
+  hasPath.value = true
 
   if (reactiveConfig.value.showCosts) {
-    drawCostLabels(scene, path, currentGridConfig, state.costLabels);
+    drawCostLabels(scene, path, currentGridConfig, state.costLabels)
   }
-};
+}
 
 const buildScene = (
   state: SceneState,
@@ -312,241 +337,272 @@ const buildScene = (
   baseGridConfig: GridConfig,
   scenario?: ScenarioConfig
 ): void => {
-  const { scene, world } = state;
+  const { scene, world } = state
 
   // Scenario may override grid size
   const effectiveGridConfig: GridConfig = scenario?.gridSize
     ? { ...baseGridConfig, ...scenario.gridSize }
-    : baseGridConfig;
+    : baseGridConfig
 
-  const start = scenario?.start ?? defaultStart;
-  const goal = scenario?.goal ?? defaultGoal(effectiveGridConfig.width, effectiveGridConfig.height);
+  const start = scenario?.start ?? defaultStart
+  const goal = scenario?.goal ?? defaultGoal(effectiveGridConfig.width, effectiveGridConfig.height)
 
-  state.currentGridConfig = effectiveGridConfig;
-  state.currentStart = start;
-  state.currentGoal = goal;
+  state.currentGridConfig = effectiveGridConfig
+  state.currentStart = start
+  state.currentGoal = goal
 
   if (state.pathLine) {
-    removePathLine(scene, state.pathLine);
-    state.pathLine = null;
-    hasPath.value = false;
+    removePathLine(scene, state.pathLine)
+    state.pathLine = null
+    hasPath.value = false
   }
-  clearCostLabels(scene, state.costLabels);
+  clearCostLabels(scene, state.costLabels)
 
   // Build grid: apply scenario cells or generate random obstacles
-  let grid = createGrid(effectiveGridConfig);
+  let grid = createGrid(effectiveGridConfig)
   if (scenario?.cells?.length) {
     grid = scenario.cells.reduce(
-      (g, cell) => setCellType(g, cell.x, cell.z, cell.type ?? "boulder"),
+      (g, cell) => setCellType(g, cell.x, cell.z, cell.type ?? 'boulder'),
       grid
-    );
+    )
   } else {
-    grid = generateTypedObstacles(effectiveGridConfig.width, effectiveGridConfig.height, density, start, goal)
-      .reduce((g, { x, z, type }) => setCellType(g, x, z, type), grid);
+    grid = generateTypedObstacles(
+      effectiveGridConfig.width,
+      effectiveGridConfig.height,
+      density,
+      start,
+      goal
+    ).reduce((g, { x, z, type }) => setCellType(g, x, z, type), grid)
   }
-  state.grid = grid;
+  state.grid = grid
 
-  clearSceneMeshes(scene, state.obstacleMeshes);
+  clearSceneMeshes(scene, state.obstacleMeshes)
   buildMeshesFromGrid(scene, world, state.grid, effectiveGridConfig).forEach((mesh, key) => {
-    state.obstacleMeshes.set(key, mesh);
-  });
+    state.obstacleMeshes.set(key, mesh)
+  })
 
-  if (state.startMarker) scene.remove(state.startMarker);
-  if (state.goalMarker) scene.remove(state.goalMarker);
+  if (state.startMarker) scene.remove(state.startMarker)
+  if (state.goalMarker) scene.remove(state.goalMarker)
 
-  const startWorld = gridToWorld(start.x, start.z, effectiveGridConfig);
+  const startWorld = gridToWorld(start.x, start.z, effectiveGridConfig)
   state.startMarker = getCube(scene, world, {
     position: [startWorld[0], GROUND_Y + 0.5, startWorld[2]] as CoordinateTuple,
     size: markerSize,
     color: startColor,
-    type: "fixed",
+    type: 'fixed',
     castShadow: true,
-    receiveShadow: false,
-  });
+    receiveShadow: false
+  })
 
-  const goalWorld = gridToWorld(goal.x, goal.z, effectiveGridConfig);
+  const goalWorld = gridToWorld(goal.x, goal.z, effectiveGridConfig)
   state.goalMarker = getCube(scene, world, {
     position: [goalWorld[0], GROUND_Y + 0.5, goalWorld[2]] as CoordinateTuple,
     size: markerSize,
     color: goalColor,
-    type: "fixed",
+    type: 'fixed',
     castShadow: true,
-    receiveShadow: false,
-  });
+    receiveShadow: false
+  })
 
-  computeAndDrawPath(state, start, goal, effectiveGridConfig);
-};
+  computeAndDrawPath(state, start, goal, effectiveGridConfig)
+}
 
 const applyObstacleEdit = (
   state: SceneState,
   gridPos: { x: number; z: number },
   targetType: CellType
 ): void => {
-  const { scene, world, grid, currentGridConfig } = state;
-  const isStart = state.currentStart && gridPos.x === state.currentStart.x && gridPos.z === state.currentStart.z;
-  const isGoal = state.currentGoal && gridPos.x === state.currentGoal.x && gridPos.z === state.currentGoal.z;
+  const { scene, world, grid, currentGridConfig } = state
+  const isStart =
+    state.currentStart && gridPos.x === state.currentStart.x && gridPos.z === state.currentStart.z
+  const isGoal =
+    state.currentGoal && gridPos.x === state.currentGoal.x && gridPos.z === state.currentGoal.z
 
-  if (isStart || isGoal) return;
+  if (isStart || isGoal) return
 
-  const cell = grid.cells[gridPos.z]?.[gridPos.x];
-  if (!cell || cell.type === targetType) return;
+  const cell = grid.cells[gridPos.z]?.[gridPos.x]
+  if (!cell || cell.type === targetType) return
 
-  const key = cellKey(gridPos.x, gridPos.z);
-  const oldMesh = state.obstacleMeshes.get(key);
+  const key = cellKey(gridPos.x, gridPos.z)
+  const oldMesh = state.obstacleMeshes.get(key)
   if (oldMesh) {
-    scene.remove(oldMesh);
-    state.obstacleMeshes.delete(key);
+    scene.remove(oldMesh)
+    state.obstacleMeshes.delete(key)
   }
 
-  state.grid = setCellType(grid, gridPos.x, gridPos.z, targetType);
+  state.grid = setCellType(grid, gridPos.x, gridPos.z, targetType)
 
-  if (targetType !== "empty") {
-    const mesh = makeCellMesh(scene, world, gridPos.x, gridPos.z, targetType, currentGridConfig);
-    state.obstacleMeshes.set(key, mesh);
+  if (targetType !== 'empty') {
+    const mesh = makeCellMesh(scene, world, gridPos.x, gridPos.z, targetType, currentGridConfig)
+    state.obstacleMeshes.set(key, mesh)
   }
-};
+}
 
 const getGridPosFromEvent = (
   event: MouseEvent,
   state: SceneState
 ): { x: number; z: number } | null => {
-  const { renderer, orthoCamera } = state;
-  const rect = renderer.domElement.getBoundingClientRect();
-  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  const { renderer, orthoCamera } = state
+  const rect = renderer.domElement.getBoundingClientRect()
+  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), orthoCamera);
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), orthoCamera)
 
-  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  const target = new THREE.Vector3();
-  raycaster.ray.intersectPlane(groundPlane, target);
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+  const target = new THREE.Vector3()
+  raycaster.ray.intersectPlane(groundPlane, target)
 
-  const gridPos = worldToGrid([target.x, 0, target.z], state.currentGridConfig);
-  const { width, height } = state.currentGridConfig;
+  const gridPos = worldToGrid([target.x, 0, target.z], state.currentGridConfig)
+  const { width, height } = state.currentGridConfig
   if (gridPos.x < 0 || gridPos.x >= width || gridPos.z < 0 || gridPos.z >= height) {
-    return null;
+    return null
   }
-  return gridPos;
-};
+  return gridPos
+}
 
 const placeMarker = (
   state: SceneState,
   gridPos: { x: number; z: number },
-  which: "start" | "goal"
+  which: 'start' | 'goal'
 ): void => {
-  const { scene, world, currentGridConfig } = state;
-  const other = which === "start" ? state.currentGoal : state.currentStart;
-  if (other && gridPos.x === other.x && gridPos.z === other.z) return;
-  const cell = state.grid.cells[gridPos.z]?.[gridPos.x];
-  if (!cell || cell.type !== "empty") return;
+  const { scene, world, currentGridConfig } = state
+  const other = which === 'start' ? state.currentGoal : state.currentStart
+  if (other && gridPos.x === other.x && gridPos.z === other.z) return
+  const cell = state.grid.cells[gridPos.z]?.[gridPos.x]
+  if (!cell || cell.type !== 'empty') return
 
-  const [wx, , wz] = gridToWorld(gridPos.x, gridPos.z, currentGridConfig);
+  const [wx, , wz] = gridToWorld(gridPos.x, gridPos.z, currentGridConfig)
 
-  if (which === "start") {
-    if (state.startMarker) scene.remove(state.startMarker);
+  if (which === 'start') {
+    if (state.startMarker) scene.remove(state.startMarker)
     state.startMarker = getCube(scene, world, {
       position: [wx, GROUND_Y + 0.5, wz] as CoordinateTuple,
-      size: markerSize, color: startColor, type: "fixed",
-      castShadow: true, receiveShadow: false,
-    });
-    state.currentStart = { x: gridPos.x, z: gridPos.z };
+      size: markerSize,
+      color: startColor,
+      type: 'fixed',
+      castShadow: true,
+      receiveShadow: false
+    })
+    state.currentStart = { x: gridPos.x, z: gridPos.z }
   } else {
-    if (state.goalMarker) scene.remove(state.goalMarker);
+    if (state.goalMarker) scene.remove(state.goalMarker)
     state.goalMarker = getCube(scene, world, {
       position: [wx, GROUND_Y + 0.5, wz] as CoordinateTuple,
-      size: markerSize, color: goalColor, type: "fixed",
-      castShadow: true, receiveShadow: false,
-    });
-    state.currentGoal = { x: gridPos.x, z: gridPos.z };
+      size: markerSize,
+      color: goalColor,
+      type: 'fixed',
+      castShadow: true,
+      receiveShadow: false
+    })
+    state.currentGoal = { x: gridPos.x, z: gridPos.z }
   }
-};
+}
 
 const onCanvasClick = (event: MouseEvent): void => {
-  if (!sceneState || isDragging.value) return;
+  if (!sceneState || isDragging.value) return
 
-  const gridPos = getGridPosFromEvent(event, sceneState);
-  if (!gridPos) return;
+  const gridPos = getGridPosFromEvent(event, sceneState)
+  if (!gridPos) return
 
-  const brush = reactiveConfig.value.brush;
-  if (brush === "start") {
-    placeMarker(sceneState, gridPos, "start");
-  } else if (brush === "goal") {
-    placeMarker(sceneState, gridPos, "goal");
+  const brush = reactiveConfig.value.brush
+  if (brush === 'start') {
+    placeMarker(sceneState, gridPos, 'start')
+  } else if (brush === 'goal') {
+    placeMarker(sceneState, gridPos, 'goal')
   } else {
-    const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x];
-    if (!cell) return;
-    applyObstacleEdit(sceneState, gridPos, brush as CellType);
+    const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x]
+    if (!cell) return
+    applyObstacleEdit(sceneState, gridPos, brush as CellType)
   }
-  computeAndDrawPath(sceneState, sceneState.currentStart, sceneState.currentGoal, sceneState.currentGridConfig);
-};
+  computeAndDrawPath(
+    sceneState,
+    sceneState.currentStart,
+    sceneState.currentGoal,
+    sceneState.currentGridConfig
+  )
+}
 
 const onCanvasMouseDown = (event: MouseEvent): void => {
-  if (!sceneState) return;
-  const brush = reactiveConfig.value.brush;
-  if (brush === "start" || brush === "goal") return; // start/goal only on click, not drag
+  if (!sceneState) return
+  const brush = reactiveConfig.value.brush
+  if (brush === 'start' || brush === 'goal') return // start/goal only on click, not drag
 
-  const gridPos = getGridPosFromEvent(event, sceneState);
-  if (!gridPos) return;
-  const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x];
-  if (!cell) return;
+  const gridPos = getGridPosFromEvent(event, sceneState)
+  if (!gridPos) return
+  const cell = sceneState.grid.cells[gridPos.z]?.[gridPos.x]
+  if (!cell) return
 
-  isDragging.value = false;
-  dragAction.value = brush as CellType;
-};
+  isDragging.value = false
+  dragAction.value = brush as CellType
+}
 
 const onCanvasMouseMove = (event: MouseEvent): void => {
-  if (!sceneState || dragAction.value === null || event.buttons === 0) return;
-  isDragging.value = true;
+  if (!sceneState || dragAction.value === null || event.buttons === 0) return
+  isDragging.value = true
 
-  const gridPos = getGridPosFromEvent(event, sceneState);
-  if (!gridPos) return;
+  const gridPos = getGridPosFromEvent(event, sceneState)
+  if (!gridPos) return
 
-  applyObstacleEdit(sceneState, gridPos, dragAction.value);
-};
+  applyObstacleEdit(sceneState, gridPos, dragAction.value)
+}
 
 const onCanvasMouseUp = (): void => {
   if (dragAction.value !== null && sceneState) {
-    computeAndDrawPath(sceneState, sceneState.currentStart, sceneState.currentGoal, sceneState.currentGridConfig);
+    computeAndDrawPath(
+      sceneState,
+      sceneState.currentStart,
+      sceneState.currentGoal,
+      sceneState.currentGridConfig
+    )
   }
-  dragAction.value = null;
-  setTimeout(() => { isDragging.value = false; }, 0);
-};
+  dragAction.value = null
+  setTimeout(() => {
+    isDragging.value = false
+  }, 0)
+}
 
 const handleResize = (): void => {
-  if (!sceneState) return;
-  const { renderer, orthoCamera } = sceneState;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  renderer.setSize(width, height);
-  const aspect = width / height;
-  orthoCamera.left = (FRUSTUM_SIZE * aspect) / -2;
-  orthoCamera.right = (FRUSTUM_SIZE * aspect) / 2;
-  orthoCamera.top = FRUSTUM_SIZE / 2;
-  orthoCamera.bottom = FRUSTUM_SIZE / -2;
-  orthoCamera.updateProjectionMatrix();
-};
+  if (!sceneState) return
+  const { renderer, orthoCamera } = sceneState
+  const width = window.innerWidth
+  const height = window.innerHeight
+  renderer.setSize(width, height)
+  const aspect = width / height
+  orthoCamera.left = (FRUSTUM_SIZE * aspect) / -2
+  orthoCamera.right = (FRUSTUM_SIZE * aspect) / 2
+  orthoCamera.top = FRUSTUM_SIZE / 2
+  orthoCamera.bottom = FRUSTUM_SIZE / -2
+  orthoCamera.updateProjectionMatrix()
+}
 
 const init = async (): Promise<void> => {
-  if (!canvas.value) return;
+  if (!canvas.value) return
 
-  if (animFrameId !== null) cancelAnimationFrame(animFrameId);
+  if (animFrameId !== null) cancelAnimationFrame(animFrameId)
 
-  const { setup, renderer, scene, world } = await getTools({ canvas: canvas.value });
+  const { setup, renderer, scene, world } = await getTools({ canvas: canvas.value })
 
-  const orthoCamera = createOrthoCamera(window.innerWidth, window.innerHeight);
-  scene.add(orthoCamera);
+  const orthoCamera = createOrthoCamera(window.innerWidth, window.innerHeight)
+  scene.add(orthoCamera)
 
-  await setup({ config: sceneSetupConfig, defineSetup: async () => {} });
+  await setup({ config: sceneSetupConfig, defineSetup: async () => {} })
 
-  const currentGridConfig = { ...gridConfig };
+  const currentGridConfig = { ...gridConfig }
 
-  const ambientLight = scene.children.find((c): c is THREE.AmbientLight => c instanceof THREE.AmbientLight) ?? null;
-  const directionalLight = scene.children.find((c): c is THREE.DirectionalLight => c instanceof THREE.DirectionalLight) ?? null;
-  const groundMesh = scene.children.find((c): c is THREE.Mesh => (c as THREE.Mesh).name === "ground") ?? null;
+  const ambientLight =
+    scene.children.find((c): c is THREE.AmbientLight => c instanceof THREE.AmbientLight) ?? null
+  const directionalLight =
+    scene.children.find((c): c is THREE.DirectionalLight => c instanceof THREE.DirectionalLight) ??
+    null
+  const groundMesh =
+    scene.children.find((c): c is THREE.Mesh => (c as THREE.Mesh).name === 'ground') ?? null
 
-  const sceneObjects = [ambientLight, directionalLight, groundMesh].filter((c): c is THREE.Object3D => c !== null);
-  registerSceneElements(orthoCamera, sceneObjects);
+  const sceneObjects = [ambientLight, directionalLight, groundMesh].filter(
+    (c): c is THREE.Object3D => c !== null
+  )
+  registerSceneElements(orthoCamera, sceneObjects)
 
   sceneState = {
     renderer,
@@ -565,98 +621,102 @@ const init = async (): Promise<void> => {
     ambientLight,
     directionalLight,
     groundMesh,
-    cameraTransition: null,
-  };
+    cameraTransition: null
+  }
 
-  buildScene(sceneState, reactiveConfig.value.density, currentGridConfig);
+  buildScene(sceneState, reactiveConfig.value.density, currentGridConfig)
 
   const runLoop = (): void => {
-    animFrameId = requestAnimationFrame(runLoop);
-    world.step();
+    animFrameId = requestAnimationFrame(runLoop)
+    world.step()
 
     if (sceneState?.cameraTransition) {
-      const previous = sceneState.cameraTransition;
-      const newT = Math.min(1, previous.t + 0.04);
-      const eased = 1 - (1 - newT) ** 3;
-      orthoCamera.position.lerpVectors(previous.from, previous.to, eased);
-      orthoCamera.up.lerpVectors(previous.fromUp, previous.toUp, eased);
-      orthoCamera.lookAt(0, 0, 0);
-      sceneState.cameraTransition = newT >= 1 ? null : { ...previous, t: newT };
+      const previous = sceneState.cameraTransition
+      const newT = Math.min(1, previous.t + 0.04)
+      const eased = 1 - (1 - newT) ** 3
+      orthoCamera.position.lerpVectors(previous.from, previous.to, eased)
+      orthoCamera.up.lerpVectors(previous.fromUp, previous.toUp, eased)
+      orthoCamera.lookAt(0, 0, 0)
+      sceneState.cameraTransition = newT >= 1 ? null : { ...previous, t: newT }
     }
 
-    renderer.render(scene, orthoCamera);
-  };
-  runLoop();
+    renderer.render(scene, orthoCamera)
+  }
+  runLoop()
 
-  canvas.value.addEventListener("click", onCanvasClick);
-  canvas.value.addEventListener("mousedown", onCanvasMouseDown);
-  canvas.value.addEventListener("mousemove", onCanvasMouseMove);
-  canvas.value.addEventListener("mouseup", onCanvasMouseUp);
-  window.addEventListener("resize", handleResize);
-};
+  canvas.value.addEventListener('click', onCanvasClick)
+  canvas.value.addEventListener('mousedown', onCanvasMouseDown)
+  canvas.value.addEventListener('mousemove', onCanvasMouseMove)
+  canvas.value.addEventListener('mouseup', onCanvasMouseUp)
+  window.addEventListener('resize', handleResize)
+}
 
 const generateNewScene = (): void => {
-  if (!sceneState) return;
-  buildScene(sceneState, reactiveConfig.value.density, sceneState.currentGridConfig);
-};
+  if (!sceneState) return
+  buildScene(sceneState, reactiveConfig.value.density, sceneState.currentGridConfig)
+}
 
 const recalculatePath = (): void => {
-  if (!sceneState) return;
-  computeAndDrawPath(sceneState, sceneState.currentStart, sceneState.currentGoal, sceneState.currentGridConfig);
-};
+  if (!sceneState) return
+  computeAndDrawPath(
+    sceneState,
+    sceneState.currentStart,
+    sceneState.currentGoal,
+    sceneState.currentGridConfig
+  )
+}
 
 const loadScenario = (name: string): void => {
-  if (!sceneState) return;
-  const scenario = scenarios[name];
-  if (!scenario) return;
-  buildScene(sceneState, 0, sceneState.currentGridConfig, scenario);
-};
+  if (!sceneState) return
+  const scenario = scenarios[name]
+  if (!scenario) return
+  buildScene(sceneState, 0, sceneState.currentGridConfig, scenario)
+}
 
 const refreshCostLabels = (): void => {
-  if (!sceneState) return;
-  const { scene, grid, currentGridConfig, currentStart, currentGoal } = sceneState;
-  clearCostLabels(scene, sceneState.costLabels);
+  if (!sceneState) return
+  const { scene, grid, currentGridConfig, currentStart, currentGoal } = sceneState
+  clearCostLabels(scene, sceneState.costLabels)
   if (reactiveConfig.value.showCosts && sceneState.pathLine && currentStart && currentGoal) {
-    const path = getBestRoute(grid, currentStart, currentGoal);
-    if (path) drawCostLabels(scene, path, currentGridConfig, sceneState.costLabels);
+    const path = getBestRoute(grid, currentStart, currentGoal)
+    if (path) drawCostLabels(scene, path, currentGridConfig, sceneState.costLabels)
   }
-};
+}
 
 const clearObstacles = (): void => {
-  if (!sceneState) return;
-  clearSceneMeshes(sceneState.scene, sceneState.obstacleMeshes);
-  sceneState.grid = createGrid(sceneState.currentGridConfig);
-  computeAndDrawPath(sceneState, sceneState.currentStart, sceneState.currentGoal, sceneState.currentGridConfig);
-};
+  if (!sceneState) return
+  clearSceneMeshes(sceneState.scene, sceneState.obstacleMeshes)
+  sceneState.grid = createGrid(sceneState.currentGridConfig)
+  computeAndDrawPath(
+    sceneState,
+    sceneState.currentStart,
+    sceneState.currentGoal,
+    sceneState.currentGridConfig
+  )
+}
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true });
-  registerViewConfig(
-    route.name as string,
-    reactiveConfig,
-    configControls,
-    undefined,
-    {
-      generateNewScene,
-      recalculate: recalculatePath,
-      clearObstacles,
-    }
-  );
-  await init();
-});
+  setViewPanels({ showConfig: true })
+  registerViewConfig(route.name as string, reactiveConfig, configControls, undefined, {
+    generateNewScene,
+    recalculate: recalculatePath,
+    clearObstacles
+  })
+  await init()
+})
 
 onUnmounted(() => {
-  if (animFrameId !== null) cancelAnimationFrame(animFrameId);
-  canvas.value?.removeEventListener("click", onCanvasClick);
-  canvas.value?.removeEventListener("mousedown", onCanvasMouseDown);
-  canvas.value?.removeEventListener("mousemove", onCanvasMouseMove);
-  canvas.value?.removeEventListener("mouseup", onCanvasMouseUp);
-  window.removeEventListener("resize", handleResize);
-  clearSceneElements();
-  clearViewPanels();
-  unregisterViewConfig(route.name as string);
-  sceneState = null;
-});
+  if (animFrameId !== null) cancelAnimationFrame(animFrameId)
+  canvas.value?.removeEventListener('click', onCanvasClick)
+  canvas.value?.removeEventListener('mousedown', onCanvasMouseDown)
+  canvas.value?.removeEventListener('mousemove', onCanvasMouseMove)
+  canvas.value?.removeEventListener('mouseup', onCanvasMouseUp)
+  window.removeEventListener('resize', handleResize)
+  clearSceneElements()
+  clearViewPanels()
+  unregisterViewConfig(route.name as string)
+  sceneState = null
+})
 </script>
 
 <template>
