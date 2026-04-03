@@ -106,7 +106,7 @@ const generateRecursiveBacktracker = (rows: number, cols: number): MazeGrid => {
   start.visited = true
   stack.push(start)
 
-  Array.from({ length: rows * cols }).forEach(() => stepRecursiveBacktracker(grid, stack))
+  Array.from({ length: rows * cols * 2 }).forEach(() => stepRecursiveBacktracker(grid, stack))
 
   return grid
 }
