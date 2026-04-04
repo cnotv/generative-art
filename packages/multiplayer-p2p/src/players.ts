@@ -27,6 +27,7 @@ export const p2pSendPosition = (
     session,
     setTimeout(() => {
       pendingTimers.delete(session)
+      console.warn(`[p2p] sending position`, position, rotation)
       sendPos({ position, rotation })
     }, throttleMs)
   )
@@ -45,6 +46,7 @@ export const p2pOnPlayers = (
   const [, onPos] = session.room.makeAction<PositionRecord>('pos')
 
   onPos((data: PositionRecord, peerId: string) => {
+    console.warn(`[p2p] received position from ${peerId}`, data)
     const pos = data['position'] as PlayerPosition
     const rot = data['rotation'] as PlayerRotation
     callback({ id: peerId, position: pos, rotation: rot })

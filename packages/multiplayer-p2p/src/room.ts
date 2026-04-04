@@ -10,9 +10,12 @@ import type { P2PConfig, P2PSession } from './types'
  */
 export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
   const appId = config?.appId ?? 'webgamekit'
+  console.warn(`[p2p] joining room "${roomId}" with appId "${appId}"`)
   const room = joinRoom({ appId }, roomId)
+  console.warn(`[p2p] joined room "${roomId}", selfId=${selfId}`)
 
   const destroy = () => {
+    console.warn(`[p2p] leaving room "${roomId}"`)
     room.leave()
   }
 
@@ -39,7 +42,10 @@ export const p2pLeave = (session: P2PSession): void => {
  * @param callback - Called with the peer's ID when they join
  */
 export const p2pOnPeerJoin = (session: P2PSession, callback: (peerId: string) => void): void => {
-  session.room.onPeerJoin(callback)
+  session.room.onPeerJoin((peerId) => {
+    console.warn(`[p2p] peer joined: ${peerId}`)
+    callback(peerId)
+  })
 }
 
 /**
@@ -48,5 +54,8 @@ export const p2pOnPeerJoin = (session: P2PSession, callback: (peerId: string) =>
  * @param callback - Called with the peer's ID when they leave
  */
 export const p2pOnPeerLeave = (session: P2PSession, callback: (peerId: string) => void): void => {
-  session.room.onPeerLeave(callback)
+  session.room.onPeerLeave((peerId) => {
+    console.warn(`[p2p] peer left: ${peerId}`)
+    callback(peerId)
+  })
 }

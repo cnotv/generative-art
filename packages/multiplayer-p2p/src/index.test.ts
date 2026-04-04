@@ -12,8 +12,10 @@ const actionCallbacks = new Map<string, ActionCallback<unknown>>()
 const peerJoinCallbacks: ((peerId: string) => void)[] = []
 const peerLeaveCallbacks: ((peerId: string) => void)[] = []
 
-const simulatePeerJoin = (peerId: string) => peerJoinCallbacks.forEach((callback) => callback(peerId))
-const simulatePeerLeave = (peerId: string) => peerLeaveCallbacks.forEach((callback) => callback(peerId))
+const simulatePeerJoin = (peerId: string) =>
+  peerJoinCallbacks.forEach((callback) => callback(peerId))
+const simulatePeerLeave = (peerId: string) =>
+  peerLeaveCallbacks.forEach((callback) => callback(peerId))
 
 const mockRoom = {
   makeAction: vi.fn(<T>(channel: string): [typeof mockSend, ActionCallback<T>] => {
@@ -31,6 +33,7 @@ const mockRoom = {
 }
 
 vi.mock('trystero/nostr', () => ({
+  selfId: 'local-peer',
   joinRoom: vi.fn(() => mockRoom)
 }))
 
