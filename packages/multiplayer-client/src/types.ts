@@ -17,25 +17,14 @@ export interface PlayerState {
   rotation: PlayerRotation
 }
 
-export interface CoinState {
-  id: string
-  position: PlayerPosition
-  collected: boolean
-}
-
-export interface CoinCollectedEvent {
-  coinId: string
-  playerId: string
-}
-
-export interface MultiplayerConfig {
+export interface MultiplayerClientConfig {
   /** Minimum ms between position broadcasts (default: 30) */
   throttleMs?: number
 }
 
-export interface MultiplayerSession {
-  /** The underlying socket instance */
+export interface MultiplayerClientSession {
+  /** The underlying socket.io Socket */
   socket: import('socket.io-client').Socket
-  /** Cancel any pending position broadcast and disconnect */
+  /** Disconnect and cancel pending broadcasts */
   destroy: () => void
 }

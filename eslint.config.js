@@ -478,7 +478,10 @@ export default [
       'packages/controls/**/*.ts',
       'packages/audio/**/*.ts',
       'packages/game/**/*.ts',
-      'packages/recording/**/*.ts'
+      'packages/recording/**/*.ts',
+      'packages/multiplayer-client/**/*.ts',
+      'packages/multiplayer-server/**/*.ts',
+      'packages/multiplayer-p2p/**/*.ts'
     ],
     rules: {
       'functional/immutable-data': 'warn',

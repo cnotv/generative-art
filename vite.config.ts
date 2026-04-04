@@ -4,7 +4,17 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import wasm from 'vite-plugin-wasm'
 
-const packages = ['animation', 'threejs', 'audio', 'game', 'controls', 'recording', 'logic']
+const packages = [
+  'animation',
+  'threejs',
+  'audio',
+  'game',
+  'controls',
+  'recording',
+  'logic',
+  'multiplayer-client',
+  'multiplayer-p2p'
+]
 const packageAliases = Object.fromEntries(
   packages.map((package_) => [
     `@webgamekit/${package_}`,

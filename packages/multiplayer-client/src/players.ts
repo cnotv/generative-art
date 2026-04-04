@@ -1,19 +1,18 @@
-import type { PlayerPosition, PlayerRotation, PlayerState, MultiplayerSession } from './types'
+import type { PlayerPosition, PlayerRotation, PlayerState, MultiplayerClientSession } from './types'
 
-type InternalSession = MultiplayerSession & { _config: { throttleMs: number } }
+type InternalSession = MultiplayerClientSession & { _config: { throttleMs: number } }
 
-const pendingTimers = new WeakMap<MultiplayerSession, ReturnType<typeof setTimeout>>()
+const pendingTimers = new WeakMap<MultiplayerClientSession, ReturnType<typeof setTimeout>>()
 
 /**
  * Broadcast the local player's position and rotation to the server, throttled.
- * Only one emission is sent per throttle window regardless of how many times
- * this function is called — always using the most recent values.
- * @param session - The active multiplayer session
+ * Only one emission is sent per throttle window — always the most recent values.
+ * @param session - The active multiplayer client session
  * @param position - Current player position {x, y, z}
  * @param rotation - Current player rotation {x, y, z}
  */
-export const multiplayerSendPosition = (
-  session: MultiplayerSession,
+export const multiplayerClientSendPosition = (
+  session: MultiplayerClientSession,
   position: PlayerPosition,
   rotation: PlayerRotation
 ): void => {
@@ -33,12 +32,12 @@ export const multiplayerSendPosition = (
 
 /**
  * Subscribe to player list updates from the server.
- * @param session - The active multiplayer session
+ * @param session - The active multiplayer client session
  * @param callback - Called with the full list of connected players on each update
  * @returns Unsubscribe function
  */
-export const multiplayerOnPlayers = (
-  session: MultiplayerSession,
+export const multiplayerClientOnPlayers = (
+  session: MultiplayerClientSession,
   callback: (players: PlayerState[]) => void
 ): (() => void) => {
   session.socket.on('user:list', callback)
