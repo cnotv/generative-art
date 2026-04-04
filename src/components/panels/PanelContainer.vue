@@ -81,7 +81,6 @@ defineProps<{
   background-color: var(--color-background);
   padding: var(--spacing-2);
   overflow-x: hidden;
-  overflow-y: auto;
   max-height: 100%;
   display: flex;
   flex-direction: column;

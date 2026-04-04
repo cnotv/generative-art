@@ -6,11 +6,14 @@ type ActionCallback<T> = (data: T, peerId: string) => void
 
 const mockSend = vi.fn()
 const mockLeave = vi.fn()
-const mockOnPeerJoin = vi.fn()
-const mockOnPeerLeave = vi.fn()
 const mockGetPeers = vi.fn(() => [] as string[])
 
 const actionCallbacks = new Map<string, ActionCallback<unknown>>()
+const peerJoinCallbacks: ((peerId: string) => void)[] = []
+const peerLeaveCallbacks: ((peerId: string) => void)[] = []
+
+const simulatePeerJoin = (peerId: string) => peerJoinCallbacks.forEach((callback) => callback(peerId))
+const simulatePeerLeave = (peerId: string) => peerLeaveCallbacks.forEach((callback) => callback(peerId))
 
 const mockRoom = {
   makeAction: vi.fn(<T>(channel: string): [typeof mockSend, ActionCallback<T>] => {
@@ -22,8 +25,8 @@ const mockRoom = {
     ]
   }),
   leave: mockLeave,
-  onPeerJoin: mockOnPeerJoin,
-  onPeerLeave: mockOnPeerLeave,
+  onPeerJoin: (callback: (peerId: string) => void) => peerJoinCallbacks.push(callback),
+  onPeerLeave: (callback: (peerId: string) => void) => peerLeaveCallbacks.push(callback),
   getPeers: mockGetPeers
 }
 
@@ -46,6 +49,8 @@ describe('p2pJoin', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     actionCallbacks.clear()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
   })
 
   it('returns a session with room and destroy function', async () => {
@@ -72,6 +77,8 @@ describe('p2pLeave', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     actionCallbacks.clear()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
   })
 
   it('calls room.leave()', () => {
@@ -90,26 +97,43 @@ describe('p2pLeave', () => {
 describe('p2pOnPeerJoin', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
   })
 
-  it('registers a callback on room.onPeerJoin', () => {
+  it('calls callback with peer ID when a peer joins', () => {
     const session = p2pJoin('room-1')
     const callback = vi.fn()
     p2pOnPeerJoin(session, callback)
-    expect(mockOnPeerJoin).toHaveBeenCalledWith(callback)
+    simulatePeerJoin('peer-abc')
+    expect(callback).toHaveBeenCalledWith('peer-abc')
+  })
+
+  it('supports multiple join callbacks', () => {
+    const session = p2pJoin('room-1')
+    const callbackA = vi.fn()
+    const callbackB = vi.fn()
+    p2pOnPeerJoin(session, callbackA)
+    p2pOnPeerJoin(session, callbackB)
+    simulatePeerJoin('peer-xyz')
+    expect(callbackA).toHaveBeenCalledWith('peer-xyz')
+    expect(callbackB).toHaveBeenCalledWith('peer-xyz')
   })
 })
 
 describe('p2pOnPeerLeave', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
   })
 
-  it('registers a callback on room.onPeerLeave', () => {
+  it('calls callback with peer ID when a peer leaves', () => {
     const session = p2pJoin('room-1')
     const callback = vi.fn()
     p2pOnPeerLeave(session, callback)
-    expect(mockOnPeerLeave).toHaveBeenCalledWith(callback)
+    simulatePeerLeave('peer-abc')
+    expect(callback).toHaveBeenCalledWith('peer-abc')
   })
 })
 
@@ -118,6 +142,8 @@ describe('p2pSendPosition', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     actionCallbacks.clear()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
   })
 
   afterEach(() => {
