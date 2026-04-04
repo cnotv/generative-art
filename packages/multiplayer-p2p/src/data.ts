@@ -1,4 +1,4 @@
-import type { DataPayload } from 'trystero/nostr'
+import type { DataPayload } from '@trystero-p2p/torrent'
 import type { P2PSession } from './types'
 
 /**

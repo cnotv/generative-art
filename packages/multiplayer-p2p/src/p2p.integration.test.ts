@@ -23,7 +23,7 @@ const resetRooms = () => {
   nextPeerId = 0
 }
 
-vi.mock('trystero/nostr', () => {
+vi.mock('@trystero-p2p/torrent', () => {
   return {
     get selfId() {
       return 'local-peer'

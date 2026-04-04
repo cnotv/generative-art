@@ -9,8 +9,8 @@ export default defineConfig({
       fileName: 'index'
     },
     rollupOptions: {
-      external: ['trystero', 'trystero/nostr'],
-      output: { globals: { trystero: 'trystero', 'trystero/nostr': 'trysteroNostr' } }
+      external: ['@trystero-p2p/torrent'],
+      output: { globals: { '@trystero-p2p/torrent': 'trysteroTorrent' } }
     }
   }
 })

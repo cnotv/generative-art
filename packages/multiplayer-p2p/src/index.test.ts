@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { PlayerState } from './types'
 
-// ── Mock trystero/nostr ────────────────────────────────────────────────────
+// ── Mock @trystero-p2p/torrent ────────────────────────────────────────────────────
 type ActionCallback<T> = (data: T, peerId: string) => void
 
 const mockSend = vi.fn()
@@ -32,7 +32,7 @@ const mockRoom = {
   getPeers: mockGetPeers
 }
 
-vi.mock('trystero/nostr', () => ({
+vi.mock('@trystero-p2p/torrent', () => ({
   selfId: 'local-peer',
   joinRoom: vi.fn(() => mockRoom)
 }))
@@ -64,13 +64,13 @@ describe('p2pJoin', () => {
   })
 
   it('calls joinRoom with the provided roomId and default appId', async () => {
-    const { joinRoom } = await import('trystero/nostr')
+    const { joinRoom } = await import('@trystero-p2p/torrent')
     p2pJoin('level-abc')
     expect(joinRoom).toHaveBeenCalledWith({ appId: 'webgamekit' }, 'level-abc')
   })
 
   it('uses custom appId from config', async () => {
-    const { joinRoom } = await import('trystero/nostr')
+    const { joinRoom } = await import('@trystero-p2p/torrent')
     p2pJoin('room-2', { appId: 'my-game' })
     expect(joinRoom).toHaveBeenCalledWith({ appId: 'my-game' }, 'room-2')
   })
