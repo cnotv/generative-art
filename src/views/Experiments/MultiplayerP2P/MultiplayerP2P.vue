@@ -5,33 +5,54 @@ import {
   p2pLeave,
   p2pSendPosition,
   p2pOnPlayers,
+  p2pOnPeerJoin,
+  p2pOnPeerLeave,
   type P2PSession,
   type PlayerState
 } from '@webgamekit/multiplayer-p2p'
 
+type PeerEntry = {
+  id: string
+  position: PlayerState['position'] | null
+  rotation: PlayerState['rotation'] | null
+}
+
 const roomId = ref('demo-room')
 const session = ref<P2PSession | null>(null)
-const peers = ref<PlayerState[]>([])
+const peers = ref<PeerEntry[]>([])
 const isJoined = ref(false)
-
-let unsubscribePlayers: (() => void) | null = null
 
 const join = () => {
   const newSession = p2pJoin(roomId.value)
   session.value = newSession
   isJoined.value = true
 
-  unsubscribePlayers = p2pOnPlayers(newSession, (playerState) => {
+  p2pOnPeerJoin(newSession, (peerId) => {
+    if (!peers.value.some((peer) => peer.id === peerId)) {
+      peers.value = [...peers.value, { id: peerId, position: null, rotation: null }]
+    }
+  })
+
+  p2pOnPeerLeave(newSession, (peerId) => {
+    peers.value = peers.value.filter((peer) => peer.id !== peerId)
+  })
+
+  p2pOnPlayers(newSession, (playerState) => {
     peers.value = peers.value.some((peer) => peer.id === playerState.id)
-      ? peers.value.map((peer) => (peer.id === playerState.id ? playerState : peer))
-      : [...peers.value, playerState]
+      ? peers.value.map((peer) =>
+          peer.id === playerState.id
+            ? { ...peer, position: playerState.position, rotation: playerState.rotation }
+            : peer
+        )
+      : [
+          ...peers.value,
+          { id: playerState.id, position: playerState.position, rotation: playerState.rotation }
+        ]
   })
 }
 
 const leave = () => {
   if (!session.value) return
-  unsubscribePlayers?.()
-  unsubscribePlayers = null
   p2pLeave(session.value)
   session.value = null
   peers.value = []
@@ -100,11 +121,12 @@ onUnmounted(() => {
         <ul class="multiplayer-p2p__peer-list">
           <li v-for="peer in peers" :key="peer.id" class="multiplayer-p2p__peer">
             <span class="multiplayer-p2p__peer-id-label">{{ peer.id }}</span>
-            <span class="multiplayer-p2p__peer-pos">
+            <span v-if="peer.position" class="multiplayer-p2p__peer-pos">
               x={{ peer.position.x.toFixed(2) }} y={{ peer.position.y.toFixed(2) }} z={{
                 peer.position.z.toFixed(2)
               }}
             </span>
+            <span v-else class="multiplayer-p2p__peer-pos">waiting for position…</span>
           </li>
         </ul>
         <p v-if="peers.length === 0" class="multiplayer-p2p__empty">

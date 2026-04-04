@@ -31,7 +31,16 @@ vi.mock('trystero/nostr', () => ({
   joinRoom: vi.fn(() => mockRoom)
 }))
 
-import { p2pJoin, p2pLeave, p2pSendPosition, p2pOnPlayers, p2pSendData, p2pOnData } from './index'
+import {
+  p2pJoin,
+  p2pLeave,
+  p2pSendPosition,
+  p2pOnPlayers,
+  p2pSendData,
+  p2pOnData,
+  p2pOnPeerJoin,
+  p2pOnPeerLeave
+} from './index'
 
 describe('p2pJoin', () => {
   beforeEach(() => {
@@ -75,6 +84,32 @@ describe('p2pLeave', () => {
     const session = p2pJoin('room-1')
     session.destroy()
     expect(mockLeave).toHaveBeenCalled()
+  })
+})
+
+describe('p2pOnPeerJoin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('registers a callback on room.onPeerJoin', () => {
+    const session = p2pJoin('room-1')
+    const callback = vi.fn()
+    p2pOnPeerJoin(session, callback)
+    expect(mockOnPeerJoin).toHaveBeenCalledWith(callback)
+  })
+})
+
+describe('p2pOnPeerLeave', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('registers a callback on room.onPeerLeave', () => {
+    const session = p2pJoin('room-1')
+    const callback = vi.fn()
+    p2pOnPeerLeave(session, callback)
+    expect(mockOnPeerLeave).toHaveBeenCalledWith(callback)
   })
 })
 
