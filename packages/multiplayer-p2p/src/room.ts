@@ -26,10 +26,6 @@ export const p2pIsSupported = (): boolean => {
  * @returns A P2PSession with the room handle and destroy function
  */
 export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
-  console.warn(`[p2p] p2pJoin called — roomId="${roomId}"`)
-  console.warn(`[p2p] isSecureContext=${window.isSecureContext}, origin=${window.location.origin}`)
-  console.warn(`[p2p] crypto.subtle available=${typeof window.crypto?.subtle !== 'undefined'}`)
-
   if (!p2pIsSupported()) {
     throw new Error(
       `P2P is not supported on this origin (${window.location.origin}). ` +
@@ -38,12 +34,9 @@ export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
   }
 
   const appId = config?.appId ?? 'webgamekit'
-  console.warn(`[p2p] calling joinRoom — appId="${appId}", roomId="${roomId}"`)
   const room = joinRoom({ appId }, roomId)
-  console.warn(`[p2p] joinRoom returned — selfId=${selfId}`)
 
   const destroy = () => {
-    console.warn(`[p2p] leaving room "${roomId}"`)
     room.leave()
   }
 
@@ -63,9 +56,7 @@ export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
  * @returns Array of peer IDs already in the room
  */
 export const p2pGetPeerIds = (session: P2PSession): string[] => {
-  const ids = Object.keys(session.room.getPeers())
-  console.warn(`[p2p] existing peers on join: [${ids.join(', ') || 'none'}]`)
-  return ids
+  return Object.keys(session.room.getPeers())
 }
 
 /**
@@ -83,7 +74,6 @@ export const p2pLeave = (session: P2PSession): void => {
  */
 export const p2pOnPeerJoin = (session: P2PSession, callback: (peerId: string) => void): void => {
   session.room.onPeerJoin((peerId) => {
-    console.warn(`[p2p] peer joined: ${peerId}`)
     callback(peerId)
   })
 }
@@ -95,7 +85,6 @@ export const p2pOnPeerJoin = (session: P2PSession, callback: (peerId: string) =>
  */
 export const p2pOnPeerLeave = (session: P2PSession, callback: (peerId: string) => void): void => {
   session.room.onPeerLeave((peerId) => {
-    console.warn(`[p2p] peer left: ${peerId}`)
     callback(peerId)
   })
 }

@@ -19,14 +19,11 @@ type ReceiveFunction = (callback: (data: unknown, peerId: string) => void) => vo
 
 const sendCache = new WeakMap<P2PSession, Map<string, SendFunction>>()
 const recvRegistered = new WeakMap<P2PSession, Set<string>>()
-let makeActionCallCount = 0
 
 const getSend = (session: P2PSession, channel: string): SendFunction => {
   if (!sendCache.has(session)) sendCache.set(session, new Map())
   const cache = sendCache.get(session)!
   if (!cache.has(channel)) {
-    makeActionCallCount++
-    console.warn(`[p2p] makeAction('${channel}') called — total calls: ${makeActionCallCount}`)
     const [send] = session.room.makeAction(channel)
     cache.set(channel, send as SendFunction)
   }
@@ -36,16 +33,7 @@ const getSend = (session: P2PSession, channel: string): SendFunction => {
 const getRecv = (session: P2PSession, channel: string): ReceiveFunction | null => {
   if (!recvRegistered.has(session)) recvRegistered.set(session, new Set())
   const registered = recvRegistered.get(session)!
-  if (registered.has(channel)) {
-    console.warn(
-      `[p2p] WARNING: onReceive for channel '${channel}' already registered — duplicate call ignored`
-    )
-    return null
-  }
-  makeActionCallCount++
-  console.warn(
-    `[p2p] makeAction('${channel}') recv registered — total calls: ${makeActionCallCount}`
-  )
+  if (registered.has(channel)) return null
   registered.add(channel)
   const [, onReceive] = session.room.makeAction(channel)
   return onReceive as ReceiveFunction
@@ -71,7 +59,6 @@ export const p2pSendPosition = (
 
   const doSend = (): void => {
     lastSentAt.set(session, performance.now())
-    console.warn(`[p2p] sending position`, position, rotation)
     sendPos({ position, rotation })
   }
 
@@ -109,7 +96,6 @@ export const p2pOnPlayers = (
   if (onPos) {
     onPos((data: unknown, peerId: string) => {
       const record = data as PositionRecord
-      console.warn(`[p2p] received position from ${peerId}`, record)
       const pos = record['position'] as PlayerPosition
       const rot = record['rotation'] as PlayerRotation
       callback({ id: peerId, position: pos, rotation: rot })
@@ -126,7 +112,6 @@ export const p2pOnPlayers = (
  */
 export const p2pSendAction = (session: P2PSession, actionName: string): void => {
   const sendAction = getSend(session, 'action')
-  console.warn(`[p2p] sending action: ${actionName}`)
   sendAction({ name: actionName })
 }
 
@@ -143,7 +128,6 @@ export const p2pOnAction = (
   const onAction = getRecv(session, 'action')
   if (onAction) {
     onAction((data: unknown, peerId: string) => {
-      console.warn(`[p2p] received action from ${peerId}:`, data)
       callback(peerId, data as PlayerAction)
     })
   }

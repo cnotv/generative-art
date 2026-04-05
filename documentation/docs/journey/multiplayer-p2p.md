@@ -168,3 +168,33 @@ Key scenarios tested:
 - Peer A sees Peer B via `p2pGetPeerIds` when A joins after B (late-joiner fix)
 - Sender does not receive their own broadcast
 - Three-peer scenario: both B and C appear in A's list
+
+## Bug: player movement fires once per second
+
+**Symptom:** The local player barely moves when pressing WASD, crawling at ~0.5 units/sec with visible stutter.
+
+**Cause:** Both `local-player` and `remote-players` timeline actions used `frequency: 60`. The timeline engine skips action execution when `frame % frequency !== 0`, so at 60 FPS the movement callback ran only on frames 0, 60, 120 — once per second. The `MOVEMENT_SPEED = 0.5` constant was applied once per second instead of 30 times per second.
+
+**Fix:** Changed `frequency: 60` to `frequency: 2` on both actions, matching the convention used by MixamoPlayground and MazeGame. At `frequency: 2` the action fires every other frame (30x/sec at 60 FPS), giving an effective movement speed of ~15 units/sec — matching MixamoPlayground's `distance: 0.5` at `frequency: 2`.
+
+The value 60 likely came from confusing "60 FPS target" with the frequency parameter's meaning. `frequency` is a frame-skip divisor, not a rate — `frequency: N` means "run every Nth frame."
+
+## Design note: direct position update vs controllerForward
+
+MixamoPlayground uses `controllerForward()` which handles obstacle checks, ground checks, and calls `moveCharacter()` internally. MultiplayerP2P uses direct `position.x += direction.x * speed` instead. This was deliberate:
+
+1. The P2P arena has no obstacles or complex terrain — just a flat ground plane
+2. `controllerForward` requires `obstacles` and `groundBodies` arrays, adding unnecessary complexity
+3. The position is authoritative on each client — simpler math is easier to reason about for netcode
+
+The tradeoff is no built-in obstacle collision. If the arena gains obstacles later, switching to `controllerForward` would be appropriate.
+
+## Design note: no delta-time scaling on movement
+
+Movement uses fixed `MOVEMENT_SPEED` without multiplying by `getDelta()`. At a fixed `frequency: 2`, the action fires at a consistent rate regardless of actual frame time. This matches MixamoPlayground which also uses fixed `distance` without delta scaling.
+
+Delta scaling would be needed if `frequency` were set to 1 (every frame) and frame rate varied. At `frequency: 2`, the movement rate is effectively decoupled from frame-rate variance — if a frame takes longer, the frequency skip still ensures roughly consistent execution counts per second.
+
+## Known limitation: remote player position snapping
+
+Remote player positions are set directly via `model.position.set()` without interpolation. With the 30ms send throttle in `p2pSendPosition`, remote players visually "snap" between positions. Linear interpolation (lerping toward the last received position each frame) would smooth this, but adds complexity and latency. Acceptable for the current prototype scope.

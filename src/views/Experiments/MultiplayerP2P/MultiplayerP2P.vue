@@ -3,7 +3,6 @@ import * as THREE from 'three'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getTools, getModel, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
 import {
-  controllerForward,
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
@@ -36,47 +35,32 @@ const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
-const PLAYER_Y_OFFSET = 0
+const PLAYER_Y_OFFSET = -1
 const GROUND_SIZE = 200
-const REMOTE_SPAWN_SPREAD = 4
-const FRAME_LOG_INTERVAL_MS = 2000
 
 const stickboySettings = {
-  model: {
-    position: [0, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
-    rotation: [0, 0, 0] as CoordinateTuple,
-    scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
-    restitution: -10,
-    boundary: 0.5,
-    hasGravity: false,
-    castShadow: true,
-    material: 'MeshLambertMaterial',
-    color: 0xffffff
-  },
-  movement: {
-    requireGround: true,
-    maxGroundDistance: 5,
-    maxStepHeight: 0.5,
-    characterRadius: 1,
-    debug: false
-  }
-}
-
-const getRemoteModelSettings = (index: number) => ({
-  position: [
-    (index % 2 === 0 ? 1 : -1) * REMOTE_SPAWN_SPREAD * (Math.floor(index / 2) + 1),
-    PLAYER_Y_OFFSET,
-    0
-  ] as CoordinateTuple,
+  position: [0, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
   rotation: [0, 0, 0] as CoordinateTuple,
   scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
   restitution: -10,
   boundary: 0.5,
   hasGravity: false,
-  castShadow: false,
+  castShadow: true,
+  material: 'MeshLambertMaterial',
+  color: 0xffffff
+}
+
+const remoteSettings = {
+  position: [0, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
+  rotation: [0, 0, 0] as CoordinateTuple,
+  scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
+  restitution: -10,
+  boundary: 0.5,
+  hasGravity: false,
+  castShadow: true,
   material: 'MeshLambertMaterial',
   color: 0xff6644
-})
+}
 
 const setupConfig = {
   orbit: { target: new THREE.Vector3(0, 1, 0), disabled: true },
@@ -91,7 +75,18 @@ const setupConfig = {
     focus: 10
   },
   ground: { size: [GROUND_SIZE, 1, GROUND_SIZE] as CoordinateTuple, color: 0x80b966 },
-  sky: { size: 500, color: 0x00aaff }
+  sky: { size: 500, color: 0x00aaff },
+  lights: {
+    directional: {
+      position: [20, 50, 20] as CoordinateTuple,
+      castShadow: true,
+      shadow: {
+        mapSize: { width: 4096, height: 4096 },
+        camera: { near: 0.5, far: 300, left: -120, right: 120, top: 120, bottom: -120 },
+        bias: -0.0005
+      }
+    }
+  }
 }
 
 const controlBindings = {
@@ -99,8 +94,8 @@ const controlBindings = {
     keyboard: {
       a: 'move-left',
       d: 'move-right',
-      w: 'move-up',
-      s: 'move-down',
+      w: 'move-down',
+      s: 'move-up',
       '1': 'wave',
       '2': 'attack',
       '3': 'jump',
@@ -112,12 +107,12 @@ const controlBindings = {
     gamepad: {
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-down',
-      'dpad-up': 'move-up',
+      'dpad-down': 'move-up',
+      'dpad-up': 'move-down',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-up',
-      'axis1-down': 'move-down',
+      'axis1-up': 'move-down',
+      'axis1-down': 'move-up',
       cross: 'jump',
       square: 'attack',
       triangle: 'wave',
@@ -126,8 +121,8 @@ const controlBindings = {
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-up',
-      down: 'move-down'
+      up: 'move-down',
+      down: 'move-up'
     }
   },
   axisThreshold: 0.5
@@ -168,19 +163,6 @@ let getDeltaReference: (() => number) | null = null
 let p2pSession: P2PSession | null = null
 const remoteModels = new Map<string, ComplexModel>()
 
-let frameCount = 0
-let lastFrameLog = performance.now()
-const logFrameRate = (): void => {
-  frameCount++
-  const now = performance.now()
-  if (now - lastFrameLog >= FRAME_LOG_INTERVAL_MS) {
-    const fps = Math.round((frameCount * 1000) / (now - lastFrameLog))
-    console.warn(`[p2p-view] fps=${fps} peers=${remoteModels.size} frame=${frameCount}`)
-    frameCount = 0
-    lastFrameLog = now
-  }
-}
-
 const handleBlockingAction = (actionName: string): void => {
   if (!timelineManagerReference || !localPlayerReference || !getDeltaReference) return
   if (!blockingActions.has(actionName)) return
@@ -219,23 +201,21 @@ const init = async (): Promise<void> => {
     config: setupConfig,
     defineSetup: async ({ ground }) => {
       getDeltaReference = getDelta
-      const groundBodies: ComplexModel[] = ground?.mesh
-        ? [ground.mesh as unknown as ComplexModel]
-        : []
+      const movementDirection = new THREE.Vector3()
+      const broadcastPosition = { x: 0, y: 0, z: 0 }
+      const broadcastRotation = { x: 0, y: 0, z: 0 }
 
-      const localPlayer = await getModel(scene, world, 'stickboy.glb', stickboySettings.model)
+      const localPlayer = await getModel(scene, world, 'stickboy.glb', stickboySettings)
       localPlayerReference = localPlayer
 
       const timelineManager = createTimelineManager()
       timelineManagerReference = timelineManager
 
       timelineManager.addAction({
-        frequency: 60,
+        frequency: 2,
         name: 'local-player',
         category: 'user-input',
         action: () => {
-          logFrameRate()
-
           if (localPlayer.userData.performing) {
             if (!localPlayer.userData.allowMovement && !localPlayer.userData.allowRotation) return
           }
@@ -256,7 +236,14 @@ const init = async (): Promise<void> => {
               setRotation(localPlayer, targetRotation)
             }
             if (localPlayer.userData.allowMovement || !localPlayer.userData.performing) {
-              controllerForward([], groundBodies, animationData, stickboySettings.movement)
+              localPlayer.getWorldDirection(movementDirection)
+              localPlayer.position.x += movementDirection.x * MOVEMENT_SPEED
+              localPlayer.position.z += movementDirection.z * MOVEMENT_SPEED
+              localPlayer.position.y = PLAYER_Y_OFFSET
+              if (localPlayer.userData.body) {
+                localPlayer.userData.body.setTranslation(localPlayer.position, true)
+              }
+              updateAnimation(animationData)
               cameraFollowPlayer(camera, localPlayer, CAMERA_OFFSET, orbit, ['x', 'z'])
             }
           } else if (!localPlayer.userData.performing) {
@@ -264,25 +251,19 @@ const init = async (): Promise<void> => {
           }
 
           if (p2pSession) {
-            p2pSendPosition(
-              p2pSession,
-              {
-                x: localPlayer.position.x,
-                y: localPlayer.position.y,
-                z: localPlayer.position.z
-              },
-              {
-                x: localPlayer.rotation.x,
-                y: localPlayer.rotation.y,
-                z: localPlayer.rotation.z
-              }
-            )
+            broadcastPosition.x = localPlayer.position.x
+            broadcastPosition.y = localPlayer.position.y
+            broadcastPosition.z = localPlayer.position.z
+            broadcastRotation.x = localPlayer.rotation.x
+            broadcastRotation.y = localPlayer.rotation.y
+            broadcastRotation.z = localPlayer.rotation.z
+            p2pSendPosition(p2pSession, broadcastPosition, broadcastRotation)
           }
         }
       })
 
       timelineManager.addAction({
-        frequency: 60,
+        frequency: 2,
         name: 'remote-players',
         category: 'user-input',
         action: () => {
@@ -311,22 +292,16 @@ const init = async (): Promise<void> => {
 
       const addRemotePeer = async (peerId: string): Promise<void> => {
         if (remoteModels.has(peerId)) return
-        const spawnIndex = remoteModels.size
-        const remoteModel = await getModel(
-          scene,
-          world,
-          'stickboy.glb',
-          getRemoteModelSettings(spawnIndex)
-        )
+        const remoteModel = await getModel(scene, world, 'stickboy.glb', remoteSettings)
         remoteModels.set(peerId, remoteModel)
         peerCount.value = remoteModels.size
       }
 
-      p2pOnPeerJoin(session, (peerId) => {
+      p2pGetPeerIds(session).forEach((peerId) => {
         addRemotePeer(peerId)
       })
 
-      p2pGetPeerIds(session).forEach((peerId) => {
+      p2pOnPeerJoin(session, (peerId) => {
         addRemotePeer(peerId)
       })
 
