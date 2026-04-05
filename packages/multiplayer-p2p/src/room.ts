@@ -2,17 +2,45 @@ import { joinRoom, selfId } from '@trystero-p2p/torrent'
 import type { P2PConfig, P2PSession } from './types'
 
 /**
- * Join a P2P room using WebRTC via Trystero (NOSTR signaling — no server required).
+ * Check whether the browser exposes crypto.subtle (requires HTTPS or localhost).
+ * @returns true if the environment supports P2P
+ */
+export const p2pIsSupported = (): boolean => {
+  const supported = typeof window !== 'undefined' && typeof window.crypto?.subtle !== 'undefined'
+  if (!supported) {
+    console.warn(
+      '[p2p] crypto.subtle is not available. ' +
+        'P2P requires a secure context (HTTPS or localhost). ' +
+        `Current origin: ${typeof window !== 'undefined' ? window.location.origin : 'unknown'}`
+    )
+  }
+  return supported
+}
+
+/**
+ * Join a P2P room using WebRTC via Trystero (torrent signaling — no server required).
  * All peers in the same roomId can communicate directly.
+ * Requires a secure context (HTTPS or localhost) — throws if crypto.subtle is unavailable.
  * @param roomId - Shared identifier for the game room (e.g. "level-1-abc123")
  * @param config - Optional configuration overrides
  * @returns A P2PSession with the room handle and destroy function
  */
 export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
+  console.warn(`[p2p] p2pJoin called — roomId="${roomId}"`)
+  console.warn(`[p2p] isSecureContext=${window.isSecureContext}, origin=${window.location.origin}`)
+  console.warn(`[p2p] crypto.subtle available=${typeof window.crypto?.subtle !== 'undefined'}`)
+
+  if (!p2pIsSupported()) {
+    throw new Error(
+      `P2P is not supported on this origin (${window.location.origin}). ` +
+        'Serve the app over HTTPS or use localhost.'
+    )
+  }
+
   const appId = config?.appId ?? 'webgamekit'
-  console.warn(`[p2p] joining room "${roomId}" with appId "${appId}"`)
+  console.warn(`[p2p] calling joinRoom — appId="${appId}", roomId="${roomId}"`)
   const room = joinRoom({ appId }, roomId)
-  console.warn(`[p2p] joined room "${roomId}", selfId=${selfId}`)
+  console.warn(`[p2p] joinRoom returned — selfId=${selfId}`)
 
   const destroy = () => {
     console.warn(`[p2p] leaving room "${roomId}"`)

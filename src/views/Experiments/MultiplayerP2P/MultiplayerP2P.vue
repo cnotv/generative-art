@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import {
   p2pJoin,
   p2pLeave,
@@ -7,6 +7,7 @@ import {
   p2pOnPlayers,
   p2pOnPeerJoin,
   p2pOnPeerLeave,
+  p2pIsSupported,
   type P2PSession,
   type PlayerState
 } from '@webgamekit/multiplayer-p2p'
@@ -21,8 +22,14 @@ const roomId = ref('demo-room')
 const session = ref<P2PSession | null>(null)
 const peers = ref<PeerEntry[]>([])
 const isJoined = ref(false)
+const isSupported = ref(true)
+
+onMounted(() => {
+  isSupported.value = p2pIsSupported()
+})
 
 const join = () => {
+  if (!isSupported.value) return
   const newSession = p2pJoin(roomId.value)
   session.value = newSession
   isJoined.value = true
@@ -79,12 +86,18 @@ onUnmounted(() => {
   <div class="multiplayer-p2p">
     <h1 class="multiplayer-p2p__title">Multiplayer P2P</h1>
     <p class="multiplayer-p2p__description">
-      Demonstrates <code>@webgamekit/multiplayer-p2p</code> using WebRTC via Trystero (NOSTR
+      Demonstrates <code>@webgamekit/multiplayer-p2p</code> using WebRTC via Trystero (torrent
       signaling — no server required). Open this page in multiple browser tabs with the same room ID
       to connect peers.
     </p>
 
-    <section class="multiplayer-p2p__join">
+    <div v-if="!isSupported" class="multiplayer-p2p__unsupported">
+      <strong>P2P not available</strong> — this page must be served over HTTPS or from localhost.
+      <code>crypto.subtle</code> is required for WebRTC signaling and is blocked by browsers on
+      plain HTTP origins.
+    </div>
+
+    <section v-else class="multiplayer-p2p__join">
       <input
         v-model="roomId"
         class="multiplayer-p2p__input"
@@ -247,5 +260,14 @@ onUnmounted(() => {
 .multiplayer-p2p__empty {
   color: var(--color-muted-foreground);
   font-size: 0.875rem;
+}
+
+.multiplayer-p2p__unsupported {
+  padding: var(--spacing-4);
+  border: 1px solid hsl(0 72% 51%);
+  border-radius: var(--radius-md);
+  color: hsl(0 72% 51%);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 </style>
