@@ -398,7 +398,15 @@ onUnmounted(() => {
     <TouchControl
       style="right: 25px; bottom: 25px"
       mode="button"
-      :mapping="{ Wave: 'wave', Attack: 'attack', Jump: 'jump', Talk: 'talk' }"
+      :mapping="{
+        Wave: 'wave',
+        Attack: 'attack',
+        Jump: 'jump',
+        Talk: 'talk',
+        Sit: 'sit',
+        Pick: 'pick',
+        Death: 'death'
+      }"
       :on-action="(a: string) => handleBlockingAction(a)"
     />
   </template>
