@@ -1,4 +1,4 @@
-import type { Room, DataPayload } from '@trystero-p2p/torrent'
+import type { Room, DataPayload } from 'trystero/nostr'
 
 export type { DataPayload }
 

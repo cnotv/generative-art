@@ -41,7 +41,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr', '@trystero-p2p/torrent']
+    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr']
   },
   server: {
     allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz']

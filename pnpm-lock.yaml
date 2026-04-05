@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@trystero-p2p/torrent':
-        specifier: ^0.23.0
-        version: 0.23.0
       '@webgamekit/controls':
         specifier: workspace:^
         version: link:packages/controls
@@ -44,6 +41,9 @@ importers:
       three:
         specifier: ^0.178.0
         version: 0.178.0
+      trystero:
+        specifier: ^0.23.0
+        version: 0.23.0
       vite-plugin-wasm:
         specifier: ^3.3.0
         version: 3.5.0(vite@5.4.21(@types/node@20.19.25)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1))
@@ -276,7 +276,7 @@ importers:
 
   packages/multiplayer-p2p:
     devDependencies:
-      '@trystero-p2p/torrent':
+      trystero:
         specifier: ^0.23.0
         version: 0.23.0
       typescript:
@@ -956,6 +956,9 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
+  '@noble/secp256k1@3.0.0':
+    resolution: {integrity: sha512-NJBaR352KyIvj3t6sgT/+7xrNyF9Xk9QlLSIqUGVUYlsnDTAUqY8LOmwpcgEx4AMJXRITQ5XEVHD+mMaPfr3mg==}
+
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -1252,8 +1255,8 @@ packages:
   '@trystero-p2p/core@0.23.0':
     resolution: {integrity: sha512-ozhtgxKDZH11Gdef0wH8xivwAE/L0/lDFvEcNFWPJWnHZlxWPPyfeonwE287ssGevQNi10vnj6x2ZcOi0n1bQQ==}
 
-  '@trystero-p2p/torrent@0.23.0':
-    resolution: {integrity: sha512-EVy3NBRfLz+c9NRcFax+XA3q7P7gOpsZbHpTBAAaNBZXXu2ltm3k3/6jaJfIoMidiMIIG+cIV1G+tUzrjUBwVg==}
+  '@trystero-p2p/nostr@0.23.0':
+    resolution: {integrity: sha512-KSqUR2c1KVfv4zeErcntuegtyKzFTzNNiitIKGD0LiKA/4H3CeTF81ROk2h+X/PNvP4mv7Gp5eVxFYwfMu4Nrg==}
 
   '@tsconfig/node20@20.1.8':
     resolution: {integrity: sha512-Em+IdPfByIzWRRpqWL4Z7ArLHZGxmc36BxE3jCz9nBFSm+5aLaPMZyjwu4yetvyKXeogWcxik4L1jB5JTWfw7A==}
@@ -3048,6 +3051,9 @@ packages:
     resolution: {integrity: sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==}
     engines: {node: '>=18'}
 
+  trystero@0.23.0:
+    resolution: {integrity: sha512-HsM0FT0w41XW9bhXmYAfxr7PT+F6KwMzOxfJK2MbfipnMk/XrAIsV8lMTgU8NwWQqwCiS/b0b1qDsOf6IGxTmg==}
+
   ts-api-utils@2.4.0:
     resolution: {integrity: sha512-3TaVTaAv2gTiMB35i3FiGJaRfwb3Pyn/j3m/bfAvGe8FB7CF6u+LMYqYlDh7reQf7UNvoTvdfAqHGmPGOSsPmA==}
     engines: {node: '>=18.12'}
@@ -3799,6 +3805,8 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
     optional: true
 
+  '@noble/secp256k1@3.0.0': {}
+
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -4004,8 +4012,9 @@ snapshots:
 
   '@trystero-p2p/core@0.23.0': {}
 
-  '@trystero-p2p/torrent@0.23.0':
+  '@trystero-p2p/nostr@0.23.0':
     dependencies:
+      '@noble/secp256k1': 3.0.0
       '@trystero-p2p/core': 0.23.0
 
   '@tsconfig/node20@20.1.8': {}
@@ -6045,6 +6054,10 @@ snapshots:
   tr46@5.1.1:
     dependencies:
       punycode: 2.3.1
+
+  trystero@0.23.0:
+    dependencies:
+      '@trystero-p2p/nostr': 0.23.0
 
   ts-api-utils@2.4.0(typescript@5.4.5):
     dependencies:

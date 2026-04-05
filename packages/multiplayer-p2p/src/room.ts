@@ -1,4 +1,4 @@
-import { joinRoom, selfId } from '@trystero-p2p/torrent'
+import { joinRoom, selfId } from 'trystero/nostr'
 import type { P2PConfig, P2PSession } from './types'
 
 /**
