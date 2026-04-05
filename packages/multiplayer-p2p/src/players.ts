@@ -12,6 +12,7 @@ type PositionRecord = Record<string, Record<string, number>>
 const defaultThrottleMs = 30
 
 const pendingTimers = new WeakMap<P2PSession, ReturnType<typeof setTimeout>>()
+const lastSentAt = new WeakMap<P2PSession, number>()
 
 type SendFunction = (data: unknown) => void
 type ReceiveFunction = (callback: (data: unknown, peerId: string) => void) => void
@@ -64,19 +65,34 @@ export const p2pSendPosition = (
   config?: P2PConfig
 ): void => {
   const throttleMs = config?.throttleMs ?? defaultThrottleMs
-  const existing = pendingTimers.get(session)
-  if (existing !== undefined) clearTimeout(existing)
-
   const sendPos = getSend(session, 'pos')
+  const now = performance.now()
+  const last = lastSentAt.get(session) ?? 0
 
-  pendingTimers.set(
-    session,
-    setTimeout(() => {
-      pendingTimers.delete(session)
-      console.warn(`[p2p] sending position`, position, rotation)
-      sendPos({ position, rotation })
-    }, throttleMs)
-  )
+  const doSend = (): void => {
+    lastSentAt.set(session, performance.now())
+    console.warn(`[p2p] sending position`, position, rotation)
+    sendPos({ position, rotation })
+  }
+
+  if (now - last >= throttleMs) {
+    const existing = pendingTimers.get(session)
+    if (existing !== undefined) clearTimeout(existing)
+    doSend()
+  } else {
+    const existing = pendingTimers.get(session)
+    if (existing !== undefined) clearTimeout(existing)
+    pendingTimers.set(
+      session,
+      setTimeout(
+        () => {
+          pendingTimers.delete(session)
+          doSend()
+        },
+        throttleMs - (now - last)
+      )
+    )
+  }
 }
 
 /**
