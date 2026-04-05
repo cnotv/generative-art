@@ -71,7 +71,10 @@ vi.mock('trystero/nostr', () => {
             otherState.peerLeaveCallbacks.forEach((callback) => callback(peerId))
           })
         },
-        getPeers: () => ({})
+        getPeers: () =>
+          Object.fromEntries(
+            [...room.entries()].filter(([id]) => id !== peerId).map(([id]) => [id, {}])
+          )
       }
     })
   }
@@ -82,6 +85,7 @@ import {
   p2pLeave,
   p2pOnPeerJoin,
   p2pOnPeerLeave,
+  p2pGetPeerIds,
   p2pSendPosition,
   p2pOnPlayers
 } from './index'
@@ -94,6 +98,16 @@ describe('P2P room integration — two peers', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('peer A sees peer B via p2pGetPeerIds when A joins after B', () => {
+    const sessionB = p2pJoin('room-1') // B joins first
+    const sessionA = p2pJoin('room-1') // A joins after — onPeerJoin already fired for B
+
+    // A would have missed the onPeerJoin for B, so use p2pGetPeerIds to catch up
+    const existingIds = p2pGetPeerIds(sessionA)
+    expect(existingIds).toContain(sessionB.peerId === 'local-peer' ? 'peer-0' : sessionB.peerId)
+    expect(existingIds.length).toBe(1)
   })
 
   it('peer A sees peer B when B joins the same room', () => {

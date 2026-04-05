@@ -57,6 +57,18 @@ export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
 }
 
 /**
+ * Return the IDs of all peers currently connected in the room.
+ * Use this immediately after joining to catch peers that joined before you.
+ * @param session - The active P2P session
+ * @returns Array of peer IDs already in the room
+ */
+export const p2pGetPeerIds = (session: P2PSession): string[] => {
+  const ids = Object.keys(session.room.getPeers())
+  console.warn(`[p2p] existing peers on join: [${ids.join(', ') || 'none'}]`)
+  return ids
+}
+
+/**
  * Leave a P2P room and clean up all connections.
  * @param session - The session returned by p2pJoin
  */

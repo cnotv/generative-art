@@ -8,6 +8,7 @@ import {
   p2pOnPeerJoin,
   p2pOnPeerLeave,
   p2pIsSupported,
+  p2pGetPeerIds,
   type P2PSession,
   type PlayerState
 } from '@webgamekit/multiplayer-p2p'
@@ -35,6 +36,13 @@ const join = () => {
   isJoined.value = true
 
   p2pOnPeerJoin(newSession, (peerId) => {
+    if (!peers.value.some((peer) => peer.id === peerId)) {
+      peers.value = [...peers.value, { id: peerId, position: null, rotation: null }]
+    }
+  })
+
+  // Add peers that were already in the room before we joined
+  p2pGetPeerIds(newSession).forEach((peerId) => {
     if (!peers.value.some((peer) => peer.id === peerId)) {
       peers.value = [...peers.value, { id: peerId, position: null, rotation: null }]
     }
