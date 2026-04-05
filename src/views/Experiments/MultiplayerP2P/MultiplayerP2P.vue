@@ -30,12 +30,12 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 
 const ROOM_ID = 'webgamekit-p2p'
-const MOVEMENT_SPEED = 0.5
+const MOVEMENT_SPEED = 0.25
 const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
-const PLAYER_Y_OFFSET = -1
+const PLAYER_Y_OFFSET = -2
 const GROUND_SIZE = 200
 
 const stickboySettings = {
