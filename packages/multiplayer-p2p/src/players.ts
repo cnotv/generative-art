@@ -8,11 +8,47 @@ import type {
 } from './types'
 
 type PositionRecord = Record<string, Record<string, number>>
-type ActionRecord = Record<string, string>
 
 const defaultThrottleMs = 30
 
 const pendingTimers = new WeakMap<P2PSession, ReturnType<typeof setTimeout>>()
+
+type SendFunction = (data: unknown) => void
+type ReceiveFunction = (callback: (data: unknown, peerId: string) => void) => void
+
+const sendCache = new WeakMap<P2PSession, Map<string, SendFunction>>()
+const recvRegistered = new WeakMap<P2PSession, Set<string>>()
+let makeActionCallCount = 0
+
+const getSend = (session: P2PSession, channel: string): SendFunction => {
+  if (!sendCache.has(session)) sendCache.set(session, new Map())
+  const cache = sendCache.get(session)!
+  if (!cache.has(channel)) {
+    makeActionCallCount++
+    console.warn(`[p2p] makeAction('${channel}') called — total calls: ${makeActionCallCount}`)
+    const [send] = session.room.makeAction(channel)
+    cache.set(channel, send as SendFunction)
+  }
+  return cache.get(channel)!
+}
+
+const getRecv = (session: P2PSession, channel: string): ReceiveFunction | null => {
+  if (!recvRegistered.has(session)) recvRegistered.set(session, new Set())
+  const registered = recvRegistered.get(session)!
+  if (registered.has(channel)) {
+    console.warn(
+      `[p2p] WARNING: onReceive for channel '${channel}' already registered — duplicate call ignored`
+    )
+    return null
+  }
+  makeActionCallCount++
+  console.warn(
+    `[p2p] makeAction('${channel}') recv registered — total calls: ${makeActionCallCount}`
+  )
+  registered.add(channel)
+  const [, onReceive] = session.room.makeAction(channel)
+  return onReceive as ReceiveFunction
+}
 
 /**
  * Broadcast the local player's position and rotation to all peers, throttled.
@@ -31,7 +67,7 @@ export const p2pSendPosition = (
   const existing = pendingTimers.get(session)
   if (existing !== undefined) clearTimeout(existing)
 
-  const [sendPos] = session.room.makeAction<PositionRecord>('pos')
+  const sendPos = getSend(session, 'pos')
 
   pendingTimers.set(
     session,
@@ -53,14 +89,16 @@ export const p2pOnPlayers = (
   session: P2PSession,
   callback: (player: PlayerState) => void
 ): (() => void) => {
-  const [, onPos] = session.room.makeAction<PositionRecord>('pos')
-
-  onPos((data: PositionRecord, peerId: string) => {
-    console.warn(`[p2p] received position from ${peerId}`, data)
-    const pos = data['position'] as PlayerPosition
-    const rot = data['rotation'] as PlayerRotation
-    callback({ id: peerId, position: pos, rotation: rot })
-  })
+  const onPos = getRecv(session, 'pos')
+  if (onPos) {
+    onPos((data: unknown, peerId: string) => {
+      const record = data as PositionRecord
+      console.warn(`[p2p] received position from ${peerId}`, record)
+      const pos = record['position'] as PlayerPosition
+      const rot = record['rotation'] as PlayerRotation
+      callback({ id: peerId, position: pos, rotation: rot })
+    })
+  }
 
   return () => {}
 }
@@ -71,7 +109,7 @@ export const p2pOnPlayers = (
  * @param actionName - Animation clip name to play (e.g. "wave", "attack")
  */
 export const p2pSendAction = (session: P2PSession, actionName: string): void => {
-  const [sendAction] = session.room.makeAction<ActionRecord>('action')
+  const sendAction = getSend(session, 'action')
   console.warn(`[p2p] sending action: ${actionName}`)
   sendAction({ name: actionName })
 }
@@ -86,10 +124,12 @@ export const p2pOnAction = (
   session: P2PSession,
   callback: (peerId: string, action: PlayerAction) => void
 ): (() => void) => {
-  const [, onAction] = session.room.makeAction<ActionRecord>('action')
-  onAction((data: ActionRecord, peerId: string) => {
-    console.warn(`[p2p] received action from ${peerId}:`, data)
-    callback(peerId, data as PlayerAction)
-  })
+  const onAction = getRecv(session, 'action')
+  if (onAction) {
+    onAction((data: unknown, peerId: string) => {
+      console.warn(`[p2p] received action from ${peerId}:`, data)
+      callback(peerId, data as PlayerAction)
+    })
+  }
   return () => {}
 }

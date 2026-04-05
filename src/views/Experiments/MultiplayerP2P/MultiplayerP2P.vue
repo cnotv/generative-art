@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getTools, getModel, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
 import {
   controllerForward,
@@ -28,6 +28,7 @@ import {
   type PlayerAction
 } from '@webgamekit/multiplayer-p2p'
 import TouchControl from '@/components/TouchControl.vue'
+import ControlsLogger from '@/components/ControlsLogger.vue'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.5
@@ -38,6 +39,7 @@ const PLAYER_SCALE = 2
 const PLAYER_Y_OFFSET = 0
 const GROUND_SIZE = 200
 const REMOTE_SPAWN_SPREAD = 4
+const FRAME_LOG_INTERVAL_MS = 2000
 
 const stickboySettings = {
   model: {
@@ -150,12 +152,34 @@ const getAnimationName = (actions: Record<string, unknown>): string => {
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
+const peerCount = ref(0)
+
+const hudLogs = computed(() => [
+  `Players: ${peerCount.value + 1}`,
+  '',
+  'WASD — move',
+  '1 wave  2 attack  3 jump',
+  '4 talk  5 sit  6 pick  7 death'
+])
 
 let timelineManagerReference: ReturnType<typeof createTimelineManager> | null = null
 let localPlayerReference: ComplexModel | null = null
 let getDeltaReference: (() => number) | null = null
 let p2pSession: P2PSession | null = null
 const remoteModels = new Map<string, ComplexModel>()
+
+let frameCount = 0
+let lastFrameLog = performance.now()
+const logFrameRate = (): void => {
+  frameCount++
+  const now = performance.now()
+  if (now - lastFrameLog >= FRAME_LOG_INTERVAL_MS) {
+    const fps = Math.round((frameCount * 1000) / (now - lastFrameLog))
+    console.warn(`[p2p-view] fps=${fps} peers=${remoteModels.size} frame=${frameCount}`)
+    frameCount = 0
+    lastFrameLog = now
+  }
+}
 
 const handleBlockingAction = (actionName: string): void => {
   if (!timelineManagerReference || !localPlayerReference || !getDeltaReference) return
@@ -210,6 +234,8 @@ const init = async (): Promise<void> => {
         name: 'local-player',
         category: 'user-input',
         action: () => {
+          logFrameRate()
+
           if (localPlayer.userData.performing) {
             if (!localPlayer.userData.allowMovement && !localPlayer.userData.allowRotation) return
           }
@@ -293,6 +319,7 @@ const init = async (): Promise<void> => {
           getRemoteModelSettings(spawnIndex)
         )
         remoteModels.set(peerId, remoteModel)
+        peerCount.value = remoteModels.size
       }
 
       p2pOnPeerJoin(session, (peerId) => {
@@ -308,6 +335,7 @@ const init = async (): Promise<void> => {
         if (model) {
           scene.remove(model)
           remoteModels.delete(peerId)
+          peerCount.value = remoteModels.size
         }
       })
 
@@ -353,6 +381,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <ControlsLogger :logs="hudLogs" />
   <template v-if="isMobileDevice">
     <TouchControl
       style="left: 25px; bottom: 25px"
