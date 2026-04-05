@@ -34,14 +34,15 @@ const MOVEMENT_SPEED = 0.5
 const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
-const PLAYER_Y_OFFSET = -0.5
+const PLAYER_SCALE = 2
+const PLAYER_Y_OFFSET = -1
 const GROUND_SIZE = 200
 
 const stickboySettings = {
   model: {
     position: [0, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
     rotation: [0, 0, 0] as CoordinateTuple,
-    scale: [1, 1, 1] as CoordinateTuple,
+    scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
     restitution: -10,
     boundary: 0.5,
     hasGravity: false,
@@ -62,7 +63,7 @@ const remoteSettings = {
   model: {
     position: [5, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
     rotation: [0, 0, 0] as CoordinateTuple,
-    scale: [1, 1, 1] as CoordinateTuple,
+    scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
     restitution: -10,
     boundary: 0.5,
     hasGravity: false,
