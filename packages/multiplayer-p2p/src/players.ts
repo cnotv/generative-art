@@ -1,6 +1,16 @@
-import type { PlayerPosition, PlayerRotation, PlayerState, P2PConfig, P2PSession } from './types'
+import type {
+  PlayerPosition,
+  PlayerRotation,
+  PlayerState,
+  PlayerAction,
+  P2PConfig,
+  P2PSession
+} from './types'
 
 type PositionRecord = Record<string, Record<string, number>>
+type ActionRecord = Record<string, string>
+
+const defaultThrottleMs = 30
 
 const pendingTimers = new WeakMap<P2PSession, ReturnType<typeof setTimeout>>()
 
@@ -17,7 +27,7 @@ export const p2pSendPosition = (
   rotation: PlayerRotation,
   config?: P2PConfig
 ): void => {
-  const throttleMs = config?.throttleMs ?? 30
+  const throttleMs = config?.throttleMs ?? defaultThrottleMs
   const existing = pendingTimers.get(session)
   if (existing !== undefined) clearTimeout(existing)
 
@@ -52,5 +62,34 @@ export const p2pOnPlayers = (
     callback({ id: peerId, position: pos, rotation: rot })
   })
 
+  return () => {}
+}
+
+/**
+ * Broadcast a named animation action to all peers.
+ * @param session - The active P2P session
+ * @param actionName - Animation clip name to play (e.g. "wave", "attack")
+ */
+export const p2pSendAction = (session: P2PSession, actionName: string): void => {
+  const [sendAction] = session.room.makeAction<ActionRecord>('action')
+  console.warn(`[p2p] sending action: ${actionName}`)
+  sendAction({ name: actionName })
+}
+
+/**
+ * Subscribe to animation action broadcasts from other peers.
+ * @param session - The active P2P session
+ * @param callback - Called with the sender's peer ID and action name
+ * @returns Unsubscribe function
+ */
+export const p2pOnAction = (
+  session: P2PSession,
+  callback: (peerId: string, action: PlayerAction) => void
+): (() => void) => {
+  const [, onAction] = session.room.makeAction<ActionRecord>('action')
+  onAction((data: ActionRecord, peerId: string) => {
+    console.warn(`[p2p] received action from ${peerId}:`, data)
+    callback(peerId, data as PlayerAction)
+  })
   return () => {}
 }

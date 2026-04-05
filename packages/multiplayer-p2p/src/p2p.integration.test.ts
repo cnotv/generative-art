@@ -87,7 +87,9 @@ import {
   p2pOnPeerLeave,
   p2pGetPeerIds,
   p2pSendPosition,
-  p2pOnPlayers
+  p2pOnPlayers,
+  p2pSendAction,
+  p2pOnAction
 } from './index'
 
 describe('P2P room integration — two peers', () => {
@@ -188,5 +190,29 @@ describe('P2P room integration — two peers', () => {
     )
     expect(receivedPositions).toContain(1)
     expect(receivedPositions).toContain(2)
+  })
+
+  it('peer A receives animation action broadcast by peer B', () => {
+    const sessionA = p2pJoin('room-1')
+    const onAction = vi.fn()
+    p2pOnAction(sessionA, onAction)
+
+    const sessionB = p2pJoin('room-1')
+    p2pSendAction(sessionB, 'wave')
+
+    expect(onAction).toHaveBeenCalledTimes(1)
+    const [peerId, action] = onAction.mock.calls[0] as [string, { name: string }]
+    expect(peerId).toMatch(/^peer-/)
+    expect(action.name).toBe('wave')
+  })
+
+  it('peer A does not receive its own action broadcast', () => {
+    const sessionA = p2pJoin('room-1')
+    const onAction = vi.fn()
+    p2pOnAction(sessionA, onAction)
+
+    p2pSendAction(sessionA, 'attack')
+
+    expect(onAction).not.toHaveBeenCalled()
   })
 })

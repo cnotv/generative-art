@@ -29,3 +29,6 @@ export interface PlayerState {
   position: PlayerPosition
   rotation: PlayerRotation
 }
+
+/** Serializable animation action — compatible with Trystero DataPayload */
+export type PlayerAction = { name: string } & Record<string, string>
