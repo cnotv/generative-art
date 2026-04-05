@@ -35,8 +35,9 @@ const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
-const PLAYER_Y_OFFSET = -1
+const PLAYER_Y_OFFSET = 0
 const GROUND_SIZE = 200
+const REMOTE_SPAWN_SPREAD = 4
 
 const stickboySettings = {
   model: {
@@ -59,26 +60,21 @@ const stickboySettings = {
   }
 }
 
-const remoteSettings = {
-  model: {
-    position: [5, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
-    rotation: [0, 0, 0] as CoordinateTuple,
-    scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
-    restitution: -10,
-    boundary: 0.5,
-    hasGravity: false,
-    castShadow: false,
-    material: 'MeshLambertMaterial',
-    color: 0xff6644
-  },
-  movement: {
-    requireGround: false,
-    maxGroundDistance: 5,
-    maxStepHeight: 0.5,
-    characterRadius: 1,
-    debug: false
-  }
-}
+const getRemoteModelSettings = (index: number) => ({
+  position: [
+    (index % 2 === 0 ? 1 : -1) * REMOTE_SPAWN_SPREAD * (Math.floor(index / 2) + 1),
+    PLAYER_Y_OFFSET,
+    0
+  ] as CoordinateTuple,
+  rotation: [0, 0, 0] as CoordinateTuple,
+  scale: [PLAYER_SCALE, PLAYER_SCALE, PLAYER_SCALE] as CoordinateTuple,
+  restitution: -10,
+  boundary: 0.5,
+  hasGravity: false,
+  castShadow: false,
+  material: 'MeshLambertMaterial',
+  color: 0xff6644
+})
 
 const setupConfig = {
   orbit: { target: new THREE.Vector3(0, 1, 0), disabled: true },
@@ -289,7 +285,13 @@ const init = async (): Promise<void> => {
 
       const addRemotePeer = async (peerId: string): Promise<void> => {
         if (remoteModels.has(peerId)) return
-        const remoteModel = await getModel(scene, world, 'stickboy.glb', remoteSettings.model)
+        const spawnIndex = remoteModels.size
+        const remoteModel = await getModel(
+          scene,
+          world,
+          'stickboy.glb',
+          getRemoteModelSettings(spawnIndex)
+        )
         remoteModels.set(peerId, remoteModel)
       }
 
@@ -338,12 +340,10 @@ const init = async (): Promise<void> => {
 
 onMounted(async () => {
   await init()
-  window.addEventListener('resize', init)
 })
 
 onUnmounted(() => {
   destroyControls()
-  window.removeEventListener('resize', init)
   if (p2pSession) {
     p2pLeave(p2pSession)
     p2pSession = null
