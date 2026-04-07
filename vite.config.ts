@@ -12,7 +12,6 @@ const packages = [
   'controls',
   'recording',
   'logic',
-  'multiplayer-client',
   'multiplayer-p2p'
 ]
 const packageAliases = Object.fromEntries(
