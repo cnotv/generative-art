@@ -31,6 +31,8 @@ import ControlsLogger from '@/components/ControlsLogger.vue'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.25
+const IDLE_ANIM_SPEED = 5
+const WALK_ANIM_SPEED = 20
 const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
@@ -129,13 +131,13 @@ const controlBindings = {
 }
 
 const actionConfig = {
-  wave: { allowMovement: false, allowRotation: false, allowActions: [], speed: 1.5 },
-  attack: { allowMovement: false, allowRotation: false, allowActions: [], speed: 2 },
+  wave: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1.5 },
+  attack: { allowMovement: true, allowRotation: false, allowActions: [], speed: 2 },
   jump: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1.5 },
-  talk: { allowMovement: false, allowRotation: false, allowActions: [], speed: 1.5 },
-  sit: { allowMovement: false, allowRotation: false, allowActions: [], speed: 1 },
-  pick: { allowMovement: false, allowRotation: false, allowActions: [], speed: 1.5 },
-  death: { allowMovement: false, allowRotation: false, allowActions: [], speed: 1.2 }
+  talk: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1.5 },
+  sit: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1 },
+  pick: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1.5 },
+  death: { allowMovement: true, allowRotation: false, allowActions: [], speed: 1.2 }
 }
 
 const blockingActions = new Set(Object.keys(actionConfig))
@@ -162,6 +164,7 @@ let localPlayerReference: ComplexModel | null = null
 let getDeltaReference: (() => number) | null = null
 let p2pSession: P2PSession | null = null
 const remoteModels = new Map<string, ComplexModel>()
+const movingPeers = new Set<string>()
 
 const handleBlockingAction = (actionName: string): void => {
   if (!timelineManagerReference || !localPlayerReference || !getDeltaReference) return
@@ -222,11 +225,12 @@ const init = async (): Promise<void> => {
 
           const targetRotation = getRotation(currentActions)
           const isMoving = targetRotation !== null
+          const animationName = getAnimationName(currentActions)
           const animationData: AnimationData = {
-            actionName: getAnimationName(currentActions),
+            actionName: animationName,
             player: localPlayer,
             delta: getDelta() * 2,
-            speed: 20,
+            speed: animationName === 'walk' ? WALK_ANIM_SPEED : IDLE_ANIM_SPEED,
             backward: false,
             distance: MOVEMENT_SPEED
           }
@@ -267,17 +271,19 @@ const init = async (): Promise<void> => {
         name: 'remote-players',
         category: 'user-input',
         action: () => {
-          remoteModels.forEach((model) => {
+          remoteModels.forEach((model, peerId) => {
             if (!model.userData.performing) {
+              const isMoving = movingPeers.has(peerId)
               const animData: AnimationData = {
-                actionName: 'idle',
+                actionName: isMoving ? 'walk' : 'idle',
                 player: model,
                 delta: getDelta() * 2,
-                speed: 20,
+                speed: isMoving ? WALK_ANIM_SPEED : IDLE_ANIM_SPEED,
                 backward: false,
-                distance: 0
+                distance: isMoving ? MOVEMENT_SPEED : 0
               }
               updateAnimation(animData)
+              movingPeers.delete(peerId)
             }
           })
         }
@@ -317,18 +323,12 @@ const init = async (): Promise<void> => {
       p2pOnPlayers(session, (playerState) => {
         const model = remoteModels.get(playerState.id)
         if (!model) return
+        const positionChanged =
+          model.position.x !== playerState.position.x || model.position.z !== playerState.position.z
         model.position.set(playerState.position.x, playerState.position.y, playerState.position.z)
         model.rotation.set(playerState.rotation.x, playerState.rotation.y, playerState.rotation.z)
-        if (!model.userData.performing) {
-          const animData: AnimationData = {
-            actionName: 'walk',
-            player: model,
-            delta: getDelta() * 2,
-            speed: 20,
-            backward: false,
-            distance: 0
-          }
-          updateAnimation(animData)
+        if (positionChanged) {
+          movingPeers.add(playerState.id)
         }
       })
 
