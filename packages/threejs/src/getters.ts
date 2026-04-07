@@ -76,7 +76,8 @@ export const getGround = (
 ) => {
   const defaultProps = { color }
   const groundSizes: CoordinateTuple = Array.isArray(size) ? size : [size, 0.01, size]
-  position[1] = position[1] - (groundSizes[1] || 0.01) / 2
+  const groundCenterY = position[1] - (groundSizes[1] || 0.01) / 2
+  const groundPosition: CoordinateTuple = [position[0], groundCenterY, position[2]]
   const geometry = new THREE.BoxGeometry(...groundSizes)
   const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
@@ -86,13 +87,13 @@ export const getGround = (
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = 'ground'
   mesh.receiveShadow = true
-  mesh.position.set(...position)
+  mesh.position.set(...groundPosition)
   mesh.userData.physics = { mass: 0 }
 
   scene.add(mesh)
 
   const { rigidBody, collider } = getPhysic(world, {
-    position: mesh.position.toArray(),
+    position: groundPosition,
     size: groundSizes,
     boundary: 0.5
   })
