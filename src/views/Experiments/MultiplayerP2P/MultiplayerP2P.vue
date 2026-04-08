@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { getTools, getModel, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
 import {
   type CoordinateTuple,
@@ -28,6 +29,9 @@ import {
 } from '@webgamekit/multiplayer-p2p'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import stickmanTexture from '@/assets/images/characters/stickman.webp'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.25
@@ -39,6 +43,20 @@ const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
 const PLAYER_Y_OFFSET = -2
 const GROUND_SIZE = 200
+
+const reactiveConfig = createReactiveConfig({
+  useTexture: true,
+  transparentModel: true,
+  frontTexture: '' as string,
+  backTexture: '' as string
+})
+
+const configControls = {
+  useTexture: { boolean: true, label: 'Use Texture' },
+  transparentModel: { boolean: true, label: 'Transparent Model' },
+  frontTexture: { file: 'image/*', label: 'Front Texture' },
+  backTexture: { file: 'image/*', label: 'Back Texture' }
+}
 
 const stickboySettings = {
   position: [0, PLAYER_Y_OFFSET, 0] as CoordinateTuple,
@@ -62,6 +80,112 @@ const remoteSettings = {
   castShadow: true,
   material: 'MeshLambertMaterial',
   color: 0xff6644
+}
+
+const FRONT_FACE_THRESHOLD = 0.5
+const BACK_FACE_THRESHOLD = -0.5
+
+const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
+
+const loadImage = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+
+const buildCombinedTexture = async (
+  frontUrl: string,
+  backUrl: string | null
+): Promise<THREE.CanvasTexture> => {
+  const frontImg = await loadImage(frontUrl)
+  const backImg = backUrl ? await loadImage(backUrl) : frontImg
+
+  const canvas = document.createElement('canvas')
+  canvas.width = frontImg.width * 2
+  canvas.height = Math.max(frontImg.height, backImg.height)
+  const ctx = canvas.getContext('2d')!
+
+  ctx.drawImage(frontImg, 0, 0, frontImg.width, canvas.height)
+
+  ctx.save()
+  ctx.translate(frontImg.width * 2, 0)
+  ctx.scale(-1, 1)
+  ctx.drawImage(backImg, 0, 0, frontImg.width, canvas.height)
+  ctx.restore()
+
+  return new THREE.CanvasTexture(canvas)
+}
+
+const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
+  const boundingBox = new THREE.Box3().setFromObject(model)
+  const size = new THREE.Vector3()
+  boundingBox.getSize(size)
+
+  const worldPosition = new THREE.Vector3()
+  const worldNormal = new THREE.Vector3()
+  const normalMatrix = new THREE.Matrix3()
+
+  model.traverse((child: THREE.Object3D) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+
+    const geometry = mesh.geometry
+    const uv = geometry.attributes.uv
+    const position = geometry.attributes.position
+    const normal = geometry.attributes.normal
+    if (!uv || !position || !normal) return
+
+    mesh.updateMatrixWorld(true)
+    normalMatrix.getNormalMatrix(mesh.matrixWorld)
+
+    Array.from({ length: position.count }).forEach((_, i) => {
+      worldNormal.set(normal.getX(i), normal.getY(i), normal.getZ(i))
+      worldNormal.applyMatrix3(normalMatrix).normalize()
+
+      const isFrontFacing = worldNormal.z > FRONT_FACE_THRESHOLD
+      const isBackFacing = worldNormal.z < BACK_FACE_THRESHOLD
+
+      if (isFrontFacing || isBackFacing) {
+        worldPosition.set(position.getX(i), position.getY(i), position.getZ(i))
+        mesh.localToWorld(worldPosition)
+
+        const normalizedX = (worldPosition.x - boundingBox.min.x) / size.x
+        const v = (worldPosition.y - boundingBox.min.y) / size.y
+        const u = isFrontFacing ? normalizedX * 0.5 : 0.5 + normalizedX * 0.5
+        uv.setXY(i, u, v)
+      } else {
+        uv.setXY(i, 0, 0)
+      }
+    })
+
+    uv.needsUpdate = true
+  })
+}
+
+const applyTextureToModel = (model: ComplexModel): void => {
+  const { useTexture, transparentModel } = reactiveConfig.value
+  model.traverse((child: THREE.Object3D) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+    const material = mesh.material as THREE.MeshLambertMaterial
+    material.map = useTexture ? combinedTextureMap.value : null
+    material.transparent = transparentModel
+    material.needsUpdate = true
+  })
+}
+
+const refreshAllModels = (): void => {
+  if (localPlayerReference) applyTextureToModel(localPlayerReference)
+  remoteModels.forEach((model) => applyTextureToModel(model))
+}
+
+const rebuildTexture = async (): Promise<void> => {
+  const front = reactiveConfig.value.frontTexture || stickmanTexture
+  const back = reactiveConfig.value.backTexture || null
+  combinedTextureMap.value = await buildCombinedTexture(front, back)
+  refreshAllModels()
 }
 
 const setupConfig = {
@@ -147,6 +271,8 @@ const getAnimationName = (actions: Record<string, unknown>): string => {
   return isMoving ? 'walk' : 'idle'
 }
 
+const route = useRoute()
+const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
@@ -208,8 +334,14 @@ const init = async (): Promise<void> => {
       const broadcastPosition = { x: 0, y: 0, z: 0 }
       const broadcastRotation = { x: 0, y: 0, z: 0 }
 
+      await rebuildTexture()
+
       const localPlayer = await getModel(scene, world, 'stickboy.glb', stickboySettings)
       localPlayerReference = localPlayer
+      remapUVsToWorldProjection(localPlayer)
+      applyTextureToModel(localPlayer)
+
+      registerSceneElements(camera, scene.children)
 
       const timelineManager = createTimelineManager()
       timelineManagerReference = timelineManager
@@ -299,6 +431,8 @@ const init = async (): Promise<void> => {
       const addRemotePeer = async (peerId: string): Promise<void> => {
         if (remoteModels.has(peerId)) return
         const remoteModel = await getModel(scene, world, 'stickboy.glb', remoteSettings)
+        remapUVsToWorldProjection(remoteModel)
+        applyTextureToModel(remoteModel)
         remoteModels.set(peerId, remoteModel)
         peerCount.value = remoteModels.size
       }
@@ -342,10 +476,25 @@ const init = async (): Promise<void> => {
 }
 
 onMounted(async () => {
+  registerViewConfig(route.name as string, reactiveConfig, configControls)
   await init()
+
+  watch(
+    () => [reactiveConfig.value.useTexture, reactiveConfig.value.transparentModel],
+    () => refreshAllModels()
+  )
+
+  watch(
+    () => [reactiveConfig.value.frontTexture, reactiveConfig.value.backTexture],
+    () => {
+      rebuildTexture()
+    }
+  )
 })
 
 onUnmounted(() => {
+  clearSceneElements()
+  unregisterViewConfig(route.name as string)
   destroyControls()
   if (p2pSession) {
     p2pLeave(p2pSession)

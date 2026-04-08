@@ -223,6 +223,32 @@ describe('getCube', () => {
       expect(cube.userData.onSpawn).toBeUndefined()
     })
   })
+
+  describe('texture option', () => {
+    it('should apply texture to cube mesh material', () => {
+      const cube = getCube(scene, world, {
+        size: [10, 10, 10],
+        position: [0, 0, 0],
+        type: 'fixed',
+        texture: '/test-texture.png'
+      })
+
+      const material = cube.material as THREE.MeshStandardMaterial
+      expect(material.map).toBeDefined()
+      expect(material.map).toBeInstanceOf(THREE.Texture)
+    })
+
+    it('should not apply texture when texture option is undefined', () => {
+      const cube = getCube(scene, world, {
+        size: [10, 10, 10],
+        position: [0, 0, 0],
+        type: 'fixed'
+      })
+
+      const material = cube.material as THREE.MeshStandardMaterial
+      expect(material.map).toBeNull()
+    })
+  })
 })
 
 describe('getBall', () => {

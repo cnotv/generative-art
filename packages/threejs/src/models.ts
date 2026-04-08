@@ -451,6 +451,7 @@ export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<M
         model.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             applyMaterial(child as THREE.Mesh, options)
+            applyTextureToMesh(child as THREE.Mesh, options.texture)
           }
         })
 
@@ -495,6 +496,7 @@ export const loadGLTF = (
         model.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             applyMaterial(child as THREE.Mesh, options)
+            applyTextureToMesh(child as THREE.Mesh, options.texture)
           }
         })
 
