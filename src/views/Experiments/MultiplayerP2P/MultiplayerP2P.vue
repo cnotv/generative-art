@@ -88,6 +88,12 @@ const BACK_FACE_THRESHOLD = -0.5
 
 const OPTIMIZE_MAX_WIDTH = 1000
 const ALPHA_TEST_THRESHOLD = 0.5
+const TEXTURE_HALF = 0.5
+const LIGHT_X = 20
+const LIGHT_Y = 50
+const LIGHT_Z = 20
+const LIGHT_POSITION: CoordinateTuple = [LIGHT_X, LIGHT_Y, LIGHT_Z]
+
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
 
@@ -103,6 +109,7 @@ const resizeToMaxWidth = (img: HTMLImageElement): { width: number; height: numbe
   const scale = img.width > OPTIMIZE_MAX_WIDTH ? OPTIMIZE_MAX_WIDTH / img.width : 1
   return { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
 }
+
 
 const buildCombinedTexture = async (
   frontUrl: string,
@@ -167,7 +174,7 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
 
         const normalizedX = (worldPosition.x - boundingBox.min.x) / size.x
         const v = (worldPosition.y - boundingBox.min.y) / size.y
-        const u = isFrontFacing ? normalizedX * 0.5 : 0.5 + normalizedX * 0.5
+        const u = isFrontFacing ? normalizedX * TEXTURE_HALF : TEXTURE_HALF + normalizedX * TEXTURE_HALF
         uv.setXY(i, u, v)
       } else {
         uv.setXY(i, 0, 0)
@@ -219,7 +226,7 @@ const setupConfig = {
   sky: { size: 500, color: 0x00aaff },
   lights: {
     directional: {
-      position: [20, 50, 20] as CoordinateTuple,
+      position: LIGHT_POSITION,
       castShadow: true,
       shadow: {
         mapSize: { width: 4096, height: 4096 },
