@@ -233,7 +233,7 @@ describe('getCube', () => {
         texture: '/test-texture.png'
       })
 
-      const material = cube.material as THREE.MeshStandardMaterial
+      const material = (cube as unknown as THREE.Mesh).material as THREE.MeshStandardMaterial
       expect(material.map).toBeDefined()
       expect(material.map).toBeInstanceOf(THREE.Texture)
     })
@@ -245,7 +245,7 @@ describe('getCube', () => {
         type: 'fixed'
       })
 
-      const material = cube.material as THREE.MeshStandardMaterial
+      const material = (cube as unknown as THREE.Mesh).material as THREE.MeshStandardMaterial
       expect(material.map).toBeNull()
     })
   })

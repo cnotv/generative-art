@@ -85,6 +85,8 @@ const remoteSettings = {
 const FRONT_FACE_THRESHOLD = 0.5
 const BACK_FACE_THRESHOLD = -0.5
 
+const OPTIMIZE_MAX_WIDTH = 1000
+
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
 
 const loadImage = (src: string): Promise<HTMLImageElement> =>
@@ -95,6 +97,11 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     img.src = src
   })
 
+const resizeToMaxWidth = (img: HTMLImageElement): { width: number; height: number } => {
+  const scale = img.width > OPTIMIZE_MAX_WIDTH ? OPTIMIZE_MAX_WIDTH / img.width : 1
+  return { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
+}
+
 const buildCombinedTexture = async (
   frontUrl: string,
   backUrl: string | null
@@ -102,17 +109,22 @@ const buildCombinedTexture = async (
   const frontImg = await loadImage(frontUrl)
   const backImg = backUrl ? await loadImage(backUrl) : frontImg
 
+  const frontSize = resizeToMaxWidth(frontImg)
+  const backSize = resizeToMaxWidth(backImg)
+  const halfWidth = Math.max(frontSize.width, backSize.width)
+  const height = Math.max(frontSize.height, backSize.height)
+
   const canvas = document.createElement('canvas')
-  canvas.width = frontImg.width * 2
-  canvas.height = Math.max(frontImg.height, backImg.height)
+  canvas.width = halfWidth * 2
+  canvas.height = height
   const ctx = canvas.getContext('2d')!
 
-  ctx.drawImage(frontImg, 0, 0, frontImg.width, canvas.height)
+  ctx.drawImage(frontImg, 0, 0, halfWidth, height)
 
   ctx.save()
-  ctx.translate(frontImg.width * 2, 0)
+  ctx.translate(halfWidth * 2, 0)
   ctx.scale(-1, 1)
-  ctx.drawImage(backImg, 0, 0, frontImg.width, canvas.height)
+  ctx.drawImage(backImg, 0, 0, halfWidth, height)
   ctx.restore()
 
   return new THREE.CanvasTexture(canvas)
