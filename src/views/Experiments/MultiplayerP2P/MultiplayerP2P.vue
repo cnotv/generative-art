@@ -31,7 +31,8 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import stickmanTexture from '@/assets/images/characters/stickman.webp'
+import stickmanFront from '@/assets/images/characters/stickman_front.webp'
+import stickmanBack from '@/assets/images/characters/stickman_back.webp'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.25
@@ -47,8 +48,8 @@ const GROUND_SIZE = 200
 const reactiveConfig = createReactiveConfig({
   useTexture: true,
   transparentModel: true,
-  frontTexture: '' as string,
-  backTexture: '' as string
+  frontTexture: stickmanFront as string,
+  backTexture: stickmanBack as string
 })
 
 const configControls = {
@@ -86,6 +87,7 @@ const FRONT_FACE_THRESHOLD = 0.5
 const BACK_FACE_THRESHOLD = -0.5
 
 const OPTIMIZE_MAX_WIDTH = 1000
+const ALPHA_TEST_THRESHOLD = 0.5
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
 
@@ -184,6 +186,7 @@ const applyTextureToModel = (model: ComplexModel): void => {
     const material = mesh.material as THREE.MeshLambertMaterial
     material.map = useTexture ? combinedTextureMap.value : null
     material.transparent = transparentModel
+    material.alphaTest = transparentModel ? ALPHA_TEST_THRESHOLD : 0
     material.needsUpdate = true
   })
 }
@@ -194,7 +197,7 @@ const refreshAllModels = (): void => {
 }
 
 const rebuildTexture = async (): Promise<void> => {
-  const front = reactiveConfig.value.frontTexture || stickmanTexture
+  const front = reactiveConfig.value.frontTexture || stickmanFront
   const back = reactiveConfig.value.backTexture || null
   combinedTextureMap.value = await buildCombinedTexture(front, back)
   refreshAllModels()
