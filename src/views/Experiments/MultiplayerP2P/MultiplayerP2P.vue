@@ -110,7 +110,6 @@ const resizeToMaxWidth = (img: HTMLImageElement): { width: number; height: numbe
   return { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
 }
 
-
 const buildCombinedTexture = async (
   frontUrl: string,
   backUrl: string | null
