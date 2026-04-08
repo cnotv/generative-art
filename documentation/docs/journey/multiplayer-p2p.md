@@ -198,3 +198,66 @@ Delta scaling would be needed if `frequency` were set to 1 (every frame) and fra
 ## Known limitation: remote player position snapping
 
 Remote player positions are set directly via `model.position.set()` without interpolation. With the 30ms send throttle in `p2pSendPosition`, remote players visually "snap" between positions. Linear interpolation (lerping toward the last received position each frame) would smooth this, but adds complexity and latency. Acceptable for the current prototype scope.
+
+## Bug: texture option silently ignored on GLB/FBX models
+
+**Symptom:** Setting `texture` in `ModelOptions` when loading a GLB model has no effect — the model appears untextured.
+
+**Cause:** `ModelOptions.texture` existed but `loadGLTF` and `loadFBX` only called `applyMaterial` during their `traverse()` loop. `applyTextureToMesh` was only wired for primitives (`getCube`, `getBall`), never for loaded models.
+
+**Fix:** Added `applyTextureToMesh(child, options.texture)` after `applyMaterial` in both `loadGLTF` and `loadFBX` traversals in `packages/threejs/src/models.ts`.
+
+## Challenge: applying one texture across a multi-mesh model
+
+**Symptom:** After wiring the texture option, the stickman texture appeared repeated on every body part (head, torso, arms, legs) — each showing the full image independently.
+
+**Cause:** `stickboy.glb` has 10 separate mesh parts, each with UVs spanning the full `[0,0]→[1,1]` range. `applyTextureToMesh` applies to each child mesh, so every part samples the entire texture.
+
+**Fix:** Remap UVs using a planar world-space projection:
+
+1. Compute `Box3` bounding box from the full model
+2. For each vertex, transform position to world space via `mesh.localToWorld()`
+3. Normalize: `u = (worldX - bbox.min.x) / bbox.width`, `v = (worldY - bbox.min.y) / bbox.height`
+4. Use vertex normals (via `normalMatrix`) to classify faces: front (Z > 0.5), back (Z < −0.5), or side
+5. Front faces map to the left half of a combined canvas texture, back faces to the right half (drawn mirrored)
+6. Side/top/bottom faces get UVs at `(0,0)` for a uniform color
+
+The combined texture is a `CanvasTexture` with double width. If only a front or back image is provided, it's mirrored for the other side.
+
+## Bug: ComplexModel does not expose `.material`
+
+**Symptom:** TypeScript error `Property 'material' does not exist on type 'ComplexModel'` in tests.
+
+**Cause:** `ComplexModel` is `Object3D` with extra `userData` — it doesn't include `THREE.Mesh` properties like `material`.
+
+**Fix:** Cast through `THREE.Mesh`: `(cube as unknown as THREE.Mesh).material as THREE.MeshStandardMaterial`.
+
+## Client-side image optimization
+
+**Problem:** Users uploading large textures (e.g. 4000px wide photos) waste GPU memory and slow rendering.
+
+**Solution:** Resize uploaded images client-side using Canvas API before creating the `CanvasTexture`, mirroring the server-side `pnpm webp` script behavior (max 1000px width):
+
+```ts
+const resizeToMaxWidth = (img: HTMLImageElement): { width: number; height: number } => {
+  const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1
+  return { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
+}
+```
+
+The resize happens inside `buildCombinedTexture` via `ctx.drawImage(img, 0, 0, width, height)`. No WebP conversion is needed — Three.js reads the canvas directly as a texture source.
+
+**Difference from server script:** The server script also trims whitespace via `sharp.trim()`. Canvas API has no equivalent without manual per-pixel scanning, so trimming is skipped client-side.
+
+## Config panel: file upload control
+
+Added a `file` schema type to the config panel system (`ControlSchema.file`) so views can add file upload inputs via schema declaration:
+
+```ts
+const configControls = {
+  frontTexture: { file: 'image/*', label: 'Front Texture' },
+  backTexture: { file: 'image/*', label: 'Back Texture' }
+}
+```
+
+The config value stores the object URL from `URL.createObjectURL(file)`. The control renders a styled `<input type="file">` in `ConfigControls.vue`.
