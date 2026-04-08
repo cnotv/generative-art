@@ -37,6 +37,7 @@ const isControlSchema = (object: any): object is ControlSchema => {
     'checkbox',
     'color',
     'bezier',
+    'file',
     'label',
     'options',
     'component',
@@ -108,6 +109,13 @@ const handleInputUpdate = (path: string, value: string | number) => {
 
 const handleCheckboxUpdate = (path: string, value: boolean) => {
   props.onUpdate(path, value)
+}
+
+const handleFileUpdate = (path: string, event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  props.onUpdate(path, URL.createObjectURL(file))
 }
 
 const handleSelectUpdate = (path: string, value: string) => {
@@ -254,6 +262,18 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         />
       </template>
 
+      <template v-else-if="control.schema.file !== undefined">
+        <label class="text-xs font-medium config-controls__file-label">
+          {{ control.schema.label ?? formatLabel(control.key) }}
+          <input
+            type="file"
+            :accept="control.schema.file"
+            class="config-controls__file-input"
+            @change="handleFileUpdate(control.path, $event)"
+          />
+        </label>
+      </template>
+
       <template v-else-if="control.schema.min !== undefined || control.schema.max !== undefined">
         <label :for="control.path" class="text-xs font-medium">
           {{ control.schema.label ?? formatLabel(control.key) }}:
@@ -395,5 +415,28 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
   cursor: pointer;
   accent-color: hsl(var(--primary));
   flex-shrink: 0;
+}
+
+.config-controls__file-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1, 0.25rem);
+  cursor: pointer;
+}
+
+.config-controls__file-input {
+  font-size: 0.625rem;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.config-controls__file-input::file-selector-button {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  cursor: pointer;
 }
 </style>

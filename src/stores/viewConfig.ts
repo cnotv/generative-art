@@ -18,6 +18,8 @@ export type ControlSchema = {
   checkbox?: boolean
   color?: boolean
   bezier?: boolean
+  /** File input — value is the `accept` attribute (e.g. `'image/*'`). Config stores the object URL. */
+  file?: string
   label?: string
   options?: string[] | ControlOption[]
   component?: string
