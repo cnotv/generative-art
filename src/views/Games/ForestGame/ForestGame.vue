@@ -339,8 +339,8 @@ onUnmounted(() => {
     :mapping="{
       left: 'move-left',
       right: 'move-right',
-      up: 'move-up',
-      down: 'move-down'
+      up: 'move-down',
+      down: 'move-up'
     }"
     :options="{ deadzone: 0.15, enableEightWay: true }"
     :current-actions="currentActions"
