@@ -2,30 +2,22 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import Stats from 'stats.js'
 
 const panel = new Stats()
+const state = { enabled: false }
 
 const init = (route: RouteLocationNormalizedLoaded, statsElement: HTMLElement) => {
-  const hasStats = route.query.stats === 'true'
-  if (hasStats) {
-    // FPS stats
+  state.enabled = route.query.stats === 'true'
+  if (state.enabled) {
     panel.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
-    statsElement!.appendChild(panel.dom)
+    statsElement.appendChild(panel.dom)
   }
 }
 
-const start = (route: RouteLocationNormalizedLoaded) => {
-  const hasStats = route.query.stats === 'true'
-
-  if (panel && hasStats) {
-    panel.begin()
-  }
+const start = (_routeName: string) => {
+  if (state.enabled) panel.begin()
 }
 
-const end = (route: RouteLocationNormalizedLoaded) => {
-  const hasStats = route.query.stats === 'true'
-
-  if (panel && hasStats) {
-    panel.end()
-  }
+const end = (_routeName: string) => {
+  if (state.enabled) panel.end()
 }
 
 export const stats = {

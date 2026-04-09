@@ -31,6 +31,8 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { registerObjectProperties } from '@/utils/objectProperties'
 import stickmanFront from '@/assets/images/characters/stickman_front.webp'
 import stickmanBack from '@/assets/images/characters/stickman_back.webp'
 
@@ -93,7 +95,6 @@ const LIGHT_X = 20
 const LIGHT_Y = 50
 const LIGHT_Z = 20
 const LIGHT_POSITION: CoordinateTuple = [LIGHT_X, LIGHT_Y, LIGHT_Z]
-
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
 
@@ -164,16 +165,18 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
       worldNormal.set(normal.getX(i), normal.getY(i), normal.getZ(i))
       worldNormal.applyMatrix3(normalMatrix).normalize()
 
-      const isFrontFacing = worldNormal.z > FRONT_FACE_THRESHOLD
-      const isBackFacing = worldNormal.z < BACK_FACE_THRESHOLD
+      const isModelFront = worldNormal.z < BACK_FACE_THRESHOLD
+      const isModelBack = worldNormal.z > FRONT_FACE_THRESHOLD
 
-      if (isFrontFacing || isBackFacing) {
+      if (isModelFront || isModelBack) {
         worldPosition.set(position.getX(i), position.getY(i), position.getZ(i))
         mesh.localToWorld(worldPosition)
 
         const normalizedX = (worldPosition.x - boundingBox.min.x) / size.x
         const v = (worldPosition.y - boundingBox.min.y) / size.y
-        const u = isFrontFacing ? normalizedX * TEXTURE_HALF : TEXTURE_HALF + normalizedX * TEXTURE_HALF
+        const u = isModelFront
+          ? normalizedX * TEXTURE_HALF
+          : TEXTURE_HALF + normalizedX * TEXTURE_HALF
         uv.setXY(i, u, v)
       } else {
         uv.setXY(i, 0, 0)
@@ -294,6 +297,7 @@ const getAnimationName = (actions: Record<string, unknown>): string => {
 
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+const { clearAllElementProperties } = useElementPropertiesStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
@@ -362,7 +366,8 @@ const init = async (): Promise<void> => {
       remapUVsToWorldProjection(localPlayer)
       applyTextureToModel(localPlayer)
 
-      registerSceneElements(camera, scene.children)
+      registerSceneElements(camera, [localPlayer])
+      registerObjectProperties({ object: localPlayer, name: 'local-player', title: 'Local Player' })
 
       const timelineManager = createTimelineManager()
       timelineManagerReference = timelineManager
@@ -515,6 +520,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearSceneElements()
+  clearAllElementProperties()
   unregisterViewConfig(route.name as string)
   destroyControls()
   if (p2pSession) {

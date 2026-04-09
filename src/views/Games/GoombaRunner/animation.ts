@@ -166,41 +166,41 @@ const buildVisualAndInputActions = (state: TimelineState) => [
     category: 'user-input',
     action: () => {
       ensurePlayerAboveGround(state.player)
-      movePlayer(
-        state.player,
-        state.playerController,
-        state.physics,
-        state.playerMovement,
-        isGamePlaying.value,
+      movePlayer({
+        player: state.player,
+        playerController: state.playerController,
+        physics: state.physics,
+        playerMovement: state.playerMovement,
+        isPlaying: isGamePlaying.value,
         config
-      )
-      handleJump(
-        state.player,
-        isGamePlaying.value,
-        state.uiStore,
-        state.camera,
-        state.horizonLine,
+      })
+      handleJump({
+        player: state.player,
+        isPlaying: isGamePlaying.value,
+        uiStore: state.uiStore,
+        camera: state.camera,
+        horizonLine: state.horizonLine,
         config
-      )
+      })
       handleArcMovement(state.player)
-      checkCollisions(
-        state.player,
-        state.obstacles,
-        state.backgrounds,
-        state.textureAreaBackgrounds,
-        state.scene,
-        state.endGame,
-        state.loggedCollisions,
+      checkCollisions({
+        player: state.player,
+        obstacles: state.obstacles,
+        backgrounds: state.backgrounds,
+        textureAreaBackgrounds: state.textureAreaBackgrounds,
+        scene: state.scene,
+        endGameCallback: state.endGame,
+        loggedCollisions: state.loggedCollisions,
         config
-      )
-      updatePlayerAnimation(
-        state.model,
-        isGamePlaying.value,
-        gameScore.value,
-        state.getDelta,
+      })
+      updatePlayerAnimation({
+        model: state.model,
+        isPlaying: isGamePlaying.value,
+        gameScore: gameScore.value,
+        getDelta: state.getDelta,
         getSpeed,
         config
-      )
+      })
     }
   },
   {
@@ -208,14 +208,13 @@ const buildVisualAndInputActions = (state: TimelineState) => [
     category: 'game-logic',
     action: () => {
       if (!isGamePlaying.value) return
-      moveBlocks(
-        state.obstacles,
-        state.physics,
-        gameScore.value,
-        state.player,
-        state.scene,
-        (points) => incrementGameScore(points)
-      )
+      moveBlocks({
+        obstacles: state.obstacles,
+        physics: state.physics,
+        gameScore: gameScore.value,
+        player: state.player,
+        onScore: (points) => incrementGameScore(points)
+      })
     }
   }
 ]

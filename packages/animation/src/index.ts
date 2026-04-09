@@ -1036,25 +1036,25 @@ const setRotation = (model: ComplexModel, degrees: number, modelOffset: number =
 
 /** Rotation mapping for directional input combinations */
 const ROTATION_MAP: Record<string, number> = {
-  down: 0,
-  'down-right': 45,
+  up: 0,
+  'up-right': 45,
   right: 90,
-  'up-right': 135,
-  up: 180,
-  'up-left': 225,
+  'down-right': 135,
+  down: 180,
+  'down-left': 225,
   left: 270,
-  'down-left': 315
+  'up-left': 315
 }
 
 const ROTATION_MAP_MIRRORED: Record<string, number> = {
-  down: 0,
-  'down-left': 45,
+  up: 0,
+  'up-left': 45,
   left: 90,
-  'up-left': 135,
-  up: 180,
-  'up-right': 225,
+  'down-left': 135,
+  down: 180,
+  'down-right': 225,
   right: 270,
-  'down-right': 315
+  'up-right': 315
 }
 
 /**

@@ -75,7 +75,7 @@ export const playerSettings = {
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
-  color: 0x000000,
+  color: 0xffffff,
   // opacity: 0.95,
   material: 'MeshBasicMaterial',
   physic: false,
