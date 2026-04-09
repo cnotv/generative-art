@@ -106,8 +106,8 @@ export const controlBindings = {
     keyboard: {
       a: 'move-left',
       d: 'move-right',
-      w: 'move-down',
-      s: 'move-up'
+      w: 'move-up',
+      s: 'move-down'
     },
     gamepad: {
       'dpad-left': 'move-left',

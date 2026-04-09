@@ -75,7 +75,7 @@ export const playerSettings = {
 const genericFlatConfig = {
   receiveShadow: false,
   castShadow: false,
-  color: 0x000000,
+  color: 0xffffff,
   // opacity: 0.95,
   material: 'MeshBasicMaterial',
   physic: false,
@@ -131,8 +131,8 @@ export const controlBindings = {
       ' ': 'jump',
       a: 'move-left',
       d: 'move-right',
-      w: 'move-up',
-      s: 'move-down',
+      w: 'move-down',
+      s: 'move-up',
       p: 'print-log'
     },
     gamepad: {
@@ -140,18 +140,18 @@ export const controlBindings = {
       cross: 'jump',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-down',
-      'dpad-up': 'move-up',
+      'dpad-down': 'move-up',
+      'dpad-up': 'move-down',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-up',
-      'axis1-down': 'move-down'
+      'axis1-up': 'move-down',
+      'axis1-down': 'move-up'
     },
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-up',
-      down: 'move-down',
+      up: 'move-down',
+      down: 'move-up',
       click: 'jump'
     }
   },
