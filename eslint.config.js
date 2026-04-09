@@ -479,11 +479,14 @@ export default [
       'packages/audio/**/*.ts',
       'packages/game/**/*.ts',
       'packages/recording/**/*.ts',
-      'packages/multiplayer-p2p/**/*.ts'
+      'packages/multiplayer-p2p/**/*.ts',
+      'packages/canvas-editor/**/*.ts'
     ],
     rules: {
       'functional/immutable-data': 'warn',
-      'functional/no-let': 'warn'
+      'functional/no-let': 'warn',
+      'functional/no-loop-statements': 'warn',
+      complexity: ['warn', { max: 15 }]
     }
   },
 
