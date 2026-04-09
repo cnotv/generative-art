@@ -244,8 +244,8 @@ const controlBindings = {
     keyboard: {
       a: 'move-left',
       d: 'move-right',
-      w: 'move-down',
-      s: 'move-up',
+      w: 'move-up',
+      s: 'move-down',
       '1': 'wave',
       '2': 'attack',
       '3': 'jump',
@@ -257,12 +257,12 @@ const controlBindings = {
     gamepad: {
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-up',
-      'dpad-up': 'move-down',
+      'dpad-down': 'move-down',
+      'dpad-up': 'move-up',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-down',
-      'axis1-down': 'move-up',
+      'axis1-up': 'move-up',
+      'axis1-down': 'move-down',
       cross: 'jump',
       square: 'attack',
       triangle: 'wave',
@@ -271,8 +271,8 @@ const controlBindings = {
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-down',
-      down: 'move-up'
+      up: 'move-up',
+      down: 'move-down'
     }
   },
   axisThreshold: 0.5
