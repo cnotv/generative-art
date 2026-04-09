@@ -450,7 +450,6 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  cursor: crosshair;
   background-image:
     linear-gradient(45deg, #ccc 25%, transparent 25%),
     linear-gradient(-45deg, #ccc 25%, transparent 25%),
@@ -468,6 +467,7 @@ onUnmounted(() => {
   display: block;
   max-width: 100%;
   touch-action: none;
+  cursor: crosshair;
 }
 
 .canvas-texture-editor__preview-wrapper {
