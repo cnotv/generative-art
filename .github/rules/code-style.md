@@ -66,6 +66,10 @@
   - **No arbitrary values**: Never define fonts, spacing, colors, z-index, radiuses, or borders directly inside a component style block. Always use `var(--...)` referencing a token defined in `_variables.scss`. If a needed token is missing, add it to `_variables.scss` first (including dark-theme overrides in `.dark` / `@media (prefers-color-scheme: dark)`).
   - **No SCSS variables in components**: Do not use `$name: value` SCSS variables inside `<style scoped>`. CSS custom properties are the single source of truth for design tokens.
 
+## Layout
+
+- **Navigation bar clearance**: Every view must add top padding equal to `var(--nav-height)` to prevent content from being obscured by the fixed navigation bar. Apply this as `padding-top: var(--nav-height)` (or combined shorthand) on the view's root element.
+
 ## Accessibility
 
 - **Add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
@@ -85,6 +89,7 @@
 - **Keep It Simple, Stupid (KISS)**: Prefer the simplest solution that solves the problem. Avoid over-engineering, unnecessary abstractions, or premature optimization
 - **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
 - **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
+- **Abstract complex UI into components**: When a view contains a non-trivial interactive element (e.g., a canvas editor, a timeline scrubber, a drag-and-drop zone), extract it into a dedicated component under `src/components/`. The view should be a thin wrapper that wires props and emits. Split large components further into sub-components by responsibility (e.g., `CanvasEditorTools`, `CanvasEditorCanvas`, `CanvasEditorStorage`) and extract stateful logic into co-located composables (`useCanvasEditor.ts`)
 
 ## Three.js Performance
 
