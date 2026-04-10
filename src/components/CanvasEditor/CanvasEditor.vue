@@ -62,7 +62,9 @@ const redo = (): void => canvasEditorCanvasReference.value?.redo()
 const clear = (): void => canvasEditorCanvasReference.value?.clear()
 
 defineExpose({
-  snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? ''
+  snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? '',
+  restore: (dataUrl: string): Promise<void> =>
+    canvasEditorCanvasReference.value?.restore(dataUrl) ?? Promise.resolve()
 })
 
 const onKeyDown = (event: KeyboardEvent): void => {
