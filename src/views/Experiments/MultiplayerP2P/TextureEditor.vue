@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { CanvasEditor } from '@/components/CanvasEditor'
-import { Upload } from 'lucide-vue-next'
+import { Upload, ArrowLeftRight } from 'lucide-vue-next'
 
 const SLOT_FRONT = 'mp2p-front'
 const SLOT_BACK = 'mp2p-back'
@@ -61,6 +61,22 @@ const handleBackUpload = async (event: Event): Promise<void> => {
   await backEditorReference.value?.restore(dataUrl)
   if (backFileReference.value) backFileReference.value.value = ''
 }
+
+const copyFrontToBack = async (): Promise<void> => {
+  const dataUrl = frontPreview.value
+  if (!dataUrl) return
+  backPreview.value = dataUrl
+  emit('update:back', dataUrl)
+  await backEditorReference.value?.restore(dataUrl)
+}
+
+const copyBackToFront = async (): Promise<void> => {
+  const dataUrl = backPreview.value
+  if (!dataUrl) return
+  frontPreview.value = dataUrl
+  emit('update:front', dataUrl)
+  await frontEditorReference.value?.restore(dataUrl)
+}
 </script>
 
 <template>
@@ -93,6 +109,25 @@ const handleBackUpload = async (event: Event): Promise<void> => {
             @change="handleFrontUpload"
           />
         </label>
+      </div>
+
+      <div class="texture-editor__copy-btns">
+        <button
+          class="texture-editor__copy-btn"
+          title="Copy front to back"
+          :disabled="!frontPreview"
+          @click="copyFrontToBack"
+        >
+          <ArrowLeftRight class="texture-editor__copy-icon" />
+        </button>
+        <button
+          class="texture-editor__copy-btn"
+          title="Copy back to front"
+          :disabled="!backPreview"
+          @click="copyBackToFront"
+        >
+          <ArrowLeftRight class="texture-editor__copy-icon texture-editor__copy-icon--flip" />
+        </button>
       </div>
 
       <div class="texture-editor__side">
@@ -235,6 +270,47 @@ const handleBackUpload = async (event: Event): Promise<void> => {
 
 .texture-editor__file-input {
   display: none;
+}
+
+.texture-editor__copy-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
+}
+
+.texture-editor__copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  padding: 0;
+}
+
+.texture-editor__copy-btn:hover:not(:disabled) {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+.texture-editor__copy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.texture-editor__copy-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.texture-editor__copy-icon--flip {
+  transform: scaleY(-1);
 }
 
 .texture-editor__canvas {
