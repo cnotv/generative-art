@@ -61,6 +61,10 @@ const undo = (): void => canvasEditorCanvasReference.value?.undo()
 const redo = (): void => canvasEditorCanvasReference.value?.redo()
 const clear = (): void => canvasEditorCanvasReference.value?.clear()
 
+defineExpose({
+  snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? ''
+})
+
 const onKeyDown = (event: KeyboardEvent): void => {
   const ctrl = event.ctrlKey || event.metaKey
   if (ctrl && event.key === 'z') {
