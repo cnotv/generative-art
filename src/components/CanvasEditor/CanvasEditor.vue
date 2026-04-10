@@ -2,15 +2,15 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CanvasEditorCanvas from './CanvasEditorCanvas.vue'
 import CanvasEditorTools from './CanvasEditorTools.vue'
+import { storageLoad } from '@webgamekit/canvas-editor'
 import type { DrawingTool, DrawingOptions } from '@webgamekit/canvas-editor'
-
-const STORAGE_KEY_LAST = 'canvas-editor-last'
 
 const props = withDefaults(
   defineProps<{
     tool?: DrawingTool
     color?: string
     size?: number
+    slotName?: string
     canvasWidth?: number
     canvasHeight?: number
   }>(),
@@ -18,6 +18,7 @@ const props = withDefaults(
     tool: 'brush',
     color: '#000000',
     size: 4,
+    slotName: 'default',
     canvasWidth: 512,
     canvasHeight: 512
   }
@@ -48,19 +49,12 @@ const getSnapshot = (): string => {
 }
 
 const handleChange = (dataUrl: string): void => {
-  localStorage.setItem(STORAGE_KEY_LAST, JSON.stringify({ front: dataUrl, back: '' }))
   emit('change', dataUrl)
 }
 
 const handleHistoryChange = (state: { canUndo: boolean; canRedo: boolean }): void => {
   canUndo.value = state.canUndo
   canRedo.value = state.canRedo
-}
-
-const handleLoad = async (raw: string): Promise<void> => {
-  const data = JSON.parse(raw) as { front: string; back?: string }
-  const dataUrl = data.front
-  if (dataUrl) await canvasEditorCanvasReference.value?.restore(dataUrl)
 }
 
 const undo = (): void => canvasEditorCanvasReference.value?.undo()
@@ -80,9 +74,10 @@ const onKeyDown = (event: KeyboardEvent): void => {
 }
 
 onMounted(async () => {
-  const lastRaw = localStorage.getItem(STORAGE_KEY_LAST)
-  if (lastRaw) {
-    await handleLoad(lastRaw)
+  const slot = await storageLoad('localStorage', props.slotName)
+  if (slot) {
+    const data = JSON.parse(slot.dataUrl) as { front: string; back?: string }
+    if (data.front) await canvasEditorCanvasReference.value?.restore(data.front)
   }
   window.addEventListener('keydown', onKeyDown)
 })
@@ -108,6 +103,7 @@ onUnmounted(() => {
       :size="size"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :slot-name="slotName"
       :get-snapshot="getSnapshot"
       @update:tool="emit('update:tool', $event)"
       @update:color="emit('update:color', $event)"
@@ -115,7 +111,6 @@ onUnmounted(() => {
       @undo="undo"
       @redo="redo"
       @clear="clear"
-      @load="handleLoad"
     />
   </div>
 </template>

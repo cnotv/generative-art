@@ -103,7 +103,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 
 .brush-size__dropdown {
   position: absolute;
-  top: calc(100% + var(--spacing-1));
+  bottom: calc(100% + var(--spacing-1));
   left: 0;
   z-index: var(--z-dropdown);
   display: flex;
