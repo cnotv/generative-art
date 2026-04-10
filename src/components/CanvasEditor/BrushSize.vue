@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const dropdownOpen = ref(false)
 const dropdownStyle = ref<{ bottom: string; left: string }>({ bottom: '0px', left: '0px' })
 const rootReference = ref<HTMLElement | null>(null)
+const dropdownReference = ref<HTMLElement | null>(null)
 
 const toggle = (): void => {
   if (!dropdownOpen.value && rootReference.value) {
@@ -39,7 +40,10 @@ const onInputChange = (event: Event): void => {
 }
 
 const onClickOutside = (event: MouseEvent): void => {
-  if (rootReference.value && !rootReference.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  const insideRoot = rootReference.value?.contains(target) ?? false
+  const insideDropdown = dropdownReference.value?.contains(target) ?? false
+  if (!insideRoot && !insideDropdown) {
     dropdownOpen.value = false
   }
 }
@@ -62,9 +66,14 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
     </Button>
 
     <Teleport to="body">
-      <div v-if="dropdownOpen" class="brush-size__dropdown" :style="dropdownStyle">
-        <label class="brush-size__label">
-          Size
+      <div
+        v-if="dropdownOpen"
+        ref="dropdownReference"
+        class="brush-size__dropdown"
+        :style="dropdownStyle"
+      >
+        <div class="brush-size__label">
+          <span>Size</span>
           <input
             type="number"
             :value="modelValue"
@@ -74,7 +83,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
             class="brush-size__input"
             @input="onInputChange"
           />
-        </label>
+        </div>
         <Slider
           :model-value="[modelValue]"
           :min="min ?? 1"

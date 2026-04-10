@@ -99,16 +99,20 @@ const copyBackToFront = async (): Promise<void> => {
           />
           <span v-else class="texture-editor__preview-placeholder">Front</span>
         </button>
-        <label class="texture-editor__upload-btn" title="Upload front texture">
+        <button
+          class="texture-editor__upload-btn"
+          title="Upload front texture"
+          @click="frontFileReference?.click()"
+        >
           <Upload class="texture-editor__upload-icon" />
-          <input
-            ref="frontFileReference"
-            type="file"
-            accept="image/*"
-            class="texture-editor__file-input"
-            @change="handleFrontUpload"
-          />
-        </label>
+        </button>
+        <input
+          ref="frontFileReference"
+          type="file"
+          accept="image/*"
+          class="texture-editor__file-input"
+          @change="handleFrontUpload"
+        />
       </div>
 
       <div class="texture-editor__copy-btns">
@@ -145,16 +149,20 @@ const copyBackToFront = async (): Promise<void> => {
           />
           <span v-else class="texture-editor__preview-placeholder">Back</span>
         </button>
-        <label class="texture-editor__upload-btn" title="Upload back texture">
+        <button
+          class="texture-editor__upload-btn"
+          title="Upload back texture"
+          @click="backFileReference?.click()"
+        >
           <Upload class="texture-editor__upload-icon" />
-          <input
-            ref="backFileReference"
-            type="file"
-            accept="image/*"
-            class="texture-editor__file-input"
-            @change="handleBackUpload"
-          />
-        </label>
+        </button>
+        <input
+          ref="backFileReference"
+          type="file"
+          accept="image/*"
+          class="texture-editor__file-input"
+          @change="handleBackUpload"
+        />
       </div>
     </div>
 
