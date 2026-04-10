@@ -9,6 +9,7 @@ const SLOT_BACK = 'mp2p-back'
 const props = defineProps<{
   frontDefault?: string
   backDefault?: string
+  backgroundImage?: string
 }>()
 
 const emit = defineEmits<{
@@ -215,7 +216,7 @@ const copyBackToFront = async (): Promise<void> => {
       :canvas-width="256"
       :canvas-height="256"
       :default-image="frontDefault"
-      :background-image="frontDefault"
+      :background-image="backgroundImage ?? frontDefault"
       class="texture-editor__canvas"
       @change="handleFrontChange"
     />
@@ -226,7 +227,7 @@ const copyBackToFront = async (): Promise<void> => {
       :canvas-width="256"
       :canvas-height="256"
       :default-image="backDefault"
-      :background-image="backDefault"
+      :background-image="backgroundImage ?? backDefault"
       class="texture-editor__canvas"
       @change="handleBackChange"
     />

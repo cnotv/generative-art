@@ -40,6 +40,7 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { registerObjectProperties } from '@/utils/objectProperties'
 import stickmanFront from '@/assets/images/characters/stickman_front.webp'
 import stickmanBack from '@/assets/images/characters/stickman_back.webp'
+import silhouette from '@/assets/images/characters/silhouette.webp'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.25
@@ -529,6 +530,7 @@ onUnmounted(() => {
     <TextureEditor
       :front-default="stickmanFront as string"
       :back-default="stickmanBack as string"
+      :background-image="silhouette as string"
       @update:front="(url) => buildAndApplyTexture(url, reactiveConfig.backTexture || null)"
       @update:back="
         (url) => buildAndApplyTexture(reactiveConfig.frontTexture || (stickmanFront as string), url)
