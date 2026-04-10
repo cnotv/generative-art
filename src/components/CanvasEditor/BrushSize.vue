@@ -14,9 +14,17 @@ const emit = defineEmits<{
 }>()
 
 const dropdownOpen = ref(false)
+const dropdownStyle = ref<{ bottom: string; left: string }>({ bottom: '0px', left: '0px' })
 const rootReference = ref<HTMLElement | null>(null)
 
 const toggle = (): void => {
+  if (!dropdownOpen.value && rootReference.value) {
+    const rect = rootReference.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      bottom: `${window.innerHeight - rect.top}px`,
+      left: `${rect.left}px`
+    }
+  }
   dropdownOpen.value = !dropdownOpen.value
 }
 
@@ -53,28 +61,30 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
       <span class="brush-size__unit">px</span>
     </Button>
 
-    <div v-if="dropdownOpen" class="brush-size__dropdown">
-      <label class="brush-size__label">
-        Size
-        <input
-          type="number"
-          :value="modelValue"
+    <Teleport to="body">
+      <div v-if="dropdownOpen" class="brush-size__dropdown" :style="dropdownStyle">
+        <label class="brush-size__label">
+          Size
+          <input
+            type="number"
+            :value="modelValue"
+            :min="min ?? 1"
+            :max="max ?? 80"
+            step="1"
+            class="brush-size__input"
+            @input="onInputChange"
+          />
+        </label>
+        <Slider
+          :model-value="[modelValue]"
           :min="min ?? 1"
           :max="max ?? 80"
-          step="1"
-          class="brush-size__input"
-          @input="onInputChange"
+          :step="1"
+          class="brush-size__slider"
+          @update:model-value="emit('update:modelValue', $event[0])"
         />
-      </label>
-      <Slider
-        :model-value="[modelValue]"
-        :min="min ?? 1"
-        :max="max ?? 80"
-        :step="1"
-        class="brush-size__slider"
-        @update:model-value="emit('update:modelValue', $event[0])"
-      />
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -102,9 +112,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 }
 
 .brush-size__dropdown {
-  position: absolute;
-  bottom: calc(100% + var(--spacing-1));
-  left: 0;
+  position: fixed;
   z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;

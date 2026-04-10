@@ -29,9 +29,8 @@ import {
   type P2PSession,
   type PlayerAction
 } from '@webgamekit/multiplayer-p2p'
-import { textureBuildCombined, textureToDataUrl, storageLoad } from '@webgamekit/canvas-editor'
-import { CanvasEditor } from '@/components/CanvasEditor'
-import { Paintbrush } from 'lucide-vue-next'
+import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
+import TextureEditor from './TextureEditor.vue'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -99,7 +98,6 @@ const LIGHT_X = 20
 const LIGHT_Y = 50
 const LIGHT_Z = 20
 const LIGHT_POSITION: CoordinateTuple = [LIGHT_X, LIGHT_Y, LIGHT_Z]
-const SLOT_NAME = 'multiplayer-p2p-texture'
 const P2P_TEXTURE_CHANNEL = 'texture'
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
@@ -140,7 +138,7 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
         const normalizedX = (worldPosition.x - boundingBox.min.x) / size.x
         const v = (worldPosition.y - boundingBox.min.y) / size.y
         const u = isModelFront
-          ? normalizedX * TEXTURE_HALF
+          ? (1 - normalizedX) * TEXTURE_HALF
           : TEXTURE_HALF + normalizedX * TEXTURE_HALF
         uv.setXY(i, u, v)
       } else {
@@ -183,10 +181,6 @@ const rebuildTexture = async (): Promise<void> => {
   const front = reactiveConfig.value.frontTexture || (stickmanFront as string)
   const back = reactiveConfig.value.backTexture || null
   await buildAndApplyTexture(front, back)
-}
-
-const handleEditorChange = async (dataUrl: string): Promise<void> => {
-  await buildAndApplyTexture(dataUrl, reactiveConfig.value.backTexture || null)
 }
 
 const setupConfig = {
@@ -278,8 +272,6 @@ const { clearAllElementProperties } = useElementPropertiesStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
-const showEditor = ref(false)
-const editorReference = ref<InstanceType<typeof CanvasEditor> | null>(null)
 
 const hudLogs = computed(() => [
   `Players: ${peerCount.value + 1}`,
@@ -501,12 +493,6 @@ onMounted(async () => {
   registerViewConfig(route.name as string, reactiveConfig, configControls)
   await init()
 
-  const savedSlot = await storageLoad('localStorage', SLOT_NAME)
-  if (savedSlot) {
-    const data = JSON.parse(savedSlot.dataUrl) as { front: string }
-    if (data.front) await buildAndApplyTexture(data.front, reactiveConfig.value.backTexture || null)
-  }
-
   watch(
     () => [reactiveConfig.value.useTexture, reactiveConfig.value.transparentModel],
     () => refreshAllModels()
@@ -536,23 +522,15 @@ onUnmounted(() => {
   <canvas ref="canvas"></canvas>
   <ControlsLogger :logs="hudLogs" />
 
-  <button
-    class="multiplayer-p2p__editor-toggle"
-    title="Toggle texture editor"
-    @click="showEditor = !showEditor"
-  >
-    <Paintbrush class="multiplayer-p2p__editor-toggle-icon" />
-  </button>
-
-  <div v-if="showEditor" class="multiplayer-p2p__editor-panel">
-    <CanvasEditor
-      ref="editorReference"
-      :slot-name="SLOT_NAME"
-      :canvas-width="256"
-      :canvas-height="256"
-      @change="handleEditorChange"
+  <Teleport to="#config-panel-extra">
+    <TextureEditor
+      @update:front="(url) => buildAndApplyTexture(url, reactiveConfig.backTexture || null)"
+      @update:back="
+        (url) => buildAndApplyTexture(reactiveConfig.frontTexture || (stickmanFront as string), url)
+      "
     />
-  </div>
+  </Teleport>
+
   <template v-if="isMobileDevice">
     <TouchControl
       style="left: 25px; bottom: 25px"
@@ -588,44 +566,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-
-.multiplayer-p2p__editor-toggle {
-  position: fixed;
-  bottom: var(--spacing-4);
-  left: var(--spacing-4);
-  z-index: var(--z-dropdown);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  cursor: pointer;
-}
-
-.multiplayer-p2p__editor-toggle:hover {
-  background: var(--color-secondary);
-}
-
-.multiplayer-p2p__editor-toggle-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.multiplayer-p2p__editor-panel {
-  position: fixed;
-  bottom: calc(var(--spacing-4) + 2.5rem + var(--spacing-2));
-  left: var(--spacing-4);
-  z-index: var(--z-dropdown);
-  width: 20rem;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: var(--spacing-3);
 }
 </style>
