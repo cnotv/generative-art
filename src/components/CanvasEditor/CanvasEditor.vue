@@ -35,11 +35,15 @@ const canvasEditorCanvasReference = ref<InstanceType<typeof CanvasEditorCanvas> 
 const canUndo = ref(false)
 const canRedo = ref(false)
 
+const internalTool = ref<DrawingTool>(props.tool)
+const internalColor = ref(props.color)
+const internalSize = ref(props.size)
+
 const currentOptions = computed(
   (): DrawingOptions => ({
-    tool: props.tool,
-    color: props.color,
-    size: props.size
+    tool: internalTool.value,
+    color: internalColor.value,
+    size: internalSize.value
   })
 )
 
@@ -55,6 +59,21 @@ const handleChange = (dataUrl: string): void => {
 const handleHistoryChange = (state: { canUndo: boolean; canRedo: boolean }): void => {
   canUndo.value = state.canUndo
   canRedo.value = state.canRedo
+}
+
+const handleToolUpdate = (value: DrawingTool): void => {
+  internalTool.value = value
+  emit('update:tool', value)
+}
+
+const handleColorUpdate = (value: string): void => {
+  internalColor.value = value
+  emit('update:color', value)
+}
+
+const handleSizeUpdate = (value: number): void => {
+  internalSize.value = value
+  emit('update:size', value)
 }
 
 const undo = (): void => canvasEditorCanvasReference.value?.undo()
@@ -104,16 +123,16 @@ onUnmounted(() => {
       @history-change="handleHistoryChange"
     />
     <CanvasEditorTools
-      :tool="tool"
-      :color="color"
-      :size="size"
+      :tool="internalTool"
+      :color="internalColor"
+      :size="internalSize"
       :can-undo="canUndo"
       :can-redo="canRedo"
       :slot-name="slotName"
       :get-snapshot="getSnapshot"
-      @update:tool="emit('update:tool', $event)"
-      @update:color="emit('update:color', $event)"
-      @update:size="emit('update:size', $event)"
+      @update:tool="handleToolUpdate"
+      @update:color="handleColorUpdate"
+      @update:size="handleSizeUpdate"
       @undo="undo"
       @redo="redo"
       @clear="clear"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { CanvasEditor } from '@/components/CanvasEditor'
-import { Upload, ArrowLeftRight } from 'lucide-vue-next'
+import { Upload, ArrowLeftRight, RotateCcw } from 'lucide-vue-next'
 
 const SLOT_FRONT = 'mp2p-front'
 const SLOT_BACK = 'mp2p-back'
@@ -62,6 +62,18 @@ const handleBackUpload = async (event: Event): Promise<void> => {
   if (backFileReference.value) backFileReference.value.value = ''
 }
 
+const resetFront = (): void => {
+  frontPreview.value = ''
+  frontEditorReference.value?.clear()
+  emit('update:front', '')
+}
+
+const resetBack = (): void => {
+  backPreview.value = ''
+  backEditorReference.value?.clear()
+  emit('update:back', '')
+}
+
 const copyFrontToBack = async (): Promise<void> => {
   const dataUrl = frontPreview.value
   if (!dataUrl) return
@@ -99,13 +111,23 @@ const copyBackToFront = async (): Promise<void> => {
           />
           <span v-else class="texture-editor__preview-placeholder">Front</span>
         </button>
-        <button
-          class="texture-editor__upload-btn"
-          title="Upload front texture"
-          @click="frontFileReference?.click()"
-        >
-          <Upload class="texture-editor__upload-icon" />
-        </button>
+        <div class="texture-editor__action-row">
+          <button
+            class="texture-editor__upload-btn"
+            title="Upload front texture"
+            @click="frontFileReference?.click()"
+          >
+            <Upload class="texture-editor__upload-icon" />
+          </button>
+          <button
+            class="texture-editor__reset-btn"
+            title="Reset front texture"
+            :disabled="!frontPreview"
+            @click="resetFront"
+          >
+            <RotateCcw class="texture-editor__reset-icon" />
+          </button>
+        </div>
         <input
           ref="frontFileReference"
           type="file"
@@ -149,13 +171,23 @@ const copyBackToFront = async (): Promise<void> => {
           />
           <span v-else class="texture-editor__preview-placeholder">Back</span>
         </button>
-        <button
-          class="texture-editor__upload-btn"
-          title="Upload back texture"
-          @click="backFileReference?.click()"
-        >
-          <Upload class="texture-editor__upload-icon" />
-        </button>
+        <div class="texture-editor__action-row">
+          <button
+            class="texture-editor__upload-btn"
+            title="Upload back texture"
+            @click="backFileReference?.click()"
+          >
+            <Upload class="texture-editor__upload-icon" />
+          </button>
+          <button
+            class="texture-editor__reset-btn"
+            title="Reset back texture"
+            :disabled="!backPreview"
+            @click="resetBack"
+          >
+            <RotateCcw class="texture-editor__reset-icon" />
+          </button>
+        </div>
         <input
           ref="backFileReference"
           type="file"
@@ -251,7 +283,13 @@ const copyBackToFront = async (): Promise<void> => {
   color: var(--color-muted-foreground);
 }
 
+.texture-editor__action-row {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
 .texture-editor__upload-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -274,6 +312,33 @@ const copyBackToFront = async (): Promise<void> => {
   width: 0.75rem;
   height: 0.75rem;
   flex-shrink: 0;
+}
+
+.texture-editor__reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.texture-editor__reset-btn:hover:not(:disabled) {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+.texture-editor__reset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.texture-editor__reset-icon {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .texture-editor__file-input {
