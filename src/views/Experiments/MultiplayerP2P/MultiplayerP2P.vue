@@ -34,6 +34,7 @@ import TextureEditor from './TextureEditor.vue'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import { usePanelsStore } from '@/stores/panels'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { registerObjectProperties } from '@/utils/objectProperties'
@@ -269,6 +270,7 @@ const getAnimationName = (actions: Record<string, unknown>): string => {
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const { clearAllElementProperties } = useElementPropertiesStore()
+const panelsStore = usePanelsStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
@@ -491,6 +493,7 @@ const init = async (): Promise<void> => {
 
 onMounted(async () => {
   registerViewConfig(route.name as string, reactiveConfig, configControls)
+  panelsStore.openPanel('config')
   await init()
 
   watch(
@@ -522,7 +525,7 @@ onUnmounted(() => {
   <canvas ref="canvas"></canvas>
   <ControlsLogger :logs="hudLogs" />
 
-  <Teleport to="#config-panel-extra">
+  <Teleport defer to="#config-panel-extra">
     <TextureEditor
       @update:front="(url) => buildAndApplyTexture(url, reactiveConfig.backTexture || null)"
       @update:back="
