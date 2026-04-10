@@ -527,6 +527,8 @@ onUnmounted(() => {
 
   <Teleport defer to="#config-panel-extra">
     <TextureEditor
+      :front-default="stickmanFront as string"
+      :back-default="stickmanBack as string"
       @update:front="(url) => buildAndApplyTexture(url, reactiveConfig.backTexture || null)"
       @update:back="
         (url) => buildAndApplyTexture(reactiveConfig.frontTexture || (stickmanFront as string), url)

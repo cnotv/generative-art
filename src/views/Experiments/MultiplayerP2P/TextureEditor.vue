@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { CanvasEditor } from '@/components/CanvasEditor'
 import { Upload, ArrowLeftRight, RotateCcw } from 'lucide-vue-next'
 
 const SLOT_FRONT = 'mp2p-front'
 const SLOT_BACK = 'mp2p-back'
+
+const props = defineProps<{
+  frontDefault?: string
+  backDefault?: string
+}>()
 
 const emit = defineEmits<{
   'update:front': [dataUrl: string]
@@ -14,12 +19,17 @@ const emit = defineEmits<{
 type Side = 'front' | 'back'
 
 const openSide = ref<Side | null>(null)
-const frontPreview = ref('')
-const backPreview = ref('')
+const frontPreview = ref(props.frontDefault ?? '')
+const backPreview = ref(props.backDefault ?? '')
 const frontEditorReference = ref<InstanceType<typeof CanvasEditor> | null>(null)
 const backEditorReference = ref<InstanceType<typeof CanvasEditor> | null>(null)
 const frontFileReference = ref<HTMLInputElement | null>(null)
 const backFileReference = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  if (props.frontDefault) emit('update:front', props.frontDefault)
+  if (props.backDefault) emit('update:back', props.backDefault)
+})
 
 const toggle = (side: Side): void => {
   openSide.value = openSide.value === side ? null : side
@@ -204,6 +214,8 @@ const copyBackToFront = async (): Promise<void> => {
       :slot-name="SLOT_FRONT"
       :canvas-width="256"
       :canvas-height="256"
+      :default-image="frontDefault"
+      :background-image="frontDefault"
       class="texture-editor__canvas"
       @change="handleFrontChange"
     />
@@ -213,6 +225,8 @@ const copyBackToFront = async (): Promise<void> => {
       :slot-name="SLOT_BACK"
       :canvas-width="256"
       :canvas-height="256"
+      :default-image="backDefault"
+      :background-image="backDefault"
       class="texture-editor__canvas"
       @change="handleBackChange"
     />

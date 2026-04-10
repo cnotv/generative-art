@@ -13,6 +13,8 @@ const props = withDefaults(
     slotName?: string
     canvasWidth?: number
     canvasHeight?: number
+    backgroundImage?: string
+    defaultImage?: string
   }>(),
   {
     tool: 'brush',
@@ -103,6 +105,8 @@ onMounted(async () => {
   if (slot) {
     const data = JSON.parse(slot.dataUrl) as { front: string; back?: string }
     if (data.front) await canvasEditorCanvasReference.value?.restore(data.front)
+  } else if (props.defaultImage) {
+    await canvasEditorCanvasReference.value?.restore(props.defaultImage)
   }
   window.addEventListener('keydown', onKeyDown)
 })
@@ -119,6 +123,7 @@ onUnmounted(() => {
       :options="currentOptions"
       :width="canvasWidth"
       :height="canvasHeight"
+      :background-image="backgroundImage"
       @change="handleChange"
       @history-change="handleHistoryChange"
     />
