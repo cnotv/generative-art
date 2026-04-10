@@ -24,9 +24,12 @@ import {
   p2pOnPlayers,
   p2pSendAction,
   p2pOnAction,
+  p2pSendData,
+  p2pOnData,
   type P2PSession,
   type PlayerAction
 } from '@webgamekit/multiplayer-p2p'
+import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -88,56 +91,16 @@ const remoteSettings = {
 const FRONT_FACE_THRESHOLD = 0.5
 const BACK_FACE_THRESHOLD = -0.5
 
-const OPTIMIZE_MAX_WIDTH = 1000
 const ALPHA_TEST_THRESHOLD = 0.5
 const TEXTURE_HALF = 0.5
 const LIGHT_X = 20
 const LIGHT_Y = 50
 const LIGHT_Z = 20
 const LIGHT_POSITION: CoordinateTuple = [LIGHT_X, LIGHT_Y, LIGHT_Z]
+const STORAGE_KEY_TEXTURE = 'canvas-editor-last'
+const P2P_TEXTURE_CHANNEL = 'texture'
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
-
-const loadImage = (src: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = src
-  })
-
-const resizeToMaxWidth = (img: HTMLImageElement): { width: number; height: number } => {
-  const scale = img.width > OPTIMIZE_MAX_WIDTH ? OPTIMIZE_MAX_WIDTH / img.width : 1
-  return { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
-}
-
-const buildCombinedTexture = async (
-  frontUrl: string,
-  backUrl: string | null
-): Promise<THREE.CanvasTexture> => {
-  const frontImg = await loadImage(frontUrl)
-  const backImg = backUrl ? await loadImage(backUrl) : frontImg
-
-  const frontSize = resizeToMaxWidth(frontImg)
-  const backSize = resizeToMaxWidth(backImg)
-  const halfWidth = Math.max(frontSize.width, backSize.width)
-  const height = Math.max(frontSize.height, backSize.height)
-
-  const canvas = document.createElement('canvas')
-  canvas.width = halfWidth * 2
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-
-  ctx.drawImage(frontImg, 0, 0, halfWidth, height)
-
-  ctx.save()
-  ctx.translate(halfWidth * 2, 0)
-  ctx.scale(-1, 1)
-  ctx.drawImage(backImg, 0, 0, halfWidth, height)
-  ctx.restore()
-
-  return new THREE.CanvasTexture(canvas)
-}
 
 const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
   const boundingBox = new THREE.Box3().setFromObject(model)
@@ -206,10 +169,15 @@ const refreshAllModels = (): void => {
 }
 
 const rebuildTexture = async (): Promise<void> => {
-  const front = reactiveConfig.value.frontTexture || stickmanFront
+  const savedCanvas = localStorage.getItem(STORAGE_KEY_TEXTURE)
+  const front = reactiveConfig.value.frontTexture || savedCanvas || (stickmanFront as string)
   const back = reactiveConfig.value.backTexture || null
-  combinedTextureMap.value = await buildCombinedTexture(front, back)
+  const canvas = await textureBuildCombined(front, back)
+  combinedTextureMap.value = new THREE.CanvasTexture(canvas)
   refreshAllModels()
+  if (p2pSession) {
+    p2pSendData(p2pSession, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(canvas) })
+  }
 }
 
 const setupConfig = {
@@ -469,6 +437,10 @@ const init = async (): Promise<void> => {
 
       p2pOnPeerJoin(session, (peerId) => {
         addRemotePeer(peerId)
+        if (combinedTextureMap.value) {
+          const canvas = combinedTextureMap.value.image as HTMLCanvasElement
+          p2pSendData(session, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(canvas) })
+        }
       })
 
       p2pOnPeerLeave(session, (peerId) => {
@@ -496,6 +468,19 @@ const init = async (): Promise<void> => {
         const model = remoteModels.get(peerId)
         if (!model) return
         playRemoteAction(model, action)
+      })
+
+      p2pOnData<{ dataUrl: string }>(session, P2P_TEXTURE_CHANNEL, (payload, peerId) => {
+        const model = remoteModels.get(peerId)
+        if (!model) return
+        const texture = new THREE.TextureLoader().load(payload.dataUrl)
+        model.traverse((child: THREE.Object3D) => {
+          const mesh = child as THREE.Mesh
+          if (!mesh.isMesh) return
+          const material = mesh.material as THREE.MeshLambertMaterial
+          material.map = texture
+          material.needsUpdate = true
+        })
       })
     }
   })
