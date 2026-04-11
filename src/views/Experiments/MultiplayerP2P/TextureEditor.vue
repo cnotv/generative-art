@@ -289,7 +289,7 @@ const copyBackToFront = async (): Promise<void> => {
 .texture-editor__preview-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -403,5 +403,14 @@ const copyBackToFront = async (): Promise<void> => {
 
 .texture-editor__canvas {
   width: 100%;
+  aspect-ratio: 1;
+}
+
+.texture-editor__canvas :deep(.canvas-editor) {
+  height: auto;
+}
+
+.texture-editor__canvas :deep(.canvas-editor-canvas) {
+  flex: none;
 }
 </style>
