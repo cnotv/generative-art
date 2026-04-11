@@ -85,20 +85,20 @@ const resetBack = (): void => {
   emit('update:back', '')
 }
 
-const copyFrontToBack = async (): Promise<void> => {
+const copyFrontToBack = (): void => {
   const dataUrl = frontPreview.value
   if (!dataUrl) return
   backPreview.value = dataUrl
   emit('update:back', dataUrl)
-  await backEditorReference.value?.restore(dataUrl)
+  openSide.value = 'back'
 }
 
-const copyBackToFront = async (): Promise<void> => {
+const copyBackToFront = (): void => {
   const dataUrl = backPreview.value
   if (!dataUrl) return
   frontPreview.value = dataUrl
   emit('update:front', dataUrl)
-  await frontEditorReference.value?.restore(dataUrl)
+  openSide.value = 'front'
 }
 </script>
 
@@ -215,7 +215,7 @@ const copyBackToFront = async (): Promise<void> => {
       :slot-name="SLOT_FRONT"
       :canvas-width="256"
       :canvas-height="256"
-      :default-image="frontDefault"
+      :default-image="frontPreview || frontDefault"
       :background-image="backgroundImage ?? frontDefault"
       class="texture-editor__canvas"
       @change="handleFrontChange"
@@ -226,7 +226,7 @@ const copyBackToFront = async (): Promise<void> => {
       :slot-name="SLOT_BACK"
       :canvas-width="256"
       :canvas-height="256"
-      :default-image="backDefault"
+      :default-image="backPreview || backDefault"
       :background-image="backgroundImage ?? backDefault"
       class="texture-editor__canvas"
       @change="handleBackChange"
