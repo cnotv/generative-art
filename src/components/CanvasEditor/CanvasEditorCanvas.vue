@@ -114,11 +114,7 @@ defineExpose({
 
 <style scoped>
 .canvas-editor-canvas {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  flex: 1;
-  min-height: 0;
 }
 
 .canvas-editor-canvas__wrapper {
@@ -128,8 +124,7 @@ defineExpose({
   overflow: hidden;
   background: var(--color-background);
   width: 100%;
-  flex: 1;
-  min-height: 0;
+  aspect-ratio: v-bind('`${width} / ${height}`');
 }
 
 .canvas-editor-canvas__background {
@@ -160,11 +155,9 @@ defineExpose({
 }
 
 .canvas-editor-canvas__canvas {
-  position: static;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
   touch-action: none;
   cursor: crosshair;
 }

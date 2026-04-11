@@ -97,8 +97,8 @@ const handleSizeUpdate = (value: number): void => {
   emit('update:size', value)
 }
 
-const undo = (): void => canvasEditorCanvasReference.value?.undo()
-const redo = (): void => canvasEditorCanvasReference.value?.redo()
+const undo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.undo()
+const redo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.redo()
 const clear = (): void => canvasEditorCanvasReference.value?.clear()
 
 defineExpose({
@@ -169,6 +169,5 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  height: 100%;
 }
 </style>
