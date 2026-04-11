@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import CanvasEditorCanvas from './CanvasEditorCanvas.vue'
 import CanvasEditorTools from './CanvasEditorTools.vue'
 import { storageLoad } from '@webgamekit/canvas-editor'
@@ -19,7 +19,7 @@ const props = withDefaults(
   {
     tool: 'brush',
     color: '#000000',
-    size: 4,
+    size: 10,
     slotName: 'default',
     canvasWidth: 512,
     canvasHeight: 512
@@ -40,6 +40,25 @@ const canRedo = ref(false)
 const internalTool = ref<DrawingTool>(props.tool)
 const internalColor = ref(props.color)
 const internalSize = ref(props.size)
+
+watch(
+  () => props.tool,
+  (v) => {
+    internalTool.value = v
+  }
+)
+watch(
+  () => props.color,
+  (v) => {
+    internalColor.value = v
+  }
+)
+watch(
+  () => props.size,
+  (v) => {
+    internalSize.value = v
+  }
+)
 
 const currentOptions = computed(
   (): DrawingOptions => ({
