@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { CanvasEditor } from '@/components/CanvasEditor'
+import { storageSaveLocal } from '@webgamekit/canvas-editor'
 import { Upload, ArrowLeftRight, RotateCcw } from 'lucide-vue-next'
 
 const SLOT_FRONT = 'mp2p-front'
 const SLOT_BACK = 'mp2p-back'
+// Panel is 20rem (320px) with --spacing-2 (8px) padding each side = 304px content width.
+// Canvas height matches the stickman default image aspect (64×99 → scale ×4.75 → 304×470)
+// so the scaled-up image fills the canvas exactly with no cropping or padding.
+const CANVAS_WIDTH = 304
+const CANVAS_HEIGHT = 470
 
 const props = defineProps<{
   frontDefault?: string
@@ -74,20 +80,25 @@ const handleBackUpload = async (event: Event): Promise<void> => {
 }
 
 const resetFront = (): void => {
-  frontPreview.value = ''
-  frontEditorReference.value?.clear()
-  emit('update:front', '')
+  const url = props.frontDefault ?? ''
+  storageSaveLocal(SLOT_FRONT, JSON.stringify({ front: url, back: '' }))
+  frontPreview.value = url
+  emit('update:front', url)
+  if (openSide.value === 'front') frontEditorReference.value?.restore(url, { silent: true })
 }
 
 const resetBack = (): void => {
-  backPreview.value = ''
-  backEditorReference.value?.clear()
-  emit('update:back', '')
+  const url = props.backDefault ?? ''
+  storageSaveLocal(SLOT_BACK, JSON.stringify({ front: url, back: '' }))
+  backPreview.value = url
+  emit('update:back', url)
+  if (openSide.value === 'back') backEditorReference.value?.restore(url, { silent: true })
 }
 
 const copyFrontToBack = (): void => {
   const dataUrl = frontPreview.value
   if (!dataUrl) return
+  storageSaveLocal(SLOT_BACK, JSON.stringify({ front: dataUrl, back: '' }))
   backPreview.value = dataUrl
   emit('update:back', dataUrl)
   openSide.value = 'back'
@@ -96,6 +107,7 @@ const copyFrontToBack = (): void => {
 const copyBackToFront = (): void => {
   const dataUrl = backPreview.value
   if (!dataUrl) return
+  storageSaveLocal(SLOT_FRONT, JSON.stringify({ front: dataUrl, back: '' }))
   frontPreview.value = dataUrl
   emit('update:front', dataUrl)
   openSide.value = 'front'
@@ -211,23 +223,25 @@ const copyBackToFront = (): void => {
 
     <CanvasEditor
       v-if="openSide === 'front'"
+      key="editor-front"
       ref="frontEditorReference"
       :slot-name="SLOT_FRONT"
-      :canvas-width="256"
-      :canvas-height="256"
+      :canvas-width="CANVAS_WIDTH"
+      :canvas-height="CANVAS_HEIGHT"
       :default-image="frontPreview || frontDefault"
-      :background-image="backgroundImage ?? frontDefault"
+      :background-image="backgroundImage"
       class="texture-editor__canvas"
       @change="handleFrontChange"
     />
     <CanvasEditor
       v-if="openSide === 'back'"
+      key="editor-back"
       ref="backEditorReference"
       :slot-name="SLOT_BACK"
-      :canvas-width="256"
-      :canvas-height="256"
+      :canvas-width="CANVAS_WIDTH"
+      :canvas-height="CANVAS_HEIGHT"
       :default-image="backPreview || backDefault"
-      :background-image="backgroundImage ?? backDefault"
+      :background-image="backgroundImage"
       class="texture-editor__canvas"
       @change="handleBackChange"
     />

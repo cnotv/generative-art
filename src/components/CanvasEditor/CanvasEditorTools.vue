@@ -2,8 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { ColorPicker } from '@/components/ui/color-picker'
 import BrushSize from './BrushSize.vue'
-import { Brush, Eraser, PaintBucket, Undo2, Redo2, Trash2, Save } from 'lucide-vue-next'
-import { storageSave } from '@webgamekit/canvas-editor'
+import { Brush, Eraser, PaintBucket, Undo2, Redo2, Trash2, Download } from 'lucide-vue-next'
 import type { DrawingTool } from '@webgamekit/canvas-editor'
 
 const props = defineProps<{
@@ -25,80 +24,78 @@ const emit = defineEmits<{
   clear: []
 }>()
 
-const save = async (): Promise<void> => {
-  await storageSave('localStorage', props.slotName, props.getSnapshot())
+const download = (): void => {
+  const snapshot = props.getSnapshot()
+  const dataUrl = (JSON.parse(snapshot) as { front: string }).front
+  if (!dataUrl) return
+  const link = document.createElement('a')
+  link.href = dataUrl
+  link.download = `${props.slotName}.png`
+  link.click()
 }
 </script>
 
 <template>
   <div class="canvas-editor-tools">
-    <div class="canvas-editor-tools__group">
-      <Button
-        :variant="tool === 'brush' ? 'default' : 'outline'"
-        size="icon"
-        title="Brush"
-        @click="emit('update:tool', 'brush')"
-      >
-        <Brush class="canvas-editor-tools__icon" />
-      </Button>
-      <Button
-        :variant="tool === 'eraser' ? 'default' : 'outline'"
-        size="icon"
-        title="Eraser"
-        @click="emit('update:tool', 'eraser')"
-      >
-        <Eraser class="canvas-editor-tools__icon" />
-      </Button>
-      <Button
-        :variant="tool === 'fill' ? 'default' : 'outline'"
-        size="icon"
-        title="Fill"
-        @click="emit('update:tool', 'fill')"
-      >
-        <PaintBucket class="canvas-editor-tools__icon" />
-      </Button>
-    </div>
-
-    <div class="canvas-editor-tools__group">
-      <label class="canvas-editor-tools__label">
-        Color
-        <ColorPicker :model-value="color" @update:model-value="emit('update:color', $event)" />
-      </label>
-      <BrushSize
-        :model-value="size"
-        :min="1"
-        :max="80"
-        @update:model-value="emit('update:size', $event)"
-      />
-    </div>
-
-    <div class="canvas-editor-tools__group">
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="!canUndo"
-        title="Undo (Ctrl+Z)"
-        @click="emit('undo')"
-      >
-        <Undo2 class="canvas-editor-tools__icon" />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="!canRedo"
-        title="Redo (Ctrl+Y)"
-        @click="emit('redo')"
-      >
-        <Redo2 class="canvas-editor-tools__icon" />
-      </Button>
-      <Button variant="destructive" size="icon" title="Clear canvas" @click="emit('clear')">
-        <Trash2 class="canvas-editor-tools__icon" />
-      </Button>
-      <Button size="sm" title="Save" @click="save">
-        <Save class="canvas-editor-tools__icon canvas-editor-tools__icon--mr" />
-        Save
-      </Button>
-    </div>
+    <Button
+      :variant="tool === 'brush' ? 'default' : 'outline'"
+      size="icon"
+      title="Brush"
+      @click="emit('update:tool', 'brush')"
+    >
+      <Brush class="canvas-editor-tools__icon" />
+    </Button>
+    <Button
+      :variant="tool === 'eraser' ? 'default' : 'outline'"
+      size="icon"
+      title="Eraser"
+      @click="emit('update:tool', 'eraser')"
+    >
+      <Eraser class="canvas-editor-tools__icon" />
+    </Button>
+    <Button
+      :variant="tool === 'fill' ? 'default' : 'outline'"
+      size="icon"
+      title="Fill"
+      @click="emit('update:tool', 'fill')"
+    >
+      <PaintBucket class="canvas-editor-tools__icon" />
+    </Button>
+    <ColorPicker
+      :model-value="color"
+      title="Color"
+      @update:model-value="emit('update:color', $event)"
+    />
+    <BrushSize
+      :model-value="size"
+      :min="1"
+      :max="80"
+      @update:model-value="emit('update:size', $event)"
+    />
+    <Button
+      variant="outline"
+      size="icon"
+      :disabled="!canUndo"
+      title="Undo (Ctrl+Z)"
+      @click="emit('undo')"
+    >
+      <Undo2 class="canvas-editor-tools__icon" />
+    </Button>
+    <Button
+      variant="outline"
+      size="icon"
+      :disabled="!canRedo"
+      title="Redo (Ctrl+Y)"
+      @click="emit('redo')"
+    >
+      <Redo2 class="canvas-editor-tools__icon" />
+    </Button>
+    <Button variant="destructive" size="icon" title="Clear canvas" @click="emit('clear')">
+      <Trash2 class="canvas-editor-tools__icon" />
+    </Button>
+    <Button variant="outline" size="icon" title="Download as PNG" @click="download">
+      <Download class="canvas-editor-tools__icon" />
+    </Button>
   </div>
 </template>
 
@@ -106,7 +103,7 @@ const save = async (): Promise<void> => {
 .canvas-editor-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-4);
+  gap: var(--spacing-2);
   align-items: center;
   padding: var(--spacing-3) var(--spacing-4);
   background: var(--color-secondary);
@@ -114,28 +111,9 @@ const save = async (): Promise<void> => {
   border: 1px solid var(--color-border);
 }
 
-.canvas-editor-tools__group {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-}
-
-.canvas-editor-tools__label {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
-}
-
 .canvas-editor-tools__icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
-}
-
-.canvas-editor-tools__icon--mr {
-  margin-right: var(--spacing-1);
 }
 </style>

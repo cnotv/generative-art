@@ -103,8 +103,8 @@ const clear = (): void => canvasEditorCanvasReference.value?.clear()
 
 defineExpose({
   snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? '',
-  restore: (dataUrl: string): Promise<void> =>
-    canvasEditorCanvasReference.value?.restore(dataUrl) ?? Promise.resolve()
+  restore: (dataUrl: string, options?: { silent?: boolean }): Promise<void> =>
+    canvasEditorCanvasReference.value?.restore(dataUrl, options) ?? Promise.resolve()
 })
 
 const onKeyDown = (event: KeyboardEvent): void => {
@@ -121,11 +121,10 @@ const onKeyDown = (event: KeyboardEvent): void => {
 
 onMounted(async () => {
   const slot = await storageLoad('localStorage', props.slotName)
-  if (slot) {
-    const data = JSON.parse(slot.dataUrl) as { front: string; back?: string }
-    if (data.front) await canvasEditorCanvasReference.value?.restore(data.front)
-  } else if (props.defaultImage) {
-    await canvasEditorCanvasReference.value?.restore(props.defaultImage)
+  const savedFront = slot ? (JSON.parse(slot.dataUrl) as { front: string }).front : ''
+  const imageToLoad = savedFront || props.defaultImage || ''
+  if (imageToLoad) {
+    await canvasEditorCanvasReference.value?.restore(imageToLoad, { silent: true })
   }
   window.addEventListener('keydown', onKeyDown)
 })

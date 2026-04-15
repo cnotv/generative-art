@@ -50,21 +50,17 @@ const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
-const PLAYER_Y_OFFSET = -2
+const PLAYER_Y_OFFSET = -0.7
 const GROUND_SIZE = 200
 
 const reactiveConfig = createReactiveConfig({
   useTexture: true,
-  transparentModel: true,
   frontTexture: stickmanFront as string,
   backTexture: stickmanBack as string
 })
 
 const configControls = {
-  useTexture: { boolean: true, label: 'Use Texture' },
-  transparentModel: { boolean: true, label: 'Transparent Model' },
-  frontTexture: { file: 'image/*', label: 'Front Texture' },
-  backTexture: { file: 'image/*', label: 'Back Texture' }
+  useTexture: { boolean: true, label: 'Use Texture' }
 }
 
 const stickboySettings = {
@@ -91,8 +87,8 @@ const remoteSettings = {
   color: 0xff6644
 }
 
-const FRONT_FACE_THRESHOLD = 0.5
-const BACK_FACE_THRESHOLD = -0.5
+const FRONT_FACE_THRESHOLD = 0.7
+const BACK_FACE_THRESHOLD = -0.7
 
 const ALPHA_TEST_THRESHOLD = 0.5
 const TEXTURE_HALF = 0.5
@@ -153,21 +149,32 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
 }
 
 const applyTextureToModel = (model: ComplexModel): void => {
-  const { useTexture, transparentModel } = reactiveConfig.value
+  const { useTexture } = reactiveConfig.value
   model.traverse((child: THREE.Object3D) => {
     const mesh = child as THREE.Mesh
     if (!mesh.isMesh) return
     const material = mesh.material as THREE.MeshLambertMaterial
     material.map = useTexture ? combinedTextureMap.value : null
-    material.transparent = transparentModel
-    material.alphaTest = transparentModel ? ALPHA_TEST_THRESHOLD : 0
+    material.transparent = true
+    material.alphaTest = ALPHA_TEST_THRESHOLD
+    material.needsUpdate = true
+  })
+}
+
+const applyRemoteModelSettings = (model: ComplexModel): void => {
+  model.traverse((child: THREE.Object3D) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+    const material = mesh.material as THREE.MeshLambertMaterial
+    material.transparent = true
+    material.alphaTest = ALPHA_TEST_THRESHOLD
     material.needsUpdate = true
   })
 }
 
 const refreshAllModels = (): void => {
   if (localPlayerReference) applyTextureToModel(localPlayerReference)
-  remoteModels.forEach((model) => applyTextureToModel(model))
+  remoteModels.forEach((model) => applyRemoteModelSettings(model))
 }
 
 const buildAndApplyTexture = async (front: string, back: string | null): Promise<void> => {
@@ -498,7 +505,7 @@ onMounted(async () => {
   await init()
 
   watch(
-    () => [reactiveConfig.value.useTexture, reactiveConfig.value.transparentModel],
+    () => reactiveConfig.value.useTexture,
     () => refreshAllModels()
   )
 

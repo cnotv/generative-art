@@ -149,7 +149,7 @@ export const drawingRestore = (ctx: CanvasRenderingContext2D, dataUrl: string): 
     img.onload = () => {
       const cw = ctx.canvas.width
       const ch = ctx.canvas.height
-      const scale = Math.min(cw / img.width, ch / img.height)
+      const scale = Math.max(cw / img.width, ch / img.height)
       const drawWidth = img.width * scale
       const drawHeight = img.height * scale
       const offsetX = (cw - drawWidth) / 2
@@ -158,6 +158,7 @@ export const drawingRestore = (ctx: CanvasRenderingContext2D, dataUrl: string): 
       ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
       resolve()
     }
+    img.onerror = () => resolve()
     img.src = dataUrl
   })
 }

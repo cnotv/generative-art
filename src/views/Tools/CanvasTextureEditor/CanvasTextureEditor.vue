@@ -53,14 +53,16 @@ onUnmounted(() => {
 .canvas-texture-editor {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--nav-height));
+  align-items: center;
+  min-height: calc(100vh - var(--nav-height));
   padding: var(--spacing-4);
   padding-top: calc(var(--nav-height) + var(--spacing-4));
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .canvas-texture-editor__editor {
-  flex: 1;
-  min-height: 0;
+  width: 100%;
+  max-width: 600px;
 }
 </style>
