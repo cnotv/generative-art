@@ -158,12 +158,12 @@ export const useCanvasEditor = (
     onUpdate()
   }
 
-  const restore = async (dataUrl: string): Promise<void> => {
+  const restore = async (dataUrl: string, options?: { silent?: boolean }): Promise<void> => {
     const ctx = getContext()
     if (!ctx) return
     history.push()
     await drawingRestore(ctx, dataUrl)
-    onUpdate()
+    if (!options?.silent) onUpdate()
   }
 
   return {

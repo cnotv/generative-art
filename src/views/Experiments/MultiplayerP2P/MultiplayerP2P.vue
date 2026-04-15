@@ -30,14 +30,17 @@ import {
   type PlayerAction
 } from '@webgamekit/multiplayer-p2p'
 import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
+import TextureEditor from './TextureEditor.vue'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import { usePanelsStore } from '@/stores/panels'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { registerObjectProperties } from '@/utils/objectProperties'
 import stickmanFront from '@/assets/images/characters/stickman_front.webp'
 import stickmanBack from '@/assets/images/characters/stickman_back.webp'
+import silhouette from '@/assets/images/characters/silhouette.webp'
 
 const ROOM_ID = 'webgamekit-p2p'
 const MOVEMENT_SPEED = 0.25
@@ -47,21 +50,17 @@ const CAMERA_HEIGHT = 7
 const CAMERA_DEPTH = 14
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_DEPTH]
 const PLAYER_SCALE = 2
-const PLAYER_Y_OFFSET = -2
+const PLAYER_Y_OFFSET = -0.7
 const GROUND_SIZE = 200
 
 const reactiveConfig = createReactiveConfig({
   useTexture: true,
-  transparentModel: true,
   frontTexture: stickmanFront as string,
   backTexture: stickmanBack as string
 })
 
 const configControls = {
-  useTexture: { boolean: true, label: 'Use Texture' },
-  transparentModel: { boolean: true, label: 'Transparent Model' },
-  frontTexture: { file: 'image/*', label: 'Front Texture' },
-  backTexture: { file: 'image/*', label: 'Back Texture' }
+  useTexture: { boolean: true, label: 'Use Texture' }
 }
 
 const stickboySettings = {
@@ -88,8 +87,8 @@ const remoteSettings = {
   color: 0xff6644
 }
 
-const FRONT_FACE_THRESHOLD = 0.5
-const BACK_FACE_THRESHOLD = -0.5
+const FRONT_FACE_THRESHOLD = 0.7
+const BACK_FACE_THRESHOLD = -0.7
 
 const ALPHA_TEST_THRESHOLD = 0.5
 const TEXTURE_HALF = 0.5
@@ -97,7 +96,6 @@ const LIGHT_X = 20
 const LIGHT_Y = 50
 const LIGHT_Z = 20
 const LIGHT_POSITION: CoordinateTuple = [LIGHT_X, LIGHT_Y, LIGHT_Z]
-const STORAGE_KEY_TEXTURE = 'canvas-editor-last'
 const P2P_TEXTURE_CHANNEL = 'texture'
 
 const combinedTextureMap = ref<THREE.CanvasTexture | null>(null)
@@ -138,7 +136,7 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
         const normalizedX = (worldPosition.x - boundingBox.min.x) / size.x
         const v = (worldPosition.y - boundingBox.min.y) / size.y
         const u = isModelFront
-          ? normalizedX * TEXTURE_HALF
+          ? (1 - normalizedX) * TEXTURE_HALF
           : TEXTURE_HALF + normalizedX * TEXTURE_HALF
         uv.setXY(i, u, v)
       } else {
@@ -151,33 +149,47 @@ const remapUVsToWorldProjection = (model: THREE.Object3D): void => {
 }
 
 const applyTextureToModel = (model: ComplexModel): void => {
-  const { useTexture, transparentModel } = reactiveConfig.value
+  const { useTexture } = reactiveConfig.value
   model.traverse((child: THREE.Object3D) => {
     const mesh = child as THREE.Mesh
     if (!mesh.isMesh) return
     const material = mesh.material as THREE.MeshLambertMaterial
     material.map = useTexture ? combinedTextureMap.value : null
-    material.transparent = transparentModel
-    material.alphaTest = transparentModel ? ALPHA_TEST_THRESHOLD : 0
+    material.transparent = true
+    material.alphaTest = ALPHA_TEST_THRESHOLD
+    material.needsUpdate = true
+  })
+}
+
+const applyRemoteModelSettings = (model: ComplexModel): void => {
+  model.traverse((child: THREE.Object3D) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+    const material = mesh.material as THREE.MeshLambertMaterial
+    material.transparent = true
+    material.alphaTest = ALPHA_TEST_THRESHOLD
     material.needsUpdate = true
   })
 }
 
 const refreshAllModels = (): void => {
   if (localPlayerReference) applyTextureToModel(localPlayerReference)
-  remoteModels.forEach((model) => applyTextureToModel(model))
+  remoteModels.forEach((model) => applyRemoteModelSettings(model))
 }
 
-const rebuildTexture = async (): Promise<void> => {
-  const savedCanvas = localStorage.getItem(STORAGE_KEY_TEXTURE)
-  const front = reactiveConfig.value.frontTexture || savedCanvas || (stickmanFront as string)
-  const back = reactiveConfig.value.backTexture || null
+const buildAndApplyTexture = async (front: string, back: string | null): Promise<void> => {
   const canvas = await textureBuildCombined(front, back)
   combinedTextureMap.value = new THREE.CanvasTexture(canvas)
   refreshAllModels()
   if (p2pSession) {
     p2pSendData(p2pSession, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(canvas) })
   }
+}
+
+const rebuildTexture = async (): Promise<void> => {
+  const front = reactiveConfig.value.frontTexture || (stickmanFront as string)
+  const back = reactiveConfig.value.backTexture || null
+  await buildAndApplyTexture(front, back)
 }
 
 const setupConfig = {
@@ -266,6 +278,7 @@ const getAnimationName = (actions: Record<string, unknown>): string => {
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const { clearAllElementProperties } = useElementPropertiesStore()
+const panelsStore = usePanelsStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
@@ -488,10 +501,11 @@ const init = async (): Promise<void> => {
 
 onMounted(async () => {
   registerViewConfig(route.name as string, reactiveConfig, configControls)
+  panelsStore.openPanel('config')
   await init()
 
   watch(
-    () => [reactiveConfig.value.useTexture, reactiveConfig.value.transparentModel],
+    () => reactiveConfig.value.useTexture,
     () => refreshAllModels()
   )
 
@@ -518,6 +532,19 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
   <ControlsLogger :logs="hudLogs" />
+
+  <Teleport defer to="#config-panel-extra">
+    <TextureEditor
+      :front-default="stickmanFront as string"
+      :back-default="stickmanBack as string"
+      :background-image="silhouette as string"
+      @update:front="(url) => buildAndApplyTexture(url, reactiveConfig.backTexture || null)"
+      @update:back="
+        (url) => buildAndApplyTexture(reactiveConfig.frontTexture || (stickmanFront as string), url)
+      "
+    />
+  </Teleport>
+
   <template v-if="isMobileDevice">
     <TouchControl
       style="left: 25px; bottom: 25px"

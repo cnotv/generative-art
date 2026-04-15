@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 
@@ -13,11 +13,32 @@ const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
-const dropdownOpen = ref(false)
-const rootReference = ref<HTMLElement | null>(null)
+const DROPDOWN_EDGE_OFFSET = 5
 
-const toggle = (): void => {
-  dropdownOpen.value = !dropdownOpen.value
+const dropdownOpen = ref(false)
+const dropdownStyle = ref<{ bottom: string; left: string }>({ bottom: '0px', left: '0px' })
+const rootReference = ref<HTMLElement | null>(null)
+const dropdownReference = ref<HTMLElement | null>(null)
+
+const toggle = async (): Promise<void> => {
+  if (!dropdownOpen.value && rootReference.value) {
+    const rect = rootReference.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      bottom: `${window.innerHeight - rect.top}px`,
+      left: `${rect.left}px`
+    }
+    dropdownOpen.value = true
+    await nextTick()
+    const dropdownWidth = dropdownReference.value?.offsetWidth ?? 0
+    const maxLeft = window.innerWidth - dropdownWidth - DROPDOWN_EDGE_OFFSET
+    const clampedLeft = Math.min(Math.max(DROPDOWN_EDGE_OFFSET, rect.left), maxLeft)
+    dropdownStyle.value = {
+      bottom: `${window.innerHeight - rect.top}px`,
+      left: `${clampedLeft}px`
+    }
+    return
+  }
+  dropdownOpen.value = false
 }
 
 const onInputChange = (event: Event): void => {
@@ -31,7 +52,10 @@ const onInputChange = (event: Event): void => {
 }
 
 const onClickOutside = (event: MouseEvent): void => {
-  if (rootReference.value && !rootReference.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  const insideRoot = rootReference.value?.contains(target) ?? false
+  const insideDropdown = dropdownReference.value?.contains(target) ?? false
+  if (!insideRoot && !insideDropdown) {
     dropdownOpen.value = false
   }
 }
@@ -53,28 +77,35 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
       <span class="brush-size__unit">px</span>
     </Button>
 
-    <div v-if="dropdownOpen" class="brush-size__dropdown">
-      <label class="brush-size__label">
-        Size
-        <input
-          type="number"
-          :value="modelValue"
+    <Teleport to="body">
+      <div
+        v-if="dropdownOpen"
+        ref="dropdownReference"
+        class="brush-size__dropdown"
+        :style="dropdownStyle"
+      >
+        <div class="brush-size__label">
+          <span>Size</span>
+          <input
+            type="number"
+            :value="modelValue"
+            :min="min ?? 1"
+            :max="max ?? 80"
+            step="1"
+            class="brush-size__input"
+            @input="onInputChange"
+          />
+        </div>
+        <Slider
+          :model-value="[modelValue]"
           :min="min ?? 1"
           :max="max ?? 80"
-          step="1"
-          class="brush-size__input"
-          @input="onInputChange"
+          :step="1"
+          class="brush-size__slider"
+          @update:model-value="emit('update:modelValue', $event[0])"
         />
-      </label>
-      <Slider
-        :model-value="[modelValue]"
-        :min="min ?? 1"
-        :max="max ?? 80"
-        :step="1"
-        class="brush-size__slider"
-        @update:model-value="emit('update:modelValue', $event[0])"
-      />
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -102,10 +133,8 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 }
 
 .brush-size__dropdown {
-  position: absolute;
-  bottom: calc(100% + var(--spacing-1));
-  left: 0;
-  z-index: var(--z-dropdown);
+  position: fixed;
+  z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);

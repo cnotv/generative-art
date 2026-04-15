@@ -31,6 +31,11 @@ const emit = defineEmits<{
     <SliderTrack class="slider__track">
       <SliderRange class="slider__range" />
     </SliderTrack>
+    <SliderThumb
+      v-for="(_, index) in modelValue ?? defaultValue ?? [0]"
+      :key="index"
+      class="slider__thumb"
+    />
   </SliderRoot>
 </template>
 
