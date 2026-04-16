@@ -34,7 +34,9 @@ export const usePictionaryStore = defineStore('pictionary', () => {
   const totalRounds = ref(5)
   const roundDuration = ref(60)
   const wordCount = ref(1)
+  const hintCount = ref(2)
   const intermissionEndsAt = ref<number | null>(null)
+  const revealedHintIndices = ref<number[]>([])
 
   const playerList = computed(() =>
     Object.values(players.value).sort((playerA, playerB) => playerB.score - playerA.score)
@@ -73,6 +75,7 @@ export const usePictionaryStore = defineStore('pictionary', () => {
     round.value = { number: 0, drawerId: '', word: null, endsAt: null, choices: [] }
     winnerId.value = null
     intermissionEndsAt.value = null
+    revealedHintIndices.value = []
   }
 
   return {
@@ -84,7 +87,9 @@ export const usePictionaryStore = defineStore('pictionary', () => {
     totalRounds,
     roundDuration,
     wordCount,
+    hintCount,
     intermissionEndsAt,
+    revealedHintIndices,
     playerList,
     hostId,
     upsertPlayer,

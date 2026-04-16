@@ -33,6 +33,20 @@ const SCORE_CHANNEL = 'score'
 const AVATAR_CHANNEL = 'avatar'
 const HELLO_CHANNEL = 'hello'
 const RESTART_CHANNEL = 'restart'
+const CONFIG_CHANNEL = 'config'
+const HINT_CHANNEL = 'hint'
+
+type PictionaryConfigPayload = {
+  totalRounds: number
+  roundDuration: number
+  wordCount: number
+  hintCount: number
+  difficulty: DictionaryDifficulty
+}
+
+type HintPayload = {
+  index: number
+}
 
 export type PictionaryStrokePayload = {
   x0: number
@@ -79,6 +93,7 @@ type PictionaryContext = {
   session: Ref<P2PSession | null>
   localPeerId: Ref<string>
   guessedPeers: Ref<Set<string>>
+  hintTimers: Ref<ReturnType<typeof setTimeout>[]>
   isDrawer: ComputedRef<boolean>
   isHost: ComputedRef<boolean>
   applyRound: (payload: PictionaryRoundPayload) => void
@@ -88,10 +103,54 @@ type PictionaryContext = {
   endRound: () => void
 }
 
+const broadcastConfig = (ctx: PictionaryContext, target: P2PSession): void => {
+  const payload: PictionaryConfigPayload = {
+    totalRounds: ctx.store.totalRounds,
+    roundDuration: ctx.store.roundDuration,
+    wordCount: ctx.store.wordCount,
+    hintCount: ctx.store.hintCount,
+    difficulty: ctx.options.difficulty
+  }
+  p2pSendData(target, CONFIG_CHANNEL, payload)
+}
+
+const clearHintTimers = (ctx: PictionaryContext): void => {
+  ctx.hintTimers.value.forEach((timer) => clearTimeout(timer))
+  ctx.hintTimers.value = []
+}
+
+const revealHint = (ctx: PictionaryContext): void => {
+  if (!ctx.session.value) return
+  const word = ctx.store.round.word
+  if (!word) return
+  const letterIndices = [...word]
+    .map((char, i) => ({ char, i }))
+    .filter(({ char }) => char !== ' ')
+    .map(({ i }) => i)
+  const remaining = letterIndices.filter((i) => !ctx.store.revealedHintIndices.includes(i))
+  if (remaining.length === 0) return
+  const pick = remaining[Math.floor(Math.random() * remaining.length)]
+  ctx.store.revealedHintIndices = [...ctx.store.revealedHintIndices, pick]
+  p2pSendData(ctx.session.value, HINT_CHANNEL, { index: pick })
+}
+
+const scheduleHints = (ctx: PictionaryContext): void => {
+  clearHintTimers(ctx)
+  if (!ctx.isHost.value) return
+  const totalMs = ctx.store.roundDuration * 1000
+  const count = ctx.store.hintCount
+  if (count <= 0) return
+  const interval = totalMs / (count + 1)
+  ctx.hintTimers.value = Array.from({ length: count }, (_, i) =>
+    setTimeout(() => revealHint(ctx), Math.round(interval * (i + 1)))
+  )
+}
+
 const startRoundForContext = (ctx: PictionaryContext): void => {
   if (!ctx.session.value) return
   const ids = Object.keys(ctx.store.players).sort()
   if (ids.length < 2) return
+  broadcastConfig(ctx, ctx.session.value)
   const nextNumber = ctx.store.round.number + 1
   const drawerId = ids[(nextNumber - 1) % ids.length]
   const buildChoice = (): string =>
@@ -213,6 +272,7 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
   p2pOnPeerJoin(joined, (peerId) => {
     p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
     p2pSendData(joined, HELLO_CHANNEL, { id: peerId })
+    if (ctx.isHost.value) broadcastConfig(ctx, joined)
   })
   p2pOnPeerLeave(joined, (peerId) => ctx.store.removePlayer(peerId))
   p2pOnData<{ name: string; color: string }>(joined, AVATAR_CHANNEL, (payload, peerId) => {
@@ -223,6 +283,13 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
       color: payload.color,
       score: existing?.score ?? 0
     })
+  })
+  p2pOnData<PictionaryConfigPayload>(joined, CONFIG_CHANNEL, (payload) => {
+    ctx.store.totalRounds = payload.totalRounds
+    ctx.store.roundDuration = payload.roundDuration
+    ctx.store.wordCount = payload.wordCount
+    ctx.store.hintCount = payload.hintCount
+    ctx.options.difficulty = payload.difficulty
   })
 }
 
@@ -238,6 +305,33 @@ const bindDrawingEvents = (ctx: PictionaryContext, joined: P2PSession): void => 
   })
 }
 
+const endRoundForContext = (ctx: PictionaryContext, startRound: () => void): void => {
+  if (!ctx.session.value || !ctx.isHost.value) return
+  clearHintTimers(ctx)
+  const intermissionEndsAt = Date.now() + INTERMISSION_MS
+  p2pSendData(ctx.session.value, ROUND_END_CHANNEL, {
+    number: ctx.store.round.number,
+    intermissionEndsAt
+  })
+  ctx.applyRoundEnd(intermissionEndsAt)
+  if (ctx.store.phase === 'intermission') {
+    setTimeout(() => {
+      if (ctx.store.phase === 'intermission' && ctx.isHost.value) startRound()
+    }, INTERMISSION_MS)
+  }
+}
+
+const initSessionForContext = (ctx: PictionaryContext, roomId: string): void => {
+  if (!p2pIsSupported()) return
+  const joined = p2pJoin(roomId)
+  ctx.session.value = joined
+  ctx.localPeerId.value = joined.peerId
+  announceSelf(ctx, joined)
+  bindPeerEvents(ctx, joined)
+  bindDrawingEvents(ctx, joined)
+  bindRoundEvents(ctx, joined)
+}
+
 const bindRoundEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
   p2pOnData<PictionaryChoicesPayload>(joined, ROUND_CHOICES_CHANNEL, (payload) =>
     ctx.applyChoices(payload)
@@ -251,6 +345,11 @@ const bindRoundEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     ctx.store.addScore(payload.drawerId, payload.drawerPoints)
     ctx.guessedPeers.value.add(payload.guesserId)
     if (ctx.isHost.value) ctx.endRound()
+  })
+  p2pOnData<HintPayload>(joined, HINT_CHANNEL, (payload) => {
+    if (!ctx.store.revealedHintIndices.includes(payload.index)) {
+      ctx.store.revealedHintIndices = [...ctx.store.revealedHintIndices, payload.index]
+    }
   })
   p2pOnData<{ ts: number }>(joined, RESTART_CHANNEL, () => ctx.applyRestart())
 }
@@ -271,8 +370,10 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
   const applyRound = (payload: PictionaryRoundPayload): void => {
     store.round = { ...payload, choices: [] }
     store.phase = 'drawing'
+    store.revealedHintIndices = []
     guessedPeers.value = new Set()
     options.onRemoteClear()
+    scheduleHints(ctx)
   }
 
   const applyChoices = (payload: PictionaryChoicesPayload): void => {
@@ -312,32 +413,23 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
       round: { number: 0, drawerId: '', word: null, endsAt: null, choices: [] },
       winnerId: null,
       intermissionEndsAt: null,
+      revealedHintIndices: [],
       messages: []
     })
     guessedPeers.value = new Set()
+    clearHintTimers(ctx)
   }
 
-  const endRound = (): void => {
-    if (!session.value || !isHost.value) return
-    const intermissionEndsAt = Date.now() + INTERMISSION_MS
-    p2pSendData(session.value, ROUND_END_CHANNEL, {
-      number: store.round.number,
-      intermissionEndsAt
-    })
-    applyRoundEnd(intermissionEndsAt)
-    if (store.phase === 'intermission') {
-      setTimeout(() => {
-        if (store.phase === 'intermission' && isHost.value) startRound()
-      }, INTERMISSION_MS)
-    }
-  }
+  const endRound = (): void => endRoundForContext(ctx, startRound)
 
+  const hintTimers = ref<ReturnType<typeof setTimeout>[]>([])
   const ctx: PictionaryContext = {
     options,
     store,
     session,
     localPeerId,
     guessedPeers,
+    hintTimers,
     isDrawer,
     isHost,
     applyRound,
@@ -372,18 +464,10 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
     restartGameForContext(ctx, startRound)
   }
 
-  const init = (): void => {
-    if (!p2pIsSupported()) return
-    const joined = p2pJoin(options.roomId)
-    session.value = joined
-    localPeerId.value = joined.peerId
-    announceSelf(ctx, joined)
-    bindPeerEvents(ctx, joined)
-    bindDrawingEvents(ctx, joined)
-    bindRoundEvents(ctx, joined)
-  }
+  const init = (): void => initSessionForContext(ctx, options.roomId)
 
   const destroy = (): void => {
+    clearHintTimers(ctx)
     if (session.value) {
       p2pLeave(session.value)
       session.value = null

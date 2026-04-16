@@ -4,6 +4,8 @@ import type { ChatMessage } from '@webgamekit/chat'
 defineProps<{
   message: ChatMessage
   isOwn: boolean
+  groupedWithPrevious?: boolean
+  groupedWithNext?: boolean
 }>()
 </script>
 
@@ -13,21 +15,27 @@ defineProps<{
     :class="{
       'chat-message--own': isOwn,
       'chat-message--system': message.kind === 'system',
-      'chat-message--success': message.kind === 'success'
+      'chat-message--success': message.kind === 'success',
+      'chat-message--grouped': groupedWithPrevious,
+      'chat-message--group-top': !groupedWithPrevious && groupedWithNext,
+      'chat-message--group-middle': groupedWithPrevious && groupedWithNext,
+      'chat-message--group-bottom': groupedWithPrevious && !groupedWithNext
     }"
   >
-    <span class="chat-message__sender">{{ message.senderName }}</span>
+    <span v-if="!groupedWithPrevious" class="chat-message__sender">{{ message.senderName }}</span>
     <span class="chat-message__text">{{ message.text }}</span>
   </div>
 </template>
 
 <style scoped>
 .chat-message {
+  --chat-message-radius: var(--radius-sm);
+  --chat-message-radius-adjacent: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0);
   padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--chat-message-radius);
   background: var(--color-secondary);
   font-size: inherit;
   color: var(--color-foreground);
@@ -38,6 +46,24 @@ defineProps<{
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   align-self: flex-end;
+}
+
+.chat-message--grouped {
+  margin-top: calc(var(--spacing-1) * -1 + 2px);
+}
+
+.chat-message--group-top {
+  border-bottom-left-radius: var(--chat-message-radius-adjacent);
+  border-bottom-right-radius: var(--chat-message-radius-adjacent);
+}
+
+.chat-message--group-middle {
+  border-radius: var(--chat-message-radius-adjacent);
+}
+
+.chat-message--group-bottom {
+  border-top-left-radius: var(--chat-message-radius-adjacent);
+  border-top-right-radius: var(--chat-message-radius-adjacent);
 }
 
 .chat-message--system {

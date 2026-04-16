@@ -2,9 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { Check, RotateCcw } from 'lucide-vue-next'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { Chat } from '@/components/Chat'
-import { dictionaryMaskWord, type DictionaryDifficulty } from '@webgamekit/dictionary'
+import { type DictionaryDifficulty } from '@webgamekit/dictionary'
 import DrawingCanvas, { type StrokeSegment } from './DrawingCanvas.vue'
 import { usePictionarySession } from './usePictionarySession'
 
@@ -49,10 +50,15 @@ const {
   totalRounds,
   roundDuration,
   wordCount,
-  intermissionEndsAt
+  hintCount,
+  intermissionEndsAt,
+  revealedHintIndices
 } = storeToRefs(store)
 const ROUND_DURATION_OPTIONS = [30, 60, 90, 120, 150]
 const WORD_COUNT_OPTIONS = [1, 2, 3]
+const HINT_COUNT_OPTIONS = [0, 1, 2, 3, 4, 5]
+const POINTS_GUESSER = 100
+const POINTS_DRAWER = 50
 
 const playerName = ref(`${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`)
 const playerColor = ref(randomPick(PLAYER_COLORS))
@@ -74,15 +80,29 @@ const resolvedRoomId = ((): string => {
 
 const roomId = ref(resolvedRoomId)
 
+const topPlayers = computed(() => {
+  const list = playerList.value
+  if (list.length === 0) return []
+  const top = list[0].score
+  return list.filter((player) => player.score === top)
+})
+
+const winnerLabel = computed(() => {
+  const top = topPlayers.value
+  if (top.length === 0) return ''
+  if (top.length === 1) return top[0].name
+  if (top.length === 2) return `${top[0].name} and ${top[1].name}`
+  return `${top
+    .slice(0, -1)
+    .map((player) => player.name)
+    .join(', ')}, and ${top[top.length - 1].name}`
+})
+
 const maskedWord = computed(() => {
   const word = round.value.word
   if (!word) return ''
-  if (!round.value.endsAt) return dictionaryMaskWord(word, 0)
-  const totalMs = roundDuration.value * 1000
-  const elapsed = 1 - Math.max(0, round.value.endsAt - Date.now()) / totalMs
-  if (elapsed > 0.75) return dictionaryMaskWord(word, 0.5)
-  if (elapsed > 0.5) return dictionaryMaskWord(word, 0.25)
-  return dictionaryMaskWord(word, 0)
+  const indices = new Set(revealedHintIndices.value)
+  return [...word].map((char, i) => (char === ' ' ? ' ' : indices.has(i) ? char : '_')).join('')
 })
 
 const session = usePictionarySession({
@@ -223,13 +243,28 @@ onMounted(() => {
               type="button"
               :title="`Pick color ${color}`"
               @click="handleColorChange(color)"
-            />
+            >
+              <Check v-if="playerColor === color" class="pictionary__swatch-check" />
+            </button>
           </div>
         </div>
       </div>
       <p class="pictionary__hint">
         Share the room link with friends. Game starts when the host clicks Start.
       </p>
+      <div class="pictionary__rules">
+        <h3 class="pictionary__rules-title">How points work</h3>
+        <ul class="pictionary__rules-list">
+          <li>
+            <strong>{{ POINTS_GUESSER }} pts</strong> to the first player who guesses the word
+          </li>
+          <li>
+            <strong>{{ POINTS_DRAWER }} pts</strong> to the drawer for each correct guess
+          </li>
+          <li>Hints reveal extra letters during the round (configurable above)</li>
+          <li>The player with the most points after all rounds wins</li>
+        </ul>
+      </div>
       <div v-if="isHost" class="pictionary__host-controls">
         <label class="pictionary__field">
           Difficulty
@@ -255,6 +290,14 @@ onMounted(() => {
           Words
           <select v-model.number="wordCount">
             <option v-for="count in WORD_COUNT_OPTIONS" :key="count" :value="count">
+              {{ count }}
+            </option>
+          </select>
+        </label>
+        <label class="pictionary__field">
+          Hints
+          <select v-model.number="hintCount">
+            <option v-for="count in HINT_COUNT_OPTIONS" :key="count" :value="count">
               {{ count }}
             </option>
           </select>
@@ -334,7 +377,9 @@ onMounted(() => {
     </section>
 
     <section v-else-if="phase === 'intermission'" class="pictionary__intermission">
-      <p class="pictionary__intermission-title">⏭ Next round starting…</p>
+      <p class="pictionary__intermission-title">
+        ⏭ Round {{ Math.min(round.number + 1, totalRounds) }} of {{ totalRounds }} starting…
+      </p>
       <div class="pictionary__intermission-timer">{{ intermissionLeft }}</div>
       <p v-if="round.word" class="pictionary__intermission-word">
         The word was <strong>{{ round.word }}</strong>
@@ -342,9 +387,15 @@ onMounted(() => {
     </section>
 
     <section v-else class="pictionary__summary">
-      <h2>Game over!</h2>
-      <p v-if="winnerId">
-        Winner: <strong>{{ playerList[0]?.name }}</strong> with {{ playerList[0]?.score }} points.
+      <div class="pictionary__fireworks" aria-hidden="true">
+        <span v-for="i in 12" :key="i" :class="`pictionary__firework pictionary__firework--${i}`" />
+      </div>
+      <h2 class="pictionary__summary-title">Game over!</h2>
+      <p v-if="topPlayers.length > 1" class="pictionary__summary-winner">
+        It's a tie! <strong>{{ winnerLabel }}</strong> share {{ topPlayers[0].score }} points.
+      </p>
+      <p v-else-if="winnerId" class="pictionary__summary-winner">
+        Winner: <strong>{{ winnerLabel }}</strong> with {{ topPlayers[0].score }} points.
       </p>
       <button
         v-if="isHost"
@@ -353,7 +404,8 @@ onMounted(() => {
         :disabled="playerList.length < 2"
         @click="handleRestart"
       >
-        🔁 Restart game
+        <RotateCcw class="pictionary__btn-icon" />
+        Restart game
       </button>
     </section>
 
@@ -475,6 +527,14 @@ onMounted(() => {
   color: #fff;
   font-size: var(--font-size-md, 1rem);
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.pictionary__btn-icon {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .pictionary__start-btn:disabled {
@@ -568,6 +628,9 @@ onMounted(() => {
   padding: 0;
   box-shadow: 2px 2px 0 #111;
   transition: transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pictionary__swatch-btn:hover {
@@ -575,10 +638,11 @@ onMounted(() => {
   box-shadow: 3px 3px 0 #111;
 }
 
-.pictionary__swatch-btn--active {
-  outline: 3px solid #111;
-  outline-offset: 2px;
-  transform: scale(1.1);
+.pictionary__swatch-check {
+  width: 1rem;
+  height: 1rem;
+  color: #111;
+  stroke-width: 4;
 }
 
 .pictionary__field {
@@ -881,7 +945,8 @@ onMounted(() => {
 }
 
 .pictionary__chat :deep(.chat-message) {
-  border-radius: 999px;
+  --chat-message-radius: var(--radius-xl);
+  --chat-message-radius-adjacent: 4px;
 }
 
 .pictionary__chat :deep(.chat-message--success) {
@@ -893,5 +958,233 @@ onMounted(() => {
 .pictionary__chat :deep(.chat-message--system) {
   --chat-system-bg: #fff4c2;
   --chat-system-color: #111;
+}
+
+.pictionary__rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background: #fff;
+  border: 3px solid #111;
+  border-radius: 1.25rem;
+  box-shadow: 4px 4px 0 #111;
+  max-width: 28rem;
+  width: 100%;
+  color: #111;
+}
+
+.pictionary__rules-title {
+  margin: 0;
+  font-size: var(--font-size-md, 1.125rem);
+  font-weight: 800;
+}
+
+.pictionary__rules-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.pictionary__summary-title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #111;
+  text-align: center;
+}
+
+.pictionary__summary-winner {
+  font-size: 1.25rem;
+  color: #111;
+  margin: 0;
+  text-align: center;
+}
+
+.pictionary__fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.pictionary__summary {
+  position: relative;
+  z-index: 1;
+}
+
+.pictionary__summary > *:not(.pictionary__fireworks) {
+  position: relative;
+  z-index: 1;
+}
+
+.pictionary__firework {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px currentColor,
+    0 0 12px 2px currentColor;
+  opacity: 0;
+  animation: pictionary-firework 2.4s infinite;
+}
+
+@keyframes pictionary-firework {
+  0% {
+    transform: scale(0) translate(0, 0);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5) translate(var(--firework-dx, 0), var(--firework-dy, 0));
+    opacity: 0;
+  }
+}
+
+.pictionary__firework--1 {
+  color: var(--pic-pink);
+  top: 20%;
+  left: 15%;
+  animation-delay: 0s;
+  --firework-dx: -40px;
+  --firework-dy: -30px;
+}
+.pictionary__firework--2 {
+  color: var(--pic-yellow);
+  top: 25%;
+  left: 80%;
+  animation-delay: 0.3s;
+  --firework-dx: 50px;
+  --firework-dy: -20px;
+}
+.pictionary__firework--3 {
+  color: var(--pic-blue);
+  top: 60%;
+  left: 10%;
+  animation-delay: 0.6s;
+  --firework-dx: -30px;
+  --firework-dy: 40px;
+}
+.pictionary__firework--4 {
+  color: var(--pic-orange);
+  top: 15%;
+  left: 50%;
+  animation-delay: 0.9s;
+  --firework-dx: 0;
+  --firework-dy: -50px;
+}
+.pictionary__firework--5 {
+  color: var(--pic-purple);
+  top: 70%;
+  left: 75%;
+  animation-delay: 1.2s;
+  --firework-dx: 40px;
+  --firework-dy: 30px;
+}
+.pictionary__firework--6 {
+  color: var(--pic-green);
+  top: 40%;
+  left: 20%;
+  animation-delay: 0.15s;
+  --firework-dx: -50px;
+  --firework-dy: 0;
+}
+.pictionary__firework--7 {
+  color: var(--pic-pink);
+  top: 50%;
+  left: 90%;
+  animation-delay: 0.45s;
+  --firework-dx: 60px;
+  --firework-dy: 0;
+}
+.pictionary__firework--8 {
+  color: var(--pic-yellow);
+  top: 80%;
+  left: 40%;
+  animation-delay: 0.75s;
+  --firework-dx: 0;
+  --firework-dy: 50px;
+}
+.pictionary__firework--9 {
+  color: var(--pic-blue);
+  top: 30%;
+  left: 35%;
+  animation-delay: 1.05s;
+  --firework-dx: -20px;
+  --firework-dy: -40px;
+}
+.pictionary__firework--10 {
+  color: var(--pic-orange);
+  top: 65%;
+  left: 55%;
+  animation-delay: 1.35s;
+  --firework-dx: 30px;
+  --firework-dy: 30px;
+}
+.pictionary__firework--11 {
+  color: var(--pic-purple);
+  top: 10%;
+  left: 70%;
+  animation-delay: 1.65s;
+  --firework-dx: 40px;
+  --firework-dy: -50px;
+}
+.pictionary__firework--12 {
+  color: var(--pic-green);
+  top: 85%;
+  left: 20%;
+  animation-delay: 1.95s;
+  --firework-dx: -40px;
+  --firework-dy: 30px;
+}
+
+@media (max-width: 720px) {
+  .pictionary {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'header' 'main' 'sidebar';
+    grid-template-rows: auto auto auto;
+    padding: 0 var(--spacing-2);
+    padding-top: var(--nav-height);
+    gap: var(--spacing-2);
+  }
+
+  .pictionary__sidebar {
+    flex-direction: column-reverse;
+  }
+
+  .pictionary__chat {
+    min-height: 240px;
+  }
+
+  .pictionary__host-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pictionary__play {
+    gap: var(--spacing-1);
+  }
+
+  .pictionary__tools {
+    padding: var(--spacing-1) var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+
+  .pictionary__tool input[type='color'] {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .pictionary__tool--size input[type='range'] {
+    width: 5rem;
+  }
 }
 </style>

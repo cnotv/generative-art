@@ -4,6 +4,12 @@ import { Send, Plus, Minus } from 'lucide-vue-next'
 import type { ChatMessage } from '@webgamekit/chat'
 import ChatMessageItem from './ChatMessage.vue'
 
+const isUserMessage = (message: ChatMessage): boolean =>
+  message.kind === undefined || message.kind === 'user'
+
+const isSameUser = (a: ChatMessage, b: ChatMessage): boolean =>
+  isUserMessage(a) && isUserMessage(b) && a.senderId === b.senderId
+
 const FONT_SCALE_MIN = 0.75
 const FONT_SCALE_MAX = 2
 const FONT_SCALE_STEP = 0.15
@@ -73,10 +79,12 @@ watch(() => props.messages.length, scrollToBottom)
     </div>
     <div ref="listReference" class="chat__list">
       <ChatMessageItem
-        v-for="message in messages"
+        v-for="(message, index) in messages"
         :key="message.id"
         :message="message"
         :is-own="message.senderId === localPeerId"
+        :grouped-with-previous="index > 0 && isSameUser(messages[index - 1], message)"
+        :grouped-with-next="index < messages.length - 1 && isSameUser(messages[index + 1], message)"
       />
     </div>
     <form class="chat__form" @submit.prevent="submit">
