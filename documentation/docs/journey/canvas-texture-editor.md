@@ -109,3 +109,22 @@ Unit tests in jsdom mock the `CanvasRenderingContext2D` with a plain object usin
 - Correct method calls (`beginPath`, `stroke`, `arc`, `fill`, `clearRect`)
 
 `drawingFill` is partially tested — the pixel-walking logic works but `hexToRgb` requires a real browser canvas to parse color strings. That path is covered by the browser test suite.
+
+## P2P texture integration (PR #76)
+
+The editor was integrated into `MultiplayerP2P.vue` to paint live on a shared 3D character texture:
+
+- `CanvasEditor.vue` exposes `snapshot()` via `defineExpose` so the parent can read the current `HTMLCanvasElement` without reaching into child internals.
+- `buildAndApplyTexture(front, back)` was extracted in the multiplayer view so the same code path runs on both **local draw** (direct canvas update) and **remote peer texture** (receive + apply) — no duplicated ordering logic.
+- A floating `Paintbrush` toggle opens/closes the editor panel instead of embedding it in the HUD, keeping the 3D viewport unobstructed during play.
+- On mount, `storageLoad(SLOT_NAME)` restores the last saved texture synchronously before any draw, so the remote peer always sees the final texture rather than a blank intermediate.
+- The same `P2P_TEXTURE_CHANNEL` used for static textures carries editor output — no new channel needed, the broadcast function just fires whenever the canvas changes.
+
+### Pitfalls encountered in the integration
+
+- **Rebuild `packages/*/dist`** — `@webgamekit/canvas-editor` is consumed via its `dist/`. Edits to `src/` inside the package don't reach the host app until `pnpm build` runs in the package directory. Several "why isn't this change showing up" moments traced back to stale `dist/`.
+- **Silent restore flag** — restoring the saved slot on mount must not broadcast, or peers receive a flurry of old-texture events on every page load. A `silent` flag on the restore path is cheaper than trying to gate at the broadcast layer.
+- **Cover-fit, not contain** — the front/back canvas halves use `object-fit: cover` when composited into the character texture; contain leaves unused transparent margins that bleed into UV-adjacent faces.
+- **Canvas aspect must match source** — loading a saved slot whose aspect ratio differs from the current canvas stretches the image. The editor canvas dimensions are now fixed to match the source texture dimensions.
+- **Vue `:key` on side toggle** — switching front/back without a `:key` lets Vue reuse the canvas node, which carries the previous side's bitmap into the new side. A `:key="side"` forces a fresh mount and a clean canvas.
+- **BrushSize dropdown clamping** — the slider `max` and numeric input need to clamp to the same bounds; mismatched bounds let users type values the slider can't represent.

@@ -122,7 +122,7 @@ defineExpose({
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: var(--color-background);
+  background: #fff;
   width: 100%;
   aspect-ratio: v-bind('`${width} / ${height}`');
 }
