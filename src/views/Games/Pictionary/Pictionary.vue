@@ -9,7 +9,7 @@ import { type DictionaryDifficulty } from '@webgamekit/dictionary'
 import DrawingCanvas, { type StrokeSegment } from './DrawingCanvas.vue'
 import { usePictionarySession } from './usePictionarySession'
 
-const PLAYER_COLORS = ['#ff6b6b', '#48dbfb', '#feca57', '#1dd1a1', '#c56cf0', '#ff9ff3', '#576574']
+const PLAYER_COLORS = ['#d32f2f', '#1565c0', '#ef6c00', '#2e7d32', '#6a1b9a', '#ad1457', '#37474f']
 const NAME_ADJECTIVES = ['Swift', 'Clever', 'Bold', 'Brave', 'Wild', 'Silent', 'Happy']
 const NAME_ANIMALS = ['Fox', 'Otter', 'Panda', 'Hawk', 'Wolf', 'Cat', 'Koala']
 const GRADIENT_COLORS = [
@@ -641,7 +641,7 @@ onMounted(() => {
 .pictionary__swatch-check {
   width: 1rem;
   height: 1rem;
-  color: #111;
+  color: #fff;
   stroke-width: 4;
 }
 
@@ -650,16 +650,19 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-1);
   font-size: var(--font-size-xs);
+  color: #111;
+  font-weight: 700;
 }
 
 .pictionary__field select,
 .pictionary__field input {
   padding: var(--spacing-1) var(--spacing-2);
-  border: 1px solid var(--color-border);
+  border: 2px solid #111;
   border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
+  background: #fff;
+  color: #111;
   font-size: var(--font-size-sm);
+  font-weight: 600;
 }
 
 .pictionary__word-banner {
@@ -947,6 +950,7 @@ onMounted(() => {
 .pictionary__chat :deep(.chat-message) {
   --chat-message-radius: var(--radius-xl);
   --chat-message-radius-adjacent: 4px;
+  --chat-message-bg: #d7d8d9;
 }
 
 .pictionary__chat :deep(.chat-message--success) {

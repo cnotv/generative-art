@@ -31,14 +31,15 @@ defineProps<{
 .chat-message {
   --chat-message-radius: var(--radius-sm);
   --chat-message-radius-adjacent: var(--radius-sm);
+  --chat-message-bg: var(--color-secondary);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0);
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--chat-message-radius);
-  background: var(--color-secondary);
+  background: var(--chat-message-bg);
   font-size: inherit;
-  color: var(--color-foreground);
+  color: #111;
   word-break: break-word;
 }
 
