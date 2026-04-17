@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { drawingStroke, drawingClear } from '@webgamekit/canvas-editor'
 
 export type StrokeSegment = {
   x0: number
@@ -9,6 +10,8 @@ export type StrokeSegment = {
   color: string
   size: number
 }
+
+const ASPECT_RATIO = 3 / 2
 
 const props = withDefaults(
   defineProps<{
@@ -31,8 +34,26 @@ const emit = defineEmits<{
   clear: []
 }>()
 
+const wrapperReference = ref<HTMLDivElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const lastPosition = ref<{ x: number; y: number } | null>(null)
+const canvasDisplayWidth = ref('600px')
+const canvasDisplayHeight = ref('400px')
+let resizeObserver: ResizeObserver | null = null
+
+const updateCanvasSize = (): void => {
+  const wrapper = wrapperReference.value
+  if (!wrapper) return
+  const { clientWidth, clientHeight } = wrapper
+  let displayWidth = clientWidth
+  let displayHeight = displayWidth / ASPECT_RATIO
+  if (displayHeight > clientHeight) {
+    displayHeight = clientHeight
+    displayWidth = displayHeight * ASPECT_RATIO
+  }
+  canvasDisplayWidth.value = `${Math.round(displayWidth)}px`
+  canvasDisplayHeight.value = `${Math.round(displayHeight)}px`
+}
 
 const getContext = (): CanvasRenderingContext2D | null => {
   const canvas = canvasReference.value
@@ -53,21 +74,18 @@ const getPointerPosition = (event: PointerEvent): { x: number; y: number } => {
 const renderSegment = (segment: StrokeSegment): void => {
   const ctx = getContext()
   if (!ctx) return
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.strokeStyle = segment.color
-  ctx.lineWidth = segment.size
-  ctx.beginPath()
-  ctx.moveTo(segment.x0, segment.y0)
-  ctx.lineTo(segment.x1, segment.y1)
-  ctx.stroke()
+  drawingStroke(
+    ctx,
+    { x: segment.x0, y: segment.y0 },
+    { x: segment.x1, y: segment.y1 },
+    { tool: 'brush', color: segment.color, size: segment.size }
+  )
 }
 
 const clearCanvas = (): void => {
   const ctx = getContext()
-  const canvas = canvasReference.value
-  if (!ctx || !canvas) return
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  if (!ctx) return
+  drawingClear(ctx)
 }
 
 const onPointerDown = (event: PointerEvent): void => {
@@ -115,6 +133,10 @@ onMounted(() => {
   canvas.addEventListener('pointermove', onPointerMove)
   canvas.addEventListener('pointerup', onPointerUp)
   canvas.addEventListener('pointercancel', onPointerUp)
+
+  updateCanvasSize()
+  resizeObserver = new ResizeObserver(updateCanvasSize)
+  if (wrapperReference.value) resizeObserver.observe(wrapperReference.value)
 })
 
 onUnmounted(() => {
@@ -124,17 +146,19 @@ onUnmounted(() => {
   canvas.removeEventListener('pointermove', onPointerMove)
   canvas.removeEventListener('pointerup', onPointerUp)
   canvas.removeEventListener('pointercancel', onPointerUp)
+  resizeObserver?.disconnect()
 })
 </script>
 
 <template>
-  <div class="drawing-canvas">
+  <div ref="wrapperReference" class="drawing-canvas">
     <canvas
       ref="canvasReference"
       :width="width"
       :height="height"
       class="drawing-canvas__surface"
       :class="{ 'drawing-canvas__surface--interactive': interactive }"
+      :style="{ width: canvasDisplayWidth, height: canvasDisplayHeight }"
     />
     <button v-if="interactive" class="drawing-canvas__clear-btn" type="button" @click="clear">
       Clear
@@ -148,13 +172,17 @@ onUnmounted(() => {
   flex-direction: column;
   gap: var(--spacing-2);
   align-items: center;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .drawing-canvas__surface {
-  width: 100%;
-  max-width: 600px;
-  aspect-ratio: 3 / 2;
-  background: var(--color-background);
+  display: block;
+  position: relative;
+  background: #fff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   touch-action: none;
@@ -173,6 +201,7 @@ onUnmounted(() => {
   color: var(--color-foreground);
   font-size: var(--font-size-xs);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .drawing-canvas__clear-btn:hover {

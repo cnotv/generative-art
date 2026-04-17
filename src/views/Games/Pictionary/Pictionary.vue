@@ -209,7 +209,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="pictionary" :style="backgroundStyle">
+  <main class="pictionary" :class="`pictionary--${phase}`" :style="backgroundStyle">
     <header class="pictionary__header">
       <div class="pictionary__room">
         <span class="pictionary__room-label">Room:</span>
@@ -1154,27 +1154,37 @@ onMounted(() => {
   .pictionary {
     grid-template-columns: 1fr;
     grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto 1fr;
+    height: 100dvh;
+    min-height: 0;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
+    padding-bottom: var(--spacing-2);
     gap: var(--spacing-2);
+    overflow: hidden;
+  }
+
+  .pictionary--lobby {
+    grid-template-rows: auto auto auto;
+    height: auto;
+    overflow: auto;
   }
 
   .pictionary__sidebar {
     flex-direction: column-reverse;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .pictionary__chat {
-    min-height: 240px;
+    flex: 1;
+    min-height: 0;
+    max-height: 240px;
   }
 
   .pictionary__host-controls {
     flex-wrap: wrap;
     justify-content: center;
-  }
-
-  .pictionary__play {
-    gap: var(--spacing-1);
   }
 
   .pictionary__tools {
@@ -1189,6 +1199,25 @@ onMounted(() => {
 
   .pictionary__tool--size input[type='range'] {
     width: 5rem;
+  }
+
+  .pictionary--drawing {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .pictionary--drawing .pictionary__play {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: var(--spacing-1);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pictionary__players {
+    flex-shrink: 0;
   }
 }
 </style>
