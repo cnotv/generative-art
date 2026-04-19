@@ -1154,11 +1154,9 @@ onMounted(() => {
   }
 
   .pictionary--drawing .pictionary__play {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--spacing-1);
     min-height: 0;
     overflow: hidden;
@@ -1166,6 +1164,10 @@ onMounted(() => {
 
   .pictionary__players {
     flex-shrink: 0;
+  }
+
+  .pictionary__sidebar-title {
+    display: none;
   }
 }
 </style>
