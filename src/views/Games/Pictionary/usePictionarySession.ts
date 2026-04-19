@@ -16,6 +16,7 @@ import {
   type ChatMessage
 } from '@webgamekit/chat'
 import { dictionaryPickRandom, type DictionaryDifficulty } from '@webgamekit/dictionary'
+import type { StrokeEvent } from '@webgamekit/canvas-editor'
 import { usePictionaryStore, type PictionaryPlayer } from '@/stores/pictionary'
 
 const INTERMISSION_MS = 10_000
@@ -48,14 +49,7 @@ type HintPayload = {
   index: number
 }
 
-export type PictionaryStrokePayload = {
-  x0: number
-  y0: number
-  x1: number
-  y1: number
-  color: string
-  size: number
-}
+export type PictionaryStrokePayload = StrokeEvent
 
 export type PictionaryRoundPayload = {
   number: number

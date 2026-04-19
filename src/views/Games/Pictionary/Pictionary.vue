@@ -6,7 +6,8 @@ import { Check, RotateCcw } from 'lucide-vue-next'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { Chat } from '@/components/Chat'
 import { type DictionaryDifficulty } from '@webgamekit/dictionary'
-import DrawingCanvas, { type StrokeSegment } from './DrawingCanvas.vue'
+import type { StrokeEvent } from '@webgamekit/canvas-editor'
+import { CanvasEditor } from '@/components/CanvasEditor'
 import { usePictionarySession } from './usePictionarySession'
 
 const PLAYER_COLORS = ['#d32f2f', '#1565c0', '#ef6c00', '#2e7d32', '#6a1b9a', '#ad1457', '#37474f']
@@ -64,9 +65,7 @@ const playerName = ref(`${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)
 const playerColor = ref(randomPick(PLAYER_COLORS))
 const backgroundStyle = { background: buildRandomGradient() }
 const difficulty = ref<DictionaryDifficulty>('easy')
-const drawingCanvasReference = ref<InstanceType<typeof DrawingCanvas> | null>(null)
-const strokeColor = ref('#111111')
-const strokeSize = ref(4)
+const canvasEditorReference = ref<InstanceType<typeof CanvasEditor> | null>(null)
 const timeLeft = ref(0)
 const intermissionLeft = ref(0)
 
@@ -111,10 +110,10 @@ const session = usePictionarySession({
   roomId: resolvedRoomId,
   difficulty: difficulty.value,
   onRemoteStroke: (payload) => {
-    drawingCanvasReference.value?.renderSegment(payload)
+    canvasEditorReference.value?.renderSegment(payload)
   },
   onRemoteClear: () => {
-    drawingCanvasReference.value?.clearCanvas()
+    canvasEditorReference.value?.silentClear()
   }
 })
 
@@ -136,12 +135,8 @@ const handleChatSend = (text: string): void => {
   session.broadcastChat(text)
 }
 
-const handleStroke = (segment: StrokeSegment): void => {
-  session.broadcastStroke(segment)
-}
-
-const handleClear = (): void => {
-  session.broadcastClear()
+const handleStroke = (event: StrokeEvent): void => {
+  session.broadcastStroke(event)
 }
 
 const startGame = (): void => {
@@ -356,24 +351,16 @@ onMounted(() => {
           Round {{ round.number }} / {{ totalRounds }} · ⏱ {{ timeLeft }}s
         </span>
       </div>
-      <DrawingCanvas
-        ref="drawingCanvasReference"
+      <CanvasEditor
+        ref="canvasEditorReference"
         :interactive="isDrawer"
-        :color="strokeColor"
-        :size="strokeSize"
+        :show-tools="isDrawer"
+        :canvas-width="600"
+        :canvas-height="400"
+        disable-storage
         @stroke="handleStroke"
-        @clear="handleClear"
+        @clear="session.broadcastClear()"
       />
-      <div v-if="isDrawer" class="pictionary__tools">
-        <label class="pictionary__tool">
-          <span class="pictionary__tool-label">Color</span>
-          <input v-model="strokeColor" type="color" />
-        </label>
-        <label class="pictionary__tool pictionary__tool--size">
-          <span class="pictionary__tool-label">Brush: {{ strokeSize }}px</span>
-          <input v-model.number="strokeSize" type="range" min="1" max="32" />
-        </label>
-      </div>
     </section>
 
     <section v-else-if="phase === 'intermission'" class="pictionary__intermission">
@@ -560,6 +547,21 @@ onMounted(() => {
 
 .pictionary__play {
   justify-content: space-between;
+  align-items: stretch;
+}
+
+.pictionary__play :deep(.canvas-editor-canvas) {
+  border: 3px solid #111;
+  border-radius: 1.25rem;
+  box-shadow: 3px 3px 0 #111;
+}
+
+.pictionary__play :deep(.btn) {
+  border-radius: 999px;
+}
+
+.pictionary__play :deep(.color-picker__swatch) {
+  border-radius: 50%;
 }
 
 .pictionary__hint {
@@ -802,46 +804,6 @@ onMounted(() => {
   color: #bbb;
   cursor: default;
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
-}
-
-.pictionary__tools {
-  display: flex;
-  gap: var(--spacing-4, 1.5rem);
-  align-items: center;
-  padding: var(--spacing-2) var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 999px;
-  box-shadow: 3px 3px 0 #111;
-  z-index: 2;
-}
-
-.pictionary__tool {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: #111;
-}
-
-.pictionary__tool-label {
-  white-space: nowrap;
-}
-
-.pictionary__tool input[type='color'] {
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 2px solid #111;
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
-  background: transparent;
-}
-
-.pictionary__tool--size input[type='range'] {
-  width: 8rem;
-  cursor: pointer;
 }
 
 .pictionary__sidebar {
@@ -1185,20 +1147,6 @@ onMounted(() => {
   .pictionary__host-controls {
     flex-wrap: wrap;
     justify-content: center;
-  }
-
-  .pictionary__tools {
-    padding: var(--spacing-1) var(--spacing-2);
-    gap: var(--spacing-2);
-  }
-
-  .pictionary__tool input[type='color'] {
-    width: 1.75rem;
-    height: 1.75rem;
-  }
-
-  .pictionary__tool--size input[type='range'] {
-    width: 5rem;
   }
 
   .pictionary--drawing {

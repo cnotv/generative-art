@@ -1,5 +1,5 @@
 export { drawingStroke, drawingDot, drawingFill, drawingClear, drawingRestore } from './drawing'
-export type { DrawingTool, DrawingOptions, DrawingPoint } from './drawing'
+export type { DrawingTool, DrawingOptions, DrawingPoint, StrokeEvent } from './drawing'
 
 export {
   historyCreate,

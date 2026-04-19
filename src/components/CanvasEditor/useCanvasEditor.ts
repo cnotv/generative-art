@@ -13,7 +13,12 @@ import {
   historyCanUndo,
   historyCanRedo
 } from '@webgamekit/canvas-editor'
-import type { DrawingOptions, DrawingPoint, HistoryStack } from '@webgamekit/canvas-editor'
+import type {
+  DrawingOptions,
+  DrawingPoint,
+  StrokeEvent,
+  HistoryStack
+} from '@webgamekit/canvas-editor'
 
 const getCanvasPoint = (
   event: MouseEvent | Touch,
@@ -65,120 +70,135 @@ const useHistory = (getSnapshot: () => string) => {
   return { canUndo, canRedo, push, applyUndo, applyRedo }
 }
 
+type EditorContext = {
+  canvasReference: Ref<HTMLCanvasElement | null>
+  options: Ref<DrawingOptions>
+  isDrawing: Ref<boolean>
+  lastPoint: Ref<DrawingPoint>
+  history: ReturnType<typeof useHistory>
+  onUpdate: () => void
+  onStrokeCallback?: (event: StrokeEvent) => void
+}
+
+const getContext = (ctx: EditorContext): CanvasRenderingContext2D | null =>
+  ctx.canvasReference.value?.getContext('2d') ?? null
+
+const startDrawing = (ctx: EditorContext, point: DrawingPoint): void => {
+  ctx.isDrawing.value = true
+  ctx.lastPoint.value = point
+  const renderContext = getContext(ctx)
+  if (!renderContext) return
+  if (ctx.options.value.tool === 'fill') {
+    ctx.history.push()
+    drawingFill(renderContext, point, ctx.options.value.color)
+    ctx.onUpdate()
+    ctx.isDrawing.value = false
+    return
+  }
+  drawingDot(renderContext, point, ctx.options.value)
+}
+
+const continueDrawing = (ctx: EditorContext, point: DrawingPoint): void => {
+  if (!ctx.isDrawing.value) return
+  const renderContext = getContext(ctx)
+  if (!renderContext) return
+  const from = { ...ctx.lastPoint.value }
+  drawingStroke(renderContext, from, point, ctx.options.value)
+  ctx.onStrokeCallback?.({ from, to: point, options: { ...ctx.options.value } })
+  ctx.lastPoint.value = point
+}
+
+const finishDrawing = (ctx: EditorContext): void => {
+  if (!ctx.isDrawing.value) return
+  ctx.isDrawing.value = false
+  ctx.history.push()
+  ctx.onUpdate()
+}
+
 /**
  * Composable managing drawing operations and undo/redo history for a single canvas.
  * @param canvasReference - Ref to the HTMLCanvasElement
  * @param options - Reactive drawing options (tool, color, size)
  * @param onUpdate - Callback fired after any operation that changes the canvas
+ * @param onStrokeCallback - Optional callback fired per stroke segment
  */
 export const useCanvasEditor = (
   canvasReference: Ref<HTMLCanvasElement | null>,
   options: Ref<DrawingOptions>,
-  onUpdate: () => void
+  onUpdate: () => void,
+  onStrokeCallback?: (event: StrokeEvent) => void
 ) => {
-  const isDrawing = ref(false)
-  const lastPoint = ref({ x: 0, y: 0 })
-
-  const getContext = (): CanvasRenderingContext2D | null =>
-    canvasReference.value?.getContext('2d') ?? null
-
   const snapshot = (): string => canvasReference.value?.toDataURL() ?? ''
-
   const history = useHistory(snapshot)
-
-  const startDrawing = (point: DrawingPoint): void => {
-    isDrawing.value = true
-    lastPoint.value = point
-    const ctx = getContext()
-    if (!ctx) return
-
-    if (options.value.tool === 'fill') {
-      history.push()
-      drawingFill(ctx, point, options.value.color)
-      onUpdate()
-      isDrawing.value = false
-      return
-    }
-
-    drawingDot(ctx, point, options.value)
+  const ctx: EditorContext = {
+    canvasReference,
+    options,
+    isDrawing: ref(false),
+    lastPoint: ref({ x: 0, y: 0 }),
+    history,
+    onUpdate,
+    onStrokeCallback
   }
 
-  const continueDrawing = (point: DrawingPoint): void => {
-    if (!isDrawing.value) return
-    const ctx = getContext()
-    if (!ctx) return
-    drawingStroke(ctx, lastPoint.value, point, options.value)
-    lastPoint.value = point
+  const renderSegment = (event: StrokeEvent): void => {
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    drawingStroke(renderContext, event.from, event.to, event.options)
   }
-
-  const finishDrawing = (): void => {
-    if (!isDrawing.value) return
-    isDrawing.value = false
-    history.push()
-    onUpdate()
-  }
-
-  const onPointerDown = (event: MouseEvent): void =>
-    startDrawing(getCanvasPoint(event, canvasReference))
-
-  const onPointerMove = (event: MouseEvent): void =>
-    continueDrawing(getCanvasPoint(event, canvasReference))
-
-  const onPointerUp = (): void => finishDrawing()
-
-  const onTouchStart = (event: TouchEvent): void => {
-    event.preventDefault()
-    startDrawing(getCanvasPoint(event.touches[0], canvasReference))
-  }
-
-  const onTouchMove = (event: TouchEvent): void => {
-    event.preventDefault()
-    continueDrawing(getCanvasPoint(event.touches[0], canvasReference))
-  }
-
-  const onTouchEnd = (): void => finishDrawing()
 
   const undo = async (): Promise<void> => {
-    const ctx = getContext()
-    if (!ctx) return
-    await history.applyUndo(ctx, onUpdate)
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    await history.applyUndo(renderContext, onUpdate)
   }
 
   const redo = async (): Promise<void> => {
-    const ctx = getContext()
-    if (!ctx) return
-    await history.applyRedo(ctx, onUpdate)
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    await history.applyRedo(renderContext, onUpdate)
   }
 
   const clear = (): void => {
-    const ctx = getContext()
-    if (!ctx) return
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
     history.push()
-    drawingClear(ctx)
+    drawingClear(renderContext)
     onUpdate()
   }
 
-  const restore = async (dataUrl: string, options?: { silent?: boolean }): Promise<void> => {
-    const ctx = getContext()
-    if (!ctx) return
+  const silentClear = (): void => {
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    drawingClear(renderContext)
+  }
+
+  const restore = async (dataUrl: string, restoreOptions?: { silent?: boolean }): Promise<void> => {
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
     history.push()
-    await drawingRestore(ctx, dataUrl)
-    if (!options?.silent) onUpdate()
+    await drawingRestore(renderContext, dataUrl)
+    if (!restoreOptions?.silent) onUpdate()
   }
 
   return {
     canUndo: history.canUndo,
     canRedo: history.canRedo,
     snapshot,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd,
+    renderSegment,
+    onPointerDown: (event: MouseEvent): void =>
+      startDrawing(ctx, getCanvasPoint(event, canvasReference)),
+    onPointerMove: (event: MouseEvent): void =>
+      continueDrawing(ctx, getCanvasPoint(event, canvasReference)),
+    onPointerUp: (): void => finishDrawing(ctx),
+    onTouchStart: (event: TouchEvent): void =>
+      startDrawing(ctx, getCanvasPoint(event.touches[0], canvasReference)),
+    onTouchMove: (event: TouchEvent): void =>
+      continueDrawing(ctx, getCanvasPoint(event.touches[0], canvasReference)),
+    onTouchEnd: (): void => finishDrawing(ctx),
     undo,
     redo,
     clear,
+    silentClear,
     restore
   }
 }
