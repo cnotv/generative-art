@@ -25,7 +25,7 @@ Everything that is not Vue-specific lives in a package. The view only handles wi
 
 ```
 chat            — ChatMessage
-stroke          — { x0, y0, x1, y1, color, size }
+stroke          — StrokeEvent { from, to, options }
 clear           — { ts }
 round-choices   — { number, drawerId, choices, endsAt }   // 10s picking phase
 round           — { number, drawerId, word, endsAt }      // drawing phase
@@ -102,3 +102,29 @@ Initial word lists were calibrated at a junior-school level, which made rounds f
 - **hard** — abstract / philosophical / loanword (schadenfreude, zeitgeist, hermeneutics)
 
 The point of the game is that guessing must be non-trivial; word choice does more than mechanics to tune difficulty.
+
+## CanvasEditor integration
+
+The initial `DrawingCanvas.vue` was a standalone component with its own color picker, brush slider, and canvas logic. It was replaced with the reusable `CanvasEditor` component from `src/components/CanvasEditor/`, which already had undo/redo, fill tool, brush size picker, and storage. Extensions made for Pictionary:
+
+| Feature               | Where                                                     | Why                                                    |
+| --------------------- | --------------------------------------------------------- | ------------------------------------------------------ |
+| `StrokeEvent` type    | `@webgamekit/canvas-editor`                               | Per-segment `{ from, to, options }` for P2P broadcast  |
+| `onStrokeCallback`    | `useCanvasEditor.ts`                                      | Fires on each stroke segment so the view can broadcast |
+| `renderSegment`       | `useCanvasEditor` → `CanvasEditorCanvas` → `CanvasEditor` | Remote peers replay strokes without triggering history |
+| `silentClear`         | same chain                                                | Remote clear without pushing to undo stack             |
+| `interactive` prop    | `CanvasEditorCanvas`, `CanvasEditor`                      | Non-drawers see the canvas but can't draw              |
+| `showTools` prop      | `CanvasEditor`                                            | Hide the toolbar for guessing players                  |
+| `disableStorage` prop | `CanvasEditor`                                            | Skip localStorage load/save in game context            |
+| `visibleTools` prop   | `CanvasEditorTools`, `CanvasEditor`                       | Choose which toolbar buttons appear                    |
+| `hideColorValue` prop | `ColorPicker`                                             | Hide the hex value text                                |
+
+The `CanvasEditorCanvas` wrapper div was also flattened — the outer `.canvas-editor-canvas` div absorbed all styles from the removed `.canvas-editor-canvas__wrapper`.
+
+### Mobile layout: grid vs flex
+
+The mobile drawing phase initially used `display: grid` on `.pictionary__play` to control the word-banner / canvas / tools layout. This prevented `flex-grow: 1` on the canvas-editor from taking effect, causing the canvas to collapse to its intrinsic size. Switching to `display: flex; flex-direction: column` fixed this — the canvas-editor and its inner canvas element both use `flex-grow: 1` to fill available space.
+
+## Tie handling
+
+The summary phase computes `topPlayers` (all players sharing the highest score). If more than one, the banner shows "It's a tie! Alice and Bob share 300 points" using Oxford-comma joining for 3+.
