@@ -11,6 +11,12 @@ export interface DrawingPoint {
   y: number
 }
 
+export interface StrokeEvent {
+  from: DrawingPoint
+  to: DrawingPoint
+  options: DrawingOptions
+}
+
 /**
  * Draw a stroke segment between two points on the canvas.
  * @param ctx - 2D rendering context

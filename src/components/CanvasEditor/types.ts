@@ -1,0 +1,10 @@
+export type CanvasEditorToolButton =
+  | 'brush'
+  | 'eraser'
+  | 'fill'
+  | 'color'
+  | 'size'
+  | 'undo'
+  | 'redo'
+  | 'clear'
+  | 'download'

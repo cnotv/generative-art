@@ -3,7 +3,8 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import CanvasEditorCanvas from './CanvasEditorCanvas.vue'
 import CanvasEditorTools from './CanvasEditorTools.vue'
 import { storageLoad } from '@webgamekit/canvas-editor'
-import type { DrawingTool, DrawingOptions } from '@webgamekit/canvas-editor'
+import type { DrawingTool, DrawingOptions, StrokeEvent } from '@webgamekit/canvas-editor'
+import type { CanvasEditorToolButton } from './types'
 
 const props = withDefaults(
   defineProps<{
@@ -15,6 +16,10 @@ const props = withDefaults(
     canvasHeight?: number
     backgroundImage?: string
     defaultImage?: string
+    interactive?: boolean
+    disableStorage?: boolean
+    showTools?: boolean
+    visibleTools?: readonly CanvasEditorToolButton[]
   }>(),
   {
     tool: 'brush',
@@ -22,7 +27,10 @@ const props = withDefaults(
     size: 10,
     slotName: 'default',
     canvasWidth: 512,
-    canvasHeight: 512
+    canvasHeight: 512,
+    interactive: true,
+    disableStorage: false,
+    showTools: true
   }
 )
 
@@ -31,6 +39,8 @@ const emit = defineEmits<{
   'update:color': [value: string]
   'update:size': [value: number]
   change: [dataUrl: string]
+  stroke: [event: StrokeEvent]
+  clear: []
 }>()
 
 const canvasEditorCanvasReference = ref<InstanceType<typeof CanvasEditorCanvas> | null>(null)
@@ -77,6 +87,10 @@ const handleChange = (dataUrl: string): void => {
   emit('change', dataUrl)
 }
 
+const handleStroke = (event: StrokeEvent): void => {
+  emit('stroke', event)
+}
+
 const handleHistoryChange = (state: { canUndo: boolean; canRedo: boolean }): void => {
   canUndo.value = state.canUndo
   canRedo.value = state.canRedo
@@ -99,12 +113,18 @@ const handleSizeUpdate = (value: number): void => {
 
 const undo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.undo()
 const redo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.redo()
-const clear = (): void => canvasEditorCanvasReference.value?.clear()
+const clear = (): void => {
+  canvasEditorCanvasReference.value?.clear()
+  emit('clear')
+}
 
 defineExpose({
   snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? '',
   restore: (dataUrl: string, options?: { silent?: boolean }): Promise<void> =>
-    canvasEditorCanvasReference.value?.restore(dataUrl, options) ?? Promise.resolve()
+    canvasEditorCanvasReference.value?.restore(dataUrl, options) ?? Promise.resolve(),
+  renderSegment: (event: StrokeEvent): void =>
+    canvasEditorCanvasReference.value?.renderSegment(event),
+  silentClear: (): void => canvasEditorCanvasReference.value?.silentClear()
 })
 
 const onKeyDown = (event: KeyboardEvent): void => {
@@ -120,11 +140,13 @@ const onKeyDown = (event: KeyboardEvent): void => {
 }
 
 onMounted(async () => {
-  const slot = await storageLoad('localStorage', props.slotName)
-  const savedFront = slot ? (JSON.parse(slot.dataUrl) as { front: string }).front : ''
-  const imageToLoad = savedFront || props.defaultImage || ''
-  if (imageToLoad) {
-    await canvasEditorCanvasReference.value?.restore(imageToLoad, { silent: true })
+  if (!props.disableStorage) {
+    const slot = await storageLoad('localStorage', props.slotName)
+    const savedFront = slot ? (JSON.parse(slot.dataUrl) as { front: string }).front : ''
+    const imageToLoad = savedFront || props.defaultImage || ''
+    if (imageToLoad) {
+      await canvasEditorCanvasReference.value?.restore(imageToLoad, { silent: true })
+    }
   }
   window.addEventListener('keydown', onKeyDown)
 })
@@ -142,10 +164,13 @@ onUnmounted(() => {
       :width="canvasWidth"
       :height="canvasHeight"
       :background-image="backgroundImage"
+      :interactive="interactive"
       @change="handleChange"
       @history-change="handleHistoryChange"
+      @stroke="handleStroke"
     />
     <CanvasEditorTools
+      v-if="showTools"
       :tool="internalTool"
       :color="internalColor"
       :size="internalSize"
@@ -153,6 +178,7 @@ onUnmounted(() => {
       :can-redo="canRedo"
       :slot-name="slotName"
       :get-snapshot="getSnapshot"
+      :visible-tools="visibleTools"
       @update:tool="handleToolUpdate"
       @update:color="handleColorUpdate"
       @update:size="handleSizeUpdate"
@@ -168,5 +194,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  flex-grow: 1;
+  margin: 0.8em;
 }
 </style>

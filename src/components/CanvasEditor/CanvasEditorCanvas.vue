@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useCanvasEditor } from './useCanvasEditor'
-import type { DrawingOptions } from '@webgamekit/canvas-editor'
+import type { DrawingOptions, StrokeEvent } from '@webgamekit/canvas-editor'
 
-const props = defineProps<{
-  options: DrawingOptions
-  width: number
-  height: number
-  backgroundImage?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    options: DrawingOptions
+    width: number
+    height: number
+    backgroundImage?: string
+    interactive?: boolean
+  }>(),
+  { interactive: true }
+)
 
 const emit = defineEmits<{
   change: [dataUrl: string]
   historyChange: [{ canUndo: boolean; canRedo: boolean }]
+  stroke: [event: StrokeEvent]
 }>()
 
 const canvasReference = ref<HTMLCanvasElement | null>(null)
@@ -38,7 +43,11 @@ const emitChange = (): void => {
   })
 }
 
-const editor = useCanvasEditor(canvasReference, optionsReference, emitChange)
+const handleStroke = (event: StrokeEvent): void => {
+  emit('stroke', event)
+}
+
+const editor = useCanvasEditor(canvasReference, optionsReference, emitChange, handleStroke)
 
 const updateCursor = (event: MouseEvent): void => {
   if (!canvasReference.value) return
@@ -53,8 +62,14 @@ const onMouseEnter = (event: MouseEvent): void => {
   updateCursor(event)
 }
 
+const onMouseDown = (event: MouseEvent): void => {
+  if (!props.interactive) return
+  editor.onPointerDown(event)
+}
+
 const onMouseMove = (event: MouseEvent): void => {
   updateCursor(event)
+  if (!props.interactive) return
   editor.onPointerMove(event)
 }
 
@@ -63,67 +78,74 @@ const onMouseLeave = (): void => {
   editor.onPointerUp()
 }
 
+const onTouchStart = (event: TouchEvent): void => {
+  if (!props.interactive) return
+  editor.onTouchStart(event)
+}
+
+const onTouchMove = (event: TouchEvent): void => {
+  if (!props.interactive) return
+  editor.onTouchMove(event)
+}
+
 const snapshot = (): string => canvasReference.value?.toDataURL() ?? ''
 
 defineExpose({
   undo: editor.undo,
   redo: editor.redo,
   clear: editor.clear,
+  silentClear: editor.silentClear,
   restore: editor.restore,
-  snapshot
+  snapshot,
+  renderSegment: editor.renderSegment
 })
 </script>
 
 <template>
   <div class="canvas-editor-canvas">
-    <div class="canvas-editor-canvas__wrapper">
-      <img
-        v-if="backgroundImage"
-        :src="backgroundImage"
-        class="canvas-editor-canvas__background"
-        aria-hidden="true"
-      />
+    <img
+      v-if="backgroundImage"
+      :src="backgroundImage"
+      class="canvas-editor-canvas__background"
+      aria-hidden="true"
+    />
 
-      <svg v-if="showCircleCursor" class="canvas-editor-canvas__cursor-overlay">
-        <circle
-          :cx="cursorX"
-          :cy="cursorY"
-          :r="cursorRadius"
-          class="canvas-editor-canvas__cursor-circle"
-        />
-      </svg>
-
-      <canvas
-        ref="canvasReference"
-        class="canvas-editor-canvas__canvas"
-        :class="{ 'canvas-editor-canvas__canvas--hide-cursor': showCircleCursor }"
-        :width="width"
-        :height="height"
-        @mouseenter="onMouseEnter"
-        @mousemove="onMouseMove"
-        @mouseleave="onMouseLeave"
-        @mousedown="editor.onPointerDown"
-        @mouseup="editor.onPointerUp"
-        @touchstart.prevent="editor.onTouchStart"
-        @touchmove.prevent="editor.onTouchMove"
-        @touchend="editor.onTouchEnd"
+    <svg v-if="showCircleCursor" class="canvas-editor-canvas__cursor-overlay">
+      <circle
+        :cx="cursorX"
+        :cy="cursorY"
+        :r="cursorRadius"
+        class="canvas-editor-canvas__cursor-circle"
       />
-    </div>
+    </svg>
+
+    <canvas
+      ref="canvasReference"
+      class="canvas-editor-canvas__canvas"
+      :class="{ 'canvas-editor-canvas__canvas--hide-cursor': showCircleCursor }"
+      :width="width"
+      :height="height"
+      @mouseenter="onMouseEnter"
+      @mousemove="onMouseMove"
+      @mouseleave="onMouseLeave"
+      @mousedown="onMouseDown"
+      @mouseup="editor.onPointerUp"
+      @touchstart.prevent="onTouchStart"
+      @touchmove.prevent="onTouchMove"
+      @touchend="editor.onTouchEnd"
+    />
   </div>
 </template>
 
 <style scoped>
 .canvas-editor-canvas {
-  width: 100%;
-}
-
-.canvas-editor-canvas__wrapper {
   position: relative;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: var(--color-background);
+  background: #fff;
   width: 100%;
+  flex-grow: 1;
   aspect-ratio: v-bind('`${width} / ${height}`');
 }
 

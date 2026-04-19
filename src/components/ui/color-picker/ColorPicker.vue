@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 const props = defineProps<{
   modelValue?: string
   disabled?: boolean
+  hideValue?: boolean
   class?: string
 }>()
 
@@ -43,7 +44,7 @@ const handleClick = () => {
     @click="handleClick"
   >
     <div class="color-picker__swatch" :style="{ backgroundColor: internalValue }" />
-    <span class="color-picker__hex">{{ internalValue }}</span>
+    <span v-if="!hideValue" class="color-picker__hex">{{ internalValue }}</span>
     <input
       ref="colorInputReference"
       type="color"
