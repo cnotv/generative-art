@@ -21,8 +21,11 @@ import { usePictionaryStore, type PictionaryPlayer } from '@/stores/pictionary'
 
 const INTERMISSION_MS = 10_000
 const CHOICE_DURATION_MS = 10_000
-const POINTS_FIRST_GUESS = 100
-const POINTS_DRAWER = 50
+const REANNOUNCE_DELAY_MS = 2000
+const POINTS_BASE = 100
+const POINTS_FIRST_BONUS = 50
+const POINTS_DRAWER_PER_GUESS = 25
+const POINTS_MINIMUM = 10
 const CHAT_CHANNEL = 'chat'
 const STROKE_CHANNEL = 'stroke'
 const CLEAR_CHANNEL = 'clear'
@@ -209,16 +212,31 @@ const announceSelf = (ctx: PictionaryContext, joined: P2PSession): void => {
   }
   ctx.store.upsertPlayer(player)
   p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+  setTimeout(() => {
+    p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+  }, REANNOUNCE_DELAY_MS)
+}
+
+const computeTimePoints = (ctx: PictionaryContext, base: number): number => {
+  const endsAt = ctx.store.round.endsAt
+  if (!endsAt) return base
+  const totalMs = ctx.store.roundDuration * 1000
+  const remainingMs = Math.max(0, endsAt - Date.now())
+  const fraction = remainingMs / totalMs
+  return Math.max(POINTS_MINIMUM, Math.round(base * fraction))
 }
 
 const handleCorrectGuess = (ctx: PictionaryContext): void => {
   if (!ctx.session.value) return
   ctx.guessedPeers.value.add(ctx.localPeerId.value)
+  const isFirst = ctx.guessedPeers.value.size === 1
+  const guesserPoints = computeTimePoints(ctx, POINTS_BASE) + (isFirst ? POINTS_FIRST_BONUS : 0)
+  const drawerPoints = computeTimePoints(ctx, POINTS_DRAWER_PER_GUESS)
   const systemMessage: ChatMessage = {
     id: crypto.randomUUID(),
     senderId: 'system',
     senderName: 'System',
-    text: `${ctx.options.name} guessed the word!`,
+    text: `${ctx.options.name} guessed the word! (+${guesserPoints} pts)`,
     timestamp: Date.now(),
     kind: 'success'
   }
@@ -227,12 +245,11 @@ const handleCorrectGuess = (ctx: PictionaryContext): void => {
   p2pSendData(ctx.session.value, SCORE_CHANNEL, {
     guesserId: ctx.localPeerId.value,
     drawerId: ctx.store.round.drawerId,
-    points: POINTS_FIRST_GUESS,
-    drawerPoints: POINTS_DRAWER
+    points: guesserPoints,
+    drawerPoints
   })
-  ctx.store.addScore(ctx.localPeerId.value, POINTS_FIRST_GUESS)
-  ctx.store.addScore(ctx.store.round.drawerId, POINTS_DRAWER)
-  if (ctx.isHost.value) ctx.endRound()
+  ctx.store.addScore(ctx.localPeerId.value, guesserPoints)
+  ctx.store.addScore(ctx.store.round.drawerId, drawerPoints)
 }
 
 const sendChat = (ctx: PictionaryContext, text: string): void => {
@@ -269,6 +286,9 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     if (ctx.isHost.value) broadcastConfig(ctx, joined)
   })
   p2pOnPeerLeave(joined, (peerId) => ctx.store.removePlayer(peerId))
+  p2pOnData<{ id: string }>(joined, HELLO_CHANNEL, () => {
+    p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+  })
   p2pOnData<{ name: string; color: string }>(joined, AVATAR_CHANNEL, (payload, peerId) => {
     const existing = ctx.store.players[peerId]
     ctx.store.upsertPlayer({
@@ -338,7 +358,9 @@ const bindRoundEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     ctx.store.addScore(payload.guesserId, payload.points)
     ctx.store.addScore(payload.drawerId, payload.drawerPoints)
     ctx.guessedPeers.value.add(payload.guesserId)
-    if (ctx.isHost.value) ctx.endRound()
+    const guesserCount = Object.keys(ctx.store.players).length - 1
+    const allGuessed = ctx.guessedPeers.value.size >= guesserCount
+    if (allGuessed && ctx.isHost.value) ctx.endRound()
   })
   p2pOnData<HintPayload>(joined, HINT_CHANNEL, (payload) => {
     if (!ctx.store.revealedHintIndices.includes(payload.index)) {

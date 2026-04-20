@@ -58,8 +58,9 @@ const {
 const ROUND_DURATION_OPTIONS = [30, 60, 90, 120, 150]
 const WORD_COUNT_OPTIONS = [1, 2, 3]
 const HINT_COUNT_OPTIONS = [0, 1, 2, 3, 4, 5]
-const POINTS_GUESSER = 100
-const POINTS_DRAWER = 50
+const POINTS_BASE = 100
+const POINTS_FIRST_BONUS = 50
+const POINTS_DRAWER_PER_GUESS = 25
 
 const playerName = ref(`${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`)
 const playerColor = ref(randomPick(PLAYER_COLORS))
@@ -247,19 +248,24 @@ onMounted(() => {
       <p class="pictionary__hint">
         Share the room link with friends. Game starts when the host clicks Start.
       </p>
-      <div class="pictionary__rules">
-        <h3 class="pictionary__rules-title">How points work</h3>
+      <details class="pictionary__rules">
+        <summary class="pictionary__rules-title">How points work</summary>
         <ul class="pictionary__rules-list">
           <li>
-            <strong>{{ POINTS_GUESSER }} pts</strong> to the first player who guesses the word
+            Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster
+            guesses score more
           </li>
           <li>
-            <strong>{{ POINTS_DRAWER }} pts</strong> to the drawer for each correct guess
+            First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
           </li>
+          <li>
+            Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct guess,
+            scaled by time remaining
+          </li>
+          <li>Everyone can guess — the round continues until time runs out or all players guess</li>
           <li>Hints reveal extra letters during the round (configurable above)</li>
-          <li>The player with the most points after all rounds wins</li>
         </ul>
-      </div>
+      </details>
       <div v-if="isHost" class="pictionary__host-controls">
         <label class="pictionary__field">
           Difficulty
@@ -944,6 +950,20 @@ onMounted(() => {
   margin: 0;
   font-size: var(--font-size-md, 1.125rem);
   font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.pictionary__rules-title::-webkit-details-marker {
+  display: none;
+}
+
+.pictionary__rules-title::before {
+  content: '▸ ';
+}
+
+.pictionary__rules[open] > .pictionary__rules-title::before {
+  content: '▾ ';
 }
 
 .pictionary__rules-list {
@@ -1168,6 +1188,31 @@ onMounted(() => {
 
   .pictionary__sidebar-title {
     display: none;
+  }
+
+  .pictionary--drawing .pictionary__header,
+  .pictionary--choosing .pictionary__header {
+    display: none;
+  }
+
+  .pictionary__room-id {
+    color: var(--color-foreground);
+  }
+
+  .pictionary__lobby {
+    padding-left: var(--spacing-3);
+    padding-right: var(--spacing-3);
+  }
+
+  .pictionary__word-banner {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .pictionary__chat {
+    max-height: 200px;
   }
 }
 </style>
