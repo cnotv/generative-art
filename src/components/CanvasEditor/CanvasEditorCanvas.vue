@@ -171,7 +171,7 @@ defineExpose({
 
 .canvas-editor-canvas__cursor-circle {
   fill: none;
-  stroke: var(--color-foreground);
+  stroke: #333;
   stroke-width: 1.5;
   opacity: 0.7;
 }
