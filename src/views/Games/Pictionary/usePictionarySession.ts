@@ -90,6 +90,7 @@ type PictionaryContext = {
   session: Ref<P2PSession | null>
   localPeerId: Ref<string>
   guessedPeers: Ref<Set<string>>
+  scoreCache: Map<string, number>
   hintTimers: Ref<ReturnType<typeof setTimeout>[]>
   isDrawer: ComputedRef<boolean>
   isHost: ComputedRef<boolean>
@@ -181,11 +182,10 @@ const pickWordForContext = (ctx: PictionaryContext, word: string): void => {
   p2pSendData(ctx.session.value, ROUND_CHANNEL, payload)
 }
 
-const restartGameForContext = (ctx: PictionaryContext, startRound: () => void): void => {
+const restartGameForContext = (ctx: PictionaryContext): void => {
   if (!ctx.session.value) return
   p2pSendData(ctx.session.value, RESTART_CHANNEL, { ts: Date.now() })
   ctx.applyRestart()
-  startRound()
 }
 
 const updateProfileForContext = (ctx: PictionaryContext, name: string, color: string): void => {
@@ -285,17 +285,33 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     p2pSendData(joined, HELLO_CHANNEL, { id: peerId })
     if (ctx.isHost.value) broadcastConfig(ctx, joined)
   })
-  p2pOnPeerLeave(joined, (peerId) => ctx.store.removePlayer(peerId))
+  p2pOnPeerLeave(joined, (peerId) => {
+    const player = ctx.store.players[peerId]
+    if (player) {
+      ctx.scoreCache.set(peerId, player.score)
+      const leaveMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        senderId: 'system',
+        senderName: 'System',
+        text: `${player.name} left the game`,
+        timestamp: Date.now(),
+        kind: 'system'
+      }
+      ctx.store.appendMessage(leaveMessage)
+    }
+    ctx.store.removePlayer(peerId)
+  })
   p2pOnData<{ id: string }>(joined, HELLO_CHANNEL, () => {
     p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
   })
   p2pOnData<{ name: string; color: string }>(joined, AVATAR_CHANNEL, (payload, peerId) => {
     const existing = ctx.store.players[peerId]
+    const cachedScore = ctx.scoreCache.get(peerId) ?? 0
     ctx.store.upsertPlayer({
       id: peerId,
       name: payload.name,
       color: payload.color,
-      score: existing?.score ?? 0
+      score: existing?.score ?? cachedScore
     })
   })
   p2pOnData<PictionaryConfigPayload>(joined, CONFIG_CHANNEL, (payload) => {
@@ -439,12 +455,14 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
   const endRound = (): void => endRoundForContext(ctx, startRound)
 
   const hintTimers = ref<ReturnType<typeof setTimeout>[]>([])
+  const scoreCache = new Map<string, number>()
   const ctx: PictionaryContext = {
     options,
     store,
     session,
     localPeerId,
     guessedPeers,
+    scoreCache,
     hintTimers,
     isDrawer,
     isHost,
@@ -477,7 +495,7 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
 
   const restartGame = (): void => {
     if (!isHost.value) return
-    restartGameForContext(ctx, startRound)
+    restartGameForContext(ctx)
   }
 
   const init = (): void => initSessionForContext(ctx, options.roomId)

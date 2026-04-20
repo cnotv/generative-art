@@ -6,6 +6,7 @@ import type { PictionaryPlayer, PictionaryPhase } from '@/stores/pictionary'
 defineProps<{
   playerList: PictionaryPlayer[]
   drawerId: string
+  hostId: string
   messages: ChatMessage[]
   localPeerId: string
   isDrawer: boolean
@@ -35,6 +36,13 @@ const emit = defineEmits<{
             title="Drawing"
             aria-label="Drawing"
             >✏️</span
+          >
+          <span
+            v-if="hostId === player.id"
+            class="pictionary-sidebar__player-icon"
+            title="Host"
+            aria-label="Host"
+            >👑</span
           >
           <span class="pictionary-sidebar__player-name">{{ player.name }}</span>
           <span class="pictionary-sidebar__player-score">{{ player.score }}</span>
@@ -178,9 +186,8 @@ const emit = defineEmits<{
   }
 
   .pictionary-sidebar__chat {
-    flex: 1;
+    flex: 0 0 200px;
     min-height: 0;
-    max-height: 200px;
   }
 
   .pictionary-sidebar__players {

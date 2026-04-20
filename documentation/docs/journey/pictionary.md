@@ -95,13 +95,13 @@ The page background is four radial gradients at random positions chosen at mount
 
 ## Word lists
 
-Initial word lists were calibrated at a junior-school level, which made rounds finish in seconds. The lists were re-calibrated:
+Initial word lists were calibrated at a junior-school level, which made rounds finish in seconds. The lists were re-calibrated with length constraints:
 
-- **easy** — concrete, everyday nouns (was previously medium)
-- **medium** — specific concrete nouns (armadillo, periscope, gondola)
-- **hard** — abstract / philosophical / loanword (schadenfreude, zeitgeist, hermeneutics)
+- **easy** — concrete, everyday nouns (short words OK)
+- **medium** — specific concrete nouns, 7+ letters (armadillo, periscope, gondola)
+- **hard** — multi-word phrases or 10+ letter abstracts (butterfly effect, broken heart, procrastination)
 
-The point of the game is that guessing must be non-trivial; word choice does more than mechanics to tune difficulty.
+The length constraints ensure difficulty scales with both concept abstractness and word length — longer words are harder to guess from partial hints.
 
 ## CanvasEditor integration
 
@@ -124,6 +124,32 @@ The `CanvasEditorCanvas` wrapper div was also flattened — the outer `.canvas-e
 ### Mobile layout: grid vs flex
 
 The mobile drawing phase initially used `display: grid` on `.pictionary__play` to control the word-banner / canvas / tools layout. This prevented `flex-grow: 1` on the canvas-editor from taking effect, causing the canvas to collapse to its intrinsic size. Switching to `display: flex; flex-direction: column` fixed this — the canvas-editor and its inner canvas element both use `flex-grow: 1` to fill available space.
+
+## Component decomposition
+
+The monolithic `Pictionary.vue` (~1200 lines) was split into focused sub-components:
+
+| Component                | Responsibility                              |
+| ------------------------ | ------------------------------------------- |
+| `PictionaryHeader`       | Room ID display + copy link button          |
+| `PictionaryLobby`        | Profile, rules (collapsible), host controls |
+| `PictionaryChoosing`     | Word choice phase with countdown            |
+| `PictionaryDrawing`      | Word banner + CanvasEditor                  |
+| `PictionaryIntermission` | Round countdown timer                       |
+| `PictionarySummary`      | Game over screen + fireworks                |
+| `PictionarySidebar`      | Player list + chat                          |
+
+Supporting files: `constants.ts` (colors, scoring, config options), `usePictionaryTimer.ts` (countdown logic extracted from watchers).
+
+The parent `Pictionary.vue` is now ~250 lines — a thin layout shell that wires sub-components via props/emits.
+
+## Time-based scoring
+
+Points decrease as the round progresses. `computeTimePoints(ctx, base)` calculates `Math.round(base * remainingMs / totalMs)` with a floor of 10 points. The first correct guesser gets a +50 bonus. The drawer earns per-guess points (base 25) also scaled by time. The round continues until all non-drawers guess or time expires — no longer ending on the first correct guess.
+
+## Player leave/rejoin
+
+On disconnect, the player's score is cached in a `Map<peerId, number>` and a system message is posted to chat. On rejoin (avatar channel), the cached score is restored via `existing?.score ?? cachedScore`. The cache persists for the session lifetime.
 
 ## Tie handling
 

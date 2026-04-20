@@ -186,6 +186,7 @@ onMounted(() => {
     <PictionarySidebar
       :player-list="playerList"
       :drawer-id="round.drawerId"
+      :host-id="store.hostId"
       :messages="messages"
       :local-peer-id="localPeerId"
       :is-drawer="isDrawer"

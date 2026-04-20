@@ -375,8 +375,16 @@ const handleNameInput = (event: Event): void => {
 
 @media (max-width: 720px) {
   .pictionary-lobby {
-    padding-left: var(--spacing-3);
-    padding-right: var(--spacing-3);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pictionary-lobby__profile,
+  .pictionary-lobby__rules {
+    max-width: 100%;
+    box-sizing: border-box;
+    box-shadow: none;
+    padding: var(--spacing-2);
   }
 
   .pictionary-lobby__host-controls {
