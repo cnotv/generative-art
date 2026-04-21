@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '@webgamekit/chat'
+import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 
 export type PictionaryPlayer = {
   id: string
@@ -35,6 +36,7 @@ export const usePictionaryStore = defineStore('pictionary', () => {
   const roundDuration = ref(60)
   const wordCount = ref(1)
   const hintCount = ref(2)
+  const difficulty = ref<DictionaryDifficulty>('easy')
   const intermissionEndsAt = ref<number | null>(null)
   const revealedHintIndices = ref<number[]>([])
 
@@ -88,6 +90,7 @@ export const usePictionaryStore = defineStore('pictionary', () => {
     roundDuration,
     wordCount,
     hintCount,
+    difficulty,
     intermissionEndsAt,
     revealedHintIndices,
     playerList,

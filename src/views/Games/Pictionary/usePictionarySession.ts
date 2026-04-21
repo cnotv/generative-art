@@ -79,7 +79,6 @@ type UsePictionarySessionOptions = {
   name: string
   color: string
   roomId: string
-  difficulty: DictionaryDifficulty
   onRemoteStroke: (payload: PictionaryStrokePayload) => void
   onRemoteClear: () => void
 }
@@ -107,7 +106,7 @@ const broadcastConfig = (ctx: PictionaryContext, target: P2PSession): void => {
     roundDuration: ctx.store.roundDuration,
     wordCount: ctx.store.wordCount,
     hintCount: ctx.store.hintCount,
-    difficulty: ctx.options.difficulty
+    difficulty: ctx.store.difficulty
   }
   p2pSendData(target, CONFIG_CHANNEL, payload)
 }
@@ -153,7 +152,7 @@ const startRoundForContext = (ctx: PictionaryContext): void => {
   const drawerId = ids[(nextNumber - 1) % ids.length]
   const buildChoice = (): string =>
     Array.from({ length: ctx.store.wordCount }, () =>
-      dictionaryPickRandom(ctx.options.difficulty)
+      dictionaryPickRandom(ctx.store.difficulty)
     ).join(' ')
   const choices = [...new Set(Array.from({ length: WORD_CHOICE_COUNT * 3 }, buildChoice))].slice(
     0,
@@ -319,7 +318,7 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     ctx.store.roundDuration = payload.roundDuration
     ctx.store.wordCount = payload.wordCount
     ctx.store.hintCount = payload.hintCount
-    ctx.options.difficulty = payload.difficulty
+    ctx.store.difficulty = payload.difficulty
   })
 }
 

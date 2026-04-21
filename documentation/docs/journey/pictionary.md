@@ -178,3 +178,7 @@ On disconnect, the player's score is cached in a `Map<peerId, number>` and a sys
 ## Tie handling
 
 The summary phase computes `topPlayers` (all players sharing the highest score). If more than one, the banner shows "It's a tie! Alice and Bob share 300 points" using Oxford-comma joining for 3+.
+
+## Difficulty selection fix
+
+The difficulty dropdown in the lobby wasn't affecting word selection. Root cause: `difficulty` was passed as a plain value snapshot (`options.difficulty`) at session init time. When the host changed the dropdown, the session still used the initial value (`'easy'`). Fix: moved `difficulty` into the Pinia store (`usePictionaryStore`) so it's reactive and shared. `broadcastConfig` and `startRoundForContext` now read `ctx.store.difficulty`, which always reflects the current dropdown selection. The config channel also writes to the store on receive, keeping peers in sync.
