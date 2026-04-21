@@ -55,3 +55,33 @@ export const HINT_COUNT_OPTIONS = [0, 1, 2, 3, 4, 5]
 export const POINTS_BASE = 100
 export const POINTS_FIRST_BONUS = 50
 export const POINTS_DRAWER_PER_GUESS = 25
+
+export const PROFILE_STORAGE_KEY = 'pictionary-profile'
+
+type StoredProfile = { name: string; color: string }
+
+/**
+ * Load a persisted player profile from localStorage.
+ * @returns The stored profile or null if not found or invalid.
+ */
+export const loadProfile = (): StoredProfile | null => {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<StoredProfile>
+    if (typeof parsed.name !== 'string' || typeof parsed.color !== 'string') return null
+    if (!PLAYER_COLORS.includes(parsed.color)) return null
+    return { name: parsed.name, color: parsed.color }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Persist a player profile to localStorage.
+ * @param name - Player display name.
+ * @param color - Player color hex string.
+ */
+export const saveProfile = (name: string, color: string): void => {
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name, color }))
+}

@@ -9,6 +9,8 @@ import { usePictionaryTimer } from './usePictionaryTimer'
 import {
   buildRandomGradient,
   randomPick,
+  loadProfile,
+  saveProfile,
   NAME_ADJECTIVES,
   NAME_ANIMALS,
   PLAYER_COLORS
@@ -39,8 +41,11 @@ const {
   difficulty
 } = storeToRefs(store)
 
-const playerName = ref(`${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`)
-const playerColor = ref(randomPick(PLAYER_COLORS))
+const storedProfile = loadProfile()
+const playerName = ref(
+  storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
+)
+const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
 const backgroundStyle = { background: buildRandomGradient() }
 const drawingReference = ref<InstanceType<typeof PictionaryDrawing> | null>(null)
 
@@ -99,11 +104,13 @@ const handleNameChange = (): void => {
   const trimmed = playerName.value.trim()
   if (!trimmed) return
   session.updateProfile(trimmed, playerColor.value)
+  saveProfile(trimmed, playerColor.value)
 }
 
 const handleColorChange = (color: string): void => {
   playerColor.value = color
   session.updateProfile(playerName.value.trim() || playerName.value, color)
+  saveProfile(playerName.value.trim() || playerName.value, color)
 }
 
 const handleStroke = (event: StrokeEvent): void => {
