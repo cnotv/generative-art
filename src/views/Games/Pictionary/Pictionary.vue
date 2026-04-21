@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePictionaryStore } from '@/stores/pictionary'
-import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { StrokeEvent } from '@webgamekit/canvas-editor'
 import { usePictionarySession } from './usePictionarySession'
 import { usePictionaryTimer } from './usePictionaryTimer'
@@ -36,13 +35,13 @@ const {
   wordCount,
   hintCount,
   intermissionEndsAt,
-  revealedHintIndices
+  revealedHintIndices,
+  difficulty
 } = storeToRefs(store)
 
 const playerName = ref(`${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`)
 const playerColor = ref(randomPick(PLAYER_COLORS))
 const backgroundStyle = { background: buildRandomGradient() }
-const difficulty = ref<DictionaryDifficulty>('easy')
 const drawingReference = ref<InstanceType<typeof PictionaryDrawing> | null>(null)
 
 const resolvedRoomId = ((): string => {
@@ -66,7 +65,6 @@ const session = usePictionarySession({
   name: playerName.value,
   color: playerColor.value,
   roomId: resolvedRoomId,
-  difficulty: difficulty.value,
   onRemoteStroke: (payload) => drawingReference.value?.renderSegment(payload),
   onRemoteClear: () => drawingReference.value?.silentClear()
 })
