@@ -40,6 +40,30 @@ restart         — { ts }
 
 `lobby → choosing → drawing → intermission → …` looping until `round.number === totalRounds`, then `summary`. The host is the owner of the canonical state; every transition (`startRound`, `pickWord`, `endRound`, `restartGame`) writes locally via an `apply*` function **and** broadcasts to peers. Peers run the same `apply*` on receive. This keeps the host/peer code paths symmetric.
 
+## WebRTC connection hiccups
+
+Trystero's P2P signaling has an inherent delay — when peer A joins, peer B may not immediately see them, and avatar data sent during that window is lost. This caused "ghost players" (connected but showing no name/color) and missing player entries in the sidebar.
+
+Two complementary strategies fixed this:
+
+1. **HELLO channel echo**: when a peer joins, the existing peer sends a `hello` message. On receiving `hello`, every peer re-broadcasts their avatar data. This ensures late-arriving avatar info is retransmitted after both sides have established the data channel.
+
+2. **Delayed re-announce**: after `announceSelf`, a second avatar broadcast fires after 2 seconds (`REANNOUNCE_DELAY_MS`). This covers the case where the signaling completes but the data channel isn't ready for the first few hundred milliseconds — common on mobile networks.
+
+```ts
+// On peer join — trigger re-broadcast from all existing peers
+p2pOnData(joined, HELLO_CHANNEL, () => {
+  p2pSendData(joined, AVATAR_CHANNEL, { name, color })
+})
+
+// On self join — delayed retry
+setTimeout(() => {
+  p2pSendData(joined, AVATAR_CHANNEL, { name, color })
+}, REANNOUNCE_DELAY_MS)
+```
+
+The score cache (`Map<peerId, number>`) also helps here: if a peer disconnects and reconnects (getting a new peer ID from the same browser), the avatar handler restores their score via `existing?.score ?? cachedScore`. A system message is posted to chat on disconnect so players know what happened.
+
 ## Close-guess detection
 
 Chat guesses off by one character show a system hint (`"Alice is very close!"`). `chatEditDistance` is a pure-functional Levenshtein in `packages/chat/src/match.ts` — written as nested `reduce` returning new arrays to satisfy `functional/immutable-data`. The `CLOSE_MAX_DISTANCE = 1` constant makes the threshold easy to tune.
