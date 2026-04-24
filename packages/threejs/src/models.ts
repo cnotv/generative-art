@@ -74,6 +74,7 @@ const createMeshMaterial = (
   base: BaseMaterialProperties,
   options: ModelOptions
 ): THREE.Material | null => {
+  if (materialType instanceof THREE.Material) return materialType
   if (materialType === 'MeshPhysicalMaterial') return buildPhysicalMaterial(base, options)
   if (materialType === 'MeshStandardMaterial') return buildStandardMaterial(base, options)
   if (materialType === 'MeshLambertMaterial')
@@ -508,30 +509,20 @@ export const loadGLTF = (
   })
 }
 
-/**
- * Create a ball with physics, texture, and shadow
- * @param scene The Three.js scene
- * @param world The Rapier physics world
- * @param options Model options including physics and render settings
- * @returns A ComplexModel representing the ball
- */
-export const getBall = (
+const attachBallPhysics = (
   scene: THREE.Scene,
+  mesh: THREE.Mesh,
   world: RAPIER.World,
-  options: ModelOptions = {}
-): ComplexModel => {
+  options: ModelOptions
+): void => {
   const {
-    name,
-    size = 1,
-    position = [0, 0, 0] as CoordinateTuple,
     hasGravity = false,
     showHelper = false,
     helperColor,
-    texture,
     onSpawn,
-    castShadow = true,
-    receiveShadow = true,
-    type = 'dynamic'
+    type = 'dynamic',
+    size = 1,
+    position = [0, 0, 0] as CoordinateTuple
   } = options
 
   const initialValues = {
@@ -540,17 +531,6 @@ export const getBall = (
     position,
     color: options.color
   }
-
-  const geometry = new THREE.SphereGeometry(size as number)
-  const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
-
-  applyTextureToMesh(mesh, texture)
-
-  if (name) mesh.name = name
-  mesh.position.set(...position)
-  mesh.castShadow = castShadow
-  mesh.receiveShadow = receiveShadow
-  scene.add(mesh)
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     ...options,
@@ -565,7 +545,7 @@ export const getBall = (
     scene.add(helper)
   }
 
-  const complexModel = Object.assign(mesh, {
+  Object.assign(mesh, {
     userData: buildComplexModelUserData({
       rigidBody,
       collider,
@@ -580,8 +560,48 @@ export const getBall = (
   })
 
   if (onSpawn) onSpawn()
+}
 
-  return complexModel
+/**
+ * Create a ball mesh, with optional physics, texture, and shadow
+ * @param scene The Three.js scene
+ * @param world The Rapier physics world, or undefined for a mesh-only ball
+ * @param options Model options including physics and render settings
+ * @returns A ComplexModel when world is provided, or a plain THREE.Mesh otherwise
+ */
+export const getBall = (
+  scene: THREE.Scene,
+  world: RAPIER.World | undefined,
+  options: ModelOptions = {}
+): THREE.Mesh => {
+  const {
+    name,
+    size = 1,
+    position = [0, 0, 0] as CoordinateTuple,
+    texture,
+    castShadow = true,
+    receiveShadow = true,
+    segments = 32,
+    setUV2 = false
+  } = options
+
+  const geometry = new THREE.SphereGeometry(size as number, segments, segments)
+  if (setUV2) geometry.setAttribute('uv2', geometry.attributes['uv'])
+  const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
+
+  applyTextureToMesh(mesh, texture)
+
+  if (name) mesh.name = name
+  mesh.position.set(...position)
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
+  scene.add(mesh)
+
+  if (!world) return mesh
+
+  attachBallPhysics(scene, mesh, world, options)
+
+  return mesh
 }
 
 /**
