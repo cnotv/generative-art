@@ -77,16 +77,14 @@ import {
   LABEL_Y_OFFSET,
   DESCRIPTION_Y_OFFSET,
   PROPERTIES_Y_OFFSET,
-  SPECIAL_ROW_Y,
-  SPECIAL_ROW_HALF_WIDTH,
+  SPECIAL_COLUMN_X,
+  SPECIAL_COLUMN_Y_START,
+  SPECIAL_COLUMN_Y_SPACING,
+  SPECIAL_DEBUG_TITLE_Y,
+  SPECIAL_DEBUG_TITLE,
   SPECIAL_LABEL_Y_OFFSET,
   SPECIAL_DESCRIPTION_Y_OFFSET,
   SPECIAL_PROPERTIES_Y_OFFSET,
-  SEPARATOR_Y,
-  SEPARATOR_LABEL_Y_OFFSET,
-  SEPARATOR_COLOR,
-  SEPARATOR_LABEL,
-  SPECIAL_ROW_WIDTH,
   LABEL_FONT_SIZE,
   DESCRIPTION_FONT_SIZE,
   PROPERTIES_FONT_SIZE,
@@ -295,54 +293,23 @@ const createWavePath = (scene: THREE.Scene): THREE.Vector3[] => {
   return curve.getSpacedPoints(MAIN_MATERIAL_TYPES.length - 1)
 }
 
-const HORIZONTAL_PATH_POINT_COUNT = 60
-
-const createDashedHorizontalPath = (scene: THREE.Scene, halfWidth: number, y: number): void => {
-  const dashMaterial = new THREE.MeshBasicMaterial({ color: WAVE_COLOR })
-  const dashGroup = new THREE.Group()
-  const allPoints = Array.from({ length: HORIZONTAL_PATH_POINT_COUNT + 1 }, (_, i) => {
-    const t = i / HORIZONTAL_PATH_POINT_COUNT
-    return new THREE.Vector3(t * halfWidth * 2 - halfWidth, y, 0)
-  })
-  const pointsPerDash = (HORIZONTAL_PATH_POINT_COUNT + 1) / WAVE_DASH_COUNT
-  const dashPointCount = Math.floor(pointsPerDash * WAVE_DASH_DUTY)
-
-  Array.from({ length: WAVE_DASH_COUNT }, (_, dashIndex) => {
-    const startIndex = Math.floor(dashIndex * pointsPerDash)
-    const segmentPoints = allPoints.slice(startIndex, startIndex + dashPointCount + 1)
-    if (segmentPoints.length < 2) return
-    const segmentCurve = new THREE.CatmullRomCurve3(segmentPoints)
-    const tubeGeometry = new THREE.TubeGeometry(
-      segmentCurve,
-      Math.max(2, dashPointCount),
-      WAVE_TUBE_RADIUS,
-      WAVE_TUBE_RADIAL_SEGMENTS,
-      false
-    )
-    dashGroup.add(new THREE.Mesh(tubeGeometry, dashMaterial))
-  })
-  scene.add(dashGroup)
-}
-
-const createSpecialRow = (scene: THREE.Scene): THREE.Vector3[] => {
-  createDashedHorizontalPath(scene, SPECIAL_ROW_HALF_WIDTH, SPECIAL_ROW_Y)
-  return Array.from(SPECIAL_MATERIAL_TYPES, (_, i) => {
-    const t = i / (SPECIAL_MATERIAL_TYPES.length - 1)
-    return new THREE.Vector3(t * SPECIAL_ROW_WIDTH - SPECIAL_ROW_HALF_WIDTH, SPECIAL_ROW_Y, 0)
-  })
-}
-
-const createSeparator = (scene: THREE.Scene): void => {
-  createDashedHorizontalPath(scene, WAVE_HALF_WIDTH, SEPARATOR_Y)
-  const label = createTextSprite({
-    text: SEPARATOR_LABEL,
-    fontSize: 32,
+const createSpecialColumn = (scene: THREE.Scene): THREE.Vector3[] => {
+  const title = createTextSprite({
+    text: SPECIAL_DEBUG_TITLE,
+    fontSize: 48,
     color: '#667788',
-    scaleY: 0.35,
+    fontStyle: 'bold',
+    scaleY: 0.5,
     autoAspect: true
   })
-  label.position.set(0, SEPARATOR_Y + SEPARATOR_LABEL_Y_OFFSET, 0)
-  scene.add(label)
+  title.position.set(SPECIAL_COLUMN_X, SPECIAL_DEBUG_TITLE_Y, 0)
+  scene.add(title)
+
+  return Array.from(
+    SPECIAL_MATERIAL_TYPES,
+    (_, i) =>
+      new THREE.Vector3(SPECIAL_COLUMN_X, SPECIAL_COLUMN_Y_START - i * SPECIAL_COLUMN_Y_SPACING, 0)
+  )
 }
 
 const buildMaterial = (
@@ -622,8 +589,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
         scene.add(ground)
 
         const wavePositions = createWavePath(scene)
-        const specialPositions = createSpecialRow(scene)
-        createSeparator(scene)
+        const specialPositions = createSpecialColumn(scene)
         createSpheres(scene, wavePositions, specialPositions)
 
         directionalLightReference =

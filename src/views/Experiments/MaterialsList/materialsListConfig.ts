@@ -157,17 +157,14 @@ export const LABEL_Y_OFFSET = 1.5
 export const DESCRIPTION_Y_OFFSET = 2.5
 export const PROPERTIES_Y_OFFSET = 3.5
 
-export const SPECIAL_ROW_Y = -7.0
-export const SPECIAL_ROW_HALF_WIDTH = 6
-export const SPECIAL_ROW_WIDTH = SPECIAL_ROW_HALF_WIDTH * 2
+export const SPECIAL_COLUMN_X = 11.5
+export const SPECIAL_COLUMN_Y_START = 2.5
+export const SPECIAL_COLUMN_Y_SPACING = 3.0
+export const SPECIAL_DEBUG_TITLE_Y = 5.0
+export const SPECIAL_DEBUG_TITLE = 'Debug'
 export const SPECIAL_LABEL_Y_OFFSET = 0.8
 export const SPECIAL_DESCRIPTION_Y_OFFSET = 1.4
 export const SPECIAL_PROPERTIES_Y_OFFSET = 2.0
-
-export const SEPARATOR_Y = -4.5
-export const SEPARATOR_LABEL_Y_OFFSET = 0.35
-export const SEPARATOR_COLOR = 0x445566
-export const SEPARATOR_LABEL = 'Debug Shaders'
 
 export const LABEL_FONT_SIZE = 72
 export const DESCRIPTION_FONT_SIZE = 50
