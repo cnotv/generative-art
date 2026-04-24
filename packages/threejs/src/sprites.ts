@@ -13,6 +13,7 @@ export interface TextSpriteOptions {
   autoAspect?: boolean
   canvasWidth?: number
   canvasHeight?: number
+  valueColor?: string
 }
 
 const TEXT_LEFT_MARGIN_RATIO = 0.05
@@ -30,6 +31,42 @@ const resolveXPosition = (
     return (canvasWidth - maxLineWidth) / 2
   }
   return canvasWidth * TEXT_LEFT_MARGIN_RATIO
+}
+
+interface LineRenderOptions {
+  color: string
+  fontSize: number
+  fontFamily: string
+  fontStyle: string
+  valueColor: string | undefined
+}
+
+const drawTextLine = (
+  context: CanvasRenderingContext2D,
+  line: string,
+  xPosition: number,
+  yPosition: number,
+  renderOptions: LineRenderOptions
+): void => {
+  const { color, fontSize, fontFamily, fontStyle, valueColor } = renderOptions
+  const normalFont = `${fontStyle} ${fontSize}px ${fontFamily}`
+
+  if (valueColor && line.includes(': ')) {
+    const colonPos = line.indexOf(': ')
+    const keyPart = line.substring(0, colonPos + 2)
+    const valuePart = line.substring(colonPos + 2)
+    context.font = normalFont
+    context.fillStyle = color
+    context.fillText(keyPart, xPosition, yPosition)
+    const keyWidth = context.measureText(keyPart).width
+    context.font = `bold ${fontSize}px ${fontFamily}`
+    context.fillStyle = valueColor
+    context.fillText(valuePart, xPosition + keyWidth, yPosition)
+    context.font = normalFont
+  } else {
+    context.fillStyle = color
+    context.fillText(line, xPosition, yPosition)
+  }
 }
 
 /**
@@ -50,7 +87,8 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
     centerBlock = false,
     autoAspect = false,
     canvasWidth = 1024,
-    canvasHeight = 80
+    canvasHeight = 80,
+    valueColor
   } = options
 
   const lines = text.split('\n')
@@ -65,9 +103,16 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
   context.textBaseline = 'middle'
   const lineHeight = canvas.height / lines.length
   const xPosition = resolveXPosition(align, canvasWidth, centerBlock, context, lines)
+  const lineRenderOptions: LineRenderOptions = {
+    color,
+    fontSize,
+    fontFamily,
+    fontStyle,
+    valueColor
+  }
 
   Array.from(lines, (line, i) => {
-    context.fillText(line, xPosition, lineHeight * i + lineHeight / 2)
+    drawTextLine(context, line, xPosition, lineHeight * i + lineHeight / 2, lineRenderOptions)
     return null
   })
 

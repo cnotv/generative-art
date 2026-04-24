@@ -13,6 +13,8 @@ import brickTextureUrl from '@/assets/images/textures/brick.jpg'
 import type { MaterialTypeName, MapToggleKey, MaterialsListConfig } from './types'
 import {
   MATERIAL_TYPES,
+  MAIN_MATERIAL_TYPES,
+  SPECIAL_MATERIAL_TYPES,
   MATERIAL_LABELS,
   MATERIAL_DESCRIPTIONS,
   MATERIAL_PROPERTIES,
@@ -33,6 +35,7 @@ import {
   TEXT_COLOR_LABEL,
   TEXT_COLOR_DESCRIPTION,
   TEXT_COLOR_PROPERTIES,
+  TEXT_COLOR_VALUE,
   PROCEDURAL_TEXTURE_SIZE,
   DISPLACEMENT_SCALE,
   NORMAL_STRENGTH,
@@ -74,6 +77,16 @@ import {
   LABEL_Y_OFFSET,
   DESCRIPTION_Y_OFFSET,
   PROPERTIES_Y_OFFSET,
+  SPECIAL_ROW_Y,
+  SPECIAL_ROW_HALF_WIDTH,
+  SPECIAL_LABEL_Y_OFFSET,
+  SPECIAL_DESCRIPTION_Y_OFFSET,
+  SPECIAL_PROPERTIES_Y_OFFSET,
+  SEPARATOR_Y,
+  SEPARATOR_LABEL_Y_OFFSET,
+  SEPARATOR_COLOR,
+  SEPARATOR_LABEL,
+  SPECIAL_ROW_WIDTH,
   LABEL_FONT_SIZE,
   DESCRIPTION_FONT_SIZE,
   PROPERTIES_FONT_SIZE,
@@ -279,7 +292,57 @@ const createWavePath = (scene: THREE.Scene): THREE.Vector3[] => {
   })
   scene.add(dashGroup)
 
-  return curve.getSpacedPoints(MATERIAL_TYPES.length - 1)
+  return curve.getSpacedPoints(MAIN_MATERIAL_TYPES.length - 1)
+}
+
+const HORIZONTAL_PATH_POINT_COUNT = 60
+
+const createDashedHorizontalPath = (scene: THREE.Scene, halfWidth: number, y: number): void => {
+  const dashMaterial = new THREE.MeshBasicMaterial({ color: WAVE_COLOR })
+  const dashGroup = new THREE.Group()
+  const allPoints = Array.from({ length: HORIZONTAL_PATH_POINT_COUNT + 1 }, (_, i) => {
+    const t = i / HORIZONTAL_PATH_POINT_COUNT
+    return new THREE.Vector3(t * halfWidth * 2 - halfWidth, y, 0)
+  })
+  const pointsPerDash = (HORIZONTAL_PATH_POINT_COUNT + 1) / WAVE_DASH_COUNT
+  const dashPointCount = Math.floor(pointsPerDash * WAVE_DASH_DUTY)
+
+  Array.from({ length: WAVE_DASH_COUNT }, (_, dashIndex) => {
+    const startIndex = Math.floor(dashIndex * pointsPerDash)
+    const segmentPoints = allPoints.slice(startIndex, startIndex + dashPointCount + 1)
+    if (segmentPoints.length < 2) return
+    const segmentCurve = new THREE.CatmullRomCurve3(segmentPoints)
+    const tubeGeometry = new THREE.TubeGeometry(
+      segmentCurve,
+      Math.max(2, dashPointCount),
+      WAVE_TUBE_RADIUS,
+      WAVE_TUBE_RADIAL_SEGMENTS,
+      false
+    )
+    dashGroup.add(new THREE.Mesh(tubeGeometry, dashMaterial))
+  })
+  scene.add(dashGroup)
+}
+
+const createSpecialRow = (scene: THREE.Scene): THREE.Vector3[] => {
+  createDashedHorizontalPath(scene, SPECIAL_ROW_HALF_WIDTH, SPECIAL_ROW_Y)
+  return Array.from(SPECIAL_MATERIAL_TYPES, (_, i) => {
+    const t = i / (SPECIAL_MATERIAL_TYPES.length - 1)
+    return new THREE.Vector3(t * SPECIAL_ROW_WIDTH - SPECIAL_ROW_HALF_WIDTH, SPECIAL_ROW_Y, 0)
+  })
+}
+
+const createSeparator = (scene: THREE.Scene): void => {
+  createDashedHorizontalPath(scene, WAVE_HALF_WIDTH, SEPARATOR_Y)
+  const label = createTextSprite({
+    text: SEPARATOR_LABEL,
+    fontSize: 32,
+    color: '#667788',
+    scaleY: 0.35,
+    autoAspect: true
+  })
+  label.position.set(0, SEPARATOR_Y + SEPARATOR_LABEL_Y_OFFSET, 0)
+  scene.add(label)
 }
 
 const buildMaterial = (
@@ -365,14 +428,25 @@ const rebuildMaterials = (): void => {
   })
 }
 
-const createSpheres = (scene: THREE.Scene, wavePositions: THREE.Vector3[]): void => {
+interface TextOffsets {
+  label: number
+  description: number
+  properties: number
+}
+
+const createSphereGroup = (
+  scene: THREE.Scene,
+  types: MaterialTypeName[],
+  positions: THREE.Vector3[],
+  offsets: TextOffsets
+): THREE.Mesh[] => {
   const configValues = reactiveConfig.value
   const maps = getEnabledMaps(configValues)
 
-  sphereMeshes = MATERIAL_TYPES.map((typeName, index) => {
+  return types.map((typeName, index) => {
     const supported = MATERIAL_FEATURES[typeName]
     const material = buildMaterial(typeName, supported, maps, configValues)
-    const position = wavePositions[index]
+    const position = positions[index]
     const mesh = getBall(scene, undefined, {
       name: typeName,
       size: SPHERE_RADIUS,
@@ -381,11 +455,6 @@ const createSpheres = (scene: THREE.Scene, wavePositions: THREE.Vector3[]): void
       segments: SPHERE_SEGMENT_COUNT,
       setUV2: true
     })
-
-    const textSide = index % 2 === 0 ? 1 : -1
-    const labelY = position.y + textSide * LABEL_Y_OFFSET
-    const descriptionY = position.y + textSide * DESCRIPTION_Y_OFFSET
-    const propertiesY = position.y + textSide * PROPERTIES_Y_OFFSET
 
     const label = createTextSprite({
       text: MATERIAL_LABELS[typeName],
@@ -396,7 +465,7 @@ const createSpheres = (scene: THREE.Scene, wavePositions: THREE.Vector3[]): void
       canvasWidth: 512,
       autoAspect: true
     })
-    label.position.set(position.x, labelY, 0)
+    label.position.set(position.x, position.y + offsets.label, 0)
     scene.add(label)
 
     const description = createTextSprite({
@@ -409,7 +478,7 @@ const createSpheres = (scene: THREE.Scene, wavePositions: THREE.Vector3[]): void
       align: 'left',
       centerBlock: true
     })
-    description.position.set(position.x, descriptionY, 0)
+    description.position.set(position.x, position.y + offsets.description, 0)
     scene.add(description)
 
     const properties = createTextSprite({
@@ -420,13 +489,32 @@ const createSpheres = (scene: THREE.Scene, wavePositions: THREE.Vector3[]): void
       color: TEXT_COLOR_PROPERTIES,
       fontFamily: 'monospace',
       align: 'left',
-      centerBlock: true
+      centerBlock: true,
+      valueColor: TEXT_COLOR_VALUE
     })
-    properties.position.set(position.x, propertiesY, 0)
+    properties.position.set(position.x, position.y + offsets.properties, 0)
     scene.add(properties)
 
     return mesh
   })
+}
+
+const createSpheres = (
+  scene: THREE.Scene,
+  mainPositions: THREE.Vector3[],
+  specialPositions: THREE.Vector3[]
+): void => {
+  const mainMeshes = createSphereGroup(scene, MAIN_MATERIAL_TYPES, mainPositions, {
+    label: LABEL_Y_OFFSET,
+    description: DESCRIPTION_Y_OFFSET,
+    properties: PROPERTIES_Y_OFFSET
+  })
+  const specialMeshes = createSphereGroup(scene, SPECIAL_MATERIAL_TYPES, specialPositions, {
+    label: SPECIAL_LABEL_Y_OFFSET,
+    description: SPECIAL_DESCRIPTION_Y_OFFSET,
+    properties: SPECIAL_PROPERTIES_Y_OFFSET
+  })
+  sphereMeshes = [...mainMeshes, ...specialMeshes]
 }
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
@@ -534,7 +622,9 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
         scene.add(ground)
 
         const wavePositions = createWavePath(scene)
-        createSpheres(scene, wavePositions)
+        const specialPositions = createSpecialRow(scene)
+        createSeparator(scene)
+        createSpheres(scene, wavePositions, specialPositions)
 
         directionalLightReference =
           scene.children.find(

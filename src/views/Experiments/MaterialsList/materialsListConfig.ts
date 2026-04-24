@@ -19,6 +19,20 @@ export const MATERIAL_TYPES: MaterialTypeName[] = [
   'MeshDepthMaterial'
 ]
 
+export const MAIN_MATERIAL_TYPES: MaterialTypeName[] = [
+  'MeshBasicMaterial',
+  'MeshLambertMaterial',
+  'MeshPhongMaterial',
+  'MeshStandardMaterial',
+  'MeshPhysicalMaterial'
+]
+
+export const SPECIAL_MATERIAL_TYPES: MaterialTypeName[] = [
+  'MeshToonMaterial',
+  'MeshNormalMaterial',
+  'MeshDepthMaterial'
+]
+
 export const MATERIAL_LABELS: Record<MaterialTypeName, string> = {
   MeshBasicMaterial: 'Basic',
   MeshLambertMaterial: 'Lambert',
@@ -42,14 +56,14 @@ export const MATERIAL_DESCRIPTIONS: Record<MaterialTypeName, string> = {
 }
 
 export const MATERIAL_PROPERTIES: Record<MaterialTypeName, string> = {
-  MeshBasicMaterial: '{\n  color\n  map\n  aoMap\n  envMap\n}',
-  MeshLambertMaterial: '{\n  normalMap\n  emissiveMap\n}',
-  MeshPhongMaterial: '{\n  displacementMap\n  shininess: number\n}',
+  MeshBasicMaterial: '{\n  color: Color\n  map: Texture\n  aoMap: Texture\n  envMap: Texture\n}',
+  MeshLambertMaterial: '{\n  normalMap: Texture\n  emissiveMap: Texture\n}',
+  MeshPhongMaterial: '{\n  displacementMap: Texture\n  shininess: number\n}',
   MeshStandardMaterial: '{\n  roughness: number\n  metalness: number\n}',
   MeshPhysicalMaterial: '{\n  clearcoat: number\n  transmission: number\n}',
   MeshToonMaterial: '{\n  gradientMap: Texture\n}',
-  MeshNormalMaterial: '{\n  normalMap\n  flatShading: boolean\n}',
-  MeshDepthMaterial: '{\n  displacementMap\n  depthPacking: number\n}'
+  MeshNormalMaterial: '{\n  normalMap: Texture\n  flatShading: boolean\n}',
+  MeshDepthMaterial: '{\n  displacementMap: Texture\n  depthPacking: number\n}'
 }
 
 export const MATERIAL_FEATURES: MaterialFeatureMap = {
@@ -96,6 +110,7 @@ export const WAVE_DASH_DUTY = 0.55
 export const TEXT_COLOR_LABEL = '#ffffff'
 export const TEXT_COLOR_DESCRIPTION = '#ffdd55'
 export const TEXT_COLOR_PROPERTIES = '#88aaff'
+export const TEXT_COLOR_VALUE = '#ffffff'
 export const PROCEDURAL_TEXTURE_SIZE = 512
 export const DISPLACEMENT_SCALE = 0.25
 export const NORMAL_STRENGTH = 2
@@ -141,6 +156,18 @@ export const ORTHO_CAMERA_DISTANCE = 20
 export const LABEL_Y_OFFSET = 1.5
 export const DESCRIPTION_Y_OFFSET = 2.5
 export const PROPERTIES_Y_OFFSET = 3.5
+
+export const SPECIAL_ROW_Y = -7.0
+export const SPECIAL_ROW_HALF_WIDTH = 6
+export const SPECIAL_ROW_WIDTH = SPECIAL_ROW_HALF_WIDTH * 2
+export const SPECIAL_LABEL_Y_OFFSET = 0.8
+export const SPECIAL_DESCRIPTION_Y_OFFSET = 1.4
+export const SPECIAL_PROPERTIES_Y_OFFSET = 2.0
+
+export const SEPARATOR_Y = -4.5
+export const SEPARATOR_LABEL_Y_OFFSET = 0.35
+export const SEPARATOR_COLOR = 0x445566
+export const SEPARATOR_LABEL = 'Debug Shaders'
 
 export const LABEL_FONT_SIZE = 72
 export const DESCRIPTION_FONT_SIZE = 50
