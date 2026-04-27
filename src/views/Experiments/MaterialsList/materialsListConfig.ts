@@ -159,7 +159,7 @@ export const PROPERTIES_Y_OFFSET = 3.5
 
 export const SPECIAL_COLUMN_X = 13.5
 export const SPECIAL_COLUMN_Y_START = 2.5
-export const SPECIAL_COLUMN_Y_SPACING = 3.0
+export const SPECIAL_COLUMN_Y_SPACING = 4.5
 export const SPECIAL_DEBUG_TITLE_Y = 5.0
 export const SPECIAL_DEBUG_TITLE = 'Debug'
 export const SPECIAL_LABEL_Y_OFFSET = 0.8
