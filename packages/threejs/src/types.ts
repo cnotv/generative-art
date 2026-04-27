@@ -32,7 +32,9 @@ export interface ModelOptions extends CommonOptions {
   metalness?: number
   transmission?: number
   transparent?: boolean
-  material?: typeof THREE.Material | string | boolean
+  material?: THREE.Material | typeof THREE.Material | string | boolean
+  segments?: number
+  setUV2?: boolean
   rotation?: CoordinateTuple
   scale?: CoordinateTuple
   shape?: 'cuboid' | 'ball'

@@ -110,6 +110,8 @@
 - **Reuse shared utilities first**: Before implementing Three.js patterns (camera properties, orbit controls, element registration), check `src/utils/` and `src/stores/` for existing shared utilities. Extend them if needed rather than duplicating logic inline. Key utilities: `src/utils/cameraProperties.ts` (camera + orbit), `src/utils/threeObjectUpdaters.ts` (lint-safe mutations), `src/stores/sceneView.ts` (full scene lifecycle)
 - **Single responsibility**: Keep functions focused on one task
 - **Framework-agnostic packages**: `@webgamekit/*` packages must not depend on Vue/React
+- **Config files**: Every view that has constants, types, or configuration must extract them into a co-located `config.ts` (or `<viewName>Config.ts`) file in the same directory. The view file should only contain setup, lifecycle, and rendering logic
+- **Use `getTools()`**: Three.js views must use `getTools()` from `@webgamekit/threejs` for scene initialization, and `controls.create()` / `stats` / `video` from `src/utils/` for configuration panels, performance stats, and recording
 
 ## Documentation
 
