@@ -14,6 +14,7 @@ export interface TextSpriteOptions {
   canvasWidth?: number
   canvasHeight?: number
   valueColor?: string
+  lineColors?: (string | undefined)[]
 }
 
 const TEXT_LEFT_MARGIN_RATIO = 0.05
@@ -88,7 +89,8 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
     autoAspect = false,
     canvasWidth = 1024,
     canvasHeight = 80,
-    valueColor
+    valueColor,
+    lineColors
   } = options
 
   const lines = text.split('\n')
@@ -112,7 +114,14 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
   }
 
   Array.from(lines, (line, i) => {
-    drawTextLine(context, line, xPosition, lineHeight * i + lineHeight / 2, lineRenderOptions)
+    const overrideColor = lineColors?.[i]
+    if (overrideColor !== undefined) {
+      context.font = `${fontStyle} ${fontSize}px ${fontFamily}`
+      context.fillStyle = overrideColor
+      context.fillText(line, xPosition, lineHeight * i + lineHeight / 2)
+    } else {
+      drawTextLine(context, line, xPosition, lineHeight * i + lineHeight / 2, lineRenderOptions)
+    }
     return null
   })
 

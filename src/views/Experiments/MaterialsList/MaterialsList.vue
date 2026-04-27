@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { stats } from '@/utils/stats'
-import { getTools, getBall, createTextSprite } from '@webgamekit/threejs'
+import { getTools, createTextSprite } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -13,27 +13,10 @@ import brickTextureUrl from '@/assets/images/textures/brick.jpg'
 import type { MaterialTypeName, MapToggleKey, MaterialsListConfig } from './types'
 import {
   MATERIAL_TYPES,
-  MAIN_MATERIAL_TYPES,
-  SPECIAL_MATERIAL_TYPES,
   MATERIAL_LABELS,
-  MATERIAL_DESCRIPTIONS,
-  MATERIAL_PROPERTIES,
   MATERIAL_FEATURES,
   SPHERE_SEGMENT_COUNT,
-  SPHERE_RADIUS,
-  WAVE_WIDTH,
-  WAVE_HALF_WIDTH,
-  WAVE_AMPLITUDE,
-  WAVE_Y_OFFSET,
-  WAVE_CYCLES,
-  WAVE_SEGMENTS,
-  WAVE_COLOR,
-  WAVE_TUBE_RADIUS,
-  WAVE_TUBE_RADIAL_SEGMENTS,
-  WAVE_DASH_COUNT,
-  WAVE_DASH_DUTY,
   TEXT_COLOR_LABEL,
-  TEXT_COLOR_DESCRIPTION,
   TEXT_COLOR_PROPERTIES,
   TEXT_COLOR_VALUE,
   PROCEDURAL_TEXTURE_SIZE,
@@ -59,12 +42,6 @@ import {
   ENV_SKY_COLOR,
   ENV_GROUND_COLOR,
   SCENE_BG_COLOR,
-  GROUND_WIDTH,
-  GROUND_DEPTH,
-  GROUND_COLOR,
-  GROUND_ROTATION_X,
-  GROUND_BACKGROUND_Y,
-  GROUND_BACKGROUND_Z,
   LIGHT_INTENSITY,
   HEMISPHERE_SKY,
   HEMISPHERE_GROUND,
@@ -74,44 +51,26 @@ import {
   ORTHO_FAR_PLANE,
   ORTHO_FRUSTUM_HALF_HEIGHT,
   ORTHO_CAMERA_DISTANCE,
-  LABEL_Y_OFFSET,
-  DESCRIPTION_Y_OFFSET,
-  PROPERTIES_Y_OFFSET,
-  SPECIAL_COLUMN_X,
-  SPECIAL_COLUMN_Y_START,
-  SPECIAL_COLUMN_Y_SPACING,
-  LEGEND_SWATCH_Y,
-  LEGEND_SWATCH_SIZE,
-  LEGEND_SWATCH_SPACING,
-  LEGEND_LABEL_Y_OFFSET,
-  LEGEND_PROPS_Y,
-  LEGEND_PROPERTIES_TEXT,
-  LEGEND_FONT_SIZE_LABEL,
-  LEGEND_SCALE_LABEL,
-  LEGEND_LABEL_CANVAS_WIDTH,
-  LEGEND_FONT_SIZE_PROPS,
-  LEGEND_SCALE_PROPS,
-  SPECIAL_LABEL_Y_OFFSET,
-  SPECIAL_DESCRIPTION_Y_OFFSET,
-  SPECIAL_PROPERTIES_Y_OFFSET,
   LABEL_FONT_SIZE,
-  DESCRIPTION_FONT_SIZE,
   PROPERTIES_FONT_SIZE,
   LABEL_SPRITE_SCALE_Y,
-  DESCRIPTION_SPRITE_SCALE_X,
-  DESCRIPTION_SPRITE_SCALE_Y,
-  PROPERTIES_SPRITE_SCALE_X,
-  PROPERTIES_SPRITE_SCALE_Y,
   TARGET_FPS,
   AMBIENT_LIGHT_INTENSITY,
   BRICK_WIDTH,
   BRICK_HEIGHT,
   MORTAR_SIZE,
   MORTAR_EDGE_OFFSET,
-  MORTAR_EDGE_SIZE,
   DEFAULT_CONFIG,
   CONFIG_SCHEMA,
-  getEnabledMaps
+  getEnabledMaps,
+  SHOWCASE_SPHERE_RADIUS,
+  SHOWCASE_TITLE_Y,
+  SHOWCASE_ATTRS_CENTER_Y,
+  SHOWCASE_ATTR_SCALE_X,
+  SHOWCASE_ATTR_SCALE_Y,
+  ATTR_COLOR_DISABLED,
+  ALL_ATTRIBUTES,
+  MATERIAL_ATTRIBUTE_SUPPORT
 } from './materialsListConfig'
 
 const statsElement = ref(null)
@@ -120,7 +79,13 @@ const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 
-let sphereMeshes: THREE.Mesh[] = []
+let showcaseSphere: THREE.Mesh | null = null
+let titleSpriteReference: THREE.Sprite | null = null
+let attributeBlockReference: THREE.Sprite | null = null
+let sceneReference: THREE.Scene | null = null
+let canvasElementReference: HTMLCanvasElement | null = null
+let currentMaterialIndex = 0
+
 let envMap: THREE.Texture | null = null
 const textures: Record<string, THREE.Texture> = {}
 let directionalLightReference: THREE.DirectionalLight | null = null
@@ -166,13 +131,13 @@ const drawNormalMap = (context: CanvasRenderingContext2D, size: number): void =>
       const normalX =
         brickX < MORTAR_SIZE + MORTAR_EDGE_OFFSET
           ? depressedValue
-          : brickX > BRICK_WIDTH - MORTAR_EDGE_SIZE
+          : brickX > BRICK_WIDTH - MORTAR_EDGE_OFFSET
             ? raisedValue
             : neutralGray
       const normalY =
         brickY < MORTAR_SIZE + MORTAR_EDGE_OFFSET
           ? depressedValue
-          : brickY > BRICK_HEIGHT - MORTAR_EDGE_SIZE
+          : brickY > BRICK_HEIGHT - MORTAR_EDGE_OFFSET
             ? raisedValue
             : neutralGray
       imageData.data[dataIndex] = normalX
@@ -268,97 +233,6 @@ const createEnvironmentMap = (rendererInstance: THREE.WebGLRenderer): THREE.Text
   return renderTarget.texture
 }
 
-const createWavePath = (scene: THREE.Scene): THREE.Vector3[] => {
-  const controlPoints = Array.from({ length: WAVE_SEGMENTS }, (_, i) => {
-    const t = i / (WAVE_SEGMENTS - 1)
-    const x = t * WAVE_WIDTH - WAVE_HALF_WIDTH
-    const y = WAVE_AMPLITUDE * Math.sin(t * Math.PI * 2 * WAVE_CYCLES) + WAVE_Y_OFFSET
-    return new THREE.Vector3(x, y, 0)
-  })
-  const curve = new THREE.CatmullRomCurve3(controlPoints)
-
-  const allPoints = curve.getSpacedPoints(WAVE_SEGMENTS)
-  const pointsPerDash = (WAVE_SEGMENTS + 1) / WAVE_DASH_COUNT
-  const dashPointCount = Math.floor(pointsPerDash * WAVE_DASH_DUTY)
-  const dashMaterial = new THREE.MeshBasicMaterial({ color: WAVE_COLOR })
-  const dashGroup = new THREE.Group()
-
-  Array.from({ length: WAVE_DASH_COUNT }, (_, dashIndex) => {
-    const startIndex = Math.floor(dashIndex * pointsPerDash)
-    const segmentPoints = allPoints.slice(startIndex, startIndex + dashPointCount + 1)
-    if (segmentPoints.length < 2) return
-    const segmentCurve = new THREE.CatmullRomCurve3(segmentPoints)
-    const tubeGeometry = new THREE.TubeGeometry(
-      segmentCurve,
-      Math.max(2, dashPointCount),
-      WAVE_TUBE_RADIUS,
-      WAVE_TUBE_RADIAL_SEGMENTS,
-      false
-    )
-    dashGroup.add(new THREE.Mesh(tubeGeometry, dashMaterial))
-  })
-  scene.add(dashGroup)
-
-  return curve.getSpacedPoints(MAIN_MATERIAL_TYPES.length - 1)
-}
-
-const createSpecialColumn = (): THREE.Vector3[] =>
-  Array.from(
-    SPECIAL_MATERIAL_TYPES,
-    (_, i) =>
-      new THREE.Vector3(SPECIAL_COLUMN_X, SPECIAL_COLUMN_Y_START - i * SPECIAL_COLUMN_Y_SPACING, 0)
-  )
-
-const createLegend = (scene: THREE.Scene): void => {
-  const swatchDefs = [
-    { texture: textures.diffuse, label: 'Diffuse\nbase color' },
-    { texture: textures.normal, label: 'Normal\ngeometry' },
-    { texture: textures.roughness, label: 'Roughness\nscatter' },
-    { texture: textures.ao, label: 'AO\nshadow' },
-    { texture: textures.displacement, label: 'Displacement\nvertex' },
-    { texture: textures.emissive, label: 'Emissive\nglow' }
-  ]
-
-  const halfSpan = ((swatchDefs.length - 1) / 2) * LEGEND_SWATCH_SPACING
-  const swatchMat = new THREE.MeshBasicMaterial()
-
-  swatchDefs.forEach(({ texture, label }, i) => {
-    const x = i * LEGEND_SWATCH_SPACING - halfSpan
-    const mat = swatchMat.clone()
-    mat.map = texture
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(LEGEND_SWATCH_SIZE, LEGEND_SWATCH_SIZE),
-      mat
-    )
-    plane.position.set(x, LEGEND_SWATCH_Y, 0)
-    scene.add(plane)
-
-    const labelSprite = createTextSprite({
-      text: label,
-      fontSize: LEGEND_FONT_SIZE_LABEL,
-      color: '#aabbcc',
-      canvasWidth: LEGEND_LABEL_CANVAS_WIDTH,
-      scaleY: LEGEND_SCALE_LABEL,
-      autoAspect: true
-    })
-    labelSprite.position.set(x, LEGEND_SWATCH_Y - LEGEND_LABEL_Y_OFFSET, 0)
-    scene.add(labelSprite)
-  })
-
-  swatchMat.dispose()
-
-  const propsSprite = createTextSprite({
-    text: LEGEND_PROPERTIES_TEXT,
-    fontSize: LEGEND_FONT_SIZE_PROPS,
-    color: '#889aaa',
-    canvasWidth: 2048,
-    scaleY: LEGEND_SCALE_PROPS,
-    autoAspect: true
-  })
-  propsSprite.position.set(0, LEGEND_PROPS_Y, 0)
-  scene.add(propsSprite)
-}
-
 const buildMaterial = (
   typeName: MaterialTypeName,
   supported: MapToggleKey[],
@@ -430,105 +304,105 @@ const buildMaterial = (
   return material
 }
 
+const buildShowcaseMaterial = (): THREE.Material => {
+  const typeName = MATERIAL_TYPES[currentMaterialIndex]
+  return buildMaterial(
+    typeName,
+    MATERIAL_FEATURES[typeName],
+    getEnabledMaps(reactiveConfig.value),
+    reactiveConfig.value
+  )
+}
+
 const rebuildMaterials = (): void => {
-  const configValues = reactiveConfig.value
-  const maps = getEnabledMaps(configValues)
-  sphereMeshes.forEach((mesh, index) => {
-    const typeName = MATERIAL_TYPES[index]
-    const supported = MATERIAL_FEATURES[typeName]
-    const oldMaterial = mesh.material as THREE.Material
-    mesh.material = buildMaterial(typeName, supported, maps, configValues)
+  if (!showcaseSphere) return
+  const oldMaterial = showcaseSphere.material as THREE.Material
+  showcaseSphere.material = buildShowcaseMaterial()
+  oldMaterial.dispose()
+}
+
+const removeSprite = (scene: THREE.Scene, sprite: THREE.Sprite | null): void => {
+  if (!sprite) return
+  scene.remove(sprite)
+  ;(sprite.material as THREE.SpriteMaterial).map?.dispose()
+  sprite.material.dispose()
+}
+
+const buildAttributeBlock = (scene: THREE.Scene, typeName: MaterialTypeName): THREE.Sprite => {
+  const supported = MATERIAL_ATTRIBUTE_SUPPORT[typeName]
+  const lines = ['{', ...ALL_ATTRIBUTES.map((a) => `  ${a.display}`), '}']
+  const lineColors: (string | undefined)[] = [
+    undefined,
+    ...ALL_ATTRIBUTES.map((a) => (supported.includes(a.key) ? undefined : ATTR_COLOR_DISABLED)),
+    undefined
+  ]
+  const sprite = createTextSprite({
+    text: lines.join('\n'),
+    fontSize: PROPERTIES_FONT_SIZE,
+    color: TEXT_COLOR_PROPERTIES,
+    valueColor: TEXT_COLOR_VALUE,
+    fontFamily: 'monospace',
+    align: 'left',
+    centerBlock: true,
+    scaleX: SHOWCASE_ATTR_SCALE_X,
+    scaleY: SHOWCASE_ATTR_SCALE_Y,
+    lineColors
+  })
+  sprite.position.set(0, SHOWCASE_ATTRS_CENTER_Y, 0)
+  scene.add(sprite)
+  return sprite
+}
+
+const updateShowcase = (scene: THREE.Scene): void => {
+  const typeName = MATERIAL_TYPES[currentMaterialIndex]
+
+  if (showcaseSphere) {
+    const oldMaterial = showcaseSphere.material as THREE.Material
+    showcaseSphere.material = buildShowcaseMaterial()
     oldMaterial.dispose()
+  }
+
+  removeSprite(scene, titleSpriteReference)
+  titleSpriteReference = createTextSprite({
+    text: MATERIAL_LABELS[typeName],
+    fontSize: LABEL_FONT_SIZE,
+    color: TEXT_COLOR_LABEL,
+    fontStyle: 'bold',
+    canvasWidth: 512,
+    scaleY: LABEL_SPRITE_SCALE_Y,
+    autoAspect: true
   })
+  titleSpriteReference.position.set(0, SHOWCASE_TITLE_Y, 0)
+  scene.add(titleSpriteReference)
+
+  removeSprite(scene, attributeBlockReference)
+  attributeBlockReference = buildAttributeBlock(scene, typeName)
 }
 
-interface TextOffsets {
-  label: number
-  description: number
-  properties: number
+const handleCanvasClick = (event: MouseEvent): void => {
+  if (!orthoCamera || !showcaseSphere || !sceneReference || !canvasElementReference) return
+  const rect = canvasElementReference.getBoundingClientRect()
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(new THREE.Vector2(x, y), orthoCamera)
+  const intersects = raycaster.intersectObject(showcaseSphere)
+  if (intersects.length > 0) {
+    currentMaterialIndex = (currentMaterialIndex + 1) % MATERIAL_TYPES.length
+    updateShowcase(sceneReference)
+    canvasElementReference.style.cursor = 'pointer'
+  }
 }
 
-const createSphereGroup = (
-  scene: THREE.Scene,
-  types: MaterialTypeName[],
-  positions: THREE.Vector3[],
-  offsets: TextOffsets
-): THREE.Mesh[] => {
-  const configValues = reactiveConfig.value
-  const maps = getEnabledMaps(configValues)
-
-  return types.map((typeName, index) => {
-    const supported = MATERIAL_FEATURES[typeName]
-    const material = buildMaterial(typeName, supported, maps, configValues)
-    const position = positions[index]
-    const mesh = getBall(scene, undefined, {
-      name: typeName,
-      size: SPHERE_RADIUS,
-      position: [position.x, position.y, position.z],
-      material,
-      segments: SPHERE_SEGMENT_COUNT,
-      setUV2: true
-    })
-
-    const label = createTextSprite({
-      text: MATERIAL_LABELS[typeName],
-      fontSize: LABEL_FONT_SIZE,
-      scaleY: LABEL_SPRITE_SCALE_Y,
-      color: TEXT_COLOR_LABEL,
-      fontStyle: 'bold',
-      canvasWidth: 512,
-      autoAspect: true
-    })
-    label.position.set(position.x, position.y + offsets.label, 0)
-    scene.add(label)
-
-    const description = createTextSprite({
-      text: MATERIAL_DESCRIPTIONS[typeName],
-      fontSize: DESCRIPTION_FONT_SIZE,
-      scaleX: DESCRIPTION_SPRITE_SCALE_X,
-      scaleY: DESCRIPTION_SPRITE_SCALE_Y,
-      color: TEXT_COLOR_DESCRIPTION,
-      fontStyle: '600',
-      align: 'left',
-      centerBlock: true
-    })
-    description.position.set(position.x, position.y + offsets.description, 0)
-    scene.add(description)
-
-    const properties = createTextSprite({
-      text: MATERIAL_PROPERTIES[typeName],
-      fontSize: PROPERTIES_FONT_SIZE,
-      scaleX: PROPERTIES_SPRITE_SCALE_X,
-      scaleY: PROPERTIES_SPRITE_SCALE_Y,
-      color: TEXT_COLOR_PROPERTIES,
-      fontFamily: 'monospace',
-      align: 'left',
-      centerBlock: true,
-      valueColor: TEXT_COLOR_VALUE
-    })
-    properties.position.set(position.x, position.y + offsets.properties, 0)
-    scene.add(properties)
-
-    return mesh
-  })
-}
-
-const createSpheres = (
-  scene: THREE.Scene,
-  mainPositions: THREE.Vector3[],
-  specialPositions: THREE.Vector3[]
-): void => {
-  const mainMeshes = createSphereGroup(scene, MAIN_MATERIAL_TYPES, mainPositions, {
-    label: LABEL_Y_OFFSET,
-    description: DESCRIPTION_Y_OFFSET,
-    properties: PROPERTIES_Y_OFFSET
-  })
-  const specialMeshes = createSphereGroup(scene, SPECIAL_MATERIAL_TYPES, specialPositions, {
-    label: -SPECIAL_LABEL_Y_OFFSET,
-    description: -SPECIAL_DESCRIPTION_Y_OFFSET,
-    properties: -SPECIAL_PROPERTIES_Y_OFFSET
-  })
-  sphereMeshes = [...mainMeshes, ...specialMeshes]
+const handleCanvasMouseMove = (event: MouseEvent): void => {
+  if (!orthoCamera || !showcaseSphere || !canvasElementReference) return
+  const rect = canvasElementReference.getBoundingClientRect()
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(new THREE.Vector2(x, y), orthoCamera)
+  const intersects = raycaster.intersectObject(showcaseSphere)
+  canvasElementReference.style.cursor = intersects.length > 0 ? 'pointer' : 'default'
 }
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
@@ -559,16 +433,10 @@ const handleResize = (): void => {
   orthoCamera.updateProjectionMatrix()
 }
 
-let initInstance: () => void
-
 onMounted(() => {
   setViewPanels({ showConfig: true })
   registerViewConfig(route.name as string, reactiveConfig as never, CONFIG_SCHEMA, rebuildMaterials)
-
-  initInstance = () => {
-    init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
-  }
-  initInstance()
+  init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
   window.addEventListener('resize', handleResize)
 })
 
@@ -577,112 +445,111 @@ onBeforeUnmount(() => {
   unregisterViewConfig(route.name as string)
   clearSceneElements()
   window.removeEventListener('resize', handleResize)
+  if (canvasElementReference) {
+    canvasElementReference.removeEventListener('click', handleCanvasClick)
+    canvasElementReference.removeEventListener('mousemove', handleCanvasMouseMove)
+  }
   if (orbitControls) orbitControls.dispose()
   Object.values(textures).forEach((texture) => texture.dispose())
   if (envMap) envMap.dispose()
-  sphereMeshes = []
+  showcaseSphere = null
+  titleSpriteReference = null
+  attributeBlockReference = null
+  sceneReference = null
+  canvasElementReference = null
 })
 
 const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElement) => {
   stats.init(route, statsElementNode)
+  canvasElementReference = canvasElement
 
-  const createScene = async () => {
-    loadTextures()
+  loadTextures()
 
-    const { setup, renderer, scene } = await getTools({
-      canvas: canvasElement,
-      resize: false
-    })
+  const { setup, renderer, scene } = await getTools({ canvas: canvasElement, resize: false })
+  sceneReference = scene
+  rendererReference = renderer
+  envMap = createEnvironmentMap(renderer)
 
-    rendererReference = renderer
-    envMap = createEnvironmentMap(renderer)
+  orthoCamera = createOrthographicCamera()
+  orbitControls = new OrbitControls(orthoCamera, renderer.domElement)
+  orbitControls.enableRotate = false
+  orbitControls.target.set(0, 0, 0)
+  orbitControls.update()
 
-    orthoCamera = createOrthographicCamera()
-    orbitControls = new OrbitControls(orthoCamera, renderer.domElement)
-    orbitControls.enableRotate = false
-    orbitControls.target.set(0, 0, 0)
-    orbitControls.update()
+  canvasElement.addEventListener('click', handleCanvasClick)
+  canvasElement.addEventListener('mousemove', handleCanvasMouseMove)
 
-    await setup({
-      config: {
-        scene: { backgroundColor: SCENE_BG_COLOR },
-        orbit: false,
-        ground: false,
-        lights: {
-          ambient: { intensity: AMBIENT_LIGHT_INTENSITY },
-          directional: {
-            intensity: LIGHT_INTENSITY,
-            position: [LIGHT_ORBIT_RADIUS, LIGHT_ORBIT_RADIUS, LIGHT_Z_POSITION] as [
-              number,
-              number,
-              number
-            ]
-          },
-          hemisphere: {
-            colors: [HEMISPHERE_SKY, HEMISPHERE_GROUND]
-          }
-        }
-      },
-      defineSetup: async () => {
-        const groundGeometry = new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_DEPTH)
-        const groundMaterial = new THREE.MeshStandardMaterial({
-          color: GROUND_COLOR,
-          roughness: 1,
-          metalness: 0
-        })
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-        ground.rotation.x = GROUND_ROTATION_X
-        ground.position.set(0, GROUND_BACKGROUND_Y, GROUND_BACKGROUND_Z)
-        ground.receiveShadow = true
-        scene.add(ground)
-
-        const wavePositions = createWavePath(scene)
-        const specialPositions = createSpecialColumn()
-        createSpheres(scene, wavePositions, specialPositions)
-        createLegend(scene)
-
-        directionalLightReference =
-          scene.children.find(
-            (child): child is THREE.DirectionalLight => child instanceof THREE.DirectionalLight
-          ) ?? null
-
-        let frameCount = 0
-        const timelineManager = createTimelineManager()
-        timelineManager.addAction({
-          name: 'Light orbit',
-          category: 'animation',
-          action: () => {
-            if (directionalLightReference) {
-              const angle = (frameCount * LIGHT_ORBIT_SPEED) / TARGET_FPS
-              directionalLightReference.position.set(
-                Math.sin(angle) * LIGHT_ORBIT_RADIUS,
-                Math.cos(angle) * LIGHT_ORBIT_RADIUS,
-                LIGHT_Z_POSITION
-              )
-            }
-          }
-        })
-        timelineManager.addAction({
-          name: 'Render',
-          category: 'render',
-          action: () => {
-            orbitControls?.update()
-            if (orthoCamera) renderer.render(scene, orthoCamera)
-          }
-        })
-
-        const animateLoop = (): void => {
-          requestAnimationFrame(animateLoop)
-          animateTimeline(timelineManager, frameCount++)
-        }
-        animateLoop()
+  await setup({
+    config: {
+      scene: { backgroundColor: SCENE_BG_COLOR },
+      orbit: false,
+      ground: false,
+      lights: {
+        ambient: { intensity: AMBIENT_LIGHT_INTENSITY },
+        directional: {
+          intensity: LIGHT_INTENSITY,
+          position: [LIGHT_ORBIT_RADIUS, LIGHT_ORBIT_RADIUS, LIGHT_Z_POSITION] as [
+            number,
+            number,
+            number
+          ]
+        },
+        hemisphere: { colors: [HEMISPHERE_SKY, HEMISPHERE_GROUND] }
       }
-    })
+    },
+    defineSetup: async () => {
+      const geometry = new THREE.SphereGeometry(
+        SHOWCASE_SPHERE_RADIUS,
+        SPHERE_SEGMENT_COUNT,
+        SPHERE_SEGMENT_COUNT
+      )
+      geometry.setAttribute('uv2', geometry.attributes['uv'])
+      showcaseSphere = new THREE.Mesh(geometry, buildShowcaseMaterial())
+      showcaseSphere.castShadow = true
+      showcaseSphere.receiveShadow = true
+      scene.add(showcaseSphere)
 
-    registerSceneElements(orthoCamera, [...sphereMeshes])
-  }
+      updateShowcase(scene)
 
-  createScene()
+      directionalLightReference =
+        scene.children.find(
+          (child): child is THREE.DirectionalLight => child instanceof THREE.DirectionalLight
+        ) ?? null
+
+      let frameCount = 0
+      const timelineManager = createTimelineManager()
+      timelineManager.addAction({
+        name: 'Light orbit',
+        category: 'animation',
+        action: () => {
+          if (directionalLightReference) {
+            const angle = (frameCount * LIGHT_ORBIT_SPEED) / TARGET_FPS
+            directionalLightReference.position.set(
+              Math.sin(angle) * LIGHT_ORBIT_RADIUS,
+              Math.cos(angle) * LIGHT_ORBIT_RADIUS,
+              LIGHT_Z_POSITION
+            )
+          }
+        }
+      })
+      timelineManager.addAction({
+        name: 'Render',
+        category: 'render',
+        action: () => {
+          orbitControls?.update()
+          if (orthoCamera) renderer.render(scene, orthoCamera)
+        }
+      })
+
+      const animateLoop = (): void => {
+        requestAnimationFrame(animateLoop)
+        animateTimeline(timelineManager, frameCount++)
+      }
+      animateLoop()
+
+      if (orthoCamera) registerSceneElements(orthoCamera, showcaseSphere ? [showcaseSphere] : [])
+    }
+  })
 }
 </script>
 

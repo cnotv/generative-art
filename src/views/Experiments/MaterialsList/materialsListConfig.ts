@@ -3,10 +3,17 @@ import type {
   MaterialTypeName,
   MapToggleKey,
   MaterialFeatureMap,
-  MaterialsListConfig
+  MaterialsListConfig,
+  AttributeKey
 } from './types'
 
-export type { MaterialTypeName, MapToggleKey, MaterialFeatureMap, MaterialsListConfig }
+export type {
+  MaterialTypeName,
+  MapToggleKey,
+  MaterialFeatureMap,
+  MaterialsListConfig,
+  AttributeKey
+}
 
 export const MATERIAL_TYPES: MaterialTypeName[] = [
   'MeshBasicMaterial',
@@ -262,3 +269,82 @@ export const getEnabledMaps = (
   emissive: materialsConfig.maps.emissive,
   envMap: materialsConfig.maps.envMapEnabled
 })
+
+// Showcase single-sphere layout
+export const SHOWCASE_SPHERE_RADIUS = 2.5
+export const SHOWCASE_TITLE_GAP = 1.0
+export const SHOWCASE_ATTRS_GAP = 3.0
+export const SHOWCASE_TITLE_Y = SHOWCASE_SPHERE_RADIUS + SHOWCASE_TITLE_GAP
+export const SHOWCASE_ATTRS_CENTER_Y = -(SHOWCASE_SPHERE_RADIUS + SHOWCASE_ATTRS_GAP)
+export const SHOWCASE_ATTR_SCALE_X = 5.5
+export const SHOWCASE_ATTR_SCALE_Y = 0.23
+export const ATTR_COLOR_DISABLED = '#334455'
+
+export const ALL_ATTRIBUTES: { key: AttributeKey; display: string }[] = [
+  { key: 'color', display: 'color: Color' },
+  { key: 'map', display: 'map: Texture' },
+  { key: 'normalMap', display: 'normalMap: Texture' },
+  { key: 'roughness', display: 'roughness: number' },
+  { key: 'roughnessMap', display: 'roughnessMap: Texture' },
+  { key: 'metalness', display: 'metalness: number' },
+  { key: 'metalnessMap', display: 'metalnessMap: Texture' },
+  { key: 'aoMap', display: 'aoMap: Texture' },
+  { key: 'displacementMap', display: 'displacementMap: Texture' },
+  { key: 'emissiveMap', display: 'emissiveMap: Texture' },
+  { key: 'envMap', display: 'envMap: Texture' },
+  { key: 'shininess', display: 'shininess: number' },
+  { key: 'clearcoat', display: 'clearcoat: number' },
+  { key: 'transmission', display: 'transmission: number' },
+  { key: 'gradientMap', display: 'gradientMap: Texture' },
+  { key: 'flatShading', display: 'flatShading: boolean' },
+  { key: 'depthPacking', display: 'depthPacking: number' },
+  { key: 'wireframe', display: 'wireframe: boolean' }
+]
+
+export const MATERIAL_ATTRIBUTE_SUPPORT: Record<MaterialTypeName, AttributeKey[]> = {
+  MeshBasicMaterial: ['color', 'map', 'aoMap', 'envMap', 'wireframe'],
+  MeshLambertMaterial: ['color', 'map', 'normalMap', 'emissiveMap', 'envMap', 'wireframe'],
+  MeshPhongMaterial: [
+    'color',
+    'map',
+    'normalMap',
+    'displacementMap',
+    'emissiveMap',
+    'envMap',
+    'shininess',
+    'wireframe'
+  ],
+  MeshStandardMaterial: [
+    'color',
+    'map',
+    'normalMap',
+    'roughness',
+    'roughnessMap',
+    'metalness',
+    'metalnessMap',
+    'aoMap',
+    'displacementMap',
+    'emissiveMap',
+    'envMap',
+    'wireframe'
+  ],
+  MeshPhysicalMaterial: [
+    'color',
+    'map',
+    'normalMap',
+    'roughness',
+    'roughnessMap',
+    'metalness',
+    'metalnessMap',
+    'aoMap',
+    'displacementMap',
+    'emissiveMap',
+    'envMap',
+    'clearcoat',
+    'transmission',
+    'wireframe'
+  ],
+  MeshToonMaterial: ['color', 'map', 'normalMap', 'emissiveMap', 'gradientMap', 'wireframe'],
+  MeshNormalMaterial: ['normalMap', 'flatShading', 'wireframe'],
+  MeshDepthMaterial: ['displacementMap', 'depthPacking', 'wireframe']
+}

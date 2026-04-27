@@ -20,6 +20,26 @@ export type MapToggleKey =
 
 export type MaterialFeatureMap = Record<MaterialTypeName, MapToggleKey[]>
 
+export type AttributeKey =
+  | 'color'
+  | 'map'
+  | 'normalMap'
+  | 'roughness'
+  | 'roughnessMap'
+  | 'metalness'
+  | 'metalnessMap'
+  | 'aoMap'
+  | 'displacementMap'
+  | 'emissiveMap'
+  | 'envMap'
+  | 'shininess'
+  | 'clearcoat'
+  | 'transmission'
+  | 'gradientMap'
+  | 'flatShading'
+  | 'depthPacking'
+  | 'wireframe'
+
 export type MaterialsListConfig = {
   properties: {
     wireframe: boolean
