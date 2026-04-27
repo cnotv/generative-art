@@ -80,18 +80,12 @@ import {
   SPECIAL_COLUMN_X,
   SPECIAL_COLUMN_Y_START,
   SPECIAL_COLUMN_Y_SPACING,
-  SPECIAL_DEBUG_TITLE_Y,
-  SPECIAL_DEBUG_TITLE,
-  LEGEND_TITLE,
-  LEGEND_TITLE_Y,
   LEGEND_SWATCH_Y,
   LEGEND_SWATCH_SIZE,
   LEGEND_SWATCH_SPACING,
   LEGEND_LABEL_Y_OFFSET,
   LEGEND_PROPS_Y,
   LEGEND_PROPERTIES_TEXT,
-  LEGEND_FONT_SIZE_TITLE,
-  LEGEND_SCALE_TITLE,
   LEGEND_FONT_SIZE_LABEL,
   LEGEND_SCALE_LABEL,
   LEGEND_LABEL_CANVAS_WIDTH,
@@ -308,37 +302,14 @@ const createWavePath = (scene: THREE.Scene): THREE.Vector3[] => {
   return curve.getSpacedPoints(MAIN_MATERIAL_TYPES.length - 1)
 }
 
-const createSpecialColumn = (scene: THREE.Scene): THREE.Vector3[] => {
-  const title = createTextSprite({
-    text: SPECIAL_DEBUG_TITLE,
-    fontSize: 48,
-    color: '#667788',
-    fontStyle: 'bold',
-    scaleY: 0.5,
-    autoAspect: true
-  })
-  title.position.set(SPECIAL_COLUMN_X, SPECIAL_DEBUG_TITLE_Y, 0)
-  scene.add(title)
-
-  return Array.from(
+const createSpecialColumn = (): THREE.Vector3[] =>
+  Array.from(
     SPECIAL_MATERIAL_TYPES,
     (_, i) =>
       new THREE.Vector3(SPECIAL_COLUMN_X, SPECIAL_COLUMN_Y_START - i * SPECIAL_COLUMN_Y_SPACING, 0)
   )
-}
 
 const createLegend = (scene: THREE.Scene): void => {
-  const titleSprite = createTextSprite({
-    text: LEGEND_TITLE,
-    fontSize: LEGEND_FONT_SIZE_TITLE,
-    color: '#aabbcc',
-    fontStyle: 'bold',
-    scaleY: LEGEND_SCALE_TITLE,
-    autoAspect: true
-  })
-  titleSprite.position.set(0, LEGEND_TITLE_Y, 0)
-  scene.add(titleSprite)
-
   const swatchDefs = [
     { texture: textures.diffuse, label: 'Diffuse\nbase color' },
     { texture: textures.normal, label: 'Normal\ngeometry' },
@@ -628,6 +599,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
 
     orthoCamera = createOrthographicCamera()
     orbitControls = new OrbitControls(orthoCamera, renderer.domElement)
+    orbitControls.enableRotate = false
     orbitControls.target.set(0, 0, 0)
     orbitControls.update()
 
@@ -665,7 +637,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
         scene.add(ground)
 
         const wavePositions = createWavePath(scene)
-        const specialPositions = createSpecialColumn(scene)
+        const specialPositions = createSpecialColumn()
         createSpheres(scene, wavePositions, specialPositions)
         createLegend(scene)
 

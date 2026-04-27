@@ -151,21 +151,21 @@ export const ENV_LIGHT_COLOR = 0xffffff
 export const ORTHO_NEAR_PLANE = 0.1
 export const ORTHO_FAR_PLANE = 100
 export const ORTHO_FRUSTUM_HALF_HEIGHT = 8.0
-export const WAVE_Y_OFFSET = -1.0
+export const WAVE_Y_OFFSET = 1.5
 export const ORTHO_CAMERA_DISTANCE = 20
 
 export const SPECIAL_COLUMN_X = 13.5
-export const SPECIAL_COLUMN_Y_START = 2.5
+export const SPECIAL_COLUMN_Y_START = 5.0
 export const SPECIAL_COLUMN_Y_SPACING = 3.5
 export const SPECIAL_DEBUG_TITLE_Y = 4.0
 export const SPECIAL_DEBUG_TITLE = 'Debug'
 
 export const LEGEND_TITLE = 'Legend'
 export const LEGEND_TITLE_Y = -4.5
-export const LEGEND_SWATCH_Y = -5.5
+export const LEGEND_SWATCH_Y = -4.0
 export const LEGEND_SWATCH_SIZE = 1.2
 export const LEGEND_SWATCH_SPACING = 2.8
-export const LEGEND_PROPS_Y = -7.2
+export const LEGEND_PROPS_Y = -7.0
 export const LEGEND_PROPERTIES_TEXT =
   'wireframe: edges only  ·  roughness: micro-scatter (0–1)  ·  metalness: conductor model (0–1)'
 
@@ -176,23 +176,23 @@ export const LABEL_CANVAS_WIDTH = 1024
 export const LABEL_CANVAS_HEIGHT = 80
 export const LABEL_SPRITE_SCALE_X = 3.5
 export const LABEL_SPRITE_SCALE_Y = 0.55
-export const DESCRIPTION_SPRITE_SCALE_X = 3.8
+export const DESCRIPTION_SPRITE_SCALE_X = 6.4
 export const DESCRIPTION_SPRITE_SCALE_Y = 0.5
-export const PROPERTIES_SPRITE_SCALE_X = 3.8
+export const PROPERTIES_SPRITE_SCALE_X = 5.8
 export const PROPERTIES_SPRITE_SCALE_Y = 0.45
 
 // Spacing unit derived from description scale — all Y gaps scale with it automatically
 export const TEXT_Y_STEP = DESCRIPTION_SPRITE_SCALE_Y
 
-export const LABEL_Y_OFFSET = SPHERE_RADIUS + TEXT_Y_STEP
+export const LABEL_Y_OFFSET = SPHERE_RADIUS + TEXT_Y_STEP * 2
 export const DESCRIPTION_Y_OFFSET = LABEL_Y_OFFSET + TEXT_Y_STEP * 2
 export const PROPERTIES_Y_OFFSET = DESCRIPTION_Y_OFFSET + TEXT_Y_STEP * 2
 
-export const SPECIAL_LABEL_Y_OFFSET = SPHERE_RADIUS + TEXT_Y_STEP
-export const SPECIAL_DESCRIPTION_Y_OFFSET = SPECIAL_LABEL_Y_OFFSET + TEXT_Y_STEP
+export const SPECIAL_LABEL_Y_OFFSET = SPHERE_RADIUS + TEXT_Y_STEP * 2
+export const SPECIAL_DESCRIPTION_Y_OFFSET = SPECIAL_LABEL_Y_OFFSET + TEXT_Y_STEP * 2
 export const SPECIAL_PROPERTIES_Y_OFFSET = SPECIAL_DESCRIPTION_Y_OFFSET + TEXT_Y_STEP * 2
 
-export const LEGEND_LABEL_Y_OFFSET = TEXT_Y_STEP * 2
+export const LEGEND_LABEL_Y_OFFSET = TEXT_Y_STEP * 3
 
 export const LEGEND_FONT_SIZE_TITLE = 44
 export const LEGEND_SCALE_TITLE = 0.75
