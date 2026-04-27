@@ -162,9 +162,9 @@ export const SPECIAL_COLUMN_Y_START = 2.5
 export const SPECIAL_COLUMN_Y_SPACING = 3.5
 export const SPECIAL_DEBUG_TITLE_Y = 4.0
 export const SPECIAL_DEBUG_TITLE = 'Debug'
-export const SPECIAL_LABEL_Y_OFFSET = 0.8
-export const SPECIAL_DESCRIPTION_Y_OFFSET = 1.4
-export const SPECIAL_PROPERTIES_Y_OFFSET = 2.0
+export const SPECIAL_LABEL_Y_OFFSET = 1.2
+export const SPECIAL_DESCRIPTION_Y_OFFSET = 1.8
+export const SPECIAL_PROPERTIES_Y_OFFSET = 2.4
 
 export const LABEL_FONT_SIZE = 72
 export const DESCRIPTION_FONT_SIZE = 50
