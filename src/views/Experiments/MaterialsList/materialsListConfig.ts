@@ -97,7 +97,7 @@ export const MATERIAL_FEATURES: MaterialFeatureMap = {
 
 export const SPHERE_SEGMENT_COUNT = 64
 export const SPHERE_RADIUS = 0.56
-export const WAVE_WIDTH = 20
+export const WAVE_WIDTH = 17
 export const WAVE_HALF_WIDTH = WAVE_WIDTH / 2
 export const WAVE_AMPLITUDE = 2.5
 export const WAVE_CYCLES = 1.5
@@ -157,7 +157,7 @@ export const LABEL_Y_OFFSET = 1.5
 export const DESCRIPTION_Y_OFFSET = 2.5
 export const PROPERTIES_Y_OFFSET = 3.5
 
-export const SPECIAL_COLUMN_X = 11.5
+export const SPECIAL_COLUMN_X = 13.5
 export const SPECIAL_COLUMN_Y_START = 2.5
 export const SPECIAL_COLUMN_Y_SPACING = 3.0
 export const SPECIAL_DEBUG_TITLE_Y = 5.0
