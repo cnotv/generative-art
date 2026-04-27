@@ -477,9 +477,9 @@ const createSpheres = (
     properties: PROPERTIES_Y_OFFSET
   })
   const specialMeshes = createSphereGroup(scene, SPECIAL_MATERIAL_TYPES, specialPositions, {
-    label: SPECIAL_LABEL_Y_OFFSET,
-    description: SPECIAL_DESCRIPTION_Y_OFFSET,
-    properties: SPECIAL_PROPERTIES_Y_OFFSET
+    label: -SPECIAL_LABEL_Y_OFFSET,
+    description: -SPECIAL_DESCRIPTION_Y_OFFSET,
+    properties: -SPECIAL_PROPERTIES_Y_OFFSET
   })
   sphereMeshes = [...mainMeshes, ...specialMeshes]
 }
