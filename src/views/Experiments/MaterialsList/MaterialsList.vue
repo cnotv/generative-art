@@ -13,6 +13,8 @@ import brickTextureUrl from '@/assets/images/textures/brick.jpg'
 import type { MaterialTypeName, MapToggleKey, MaterialsListConfig } from './types'
 import {
   MATERIAL_TYPES,
+  MAIN_MATERIAL_TYPES,
+  SPECIAL_MATERIAL_TYPES,
   MATERIAL_LABELS,
   MATERIAL_FEATURES,
   SPHERE_SEGMENT_COUNT,
@@ -27,9 +29,7 @@ import {
   LIGHT_Z_POSITION,
   EMISSIVE_COLOR,
   EMISSIVE_INTENSITY,
-  CLEARCOAT_VALUE,
   CLEARCOAT_ROUGHNESS_VALUE,
-  PHONG_SHININESS,
   ENV_MAP_INTENSITY,
   ENV_MAP_REFLECTIVITY,
   ENV_GROUND_SIZE,
@@ -65,12 +65,26 @@ import {
   getEnabledMaps,
   SHOWCASE_SPHERE_RADIUS,
   SHOWCASE_TITLE_Y,
-  SHOWCASE_ATTRS_CENTER_Y,
-  SHOWCASE_ATTR_SCALE_X,
   SHOWCASE_ATTR_SCALE_Y,
+  SHOWCASE_ATTRS_X,
+  SHOWCASE_ATTRS_Y,
+  SHOWCASE_ATTR_CANVAS_WIDTH,
   ATTR_COLOR_DISABLED,
+  TEXT_COLOR_COMMENT,
   ALL_ATTRIBUTES,
-  MATERIAL_ATTRIBUTE_SUPPORT
+  ATTRIBUTE_DESCRIPTIONS,
+  MATERIAL_ATTRIBUTE_SUPPORT,
+  SPHERE_DRAG_SENSITIVITY,
+  SHOWCASE_LEGEND_SWATCH_Y,
+  SHOWCASE_LEGEND_LABEL_Y,
+  SHOWCASE_LEGEND_SWATCH_SPACING,
+  SHOWCASE_LEGEND_CENTER_X,
+  TEXTURE_LEGEND_ENTRIES,
+  LEGEND_SWATCH_SIZE,
+  LEGEND_FONT_SIZE_LABEL,
+  LEGEND_SCALE_LABEL,
+  LEGEND_LABEL_CANVAS_WIDTH,
+  TEXT_COLOR_DESCRIPTION
 } from './materialsListConfig'
 
 const statsElement = ref(null)
@@ -84,7 +98,16 @@ let titleSpriteReference: THREE.Sprite | null = null
 let attributeBlockReference: THREE.Sprite | null = null
 let sceneReference: THREE.Scene | null = null
 let canvasElementReference: HTMLCanvasElement | null = null
-let currentMaterialIndex = 0
+const legendMeshes: THREE.Mesh[] = []
+const legendSprites: THREE.Sprite[] = []
+let isDragging = false
+let hasDragged = false
+let dragLastX = 0
+let dragLastY = 0
+const currentMaterialIndex = ref(0)
+const showMenu = ref(false)
+const menuScreenX = ref(0)
+const menuScreenY = ref(0)
 
 let envMap: THREE.Texture | null = null
 const textures: Record<string, THREE.Texture> = {}
@@ -280,11 +303,15 @@ const buildMaterial = (
     parameters.metalness = configValues.properties.metalness
   }
   if (typeName === 'MeshPhysicalMaterial') {
-    parameters.clearcoat = CLEARCOAT_VALUE
+    parameters.clearcoat = configValues.properties.clearcoat
     parameters.clearcoatRoughness = CLEARCOAT_ROUGHNESS_VALUE
+    parameters.transmission = configValues.properties.transmission
   }
   if (typeName === 'MeshPhongMaterial') {
-    parameters.shininess = PHONG_SHININESS
+    parameters.shininess = configValues.properties.shininess
+  }
+  if (typeName === 'MeshNormalMaterial') {
+    parameters.flatShading = configValues.properties.flatShading
   }
 
   const materialConstructors: Record<MaterialTypeName, new (p: never) => THREE.Material> = {
@@ -305,7 +332,7 @@ const buildMaterial = (
 }
 
 const buildShowcaseMaterial = (): THREE.Material => {
-  const typeName = MATERIAL_TYPES[currentMaterialIndex]
+  const typeName = MATERIAL_TYPES[currentMaterialIndex.value]
   return buildMaterial(
     typeName,
     MATERIAL_FEATURES[typeName],
@@ -330,7 +357,11 @@ const removeSprite = (scene: THREE.Scene, sprite: THREE.Sprite | null): void => 
 
 const buildAttributeBlock = (scene: THREE.Scene, typeName: MaterialTypeName): THREE.Sprite => {
   const supported = MATERIAL_ATTRIBUTE_SUPPORT[typeName]
-  const lines = ['{', ...ALL_ATTRIBUTES.map((a) => `  ${a.display}`), '}']
+  const maxDisplayLength = Math.max(...ALL_ATTRIBUTES.map((a) => a.display.length))
+  const attributeLines = ALL_ATTRIBUTES.map(
+    (a) => `  ${a.display.padEnd(maxDisplayLength)} // ${ATTRIBUTE_DESCRIPTIONS[a.key]}`
+  )
+  const lines = ['{', ...attributeLines, '}']
   const lineColors: (string | undefined)[] = [
     undefined,
     ...ALL_ATTRIBUTES.map((a) => (supported.includes(a.key) ? undefined : ATTR_COLOR_DISABLED)),
@@ -344,17 +375,54 @@ const buildAttributeBlock = (scene: THREE.Scene, typeName: MaterialTypeName): TH
     fontFamily: 'monospace',
     align: 'left',
     centerBlock: true,
-    scaleX: SHOWCASE_ATTR_SCALE_X,
+    canvasWidth: SHOWCASE_ATTR_CANVAS_WIDTH,
+    autoAspect: true,
     scaleY: SHOWCASE_ATTR_SCALE_Y,
+    commentColor: TEXT_COLOR_COMMENT,
     lineColors
   })
-  sprite.position.set(0, SHOWCASE_ATTRS_CENTER_Y, 0)
+  sprite.position.set(SHOWCASE_ATTRS_X, SHOWCASE_ATTRS_Y, 0)
   scene.add(sprite)
   return sprite
 }
 
+const selectMaterial = (typeName: MaterialTypeName): void => {
+  currentMaterialIndex.value = MATERIAL_TYPES.indexOf(typeName)
+  showMenu.value = false
+  if (sceneReference) updateShowcase(sceneReference)
+}
+
+const buildTextureLegend = (scene: THREE.Scene): void => {
+  const entryCount = TEXTURE_LEGEND_ENTRIES.length
+  TEXTURE_LEGEND_ENTRIES.forEach(({ key, label }, index) => {
+    const texture = textures[key]
+    if (!texture) return
+    const positionX =
+      SHOWCASE_LEGEND_CENTER_X + (index - (entryCount - 1) / 2) * SHOWCASE_LEGEND_SWATCH_SPACING
+
+    const geometry = new THREE.PlaneGeometry(LEGEND_SWATCH_SIZE, LEGEND_SWATCH_SIZE)
+    const swatchMaterial = new THREE.MeshBasicMaterial({ map: texture })
+    const mesh = new THREE.Mesh(geometry, swatchMaterial)
+    mesh.position.set(positionX, SHOWCASE_LEGEND_SWATCH_Y, 0)
+    scene.add(mesh)
+    legendMeshes.push(mesh)
+
+    const sprite = createTextSprite({
+      text: label,
+      fontSize: LEGEND_FONT_SIZE_LABEL,
+      color: TEXT_COLOR_DESCRIPTION,
+      canvasWidth: LEGEND_LABEL_CANVAS_WIDTH,
+      autoAspect: true,
+      scaleY: LEGEND_SCALE_LABEL
+    })
+    sprite.position.set(positionX, SHOWCASE_LEGEND_LABEL_Y, 0)
+    scene.add(sprite)
+    legendSprites.push(sprite)
+  })
+}
+
 const updateShowcase = (scene: THREE.Scene): void => {
-  const typeName = MATERIAL_TYPES[currentMaterialIndex]
+  const typeName = MATERIAL_TYPES[currentMaterialIndex.value]
 
   if (showcaseSphere) {
     const oldMaterial = showcaseSphere.material as THREE.Material
@@ -364,7 +432,7 @@ const updateShowcase = (scene: THREE.Scene): void => {
 
   removeSprite(scene, titleSpriteReference)
   titleSpriteReference = createTextSprite({
-    text: MATERIAL_LABELS[typeName],
+    text: `${MATERIAL_LABELS[typeName]}    ▾`,
     fontSize: LABEL_FONT_SIZE,
     color: TEXT_COLOR_LABEL,
     fontStyle: 'bold',
@@ -379,30 +447,82 @@ const updateShowcase = (scene: THREE.Scene): void => {
   attributeBlockReference = buildAttributeBlock(scene, typeName)
 }
 
-const handleCanvasClick = (event: MouseEvent): void => {
-  if (!orthoCamera || !showcaseSphere || !sceneReference || !canvasElementReference) return
-  const rect = canvasElementReference.getBoundingClientRect()
+const getNdcFromEvent = (event: MouseEvent, rect: DOMRect): THREE.Vector2 => {
   const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
   const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  return new THREE.Vector2(x, y)
+}
+
+const handleCanvasMouseDown = (event: MouseEvent): void => {
+  if (!orthoCamera || !showcaseSphere || !canvasElementReference) return
+  const rect = canvasElementReference.getBoundingClientRect()
   const raycaster = new THREE.Raycaster()
-  raycaster.setFromCamera(new THREE.Vector2(x, y), orthoCamera)
-  const intersects = raycaster.intersectObject(showcaseSphere)
-  if (intersects.length > 0) {
-    currentMaterialIndex = (currentMaterialIndex + 1) % MATERIAL_TYPES.length
+  raycaster.setFromCamera(getNdcFromEvent(event, rect), orthoCamera)
+  if (raycaster.intersectObject(showcaseSphere).length > 0) {
+    isDragging = true
+    hasDragged = false
+    dragLastX = event.clientX
+    dragLastY = event.clientY
+    canvasElementReference.style.cursor = 'grabbing'
+  }
+}
+
+const handleCanvasMouseUp = (): void => {
+  isDragging = false
+  if (canvasElementReference) canvasElementReference.style.cursor = 'default'
+}
+
+const handleCanvasClick = (event: MouseEvent): void => {
+  if (!orthoCamera || !showcaseSphere || !sceneReference || !canvasElementReference) return
+  if (hasDragged) {
+    hasDragged = false
+    return
+  }
+
+  const rect = canvasElementReference.getBoundingClientRect()
+  const ndc = getNdcFromEvent(event, rect)
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(ndc, orthoCamera)
+
+  if (titleSpriteReference && raycaster.intersectObject(titleSpriteReference).length > 0) {
+    if (!showMenu.value) {
+      const spritePos = titleSpriteReference.position.clone().project(orthoCamera)
+      menuScreenX.value = ((spritePos.x + 1) / 2) * window.innerWidth
+      menuScreenY.value = ((1 - spritePos.y) / 2) * window.innerHeight
+    }
+    showMenu.value = !showMenu.value
+    return
+  }
+
+  if (raycaster.intersectObject(showcaseSphere).length > 0) {
+    currentMaterialIndex.value = (currentMaterialIndex.value + 1) % MATERIAL_TYPES.length
     updateShowcase(sceneReference)
-    canvasElementReference.style.cursor = 'pointer'
   }
 }
 
 const handleCanvasMouseMove = (event: MouseEvent): void => {
   if (!orthoCamera || !showcaseSphere || !canvasElementReference) return
+
+  if (isDragging) {
+    const deltaX = event.clientX - dragLastX
+    const deltaY = event.clientY - dragLastY
+    showcaseSphere.rotation.y += deltaX * SPHERE_DRAG_SENSITIVITY
+    showcaseSphere.rotation.x += deltaY * SPHERE_DRAG_SENSITIVITY
+    dragLastX = event.clientX
+    dragLastY = event.clientY
+    hasDragged = true
+    return
+  }
+
   const rect = canvasElementReference.getBoundingClientRect()
-  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  const ndc = getNdcFromEvent(event, rect)
   const raycaster = new THREE.Raycaster()
-  raycaster.setFromCamera(new THREE.Vector2(x, y), orthoCamera)
-  const intersects = raycaster.intersectObject(showcaseSphere)
-  canvasElementReference.style.cursor = intersects.length > 0 ? 'pointer' : 'default'
+  raycaster.setFromCamera(ndc, orthoCamera)
+  const hitsTitle = titleSpriteReference
+    ? raycaster.intersectObject(titleSpriteReference).length > 0
+    : false
+  const hitsSphere = raycaster.intersectObject(showcaseSphere).length > 0
+  canvasElementReference.style.cursor = hitsTitle || hitsSphere ? 'pointer' : 'default'
 }
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
@@ -448,8 +568,20 @@ onBeforeUnmount(() => {
   if (canvasElementReference) {
     canvasElementReference.removeEventListener('click', handleCanvasClick)
     canvasElementReference.removeEventListener('mousemove', handleCanvasMouseMove)
+    canvasElementReference.removeEventListener('mousedown', handleCanvasMouseDown)
+    canvasElementReference.removeEventListener('mouseup', handleCanvasMouseUp)
   }
   if (orbitControls) orbitControls.dispose()
+  legendMeshes.forEach((mesh) => {
+    sceneReference?.remove(mesh)
+    mesh.geometry.dispose()
+    ;(mesh.material as THREE.MeshBasicMaterial).dispose()
+  })
+  legendSprites.forEach((sprite) => {
+    sceneReference?.remove(sprite)
+    ;(sprite.material as THREE.SpriteMaterial).map?.dispose()
+    sprite.material.dispose()
+  })
   Object.values(textures).forEach((texture) => texture.dispose())
   if (envMap) envMap.dispose()
   showcaseSphere = null
@@ -478,6 +610,8 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
 
   canvasElement.addEventListener('click', handleCanvasClick)
   canvasElement.addEventListener('mousemove', handleCanvasMouseMove)
+  canvasElement.addEventListener('mousedown', handleCanvasMouseDown)
+  canvasElement.addEventListener('mouseup', handleCanvasMouseUp)
 
   await setup({
     config: {
@@ -510,6 +644,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
       scene.add(showcaseSphere)
 
       updateShowcase(scene)
+      buildTextureLegend(scene)
 
       directionalLightReference =
         scene.children.find(
@@ -556,4 +691,89 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
 <template>
   <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
+  <nav v-if="showMenu" class="materials-list__menu">
+    <section class="materials-list__group">
+      <h3 class="materials-list__group-title">Materials</h3>
+      <button
+        v-for="type in MAIN_MATERIAL_TYPES"
+        :key="type"
+        class="materials-list__btn"
+        :class="{ 'materials-list__btn--active': MATERIAL_TYPES[currentMaterialIndex] === type }"
+        @click="selectMaterial(type)"
+      >
+        {{ MATERIAL_LABELS[type] }}
+      </button>
+    </section>
+    <section class="materials-list__group">
+      <h3 class="materials-list__group-title">Debug Materials</h3>
+      <button
+        v-for="type in SPECIAL_MATERIAL_TYPES"
+        :key="type"
+        class="materials-list__btn"
+        :class="{ 'materials-list__btn--active': MATERIAL_TYPES[currentMaterialIndex] === type }"
+        @click="selectMaterial(type)"
+      >
+        {{ MATERIAL_LABELS[type] }}
+      </button>
+    </section>
+  </nav>
 </template>
+
+<style scoped>
+.materials-list__menu {
+  position: fixed;
+  top: v-bind('menuScreenY + "px"');
+  left: v-bind('menuScreenX + "px"');
+  transform: translateX(0);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0.75rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.materials-list__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.materials-list__group-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+  margin-bottom: 0.35rem;
+}
+
+.materials-list__btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  text-align: left;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.materials-list__btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+}
+
+.materials-list__btn--active {
+  color: var(--color-foreground);
+  background: var(--color-secondary);
+  border-color: var(--color-border);
+}
+</style>

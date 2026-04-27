@@ -45,6 +45,10 @@ export type MaterialsListConfig = {
     wireframe: boolean
     roughness: number
     metalness: number
+    shininess: number
+    clearcoat: number
+    transmission: number
+    flatShading: boolean
   }
   maps: {
     diffuse: boolean
@@ -55,5 +59,6 @@ export type MaterialsListConfig = {
     displacement: boolean
     emissive: boolean
     envMapEnabled: boolean
+    gradientMap: boolean
   }
 }

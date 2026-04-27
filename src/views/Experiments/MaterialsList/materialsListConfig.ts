@@ -220,7 +220,11 @@ export const DEFAULT_CONFIG: MaterialsListConfig = {
   properties: {
     wireframe: false,
     roughness: 0.5,
-    metalness: 0.5
+    metalness: 0.5,
+    shininess: 100,
+    clearcoat: 0.8,
+    transmission: 0,
+    flatShading: false
   },
   maps: {
     diffuse: true,
@@ -230,7 +234,8 @@ export const DEFAULT_CONFIG: MaterialsListConfig = {
     ao: true,
     displacement: false,
     emissive: false,
-    envMapEnabled: true
+    envMapEnabled: true,
+    gradientMap: false
   }
 }
 
@@ -238,7 +243,11 @@ export const CONFIG_SCHEMA: ConfigControlsSchema = {
   properties: {
     wireframe: { checkbox: true },
     roughness: { min: 0, max: 1, step: 0.01 },
-    metalness: { min: 0, max: 1, step: 0.01 }
+    metalness: { min: 0, max: 1, step: 0.01 },
+    shininess: { min: 0, max: 300, step: 1 },
+    clearcoat: { min: 0, max: 1, step: 0.01 },
+    transmission: { min: 0, max: 1, step: 0.01 },
+    flatShading: { checkbox: true, label: 'flat shading' }
   },
   maps: {
     diffuse: { checkbox: true },
@@ -248,7 +257,8 @@ export const CONFIG_SCHEMA: ConfigControlsSchema = {
     ao: { checkbox: true, label: 'ambient occlusion' },
     displacement: { checkbox: true },
     emissive: { checkbox: true },
-    envMapEnabled: { checkbox: true, label: 'environment map' }
+    envMapEnabled: { checkbox: true, label: 'environment map' },
+    gradientMap: { checkbox: true, label: 'gradient map' }
   }
 }
 
@@ -276,9 +286,48 @@ export const SHOWCASE_TITLE_GAP = 1.0
 export const SHOWCASE_ATTRS_GAP = 3.0
 export const SHOWCASE_TITLE_Y = SHOWCASE_SPHERE_RADIUS + SHOWCASE_TITLE_GAP
 export const SHOWCASE_ATTRS_CENTER_Y = -(SHOWCASE_SPHERE_RADIUS + SHOWCASE_ATTRS_GAP)
-export const SHOWCASE_ATTR_SCALE_X = 5.5
-export const SHOWCASE_ATTR_SCALE_Y = 0.23
+export const SHOWCASE_ATTR_SCALE_Y = 0.45
+export const SHOWCASE_ATTRS_X = -8.5
+export const SPHERE_DRAG_SENSITIVITY = 0.008
+export const SHOWCASE_ATTRS_Y = 0
+export const SHOWCASE_ATTR_CANVAS_WIDTH = 1536
 export const ATTR_COLOR_DISABLED = '#334455'
+export const TEXT_COLOR_COMMENT = '#556677'
+
+export const SHOWCASE_LEGEND_SWATCH_Y = -4.5
+export const SHOWCASE_LEGEND_LABEL_Y = -5.6
+export const SHOWCASE_LEGEND_SWATCH_SPACING = 2.2
+export const SHOWCASE_LEGEND_CENTER_X = 2.0
+
+export const TEXTURE_LEGEND_ENTRIES: { key: string; label: string }[] = [
+  { key: 'diffuse', label: 'diffuse' },
+  { key: 'normal', label: 'normal' },
+  { key: 'roughness', label: 'roughness' },
+  { key: 'ao', label: 'ambient occ' },
+  { key: 'displacement', label: 'displace' },
+  { key: 'emissive', label: 'emissive' }
+]
+
+export const ATTRIBUTE_DESCRIPTIONS: Record<AttributeKey, string> = {
+  color: 'base surface tint',
+  map: 'diffuse / albedo texture',
+  normalMap: 'surface micro-detail',
+  roughness: 'micro-scatter 0–1',
+  roughnessMap: 'roughness from texture',
+  metalness: 'conductor model 0–1',
+  metalnessMap: 'metalness from texture',
+  aoMap: 'baked ambient shadows',
+  displacementMap: 'vertex height offset',
+  emissiveMap: 'self-illumination mask',
+  envMap: 'reflection cubemap',
+  shininess: 'specular tightness',
+  clearcoat: 'lacquer coat layer',
+  transmission: 'glass-like transparency',
+  gradientMap: 'cel-shade tone ramp',
+  flatShading: 'hard / faceted normals',
+  depthPacking: 'depth buffer encoding',
+  wireframe: 'render edges only'
+}
 
 export const ALL_ATTRIBUTES: { key: AttributeKey; display: string }[] = [
   { key: 'color', display: 'color: Color' },

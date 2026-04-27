@@ -14,6 +14,7 @@ export interface TextSpriteOptions {
   canvasWidth?: number
   canvasHeight?: number
   valueColor?: string
+  commentColor?: string
   lineColors?: (string | undefined)[]
 }
 
@@ -40,6 +41,7 @@ interface LineRenderOptions {
   fontFamily: string
   fontStyle: string
   valueColor: string | undefined
+  commentColor: string | undefined
 }
 
 const drawTextLine = (
@@ -49,21 +51,36 @@ const drawTextLine = (
   yPosition: number,
   renderOptions: LineRenderOptions
 ): void => {
-  const { color, fontSize, fontFamily, fontStyle, valueColor } = renderOptions
+  const { color, fontSize, fontFamily, fontStyle, valueColor, commentColor } = renderOptions
   const normalFont = `${fontStyle} ${fontSize}px ${fontFamily}`
 
   if (valueColor && line.includes(': ')) {
     const colonPos = line.indexOf(': ')
     const keyPart = line.substring(0, colonPos + 2)
-    const valuePart = line.substring(colonPos + 2)
+    const rest = line.substring(colonPos + 2)
+
     context.font = normalFont
     context.fillStyle = color
     context.fillText(keyPart, xPosition, yPosition)
     const keyWidth = context.measureText(keyPart).width
-    context.font = `bold ${fontSize}px ${fontFamily}`
-    context.fillStyle = valueColor
-    context.fillText(valuePart, xPosition + keyWidth, yPosition)
-    context.font = normalFont
+
+    if (commentColor && rest.includes(' // ')) {
+      const commentPos = rest.indexOf(' // ')
+      const valuePart = rest.substring(0, commentPos)
+      const commentPart = rest.substring(commentPos)
+      context.font = `bold ${fontSize}px ${fontFamily}`
+      context.fillStyle = valueColor
+      context.fillText(valuePart, xPosition + keyWidth, yPosition)
+      const valueWidth = context.measureText(valuePart).width
+      context.font = normalFont
+      context.fillStyle = commentColor
+      context.fillText(commentPart, xPosition + keyWidth + valueWidth, yPosition)
+    } else {
+      context.font = `bold ${fontSize}px ${fontFamily}`
+      context.fillStyle = valueColor
+      context.fillText(rest, xPosition + keyWidth, yPosition)
+      context.font = normalFont
+    }
   } else {
     context.fillStyle = color
     context.fillText(line, xPosition, yPosition)
@@ -90,6 +107,7 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
     canvasWidth = 1024,
     canvasHeight = 80,
     valueColor,
+    commentColor,
     lineColors
   } = options
 
@@ -110,7 +128,8 @@ export const createTextSprite = (options: TextSpriteOptions): THREE.Sprite => {
     fontSize,
     fontFamily,
     fontStyle,
-    valueColor
+    valueColor,
+    commentColor
   }
 
   Array.from(lines, (line, i) => {
