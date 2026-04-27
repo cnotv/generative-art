@@ -186,17 +186,21 @@ export const MORTAR_EDGE_OFFSET = 3
 export const MORTAR_EDGE_SIZE = 4
 
 export const DEFAULT_CONFIG: MaterialsListConfig = {
-  wireframe: false,
-  roughness: 0.5,
-  metalness: 0.5,
-  diffuse: true,
-  normal: true,
-  roughnessMap: true,
-  metalnessMap: true,
-  ao: true,
-  displacement: false,
-  emissive: false,
-  envMapEnabled: true
+  properties: {
+    wireframe: false,
+    roughness: 0.5,
+    metalness: 0.5
+  },
+  maps: {
+    diffuse: true,
+    normal: true,
+    roughnessMap: true,
+    metalnessMap: true,
+    ao: true,
+    displacement: false,
+    emissive: false,
+    envMapEnabled: true
+  }
 }
 
 export const CONFIG_SCHEMA: ConfigControlsSchema = {
@@ -225,12 +229,12 @@ export const CONFIG_SCHEMA: ConfigControlsSchema = {
 export const getEnabledMaps = (
   materialsConfig: MaterialsListConfig
 ): Record<MapToggleKey, boolean> => ({
-  diffuse: materialsConfig.diffuse,
-  normal: materialsConfig.normal,
-  roughness: materialsConfig.roughnessMap,
-  metalness: materialsConfig.metalnessMap,
-  ao: materialsConfig.ao,
-  displacement: materialsConfig.displacement,
-  emissive: materialsConfig.emissive,
-  envMap: materialsConfig.envMapEnabled
+  diffuse: materialsConfig.maps.diffuse,
+  normal: materialsConfig.maps.normal,
+  roughness: materialsConfig.maps.roughnessMap,
+  metalness: materialsConfig.maps.metalnessMap,
+  ao: materialsConfig.maps.ao,
+  displacement: materialsConfig.maps.displacement,
+  emissive: materialsConfig.maps.emissive,
+  envMap: materialsConfig.maps.envMapEnabled
 })

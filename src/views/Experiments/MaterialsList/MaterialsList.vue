@@ -355,8 +355,8 @@ const buildMaterial = (
     }
   }
   if (['MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(typeName)) {
-    parameters.roughness = configValues.roughness
-    parameters.metalness = configValues.metalness
+    parameters.roughness = configValues.properties.roughness
+    parameters.metalness = configValues.properties.metalness
   }
   if (typeName === 'MeshPhysicalMaterial') {
     parameters.clearcoat = CLEARCOAT_VALUE
@@ -379,7 +379,7 @@ const buildMaterial = (
 
   const Constructor = materialConstructors[typeName]
   const material = new Constructor(parameters as never)
-  ;(material as THREE.MeshBasicMaterial).wireframe = configValues.wireframe
+  ;(material as THREE.MeshBasicMaterial).wireframe = configValues.properties.wireframe
   return material
 }
 

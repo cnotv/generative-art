@@ -21,15 +21,19 @@ export type MapToggleKey =
 export type MaterialFeatureMap = Record<MaterialTypeName, MapToggleKey[]>
 
 export type MaterialsListConfig = {
-  wireframe: boolean
-  roughness: number
-  metalness: number
-  diffuse: boolean
-  normal: boolean
-  roughnessMap: boolean
-  metalnessMap: boolean
-  ao: boolean
-  displacement: boolean
-  emissive: boolean
-  envMapEnabled: boolean
+  properties: {
+    wireframe: boolean
+    roughness: number
+    metalness: number
+  }
+  maps: {
+    diffuse: boolean
+    normal: boolean
+    roughnessMap: boolean
+    metalnessMap: boolean
+    ao: boolean
+    displacement: boolean
+    emissive: boolean
+    envMapEnabled: boolean
+  }
 }
