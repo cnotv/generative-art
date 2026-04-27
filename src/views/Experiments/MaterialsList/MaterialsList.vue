@@ -82,6 +82,14 @@ import {
   SPECIAL_COLUMN_Y_SPACING,
   SPECIAL_DEBUG_TITLE_Y,
   SPECIAL_DEBUG_TITLE,
+  LEGEND_TITLE,
+  LEGEND_TITLE_Y,
+  LEGEND_SWATCH_Y,
+  LEGEND_SWATCH_SIZE,
+  LEGEND_SWATCH_SPACING,
+  LEGEND_LABEL_Y_OFFSET,
+  LEGEND_PROPS_Y,
+  LEGEND_PROPERTIES_TEXT,
   SPECIAL_LABEL_Y_OFFSET,
   SPECIAL_DESCRIPTION_Y_OFFSET,
   SPECIAL_PROPERTIES_Y_OFFSET,
@@ -310,6 +318,66 @@ const createSpecialColumn = (scene: THREE.Scene): THREE.Vector3[] => {
     (_, i) =>
       new THREE.Vector3(SPECIAL_COLUMN_X, SPECIAL_COLUMN_Y_START - i * SPECIAL_COLUMN_Y_SPACING, 0)
   )
+}
+
+const createLegend = (scene: THREE.Scene): void => {
+  const titleSprite = createTextSprite({
+    text: LEGEND_TITLE,
+    fontSize: 36,
+    color: '#aabbcc',
+    fontStyle: 'bold',
+    scaleY: 0.4,
+    autoAspect: true
+  })
+  titleSprite.position.set(0, LEGEND_TITLE_Y, 0)
+  scene.add(titleSprite)
+
+  const swatchDefs = [
+    { texture: textures.diffuse, label: 'Diffuse\nbase color' },
+    { texture: textures.normal, label: 'Normal\ngeometry' },
+    { texture: textures.roughness, label: 'Roughness\nscatter' },
+    { texture: textures.ao, label: 'AO\nshadow' },
+    { texture: textures.displacement, label: 'Displacement\nvertex' },
+    { texture: textures.emissive, label: 'Emissive\nglow' }
+  ]
+
+  const halfSpan = ((swatchDefs.length - 1) / 2) * LEGEND_SWATCH_SPACING
+  const swatchMat = new THREE.MeshBasicMaterial()
+
+  swatchDefs.forEach(({ texture, label }, i) => {
+    const x = i * LEGEND_SWATCH_SPACING - halfSpan
+    const mat = swatchMat.clone()
+    mat.map = texture
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(LEGEND_SWATCH_SIZE, LEGEND_SWATCH_SIZE),
+      mat
+    )
+    plane.position.set(x, LEGEND_SWATCH_Y, 0)
+    scene.add(plane)
+
+    const labelSprite = createTextSprite({
+      text: label,
+      fontSize: 28,
+      color: '#aabbcc',
+      scaleY: 0.3,
+      autoAspect: true
+    })
+    labelSprite.position.set(x, LEGEND_SWATCH_Y - LEGEND_LABEL_Y_OFFSET, 0)
+    scene.add(labelSprite)
+  })
+
+  swatchMat.dispose()
+
+  const propsSprite = createTextSprite({
+    text: LEGEND_PROPERTIES_TEXT,
+    fontSize: 28,
+    color: '#889aaa',
+    canvasWidth: 2048,
+    scaleY: 0.3,
+    autoAspect: true
+  })
+  propsSprite.position.set(0, LEGEND_PROPS_Y, 0)
+  scene.add(propsSprite)
 }
 
 const buildMaterial = (
@@ -591,6 +659,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
         const wavePositions = createWavePath(scene)
         const specialPositions = createSpecialColumn(scene)
         createSpheres(scene, wavePositions, specialPositions)
+        createLegend(scene)
 
         directionalLightReference =
           scene.children.find(

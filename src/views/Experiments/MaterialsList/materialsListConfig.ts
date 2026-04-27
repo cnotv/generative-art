@@ -163,6 +163,16 @@ export const SPECIAL_COLUMN_Y_SPACING = 3.5
 export const SPECIAL_DEBUG_TITLE_Y = 4.0
 export const SPECIAL_DEBUG_TITLE = 'Debug'
 export const SPECIAL_LABEL_Y_OFFSET = 1.2
+
+export const LEGEND_TITLE = 'Legend'
+export const LEGEND_TITLE_Y = -4.5
+export const LEGEND_SWATCH_Y = -5.5
+export const LEGEND_SWATCH_SIZE = 1.2
+export const LEGEND_SWATCH_SPACING = 2.8
+export const LEGEND_LABEL_Y_OFFSET = 0.9
+export const LEGEND_PROPS_Y = -7.2
+export const LEGEND_PROPERTIES_TEXT =
+  'wireframe: edges only  ·  roughness: micro-scatter (0–1)  ·  metalness: conductor model (0–1)'
 export const SPECIAL_DESCRIPTION_Y_OFFSET = 1.8
 export const SPECIAL_PROPERTIES_Y_OFFSET = 2.4
 
