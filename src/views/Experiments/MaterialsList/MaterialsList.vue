@@ -90,6 +90,13 @@ import {
   LEGEND_LABEL_Y_OFFSET,
   LEGEND_PROPS_Y,
   LEGEND_PROPERTIES_TEXT,
+  LEGEND_FONT_SIZE_TITLE,
+  LEGEND_SCALE_TITLE,
+  LEGEND_FONT_SIZE_LABEL,
+  LEGEND_SCALE_LABEL,
+  LEGEND_LABEL_CANVAS_WIDTH,
+  LEGEND_FONT_SIZE_PROPS,
+  LEGEND_SCALE_PROPS,
   SPECIAL_LABEL_Y_OFFSET,
   SPECIAL_DESCRIPTION_Y_OFFSET,
   SPECIAL_PROPERTIES_Y_OFFSET,
@@ -323,10 +330,10 @@ const createSpecialColumn = (scene: THREE.Scene): THREE.Vector3[] => {
 const createLegend = (scene: THREE.Scene): void => {
   const titleSprite = createTextSprite({
     text: LEGEND_TITLE,
-    fontSize: 36,
+    fontSize: LEGEND_FONT_SIZE_TITLE,
     color: '#aabbcc',
     fontStyle: 'bold',
-    scaleY: 0.4,
+    scaleY: LEGEND_SCALE_TITLE,
     autoAspect: true
   })
   titleSprite.position.set(0, LEGEND_TITLE_Y, 0)
@@ -357,9 +364,10 @@ const createLegend = (scene: THREE.Scene): void => {
 
     const labelSprite = createTextSprite({
       text: label,
-      fontSize: 28,
+      fontSize: LEGEND_FONT_SIZE_LABEL,
       color: '#aabbcc',
-      scaleY: 0.3,
+      canvasWidth: LEGEND_LABEL_CANVAS_WIDTH,
+      scaleY: LEGEND_SCALE_LABEL,
       autoAspect: true
     })
     labelSprite.position.set(x, LEGEND_SWATCH_Y - LEGEND_LABEL_Y_OFFSET, 0)
@@ -370,10 +378,10 @@ const createLegend = (scene: THREE.Scene): void => {
 
   const propsSprite = createTextSprite({
     text: LEGEND_PROPERTIES_TEXT,
-    fontSize: 28,
+    fontSize: LEGEND_FONT_SIZE_PROPS,
     color: '#889aaa',
     canvasWidth: 2048,
-    scaleY: 0.3,
+    scaleY: LEGEND_SCALE_PROPS,
     autoAspect: true
   })
   propsSprite.position.set(0, LEGEND_PROPS_Y, 0)

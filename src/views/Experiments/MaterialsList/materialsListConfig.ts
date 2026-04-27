@@ -182,11 +182,19 @@ export const PROPERTIES_FONT_SIZE = 46
 export const LABEL_CANVAS_WIDTH = 1024
 export const LABEL_CANVAS_HEIGHT = 80
 export const LABEL_SPRITE_SCALE_X = 3.5
-export const LABEL_SPRITE_SCALE_Y = 0.45
+export const LABEL_SPRITE_SCALE_Y = 0.7
 export const DESCRIPTION_SPRITE_SCALE_X = 3.8
-export const DESCRIPTION_SPRITE_SCALE_Y = 0.23
+export const DESCRIPTION_SPRITE_SCALE_Y = 0.38
 export const PROPERTIES_SPRITE_SCALE_X = 3.8
-export const PROPERTIES_SPRITE_SCALE_Y = 0.2
+export const PROPERTIES_SPRITE_SCALE_Y = 0.32
+
+export const LEGEND_FONT_SIZE_TITLE = 44
+export const LEGEND_SCALE_TITLE = 0.75
+export const LEGEND_FONT_SIZE_LABEL = 34
+export const LEGEND_SCALE_LABEL = 0.55
+export const LEGEND_LABEL_CANVAS_WIDTH = 256
+export const LEGEND_FONT_SIZE_PROPS = 32
+export const LEGEND_SCALE_PROPS = 0.55
 export const AMBIENT_LIGHT_INTENSITY = 1.5
 
 export const BRICK_WIDTH = 64
