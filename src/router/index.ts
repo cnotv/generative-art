@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { generatedRoutes } from '@/config/router'
+import { VIEW_META } from '@/config/viewsMeta'
+import { updatePageMeta } from '@/utils/pageMeta'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,7 +27,17 @@ const getPageTitle = (name: string | null | symbol): string => {
 }
 
 router.beforeEach((to, _from, next) => {
-  document.title = getPageTitle(to.name)
+  const name = typeof to.name === 'string' ? to.name : null
+  const title = getPageTitle(name)
+  document.title = title
+
+  const viewMeta = name ? VIEW_META[name] : undefined
+  updatePageMeta({
+    title,
+    description: viewMeta?.description,
+    image: viewMeta?.image
+  })
+
   next()
 })
 
