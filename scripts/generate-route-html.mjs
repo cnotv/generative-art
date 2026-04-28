@@ -7,20 +7,18 @@ const SITE_URL = process.env.SITE_URL || 'https://cnotv.xyz'
 const DEFAULT_DESCRIPTION =
   'Interactive generative art, 3D experiments, and games built with Three.js and Vue.'
 const DEFAULT_IMAGE = `${SITE_URL}/logobw.svg`
-const SITE_TITLE = 'Generative Art'
 
 const viewsMeta = JSON.parse(readFileSync(join(ROOT, 'src/config/viewsMeta.json'), 'utf-8'))
 
 const injectMeta = (html, { title, description, url, image }) => {
-  const fullTitle = `${title} | ${SITE_TITLE}`
   return html
-    .replace(/(<title>)[^<]*(<\/title>)/, `$1${fullTitle}$2`)
+    .replace(/(<title>)[^<]*(<\/title>)/, `$1${title}$2`)
     .replace(/(<meta name="description" content=")[^"]*"/, `$1${description}"`)
-    .replace(/(<meta property="og:title" content=")[^"]*"/, `$1${fullTitle}"`)
+    .replace(/(<meta property="og:title" content=")[^"]*"/, `$1${title}"`)
     .replace(/(<meta property="og:description" content=")[^"]*"/, `$1${description}"`)
     .replace(/(<meta property="og:image" content=")[^"]*"/, `$1${image}"`)
     .replace(/(<meta property="og:url" content=")[^"]*"/, `$1${url}"`)
-    .replace(/(<meta name="twitter:title" content=")[^"]*"/, `$1${fullTitle}"`)
+    .replace(/(<meta name="twitter:title" content=")[^"]*"/, `$1${title}"`)
     .replace(/(<meta name="twitter:description" content=")[^"]*"/, `$1${description}"`)
     .replace(/(<meta name="twitter:image" content=")[^"]*"/, `$1${image}"`)
 }

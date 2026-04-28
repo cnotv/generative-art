@@ -20,9 +20,7 @@ const router = createRouter({
 })
 
 const getPageTitle = (name: string | null | symbol): string => {
-  if (name && typeof name === 'string') {
-    return `${name} | Generative Art`
-  }
+  if (name && typeof name === 'string') return name
   return 'Generative Art'
 }
 
