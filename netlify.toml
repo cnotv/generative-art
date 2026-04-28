@@ -1,3 +1,0 @@
-[build]
-  command = "npx playwright install chromium && pnpm build"
-  publish = "dist"
