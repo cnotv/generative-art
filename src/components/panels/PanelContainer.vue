@@ -59,10 +59,13 @@ defineProps<{
   align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
-  overflow-y: auto;
 
   > * {
     pointer-events: auto;
+  }
+
+  @media (max-width: 600px) {
+    overflow-y: auto;
   }
 }
 
