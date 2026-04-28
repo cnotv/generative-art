@@ -68,7 +68,14 @@ const startStaticServer = () =>
 const run = async () => {
   const routes = discoverRoutes()
   const server = await startStaticServer()
-  const browser = await chromium.launch()
+  const browser = await chromium.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--use-gl=swiftshader'
+    ]
+  })
 
   const screenshotRoute = async ({ path, group, viewName }) => {
     const routePage = await browser.newPage()
@@ -97,6 +104,6 @@ const run = async () => {
 }
 
 run().catch((error) => {
-  process.stderr.write(`Screenshot generation failed: ${error.message}\nSkipping.\n`)
+  process.stderr.write(`Screenshot generation failed: ${error.stack ?? error.message}\nSkipping.\n`)
   process.exit(0)
 })
