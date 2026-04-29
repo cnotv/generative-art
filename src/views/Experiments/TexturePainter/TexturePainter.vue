@@ -53,9 +53,11 @@ import {
   TEXTURE_SLOTS,
   TEXTURE_SLOT_LABELS,
   TEXTURE_SLOT_PALETTE,
-  TEXTURE_SLOT_DEFAULT_COLOR
+  TEXTURE_SLOT_DEFAULT_COLOR,
+  PRESET_LABELS,
+  PRESETS
 } from './config'
-import type { MaterialTypeName, MaterialsListConfig, TextureSlotKey } from './config'
+import type { MaterialTypeName, MaterialsListConfig, TextureSlotKey, PresetKey } from './config'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
@@ -257,6 +259,323 @@ const DEFAULT_DRAW_FUNCTIONS: Record<
   ao: drawAoMap,
   displacement: drawDisplacementMap,
   emissive: (ctx, size) => drawBrickGrid(ctx, size, '#ff6600', '#000000')
+}
+
+type DrawFunction = (ctx: CanvasRenderingContext2D, size: number) => void
+
+const drawNoiseNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const nx = Math.sin(x * 0.05 + y * 0.03) * 12 + 128
+    const ny = Math.cos(x * 0.04 + y * 0.06) * 12 + 128
+    const d = i * 4
+    imageData.data[d] = Math.min(255, Math.max(0, nx))
+    imageData.data[d + 1] = Math.min(255, Math.max(0, ny))
+    imageData.data[d + 2] = 255
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawScratchDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#888888'
+  ctx.fillRect(0, 0, size, size)
+  Array.from({ length: 80 }, (_, i) => {
+    const y = (i * size) / 80
+    const brightness = 140 + (i % 5) * 18
+    ctx.fillStyle = `rgba(${brightness},${brightness},${brightness + 10},${0.25 + (i % 4) * 0.1})`
+    ctx.fillRect(0, y + Math.sin(i * 1.7) * 2, size, 1 + (i % 2))
+    return null
+  })
+}
+
+const drawScratchNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const y = Math.floor(i / size)
+    const scratch = (y * 17) % 11 === 0
+    const d = i * 4
+    imageData.data[d] = 128
+    imageData.data[d + 1] = scratch ? 88 : 128
+    imageData.data[d + 2] = 255
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawScratchRoughness = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#333333'
+  ctx.fillRect(0, 0, size, size)
+  Array.from({ length: 80 }, (_, i) => {
+    const y = (i * size) / 80
+    const rough = i % 11 === 0
+    ctx.fillStyle = rough ? '#cccccc' : '#222222'
+    ctx.fillRect(0, y + Math.sin(i * 1.7) * 2, size, rough ? 2 : 1)
+    return null
+  })
+}
+
+const drawRockDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const v =
+      Math.sin(x * 0.04) * Math.cos(y * 0.04) * 35 +
+      Math.sin(x * 0.12 + y * 0.08) * 20 +
+      Math.sin(x * 0.25 + y * 0.3) * 10 +
+      100
+    const d = i * 4
+    imageData.data[d] = Math.min(255, Math.max(0, v + 10))
+    imageData.data[d + 1] = Math.min(255, Math.max(0, v))
+    imageData.data[d + 2] = Math.min(255, Math.max(0, v - 15))
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawRockNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const nx = Math.sin(x * 0.08 + y * 0.05) * 45 + Math.sin(x * 0.2 + y * 0.15) * 25 + 128
+    const ny = Math.cos(x * 0.07 + y * 0.09) * 45 + Math.cos(x * 0.18 + y * 0.12) * 25 + 128
+    const d = i * 4
+    imageData.data[d] = Math.min(255, Math.max(0, nx))
+    imageData.data[d + 1] = Math.min(255, Math.max(0, ny))
+    imageData.data[d + 2] = 255
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawRockRoughness = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const v = Math.sin(x * 0.07) * Math.cos(y * 0.06) * 30 + Math.sin(x * 0.2 + y * 0.25) * 15 + 200
+    const d = i * 4
+    const c = Math.min(255, Math.max(0, v))
+    imageData.data[d] = c
+    imageData.data[d + 1] = c
+    imageData.data[d + 2] = c
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawRockAo = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const v =
+      Math.sin(x * 0.08 + 1) * Math.cos(y * 0.07) * 40 + Math.sin(x * 0.22 + y * 0.18) * 20 + 180
+    const d = i * 4
+    const c = Math.min(255, Math.max(0, v))
+    imageData.data[d] = c
+    imageData.data[d + 1] = c
+    imageData.data[d + 2] = c
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawRockDisplacement = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const v =
+      Math.sin(x * 0.04) * Math.cos(y * 0.04) * 55 +
+      Math.sin(x * 0.1 + y * 0.08) * 30 +
+      Math.sin(x * 0.25 + y * 0.2) * 15 +
+      128
+    const d = i * 4
+    const c = Math.min(255, Math.max(0, v))
+    imageData.data[d] = c
+    imageData.data[d + 1] = c
+    imageData.data[d + 2] = c
+    imageData.data[d + 3] = 255
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawMagicDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#050010'
+  ctx.fillRect(0, 0, size, size)
+  const center = size / 2
+  const gradient = ctx.createRadialGradient(center, center, 0, center, center, size * 0.5)
+  gradient.addColorStop(0, 'rgba(60,0,90,0.8)')
+  gradient.addColorStop(1, 'rgba(5,0,16,0)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, size, size)
+}
+
+const drawMagicEmissive = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(0, 0, size, size)
+  const center = size / 2
+  const centralGlow = ctx.createRadialGradient(center, center, 0, center, center, size * 0.22)
+  centralGlow.addColorStop(0, '#ffffff')
+  centralGlow.addColorStop(0.2, '#dd88ff')
+  centralGlow.addColorStop(1, 'rgba(80,0,160,0)')
+  ctx.fillStyle = centralGlow
+  ctx.fillRect(0, 0, size, size)
+  Array.from({ length: 8 }, (_, i) => {
+    const angle = (i / 8) * Math.PI * 2
+    const orb = ctx.createRadialGradient(
+      center + Math.cos(angle) * size * 0.3,
+      center + Math.sin(angle) * size * 0.3,
+      0,
+      center + Math.cos(angle) * size * 0.3,
+      center + Math.sin(angle) * size * 0.3,
+      size * 0.1
+    )
+    orb.addColorStop(0, '#ffffff')
+    orb.addColorStop(0.4, '#aa44ff')
+    orb.addColorStop(1, 'rgba(80,0,160,0)')
+    ctx.fillStyle = orb
+    ctx.fillRect(0, 0, size, size)
+    ctx.strokeStyle = 'rgba(160,80,255,0.4)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(center, center)
+    ctx.lineTo(center + Math.cos(angle) * size * 0.42, center + Math.sin(angle) * size * 0.42)
+    ctx.stroke()
+    return null
+  })
+}
+
+const CUTOUT_SPACING = 40
+const CUTOUT_HOLE_RADIUS = 14
+
+const drawCutoutDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#998877'
+  ctx.fillRect(0, 0, size, size)
+}
+
+const drawCutoutAo = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+  Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (_, row) =>
+    Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (__, col) => {
+      const cx = col * CUTOUT_SPACING + CUTOUT_SPACING / 2
+      const cy = row * CUTOUT_SPACING + CUTOUT_SPACING / 2
+      const g = ctx.createRadialGradient(
+        cx,
+        cy,
+        CUTOUT_HOLE_RADIUS - 4,
+        cx,
+        cy,
+        CUTOUT_HOLE_RADIUS + 10
+      )
+      g.addColorStop(0, 'rgba(0,0,0,0.9)')
+      g.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(cx, cy, CUTOUT_HOLE_RADIUS + 10, 0, Math.PI * 2)
+      ctx.fill()
+      return null
+    })
+  )
+}
+
+const drawCutoutDisplacement = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#cccccc'
+  ctx.fillRect(0, 0, size, size)
+  Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (_, row) =>
+    Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (__, col) => {
+      const cx = col * CUTOUT_SPACING + CUTOUT_SPACING / 2
+      const cy = row * CUTOUT_SPACING + CUTOUT_SPACING / 2
+      ctx.fillStyle = '#000000'
+      ctx.beginPath()
+      ctx.arc(cx, cy, CUTOUT_HOLE_RADIUS, 0, Math.PI * 2)
+      ctx.fill()
+      return null
+    })
+  )
+}
+
+const flat =
+  (color: string): DrawFunction =>
+  (ctx, size) => {
+    ctx.fillStyle = color
+    ctx.fillRect(0, 0, size, size)
+  }
+
+const PRESET_DRAW_FUNCTIONS: Record<PresetKey, Record<TextureSlotKey, DrawFunction>> = {
+  glass: {
+    diffuse: flat('#aaccff'),
+    normal: drawNoiseNormal,
+    roughness: flat('#f8f8f8'),
+    ao: flat('#ffffff'),
+    displacement: flat('#000000'),
+    emissive: flat('#000000')
+  },
+  metal: {
+    diffuse: drawScratchDiffuse,
+    normal: drawScratchNormal,
+    roughness: drawScratchRoughness,
+    ao: (ctx, size) => drawBrickGrid(ctx, size, 'rgba(0,0,0,0.3)', '#ffffff'),
+    displacement: flat('#000000'),
+    emissive: flat('#000000')
+  },
+  rock: {
+    diffuse: drawRockDiffuse,
+    normal: drawRockNormal,
+    roughness: drawRockRoughness,
+    ao: drawRockAo,
+    displacement: drawRockDisplacement,
+    emissive: flat('#000000')
+  },
+  magic: {
+    diffuse: drawMagicDiffuse,
+    normal: flat('#8080ff'),
+    roughness: flat('#111111'),
+    ao: flat('#ffffff'),
+    displacement: flat('#000000'),
+    emissive: drawMagicEmissive
+  },
+  cutout: {
+    diffuse: drawCutoutDiffuse,
+    normal: flat('#8080ff'),
+    roughness: flat('#bbbbbb'),
+    ao: drawCutoutAo,
+    displacement: drawCutoutDisplacement,
+    emissive: flat('#000000')
+  }
+}
+
+const applyPreset = (key: PresetKey): void => {
+  const preset = PRESETS[key]
+  reactiveConfig.value.materialType = preset.materialType as MaterialTypeName
+  Object.assign(reactiveConfig.value.properties, preset.properties)
+  Object.assign(reactiveConfig.value.strengths, preset.strengths)
+  Object.assign(reactiveConfig.value.maps, preset.maps)
+  TEXTURE_SLOTS.forEach((slot) => {
+    const offscreen = offscreenCanvases[slot]
+    if (!offscreen) return
+    const ctx = offscreen.getContext('2d')!
+    ctx.clearRect(0, 0, offscreen.width, offscreen.height)
+    PRESET_DRAW_FUNCTIONS[key][slot](ctx, offscreen.width)
+    textures[slot].needsUpdate = true
+    const dataUrl = offscreen.toDataURL()
+    storageSaveLocal(storageKey(slot), dataUrl)
+    pushHistory(slot, dataUrl)
+  })
+  rebuildMaterial()
 }
 
 const applyDataUrlToCanvas = (offscreen: HTMLCanvasElement, dataUrl: string): Promise<void> =>
@@ -698,6 +1017,18 @@ onBeforeUnmount(() => {
 
   <Teleport defer to="#config-panel-extra">
     <div class="texture-painter-toolbar">
+      <p class="texture-painter-toolbar__label">Presets</p>
+      <div class="texture-painter-toolbar__preset-row">
+        <button
+          v-for="(label, key) in PRESET_LABELS"
+          :key="key"
+          class="texture-painter-toolbar__preset-btn"
+          @click="applyPreset(key as PresetKey)"
+        >
+          {{ label }}
+        </button>
+      </div>
+
       <p class="texture-painter-toolbar__label">Texture</p>
       <div class="texture-painter-toolbar__slots">
         <button
@@ -791,6 +1122,28 @@ canvas {
 }
 
 .texture-painter-toolbar__slot-btn--active {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+  border-color: var(--color-primary);
+}
+
+.texture-painter-toolbar__preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.texture-painter-toolbar__preset-btn {
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.texture-painter-toolbar__preset-btn:hover {
   color: var(--color-foreground);
   background: var(--color-muted);
   border-color: var(--color-primary);
