@@ -23,6 +23,8 @@ import {
   BRICK_WIDTH,
   BRICK_HEIGHT,
   MORTAR_SIZE,
+  MORTAR_EDGE_OFFSET,
+  MORTAR_EDGE_SIZE,
   SCENE_BG_COLOR,
   LIGHT_INTENSITY,
   AMBIENT_LIGHT_INTENSITY,
@@ -148,24 +150,87 @@ const drawBrickGrid = (
   )
 }
 
+const drawNormalMap = (ctx: CanvasRenderingContext2D, size: number): void => {
+  const imageData = ctx.createImageData(size, size)
+  const neutral = 128
+  const blue = 255
+  const depressed = 100
+  const raised = 156
+  Array.from({ length: size * size }, (_, i) => {
+    const x = i % size
+    const y = Math.floor(i / size)
+    const offset = y % (BRICK_HEIGHT * 2) < BRICK_HEIGHT ? 0 : BRICK_WIDTH / 2
+    const bx = (x + offset) % BRICK_WIDTH
+    const by = y % BRICK_HEIGHT
+    const isMortar = bx < MORTAR_SIZE || by < MORTAR_SIZE
+    const d = i * 4
+    if (isMortar) {
+      imageData.data[d] = neutral
+      imageData.data[d + 1] = neutral
+    } else {
+      imageData.data[d] =
+        bx < MORTAR_SIZE + MORTAR_EDGE_OFFSET
+          ? depressed
+          : bx > BRICK_WIDTH - MORTAR_EDGE_OFFSET
+            ? raised
+            : neutral
+      imageData.data[d + 1] =
+        by < MORTAR_SIZE + MORTAR_EDGE_OFFSET
+          ? depressed
+          : by > BRICK_HEIGHT - MORTAR_EDGE_OFFSET
+            ? raised
+            : neutral
+    }
+    imageData.data[d + 2] = blue
+    imageData.data[d + 3] = blue
+    return null
+  })
+  ctx.putImageData(imageData, 0, 0)
+}
+
+const drawAoMap = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'
+  Array.from({ length: Math.ceil(size / BRICK_HEIGHT) }, (_, row) =>
+    Array.from({ length: Math.ceil(size / BRICK_WIDTH) + 1 }, (__, col) => {
+      const offset = row % 2 === 0 ? 0 : BRICK_WIDTH / 2
+      const brickX = col * BRICK_WIDTH - offset
+      ctx.fillRect(brickX, row * BRICK_HEIGHT, MORTAR_SIZE + MORTAR_EDGE_SIZE, BRICK_HEIGHT)
+      ctx.fillRect(brickX, row * BRICK_HEIGHT, BRICK_WIDTH, MORTAR_SIZE + MORTAR_EDGE_SIZE)
+      return null
+    })
+  )
+}
+
+const drawDisplacementMap = (ctx: CanvasRenderingContext2D, size: number): void => {
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(0, 0, size, size)
+  ctx.fillStyle = '#cccccc'
+  Array.from({ length: Math.ceil(size / BRICK_HEIGHT) }, (_, row) =>
+    Array.from({ length: Math.ceil(size / BRICK_WIDTH) + 1 }, (__, col) => {
+      const offset = row % 2 === 0 ? 0 : BRICK_WIDTH / 2
+      const brickX = col * BRICK_WIDTH - offset
+      ctx.fillRect(
+        brickX + MORTAR_SIZE,
+        row * BRICK_HEIGHT + MORTAR_SIZE,
+        BRICK_WIDTH - MORTAR_SIZE * 2,
+        BRICK_HEIGHT - MORTAR_SIZE * 2
+      )
+      return null
+    })
+  )
+}
+
 const DEFAULT_DRAW_FUNCTIONS: Record<
   TextureSlotKey,
   (ctx: CanvasRenderingContext2D, size: number) => void
 > = {
   diffuse: (ctx, size) => drawBrickGrid(ctx, size, '#cc8866', '#884433'),
-  normal: (ctx, size) => {
-    ctx.fillStyle = '#8080ff'
-    ctx.fillRect(0, 0, size, size)
-  },
+  normal: drawNormalMap,
   roughness: (ctx, size) => drawBrickGrid(ctx, size, '#ffffff', '#999999'),
-  ao: (ctx, size) => {
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, size, size)
-  },
-  displacement: (ctx, size) => {
-    ctx.fillStyle = '#000000'
-    ctx.fillRect(0, 0, size, size)
-  },
+  ao: drawAoMap,
+  displacement: drawDisplacementMap,
   emissive: (ctx, size) => drawBrickGrid(ctx, size, '#ff6600', '#000000')
 }
 
