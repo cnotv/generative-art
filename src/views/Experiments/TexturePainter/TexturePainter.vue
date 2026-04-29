@@ -8,6 +8,7 @@ import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { storageSaveLocal, storageLoadLocal } from '@webgamekit/canvas-editor'
 import { CanvasEditor } from '@/components/CanvasEditor'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import { registerSceneConfig, unregisterSceneConfig } from '@/stores/sceneConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { buildMaterial } from '@/utils/materialBuilder'
 import type { CanvasEditorToolButton } from '@/components/CanvasEditor'
@@ -91,7 +92,25 @@ const configControls = {
     component: 'ButtonSelector' as const,
     options: MAIN_MATERIAL_TYPES.map((t) => ({ value: t, label: MATERIAL_LABELS[t] }))
   },
-  ...CONFIG_SCHEMA
+  properties: CONFIG_SCHEMA.properties
+}
+
+const mapsSceneRegistration = {
+  schema: { maps: CONFIG_SCHEMA.maps },
+  getValue: (path: string): unknown =>
+    path
+      .split('.')
+      .reduce<unknown>(
+        (object, key) => (object as Record<string, unknown>)?.[key],
+        reactiveConfig.value
+      ),
+  updateValue: (path: string, value: unknown): void => {
+    const [group, key] = path.split('.')
+    if (group === 'maps' && key) {
+      ;(reactiveConfig.value.maps as Record<string, unknown>)[key] = value
+      rebuildMaterial()
+    }
+  }
 }
 
 const EDITOR_TOOLS: readonly CanvasEditorToolButton[] = [
@@ -465,8 +484,9 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 }
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true })
+  setViewPanels({ showConfig: true, showScene: true })
   registerViewConfig(route.name as string, reactiveConfig as never, configControls, rebuildMaterial)
+  registerSceneConfig(mapsSceneRegistration)
   if (canvas.value) await init(canvas.value)
   window.addEventListener('resize', handleResize)
 })
@@ -474,6 +494,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearViewPanels()
   unregisterViewConfig(route.name as string)
+  unregisterSceneConfig()
   window.removeEventListener('resize', handleResize)
   if (canvasElement) {
     canvasElement.removeEventListener('mousedown', handleMouseDown)
