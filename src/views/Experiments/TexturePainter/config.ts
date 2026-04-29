@@ -42,7 +42,6 @@ export const PAINTER_ORTHO_FRUSTUM = 5.0
 export const PAINTER_ORTHO_NEAR = 0.1
 export const PAINTER_ORTHO_FAR = 100
 export const PAINTER_ORTHO_DISTANCE = 20
-export const PAINTER_DRAG_SENSITIVITY = 0.008
 
 export const STORAGE_PREFIX = 'texture-painter'
 
