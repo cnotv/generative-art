@@ -10,6 +10,8 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 import { registerSceneConfig, unregisterSceneConfig } from '@/stores/sceneConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { buildMaterial } from '@/utils/materialBuilder'
+import { DrawingToolbar } from '@/components/DrawingToolbar'
+import type { DrawingTool } from '@/components/DrawingToolbar'
 import {
   MAIN_MATERIAL_TYPES,
   MATERIAL_LABELS,
@@ -64,55 +66,34 @@ let orthoCamera: THREE.OrthographicCamera | null = null
 let rendererReference: THREE.WebGLRenderer | null = null
 let canvasElement: HTMLCanvasElement | null = null
 
-type InteractionMode = 'paint' | 'rotate'
-let interactionMode: InteractionMode = 'none' as InteractionMode
+type ActiveMode = 'paint' | 'rotate' | 'none'
+let activeMode: ActiveMode = 'none'
 let lastPaintUv: THREE.Vector2 | null = null
 let dragLastX = 0
 let dragLastY = 0
 
+const activeTool = ref<DrawingTool>('brush')
+const brushColor = ref(TEXTURE_SLOT_DEFAULT_COLOR.diffuse)
+const brushSize = ref(20)
+
 const textures: Record<string, THREE.CanvasTexture> = {}
 const offscreenCanvases: Record<string, HTMLCanvasElement> = {}
 
+const activeSlot = ref<TextureSlotKey>('diffuse')
+
 const reactiveConfig = createReactiveConfig<
-  MaterialsListConfig & {
-    materialType: MaterialTypeName
-    activeSlot: TextureSlotKey
-    brushColor: string
-    brushSize: number
-    mode: InteractionMode
-  }
+  MaterialsListConfig & { materialType: MaterialTypeName }
 >({
   materialType: 'MeshStandardMaterial',
-  activeSlot: 'diffuse',
-  brushColor: TEXTURE_SLOT_DEFAULT_COLOR.diffuse,
-  brushSize: 20,
-  mode: 'paint',
   ...DEFAULT_CONFIG
 })
 
 const configControls = {
-  mode: {
-    label: 'Mode',
-    component: 'ButtonSelector' as const,
-    options: [
-      { value: 'paint', label: 'Paint' },
-      { value: 'rotate', label: 'Rotate' }
-    ]
-  },
   materialType: {
     label: 'Material',
     component: 'ButtonSelector' as const,
     options: MAIN_MATERIAL_TYPES.map((t) => ({ value: t, label: MATERIAL_LABELS[t] }))
   },
-  activeSlot: {
-    label: 'Paint on',
-    component: 'ButtonSelector' as const,
-    options: TEXTURE_SLOTS.map((s) => ({ value: s, label: TEXTURE_SLOT_LABELS[s] }))
-  },
-  brushColor: { color: true, label: 'Color' },
-  brushSize: { min: 1, max: 80, step: 1, label: 'Brush Size' },
-  resetTexture: { callback: 'resetTexture', label: 'Reset Texture' },
-  resetAll: { callback: 'resetAll', label: 'Reset All Textures' },
   properties: CONFIG_SCHEMA.properties
 }
 
@@ -254,18 +235,18 @@ const rebuildMaterial = (): void => {
 }
 
 const paintStroke = (fromUv: THREE.Vector2 | null, toUv: THREE.Vector2): void => {
-  const slot = reactiveConfig.value.activeSlot
+  const slot = activeSlot.value
   const offscreen = offscreenCanvases[slot]
   if (!offscreen) return
   const ctx = offscreen.getContext('2d')!
   const size = offscreen.width
   const toX = toUv.x * size
   const toY = (1 - toUv.y) * size
-  const radius = reactiveConfig.value.brushSize / 2
+  const radius = brushSize.value / 2
 
-  ctx.fillStyle = reactiveConfig.value.brushColor
-  ctx.strokeStyle = reactiveConfig.value.brushColor
-  ctx.lineWidth = reactiveConfig.value.brushSize
+  ctx.fillStyle = brushColor.value
+  ctx.strokeStyle = brushColor.value
+  ctx.lineWidth = brushSize.value
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
 
@@ -293,7 +274,7 @@ const resetSlot = (slot: TextureSlotKey): void => {
   storageSaveLocal(storageKey(slot), offscreen.toDataURL())
 }
 
-const resetTexture = (): void => resetSlot(reactiveConfig.value.activeSlot)
+const resetTexture = (): void => resetSlot(activeSlot.value)
 
 const resetAll = (): void => TEXTURE_SLOTS.forEach(resetSlot)
 
@@ -314,8 +295,9 @@ const handleMouseDown = (event: MouseEvent): void => {
   if (!canvasElement) return
   const hit = getIntersection(event)
 
-  if (reactiveConfig.value.mode === 'paint' && hit?.uv) {
-    interactionMode = 'paint'
+  const isPaintTool = activeTool.value !== 'rotate'
+  if (isPaintTool && hit?.uv) {
+    activeMode = 'paint'
     lastPaintUv = null
     paintStroke(null, hit.uv)
     lastPaintUv = hit.uv.clone()
@@ -324,7 +306,7 @@ const handleMouseDown = (event: MouseEvent): void => {
   }
 
   if (hit) {
-    interactionMode = 'rotate'
+    activeMode = 'rotate'
     dragLastX = event.clientX
     dragLastY = event.clientY
     canvasElement.style.cursor = 'grabbing'
@@ -332,7 +314,7 @@ const handleMouseDown = (event: MouseEvent): void => {
 }
 
 const handleMouseUp = (): void => {
-  interactionMode = 'none' as InteractionMode
+  activeMode = 'none'
   lastPaintUv = null
   if (canvasElement) canvasElement.style.cursor = 'default'
 }
@@ -340,7 +322,7 @@ const handleMouseUp = (): void => {
 const handleMouseMove = (event: MouseEvent): void => {
   if (!sphere || !canvasElement) return
 
-  if (interactionMode === 'paint') {
+  if (activeMode === 'paint') {
     const hit = getIntersection(event)
     if (hit?.uv) {
       paintStroke(lastPaintUv, hit.uv)
@@ -349,7 +331,7 @@ const handleMouseMove = (event: MouseEvent): void => {
     return
   }
 
-  if (interactionMode === 'rotate') {
+  if (activeMode === 'rotate') {
     const dx = event.clientX - dragLastX
     const dy = event.clientY - dragLastY
     sphere.rotation.y += dx * 0.008
@@ -360,7 +342,7 @@ const handleMouseMove = (event: MouseEvent): void => {
   }
 
   const hit = getIntersection(event)
-  const isPaint = reactiveConfig.value.mode === 'paint'
+  const isPaint = activeTool.value !== 'rotate'
   canvasElement.style.cursor = hit ? (isPaint ? 'crosshair' : 'grab') : 'default'
 }
 
@@ -482,16 +464,7 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 
 onMounted(async () => {
   setViewPanels({ showConfig: true, showScene: true })
-  registerViewConfig(
-    route.name as string,
-    reactiveConfig as never,
-    configControls,
-    rebuildMaterial,
-    {
-      resetTexture,
-      resetAll
-    }
-  )
+  registerViewConfig(route.name as string, reactiveConfig as never, configControls, rebuildMaterial)
   registerSceneConfig(mapsSceneRegistration)
   if (canvas.value) await init(canvas.value)
   window.addEventListener('resize', handleResize)
@@ -517,7 +490,112 @@ onBeforeUnmount(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+
+  <Teleport defer to="#config-panel-extra">
+    <div class="texture-painter-toolbar">
+      <p class="texture-painter-toolbar__label">Texture</p>
+      <div class="texture-painter-toolbar__slots">
+        <button
+          v-for="slot in TEXTURE_SLOTS"
+          :key="slot"
+          class="texture-painter-toolbar__slot-btn"
+          :class="{ 'texture-painter-toolbar__slot-btn--active': activeSlot === slot }"
+          @click="activeSlot = slot"
+        >
+          {{ TEXTURE_SLOT_LABELS[slot] }}
+        </button>
+      </div>
+
+      <DrawingToolbar
+        :tool="activeTool"
+        :color="brushColor"
+        :size="brushSize"
+        :visible-tools="['brush', 'eraser', 'fill', 'rotate', 'color', 'size']"
+        @update:tool="activeTool = $event"
+        @update:color="brushColor = $event"
+        @update:size="brushSize = $event"
+      />
+
+      <div class="texture-painter-toolbar__resets">
+        <button class="texture-painter-toolbar__reset-btn" @click="resetTexture">
+          Reset texture
+        </button>
+        <button class="texture-painter-toolbar__reset-btn" @click="resetAll">Reset all</button>
+      </div>
+    </div>
+  </Teleport>
 </template>
+
+<style scoped>
+canvas {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
+
+.texture-painter-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.texture-painter-toolbar__label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-foreground);
+  margin: 0;
+}
+
+.texture-painter-toolbar__slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.texture-painter-toolbar__slot-btn {
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.texture-painter-toolbar__slot-btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+}
+
+.texture-painter-toolbar__slot-btn--active {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+  border-color: var(--color-primary);
+}
+
+.texture-painter-toolbar__resets {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.texture-painter-toolbar__reset-btn {
+  flex: 1;
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.texture-painter-toolbar__reset-btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+}
+</style>
 
 <style scoped>
 canvas {
