@@ -7,7 +7,6 @@ import { getTools } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { storageSaveLocal, storageLoadLocal } from '@webgamekit/canvas-editor'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
-import { registerSceneConfig, unregisterSceneConfig } from '@/stores/sceneConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { buildMaterial } from '@/utils/materialBuilder'
 import { DrawingToolbar } from '@/components/DrawingToolbar'
@@ -139,25 +138,8 @@ const configControls = {
     emissiveIntensity: { min: 0, max: 5, step: 0.1, label: 'Emissive Intensity' },
     envMapIntensity: { min: 0, max: 3, step: 0.1, label: 'Env Map Intensity' }
   },
-  properties: CONFIG_SCHEMA.properties
-}
-
-const mapsSceneRegistration = {
-  schema: { maps: CONFIG_SCHEMA.maps },
-  getValue: (path: string): unknown =>
-    path
-      .split('.')
-      .reduce<unknown>(
-        (object, key) => (object as Record<string, unknown>)?.[key],
-        reactiveConfig.value
-      ),
-  updateValue: (path: string, value: unknown): void => {
-    const [group, key] = path.split('.')
-    if (group === 'maps' && key) {
-      ;(reactiveConfig.value.maps as Record<string, unknown>)[key] = value
-      rebuildMaterial()
-    }
-  }
+  properties: CONFIG_SCHEMA.properties,
+  maps: CONFIG_SCHEMA.maps
 }
 
 const storageKey = (slot: TextureSlotKey): string => `${STORAGE_PREFIX}-${slot}`
@@ -688,9 +670,8 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 }
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true, showScene: true })
+  setViewPanels({ showConfig: true })
   registerViewConfig(route.name as string, reactiveConfig as never, configControls, rebuildMaterial)
-  registerSceneConfig(mapsSceneRegistration)
   if (canvas.value) await init(canvas.value)
   window.addEventListener('resize', handleResize)
 })
@@ -698,7 +679,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearViewPanels()
   unregisterViewConfig(route.name as string)
-  unregisterSceneConfig()
   window.removeEventListener('resize', handleResize)
   if (canvasElement) {
     canvasElement.removeEventListener('mousedown', handleMouseDown)
