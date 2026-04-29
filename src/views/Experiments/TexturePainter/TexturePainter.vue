@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTools } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
@@ -53,6 +53,7 @@ import {
   STORAGE_PREFIX,
   TEXTURE_SLOTS,
   TEXTURE_SLOT_LABELS,
+  TEXTURE_SLOT_PALETTE,
   TEXTURE_SLOT_DEFAULT_COLOR
 } from './config'
 import type { MaterialTypeName, MaterialsListConfig, TextureSlotKey } from './config'
@@ -71,6 +72,7 @@ let canvasElement: HTMLCanvasElement | null = null
 type ActiveMode = 'paint' | 'rotate' | 'none'
 let activeMode: ActiveMode = 'none'
 let lastPaintUv: THREE.Vector2 | null = null
+let didPaint = false
 let dragLastX = 0
 let dragLastY = 0
 
@@ -78,15 +80,49 @@ const activeTool = ref<DrawingTool>('brush')
 const brushColor = ref(TEXTURE_SLOT_DEFAULT_COLOR.diffuse)
 const brushSize = ref(20)
 
+const HISTORY_LIMIT = 20
+const paintHistory = reactive<Record<TextureSlotKey, { stack: string[]; index: number }>>(
+  Object.fromEntries(TEXTURE_SLOTS.map((s) => [s, { stack: [], index: -1 }])) as Record<
+    TextureSlotKey,
+    { stack: string[]; index: number }
+  >
+)
+const canUndo = computed(() => paintHistory[activeSlot.value].index > 0)
+const canRedo = computed(() => {
+  const h = paintHistory[activeSlot.value]
+  return h.index < h.stack.length - 1
+})
+
 const textures: Record<string, THREE.CanvasTexture> = {}
 const offscreenCanvases: Record<string, HTMLCanvasElement> = {}
 
 const activeSlot = ref<TextureSlotKey>('diffuse')
 
+watch(activeSlot, (slot) => {
+  const palette = TEXTURE_SLOT_PALETTE[slot]
+  if (!palette.includes(brushColor.value)) brushColor.value = palette[0]
+})
+
 const reactiveConfig = createReactiveConfig<
-  MaterialsListConfig & { materialType: MaterialTypeName }
+  MaterialsListConfig & {
+    materialType: MaterialTypeName
+    strengths: {
+      normalScale: number
+      aoIntensity: number
+      displacementScale: number
+      emissiveIntensity: number
+      envMapIntensity: number
+    }
+  }
 >({
   materialType: 'MeshStandardMaterial',
+  strengths: {
+    normalScale: 2,
+    aoIntensity: 1,
+    displacementScale: 0.25,
+    emissiveIntensity: 1.5,
+    envMapIntensity: 1
+  },
   ...DEFAULT_CONFIG
 })
 
@@ -95,6 +131,13 @@ const configControls = {
     label: 'Material',
     component: 'ButtonSelector' as const,
     options: MAIN_MATERIAL_TYPES.map((t) => ({ value: t, label: MATERIAL_LABELS[t] }))
+  },
+  strengths: {
+    normalScale: { min: 0, max: 5, step: 0.1, label: 'Normal Scale' },
+    aoIntensity: { min: 0, max: 2, step: 0.05, label: 'AO Intensity' },
+    displacementScale: { min: 0, max: 2, step: 0.01, label: 'Displacement Scale' },
+    emissiveIntensity: { min: 0, max: 5, step: 0.1, label: 'Emissive Intensity' },
+    envMapIntensity: { min: 0, max: 3, step: 0.1, label: 'Env Map Intensity' }
   },
   properties: CONFIG_SCHEMA.properties
 }
@@ -283,20 +326,116 @@ const createEnvironmentMap = (renderer: THREE.WebGLRenderer): THREE.Texture => {
   return renderTarget.texture
 }
 
-const buildSphereMaterial = (): THREE.Material =>
-  buildMaterial(
+const applyStrengths = (mat: THREE.Material): void => {
+  const s = reactiveConfig.value.strengths
+  const m = mat as THREE.MeshStandardMaterial
+  if (m.normalMap && m.normalScale) m.normalScale.set(s.normalScale, s.normalScale)
+  if (m.aoMap) m.aoMapIntensity = s.aoIntensity
+  if ('displacementMap' in m && m.displacementMap)
+    (m as unknown as { displacementScale: number }).displacementScale = s.displacementScale
+  if (m.emissiveMap) m.emissiveIntensity = s.emissiveIntensity
+  if (m.envMap) m.envMapIntensity = s.envMapIntensity
+}
+
+const buildSphereMaterial = (): THREE.Material => {
+  const mat = buildMaterial(
     reactiveConfig.value.materialType,
     MATERIAL_FEATURES[reactiveConfig.value.materialType],
     getEnabledMaps(reactiveConfig.value),
     reactiveConfig.value,
     { textures: textures as Record<string, THREE.Texture>, envMap }
   )
+  applyStrengths(mat)
+  return mat
+}
 
 const rebuildMaterial = (): void => {
   if (!sphere) return
   const old = sphere.material as THREE.Material
   sphere.material = buildSphereMaterial()
   old.dispose()
+}
+
+const pushHistory = (slot: TextureSlotKey, dataUrl: string): void => {
+  const h = paintHistory[slot]
+  h.stack = h.stack.slice(0, h.index + 1)
+  h.stack.push(dataUrl)
+  if (h.stack.length > HISTORY_LIMIT) h.stack.shift()
+  else h.index++
+}
+
+const applySnapshot = (slot: TextureSlotKey, dataUrl: string): void => {
+  applyDataUrlToCanvas(offscreenCanvases[slot], dataUrl).then(() => {
+    textures[slot].needsUpdate = true
+    storageSaveLocal(storageKey(slot), dataUrl)
+  })
+}
+
+const undoPaint = (): void => {
+  const slot = activeSlot.value
+  const h = paintHistory[slot]
+  if (h.index <= 0) return
+  h.index--
+  applySnapshot(slot, h.stack[h.index])
+}
+
+const redoPaint = (): void => {
+  const slot = activeSlot.value
+  const h = paintHistory[slot]
+  if (h.index >= h.stack.length - 1) return
+  h.index++
+  applySnapshot(slot, h.stack[h.index])
+}
+
+const floodFill = (
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  startY: number,
+  fillColor: string
+): void => {
+  const { width, height } = ctx.canvas
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const data = imageData.data
+  const ix = Math.round(startX)
+  const iy = Math.round(startY)
+  if (ix < 0 || ix >= width || iy < 0 || iy >= height) return
+  const startIndex = (iy * width + ix) * 4
+  const [tr, tg, tb, ta] = [
+    data[startIndex],
+    data[startIndex + 1],
+    data[startIndex + 2],
+    data[startIndex + 3]
+  ]
+  const temporary = document.createElement('canvas')
+  temporary.width = 1
+  temporary.height = 1
+  const temporaryContext = temporary.getContext('2d')!
+  temporaryContext.fillStyle = fillColor
+  temporaryContext.fillRect(0, 0, 1, 1)
+  const [fr, fg, fb, fa] = [...temporaryContext.getImageData(0, 0, 1, 1).data]
+  if (tr === fr && tg === fg && tb === fb && ta === fa) return
+  const isSame = (i: number): boolean =>
+    data[i] === tr && data[i + 1] === tg && data[i + 2] === tb && data[i + 3] === ta
+  const queue: number[] = [ix + iy * width]
+  const visited = new Uint8Array(width * height)
+  while (queue.length > 0) {
+    const pos = queue.pop()!
+    if (visited[pos]) continue
+    visited[pos] = 1
+    const px = pos % width
+    const py = Math.floor(pos / width)
+    const i = pos * 4
+    if (!isSame(i)) continue
+    data[i] = fr
+    data[i + 1] = fg
+    data[i + 2] = fb
+    data[i + 3] = fa
+    if (px > 0) queue.push(pos - 1)
+    if (px < width - 1) queue.push(pos + 1)
+    if (py > 0) queue.push(pos - width)
+    if (py < height - 1) queue.push(pos + width)
+  }
+  ctx.putImageData(imageData, 0, 0)
 }
 
 const paintStroke = (fromUv: THREE.Vector2 | null, toUv: THREE.Vector2): void => {
@@ -307,26 +446,32 @@ const paintStroke = (fromUv: THREE.Vector2 | null, toUv: THREE.Vector2): void =>
   const size = offscreen.width
   const toX = toUv.x * size
   const toY = (1 - toUv.y) * size
-  const radius = brushSize.value / 2
 
-  ctx.fillStyle = brushColor.value
-  ctx.strokeStyle = brushColor.value
-  ctx.lineWidth = brushSize.value
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-
-  ctx.beginPath()
-  if (fromUv) {
-    ctx.moveTo(fromUv.x * size, (1 - fromUv.y) * size)
-    ctx.lineTo(toX, toY)
-    ctx.stroke()
+  if (activeTool.value === 'fill') {
+    floodFill(ctx, toX, toY, brushColor.value)
+  } else {
+    const isEraser = activeTool.value === 'eraser'
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over'
+    const color = isEraser ? 'rgba(0,0,0,1)' : brushColor.value
+    ctx.fillStyle = color
+    ctx.strokeStyle = color
+    ctx.lineWidth = brushSize.value
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    if (fromUv) {
+      ctx.moveTo(fromUv.x * size, (1 - fromUv.y) * size)
+      ctx.lineTo(toX, toY)
+      ctx.stroke()
+    }
+    ctx.beginPath()
+    ctx.arc(toX, toY, brushSize.value / 2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalCompositeOperation = 'source-over'
   }
-  ctx.beginPath()
-  ctx.arc(toX, toY, radius, 0, Math.PI * 2)
-  ctx.fill()
 
   textures[slot].needsUpdate = true
-  storageSaveLocal(storageKey(slot), offscreen.toDataURL())
+  didPaint = true
 }
 
 const resetSlot = (slot: TextureSlotKey): void => {
@@ -336,7 +481,9 @@ const resetSlot = (slot: TextureSlotKey): void => {
   ctx.clearRect(0, 0, offscreen.width, offscreen.height)
   DEFAULT_DRAW_FUNCTIONS[slot](ctx, offscreen.width)
   textures[slot].needsUpdate = true
-  storageSaveLocal(storageKey(slot), offscreen.toDataURL())
+  const dataUrl = offscreen.toDataURL()
+  storageSaveLocal(storageKey(slot), dataUrl)
+  pushHistory(slot, dataUrl)
 }
 
 const resetTexture = (): void => resetSlot(activeSlot.value)
@@ -364,6 +511,7 @@ const handleMouseDown = (event: MouseEvent): void => {
   if (isPaintTool && hit?.uv) {
     activeMode = 'paint'
     lastPaintUv = null
+    didPaint = false
     paintStroke(null, hit.uv)
     lastPaintUv = hit.uv.clone()
     canvasElement.style.cursor = 'crosshair'
@@ -379,8 +527,15 @@ const handleMouseDown = (event: MouseEvent): void => {
 }
 
 const handleMouseUp = (): void => {
+  if (activeMode === 'paint' && didPaint) {
+    const slot = activeSlot.value
+    const dataUrl = offscreenCanvases[slot].toDataURL()
+    pushHistory(slot, dataUrl)
+    storageSaveLocal(storageKey(slot), dataUrl)
+  }
   activeMode = 'none'
   lastPaintUv = null
+  didPaint = false
   if (canvasElement) canvasElement.style.cursor = 'default'
 }
 
@@ -442,6 +597,11 @@ const handleResize = (): void => {
 const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
   canvasElement = canvasReference
   await initTextures()
+  TEXTURE_SLOTS.forEach((slot) => {
+    const initialDataUrl = offscreenCanvases[slot].toDataURL()
+    paintHistory[slot].stack = [initialDataUrl]
+    paintHistory[slot].index = 0
+  })
 
   const { setup, renderer, scene } = await getTools({ canvas: canvasReference, resize: false })
   rendererReference = renderer
@@ -571,14 +731,30 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
+      <div class="texture-painter-toolbar__palette">
+        <button
+          v-for="color in TEXTURE_SLOT_PALETTE[activeSlot]"
+          :key="color"
+          class="texture-painter-toolbar__swatch"
+          :class="{ 'texture-painter-toolbar__swatch--active': brushColor === color }"
+          :style="{ background: color }"
+          :title="color"
+          @click="brushColor = color"
+        />
+      </div>
+
       <DrawingToolbar
         :tool="activeTool"
         :color="brushColor"
         :size="brushSize"
-        :visible-tools="['brush', 'eraser', 'fill', 'rotate', 'color', 'size']"
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        :visible-tools="['brush', 'eraser', 'fill', 'rotate', 'color', 'size', 'undo', 'redo']"
         @update:tool="activeTool = $event"
         @update:color="brushColor = $event"
         @update:size="brushSize = $event"
+        @undo="undoPaint"
+        @redo="redoPaint"
       />
 
       <div class="texture-painter-toolbar__resets">
@@ -638,6 +814,29 @@ canvas {
   color: var(--color-foreground);
   background: var(--color-muted);
   border-color: var(--color-primary);
+}
+
+.texture-painter-toolbar__palette {
+  display: flex;
+  gap: var(--spacing-1);
+  flex-wrap: wrap;
+}
+
+.texture-painter-toolbar__swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.texture-painter-toolbar__swatch--active {
+  border-color: var(--color-foreground);
+}
+
+.texture-painter-toolbar__swatch:hover {
+  opacity: 0.85;
 }
 
 .texture-painter-toolbar__resets {

@@ -3,19 +3,23 @@ import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { ColorPicker } from '@/components/ui/color-picker'
 import BrushSize from '@/components/CanvasEditor/BrushSize.vue'
-import { Brush, Eraser, PaintBucket, RotateCw } from 'lucide-vue-next'
+import { Brush, Eraser, PaintBucket, RotateCw, Undo2, Redo2 } from 'lucide-vue-next'
 
 export type DrawingTool = 'brush' | 'eraser' | 'fill' | 'rotate'
-export type DrawingToolbarButton = DrawingTool | 'color' | 'size'
+export type DrawingToolbarButton = DrawingTool | 'color' | 'size' | 'undo' | 'redo'
 
 const props = withDefaults(
   defineProps<{
     tool: DrawingTool
     color: string
     size: number
+    canUndo?: boolean
+    canRedo?: boolean
     visibleTools?: readonly DrawingToolbarButton[]
   }>(),
   {
+    canUndo: false,
+    canRedo: false,
     visibleTools: () => ['brush', 'eraser', 'fill', 'color', 'size']
   }
 )
@@ -24,6 +28,8 @@ const emit = defineEmits<{
   'update:tool': [value: DrawingTool]
   'update:color': [value: string]
   'update:size': [value: number]
+  undo: []
+  redo: []
 }>()
 
 const show = computed(() => new Set(props.visibleTools))
@@ -81,6 +87,26 @@ const show = computed(() => new Set(props.visibleTools))
       :max="80"
       @update:model-value="emit('update:size', $event)"
     />
+    <Button
+      v-if="show.has('undo')"
+      variant="outline"
+      size="icon"
+      :disabled="!canUndo"
+      title="Undo"
+      @click="emit('undo')"
+    >
+      <Undo2 class="drawing-toolbar__icon" />
+    </Button>
+    <Button
+      v-if="show.has('redo')"
+      variant="outline"
+      size="icon"
+      :disabled="!canRedo"
+      title="Redo"
+      @click="emit('redo')"
+    >
+      <Redo2 class="drawing-toolbar__icon" />
+    </Button>
   </div>
 </template>
 
