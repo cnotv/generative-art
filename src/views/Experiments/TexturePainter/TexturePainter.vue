@@ -111,6 +111,8 @@ const configControls = {
   },
   brushColor: { color: true, label: 'Color' },
   brushSize: { min: 1, max: 80, step: 1, label: 'Brush Size' },
+  resetTexture: { callback: 'resetTexture', label: 'Reset Texture' },
+  resetAll: { callback: 'resetAll', label: 'Reset All Textures' },
   properties: CONFIG_SCHEMA.properties
 }
 
@@ -280,6 +282,20 @@ const paintStroke = (fromUv: THREE.Vector2 | null, toUv: THREE.Vector2): void =>
   textures[slot].needsUpdate = true
   storageSaveLocal(storageKey(slot), offscreen.toDataURL())
 }
+
+const resetSlot = (slot: TextureSlotKey): void => {
+  const offscreen = offscreenCanvases[slot]
+  if (!offscreen) return
+  const ctx = offscreen.getContext('2d')!
+  ctx.clearRect(0, 0, offscreen.width, offscreen.height)
+  DEFAULT_DRAW_FUNCTIONS[slot](ctx, offscreen.width)
+  textures[slot].needsUpdate = true
+  storageSaveLocal(storageKey(slot), offscreen.toDataURL())
+}
+
+const resetTexture = (): void => resetSlot(reactiveConfig.value.activeSlot)
+
+const resetAll = (): void => TEXTURE_SLOTS.forEach(resetSlot)
 
 const getIntersection = (event: MouseEvent): THREE.Intersection | null => {
   if (!orthoCamera || !sphere || !canvasElement) return null
@@ -466,7 +482,16 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 
 onMounted(async () => {
   setViewPanels({ showConfig: true, showScene: true })
-  registerViewConfig(route.name as string, reactiveConfig as never, configControls, rebuildMaterial)
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig as never,
+    configControls,
+    rebuildMaterial,
+    {
+      resetTexture,
+      resetAll
+    }
+  )
   registerSceneConfig(mapsSceneRegistration)
   if (canvas.value) await init(canvas.value)
   window.addEventListener('resize', handleResize)
