@@ -7,7 +7,9 @@ import { getTools } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { storageSaveLocal, storageLoadLocal } from '@webgamekit/canvas-editor'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
+import lakeUrl from '@/assets/images/backgrounds/lake.webp'
 import { useViewPanelsStore } from '@/stores/viewPanels'
+import { usePanelsStore } from '@/stores/panels'
 import { buildMaterial } from '@/utils/materialBuilder'
 import { DrawingToolbar } from '@/components/DrawingToolbar'
 import type { DrawingTool } from '@/components/DrawingToolbar'
@@ -24,23 +26,12 @@ import {
   MORTAR_SIZE,
   MORTAR_EDGE_OFFSET,
   MORTAR_EDGE_SIZE,
-  SCENE_BG_COLOR,
   LIGHT_INTENSITY,
   AMBIENT_LIGHT_INTENSITY,
   HEMISPHERE_SKY,
   HEMISPHERE_GROUND,
   LIGHT_ORBIT_RADIUS,
   LIGHT_Z_POSITION,
-  ENV_SKY_COLOR,
-  ENV_GROUND_COLOR,
-  ENV_GROUND_SIZE,
-  ENV_GROUND_Y,
-  ENV_LIGHT_INTENSITY,
-  ENV_LIGHT_POSITION,
-  ENV_LIGHT_Y,
-  ENV_AMBIENT_COLOR,
-  ENV_AMBIENT_INTENSITY,
-  ENV_LIGHT_COLOR,
   PAINTER_SPHERE_RADIUS,
   PAINTER_LIGHT_ORBIT_SPEED,
   PAINTER_TARGET_FPS,
@@ -53,11 +44,9 @@ import {
   TEXTURE_SLOTS,
   TEXTURE_SLOT_LABELS,
   TEXTURE_SLOT_PALETTE,
-  TEXTURE_SLOT_DEFAULT_COLOR,
-  PRESET_LABELS,
-  PRESETS
+  TEXTURE_SLOT_DEFAULT_COLOR
 } from './config'
-import type { MaterialTypeName, MaterialsListConfig, TextureSlotKey, PresetKey } from './config'
+import type { MaterialTypeName, MaterialsListConfig, TextureSlotKey } from './config'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
@@ -65,10 +54,20 @@ const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 
 let sphere: THREE.Mesh | null = null
 let envMap: THREE.Texture | null = null
+let backgroundTexture: THREE.Texture | null = null
 let orbitControls: OrbitControls | null = null
 let orthoCamera: THREE.OrthographicCamera | null = null
 let rendererReference: THREE.WebGLRenderer | null = null
 let canvasElement: HTMLCanvasElement | null = null
+
+const previewUrls = reactive<Partial<Record<TextureSlotKey, string>>>({})
+const updatePreviews = (): void => {
+  TEXTURE_SLOTS.forEach((slot) => {
+    const offscreen = offscreenCanvases[slot]
+    if (!offscreen) return
+    previewUrls[slot] = offscreen.toDataURL()
+  })
+}
 
 type ActiveMode = 'paint' | 'rotate' | 'none'
 let activeMode: ActiveMode = 'none'
@@ -77,16 +76,16 @@ let didPaint = false
 let dragLastX = 0
 let dragLastY = 0
 
-const activeTool = ref<DrawingTool>('brush')
+const activeTool = ref<DrawingTool>('rotate')
 const brushColor = ref(TEXTURE_SLOT_DEFAULT_COLOR.diffuse)
-const brushSize = ref(20)
+const BRUSH_SIZE_DEFAULT = 20
+const brushSize = ref(BRUSH_SIZE_DEFAULT)
 
 const HISTORY_LIMIT = 20
 const paintHistory = reactive<Record<TextureSlotKey, { stack: string[]; index: number }>>(
-  Object.fromEntries(TEXTURE_SLOTS.map((s) => [s, { stack: [], index: -1 }])) as Record<
-    TextureSlotKey,
-    { stack: string[]; index: number }
-  >
+  Object.fromEntries(
+    TEXTURE_SLOTS.map((s) => [s, { stack: [] as string[], index: -1 }])
+  ) as unknown as Record<TextureSlotKey, { stack: string[]; index: number }>
 )
 const canUndo = computed(() => paintHistory[activeSlot.value].index > 0)
 const canRedo = computed(() => {
@@ -104,44 +103,46 @@ watch(activeSlot, (slot) => {
   if (!palette.includes(brushColor.value)) brushColor.value = palette[0]
 })
 
-const reactiveConfig = createReactiveConfig<
-  MaterialsListConfig & {
-    materialType: MaterialTypeName
-    strengths: {
-      normalScale: number
-      aoIntensity: number
-      displacementScale: number
-      emissiveIntensity: number
-      envMapIntensity: number
-    }
+const reactiveConfig = createReactiveConfig<{
+  materialType: MaterialTypeName
+  config: {
+    normalScale: number
+    aoIntensity: number
+    displacementScale: number
+    emissiveIntensity: number
+    envMapIntensity: number
   }
->({
-  materialType: 'MeshStandardMaterial',
-  strengths: {
+  materials: MaterialsListConfig
+}>({
+  materialType: 'MeshPhysicalMaterial',
+  config: {
     normalScale: 2,
     aoIntensity: 1,
     displacementScale: 0.25,
     emissiveIntensity: 1.5,
     envMapIntensity: 1
   },
-  ...DEFAULT_CONFIG
+  materials: { ...DEFAULT_CONFIG }
 })
 
 const configControls = {
+  __defaultOpenGroups: [] as string[],
   materialType: {
     label: 'Material',
     component: 'ButtonSelector' as const,
     options: MAIN_MATERIAL_TYPES.map((t) => ({ value: t, label: MATERIAL_LABELS[t] }))
   },
-  strengths: {
+  config: {
     normalScale: { min: 0, max: 5, step: 0.1, label: 'Normal Scale' },
     aoIntensity: { min: 0, max: 2, step: 0.05, label: 'AO Intensity' },
     displacementScale: { min: 0, max: 2, step: 0.01, label: 'Displacement Scale' },
     emissiveIntensity: { min: 0, max: 5, step: 0.1, label: 'Emissive Intensity' },
     envMapIntensity: { min: 0, max: 3, step: 0.1, label: 'Env Map Intensity' }
   },
-  properties: CONFIG_SCHEMA.properties,
-  maps: CONFIG_SCHEMA.maps
+  materials: {
+    properties: CONFIG_SCHEMA.properties,
+    maps: CONFIG_SCHEMA.maps
+  }
 }
 
 const storageKey = (slot: TextureSlotKey): string => `${STORAGE_PREFIX}-${slot}`
@@ -261,321 +262,28 @@ const DEFAULT_DRAW_FUNCTIONS: Record<
   emissive: (ctx, size) => drawBrickGrid(ctx, size, '#ff6600', '#000000')
 }
 
-type DrawFunction = (ctx: CanvasRenderingContext2D, size: number) => void
-
-const drawNoiseNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const nx = Math.sin(x * 0.05 + y * 0.03) * 12 + 128
-    const ny = Math.cos(x * 0.04 + y * 0.06) * 12 + 128
-    const d = i * 4
-    imageData.data[d] = Math.min(255, Math.max(0, nx))
-    imageData.data[d + 1] = Math.min(255, Math.max(0, ny))
-    imageData.data[d + 2] = 255
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawScratchDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#888888'
-  ctx.fillRect(0, 0, size, size)
-  Array.from({ length: 80 }, (_, i) => {
-    const y = (i * size) / 80
-    const brightness = 140 + (i % 5) * 18
-    ctx.fillStyle = `rgba(${brightness},${brightness},${brightness + 10},${0.25 + (i % 4) * 0.1})`
-    ctx.fillRect(0, y + Math.sin(i * 1.7) * 2, size, 1 + (i % 2))
-    return null
-  })
-}
-
-const drawScratchNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const y = Math.floor(i / size)
-    const scratch = (y * 17) % 11 === 0
-    const d = i * 4
-    imageData.data[d] = 128
-    imageData.data[d + 1] = scratch ? 88 : 128
-    imageData.data[d + 2] = 255
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawScratchRoughness = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#333333'
-  ctx.fillRect(0, 0, size, size)
-  Array.from({ length: 80 }, (_, i) => {
-    const y = (i * size) / 80
-    const rough = i % 11 === 0
-    ctx.fillStyle = rough ? '#cccccc' : '#222222'
-    ctx.fillRect(0, y + Math.sin(i * 1.7) * 2, size, rough ? 2 : 1)
-    return null
-  })
-}
-
-const drawRockDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const v =
-      Math.sin(x * 0.04) * Math.cos(y * 0.04) * 35 +
-      Math.sin(x * 0.12 + y * 0.08) * 20 +
-      Math.sin(x * 0.25 + y * 0.3) * 10 +
-      100
-    const d = i * 4
-    imageData.data[d] = Math.min(255, Math.max(0, v + 10))
-    imageData.data[d + 1] = Math.min(255, Math.max(0, v))
-    imageData.data[d + 2] = Math.min(255, Math.max(0, v - 15))
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawRockNormal = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const nx = Math.sin(x * 0.08 + y * 0.05) * 45 + Math.sin(x * 0.2 + y * 0.15) * 25 + 128
-    const ny = Math.cos(x * 0.07 + y * 0.09) * 45 + Math.cos(x * 0.18 + y * 0.12) * 25 + 128
-    const d = i * 4
-    imageData.data[d] = Math.min(255, Math.max(0, nx))
-    imageData.data[d + 1] = Math.min(255, Math.max(0, ny))
-    imageData.data[d + 2] = 255
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawRockRoughness = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const v = Math.sin(x * 0.07) * Math.cos(y * 0.06) * 30 + Math.sin(x * 0.2 + y * 0.25) * 15 + 200
-    const d = i * 4
-    const c = Math.min(255, Math.max(0, v))
-    imageData.data[d] = c
-    imageData.data[d + 1] = c
-    imageData.data[d + 2] = c
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawRockAo = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const v =
-      Math.sin(x * 0.08 + 1) * Math.cos(y * 0.07) * 40 + Math.sin(x * 0.22 + y * 0.18) * 20 + 180
-    const d = i * 4
-    const c = Math.min(255, Math.max(0, v))
-    imageData.data[d] = c
-    imageData.data[d + 1] = c
-    imageData.data[d + 2] = c
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawRockDisplacement = (ctx: CanvasRenderingContext2D, size: number): void => {
-  const imageData = ctx.createImageData(size, size)
-  Array.from({ length: size * size }, (_, i) => {
-    const x = i % size
-    const y = Math.floor(i / size)
-    const v =
-      Math.sin(x * 0.04) * Math.cos(y * 0.04) * 55 +
-      Math.sin(x * 0.1 + y * 0.08) * 30 +
-      Math.sin(x * 0.25 + y * 0.2) * 15 +
-      128
-    const d = i * 4
-    const c = Math.min(255, Math.max(0, v))
-    imageData.data[d] = c
-    imageData.data[d + 1] = c
-    imageData.data[d + 2] = c
-    imageData.data[d + 3] = 255
-    return null
-  })
-  ctx.putImageData(imageData, 0, 0)
-}
-
-const drawMagicDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#050010'
-  ctx.fillRect(0, 0, size, size)
-  const center = size / 2
-  const gradient = ctx.createRadialGradient(center, center, 0, center, center, size * 0.5)
-  gradient.addColorStop(0, 'rgba(60,0,90,0.8)')
-  gradient.addColorStop(1, 'rgba(5,0,16,0)')
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, size, size)
-}
-
-const drawMagicEmissive = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(0, 0, size, size)
-  const center = size / 2
-  const centralGlow = ctx.createRadialGradient(center, center, 0, center, center, size * 0.22)
-  centralGlow.addColorStop(0, '#ffffff')
-  centralGlow.addColorStop(0.2, '#dd88ff')
-  centralGlow.addColorStop(1, 'rgba(80,0,160,0)')
-  ctx.fillStyle = centralGlow
-  ctx.fillRect(0, 0, size, size)
-  Array.from({ length: 8 }, (_, i) => {
-    const angle = (i / 8) * Math.PI * 2
-    const orb = ctx.createRadialGradient(
-      center + Math.cos(angle) * size * 0.3,
-      center + Math.sin(angle) * size * 0.3,
-      0,
-      center + Math.cos(angle) * size * 0.3,
-      center + Math.sin(angle) * size * 0.3,
-      size * 0.1
-    )
-    orb.addColorStop(0, '#ffffff')
-    orb.addColorStop(0.4, '#aa44ff')
-    orb.addColorStop(1, 'rgba(80,0,160,0)')
-    ctx.fillStyle = orb
-    ctx.fillRect(0, 0, size, size)
-    ctx.strokeStyle = 'rgba(160,80,255,0.4)'
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.moveTo(center, center)
-    ctx.lineTo(center + Math.cos(angle) * size * 0.42, center + Math.sin(angle) * size * 0.42)
-    ctx.stroke()
-    return null
-  })
-}
-
-const CUTOUT_SPACING = 40
-const CUTOUT_HOLE_RADIUS = 14
-
-const drawCutoutDiffuse = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#998877'
-  ctx.fillRect(0, 0, size, size)
-}
-
-const drawCutoutAo = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, size, size)
-  Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (_, row) =>
-    Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (__, col) => {
-      const cx = col * CUTOUT_SPACING + CUTOUT_SPACING / 2
-      const cy = row * CUTOUT_SPACING + CUTOUT_SPACING / 2
-      const g = ctx.createRadialGradient(
-        cx,
-        cy,
-        CUTOUT_HOLE_RADIUS - 4,
-        cx,
-        cy,
-        CUTOUT_HOLE_RADIUS + 10
-      )
-      g.addColorStop(0, 'rgba(0,0,0,0.9)')
-      g.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.arc(cx, cy, CUTOUT_HOLE_RADIUS + 10, 0, Math.PI * 2)
-      ctx.fill()
-      return null
-    })
-  )
-}
-
-const drawCutoutDisplacement = (ctx: CanvasRenderingContext2D, size: number): void => {
-  ctx.fillStyle = '#cccccc'
-  ctx.fillRect(0, 0, size, size)
-  Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (_, row) =>
-    Array.from({ length: Math.ceil(size / CUTOUT_SPACING) }, (__, col) => {
-      const cx = col * CUTOUT_SPACING + CUTOUT_SPACING / 2
-      const cy = row * CUTOUT_SPACING + CUTOUT_SPACING / 2
-      ctx.fillStyle = '#000000'
-      ctx.beginPath()
-      ctx.arc(cx, cy, CUTOUT_HOLE_RADIUS, 0, Math.PI * 2)
-      ctx.fill()
-      return null
-    })
-  )
-}
-
-const flat =
-  (color: string): DrawFunction =>
-  (ctx, size) => {
-    ctx.fillStyle = color
-    ctx.fillRect(0, 0, size, size)
-  }
-
-const PRESET_DRAW_FUNCTIONS: Record<PresetKey, Record<TextureSlotKey, DrawFunction>> = {
-  glass: {
-    diffuse: flat('#aaccff'),
-    normal: drawNoiseNormal,
-    roughness: flat('#f8f8f8'),
-    ao: flat('#ffffff'),
-    displacement: flat('#000000'),
-    emissive: flat('#000000')
-  },
-  metal: {
-    diffuse: drawScratchDiffuse,
-    normal: drawScratchNormal,
-    roughness: drawScratchRoughness,
-    ao: (ctx, size) => drawBrickGrid(ctx, size, 'rgba(0,0,0,0.3)', '#ffffff'),
-    displacement: flat('#000000'),
-    emissive: flat('#000000')
-  },
-  rock: {
-    diffuse: drawRockDiffuse,
-    normal: drawRockNormal,
-    roughness: drawRockRoughness,
-    ao: drawRockAo,
-    displacement: drawRockDisplacement,
-    emissive: flat('#000000')
-  },
-  magic: {
-    diffuse: drawMagicDiffuse,
-    normal: flat('#8080ff'),
-    roughness: flat('#111111'),
-    ao: flat('#ffffff'),
-    displacement: flat('#000000'),
-    emissive: drawMagicEmissive
-  },
-  cutout: {
-    diffuse: drawCutoutDiffuse,
-    normal: flat('#8080ff'),
-    roughness: flat('#bbbbbb'),
-    ao: drawCutoutAo,
-    displacement: drawCutoutDisplacement,
-    emissive: flat('#000000')
-  }
-}
-
-const applyPreset = (key: PresetKey): void => {
-  const preset = PRESETS[key]
-  reactiveConfig.value.materialType = preset.materialType as MaterialTypeName
-  Object.assign(reactiveConfig.value.properties, preset.properties)
-  Object.assign(reactiveConfig.value.strengths, preset.strengths)
-  Object.assign(reactiveConfig.value.maps, preset.maps)
-  TEXTURE_SLOTS.forEach((slot) => {
-    const offscreen = offscreenCanvases[slot]
-    if (!offscreen) return
+const handleTextureLoad = (event: Event): void => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const objectUrl = URL.createObjectURL(file)
+  const slot = activeSlot.value
+  const offscreen = offscreenCanvases[slot]
+  if (!offscreen) return
+  const img = new Image()
+  img.onload = () => {
     const ctx = offscreen.getContext('2d')!
     ctx.clearRect(0, 0, offscreen.width, offscreen.height)
-    PRESET_DRAW_FUNCTIONS[key][slot](ctx, offscreen.width)
+    ctx.drawImage(img, 0, 0, offscreen.width, offscreen.height)
     textures[slot].needsUpdate = true
+    URL.revokeObjectURL(objectUrl)
     const dataUrl = offscreen.toDataURL()
     storageSaveLocal(storageKey(slot), dataUrl)
     pushHistory(slot, dataUrl)
-  })
-  rebuildMaterial()
+    updatePreviews()
+  }
+  img.src = objectUrl
+  input.value = ''
 }
 
 const applyDataUrlToCanvas = (offscreen: HTMLCanvasElement, dataUrl: string): Promise<void> =>
@@ -606,29 +314,20 @@ const initTextures = async (): Promise<void> => {
   )
 }
 
-const createEnvironmentMap = (renderer: THREE.WebGLRenderer): THREE.Texture => {
-  const pmremGenerator = new THREE.PMREMGenerator(renderer)
-  const envScene = new THREE.Scene()
-  envScene.background = new THREE.Color(ENV_SKY_COLOR)
-  const groundGeo = new THREE.PlaneGeometry(ENV_GROUND_SIZE, ENV_GROUND_SIZE)
-  const groundMat = new THREE.MeshBasicMaterial({ color: ENV_GROUND_COLOR })
-  const ground = new THREE.Mesh(groundGeo, groundMat)
-  ground.rotation.x = -Math.PI / 2
-  ground.position.y = ENV_GROUND_Y
-  envScene.add(ground)
-  const envLight = new THREE.DirectionalLight(ENV_LIGHT_COLOR, ENV_LIGHT_INTENSITY)
-  envLight.position.set(ENV_LIGHT_POSITION, ENV_LIGHT_Y, ENV_LIGHT_POSITION)
-  envScene.add(envLight)
-  envScene.add(new THREE.AmbientLight(ENV_AMBIENT_COLOR, ENV_AMBIENT_INTENSITY))
-  const renderTarget = pmremGenerator.fromScene(envScene, 0)
-  pmremGenerator.dispose()
-  groundGeo.dispose()
-  groundMat.dispose()
-  return renderTarget.texture
+const createEnvironmentMap = async (renderer: THREE.WebGLRenderer): Promise<void> => {
+  const tex = await new THREE.TextureLoader().loadAsync(lakeUrl)
+  tex.mapping = THREE.EquirectangularReflectionMapping
+  tex.colorSpace = THREE.SRGBColorSpace
+  backgroundTexture = tex
+
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  pmrem.compileEquirectangularShader()
+  envMap = pmrem.fromEquirectangular(tex).texture
+  pmrem.dispose()
 }
 
 const applyStrengths = (mat: THREE.Material): void => {
-  const s = reactiveConfig.value.strengths
+  const s = reactiveConfig.value.config
   const m = mat as THREE.MeshStandardMaterial
   if (m.normalMap && m.normalScale) m.normalScale.set(s.normalScale, s.normalScale)
   if (m.aoMap) m.aoMapIntensity = s.aoIntensity
@@ -642,10 +341,10 @@ const buildSphereMaterial = (): THREE.Material => {
   const mat = buildMaterial(
     reactiveConfig.value.materialType,
     MATERIAL_FEATURES[reactiveConfig.value.materialType],
-    getEnabledMaps(reactiveConfig.value),
-    reactiveConfig.value,
+    getEnabledMaps(reactiveConfig.value.materials),
+    reactiveConfig.value.materials,
     { textures: textures as Record<string, THREE.Texture>, envMap }
-  )
+  ) as THREE.MeshStandardMaterial
   applyStrengths(mat)
   return mat
 }
@@ -785,6 +484,7 @@ const resetSlot = (slot: TextureSlotKey): void => {
   const dataUrl = offscreen.toDataURL()
   storageSaveLocal(storageKey(slot), dataUrl)
   pushHistory(slot, dataUrl)
+  updatePreviews()
 }
 
 const resetTexture = (): void => resetSlot(activeSlot.value)
@@ -833,6 +533,7 @@ const handleMouseUp = (): void => {
     const dataUrl = offscreenCanvases[slot].toDataURL()
     pushHistory(slot, dataUrl)
     storageSaveLocal(storageKey(slot), dataUrl)
+    updatePreviews()
   }
   activeMode = 'none'
   lastPaintUv = null
@@ -855,8 +556,9 @@ const handleMouseMove = (event: MouseEvent): void => {
   if (activeMode === 'rotate') {
     const dx = event.clientX - dragLastX
     const dy = event.clientY - dragLastY
-    sphere.rotation.y += dx * 0.008
-    sphere.rotation.x += dy * 0.008
+    const DRAG_SENSITIVITY = 0.008
+    sphere.rotation.y += dx * DRAG_SENSITIVITY
+    sphere.rotation.x += dy * DRAG_SENSITIVITY
     dragLastX = event.clientX
     dragLastY = event.clientY
     return
@@ -903,10 +605,11 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
     paintHistory[slot].stack = [initialDataUrl]
     paintHistory[slot].index = 0
   })
+  updatePreviews()
 
   const { setup, renderer, scene } = await getTools({ canvas: canvasReference, resize: false })
   rendererReference = renderer
-  envMap = createEnvironmentMap(renderer)
+  await createEnvironmentMap(renderer)
   orthoCamera = createOrthoCamera()
 
   orbitControls = new OrbitControls(orthoCamera, renderer.domElement)
@@ -920,7 +623,6 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 
   await setup({
     config: {
-      scene: { backgroundColor: SCENE_BG_COLOR },
       orbit: false,
       ground: false,
       lights: {
@@ -986,10 +688,13 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
       animateLoop()
     }
   })
+
+  if (backgroundTexture) scene.background = backgroundTexture
 }
 
 onMounted(async () => {
   setViewPanels({ showConfig: true })
+  usePanelsStore().openPanel('config')
   registerViewConfig(route.name as string, reactiveConfig as never, configControls, rebuildMaterial)
   if (canvas.value) await init(canvas.value)
   window.addEventListener('resize', handleResize)
@@ -1007,28 +712,31 @@ onBeforeUnmount(() => {
   orbitControls?.dispose()
   Object.values(textures).forEach((t) => t.dispose())
   if (envMap) envMap.dispose()
+  if (backgroundTexture) backgroundTexture.dispose()
   sphere = null
   canvasElement = null
 })
 </script>
 
 <template>
-  <canvas ref="canvas"></canvas>
+  <div class="texture-painter">
+    <canvas ref="canvas"></canvas>
+    <div class="texture-painter__strip">
+      <img
+        v-for="slot in TEXTURE_SLOTS"
+        :key="slot"
+        :src="previewUrls[slot]"
+        class="texture-painter__preview"
+        :class="{ 'texture-painter__preview--active': activeSlot === slot }"
+        :title="TEXTURE_SLOT_LABELS[slot]"
+        :alt="TEXTURE_SLOT_LABELS[slot]"
+        @click="activeSlot = slot"
+      />
+    </div>
+  </div>
 
   <Teleport defer to="#config-panel-extra">
     <div class="texture-painter-toolbar">
-      <p class="texture-painter-toolbar__label">Presets</p>
-      <div class="texture-painter-toolbar__preset-row">
-        <button
-          v-for="(label, key) in PRESET_LABELS"
-          :key="key"
-          class="texture-painter-toolbar__preset-btn"
-          @click="applyPreset(key as PresetKey)"
-        >
-          {{ label }}
-        </button>
-      </div>
-
       <p class="texture-painter-toolbar__label">Texture</p>
       <div class="texture-painter-toolbar__slots">
         <button
@@ -1074,15 +782,64 @@ onBeforeUnmount(() => {
         </button>
         <button class="texture-painter-toolbar__reset-btn" @click="resetAll">Reset all</button>
       </div>
+
+      <label class="texture-painter-toolbar__load-label">
+        Load image
+        <input
+          type="file"
+          accept="image/*"
+          class="texture-painter-toolbar__load-input"
+          @change="handleTextureLoad"
+        />
+      </label>
     </div>
   </Teleport>
 </template>
 
 <style scoped>
+.texture-painter {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
 canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+
+.texture-painter__strip {
+  position: absolute;
+  bottom: var(--spacing-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(4px);
+}
+
+.texture-painter__preview {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 150ms;
+  image-rendering: pixelated;
+}
+
+.texture-painter__preview:hover {
+  border-color: var(--color-muted-foreground);
+}
+
+.texture-painter__preview--active {
+  border-color: var(--color-primary);
 }
 
 .texture-painter-toolbar {
@@ -1127,26 +884,30 @@ canvas {
   border-color: var(--color-primary);
 }
 
-.texture-painter-toolbar__preset-row {
+.texture-painter-toolbar__load-label {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-foreground);
+  cursor: pointer;
 }
 
-.texture-painter-toolbar__preset-btn {
-  padding: var(--spacing-1) var(--spacing-2);
+.texture-painter-toolbar__load-input {
   font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.texture-painter-toolbar__load-input::file-selector-button {
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-1) var(--spacing-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-secondary);
   color: var(--color-muted-foreground);
   cursor: pointer;
-}
-
-.texture-painter-toolbar__preset-btn:hover {
-  color: var(--color-foreground);
-  background: var(--color-muted);
-  border-color: var(--color-primary);
 }
 
 .texture-painter-toolbar__palette {
@@ -1191,13 +952,5 @@ canvas {
 .texture-painter-toolbar__reset-btn:hover {
   color: var(--color-foreground);
   background: var(--color-muted);
-}
-</style>
-
-<style scoped>
-canvas {
-  display: block;
-  width: 100%;
-  height: 100vh;
 }
 </style>
