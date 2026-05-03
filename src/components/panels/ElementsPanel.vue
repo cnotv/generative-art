@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import SchemaControls from './ConfigControls.vue'
 import ElementItem from './ElementItem.vue'
@@ -105,10 +105,27 @@ interface AddButton {
 }
 
 const addButtons: AddButton[] = [
-  { type: 'camera', icon: Camera, label: 'Camera', title: 'Add Camera' },
-  { type: 'mesh', icon: Box, label: 'Mesh', title: 'Add Mesh' },
-  { type: 'textureArea', icon: Image, label: 'Texture', title: 'Add Texture Area' }
+  { type: 'camera', icon: Camera, label: 'New camera', title: 'Add a camera to the scene' },
+  { type: 'mesh', icon: Box, label: 'Add model', title: 'Add a 3D model' },
+  { type: 'textureArea', icon: Image, label: 'Add image', title: 'Load an image for stamping' }
 ]
+
+const stampGroupId = ref<string | null>(null)
+
+const toggleStampGroup = (groupId: string) => {
+  stampGroupId.value = stampGroupId.value === groupId ? null : groupId
+  textureStore.handlers?.onStampGroupSelect?.(stampGroupId.value)
+}
+
+watch(
+  () => textureStore.groups.length,
+  () => {
+    if (stampGroupId.value && !textureStore.groups.some((g) => g.id === stampGroupId.value)) {
+      stampGroupId.value = null
+      textureStore.handlers?.onStampGroupSelect?.(null)
+    }
+  }
+)
 
 const isCameraExpanded = computed(() => {
   if (!expandedName.value) return false
@@ -148,7 +165,6 @@ const hasExpandedSchema = computed(
   <GenericPanel panel-type="elements" side="left" title="Elements">
     <!-- Add bar -->
     <div class="elements-panel__add-bar">
-      <span class="elements-panel__add-label">Add</span>
       <Button
         v-for="btn in addButtons"
         :key="btn.type"
@@ -158,7 +174,7 @@ const hasExpandedSchema = computed(
         :title="btn.title"
         @click="addElement(btn.type)"
       >
-        <component :is="btn.icon" class="h-3 w-3 mr-1" />{{ btn.label }}
+        <component :is="btn.icon" class="elements-panel__add-icon" />{{ btn.label }}
       </Button>
     </div>
 
@@ -166,7 +182,8 @@ const hasExpandedSchema = computed(
     <div class="elements-panel__filter-bar">
       <IconButton
         size="sm"
-        :active="allVisible"
+        variant="ghost"
+        :class="{ 'elements-panel__filter-btn--active': allVisible }"
         :title="allVisible ? 'Hide all' : 'Show all'"
         @click="allVisible ? hideAllCategories() : showAllCategories()"
       >
@@ -178,12 +195,38 @@ const hasExpandedSchema = computed(
         v-for="cat in ELEMENT_CATEGORIES"
         :key="cat.category"
         size="sm"
-        :active="!hiddenCategories.has(cat.category)"
+        variant="ghost"
+        :class="{ 'elements-panel__filter-btn--active': !hiddenCategories.has(cat.category) }"
         :title="hiddenCategories.has(cat.category) ? `Show ${cat.label}` : `Hide ${cat.label}`"
         @click="toggleCategory(cat.category)"
       >
         <component :is="cat.icon" />
       </IconButton>
+    </div>
+
+    <!-- Image stamp palette -->
+    <div v-if="textureStore.groups.length > 0" class="elements-panel__palette">
+      <p class="elements-panel__palette-label">Stamp</p>
+      <div class="elements-panel__palette-items">
+        <button
+          v-for="group in textureStore.groups"
+          :key="group.id"
+          class="elements-panel__palette-item"
+          :class="{ 'elements-panel__palette-item--active': stampGroupId === group.id }"
+          :title="
+            stampGroupId === group.id ? `Cancel stamp: ${group.name}` : `Stamp: ${group.name}`
+          "
+          @click="toggleStampGroup(group.id)"
+        >
+          <img
+            v-if="group.textures[0]"
+            :src="group.textures[0].url"
+            :alt="group.name"
+            class="elements-panel__palette-thumb"
+          />
+          <span class="elements-panel__palette-name">{{ group.name }}</span>
+        </button>
+      </div>
     </div>
 
     <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
@@ -276,17 +319,17 @@ const hasExpandedSchema = computed(
   flex-wrap: wrap;
 }
 
-.elements-panel__add-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  flex-shrink: 0;
-}
-
 .elements-panel__add-btn {
   height: var(--btn-sm-height);
   padding: 0 var(--spacing-2);
   font-size: var(--font-size-xs);
   gap: var(--spacing-1);
+}
+
+.elements-panel__add-icon {
+  width: var(--font-size-sm);
+  height: var(--font-size-sm);
+  flex-shrink: 0;
 }
 
 .elements-panel__filter-bar {
@@ -303,6 +346,72 @@ const hasExpandedSchema = computed(
   height: var(--btn-sm-height);
   background: var(--color-border);
   flex-shrink: 0;
+}
+
+.elements-panel__filter-btn--active {
+  color: var(--color-foreground);
+  opacity: 1;
+}
+
+.elements-panel__filter-bar .icon-btn:not(.elements-panel__filter-btn--active) {
+  opacity: var(--opacity-muted);
+}
+
+.elements-panel__palette {
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-1-5);
+}
+
+.elements-panel__palette-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  margin: 0 0 var(--spacing-1);
+}
+
+.elements-panel__palette-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.elements-panel__palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-0-5);
+  padding: var(--spacing-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  cursor: pointer;
+  width: 4rem;
+}
+
+.elements-panel__palette-item:hover {
+  border-color: var(--color-muted-foreground);
+}
+
+.elements-panel__palette-item--active {
+  border-color: var(--color-primary);
+  background: var(--color-muted);
+}
+
+.elements-panel__palette-thumb {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: var(--radius-xs, 2px);
+}
+
+.elements-panel__palette-name {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
 }
 
 .elements-panel__empty {

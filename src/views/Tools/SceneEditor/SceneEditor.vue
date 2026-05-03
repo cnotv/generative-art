@@ -267,6 +267,11 @@ let currentWorld: any = null
 let currentGround: any = null
 let currentAmbientLight: THREE.Light | null = null
 let currentDirectionalLight: THREE.Light | null = null
+let stampGroupId: string | null = null
+const stampedMeshes: THREE.Mesh[] = []
+const STAMP_Y_OFFSET = 0.01
+const STAMP_DEFAULT_SIZE = 10
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 // Live-update ground properties without reinit
 const applyGroundUpdate = (field: string, value: unknown) => {
   if (field === 'enabled' || field === 'size') {
@@ -330,17 +335,28 @@ onMounted(() => {
     onManualUpdate: () => {
       if (selectedGroupId.value) regenerateGroupMeshes(selectedGroupId.value)
     },
-    onAddElement: () => {}
+    onAddElement: () => {},
+    onStampGroupSelect: (groupId) => {
+      stampGroupId = groupId
+      if (canvas.value) canvas.value.style.cursor = groupId ? 'crosshair' : ''
+    }
   })
 
   if (canvas.value) {
     initScene()
+    canvas.value.addEventListener('click', handleStampClick)
   }
 
   openPanel('elements')
 })
 
 onBeforeUnmount(() => {
+  canvas.value?.removeEventListener('click', handleStampClick)
+  stampedMeshes.forEach((mesh) => {
+    mesh.geometry.dispose()
+    ;(mesh.material as THREE.Material).dispose()
+  })
+  stampedMeshes.length = 0
   clearViewPanels()
   clearSceneElements()
   unregisterCameraHandlers()
@@ -530,6 +546,41 @@ const regenerateGroupMeshes = (groupId: string) => {
   )
 }
 
+const handleStampClick = (event: MouseEvent): void => {
+  if (!stampGroupId || !currentScene || !currentCamera || !canvas.value) return
+  const group = textureGroups.value.find((g) => g.id === stampGroupId)
+  const texture = group?.textures[0]
+  if (!texture) return
+
+  const rect = canvas.value.getBoundingClientRect()
+  const mouse = new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(mouse, currentCamera)
+
+  const hitPoint = new THREE.Vector3()
+  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return
+
+  const groupConfig = getGroupConfig(group.name)
+  const size = groupConfig?.textures.baseSize ?? [STAMP_DEFAULT_SIZE, STAMP_DEFAULT_SIZE, 0]
+  const tex = new THREE.TextureLoader().load(texture.url)
+  const geometry = new THREE.PlaneGeometry(size[0], size[1])
+  const material = new THREE.MeshStandardMaterial({
+    map: tex,
+    side: THREE.DoubleSide,
+    transparent: true
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.rotation.x = -Math.PI / 2
+  mesh.position.set(hitPoint.x, STAMP_Y_OFFSET, hitPoint.z)
+  mesh.name = `stamp-${stampGroupId}-${Date.now()}`
+  currentScene.add(mesh)
+  stampedMeshes.push(mesh)
+  updateSceneElements(currentScene)
+}
+
 // Reinitialize scene
 const reinitScene = () => {
   if (animationId) {
@@ -637,8 +688,8 @@ const initScene = async () => {
       {
         id: 'cam-1',
         label: 'Camera 1',
-        preset: CameraPreset.Perspective,
-        position: [0, 50, 100],
+        preset: CameraPreset.Orthographic,
+        position: [30, 30, 30],
         fov: 60,
         orbitTarget: [0, 0, 0]
       }

@@ -43,6 +43,7 @@ export interface TextureGroupHandlers {
   onAddNewGroup: (event: Event) => void
   onManualUpdate: () => void
   onAddElement: (type: 'camera' | 'mesh') => void
+  onStampGroupSelect?: (groupId: string | null) => void
 }
 
 const DEFAULT_BASE_SIZE = 20
