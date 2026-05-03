@@ -4,13 +4,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { stats } from '@/utils/stats'
+import { buildMaterial } from '@/utils/materialBuilder'
 import { getTools, createTextSprite } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import brickTextureUrl from '@/assets/images/textures/brick.jpg'
-import type { MaterialTypeName, MapToggleKey, MaterialsListConfig } from './types'
+import type { MaterialTypeName, MaterialsListConfig } from './types'
 import {
   MATERIAL_TYPES,
   MAIN_MATERIAL_TYPES,
@@ -22,16 +23,9 @@ import {
   TEXT_COLOR_PROPERTIES,
   TEXT_COLOR_VALUE,
   PROCEDURAL_TEXTURE_SIZE,
-  DISPLACEMENT_SCALE,
-  NORMAL_STRENGTH,
   LIGHT_ORBIT_SPEED,
   LIGHT_ORBIT_RADIUS,
   LIGHT_Z_POSITION,
-  EMISSIVE_COLOR,
-  EMISSIVE_INTENSITY,
-  CLEARCOAT_ROUGHNESS_VALUE,
-  ENV_MAP_INTENSITY,
-  ENV_MAP_REFLECTIVITY,
   ENV_GROUND_SIZE,
   ENV_GROUND_Y,
   ENV_LIGHT_INTENSITY,
@@ -45,7 +39,6 @@ import {
   LIGHT_INTENSITY,
   HEMISPHERE_SKY,
   HEMISPHERE_GROUND,
-  MATERIAL_COLOR,
   ENV_LIGHT_COLOR,
   ORTHO_NEAR_PLANE,
   ORTHO_FAR_PLANE,
@@ -256,88 +249,14 @@ const createEnvironmentMap = (rendererInstance: THREE.WebGLRenderer): THREE.Text
   return renderTarget.texture
 }
 
-const buildMaterial = (
-  typeName: MaterialTypeName,
-  supported: MapToggleKey[],
-  maps: Record<MapToggleKey, boolean>,
-  configValues: MaterialsListConfig
-): THREE.Material => {
-  const parameters: Record<string, unknown> = {}
-  const hasFeature = (key: MapToggleKey): boolean => supported.includes(key) && maps[key]
-
-  if (!['MeshNormalMaterial', 'MeshDepthMaterial'].includes(typeName)) {
-    parameters.color = MATERIAL_COLOR
-  }
-  if (hasFeature('diffuse')) parameters.map = textures.diffuse
-  if (hasFeature('normal')) {
-    parameters.normalMap = textures.normal
-    parameters.normalScale = new THREE.Vector2(NORMAL_STRENGTH, NORMAL_STRENGTH)
-  }
-  if (hasFeature('roughness')) parameters.roughnessMap = textures.roughness
-  if (hasFeature('metalness')) parameters.metalnessMap = textures.roughness
-  if (hasFeature('ao')) {
-    parameters.aoMap = textures.ao
-    parameters.aoMapIntensity = 1
-  }
-  if (hasFeature('displacement')) {
-    parameters.displacementMap = textures.displacement
-    parameters.displacementScale = DISPLACEMENT_SCALE
-  }
-  if (hasFeature('emissive') && typeName !== 'MeshBasicMaterial') {
-    parameters.emissiveMap = textures.emissive
-    parameters.emissive = new THREE.Color(EMISSIVE_COLOR)
-    parameters.emissiveIntensity = EMISSIVE_INTENSITY
-  }
-  if (hasFeature('envMap') && envMap) {
-    const isPbr = ['MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(typeName)
-    parameters.envMap = envMap
-    if (isPbr) {
-      parameters.envMapIntensity = ENV_MAP_INTENSITY
-    } else {
-      parameters.combine = THREE.AddOperation
-      parameters.reflectivity = ENV_MAP_REFLECTIVITY
-    }
-  }
-  if (['MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(typeName)) {
-    parameters.roughness = configValues.properties.roughness
-    parameters.metalness = configValues.properties.metalness
-  }
-  if (typeName === 'MeshPhysicalMaterial') {
-    parameters.clearcoat = configValues.properties.clearcoat
-    parameters.clearcoatRoughness = CLEARCOAT_ROUGHNESS_VALUE
-    parameters.transmission = configValues.properties.transmission
-  }
-  if (typeName === 'MeshPhongMaterial') {
-    parameters.shininess = configValues.properties.shininess
-  }
-  if (typeName === 'MeshNormalMaterial') {
-    parameters.flatShading = configValues.properties.flatShading
-  }
-
-  const materialConstructors: Record<MaterialTypeName, new (p: never) => THREE.Material> = {
-    MeshBasicMaterial: THREE.MeshBasicMaterial,
-    MeshLambertMaterial: THREE.MeshLambertMaterial,
-    MeshPhongMaterial: THREE.MeshPhongMaterial,
-    MeshStandardMaterial: THREE.MeshStandardMaterial,
-    MeshPhysicalMaterial: THREE.MeshPhysicalMaterial,
-    MeshToonMaterial: THREE.MeshToonMaterial,
-    MeshNormalMaterial: THREE.MeshNormalMaterial,
-    MeshDepthMaterial: THREE.MeshDepthMaterial
-  }
-
-  const Constructor = materialConstructors[typeName]
-  const material = new Constructor(parameters as never)
-  ;(material as THREE.MeshBasicMaterial).wireframe = configValues.properties.wireframe
-  return material
-}
-
 const buildShowcaseMaterial = (): THREE.Material => {
   const typeName = MATERIAL_TYPES[currentMaterialIndex.value]
   return buildMaterial(
     typeName,
     MATERIAL_FEATURES[typeName],
     getEnabledMaps(reactiveConfig.value),
-    reactiveConfig.value
+    reactiveConfig.value,
+    { textures, envMap }
   )
 }
 

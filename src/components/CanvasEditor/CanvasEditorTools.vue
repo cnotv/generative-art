@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
-import { ColorPicker } from '@/components/ui/color-picker'
-import BrushSize from './BrushSize.vue'
-import { Brush, Eraser, PaintBucket, Undo2, Redo2, Trash2, Download } from 'lucide-vue-next'
+import { DrawingToolbar } from '@/components/DrawingToolbar'
+import type { DrawingTool as CanvasDrawingTool } from '@/components/DrawingToolbar'
+import { Undo2, Redo2, Trash2, Download } from 'lucide-vue-next'
 import type { DrawingTool } from '@webgamekit/canvas-editor'
 import type { CanvasEditorToolButton } from './types'
 
@@ -46,6 +46,10 @@ const emit = defineEmits<{
   clear: []
 }>()
 
+const toolbarTools = computed(() =>
+  (['brush', 'eraser', 'fill', 'color', 'size'] as const).filter((t) => show.value.has(t))
+)
+
 const download = (): void => {
   const snapshot = props.getSnapshot()
   const dataUrl = (JSON.parse(snapshot) as { front: string }).front
@@ -59,46 +63,14 @@ const download = (): void => {
 
 <template>
   <div class="canvas-editor-tools">
-    <Button
-      v-if="show.has('brush')"
-      :variant="tool === 'brush' ? 'default' : 'outline'"
-      size="icon"
-      title="Brush"
-      @click="emit('update:tool', 'brush')"
-    >
-      <Brush class="canvas-editor-tools__icon" />
-    </Button>
-    <Button
-      v-if="show.has('eraser')"
-      :variant="tool === 'eraser' ? 'default' : 'outline'"
-      size="icon"
-      title="Eraser"
-      @click="emit('update:tool', 'eraser')"
-    >
-      <Eraser class="canvas-editor-tools__icon" />
-    </Button>
-    <Button
-      v-if="show.has('fill')"
-      :variant="tool === 'fill' ? 'default' : 'outline'"
-      size="icon"
-      title="Fill"
-      @click="emit('update:tool', 'fill')"
-    >
-      <PaintBucket class="canvas-editor-tools__icon" />
-    </Button>
-    <ColorPicker
-      v-if="show.has('color')"
-      :model-value="color"
-      :hide-value="hideColorValue"
-      title="Color"
-      @update:model-value="emit('update:color', $event)"
-    />
-    <BrushSize
-      v-if="show.has('size')"
-      :model-value="size"
-      :min="1"
-      :max="80"
-      @update:model-value="emit('update:size', $event)"
+    <DrawingToolbar
+      :tool="tool as CanvasDrawingTool"
+      :color="color"
+      :size="size"
+      :visible-tools="toolbarTools"
+      @update:tool="emit('update:tool', $event as DrawingTool)"
+      @update:color="emit('update:color', $event)"
+      @update:size="emit('update:size', $event)"
     />
     <Button
       v-if="show.has('undo')"
