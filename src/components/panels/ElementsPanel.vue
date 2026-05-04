@@ -102,11 +102,18 @@ interface AddButton {
   icon: Component
   label: string
   title: string
+  disabled?: boolean
 }
 
 const addButtons: AddButton[] = [
-  { type: 'camera', icon: Camera, label: 'New camera', title: 'Add a camera to the scene' },
-  { type: 'mesh', icon: Box, label: 'Add model', title: 'Add a 3D model' },
+  {
+    type: 'camera',
+    icon: Camera,
+    label: 'New camera',
+    title: 'Not yet implemented',
+    disabled: true
+  },
+  { type: 'mesh', icon: Box, label: 'Add model', title: 'Not yet implemented', disabled: true },
   { type: 'textureArea', icon: Image, label: 'Add image', title: 'Load an image for stamping' }
 ]
 
@@ -173,7 +180,8 @@ const hasExpandedSchema = computed(
         size="sm"
         class="elements-panel__add-btn"
         :title="btn.title"
-        @click="addElement(btn.type)"
+        :disabled="btn.disabled"
+        @click="!btn.disabled && addElement(btn.type)"
       >
         <component :is="btn.icon" class="elements-panel__add-icon" />{{ btn.label }}
       </Button>
