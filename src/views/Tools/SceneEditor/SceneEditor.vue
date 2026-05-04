@@ -84,6 +84,15 @@ const updateSceneElements = (scene: THREE.Scene) => {
     [
       ...cameraElements,
       ...scene.children.map((child: any) => {
+        const stampId = stampGroupIdFromName(child.name ?? '')
+        if (stampId) {
+          return {
+            name: child.name,
+            type: 'Stamp',
+            hidden: hiddenElements.value.has(child.name),
+            groupId: stampId
+          }
+        }
         const groupId = textureGroups.value.find(
           (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
         )?.id
@@ -270,8 +279,16 @@ let currentDirectionalLight: THREE.Light | null = null
 let stampGroupId: string | null = null
 const stampedMeshes: THREE.Mesh[] = []
 const STAMP_Y_OFFSET = 0.01
-const STAMP_DEFAULT_SIZE = 10
+const STAMP_DEFAULT_SIZE = 2
+const STAMP_AREA_DENSITY = 5
+const STAMP_SEPARATOR = '__'
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+
+const stampGroupIdFromName = (name: string): string | undefined => {
+  if (!name.startsWith(`stamp${STAMP_SEPARATOR}`)) return undefined
+  const parts = name.split(STAMP_SEPARATOR)
+  return parts[1]
+}
 // Live-update ground properties without reinit
 const applyGroundUpdate = (field: string, value: unknown) => {
   if (field === 'enabled' || field === 'size') {
@@ -339,6 +356,45 @@ onMounted(() => {
     onStampGroupSelect: (groupId) => {
       stampGroupId = groupId
       if (canvas.value) canvas.value.style.cursor = groupId ? 'crosshair' : ''
+    },
+    onConvertStampToArea: (stampName) => {
+      if (!currentScene || !currentWorld) return
+      const groupId = stampGroupIdFromName(stampName)
+      if (!groupId) return
+      const group = textureGroups.value.find((g) => g.id === groupId)
+      if (!group) return
+
+      const stampMesh = currentScene.children.find((c: any) => c.name === stampName) as
+        | THREE.Mesh
+        | undefined
+      const position = stampMesh?.position.clone() ?? new THREE.Vector3()
+
+      // Remove the billboard mesh
+      if (stampMesh) {
+        currentScene.remove(stampMesh)
+        const index = stampedMeshes.indexOf(stampMesh)
+        if (index !== -1) stampedMeshes.splice(index, 1)
+        ;(stampMesh.material as THREE.Material).dispose()
+        stampMesh.geometry.dispose()
+      }
+
+      // Configure the group to use an area centred on the stamp position
+      const name = getGroupName(groupId)
+      const existing =
+        textureStore.groupConfigRegistry[name] ?? textureStore.createDefaultGroupConfig()
+      const areaSpread = STAMP_DEFAULT_SIZE * 4
+      textureStore.groupConfigRegistry[name] = {
+        ...existing,
+        area: {
+          center: [position.x, 0, position.z] as [number, number, number],
+          size: [areaSpread, 0, areaSpread] as [number, number, number]
+        },
+        instances: { ...existing.instances, density: STAMP_AREA_DENSITY }
+      }
+
+      addGroupMeshes(currentScene, currentWorld, group, getGroupConfig, () =>
+        updateSceneElements(currentScene)
+      )
     }
   })
 
@@ -563,19 +619,19 @@ const handleStampClick = (event: MouseEvent): void => {
   const hitPoint = new THREE.Vector3()
   if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return
 
-  const groupConfig = getGroupConfig(group.name)
-  const size = groupConfig?.textures.baseSize ?? [STAMP_DEFAULT_SIZE, STAMP_DEFAULT_SIZE, 0]
+  const billboardWidth = STAMP_DEFAULT_SIZE
+  const billboardHeight = STAMP_DEFAULT_SIZE
   const tex = new THREE.TextureLoader().load(texture.url)
-  const geometry = new THREE.PlaneGeometry(size[0], size[1])
+  const geometry = new THREE.PlaneGeometry(billboardWidth, billboardHeight)
   const material = new THREE.MeshStandardMaterial({
     map: tex,
     side: THREE.DoubleSide,
-    transparent: true
+    transparent: true,
+    alphaTest: 0.5
   })
   const mesh = new THREE.Mesh(geometry, material)
-  mesh.rotation.x = -Math.PI / 2
-  mesh.position.set(hitPoint.x, STAMP_Y_OFFSET, hitPoint.z)
-  mesh.name = `stamp-${stampGroupId}-${Date.now()}`
+  mesh.position.set(hitPoint.x, billboardHeight / 2, hitPoint.z)
+  mesh.name = ['stamp', stampGroupId, Date.now()].join(STAMP_SEPARATOR)
   currentScene.add(mesh)
   stampedMeshes.push(mesh)
   updateSceneElements(currentScene)

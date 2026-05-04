@@ -8,7 +8,7 @@ import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Button } from '@/components/ui/button'
-import { Box, Camera, CheckSquare, Image, Square } from 'lucide-vue-next'
+import { Box, Camera, CheckSquare, ChevronDown, ChevronRight, Image, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -111,6 +111,7 @@ const addButtons: AddButton[] = [
 ]
 
 const stampGroupId = ref<string | null>(null)
+const isListOpen = ref(false)
 
 const toggleStampGroup = (groupId: string) => {
   stampGroupId.value = stampGroupId.value === groupId ? null : groupId
@@ -229,9 +230,24 @@ const hasExpandedSchema = computed(
       </div>
     </div>
 
-    <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
+    <!-- Collapsible element list header -->
+    <div
+      class="elements-panel__list-header"
+      role="button"
+      tabindex="0"
+      @click="isListOpen = !isListOpen"
+      @keydown.enter.space.prevent="isListOpen = !isListOpen"
+    >
+      <component
+        :is="isListOpen ? ChevronDown : ChevronRight"
+        class="elements-panel__list-chevron"
+      />
+      <span class="elements-panel__list-title">Elements</span>
+    </div>
 
-    <div v-else class="elements-panel__list">
+    <p v-if="isListOpen && !hasContent" class="elements-panel__empty">No scene elements.</p>
+
+    <div v-if="isListOpen && hasContent" class="elements-panel__list">
       <!-- Ungrouped scene elements -->
       <div
         v-for="(element, index) in grouped.ungrouped"
@@ -258,6 +274,19 @@ const hasExpandedSchema = computed(
           <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">
             Texture Area
           </p>
+
+          <!-- Stamp billboard → area toggler -->
+          <div v-if="element.type === 'Stamp'" class="elements-panel__stamp-convert">
+            <span class="elements-panel__stamp-convert-label">Billboard</span>
+            <button
+              class="elements-panel__stamp-convert-btn"
+              title="Convert to area distribution"
+              @click="textureStore.handlers?.onConvertStampToArea?.(element.name)"
+            >
+              Convert to area
+            </button>
+          </div>
+
           <ElementCamera
             v-if="isCameraExpanded"
             :is-recording="isRecording"
@@ -412,6 +441,60 @@ const hasExpandedSchema = computed(
   white-space: nowrap;
   width: 100%;
   text-align: center;
+}
+
+.elements-panel__list-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) 0;
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.elements-panel__list-header:hover {
+  color: var(--color-foreground);
+}
+
+.elements-panel__list-chevron {
+  width: var(--font-size-sm);
+  height: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.elements-panel__list-title {
+  flex: 1;
+}
+
+.elements-panel__stamp-convert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1) 0;
+}
+
+.elements-panel__stamp-convert-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+}
+
+.elements-panel__stamp-convert-btn {
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.elements-panel__stamp-convert-btn:hover {
+  background: var(--color-muted);
+  border-color: var(--color-primary);
 }
 
 .elements-panel__empty {

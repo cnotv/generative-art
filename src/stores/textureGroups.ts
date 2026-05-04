@@ -44,6 +44,7 @@ export interface TextureGroupHandlers {
   onManualUpdate: () => void
   onAddElement: (type: 'camera' | 'mesh') => void
   onStampGroupSelect?: (groupId: string | null) => void
+  onConvertStampToArea?: (stampName: string) => void
 }
 
 const DEFAULT_BASE_SIZE = 20
