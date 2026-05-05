@@ -59,10 +59,12 @@ defineProps<{
   align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
-  overflow-y: auto;
-
   > * {
     pointer-events: auto;
+  }
+
+  @media (max-width: 768px) {
+    overflow-y: auto;
   }
 }
 
@@ -81,6 +83,7 @@ defineProps<{
   background-color: var(--color-background);
   padding: var(--spacing-2);
   overflow-x: hidden;
+  overflow-y: auto;
   max-height: 100%;
   display: flex;
   flex-direction: column;
