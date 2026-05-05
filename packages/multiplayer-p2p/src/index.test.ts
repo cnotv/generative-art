@@ -45,7 +45,8 @@ import {
   p2pSendData,
   p2pOnData,
   p2pOnPeerJoin,
-  p2pOnPeerLeave
+  p2pOnPeerLeave,
+  p2pMatchmake
 } from './index'
 
 describe('p2pJoin', () => {
@@ -253,5 +254,77 @@ describe('p2pOnData', () => {
     const session = p2pJoin('room-1')
     const unsubscribe = p2pOnData(session, 'game:event', vi.fn())
     expect(typeof unsubscribe).toBe('function')
+  })
+})
+
+describe('p2pMatchmake', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    actionCallbacks.clear()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
+    mockGetPeers.mockReturnValue({})
+  })
+
+  it('calls onStatusChange with searching immediately when no peers present', () => {
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    expect(onStatusChange).toHaveBeenCalledWith('searching', 0)
+  })
+
+  it('calls onStatusChange with matched immediately when peers already present', () => {
+    mockGetPeers.mockReturnValue({ 'peer-existing': {} })
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    expect(onStatusChange).toHaveBeenCalledWith('matched', 1)
+  })
+
+  it.each([
+    ['peer-a', 'matched', 1],
+    ['peer-b', 'matched', 1]
+  ])('transitions to matched when peer %s joins', (peerId, expectedStatus, expectedCount) => {
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    simulatePeerJoin(peerId)
+    expect(onStatusChange).toHaveBeenLastCalledWith(expectedStatus, expectedCount)
+  })
+
+  it('reverts to searching when last peer leaves', () => {
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    simulatePeerJoin('peer-a')
+    simulatePeerLeave('peer-a')
+    expect(onStatusChange).toHaveBeenLastCalledWith('searching', 0)
+  })
+
+  it('stays matched when one of multiple peers leaves', () => {
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    simulatePeerJoin('peer-a')
+    simulatePeerJoin('peer-b')
+    simulatePeerLeave('peer-a')
+    expect(onStatusChange).toHaveBeenLastCalledWith('matched', 1)
+  })
+
+  it('returns a session with the correct peerId', () => {
+    const { session } = p2pMatchmake('room-1', undefined, vi.fn())
+    expect(session.peerId).toBe('local-peer')
+  })
+
+  it('stop() calls p2pLeave and cleans up the room', () => {
+    const { stop } = p2pMatchmake('room-1', undefined, vi.fn())
+    stop()
+    expect(mockLeave).toHaveBeenCalled()
+  })
+
+  it('tracks multiple peers correctly by ID', () => {
+    const onStatusChange = vi.fn()
+    p2pMatchmake('room-1', undefined, onStatusChange)
+    simulatePeerJoin('peer-a')
+    simulatePeerJoin('peer-b')
+    simulatePeerLeave('peer-b')
+    expect(onStatusChange).toHaveBeenLastCalledWith('matched', 1)
+    simulatePeerLeave('peer-a')
+    expect(onStatusChange).toHaveBeenLastCalledWith('searching', 0)
   })
 })
