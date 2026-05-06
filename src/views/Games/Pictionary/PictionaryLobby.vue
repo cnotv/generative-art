@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { Check, Plus, Minus } from 'lucide-vue-next'
+import { onUnmounted, ref } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
+import {
+  p2pJoin,
+  p2pLeave,
+  p2pGetPeerIds,
+  p2pOnPeerJoin,
+  p2pIsSupported,
+  type P2PSession
+} from '@webgamekit/multiplayer-p2p'
 import {
   PLAYER_COLORS,
   ROUND_DURATION_OPTIONS,
@@ -11,6 +20,8 @@ import {
   POINTS_FIRST_BONUS,
   POINTS_DRAWER_PER_GUESS
 } from './constants'
+
+const MATCHMAKER_ROOM = 'pictionary-matchmaker'
 
 defineProps<{
   playerName: string
@@ -35,11 +46,53 @@ const emit = defineEmits<{
   'update:hintCount': [value: number]
   nameChange: []
   startGame: []
+  matchFound: [roomId: string]
 }>()
+
+const matchState = ref<'idle' | 'searching'>('idle')
+let matchSession: P2PSession | null = null
+
+const deriveGameRoomId = (peerA: string, peerB: string): string => [peerA, peerB].sort().join('--')
+
+const handlePeerFound = (session: P2PSession, remotePeerId: string): void => {
+  const gameRoomId = deriveGameRoomId(session.peerId, remotePeerId)
+  p2pLeave(session)
+  matchSession = null
+  matchState.value = 'idle'
+  emit('matchFound', gameRoomId)
+}
+
+const startSearching = (): void => {
+  if (!p2pIsSupported()) return
+  const session = p2pJoin(MATCHMAKER_ROOM)
+  matchSession = session
+  matchState.value = 'searching'
+
+  const existing = p2pGetPeerIds(session)
+  if (existing.length > 0) {
+    handlePeerFound(session, existing[0])
+    return
+  }
+
+  p2pOnPeerJoin(session, (remotePeerId) => {
+    if (!matchSession) return
+    handlePeerFound(session, remotePeerId)
+  })
+}
+
+const stopSearching = (): void => {
+  if (matchSession) {
+    p2pLeave(matchSession)
+    matchSession = null
+  }
+  matchState.value = 'idle'
+}
 
 const handleNameInput = (event: Event): void => {
   emit('update:playerName', (event.target as HTMLInputElement).value)
 }
+
+onUnmounted(stopSearching)
 </script>
 
 <template>
@@ -78,6 +131,25 @@ const handleNameInput = (event: Event): void => {
     <p class="pictionary-lobby__hint">
       Share the room link with friends. Game starts when the host clicks Start.
     </p>
+
+    <div v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker">
+      <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
+      <template v-if="matchState === 'idle'">
+        <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+          🔍 Find players
+        </button>
+      </template>
+      <template v-else>
+        <span class="pictionary-lobby__matchmaker-searching">Searching…</span>
+        <button
+          class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--cancel"
+          type="button"
+          @click="stopSearching"
+        >
+          Cancel
+        </button>
+      </template>
+    </div>
     <details class="pictionary-lobby__rules">
       <summary class="pictionary-lobby__rules-title">
         <Plus class="pictionary-lobby__rules-icon pictionary-lobby__rules-icon--closed" />
@@ -281,6 +353,57 @@ const handleNameInput = (event: Event): void => {
 .pictionary-lobby__hint {
   color: var(--color-muted-foreground);
   font-size: var(--font-size-sm);
+}
+
+.pictionary-lobby__matchmaker {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: #fff;
+  border: 3px solid #111;
+  border-radius: 1.25rem;
+  box-shadow: 4px 4px 0 #111;
+  max-width: 28rem;
+  width: 100%;
+}
+
+.pictionary-lobby__matchmaker-label {
+  flex: 1;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__matchmaker-searching {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-muted-foreground);
+}
+
+.pictionary-lobby__matchmaker-btn {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: var(--pic-blue);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  white-space: nowrap;
+  transition: transform 0.1s ease;
+}
+
+.pictionary-lobby__matchmaker-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
+}
+
+.pictionary-lobby__matchmaker-btn--cancel {
+  background: #fff;
+  color: #111;
 }
 
 .pictionary-lobby__host-controls {
