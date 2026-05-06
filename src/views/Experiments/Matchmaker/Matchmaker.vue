@@ -7,19 +7,27 @@ import {
   type MatchRequest
 } from '@webgamekit/multiplayer-p2p'
 import Button from '@/components/ui/button/Button.vue'
+import { Input } from '@/components/ui/input'
 
 const LOBBY_ROOM_ID = 'webgamekit-lobby'
 const PEER_ID_LENGTH = 8
 
 const lobbyHandle = ref<LobbyHandle | null>(null)
 const localPeerId = ref<string>('')
+const localName = ref<string>('')
+const peerNames = ref<Map<string, string>>(new Map())
 const lobbyPeers = ref<string[]>([])
 const incomingRequests = ref<Array<{ request: MatchRequest; fromPeerId: string }>>([])
 const sentRequests = ref<Map<string, { requestId: string; gameRoomId: string }>>(new Map())
 const matchedSession = ref<{ peerId: string; gameRoomId: string } | null>(null)
 const unsupported = ref(false)
 
-const abbrev = (peerId: string): string => peerId.slice(0, PEER_ID_LENGTH)
+const displayName = (peerId: string): string =>
+  peerNames.value.get(peerId) || peerId.slice(0, PEER_ID_LENGTH)
+
+const commitName = (): void => {
+  lobbyHandle.value?.setName(localName.value.trim())
+}
 
 const joinLobby = (): void => {
   if (!p2pIsSupported()) {
@@ -54,12 +62,16 @@ const joinLobby = (): void => {
     onIgnored: (requestId) => {
       const entry = [...sentRequests.value.entries()].find(([, v]) => v.requestId === requestId)
       if (entry) sentRequests.value.delete(entry[0])
+    },
+    onPeerName: (peerId, name) => {
+      peerNames.value = new Map(peerNames.value).set(peerId, name)
     }
   })
 
   localPeerId.value = handle.session.peerId
   lobbyPeers.value = handle.getPeerIds()
   lobbyHandle.value = handle
+  if (localName.value.trim()) handle.setName(localName.value.trim())
 }
 
 const leaveLobby = (): void => {
@@ -69,6 +81,7 @@ const leaveLobby = (): void => {
   lobbyPeers.value = []
   incomingRequests.value = []
   sentRequests.value = new Map()
+  peerNames.value = new Map()
   matchedSession.value = null
 }
 
@@ -120,7 +133,7 @@ onUnmounted(() => {
       </p>
       <p v-else-if="!lobbyHandle" class="matchmaker__subtitle">Connecting to lobby…</p>
       <p v-else class="matchmaker__subtitle">
-        You are <strong>{{ abbrev(localPeerId) }}</strong> —
+        You are <strong>{{ localName.trim() || localPeerId.slice(0, PEER_ID_LENGTH) }}</strong> —
         {{
           lobbyPeers.length === 0
             ? 'waiting for other players'
@@ -130,6 +143,20 @@ onUnmounted(() => {
     </header>
 
     <main v-if="lobbyHandle && !unsupported" class="matchmaker__main">
+      <!-- Name setting -->
+      <section class="matchmaker__section">
+        <h2 class="matchmaker__section-title">Your name</h2>
+        <div class="matchmaker__name-row">
+          <Input
+            v-model="localName"
+            class="matchmaker__name-input"
+            placeholder="Enter your name…"
+            maxlength="24"
+            @keydown.enter="commitName"
+            @blur="commitName"
+          />
+        </div>
+      </section>
       <!-- Incoming requests -->
       <section v-if="incomingRequests.length" class="matchmaker__section">
         <h2 class="matchmaker__section-title">Requests</h2>
@@ -139,7 +166,7 @@ onUnmounted(() => {
             :key="entry.request.requestId"
             class="matchmaker__item matchmaker__item--request"
           >
-            <span class="matchmaker__player-id">{{ abbrev(entry.fromPeerId) }}</span>
+            <span class="matchmaker__player-id">{{ displayName(entry.fromPeerId) }}</span>
             <span class="matchmaker__player-label">wants to play</span>
             <div class="matchmaker__actions">
               <Button size="sm" @click="acceptRequest(entry)">Accept</Button>
@@ -157,7 +184,7 @@ onUnmounted(() => {
         </p>
         <ul v-else class="matchmaker__list">
           <li v-for="peerId in lobbyPeers" :key="peerId" class="matchmaker__item">
-            <span class="matchmaker__player-id">{{ abbrev(peerId) }}</span>
+            <span class="matchmaker__player-id">{{ displayName(peerId) }}</span>
             <span v-if="sentRequests.has(peerId)" class="matchmaker__player-status">
               Pending…
             </span>
@@ -178,7 +205,7 @@ onUnmounted(() => {
       <div class="matchmaker__matched">
         <p class="matchmaker__matched-title">Matched!</p>
         <p class="matchmaker__matched-peer">
-          Session with <strong>{{ abbrev(matchedSession.peerId) }}</strong>
+          Session with <strong>{{ displayName(matchedSession.peerId) }}</strong>
         </p>
         <p class="matchmaker__matched-room">Room: {{ matchedSession.gameRoomId }}</p>
         <Button class="matchmaker__matched-close" variant="outline" @click="dismissMatch">
@@ -304,6 +331,17 @@ onUnmounted(() => {
   text-align: center;
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
+}
+
+.matchmaker__name-row {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.matchmaker__name-input {
+  flex: 1;
+  height: 2rem;
+  font-size: 0.875rem;
 }
 
 .matchmaker__leave-btn {

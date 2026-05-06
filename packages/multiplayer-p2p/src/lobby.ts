@@ -3,6 +3,7 @@ import type { P2PConfig, P2PSession } from './types'
 
 const REQUEST_CHANNEL = 'lobby-req'
 const RESPONSE_CHANNEL = 'lobby-res'
+const NAME_CHANNEL = 'lobby-name'
 
 export interface MatchRequest {
   requestId: string
@@ -11,6 +12,7 @@ export interface MatchRequest {
 
 type RequestPayload = { requestId: string; gameRoomId: string } & Record<string, string>
 type ResponsePayload = { requestId: string; accepted: string } & Record<string, string>
+type NamePayload = { name: string } & Record<string, string>
 
 export interface LobbyCallbacks {
   /** A new peer appeared in the lobby */
@@ -23,12 +25,16 @@ export interface LobbyCallbacks {
   onAccepted: (requestId: string) => void
   /** The peer we requested ignored the match */
   onIgnored: (requestId: string) => void
+  /** A peer broadcast their display name */
+  onPeerName: (peerId: string, name: string) => void
 }
 
 export interface LobbyHandle {
   session: P2PSession
   /** IDs of all peers currently in the lobby */
   getPeerIds: () => string[]
+  /** Broadcast a display name to all current peers and auto-send it to future joiners */
+  setName: (name: string) => void
   /** Send a match request to a specific peer — returns the request for tracking */
   sendRequest: (targetPeerId: string) => MatchRequest
   /** Accept an incoming match request */
@@ -42,14 +48,14 @@ export interface LobbyHandle {
 /**
  * Join a lobby room for peer discovery and match negotiation.
  *
- * Peers in the lobby can send targeted match requests to each other.
- * The recipient can accept or ignore each request individually.
+ * Peers in the lobby can broadcast a display name, send targeted match
+ * requests to each other, and accept or ignore each request individually.
  * On acceptance, both sides receive the shared `gameRoomId` to join.
  *
  * @param lobbyRoomId - Well-known room ID all players join to discover each other
  * @param config - Optional P2P configuration
- * @param callbacks - Event handlers for peer and request lifecycle events
- * @returns A handle to send requests, respond, and leave the lobby
+ * @param callbacks - Event handlers for peer, name, and request lifecycle events
+ * @returns A handle to set a name, send requests, respond, and leave the lobby
  */
 export const p2pLobbyJoin = (
   lobbyRoomId: string,
@@ -60,8 +66,15 @@ export const p2pLobbyJoin = (
 
   const [sendRequest, onRequest] = session.room.makeAction<RequestPayload>(REQUEST_CHANNEL)
   const [sendResponse, onResponse] = session.room.makeAction<ResponsePayload>(RESPONSE_CHANNEL)
+  const [sendName, onName] = session.room.makeAction<NamePayload>(NAME_CHANNEL)
 
-  p2pOnPeerJoin(session, callbacks.onPeerJoin)
+  let localName = ''
+
+  p2pOnPeerJoin(session, (peerId) => {
+    if (localName) sendName({ name: localName }, peerId)
+    callbacks.onPeerJoin(peerId)
+  })
+
   p2pOnPeerLeave(session, callbacks.onPeerLeave)
 
   onRequest((payload: RequestPayload, fromPeerId: string) => {
@@ -79,9 +92,17 @@ export const p2pLobbyJoin = (
     }
   })
 
+  onName((payload: NamePayload, fromPeerId: string) => {
+    callbacks.onPeerName(fromPeerId, payload.name)
+  })
+
   return {
     session,
     getPeerIds: () => p2pGetPeerIds(session),
+    setName: (name: string): void => {
+      localName = name
+      sendName({ name })
+    },
     sendRequest: (targetPeerId: string): MatchRequest => {
       const requestId = `${session.peerId}-${Date.now()}`
       const gameRoomId = `${lobbyRoomId}-game-${requestId}`
