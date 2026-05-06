@@ -22,6 +22,9 @@
   },
   "Moon Two": { "description": "3D Moon surface rendering with displacement mapping." },
   "Moon View": { "description": "Detailed 3D Moon view with realistic surface shading." },
+  "Matchmaker": {
+    "description": "Browse online players and negotiate a P2P session — request, accept, or ignore individual matches."
+  },
   "Multiplayer P 2 P": {
     "description": "Peer-to-peer multiplayer demo using WebRTC data channels."
   },

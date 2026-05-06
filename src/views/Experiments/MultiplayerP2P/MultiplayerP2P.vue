@@ -14,27 +14,25 @@ import {
 } from '@webgamekit/animation'
 import { createControls, isMobile } from '@webgamekit/controls'
 import {
+  p2pJoin,
+  p2pLeave,
   p2pIsSupported,
-  p2pGetPeerIds,
   p2pOnPeerJoin,
   p2pOnPeerLeave,
+  p2pGetPeerIds,
   p2pSendPosition,
   p2pOnPlayers,
   p2pSendAction,
   p2pOnAction,
   p2pSendData,
   p2pOnData,
-  p2pMatchmake,
   type P2PSession,
-  type PlayerAction,
-  type MatchmakeHandle,
-  type MatchmakeStatus
+  type PlayerAction
 } from '@webgamekit/multiplayer-p2p'
 import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
 import TextureEditor from './TextureEditor.vue'
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
-import Button from '@/components/ui/button/Button.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { usePanelsStore } from '@/stores/panels'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -180,11 +178,11 @@ const refreshAllModels = (): void => {
 }
 
 const buildAndApplyTexture = async (front: string, back: string | null): Promise<void> => {
-  const textureCanvas = await textureBuildCombined(front, back)
-  combinedTextureMap.value = new THREE.CanvasTexture(textureCanvas)
+  const canvas = await textureBuildCombined(front, back)
+  combinedTextureMap.value = new THREE.CanvasTexture(canvas)
   refreshAllModels()
   if (p2pSession) {
-    p2pSendData(p2pSession, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(textureCanvas) })
+    p2pSendData(p2pSession, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(canvas) })
   }
 }
 
@@ -198,7 +196,7 @@ const setupConfig = {
   orbit: { target: new THREE.Vector3(0, 1, 0), disabled: true },
   camera: {
     position: [0, CAMERA_HEIGHT, CAMERA_DEPTH] as CoordinateTuple,
-    lookAt: [0, 0, 0] as CoordinateTuple,
+    lookAt: [0, 0, 0],
     fov: 70,
     up: new THREE.Vector3(0, 1, 0),
     near: 0.1,
@@ -284,122 +282,21 @@ const panelsStore = usePanelsStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
-const matchState = ref<'idle' | 'searching' | 'matched'>('idle')
 
-const hudLogs = computed(() => {
-  if (matchState.value === 'idle')
-    return ['', 'WASD — move', '1 wave  2 attack  3 jump', '4 talk  5 sit  6 pick  7 death']
-  if (matchState.value === 'searching')
-    return [
-      'Searching for players…',
-      '',
-      'WASD — move',
-      '1 wave  2 attack  3 jump',
-      '4 talk  5 sit  6 pick  7 death'
-    ]
-  return [
-    `Players: ${peerCount.value + 1}`,
-    '',
-    'WASD — move',
-    '1 wave  2 attack  3 jump',
-    '4 talk  5 sit  6 pick  7 death'
-  ]
-})
+const hudLogs = computed(() => [
+  `Players: ${peerCount.value + 1}`,
+  '',
+  'WASD — move',
+  '1 wave  2 attack  3 jump',
+  '4 talk  5 sit  6 pick  7 death'
+])
 
 let timelineManagerReference: ReturnType<typeof createTimelineManager> | null = null
 let localPlayerReference: ComplexModel | null = null
 let getDeltaReference: (() => number) | null = null
 let p2pSession: P2PSession | null = null
-let matchmakeHandle: MatchmakeHandle | null = null
-let addRemotePeer: ((peerId: string) => Promise<void>) | null = null
 const remoteModels = new Map<string, ComplexModel>()
 const movingPeers = new Set<string>()
-let sceneReference: THREE.Scene | null = null
-
-const cleanupRemoteModels = (): void => {
-  remoteModels.forEach((model) => sceneReference?.remove(model))
-  remoteModels.clear()
-  movingPeers.clear()
-  peerCount.value = 0
-}
-
-const startP2PSession = (session: P2PSession): void => {
-  p2pSession = session
-
-  p2pGetPeerIds(session).forEach((peerId) => addRemotePeer?.(peerId))
-
-  p2pOnPeerJoin(session, async (peerId) => {
-    await addRemotePeer?.(peerId)
-    if (combinedTextureMap.value) {
-      const textureCanvas = combinedTextureMap.value.image as HTMLCanvasElement
-      p2pSendData(session, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(textureCanvas) })
-    }
-  })
-
-  p2pOnPeerLeave(session, (peerId) => {
-    const model = remoteModels.get(peerId)
-    if (model) {
-      sceneReference?.remove(model)
-      remoteModels.delete(peerId)
-      movingPeers.delete(peerId)
-      peerCount.value = remoteModels.size
-    }
-  })
-
-  p2pOnPlayers(session, (playerState) => {
-    const model = remoteModels.get(playerState.id)
-    if (!model) return
-    const positionChanged =
-      model.position.x !== playerState.position.x || model.position.z !== playerState.position.z
-    model.position.set(playerState.position.x, playerState.position.y, playerState.position.z)
-    model.rotation.set(playerState.rotation.x, playerState.rotation.y, playerState.rotation.z)
-    if (positionChanged) {
-      movingPeers.add(playerState.id)
-    }
-  })
-
-  p2pOnAction(session, (peerId, action) => {
-    const model = remoteModels.get(peerId)
-    if (!model) return
-    playRemoteAction(model, action)
-  })
-
-  p2pOnData<{ dataUrl: string }>(session, P2P_TEXTURE_CHANNEL, (payload, peerId) => {
-    const model = remoteModels.get(peerId)
-    if (!model) return
-    const texture = new THREE.TextureLoader().load(payload.dataUrl)
-    model.traverse((child: THREE.Object3D) => {
-      const mesh = child as THREE.Mesh
-      if (!mesh.isMesh) return
-      const material = mesh.material as THREE.MeshLambertMaterial
-      material.map = texture
-      material.needsUpdate = true
-    })
-  })
-}
-
-const startSearching = (): void => {
-  if (!p2pIsSupported() || matchmakeHandle) return
-  let sessionStarted = false
-
-  matchmakeHandle = p2pMatchmake(ROOM_ID, undefined, (status: MatchmakeStatus, count: number) => {
-    matchState.value = status
-    peerCount.value = count
-    if (status === 'matched' && !sessionStarted && matchmakeHandle) {
-      sessionStarted = true
-      startP2PSession(matchmakeHandle.session)
-    }
-  })
-}
-
-const stopSearching = (): void => {
-  const handle = matchmakeHandle
-  matchmakeHandle = null
-  p2pSession = null
-  cleanupRemoteModels()
-  matchState.value = 'idle'
-  handle?.stop()
-}
 
 const handleBlockingAction = (actionName: string): void => {
   if (!timelineManagerReference || !localPlayerReference || !getDeltaReference) return
@@ -435,11 +332,9 @@ const init = async (): Promise<void> => {
     canvas: canvas.value
   })
 
-  sceneReference = scene
-
   const { orbit } = await setup({
     config: setupConfig,
-    defineSetup: async () => {
+    defineSetup: async ({ ground }) => {
       getDeltaReference = getDelta
       const movementDirection = new THREE.Vector3()
       const broadcastPosition = { x: 0, y: 0, z: 0 }
@@ -457,15 +352,6 @@ const init = async (): Promise<void> => {
 
       const timelineManager = createTimelineManager()
       timelineManagerReference = timelineManager
-
-      addRemotePeer = async (peerId: string): Promise<void> => {
-        if (remoteModels.has(peerId)) return
-        const remoteModel = await getModel(scene, world, 'stickboy.glb', remoteSettings)
-        remapUVsToWorldProjection(remoteModel)
-        applyTextureToModel(remoteModel)
-        remoteModels.set(peerId, remoteModel)
-        peerCount.value = remoteModels.size
-      }
 
       timelineManager.addAction({
         frequency: 2,
@@ -543,6 +429,72 @@ const init = async (): Promise<void> => {
       })
 
       animate({ beforeTimeline: () => {}, timeline: timelineManager })
+
+      if (!p2pIsSupported()) return
+
+      const session = p2pJoin(ROOM_ID)
+      p2pSession = session
+
+      const addRemotePeer = async (peerId: string): Promise<void> => {
+        if (remoteModels.has(peerId)) return
+        const remoteModel = await getModel(scene, world, 'stickboy.glb', remoteSettings)
+        remapUVsToWorldProjection(remoteModel)
+        applyTextureToModel(remoteModel)
+        remoteModels.set(peerId, remoteModel)
+        peerCount.value = remoteModels.size
+      }
+
+      p2pGetPeerIds(session).forEach((peerId) => {
+        addRemotePeer(peerId)
+      })
+
+      p2pOnPeerJoin(session, (peerId) => {
+        addRemotePeer(peerId)
+        if (combinedTextureMap.value) {
+          const canvas = combinedTextureMap.value.image as HTMLCanvasElement
+          p2pSendData(session, P2P_TEXTURE_CHANNEL, { dataUrl: textureToDataUrl(canvas) })
+        }
+      })
+
+      p2pOnPeerLeave(session, (peerId) => {
+        const model = remoteModels.get(peerId)
+        if (model) {
+          scene.remove(model)
+          remoteModels.delete(peerId)
+          peerCount.value = remoteModels.size
+        }
+      })
+
+      p2pOnPlayers(session, (playerState) => {
+        const model = remoteModels.get(playerState.id)
+        if (!model) return
+        const positionChanged =
+          model.position.x !== playerState.position.x || model.position.z !== playerState.position.z
+        model.position.set(playerState.position.x, playerState.position.y, playerState.position.z)
+        model.rotation.set(playerState.rotation.x, playerState.rotation.y, playerState.rotation.z)
+        if (positionChanged) {
+          movingPeers.add(playerState.id)
+        }
+      })
+
+      p2pOnAction(session, (peerId, action) => {
+        const model = remoteModels.get(peerId)
+        if (!model) return
+        playRemoteAction(model, action)
+      })
+
+      p2pOnData<{ dataUrl: string }>(session, P2P_TEXTURE_CHANNEL, (payload, peerId) => {
+        const model = remoteModels.get(peerId)
+        if (!model) return
+        const texture = new THREE.TextureLoader().load(payload.dataUrl)
+        model.traverse((child: THREE.Object3D) => {
+          const mesh = child as THREE.Mesh
+          if (!mesh.isMesh) return
+          const material = mesh.material as THREE.MeshLambertMaterial
+          material.map = texture
+          material.needsUpdate = true
+        })
+      })
     }
   })
 }
@@ -570,33 +522,16 @@ onUnmounted(() => {
   clearAllElementProperties()
   unregisterViewConfig(route.name as string)
   destroyControls()
-  stopSearching()
+  if (p2pSession) {
+    p2pLeave(p2pSession)
+    p2pSession = null
+  }
 })
 </script>
 
 <template>
   <canvas ref="canvas"></canvas>
   <ControlsLogger :logs="hudLogs" />
-
-  <div class="multiplayer-p2p__matchmaker">
-    <template v-if="matchState === 'idle'">
-      <p class="multiplayer-p2p__matchmaker-hint">Find other players to join a session</p>
-      <Button class="multiplayer-p2p__matchmaker-btn" @click="startSearching">Find Match</Button>
-    </template>
-
-    <template v-else-if="matchState === 'searching'">
-      <p class="multiplayer-p2p__matchmaker-status">Searching for players…</p>
-      <Button class="multiplayer-p2p__matchmaker-btn" variant="outline" @click="stopSearching">
-        Cancel
-      </Button>
-    </template>
-
-    <template v-else>
-      <Button class="multiplayer-p2p__matchmaker-btn" variant="outline" @click="stopSearching">
-        Leave
-      </Button>
-    </template>
-  </div>
 
   <Teleport defer to="#config-panel-extra">
     <TextureEditor
@@ -645,30 +580,5 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
-}
-
-.multiplayer-p2p__matchmaker {
-  position: fixed;
-  bottom: var(--spacing-6, 1.5rem);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-2, 0.5rem);
-  z-index: var(--z-overlay);
-  pointer-events: auto;
-}
-
-.multiplayer-p2p__matchmaker-hint,
-.multiplayer-p2p__matchmaker-status {
-  color: var(--color-foreground);
-  font-size: 0.875rem;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, var(--shadow-opacity, 0.6));
-  margin: 0;
-}
-
-.multiplayer-p2p__matchmaker-btn {
-  min-width: 9rem;
 }
 </style>

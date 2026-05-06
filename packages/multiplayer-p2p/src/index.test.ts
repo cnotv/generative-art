@@ -328,3 +328,170 @@ describe('p2pMatchmake', () => {
     expect(onStatusChange).toHaveBeenLastCalledWith('searching', 0)
   })
 })
+
+// ── Lobby helpers ──────────────────────────────────────────────────────────
+// In the mock, actionCallbacks stores the *receive* side of makeAction by channel.
+// We expose two helpers to simulate incoming lobby messages.
+const fireLobbyRequest = (payload: { requestId: string; gameRoomId: string }, fromPeerId: string) =>
+  (actionCallbacks.get('lobby-req') as ((d: unknown, p: string) => void) | undefined)?.(
+    payload,
+    fromPeerId
+  )
+
+const fireLobbyResponse = (payload: { requestId: string; accepted: string }) =>
+  (actionCallbacks.get('lobby-res') as ((d: unknown, p: string) => void) | undefined)?.(
+    payload,
+    'some-peer'
+  )
+
+import { p2pLobbyJoin } from './index'
+
+describe('p2pLobbyJoin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    actionCallbacks.clear()
+    peerJoinCallbacks.length = 0
+    peerLeaveCallbacks.length = 0
+    mockGetPeers.mockReturnValue({})
+  })
+
+  it('returns a handle with session, getPeerIds, sendRequest, acceptRequest, ignoreRequest, stop', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    expect(typeof handle.session).toBe('object')
+    expect(typeof handle.getPeerIds).toBe('function')
+    expect(typeof handle.sendRequest).toBe('function')
+    expect(typeof handle.acceptRequest).toBe('function')
+    expect(typeof handle.ignoreRequest).toBe('function')
+    expect(typeof handle.stop).toBe('function')
+  })
+
+  it('calls onPeerJoin when a peer joins the lobby', () => {
+    const onPeerJoin = vi.fn()
+    p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin,
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    simulatePeerJoin('peer-a')
+    expect(onPeerJoin).toHaveBeenCalledWith('peer-a')
+  })
+
+  it('calls onPeerLeave when a peer leaves the lobby', () => {
+    const onPeerLeave = vi.fn()
+    p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave,
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    simulatePeerLeave('peer-a')
+    expect(onPeerLeave).toHaveBeenCalledWith('peer-a')
+  })
+
+  it('calls onRequest when a match request arrives', () => {
+    const onRequest = vi.fn()
+    p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest,
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    fireLobbyRequest({ requestId: 'req-1', gameRoomId: 'room-abc' }, 'peer-b')
+    expect(onRequest).toHaveBeenCalledWith({ requestId: 'req-1', gameRoomId: 'room-abc' }, 'peer-b')
+  })
+
+  it('calls onAccepted with requestId when acceptance response arrives', () => {
+    const onAccepted = vi.fn()
+    p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted,
+      onIgnored: vi.fn()
+    })
+    fireLobbyResponse({ requestId: 'req-1', accepted: 'true' })
+    expect(onAccepted).toHaveBeenCalledWith('req-1')
+  })
+
+  it('calls onIgnored with requestId when ignore response arrives', () => {
+    const onIgnored = vi.fn()
+    p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored
+    })
+    fireLobbyResponse({ requestId: 'req-2', accepted: 'false' })
+    expect(onIgnored).toHaveBeenCalledWith('req-2')
+  })
+
+  it('sendRequest sends payload to target peer and returns a MatchRequest', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    const request = handle.sendRequest('peer-b')
+    expect(request).toHaveProperty('requestId')
+    expect(request).toHaveProperty('gameRoomId')
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: request.requestId, gameRoomId: request.gameRoomId }),
+      'peer-b'
+    )
+  })
+
+  it('acceptRequest sends accepted=true response to the requester', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    handle.acceptRequest({ requestId: 'req-1', gameRoomId: 'room-x' }, 'peer-b')
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: 'req-1', accepted: 'true' }),
+      'peer-b'
+    )
+  })
+
+  it('ignoreRequest sends accepted=false response to the requester', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    handle.ignoreRequest({ requestId: 'req-2', gameRoomId: 'room-y' }, 'peer-c')
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: 'req-2', accepted: 'false' }),
+      'peer-c'
+    )
+  })
+
+  it('stop() leaves the room', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn()
+    })
+    handle.stop()
+    expect(mockLeave).toHaveBeenCalled()
+  })
+})
