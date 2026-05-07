@@ -162,15 +162,24 @@ onUnmounted(stopSearching)
       />
     </div>
 
-    <div
-      v-if="isHost && (lobbyHandle !== null || playerList.length <= 1)"
-      class="pictionary-lobby__matchmaker"
-    >
+    <div v-if="isHost" class="pictionary-lobby__matchmaker">
       <template v-if="!lobbyHandle">
-        <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
-        <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
-          Find players
-        </button>
+        <p v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker-label">
+          No one else here yet.
+        </p>
+        <div class="pictionary-lobby__matchmaker-actions">
+          <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+            Find players
+          </button>
+          <button
+            v-if="playerList.length > 1"
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </div>
       </template>
 
       <template v-else>
@@ -227,16 +236,6 @@ onUnmounted(stopSearching)
           </button>
         </div>
       </template>
-    </div>
-
-    <div v-else-if="isHost" class="pictionary-lobby__leave-row">
-      <button
-        class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
-        type="button"
-        @click="emit('leaveRoom')"
-      >
-        Leave room
-      </button>
     </div>
     <div v-if="isHost" class="pictionary-lobby__host-controls">
       <label class="pictionary-lobby__field">
