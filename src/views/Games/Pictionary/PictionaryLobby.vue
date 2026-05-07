@@ -174,9 +174,20 @@ onUnmounted(stopSearching)
         </div>
       </div>
     </div>
-    <p class="pictionary-lobby__hint">Game starts when the host clicks Start.</p>
+    <div class="pictionary-lobby__players">
+      <span class="pictionary-lobby__player-count">
+        {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
+      </span>
+      <span
+        v-for="player in playerList"
+        :key="player.id"
+        class="pictionary-lobby__player-dot"
+        :style="{ background: player.color }"
+        :title="player.name"
+      />
+    </div>
 
-    <div v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker">
+    <div v-if="lobbyHandle !== null || playerList.length <= 1" class="pictionary-lobby__matchmaker">
       <template v-if="!lobbyHandle">
         <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
         <div class="pictionary-lobby__matchmaker-actions">
@@ -229,13 +240,22 @@ onUnmounted(stopSearching)
           </li>
         </ul>
 
-        <button
-          class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
-          type="button"
-          @click="stopSearching"
-        >
-          Cancel
-        </button>
+        <div class="pictionary-lobby__matchmaker-actions">
+          <button
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="stopSearching"
+          >
+            Stop searching
+          </button>
+          <button
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </div>
       </template>
     </div>
 
@@ -336,10 +356,24 @@ onUnmounted(stopSearching)
         :disabled="playerList.length < 2"
         @click="emit('startGame')"
       >
-        Start round {{ round.number + 1 }}
+        Start
       </button>
     </div>
-    <p v-else class="pictionary-lobby__hint">Waiting for the host to start the round…</p>
+    <div v-else class="pictionary-lobby__guest-waiting">
+      <span class="pictionary-lobby__matchmaker-searching">
+        Waiting for host
+        <span class="pictionary-lobby__dots" aria-hidden="true">
+          <span>.</span><span>.</span><span>.</span>
+        </span>
+      </span>
+      <button
+        class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+        type="button"
+        @click="emit('leaveRoom')"
+      >
+        Leave room
+      </button>
+    </div>
   </section>
 </template>
 
@@ -451,6 +485,40 @@ onUnmounted(stopSearching)
 .pictionary-lobby__hint {
   color: var(--color-muted-foreground);
   font-size: var(--font-size-sm);
+}
+
+.pictionary-lobby__players {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__player-count {
+  font-size: var(--font-size-sm);
+}
+
+.pictionary-lobby__player-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  border: 2px solid #111;
+  display: inline-block;
+}
+
+.pictionary-lobby__guest-waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: #fff;
+  border: 3px solid #111;
+  border-radius: 1.25rem;
+  box-shadow: 4px 4px 0 #111;
+  max-width: 28rem;
+  width: 100%;
 }
 
 .pictionary-lobby__matchmaker {
