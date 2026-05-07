@@ -481,6 +481,7 @@ onUnmounted(stopSearching)
   box-shadow: 4px 4px 0 #111;
   max-width: 28rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .pictionary-lobby__matchmaker-label {
