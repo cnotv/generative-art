@@ -30,6 +30,7 @@ const props = defineProps<{
   roundDuration: number
   wordCount: number
   hintCount: number
+  roomId: string
 }>()
 
 const emit = defineEmits<{
@@ -49,70 +50,42 @@ const emit = defineEmits<{
 const lobbyHandle = ref<LobbyHandle | null>(null)
 const pendingRequests = ref<Array<{ request: MatchRequest; fromPeerId: string }>>([])
 const peerNames = ref<Record<string, string>>({})
-// Non-reactive: requestId → targetPeerId (only needed for onAccepted lookup)
-const sentRequestPeerIds: Record<string, string> = {}
-let matchComplete = false
 
 const displayName = (peerId: string): string =>
   peerNames.value[peerId] || peerId.slice(0, PEER_ID_LENGTH)
-
-const gameRoomFor = (remotePeerId: string): string =>
-  [lobbyHandle.value?.session.peerId ?? '', remotePeerId].sort().join('--')
-
-const doMatch = (remotePeerId: string): void => {
-  if (matchComplete) return
-  matchComplete = true
-  const gameRoomId = gameRoomFor(remotePeerId)
-  lobbyHandle.value?.stop()
-  lobbyHandle.value = null
-  pendingRequests.value = []
-  emit('matchFound', gameRoomId)
-}
 
 const stopSearching = (): void => {
   lobbyHandle.value?.stop()
   lobbyHandle.value = null
   pendingRequests.value = []
   peerNames.value = {}
-  matchComplete = false
 }
 
 const startSearching = (): void => {
   if (!p2pIsSupported() || lobbyHandle.value) return
-  matchComplete = false
 
   const handle = p2pLobbyJoin(MATCHMAKER_ROOM, undefined, {
     onPeerJoin: (peerId) => {
-      if (matchComplete) return
-      const req = handle.sendRequest(peerId)
-      sentRequestPeerIds[req.requestId] = peerId
+      handle.sendRequest(peerId, props.roomId)
     },
     onPeerLeave: (peerId) => {
       pendingRequests.value = pendingRequests.value.filter((r) => r.fromPeerId !== peerId)
     },
     onRequest: (request, fromPeerId) => {
-      if (matchComplete) return
       if (!pendingRequests.value.some((r) => r.fromPeerId === fromPeerId)) {
         pendingRequests.value = [...pendingRequests.value, { request, fromPeerId }]
       }
     },
-    onAccepted: (requestId) => {
-      const targetPeerId = sentRequestPeerIds[requestId]
-      if (targetPeerId) doMatch(targetPeerId)
+    onAccepted: () => {
+      // Our request was accepted — the peer is coming to our room. Stay and keep searching.
     },
-    onIgnored: (requestId) => {
-      delete sentRequestPeerIds[requestId]
-    },
+    onIgnored: () => {},
     onPeerName: (peerId, name) => {
       peerNames.value = { ...peerNames.value, [peerId]: name }
     }
   })
 
-  handle.getPeerIds().forEach((peerId) => {
-    const req = handle.sendRequest(peerId)
-    sentRequestPeerIds[req.requestId] = peerId
-  })
-
+  handle.getPeerIds().forEach((peerId) => handle.sendRequest(peerId, props.roomId))
   handle.setName(props.playerName)
   lobbyHandle.value = handle
 }
@@ -120,7 +93,8 @@ const startSearching = (): void => {
 const acceptRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
   if (!lobbyHandle.value) return
   lobbyHandle.value.acceptRequest(entry.request, entry.fromPeerId)
-  doMatch(entry.fromPeerId)
+  stopSearching()
+  emit('matchFound', entry.request.gameRoomId)
 }
 
 const ignoreRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
@@ -141,20 +115,17 @@ onUnmounted(stopSearching)
 <template>
   <section class="pictionary-lobby">
     <div class="pictionary-lobby__profile">
-      <h2 class="pictionary-lobby__profile-title">Your name</h2>
       <div class="pictionary-lobby__profile-row">
-        <label class="pictionary-lobby__field">
-          Name
-          <input
-            :value="playerName"
-            type="text"
-            maxlength="20"
-            class="pictionary-lobby__name-input"
-            @input="handleNameInput"
-            @change="emit('nameChange')"
-            @blur="emit('nameChange')"
-          />
-        </label>
+        <h2 class="pictionary-lobby__profile-title">Your name is</h2>
+        <input
+          :value="playerName"
+          type="text"
+          maxlength="20"
+          class="pictionary-lobby__name-input"
+          @input="handleNameInput"
+          @change="emit('nameChange')"
+          @blur="emit('nameChange')"
+        />
         <div class="pictionary-lobby__swatches">
           <button
             v-for="color in PLAYER_COLORS"
@@ -375,17 +346,18 @@ onUnmounted(stopSearching)
   font-size: var(--font-size-md, 1.125rem);
   font-weight: 800;
   color: #111;
+  white-space: nowrap;
 }
 
 .pictionary-lobby__profile-row {
   display: flex;
   gap: var(--spacing-3);
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.pictionary-lobby__field .pictionary-lobby__name-input,
-.pictionary-lobby__field .pictionary-lobby__name-input:focus {
+.pictionary-lobby__name-input,
+.pictionary-lobby__name-input:focus {
   padding: var(--spacing-2) var(--spacing-3);
   border: 3px solid #111;
   border-radius: 999px;
@@ -393,8 +365,9 @@ onUnmounted(stopSearching)
   color: #111;
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
-  min-width: 12rem;
+  min-width: 10rem;
   outline: none;
+  flex: 1;
 }
 
 .pictionary-lobby__swatches {

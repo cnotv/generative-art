@@ -35,8 +35,11 @@ export interface LobbyHandle {
   getPeerIds: () => string[]
   /** Broadcast a display name to all current peers and auto-send it to future joiners */
   setName: (name: string) => void
-  /** Send a match request to a specific peer — returns the request for tracking */
-  sendRequest: (targetPeerId: string) => MatchRequest
+  /**
+   * Send a match request to a specific peer — returns the request for tracking.
+   * Pass `gameRoomId` to advertise the caller's existing room; omit to auto-generate one.
+   */
+  sendRequest: (targetPeerId: string, gameRoomId?: string) => MatchRequest
   /** Accept an incoming match request */
   acceptRequest: (request: MatchRequest, fromPeerId: string) => void
   /** Ignore an incoming match request */
@@ -103,12 +106,12 @@ export const p2pLobbyJoin = (
       localName = name
       sendName({ name })
     },
-    sendRequest: (targetPeerId: string): MatchRequest => {
+    sendRequest: (targetPeerId: string, gameRoomId?: string): MatchRequest => {
       const requestId = `${session.peerId}-${Date.now()}`
-      const gameRoomId = `${lobbyRoomId}-game-${requestId}`
-      const payload: RequestPayload = { requestId, gameRoomId }
+      const resolvedGameRoomId = gameRoomId ?? `${lobbyRoomId}-game-${requestId}`
+      const payload: RequestPayload = { requestId, gameRoomId: resolvedGameRoomId }
       sendRequest(payload, targetPeerId)
-      return { requestId, gameRoomId }
+      return { requestId, gameRoomId: resolvedGameRoomId }
     },
     acceptRequest: (request: MatchRequest, fromPeerId: string): void => {
       const payload: ResponsePayload = { requestId: request.requestId, accepted: 'true' }

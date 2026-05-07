@@ -465,6 +465,23 @@ describe('p2pLobbyJoin', () => {
     )
   })
 
+  it('sendRequest uses a custom gameRoomId when provided', () => {
+    const handle = p2pLobbyJoin('lobby-1', undefined, {
+      onPeerJoin: vi.fn(),
+      onPeerLeave: vi.fn(),
+      onRequest: vi.fn(),
+      onAccepted: vi.fn(),
+      onIgnored: vi.fn(),
+      onPeerName: vi.fn()
+    })
+    const request = handle.sendRequest('peer-b', 'my-existing-room-id')
+    expect(request.gameRoomId).toBe('my-existing-room-id')
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({ gameRoomId: 'my-existing-room-id' }),
+      'peer-b'
+    )
+  })
+
   it('acceptRequest sends accepted=true response to the requester', () => {
     const handle = p2pLobbyJoin('lobby-1', undefined, {
       onPeerJoin: vi.fn(),

@@ -145,6 +145,7 @@ onMounted(() => {
       :player-color="playerColor"
       :is-host="isHost"
       :player-list="playerList"
+      :room-id="roomId"
       :round="round"
       :difficulty="difficulty"
       :total-rounds="totalRounds"

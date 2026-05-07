@@ -47,6 +47,9 @@ const emit = defineEmits<{
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-2);
+  overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 
 .pictionary-header__room {
@@ -123,7 +126,7 @@ const emit = defineEmits<{
   top: calc(100% + var(--spacing-2));
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 100;
   margin: 0;
   padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
   background: #fff;
