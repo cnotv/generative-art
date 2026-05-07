@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Plus, Minus } from 'lucide-vue-next'
+import { Check } from 'lucide-vue-next'
 import { onUnmounted, ref } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
@@ -269,11 +269,7 @@ onUnmounted(stopSearching)
       </button>
     </div>
     <details class="pictionary-lobby__rules">
-      <summary class="pictionary-lobby__rules-title">
-        <Plus class="pictionary-lobby__rules-icon pictionary-lobby__rules-icon--closed" />
-        <Minus class="pictionary-lobby__rules-icon pictionary-lobby__rules-icon--open" />
-        How points work
-      </summary>
+      <summary class="pictionary-lobby__rules-title" title="How points work">?</summary>
       <ul class="pictionary-lobby__rules-list">
         <li>
           Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster guesses
@@ -675,55 +671,50 @@ onUnmounted(stopSearching)
 }
 
 .pictionary-lobby__rules {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
-  max-width: 28rem;
-  width: 100%;
+  position: relative;
+  align-self: flex-start;
   color: #111;
 }
 
 .pictionary-lobby__rules-title {
-  margin: 0;
-  font-size: var(--font-size-md, 1.125rem);
-  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 0.875rem;
+  font-weight: 900;
   cursor: pointer;
   list-style: none;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  user-select: none;
 }
 
 .pictionary-lobby__rules-title::-webkit-details-marker {
   display: none;
 }
 
-.pictionary-lobby__rules-icon {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
-.pictionary-lobby__rules-icon--open {
-  display: none;
-}
-
-.pictionary-lobby__rules[open] .pictionary-lobby__rules-icon--closed {
-  display: none;
-}
-
-.pictionary-lobby__rules[open] .pictionary-lobby__rules-icon--open {
-  display: block;
+.pictionary-lobby__rules-title:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
 }
 
 .pictionary-lobby__rules-list {
+  position: absolute;
+  bottom: calc(100% + var(--spacing-2));
+  left: 0;
+  z-index: 10;
   margin: 0;
-  padding-left: 1.25rem;
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
+  background: #fff;
+  border: 2px solid #111;
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0 #111;
+  width: 16rem;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
