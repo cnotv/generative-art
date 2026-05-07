@@ -618,10 +618,11 @@ onUnmounted(stopSearching)
     padding-right: 0;
   }
 
-  .pictionary-lobby__profile {
+  .pictionary-lobby__profile,
+  .pictionary-lobby__matchmaker,
+  .pictionary-lobby__guest-waiting {
     max-width: 100%;
     box-sizing: border-box;
-    box-shadow: none;
     padding: var(--spacing-2);
   }
 
