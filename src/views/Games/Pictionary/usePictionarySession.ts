@@ -499,6 +499,11 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
 
   const init = (): void => initSessionForContext(ctx, options.roomId)
 
+  const reconnect = (newRoomId: string): void => {
+    destroy()
+    initSessionForContext(ctx, newRoomId)
+  }
+
   const destroy = (): void => {
     clearHintTimers(ctx)
     if (session.value) {
@@ -524,6 +529,7 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
     updateProfile,
     restartGame,
     init,
+    reconnect,
     destroy
   }
 }

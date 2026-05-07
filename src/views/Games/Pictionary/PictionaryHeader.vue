@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { POINTS_BASE, POINTS_FIRST_BONUS, POINTS_DRAWER_PER_GUESS } from './constants'
+
 defineProps<{
   roomId: string
 }>()
@@ -16,6 +18,24 @@ const emit = defineEmits<{
       <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
         Copy link
       </button>
+      <details class="pictionary-header__rules">
+        <summary class="pictionary-header__rules-btn" title="How points work">?</summary>
+        <ul class="pictionary-header__rules-list">
+          <li>
+            Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster
+            guesses score more
+          </li>
+          <li>
+            First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
+          </li>
+          <li>
+            Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct guess,
+            scaled by time remaining
+          </li>
+          <li>Round continues until time runs out or all players guess</li>
+          <li>Hints reveal extra letters (configurable)</li>
+        </ul>
+      </details>
     </div>
   </header>
 </template>
@@ -27,6 +47,9 @@ const emit = defineEmits<{
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-2);
+  overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 
 .pictionary-header__room {
@@ -64,6 +87,60 @@ const emit = defineEmits<{
 .pictionary-header__copy-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 #111;
+}
+
+.pictionary-header__rules {
+  position: relative;
+}
+
+.pictionary-header__rules-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 0.875rem;
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  user-select: none;
+  font-family: inherit;
+}
+
+.pictionary-header__rules-btn::-webkit-details-marker {
+  display: none;
+}
+
+.pictionary-header__rules-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
+}
+
+.pictionary-header__rules-list {
+  position: absolute;
+  top: calc(100% + var(--spacing-2));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  margin: 0;
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
+  background: #fff;
+  border: 2px solid #111;
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0 #111;
+  width: 18rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: #111;
 }
 
 @media (max-width: 720px) {

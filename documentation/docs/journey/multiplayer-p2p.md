@@ -261,3 +261,59 @@ const configControls = {
 ```
 
 The config value stores the object URL from `URL.createObjectURL(file)`. The control renders a styled `<input type="file">` in `ConfigControls.vue`.
+
+## Matchmaker: room ID strategy matters
+
+When building `p2pLobbyJoin`-based matchmaking, the first instinct was to auto-generate a fresh game room ID from the two peer IDs (deterministic, race-condition free):
+
+```ts
+const gameRoomId = [localPeerId, remotePeerId].sort().join('--')
+```
+
+**Problem:** this creates a private room no one outside the matchmaker can reach. The share link (`?room=<originalId>`) now points to an empty room. Players who joined via the link and players who found the game via the matchmaker are on different rooms.
+
+**Fix:** the requester advertises their _existing_ game room ID in the request:
+
+```ts
+handle.sendRequest(peerId, currentGameRoomId)
+```
+
+The acceptor navigates to `request.gameRoomId` (the host's room). The host stays in their room and keeps the matchmaker running — the share link remains valid, and the host can find additional players simultaneously.
+
+**Key rule:** never create a new room for a match. Reuse the host's current room.
+
+## Matchmaker: host role and searching state conflict
+
+When a new player joins a game room via the share link, Trystero assigns the host role to the peer with the lexicographically smallest peer ID. If the newcomer has a smaller ID, they inherit the host role even though the original host was actively searching.
+
+**Symptoms observed:**
+
+- Original host loses the `isHost` flag mid-session
+- Matchmaker widget was still visible (lobbyHandle still set) but `isHost` was false
+- Both the matchmaker searching UI and the guest-waiting UI rendered simultaneously
+
+**Fix:** `watch(() => props.isHost, (isHost) => { if (!isHost) stopSearching() })` in `PictionaryLobby`. The former host immediately leaves the matchmaker lobby and shows the guest-waiting UI.
+
+**Secondary fix:** changed the matchmaker section condition from `isHost && (lobbyHandle !== null || playerList.length <= 1)` to simply `isHost`. The host can always see the "Find players" button regardless of how many players are already present — supporting the pattern of continuing to search for more players after the first match.
+
+## Matchmaker: lobby room must stay separate from the game room
+
+The matchmaker and the game both use Trystero rooms. They must use different room IDs:
+
+| Room       | ID                              | Purpose                                                |
+| ---------- | ------------------------------- | ------------------------------------------------------ |
+| Game room  | `<uuid>` (from URL query param) | Real-time game state: positions, drawing strokes, chat |
+| Lobby room | `pictionary-matchmaker`         | Discovery: who is searching for a match                |
+
+If both used the same room ID, game events (positions, strokes) would flood the lobby's request/response channels, and players could not reliably negotiate matches.
+
+## `p2pMatchmake` vs `p2pLobbyJoin`
+
+Two matchmaking APIs were built during this feature, serving different use cases:
+
+| API            | When to use                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `p2pMatchmake` | Auto-connect: first peer in the shared room triggers `'matched'`. No UI negotiation needed. Good for games where any opponent is fine.                                    |
+| `p2pLobbyJoin` | Explicit approval: players see a list of candidates and choose. Needed when room identity matters (e.g. Pictionary — joining the wrong room means losing the share link). |
+
+`p2pMatchmake` is a thin wrapper around `p2pJoin` + `p2pOnPeerJoin` that exposes only a status callback and a `stop()`. `p2pLobbyJoin` adds three targeted data channels (`lobby-req`, `lobby-res`, `lobby-name`) on top of the base session for request/response/name negotiation.

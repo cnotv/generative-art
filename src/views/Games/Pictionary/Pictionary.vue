@@ -100,6 +100,19 @@ const copyLink = async (): Promise<void> => {
   await navigator.clipboard.writeText(shareableLink.value)
 }
 
+const handleMatchFound = (gameRoomId: string): void => {
+  roomId.value = gameRoomId
+  router.replace({ query: { room: gameRoomId } })
+  session.reconnect(gameRoomId)
+}
+
+const handleLeaveRoom = (): void => {
+  const freshId = crypto.randomUUID()
+  roomId.value = freshId
+  router.replace({ query: { room: freshId } })
+  session.reconnect(freshId)
+}
+
 const handleNameChange = (): void => {
   const trimmed = playerName.value.trim()
   if (!trimmed) return
@@ -132,6 +145,7 @@ onMounted(() => {
       :player-color="playerColor"
       :is-host="isHost"
       :player-list="playerList"
+      :room-id="roomId"
       :round="round"
       :difficulty="difficulty"
       :total-rounds="totalRounds"
@@ -147,6 +161,8 @@ onMounted(() => {
       @update:hint-count="hintCount = $event"
       @name-change="handleNameChange"
       @start-game="session.startRound()"
+      @match-found="handleMatchFound"
+      @leave-room="handleLeaveRoom"
     />
 
     <PictionaryChoosing

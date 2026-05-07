@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { Check, Plus, Minus } from 'lucide-vue-next'
+import { Check } from 'lucide-vue-next'
+import PictionaryCard from './PictionaryCard.vue'
+import { onUnmounted, ref, watch } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
+import {
+  p2pIsSupported,
+  p2pLobbyJoin,
+  type LobbyHandle,
+  type MatchRequest
+} from '@webgamekit/multiplayer-p2p'
 import {
   PLAYER_COLORS,
   ROUND_DURATION_OPTIONS,
   WORD_COUNT_OPTIONS,
-  HINT_COUNT_OPTIONS,
-  POINTS_BASE,
-  POINTS_FIRST_BONUS,
-  POINTS_DRAWER_PER_GUESS
+  HINT_COUNT_OPTIONS
 } from './constants'
 
-defineProps<{
+const MATCHMAKER_ROOM = 'pictionary-matchmaker'
+const PEER_ID_LENGTH = 8
+
+const props = defineProps<{
   playerName: string
   playerColor: string
   isHost: boolean
@@ -23,6 +31,7 @@ defineProps<{
   roundDuration: number
   wordCount: number
   hintCount: number
+  roomId: string
 }>()
 
 const emit = defineEmits<{
@@ -35,30 +44,96 @@ const emit = defineEmits<{
   'update:hintCount': [value: number]
   nameChange: []
   startGame: []
+  matchFound: [roomId: string]
+  leaveRoom: []
 }>()
+
+const lobbyHandle = ref<LobbyHandle | null>(null)
+const pendingRequests = ref<Array<{ request: MatchRequest; fromPeerId: string }>>([])
+const peerNames = ref<Record<string, string>>({})
+
+const displayName = (peerId: string): string =>
+  peerNames.value[peerId] || peerId.slice(0, PEER_ID_LENGTH)
+
+const stopSearching = (): void => {
+  lobbyHandle.value?.stop()
+  lobbyHandle.value = null
+  pendingRequests.value = []
+  peerNames.value = {}
+}
+
+const startSearching = (): void => {
+  if (!p2pIsSupported() || lobbyHandle.value) return
+
+  const handle = p2pLobbyJoin(MATCHMAKER_ROOM, undefined, {
+    onPeerJoin: (peerId) => {
+      handle.sendRequest(peerId, props.roomId)
+    },
+    onPeerLeave: (peerId) => {
+      pendingRequests.value = pendingRequests.value.filter((r) => r.fromPeerId !== peerId)
+    },
+    onRequest: (request, fromPeerId) => {
+      if (!pendingRequests.value.some((r) => r.fromPeerId === fromPeerId)) {
+        pendingRequests.value = [...pendingRequests.value, { request, fromPeerId }]
+      }
+    },
+    onAccepted: () => {
+      // Our request was accepted — the peer is coming to our room. Stay and keep searching.
+    },
+    onIgnored: () => {},
+    onPeerName: (peerId, name) => {
+      peerNames.value = { ...peerNames.value, [peerId]: name }
+    }
+  })
+
+  handle.getPeerIds().forEach((peerId) => handle.sendRequest(peerId, props.roomId))
+  handle.setName(props.playerName)
+  lobbyHandle.value = handle
+}
+
+const acceptRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
+  if (!lobbyHandle.value) return
+  lobbyHandle.value.acceptRequest(entry.request, entry.fromPeerId)
+  stopSearching()
+  emit('matchFound', entry.request.gameRoomId)
+}
+
+const ignoreRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
+  if (!lobbyHandle.value) return
+  lobbyHandle.value.ignoreRequest(entry.request, entry.fromPeerId)
+  pendingRequests.value = pendingRequests.value.filter(
+    (r) => r.request.requestId !== entry.request.requestId
+  )
+}
 
 const handleNameInput = (event: Event): void => {
   emit('update:playerName', (event.target as HTMLInputElement).value)
 }
+
+watch(
+  () => props.isHost,
+  (isHost) => {
+    if (!isHost) stopSearching()
+  }
+)
+
+onUnmounted(stopSearching)
 </script>
 
 <template>
   <section class="pictionary-lobby">
-    <div class="pictionary-lobby__profile">
-      <h2 class="pictionary-lobby__profile-title">👋 Your name</h2>
+    <PictionaryCard class="pictionary-lobby__profile">
       <div class="pictionary-lobby__profile-row">
-        <label class="pictionary-lobby__field">
-          Name
-          <input
-            :value="playerName"
-            type="text"
-            maxlength="20"
-            class="pictionary-lobby__name-input"
-            @input="handleNameInput"
-            @change="emit('nameChange')"
-            @blur="emit('nameChange')"
-          />
-        </label>
+        <h2 class="pictionary-lobby__profile-title">Your name is</h2>
+        <input
+          :value="playerName"
+          type="text"
+          maxlength="20"
+          class="pictionary-lobby__name-input"
+          @input="handleNameInput"
+          @change="emit('nameChange')"
+          @blur="emit('nameChange')"
+        />
         <div class="pictionary-lobby__swatches">
           <button
             v-for="color in PLAYER_COLORS"
@@ -74,32 +149,95 @@ const handleNameInput = (event: Event): void => {
           </button>
         </div>
       </div>
+    </PictionaryCard>
+    <div class="pictionary-lobby__players">
+      <span class="pictionary-lobby__player-count">
+        {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
+      </span>
+      <span
+        v-for="player in playerList"
+        :key="player.id"
+        class="pictionary-lobby__player-dot"
+        :style="{ background: player.color }"
+        :title="player.name"
+      />
     </div>
-    <p class="pictionary-lobby__hint">
-      Share the room link with friends. Game starts when the host clicks Start.
-    </p>
-    <details class="pictionary-lobby__rules">
-      <summary class="pictionary-lobby__rules-title">
-        <Plus class="pictionary-lobby__rules-icon pictionary-lobby__rules-icon--closed" />
-        <Minus class="pictionary-lobby__rules-icon pictionary-lobby__rules-icon--open" />
-        How points work
-      </summary>
-      <ul class="pictionary-lobby__rules-list">
-        <li>
-          Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster guesses
-          score more
-        </li>
-        <li>
-          First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
-        </li>
-        <li>
-          Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct guess,
-          scaled by time remaining
-        </li>
-        <li>Everyone can guess — the round continues until time runs out or all players guess</li>
-        <li>Hints reveal extra letters during the round (configurable above)</li>
-      </ul>
-    </details>
+
+    <PictionaryCard v-if="isHost" class="pictionary-lobby__matchmaker">
+      <template v-if="!lobbyHandle">
+        <p v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker-label">
+          No one else here yet.
+        </p>
+        <div class="pictionary-lobby__matchmaker-actions">
+          <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+            Find players
+          </button>
+          <button
+            v-if="playerList.length > 1"
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="pictionary-lobby__matchmaker-searching">
+          <span>Searching</span>
+          <span class="pictionary-lobby__dots" aria-hidden="true">
+            <span>.</span><span>.</span><span>.</span>
+          </span>
+        </div>
+
+        <ul v-if="pendingRequests.length" class="pictionary-lobby__requests">
+          <li
+            v-for="entry in pendingRequests"
+            :key="entry.request.requestId"
+            class="pictionary-lobby__request"
+          >
+            <span class="pictionary-lobby__request-name">
+              {{ displayName(entry.fromPeerId) }} wants to play
+            </span>
+            <div class="pictionary-lobby__request-actions">
+              <button
+                class="pictionary-lobby__matchmaker-btn"
+                type="button"
+                @click="acceptRequest(entry)"
+              >
+                Join
+              </button>
+              <button
+                class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+                type="button"
+                @click="ignoreRequest(entry)"
+              >
+                Ignore
+              </button>
+            </div>
+          </li>
+        </ul>
+
+        <div class="pictionary-lobby__matchmaker-actions">
+          <button
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="stopSearching"
+          >
+            Stop searching
+          </button>
+          <button
+            v-if="playerList.length > 1"
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </div>
+      </template>
+    </PictionaryCard>
     <div v-if="isHost" class="pictionary-lobby__host-controls">
       <label class="pictionary-lobby__field">
         Difficulty
@@ -166,10 +304,24 @@ const handleNameInput = (event: Event): void => {
         :disabled="playerList.length < 2"
         @click="emit('startGame')"
       >
-        Start round {{ round.number + 1 }}
+        Start
       </button>
     </div>
-    <p v-else class="pictionary-lobby__hint">Waiting for the host to start the round…</p>
+    <PictionaryCard v-else class="pictionary-lobby__guest-waiting">
+      <span class="pictionary-lobby__matchmaker-searching">
+        Waiting for host
+        <span class="pictionary-lobby__dots" aria-hidden="true">
+          <span>.</span><span>.</span><span>.</span>
+        </span>
+      </span>
+      <button
+        class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+        type="button"
+        @click="emit('leaveRoom')"
+      >
+        Leave room
+      </button>
+    </PictionaryCard>
   </section>
 </template>
 
@@ -191,10 +343,6 @@ const handleNameInput = (event: Event): void => {
   flex-direction: column;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
   max-width: 28rem;
   width: 100%;
 }
@@ -204,17 +352,18 @@ const handleNameInput = (event: Event): void => {
   font-size: var(--font-size-md, 1.125rem);
   font-weight: 800;
   color: #111;
+  white-space: nowrap;
 }
 
 .pictionary-lobby__profile-row {
   display: flex;
   gap: var(--spacing-3);
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.pictionary-lobby__field .pictionary-lobby__name-input,
-.pictionary-lobby__field .pictionary-lobby__name-input:focus {
+.pictionary-lobby__name-input,
+.pictionary-lobby__name-input:focus {
   padding: var(--spacing-2) var(--spacing-3);
   border: 3px solid #111;
   border-radius: 999px;
@@ -222,8 +371,9 @@ const handleNameInput = (event: Event): void => {
   color: #111;
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
-  min-width: 12rem;
+  min-width: 10rem;
   outline: none;
+  flex: 1;
 }
 
 .pictionary-lobby__swatches {
@@ -283,6 +433,152 @@ const handleNameInput = (event: Event): void => {
   font-size: var(--font-size-sm);
 }
 
+.pictionary-lobby__players {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__player-count {
+  font-size: var(--font-size-sm);
+}
+
+.pictionary-lobby__player-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  border: 2px solid #111;
+  display: inline-block;
+}
+
+.pictionary-lobby__guest-waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  max-width: 28rem;
+  width: 100%;
+}
+
+.pictionary-lobby__matchmaker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  max-width: 28rem;
+  width: 100%;
+}
+
+.pictionary-lobby__matchmaker-label {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__matchmaker-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.pictionary-lobby__matchmaker-searching {
+  display: flex;
+  align-items: baseline;
+  gap: 0.1em;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+@keyframes pic-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.35em);
+    opacity: 1;
+  }
+}
+
+.pictionary-lobby__dots span {
+  display: inline-block;
+  animation: pic-bounce 1.2s ease-in-out infinite;
+}
+.pictionary-lobby__dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.pictionary-lobby__dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.pictionary-lobby__requests {
+  list-style: none;
+  margin: var(--spacing-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.pictionary-lobby__request {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #f0f9ff;
+}
+
+.pictionary-lobby__request-name {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__request-actions {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.pictionary-lobby__matchmaker-btn {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: var(--pic-blue);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  white-space: nowrap;
+  transition: transform 0.1s ease;
+}
+
+.pictionary-lobby__matchmaker-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
+}
+
+.pictionary-lobby__matchmaker-btn--ghost {
+  background: #fff;
+  color: #111;
+}
+
+.pictionary-lobby__leave-row {
+  max-width: 28rem;
+  width: 100%;
+  display: flex;
+}
+
 .pictionary-lobby__host-controls {
   display: flex;
   gap: var(--spacing-3);
@@ -316,63 +612,6 @@ const handleNameInput = (event: Event): void => {
   box-shadow: 2px 2px 0 #111;
 }
 
-.pictionary-lobby__rules {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
-  max-width: 28rem;
-  width: 100%;
-  color: #111;
-}
-
-.pictionary-lobby__rules-title {
-  margin: 0;
-  font-size: var(--font-size-md, 1.125rem);
-  font-weight: 800;
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.pictionary-lobby__rules-title::-webkit-details-marker {
-  display: none;
-}
-
-.pictionary-lobby__rules-icon {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
-.pictionary-lobby__rules-icon--open {
-  display: none;
-}
-
-.pictionary-lobby__rules[open] .pictionary-lobby__rules-icon--closed {
-  display: none;
-}
-
-.pictionary-lobby__rules[open] .pictionary-lobby__rules-icon--open {
-  display: block;
-}
-
-.pictionary-lobby__rules-list {
-  margin: 0;
-  padding-left: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  line-height: 1.4;
-}
-
 @media (max-width: 720px) {
   .pictionary-lobby {
     padding-left: 0;
@@ -380,10 +619,10 @@ const handleNameInput = (event: Event): void => {
   }
 
   .pictionary-lobby__profile,
-  .pictionary-lobby__rules {
+  .pictionary-lobby__matchmaker,
+  .pictionary-lobby__guest-waiting {
     max-width: 100%;
     box-sizing: border-box;
-    box-shadow: none;
     padding: var(--spacing-2);
   }
 

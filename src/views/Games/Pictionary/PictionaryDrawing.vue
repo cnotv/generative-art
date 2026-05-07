@@ -63,12 +63,15 @@ defineExpose({
   justify-content: space-between;
   align-items: stretch;
   min-width: 0;
+  min-height: 0;
   max-width: 100%;
   overflow: hidden;
 }
 
 .pictionary-drawing :deep(.canvas-editor) {
-  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .pictionary-drawing :deep(.canvas-editor-canvas) {
