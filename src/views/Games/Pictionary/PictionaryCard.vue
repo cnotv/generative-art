@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import GameCard from '@/components/GameCard.vue'
+
 withDefaults(
   defineProps<{
     tag?: string
@@ -8,18 +10,5 @@ withDefaults(
 </script>
 
 <template>
-  <component :is="tag" class="pictionary-card">
-    <slot />
-  </component>
+  <GameCard><slot /></GameCard>
 </template>
-
-<style scoped>
-.pictionary-card {
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
-  box-sizing: border-box;
-  color: #111;
-}
-</style>

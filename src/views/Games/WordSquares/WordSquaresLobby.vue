@@ -1,31 +1,22 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next'
-import PictionaryCard from './PictionaryCard.vue'
 import { watch } from 'vue'
-import type { DictionaryDifficulty } from '@webgamekit/dictionary'
-import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
+import { Check } from 'lucide-vue-next'
+import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
-import {
-  PLAYER_COLORS,
-  ROUND_DURATION_OPTIONS,
-  WORD_COUNT_OPTIONS,
-  HINT_COUNT_OPTIONS
-} from './constants'
-
-const MATCHMAKER_ROOM = 'pictionary-matchmaker'
+import type { DictionaryDifficulty } from '@webgamekit/dictionary'
+import type { WsPlayer } from '@/stores/wordSquares'
+import { ROUND_DURATION_OPTIONS } from './constants'
+import { PLAYER_COLORS } from '@/utils/playerProfile'
 
 const props = defineProps<{
   playerName: string
   playerColor: string
   isHost: boolean
-  playerList: PictionaryPlayer[]
-  round: PictionaryRound
+  playerList: WsPlayer[]
+  roomId: string
   difficulty: DictionaryDifficulty
   totalRounds: number
   roundDuration: number
-  wordCount: number
-  hintCount: number
-  roomId: string
 }>()
 
 const emit = defineEmits<{
@@ -34,13 +25,13 @@ const emit = defineEmits<{
   'update:difficulty': [value: DictionaryDifficulty]
   'update:totalRounds': [value: number]
   'update:roundDuration': [value: number]
-  'update:wordCount': [value: number]
-  'update:hintCount': [value: number]
   nameChange: []
   startGame: []
   matchFound: [roomId: string]
   leaveRoom: []
 }>()
+
+const MATCHMAKER_ROOM = 'word-squares-matchmaker'
 
 const {
   isSearching,
@@ -74,60 +65,61 @@ watch(
 </script>
 
 <template>
-  <section class="pictionary-lobby">
-    <PictionaryCard class="pictionary-lobby__profile">
-      <div class="pictionary-lobby__profile-row">
-        <h2 class="pictionary-lobby__profile-title">Your name is</h2>
+  <section class="ws-lobby">
+    <GameCard class="ws-lobby__profile">
+      <div class="ws-lobby__profile-row">
+        <h2 class="ws-lobby__profile-title">Your name is</h2>
         <input
           :value="playerName"
           type="text"
           maxlength="20"
-          class="pictionary-lobby__name-input"
+          class="ws-lobby__name-input"
           @input="handleNameInput"
           @change="emit('nameChange')"
           @blur="emit('nameChange')"
         />
-        <div class="pictionary-lobby__swatches">
+        <div class="ws-lobby__swatches">
           <button
             v-for="color in PLAYER_COLORS"
             :key="color"
-            class="pictionary-lobby__swatch-btn"
-            :class="{ 'pictionary-lobby__swatch-btn--active': playerColor === color }"
+            class="ws-lobby__swatch-btn"
+            :class="{ 'ws-lobby__swatch-btn--active': playerColor === color }"
             :style="{ background: color }"
             type="button"
             :title="`Pick color ${color}`"
             @click="emit('update:playerColor', color)"
           >
-            <Check v-if="playerColor === color" class="pictionary-lobby__swatch-check" />
+            <Check v-if="playerColor === color" class="ws-lobby__swatch-check" />
           </button>
         </div>
       </div>
-    </PictionaryCard>
-    <div class="pictionary-lobby__players">
-      <span class="pictionary-lobby__player-count">
+    </GameCard>
+
+    <div class="ws-lobby__players">
+      <span class="ws-lobby__player-count">
         {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
       </span>
       <span
         v-for="player in playerList"
         :key="player.id"
-        class="pictionary-lobby__player-dot"
+        class="ws-lobby__player-dot"
         :style="{ background: player.color }"
         :title="player.name"
       />
     </div>
 
-    <PictionaryCard v-if="isHost" class="pictionary-lobby__matchmaker">
+    <GameCard v-if="isHost" class="ws-lobby__matchmaker">
       <template v-if="!isSearching">
-        <p v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker-label">
+        <p v-if="playerList.length <= 1" class="ws-lobby__matchmaker-label">
           No one else here yet.
         </p>
-        <div class="pictionary-lobby__matchmaker-actions">
-          <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+        <div class="ws-lobby__matchmaker-actions">
+          <button class="ws-lobby__matchmaker-btn" type="button" @click="startSearching">
             Find players
           </button>
           <button
             v-if="playerList.length > 1"
-            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
             type="button"
             @click="emit('leaveRoom')"
           >
@@ -137,32 +129,28 @@ watch(
       </template>
 
       <template v-else>
-        <div class="pictionary-lobby__matchmaker-searching">
+        <div class="ws-lobby__matchmaker-searching">
           <span>Searching</span>
-          <span class="pictionary-lobby__dots" aria-hidden="true">
+          <span class="ws-lobby__dots" aria-hidden="true">
             <span>.</span><span>.</span><span>.</span>
           </span>
         </div>
 
-        <ul v-if="pendingRequests.length" class="pictionary-lobby__requests">
+        <ul v-if="pendingRequests.length" class="ws-lobby__requests">
           <li
             v-for="entry in pendingRequests"
             :key="entry.request.requestId"
-            class="pictionary-lobby__request"
+            class="ws-lobby__request"
           >
-            <span class="pictionary-lobby__request-name">
+            <span class="ws-lobby__request-name">
               {{ displayName(entry.fromPeerId) }} wants to play
             </span>
-            <div class="pictionary-lobby__request-actions">
-              <button
-                class="pictionary-lobby__matchmaker-btn"
-                type="button"
-                @click="handleAccept(entry)"
-              >
+            <div class="ws-lobby__request-actions">
+              <button class="ws-lobby__matchmaker-btn" type="button" @click="handleAccept(entry)">
                 Join
               </button>
               <button
-                class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+                class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
                 type="button"
                 @click="ignoreRequest(entry)"
               >
@@ -172,9 +160,9 @@ watch(
           </li>
         </ul>
 
-        <div class="pictionary-lobby__matchmaker-actions">
+        <div class="ws-lobby__matchmaker-actions">
           <button
-            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
             type="button"
             @click="stopSearching"
           >
@@ -182,7 +170,7 @@ watch(
           </button>
           <button
             v-if="playerList.length > 1"
-            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
             type="button"
             @click="emit('leaveRoom')"
           >
@@ -190,9 +178,10 @@ watch(
           </button>
         </div>
       </template>
-    </PictionaryCard>
-    <div v-if="isHost" class="pictionary-lobby__host-controls">
-      <label class="pictionary-lobby__field">
+    </GameCard>
+
+    <div v-if="isHost" class="ws-lobby__host-controls">
+      <label class="ws-lobby__field">
         Difficulty
         <select
           :value="difficulty"
@@ -208,7 +197,7 @@ watch(
           <option value="hard">Hard</option>
         </select>
       </label>
-      <label class="pictionary-lobby__field">
+      <label class="ws-lobby__field">
         Rounds
         <input
           :value="totalRounds"
@@ -218,7 +207,7 @@ watch(
           @input="emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))"
         />
       </label>
-      <label class="pictionary-lobby__field">
+      <label class="ws-lobby__field">
         Round time
         <select
           :value="roundDuration"
@@ -229,30 +218,8 @@ watch(
           </option>
         </select>
       </label>
-      <label class="pictionary-lobby__field">
-        Words
-        <select
-          :value="wordCount"
-          @change="emit('update:wordCount', Number(($event.target as HTMLSelectElement).value))"
-        >
-          <option v-for="count in WORD_COUNT_OPTIONS" :key="count" :value="count">
-            {{ count }}
-          </option>
-        </select>
-      </label>
-      <label class="pictionary-lobby__field">
-        Hints
-        <select
-          :value="hintCount"
-          @change="emit('update:hintCount', Number(($event.target as HTMLSelectElement).value))"
-        >
-          <option v-for="count in HINT_COUNT_OPTIONS" :key="count" :value="count">
-            {{ count }}
-          </option>
-        </select>
-      </label>
       <button
-        class="pictionary-lobby__start-btn"
+        class="ws-lobby__start-btn"
         type="button"
         :disabled="playerList.length < 2"
         @click="emit('startGame')"
@@ -260,26 +227,27 @@ watch(
         Start
       </button>
     </div>
-    <PictionaryCard v-else class="pictionary-lobby__guest-waiting">
-      <span class="pictionary-lobby__matchmaker-searching">
+
+    <GameCard v-else class="ws-lobby__guest-waiting">
+      <span class="ws-lobby__matchmaker-searching">
         Waiting for host
-        <span class="pictionary-lobby__dots" aria-hidden="true">
+        <span class="ws-lobby__dots" aria-hidden="true">
           <span>.</span><span>.</span><span>.</span>
         </span>
       </span>
       <button
-        class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+        class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
         type="button"
         @click="emit('leaveRoom')"
       >
         Leave room
       </button>
-    </PictionaryCard>
+    </GameCard>
   </section>
 </template>
 
 <style scoped>
-.pictionary-lobby {
+.ws-lobby {
   grid-area: main;
   display: flex;
   flex-direction: column;
@@ -288,10 +256,9 @@ watch(
   justify-content: center;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
-.pictionary-lobby__profile {
+.ws-lobby__profile {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
@@ -300,7 +267,7 @@ watch(
   width: 100%;
 }
 
-.pictionary-lobby__profile-title {
+.ws-lobby__profile-title {
   margin: 0;
   font-size: var(--font-size-md, 1.125rem);
   font-weight: 800;
@@ -308,15 +275,15 @@ watch(
   white-space: nowrap;
 }
 
-.pictionary-lobby__profile-row {
+.ws-lobby__profile-row {
   display: flex;
   gap: var(--spacing-3);
   align-items: center;
   flex-wrap: wrap;
 }
 
-.pictionary-lobby__name-input,
-.pictionary-lobby__name-input:focus {
+.ws-lobby__name-input,
+.ws-lobby__name-input:focus {
   padding: var(--spacing-2) var(--spacing-3);
   border: 3px solid #111;
   border-radius: 999px;
@@ -329,13 +296,13 @@ watch(
   flex: 1;
 }
 
-.pictionary-lobby__swatches {
+.ws-lobby__swatches {
   display: flex;
   gap: var(--spacing-1);
   flex-wrap: wrap;
 }
 
-.pictionary-lobby__swatch-btn {
+.ws-lobby__swatch-btn {
   width: 2rem;
   height: 2rem;
   border: 2px solid #111;
@@ -349,44 +316,19 @@ watch(
   justify-content: center;
 }
 
-.pictionary-lobby__swatch-btn:hover {
+.ws-lobby__swatch-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
 }
 
-.pictionary-lobby__swatch-check {
+.ws-lobby__swatch-check {
   width: 1rem;
   height: 1rem;
   color: #fff;
   stroke-width: 4;
 }
 
-.pictionary-lobby__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  font-size: var(--font-size-xs);
-  color: #111;
-  font-weight: 700;
-}
-
-.pictionary-lobby__field select,
-.pictionary-lobby__field input {
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #111;
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: #111;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-}
-
-.pictionary-lobby__hint {
-  color: var(--color-muted-foreground);
-  font-size: var(--font-size-sm);
-}
-
-.pictionary-lobby__players {
+.ws-lobby__players {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -395,11 +337,11 @@ watch(
   color: #111;
 }
 
-.pictionary-lobby__player-count {
+.ws-lobby__player-count {
   font-size: var(--font-size-sm);
 }
 
-.pictionary-lobby__player-dot {
+.ws-lobby__player-dot {
   width: 0.875rem;
   height: 0.875rem;
   border-radius: 50%;
@@ -407,7 +349,16 @@ watch(
   display: inline-block;
 }
 
-.pictionary-lobby__guest-waiting {
+.ws-lobby__matchmaker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  max-width: 28rem;
+  width: 100%;
+}
+
+.ws-lobby__guest-waiting {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
@@ -416,29 +367,20 @@ watch(
   width: 100%;
 }
 
-.pictionary-lobby__matchmaker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-4);
-  max-width: 28rem;
-  width: 100%;
-}
-
-.pictionary-lobby__matchmaker-label {
+.ws-lobby__matchmaker-label {
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: #111;
 }
 
-.pictionary-lobby__matchmaker-actions {
+.ws-lobby__matchmaker-actions {
   display: flex;
   gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
-.pictionary-lobby__matchmaker-searching {
+.ws-lobby__matchmaker-searching {
   display: flex;
   align-items: baseline;
   gap: 0.1em;
@@ -447,7 +389,7 @@ watch(
   color: #111;
 }
 
-@keyframes pic-bounce {
+@keyframes ws-bounce {
   0%,
   60%,
   100% {
@@ -460,18 +402,20 @@ watch(
   }
 }
 
-.pictionary-lobby__dots span {
+.ws-lobby__dots span {
   display: inline-block;
-  animation: pic-bounce 1.2s ease-in-out infinite;
+  animation: ws-bounce 1.2s ease-in-out infinite;
 }
-.pictionary-lobby__dots span:nth-child(2) {
+
+.ws-lobby__dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
-.pictionary-lobby__dots span:nth-child(3) {
+
+.ws-lobby__dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
 
-.pictionary-lobby__requests {
+.ws-lobby__requests {
   list-style: none;
   margin: var(--spacing-1) 0 0;
   padding: 0;
@@ -480,33 +424,33 @@ watch(
   gap: var(--spacing-2);
 }
 
-.pictionary-lobby__request {
+.ws-lobby__request {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
   border: 2px solid #111;
   border-radius: 999px;
-  background: #f0f9ff;
+  background: #f0fff4;
 }
 
-.pictionary-lobby__request-name {
+.ws-lobby__request-name {
   flex: 1;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: #111;
 }
 
-.pictionary-lobby__request-actions {
+.ws-lobby__request-actions {
   display: flex;
   gap: var(--spacing-1);
 }
 
-.pictionary-lobby__matchmaker-btn {
+.ws-lobby__matchmaker-btn {
   padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid #111;
   border-radius: 999px;
-  background: var(--pic-blue);
+  background: var(--ws-green);
   color: #fff;
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -516,33 +460,47 @@ watch(
   transition: transform 0.1s ease;
 }
 
-.pictionary-lobby__matchmaker-btn:hover {
+.ws-lobby__matchmaker-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
 }
 
-.pictionary-lobby__matchmaker-btn--ghost {
+.ws-lobby__matchmaker-btn--ghost {
   background: #fff;
   color: #111;
 }
 
-.pictionary-lobby__leave-row {
-  max-width: 28rem;
-  width: 100%;
+.ws-lobby__field {
   display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: #111;
+  font-weight: 700;
 }
 
-.pictionary-lobby__host-controls {
+.ws-lobby__field select,
+.ws-lobby__field input {
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid #111;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: #111;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.ws-lobby__host-controls {
   display: flex;
   gap: var(--spacing-3);
   align-items: flex-end;
 }
 
-.pictionary-lobby__start-btn {
+.ws-lobby__start-btn {
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
   border: 3px solid #111;
   border-radius: 999px;
-  background: var(--pic-pink);
+  background: var(--ws-green);
   color: #fff;
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
@@ -554,32 +512,32 @@ watch(
   gap: var(--spacing-2);
 }
 
-.pictionary-lobby__start-btn:hover:not(:disabled) {
+.ws-lobby__start-btn:hover:not(:disabled) {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 #111;
 }
 
-.pictionary-lobby__start-btn:disabled {
+.ws-lobby__start-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   box-shadow: 2px 2px 0 #111;
 }
 
 @media (max-width: 720px) {
-  .pictionary-lobby {
+  .ws-lobby {
     padding-left: 0;
     padding-right: 0;
   }
 
-  .pictionary-lobby__profile,
-  .pictionary-lobby__matchmaker,
-  .pictionary-lobby__guest-waiting {
+  .ws-lobby__profile,
+  .ws-lobby__matchmaker,
+  .ws-lobby__guest-waiting {
     max-width: 100%;
     box-sizing: border-box;
     padding: var(--spacing-2);
   }
 
-  .pictionary-lobby__host-controls {
+  .ws-lobby__host-controls {
     flex-wrap: wrap;
     justify-content: center;
   }
