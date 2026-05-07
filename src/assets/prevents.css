@@ -1,9 +1,5 @@
-/* iOS-specific zoom and selection prevention */
+/* iOS-specific zoom and touch prevention */
 * {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -23,7 +19,5 @@ canvas {
 html,
 body {
   touch-action: manipulation;
-  -webkit-user-select: none;
-  user-select: none;
   -webkit-touch-callout: none;
 }
