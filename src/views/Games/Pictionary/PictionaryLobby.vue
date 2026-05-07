@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check } from 'lucide-vue-next'
-import { onUnmounted, ref } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
 import {
@@ -109,6 +109,13 @@ const handleNameInput = (event: Event): void => {
   emit('update:playerName', (event.target as HTMLInputElement).value)
 }
 
+watch(
+  () => props.isHost,
+  (isHost) => {
+    if (!isHost) stopSearching()
+  }
+)
+
 onUnmounted(stopSearching)
 </script>
 
@@ -155,7 +162,10 @@ onUnmounted(stopSearching)
       />
     </div>
 
-    <div v-if="lobbyHandle !== null || playerList.length <= 1" class="pictionary-lobby__matchmaker">
+    <div
+      v-if="isHost && (lobbyHandle !== null || playerList.length <= 1)"
+      class="pictionary-lobby__matchmaker"
+    >
       <template v-if="!lobbyHandle">
         <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
         <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
