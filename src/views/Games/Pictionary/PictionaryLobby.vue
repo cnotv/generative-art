@@ -116,7 +116,7 @@ onUnmounted(stopSearching)
   <section class="pictionary-lobby">
     <div class="pictionary-lobby__profile">
       <div class="pictionary-lobby__profile-row">
-        <h2 class="pictionary-lobby__profile-title">Your name is</h2>
+        <h2 class="pictionary-lobby__profile-title">Your name</h2>
         <input
           :value="playerName"
           type="text"
