@@ -1,8 +1,6 @@
 services:
   website:
     image: ghcr.io/cnotv/generative-art:latest
-    build:
-      context: .
     environment:
       NODE_ENV: production
     ports:
