@@ -174,9 +174,7 @@ onUnmounted(stopSearching)
         </div>
       </div>
     </div>
-    <p class="pictionary-lobby__hint">
-      Share the room link with friends. Game starts when the host clicks Start.
-    </p>
+    <p class="pictionary-lobby__hint">Game starts when the host clicks Start.</p>
 
     <div v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker">
       <template v-if="!lobbyHandle">
