@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check } from 'lucide-vue-next'
+import PictionaryCard from './PictionaryCard.vue'
 import { onUnmounted, ref, watch } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
@@ -121,7 +122,7 @@ onUnmounted(stopSearching)
 
 <template>
   <section class="pictionary-lobby">
-    <div class="pictionary-lobby__profile">
+    <PictionaryCard class="pictionary-lobby__profile">
       <div class="pictionary-lobby__profile-row">
         <h2 class="pictionary-lobby__profile-title">Your name is</h2>
         <input
@@ -148,7 +149,7 @@ onUnmounted(stopSearching)
           </button>
         </div>
       </div>
-    </div>
+    </PictionaryCard>
     <div class="pictionary-lobby__players">
       <span class="pictionary-lobby__player-count">
         {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
@@ -162,7 +163,7 @@ onUnmounted(stopSearching)
       />
     </div>
 
-    <div v-if="isHost" class="pictionary-lobby__matchmaker">
+    <PictionaryCard v-if="isHost" class="pictionary-lobby__matchmaker">
       <template v-if="!lobbyHandle">
         <p v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker-label">
           No one else here yet.
@@ -236,7 +237,7 @@ onUnmounted(stopSearching)
           </button>
         </div>
       </template>
-    </div>
+    </PictionaryCard>
     <div v-if="isHost" class="pictionary-lobby__host-controls">
       <label class="pictionary-lobby__field">
         Difficulty
@@ -306,7 +307,7 @@ onUnmounted(stopSearching)
         Start
       </button>
     </div>
-    <div v-else class="pictionary-lobby__guest-waiting">
+    <PictionaryCard v-else class="pictionary-lobby__guest-waiting">
       <span class="pictionary-lobby__matchmaker-searching">
         Waiting for host
         <span class="pictionary-lobby__dots" aria-hidden="true">
@@ -320,7 +321,7 @@ onUnmounted(stopSearching)
       >
         Leave room
       </button>
-    </div>
+    </PictionaryCard>
   </section>
 </template>
 
@@ -342,10 +343,6 @@ onUnmounted(stopSearching)
   flex-direction: column;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
   max-width: 28rem;
   width: 100%;
 }
@@ -462,10 +459,6 @@ onUnmounted(stopSearching)
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-3) var(--spacing-4);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
   max-width: 28rem;
   width: 100%;
 }
@@ -475,10 +468,6 @@ onUnmounted(stopSearching)
   flex-direction: column;
   gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-4);
-  background: #fff;
-  border: 3px solid #111;
-  border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
   max-width: 28rem;
   width: 100%;
 }
