@@ -13,10 +13,7 @@ import {
   PLAYER_COLORS,
   ROUND_DURATION_OPTIONS,
   WORD_COUNT_OPTIONS,
-  HINT_COUNT_OPTIONS,
-  POINTS_BASE,
-  POINTS_FIRST_BONUS,
-  POINTS_DRAWER_PER_GUESS
+  HINT_COUNT_OPTIONS
 } from './constants'
 
 const MATCHMAKER_ROOM = 'pictionary-matchmaker'
@@ -190,18 +187,9 @@ onUnmounted(stopSearching)
     <div v-if="lobbyHandle !== null || playerList.length <= 1" class="pictionary-lobby__matchmaker">
       <template v-if="!lobbyHandle">
         <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
-        <div class="pictionary-lobby__matchmaker-actions">
-          <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
-            Find players
-          </button>
-          <button
-            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
-            type="button"
-            @click="emit('leaveRoom')"
-          >
-            Leave room
-          </button>
-        </div>
+        <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+          Find players
+        </button>
       </template>
 
       <template v-else>
@@ -249,6 +237,7 @@ onUnmounted(stopSearching)
             Stop searching
           </button>
           <button
+            v-if="playerList.length > 1"
             class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
             type="button"
             @click="emit('leaveRoom')"
@@ -268,24 +257,6 @@ onUnmounted(stopSearching)
         Leave room
       </button>
     </div>
-    <details class="pictionary-lobby__rules">
-      <summary class="pictionary-lobby__rules-title" title="How points work">?</summary>
-      <ul class="pictionary-lobby__rules-list">
-        <li>
-          Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster guesses
-          score more
-        </li>
-        <li>
-          First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
-        </li>
-        <li>
-          Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct guess,
-          scaled by time remaining
-        </li>
-        <li>Everyone can guess — the round continues until time runs out or all players guess</li>
-        <li>Hints reveal extra letters during the round (configurable above)</li>
-      </ul>
-    </details>
     <div v-if="isHost" class="pictionary-lobby__host-controls">
       <label class="pictionary-lobby__field">
         Difficulty
@@ -670,66 +641,13 @@ onUnmounted(stopSearching)
   box-shadow: 2px 2px 0 #111;
 }
 
-.pictionary-lobby__rules {
-  position: relative;
-  align-self: flex-start;
-  color: #111;
-}
-
-.pictionary-lobby__rules-title {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid #111;
-  border-radius: 50%;
-  background: #fff;
-  font-size: 0.875rem;
-  font-weight: 900;
-  cursor: pointer;
-  list-style: none;
-  box-shadow: 2px 2px 0 #111;
-  transition: transform 0.1s ease;
-  user-select: none;
-}
-
-.pictionary-lobby__rules-title::-webkit-details-marker {
-  display: none;
-}
-
-.pictionary-lobby__rules-title:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
-}
-
-.pictionary-lobby__rules-list {
-  position: absolute;
-  bottom: calc(100% + var(--spacing-2));
-  left: 0;
-  z-index: 10;
-  margin: 0;
-  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
-  background: #fff;
-  border: 2px solid #111;
-  border-radius: 0.75rem;
-  box-shadow: 3px 3px 0 #111;
-  width: 16rem;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  line-height: 1.4;
-}
-
 @media (max-width: 720px) {
   .pictionary-lobby {
     padding-left: 0;
     padding-right: 0;
   }
 
-  .pictionary-lobby__profile,
-  .pictionary-lobby__rules {
+  .pictionary-lobby__profile {
     max-width: 100%;
     box-sizing: border-box;
     box-shadow: none;
