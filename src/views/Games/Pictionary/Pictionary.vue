@@ -106,6 +106,13 @@ const handleMatchFound = (gameRoomId: string): void => {
   session.reconnect(gameRoomId)
 }
 
+const handleLeaveRoom = (): void => {
+  const freshId = crypto.randomUUID()
+  roomId.value = freshId
+  router.replace({ query: { room: freshId } })
+  session.reconnect(freshId)
+}
+
 const handleNameChange = (): void => {
   const trimmed = playerName.value.trim()
   if (!trimmed) return
@@ -154,6 +161,7 @@ onMounted(() => {
       @name-change="handleNameChange"
       @start-game="session.startRound()"
       @match-found="handleMatchFound"
+      @leave-room="handleLeaveRoom"
     />
 
     <PictionaryChoosing

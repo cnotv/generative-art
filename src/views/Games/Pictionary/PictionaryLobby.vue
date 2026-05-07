@@ -4,12 +4,10 @@ import { onUnmounted, ref } from 'vue'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer, PictionaryRound } from '@/stores/pictionary'
 import {
-  p2pJoin,
-  p2pLeave,
-  p2pGetPeerIds,
-  p2pOnPeerJoin,
   p2pIsSupported,
-  type P2PSession
+  p2pLobbyJoin,
+  type LobbyHandle,
+  type MatchRequest
 } from '@webgamekit/multiplayer-p2p'
 import {
   PLAYER_COLORS,
@@ -22,8 +20,9 @@ import {
 } from './constants'
 
 const MATCHMAKER_ROOM = 'pictionary-matchmaker'
+const PEER_ID_LENGTH = 8
 
-defineProps<{
+const props = defineProps<{
   playerName: string
   playerColor: string
   isHost: boolean
@@ -47,45 +46,92 @@ const emit = defineEmits<{
   nameChange: []
   startGame: []
   matchFound: [roomId: string]
+  leaveRoom: []
 }>()
 
-const matchState = ref<'idle' | 'searching'>('idle')
-let matchSession: P2PSession | null = null
+const lobbyHandle = ref<LobbyHandle | null>(null)
+const pendingRequests = ref<Array<{ request: MatchRequest; fromPeerId: string }>>([])
+const peerNames = ref<Record<string, string>>({})
+// Non-reactive: requestId → targetPeerId (only needed for onAccepted lookup)
+const sentRequestPeerIds: Record<string, string> = {}
+let matchComplete = false
 
-const deriveGameRoomId = (peerA: string, peerB: string): string => [peerA, peerB].sort().join('--')
+const displayName = (peerId: string): string =>
+  peerNames.value[peerId] || peerId.slice(0, PEER_ID_LENGTH)
 
-const handlePeerFound = (session: P2PSession, remotePeerId: string): void => {
-  const gameRoomId = deriveGameRoomId(session.peerId, remotePeerId)
-  p2pLeave(session)
-  matchSession = null
-  matchState.value = 'idle'
+const gameRoomFor = (remotePeerId: string): string =>
+  [lobbyHandle.value?.session.peerId ?? '', remotePeerId].sort().join('--')
+
+const doMatch = (remotePeerId: string): void => {
+  if (matchComplete) return
+  matchComplete = true
+  const gameRoomId = gameRoomFor(remotePeerId)
+  lobbyHandle.value?.stop()
+  lobbyHandle.value = null
+  pendingRequests.value = []
   emit('matchFound', gameRoomId)
 }
 
-const startSearching = (): void => {
-  if (!p2pIsSupported()) return
-  const session = p2pJoin(MATCHMAKER_ROOM)
-  matchSession = session
-  matchState.value = 'searching'
-
-  const existing = p2pGetPeerIds(session)
-  if (existing.length > 0) {
-    handlePeerFound(session, existing[0])
-    return
-  }
-
-  p2pOnPeerJoin(session, (remotePeerId) => {
-    if (!matchSession) return
-    handlePeerFound(session, remotePeerId)
-  })
+const stopSearching = (): void => {
+  lobbyHandle.value?.stop()
+  lobbyHandle.value = null
+  pendingRequests.value = []
+  peerNames.value = {}
+  matchComplete = false
 }
 
-const stopSearching = (): void => {
-  if (matchSession) {
-    p2pLeave(matchSession)
-    matchSession = null
-  }
-  matchState.value = 'idle'
+const startSearching = (): void => {
+  if (!p2pIsSupported() || lobbyHandle.value) return
+  matchComplete = false
+
+  const handle = p2pLobbyJoin(MATCHMAKER_ROOM, undefined, {
+    onPeerJoin: (peerId) => {
+      if (matchComplete) return
+      const req = handle.sendRequest(peerId)
+      sentRequestPeerIds[req.requestId] = peerId
+    },
+    onPeerLeave: (peerId) => {
+      pendingRequests.value = pendingRequests.value.filter((r) => r.fromPeerId !== peerId)
+    },
+    onRequest: (request, fromPeerId) => {
+      if (matchComplete) return
+      if (!pendingRequests.value.some((r) => r.fromPeerId === fromPeerId)) {
+        pendingRequests.value = [...pendingRequests.value, { request, fromPeerId }]
+      }
+    },
+    onAccepted: (requestId) => {
+      const targetPeerId = sentRequestPeerIds[requestId]
+      if (targetPeerId) doMatch(targetPeerId)
+    },
+    onIgnored: (requestId) => {
+      delete sentRequestPeerIds[requestId]
+    },
+    onPeerName: (peerId, name) => {
+      peerNames.value = { ...peerNames.value, [peerId]: name }
+    }
+  })
+
+  handle.getPeerIds().forEach((peerId) => {
+    const req = handle.sendRequest(peerId)
+    sentRequestPeerIds[req.requestId] = peerId
+  })
+
+  handle.setName(props.playerName)
+  lobbyHandle.value = handle
+}
+
+const acceptRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
+  if (!lobbyHandle.value) return
+  lobbyHandle.value.acceptRequest(entry.request, entry.fromPeerId)
+  doMatch(entry.fromPeerId)
+}
+
+const ignoreRequest = (entry: { request: MatchRequest; fromPeerId: string }): void => {
+  if (!lobbyHandle.value) return
+  lobbyHandle.value.ignoreRequest(entry.request, entry.fromPeerId)
+  pendingRequests.value = pendingRequests.value.filter(
+    (r) => r.request.requestId !== entry.request.requestId
+  )
 }
 
 const handleNameInput = (event: Event): void => {
@@ -98,7 +144,7 @@ onUnmounted(stopSearching)
 <template>
   <section class="pictionary-lobby">
     <div class="pictionary-lobby__profile">
-      <h2 class="pictionary-lobby__profile-title">👋 Your name</h2>
+      <h2 class="pictionary-lobby__profile-title">Your name</h2>
       <div class="pictionary-lobby__profile-row">
         <label class="pictionary-lobby__field">
           Name
@@ -133,22 +179,76 @@ onUnmounted(stopSearching)
     </p>
 
     <div v-if="playerList.length <= 1" class="pictionary-lobby__matchmaker">
-      <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
-      <template v-if="matchState === 'idle'">
-        <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
-          🔍 Find players
-        </button>
+      <template v-if="!lobbyHandle">
+        <p class="pictionary-lobby__matchmaker-label">No one else here yet.</p>
+        <div class="pictionary-lobby__matchmaker-actions">
+          <button class="pictionary-lobby__matchmaker-btn" type="button" @click="startSearching">
+            Find players
+          </button>
+          <button
+            class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </div>
       </template>
+
       <template v-else>
-        <span class="pictionary-lobby__matchmaker-searching">Searching…</span>
+        <div class="pictionary-lobby__matchmaker-searching">
+          <span>Searching</span>
+          <span class="pictionary-lobby__dots" aria-hidden="true">
+            <span>.</span><span>.</span><span>.</span>
+          </span>
+        </div>
+
+        <ul v-if="pendingRequests.length" class="pictionary-lobby__requests">
+          <li
+            v-for="entry in pendingRequests"
+            :key="entry.request.requestId"
+            class="pictionary-lobby__request"
+          >
+            <span class="pictionary-lobby__request-name">
+              {{ displayName(entry.fromPeerId) }} wants to play
+            </span>
+            <div class="pictionary-lobby__request-actions">
+              <button
+                class="pictionary-lobby__matchmaker-btn"
+                type="button"
+                @click="acceptRequest(entry)"
+              >
+                Join
+              </button>
+              <button
+                class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+                type="button"
+                @click="ignoreRequest(entry)"
+              >
+                Ignore
+              </button>
+            </div>
+          </li>
+        </ul>
+
         <button
-          class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--cancel"
+          class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
           type="button"
           @click="stopSearching"
         >
           Cancel
         </button>
       </template>
+    </div>
+
+    <div v-else-if="isHost" class="pictionary-lobby__leave-row">
+      <button
+        class="pictionary-lobby__matchmaker-btn pictionary-lobby__matchmaker-btn--ghost"
+        type="button"
+        @click="emit('leaveRoom')"
+      >
+        Leave room
+      </button>
     </div>
     <details class="pictionary-lobby__rules">
       <summary class="pictionary-lobby__rules-title">
@@ -357,8 +457,8 @@ onUnmounted(stopSearching)
 
 .pictionary-lobby__matchmaker {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
+  flex-direction: column;
+  gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-4);
   background: #fff;
   border: 3px solid #111;
@@ -369,17 +469,80 @@ onUnmounted(stopSearching)
 }
 
 .pictionary-lobby__matchmaker-label {
-  flex: 1;
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: #111;
 }
 
+.pictionary-lobby__matchmaker-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
 .pictionary-lobby__matchmaker-searching {
+  display: flex;
+  align-items: baseline;
+  gap: 0.1em;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: var(--color-muted-foreground);
+  color: #111;
+}
+
+@keyframes pic-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.35em);
+    opacity: 1;
+  }
+}
+
+.pictionary-lobby__dots span {
+  display: inline-block;
+  animation: pic-bounce 1.2s ease-in-out infinite;
+}
+.pictionary-lobby__dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.pictionary-lobby__dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.pictionary-lobby__requests {
+  list-style: none;
+  margin: var(--spacing-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.pictionary-lobby__request {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #f0f9ff;
+}
+
+.pictionary-lobby__request-name {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
+}
+
+.pictionary-lobby__request-actions {
+  display: flex;
+  gap: var(--spacing-1);
 }
 
 .pictionary-lobby__matchmaker-btn {
@@ -401,9 +564,15 @@ onUnmounted(stopSearching)
   box-shadow: 3px 3px 0 #111;
 }
 
-.pictionary-lobby__matchmaker-btn--cancel {
+.pictionary-lobby__matchmaker-btn--ghost {
   background: #fff;
   color: #111;
+}
+
+.pictionary-lobby__leave-row {
+  max-width: 28rem;
+  width: 100%;
+  display: flex;
 }
 
 .pictionary-lobby__host-controls {

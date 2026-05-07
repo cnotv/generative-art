@@ -131,14 +131,23 @@ onUnmounted(() => {
       <p v-if="unsupported" class="matchmaker__error">
         P2P requires a secure context (HTTPS or localhost).
       </p>
-      <p v-else-if="!lobbyHandle" class="matchmaker__subtitle">Connecting to lobby…</p>
+      <p v-else-if="!lobbyHandle" class="matchmaker__subtitle matchmaker__subtitle--searching">
+        Connecting<span class="matchmaker__dots" aria-hidden="true"
+          ><span>.</span><span>.</span><span>.</span></span
+        >
+      </p>
+      <p
+        v-else-if="lobbyPeers.length === 0"
+        class="matchmaker__subtitle matchmaker__subtitle--searching"
+      >
+        You are <strong>{{ localName.trim() || localPeerId.slice(0, PEER_ID_LENGTH) }}</strong> —
+        searching<span class="matchmaker__dots" aria-hidden="true"
+          ><span>.</span><span>.</span><span>.</span></span
+        >
+      </p>
       <p v-else class="matchmaker__subtitle">
         You are <strong>{{ localName.trim() || localPeerId.slice(0, PEER_ID_LENGTH) }}</strong> —
-        {{
-          lobbyPeers.length === 0
-            ? 'waiting for other players'
-            : `${lobbyPeers.length} player${lobbyPeers.length === 1 ? '' : 's'} online`
-        }}
+        {{ lobbyPeers.length }} player{{ lobbyPeers.length === 1 ? '' : 's' }} online
       </p>
     </header>
 
@@ -244,6 +253,36 @@ onUnmounted(() => {
   font-size: 0.875rem;
   color: var(--color-muted-foreground);
   margin: 0;
+}
+
+@keyframes matchmaker-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.3em);
+    opacity: 1;
+  }
+}
+
+.matchmaker__dots {
+  display: inline-flex;
+  gap: 0.05em;
+}
+
+.matchmaker__dots span {
+  display: inline-block;
+  animation: matchmaker-bounce 1.2s ease-in-out infinite;
+}
+
+.matchmaker__dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.matchmaker__dots span:nth-child(3) {
+  animation-delay: 0.4s;
 }
 
 .matchmaker__error {
