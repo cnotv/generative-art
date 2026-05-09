@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
@@ -32,11 +32,21 @@ const emit = defineEmits<{
 }>()
 
 type Section = 'profile' | 'matchmaker' | 'settings'
-const openSection = ref<Section | null>(null)
+const openSection = ref<Section | null>('matchmaker')
+
+const isSolo = computed(() => props.playerList.length < 2)
 
 const toggle = (section: Section): void => {
+  if (section === 'matchmaker' && isSolo.value) return
   openSection.value = openSection.value === section ? null : section
 }
+
+watch(
+  () => props.playerList.length,
+  (length) => {
+    if (length < 2) openSection.value = 'matchmaker'
+  }
+)
 
 const {
   isSearching,
@@ -160,7 +170,7 @@ watch(
               </template>
               <template v-else>Find players</template>
             </span>
-            <span class="wl-lobby__section-chevron">
+            <span v-if="!isSolo || isSearching" class="wl-lobby__section-chevron">
               {{ isSearching ? '■' : openSection === 'matchmaker' ? '▲' : '▼' }}
             </span>
           </button>
