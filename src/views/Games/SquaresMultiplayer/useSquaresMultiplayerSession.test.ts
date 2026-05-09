@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   generateGrid,
   findWordInGrid,
+  enumerateGridWords,
   scoreWord,
   shuffleArray
 } from './squaresMultiplayerUtilities'
@@ -94,6 +95,45 @@ describe('generateGrid', () => {
   it('returns placed words as uppercase', () => {
     const { placedWords } = generateGrid(['ant', 'bee'], 4)
     placedWords.forEach((w) => expect(w).toBe(w.toUpperCase()))
+  })
+})
+
+describe('enumerateGridWords', () => {
+  it('finds all words traceable as adjacent paths', () => {
+    // C(0,0) A(0,1) T(0,2) — horizontal neighbours
+    // CAT: C→A→T ✓  TAC: T→A→C ✓  ACT: A→C but C not adj T ✗
+    const grid = [
+      ['C', 'A', 'T'],
+      ['X', 'X', 'X'],
+      ['X', 'X', 'X']
+    ]
+    const wordSet = new Set(['CAT', 'TAC', 'FOO'])
+    const result = enumerateGridWords(grid, wordSet)
+    expect(result).toContain('CAT')
+    expect(result).toContain('TAC')
+    expect(result).not.toContain('FOO')
+  })
+
+  it('does not find words with length less than 3', () => {
+    const grid = [
+      ['C', 'A'],
+      ['X', 'X']
+    ]
+    const wordSet = new Set(['CA', 'CAT'])
+    const result = enumerateGridWords(grid, wordSet)
+    expect(result).not.toContain('CA')
+  })
+
+  it('returns sorted unique words', () => {
+    const grid = [
+      ['C', 'A', 'T'],
+      ['X', 'X', 'X'],
+      ['X', 'X', 'X']
+    ]
+    const wordSet = new Set(['CAT', 'TAC'])
+    const result = enumerateGridWords(grid, wordSet)
+    expect(result).toEqual([...result].sort())
+    expect(new Set(result).size).toBe(result.length)
   })
 })
 

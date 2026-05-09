@@ -9,10 +9,12 @@ defineProps<{
   hostId: string
   messages: ChatMessage[]
   solvedPlayers: Record<string, number>
+  showChat: boolean
 }>()
 
 const emit = defineEmits<{
   send: [text: string]
+  'update:showChat': [value: boolean]
 }>()
 
 const chatInput = ref('')
@@ -26,7 +28,7 @@ const handleSend = (): void => {
 </script>
 
 <template>
-  <aside class="wl-sidebar">
+  <aside class="wl-sidebar" :class="{ 'wl-sidebar--chat-open': showChat }">
     <div class="wl-sidebar__players">
       <h3 class="wl-sidebar__section-title">Players</h3>
       <ul class="wl-sidebar__player-list">
@@ -73,6 +75,19 @@ const handleSend = (): void => {
         <button class="wl-sidebar__chat-send" type="submit">Send</button>
       </form>
     </div>
+
+    <!-- Mobile chat toggle -->
+    <button
+      class="wl-sidebar__chat-toggle"
+      type="button"
+      :title="showChat ? 'Show game' : 'Open chat'"
+      @click="emit('update:showChat', !showChat)"
+    >
+      {{ showChat ? '🎮' : '💬' }}
+      <span v-if="messages.length && !showChat" class="wl-sidebar__chat-badge">
+        {{ messages.length }}
+      </span>
+    </button>
   </aside>
 </template>
 
@@ -250,14 +265,58 @@ const handleSend = (): void => {
   box-shadow: 3px 3px 0 #111;
 }
 
+/* Mobile chat toggle button — hidden on desktop */
+.wl-sidebar__chat-toggle {
+  display: none;
+}
+
+.wl-sidebar__chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  border-radius: 50%;
+  width: 1rem;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 720px) {
   .wl-sidebar {
-    max-height: 40vh;
+    display: none;
+    grid-area: main;
+    position: relative;
   }
 
-  .wl-sidebar__chat {
-    flex: none;
-    max-height: 20vh;
+  .wl-sidebar--chat-open {
+    display: flex;
+    max-height: none;
+    overflow: auto;
+  }
+
+  .wl-sidebar__chat-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: var(--spacing-4);
+    right: var(--spacing-4);
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid #111;
+    border-radius: 50%;
+    background: var(--wl-green);
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 #111;
+    z-index: 100;
+    touch-action: manipulation;
+    position: relative;
   }
 }
 </style>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { WmPlayer } from '@/stores/squaresMultiplayer'
-import { ROUND_DURATION_OPTIONS } from './constants'
+import { ROUND_DURATION_OPTIONS, MATCHMAKER_ROOM } from './constants'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 
 const props = defineProps<{
@@ -31,7 +31,7 @@ const emit = defineEmits<{
   leaveRoom: []
 }>()
 
-import { MATCHMAKER_ROOM } from './constants'
+const isProfileExpanded = ref(true)
 
 const {
   isSearching,
@@ -56,6 +56,25 @@ const handleNameInput = (event: Event): void => {
   emit('update:playerName', (event.target as HTMLInputElement).value)
 }
 
+const handleNameCommit = (): void => {
+  isProfileExpanded.value = false
+  emit('nameChange')
+}
+
+const handleStartSearching = (): void => {
+  isProfileExpanded.value = false
+  startSearching()
+}
+
+const handleStopSearching = (): void => {
+  isProfileExpanded.value = false
+  stopSearching()
+}
+
+const handleColorPick = (color: string): void => {
+  emit('update:playerColor', color)
+}
+
 watch(
   () => props.isHost,
   (isHost) => {
@@ -66,17 +85,24 @@ watch(
 
 <template>
   <section class="ws-lobby">
-    <GameCard class="ws-lobby__profile">
-      <div class="ws-lobby__profile-row">
-        <h2 class="ws-lobby__profile-title">Your name is</h2>
+    <GameCard class="ws-lobby__card">
+      <!-- Profile row (collapsible) -->
+      <div class="ws-lobby__profile-header" @click="isProfileExpanded = !isProfileExpanded">
+        <span class="ws-lobby__profile-dot" :style="{ background: playerColor }" />
+        <span class="ws-lobby__profile-name">{{ playerName || 'Your name' }}</span>
+        <span class="ws-lobby__profile-toggle">{{ isProfileExpanded ? '▲' : '▼' }}</span>
+      </div>
+
+      <div v-if="isProfileExpanded" class="ws-lobby__profile-body">
         <input
           :value="playerName"
           type="text"
           maxlength="20"
           class="ws-lobby__name-input"
+          placeholder="Your name"
           @input="handleNameInput"
-          @change="emit('nameChange')"
-          @blur="emit('nameChange')"
+          @change="handleNameCommit"
+          @blur="handleNameCommit"
         />
         <div class="ws-lobby__swatches">
           <button
@@ -87,161 +113,166 @@ watch(
             :style="{ background: color }"
             type="button"
             :title="`Pick color ${color}`"
-            @click="emit('update:playerColor', color)"
+            @click="handleColorPick(color)"
+            @touchend.prevent="handleColorPick(color)"
           >
             <Check v-if="playerColor === color" class="ws-lobby__swatch-check" />
           </button>
         </div>
       </div>
-    </GameCard>
 
-    <div class="ws-lobby__players">
-      <span class="ws-lobby__player-count">
-        {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
-      </span>
-      <span
-        v-for="player in playerList"
-        :key="player.id"
-        class="ws-lobby__player-dot"
-        :style="{ background: player.color }"
-        :title="player.name"
-      />
-    </div>
+      <hr class="ws-lobby__divider" />
 
-    <GameCard v-if="isHost" class="ws-lobby__matchmaker">
-      <template v-if="!isSearching">
-        <p v-if="playerList.length <= 1" class="ws-lobby__matchmaker-label">
-          No one else here yet.
-        </p>
-        <div class="ws-lobby__matchmaker-actions">
-          <button class="ws-lobby__matchmaker-btn" type="button" @click="startSearching">
-            Find players
-          </button>
+      <!-- Player count -->
+      <div class="ws-lobby__players">
+        <span class="ws-lobby__player-count">
+          {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
+        </span>
+        <span
+          v-for="player in playerList"
+          :key="player.id"
+          class="ws-lobby__player-dot"
+          :style="{ background: player.color }"
+          :title="player.name"
+        />
+      </div>
+
+      <!-- Host: matchmaker -->
+      <template v-if="isHost">
+        <template v-if="!isSearching">
+          <p v-if="playerList.length <= 1" class="ws-lobby__hint">No one else here yet.</p>
+          <div class="ws-lobby__actions">
+            <button class="ws-lobby__btn" type="button" @click="handleStartSearching">
+              Find players
+            </button>
+            <button
+              v-if="playerList.length > 1"
+              class="ws-lobby__btn ws-lobby__btn--ghost"
+              type="button"
+              @click="emit('leaveRoom')"
+            >
+              Leave room
+            </button>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="ws-lobby__searching">
+            <span>Searching</span>
+            <span class="ws-lobby__dots" aria-hidden="true">
+              <span>.</span><span>.</span><span>.</span>
+            </span>
+          </div>
+
+          <ul v-if="pendingRequests.length" class="ws-lobby__requests">
+            <li
+              v-for="entry in pendingRequests"
+              :key="entry.request.requestId"
+              class="ws-lobby__request"
+            >
+              <span class="ws-lobby__request-name">
+                {{ displayName(entry.fromPeerId) }} wants to play
+              </span>
+              <div class="ws-lobby__request-actions">
+                <button class="ws-lobby__btn" type="button" @click="handleAccept(entry)">
+                  Join
+                </button>
+                <button
+                  class="ws-lobby__btn ws-lobby__btn--ghost"
+                  type="button"
+                  @click="ignoreRequest(entry)"
+                >
+                  Ignore
+                </button>
+              </div>
+            </li>
+          </ul>
+
+          <div class="ws-lobby__actions">
+            <button
+              class="ws-lobby__btn ws-lobby__btn--ghost"
+              type="button"
+              @click="handleStopSearching"
+            >
+              Stop searching
+            </button>
+            <button
+              v-if="playerList.length > 1"
+              class="ws-lobby__btn ws-lobby__btn--ghost"
+              type="button"
+              @click="emit('leaveRoom')"
+            >
+              Leave room
+            </button>
+          </div>
+        </template>
+
+        <hr class="ws-lobby__divider" />
+
+        <!-- Host controls: always visible -->
+        <div class="ws-lobby__host-controls">
+          <label class="ws-lobby__field">
+            Difficulty
+            <select
+              :value="difficulty"
+              @change="
+                emit(
+                  'update:difficulty',
+                  ($event.target as HTMLSelectElement).value as DictionaryDifficulty
+                )
+              "
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <label class="ws-lobby__field">
+            Rounds
+            <input
+              :value="totalRounds"
+              type="number"
+              min="1"
+              max="20"
+              @input="emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))"
+            />
+          </label>
+          <label class="ws-lobby__field">
+            Round time
+            <select
+              :value="roundDuration"
+              @change="
+                emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))
+              "
+            >
+              <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
+                {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
+              </option>
+            </select>
+          </label>
           <button
-            v-if="playerList.length > 1"
-            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
+            class="ws-lobby__start-btn"
             type="button"
-            @click="emit('leaveRoom')"
+            :disabled="playerList.length < 2"
+            @click="emit('startGame')"
           >
-            Leave room
+            Start
           </button>
         </div>
       </template>
 
+      <!-- Guest: waiting -->
       <template v-else>
-        <div class="ws-lobby__matchmaker-searching">
-          <span>Searching</span>
+        <span class="ws-lobby__searching">
+          Waiting for host
           <span class="ws-lobby__dots" aria-hidden="true">
             <span>.</span><span>.</span><span>.</span>
           </span>
-        </div>
-
-        <ul v-if="pendingRequests.length" class="ws-lobby__requests">
-          <li
-            v-for="entry in pendingRequests"
-            :key="entry.request.requestId"
-            class="ws-lobby__request"
-          >
-            <span class="ws-lobby__request-name">
-              {{ displayName(entry.fromPeerId) }} wants to play
-            </span>
-            <div class="ws-lobby__request-actions">
-              <button class="ws-lobby__matchmaker-btn" type="button" @click="handleAccept(entry)">
-                Join
-              </button>
-              <button
-                class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
-                type="button"
-                @click="ignoreRequest(entry)"
-              >
-                Ignore
-              </button>
-            </div>
-          </li>
-        </ul>
-
-        <div class="ws-lobby__matchmaker-actions">
-          <button
-            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
-            type="button"
-            @click="stopSearching"
-          >
-            Stop searching
-          </button>
-          <button
-            v-if="playerList.length > 1"
-            class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
-            type="button"
-            @click="emit('leaveRoom')"
-          >
-            Leave room
-          </button>
-        </div>
-      </template>
-    </GameCard>
-
-    <div v-if="isHost" class="ws-lobby__host-controls">
-      <label class="ws-lobby__field">
-        Difficulty
-        <select
-          :value="difficulty"
-          @change="
-            emit(
-              'update:difficulty',
-              ($event.target as HTMLSelectElement).value as DictionaryDifficulty
-            )
-          "
-        >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-      </label>
-      <label class="ws-lobby__field">
-        Rounds
-        <input
-          :value="totalRounds"
-          type="number"
-          min="1"
-          max="20"
-          @input="emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))"
-        />
-      </label>
-      <label class="ws-lobby__field">
-        Round time
-        <select
-          :value="roundDuration"
-          @change="emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))"
-        >
-          <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
-            {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
-          </option>
-        </select>
-      </label>
-      <button
-        class="ws-lobby__start-btn"
-        type="button"
-        :disabled="playerList.length < 2"
-        @click="emit('startGame')"
-      >
-        Start
-      </button>
-    </div>
-
-    <GameCard v-else class="ws-lobby__guest-waiting">
-      <span class="ws-lobby__matchmaker-searching">
-        Waiting for host
-        <span class="ws-lobby__dots" aria-hidden="true">
-          <span>.</span><span>.</span><span>.</span>
         </span>
-      </span>
-      <button
-        class="ws-lobby__matchmaker-btn ws-lobby__matchmaker-btn--ghost"
-        type="button"
-        @click="emit('leaveRoom')"
-      >
-        Leave room
-      </button>
+        <button class="ws-lobby__btn ws-lobby__btn--ghost" type="button" @click="emit('leaveRoom')">
+          Leave room
+        </button>
+      </template>
     </GameCard>
   </section>
 </template>
@@ -258,28 +289,55 @@ watch(
   max-width: 100%;
 }
 
-.ws-lobby__profile {
+.ws-lobby__card {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
   max-width: 28rem;
   width: 100%;
 }
 
-.ws-lobby__profile-title {
+.ws-lobby__divider {
+  border: none;
+  border-top: 2px solid #f0f0f0;
   margin: 0;
-  font-size: var(--font-size-md, 1.125rem);
-  font-weight: 800;
-  color: #111;
-  white-space: nowrap;
 }
 
-.ws-lobby__profile-row {
+/* Profile */
+.ws-lobby__profile-header {
   display: flex;
-  gap: var(--spacing-3);
   align-items: center;
-  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  cursor: pointer;
+  user-select: none;
+  padding: var(--spacing-1) 0;
+}
+
+.ws-lobby__profile-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid #111;
+  flex-shrink: 0;
+}
+
+.ws-lobby__profile-name {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #111;
+}
+
+.ws-lobby__profile-toggle {
+  font-size: var(--font-size-xs);
+  color: #888;
+}
+
+.ws-lobby__profile-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
 }
 
 .ws-lobby__name-input,
@@ -291,9 +349,9 @@ watch(
   color: #111;
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
-  min-width: 10rem;
   outline: none;
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ws-lobby__swatches {
@@ -314,6 +372,8 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .ws-lobby__swatch-btn:hover {
@@ -328,6 +388,7 @@ watch(
   stroke-width: 4;
 }
 
+/* Players */
 .ws-lobby__players {
   display: flex;
   align-items: center;
@@ -338,6 +399,7 @@ watch(
 }
 
 .ws-lobby__player-count {
+  flex: 1;
   font-size: var(--font-size-sm);
 }
 
@@ -347,40 +409,24 @@ watch(
   border-radius: 50%;
   border: 2px solid #111;
   display: inline-block;
+  flex-shrink: 0;
 }
 
-.ws-lobby__matchmaker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-4);
-  max-width: 28rem;
-  width: 100%;
-}
-
-.ws-lobby__guest-waiting {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-4);
-  max-width: 28rem;
-  width: 100%;
-}
-
-.ws-lobby__matchmaker-label {
+/* Matchmaker */
+.ws-lobby__hint {
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: #111;
 }
 
-.ws-lobby__matchmaker-actions {
+.ws-lobby__actions {
   display: flex;
   gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
-.ws-lobby__matchmaker-searching {
+.ws-lobby__searching {
   display: flex;
   align-items: baseline;
   gap: 0.1em;
@@ -406,18 +452,16 @@ watch(
   display: inline-block;
   animation: ws-bounce 1.2s ease-in-out infinite;
 }
-
 .ws-lobby__dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
-
 .ws-lobby__dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
 
 .ws-lobby__requests {
   list-style: none;
-  margin: var(--spacing-1) 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -446,7 +490,7 @@ watch(
   gap: var(--spacing-1);
 }
 
-.ws-lobby__matchmaker-btn {
+.ws-lobby__btn {
   padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid #111;
   border-radius: 999px;
@@ -458,16 +502,25 @@ watch(
   box-shadow: 2px 2px 0 #111;
   white-space: nowrap;
   transition: transform 0.1s ease;
+  touch-action: manipulation;
 }
 
-.ws-lobby__matchmaker-btn:hover {
+.ws-lobby__btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
 }
 
-.ws-lobby__matchmaker-btn--ghost {
+.ws-lobby__btn--ghost {
   background: #fff;
   color: #111;
+}
+
+/* Host controls */
+.ws-lobby__host-controls {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .ws-lobby__field {
@@ -490,12 +543,6 @@ watch(
   font-weight: 600;
 }
 
-.ws-lobby__host-controls {
-  display: flex;
-  gap: var(--spacing-3);
-  align-items: flex-end;
-}
-
 .ws-lobby__start-btn {
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
   border: 3px solid #111;
@@ -510,6 +557,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-2);
+  touch-action: manipulation;
 }
 
 .ws-lobby__start-btn:hover:not(:disabled) {
@@ -524,21 +572,13 @@ watch(
 }
 
 @media (max-width: 720px) {
-  .ws-lobby {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .ws-lobby__profile,
-  .ws-lobby__matchmaker,
-  .ws-lobby__guest-waiting {
+  .ws-lobby__card {
     max-width: 100%;
     box-sizing: border-box;
-    padding: var(--spacing-2);
+    padding: var(--spacing-3);
   }
 
   .ws-lobby__host-controls {
-    flex-wrap: wrap;
     justify-content: center;
   }
 }

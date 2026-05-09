@@ -39,6 +39,8 @@ const {
   hostId
 } = storeToRefs(store)
 
+const showChat = ref(false)
+
 const storedProfile = loadProfile()
 const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
@@ -160,7 +162,7 @@ onMounted(() => {
     <SquaresMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
     <SquaresMultiplayerLobby
-      v-if="phase === 'lobby'"
+      v-if="phase === 'lobby' && !showChat"
       :player-name="playerName"
       :player-color="playerColor"
       :is-host="isHost"
@@ -181,7 +183,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerGame
-      v-else-if="phase === 'playing'"
+      v-else-if="phase === 'playing' && !showChat"
       :grid="round.grid"
       :valid-words="round.validWords"
       :claimed-words="claimedWords"
@@ -194,7 +196,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerIntermission
-      v-else-if="phase === 'intermission'"
+      v-else-if="phase === 'intermission' && !showChat"
       :round-number="round.number"
       :total-rounds="totalRounds"
       :claimed-words="claimedWords"
@@ -205,7 +207,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerSummary
-      v-else
+      v-else-if="!showChat"
       :player-list="playerList"
       :winner-id="winnerId"
       :is-host="isHost"
@@ -221,7 +223,9 @@ onMounted(() => {
       :host-id="hostId"
       :messages="messages"
       :claimed-words="claimedWords"
+      :show-chat="showChat"
       @send="session.broadcastChat($event)"
+      @update:show-chat="showChat = $event"
     />
   </main>
 </template>
@@ -248,8 +252,8 @@ onMounted(() => {
 @media (max-width: 720px) {
   .wm {
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 'header' 'main';
+    grid-template-rows: auto 1fr;
     min-height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);

@@ -169,6 +169,42 @@ export const findWordInGrid = (grid: string[][], word: string): boolean => {
 }
 
 /**
+ * Enumerate all words that can be traced as adjacent (including diagonal) paths in the grid,
+ * filtered against a known word set. Minimum length 3.
+ * @param grid - 2D uppercase letter grid.
+ * @param wordSet - Set of uppercase valid words to match against.
+ * @returns Sorted array of found uppercase words.
+ */
+export const enumerateGridWords = (grid: string[][], wordSet: Set<string>): string[] => {
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  const found = new Set<string>()
+
+  const dfs = (r: number, c: number, path: string, visited: Set<number>): void => {
+    const word = path + grid[r][c]
+    const key = r * cols + c
+    const nextVisited = new Set(visited)
+    nextVisited.add(key)
+
+    if (word.length >= 3 && wordSet.has(word)) found.add(word)
+
+    DIRECTIONS.forEach(([dr, dc]) => {
+      const nr = r + dr
+      const nc = c + dc
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !nextVisited.has(nr * cols + nc)) {
+        dfs(nr, nc, word, nextVisited)
+      }
+    })
+  }
+
+  Array.from({ length: rows * cols }, (_, k) => [Math.floor(k / cols), k % cols]).forEach(
+    ([r, c]) => dfs(r as number, c as number, '', new Set())
+  )
+
+  return [...found].sort()
+}
+
+/**
  * Compute Boggle-style points for a word based on its length.
  * @param word - The found word.
  * @returns Point value.

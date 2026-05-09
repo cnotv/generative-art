@@ -9,10 +9,12 @@ defineProps<{
   hostId: string
   messages: ChatMessage[]
   claimedWords: WmClaimedWord[]
+  showChat: boolean
 }>()
 
 const emit = defineEmits<{
   send: [text: string]
+  'update:showChat': [value: boolean]
 }>()
 
 const chatInput = ref('')
@@ -26,7 +28,7 @@ const handleSend = (): void => {
 </script>
 
 <template>
-  <aside class="ws-sidebar">
+  <aside class="ws-sidebar" :class="{ 'ws-sidebar--chat-open': showChat }">
     <div class="ws-sidebar__players">
       <h3 class="ws-sidebar__section-title">Players</h3>
       <ul class="ws-sidebar__player-list">
@@ -77,6 +79,19 @@ const handleSend = (): void => {
         <button class="ws-sidebar__chat-send" type="submit">Send</button>
       </form>
     </div>
+
+    <!-- Mobile chat toggle -->
+    <button
+      class="ws-sidebar__chat-toggle"
+      type="button"
+      :title="showChat ? 'Show game' : 'Open chat'"
+      @click="emit('update:showChat', !showChat)"
+    >
+      {{ showChat ? '🎮' : '💬' }}
+      <span v-if="messages.length && !showChat" class="ws-sidebar__chat-badge">
+        {{ messages.length }}
+      </span>
+    </button>
   </aside>
 </template>
 
@@ -254,14 +269,59 @@ const handleSend = (): void => {
   box-shadow: 3px 3px 0 #111;
 }
 
+/* Mobile chat toggle button — hidden on desktop */
+.ws-sidebar__chat-toggle {
+  display: none;
+}
+
+.ws-sidebar__chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  border-radius: 50%;
+  width: 1rem;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 720px) {
   .ws-sidebar {
-    max-height: 40vh;
+    /* On mobile the sidebar lives in the grid but is hidden unless chat is open */
+    display: none;
+    grid-area: main;
+    position: relative;
   }
 
-  .ws-sidebar__chat {
-    flex: none;
-    max-height: 20vh;
+  .ws-sidebar--chat-open {
+    display: flex;
+    max-height: none;
+    overflow: auto;
+  }
+
+  .ws-sidebar__chat-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: var(--spacing-4);
+    right: var(--spacing-4);
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid #111;
+    border-radius: 50%;
+    background: var(--ws-green);
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 #111;
+    z-index: 100;
+    touch-action: manipulation;
+    position: relative;
   }
 }
 </style>
