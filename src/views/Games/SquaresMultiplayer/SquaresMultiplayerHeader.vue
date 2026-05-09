@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { POINTS_BASE, POINTS_FIRST_BONUS, POINTS_DRAWER_PER_GUESS } from './constants'
 
 const RULES_SEEN_KEY = 'game-rules-seen'
 
@@ -27,40 +26,32 @@ const closeRules = (): void => {
 </script>
 
 <template>
-  <header class="pictionary-header">
-    <div class="pictionary-header__room">
-      <span class="pictionary-header__room-label">Room:</span>
-      <code class="pictionary-header__room-id">{{ roomId.slice(0, 8) }}</code>
-      <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
-        Copy link
-      </button>
-      <div class="pictionary-header__rules">
+  <header class="wm-header">
+    <div class="wm-header__room">
+      <span class="wm-header__room-label">Room:</span>
+      <code class="wm-header__room-id">{{ roomId.slice(0, 8) }}</code>
+      <button class="wm-header__copy-btn" type="button" @click="emit('copyLink')">Copy link</button>
+      <div class="wm-header__rules">
         <button
-          class="pictionary-header__rules-btn"
+          class="wm-header__rules-btn"
           type="button"
-          title="How points work"
+          title="How to play"
           @click="rulesOpen = !rulesOpen"
         >
           ?
         </button>
-        <div v-if="rulesOpen" class="pictionary-header__rules-panel">
-          <button class="pictionary-header__rules-close" type="button" @click="closeRules">
-            ×
-          </button>
-          <ul class="pictionary-header__rules-list">
+        <div v-if="rulesOpen" class="wm-header__rules-panel">
+          <button class="wm-header__rules-close" type="button" @click="closeRules">×</button>
+          <ul class="wm-header__rules-list">
+            <li>A grid of letters hides several target words — grouped by length</li>
             <li>
-              Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster
-              guesses score more
+              <strong>Click and drag</strong> through adjacent letters (diagonals OK) to trace a
+              word
             </li>
-            <li>
-              First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
-            </li>
-            <li>
-              Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct
-              guess, scaled by time remaining
-            </li>
-            <li>Round continues until time runs out or all players guess</li>
-            <li>Hints reveal extra letters (configurable)</li>
+            <li>Release to submit — if the word is in the list, you claim it</li>
+            <li>First to claim a word gets the points</li>
+            <li>3–4 letters = 1 pt · 5 = 2 pt · 6 = 3 pt · 7 = 5 pt · 8+ = 11 pt</li>
+            <li>Round ends when all words are found or time runs out</li>
           </ul>
         </div>
       </div>
@@ -69,7 +60,7 @@ const closeRules = (): void => {
 </template>
 
 <style scoped>
-.pictionary-header {
+.wm-header {
   grid-area: header;
   display: flex;
   justify-content: space-between;
@@ -80,30 +71,30 @@ const closeRules = (): void => {
   z-index: 10;
 }
 
-.pictionary-header__room {
+.wm-header__room {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
 }
 
-.pictionary-header__room-id {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-secondary);
-  border-radius: var(--radius-sm);
-}
-
-.pictionary-header__room-label {
+.wm-header__room-label {
   color: #111;
   font-weight: 700;
 }
 
-.pictionary-header__copy-btn {
+.wm-header__room-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--ws-green);
+  border-radius: var(--radius-sm);
+}
+
+.wm-header__copy-btn {
   padding: var(--spacing-2) var(--spacing-4, 1rem);
   border: 3px solid #111;
   border-radius: 999px;
-  background: var(--pic-yellow);
+  background: var(--ws-yellow);
   color: #111;
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -112,16 +103,16 @@ const closeRules = (): void => {
   transition: transform 0.1s ease;
 }
 
-.pictionary-header__copy-btn:hover {
+.wm-header__copy-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 #111;
 }
 
-.pictionary-header__rules {
+.wm-header__rules {
   position: relative;
 }
 
-.pictionary-header__rules-btn {
+.wm-header__rules-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -140,12 +131,12 @@ const closeRules = (): void => {
   font-family: inherit;
 }
 
-.pictionary-header__rules-btn:hover {
+.wm-header__rules-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
 }
 
-.pictionary-header__rules-panel {
+.wm-header__rules-panel {
   position: absolute;
   top: calc(100% + var(--spacing-2));
   left: 50%;
@@ -159,7 +150,7 @@ const closeRules = (): void => {
   padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
 }
 
-.pictionary-header__rules-close {
+.wm-header__rules-close {
   position: absolute;
   top: var(--spacing-2);
   right: var(--spacing-2);
@@ -179,11 +170,11 @@ const closeRules = (): void => {
   font-family: inherit;
 }
 
-.pictionary-header__rules-close:hover {
+.wm-header__rules-close:hover {
   color: #111;
 }
 
-.pictionary-header__rules-list {
+.wm-header__rules-list {
   margin: 0;
   padding: 0 0 0 var(--spacing-2);
   display: flex;
@@ -192,11 +183,5 @@ const closeRules = (): void => {
   font-size: var(--font-size-sm);
   line-height: 1.4;
   color: #111;
-}
-
-@media (max-width: 720px) {
-  .pictionary-header__room-id {
-    color: var(--color-foreground);
-  }
 }
 </style>
