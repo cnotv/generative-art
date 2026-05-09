@@ -31,7 +31,12 @@ const emit = defineEmits<{
   leaveRoom: []
 }>()
 
-const isProfileExpanded = ref(true)
+type Section = 'profile' | 'matchmaker' | 'settings'
+const openSection = ref<Section | null>(null)
+
+const toggle = (section: Section): void => {
+  openSection.value = openSection.value === section ? null : section
+}
 
 const {
   isSearching,
@@ -57,17 +62,17 @@ const handleNameInput = (event: Event): void => {
 }
 
 const handleNameCommit = (): void => {
-  isProfileExpanded.value = false
+  openSection.value = null
   emit('nameChange')
 }
 
 const handleStartSearching = (): void => {
-  isProfileExpanded.value = false
+  openSection.value = 'matchmaker'
   startSearching()
 }
 
 const handleStopSearching = (): void => {
-  isProfileExpanded.value = false
+  openSection.value = null
   stopSearching()
 }
 
@@ -86,170 +91,203 @@ watch(
 <template>
   <section class="ws-lobby">
     <GameCard class="ws-lobby__card">
-      <!-- Profile row (collapsible) -->
-      <div class="ws-lobby__profile-header" @click="isProfileExpanded = !isProfileExpanded">
-        <span class="ws-lobby__profile-dot" :style="{ background: playerColor }" />
-        <span class="ws-lobby__profile-name">{{ playerName || 'Your name' }}</span>
-        <span class="ws-lobby__profile-toggle">{{ isProfileExpanded ? '▲' : '▼' }}</span>
-      </div>
-
-      <div v-if="isProfileExpanded" class="ws-lobby__profile-body">
-        <input
-          :value="playerName"
-          type="text"
-          maxlength="20"
-          class="ws-lobby__name-input"
-          placeholder="Your name"
-          @input="handleNameInput"
-          @change="handleNameCommit"
-          @blur="handleNameCommit"
-        />
-        <div class="ws-lobby__swatches">
-          <button
-            v-for="color in PLAYER_COLORS"
-            :key="color"
-            class="ws-lobby__swatch-btn"
-            :class="{ 'ws-lobby__swatch-btn--active': playerColor === color }"
-            :style="{ background: color }"
-            type="button"
-            :title="`Pick color ${color}`"
-            @click="handleColorPick(color)"
-            @touchend.prevent="handleColorPick(color)"
-          >
-            <Check v-if="playerColor === color" class="ws-lobby__swatch-check" />
-          </button>
+      <!-- Profile section -->
+      <div class="ws-lobby__section">
+        <button class="ws-lobby__section-header" type="button" @click="toggle('profile')">
+          <span class="ws-lobby__profile-dot" :style="{ background: playerColor }" />
+          <span class="ws-lobby__section-label">{{ playerName || 'Your name' }}</span>
+          <span class="ws-lobby__section-chevron">{{ openSection === 'profile' ? '▲' : '▼' }}</span>
+        </button>
+        <div v-if="openSection === 'profile'" class="ws-lobby__section-body">
+          <input
+            :value="playerName"
+            type="text"
+            maxlength="20"
+            class="ws-lobby__name-input"
+            placeholder="Your name"
+            @input="handleNameInput"
+            @change="handleNameCommit"
+            @blur="handleNameCommit"
+          />
+          <div class="ws-lobby__swatches">
+            <button
+              v-for="color in PLAYER_COLORS"
+              :key="color"
+              class="ws-lobby__swatch-btn"
+              :class="{ 'ws-lobby__swatch-btn--active': playerColor === color }"
+              :style="{ background: color }"
+              type="button"
+              :title="`Pick color ${color}`"
+              @click="handleColorPick(color)"
+              @touchend.prevent="handleColorPick(color)"
+            >
+              <Check v-if="playerColor === color" class="ws-lobby__swatch-check" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <hr class="ws-lobby__divider" />
-
-      <!-- Player count -->
-      <div class="ws-lobby__players">
-        <span class="ws-lobby__player-count">
-          {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
-        </span>
-        <span
-          v-for="player in playerList"
-          :key="player.id"
-          class="ws-lobby__player-dot"
-          :style="{ background: player.color }"
-          :title="player.name"
-        />
+      <!-- Player count row -->
+      <div class="ws-lobby__section ws-lobby__section--players">
+        <div class="ws-lobby__players">
+          <span class="ws-lobby__player-count">
+            {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
+          </span>
+          <span
+            v-for="player in playerList"
+            :key="player.id"
+            class="ws-lobby__player-dot"
+            :style="{ background: player.color }"
+            :title="player.name"
+          />
+        </div>
       </div>
 
-      <!-- Host: matchmaker -->
+      <!-- Matchmaker section (host only) -->
       <template v-if="isHost">
-        <template v-if="!isSearching">
-          <p v-if="playerList.length <= 1" class="ws-lobby__hint">No one else here yet.</p>
-          <div class="ws-lobby__actions">
-            <button class="ws-lobby__btn" type="button" @click="handleStartSearching">
-              Find players
-            </button>
-            <button
-              v-if="playerList.length > 1"
-              class="ws-lobby__btn ws-lobby__btn--ghost"
-              type="button"
-              @click="emit('leaveRoom')"
-            >
-              Leave room
-            </button>
-          </div>
-        </template>
-
-        <template v-else>
-          <div class="ws-lobby__searching">
-            <span>Searching</span>
-            <span class="ws-lobby__dots" aria-hidden="true">
-              <span>.</span><span>.</span><span>.</span>
+        <div class="ws-lobby__section">
+          <button
+            class="ws-lobby__section-header"
+            type="button"
+            @click="isSearching ? handleStopSearching() : toggle('matchmaker')"
+          >
+            <span class="ws-lobby__section-label">
+              <template v-if="isSearching">
+                Searching
+                <span class="ws-lobby__dots" aria-hidden="true">
+                  <span>.</span><span>.</span><span>.</span>
+                </span>
+              </template>
+              <template v-else>Find players</template>
             </span>
-          </div>
-
-          <ul v-if="pendingRequests.length" class="ws-lobby__requests">
-            <li
-              v-for="entry in pendingRequests"
-              :key="entry.request.requestId"
-              class="ws-lobby__request"
-            >
-              <span class="ws-lobby__request-name">
-                {{ displayName(entry.fromPeerId) }} wants to play
-              </span>
-              <div class="ws-lobby__request-actions">
-                <button class="ws-lobby__btn" type="button" @click="handleAccept(entry)">
-                  Join
+            <span class="ws-lobby__section-chevron">
+              {{ isSearching ? '■' : openSection === 'matchmaker' ? '▲' : '▼' }}
+            </span>
+          </button>
+          <div v-if="openSection === 'matchmaker' || isSearching" class="ws-lobby__section-body">
+            <template v-if="!isSearching">
+              <p v-if="playerList.length <= 1" class="ws-lobby__hint">No one else here yet.</p>
+              <div class="ws-lobby__actions">
+                <button class="ws-lobby__btn" type="button" @click="handleStartSearching">
+                  Start searching
                 </button>
+                <button
+                  v-if="playerList.length > 1"
+                  class="ws-lobby__btn ws-lobby__btn--ghost"
+                  type="button"
+                  @click="emit('leaveRoom')"
+                >
+                  Leave room
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <ul v-if="pendingRequests.length" class="ws-lobby__requests">
+                <li
+                  v-for="entry in pendingRequests"
+                  :key="entry.request.requestId"
+                  class="ws-lobby__request"
+                >
+                  <span class="ws-lobby__request-name">
+                    {{ displayName(entry.fromPeerId) }} wants to play
+                  </span>
+                  <div class="ws-lobby__request-actions">
+                    <button class="ws-lobby__btn" type="button" @click="handleAccept(entry)">
+                      Join
+                    </button>
+                    <button
+                      class="ws-lobby__btn ws-lobby__btn--ghost"
+                      type="button"
+                      @click="ignoreRequest(entry)"
+                    >
+                      Ignore
+                    </button>
+                  </div>
+                </li>
+              </ul>
+              <div class="ws-lobby__actions">
                 <button
                   class="ws-lobby__btn ws-lobby__btn--ghost"
                   type="button"
-                  @click="ignoreRequest(entry)"
+                  @click="handleStopSearching"
                 >
-                  Ignore
+                  Stop searching
+                </button>
+                <button
+                  v-if="playerList.length > 1"
+                  class="ws-lobby__btn ws-lobby__btn--ghost"
+                  type="button"
+                  @click="emit('leaveRoom')"
+                >
+                  Leave room
                 </button>
               </div>
-            </li>
-          </ul>
-
-          <div class="ws-lobby__actions">
-            <button
-              class="ws-lobby__btn ws-lobby__btn--ghost"
-              type="button"
-              @click="handleStopSearching"
-            >
-              Stop searching
-            </button>
-            <button
-              v-if="playerList.length > 1"
-              class="ws-lobby__btn ws-lobby__btn--ghost"
-              type="button"
-              @click="emit('leaveRoom')"
-            >
-              Leave room
-            </button>
+            </template>
           </div>
-        </template>
+        </div>
 
-        <hr class="ws-lobby__divider" />
+        <!-- Settings section -->
+        <div class="ws-lobby__section" :class="{ 'ws-lobby__section--disabled': isSearching }">
+          <button
+            class="ws-lobby__section-header"
+            type="button"
+            :disabled="isSearching"
+            @click="toggle('settings')"
+          >
+            <span class="ws-lobby__section-label">Settings</span>
+            <span class="ws-lobby__section-chevron">{{
+              openSection === 'settings' ? '▲' : '▼'
+            }}</span>
+          </button>
+          <div v-if="openSection === 'settings' && !isSearching" class="ws-lobby__section-body">
+            <div class="ws-lobby__host-controls">
+              <label class="ws-lobby__field">
+                Difficulty
+                <select
+                  :value="difficulty"
+                  @change="
+                    emit(
+                      'update:difficulty',
+                      ($event.target as HTMLSelectElement).value as DictionaryDifficulty
+                    )
+                  "
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </label>
+              <label class="ws-lobby__field">
+                Rounds
+                <input
+                  :value="totalRounds"
+                  type="number"
+                  min="1"
+                  max="20"
+                  @input="
+                    emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))
+                  "
+                />
+              </label>
+              <label class="ws-lobby__field">
+                Round time
+                <select
+                  :value="roundDuration"
+                  @change="
+                    emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))
+                  "
+                >
+                  <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
+                    {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
 
-        <!-- Host controls: always visible -->
-        <div class="ws-lobby__host-controls">
-          <label class="ws-lobby__field">
-            Difficulty
-            <select
-              :value="difficulty"
-              @change="
-                emit(
-                  'update:difficulty',
-                  ($event.target as HTMLSelectElement).value as DictionaryDifficulty
-                )
-              "
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </label>
-          <label class="ws-lobby__field">
-            Rounds
-            <input
-              :value="totalRounds"
-              type="number"
-              min="1"
-              max="20"
-              @input="emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))"
-            />
-          </label>
-          <label class="ws-lobby__field">
-            Round time
-            <select
-              :value="roundDuration"
-              @change="
-                emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))
-              "
-            >
-              <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
-                {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
-              </option>
-            </select>
-          </label>
+        <!-- Start button -->
+        <div class="ws-lobby__start-row">
           <button
             class="ws-lobby__start-btn"
             type="button"
@@ -263,15 +301,23 @@ watch(
 
       <!-- Guest: waiting -->
       <template v-else>
-        <span class="ws-lobby__searching">
-          Waiting for host
-          <span class="ws-lobby__dots" aria-hidden="true">
-            <span>.</span><span>.</span><span>.</span>
-          </span>
-        </span>
-        <button class="ws-lobby__btn ws-lobby__btn--ghost" type="button" @click="emit('leaveRoom')">
-          Leave room
-        </button>
+        <div class="ws-lobby__section">
+          <div class="ws-lobby__section-body">
+            <span class="ws-lobby__searching">
+              Waiting for host
+              <span class="ws-lobby__dots" aria-hidden="true">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </span>
+            <button
+              class="ws-lobby__btn ws-lobby__btn--ghost"
+              type="button"
+              @click="emit('leaveRoom')"
+            >
+              Leave room
+            </button>
+          </div>
+        </div>
       </template>
     </GameCard>
   </section>
@@ -292,52 +338,78 @@ watch(
 .ws-lobby__card {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
+  gap: 0;
+  padding: 0;
   max-width: 28rem;
   width: 100%;
+  overflow: hidden;
 }
 
-.ws-lobby__divider {
-  border: none;
-  border-top: 2px solid #f0f0f0;
-  margin: 0;
+/* Accordion sections */
+.ws-lobby__section {
+  border-bottom: 2px solid #f0f0f0;
 }
 
-/* Profile */
-.ws-lobby__profile-header {
+.ws-lobby__section:last-child {
+  border-bottom: none;
+}
+
+.ws-lobby__section--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ws-lobby__section--players {
+  padding: var(--spacing-2) var(--spacing-4);
+}
+
+.ws-lobby__section-header {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: none;
+  border: none;
   cursor: pointer;
+  text-align: left;
   user-select: none;
-  padding: var(--spacing-1) 0;
+  touch-action: manipulation;
 }
 
+.ws-lobby__section-header:disabled {
+  cursor: not-allowed;
+}
+
+.ws-lobby__section-label {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #111;
+  display: flex;
+  align-items: baseline;
+  gap: 0.1em;
+}
+
+.ws-lobby__section-chevron {
+  font-size: var(--font-size-xs);
+  color: #888;
+}
+
+.ws-lobby__section-body {
+  padding: 0 var(--spacing-4) var(--spacing-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* Profile */
 .ws-lobby__profile-dot {
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
   border: 2px solid #111;
   flex-shrink: 0;
-}
-
-.ws-lobby__profile-name {
-  flex: 1;
-  font-size: var(--font-size-sm);
-  font-weight: 800;
-  color: #111;
-}
-
-.ws-lobby__profile-toggle {
-  font-size: var(--font-size-xs);
-  color: #888;
-}
-
-.ws-lobby__profile-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
 }
 
 .ws-lobby__name-input,
@@ -543,6 +615,11 @@ watch(
   font-weight: 600;
 }
 
+/* Start button row */
+.ws-lobby__start-row {
+  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+}
+
 .ws-lobby__start-btn {
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
   border: 3px solid #111;
@@ -575,7 +652,6 @@ watch(
   .ws-lobby__card {
     max-width: 100%;
     box-sizing: border-box;
-    padding: var(--spacing-3);
   }
 
   .ws-lobby__host-controls {

@@ -98,7 +98,8 @@ const handleSend = (): void => {
   flex-direction: column;
   gap: var(--spacing-3);
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
+  padding: 4px;
 }
 
 .wl-sidebar__section-title {
