@@ -4,7 +4,7 @@ import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
-import type { WsPlayer } from '@/stores/wordSquares'
+import type { WmPlayer } from '@/stores/squaresMultiplayer'
 import { ROUND_DURATION_OPTIONS } from './constants'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 
@@ -12,7 +12,7 @@ const props = defineProps<{
   playerName: string
   playerColor: string
   isHost: boolean
-  playerList: WsPlayer[]
+  playerList: WmPlayer[]
   roomId: string
   difficulty: DictionaryDifficulty
   totalRounds: number
@@ -31,7 +31,7 @@ const emit = defineEmits<{
   leaveRoom: []
 }>()
 
-const MATCHMAKER_ROOM = 'word-squares-matchmaker'
+import { MATCHMAKER_ROOM } from './constants'
 
 const {
   isSearching,
@@ -214,7 +214,7 @@ watch(
           @change="emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))"
         >
           <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
-            {{ seconds }}s
+            {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
           </option>
         </select>
       </label>

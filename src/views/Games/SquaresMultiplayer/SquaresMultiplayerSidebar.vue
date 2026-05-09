@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { WsPlayer } from '@/stores/wordSquares'
+import type { WmPlayer, WmClaimedWord } from '@/stores/squaresMultiplayer'
 import type { ChatMessage } from '@webgamekit/chat'
 
 defineProps<{
-  playerList: WsPlayer[]
+  playerList: WmPlayer[]
   localPeerId: string
   hostId: string
   messages: ChatMessage[]
-  solvedPlayers: Record<string, number>
+  claimedWords: WmClaimedWord[]
 }>()
 
 const emit = defineEmits<{
@@ -41,7 +41,11 @@ const handleSend = (): void => {
             {{ player.name }}
             <span v-if="player.id === hostId" class="ws-sidebar__player-host">host</span>
           </span>
-          <span v-if="solvedPlayers[player.id]" class="ws-sidebar__player-solved">✓</span>
+          <span
+            v-if="claimedWords.some((cw) => cw.playerId === player.id)"
+            class="ws-sidebar__player-solved"
+            >✓</span
+          >
           <span class="ws-sidebar__player-score">{{ player.score }}</span>
         </li>
       </ul>

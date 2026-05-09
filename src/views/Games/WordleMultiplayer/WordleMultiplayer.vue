@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { useWordSquaresStore } from '@/stores/wordSquares'
-import { useWordSquaresSession } from './useWordSquaresSession'
+import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
+import { useWordleMultiplayerSession } from './useWordleMultiplayerSession'
 import { INTERMISSION_MS } from './constants'
 import {
   buildRandomGradient,
@@ -14,19 +14,20 @@ import {
   NAME_ANIMALS,
   PLAYER_COLORS
 } from '@/utils/playerProfile'
-import WordSquaresHeader from './WordSquaresHeader.vue'
-import WordSquaresLobby from './WordSquaresLobby.vue'
-import WordSquaresGame from './WordSquaresGame.vue'
-import WordSquaresIntermission from './WordSquaresIntermission.vue'
-import WordSquaresSummary from './WordSquaresSummary.vue'
-import WordSquaresSidebar from './WordSquaresSidebar.vue'
+import WordleMultiplayerHeader from './WordleMultiplayerHeader.vue'
+import WordleMultiplayerLobby from './WordleMultiplayerLobby.vue'
+import WordleMultiplayerGame from './WordleMultiplayerGame.vue'
+import WordleMultiplayerIntermission from './WordleMultiplayerIntermission.vue'
+import WordleMultiplayerSummary from './WordleMultiplayerSummary.vue'
+import WordleMultiplayerSidebar from './WordleMultiplayerSidebar.vue'
 
 const route = useRoute()
 const router = useRouter()
-const store = useWordSquaresStore()
+const store = useWordleMultiplayerStore()
 const {
   phase,
   playerList,
+  players,
   messages,
   winnerId,
   totalRounds,
@@ -56,7 +57,7 @@ const resolvedRoomId = ((): string => {
 
 const roomId = ref(resolvedRoomId)
 
-const session = useWordSquaresSession({
+const session = useWordleMultiplayerSession({
   name: playerName.value,
   color: playerColor.value,
   roomId: resolvedRoomId
@@ -64,7 +65,7 @@ const session = useWordSquaresSession({
 
 const { isHost, localPeerId } = session
 
-const timeLeft = ref(0)
+const timeLeft = ref<number | null>(null)
 const intermissionLeft = ref(0)
 
 let roundTimer: ReturnType<typeof setInterval> | null = null
@@ -72,9 +73,16 @@ let intermissionTimer: ReturnType<typeof setInterval> | null = null
 
 const startRoundTimer = (): void => {
   if (roundTimer) clearInterval(roundTimer)
+  if (!round.value.endsAt) {
+    timeLeft.value = null
+    return
+  }
   roundTimer = setInterval(() => {
     const endsAt = round.value.endsAt
-    if (!endsAt) return
+    if (!endsAt) {
+      timeLeft.value = null
+      return
+    }
     const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
     timeLeft.value = remaining
     if (remaining === 0) {
@@ -93,25 +101,9 @@ const startIntermissionTimer = (): void => {
   }, 250)
 }
 
-computed(() => phase.value) // reactive watch handled below
-
-const myGuesses = computed(() => playerGuesses.value[localPeerId.value] ?? [])
-
-const isSolved = computed(
-  () =>
-    myGuesses.value.length > 0 &&
-    myGuesses.value[myGuesses.value.length - 1].result.every((s) => s === 'correct')
-)
-
-const isOutOfAttempts = computed(
-  () => !isSolved.value && myGuesses.value.length >= round.value.maxAttempts
-)
-
-import { watch } from 'vue'
-
 watch(phase, (newPhase) => {
   if (newPhase === 'playing') {
-    timeLeft.value = roundDuration.value
+    timeLeft.value = round.value.endsAt ? roundDuration.value : null
     startRoundTimer()
   } else if (newPhase === 'intermission') {
     if (roundTimer) clearInterval(roundTimer)
@@ -159,16 +151,18 @@ const handleColorChange = (color: string): void => {
   saveProfile(playerName.value.trim() || playerName.value, color)
 }
 
+const myGuesses = computed(() => playerGuesses.value[localPeerId.value] ?? [])
+
 onMounted(() => {
   session.init()
 })
 </script>
 
 <template>
-  <main class="ws" :class="`ws--${phase}`" :style="backgroundStyle">
-    <WordSquaresHeader :room-id="roomId" @copy-link="copyLink" />
+  <main class="wl" :class="`wl--${phase}`" :style="backgroundStyle">
+    <WordleMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
-    <WordSquaresLobby
+    <WordleMultiplayerLobby
       v-if="phase === 'lobby'"
       :player-name="playerName"
       :player-color="playerColor"
@@ -189,29 +183,31 @@ onMounted(() => {
       @leave-room="handleLeaveRoom"
     />
 
-    <WordSquaresGame
+    <WordleMultiplayerGame
       v-else-if="phase === 'playing'"
       :word="round.word"
+      :max-attempts="round.maxAttempts"
+      :my-guesses="myGuesses"
+      :solved-players="solvedPlayers"
+      :local-peer-id="localPeerId"
       :round-number="round.number"
       :total-rounds="totalRounds"
       :time-left="timeLeft"
-      :my-guesses="myGuesses"
-      :is-solved="isSolved"
-      :is-out-of-attempts="isOutOfAttempts"
       @submit-guess="session.submitGuess($event)"
     />
 
-    <WordSquaresIntermission
+    <WordleMultiplayerIntermission
       v-else-if="phase === 'intermission'"
       :round-number="round.number"
       :total-rounds="totalRounds"
       :word="round.word"
+      :player-guesses="playerGuesses"
+      :solved-players="solvedPlayers"
       :intermission-left="intermissionLeft"
       :player-list="playerList"
-      :solved-players="solvedPlayers"
     />
 
-    <WordSquaresSummary
+    <WordleMultiplayerSummary
       v-else
       :player-list="playerList"
       :winner-id="winnerId"
@@ -219,7 +215,7 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <WordSquaresSidebar
+    <WordleMultiplayerSidebar
       :player-list="playerList"
       :local-peer-id="localPeerId"
       :host-id="hostId"
@@ -231,10 +227,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.ws {
-  --ws-green: #6bcf7f;
-  --ws-yellow: #ffd93d;
-  --ws-gray: #aaa;
+.wl {
+  --wl-green: #6aaa64;
+  --wl-yellow: #c9b458;
 
   touch-action: manipulation;
   display: grid;
@@ -246,12 +241,12 @@ onMounted(() => {
   padding-top: calc(var(--nav-height) + var(--spacing-3));
   min-height: 100vh;
   box-sizing: border-box;
-  background: #f0fff4;
+  background: #f9f9f9;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 @media (max-width: 720px) {
-  .ws {
+  .wl {
     grid-template-columns: 1fr;
     grid-template-areas: 'header' 'main' 'sidebar';
     grid-template-rows: auto 1fr auto;
@@ -263,13 +258,13 @@ onMounted(() => {
     overflow: hidden;
   }
 
-  .ws--lobby {
+  .wl--lobby {
     height: auto;
     min-height: 100dvh;
     overflow: auto;
   }
 
-  .ws--playing {
+  .wl--playing {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 }

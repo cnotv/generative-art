@@ -1,8 +1,8 @@
-export const MATCHMAKER_ROOM = 'word-squares-matchmaker'
+export const MATCHMAKER_ROOM = 'wordle-multiplayer-matchmaker'
 export const MAX_ATTEMPTS = 6
 export const INTERMISSION_MS = 8_000
 export const REANNOUNCE_DELAY_MS = 2000
-export const ROUND_DURATION_OPTIONS = [30, 60, 90, 120]
+export const ROUND_DURATION_OPTIONS = [0, 30, 60, 90, 120]
 
 export const POINTS_MAX = 100
 export const POINTS_FIRST_BONUS = 50

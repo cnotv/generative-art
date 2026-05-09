@@ -1,15 +1,38 @@
 <script setup lang="ts">
-import type { WsPlayer } from '@/stores/wordSquares'
+import { computed } from 'vue'
+import type { WmPlayer, WmClaimedWord } from '@/stores/squaresMultiplayer'
 
-defineProps<{
-  playerList: WsPlayer[]
+const props = defineProps<{
+  playerList: WmPlayer[]
   winnerId: string | null
   isHost: boolean
+  validWords: string[]
+  claimedWords: WmClaimedWord[]
+  players: Record<string, { name: string; color: string }>
 }>()
 
 const emit = defineEmits<{
   restart: []
 }>()
+
+type WordGroup = {
+  length: number
+  slots: Array<{ word: string; claim: WmClaimedWord | null }>
+}
+
+const wordGroups = computed((): WordGroup[] => {
+  const grouped = props.validWords.reduce<
+    Record<number, Array<{ word: string; claim: WmClaimedWord | null }>>
+  >((accumulator, word) => {
+    const length_ = word.length
+    const claim =
+      props.claimedWords.find((cw) => cw.word.toUpperCase() === word.toUpperCase()) ?? null
+    return { ...accumulator, [length_]: [...(accumulator[length_] ?? []), { word, claim }] }
+  }, {})
+  return Object.entries(grouped)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([length, slots]) => ({ length: Number(length), slots }))
+})
 </script>
 
 <template>
@@ -34,6 +57,28 @@ const emit = defineEmits<{
         </li>
       </ul>
 
+      <div v-if="validWords.length > 0" class="ws-summary__words">
+        <h3 class="ws-summary__words-title">Last round words</h3>
+        <div v-for="group in wordGroups" :key="group.length" class="ws-summary__word-group">
+          <span class="ws-summary__word-group-label">{{ group.length }} letters</span>
+          <div class="ws-summary__word-slots">
+            <div
+              v-for="(slot, slotIndex) in group.slots"
+              :key="slotIndex"
+              class="ws-summary__word-slot"
+              :class="slot.claim ? 'ws-summary__word-slot--found' : 'ws-summary__word-slot--missed'"
+            >
+              <span
+                v-if="slot.claim"
+                class="ws-summary__word-dot"
+                :style="{ background: players[slot.claim.playerId]?.color ?? '#888' }"
+              />
+              <span class="ws-summary__word-text">{{ slot.word.toLowerCase() }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button v-if="isHost" class="ws-summary__restart-btn" type="button" @click="emit('restart')">
         Play again
       </button>
@@ -52,6 +97,7 @@ const emit = defineEmits<{
 
 .ws-summary__card {
   background: #fff;
+  color: #111;
   border: 3px solid #111;
   border-radius: 1.25rem;
   box-shadow: 5px 5px 0 #111;
@@ -151,5 +197,73 @@ const emit = defineEmits<{
   margin: 0;
   font-size: var(--font-size-sm);
   color: #888;
+}
+
+.ws-summary__words {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  border-top: 2px solid #f0f0f0;
+  padding-top: var(--spacing-3);
+}
+
+.ws-summary__words-title {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #555;
+}
+
+.ws-summary__word-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.ws-summary__word-group-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #888;
+}
+
+.ws-summary__word-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.ws-summary__word-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid #ddd;
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.ws-summary__word-slot--found {
+  background: #f0fff4;
+  border-color: var(--ws-green);
+}
+
+.ws-summary__word-slot--missed {
+  opacity: 0.45;
+}
+
+.ws-summary__word-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid #111;
+}
+
+.ws-summary__word-text {
+  color: #111;
 }
 </style>

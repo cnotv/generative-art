@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeGuessResult } from './useWordSquaresSession'
+import { computeGuessResult } from './useWordleMultiplayerSession'
 
 describe('computeGuessResult', () => {
   it.each([
