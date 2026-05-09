@@ -31,22 +31,8 @@ const emit = defineEmits<{
   leaveRoom: []
 }>()
 
-type Section = 'profile' | 'matchmaker' | 'settings'
-const openSection = ref<Section | null>('matchmaker')
-
-const isSolo = computed(() => props.playerList.length < 2)
-
-const toggle = (section: Section): void => {
-  if (section === 'matchmaker' && isSolo.value) return
-  openSection.value = openSection.value === section ? null : section
-}
-
-watch(
-  () => props.playerList.length,
-  (length) => {
-    if (length < 2) openSection.value = 'matchmaker'
-  }
-)
+const step = ref(1)
+const totalSteps = computed(() => (props.isHost ? 3 : 2))
 
 const {
   isSearching,
@@ -72,23 +58,28 @@ const handleNameInput = (event: Event): void => {
 }
 
 const handleNameCommit = (): void => {
-  openSection.value = null
   emit('nameChange')
-}
-
-const handleStartSearching = (): void => {
-  openSection.value = 'matchmaker'
-  startSearching()
-}
-
-const handleStopSearching = (): void => {
-  openSection.value = null
-  stopSearching()
 }
 
 const handleColorPick = (color: string): void => {
   emit('update:playerColor', color)
 }
+
+const goNext = (): void => {
+  if (step.value < totalSteps.value) step.value++
+}
+
+const goBack = (): void => {
+  if (step.value > 1) {
+    if (step.value === 2 && isSearching.value) stopSearching()
+    step.value--
+  }
+}
+
+const canGoNext = computed(() => {
+  if (step.value === 2 && props.isHost) return props.playerList.length >= 2
+  return step.value < totalSteps.value
+})
 
 watch(
   () => props.isHost,
@@ -101,48 +92,173 @@ watch(
 <template>
   <section class="wl-lobby">
     <GameCard class="wl-lobby__card">
-      <!-- Profile section -->
-      <div class="wl-lobby__section">
-        <button class="wl-lobby__section-header" type="button" @click="toggle('profile')">
-          <span class="wl-lobby__profile-dot" :style="{ background: playerColor }" />
-          <span class="wl-lobby__section-label">{{ playerName || 'Your name' }}</span>
-          <span class="wl-lobby__section-chevron">{{ openSection === 'profile' ? '▲' : '▼' }}</span>
-        </button>
-        <div v-if="openSection === 'profile'" class="wl-lobby__section-body">
-          <input
-            :value="playerName"
-            type="text"
-            maxlength="20"
-            class="wl-lobby__name-input"
-            placeholder="Your name"
-            @input="handleNameInput"
-            @change="handleNameCommit"
-            @blur="handleNameCommit"
-          />
-          <div class="wl-lobby__swatches">
-            <button
-              v-for="color in PLAYER_COLORS"
-              :key="color"
-              class="wl-lobby__swatch-btn"
-              :class="{ 'wl-lobby__swatch-btn--active': playerColor === color }"
-              :style="{ background: color }"
-              type="button"
-              :title="`Pick color ${color}`"
-              @click="handleColorPick(color)"
-              @touchend.prevent="handleColorPick(color)"
-            >
-              <Check v-if="playerColor === color" class="wl-lobby__swatch-check" />
-            </button>
-          </div>
+      <!-- Step indicator -->
+      <div class="wl-lobby__steps">
+        <span
+          v-for="n in totalSteps"
+          :key="n"
+          class="wl-lobby__step-dot"
+          :class="{
+            'wl-lobby__step-dot--active': n === step,
+            'wl-lobby__step-dot--done': n < step
+          }"
+        />
+      </div>
+
+      <!-- Step 1: Profile -->
+      <div v-if="step === 1" class="wl-lobby__body">
+        <h3 class="wl-lobby__step-title">Your profile</h3>
+        <input
+          :value="playerName"
+          type="text"
+          maxlength="20"
+          class="wl-lobby__name-input"
+          placeholder="Your name"
+          @input="handleNameInput"
+          @change="handleNameCommit"
+          @blur="handleNameCommit"
+        />
+        <div class="wl-lobby__swatches">
+          <button
+            v-for="color in PLAYER_COLORS"
+            :key="color"
+            class="wl-lobby__swatch-btn"
+            :class="{ 'wl-lobby__swatch-btn--active': playerColor === color }"
+            :style="{ background: color }"
+            type="button"
+            :title="`Pick color ${color}`"
+            @click="handleColorPick(color)"
+            @touchend.prevent="handleColorPick(color)"
+          >
+            <Check v-if="playerColor === color" class="wl-lobby__swatch-check" />
+          </button>
         </div>
       </div>
 
-      <!-- Player count row -->
-      <div class="wl-lobby__section wl-lobby__section--players">
+      <!-- Step 2: Matchmaker (host) / Waiting (guest) -->
+      <div v-else-if="step === 2" class="wl-lobby__body">
+        <!-- Host -->
+        <template v-if="isHost">
+          <h3 class="wl-lobby__step-title">Find players</h3>
+
+          <div class="wl-lobby__players">
+            <span class="wl-lobby__player-count">
+              {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }}
+              players
+            </span>
+            <span
+              v-for="player in playerList"
+              :key="player.id"
+              class="wl-lobby__player-dot"
+              :style="{ background: player.color }"
+              :title="player.name"
+            />
+          </div>
+
+          <template v-if="!isSearching">
+            <p v-if="playerList.length <= 1" class="wl-lobby__hint">No one else here yet.</p>
+            <div class="wl-lobby__actions">
+              <button class="wl-lobby__btn" type="button" @click="startSearching">
+                Search for players
+              </button>
+              <button
+                v-if="playerList.length > 1"
+                class="wl-lobby__btn wl-lobby__btn--ghost"
+                type="button"
+                @click="emit('leaveRoom')"
+              >
+                Leave room
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="wl-lobby__searching">
+              Searching
+              <span class="wl-lobby__dots" aria-hidden="true">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </div>
+
+            <ul v-if="pendingRequests.length" class="wl-lobby__requests">
+              <li
+                v-for="entry in pendingRequests"
+                :key="entry.request.requestId"
+                class="wl-lobby__request"
+              >
+                <span class="wl-lobby__request-name">
+                  {{ displayName(entry.fromPeerId) }} wants to play
+                </span>
+                <div class="wl-lobby__request-actions">
+                  <button class="wl-lobby__btn" type="button" @click="handleAccept(entry)">
+                    Join
+                  </button>
+                  <button
+                    class="wl-lobby__btn wl-lobby__btn--ghost"
+                    type="button"
+                    @click="ignoreRequest(entry)"
+                  >
+                    Ignore
+                  </button>
+                </div>
+              </li>
+            </ul>
+
+            <div class="wl-lobby__actions">
+              <button
+                class="wl-lobby__btn wl-lobby__btn--ghost"
+                type="button"
+                @click="stopSearching"
+              >
+                Stop searching
+              </button>
+              <button
+                v-if="playerList.length > 1"
+                class="wl-lobby__btn wl-lobby__btn--ghost"
+                type="button"
+                @click="emit('leaveRoom')"
+              >
+                Leave room
+              </button>
+            </div>
+          </template>
+        </template>
+
+        <!-- Guest -->
+        <template v-else>
+          <h3 class="wl-lobby__step-title">Waiting for host</h3>
+          <div class="wl-lobby__players">
+            <span class="wl-lobby__player-count">
+              {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
+            </span>
+            <span
+              v-for="player in playerList"
+              :key="player.id"
+              class="wl-lobby__player-dot"
+              :style="{ background: player.color }"
+              :title="player.name"
+            />
+          </div>
+          <div class="wl-lobby__searching">
+            <span class="wl-lobby__dots" aria-hidden="true">
+              <span>.</span><span>.</span><span>.</span>
+            </span>
+          </div>
+          <button
+            class="wl-lobby__btn wl-lobby__btn--ghost"
+            type="button"
+            @click="emit('leaveRoom')"
+          >
+            Leave room
+          </button>
+        </template>
+      </div>
+
+      <!-- Step 3: Settings (host only) -->
+      <div v-else-if="step === 3" class="wl-lobby__body">
+        <h3 class="wl-lobby__step-title">Game settings</h3>
         <div class="wl-lobby__players">
-          <span class="wl-lobby__player-count">
-            {{ playerList.length }} / {{ playerList.length < 2 ? '2+' : playerList.length }} players
-          </span>
+          <span class="wl-lobby__player-count"> {{ playerList.length }} players ready </span>
           <span
             v-for="player in playerList"
             :key="player.id"
@@ -151,184 +267,79 @@ watch(
             :title="player.name"
           />
         </div>
+        <div class="wl-lobby__host-controls">
+          <label class="wl-lobby__field">
+            Difficulty
+            <select
+              :value="difficulty"
+              @change="
+                emit(
+                  'update:difficulty',
+                  ($event.target as HTMLSelectElement).value as DictionaryDifficulty
+                )
+              "
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <label class="wl-lobby__field">
+            Rounds
+            <input
+              :value="totalRounds"
+              type="number"
+              min="1"
+              max="20"
+              @input="emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))"
+            />
+          </label>
+          <label class="wl-lobby__field">
+            Round time
+            <select
+              :value="roundDuration"
+              @change="
+                emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))
+              "
+            >
+              <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
+                {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
+              </option>
+            </select>
+          </label>
+        </div>
       </div>
 
-      <!-- Matchmaker section (host only) -->
-      <template v-if="isHost">
-        <div class="wl-lobby__section">
-          <button
-            class="wl-lobby__section-header"
-            type="button"
-            @click="isSearching ? handleStopSearching() : toggle('matchmaker')"
-          >
-            <span class="wl-lobby__section-label">
-              <template v-if="isSearching">
-                Searching
-                <span class="wl-lobby__dots" aria-hidden="true">
-                  <span>.</span><span>.</span><span>.</span>
-                </span>
-              </template>
-              <template v-else>Find players</template>
-            </span>
-            <span v-if="!isSolo || isSearching" class="wl-lobby__section-chevron">
-              {{ isSearching ? '■' : openSection === 'matchmaker' ? '▲' : '▼' }}
-            </span>
-          </button>
-          <div v-if="openSection === 'matchmaker' || isSearching" class="wl-lobby__section-body">
-            <template v-if="!isSearching">
-              <p v-if="playerList.length <= 1" class="wl-lobby__hint">No one else here yet.</p>
-              <div class="wl-lobby__actions">
-                <button class="wl-lobby__btn" type="button" @click="handleStartSearching">
-                  Start searching
-                </button>
-                <button
-                  v-if="playerList.length > 1"
-                  class="wl-lobby__btn wl-lobby__btn--ghost"
-                  type="button"
-                  @click="emit('leaveRoom')"
-                >
-                  Leave room
-                </button>
-              </div>
-            </template>
-            <template v-else>
-              <ul v-if="pendingRequests.length" class="wl-lobby__requests">
-                <li
-                  v-for="entry in pendingRequests"
-                  :key="entry.request.requestId"
-                  class="wl-lobby__request"
-                >
-                  <span class="wl-lobby__request-name">
-                    {{ displayName(entry.fromPeerId) }} wants to play
-                  </span>
-                  <div class="wl-lobby__request-actions">
-                    <button class="wl-lobby__btn" type="button" @click="handleAccept(entry)">
-                      Join
-                    </button>
-                    <button
-                      class="wl-lobby__btn wl-lobby__btn--ghost"
-                      type="button"
-                      @click="ignoreRequest(entry)"
-                    >
-                      Ignore
-                    </button>
-                  </div>
-                </li>
-              </ul>
-              <div class="wl-lobby__actions">
-                <button
-                  class="wl-lobby__btn wl-lobby__btn--ghost"
-                  type="button"
-                  @click="handleStopSearching"
-                >
-                  Stop searching
-                </button>
-                <button
-                  v-if="playerList.length > 1"
-                  class="wl-lobby__btn wl-lobby__btn--ghost"
-                  type="button"
-                  @click="emit('leaveRoom')"
-                >
-                  Leave room
-                </button>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- Settings section -->
-        <div class="wl-lobby__section" :class="{ 'wl-lobby__section--disabled': isSearching }">
-          <button
-            class="wl-lobby__section-header"
-            type="button"
-            :disabled="isSearching"
-            @click="toggle('settings')"
-          >
-            <span class="wl-lobby__section-label">Settings</span>
-            <span class="wl-lobby__section-chevron">{{
-              openSection === 'settings' ? '▲' : '▼'
-            }}</span>
-          </button>
-          <div v-if="openSection === 'settings' && !isSearching" class="wl-lobby__section-body">
-            <div class="wl-lobby__host-controls">
-              <label class="wl-lobby__field">
-                Difficulty
-                <select
-                  :value="difficulty"
-                  @change="
-                    emit(
-                      'update:difficulty',
-                      ($event.target as HTMLSelectElement).value as DictionaryDifficulty
-                    )
-                  "
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </label>
-              <label class="wl-lobby__field">
-                Rounds
-                <input
-                  :value="totalRounds"
-                  type="number"
-                  min="1"
-                  max="20"
-                  @input="
-                    emit('update:totalRounds', Number(($event.target as HTMLInputElement).value))
-                  "
-                />
-              </label>
-              <label class="wl-lobby__field">
-                Round time
-                <select
-                  :value="roundDuration"
-                  @change="
-                    emit('update:roundDuration', Number(($event.target as HTMLSelectElement).value))
-                  "
-                >
-                  <option v-for="seconds in ROUND_DURATION_OPTIONS" :key="seconds" :value="seconds">
-                    {{ seconds === 0 ? 'No limit' : `${seconds}s` }}
-                  </option>
-                </select>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Start button -->
-        <div class="wl-lobby__start-row">
-          <button
-            class="wl-lobby__start-btn"
-            type="button"
-            :disabled="playerList.length < 2"
-            @click="emit('startGame')"
-          >
-            Start
-          </button>
-        </div>
-      </template>
-
-      <!-- Guest: waiting -->
-      <template v-else>
-        <div class="wl-lobby__section">
-          <div class="wl-lobby__section-body">
-            <span class="wl-lobby__searching">
-              Waiting for host
-              <span class="wl-lobby__dots" aria-hidden="true">
-                <span>.</span><span>.</span><span>.</span>
-              </span>
-            </span>
-            <button
-              class="wl-lobby__btn wl-lobby__btn--ghost"
-              type="button"
-              @click="emit('leaveRoom')"
-            >
-              Leave room
-            </button>
-          </div>
-        </div>
-      </template>
+      <!-- Navigation -->
+      <div class="wl-lobby__nav">
+        <button
+          v-if="step > 1"
+          class="wl-lobby__btn wl-lobby__btn--ghost"
+          type="button"
+          @click="goBack"
+        >
+          ← Back
+        </button>
+        <span class="wl-lobby__nav-spacer" />
+        <button
+          v-if="step < totalSteps"
+          class="wl-lobby__btn"
+          type="button"
+          :disabled="!canGoNext"
+          @click="goNext"
+        >
+          Next →
+        </button>
+        <button
+          v-else-if="isHost"
+          class="wl-lobby__start-btn"
+          type="button"
+          :disabled="playerList.length < 2"
+          @click="emit('startGame')"
+        >
+          Start
+        </button>
+      </div>
     </GameCard>
   </section>
 </template>
@@ -348,80 +359,55 @@ watch(
 .wl-lobby__card {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 0;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
   max-width: 28rem;
   width: 100%;
-  overflow: hidden;
 }
 
-/* Accordion sections */
-.wl-lobby__section {
-  border-bottom: 2px solid #f0f0f0;
-}
-
-.wl-lobby__section:last-child {
-  border-bottom: none;
-}
-
-.wl-lobby__section--disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-
-.wl-lobby__section--players {
-  padding: var(--spacing-2) var(--spacing-4);
-}
-
-.wl-lobby__section-header {
-  width: 100%;
+/* Step indicator */
+.wl-lobby__steps {
   display: flex;
-  align-items: center;
+  justify-content: center;
   gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-4);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  user-select: none;
-  touch-action: manipulation;
 }
 
-.wl-lobby__section-header:disabled {
-  cursor: not-allowed;
+.wl-lobby__step-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #ddd;
+  border: 2px solid #ccc;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.wl-lobby__section-label {
-  flex: 1;
-  font-size: var(--font-size-sm);
-  font-weight: 800;
-  color: #111;
-  display: flex;
-  align-items: baseline;
-  gap: 0.1em;
+.wl-lobby__step-dot--active {
+  background: #111;
+  border-color: #111;
 }
 
-.wl-lobby__section-chevron {
-  font-size: var(--font-size-xs);
-  color: #888;
+.wl-lobby__step-dot--done {
+  background: var(--wl-green);
+  border-color: var(--wl-green);
 }
 
-.wl-lobby__section-body {
-  padding: 0 var(--spacing-4) var(--spacing-3);
+/* Step body */
+.wl-lobby__body {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--spacing-3);
+}
+
+.wl-lobby__step-title {
+  margin: 0;
+  font-size: var(--font-size-md, 1rem);
+  font-weight: 800;
+  color: #111;
 }
 
 /* Profile */
-.wl-lobby__profile-dot {
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  border: 2px solid #111;
-  flex-shrink: 0;
-}
-
 .wl-lobby__name-input,
 .wl-lobby__name-input:focus {
   padding: var(--spacing-2) var(--spacing-3);
@@ -499,7 +485,7 @@ watch(
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: #555;
 }
 
 .wl-lobby__actions {
@@ -587,9 +573,14 @@ watch(
   touch-action: manipulation;
 }
 
-.wl-lobby__btn:hover {
+.wl-lobby__btn:hover:not(:disabled) {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
+}
+
+.wl-lobby__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .wl-lobby__btn--ghost {
@@ -625,9 +616,17 @@ watch(
   font-weight: 600;
 }
 
-/* Start button row */
-.wl-lobby__start-row {
-  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+/* Navigation bar */
+.wl-lobby__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-2);
+  border-top: 2px solid #f0f0f0;
+}
+
+.wl-lobby__nav-spacer {
+  flex: 1;
 }
 
 .wl-lobby__start-btn {
@@ -662,6 +661,7 @@ watch(
   .wl-lobby__card {
     max-width: 100%;
     box-sizing: border-box;
+    padding: var(--spacing-3);
   }
 
   .wl-lobby__host-controls {
