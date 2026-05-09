@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { WmClaimedWord } from '@/stores/squaresMultiplayer'
 import { GRID_SIZE } from './constants'
+import { scoreWord } from './squaresMultiplayerUtilities'
 
 type WordSlot = { word: string; claim: WmClaimedWord | null }
 type WordGroup = { length: number; slots: WordSlot[]; foundCount: number }
@@ -182,6 +183,7 @@ onUnmounted(() => {
         <span class="wm-game__group-label">
           {{ group.length }} letters
           <span class="wm-game__group-count">{{ group.foundCount }}/{{ group.slots.length }}</span>
+          <span class="wm-game__group-pts">{{ scoreWord('_'.repeat(group.length)) }}pt</span>
         </span>
         <div class="wm-game__group-slots">
           <div
@@ -472,6 +474,16 @@ onUnmounted(() => {
   border-radius: 999px;
   padding: 0 var(--spacing-1);
   color: #777;
+}
+
+.wm-game__group-pts {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--ws-green);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 var(--spacing-1);
+  margin-left: auto;
 }
 
 .wm-game__group-slots {

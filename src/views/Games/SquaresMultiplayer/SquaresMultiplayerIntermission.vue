@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { WmPlayer, WmClaimedWord } from '@/stores/squaresMultiplayer'
+import { scoreWord } from './squaresMultiplayerUtilities'
 
 const props = defineProps<{
   roundNumber: number
@@ -43,6 +44,9 @@ const wordGroups = computed((): WordGroup[] => {
             {{ group.length }} letters
             <span class="wm-intermission__group-count"
               >{{ group.foundCount }}/{{ group.slots.length }}</span
+            >
+            <span class="wm-intermission__group-pts"
+              >{{ scoreWord('_'.repeat(group.length)) }}pt</span
             >
           </span>
           <div class="wm-intermission__group-slots">
@@ -141,6 +145,16 @@ const wordGroups = computed((): WordGroup[] => {
   border-radius: 999px;
   padding: 0 var(--spacing-1);
   color: #777;
+}
+
+.wm-intermission__group-pts {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--ws-green);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 var(--spacing-1);
+  margin-left: auto;
 }
 
 .wm-intermission__group-slots {

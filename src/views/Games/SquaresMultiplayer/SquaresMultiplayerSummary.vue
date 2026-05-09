@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { WmPlayer, WmClaimedWord } from '@/stores/squaresMultiplayer'
+import { scoreWord } from './squaresMultiplayerUtilities'
 
 const props = defineProps<{
   playerList: WmPlayer[]
@@ -60,7 +61,12 @@ const wordGroups = computed((): WordGroup[] => {
       <div v-if="validWords.length > 0" class="ws-summary__words">
         <h3 class="ws-summary__words-title">Last round words</h3>
         <div v-for="group in wordGroups" :key="group.length" class="ws-summary__word-group">
-          <span class="ws-summary__word-group-label">{{ group.length }} letters</span>
+          <span class="ws-summary__word-group-label">
+            {{ group.length }} letters
+            <span class="ws-summary__word-group-pts"
+              >{{ scoreWord('_'.repeat(group.length)) }}pt</span
+            >
+          </span>
           <div class="ws-summary__word-slots">
             <div
               v-for="(slot, slotIndex) in group.slots"
@@ -227,6 +233,18 @@ const wordGroups = computed((): WordGroup[] => {
   font-size: var(--font-size-xs);
   font-weight: 700;
   color: #888;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.ws-summary__word-group-pts {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--ws-green);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 var(--spacing-1);
 }
 
 .ws-summary__word-slots {
