@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { WmClaimedWord } from '@/stores/squaresMultiplayer'
+import { dictionaryGetDefinition } from '@webgamekit/dictionary'
 import { GRID_SIZE } from './constants'
 import { scoreWord } from './squaresMultiplayerUtilities'
 
@@ -21,6 +22,32 @@ const props = defineProps<{
 const emit = defineEmits<{
   submitWord: [word: string]
 }>()
+
+const collapsedGroups = ref(new Set<number>())
+
+const toggleGroup = (length: number): void => {
+  const next = new Set(collapsedGroups.value)
+  if (next.has(length)) next.delete(length)
+  else next.add(length)
+  collapsedGroups.value = next
+}
+
+const TOOLTIP_MAX_WIDTH = 288
+const TOOLTIP_MARGIN = 8
+
+const clampTooltip = (event: PointerEvent): void => {
+  const slot = event.currentTarget as HTMLElement
+  const rect = slot.getBoundingClientRect()
+  const center = rect.left + rect.width / 2
+  const halfTooltip = Math.min(TOOLTIP_MAX_WIDTH, window.innerWidth - TOOLTIP_MARGIN * 2) / 2
+  const overflow =
+    center - halfTooltip < TOOLTIP_MARGIN
+      ? TOOLTIP_MARGIN - (center - halfTooltip)
+      : center + halfTooltip > window.innerWidth - TOOLTIP_MARGIN
+        ? window.innerWidth - TOOLTIP_MARGIN - (center + halfTooltip)
+        : 0
+  slot.style.setProperty('--tt-offset', `${overflow}px`)
+}
 
 const selectedPath = ref<Array<[number, number]>>([])
 const isSelecting = ref(false)
@@ -180,29 +207,33 @@ onUnmounted(() => {
 
     <div class="wm-game__groups">
       <div v-for="group in wordGroups" :key="group.length" class="wm-game__group">
-        <span class="wm-game__group-label">
+        <button class="wm-game__group-label" type="button" @click="toggleGroup(group.length)">
+          <span
+            class="wm-game__group-chevron"
+            :class="{ 'wm-game__group-chevron--open': !collapsedGroups.has(group.length) }"
+            >›</span
+          >
           {{ group.length }} letters
           <span class="wm-game__group-count">{{ group.foundCount }}/{{ group.slots.length }}</span>
           <span class="wm-game__group-pts">{{ scoreWord('_'.repeat(group.length)) }}pt</span>
-        </span>
-        <div class="wm-game__group-slots">
+        </button>
+        <div v-if="!collapsedGroups.has(group.length)" class="wm-game__group-slots">
           <div
-            v-for="(slot, slotIndex) in group.slots"
-            :key="slotIndex"
-            class="wm-game__slot"
-            :class="slot.claim ? 'wm-game__slot--found' : 'wm-game__slot--empty'"
+            v-for="slot in group.slots.filter((s) => s.claim !== null)"
+            :key="slot.word"
+            class="wm-game__slot wm-game__slot--found"
+            @pointerenter="clampTooltip"
           >
-            <template v-if="slot.claim">
-              <span
-                class="wm-game__slot-dot"
-                :style="{ background: players[slot.claim.playerId]?.color ?? '#888' }"
-              />
-              <span class="wm-game__slot-word">{{ slot.word.toLowerCase() }}</span>
-            </template>
-            <span v-else class="wm-game__slot-blanks">
-              {{ Array.from({ length: group.length }, () => '_').join(' ') }}
-            </span>
+            <span
+              class="wm-game__slot-dot"
+              :style="{ background: players[slot.claim!.playerId]?.color ?? '#888' }"
+            />
+            <span class="wm-game__slot-word">{{ slot.word.toLowerCase() }}</span>
+            <span v-if="dictionaryGetDefinition(slot.word)" class="wm-game__slot-tooltip">{{
+              dictionaryGetDefinition(slot.word)
+            }}</span>
           </div>
+          <span v-if="group.foundCount === 0" class="wm-game__group-empty">no words found yet</span>
         </div>
       </div>
     </div>
@@ -447,7 +478,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: var(--spacing-2);
   width: 100%;
-  max-width: 24rem;
 }
 
 .wm-game__group {
@@ -465,15 +495,40 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.1s ease;
+}
+
+.wm-game__group-label:hover {
+  background: #ebebeb;
+}
+
+.wm-game__group-chevron {
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+  display: inline-block;
+  transform: rotate(0deg);
+}
+
+.wm-game__group-chevron--open {
+  transform: rotate(90deg);
 }
 
 .wm-game__group-count {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  background: #f0f0f0;
+  background: #e0e0e0;
   border-radius: 999px;
   padding: 0 var(--spacing-1);
-  color: #777;
+  color: #555;
 }
 
 .wm-game__group-pts {
@@ -490,26 +545,27 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-1);
+  padding: var(--spacing-1) 0;
+}
+
+.wm-game__group-empty {
+  font-size: var(--font-size-xs);
+  color: #aaa;
+  font-style: italic;
+  padding: var(--spacing-1) var(--spacing-2);
 }
 
 .wm-game__slot {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #ddd;
+  border: 2px solid var(--ws-green);
   border-radius: 999px;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  background: #fafafa;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.wm-game__slot--found {
   background: #f0fff4;
-  border-color: var(--ws-green);
 }
 
 .wm-game__slot-dot {
@@ -525,10 +581,41 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
-.wm-game__slot-blanks {
-  color: #bbb;
-  letter-spacing: 0.15em;
-  font-family: var(--font-mono);
+.wm-game__slot-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: calc(50% + var(--tt-offset, 0px));
+  transform: translateX(-50%);
+  background: #111;
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.4;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  white-space: normal;
+  width: max-content;
+  max-width: 18rem;
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.wm-game__slot-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: calc(50% - var(--tt-offset, 0px));
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #111;
+}
+
+.wm-game__slot:hover .wm-game__slot-tooltip,
+.wm-game__slot:focus-within .wm-game__slot-tooltip {
+  display: block;
 }
 
 @media (max-width: 720px) {

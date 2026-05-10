@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dictionaryGetDefinition } from '@webgamekit/dictionary'
 import type { PictionaryPlayer } from '@/stores/pictionary'
 
 defineProps<{
@@ -33,7 +34,10 @@ const drawerName = (playerList: PictionaryPlayer[], drawerId: string): string =>
         type="button"
         @click="emit('pickWord', choice)"
       >
-        {{ choice }}
+        <span class="pictionary-choosing__choice-word">{{ choice }}</span>
+        <span v-if="dictionaryGetDefinition(choice)" class="pictionary-choosing__choice-def">{{
+          dictionaryGetDefinition(choice)
+        }}</span>
       </button>
     </div>
     <div v-else class="pictionary-choosing__choices pictionary-choosing__choices--placeholder">
@@ -91,6 +95,26 @@ const drawerName = (playerList: PictionaryPlayer[], drawerId: string): string =>
   transition:
     transform 0.1s ease,
     box-shadow 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.pictionary-choosing__choice-word {
+  display: block;
+}
+
+.pictionary-choosing__choice-def {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
+  line-height: 1.3;
+  max-width: 16ch;
+  text-align: center;
 }
 
 .pictionary-choosing__choice-btn--0 {

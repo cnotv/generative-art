@@ -1,6 +1,7 @@
 export {
   dictionaryGetWords,
   dictionaryGetBoggleWords,
+  dictionaryGetDefinition,
   dictionaryPickRandom,
   dictionaryMaskWord
 } from './picker'

@@ -2,6 +2,7 @@ import easyWords from './words/easy.json'
 import mediumWords from './words/medium.json'
 import hardWords from './words/hard.json'
 import boggleWords from './words/boggle.json'
+import definitionsMap from './words/definitions.json'
 
 export type DictionaryDifficulty = 'easy' | 'medium' | 'hard'
 
@@ -24,6 +25,14 @@ export const dictionaryGetWords = (difficulty: DictionaryDifficulty): readonly s
  * @returns Frozen list of lowercase words.
  */
 export const dictionaryGetBoggleWords = (): readonly string[] => boggleWords
+
+/**
+ * Get the definition for a word if available.
+ * @param word - The word to look up (case-insensitive).
+ * @returns The definition string, or undefined if not found.
+ */
+export const dictionaryGetDefinition = (word: string): string | undefined =>
+  (definitionsMap as Record<string, string>)[word.toLowerCase()]
 
 /**
  * Pick a random word from the chosen difficulty list.

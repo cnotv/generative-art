@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { StrokeEvent } from '@webgamekit/canvas-editor'
+import { dictionaryGetDefinition } from '@webgamekit/dictionary'
 import { CanvasEditor } from '@/components/CanvasEditor'
 
-defineProps<{
+const props = defineProps<{
   isDrawer: boolean
   word: string | null
   maskedWord: string
@@ -18,6 +19,10 @@ const emit = defineEmits<{
 }>()
 
 const canvasEditorReference = ref<InstanceType<typeof CanvasEditor> | null>(null)
+
+const wordDefinition = computed(() =>
+  props.isDrawer && props.word ? dictionaryGetDefinition(props.word) : undefined
+)
 
 defineExpose({
   renderSegment: (payload: StrokeEvent) => canvasEditorReference.value?.renderSegment(payload),
@@ -36,6 +41,9 @@ defineExpose({
         :class="{ 'pictionary-drawing__banner-word--masked': !isDrawer }"
       >
         {{ isDrawer ? word : maskedWord }}
+      </span>
+      <span v-if="isDrawer && wordDefinition" class="pictionary-drawing__banner-def">
+        {{ wordDefinition }}
       </span>
       <span class="pictionary-drawing__banner-meta">
         Round {{ roundNumber }} / {{ totalRounds }} · ⏱ {{ timeLeft }}s
@@ -129,6 +137,19 @@ defineExpose({
 .pictionary-drawing__banner-word--masked {
   font-family: var(--font-mono);
   color: #333;
+}
+
+.pictionary-drawing__banner-def {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #111;
+  opacity: 0.8;
+  font-style: italic;
+  max-width: 36ch;
+  text-align: center;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .pictionary-drawing__banner-meta {

@@ -13,6 +13,7 @@ import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
 import {
   dictionaryGetWords,
   dictionaryGetBoggleWords,
+  dictionaryGetDefinition,
   type DictionaryDifficulty
 } from '@webgamekit/dictionary'
 import {
@@ -285,7 +286,7 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
     )
 
     const boggleSet = new Set(dictionaryGetBoggleWords().map((w) => w.toUpperCase()))
-    const validWords = enumerateGridWords(grid, boggleSet)
+    const validWords = enumerateGridWords(grid, boggleSet).filter((w) => dictionaryGetDefinition(w))
 
     const nextNumber = store.round.number + 1
     const endsAt = store.roundDuration > 0 ? Date.now() + store.roundDuration * 1000 : null
