@@ -319,6 +319,29 @@ scene.add(new THREE.Mesh(groundGeo, new THREE.MeshLambertMaterial({ color: 0x2c3
 - Vite aliases resolve to `packages/{pkg}/src/index.ts` for HMR
 - Changes to packages hot-reload without rebuilding
 
+**CRITICAL — register every new package in `vite.config.ts`**:
+
+When a new `@webgamekit/*` package is added to `packages/`, it **must** be added to the `packages` array in `vite.config.ts`:
+
+```ts
+const packages = [
+  'animation',
+  'threejs',
+  'audio',
+  'game',
+  'controls',
+  'recording',
+  'logic',
+  'multiplayer-p2p',
+  'dictionary',
+  'chat',
+  'canvas-editor',
+  'your-new-package' // ← add here
+]
+```
+
+Omitting a package causes Vite to resolve it via `node_modules` to its `dist/` file. If that dist is stale or missing a new export, the app will throw a runtime `SyntaxError` in both dev and Docker.
+
 ### Configuration Separation
 
 Keep scene configs in separate `config.ts` files:

@@ -12,7 +12,10 @@ const packages = [
   'controls',
   'recording',
   'logic',
-  'multiplayer-p2p'
+  'multiplayer-p2p',
+  'dictionary',
+  'chat',
+  'canvas-editor'
 ]
 const packageAliases = Object.fromEntries(
   packages.map((package_) => [
