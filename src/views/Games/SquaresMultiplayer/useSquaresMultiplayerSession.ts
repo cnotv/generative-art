@@ -10,7 +10,11 @@ import {
   type P2PSession
 } from '@webgamekit/multiplayer-p2p'
 import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
-import { dictionaryGetWords, type DictionaryDifficulty } from '@webgamekit/dictionary'
+import {
+  dictionaryGetWords,
+  dictionaryGetBoggleWords,
+  type DictionaryDifficulty
+} from '@webgamekit/dictionary'
 import {
   useSquaresMultiplayerStore,
   type WmPlayer,
@@ -280,8 +284,8 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
       { grid: [], placedWords: [] }
     )
 
-    const eligibleSet = new Set(eligible.map((w) => w.toUpperCase()))
-    const validWords = enumerateGridWords(grid, eligibleSet)
+    const boggleSet = new Set(dictionaryGetBoggleWords().map((w) => w.toUpperCase()))
+    const validWords = enumerateGridWords(grid, boggleSet)
 
     const nextNumber = store.round.number + 1
     const endsAt = store.roundDuration > 0 ? Date.now() + store.roundDuration * 1000 : null

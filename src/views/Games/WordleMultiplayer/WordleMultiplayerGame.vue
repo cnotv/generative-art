@@ -16,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submitGuess: [guess: string]
+  surrender: []
 }>()
 
 const currentGuess = ref('')
@@ -142,7 +143,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           v-for="key in row"
           :key="key"
           class="wl-game__key"
-          :class="[keyClass(key), key.length > 1 ? 'wl-game__key--wide' : '']"
+          :class="[
+            keyClass(key),
+            key.length > 1 ? 'wl-game__key--wide' : '',
+            key === 'Enter' ? 'wl-game__key--enter' : '',
+            key === '⌫' ? 'wl-game__key--delete' : ''
+          ]"
           type="button"
           :disabled="isDone"
           @click="handleKeyPress(key)"
@@ -150,6 +156,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           {{ key }}
         </button>
       </div>
+      <button class="wl-game__surrender" type="button" @click="emit('surrender')">Surrender</button>
     </div>
   </section>
 </template>
@@ -344,6 +351,38 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: #888;
   border-color: #888;
   color: #fff;
+}
+
+.wl-game__key--enter {
+  background: var(--wl-green);
+  border-color: var(--wl-green);
+  color: #fff;
+}
+
+.wl-game__key--delete {
+  background: #d32f2f;
+  border-color: #d32f2f;
+  color: #fff;
+}
+
+.wl-game__surrender {
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #888;
+  border-radius: 999px;
+  background: #fff;
+  color: #888;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.wl-game__surrender:hover {
+  color: #d32f2f;
+  border-color: #d32f2f;
 }
 
 @media (max-width: 720px) {

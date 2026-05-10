@@ -1,4 +1,11 @@
-import { POINTS_3_4, POINTS_5, POINTS_6, POINTS_7, POINTS_8_PLUS } from './constants'
+import {
+  POINTS_3_4,
+  POINTS_5,
+  POINTS_6,
+  POINTS_7,
+  POINTS_8_PLUS,
+  MAX_WORD_LENGTH
+} from './constants'
 
 const LETTER_WEIGHTS: Record<string, number> = {
   E: 12,
@@ -179,26 +186,30 @@ export const enumerateGridWords = (grid: string[][], wordSet: Set<string>): stri
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   const found = new Set<string>()
+  const visited = new Set<number>()
 
-  const dfs = (r: number, c: number, path: string, visited: Set<number>): void => {
+  const dfs = (r: number, c: number, path: string): void => {
     const word = path + grid[r][c]
     const key = r * cols + c
-    const nextVisited = new Set(visited)
-    nextVisited.add(key)
+    visited.add(key)
 
     if (word.length >= 3 && wordSet.has(word)) found.add(word)
 
-    DIRECTIONS.forEach(([dr, dc]) => {
-      const nr = r + dr
-      const nc = c + dc
-      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !nextVisited.has(nr * cols + nc)) {
-        dfs(nr, nc, word, nextVisited)
-      }
-    })
+    if (word.length < MAX_WORD_LENGTH) {
+      DIRECTIONS.forEach(([dr, dc]) => {
+        const nr = r + dr
+        const nc = c + dc
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited.has(nr * cols + nc)) {
+          dfs(nr, nc, word)
+        }
+      })
+    }
+
+    visited.delete(key)
   }
 
   Array.from({ length: rows * cols }, (_, k) => [Math.floor(k / cols), k % cols]).forEach(
-    ([r, c]) => dfs(r as number, c as number, '', new Set())
+    ([r, c]) => dfs(r as number, c as number, '')
   )
 
   return [...found].sort()

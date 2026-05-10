@@ -330,13 +330,13 @@ onUnmounted(() => {
 .wm-game__grid {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--spacing-3);
   position: relative;
 }
 
 .wm-game__grid-row {
   display: flex;
-  gap: var(--spacing-2);
+  gap: var(--spacing-3);
 }
 
 .wm-game__grid-cell {

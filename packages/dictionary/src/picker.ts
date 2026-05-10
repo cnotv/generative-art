@@ -1,6 +1,7 @@
 import easyWords from './words/easy.json'
 import mediumWords from './words/medium.json'
 import hardWords from './words/hard.json'
+import boggleWords from './words/boggle.json'
 
 export type DictionaryDifficulty = 'easy' | 'medium' | 'hard'
 
@@ -17,6 +18,12 @@ const WORD_LISTS: Record<DictionaryDifficulty, readonly string[]> = {
  */
 export const dictionaryGetWords = (difficulty: DictionaryDifficulty): readonly string[] =>
   WORD_LISTS[difficulty]
+
+/**
+ * Get the full comprehensive word list for Boggle-style enumeration (3–6 letters, no proper nouns).
+ * @returns Frozen list of lowercase words.
+ */
+export const dictionaryGetBoggleWords = (): readonly string[] => boggleWords
 
 /**
  * Pick a random word from the chosen difficulty list.
