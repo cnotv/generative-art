@@ -5,6 +5,6 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-RUN npm install -g pnpm && pnpm install
+RUN npm install -g pnpm && pnpm install && pnpm --filter "@webgamekit/*" build
 
 CMD ["pnpm", "run", "host"]
