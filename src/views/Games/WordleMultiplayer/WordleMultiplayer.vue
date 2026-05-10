@@ -46,6 +46,7 @@ const playerName = ref(
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
 const backgroundStyle = { background: buildRandomGradient() }
+const showChat = ref(false)
 
 const resolvedRoomId = ((): string => {
   const existing = route.query.room as string | undefined
@@ -163,7 +164,7 @@ onMounted(() => {
     <WordleMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
     <WordleMultiplayerLobby
-      v-if="phase === 'lobby'"
+      v-if="phase === 'lobby' && !showChat"
       :player-name="playerName"
       :player-color="playerColor"
       :is-host="isHost"
@@ -184,7 +185,7 @@ onMounted(() => {
     />
 
     <WordleMultiplayerGame
-      v-else-if="phase === 'playing'"
+      v-else-if="phase === 'playing' && !showChat"
       :word="round.word"
       :max-attempts="round.maxAttempts"
       :my-guesses="myGuesses"
@@ -197,7 +198,7 @@ onMounted(() => {
     />
 
     <WordleMultiplayerIntermission
-      v-else-if="phase === 'intermission'"
+      v-else-if="phase === 'intermission' && !showChat"
       :round-number="round.number"
       :total-rounds="totalRounds"
       :word="round.word"
@@ -208,7 +209,7 @@ onMounted(() => {
     />
 
     <WordleMultiplayerSummary
-      v-else
+      v-else-if="!showChat"
       :player-list="playerList"
       :winner-id="winnerId"
       :is-host="isHost"
@@ -221,7 +222,9 @@ onMounted(() => {
       :host-id="hostId"
       :messages="messages"
       :solved-players="solvedPlayers"
+      :show-chat="showChat"
       @send="session.broadcastChat($event)"
+      @update:show-chat="showChat = $event"
     />
   </main>
 </template>
@@ -248,8 +251,8 @@ onMounted(() => {
 @media (max-width: 720px) {
   .wl {
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 'header' 'main';
+    grid-template-rows: auto 1fr;
     min-height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);

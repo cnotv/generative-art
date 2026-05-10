@@ -10,7 +10,12 @@ import {
   type P2PSession
 } from '@webgamekit/multiplayer-p2p'
 import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
-import { dictionaryGetWords, type DictionaryDifficulty } from '@webgamekit/dictionary'
+import {
+  dictionaryGetWords,
+  dictionaryGetBoggleWords,
+  dictionaryGetDefinition,
+  type DictionaryDifficulty
+} from '@webgamekit/dictionary'
 import {
   useSquaresMultiplayerStore,
   type WmPlayer,
@@ -26,7 +31,7 @@ import {
   MIN_VALID_WORDS
 } from './constants'
 import {
-  findWordInGrid,
+  enumerateGridWords,
   generateGrid,
   scoreWord,
   shuffleArray
@@ -268,7 +273,7 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
     const eligible = buildEligibleWords(store.difficulty)
     const candidates = shuffleArray(eligible)
 
-    const { grid, placedWords } = Array.from({ length: 5 }).reduce<{
+    const { grid } = Array.from({ length: 5 }).reduce<{
       grid: string[][]
       placedWords: string[]
     }>(
@@ -280,10 +285,8 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
       { grid: [], placedWords: [] }
     )
 
-    const allFoundWords = eligible
-      .filter((w) => findWordInGrid(grid, w))
-      .map((w) => w.toUpperCase())
-    const validWords = [...new Set([...placedWords, ...allFoundWords])]
+    const boggleSet = new Set(dictionaryGetBoggleWords().map((w) => w.toUpperCase()))
+    const validWords = enumerateGridWords(grid, boggleSet).filter((w) => dictionaryGetDefinition(w))
 
     const nextNumber = store.round.number + 1
     const endsAt = store.roundDuration > 0 ? Date.now() + store.roundDuration * 1000 : null
