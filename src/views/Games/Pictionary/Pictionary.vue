@@ -232,8 +232,8 @@ onMounted(() => {
   grid-template-rows: auto 1fr;
   gap: var(--spacing-3);
   padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  min-height: 100vh;
+  padding-top: calc(var(--nav-height) + var(--game-top-inset, var(--spacing-3)));
+  min-height: var(--game-min-height, 100vh);
   box-sizing: border-box;
   background: #fff7e6;
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
