@@ -97,6 +97,7 @@ const handleClose = (): void => {
 <style scoped>
 .lobby {
   padding-top: var(--nav-height);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   height: 100dvh;
