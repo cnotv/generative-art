@@ -1,4 +1,7 @@
 {
+  "Lobby": {
+    "description": "Shared multiplayer lobby with live chat, player presence, and game room discovery for Pictionary, Wordle, and Squares."
+  },
   "Landing Page": {
     "description": "Browse all generative art experiments, games, and interactive 3D tools."
   },

@@ -85,5 +85,15 @@ const handleConfig = (key: string, value: string | number): void => {
     @start-game="emit('startGame')"
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
-  />
+  >
+    <template #rules>
+      <ul>
+        <li>Guess the secret word — all players guess simultaneously</li>
+        <li>Green = correct letter and position · Yellow = letter in word but wrong position</li>
+        <li>Fewer attempts and faster guesses earn more points</li>
+        <li>First to solve gets a bonus</li>
+        <li>Round ends when everyone finishes or time runs out</li>
+      </ul>
+    </template>
+  </GameLobbyWizard>
 </template>

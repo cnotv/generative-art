@@ -85,5 +85,18 @@ const handleConfig = (key: string, value: string | number): void => {
     @start-game="emit('startGame')"
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
-  />
+  >
+    <template #rules>
+      <ul>
+        <li>A grid of letters hides several target words — grouped by length</li>
+        <li>
+          <strong>Click and drag</strong> through adjacent letters (diagonals OK) to trace a word
+        </li>
+        <li>Release to submit — if the word is in the list, you claim it</li>
+        <li>First to claim a word gets the points</li>
+        <li>3–4 letters = 1 pt · 5 = 2 pt · 6 = 3 pt · 7 = 5 pt · 8+ = 11 pt</li>
+        <li>Round ends when all words are found or time runs out</li>
+      </ul>
+    </template>
+  </GameLobbyWizard>
 </template>

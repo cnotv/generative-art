@@ -104,5 +104,16 @@ const handleConfig = (key: string, value: string | number): void => {
     @start-game="emit('startGame')"
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
-  />
+  >
+    <template #rules>
+      <ul>
+        <li>The drawer is given a word and must draw it without speaking</li>
+        <li>Guessers earn points based on speed — faster guesses score more</li>
+        <li>First correct guess gets a bonus</li>
+        <li>The drawer earns points per correct guess, scaled by time remaining</li>
+        <li>Hints reveal extra letters (configurable)</li>
+        <li>Round ends when time runs out or all players guess correctly</li>
+      </ul>
+    </template>
+  </GameLobbyWizard>
 </template>

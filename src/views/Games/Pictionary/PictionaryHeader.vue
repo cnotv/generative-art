@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { POINTS_BASE, POINTS_FIRST_BONUS, POINTS_DRAWER_PER_GUESS } from './constants'
-
-const RULES_SEEN_KEY = 'game-rules-seen'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 defineProps<{
   roomId: string
@@ -12,58 +10,30 @@ const emit = defineEmits<{
   copyLink: []
 }>()
 
-const rulesOpen = ref(false)
-
-onMounted(() => {
-  if (!localStorage.getItem(RULES_SEEN_KEY)) {
-    rulesOpen.value = true
-    localStorage.setItem(RULES_SEEN_KEY, '1')
-  }
-})
-
-const closeRules = (): void => {
-  rulesOpen.value = false
-}
+const route = useRoute()
+const router = useRouter()
+const fromLobby = computed(() => !!route.query.game)
 </script>
 
 <template>
   <header class="pictionary-header">
     <div class="pictionary-header__room">
-      <span class="pictionary-header__room-label">Room:</span>
-      <code class="pictionary-header__room-id">{{ roomId.slice(0, 8) }}</code>
-      <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
-        Copy link
-      </button>
-      <div class="pictionary-header__rules">
+      <template v-if="fromLobby">
         <button
-          class="pictionary-header__rules-btn"
+          class="pictionary-header__lobby-btn"
           type="button"
-          title="How points work"
-          @click="rulesOpen = !rulesOpen"
+          @click="router.replace({ query: {} })"
         >
-          ?
+          ← Lobby
         </button>
-        <div v-if="rulesOpen" class="pictionary-header__rules-panel">
-          <button class="pictionary-header__rules-close" type="button" @click="closeRules">
-            ×
-          </button>
-          <ul class="pictionary-header__rules-list">
-            <li>
-              Guessers earn up to <strong>{{ POINTS_BASE }} pts</strong> based on speed — faster
-              guesses score more
-            </li>
-            <li>
-              First correct guess gets a <strong>+{{ POINTS_FIRST_BONUS }} pts</strong> bonus
-            </li>
-            <li>
-              Drawer earns up to <strong>{{ POINTS_DRAWER_PER_GUESS }} pts</strong> per correct
-              guess, scaled by time remaining
-            </li>
-            <li>Round continues until time runs out or all players guess</li>
-            <li>Hints reveal extra letters (configurable)</li>
-          </ul>
-        </div>
-      </div>
+      </template>
+      <template v-else>
+        <span class="pictionary-header__room-label">Room:</span>
+        <code class="pictionary-header__room-id">{{ roomId.slice(0, 8) }}</code>
+        <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
+          Copy link
+        </button>
+      </template>
     </div>
   </header>
 </template>
@@ -84,6 +54,25 @@ const closeRules = (): void => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+}
+
+.pictionary-header__lobby-btn {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff7e6;
+  color: #111;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  font-family: inherit;
+}
+
+.pictionary-header__lobby-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
 }
 
 .pictionary-header__room-id {

@@ -44,7 +44,7 @@ export const useWordleMultiplayerStore = defineStore('wordleMultiplayer', () => 
   const hostId = computed(() => {
     const ids = Object.keys(players.value)
     if (ids.length === 0) return ''
-    return [...ids].sort()[0]
+    return ids[0]
   })
 
   const upsertPlayer = (player: WlPlayer): void => {

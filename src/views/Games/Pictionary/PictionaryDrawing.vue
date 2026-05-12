@@ -169,7 +169,12 @@ defineExpose({
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    padding: var(--spacing-2) var(--spacing-3);
+    padding: var(--spacing-1) var(--spacing-2);
+    gap: var(--spacing-1);
+  }
+
+  .pictionary-drawing__banner-def {
+    display: none;
   }
 }
 </style>

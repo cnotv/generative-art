@@ -249,6 +249,10 @@ const handleCorrectGuess = (ctx: PictionaryContext): void => {
   })
   ctx.store.addScore(ctx.localPeerId.value, guesserPoints)
   ctx.store.addScore(ctx.store.round.drawerId, drawerPoints)
+  if (ctx.isHost.value) {
+    const guesserCount = Object.keys(ctx.store.players).length - 1
+    if (ctx.guessedPeers.value.size >= guesserCount) ctx.endRound()
+  }
 }
 
 const sendChat = (ctx: PictionaryContext, text: string): void => {
