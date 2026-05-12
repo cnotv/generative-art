@@ -238,3 +238,69 @@ Cards used `background: #fff` but no explicit `color`. On a dark OS theme the bo
 ## Intermission layout with many words
 
 A full dictionary scan can produce 20–30 valid words. With `align-items: center` on the flex container, overflow split equally above and below — words above the viewport were unreachable. Switching to `align-items: flex-start; overflow-y: auto` kept all content scrollable from the top.
+
+---
+
+## Games Lobby
+
+### Overview
+
+The Lobby (`src/views/Games/Lobby/`) is a shared room-discovery hub that embeds any of the three games via `defineAsyncComponent`. The URL carries the game and room as query params (`?game=Pictionary&room=<uuid>`), so the embedded game's own composable can join the correct P2P room without modification.
+
+The Lobby runs its own P2P session (`useLobbySession`) on a separate well-known room key. Each peer broadcasts an `lb-hello` (profile) and `lb-room` (room announcement) on join. Room state is ephemeral — only the host's peer keeps it alive; if that peer disconnects before the room is cleaned up, the room simply disappears from all other clients' lists.
+
+### Player list sync
+
+The lobby needs to know how many players are in the embedded game so it can update its own room advertisement. Rather than adding a new P2P channel, the lobby watches each game's Pinia `playerList` computed ref directly:
+
+```ts
+const gamePlayerList = computed(() => {
+  if (activeGame.value === 'Pictionary') return pictionaryStore.playerList
+  ...
+})
+watch(gamePlayerList, (players) => {
+  if (!ownRoom.value) return
+  updateRoomPlayers(players.map(p => ({ id: p.id, name: p.name, color: p.color })))
+}, { deep: true })
+```
+
+This avoids any new networking layer — the Pinia store is the source of truth.
+
+### Host-stealing bug
+
+`hostId` was originally computed as `[...Object.keys(players)].sort()[0]`. Any peer whose UUID sorts lexicographically before the current host's UUID would silently become the new host on join, triggering duplicate `startRound` calls. The fix is simple:
+
+```ts
+// Before: sort()[0]  — alphabetical, anyone can steal host
+// After: ids[0]      — insertion order, first joiner stays host
+const hostId = computed(() => {
+  const ids = Object.keys(players.value)
+  return ids.length ? ids[0] : ''
+})
+```
+
+JavaScript objects preserve insertion order for string keys that are not array indices, so `Object.keys()[0]` reliably returns the first player to call `upsertPlayer`.
+
+### Embedded game top padding
+
+Each game root had `padding-top: calc(var(--nav-height) + var(--spacing-3))`. The lobby wrapper previously added its own `padding-top: var(--nav-height)`, then zeroed the CSS variable inside the embed container (`--nav-height: 0px`) to prevent double-padding — leaving only the `var(--spacing-3)` gap, which appeared as a white strip at the top of every embedded game.
+
+The fix restructures clearance per section instead of on the wrapper:
+
+- Removed `padding-top` from `.lobby` root entirely
+- Added `padding-top: var(--nav-height)` to `.lobby__sidebar` and `.lobby__picker` individually
+- Used CSS deep selectors to override each embedded game root's padding-top to just `var(--nav-height)` (no extra `spacing-3`):
+
+```css
+.lobby__game-embed :deep(.wm),
+.lobby__game-embed :deep(.wl),
+.lobby__game-embed :deep(.pictionary) {
+  padding-top: var(--nav-height);
+}
+```
+
+Each section now owns its own nav clearance; the wrapper is transparent.
+
+### ← Lobby button
+
+Each game header detects `route.query.game` and replaces the room-ID row with a back button when set. Clicking it calls `router.replace({ query: {} })`, which clears `activeGame` in the lobby, triggers `watch(activeGame)` to auto-close the room, and returns the user to the picker screen — no extra event bus needed.
