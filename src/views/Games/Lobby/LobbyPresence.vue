@@ -25,7 +25,7 @@ const playerList = computed(() => Object.values(store.players))
 <style scoped>
 .lb-presence {
   padding: var(--spacing-3);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 3px solid #111;
 }
 
 .lb-presence__title {

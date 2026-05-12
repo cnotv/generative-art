@@ -16,7 +16,7 @@ import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import type { GameType } from '@/types/lobby'
 import type { LobbyRoom } from '@/types/lobby'
-import { GAME_EMOJI, GAME_LABELS, GAME_TYPES } from './constants'
+import { GAME_LABELS, GAME_TYPES } from './constants'
 
 const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {
   Pictionary: defineAsyncComponent(() => import('@/views/Games/Pictionary/Pictionary.vue')),
@@ -109,7 +109,6 @@ const handleLeave = (): void => {
             type="button"
             @click="pickGame(game)"
           >
-            <span class="lobby__game-emoji">{{ GAME_EMOJI[game] }}</span>
             <span class="lobby__game-name">{{ GAME_LABELS[game] }}</span>
           </button>
         </div>
@@ -165,6 +164,11 @@ const handleLeave = (): void => {
 
 <style scoped>
 .lobby {
+  --lb-yellow: #ffd93d;
+  --lb-pink: #ff6bcb;
+  --lb-blue: #4ecdc4;
+  --lb-orange: #ff8c42;
+
   padding-top: var(--nav-height);
   box-sizing: border-box;
   display: grid;
@@ -172,11 +176,13 @@ const handleLeave = (): void => {
   grid-template-areas: 'main sidebar';
   height: 100dvh;
   overflow: hidden;
+  background: #fff7e6;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
 }
 
 .lobby__main {
   grid-area: main;
-  border-right: 2px solid var(--color-border);
+  border-right: 3px solid #111;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -215,28 +221,33 @@ const handleLeave = (): void => {
   gap: var(--spacing-2);
   padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
   border: 3px solid #111;
-  border-radius: var(--radius-lg, 1rem);
-  background: #fff;
-  box-shadow: 4px 4px 0 #111;
+  border-radius: 1.25rem;
+  background: var(--lb-yellow);
+  box-shadow: 5px 5px 0 #111;
   cursor: pointer;
   transition: transform 0.1s ease;
   min-width: 9rem;
+  touch-action: manipulation;
+}
+
+.lobby__game-card:nth-child(2) {
+  background: var(--lb-blue);
+}
+
+.lobby__game-card:nth-child(3) {
+  background: var(--lb-pink);
 }
 
 .lobby__game-card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 #111;
-}
-
-.lobby__game-emoji {
-  font-size: 3rem;
-  line-height: 1;
+  box-shadow: 7px 7px 0 #111;
 }
 
 .lobby__game-name {
-  font-size: var(--font-size-sm);
-  font-weight: 800;
+  font-size: var(--font-size-md, 1rem);
+  font-weight: 900;
   color: #111;
+  letter-spacing: 0.02em;
 }
 
 /* Embedded game */
@@ -252,14 +263,21 @@ const handleLeave = (): void => {
   flex-shrink: 0;
   align-self: flex-start;
   margin: var(--spacing-2) var(--spacing-3);
-  padding: var(--spacing-1) var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid #111;
   border-radius: 999px;
-  background: #fff;
+  background: #fff7e6;
   color: #111;
   font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+}
+
+.lobby__leave-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
 }
 
 .lobby__game-embed {
@@ -274,11 +292,12 @@ const handleLeave = (): void => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fffbf0;
 }
 
 .lobby__profile {
   padding: var(--spacing-2) var(--spacing-3);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 3px solid #111;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
@@ -295,6 +314,7 @@ const handleLeave = (): void => {
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 .lobby__swatches {
@@ -331,7 +351,7 @@ const handleLeave = (): void => {
 .lobby__chat {
   flex: 1;
   min-height: 0;
-  border-top: 2px solid var(--color-border);
+  border-top: 3px solid #111;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -360,10 +380,6 @@ const handleLeave = (): void => {
   .lobby__game-card {
     padding: var(--spacing-3) var(--spacing-4);
     min-width: 7rem;
-  }
-
-  .lobby__game-emoji {
-    font-size: 2rem;
   }
 }
 </style>

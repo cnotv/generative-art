@@ -126,7 +126,7 @@ const handleSend = (): void => {
   display: flex;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  border-top: 2px solid var(--color-border);
+  border-top: 3px solid #111;
 }
 
 .lb-chat__input {

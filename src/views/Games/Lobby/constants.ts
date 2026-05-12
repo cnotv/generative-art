@@ -9,10 +9,4 @@ export const GAME_LABELS: Record<GameType, string> = {
   WordleMultiplayer: 'Wordle'
 }
 
-export const GAME_EMOJI: Record<GameType, string> = {
-  Pictionary: '🎨',
-  SquaresMultiplayer: '🟩',
-  WordleMultiplayer: '🔤'
-}
-
 export const GAME_TYPES: GameType[] = ['Pictionary', 'SquaresMultiplayer', 'WordleMultiplayer']

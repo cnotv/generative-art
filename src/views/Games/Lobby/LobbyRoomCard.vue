@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LobbyRoom } from '@/types/lobby'
-import { GAME_EMOJI, GAME_LABELS } from './constants'
+import { GAME_LABELS } from './constants'
 
 defineProps<{ room: LobbyRoom; isOwn: boolean }>()
 const emit = defineEmits<{
@@ -12,9 +12,7 @@ const emit = defineEmits<{
 <template>
   <div class="lb-room-card" :class="{ 'lb-room-card--own': isOwn }">
     <div class="lb-room-card__info">
-      <span class="lb-room-card__game"
-        >{{ GAME_EMOJI[room.game] }} {{ GAME_LABELS[room.game] }}</span
-      >
+      <span class="lb-room-card__game">{{ GAME_LABELS[room.game] }}</span>
       <span class="lb-room-card__host">
         <span class="lb-room-card__dot" :style="{ background: room.players[0]?.color ?? '#888' }" />
         {{ room.hostName }}
@@ -29,7 +27,7 @@ const emit = defineEmits<{
         :title="room.isHidden ? 'Make public' : 'Hide room'"
         @click="emit('toggle', room)"
       >
-        {{ room.isHidden ? '👁' : '🙈' }}
+        {{ room.isHidden ? 'Show' : 'Hide' }}
       </button>
       <button v-else class="lb-room-card__join" type="button" @click="emit('join', room)">
         Join
