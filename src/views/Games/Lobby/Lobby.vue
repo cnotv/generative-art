@@ -453,7 +453,6 @@ const roomsOpen = ref(true)
 .lobby__chat {
   flex: 1;
   min-height: 0;
-  border-top: 3px solid #111;
   display: flex;
   flex-direction: column;
   overflow: hidden;
