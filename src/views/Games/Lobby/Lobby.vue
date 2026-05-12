@@ -299,8 +299,6 @@ const handleJoin = (room: LobbyRoom): void => {
   overflow: auto;
   min-height: 0;
   --nav-height: 0px;
-  --game-top-inset: 0px;
-  --game-min-height: 0px;
 }
 
 /* Sidebar */
