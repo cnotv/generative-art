@@ -32,7 +32,6 @@ const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>>
 
 const route = useRoute()
 const router = useRouter()
-const lobbyStore = useLobbyStore()
 const squaresStore = useSquaresMultiplayerStore()
 const pictionaryStore = usePictionaryStore()
 const wordleStore = useWordleMultiplayerStore()
