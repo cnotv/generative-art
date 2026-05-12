@@ -13,7 +13,6 @@ const rooms = computed(() => Object.values(store.rooms))
 
 <template>
   <div class="lb-rooms">
-    <p class="lb-rooms__label">Rooms</p>
     <ul v-if="rooms.length" class="lb-rooms__list">
       <li v-for="room in rooms" :key="room.id">
         <LobbyRoomCard
@@ -30,19 +29,10 @@ const rooms = computed(() => Object.values(store.rooms))
 
 <style scoped>
 .lb-rooms {
-  padding: var(--spacing-2) var(--spacing-3);
+  padding: 0 var(--spacing-3) var(--spacing-2);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
-}
-
-.lb-rooms__label {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  font-weight: 800;
-  color: var(--color-muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .lb-rooms__list {

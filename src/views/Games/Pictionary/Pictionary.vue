@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePictionaryStore } from '@/stores/pictionary'
-import type { StrokeEvent } from '@webgamekit/canvas-editor'
+import type { StrokeEvent, FillEvent } from '@webgamekit/canvas-editor'
 import { usePictionarySession } from './usePictionarySession'
 import { usePictionaryTimer } from './usePictionaryTimer'
 import {
@@ -71,6 +71,8 @@ const session = usePictionarySession({
   color: playerColor.value,
   roomId: resolvedRoomId,
   onRemoteStroke: (payload) => drawingReference.value?.renderSegment(payload),
+  onRemoteFill: (payload) => drawingReference.value?.renderFill(payload),
+  onRemoteRestore: (dataUrl) => drawingReference.value?.silentRestore(dataUrl),
   onRemoteClear: () => drawingReference.value?.silentClear()
 })
 
@@ -130,6 +132,14 @@ const handleStroke = (event: StrokeEvent): void => {
   session.broadcastStroke(event)
 }
 
+const handleFill = (event: FillEvent): void => {
+  session.broadcastFill(event)
+}
+
+const handleUndoRedo = (dataUrl: string): void => {
+  session.broadcastCanvasRestore(dataUrl)
+}
+
 onMounted(() => {
   session.init()
 })
@@ -184,6 +194,9 @@ onMounted(() => {
       :total-rounds="totalRounds"
       :time-left="timeLeft"
       @stroke="handleStroke"
+      @fill="handleFill"
+      @undo="handleUndoRedo"
+      @redo="handleUndoRedo"
       @clear="session.broadcastClear()"
     />
 
@@ -229,14 +242,21 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 320px;
   grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--spacing-3);
   padding: var(--spacing-3);
   padding-top: calc(var(--nav-height) + var(--spacing-3));
-  min-height: 100vh;
+  height: 100dvh;
   box-sizing: border-box;
+  overflow: hidden;
   background: #fff7e6;
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
+}
+
+.pictionary--lobby {
+  height: auto;
+  min-height: 100dvh;
+  overflow: auto;
 }
 
 @media (max-width: 720px) {

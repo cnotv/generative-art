@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { StrokeEvent } from '@webgamekit/canvas-editor'
+import type { StrokeEvent, FillEvent } from '@webgamekit/canvas-editor'
 import { dictionaryGetDefinition } from '@webgamekit/dictionary'
 import { CanvasEditor } from '@/components/CanvasEditor'
 
@@ -15,6 +15,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   stroke: [event: StrokeEvent]
+  fill: [event: FillEvent]
+  undo: [dataUrl: string]
+  redo: [dataUrl: string]
   clear: []
 }>()
 
@@ -26,7 +29,9 @@ const wordDefinition = computed(() =>
 
 defineExpose({
   renderSegment: (payload: StrokeEvent) => canvasEditorReference.value?.renderSegment(payload),
-  silentClear: () => canvasEditorReference.value?.silentClear()
+  renderFill: (payload: FillEvent) => canvasEditorReference.value?.renderFill(payload),
+  silentClear: () => canvasEditorReference.value?.silentClear(),
+  silentRestore: (dataUrl: string) => canvasEditorReference.value?.silentRestore(dataUrl)
 })
 </script>
 
@@ -57,6 +62,9 @@ defineExpose({
       :canvas-height="400"
       disable-storage
       @stroke="emit('stroke', $event)"
+      @fill="emit('fill', $event)"
+      @undo="emit('undo', $event)"
+      @redo="emit('redo', $event)"
       @clear="emit('clear')"
     />
   </section>

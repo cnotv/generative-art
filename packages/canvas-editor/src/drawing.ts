@@ -17,6 +17,11 @@ export interface StrokeEvent {
   options: DrawingOptions
 }
 
+export interface FillEvent {
+  point: DrawingPoint
+  color: string
+}
+
 /**
  * Draw a stroke segment between two points on the canvas.
  * @param ctx - 2D rendering context

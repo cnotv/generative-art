@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useCanvasEditor } from './useCanvasEditor'
-import type { DrawingOptions, StrokeEvent } from '@webgamekit/canvas-editor'
+import type { DrawingOptions, StrokeEvent, FillEvent } from '@webgamekit/canvas-editor'
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +18,9 @@ const emit = defineEmits<{
   change: [dataUrl: string]
   historyChange: [{ canUndo: boolean; canRedo: boolean }]
   stroke: [event: StrokeEvent]
+  fill: [event: FillEvent]
+  undo: [dataUrl: string]
+  redo: [dataUrl: string]
 }>()
 
 const canvasReference = ref<HTMLCanvasElement | null>(null)
@@ -47,7 +50,17 @@ const handleStroke = (event: StrokeEvent): void => {
   emit('stroke', event)
 }
 
-const editor = useCanvasEditor(canvasReference, optionsReference, emitChange, handleStroke)
+const handleFill = (event: FillEvent): void => {
+  emit('fill', event)
+}
+
+const editor = useCanvasEditor(
+  canvasReference,
+  optionsReference,
+  emitChange,
+  handleStroke,
+  handleFill
+)
 
 const updateCursor = (event: MouseEvent): void => {
   if (!canvasReference.value) return
@@ -90,14 +103,26 @@ const onTouchMove = (event: TouchEvent): void => {
 
 const snapshot = (): string => canvasReference.value?.toDataURL() ?? ''
 
+const undo = async (): Promise<void> => {
+  await editor.undo()
+  emit('undo', snapshot())
+}
+
+const redo = async (): Promise<void> => {
+  await editor.redo()
+  emit('redo', snapshot())
+}
+
 defineExpose({
-  undo: editor.undo,
-  redo: editor.redo,
+  undo,
+  redo,
   clear: editor.clear,
   silentClear: editor.silentClear,
   restore: editor.restore,
+  silentRestore: editor.silentRestore,
   snapshot,
-  renderSegment: editor.renderSegment
+  renderSegment: editor.renderSegment,
+  renderFill: editor.renderFill
 })
 </script>
 

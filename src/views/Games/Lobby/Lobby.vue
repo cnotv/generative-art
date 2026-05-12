@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent, storeToRefs } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import {
@@ -17,6 +17,7 @@ import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
+import { useLobbyStore } from '@/stores/lobby'
 import type { GameType, LobbyRoom } from '@/types/lobby'
 import { GAME_LABELS, GAME_TYPES } from './constants'
 
@@ -123,6 +124,15 @@ const handleJoin = (room: LobbyRoom): void => {
   if (ownRoom.value) closeRoom()
   router.replace({ query: { game: room.game, room: room.id } })
 }
+
+const lobbyStore = useLobbyStore()
+const { players: lobbyPlayers, rooms: lobbyRooms } = storeToRefs(lobbyStore)
+const onlineCount = computed(() => Object.keys(lobbyPlayers.value).length)
+const roomCount = computed(() => Object.keys(lobbyRooms.value).length)
+
+const profileOpen = ref(true)
+const presenceOpen = ref(true)
+const roomsOpen = ref(true)
 </script>
 
 <template>
@@ -152,41 +162,75 @@ const handleJoin = (room: LobbyRoom): void => {
     <!-- Sidebar — hidden when a game is active -->
     <aside v-if="!activeComponent" class="lobby__sidebar">
       <!-- Profile -->
-      <div class="lobby__profile">
-        <input
-          v-model="playerName"
-          class="lobby__name-input"
-          type="text"
-          maxlength="20"
-          placeholder="Your name"
-          @change="handleNameCommit"
-          @blur="handleNameCommit"
-        />
-        <div class="lobby__swatches">
-          <button
-            v-for="color in PLAYER_COLORS"
-            :key="color"
-            class="lobby__swatch"
-            :class="{ 'lobby__swatch--active': playerColor === color }"
-            :style="{ background: color }"
-            type="button"
-            @click="handleColorPick(color)"
+      <div class="lobby__section" :class="{ 'lobby__section--collapsed': !profileOpen }">
+        <button class="lobby__section-toggle" type="button" @click="profileOpen = !profileOpen">
+          <span class="lobby__section-label">Profile</span>
+          <span
+            class="lobby__section-chevron"
+            :class="{ 'lobby__section-chevron--open': profileOpen }"
+            >›</span
           >
-            <Check v-if="playerColor === color" class="lobby__swatch-check" />
-          </button>
+        </button>
+        <div v-show="profileOpen" class="lobby__profile">
+          <input
+            v-model="playerName"
+            class="lobby__name-input"
+            type="text"
+            maxlength="20"
+            placeholder="Your name"
+            @change="handleNameCommit"
+            @blur="handleNameCommit"
+          />
+          <div class="lobby__swatches">
+            <button
+              v-for="color in PLAYER_COLORS"
+              :key="color"
+              class="lobby__swatch"
+              :class="{ 'lobby__swatch--active': playerColor === color }"
+              :style="{ background: color }"
+              type="button"
+              @click="handleColorPick(color)"
+            >
+              <Check v-if="playerColor === color" class="lobby__swatch-check" />
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Presence -->
-      <LobbyPresence :local-peer-id="localPeerId" />
+      <div class="lobby__section" :class="{ 'lobby__section--collapsed': !presenceOpen }">
+        <button class="lobby__section-toggle" type="button" @click="presenceOpen = !presenceOpen">
+          <span class="lobby__section-label">Online ({{ onlineCount }})</span>
+          <span
+            class="lobby__section-chevron"
+            :class="{ 'lobby__section-chevron--open': presenceOpen }"
+            >›</span
+          >
+        </button>
+        <div v-show="presenceOpen">
+          <LobbyPresence :local-peer-id="localPeerId" />
+        </div>
+      </div>
 
       <!-- Rooms -->
-      <LobbyRoomList
-        :local-peer-id="localPeerId"
-        :own-room-id="ownRoomId"
-        @join="handleJoin"
-        @toggle="toggleRoomVisibility"
-      />
+      <div class="lobby__section" :class="{ 'lobby__section--collapsed': !roomsOpen }">
+        <button class="lobby__section-toggle" type="button" @click="roomsOpen = !roomsOpen">
+          <span class="lobby__section-label">Rooms ({{ roomCount }})</span>
+          <span
+            class="lobby__section-chevron"
+            :class="{ 'lobby__section-chevron--open': roomsOpen }"
+            >›</span
+          >
+        </button>
+        <div v-show="roomsOpen">
+          <LobbyRoomList
+            :local-peer-id="localPeerId"
+            :own-room-id="ownRoomId"
+            @join="handleJoin"
+            @toggle="toggleRoomVisibility"
+          />
+        </div>
+      </div>
 
       <!-- Chat -->
       <div class="lobby__chat">
@@ -316,9 +360,45 @@ const handleJoin = (room: LobbyRoom): void => {
   padding-top: var(--nav-height);
 }
 
-.lobby__profile {
-  padding: var(--spacing-2) var(--spacing-3);
+.lobby__section {
   border-bottom: 3px solid #111;
+}
+
+.lobby__section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-2) var(--spacing-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  gap: var(--spacing-2);
+}
+
+.lobby__section-label {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lobby__section-chevron {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  transition: transform 0.15s ease;
+  transform: rotate(90deg);
+  display: inline-block;
+}
+
+.lobby__section-chevron--open {
+  transform: rotate(270deg);
+}
+
+.lobby__profile {
+  padding: 0 var(--spacing-3) var(--spacing-2);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);

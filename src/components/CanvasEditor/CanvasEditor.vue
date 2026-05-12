@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import CanvasEditorCanvas from './CanvasEditorCanvas.vue'
 import CanvasEditorTools from './CanvasEditorTools.vue'
 import { storageLoad } from '@webgamekit/canvas-editor'
-import type { DrawingTool, DrawingOptions, StrokeEvent } from '@webgamekit/canvas-editor'
+import type { DrawingTool, DrawingOptions, StrokeEvent, FillEvent } from '@webgamekit/canvas-editor'
 import type { CanvasEditorToolButton } from './types'
 
 const props = withDefaults(
@@ -40,6 +40,9 @@ const emit = defineEmits<{
   'update:size': [value: number]
   change: [dataUrl: string]
   stroke: [event: StrokeEvent]
+  fill: [event: FillEvent]
+  undo: [dataUrl: string]
+  redo: [dataUrl: string]
   clear: []
 }>()
 
@@ -91,6 +94,18 @@ const handleStroke = (event: StrokeEvent): void => {
   emit('stroke', event)
 }
 
+const handleFill = (event: FillEvent): void => {
+  emit('fill', event)
+}
+
+const handleUndo = (dataUrl: string): void => {
+  emit('undo', dataUrl)
+}
+
+const handleRedo = (dataUrl: string): void => {
+  emit('redo', dataUrl)
+}
+
 const handleHistoryChange = (state: { canUndo: boolean; canRedo: boolean }): void => {
   canUndo.value = state.canUndo
   canRedo.value = state.canRedo
@@ -113,6 +128,7 @@ const handleSizeUpdate = (value: number): void => {
 
 const undo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.undo()
 const redo = (): Promise<void> | undefined => canvasEditorCanvasReference.value?.redo()
+
 const clear = (): void => {
   canvasEditorCanvasReference.value?.clear()
   emit('clear')
@@ -122,8 +138,11 @@ defineExpose({
   snapshot: (): string => canvasEditorCanvasReference.value?.snapshot() ?? '',
   restore: (dataUrl: string, options?: { silent?: boolean }): Promise<void> =>
     canvasEditorCanvasReference.value?.restore(dataUrl, options) ?? Promise.resolve(),
+  silentRestore: (dataUrl: string): Promise<void> =>
+    canvasEditorCanvasReference.value?.silentRestore(dataUrl) ?? Promise.resolve(),
   renderSegment: (event: StrokeEvent): void =>
     canvasEditorCanvasReference.value?.renderSegment(event),
+  renderFill: (event: FillEvent): void => canvasEditorCanvasReference.value?.renderFill(event),
   silentClear: (): void => canvasEditorCanvasReference.value?.silentClear()
 })
 
@@ -168,6 +187,9 @@ onUnmounted(() => {
       @change="handleChange"
       @history-change="handleHistoryChange"
       @stroke="handleStroke"
+      @fill="handleFill"
+      @undo="handleUndo"
+      @redo="handleRedo"
     />
     <CanvasEditorTools
       v-if="showTools"
