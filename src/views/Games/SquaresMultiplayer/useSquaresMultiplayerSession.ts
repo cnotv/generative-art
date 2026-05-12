@@ -157,6 +157,11 @@ const bindPeerEvents = (ctx: WmContext, joined: P2PSession): void => {
       ctx.store.appendMessage(leaveMessage)
     }
     ctx.store.removePlayer(peerId)
+    const activePhase = ctx.store.phase === 'playing' || ctx.store.phase === 'intermission'
+    if (activePhase && Object.keys(ctx.store.players).length <= 1) {
+      ctx.store.winnerId = ctx.store.playerList[0]?.id ?? null
+      ctx.store.phase = 'summary'
+    }
   })
 
   p2pOnData<{ id: string }>(joined, HELLO_CHANNEL, () => {

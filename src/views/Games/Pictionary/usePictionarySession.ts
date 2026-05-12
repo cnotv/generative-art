@@ -307,6 +307,14 @@ const bindPeerEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
       ctx.store.appendMessage(leaveMessage)
     }
     ctx.store.removePlayer(peerId)
+    const activePhase =
+      ctx.store.phase === 'choosing' ||
+      ctx.store.phase === 'drawing' ||
+      ctx.store.phase === 'intermission'
+    if (activePhase && Object.keys(ctx.store.players).length <= 1) {
+      ctx.store.winnerId = ctx.store.playerList[0]?.id ?? null
+      ctx.store.phase = 'summary'
+    }
   })
   p2pOnData<{ id: string }>(joined, HELLO_CHANNEL, () => {
     p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
