@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import {
@@ -11,11 +11,14 @@ import {
   NAME_ANIMALS
 } from '@/utils/playerProfile'
 import { useLobbySession } from './useLobbySession'
+import { useLobbyStore } from '@/stores/lobby'
+import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
+import { usePictionaryStore } from '@/stores/pictionary'
+import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
-import type { GameType } from '@/types/lobby'
-import type { LobbyRoom } from '@/types/lobby'
+import type { GameType, LobbyRoom } from '@/types/lobby'
 import { GAME_LABELS, GAME_TYPES } from './constants'
 
 const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {
@@ -30,18 +33,49 @@ const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>>
 
 const route = useRoute()
 const router = useRouter()
+const lobbyStore = useLobbyStore()
+const squaresStore = useSquaresMultiplayerStore()
+const pictionaryStore = usePictionaryStore()
+const wordleStore = useWordleMultiplayerStore()
 
 const stored = loadProfile()
 const playerName = ref(stored?.name ?? `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`)
 const playerColor = ref(stored?.color ?? randomPick(PLAYER_COLORS))
 
-const { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom, toggleRoomVisibility } =
-  useLobbySession(playerName.value, playerColor.value)
+const {
+  localPeerId,
+  ownRoom,
+  init,
+  sendChat,
+  updateProfile,
+  createRoom,
+  closeRoom,
+  toggleRoomVisibility,
+  updateRoomPlayers
+} = useLobbySession(playerName.value, playerColor.value)
 
 const ownRoomId = computed(() => ownRoom.value?.id ?? null)
 const activeGame = computed(() => route.query.game as GameType | undefined)
 const activeComponent = computed(() =>
   activeGame.value ? GAME_COMPONENTS[activeGame.value] : null
+)
+const lobbyPlayers = computed(() => Object.values(lobbyStore.players))
+
+// Watch the active game's player list to keep the lobby room count current
+const gamePlayerList = computed(() => {
+  if (activeGame.value === 'Pictionary') return pictionaryStore.playerList
+  if (activeGame.value === 'SquaresMultiplayer') return squaresStore.playerList
+  if (activeGame.value === 'WordleMultiplayer') return wordleStore.playerList
+  return []
+})
+
+watch(
+  gamePlayerList,
+  (players) => {
+    if (!ownRoom.value) return
+    updateRoomPlayers(players.map((p) => ({ id: p.id, name: p.name, color: p.color })))
+  },
+  { deep: true }
 )
 
 onMounted(() => {
@@ -51,11 +85,13 @@ onMounted(() => {
 
 const handleNameCommit = (): void => {
   saveProfile(playerName.value, playerColor.value)
+  updateProfile(playerName.value, playerColor.value)
 }
 
 const handleColorPick = (color: string): void => {
   playerColor.value = color
   saveProfile(playerName.value, playerColor.value)
+  updateProfile(playerName.value, playerColor.value)
 }
 
 const pickGame = (game: GameType): void => {
@@ -75,28 +111,43 @@ const pickGame = (game: GameType): void => {
 }
 
 const handleJoin = (room: LobbyRoom): void => {
+  if (ownRoom.value) closeRoom()
   router.replace({ query: { game: room.game, room: room.id } })
-}
-
-const handleToggle = (): void => {
-  toggleRoomVisibility()
 }
 
 const handleLeave = (): void => {
   closeRoom()
   router.replace({ query: {} })
+  // Re-sync profile in case the embedded game changed it
+  const fresh = loadProfile()
+  if (fresh && (fresh.name !== playerName.value || fresh.color !== playerColor.value)) {
+    playerName.value = fresh.name
+    playerColor.value = fresh.color
+    updateProfile(fresh.name, fresh.color)
+  }
 }
 </script>
 
 <template>
-  <div class="lobby">
-    <!-- Game area -->
+  <div class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
+    <!-- Compact top bar shown only while a game is embedded -->
+    <div v-if="activeComponent" class="lobby__game-bar">
+      <button class="lobby__leave-btn" type="button" @click="handleLeave">← Lobby</button>
+      <div class="lobby__game-bar-players">
+        <span
+          v-for="player in lobbyPlayers"
+          :key="player.id"
+          class="lobby__game-bar-dot"
+          :style="{ background: player.color }"
+          :title="player.name"
+        />
+      </div>
+    </div>
+
+    <!-- Main content area -->
     <main class="lobby__main">
-      <div v-if="activeComponent" class="lobby__game-area">
-        <button class="lobby__leave-btn" type="button" @click="handleLeave">← Lobby</button>
-        <div class="lobby__game-embed">
-          <component :is="activeComponent" />
-        </div>
+      <div v-if="activeComponent" class="lobby__game-embed">
+        <component :is="activeComponent" />
       </div>
 
       <div v-else class="lobby__picker">
@@ -115,8 +166,8 @@ const handleLeave = (): void => {
       </div>
     </main>
 
-    <!-- Sidebar -->
-    <aside class="lobby__sidebar">
+    <!-- Sidebar — hidden when a game is active -->
+    <aside v-if="!activeComponent" class="lobby__sidebar">
       <!-- Profile -->
       <div class="lobby__profile">
         <input
@@ -151,7 +202,7 @@ const handleLeave = (): void => {
         :local-peer-id="localPeerId"
         :own-room-id="ownRoomId"
         @join="handleJoin"
-        @toggle="handleToggle"
+        @toggle="toggleRoomVisibility"
       />
 
       <!-- Chat -->
@@ -180,6 +231,38 @@ const handleLeave = (): void => {
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
 }
 
+.lobby--in-game {
+  grid-template-columns: 1fr;
+  grid-template-areas: 'main';
+  grid-template-rows: auto 1fr;
+}
+
+/* Top bar when game is embedded */
+.lobby__game-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 3px solid #111;
+  background: #fff7e6;
+  flex-shrink: 0;
+}
+
+.lobby__game-bar-players {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.lobby__game-bar-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  border: 2px solid #111;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 .lobby__main {
   grid-area: main;
   border-right: 3px solid #111;
@@ -187,6 +270,10 @@ const handleLeave = (): void => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.lobby--in-game .lobby__main {
+  border-right: none;
 }
 
 /* Game picker */
@@ -251,18 +338,14 @@ const handleLeave = (): void => {
 }
 
 /* Embedded game */
-.lobby__game-area {
+.lobby__game-embed {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
+  min-height: 0;
   --nav-height: 0px;
 }
 
 .lobby__leave-btn {
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin: var(--spacing-2) var(--spacing-3);
   padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid #111;
   border-radius: 999px;
@@ -273,17 +356,13 @@ const handleLeave = (): void => {
   cursor: pointer;
   box-shadow: 2px 2px 0 #111;
   transition: transform 0.1s ease;
+  font-family: inherit;
+  flex-shrink: 0;
 }
 
 .lobby__leave-btn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 #111;
-}
-
-.lobby__game-embed {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
 }
 
 /* Sidebar */
@@ -364,9 +443,13 @@ const handleLeave = (): void => {
     grid-template-rows: 1fr auto;
   }
 
+  .lobby--in-game {
+    grid-template-rows: auto 1fr;
+  }
+
   .lobby__main {
     border-right: none;
-    border-bottom: 2px solid var(--color-border);
+    border-bottom: 2px solid #111;
   }
 
   .lobby__sidebar {

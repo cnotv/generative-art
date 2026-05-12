@@ -11,7 +11,7 @@ import {
 } from '@webgamekit/multiplayer-p2p'
 import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
 import { useLobbyStore } from '@/stores/lobby'
-import type { LobbyRoom } from '@/types/lobby'
+import type { LobbyPlayer, LobbyRoom } from '@/types/lobby'
 import { LOBBY_CHANNEL, REANNOUNCE_MS } from './constants'
 
 const HELLO_CHANNEL = 'lb-hello'
@@ -22,17 +22,15 @@ const RETRACT_CHANNEL = 'lb-room-retract'
 type HelloPayload = { name: string; color: string }
 type RetractPayload = { id: string }
 
-export const useLobbySession = (name: string, color: string) => {
+export const useLobbySession = (initialName: string, initialColor: string) => {
   const store = useLobbyStore()
   const session = ref<P2PSession | null>(null)
   const localPeerId = ref('')
   const ownRoom = ref<LobbyRoom | null>(null)
   let reannounceTimer: ReturnType<typeof setInterval> | null = null
 
-  const announceSelf = (target: P2PSession): void => {
-    const payload: HelloPayload = { name, color }
-    p2pSendData(target, HELLO_CHANNEL, payload)
-  }
+  const currentName = ref(initialName)
+  const currentColor = ref(initialColor)
 
   const announceRoom = (target: P2PSession, room: LobbyRoom): void => {
     if (!room.isHidden) p2pSendData(target, ROOM_CHANNEL, room)
@@ -55,14 +53,12 @@ export const useLobbySession = (name: string, color: string) => {
     session.value = joined
     localPeerId.value = joined.peerId
 
-    store.upsertPlayer({ id: joined.peerId, name, color })
-    announceSelf(joined)
+    store.upsertPlayer({ id: joined.peerId, name: currentName.value, color: currentColor.value })
+    p2pSendData(joined, HELLO_CHANNEL, { name: currentName.value, color: currentColor.value })
 
-    p2pOnPeerJoin(joined, (peerId) => {
-      p2pSendData(joined, HELLO_CHANNEL, { name, color })
+    p2pOnPeerJoin(joined, () => {
+      p2pSendData(joined, HELLO_CHANNEL, { name: currentName.value, color: currentColor.value })
       if (ownRoom.value) announceRoom(joined, ownRoom.value)
-      // greet message added once we know their name via lb-hello
-      void peerId
     })
 
     p2pOnPeerLeave(joined, (peerId) => {
@@ -97,10 +93,17 @@ export const useLobbySession = (name: string, color: string) => {
 
   const sendChat = (text: string): void => {
     if (!session.value) return
-    const message = chatMessageCreate(localPeerId.value, name, text)
+    const message = chatMessageCreate(localPeerId.value, currentName.value, text)
     if (!message) return
     store.appendMessage(message)
     p2pSendData(session.value, CHAT_CHANNEL, message)
+  }
+
+  const updateProfile = (name: string, color: string): void => {
+    currentName.value = name
+    currentColor.value = color
+    store.upsertPlayer({ id: localPeerId.value, name, color })
+    if (session.value) p2pSendData(session.value, HELLO_CHANNEL, { name, color })
   }
 
   const createRoom = (room: LobbyRoom): void => {
@@ -128,6 +131,14 @@ export const useLobbySession = (name: string, color: string) => {
     }
   }
 
+  const updateRoomPlayers = (players: LobbyPlayer[]): void => {
+    if (!ownRoom.value || !session.value) return
+    const updated = { ...ownRoom.value, players }
+    ownRoom.value = updated
+    store.upsertRoom(updated)
+    if (!updated.isHidden) announceRoom(session.value, updated)
+  }
+
   const destroy = (): void => {
     if (reannounceTimer !== null) clearInterval(reannounceTimer)
     closeRoom()
@@ -138,5 +149,15 @@ export const useLobbySession = (name: string, color: string) => {
 
   onUnmounted(destroy)
 
-  return { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom, toggleRoomVisibility }
+  return {
+    localPeerId,
+    ownRoom,
+    init,
+    sendChat,
+    updateProfile,
+    createRoom,
+    closeRoom,
+    toggleRoomVisibility,
+    updateRoomPlayers
+  }
 }
