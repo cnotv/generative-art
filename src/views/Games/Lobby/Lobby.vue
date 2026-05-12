@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Check } from 'lucide-vue-next'
 import {
   loadProfile,
   saveProfile,
@@ -13,84 +14,152 @@ import { useLobbySession } from './useLobbySession'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
-import LobbyCreateRoom from './LobbyCreateRoom.vue'
 import type { GameType } from '@/types/lobby'
 import type { LobbyRoom } from '@/types/lobby'
+import { GAME_EMOJI, GAME_LABELS, GAME_TYPES } from './constants'
 
+const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {
+  Pictionary: defineAsyncComponent(() => import('@/views/Games/Pictionary/Pictionary.vue')),
+  SquaresMultiplayer: defineAsyncComponent(
+    () => import('@/views/Games/SquaresMultiplayer/SquaresMultiplayer.vue')
+  ),
+  WordleMultiplayer: defineAsyncComponent(
+    () => import('@/views/Games/WordleMultiplayer/WordleMultiplayer.vue')
+  )
+}
+
+const route = useRoute()
 const router = useRouter()
 
 const stored = loadProfile()
 const playerName = ref(stored?.name ?? `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`)
 const playerColor = ref(stored?.color ?? randomPick(PLAYER_COLORS))
 
-const { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom } = useLobbySession(
-  playerName.value,
-  playerColor.value
-)
-
-const showCreate = ref(false)
+const { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom, toggleRoomVisibility } =
+  useLobbySession(playerName.value, playerColor.value)
 
 const ownRoomId = computed(() => ownRoom.value?.id ?? null)
+const activeGame = computed(() => route.query.game as GameType | undefined)
+const activeComponent = computed(() =>
+  activeGame.value ? GAME_COMPONENTS[activeGame.value] : null
+)
 
 onMounted(() => {
   saveProfile(playerName.value, playerColor.value)
   init()
 })
 
-const handleCreate = (name: string, game: GameType, isHidden: boolean): void => {
+const handleNameCommit = (): void => {
+  saveProfile(playerName.value, playerColor.value)
+}
+
+const handleColorPick = (color: string): void => {
+  playerColor.value = color
+  saveProfile(playerName.value, playerColor.value)
+}
+
+const pickGame = (game: GameType): void => {
+  const roomId = crypto.randomUUID()
   const room: LobbyRoom = {
-    id: crypto.randomUUID(),
-    name,
+    id: roomId,
+    name: `${playerName.value}'s room`,
     game,
     hostId: localPeerId.value,
     hostName: playerName.value,
     players: [{ id: localPeerId.value, name: playerName.value, color: playerColor.value }],
-    isHidden,
+    isHidden: false,
     createdAt: Date.now()
   }
   createRoom(room)
-  showCreate.value = false
+  router.replace({ query: { game, room: roomId } })
 }
 
 const handleJoin = (room: LobbyRoom): void => {
-  router.push({ path: `/games/${room.game}`, query: { room: room.id } })
+  router.replace({ query: { game: room.game, room: room.id } })
 }
 
-const handleClose = (): void => {
+const handleToggle = (): void => {
+  toggleRoomVisibility()
+}
+
+const handleLeave = (): void => {
   closeRoom()
+  router.replace({ query: {} })
 }
 </script>
 
 <template>
   <div class="lobby">
-    <header class="lobby__header">
-      <h1 class="lobby__title">Lobby</h1>
-      <button
-        v-if="!ownRoom"
-        class="lobby__create-btn"
-        type="button"
-        @click="showCreate = !showCreate"
-      >
-        + Create room
-      </button>
-    </header>
+    <!-- Game area -->
+    <main class="lobby__main">
+      <div v-if="activeComponent" class="lobby__game-area">
+        <button class="lobby__leave-btn" type="button" @click="handleLeave">← Lobby</button>
+        <div class="lobby__game-embed">
+          <component :is="activeComponent" />
+        </div>
+      </div>
 
-    <div class="lobby__body">
-      <section class="lobby__chat">
-        <LobbyChat :local-peer-id="localPeerId" @send="sendChat" />
-      </section>
+      <div v-else class="lobby__picker">
+        <p class="lobby__picker-label">Pick a game to create a room</p>
+        <div class="lobby__picker-games">
+          <button
+            v-for="game in GAME_TYPES"
+            :key="game"
+            class="lobby__game-card"
+            type="button"
+            @click="pickGame(game)"
+          >
+            <span class="lobby__game-emoji">{{ GAME_EMOJI[game] }}</span>
+            <span class="lobby__game-name">{{ GAME_LABELS[game] }}</span>
+          </button>
+        </div>
+      </div>
+    </main>
 
-      <aside class="lobby__sidebar">
-        <LobbyPresence :local-peer-id="localPeerId" />
-        <LobbyRoomList
-          :local-peer-id="localPeerId"
-          :own-room-id="ownRoomId"
-          @join="handleJoin"
-          @close="handleClose"
+    <!-- Sidebar -->
+    <aside class="lobby__sidebar">
+      <!-- Profile -->
+      <div class="lobby__profile">
+        <input
+          v-model="playerName"
+          class="lobby__name-input"
+          type="text"
+          maxlength="20"
+          placeholder="Your name"
+          @change="handleNameCommit"
+          @blur="handleNameCommit"
         />
-        <LobbyCreateRoom v-if="showCreate" @create="handleCreate" @cancel="showCreate = false" />
-      </aside>
-    </div>
+        <div class="lobby__swatches">
+          <button
+            v-for="color in PLAYER_COLORS"
+            :key="color"
+            class="lobby__swatch"
+            :class="{ 'lobby__swatch--active': playerColor === color }"
+            :style="{ background: color }"
+            type="button"
+            @click="handleColorPick(color)"
+          >
+            <Check v-if="playerColor === color" class="lobby__swatch-check" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Presence -->
+      <LobbyPresence :local-peer-id="localPeerId" />
+
+      <!-- Rooms -->
+      <LobbyRoomList
+        :local-peer-id="localPeerId"
+        :own-room-id="ownRoomId"
+        @join="handleJoin"
+        @toggle="handleToggle"
+      />
+
+      <!-- Chat -->
+      <div class="lobby__chat">
+        <LobbyChat :local-peer-id="localPeerId" @send="sendChat" />
+      </div>
+    </aside>
   </div>
 </template>
 
@@ -98,62 +167,108 @@ const handleClose = (): void => {
 .lobby {
   padding-top: var(--nav-height);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-areas: 'main sidebar';
   height: 100dvh;
   overflow: hidden;
 }
 
-.lobby__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 2px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.lobby__title {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 800;
-  color: #111;
-}
-
-.lobby__create-btn {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #111;
-  border-radius: 999px;
-  background: #111;
-  color: #fff;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 #444;
-  transition: transform 0.1s ease;
-}
-
-.lobby__create-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #444;
-}
-
-.lobby__body {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  grid-template-areas: 'chat sidebar';
-  flex: 1;
-  min-height: 0;
-}
-
-.lobby__chat {
-  grid-area: chat;
+.lobby__main {
+  grid-area: main;
   border-right: 2px solid var(--color-border);
   min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
+/* Game picker */
+.lobby__picker {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+}
+
+.lobby__picker-label {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-muted-foreground);
+}
+
+.lobby__picker-games {
+  display: flex;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lobby__game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
+  border: 3px solid #111;
+  border-radius: var(--radius-lg, 1rem);
+  background: #fff;
+  box-shadow: 4px 4px 0 #111;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  min-width: 9rem;
+}
+
+.lobby__game-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #111;
+}
+
+.lobby__game-emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.lobby__game-name {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #111;
+}
+
+/* Embedded game */
+.lobby__game-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  --nav-height: 0px;
+}
+
+.lobby__leave-btn {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin: var(--spacing-2) var(--spacing-3);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lobby__game-embed {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Sidebar */
 .lobby__sidebar {
   grid-area: sidebar;
   display: flex;
@@ -161,20 +276,94 @@ const handleClose = (): void => {
   overflow: hidden;
 }
 
-@media (max-width: 640px) {
-  .lobby__body {
+.lobby__profile {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.lobby__name-input {
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lobby__swatches {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.lobby__swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #111;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 1px 1px 0 #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+.lobby__swatch:hover {
+  transform: scale(1.15);
+}
+
+.lobby__swatch-check {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: #fff;
+  stroke-width: 4;
+}
+
+.lobby__chat {
+  flex: 1;
+  min-height: 0;
+  border-top: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .lobby {
     grid-template-columns: 1fr;
-    grid-template-areas: 'chat' 'sidebar';
+    grid-template-areas: 'main' 'sidebar';
     grid-template-rows: 1fr auto;
   }
 
-  .lobby__chat {
+  .lobby__main {
     border-right: none;
     border-bottom: 2px solid var(--color-border);
   }
 
   .lobby__sidebar {
-    max-height: 40dvh;
+    max-height: 50dvh;
+  }
+
+  .lobby__picker-games {
+    gap: var(--spacing-3);
+  }
+
+  .lobby__game-card {
+    padding: var(--spacing-3) var(--spacing-4);
+    min-width: 7rem;
+  }
+
+  .lobby__game-emoji {
+    font-size: 2rem;
   }
 }
 </style>

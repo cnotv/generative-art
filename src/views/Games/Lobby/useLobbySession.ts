@@ -116,6 +116,18 @@ export const useLobbySession = (name: string, color: string) => {
     ownRoom.value = null
   }
 
+  const toggleRoomVisibility = (): void => {
+    if (!ownRoom.value || !session.value) return
+    const updated = { ...ownRoom.value, isHidden: !ownRoom.value.isHidden }
+    ownRoom.value = updated
+    store.upsertRoom(updated)
+    if (updated.isHidden) {
+      p2pSendData(session.value, RETRACT_CHANNEL, { id: updated.id })
+    } else {
+      announceRoom(session.value, updated)
+    }
+  }
+
   const destroy = (): void => {
     if (reannounceTimer !== null) clearInterval(reannounceTimer)
     closeRoom()
@@ -126,5 +138,5 @@ export const useLobbySession = (name: string, color: string) => {
 
   onUnmounted(destroy)
 
-  return { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom }
+  return { localPeerId, ownRoom, init, sendChat, createRoom, closeRoom, toggleRoomVisibility }
 }

@@ -220,6 +220,18 @@ watch(
               ><span>.</span><span>.</span><span>.</span></span
             >
           </div>
+          <dl v-if="configFields.length" class="glw__settings-list">
+            <div v-for="field in configFields" :key="field.key" class="glw__settings-item">
+              <dt class="glw__settings-label">{{ field.label }}</dt>
+              <dd class="glw__settings-value">
+                {{
+                  field.type === 'select'
+                    ? (field.options?.find((o) => o.value === field.value)?.label ?? field.value)
+                    : field.value
+                }}
+              </dd>
+            </div>
+          </dl>
           <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
             Leave room
           </button>
@@ -497,6 +509,35 @@ watch(
 .glw__request-actions {
   display: flex;
   gap: var(--spacing-1);
+}
+
+.glw__settings-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-4);
+}
+
+.glw__settings-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.glw__settings-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.glw__settings-value {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #111;
 }
 
 .glw__fields {
