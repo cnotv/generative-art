@@ -17,6 +17,7 @@ import type {
   DrawingOptions,
   DrawingPoint,
   StrokeEvent,
+  FillEvent,
   HistoryStack
 } from '@webgamekit/canvas-editor'
 
@@ -78,6 +79,7 @@ type EditorContext = {
   history: ReturnType<typeof useHistory>
   onUpdate: () => void
   onStrokeCallback?: (event: StrokeEvent) => void
+  onFillCallback?: (event: FillEvent) => void
 }
 
 const getContext = (ctx: EditorContext): CanvasRenderingContext2D | null =>
@@ -91,6 +93,7 @@ const startDrawing = (ctx: EditorContext, point: DrawingPoint): void => {
   if (ctx.options.value.tool === 'fill') {
     ctx.history.push()
     drawingFill(renderContext, point, ctx.options.value.color)
+    ctx.onFillCallback?.({ point, color: ctx.options.value.color })
     ctx.onUpdate()
     ctx.isDrawing.value = false
     return
@@ -121,12 +124,14 @@ const finishDrawing = (ctx: EditorContext): void => {
  * @param options - Reactive drawing options (tool, color, size)
  * @param onUpdate - Callback fired after any operation that changes the canvas
  * @param onStrokeCallback - Optional callback fired per stroke segment
+ * @param onFillCallback - Optional callback fired when a fill is applied
  */
 export const useCanvasEditor = (
   canvasReference: Ref<HTMLCanvasElement | null>,
   options: Ref<DrawingOptions>,
   onUpdate: () => void,
-  onStrokeCallback?: (event: StrokeEvent) => void
+  onStrokeCallback?: (event: StrokeEvent) => void,
+  onFillCallback?: (event: FillEvent) => void
 ) => {
   const snapshot = (): string => canvasReference.value?.toDataURL() ?? ''
   const history = useHistory(snapshot)
@@ -137,13 +142,26 @@ export const useCanvasEditor = (
     lastPoint: ref({ x: 0, y: 0 }),
     history,
     onUpdate,
-    onStrokeCallback
+    onStrokeCallback,
+    onFillCallback
   }
 
   const renderSegment = (event: StrokeEvent): void => {
     const renderContext = getContext(ctx)
     if (!renderContext) return
     drawingStroke(renderContext, event.from, event.to, event.options)
+  }
+
+  const renderFill = (event: FillEvent): void => {
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    drawingFill(renderContext, event.point, event.color)
+  }
+
+  const silentRestore = async (dataUrl: string): Promise<void> => {
+    const renderContext = getContext(ctx)
+    if (!renderContext) return
+    await drawingRestore(renderContext, dataUrl)
   }
 
   const undo = async (): Promise<void> => {
@@ -185,6 +203,8 @@ export const useCanvasEditor = (
     canRedo: history.canRedo,
     snapshot,
     renderSegment,
+    renderFill,
+    silentRestore,
     onPointerDown: (event: MouseEvent): void =>
       startDrawing(ctx, getCanvasPoint(event, canvasReference)),
     onPointerMove: (event: MouseEvent): void =>

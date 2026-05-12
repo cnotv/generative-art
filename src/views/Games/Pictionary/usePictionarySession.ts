@@ -16,7 +16,7 @@ import {
   type ChatMessage
 } from '@webgamekit/chat'
 import { dictionaryPickRandom, type DictionaryDifficulty } from '@webgamekit/dictionary'
-import type { StrokeEvent } from '@webgamekit/canvas-editor'
+import type { StrokeEvent, FillEvent } from '@webgamekit/canvas-editor'
 import { usePictionaryStore, type PictionaryPlayer } from '@/stores/pictionary'
 
 const INTERMISSION_MS = 10_000
@@ -28,6 +28,8 @@ const POINTS_DRAWER_PER_GUESS = 25
 const POINTS_MINIMUM = 10
 const CHAT_CHANNEL = 'chat'
 const STROKE_CHANNEL = 'stroke'
+const FILL_CHANNEL = 'fill'
+const CANVAS_RESTORE_CHANNEL = 'canvas-restore'
 const CLEAR_CHANNEL = 'clear'
 const ROUND_CHOICES_CHANNEL = 'round-choices'
 const ROUND_CHANNEL = 'round'
@@ -80,6 +82,8 @@ type UsePictionarySessionOptions = {
   color: string
   roomId: string
   onRemoteStroke: (payload: PictionaryStrokePayload) => void
+  onRemoteFill: (payload: FillEvent) => void
+  onRemoteRestore: (dataUrl: string) => void
   onRemoteClear: () => void
 }
 
@@ -332,6 +336,14 @@ const bindDrawingEvents = (ctx: PictionaryContext, joined: P2PSession): void => 
     if (peerId !== ctx.store.round.drawerId) return
     ctx.options.onRemoteStroke(payload)
   })
+  p2pOnData<FillEvent>(joined, FILL_CHANNEL, (payload, peerId) => {
+    if (peerId !== ctx.store.round.drawerId) return
+    ctx.options.onRemoteFill(payload)
+  })
+  p2pOnData<{ dataUrl: string }>(joined, CANVAS_RESTORE_CHANNEL, (payload, peerId) => {
+    if (peerId !== ctx.store.round.drawerId) return
+    ctx.options.onRemoteRestore(payload.dataUrl)
+  })
   p2pOnData<{ ts: number }>(joined, CLEAR_CHANNEL, (_payload, peerId) => {
     if (peerId !== ctx.store.round.drawerId) return
     ctx.options.onRemoteClear()
@@ -387,6 +399,16 @@ const bindRoundEvents = (ctx: PictionaryContext, joined: P2PSession): void => {
     }
   })
   p2pOnData<{ ts: number }>(joined, RESTART_CHANNEL, () => ctx.applyRestart())
+}
+
+const broadcastFillForContext = (ctx: PictionaryContext, payload: FillEvent): void => {
+  if (!ctx.session.value || !ctx.isDrawer.value) return
+  p2pSendData(ctx.session.value, FILL_CHANNEL, payload)
+}
+
+const broadcastCanvasRestoreForContext = (ctx: PictionaryContext, dataUrl: string): void => {
+  if (!ctx.session.value || !ctx.isDrawer.value) return
+  p2pSendData(ctx.session.value, CANVAS_RESTORE_CHANNEL, { dataUrl })
 }
 
 /**
@@ -483,6 +505,11 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
     p2pSendData(session.value, STROKE_CHANNEL, payload)
   }
 
+  const broadcastFill = (payload: FillEvent): void => broadcastFillForContext(ctx, payload)
+
+  const broadcastCanvasRestore = (dataUrl: string): void =>
+    broadcastCanvasRestoreForContext(ctx, dataUrl)
+
   const broadcastClear = (): void => {
     if (!session.value || !isDrawer.value) return
     p2pSendData(session.value, CLEAR_CHANNEL, { ts: Date.now() })
@@ -526,6 +553,8 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
     isDrawer,
     broadcastChat,
     broadcastStroke,
+    broadcastFill,
+    broadcastCanvasRestore,
     broadcastClear,
     startRound,
     pickWord,

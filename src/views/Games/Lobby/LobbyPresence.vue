@@ -9,7 +9,6 @@ const playerList = computed(() => Object.values(store.players))
 
 <template>
   <div class="lb-presence">
-    <h3 class="lb-presence__title">Online ({{ playerList.length }})</h3>
     <ul class="lb-presence__list">
       <li v-for="player in playerList" :key="player.id" class="lb-presence__player">
         <span class="lb-presence__dot" :style="{ background: player.color }" />
@@ -24,8 +23,7 @@ const playerList = computed(() => Object.values(store.players))
 
 <style scoped>
 .lb-presence {
-  padding: var(--spacing-3);
-  border-bottom: 3px solid #111;
+  padding: 0 var(--spacing-3) var(--spacing-2);
 }
 
 .lb-presence__title {
