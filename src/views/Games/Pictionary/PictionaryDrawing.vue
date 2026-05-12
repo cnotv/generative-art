@@ -91,6 +91,8 @@ defineExpose({
 }
 
 .pictionary-drawing :deep(.canvas-editor-canvas) {
+  flex-grow: 0;
+  height: auto;
   border: 3px solid #111;
   border-radius: 1.25rem;
   box-shadow: 3px 3px 0 #111;
