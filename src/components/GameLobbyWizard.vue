@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useSlots } from 'vue'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
@@ -71,6 +71,10 @@ const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
   const raw = (event.target as HTMLInputElement | HTMLSelectElement).value
   emit('configChange', field.key, field.type === 'number' ? Number(raw) : raw)
 }
+
+const slots = useSlots()
+const hasRules = computed(() => !!slots.rules)
+const rulesOpen = ref(false)
 
 watch(
   () => props.isHost,
@@ -280,6 +284,12 @@ watch(
         <button v-if="step > 1" class="glw__btn glw__btn--ghost" type="button" @click="goBack">
           ← Back
         </button>
+        <div v-if="hasRules" class="glw__rules">
+          <button class="glw__rules-btn" type="button" @click="rulesOpen = !rulesOpen">?</button>
+          <div v-if="rulesOpen" class="glw__rules-panel">
+            <slot name="rules" />
+          </div>
+        </div>
         <span class="glw__nav-spacer" />
         <button
           v-if="step < totalSteps"
@@ -608,6 +618,50 @@ watch(
 
 .glw__nav-spacer {
   flex: 1;
+}
+
+.glw__rules {
+  position: relative;
+}
+
+.glw__rules-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 0.875rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  font-family: inherit;
+}
+
+.glw__rules-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
+}
+
+.glw__rules-panel {
+  position: absolute;
+  bottom: calc(100% + var(--spacing-2));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: #fff;
+  border: 2px solid #111;
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0 #111;
+  width: 18rem;
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: #111;
 }
 
 .glw__start-btn {

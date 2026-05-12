@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const RULES_SEEN_KEY = 'game-rules-seen'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 defineProps<{
   roomId: string
@@ -11,50 +10,26 @@ const emit = defineEmits<{
   copyLink: []
 }>()
 
-const rulesOpen = ref(false)
-
-onMounted(() => {
-  if (!localStorage.getItem(RULES_SEEN_KEY)) {
-    rulesOpen.value = true
-    localStorage.setItem(RULES_SEEN_KEY, '1')
-  }
-})
-
-const closeRules = (): void => {
-  rulesOpen.value = false
-}
+const route = useRoute()
+const router = useRouter()
+const fromLobby = computed(() => !!route.query.game)
 </script>
 
 <template>
   <header class="wm-header">
     <div class="wm-header__room">
-      <span class="wm-header__room-label">Room:</span>
-      <code class="wm-header__room-id">{{ roomId.slice(0, 8) }}</code>
-      <button class="wm-header__copy-btn" type="button" @click="emit('copyLink')">Copy link</button>
-      <div class="wm-header__rules">
-        <button
-          class="wm-header__rules-btn"
-          type="button"
-          title="How to play"
-          @click="rulesOpen = !rulesOpen"
-        >
-          ?
+      <template v-if="fromLobby">
+        <button class="wm-header__lobby-btn" type="button" @click="router.replace({ query: {} })">
+          ← Lobby
         </button>
-        <div v-if="rulesOpen" class="wm-header__rules-panel">
-          <button class="wm-header__rules-close" type="button" @click="closeRules">×</button>
-          <ul class="wm-header__rules-list">
-            <li>A grid of letters hides several target words — grouped by length</li>
-            <li>
-              <strong>Click and drag</strong> through adjacent letters (diagonals OK) to trace a
-              word
-            </li>
-            <li>Release to submit — if the word is in the list, you claim it</li>
-            <li>First to claim a word gets the points</li>
-            <li>3–4 letters = 1 pt · 5 = 2 pt · 6 = 3 pt · 7 = 5 pt · 8+ = 11 pt</li>
-            <li>Round ends when all words are found or time runs out</li>
-          </ul>
-        </div>
-      </div>
+      </template>
+      <template v-else>
+        <span class="wm-header__room-label">Room:</span>
+        <code class="wm-header__room-id">{{ roomId.slice(0, 8) }}</code>
+        <button class="wm-header__copy-btn" type="button" @click="emit('copyLink')">
+          Copy link
+        </button>
+      </template>
     </div>
   </header>
 </template>
@@ -75,6 +50,25 @@ const closeRules = (): void => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+}
+
+.wm-header__lobby-btn {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  font-family: inherit;
+}
+
+.wm-header__lobby-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
 }
 
 .wm-header__room-label {

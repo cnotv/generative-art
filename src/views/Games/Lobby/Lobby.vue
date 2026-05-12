@@ -11,7 +11,6 @@ import {
   NAME_ANIMALS
 } from '@/utils/playerProfile'
 import { useLobbySession } from './useLobbySession'
-import { useLobbyStore } from '@/stores/lobby'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
@@ -59,8 +58,6 @@ const activeGame = computed(() => route.query.game as GameType | undefined)
 const activeComponent = computed(() =>
   activeGame.value ? GAME_COMPONENTS[activeGame.value] : null
 )
-const lobbyPlayers = computed(() => Object.values(lobbyStore.players))
-
 // Watch the active game's player list to keep the lobby room count current
 const gamePlayerList = computed(() => {
   if (activeGame.value === 'Pictionary') return pictionaryStore.playerList
@@ -77,6 +74,19 @@ watch(
   },
   { deep: true }
 )
+
+// Auto-close own lobby room when navigating away from a game
+watch(activeGame, (game, previous) => {
+  if (previous && !game) {
+    closeRoom()
+    const fresh = loadProfile()
+    if (fresh) {
+      playerName.value = fresh.name
+      playerColor.value = fresh.color
+      updateProfile(fresh.name, fresh.color)
+    }
+  }
+})
 
 onMounted(() => {
   saveProfile(playerName.value, playerColor.value)
@@ -114,36 +124,10 @@ const handleJoin = (room: LobbyRoom): void => {
   if (ownRoom.value) closeRoom()
   router.replace({ query: { game: room.game, room: room.id } })
 }
-
-const handleLeave = (): void => {
-  closeRoom()
-  router.replace({ query: {} })
-  // Re-sync profile in case the embedded game changed it
-  const fresh = loadProfile()
-  if (fresh && (fresh.name !== playerName.value || fresh.color !== playerColor.value)) {
-    playerName.value = fresh.name
-    playerColor.value = fresh.color
-    updateProfile(fresh.name, fresh.color)
-  }
-}
 </script>
 
 <template>
   <div class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
-    <!-- Compact top bar shown only while a game is embedded -->
-    <div v-if="activeComponent" class="lobby__game-bar">
-      <button class="lobby__leave-btn" type="button" @click="handleLeave">← Lobby</button>
-      <div class="lobby__game-bar-players">
-        <span
-          v-for="player in lobbyPlayers"
-          :key="player.id"
-          class="lobby__game-bar-dot"
-          :style="{ background: player.color }"
-          :title="player.name"
-        />
-      </div>
-    </div>
-
     <!-- Main content area -->
     <main class="lobby__main">
       <div v-if="activeComponent" class="lobby__game-embed">
@@ -234,33 +218,6 @@ const handleLeave = (): void => {
 .lobby--in-game {
   grid-template-columns: 1fr;
   grid-template-areas: 'main';
-  grid-template-rows: auto 1fr;
-}
-
-/* Top bar when game is embedded */
-.lobby__game-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-2) var(--spacing-3);
-  border-bottom: 3px solid #111;
-  background: #fff7e6;
-  flex-shrink: 0;
-}
-
-.lobby__game-bar-players {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.lobby__game-bar-dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 50%;
-  border: 2px solid #111;
-  display: inline-block;
-  flex-shrink: 0;
 }
 
 .lobby__main {
@@ -343,26 +300,6 @@ const handleLeave = (): void => {
   overflow: auto;
   min-height: 0;
   --nav-height: 0px;
-}
-
-.lobby__leave-btn {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #111;
-  border-radius: 999px;
-  background: #fff7e6;
-  color: #111;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
-  transition: transform 0.1s ease;
-  font-family: inherit;
-  flex-shrink: 0;
-}
-
-.lobby__leave-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
 }
 
 /* Sidebar */

@@ -49,7 +49,7 @@ const emit = defineEmits<{
 }
 
 .lb-room-card:hover {
-  background: var(--color-muted);
+  background: #ffefc0;
 }
 
 .lb-room-card--own {

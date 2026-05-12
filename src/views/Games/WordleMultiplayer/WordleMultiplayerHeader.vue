@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const RULES_SEEN_KEY = 'game-rules-seen'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 defineProps<{
   roomId: string
@@ -11,48 +10,26 @@ const emit = defineEmits<{
   copyLink: []
 }>()
 
-const rulesOpen = ref(false)
-
-onMounted(() => {
-  if (!localStorage.getItem(RULES_SEEN_KEY)) {
-    rulesOpen.value = true
-    localStorage.setItem(RULES_SEEN_KEY, '1')
-  }
-})
-
-const closeRules = (): void => {
-  rulesOpen.value = false
-}
+const route = useRoute()
+const router = useRouter()
+const fromLobby = computed(() => !!route.query.game)
 </script>
 
 <template>
   <header class="wl-header">
     <div class="wl-header__room">
-      <span class="wl-header__room-label">Room:</span>
-      <code class="wl-header__room-id">{{ roomId.slice(0, 8) }}</code>
-      <button class="wl-header__copy-btn" type="button" @click="emit('copyLink')">Copy link</button>
-      <div class="wl-header__rules">
-        <button
-          class="wl-header__rules-btn"
-          type="button"
-          title="How to play"
-          @click="rulesOpen = !rulesOpen"
-        >
-          ?
+      <template v-if="fromLobby">
+        <button class="wl-header__lobby-btn" type="button" @click="router.replace({ query: {} })">
+          ← Lobby
         </button>
-        <div v-if="rulesOpen" class="wl-header__rules-panel">
-          <button class="wl-header__rules-close" type="button" @click="closeRules">×</button>
-          <ul class="wl-header__rules-list">
-            <li>Guess the secret word — all players guess simultaneously</li>
-            <li>
-              Green = correct letter and position · Yellow = letter in word but wrong position
-            </li>
-            <li>Fewer attempts and faster guesses earn more points</li>
-            <li>First to solve gets a bonus</li>
-            <li>Round ends when everyone finishes or time runs out</li>
-          </ul>
-        </div>
-      </div>
+      </template>
+      <template v-else>
+        <span class="wl-header__room-label">Room:</span>
+        <code class="wl-header__room-id">{{ roomId.slice(0, 8) }}</code>
+        <button class="wl-header__copy-btn" type="button" @click="emit('copyLink')">
+          Copy link
+        </button>
+      </template>
     </div>
   </header>
 </template>
@@ -73,6 +50,25 @@ const closeRules = (): void => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+}
+
+.wl-header__lobby-btn {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111;
+  transition: transform 0.1s ease;
+  font-family: inherit;
+}
+
+.wl-header__lobby-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #111;
 }
 
 .wl-header__room-label {
