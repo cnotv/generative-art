@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, useSlots } from 'vue'
+import { useRoute } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
@@ -28,8 +29,17 @@ const emit = defineEmits<{
   leaveRoom: []
 }>()
 
+const route = useRoute()
+const fromLobby = computed(() => !!route.query.game)
+
 const step = ref(1)
-const totalSteps = computed(() => (props.isHost ? 3 : 2))
+// From lobby: matchmaking step is skipped. Host: profile + settings (2). Guest: profile only (1).
+const totalSteps = computed(() => {
+  if (fromLobby.value) return props.isHost ? 2 : 1
+  return props.isHost ? 3 : 2
+})
+// Maps visual step to content slot: when fromLobby, step 2 shows settings (slot 3).
+const contentStep = computed(() => (fromLobby.value && step.value === 2 ? 3 : step.value))
 const required = computed(() => props.minPlayers ?? 2)
 
 const {
@@ -52,7 +62,10 @@ const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
 }
 
 const canGoNext = computed(() => {
-  if (step.value === 2 && props.isHost) return props.playerList.length >= required.value
+  // Require minimum players only on the matchmaking step (step 2 when NOT from lobby)
+  if (step.value === 2 && props.isHost && !fromLobby.value) {
+    return props.playerList.length >= required.value
+  }
   return step.value < totalSteps.value
 })
 
@@ -97,7 +110,7 @@ watch(
       </div>
 
       <!-- Step 1: Profile -->
-      <div v-if="step === 1" class="glw__body">
+      <div v-if="contentStep === 1" class="glw__body">
         <h3 class="glw__step-title">Your profile</h3>
         <input
           :value="playerName"
@@ -126,8 +139,8 @@ watch(
         </div>
       </div>
 
-      <!-- Step 2: Matchmaker (host) / Waiting (guest) -->
-      <div v-else-if="step === 2" class="glw__body">
+      <!-- Step 2: Matchmaker (host) / Waiting (guest) — skipped when fromLobby -->
+      <div v-else-if="contentStep === 2" class="glw__body">
         <template v-if="isHost">
           <h3 class="glw__step-title">Find players</h3>
           <div class="glw__players">
@@ -242,8 +255,8 @@ watch(
         </template>
       </div>
 
-      <!-- Step 3: Settings (host only) -->
-      <div v-else-if="step === 3" class="glw__body">
+      <!-- Step 3: Settings (host only) — also shown as step 2 when fromLobby -->
+      <div v-else-if="contentStep === 3" class="glw__body">
         <h3 class="glw__step-title">Game settings</h3>
         <div class="glw__players">
           <span class="glw__player-count">{{ playerList.length }} players ready</span>
