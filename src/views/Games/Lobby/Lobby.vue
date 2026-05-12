@@ -203,12 +203,11 @@ const handleJoin = (room: LobbyRoom): void => {
   --lb-blue: #4ecdc4;
   --lb-orange: #ff8c42;
 
-  padding-top: var(--nav-height);
-  box-sizing: border-box;
   display: grid;
   grid-template-columns: 1fr 280px;
   grid-template-areas: 'main sidebar';
   height: 100dvh;
+  box-sizing: border-box;
   overflow: hidden;
   background: #fff7e6;
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
@@ -241,6 +240,7 @@ const handleJoin = (room: LobbyRoom): void => {
   justify-content: center;
   gap: var(--spacing-4);
   padding: var(--spacing-4);
+  padding-top: var(--nav-height);
 }
 
 .lobby__picker-label {
@@ -298,7 +298,12 @@ const handleJoin = (room: LobbyRoom): void => {
   flex: 1;
   overflow: auto;
   min-height: 0;
-  --nav-height: 0px;
+}
+
+.lobby__game-embed :deep(.wm),
+.lobby__game-embed :deep(.wl),
+.lobby__game-embed :deep(.pictionary) {
+  padding-top: var(--nav-height);
 }
 
 /* Sidebar */
@@ -308,6 +313,7 @@ const handleJoin = (room: LobbyRoom): void => {
   flex-direction: column;
   overflow: hidden;
   background: #fffbf0;
+  padding-top: var(--nav-height);
 }
 
 .lobby__profile {
@@ -390,6 +396,7 @@ const handleJoin = (room: LobbyRoom): void => {
 
   .lobby__sidebar {
     max-height: 50dvh;
+    padding-top: 0;
   }
 
   .lobby__picker-games {
