@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent, storeToRefs } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import {
