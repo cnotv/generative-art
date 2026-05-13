@@ -16,7 +16,6 @@ const props = defineProps<{
   matchmakerRoom: string
   configFields: LobbyConfigField[]
   accentColor: string
-  minPlayers?: number
 }>()
 
 const emit = defineEmits<{
@@ -33,7 +32,6 @@ const route = useRoute()
 const fromLobby = computed(() => !!route.query.game)
 
 const step = ref(1)
-const soloMode = ref(false)
 // From lobby: matchmaking step is skipped. Host: profile + settings (2). Guest: profile only (1).
 const totalSteps = computed(() => {
   if (fromLobby.value) return props.isHost ? 2 : 1
@@ -41,7 +39,6 @@ const totalSteps = computed(() => {
 })
 // Maps visual step to content slot: when fromLobby, step 2 shows settings (slot 3).
 const contentStep = computed(() => (fromLobby.value && step.value === 2 ? 3 : step.value))
-const required = computed(() => (soloMode.value ? 1 : (props.minPlayers ?? 2)))
 
 const {
   isSearching,
@@ -62,21 +59,10 @@ const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
   if (gameRoomId) emit('matchFound', gameRoomId)
 }
 
-const canGoNext = computed(() => {
-  // Require minimum players only on the matchmaking step (step 2 when NOT from lobby)
-  if (step.value === 2 && props.isHost && !fromLobby.value) {
-    return props.playerList.length >= required.value
-  }
-  return step.value < totalSteps.value
-})
+const canGoNext = computed(() => step.value < totalSteps.value)
 
 const goNext = (): void => {
   if (step.value < totalSteps.value) step.value++
-}
-
-const playSolo = (): void => {
-  soloMode.value = true
-  goNext()
 }
 
 const goBack = (): void => {
@@ -150,10 +136,7 @@ watch(
         <template v-if="isHost">
           <h3 class="glw__step-title">Find players</h3>
           <div class="glw__players">
-            <span class="glw__player-count">
-              {{ playerList.length }} /
-              {{ playerList.length < required ? `${required}+` : playerList.length }} players
-            </span>
+            <span class="glw__player-count">{{ playerList.length }} players</span>
             <span
               v-for="player in playerList"
               :key="player.id"
@@ -164,21 +147,10 @@ watch(
           </div>
 
           <template v-if="!isSearching">
-            <p v-if="playerList.length < required" class="glw__hint">No one else here yet.</p>
+            <p v-if="playerList.length < 2" class="glw__hint">No one else here yet.</p>
             <div class="glw__actions">
               <button class="glw__btn" type="button" @click="startSearching">
                 Search for players
-              </button>
-              <button class="glw__btn glw__btn--ghost" type="button" @click="playSolo">
-                Play Solo
-              </button>
-              <button
-                v-if="playerList.length >= required"
-                class="glw__btn glw__btn--ghost"
-                type="button"
-                @click="emit('leaveRoom')"
-              >
-                Leave room
               </button>
             </div>
           </template>
@@ -214,14 +186,6 @@ watch(
             <div class="glw__actions">
               <button class="glw__btn glw__btn--ghost" type="button" @click="stopSearching">
                 Stop searching
-              </button>
-              <button
-                v-if="playerList.length >= required"
-                class="glw__btn glw__btn--ghost"
-                type="button"
-                @click="emit('leaveRoom')"
-              >
-                Leave room
               </button>
             </div>
           </template>
@@ -326,7 +290,7 @@ watch(
           v-else-if="isHost"
           class="glw__start-btn"
           type="button"
-          :disabled="playerList.length < required"
+          :disabled="false"
           @click="emit('startGame')"
         >
           Start
