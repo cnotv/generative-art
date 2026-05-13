@@ -5,6 +5,25 @@ import { getTools, getModel } from '@webgamekit/threejs'
 import { updateAnimation, createTimelineManager } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
 
+let gltfLoader: import('three/examples/jsm/loaders/GLTFLoader').GLTFLoader | null = null
+let fbxLoader: import('three/examples/jsm/loaders/FBXLoader').FBXLoader | null = null
+
+const getGltfLoader = async () => {
+  if (!gltfLoader) {
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
+    gltfLoader = new GLTFLoader()
+  }
+  return gltfLoader
+}
+
+const getFbxLoader = async () => {
+  if (!fbxLoader) {
+    const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader')
+    fbxLoader = new FBXLoader()
+  }
+  return fbxLoader
+}
+
 const chameleonConfig = {
   position: [0, -0.75, 0],
   scale: [0.05, 0.05, 0.05],
@@ -376,8 +395,7 @@ const loadModelManually = async () => {
 
   return new Promise((resolve, reject) => {
     if (isGLTF) {
-      import('three/examples/jsm/loaders/GLTFLoader').then(({ GLTFLoader }) => {
-        const loader = new GLTFLoader()
+      getGltfLoader().then((loader) => {
         loader.load(
           modelPath.value,
           (gltf) => {
@@ -436,8 +454,7 @@ const loadModelManually = async () => {
       })
     } else {
       // FBX file
-      import('three/examples/jsm/loaders/FBXLoader').then(({ FBXLoader }) => {
-        const loader = new FBXLoader()
+      getFbxLoader().then((loader) => {
         loader.load(
           modelPath.value,
           (fbx) => {
@@ -606,8 +623,7 @@ const onAnimationFileChange = async (event) => {
     if (chameleonModel && chameleonModel.mixer) {
       if (isGLTF) {
         // Load GLTF/GLB animations
-        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-        const loader = new GLTFLoader()
+        const loader = await getGltfLoader()
 
         loader.load(fileUrl, (gltf) => {
           if (gltf.animations && gltf.animations.length > 0) {
@@ -633,8 +649,7 @@ const onAnimationFileChange = async (event) => {
         })
       } else {
         // Load FBX animations
-        const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader')
-        const loader = new FBXLoader()
+        const loader = await getFbxLoader()
 
         loader.load(fileUrl, (animationFbx) => {
           // Stop all current animations

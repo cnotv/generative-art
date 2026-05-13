@@ -46,8 +46,9 @@ const earthGazerConfig = {
   light: [255, 255, 255]
 }
 
+const textureLoader = new THREE.TextureLoader()
+
 const getTexture = (img: string) => {
-  const textureLoader = new THREE.TextureLoader()
   const texture = textureLoader.load(img)
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
@@ -58,7 +59,6 @@ const getTexture = (img: string) => {
 
 const buildEarthMesh = (config: typeof earthGazerConfig) => {
   const earthGeometry = new THREE.SphereGeometry(config.earthSize, 32, 32)
-  const textureLoader = new THREE.TextureLoader()
   const earthMaterial = new THREE.ShaderMaterial({
     uniforms: {
       earthDayTexture: { value: textureLoader.load(earthDay) },

@@ -31,6 +31,8 @@ import {
 } from '@webgamekit/multiplayer-p2p'
 import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
 import TextureEditor from './TextureEditor.vue'
+
+const textureLoader = new THREE.TextureLoader()
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -486,7 +488,7 @@ const init = async (): Promise<void> => {
       p2pOnData<{ dataUrl: string }>(session, P2P_TEXTURE_CHANNEL, (payload, peerId) => {
         const model = remoteModels.get(peerId)
         if (!model) return
-        const texture = new THREE.TextureLoader().load(payload.dataUrl)
+        const texture = textureLoader.load(payload.dataUrl)
         model.traverse((child: THREE.Object3D) => {
           const mesh = child as THREE.Mesh
           if (!mesh.isMesh) return

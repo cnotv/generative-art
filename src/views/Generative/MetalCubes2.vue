@@ -29,7 +29,8 @@ const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
 const urls = cubeFaces.map(
   (code) => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href
 )
-const reflection = new THREE.CubeTextureLoader().load(urls)
+const cubeTextureLoader = new THREE.CubeTextureLoader()
+const reflection = cubeTextureLoader.load(urls)
 
 onMounted(() => {
   ;(init(

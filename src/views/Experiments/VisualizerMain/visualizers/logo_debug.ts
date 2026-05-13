@@ -116,8 +116,7 @@ export const boxVisualizer: VisualizerSetup = {
     bgTexture.mapping = THREE.EquirectangularReflectionMapping
     scene.background = bgTexture
 
-    const textureLoader2 = new THREE.TextureLoader()
-    const bgTexture2 = textureLoader2.load(streetBg)
+    const bgTexture2 = textureLoader.load(streetBg)
     bgTexture2.mapping = THREE.EquirectangularReflectionMapping
     scene.environment = bgTexture2
 
