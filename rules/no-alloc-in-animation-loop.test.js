@@ -7,6 +7,8 @@ const tester = new RuleTester({
 
 tester.run('no-alloc-in-animation-loop', rule, {
   valid: [
+    // ── Context 1: timeline action callbacks ──────────────────────────────
+
     // new outside action callback is fine
     {
       code: `
@@ -23,48 +25,137 @@ tester.run('no-alloc-in-animation-loop', rule, {
     },
     // new for non-Three.js types inside action is fine
     {
-      code: `
-        addAction({ action: () => { const map = new Map() } })
-      `
+      code: `addAction({ action: () => { const map = new Map() } })`
     },
     // unrelated function named action is fine
     {
+      code: `doSomething({ action: () => { const v = new Vector3() } })`
+    },
+
+    // ── Context 2: browser loop callbacks ─────────────────────────────────
+
+    // new outside requestAnimationFrame callback
+    {
       code: `
-        doSomething({ action: () => { const v = new Vector3() } })
+        const v = new Vector3()
+        requestAnimationFrame(() => { v.set(1, 0, 0) })
       `
+    },
+    // non-Three.js allocation inside rAF is fine
+    {
+      code: `requestAnimationFrame(() => { const arr = new Array(10) })`
+    },
+    // new outside setInterval callback
+    {
+      code: `
+        const color = new Color(0xff0000)
+        setInterval(() => { mesh.material.color.copy(color) }, 16)
+      `
+    },
+
+    // ── Context 3: named animation functions ──────────────────────────────
+
+    // new inside a function with a non-animation name
+    {
+      code: `function setup() { const v = new Vector3() }`
+    },
+    // new inside an arrow function not assigned to an animation name
+    {
+      code: `const init = () => { const m = new Matrix4() }`
+    },
+    // custom animationFunctionNames option — default names no longer flagged
+    {
+      code: `function animate() { const v = new Vector3() }`,
+      options: [{ animationFunctionNames: ['tick'] }]
     }
   ],
 
   invalid: [
-    // new Vector3 inside addAction
+    // ── Context 1: timeline action callbacks ──────────────────────────────
+
     {
       code: `addAction({ action: () => { const v = new Vector3(1, 0, 0) } })`,
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
     },
-    // new Matrix4 inside addAction
     {
       code: `addAction({ action: () => { const m = new Matrix4() } })`,
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Matrix4' } }]
     },
-    // .clone() inside addAction
     {
       code: `addAction({ action: () => { const d = velocity.clone() } })`,
       errors: [{ messageId: 'noCloneInLoop' }]
     },
-    // new Vector3 inside addActions array element
     {
       code: `addActions([{ action: () => { const v = new Vector3() } }])`,
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
     },
-    // method call form: timelineManager.addAction
     {
       code: `timelineManager.addAction({ action: () => { const q = new Quaternion() } })`,
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Quaternion' } }]
     },
-    // .clone() via method call form
     {
       code: `timelineManager.addAction({ action: () => { enemy.position.clone() } })`,
       errors: [{ messageId: 'noCloneInLoop' }]
+    },
+
+    // ── Context 2: requestAnimationFrame callback ─────────────────────────
+
+    {
+      code: `requestAnimationFrame(() => { const v = new Vector3() })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
+    },
+    {
+      code: `requestAnimationFrame(() => { const e = new Euler() })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Euler' } }]
+    },
+    {
+      code: `requestAnimationFrame(() => { const c = position.clone() })`,
+      errors: [{ messageId: 'noCloneInLoop' }]
+    },
+    // nested arrow inside rAF still flagged
+    {
+      code: `requestAnimationFrame(() => { objects.forEach(() => { const m = new Matrix4() }) })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Matrix4' } }]
+    },
+
+    // ── Context 2: setInterval callback ──────────────────────────────────
+
+    {
+      code: `setInterval(() => { const q = new Quaternion() }, 16)`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Quaternion' } }]
+    },
+    {
+      code: `setInterval(() => { const d = dir.clone() }, 100)`,
+      errors: [{ messageId: 'noCloneInLoop' }]
+    },
+
+    // ── Context 3: named animation functions ──────────────────────────────
+
+    // function declaration
+    {
+      code: `function animate() { const v = new Vector3() }`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
+    },
+    // arrow assigned to variable named tick
+    {
+      code: `const tick = () => { const m = new Matrix4() }`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Matrix4' } }]
+    },
+    // function expression assigned to variable named update
+    {
+      code: `const update = function() { position.clone() }`,
+      errors: [{ messageId: 'noCloneInLoop' }]
+    },
+    // method shorthand named onFrame
+    {
+      code: `const obj = { onFrame() { const e = new Euler() } }`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Euler' } }]
+    },
+    // custom animationFunctionNames option
+    {
+      code: `function tick() { const v = new Vector3() }`,
+      options: [{ animationFunctionNames: ['tick'] }],
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
     }
   ]
 })
