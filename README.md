@@ -2,6 +2,15 @@
 
 A monorepo containing **WebGameKit** - a framework-agnostic toolkit for creating 3D games, environments, and animations - along with a personal playground for generative art and Three.js experiments.
 
+## Performance
+
+Scores measured by [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) against the live site after each deploy to GitHub Pages.
+
+[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-performance.json)](https://cnotv.github.io/generative-art/)
+[![Accessibility](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-accessibility.json)](https://cnotv.github.io/generative-art/)
+[![Best Practices](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-best-practices.json)](https://cnotv.github.io/generative-art/)
+[![SEO](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-seo.json)](https://cnotv.github.io/generative-art/)
+
 ## 🎮 Live Demo
 
 **Main App**: [https://cnotv.github.io/generative-art/](https://cnotv.github.io/generative-art/)
@@ -10,13 +19,13 @@ A monorepo containing **WebGameKit** - a framework-agnostic toolkit for creating
 
 ## 📦 Packages
 
-| Package | Description |
-|---------|-------------|
-| [@webgamekit/threejs](./packages/threejs) | Three.js + Rapier physics integration |
-| [@webgamekit/controls](./packages/controls) | Multi-input controller (keyboard, gamepad, touch) |
-| [@webgamekit/animation](./packages/animation) | Timeline-based animation system |
-| [@webgamekit/game](./packages/game) | Reactive game state management |
-| [@webgamekit/audio](./packages/audio) | Audio playback utilities |
+| Package                                       | Description                                       |
+| --------------------------------------------- | ------------------------------------------------- |
+| [@webgamekit/threejs](./packages/threejs)     | Three.js + Rapier physics integration             |
+| [@webgamekit/controls](./packages/controls)   | Multi-input controller (keyboard, gamepad, touch) |
+| [@webgamekit/animation](./packages/animation) | Timeline-based animation system                   |
+| [@webgamekit/game](./packages/game)           | Reactive game state management                    |
+| [@webgamekit/audio](./packages/audio)         | Audio playback utilities                          |
 
 ## 🚀 Quick Start
 
@@ -54,15 +63,15 @@ pnpm docs:build
 
 ### Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start development server |
-| `pnpm host` | Start dev server accessible on network |
-| `pnpm build` | Build for production |
-| `pnpm test:unit` | Run unit tests |
-| `pnpm lint` | Lint and fix code |
-| `pnpm docs:dev` | Start documentation server |
-| `pnpm docs:build` | Build documentation |
+| Command           | Description                            |
+| ----------------- | -------------------------------------- |
+| `pnpm dev`        | Start development server               |
+| `pnpm host`       | Start dev server accessible on network |
+| `pnpm build`      | Build for production                   |
+| `pnpm test:unit`  | Run unit tests                         |
+| `pnpm lint`       | Lint and fix code                      |
+| `pnpm docs:dev`   | Start documentation server             |
+| `pnpm docs:build` | Build documentation                    |
 
 ### Project Structure
 

@@ -1,0 +1,52 @@
+name: Lighthouse
+
+on:
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lighthouse:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: https://cnotv.github.io/generative-art/
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+        id: lighthouse
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate badge JSON files
+        run: |
+          REPORT=$(ls .lighthouseci/lhr-*.json | head -1)
+          node scripts/generate-lighthouse-badges.mjs "$REPORT"
+
+      - name: Commit badge files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add badges/
+          git diff --cached --quiet || git commit -m "chore: update Lighthouse performance badges [skip ci]"
+          git push
