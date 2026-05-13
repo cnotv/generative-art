@@ -262,13 +262,16 @@ onUnmounted(() => {
               'wm-game__grid-cell--selected': isInPath(rowIndex, colIndex),
               'wm-game__grid-cell--first': pathIndex(rowIndex, colIndex) === 0
             }"
-            :data-row="rowIndex"
-            :data-col="colIndex"
-            @pointerdown="handlePointerDown($event, rowIndex, colIndex)"
-            @pointerenter="handlePointerEnter(rowIndex, colIndex)"
-            @touchstart.prevent="startSelection(rowIndex, colIndex)"
           >
             {{ letter }}
+            <span
+              class="wm-game__grid-cell-hit"
+              :data-row="rowIndex"
+              :data-col="colIndex"
+              @pointerdown="handlePointerDown($event, rowIndex, colIndex)"
+              @pointerenter="handlePointerEnter(rowIndex, colIndex)"
+              @touchstart.prevent="startSelection(rowIndex, colIndex)"
+            />
           </div>
         </div>
       </div>
@@ -384,7 +387,6 @@ onUnmounted(() => {
   background: var(--game-surface-subtle);
   box-shadow: 2px 2px 0 var(--game-border);
   text-transform: uppercase;
-  cursor: pointer;
   touch-action: none;
   transition:
     background 0.08s ease,
@@ -392,14 +394,12 @@ onUnmounted(() => {
   position: relative;
 }
 
-.wm-game__grid-cell::after {
-  content: '';
+/* Invisible hit zone — smaller than the tile to create dead space between adjacent cells */
+.wm-game__grid-cell-hit {
   position: absolute;
-  inset: -5px;
-}
-
-.wm-game__grid-cell:hover {
-  background: var(--game-surface-subtle);
+  inset: 20%;
+  cursor: pointer;
+  touch-action: none;
 }
 
 .wm-game__grid-cell--selected {
