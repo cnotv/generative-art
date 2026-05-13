@@ -5,6 +5,22 @@ import { createElementsChunk } from './elementGenerator'
 const CHUNK_SIZE = 32
 const ELEMENTS_PER_CHUNK = 8
 
+describe('geometry budget', () => {
+  // ConeGeometry/BoxGeometry with default segments are tiny (<50 vertices each).
+  // Budget guards against swapping in high-poly geometry by accident.
+  const ELEMENT_VERTEX_BUDGET = 100
+
+  it(`each element mesh vertex count stays within budget of ${ELEMENT_VERTEX_BUDGET}`, () => {
+    const group = createElementsChunk(0, 0, CHUNK_SIZE, 20)
+
+    group.children.forEach((child) => {
+      const mesh = child as THREE.Mesh
+      const vertexCount = mesh.geometry.getAttribute('position').count
+      expect(vertexCount).toBeLessThan(ELEMENT_VERTEX_BUDGET)
+    })
+  })
+})
+
 describe('createElementsChunk', () => {
   describe('group properties', () => {
     it.each([

@@ -7,6 +7,26 @@ import { generateMazeAndSegments } from './helpers/maze'
 import { logicGetBestRoute } from '@webgamekit/logic'
 import type { ComplexModel } from '@webgamekit/threejs'
 
+describe('geometry budget', () => {
+  // ISLAND_SIZE=80, MAZE_CELL_SIZE=16 → 5×5 grid. Max unique internal wall segments ≈ 80.
+  // Perimeter walls add another ~20. Budget guards against maze size config increases.
+  const MAZE_WALL_SEGMENT_BUDGET = 200
+  // Perimeter wall positions: ISLAND_SIZE/WALL_CELL_SIZE per edge × 4 edges.
+  const PERIMETER_WALL_BUDGET = 100
+
+  it(`maze wall segment count stays within budget of ${MAZE_WALL_SEGMENT_BUDGET}`, () => {
+    const { segments } = generateMazeAndSegments(ISLAND_SIZE, MAZE_CELL_SIZE)
+
+    expect(segments.length).toBeLessThan(MAZE_WALL_SEGMENT_BUDGET)
+  })
+
+  it(`perimeter wall count stays within budget of ${PERIMETER_WALL_BUDGET}`, () => {
+    const positions = generateWallPositions(ISLAND_SIZE, WALL_CELL_SIZE)
+
+    expect(positions.length).toBeLessThan(PERIMETER_WALL_BUDGET)
+  })
+})
+
 describe('generateWallPositions', () => {
   it('returns positions along all 4 edges', () => {
     const positions = generateWallPositions(ISLAND_SIZE, WALL_CELL_SIZE)

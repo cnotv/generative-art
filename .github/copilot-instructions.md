@@ -40,6 +40,22 @@ The project is organized as a **pnpm workspace monorepo**:
 
 ## GitHub Issue Workflow
 
+### Creating epics and subtasks
+
+When breaking a large issue into subtasks, **always use GitHub's native sub-issue feature** instead of only listing references in the body text.
+
+```sh
+# Attach an existing issue as a sub-issue of a parent
+gh api \
+  --method POST \
+  repos/cnotv/generative-art/issues/<parent-number>/sub_issues \
+  -f sub_issue_id=<child-number>
+```
+
+- Create each subtask as a standalone issue first, then attach it as a sub-issue of the epic
+- The parent issue body may still include a checklist (`- [ ] #N — description`) for quick scanning, but the sub-issue relationship must also be set via the API so GitHub tracks progress natively
+- When closing a subtask, the parent epic's progress indicator updates automatically
+
 ### Before Implementation
 
 1. **Sync with main branch**: ALWAYS fetch and rebase main before creating a new branch
