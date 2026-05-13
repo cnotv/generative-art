@@ -33,6 +33,7 @@ const route = useRoute()
 const fromLobby = computed(() => !!route.query.game)
 
 const step = ref(1)
+const soloMode = ref(false)
 // From lobby: matchmaking step is skipped. Host: profile + settings (2). Guest: profile only (1).
 const totalSteps = computed(() => {
   if (fromLobby.value) return props.isHost ? 2 : 1
@@ -40,7 +41,7 @@ const totalSteps = computed(() => {
 })
 // Maps visual step to content slot: when fromLobby, step 2 shows settings (slot 3).
 const contentStep = computed(() => (fromLobby.value && step.value === 2 ? 3 : step.value))
-const required = computed(() => props.minPlayers ?? 2)
+const required = computed(() => (soloMode.value ? 1 : (props.minPlayers ?? 2)))
 
 const {
   isSearching,
@@ -71,6 +72,11 @@ const canGoNext = computed(() => {
 
 const goNext = (): void => {
   if (step.value < totalSteps.value) step.value++
+}
+
+const playSolo = (): void => {
+  soloMode.value = true
+  goNext()
 }
 
 const goBack = (): void => {
@@ -162,6 +168,9 @@ watch(
             <div class="glw__actions">
               <button class="glw__btn" type="button" @click="startSearching">
                 Search for players
+              </button>
+              <button class="glw__btn glw__btn--ghost" type="button" @click="playSolo">
+                Play Solo
               </button>
               <button
                 v-if="playerList.length >= required"
