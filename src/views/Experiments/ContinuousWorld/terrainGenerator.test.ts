@@ -165,4 +165,16 @@ describe('createTerrainChunk', () => {
       expect(material.flatShading).toBe(true)
     })
   })
+
+  describe('geometry budget', () => {
+    // TERRAIN_SEGMENTS=16 → (16+1)²=289 vertices. Budget guards against segment count increases.
+    const TERRAIN_VERTEX_BUDGET = 500
+
+    it(`terrain chunk vertex count stays within budget of ${TERRAIN_VERTEX_BUDGET}`, () => {
+      const mesh = createTerrainChunk(0, 0, 32, { noiseConfig: defaultNoiseConfig })
+      const vertexCount = mesh.geometry.getAttribute('position').count
+
+      expect(vertexCount).toBeLessThan(TERRAIN_VERTEX_BUDGET)
+    })
+  })
 })

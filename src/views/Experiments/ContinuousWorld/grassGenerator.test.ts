@@ -5,6 +5,32 @@ import { createGrassBladeGeometry, createGrassMaterial, createGrassChunk } from 
 const CHUNK_SIZE = 32
 const GRASS_PER_CHUNK = 300
 
+describe('geometry budget', () => {
+  // BLADE_POINTS=10 → 11 rows × 2 vertices = 22. Budget guards against point count increases.
+  const GRASS_BLADE_VERTEX_BUDGET = 60
+  // Instance count per chunk is caller-controlled; budget guards the shared blade geometry only.
+  const GRASS_MAX_INSTANCES_PER_CHUNK = 1000
+
+  it(`grass blade vertex count stays within budget of ${GRASS_BLADE_VERTEX_BUDGET}`, () => {
+    const geometry = createGrassBladeGeometry()
+    const vertexCount = geometry.getAttribute('position').count
+
+    expect(vertexCount).toBeLessThan(GRASS_BLADE_VERTEX_BUDGET)
+  })
+
+  it(`grass chunk instance count stays within budget of ${GRASS_MAX_INSTANCES_PER_CHUNK}`, () => {
+    const geometry = createGrassBladeGeometry()
+    const material = createGrassMaterial()
+    const mesh = createGrassChunk(0, 0, CHUNK_SIZE, {
+      grassPerChunk: GRASS_PER_CHUNK,
+      sharedGeometry: geometry,
+      sharedMaterial: material
+    })
+
+    expect(mesh.count).toBeLessThan(GRASS_MAX_INSTANCES_PER_CHUNK)
+  })
+})
+
 describe('createGrassBladeGeometry', () => {
   it('returns a BufferGeometry with position attribute', () => {
     const geometry = createGrassBladeGeometry()
