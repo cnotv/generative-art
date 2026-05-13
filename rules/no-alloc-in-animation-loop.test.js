@@ -158,6 +158,22 @@ tester.run('no-alloc-in-animation-loop', rule, {
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
     },
 
+    // ── Intermediate variable pattern ─────────────────────────────────────
+
+    // Timeline array defined as a variable, not directly in addActions
+    {
+      code: `
+        const timeline = [{ interval: [100, 100], action: () => { const v = new Vector3() } }]
+        addActions([...timeline])
+      `,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
+    },
+    // Single entry object with timeline sibling
+    {
+      code: `const entry = { start: 0, action: () => { const m = new Matrix4() } }`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'Matrix4' } }]
+    },
+
     // ── Loaders and materials inside loops ────────────────────────────────
 
     // TextureLoader inside rAF — loader must be created once and reused

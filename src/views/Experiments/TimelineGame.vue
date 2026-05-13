@@ -284,23 +284,19 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
           boundary: 0.5,
           color: 0x888888
         })
+        const cubeUp = new THREE.Vector3(0, 0.5, 0)
+        const cubeDown = new THREE.Vector3(0, -0.5, 0)
         const movingCubeTimeline: Timeline[] = [
           {
             interval: [100, 100] as [number, number],
             action: () =>
-              movingCube.userData.body.setTranslation(
-                movingCube.position.add(new THREE.Vector3(0, 0.5, 0)),
-                true
-              )
+              movingCube.userData.body.setTranslation(movingCube.position.add(cubeUp), true)
           },
           {
             interval: [100, 100] as [number, number],
             delay: 100,
             action: () =>
-              movingCube.userData.body.setTranslation(
-                movingCube.position.add(new THREE.Vector3(0, -0.5, 0)),
-                true
-              )
+              movingCube.userData.body.setTranslation(movingCube.position.add(cubeDown), true)
           }
         ]
 

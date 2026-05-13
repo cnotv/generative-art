@@ -87,23 +87,40 @@ const getCalleeName = (callee) => {
 
 // ── Context 1: timeline action callbacks ────────────────────────────────────
 
+// Sibling property keys that indicate an object is a Timeline entry even when
+// not directly passed to addAction/addActions (intermediate variable pattern).
+const TIMELINE_SIBLING_KEYS = new Set(['interval', 'start', 'delay', 'category', 'duration'])
+
 const isActionProperty = (node) =>
   node?.type === 'Property' && node.key?.name === ACTION_PROPERTY_NAME
 
 const isLoopCall = (node) =>
   node?.type === 'CallExpression' && LOOP_FUNCTION_NAMES.has(getCalleeName(node.callee) ?? '')
 
+const isTimelineProperty = (property) =>
+  property.type === 'Property' && TIMELINE_SIBLING_KEYS.has(property.key?.name ?? '')
+
+const hasTimelineSiblings = (objectExpression) =>
+  objectExpression.properties.some(isTimelineProperty)
+
+const isDirectLoopArgument = (objectExpression) => isLoopCall(objectExpression.parent)
+
+const isArrayLoopArgument = (objectExpression) =>
+  objectExpression.parent?.type === 'ArrayExpression' && isLoopCall(objectExpression.parent.parent)
+
+const isTimelineArrayEntry = (objectExpression) =>
+  objectExpression.parent?.type === 'ArrayExpression' && hasTimelineSiblings(objectExpression)
+
 const isInsideActionCallback = (functionNode) => {
   const propertyNode = functionNode.parent
   if (!isActionProperty(propertyNode)) return false
   const objectExpression = propertyNode.parent
   if (!objectExpression || objectExpression.type !== 'ObjectExpression') return false
-  // addAction({ action: fn })
-  if (isLoopCall(objectExpression.parent)) return true
-  // addActions([{ action: fn }])
   return (
-    objectExpression.parent?.type === 'ArrayExpression' &&
-    isLoopCall(objectExpression.parent.parent)
+    isDirectLoopArgument(objectExpression) ||
+    isArrayLoopArgument(objectExpression) ||
+    isTimelineArrayEntry(objectExpression) ||
+    hasTimelineSiblings(objectExpression)
   )
 }
 
