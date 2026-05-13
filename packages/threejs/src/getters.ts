@@ -5,6 +5,8 @@ import { CoordinateTuple, Model } from '@webgamekit/animation'
 import { GeneratedInstanceConfig, InstanceConfig, LightsConfig, PhysicOptions } from './types'
 import { SCENE_DEFAULTS } from './defaults'
 
+const textureLoader = new THREE.TextureLoader()
+
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
  * @param canvas
@@ -463,12 +465,11 @@ export const getSky = (
   }
 ) => {
   const skyGeometry = new THREE.SphereGeometry(size, 32, 32)
-  const loader = new THREE.TextureLoader()
   const skyMaterial = new THREE.MeshBasicMaterial({
     side: THREE.BackSide,
     color,
     ...(texture
-      ? { map: loader.load(new URL(texture!, import.meta.url) as unknown as string) }
+      ? { map: textureLoader.load(new URL(texture!, import.meta.url) as unknown as string) }
       : {})
   })
   const model = new THREE.Mesh(skyGeometry, skyMaterial)
@@ -488,7 +489,6 @@ export const getTextures = (
   repeat: [number, number] = [1, 1],
   offset: [number, number] = [0, 0]
 ) => {
-  const textureLoader = new THREE.TextureLoader()
   const texture = textureLoader.load(img)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping

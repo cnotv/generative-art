@@ -18,6 +18,8 @@ import { updateCamera } from './camera'
 import { deepMerge } from './utils/lodash'
 import { SCENE_DEFAULTS } from './defaults'
 
+const textureLoader = new THREE.TextureLoader()
+
 /**
  * Merge a partial SetupConfig over SCENE_DEFAULTS so every section has complete values.
  * Sections disabled with `false` are preserved as `false`.
@@ -314,7 +316,6 @@ export const instanceMatrixMesh = (
     matrix.compose(positionVector, new THREE.Quaternion().setFromEuler(rotationEuler), scaleVector)
     instancedMesh.setMatrixAt(index, matrix)
     if (textures) {
-      const textureLoader = new THREE.TextureLoader()
       const counter = textures.random
         ? Math.floor(Math.random() * textures.list.length)
         : index % textures.list.length
