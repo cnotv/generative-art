@@ -4,8 +4,7 @@ import { times } from './utils/lodash'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
 import { GeneratedInstanceConfig, InstanceConfig, LightsConfig, PhysicOptions } from './types'
 import { SCENE_DEFAULTS } from './defaults'
-
-const textureLoader = new THREE.TextureLoader()
+import { textureLoader } from './loaders'
 
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.

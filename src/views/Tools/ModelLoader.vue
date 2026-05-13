@@ -1,28 +1,9 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import * as THREE from 'three'
-import { getTools, getModel } from '@webgamekit/threejs'
+import { getTools, getModel, gltfLoader, fbxLoader } from '@webgamekit/threejs'
 import { updateAnimation, createTimelineManager } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
-
-let gltfLoader: import('three/examples/jsm/loaders/GLTFLoader').GLTFLoader | null = null
-let fbxLoader: import('three/examples/jsm/loaders/FBXLoader').FBXLoader | null = null
-
-const getGltfLoader = async () => {
-  if (!gltfLoader) {
-    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    gltfLoader = new GLTFLoader()
-  }
-  return gltfLoader
-}
-
-const getFbxLoader = async () => {
-  if (!fbxLoader) {
-    const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader')
-    fbxLoader = new FBXLoader()
-  }
-  return fbxLoader
-}
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -393,126 +374,123 @@ const loadModelManually = async () => {
   const fileName = modelFile.value.name.toLowerCase()
   const isGLTF = fileName.endsWith('.glb') || fileName.endsWith('.gltf')
 
-  return new Promise((resolve, reject) => {
-    if (isGLTF) {
-      getGltfLoader().then((loader) => {
-        loader.load(
-          modelPath.value,
-          (gltf) => {
-            const mesh = gltf.scene
-            mesh.position.set(...chameleonConfig.position)
-            mesh.scale.set(...modelScale.value)
+  if (isGLTF) {
+    return new Promise((resolve, reject) => {
+      gltfLoader.load(
+        modelPath.value,
+        (gltf) => {
+          const mesh = gltf.scene
+          mesh.position.set(...chameleonConfig.position)
+          mesh.scale.set(...modelScale.value)
 
-            mesh.traverse((child) => {
-              if (child.isMesh) {
-                child.castShadow = chameleonConfig.castShadow
-                child.receiveShadow = chameleonConfig.receiveShadow
-              }
+          mesh.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = chameleonConfig.castShadow
+              child.receiveShadow = chameleonConfig.receiveShadow
+            }
+          })
+
+          sceneReference.add(mesh)
+
+          // Create physics body
+          const RAPIER = worldReference.constructor
+          const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+            ...chameleonConfig.position
+          )
+          const rigidBody = worldReference.createRigidBody(bodyDesc)
+
+          const colliderDesc = RAPIER.ColliderDesc.cuboid(
+            chameleonConfig.boundary,
+            chameleonConfig.boundary,
+            chameleonConfig.boundary
+          )
+          const collider = worldReference.createCollider(colliderDesc, rigidBody)
+
+          // Setup animations
+          const mixer = new THREE.AnimationMixer(mesh)
+          const actions = {}
+
+          if (gltf.animations && gltf.animations.length > 0) {
+            gltf.animations.forEach((clip) => {
+              actions[clip.name] = mixer.clipAction(clip)
             })
+          }
 
-            sceneReference.add(mesh)
+          chameleonModel = {
+            mesh,
+            rigidBody,
+            collider,
+            mixer,
+            actions,
+            type: chameleonConfig.type,
+            hasGravity: chameleonConfig.hasGravity
+          }
 
-            // Create physics body
-            const RAPIER = worldReference.constructor
-            const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-              ...chameleonConfig.position
-            )
-            const rigidBody = worldReference.createRigidBody(bodyDesc)
+          resolve()
+        },
+        undefined,
+        reject
+      )
+    })
+  } else {
+    return new Promise((resolve, reject) => {
+      fbxLoader.load(
+        modelPath.value,
+        (fbx) => {
+          const mesh = fbx
+          mesh.position.set(...chameleonConfig.position)
+          mesh.scale.set(...modelScale.value)
 
-            const colliderDesc = RAPIER.ColliderDesc.cuboid(
-              chameleonConfig.boundary,
-              chameleonConfig.boundary,
-              chameleonConfig.boundary
-            )
-            const collider = worldReference.createCollider(colliderDesc, rigidBody)
-
-            // Setup animations
-            const mixer = new THREE.AnimationMixer(mesh)
-            const actions = {}
-
-            if (gltf.animations && gltf.animations.length > 0) {
-              gltf.animations.forEach((clip) => {
-                actions[clip.name] = mixer.clipAction(clip)
-              })
+          mesh.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = chameleonConfig.castShadow
+              child.receiveShadow = chameleonConfig.receiveShadow
             }
+          })
 
-            chameleonModel = {
-              mesh,
-              rigidBody,
-              collider,
-              mixer,
-              actions,
-              type: chameleonConfig.type,
-              hasGravity: chameleonConfig.hasGravity
-            }
+          sceneReference.add(mesh)
 
-            resolve()
-          },
-          undefined,
-          reject
-        )
-      })
-    } else {
-      // FBX file
-      getFbxLoader().then((loader) => {
-        loader.load(
-          modelPath.value,
-          (fbx) => {
-            const mesh = fbx
-            mesh.position.set(...chameleonConfig.position)
-            mesh.scale.set(...modelScale.value)
+          // Create physics body
+          const RAPIER = worldReference.constructor
+          const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+            ...chameleonConfig.position
+          )
+          const rigidBody = worldReference.createRigidBody(bodyDesc)
 
-            mesh.traverse((child) => {
-              if (child.isMesh) {
-                child.castShadow = chameleonConfig.castShadow
-                child.receiveShadow = chameleonConfig.receiveShadow
-              }
+          const colliderDesc = RAPIER.ColliderDesc.cuboid(
+            chameleonConfig.boundary,
+            chameleonConfig.boundary,
+            chameleonConfig.boundary
+          )
+          const collider = worldReference.createCollider(colliderDesc, rigidBody)
+
+          // Setup animations
+          const mixer = new THREE.AnimationMixer(mesh)
+          const actions = {}
+
+          if (fbx.animations && fbx.animations.length > 0) {
+            fbx.animations.forEach((clip) => {
+              actions[clip.name] = mixer.clipAction(clip)
             })
+          }
 
-            sceneReference.add(mesh)
+          chameleonModel = {
+            mesh,
+            rigidBody,
+            collider,
+            mixer,
+            actions,
+            type: chameleonConfig.type,
+            hasGravity: chameleonConfig.hasGravity
+          }
 
-            // Create physics body
-            const RAPIER = worldReference.constructor
-            const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-              ...chameleonConfig.position
-            )
-            const rigidBody = worldReference.createRigidBody(bodyDesc)
-
-            const colliderDesc = RAPIER.ColliderDesc.cuboid(
-              chameleonConfig.boundary,
-              chameleonConfig.boundary,
-              chameleonConfig.boundary
-            )
-            const collider = worldReference.createCollider(colliderDesc, rigidBody)
-
-            // Setup animations
-            const mixer = new THREE.AnimationMixer(mesh)
-            const actions = {}
-
-            if (fbx.animations && fbx.animations.length > 0) {
-              fbx.animations.forEach((clip) => {
-                actions[clip.name] = mixer.clipAction(clip)
-              })
-            }
-
-            chameleonModel = {
-              mesh,
-              rigidBody,
-              collider,
-              mixer,
-              actions,
-              type: chameleonConfig.type,
-              hasGravity: chameleonConfig.hasGravity
-            }
-
-            resolve()
-          },
-          undefined,
-          reject
-        )
-      })
-    }
-  })
+          resolve()
+        },
+        undefined,
+        reject
+      )
+    })
+  }
 }
 
 const reloadAnimations = () => {

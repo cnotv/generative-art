@@ -7,7 +7,7 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { animateTimeline, createTimelineManager } from '@webgamekit/animation'
-import { getLights, instanceMatrixMesh } from '@webgamekit/threejs'
+import { getLights, instanceMatrixMesh, cubeTextureLoader } from '@webgamekit/threejs'
 import { getRoundedBox } from '@/utils/custom-models'
 import { times } from '@/utils/lodash'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -29,7 +29,6 @@ const cubeFaces = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
 const urls = cubeFaces.map(
   (code) => new URL(`../../assets/cubemaps/stairs/${code}.jpg`, import.meta.url).href
 )
-const cubeTextureLoader = new THREE.CubeTextureLoader()
 const reflection = cubeTextureLoader.load(urls)
 
 onMounted(() => {

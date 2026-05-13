@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { getModel, colorModel, tiltCamera } from '@webgamekit/threejs'
+import { getModel, colorModel, tiltCamera, textureLoader } from '@webgamekit/threejs'
 import { playAudioFile } from '@webgamekit/audio'
 import { startBackgroundFalling } from './background'
 const jumpSound = new URL('@/assets/jump.wav', import.meta.url).href
@@ -417,8 +417,6 @@ const explosionParticles: THREE.Mesh[] = []
 const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color: number) => {
   const starCount = 12 // Number of stars in explosion
 
-  // Load the star texture
-  const textureLoader = new THREE.TextureLoader()
   const starTextureLoaded = textureLoader.load(starTexture)
 
   Array.from({ length: starCount }, () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { textureLoader, gltfLoader } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -9,7 +10,6 @@ import { stats } from '@/utils/stats'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import RAPIER from '@dimforge/rapier3d-compat'
 import terrainTextureAsset from '@/assets/images/textures/terrain.jpg'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 type Model = THREE.Group<THREE.Object3DEventMap>
 
@@ -123,7 +123,6 @@ const createLights = (scene: THREE.Scene) => {
  * @returns
  */
 const getTextures = (img: string) => {
-  const textureLoader = new THREE.TextureLoader()
   const texture = textureLoader.load(img)
 
   // Adjust the texture offset and repeat
@@ -172,8 +171,7 @@ const getGround = (
  */
 const loadGLTF = (): Promise<{ model: Model; gltf: any }> => {
   return new Promise((resolve, reject) => {
-    const loader = new GLTFLoader()
-    loader.load(
+    gltfLoader.load(
       '/low_poly.glb',
       (gltf) => {
         resolve({ model: gltf.scene, gltf })

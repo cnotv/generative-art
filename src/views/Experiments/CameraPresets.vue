@@ -3,10 +3,8 @@ import { onMounted, ref, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { createZigzagTexture } from '@webgamekit/threejs'
+import { createZigzagTexture, textureLoader, gltfLoader, fbxLoader } from '@webgamekit/threejs'
 import grassTextureImg from '@/assets/images/textures/grass.jpg'
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
@@ -94,7 +92,6 @@ const setupGround = async (gltfLoader) => {
     roughness: 0.8,
     metalness: 0.2
   })
-  const textureLoader = new THREE.TextureLoader()
   const grassTexture = textureLoader.load(grassTextureImg)
   grassTexture.wrapS = THREE.RepeatWrapping
   grassTexture.wrapT = THREE.RepeatWrapping
@@ -450,14 +447,12 @@ const init = async () => {
   await RAPIER.init()
   world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 })
 
-  const gltfLoader = new GLTFLoader()
   await setupGround(gltfLoader)
 
-  const loader = new FBXLoader()
-  geekoObject = await loadGeekoModel(loader)
+  geekoObject = await loadGeekoModel(fbxLoader)
   setupGeekoPhysics()
   await loadBug(gltfLoader)
-  await loadGeekoAnimations(loader)
+  await loadGeekoAnimations(fbxLoader)
 
   clock = new THREE.Clock()
   registerSceneElements(

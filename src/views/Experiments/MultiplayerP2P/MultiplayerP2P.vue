@@ -2,7 +2,13 @@
 import * as THREE from 'three'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getTools, getModel, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
+import {
+  getTools,
+  getModel,
+  cameraFollowPlayer,
+  textureLoader,
+  type ComplexModel
+} from '@webgamekit/threejs'
 import {
   type CoordinateTuple,
   type AnimationData,
@@ -32,7 +38,6 @@ import {
 import { textureBuildCombined, textureToDataUrl } from '@webgamekit/canvas-editor'
 import TextureEditor from './TextureEditor.vue'
 
-const textureLoader = new THREE.TextureLoader()
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'

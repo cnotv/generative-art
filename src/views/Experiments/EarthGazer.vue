@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { textureLoader } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -45,8 +46,6 @@ const earthGazerConfig = {
   fill: [0, 0, 255],
   light: [255, 255, 255]
 }
-
-const textureLoader = new THREE.TextureLoader()
 
 const getTexture = (img: string) => {
   const texture = textureLoader.load(img)

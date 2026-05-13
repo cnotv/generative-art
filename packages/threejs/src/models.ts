@@ -1,16 +1,11 @@
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation'
 import { ModelOptions, ComplexModel, Model, ModelType } from './types'
 import { getPhysic } from './getters'
 import { applyOriginTranslation } from './core'
-
-const textureLoader = new THREE.TextureLoader()
-const fbxLoader = new FBXLoader()
-const gltfLoader = new GLTFLoader()
+import { textureLoader, fbxLoader, gltfLoader } from './loaders'
 
 type BaseMaterialProperties = {
   opacity: number

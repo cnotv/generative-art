@@ -17,8 +17,7 @@ import { getEnvironment, getLights, getGround, getSky } from './getters'
 import { updateCamera } from './camera'
 import { deepMerge } from './utils/lodash'
 import { SCENE_DEFAULTS } from './defaults'
-
-const textureLoader = new THREE.TextureLoader()
+import { textureLoader } from './loaders'
 
 /**
  * Merge a partial SetupConfig over SCENE_DEFAULTS so every section has complete values.

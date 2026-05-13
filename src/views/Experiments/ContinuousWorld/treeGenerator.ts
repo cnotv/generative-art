@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { textureLoader } from '@webgamekit/threejs'
 import type { HeightSampler } from './types'
 
 import illustrationTree11Img from '@/assets/images/illustrations/Tree1-1.webp'
@@ -46,8 +47,6 @@ const DEFAULT_SIZE_SCALE = 1
 
 /** One unit plane reused for every tree — scaled per-mesh via mesh.scale. */
 const sharedPlaneGeometry = new THREE.PlaneGeometry(1, 1)
-
-const textureLoader = new THREE.TextureLoader()
 
 /** Texture cache: url → THREE.Texture */
 const textureCache = new Map<string, THREE.Texture>()

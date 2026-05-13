@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { stats } from '@/utils/stats'
-import { getTools, createTextSprite } from '@webgamekit/threejs'
+import { getTools, createTextSprite, textureLoader } from '@webgamekit/threejs'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -218,8 +218,7 @@ const drawEmissiveMap = (context: CanvasRenderingContext2D, size: number): void 
 }
 
 const loadTextures = (): void => {
-  const loader = new THREE.TextureLoader()
-  textures.diffuse = loader.load(brickTextureUrl)
+  textures.diffuse = textureLoader.load(brickTextureUrl)
   textures.diffuse.wrapS = THREE.RepeatWrapping
   textures.diffuse.wrapT = THREE.RepeatWrapping
   textures.diffuse.colorSpace = THREE.SRGBColorSpace
