@@ -357,16 +357,16 @@ watch(
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: #ddd;
-  border: 2px solid #ccc;
+  background: var(--game-border-light);
+  border: 2px solid var(--game-border-secondary);
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
 }
 
 .glw__step-dot--active {
-  background: #111;
-  border-color: #111;
+  background: var(--game-ink);
+  border-color: var(--game-border);
 }
 
 .glw__step-dot--done {
@@ -384,16 +384,16 @@ watch(
   margin: 0;
   font-size: var(--font-size-md, 1rem);
   font-weight: 800;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .glw__name-input,
 .glw__name-input:focus {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 999px;
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
   outline: none;
@@ -410,11 +410,11 @@ watch(
 .glw__swatch-btn {
   width: 2rem;
   height: 2rem;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 50%;
   cursor: pointer;
   padding: 0;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
   display: inline-flex;
   align-items: center;
@@ -425,7 +425,7 @@ watch(
 
 .glw__swatch-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .glw__swatch-check {
@@ -441,7 +441,7 @@ watch(
   gap: var(--spacing-2);
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .glw__player-count {
@@ -453,7 +453,7 @@ watch(
   width: 0.875rem;
   height: 0.875rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -461,7 +461,7 @@ watch(
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #555;
+  color: var(--game-ink-medium);
 }
 
 .glw__actions {
@@ -476,7 +476,7 @@ watch(
   gap: 0.1em;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 @keyframes glw-bounce {
@@ -517,16 +517,16 @@ watch(
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #f0fff4;
+  background: var(--game-surface-subtle);
 }
 
 .glw__request-name {
   flex: 1;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .glw__request-actions {
@@ -551,7 +551,7 @@ watch(
 .glw__settings-label {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  color: #555;
+  color: var(--game-ink-medium);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -560,7 +560,7 @@ watch(
   margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .glw__fields {
@@ -575,40 +575,41 @@ watch(
   flex-direction: column;
   gap: var(--spacing-1);
   font-size: var(--font-size-xs);
-  color: #111;
+  color: var(--game-ink);
   font-weight: 700;
 }
 
 .glw__field select,
 .glw__field input {
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: var(--radius-sm);
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .glw__btn {
   padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #111;
+  border: 1px solid var(--game-border-secondary);
   border-radius: 999px;
   background: var(--glw-accent);
   color: #fff;
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: none;
   white-space: nowrap;
-  transition: transform 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    opacity 0.1s ease;
   touch-action: manipulation;
   font-family: inherit;
 }
 
 .glw__btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  opacity: 0.88;
 }
 
 .glw__btn:disabled {
@@ -617,8 +618,16 @@ watch(
 }
 
 .glw__btn--ghost {
-  background: #fff;
-  color: #111;
+  background: transparent;
+  color: var(--game-ink-medium);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.glw__btn--ghost:hover:not(:disabled) {
+  opacity: 1;
+  color: var(--game-ink);
+  background: var(--game-surface-subtle);
 }
 
 .glw__nav {
@@ -626,7 +635,7 @@ watch(
   align-items: center;
   gap: var(--spacing-2);
   padding-top: var(--spacing-2);
-  border-top: 2px solid #f0f0f0;
+  border-top: 1px solid var(--game-surface-dim);
 }
 
 .glw__nav-spacer {
@@ -643,21 +652,21 @@ watch(
   justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 50%;
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: 0.875rem;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
   font-family: inherit;
 }
 
 .glw__rules-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .glw__rules-panel {
@@ -666,27 +675,27 @@ watch(
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  background: #fff;
-  border: 2px solid #111;
+  background: var(--game-surface-subtle);
+  border: 2px solid var(--game-border);
   border-radius: 0.75rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   width: 18rem;
   padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
   font-size: var(--font-size-sm);
   line-height: 1.4;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .glw__start-btn {
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 999px;
   background: var(--glw-accent);
   color: #fff;
   font-size: var(--font-size-md, 1rem);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   transition: transform 0.1s ease;
   touch-action: manipulation;
   font-family: inherit;
@@ -694,13 +703,13 @@ watch(
 
 .glw__start-btn:hover:not(:disabled) {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 4px 4px 0 var(--game-border);
 }
 
 .glw__start-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
 }
 
 @media (max-width: 720px) {

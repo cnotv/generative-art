@@ -306,12 +306,12 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-2) var(--spacing-4);
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 999px;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wm-game__banner-meta {
@@ -373,16 +373,16 @@ onUnmounted(() => {
 .wm-game__grid-cell {
   width: 3rem;
   height: 3rem;
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
   font-weight: 900;
-  color: #111;
-  background: #fff;
-  box-shadow: 2px 2px 0 #111;
+  color: var(--game-ink);
+  background: var(--game-surface-subtle);
+  box-shadow: 2px 2px 0 var(--game-border);
   text-transform: uppercase;
   cursor: pointer;
   touch-action: none;
@@ -399,7 +399,7 @@ onUnmounted(() => {
 }
 
 .wm-game__grid-cell:hover {
-  background: #f5f5f5;
+  background: var(--game-surface-subtle);
 }
 
 .wm-game__grid-cell--selected {
@@ -428,18 +428,18 @@ onUnmounted(() => {
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: 0.12em;
-  color: #111;
+  color: var(--game-ink);
   text-transform: uppercase;
   padding: var(--spacing-1) var(--spacing-3);
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 999px;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .wm-game__current-word-hint {
   font-size: var(--font-size-sm);
-  color: #aaa;
+  color: var(--game-border-secondary);
   font-style: italic;
 }
 
@@ -448,7 +448,7 @@ onUnmounted(() => {
   font-weight: 700;
   padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   animation: wm-fade-in 0.1s ease;
 }
 
@@ -469,7 +469,7 @@ onUnmounted(() => {
 }
 
 .wm-game__flash--miss {
-  background: #ffeaea;
+  background: var(--game-msg-error-bg);
   color: #d32f2f;
 }
 
@@ -491,12 +491,12 @@ onUnmounted(() => {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #555;
+  color: var(--game-ink-medium);
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  background: #f5f5f5;
-  border: 2px solid #ddd;
+  background: var(--game-surface-subtle);
+  border: 2px solid var(--game-border-light);
   border-radius: var(--radius-sm);
   padding: var(--spacing-1) var(--spacing-2);
   cursor: pointer;
@@ -507,7 +507,7 @@ onUnmounted(() => {
 }
 
 .wm-game__group-label:hover {
-  background: #ebebeb;
+  background: var(--game-surface-dim);
 }
 
 .wm-game__group-chevron {
@@ -525,10 +525,10 @@ onUnmounted(() => {
 .wm-game__group-count {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  background: #e0e0e0;
+  background: var(--game-surface-dim);
   border-radius: 999px;
   padding: 0 var(--spacing-1);
-  color: #555;
+  color: var(--game-ink-medium);
 }
 
 .wm-game__group-pts {
@@ -550,7 +550,7 @@ onUnmounted(() => {
 
 .wm-game__group-empty {
   font-size: var(--font-size-xs);
-  color: #aaa;
+  color: var(--game-border-secondary);
   font-style: italic;
   padding: var(--spacing-1) var(--spacing-2);
 }
@@ -565,7 +565,7 @@ onUnmounted(() => {
   border-radius: 999px;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  background: #f0fff4;
+  background: var(--wm-bg);
 }
 
 .wm-game__slot-dot {
@@ -573,11 +573,11 @@ onUnmounted(() => {
   height: 0.5rem;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 1.5px solid #111;
+  border: 1.5px solid var(--game-border);
 }
 
 .wm-game__slot-word {
-  color: #111;
+  color: var(--game-ink);
   letter-spacing: 0.04em;
 }
 
@@ -587,7 +587,7 @@ onUnmounted(() => {
   bottom: calc(100% + 6px);
   left: calc(50% + var(--tt-offset, 0px));
   transform: translateX(-50%);
-  background: #111;
+  background: var(--game-ink);
   color: #fff;
   font-size: var(--font-size-xs);
   font-weight: 500;
@@ -610,7 +610,7 @@ onUnmounted(() => {
   left: calc(50% - var(--tt-offset, 0px));
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: #111;
+  border-top-color: var(--game-border);
 }
 
 .wm-game__slot:hover .wm-game__slot-tooltip,

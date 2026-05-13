@@ -58,21 +58,21 @@ const fromLobby = computed(() => !!route.query.game)
 
 .pictionary-header__lobby-btn {
   padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #fff7e6;
-  color: #111;
+  background: var(--pic-bg);
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
   font-family: inherit;
 }
 
 .pictionary-header__lobby-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .pictionary-header__room-id {
@@ -84,26 +84,26 @@ const fromLobby = computed(() => !!route.query.game)
 }
 
 .pictionary-header__room-label {
-  color: #111;
+  color: var(--game-ink);
   font-weight: 700;
 }
 
 .pictionary-header__copy-btn {
   padding: var(--spacing-2) var(--spacing-4, 1rem);
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 999px;
   background: var(--pic-yellow);
-  color: #111;
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   transition: transform 0.1s ease;
 }
 
 .pictionary-header__copy-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 4px 4px 0 var(--game-border);
 }
 
 .pictionary-header__rules {
@@ -116,14 +116,14 @@ const fromLobby = computed(() => !!route.query.game)
   justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 50%;
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: 0.875rem;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
   user-select: none;
   font-family: inherit;
@@ -131,7 +131,7 @@ const fromLobby = computed(() => !!route.query.game)
 
 .pictionary-header__rules-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .pictionary-header__rules-panel {
@@ -140,10 +140,10 @@ const fromLobby = computed(() => !!route.query.game)
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  background: #fff;
-  border: 2px solid #111;
+  background: var(--game-surface-subtle);
+  border: 2px solid var(--game-border);
   border-radius: 0.75rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   width: 18rem;
   padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
 }
@@ -157,7 +157,7 @@ const fromLobby = computed(() => !!route.query.game)
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: #888;
+  color: var(--game-ink-muted);
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
@@ -169,7 +169,7 @@ const fromLobby = computed(() => !!route.query.game)
 }
 
 .pictionary-header__rules-close:hover {
-  color: #111;
+  color: var(--game-ink);
 }
 
 .pictionary-header__rules-list {
@@ -180,7 +180,7 @@ const fromLobby = computed(() => !!route.query.game)
   gap: var(--spacing-1);
   font-size: var(--font-size-sm);
   line-height: 1.4;
-  color: #111;
+  color: var(--game-ink);
 }
 
 @media (max-width: 720px) {

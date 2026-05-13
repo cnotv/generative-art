@@ -1,6 +1,52 @@
 // Design System Variables
 // CSS custom properties for theming support
 
+// ── Game UI tokens ───────────────────────────────────────────────────────────
+// Light mode defaults; overridden in the dark-mode block below.
+:root {
+  --game-ink: #111;
+  --game-ink-medium: #555;
+  --game-ink-muted: #888;
+  --game-border: rgba(0, 0, 0, 0.28);
+  --game-surface: #fff;
+  --game-surface-subtle: #f5f5f5;
+  --game-surface-dim: #f0f0f0;
+  --game-border-secondary: #ccc;
+  --game-border-light: #ddd;
+
+  --lb-bg: #fff7e6;
+  --lb-sidebar-bg: #fffbf0;
+  --lb-card-hover: #ffefc0;
+  --pic-bg: #fff7e6;
+  --wm-bg: #f0fff4;
+  --wl-bg: #f9f9f9;
+
+  --game-msg-system-bg: #fff4c2;
+  --game-msg-error-bg: #ffeaea;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 :root {
   // Light theme (default)
   --color-background: hsl(0 0% 100%);
@@ -101,6 +147,26 @@
 // Dark theme - manual toggle
 .dark,
 [data-theme='dark'] {
+  --game-ink: #e0d5c0;
+  --game-ink-medium: #b0a590;
+  --game-ink-muted: #7a6e60;
+  --game-border: rgba(255, 240, 220, 0.22);
+  --game-surface: #262218;
+  --game-surface-subtle: #2e2820;
+  --game-surface-dim: #222016;
+  --game-border-secondary: #4a4035;
+  --game-border-light: #3a3028;
+
+  --lb-bg: #1c1812;
+  --lb-sidebar-bg: #161210;
+  --lb-card-hover: #252015;
+  --pic-bg: #1c1812;
+  --wm-bg: #0d1a10;
+  --wl-bg: #181818;
+
+  --game-msg-system-bg: #2a2208;
+  --game-msg-error-bg: #2a0d0d;
+
   --panel-item-bg: hsl(0 0% 12%);
   --panel-item-bg-hover: hsl(0 0% 18%);
   --panel-item-bg-selected: hsl(0 0% 22%);
@@ -133,6 +199,25 @@
 // Dark theme - system preference auto-detection
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --game-ink: #e0d5c0;
+    --game-ink-medium: #b0a590;
+    --game-ink-muted: #7a6e60;
+    --game-border: rgba(255, 240, 220, 0.22);
+    --game-surface: #262218;
+    --game-surface-subtle: #2e2820;
+    --game-surface-dim: #222016;
+    --game-border-secondary: #4a4035;
+    --game-border-light: #3a3028;
+
+    --lb-bg: #1c1812;
+    --lb-sidebar-bg: #161210;
+    --lb-card-hover: #252015;
+    --pic-bg: #1c1812;
+    --wm-bg: #0d1a10;
+    --wl-bg: #181818;
+
+    --game-msg-system-bg: #2a2208;
+    --game-msg-error-bg: #2a0d0d;
     --panel-item-bg: hsl(0 0% 12%);
     --panel-item-bg-hover: hsl(0 0% 18%);
     --panel-item-bg-selected: hsl(0 0% 22%);

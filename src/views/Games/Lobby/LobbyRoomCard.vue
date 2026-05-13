@@ -49,11 +49,11 @@ const emit = defineEmits<{
 }
 
 .lb-room-card:hover {
-  background: #ffefc0;
+  background: var(--lb-card-hover);
 }
 
 .lb-room-card--own {
-  border-color: #ccc;
+  border-color: var(--game-border-secondary);
 }
 
 .lb-room-card__info {
@@ -66,7 +66,7 @@ const emit = defineEmits<{
 .lb-room-card__game {
   font-size: var(--font-size-xs);
   font-weight: 800;
-  color: #111;
+  color: var(--game-ink);
   white-space: nowrap;
 }
 
@@ -76,14 +76,14 @@ const emit = defineEmits<{
   gap: var(--spacing-1);
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: #555;
+  color: var(--game-ink-medium);
 }
 
 .lb-room-card__dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1.5px solid #111;
+  border: 1.5px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -97,9 +97,9 @@ const emit = defineEmits<{
 
 .lb-room-card__join {
   padding: 2px var(--spacing-2);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #111;
+  background: var(--game-ink);
   color: #fff;
   font-size: var(--font-size-xs);
   font-weight: 700;

@@ -37,7 +37,7 @@ export const buildRandomGradient = (): string => {
     const color = GRADIENT_COLORS[Math.floor(Math.random() * GRADIENT_COLORS.length)]
     return `radial-gradient(circle at ${x}% ${y}%, ${color}, transparent ${GRADIENT_STOP_PERCENT}%)`
   })
-  return [...layers, '#fff7e6'].join(', ')
+  return layers.join(', ')
 }
 
 /**

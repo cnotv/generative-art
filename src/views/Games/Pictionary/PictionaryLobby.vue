@@ -95,7 +95,7 @@ const handleConfig = (key: string, value: string | number): void => {
     :player-list="playerList"
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
-    accent-color="var(--pic-pink)"
+    accent-color="var(--pic-orange)"
     :config-fields="configFields"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"

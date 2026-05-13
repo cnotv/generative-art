@@ -110,7 +110,7 @@ const handleSend = (): void => {
 }
 
 .lb-chat__message--own .lb-chat__text {
-  background: #111;
+  background: var(--game-ink);
   color: #fff;
 }
 
@@ -126,16 +126,16 @@ const handleSend = (): void => {
   display: flex;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  border-top: 3px solid #111;
+  border-top: 3px solid var(--game-border);
 }
 
 .lb-chat__input {
   flex: 1;
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 600;
   outline: none;
@@ -143,19 +143,19 @@ const handleSend = (): void => {
 
 .lb-chat__send {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #111;
-  color: #fff;
+  background: var(--game-ink);
+  color: var(--game-surface);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #444;
+  box-shadow: 2px 2px 0 var(--game-ink-medium);
   transition: transform 0.1s ease;
 }
 
 .lb-chat__send:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #444;
+  box-shadow: 3px 3px 0 var(--game-ink-medium);
 }
 </style>

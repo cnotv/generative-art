@@ -62,10 +62,10 @@ defineProps<{
 }
 
 .wl-intermission__card {
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 5px 5px 0 #111;
+  box-shadow: 5px 5px 0 var(--game-border);
   padding: var(--spacing-5, 2rem);
   max-width: 32rem;
   width: 100%;
@@ -79,13 +79,13 @@ defineProps<{
   margin: 0;
   font-size: 1.5rem;
   font-weight: 900;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wl-intermission__word {
   margin: 0;
   font-size: var(--font-size-md, 1rem);
-  color: #555;
+  color: var(--game-ink-medium);
 }
 
 .wl-intermission__players {
@@ -102,7 +102,7 @@ defineProps<{
   flex-direction: column;
   gap: var(--spacing-1);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--game-surface-dim);
   border-radius: var(--radius-sm);
 }
 
@@ -116,7 +116,7 @@ defineProps<{
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -160,7 +160,7 @@ defineProps<{
   width: 1rem;
   height: 1rem;
   border-radius: 2px;
-  background: #ccc;
+  background: var(--game-border-secondary);
 }
 
 .wl-intermission__mini-tile--correct {
@@ -172,12 +172,12 @@ defineProps<{
 }
 
 .wl-intermission__mini-tile--absent {
-  background: #888;
+  background: var(--game-ink-muted);
 }
 
 .wl-intermission__next {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: #888;
+  color: var(--game-ink-muted);
 }
 </style>

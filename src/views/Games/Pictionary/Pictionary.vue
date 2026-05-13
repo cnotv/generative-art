@@ -46,7 +46,7 @@ const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
-const backgroundStyle = { background: buildRandomGradient() }
+const backgroundStyle = { backgroundImage: buildRandomGradient() }
 const drawingReference = ref<InstanceType<typeof PictionaryDrawing> | null>(null)
 
 const resolvedRoomId = ((): string => {
@@ -249,7 +249,7 @@ onMounted(() => {
   height: 100dvh;
   box-sizing: border-box;
   overflow: hidden;
-  background: #fff7e6;
+  background: var(--pic-bg);
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
 }
 
@@ -257,6 +257,18 @@ onMounted(() => {
   height: auto;
   min-height: 100dvh;
   overflow: auto;
+}
+
+.pictionary :deep(.glw),
+.pictionary :deep(.pictionary-choosing),
+.pictionary :deep(.pictionary-drawing),
+.pictionary :deep(.pictionary-intermission),
+.pictionary :deep(.pictionary-summary) {
+  animation: slide-up 0.28s ease both;
+}
+
+.pictionary :deep(.pictionary-sidebar) {
+  animation: slide-from-right 0.32s ease both;
 }
 
 @media (max-width: 720px) {
