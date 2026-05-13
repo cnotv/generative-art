@@ -156,6 +156,29 @@ tester.run('no-alloc-in-animation-loop', rule, {
       code: `function tick() { const v = new Vector3() }`,
       options: [{ animationFunctionNames: ['tick'] }],
       errors: [{ messageId: 'noNewInLoop', data: { name: 'Vector3' } }]
+    },
+
+    // ── Loaders and materials inside loops ────────────────────────────────
+
+    // TextureLoader inside rAF — loader must be created once and reused
+    {
+      code: `requestAnimationFrame(() => { const loader = new TextureLoader() })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'TextureLoader' } }]
+    },
+    // GLTFLoader inside animate — extremely expensive per frame
+    {
+      code: `function animate() { const loader = new GLTFLoader() }`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'GLTFLoader' } }]
+    },
+    // Material creation inside rAF — should be shared, not recreated
+    {
+      code: `requestAnimationFrame(() => { const mat = new MeshStandardMaterial({ color: 0xff0000 }) })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'MeshStandardMaterial' } }]
+    },
+    // SpriteMaterial inside addAction
+    {
+      code: `addAction({ action: () => { const m = new SpriteMaterial() } })`,
+      errors: [{ messageId: 'noNewInLoop', data: { name: 'SpriteMaterial' } }]
     }
   ]
 })

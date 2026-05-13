@@ -24,6 +24,7 @@ const BROWSER_LOOP_CALLS = new Set(['requestAnimationFrame', 'setInterval'])
 const DEFAULT_ANIMATION_FUNCTION_NAMES = new Set(['animate', 'update', 'tick', 'onFrame'])
 
 const THREE_CONSTRUCTORS = new Set([
+  // Math / transform types
   'Vector2',
   'Vector3',
   'Vector4',
@@ -37,16 +38,40 @@ const THREE_CONSTRUCTORS = new Set([
   'Ray',
   'Plane',
   'Color',
+  // Geometry
   'BufferGeometry',
+  // Materials — creating per-frame defeats sharing; prefer MeshBasicMaterial for static objects
   'MeshBasicMaterial',
   'MeshStandardMaterial',
   'MeshLambertMaterial',
+  'MeshPhongMaterial',
+  'MeshPhysicalMaterial',
+  'MeshToonMaterial',
   'ShaderMaterial',
+  'RawShaderMaterial',
+  'SpriteMaterial',
+  'LineBasicMaterial',
+  // Scene objects
   'Mesh',
   'Group',
   'Object3D',
   'LineSegments',
-  'Points'
+  'Points',
+  'Sprite',
+  // Loaders — must be created once and reused; never inside a loop
+  'TextureLoader',
+  'CubeTextureLoader',
+  'DataTextureLoader',
+  'CompressedTextureLoader',
+  'GLTFLoader',
+  'FBXLoader',
+  'OBJLoader',
+  'STLLoader',
+  'DRACOLoader',
+  'KTX2Loader',
+  'ImageLoader',
+  'FileLoader',
+  'AudioLoader'
 ])
 
 /**
