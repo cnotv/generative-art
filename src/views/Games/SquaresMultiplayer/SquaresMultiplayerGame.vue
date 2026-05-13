@@ -394,10 +394,11 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* Invisible hit zone — smaller than the tile to create dead space between adjacent cells */
+/* Invisible circular hit zone — corners cut off so diagonal neighbours don't bleed */
 .wm-game__grid-cell-hit {
   position: absolute;
-  inset: 20%;
+  inset: 15%;
+  border-radius: 50%;
   cursor: pointer;
   touch-action: none;
 }
