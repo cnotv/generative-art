@@ -74,7 +74,7 @@ const emit = defineEmits<{
 .pictionary-sidebar__title {
   margin: 0 0 var(--spacing-2) 0;
   font-size: var(--font-size-sm);
-  color: #111;
+  color: var(--game-ink);
   font-weight: 700;
 }
 
@@ -97,13 +97,13 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--game-surface-subtle);
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
-  box-shadow: 2px 2px 0 #111;
+  color: var(--game-ink);
+  box-shadow: 2px 2px 0 var(--game-border);
 }
 
 .pictionary-sidebar__player--drawer {
@@ -140,10 +140,10 @@ const emit = defineEmits<{
 
 .pictionary-sidebar__chat :deep(.chat) {
   flex: 1;
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   padding: var(--spacing-2);
   box-sizing: border-box;
 }
@@ -152,13 +152,13 @@ const emit = defineEmits<{
 .pictionary-sidebar__chat :deep(.chat__send-btn),
 .pictionary-sidebar__chat :deep(.chat__zoom-btn) {
   border-radius: 999px;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
 }
 
 .pictionary-sidebar__chat :deep(.chat__list) {
   border-radius: 1rem;
-  border: 2px solid #111;
-  background: #fff;
+  border: 2px solid var(--game-border);
+  background: var(--game-surface-subtle);
 }
 
 .pictionary-sidebar__chat :deep(.chat-message) {
@@ -169,13 +169,13 @@ const emit = defineEmits<{
 
 .pictionary-sidebar__chat :deep(.chat-message--success) {
   --chat-success-bg: var(--pic-yellow);
-  --chat-success-color: #111;
-  --chat-success-border: #111;
+  --chat-success-color: var(--game-ink);
+  --chat-success-border: var(--game-border);
 }
 
 .pictionary-sidebar__chat :deep(.chat-message--system) {
-  --chat-system-bg: #fff4c2;
-  --chat-system-color: #111;
+  --chat-system-bg: var(--game-msg-system-bg);
+  --chat-system-color: var(--game-ink);
 }
 
 @media (max-width: 720px) {

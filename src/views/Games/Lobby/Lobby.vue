@@ -254,7 +254,7 @@ const roomsOpen = ref(true)
   height: 100dvh;
   box-sizing: border-box;
   overflow: hidden;
-  background: #fff7e6;
+  background: var(--lb-bg);
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
 }
 
@@ -265,15 +265,10 @@ const roomsOpen = ref(true)
 
 .lobby__main {
   grid-area: main;
-  border-right: 3px solid #111;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.lobby--in-game .lobby__main {
-  border-right: none;
 }
 
 /* Game picker */
@@ -308,10 +303,10 @@ const roomsOpen = ref(true)
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
   background: var(--lb-yellow);
-  box-shadow: 5px 5px 0 #111;
+  box-shadow: 5px 5px 0 var(--game-border);
   cursor: pointer;
   transition: transform 0.1s ease;
   min-width: 9rem;
@@ -328,7 +323,7 @@ const roomsOpen = ref(true)
 
 .lobby__game-card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 #111;
+  box-shadow: 7px 7px 0 var(--game-border);
 }
 
 .lobby__game-name {
@@ -336,6 +331,12 @@ const roomsOpen = ref(true)
   font-weight: 900;
   color: #111;
   letter-spacing: 0.02em;
+}
+
+/* Picker and embedded game slide up on mount */
+.lobby__picker,
+.lobby__game-embed {
+  animation: slide-up 0.28s ease both;
 }
 
 /* Embedded game */
@@ -357,12 +358,14 @@ const roomsOpen = ref(true)
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fffbf0;
+  background: var(--lb-sidebar-bg);
   padding-top: var(--nav-height);
+  border-left: 3px solid var(--game-border);
+  animation: slide-from-right 0.32s ease both;
 }
 
 .lobby__section {
-  border-bottom: 3px solid #111;
+  border-bottom: 3px solid var(--game-border);
 }
 
 .lobby__section-toggle {
@@ -407,10 +410,10 @@ const roomsOpen = ref(true)
 
 .lobby__name-input {
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 700;
   outline: none;
@@ -428,11 +431,11 @@ const roomsOpen = ref(true)
 .lobby__swatch {
   width: 1.5rem;
   height: 1.5rem;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 50%;
   cursor: pointer;
   padding: 0;
-  box-shadow: 1px 1px 0 #111;
+  box-shadow: 1px 1px 0 var(--game-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -469,14 +472,11 @@ const roomsOpen = ref(true)
     grid-template-rows: auto 1fr;
   }
 
-  .lobby__main {
-    border-right: none;
-    border-bottom: 2px solid #111;
-  }
-
   .lobby__sidebar {
     max-height: 50dvh;
     padding-top: 0;
+    border-left: none;
+    border-top: 3px solid var(--game-border);
   }
 
   .lobby__picker-games {

@@ -112,14 +112,14 @@ const handleSend = (): void => {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #555;
+  color: var(--game-ink-medium);
 }
 
 .ws-sidebar__players {
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   padding: var(--spacing-3);
 }
 
@@ -141,14 +141,14 @@ const handleSend = (): void => {
 }
 
 .ws-sidebar__player--local {
-  background: #f5f5f5;
+  background: var(--game-surface-subtle);
 }
 
 .ws-sidebar__player-dot {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -156,7 +156,7 @@ const handleSend = (): void => {
   flex: 1;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -168,8 +168,8 @@ const handleSend = (): void => {
 .ws-sidebar__player-host {
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: #888;
-  border: 1px solid #ccc;
+  color: var(--game-ink-muted);
+  border: 1px solid var(--game-border-secondary);
   border-radius: 999px;
   padding: 0 var(--spacing-1);
 }
@@ -183,7 +183,7 @@ const handleSend = (): void => {
 .ws-sidebar__player-score {
   font-size: var(--font-size-sm);
   font-weight: 800;
-  color: #111;
+  color: var(--game-ink);
   min-width: 2.5rem;
   text-align: right;
 }
@@ -193,10 +193,10 @@ const handleSend = (): void => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   padding: var(--spacing-3);
   overflow: hidden;
 }
@@ -216,13 +216,13 @@ const handleSend = (): void => {
 .ws-sidebar__message {
   font-size: var(--font-size-xs);
   line-height: 1.4;
-  color: #111;
+  color: var(--game-ink);
   padding: var(--spacing-1) 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--game-surface-dim);
 }
 
 .ws-sidebar__message--system {
-  color: #888;
+  color: var(--game-ink-muted);
   font-style: italic;
 }
 
@@ -244,30 +244,30 @@ const handleSend = (): void => {
 .ws-sidebar__chat-input {
   flex: 1;
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
   font-size: var(--font-size-sm);
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   outline: none;
 }
 
 .ws-sidebar__chat-send {
   padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: 999px;
   background: var(--ws-green);
   color: #fff;
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
 }
 
 .ws-sidebar__chat-send:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 /* Mobile chat toggle button — hidden on desktop */
@@ -314,12 +314,12 @@ const handleSend = (): void => {
     right: var(--spacing-4);
     width: 3rem;
     height: 3rem;
-    border: 3px solid #111;
+    border: 3px solid var(--game-border);
     border-radius: 50%;
     background: var(--ws-green);
     font-size: 1.25rem;
     cursor: pointer;
-    box-shadow: 3px 3px 0 #111;
+    box-shadow: 3px 3px 0 var(--game-border);
     z-index: 100;
     touch-action: manipulation;
     position: relative;

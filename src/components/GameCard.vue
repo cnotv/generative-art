@@ -4,11 +4,11 @@
 
 <style scoped>
 .game-card {
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 4px 4px 0 var(--game-border);
   box-sizing: border-box;
-  color: #111;
+  color: var(--game-ink);
 }
 </style>

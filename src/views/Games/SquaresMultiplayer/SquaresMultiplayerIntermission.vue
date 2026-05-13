@@ -93,11 +93,11 @@ const wordGroups = computed((): WordGroup[] => {
 }
 
 .wm-intermission__card {
-  background: #fff;
-  color: #111;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 5px 5px 0 #111;
+  box-shadow: 5px 5px 0 var(--game-border);
   padding: var(--spacing-4);
   max-width: 28rem;
   width: 100%;
@@ -111,7 +111,7 @@ const wordGroups = computed((): WordGroup[] => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 900;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wm-intermission__groups {
@@ -132,7 +132,7 @@ const wordGroups = computed((): WordGroup[] => {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #555;
+  color: var(--game-ink-medium);
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -141,10 +141,10 @@ const wordGroups = computed((): WordGroup[] => {
 .wm-intermission__group-count {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  background: #f0f0f0;
+  background: var(--game-surface-dim);
   border-radius: 999px;
   padding: 0 var(--spacing-1);
-  color: #777;
+  color: var(--game-ink-muted);
 }
 
 .wm-intermission__group-pts {
@@ -168,15 +168,15 @@ const wordGroups = computed((): WordGroup[] => {
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid #ddd;
+  border: 2px solid var(--game-border-light);
   border-radius: 999px;
   font-size: var(--font-size-sm);
   font-weight: 700;
-  background: #fafafa;
+  background: var(--game-surface-subtle);
 }
 
 .wm-intermission__slot--found {
-  background: #f0fff4;
+  background: var(--wm-bg);
   border-color: var(--ws-green);
 }
 
@@ -189,11 +189,11 @@ const wordGroups = computed((): WordGroup[] => {
   height: 0.5rem;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 1.5px solid #111;
+  border: 1.5px solid var(--game-border);
 }
 
 .wm-intermission__slot-word {
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wm-intermission__scores {
@@ -203,7 +203,7 @@ const wordGroups = computed((): WordGroup[] => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--game-surface-dim);
   padding-top: var(--spacing-3);
 }
 
@@ -212,7 +212,7 @@ const wordGroups = computed((): WordGroup[] => {
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--game-surface-dim);
   border-radius: 999px;
 }
 
@@ -220,7 +220,7 @@ const wordGroups = computed((): WordGroup[] => {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -241,6 +241,6 @@ const wordGroups = computed((): WordGroup[] => {
 .wm-intermission__next {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: #888;
+  color: var(--game-ink-muted);
 }
 </style>

@@ -45,7 +45,7 @@ const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
-const backgroundStyle = { background: buildRandomGradient() }
+const backgroundStyle = { backgroundImage: buildRandomGradient() }
 const showChat = ref(false)
 
 const resolvedRoomId = ((): string => {
@@ -244,8 +244,19 @@ onMounted(() => {
   padding-top: calc(var(--nav-height) + var(--spacing-3));
   min-height: 100vh;
   box-sizing: border-box;
-  background: #f9f9f9;
+  background: var(--wl-bg);
   font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.wl :deep(.glw),
+.wl :deep(.wl-game),
+.wl :deep(.wl-intermission),
+.wl :deep(.wl-summary) {
+  animation: slide-up 0.28s ease both;
+}
+
+.wl :deep(.wl-sidebar) {
+  animation: slide-from-right 0.32s ease both;
 }
 
 @media (max-width: 720px) {

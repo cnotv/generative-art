@@ -51,10 +51,10 @@ const emit = defineEmits<{
 }
 
 .wl-summary__card {
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 5px 5px 0 #111;
+  box-shadow: 5px 5px 0 var(--game-border);
   padding: var(--spacing-5, 2rem);
   max-width: 28rem;
   width: 100%;
@@ -68,7 +68,7 @@ const emit = defineEmits<{
   margin: 0;
   font-size: 2rem;
   font-weight: 900;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wl-summary__scores {
@@ -85,19 +85,19 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--game-surface-dim);
   border-radius: 999px;
 }
 
 .wl-summary__score-row--winner {
   border-color: var(--wl-yellow);
-  background: #fffbe6;
+  background: var(--game-msg-system-bg);
 }
 
 .wl-summary__rank {
   font-size: var(--font-size-sm);
   font-weight: 800;
-  color: #888;
+  color: var(--game-ink-muted);
   min-width: 1.25rem;
   text-align: center;
 }
@@ -106,7 +106,7 @@ const emit = defineEmits<{
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
@@ -131,25 +131,25 @@ const emit = defineEmits<{
 
 .wl-summary__restart-btn {
   padding: var(--spacing-3) var(--spacing-5, 1.5rem);
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 999px;
   background: var(--wl-green);
   color: #fff;
   font-size: var(--font-size-md, 1rem);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   transition: transform 0.1s ease;
 }
 
 .wl-summary__restart-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 4px 4px 0 var(--game-border);
 }
 
 .wl-summary__waiting {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: #888;
+  color: var(--game-ink-muted);
 }
 </style>

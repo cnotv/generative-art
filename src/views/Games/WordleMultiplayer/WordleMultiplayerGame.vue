@@ -177,12 +177,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-2) var(--spacing-4);
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
   border-radius: 999px;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wl-game__banner-meta,
@@ -223,15 +223,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .wl-game__tile {
   width: 3rem;
   height: 3rem;
-  border: 3px solid #ccc;
+  border: 3px solid var(--game-border-secondary);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
   font-weight: 900;
-  color: #111;
-  background: #fff;
+  color: var(--game-ink);
+  background: var(--game-surface-subtle);
   text-transform: uppercase;
   user-select: none;
   transition:
@@ -240,7 +240,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .wl-game__tile--active {
-  border-color: #111;
+  border-color: var(--game-border);
 }
 
 .wl-game__tile--correct {
@@ -252,12 +252,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .wl-game__tile--present {
   background: var(--wl-yellow);
   border-color: var(--wl-yellow);
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wl-game__tile--absent {
-  background: #888;
-  border-color: #888;
+  background: var(--game-ink-muted);
+  border-color: var(--game-ink-muted);
   color: #fff;
 }
 
@@ -266,7 +266,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-weight: 700;
   padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
 }
 
 .wl-game__status--solved {
@@ -275,13 +275,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .wl-game__status--failed {
-  background: #ffeaea;
+  background: var(--game-msg-error-bg);
   color: #d32f2f;
 }
 
 .wl-game__status--waiting {
-  background: #f5f5f5;
-  color: #555;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink-medium);
 }
 
 .wl-game__keyboard {
@@ -299,14 +299,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .wl-game__key {
   min-width: 2.25rem;
   height: 3.5rem;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   border-radius: var(--radius-sm);
-  background: #fff;
-  color: #111;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #111;
+  box-shadow: 2px 2px 0 var(--game-border);
   transition: transform 0.1s ease;
   display: flex;
   align-items: center;
@@ -322,12 +322,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .wl-game__key:hover:not(:disabled) {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .wl-game__key:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 #111;
+  box-shadow: 1px 1px 0 var(--game-border);
 }
 
 .wl-game__key:disabled {
@@ -344,12 +344,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .wl-game__key--present {
   background: var(--wl-yellow);
   border-color: var(--wl-yellow);
-  color: #111;
+  color: var(--game-ink);
 }
 
 .wl-game__key--absent {
-  background: #888;
-  border-color: #888;
+  background: var(--game-ink-muted);
+  border-color: var(--game-ink-muted);
   color: #fff;
 }
 
@@ -368,10 +368,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .wl-game__surrender {
   margin-top: var(--spacing-2);
   padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid #888;
+  border: 2px solid var(--game-ink-muted);
   border-radius: 999px;
-  background: #fff;
-  color: #888;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;

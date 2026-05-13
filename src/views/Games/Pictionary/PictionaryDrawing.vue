@@ -93,9 +93,9 @@ defineExpose({
 .pictionary-drawing :deep(.canvas-editor-canvas) {
   flex-grow: 0;
   height: auto;
-  border: 3px solid #111;
+  border: 3px solid var(--game-border);
   border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 #111;
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .pictionary-drawing :deep(.btn) {
@@ -115,10 +115,10 @@ defineExpose({
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-3) var(--spacing-4, 1rem);
-  border: 4px dashed #111;
+  border: 4px dashed var(--game-border);
   border-radius: 1.25rem;
   background: linear-gradient(135deg, var(--pic-yellow), var(--pic-orange));
-  box-shadow: 5px 5px 0 #111;
+  box-shadow: 5px 5px 0 var(--game-border);
   text-align: center;
   z-index: 3;
 }
@@ -126,7 +126,7 @@ defineExpose({
 .pictionary-drawing__banner-label {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -136,7 +136,7 @@ defineExpose({
   font-size: clamp(1.25rem, 4vw, 2.5rem);
   font-weight: 900;
   letter-spacing: 0.1em;
-  color: #111;
+  color: var(--game-ink);
   text-transform: uppercase;
   text-shadow: 2px 2px 0 #fff;
   word-break: break-word;
@@ -146,13 +146,13 @@ defineExpose({
 
 .pictionary-drawing__banner-word--masked {
   font-family: var(--font-mono);
-  color: #333;
+  color: var(--game-ink-medium);
 }
 
 .pictionary-drawing__banner-def {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #111;
+  color: var(--game-ink);
   opacity: 0.8;
   font-style: italic;
   max-width: 36ch;
@@ -165,7 +165,7 @@ defineExpose({
 .pictionary-drawing__banner-meta {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #111;
+  color: var(--game-ink);
   opacity: 0.8;
 }
 

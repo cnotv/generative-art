@@ -54,14 +54,14 @@ const playerList = computed(() => Object.values(store.players))
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 50%;
-  border: 2px solid #111;
+  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
 .lb-presence__name {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #111;
+  color: var(--game-ink);
 }
 
 .lb-presence__you {
