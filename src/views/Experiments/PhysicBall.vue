@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader } from '@webgamekit/threejs'
+import { textureLoader, disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -28,6 +28,7 @@ const modelPosition = [0.0, 5.0, 0.0] as CoordinateTuple
 const groundPosition = [1, -1, 1] as CoordinateTuple
 const gravity = { x: 0.0, y: -9.81, z: 0.0 }
 let world
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -37,8 +38,12 @@ onMounted(() => {
     statsElement.value!)
 })
 
+let activeRenderer: THREE.WebGLRenderer | null = null
+
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
@@ -114,6 +119,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       }
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup()
     }
   )
@@ -150,7 +156,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       world.step()
 
       models.forEach(({ mesh, rigidBody }) => {
@@ -173,6 +179,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
 const getRenderer = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+  activeRenderer = renderer
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(0x777777) // Set background color to black
   renderer.shadowMap.enabled = true // Enable shadow maps

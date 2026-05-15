@@ -21,6 +21,7 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -31,6 +32,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
 })
 
@@ -48,6 +50,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   }
   stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     setup()
   })
 
@@ -177,12 +180,12 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     function animate() {
       stats.start(route)
       const delta = clock.getDelta()
-      const frame = requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       world.step()
 
       bindAnimatedElements(experiments, world, delta)
 
-      animateTimeline(timelineManager, frame)
+      animateTimeline(timelineManager, animationFrameId)
 
       renderer.render(scene, camera)
       video.stop(renderer.info.render.frame, route)

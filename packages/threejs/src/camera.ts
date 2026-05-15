@@ -104,10 +104,13 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
  * @param config
  */
 export const getLookAt = (model: Model, config: CameraConfig) => {
+  const raw = config.lookAt ?? [0, 0, 0]
   const lookAt =
-    config.lookAt instanceof THREE.Vector3
-      ? config.lookAt.clone()
-      : new THREE.Vector3(...((config.lookAt as CoordinateTuple) ?? [0, 0, 0]))
+    raw instanceof THREE.Vector3
+      ? raw.clone()
+      : Array.isArray(raw)
+        ? new THREE.Vector3(...(raw as CoordinateTuple))
+        : new THREE.Vector3(raw.x, raw.y, raw.z)
   lookAt.applyQuaternion(model.quaternion)
   lookAt.add(model.position)
   return lookAt
@@ -301,12 +304,19 @@ export const updateCamera = (
       camera.rotation.setFromVector3(config.rotation as THREE.Vector3)
     }
   }
-  if (config.lookAt) {
-    if (config.lookAt instanceof Array) {
-      camera.lookAt(...(config.lookAt as CoordinateTuple))
-    } else {
-      camera.lookAt(config.lookAt)
-    }
-  }
+  if (config.lookAt) applyCameraLookAt(camera, config.lookAt)
   camera.updateProjectionMatrix()
+}
+
+const applyCameraLookAt = (
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  lookAt: NonNullable<CameraConfig['lookAt']>
+): void => {
+  if (lookAt instanceof Array) {
+    camera.lookAt(...(lookAt as CoordinateTuple))
+  } else if (lookAt instanceof THREE.Vector3) {
+    camera.lookAt(lookAt)
+  } else {
+    camera.lookAt(lookAt.x, lookAt.y, lookAt.z)
+  }
 }

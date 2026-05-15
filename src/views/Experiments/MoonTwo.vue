@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader } from '@webgamekit/threejs'
+import { textureLoader, disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -15,9 +15,13 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 onMounted(() => {
@@ -66,12 +70,14 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       color: {}
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup()
     }
   )
 
   const setup = () => {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    activeRenderer = renderer
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`)) // Set background color to black
     renderer.shadowMap.enabled = true // Enable shadow maps
@@ -114,7 +120,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
 
       // mesh.rotation.x += (0.001 * config.speed);
       moon.rotation.y += 0.001 * config.speed

@@ -32,7 +32,7 @@ The instancing was already optimal — one `THREE.InstancedMesh` per chunk — s
 
 ### Fix
 
-Two constants changed in [`config.ts`](../../src/views/Experiments/ContinuousWorld/config.ts) and [`grassGenerator.ts`](../../src/views/Experiments/ContinuousWorld/grassGenerator.ts):
+Two constants changed in `config.ts` and `grassGenerator.ts`:
 
 ```ts
 // grassGenerator.ts
@@ -64,7 +64,7 @@ The visual difference at normal play distance is imperceptible — the spline st
 
 ### Root cause
 
-[`treeGenerator.ts`](../../src/views/Experiments/ContinuousWorld/treeGenerator.ts) created a `new THREE.Mesh` per tree inside a `forEach` loop — the exact pattern the `no-mesh-in-loop` ESLint rule flags:
+`treeGenerator.ts` created a `new THREE.Mesh` per tree inside a `forEach` loop — the exact pattern the `no-mesh-in-loop` ESLint rule flags:
 
 ```ts
 // Before: one draw call per tree

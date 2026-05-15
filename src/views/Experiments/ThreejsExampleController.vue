@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { disposeScene } from '@webgamekit/threejs'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js'
 import { RapierHelper } from 'three/addons/helpers/RapierHelper.js'
@@ -15,6 +16,7 @@ const canvas = ref(null)
 const movement = { forward: 0, right: 0, up: 0 }
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
 
 onMounted(() => {
   ;(init(
@@ -23,7 +25,10 @@ onMounted(() => {
   ),
     statsElement.value!)
 })
-onUnmounted(() => clearSceneElements())
+onUnmounted(() => {
+  clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
+})
 
 function random(min: number, max: number) {
   return Math.random() * (max - min) + min
@@ -237,6 +242,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElement: HTMLElement)
     getLight(scene)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvasElement })
+    activeRenderer = renderer
     renderer.setPixelRatio(window.devicePixelRatio)
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.shadowMap.enabled = true

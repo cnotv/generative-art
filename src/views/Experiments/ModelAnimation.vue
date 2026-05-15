@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader, gltfLoader } from '@webgamekit/threejs'
+import { textureLoader, gltfLoader, disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -17,6 +17,8 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -25,7 +27,11 @@ onMounted(() => {
   ),
     statsElement.value!)
 })
-onUnmounted(() => clearSceneElements())
+onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
+  clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
+})
 
 const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const config = {
@@ -33,6 +39,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   }
   stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     setup()
   })
 
@@ -66,7 +73,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       const delta = clock.getDelta()
       mixer.update(delta)
 
@@ -84,6 +91,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
 const getRenderer = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+  activeRenderer = renderer
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(0xaaaaff) // Set background color to black
   renderer.shadowMap.enabled = true // Enable shadow maps

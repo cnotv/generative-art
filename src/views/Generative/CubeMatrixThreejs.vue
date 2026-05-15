@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -14,6 +15,8 @@ let amountX = 3
 let amountY = 3
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -46,12 +49,14 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       // light: { addColor: []},
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup()
     }
   )
 
   const setup = () => {
     const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+    activeRenderer = renderer
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(0x000000) // Set background color to black
 
@@ -98,7 +103,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       const time = Date.now() * 0.0001 * config.speed // Adjust speed of the wave
 
       Array.from({ length: amountX }, (_, i) => {
@@ -122,7 +127,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 }
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 </script>
 

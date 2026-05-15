@@ -15,6 +15,7 @@ const canvas = ref(null)
 const route = useRoute()
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -38,6 +39,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   }
   stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     setup()
   })
 
@@ -82,7 +84,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     function animate() {
       stats.start(route)
       const delta = clock.getDelta()
-      const frame = requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       world.step()
 
       bindAnimatedElements(elements, world, delta)
@@ -94,7 +96,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
             action: () => (elements = removeElements(world, elements))
           }
         ],
-        frame
+        animationFrameId
       )
 
       renderer.render(scene, camera)
@@ -107,6 +109,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 }
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
 })
 </script>

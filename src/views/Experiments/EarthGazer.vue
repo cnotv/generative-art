@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader } from '@webgamekit/threejs'
+import { textureLoader, disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -16,9 +16,13 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 onMounted(() => {
@@ -91,6 +95,7 @@ let earthGazerTime = 0
 const setupEarthGazer = (canvas: HTMLCanvasElement) => {
   const config = earthGazerConfig
   const renderer = new THREE.WebGLRenderer({ canvas })
+  activeRenderer = renderer
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`))
 
@@ -130,7 +135,7 @@ const setupEarthGazer = (canvas: HTMLCanvasElement) => {
 
   const animate = () => {
     stats.start(route)
-    requestAnimationFrame(animate)
+    animationFrameId = requestAnimationFrame(animate)
     moon.rotation.z += -0.0001 * config.speed
     earth.rotation.y += 0.0005 * config.speed
     earth.rotation.x += 0.000001 * config.speed
@@ -167,6 +172,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       light: { addColor: [] }
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setupEarthGazer(canvas)
     }
   )

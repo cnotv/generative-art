@@ -4,7 +4,13 @@ import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { createZigzagTexture, textureLoader, gltfLoader, fbxLoader } from '@webgamekit/threejs'
+import {
+  createZigzagTexture,
+  textureLoader,
+  gltfLoader,
+  fbxLoader,
+  disposeScene
+} from '@webgamekit/threejs'
 import grassTextureImg from '@/assets/images/textures/grass.jpg'
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
@@ -13,6 +19,7 @@ const canvas1 = ref(null)
 const canvas2 = ref(null)
 const canvas3 = ref(null)
 const canvas4 = ref(null)
+let animationFrameId = 0
 let scene, camera, renderer, world, clock
 let cameras = []
 let renderers = []
@@ -461,7 +468,7 @@ const init = async () => {
   )
 
   const animate = () => {
-    requestAnimationFrame(animate)
+    animationFrameId = requestAnimationFrame(animate)
     const delta = clock.getDelta()
     const position = geekoRigidBody.translation()
     runAnimationLoop(delta, position)
@@ -576,10 +583,13 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   window.removeEventListener('resize', onWindowResize)
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   clearSceneElements()
+  if (renderer) disposeScene(renderer, scene)
+  renderers.forEach((r) => r?.dispose())
 })
 </script>
 

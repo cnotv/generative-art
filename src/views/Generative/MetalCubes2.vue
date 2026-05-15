@@ -7,7 +7,7 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { animateTimeline, createTimelineManager } from '@webgamekit/animation'
-import { getLights, instanceMatrixMesh, cubeTextureLoader } from '@webgamekit/threejs'
+import { getLights, instanceMatrixMesh, cubeTextureLoader, disposeScene } from '@webgamekit/threejs'
 import { getRoundedBox } from '@/utils/custom-models'
 import { times } from '@/utils/lodash'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -45,8 +45,11 @@ onBeforeUnmount(() => {
   }
 })
 
+let activeRenderer: THREE.WebGLRenderer | null = null
+
 onUnmounted(() => {
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
@@ -86,6 +89,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const setup = () => {
     // Init canvas
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    activeRenderer = renderer
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(0x000000) // Set background color to black
     const scene = new THREE.Scene()

@@ -28,6 +28,7 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let animationFrameId = 0
 
 onMounted(async () => {
   ;(init(
@@ -38,6 +39,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
 })
 
@@ -104,7 +106,7 @@ const setup = async (canvas: HTMLCanvasElement) => {
 
   const animate = () => {
     stats.start(route)
-    requestAnimationFrame(animate)
+    animationFrameId = requestAnimationFrame(animate)
     const delta = clock.getDelta()
     if (config.walk) {
       animationWalk.update(delta)
@@ -139,6 +141,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       mushroom: { show: {}, amount: {} }
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup(canvas)
     }
   )
