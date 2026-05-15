@@ -80,8 +80,17 @@ interface GameContext {
   aim: ReturnType<typeof createAimState>
 }
 
+const clearHoleObjects = (scene: THREE.Scene): void => {
+  const toRemove = scene.children.filter((c) => c.userData.mgHole)
+  toRemove.forEach((c) => scene.remove(c))
+}
+
+const tagHoleObject = (object: THREE.Object3D): void => {
+  object.userData.mgHole = true
+}
+
 const buildHole = (ctx: GameContext): void => {
-  ctx.scene.clear()
+  clearHoleObjects(ctx.scene)
   const hole = holes.value[currentHole.value]
   ctx.camera.position.set(
     hole.teePosition[0] + CAMERA_OFFSET_TOPDOWN[0],
@@ -89,10 +98,12 @@ const buildHole = (ctx: GameContext): void => {
     hole.teePosition[2] + CAMERA_OFFSET_TOPDOWN[2]
   )
   ctx.camera.lookAt(hole.teePosition[0], 0, hole.teePosition[2])
-  buildGround(hole, ctx.scene, ctx.world)
-  buildWalls(hole, ctx.scene, ctx.world)
-  buildHoleMarker(hole.holePosition, ctx.scene)
-  ctx.setBall(createBall(hole.teePosition, ctx.scene, ctx.world))
+  tagHoleObject(buildGround(hole, ctx.scene, ctx.world))
+  buildWalls(hole, ctx.scene, ctx.world).forEach(tagHoleObject)
+  tagHoleObject(buildHoleMarker(hole.holePosition, ctx.scene))
+  const ball = createBall(hole.teePosition, ctx.scene, ctx.world)
+  tagHoleObject(ball.mesh)
+  ctx.setBall(ball)
   ctx.aim.direction.set(0, 0, -1)
   message.value = ''
   waiting.value = false
@@ -159,8 +170,10 @@ const startGame = async (): Promise<void> => {
 
   await sceneStore.init(
     canvas.value,
-    {},
+    { ground: false, sky: false },
     {
+      playMode: true,
+      viewPanels: {},
       defineSetup: ({ scene, camera, world, animate }) => {
         let ballState: BallState | null = null
         const aim = createAimState()
