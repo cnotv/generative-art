@@ -46,7 +46,7 @@ export const HELPER_COLOR_ELEVATOR = 0x0088ff
 
 export const PLAYER_SPEED = 10
 export const PLAYER_DISTANCE = 0.5
-export const PLAYER_MODEL = 'stickboy.glb'
+export const PLAYER_MODEL = 'stickboy_maze.glb'
 const PLAYER_Y = -1.15
 const MAZE_HALF = ISLAND_SIZE / 2
 export const MAZE_ENTRANCE_OFFSET = MAZE_HALF - MAZE_CELL_SIZE / 2
