@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { usePerfMetricsStore } from './perfMetrics'
+import { usePerfMetricsStore, MAX_HISTORY_SIZE } from './perfMetrics'
 import type * as THREE from 'three'
 
 const makeRenderer = (calls = 0, triangles = 0): THREE.WebGLRenderer =>
@@ -41,6 +41,57 @@ describe('usePerfMetricsStore', () => {
       expect(store.renderer).toBeNull()
       expect(store.drawCalls).toBe(0)
       expect(store.triangles).toBe(0)
+    })
+  })
+
+  describe('history', () => {
+    it('starts with empty history for all metrics', () => {
+      const store = usePerfMetricsStore()
+      expect(store.history.fps).toHaveLength(0)
+      expect(store.history.ms).toHaveLength(0)
+      expect(store.history.drawCalls).toHaveLength(0)
+      expect(store.history.triangles).toHaveLength(0)
+      expect(store.history.heapMB).toHaveLength(0)
+    })
+
+    it('appends a value to history on each recordSnapshot', () => {
+      const store = usePerfMetricsStore()
+      store.tick(60, 16)
+      store.recordSnapshot()
+      store.tick(58, 17)
+      store.recordSnapshot()
+      expect(store.history.fps).toEqual([60, 58])
+      expect(store.history.ms).toEqual([16, 17])
+    })
+
+    it(`caps history at MAX_HISTORY_SIZE (${MAX_HISTORY_SIZE}) entries`, () => {
+      const store = usePerfMetricsStore()
+      // Pre-fill to capacity via $patch to avoid running recordSnapshot MAX_HISTORY_SIZE times
+      const full = Array.from({ length: MAX_HISTORY_SIZE }, (_, i) => i)
+      store.$patch((state) => {
+        state.history = { fps: full, ms: full, drawCalls: full, triangles: full, heapMB: full }
+      })
+      store.tick(9999, 9999)
+      store.recordSnapshot()
+      expect(store.history.fps).toHaveLength(MAX_HISTORY_SIZE)
+      expect(store.history.fps[MAX_HISTORY_SIZE - 1]).toBe(9999)
+      expect(store.history.fps[0]).toBe(1)
+    })
+
+    it('tick does not append to history', () => {
+      const store = usePerfMetricsStore()
+      store.tick(60, 16)
+      store.tick(58, 17)
+      expect(store.history.fps).toHaveLength(0)
+    })
+
+    it('records draw calls and triangles from renderer into history via recordSnapshot', () => {
+      const store = usePerfMetricsStore()
+      store.setRenderer(makeRenderer(5, 1000))
+      store.tick(60, 16)
+      store.recordSnapshot()
+      expect(store.history.drawCalls).toEqual([5])
+      expect(store.history.triangles).toEqual([1000])
     })
   })
 
