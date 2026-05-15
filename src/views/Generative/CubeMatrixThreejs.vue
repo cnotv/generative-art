@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -14,6 +15,7 @@ let amountX = 3
 let amountY = 3
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
 
 onMounted(() => {
   ;(init(
@@ -52,6 +54,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
   const setup = () => {
     const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+    activeRenderer = renderer
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(0x000000) // Set background color to black
 
@@ -123,6 +126,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
 onUnmounted(() => {
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 </script>
 

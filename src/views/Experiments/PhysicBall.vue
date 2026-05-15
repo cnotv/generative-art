@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader } from '@webgamekit/threejs'
+import { textureLoader, disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -37,8 +37,11 @@ onMounted(() => {
     statsElement.value!)
 })
 
+let activeRenderer: THREE.WebGLRenderer | null = null
+
 onUnmounted(() => {
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
@@ -173,6 +176,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
 const getRenderer = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+  activeRenderer = renderer
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(0x777777) // Set background color to black
   renderer.shadowMap.enabled = true // Enable shadow maps

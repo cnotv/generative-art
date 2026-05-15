@@ -4,7 +4,13 @@ import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { createZigzagTexture, textureLoader, gltfLoader, fbxLoader } from '@webgamekit/threejs'
+import {
+  createZigzagTexture,
+  textureLoader,
+  gltfLoader,
+  fbxLoader,
+  disposeScene
+} from '@webgamekit/threejs'
 import grassTextureImg from '@/assets/images/textures/grass.jpg'
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
@@ -580,6 +586,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   clearSceneElements()
+  if (renderer) disposeScene(renderer, scene)
+  renderers.forEach((r) => r?.dispose())
 })
 </script>
 

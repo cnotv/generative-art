@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { disposeScene } from '@webgamekit/threejs'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -13,6 +14,7 @@ const canvas = ref(null)
 const route = useRoute()
 const animationId = ref(0)
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+let activeRenderer: THREE.WebGLRenderer | null = null
 
 onMounted(() => {
   ;(init(
@@ -23,10 +25,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (animationId.value) {
-    cancelAnimationFrame(animationId.value)
-  }
+  if (animationId.value) cancelAnimationFrame(animationId.value)
   clearSceneElements()
+  if (activeRenderer) disposeScene(activeRenderer)
 })
 
 const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
@@ -54,6 +55,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   const setup = () => {
     // Init canvas
     const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+    activeRenderer = renderer
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(0x000000) // Set background color to black
 

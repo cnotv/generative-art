@@ -1,4 +1,5 @@
 // Re-export all modules
+export * from './dispose'
 export * from './loaders'
 export * from './types'
 export * from './getters'
