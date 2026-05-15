@@ -35,15 +35,25 @@ const timeRange = ref<string>(TIME_RANGE_OPTIONS[0].value)
 
 const timeRangeCount = computed(() => parseInt(timeRange.value, 10))
 
+const BASE_POINTS = 60
+
 /**
- * Returns exactly `timeRangeCount` values: real data right-aligned,
- * left-padded with the earliest available value (or 0 when empty).
+ * Returns exactly BASE_POINTS values for the selected time range.
+ * Data is right-aligned and left-padded with the earliest value (or 0).
+ * For ranges longer than BASE_POINTS seconds, values are downsampled
+ * by picking one entry per step so density stays constant across ranges.
  */
 const getChartValues = (values: number[]): number[] => {
   const count = timeRangeCount.value
   const fill = values.length > 0 ? values[0] : 0
-  if (values.length >= count) return values.slice(-count)
-  return [...Array(count - values.length).fill(fill), ...values]
+
+  const window =
+    values.length >= count
+      ? values.slice(-count)
+      : [...Array(count - values.length).fill(fill), ...values]
+
+  const step = Math.max(1, Math.floor(count / BASE_POINTS))
+  return Array.from({ length: BASE_POINTS }, (_, i) => window[i * step] ?? fill)
 }
 
 const fpsColor = computed(() => {
