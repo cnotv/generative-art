@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import GenericPanel from './GenericPanel.vue'
 import PerfChart from './PerfChart.vue'
 import {
@@ -15,6 +16,12 @@ import { usePanelsStore } from '@/stores/panels'
 
 const perfStore = usePerfMetricsStore()
 const panelsStore = usePanelsStore()
+const route = useRoute()
+
+watch(
+  () => route.name,
+  () => perfStore.resetHistory()
+)
 
 let frameCount = 0
 let lastTime = performance.now()

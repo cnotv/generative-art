@@ -60,6 +60,10 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
     triangles.value = 0
   }
 
+  const resetHistory = () => {
+    history.value = { fps: [], ms: [], drawCalls: [], triangles: [], heapMB: [] }
+  }
+
   /**
    * Update live metric values for the current frame. Called every rAF tick.
    * @param currentFps Frames per second calculated over the last second
@@ -107,6 +111,7 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
     setRenderer,
     clearRenderer,
     tick,
-    recordSnapshot
+    recordSnapshot,
+    resetHistory
   }
 })
