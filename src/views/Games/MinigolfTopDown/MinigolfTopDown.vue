@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, toRaw } from 'vue'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useSceneViewStore } from '@/stores/sceneView'
@@ -22,10 +22,16 @@ const holeIndex = ref(0)
 const strokes = ref(0)
 const message = ref('')
 const waiting = ref(false)
+const loading = ref(true)
 
 const HOLE = HOLES[holeIndex.value]
 
 let cleanupListeners: (() => void) | null = null
+
+const setOrbitEnabled = (enabled: boolean) => {
+  const orbit = toRaw(store.orbitReference)
+  if (orbit) orbit.enabled = enabled
+}
 
 onMounted(async () => {
   if (!canvas.value) return
@@ -50,17 +56,22 @@ onMounted(async () => {
         const aim = createAimState()
         const holeVec = new THREE.Vector3(...HOLE.holePosition)
 
+        loading.value = false
+
         const onPointerDown = (e: PointerEvent) => {
           if (waiting.value || !isBallStopped(ballState)) return
           beginDrag(aim, e.clientX, e.clientY)
         }
         const onPointerMove = (e: PointerEvent) => {
+          if (!aim.dragging) return
           updateDrag(aim, e.clientX, e.clientY, camera, ballState.mesh.position)
         }
         const onPointerUp = (e: PointerEvent) => {
+          if (!aim.dragging) return
           updateDrag(aim, e.clientX, e.clientY, camera, ballState.mesh.position)
           if (!endDrag(aim) || strokes.value >= MAX_STROKES) return
           strokes.value++
+          setOrbitEnabled(true)
           shootBall(ballState, aim.direction, aim.power, MAX_SHOT_POWER)
         }
 
@@ -78,11 +89,17 @@ onMounted(async () => {
           timeline,
           beforeTimeline: () => {
             syncBall(ballState)
-            if (waiting.value || !isBallStopped(ballState) || strokes.value === 0) return
-            const distribution = ballState.mesh.position.distanceTo(holeVec)
-            const isHoled = distribution < WIN_DISTANCE
+
+            const ballStopped = isBallStopped(ballState)
+            setOrbitEnabled(!ballStopped || waiting.value)
+
+            if (waiting.value || !ballStopped || strokes.value === 0) return
+
+            const distance = ballState.mesh.position.distanceTo(holeVec)
+            const isHoled = distance < WIN_DISTANCE
             const isMaxed = strokes.value >= MAX_STROKES
             if (!isHoled && !isMaxed) return
+
             message.value = isHoled
               ? `Hole in ${strokes.value}! Par ${HOLE.par}`
               : `Max strokes reached`
@@ -109,12 +126,19 @@ onUnmounted(() => {
 <template>
   <div class="minigolf-topdown">
     <canvas ref="canvas" />
-    <div class="minigolf-topdown__hud">
-      <span>Hole {{ holeIndex + 1 }} · Par {{ HOLE.par }}</span>
-      <span>Strokes: {{ strokes }}</span>
+
+    <div v-if="loading" class="minigolf-topdown__loading">
+      <span>Loading course…</span>
     </div>
-    <div v-if="message" class="minigolf-topdown__message">{{ message }}</div>
-    <div class="minigolf-topdown__hint">Drag to aim &amp; shoot</div>
+
+    <template v-else>
+      <div class="minigolf-topdown__hud">
+        <span>Hole {{ holeIndex + 1 }} · Par {{ HOLE.par }}</span>
+        <span>Strokes: {{ strokes }}</span>
+      </div>
+      <div v-if="message" class="minigolf-topdown__message">{{ message }}</div>
+      <div class="minigolf-topdown__hint">Drag to aim &amp; shoot</div>
+    </template>
   </div>
 </template>
 
@@ -129,6 +153,19 @@ canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.minigolf-topdown__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  padding-top: var(--nav-height);
 }
 
 .minigolf-topdown__hud {
