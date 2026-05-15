@@ -39,12 +39,13 @@ const BASE_POINTS = 60
 
 const downsample = (values: number[], count: number): number[] => {
   const fill = values.length > 0 ? values[0] : 0
-  const window =
-    values.length >= count
-      ? values.slice(-count)
-      : [...Array(count - values.length).fill(fill), ...values]
   const step = Math.max(1, Math.floor(count / BASE_POINTS))
-  return Array.from({ length: BASE_POINTS }, (_, i) => window[i * step] ?? fill)
+  // Anchor from the right: position i always refers to the same time offset
+  // from the most recent sample, so chart positions stay stable as data arrives.
+  return Array.from({ length: BASE_POINTS }, (_, i) => {
+    const index = values.length - (BASE_POINTS - i) * step
+    return index >= 0 ? values[index] : fill
+  })
 }
 
 type ChartSnapshot = {
