@@ -24,6 +24,10 @@ STEP 5  implement
 
 **This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
 
+## Pull requests
+
+**Never open a pull request unless the user explicitly asks for one.**
+
 ## When information is insufficient — ask first
 
 Before implementing any task where the intent, scope, or expected behavior is unclear, **ask the user for clarification**. Do not assume or guess. This applies especially to:

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import type * as THREE from 'three'
+import { activeRendererReference } from '@webgamekit/threejs'
 
 export interface PerfMetrics {
   fps: number
@@ -38,9 +39,10 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
     fps.value = currentFps
     ms.value = currentMs
 
-    if (renderer.value) {
-      drawCalls.value = renderer.value.info.render.calls
-      triangles.value = renderer.value.info.render.triangles
+    const activeR = renderer.value ?? activeRendererReference.current
+    if (activeR) {
+      drawCalls.value = activeR.info.render.calls
+      triangles.value = activeR.info.render.triangles
     }
 
     if ('memory' in performance) {

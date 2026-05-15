@@ -5,9 +5,7 @@ import type * as THREE from 'three'
 
 const makeRenderer = (calls = 0, triangles = 0): THREE.WebGLRenderer =>
   ({
-    info: {
-      render: { calls, triangles }
-    }
+    info: { render: { calls, triangles } }
   }) as unknown as THREE.WebGLRenderer
 
 beforeEach(() => {

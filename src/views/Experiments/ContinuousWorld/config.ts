@@ -71,7 +71,7 @@ export const DIRECTIONAL_LIGHT_NAME = 'directional-light'
 
 export const playerSettings = {
   model: {
-    path: 'stickboy.glb',
+    path: 'stickboy_maze.glb',
     position: [0, 0, 0] as CoordinateTuple,
     rotation: [0, Math.PI, 0] as CoordinateTuple,
     scale: [PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE] as CoordinateTuple,
