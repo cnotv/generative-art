@@ -15,8 +15,10 @@ const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
   if (activeRenderer) disposeScene(activeRenderer)
 })
@@ -67,6 +69,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       light: { addColor: [] }
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup()
     }
   )
@@ -126,7 +129,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
 
       // mesh.rotation.x += (0.001 * config.speed);
       mesh.rotation.y += 0.001 * config.speed

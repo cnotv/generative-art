@@ -14,6 +14,7 @@ import {
   CameraConfig
 } from './types'
 import { getEnvironment, getLights, getGround, getSky } from './getters'
+import { disposeScene } from './dispose'
 import { updateCamera } from './camera'
 import { deepMerge } from './utils/lodash'
 import { SCENE_DEFAULTS } from './defaults'
@@ -144,6 +145,7 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
   if (video && route) video.record(canvas, route)
   const getDelta = () => delta
   let orbit: OrbitControls | null = null
+  let animationFrameId = 0
 
   /**
    * Setup scene
@@ -222,7 +224,7 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
     function runAnimation() {
       if (stats?.start && route) stats.start(route.name ?? '')
       delta = clock.getDelta()
-      requestAnimationFrame(runAnimation)
+      animationFrameId = requestAnimationFrame(runAnimation)
 
       accumulator += delta
       if (accumulator < frameRate) return
@@ -253,7 +255,10 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
   }
 
   const cleanup = () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     if (resize !== false) window.removeEventListener('resize', handleResize)
+    disposeScene(renderer)
+    activeRendererReference.current = null
   }
 
   return {

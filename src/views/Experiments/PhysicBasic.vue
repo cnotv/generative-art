@@ -91,8 +91,10 @@ onMounted(() => {
 })
 
 let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
   if (activeRenderer) disposeScene(activeRenderer)
 })
@@ -103,6 +105,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   }
   stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     setup()
   })
 
@@ -161,7 +164,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       world.step()
 
       cubes.forEach(({ cube, rigidBody }) => {

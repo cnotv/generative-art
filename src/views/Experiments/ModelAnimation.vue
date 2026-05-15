@@ -18,6 +18,7 @@ const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -27,6 +28,7 @@ onMounted(() => {
     statsElement.value!)
 })
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
   if (activeRenderer) disposeScene(activeRenderer)
 })
@@ -37,6 +39,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   }
   stats.init(route, statsElement)
   controls.create(config, route, {}, () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     setup()
   })
 
@@ -70,7 +73,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       const delta = clock.getDelta()
       mixer.update(delta)
 

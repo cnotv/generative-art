@@ -16,6 +16,7 @@ let amountY = 3
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 let activeRenderer: THREE.WebGLRenderer | null = null
+let animationFrameId = 0
 
 onMounted(() => {
   ;(init(
@@ -48,6 +49,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       // light: { addColor: []},
     },
     () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
       setup()
     }
   )
@@ -101,7 +103,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     function animate() {
       stats.start(route)
-      requestAnimationFrame(animate)
+      animationFrameId = requestAnimationFrame(animate)
       const time = Date.now() * 0.0001 * config.speed // Adjust speed of the wave
 
       Array.from({ length: amountX }, (_, i) => {
@@ -125,6 +127,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 }
 
 onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   clearSceneElements()
   if (activeRenderer) disposeScene(activeRenderer)
 })
