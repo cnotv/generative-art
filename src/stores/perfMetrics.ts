@@ -13,11 +13,23 @@ export interface PerfMetrics {
 
 export type PerfHistory = Record<keyof PerfMetrics, number[]>
 
-export const HISTORY_SIZE = 60
+/** Maximum samples retained — enough for the longest chart time range (30 s @ 60 fps). */
+export const MAX_HISTORY_SIZE = 1800
+
+/** Legacy alias kept so existing tests importing HISTORY_SIZE still compile. */
+export const HISTORY_SIZE = MAX_HISTORY_SIZE
+
+export const TIME_RANGE_OPTIONS = [
+  { value: '60', label: '1s' },
+  { value: '300', label: '5s' },
+  { value: '1800', label: '30s' }
+] as const
+
+export type TimeRangeValue = (typeof TIME_RANGE_OPTIONS)[number]['value']
 
 const pushHistory = (history: number[], value: number): number[] => {
   const next = [...history, value]
-  return next.length > HISTORY_SIZE ? next.slice(next.length - HISTORY_SIZE) : next
+  return next.length > MAX_HISTORY_SIZE ? next.slice(next.length - MAX_HISTORY_SIZE) : next
 }
 
 export const usePerfMetricsStore = defineStore('perfMetrics', () => {

@@ -8,7 +8,9 @@ import {
   AccordionTrigger,
   AccordionContent
 } from '@/components/ui/accordion'
-import { usePerfMetricsStore } from '@/stores/perfMetrics'
+import { Select } from '@/components/ui/select'
+import { Toggle } from '@/components/ui/toggle'
+import { usePerfMetricsStore, TIME_RANGE_OPTIONS } from '@/stores/perfMetrics'
 import { usePanelsStore } from '@/stores/panels'
 
 const perfStore = usePerfMetricsStore()
@@ -21,6 +23,12 @@ let animationFrameId: number | null = null
 
 const currentFps = ref(0)
 const currentMs = ref(0)
+const showCharts = ref(true)
+const timeRange = ref<string>(TIME_RANGE_OPTIONS[0].value)
+
+const timeRangeCount = computed(() => parseInt(timeRange.value, 10))
+
+const sliceHistory = (values: number[]) => values.slice(-timeRangeCount.value)
 
 const fpsColor = computed(() => {
   if (perfStore.fps >= 55) return 'ok'
@@ -114,6 +122,22 @@ onUnmounted(() => {
       <AccordionItem value="stats">
         <AccordionTrigger class="text-sm font-medium py-2">Performance Stats</AccordionTrigger>
         <AccordionContent>
+          <div class="debug-panel__chart-controls">
+            <Toggle
+              v-model="showCharts"
+              size="sm"
+              class="debug-panel__chart-toggle"
+              title="Toggle charts"
+            >
+              Chart
+            </Toggle>
+            <Select
+              v-if="showCharts"
+              v-model="timeRange"
+              :options="[...TIME_RANGE_OPTIONS]"
+              class="debug-panel__time-range"
+            />
+          </div>
           <div class="debug-panel__stats">
             <div class="debug-panel__stat-group">
               <div class="debug-panel__stat">
@@ -125,7 +149,11 @@ onUnmounted(() => {
                   {{ perfStore.fps }}
                 </span>
               </div>
-              <PerfChart :values="perfStore.history.fps" :color="`var(--color-perf-${fpsColor})`" />
+              <PerfChart
+                v-if="showCharts"
+                :values="sliceHistory(perfStore.history.fps)"
+                :color="`var(--color-perf-${fpsColor})`"
+              />
             </div>
             <div class="debug-panel__stat-group">
               <div class="debug-panel__stat">
@@ -137,7 +165,11 @@ onUnmounted(() => {
                   {{ perfStore.ms }}
                 </span>
               </div>
-              <PerfChart :values="perfStore.history.ms" :color="`var(--color-perf-${msColor})`" />
+              <PerfChart
+                v-if="showCharts"
+                :values="sliceHistory(perfStore.history.ms)"
+                :color="`var(--color-perf-${msColor})`"
+              />
             </div>
             <div class="debug-panel__stat-group">
               <div class="debug-panel__stat">
@@ -150,7 +182,8 @@ onUnmounted(() => {
                 </span>
               </div>
               <PerfChart
-                :values="perfStore.history.drawCalls"
+                v-if="showCharts"
+                :values="sliceHistory(perfStore.history.drawCalls)"
                 :color="`var(--color-perf-${drawCallsColor})`"
               />
             </div>
@@ -165,7 +198,8 @@ onUnmounted(() => {
                 </span>
               </div>
               <PerfChart
-                :values="perfStore.history.triangles"
+                v-if="showCharts"
+                :values="sliceHistory(perfStore.history.triangles)"
                 :color="`var(--color-perf-${trianglesColor})`"
               />
             </div>
@@ -180,7 +214,8 @@ onUnmounted(() => {
                 </span>
               </div>
               <PerfChart
-                :values="perfStore.history.heapMB"
+                v-if="showCharts"
+                :values="sliceHistory(perfStore.history.heapMB)"
                 :color="`var(--color-perf-${heapColor})`"
               />
             </div>
@@ -194,6 +229,24 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.debug-panel__chart-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding-bottom: var(--spacing-1);
+}
+
+.debug-panel__chart-toggle {
+  font-size: var(--font-size-xs);
+  height: auto;
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.debug-panel__time-range {
+  flex: 1;
+  font-size: var(--font-size-xs);
+}
+
 .debug-panel__stats {
   display: grid;
   gap: var(--spacing-1);
