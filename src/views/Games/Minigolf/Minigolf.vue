@@ -1,86 +1,75 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, toRaw } from 'vue'
+import { onMounted, onUnmounted, ref, computed, toRaw, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useSceneViewStore } from '@/stores/sceneView'
+import { useMinigolfStore } from '@/stores/minigolf'
+import { useMinigolfSession } from './useMinigolfSession'
 import { buildGround, buildWalls, buildHoleMarker } from './helpers/course'
 import { createBall, syncBall, shootBall, isBallStopped, resetBall } from './helpers/ball'
 import { createAimState, beginDrag, updateDrag, endDrag } from './helpers/input'
 import { HOLES, CAMERA_OFFSET_TOPDOWN, MAX_SHOT_POWER, WIN_DISTANCE, MAX_STROKES } from './config'
-import { PLAYER_COLORS, randomPick, NAME_ADJECTIVES, NAME_ANIMALS } from '@/utils/playerProfile'
+import {
+  loadProfile,
+  saveProfile,
+  randomPick,
+  NAME_ADJECTIVES,
+  NAME_ANIMALS,
+  PLAYER_COLORS,
+  buildRandomGradient
+} from '@/utils/playerProfile'
+import MinigolfLobby from './MinigolfLobby.vue'
 import type { BallState } from './helpers/ball'
 
-interface Player {
-  name: string
-  color: string
-  scores: number[]
-}
-
-type Phase = 'wizard' | 'loading' | 'game' | 'summary'
-
+const route = useRoute()
+const router = useRouter()
 const canvas = ref<HTMLCanvasElement | null>(null)
-const store = useSceneViewStore()
+const sceneStore = useSceneViewStore()
+const store = useMinigolfStore()
+const { phase, playerList, holeCount, currentHole, hostId } = storeToRefs(store)
 
-const phase = ref<Phase>('wizard')
-const wizardStep = ref<1 | 2>(1)
-const holeCount = ref(HOLES.length)
+const storedProfile = loadProfile()
+const playerName = ref(
+  storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
+)
+const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
+const backgroundStyle = { backgroundImage: buildRandomGradient() }
 
-const players = ref<Player[]>([
-  {
-    name: `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`,
-    color: PLAYER_COLORS[0],
-    scores: []
-  },
-  {
-    name: `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`,
-    color: PLAYER_COLORS[1],
-    scores: []
-  }
-])
+const resolvedRoomId = ((): string => {
+  const existing = route.query.room as string | undefined
+  if (existing) return existing
+  const next = crypto.randomUUID()
+  router.replace({ query: { ...route.query, room: next } })
+  return next
+})()
 
-const addPlayer = () => {
-  if (players.value.length >= 4) return
-  const usedColors = players.value.map((p) => p.color)
-  const availableColor = PLAYER_COLORS.find((c) => !usedColors.includes(c)) ?? PLAYER_COLORS[0]
-  players.value = [
-    ...players.value,
-    {
-      name: `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`,
-      color: availableColor,
-      scores: []
-    }
-  ]
-}
+const roomId = ref(resolvedRoomId)
 
-const removePlayer = (index: number) => {
-  if (players.value.length <= 2) return
-  players.value = players.value.filter((_, i) => i !== index)
-}
+const session = useMinigolfSession({
+  name: playerName.value,
+  color: playerColor.value,
+  roomId: resolvedRoomId
+})
 
-const holeIndex = ref(0)
+const { isHost, localPeerId } = session
+
+const holes = computed(() => HOLES.slice(0, holeCount.value))
+
 const currentPlayerIndex = ref(0)
 const strokesThisHole = ref<number[]>([])
 const message = ref('')
 const waiting = ref(false)
 
-const currentPlayer = computed(() => players.value[currentPlayerIndex.value])
-const holes = computed(() => HOLES.slice(0, holeCount.value))
-
-const totalScore = (player: Player) => player.scores.reduce((a, b) => a + b, 0)
-
-const resetToWizard = () => {
-  phase.value = 'wizard'
-  wizardStep.value = 1
-}
+const currentPlayer = computed(() => playerList.value[currentPlayerIndex.value])
 
 let cleanupListeners: (() => void) | null = null
 
-const setOrbitEnabled = (enabled: boolean) => {
-  const orbit = toRaw(store.orbitReference)
+const setOrbitEnabled = (enabled: boolean): void => {
+  const orbit = toRaw(sceneStore.orbitReference)
   if (orbit) orbit.enabled = enabled
 }
-
-// ── Extracted helpers (keep arrow functions short) ─────────────────────────
 
 interface GameContext {
   scene: THREE.Scene
@@ -91,9 +80,9 @@ interface GameContext {
   aim: ReturnType<typeof createAimState>
 }
 
-const buildHole = (ctx: GameContext) => {
+const buildHole = (ctx: GameContext): void => {
   ctx.scene.clear()
-  const hole = holes.value[holeIndex.value]
+  const hole = holes.value[currentHole.value]
   ctx.camera.position.set(
     hole.teePosition[0] + CAMERA_OFFSET_TOPDOWN[0],
     hole.teePosition[1] + CAMERA_OFFSET_TOPDOWN[1],
@@ -109,60 +98,66 @@ const buildHole = (ctx: GameContext) => {
   waiting.value = false
 }
 
-const advancePlayer = (ctx: GameContext) => {
-  currentPlayerIndex.value = (currentPlayerIndex.value + 1) % players.value.length
+const advancePlayer = (ctx: GameContext): void => {
+  currentPlayerIndex.value = (currentPlayerIndex.value + 1) % playerList.value.length
   const ball = ctx.getBall()
-  if (ball) resetBall(ball, holes.value[holeIndex.value].teePosition)
+  if (ball) resetBall(ball, holes.value[currentHole.value].teePosition)
   message.value = ''
   waiting.value = false
 }
 
-const advanceHole = (ctx: GameContext) => {
-  holeIndex.value++
-  if (holeIndex.value >= holes.value.length) {
-    phase.value = 'summary'
+const advanceHole = (ctx: GameContext): void => {
+  const nextHole = currentHole.value + 1
+  if (nextHole >= holes.value.length) {
+    store.phase = 'summary'
     return
   }
+  store.currentHole = nextHole
   currentPlayerIndex.value = 0
-  strokesThisHole.value = Array(players.value.length).fill(0)
+  strokesThisHole.value = Array(playerList.value.length).fill(0)
   buildHole(ctx)
 }
 
-const resolveTurn = (ctx: GameContext) => {
+const resolveTurn = (ctx: GameContext): void => {
   const ball = ctx.getBall()
   if (!ball) return
   const strokes = strokesThisHole.value[currentPlayerIndex.value]
-  const holePosition = new THREE.Vector3(...holes.value[holeIndex.value].holePosition)
+  const holePosition = new THREE.Vector3(...holes.value[currentHole.value].holePosition)
   const isHoled = ball.mesh.position.distanceTo(holePosition) < WIN_DISTANCE
   const isMaxed = strokes >= MAX_STROKES
   if (!isHoled && !isMaxed) return
 
   waiting.value = true
-  const par = holes.value[holeIndex.value].par
+  const par = holes.value[currentHole.value].par
   const finalStrokes = isHoled ? strokes : MAX_STROKES
-  players.value = players.value.map((p, i) =>
-    i === currentPlayerIndex.value ? { ...p, scores: [...p.scores, finalStrokes] } : p
-  )
-  message.value = isHoled
-    ? `${currentPlayer.value.name}: ${strokes} stroke${strokes !== 1 ? 's' : ''}! Par ${par}`
-    : `${currentPlayer.value.name}: max strokes`
+  const player = currentPlayer.value
+  if (player) {
+    session.broadcastScore(currentHole.value, finalStrokes)
+    message.value = isHoled
+      ? `${player.name}: ${strokes} stroke${strokes !== 1 ? 's' : ''}! Par ${par}`
+      : `${player.name}: max strokes`
+  }
 
-  const isLastPlayer = currentPlayerIndex.value === players.value.length - 1
+  const isLastPlayer = currentPlayerIndex.value === playerList.value.length - 1
   setTimeout(() => {
     if (isLastPlayer) advanceHole(ctx)
     else advancePlayer(ctx)
   }, 1800)
 }
 
-const startGame = async () => {
-  if (!canvas.value) return
-  phase.value = 'loading'
-  players.value = players.value.map((p) => ({ ...p, scores: [] }))
-  holeIndex.value = 0
-  currentPlayerIndex.value = 0
-  strokesThisHole.value = Array(players.value.length).fill(0)
+let gameContext: GameContext | null = null
 
-  await store.init(
+const startGame = async (): Promise<void> => {
+  if (!canvas.value) return
+
+  const resetScores = playerList.value.map((p) => ({ ...p, scores: [] }))
+  resetScores.forEach((p) => store.upsertPlayer(p))
+
+  store.currentHole = 0
+  currentPlayerIndex.value = 0
+  strokesThisHole.value = Array(playerList.value.length).fill(0)
+
+  await sceneStore.init(
     canvas.value,
     {},
     {
@@ -180,18 +175,18 @@ const startGame = async () => {
           }
         }
 
+        gameContext = ctx
         buildHole(ctx)
-        phase.value = 'game'
 
-        const onPointerDown = (e: PointerEvent) => {
+        const onPointerDown = (e: PointerEvent): void => {
           if (waiting.value || !ballState || !isBallStopped(ballState)) return
           beginDrag(aim, e.clientX, e.clientY)
         }
-        const onPointerMove = (e: PointerEvent) => {
+        const onPointerMove = (e: PointerEvent): void => {
           if (!aim.dragging) return
           updateDrag(aim, e.clientX, e.clientY, camera, ballState!.mesh.position)
         }
-        const onPointerUp = (e: PointerEvent) => {
+        const onPointerUp = (e: PointerEvent): void => {
           if (!aim.dragging || !ballState) return
           updateDrag(aim, e.clientX, e.clientY, camera, ballState.mesh.position)
           if (!endDrag(aim) || strokesThisHole.value[currentPlayerIndex.value] >= MAX_STROKES)
@@ -229,306 +224,157 @@ const startGame = async () => {
   )
 }
 
+watch(phase, (newPhase) => {
+  if (newPhase === 'playing') {
+    startGame()
+  }
+})
+
+const handleMatchFound = (gameRoomId: string): void => {
+  roomId.value = gameRoomId
+  router.replace({ query: { room: gameRoomId } })
+  session.reconnect(gameRoomId)
+}
+
+const handleLeaveRoom = (): void => {
+  const freshId = crypto.randomUUID()
+  roomId.value = freshId
+  router.replace({ query: { room: freshId } })
+  session.reconnect(freshId)
+}
+
+const handleNameChange = (): void => {
+  const trimmed = playerName.value.trim()
+  if (!trimmed) return
+  session.updateProfile(trimmed, playerColor.value)
+  saveProfile(trimmed, playerColor.value)
+}
+
+const handleColorChange = (color: string): void => {
+  playerColor.value = color
+  session.updateProfile(playerName.value.trim() || playerName.value, color)
+  saveProfile(playerName.value.trim() || playerName.value, color)
+}
+
+const handleConfigChange = (holeCountValue: number): void => {
+  session.broadcastConfig(holeCountValue)
+}
+
+const handleStartGame = (): void => {
+  session.broadcastStart()
+}
+
+const handlePlayAgain = (): void => {
+  store.phase = 'lobby'
+  store.currentHole = 0
+  const resetPlayers = playerList.value.map((p) => ({ ...p, scores: [] }))
+  resetPlayers.forEach((p) => store.upsertPlayer(p))
+  cleanupListeners?.()
+  sceneStore.cleanup()
+  gameContext = null
+}
+
+const totalScore = (scores: number[]): number => scores.reduce((a, b) => a + b, 0)
+
+onMounted(() => {
+  session.init()
+})
+
 onUnmounted(() => {
   cleanupListeners?.()
-  store.cleanup()
+  sceneStore.cleanup()
 })
 </script>
 
 <template>
-  <!-- Wizard -->
-  <div v-if="phase === 'wizard'" class="mg-wizard">
-    <div class="mg-wizard__card">
-      <h1 class="mg-wizard__title">Minigolf</h1>
+  <main class="mg" :class="`mg--${phase}`" :style="backgroundStyle">
+    <MinigolfLobby
+      v-if="phase === 'lobby'"
+      :player-name="playerName"
+      :player-color="playerColor"
+      :is-host="isHost"
+      :player-list="playerList"
+      :room-id="roomId"
+      :hole-count="holeCount"
+      @update:player-name="playerName = $event"
+      @update:player-color="handleColorChange"
+      @update:hole-count="handleConfigChange"
+      @name-change="handleNameChange"
+      @start-game="handleStartGame"
+      @match-found="handleMatchFound"
+      @leave-room="handleLeaveRoom"
+    />
 
-      <div class="mg-wizard__steps">
-        <span class="mg-wizard__step" :class="{ 'mg-wizard__step--active': wizardStep === 1 }"
-          >1. Players</span
+    <div v-else-if="phase === 'playing'" class="mg-game">
+      <canvas ref="canvas" />
+      <div class="mg-game__hud">
+        <div
+          v-if="currentPlayer"
+          class="mg-game__player"
+          :style="{ borderColor: currentPlayer.color }"
         >
-        <span class="mg-wizard__step-sep">›</span>
-        <span class="mg-wizard__step" :class="{ 'mg-wizard__step--active': wizardStep === 2 }"
-          >2. Course</span
-        >
-      </div>
-
-      <div v-if="wizardStep === 1" class="mg-wizard__section">
-        <div v-for="(player, index) in players" :key="index" class="mg-wizard__player">
-          <input
-            class="mg-wizard__input"
-            :value="player.name"
-            maxlength="20"
-            @input="players[index] = { ...player, name: ($event.target as HTMLInputElement).value }"
-          />
-          <div class="mg-wizard__colors">
-            <button
-              v-for="color in PLAYER_COLORS"
-              :key="color"
-              class="mg-wizard__color"
-              :class="{ 'mg-wizard__color--active': player.color === color }"
-              :style="{ background: color }"
-              :disabled="players.some((p, i) => i !== index && p.color === color)"
-              @click="players[index] = { ...player, color }"
-            />
-          </div>
-          <button v-if="players.length > 2" class="mg-wizard__remove" @click="removePlayer(index)">
-            ✕
-          </button>
+          {{ currentPlayer.name }}
         </div>
-        <button v-if="players.length < 4" class="mg-wizard__add" @click="addPlayer">
-          + Add player
-        </button>
-      </div>
-
-      <div v-if="wizardStep === 2" class="mg-wizard__section">
-        <label class="mg-wizard__label">
-          Number of holes
-          <select
-            class="mg-wizard__select"
-            :value="holeCount"
-            @change="holeCount = Number(($event.target as HTMLSelectElement).value)"
+        <div class="mg-game__info">
+          <span
+            >Hole {{ currentHole + 1 }}/{{ holes.length }} · Par {{ holes[currentHole].par }}</span
           >
-            <option v-for="n in HOLES.length" :key="n" :value="n">{{ n }}</option>
-          </select>
-        </label>
+          <span>Stroke {{ strokesThisHole[currentPlayerIndex] }}/{{ MAX_STROKES }}</span>
+        </div>
       </div>
+      <div v-if="message" class="mg-game__message">{{ message }}</div>
+      <div class="mg-game__hint">Drag to aim &amp; shoot</div>
+    </div>
 
-      <div class="mg-wizard__actions">
+    <div v-else class="mg-summary">
+      <div class="mg-summary__card">
+        <h2 class="mg-summary__title">Final Scores</h2>
+        <table class="mg-summary__table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th v-for="n in holeCount" :key="n">H{{ n }}</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="player in playerList" :key="player.id">
+              <td>
+                <span class="mg-summary__dot" :style="{ background: player.color }" />
+                {{ player.name }}
+              </td>
+              <td v-for="(score, i) in player.scores" :key="i">{{ score }}</td>
+              <td class="mg-summary__total">{{ totalScore(player.scores) }}</td>
+            </tr>
+          </tbody>
+        </table>
         <button
-          v-if="wizardStep === 2"
-          class="mg-wizard__btn mg-wizard__btn--secondary"
-          @click="wizardStep = 1"
+          v-if="isHost"
+          class="mg-summary__btn mg-summary__btn--primary"
+          @click="handlePlayAgain"
         >
-          Back
+          Play again
         </button>
-        <button
-          v-if="wizardStep === 1"
-          class="mg-wizard__btn mg-wizard__btn--primary"
-          @click="wizardStep = 2"
-        >
-          Next
-        </button>
-        <button
-          v-if="wizardStep === 2"
-          class="mg-wizard__btn mg-wizard__btn--primary"
-          @click="startGame"
-        >
-          Start
-        </button>
+        <p v-else class="mg-summary__hint">Waiting for host to restart…</p>
       </div>
     </div>
-  </div>
-
-  <!-- Loading -->
-  <div v-else-if="phase === 'loading'" class="mg-loading">Loading course…</div>
-
-  <!-- Game -->
-  <div v-else-if="phase === 'game'" class="mg-game">
-    <canvas ref="canvas" />
-    <div class="mg-game__hud">
-      <div class="mg-game__player" :style="{ borderColor: currentPlayer.color }">
-        {{ currentPlayer.name }}
-      </div>
-      <div class="mg-game__info">
-        <span>Hole {{ holeIndex + 1 }}/{{ holes.length }} · Par {{ holes[holeIndex].par }}</span>
-        <span>Stroke {{ strokesThisHole[currentPlayerIndex] }}/{{ MAX_STROKES }}</span>
-      </div>
-    </div>
-    <div v-if="message" class="mg-game__message">{{ message }}</div>
-    <div class="mg-game__hint">Drag to aim &amp; shoot</div>
-  </div>
-
-  <!-- Summary -->
-  <div v-else class="mg-summary">
-    <div class="mg-summary__card">
-      <h2 class="mg-summary__title">Final Scores</h2>
-      <table class="mg-summary__table">
-        <thead>
-          <tr>
-            <th>Player</th>
-            <th v-for="n in holeCount" :key="n">H{{ n }}</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="player in players" :key="player.name">
-            <td>
-              <span class="mg-summary__dot" :style="{ background: player.color }" />
-              {{ player.name }}
-            </td>
-            <td v-for="(score, i) in player.scores" :key="i">{{ score }}</td>
-            <td class="mg-summary__total">{{ totalScore(player) }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <button class="mg-wizard__btn mg-wizard__btn--primary" @click="resetToWizard">
-        Play again
-      </button>
-    </div>
-  </div>
+  </main>
 </template>
 
 <style scoped>
-.mg-wizard {
+.mg {
+  --mg-green: #4caf50;
+
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   min-height: 100vh;
-  padding-top: var(--nav-height);
   background: var(--color-background);
 }
 
-.mg-wizard__card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  padding: var(--spacing-6);
-  background: var(--color-secondary);
-  border-radius: var(--radius-lg);
-  width: min(480px, 92vw);
-}
-
-.mg-wizard__title {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  color: var(--color-foreground);
-  margin: 0;
-  text-align: center;
-}
-
-.mg-wizard__steps {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  justify-content: center;
-  font-size: var(--font-size-xs);
-  color: var(--color-foreground);
-  opacity: 0.5;
-}
-
-.mg-wizard__step--active {
-  opacity: 1;
-  font-weight: 600;
-}
-
-.mg-wizard__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-.mg-wizard__player {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.mg-wizard__input {
-  flex: 1;
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-sm);
-}
-
-.mg-wizard__colors {
-  display: flex;
-  gap: var(--spacing-1);
-}
-
-.mg-wizard__color {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.mg-wizard__color--active {
-  border-color: var(--color-foreground);
-}
-
-.mg-wizard__color:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-
-.mg-wizard__remove {
-  background: none;
-  border: none;
-  color: var(--color-foreground);
-  opacity: 0.4;
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-1);
-}
-
-.mg-wizard__add {
-  background: none;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-foreground);
-  opacity: 0.6;
-  cursor: pointer;
-  padding: var(--spacing-2);
-  font-size: var(--font-size-sm);
-}
-
-.mg-wizard__label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--font-size-sm);
-  color: var(--color-foreground);
-}
-
-.mg-wizard__select {
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-sm);
-}
-
-.mg-wizard__actions {
-  display: flex;
-  gap: var(--spacing-2);
-  justify-content: flex-end;
-}
-
-.mg-wizard__btn {
-  padding: var(--spacing-2) var(--spacing-4);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-}
-
-.mg-wizard__btn--primary {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-}
-
-.mg-wizard__btn--secondary {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  border: 1px solid var(--color-border);
-}
-
-.mg-loading {
-  display: flex;
+.mg--lobby {
   align-items: center;
   justify-content: center;
-  height: 100vh;
   padding-top: var(--nav-height);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-foreground);
-  background: var(--color-background);
 }
 
 .mg-game {
@@ -655,5 +501,26 @@ canvas {
 
 .mg-summary__total {
   font-weight: 700;
+}
+
+.mg-summary__btn {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.mg-summary__btn--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.mg-summary__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-foreground);
+  opacity: 0.6;
+  margin: 0;
 }
 </style>

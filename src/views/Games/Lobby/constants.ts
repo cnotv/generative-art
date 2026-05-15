@@ -6,7 +6,13 @@ export const REANNOUNCE_MS = 30_000
 export const GAME_LABELS: Record<GameType, string> = {
   Pictionary: 'Pictionary',
   SquaresMultiplayer: 'Squares',
-  WordleMultiplayer: 'Wordle'
+  WordleMultiplayer: 'Wordle',
+  Minigolf: 'Minigolf'
 }
 
-export const GAME_TYPES: GameType[] = ['Pictionary', 'SquaresMultiplayer', 'WordleMultiplayer']
+export const GAME_TYPES: GameType[] = [
+  'Pictionary',
+  'SquaresMultiplayer',
+  'WordleMultiplayer',
+  'Minigolf'
+]

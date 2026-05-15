@@ -1,4 +1,4 @@
-export type GameType = 'Pictionary' | 'SquaresMultiplayer' | 'WordleMultiplayer'
+export type GameType = 'Pictionary' | 'SquaresMultiplayer' | 'WordleMultiplayer' | 'Minigolf'
 
 export type LobbyPlayer = {
   id: string
