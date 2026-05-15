@@ -117,7 +117,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     scene.add(light)
     scene.add(mesh)
 
-    registerSceneElements(camera, scene.children)
+    registerSceneElements(camera, scene.children, undefined, renderer)
 
     video.record(canvas, route)
 

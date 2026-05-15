@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type * as THREE from 'three'
+import { usePerfMetricsStore } from './perfMetrics'
 
 export interface SceneElement {
   name: string
@@ -41,7 +43,8 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   const registerSceneElements = (
     camera: { type: string },
     objects: Array<{ name?: string; type: string }>,
-    elementHandlers?: Partial<DebugSceneHandlers>
+    elementHandlers?: Partial<DebugSceneHandlers>,
+    renderer?: THREE.WebGLRenderer
   ) => {
     setSceneElements(
       [
@@ -57,6 +60,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
         onRemove: elementHandlers?.onRemove ?? (() => {})
       }
     )
+    if (renderer) usePerfMetricsStore().setRenderer(renderer)
   }
 
   const registerSpawn = (id: string, label: string, onToggleVisibility?: () => void) => {
@@ -82,6 +86,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     sceneGroups.value = {}
     spawns.value = []
     handlers.value = null
+    usePerfMetricsStore().clearRenderer()
   }
 
   const handleToggleVisibility = (name: string) => {

@@ -199,7 +199,7 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const init = async (): Promise<void> => {
   if (!canvas.value) return
-  const { setup, animate, scene, world, camera, getDelta } = await getTools({
+  const { setup, animate, scene, world, camera, getDelta, renderer } = await getTools({
     canvas: canvas.value
   })
   const { orbit } = await setup({
@@ -270,7 +270,9 @@ const init = async (): Promise<void> => {
   })
   registerSceneElements(
     camera,
-    scene.children.filter((c) => c !== camera)
+    scene.children.filter((c) => c !== camera),
+    undefined,
+    renderer
   )
 }
 

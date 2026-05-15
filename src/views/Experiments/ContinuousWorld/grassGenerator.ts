@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { HeightSampler } from './types'
 
-const BLADE_POINTS = 10
+const BLADE_POINTS = 5
 const DEFAULT_BLADE_SCALE = 2
 
 const BASE_LENGTH_CURVE_POINTS = [

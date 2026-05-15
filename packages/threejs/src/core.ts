@@ -126,12 +126,20 @@ const applySceneConfig = (
  * @param options
  * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
  */
+/**
+ * The most-recently created WebGLRenderer from getTools().
+ * Read by the debug panel to access draw-call and triangle counts without
+ * requiring each view to explicitly register its renderer.
+ */
+export const activeRendererReference: { current: THREE.WebGLRenderer | null } = { current: null }
+
 export const getTools = async ({ stats, route, canvas, resize = true }: ToolsConfig) => {
   const clock = new THREE.Clock()
   let delta = 0
   let simulationFrame = 0
   let frameRate = 1 / 60
   const { renderer, scene, camera, world } = await getEnvironment(canvas)
+  activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
   if (video && route) video.record(canvas, route)
   const getDelta = () => delta

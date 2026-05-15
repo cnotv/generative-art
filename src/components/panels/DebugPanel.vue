@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import {
   Accordion,
@@ -7,42 +7,103 @@ import {
   AccordionTrigger,
   AccordionContent
 } from '@/components/ui/accordion'
+import { usePerfMetricsStore } from '@/stores/perfMetrics'
+import { usePanelsStore } from '@/stores/panels'
 
-const fps = ref(0)
-const memory = ref(0)
-const drawCalls = ref(0)
+const perfStore = usePerfMetricsStore()
+const panelsStore = usePanelsStore()
 
 let frameCount = 0
 let lastTime = performance.now()
+let lastFrameTime = performance.now()
 let animationFrameId: number | null = null
 
+const currentFps = ref(0)
+const currentMs = ref(0)
+
+const fpsColor = computed(() => {
+  if (perfStore.fps >= 55) return 'ok'
+  if (perfStore.fps >= 30) return 'warn'
+  return 'bad'
+})
+
+const msColor = computed(() => {
+  if (perfStore.ms < 17) return 'ok'
+  if (perfStore.ms < 34) return 'warn'
+  return 'bad'
+})
+
+const drawCallsColor = computed(() => {
+  if (perfStore.drawCalls < 100) return 'ok'
+  if (perfStore.drawCalls < 500) return 'warn'
+  return 'bad'
+})
+
+const trianglesColor = computed(() => {
+  if (perfStore.triangles < 500_000) return 'ok'
+  if (perfStore.triangles < 1_000_000) return 'warn'
+  return 'bad'
+})
+
+const heapColor = computed(() => {
+  if (perfStore.heapMB < 100) return 'ok'
+  if (perfStore.heapMB < 500) return 'warn'
+  return 'bad'
+})
+
+const formatTriangles = computed(() => {
+  const count = perfStore.triangles
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(0)}k`
+  return String(count)
+})
+
 const updateStats = () => {
+  const now = performance.now()
+  currentMs.value = Math.round(now - lastFrameTime)
+  lastFrameTime = now
+
   frameCount++
-  const currentTime = performance.now()
-
-  if (currentTime - lastTime >= 1000) {
-    fps.value = Math.round(frameCount)
+  if (now - lastTime >= 1000) {
+    currentFps.value = frameCount
     frameCount = 0
-    lastTime = currentTime
-
-    if ('memory' in performance) {
-      const memoryInfo = (performance as Performance & { memory: { usedJSHeapSize: number } })
-        .memory
-      memory.value = Math.round(memoryInfo.usedJSHeapSize / 1048576)
-    }
+    lastTime = now
   }
 
+  perfStore.tick(currentFps.value, currentMs.value)
   animationFrameId = requestAnimationFrame(updateStats)
 }
 
+const stopLoop = () => {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+}
+
+const startLoop = () => {
+  if (animationFrameId === null) {
+    lastTime = performance.now()
+    lastFrameTime = performance.now()
+    frameCount = 0
+    updateStats()
+  }
+}
+
+watch(
+  () => panelsStore.isDebugOpen,
+  (open) => {
+    if (open) startLoop()
+    else stopLoop()
+  }
+)
+
 onMounted(() => {
-  updateStats()
+  if (panelsStore.isDebugOpen) startLoop()
 })
 
 onUnmounted(() => {
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId)
-  }
+  stopLoop()
 })
 </script>
 
@@ -50,20 +111,47 @@ onUnmounted(() => {
   <GenericPanel panel-type="debug" side="right" title="Debug">
     <Accordion type="multiple" :default-value="['stats']" class="w-full">
       <AccordionItem value="stats">
-        <AccordionTrigger class="text-sm font-medium py-2"> Performance Stats </AccordionTrigger>
+        <AccordionTrigger class="text-sm font-medium py-2">Performance Stats</AccordionTrigger>
         <AccordionContent>
-          <div class="debug-panel__stats grid gap-1 pb-1">
-            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-              <span class="text-xs font-medium">FPS</span>
-              <span class="font-mono text-xs">{{ fps }}</span>
+          <div class="debug-panel__stats">
+            <div class="debug-panel__stat">
+              <span class="debug-panel__stat-label">FPS</span>
+              <span class="debug-panel__stat-value" :class="`debug-panel__stat-value--${fpsColor}`">
+                {{ perfStore.fps }}
+              </span>
             </div>
-            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-              <span class="text-xs font-medium">Memory (MB)</span>
-              <span class="font-mono text-xs">{{ memory }}</span>
+            <div class="debug-panel__stat">
+              <span class="debug-panel__stat-label">Frame ms</span>
+              <span class="debug-panel__stat-value" :class="`debug-panel__stat-value--${msColor}`">
+                {{ perfStore.ms }}
+              </span>
             </div>
-            <div class="debug-panel__stat flex justify-between rounded bg-secondary p-1">
-              <span class="text-xs font-medium">Draw Calls</span>
-              <span class="font-mono text-xs">{{ drawCalls }}</span>
+            <div class="debug-panel__stat">
+              <span class="debug-panel__stat-label">Draw calls</span>
+              <span
+                class="debug-panel__stat-value"
+                :class="`debug-panel__stat-value--${drawCallsColor}`"
+              >
+                {{ perfStore.drawCalls }}
+              </span>
+            </div>
+            <div class="debug-panel__stat">
+              <span class="debug-panel__stat-label">Triangles</span>
+              <span
+                class="debug-panel__stat-value"
+                :class="`debug-panel__stat-value--${trianglesColor}`"
+              >
+                {{ formatTriangles }}
+              </span>
+            </div>
+            <div v-if="perfStore.heapMB > 0" class="debug-panel__stat">
+              <span class="debug-panel__stat-label">Heap MB</span>
+              <span
+                class="debug-panel__stat-value"
+                :class="`debug-panel__stat-value--${heapColor}`"
+              >
+                {{ perfStore.heapMB }}
+              </span>
             </div>
           </div>
         </AccordionContent>
@@ -73,3 +161,44 @@ onUnmounted(() => {
     <slot />
   </GenericPanel>
 </template>
+
+<style scoped>
+.debug-panel__stats {
+  display: grid;
+  gap: var(--spacing-1);
+  padding-bottom: var(--spacing-1);
+}
+
+.debug-panel__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  padding: var(--spacing-1);
+}
+
+.debug-panel__stat-label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+
+.debug-panel__stat-value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.debug-panel__stat-value--ok {
+  color: var(--color-perf-ok);
+}
+
+.debug-panel__stat-value--warn {
+  color: var(--color-perf-warn);
+}
+
+.debug-panel__stat-value--bad {
+  color: var(--color-perf-bad);
+}
+</style>

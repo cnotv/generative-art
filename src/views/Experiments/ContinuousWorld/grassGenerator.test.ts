@@ -39,12 +39,12 @@ describe('createGrassBladeGeometry', () => {
     expect(geometry.getAttribute('position')).toBeDefined()
   })
 
-  it('creates 22 vertices (11 rows × 2 per row from getPoints(10))', () => {
+  it('creates 12 vertices (6 rows × 2 per row from getPoints(5))', () => {
     const geometry = createGrassBladeGeometry()
     const positionAttribute = geometry.getAttribute('position')
 
-    // getPoints(10) returns 11 points → 11 rows × 2 vertices = 22
-    expect(positionAttribute.count).toBe(22)
+    // getPoints(5) returns 6 points → 6 rows × 2 vertices = 12
+    expect(positionAttribute.count).toBe(12)
   })
 
   it('has an index buffer for triangles', () => {
@@ -52,17 +52,17 @@ describe('createGrassBladeGeometry', () => {
     const index = geometry.getIndex()
 
     expect(index).not.toBeNull()
-    // 10 segments × 2 triangles × 3 indices = 60
-    expect(index!.count).toBe(60)
+    // 5 segments × 2 triangles × 3 indices = 30
+    expect(index!.count).toBe(30)
   })
 
   it('tapers from base to tip (narrower at top)', () => {
     const geometry = createGrassBladeGeometry()
     const positionAttribute = geometry.getAttribute('position')
 
-    // Base vertices (index 0, 1) should be wider than tip vertices (index 20, 21)
+    // Base vertices (index 0, 1) should be wider than tip vertices (index 10, 11)
     const baseWidth = Math.abs(positionAttribute.getX(0) - positionAttribute.getX(1))
-    const tipWidth = Math.abs(positionAttribute.getX(20) - positionAttribute.getX(21))
+    const tipWidth = Math.abs(positionAttribute.getX(10) - positionAttribute.getX(11))
 
     expect(baseWidth).toBeGreaterThan(tipWidth)
   })
@@ -73,8 +73,8 @@ describe('createGrassBladeGeometry', () => {
 
     // Base Y
     expect(positionAttribute.getY(0)).toBe(0)
-    // Tip Y (last row, vertex index 20)
-    expect(positionAttribute.getY(20)).toBeGreaterThan(0)
+    // Tip Y (last row, vertex index 10)
+    expect(positionAttribute.getY(10)).toBeGreaterThan(0)
   })
 })
 

@@ -16,6 +16,8 @@
     "test:ui": "vitest --ui",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:browser:ui": "vitest --config vitest.browser.config.ts --ui",
+    "analyze": "node scripts/analyze-assets.mjs",
+    "check:assets": "node scripts/analyze-assets.mjs --check --glb-only",
     "size": "size-limit",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit",

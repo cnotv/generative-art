@@ -211,7 +211,12 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     getLights(scene)
 
     const lights = scene.children.filter((c) => c.type.includes('Light'))
-    registerSceneElements(camera, [...lights, { name: 'Grass Field', type: 'InstancedMesh' }])
+    registerSceneElements(
+      camera,
+      [...lights, { name: 'Grass Field', type: 'InstancedMesh' }],
+      undefined,
+      renderer
+    )
 
     // Populate grass
     const grass = getGrass(config.grass)
