@@ -68,6 +68,11 @@ const holes = computed(() => HOLES.slice(0, holeCount.value))
 
 const totalScore = (player: Player) => player.scores.reduce((a, b) => a + b, 0)
 
+const resetToWizard = () => {
+  phase.value = 'wizard'
+  wizardStep.value = 1
+}
+
 let cleanupListeners: (() => void) | null = null
 
 const setOrbitEnabled = (enabled: boolean) => {
@@ -355,13 +360,7 @@ onUnmounted(() => {
           </tr>
         </tbody>
       </table>
-      <button
-        class="mg-wizard__btn mg-wizard__btn--primary"
-        @click="
-          phase = 'wizard'
-          wizardStep = 1
-        "
-      >
+      <button class="mg-wizard__btn mg-wizard__btn--primary" @click="resetToWizard">
         Play again
       </button>
     </div>
