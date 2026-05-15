@@ -54,15 +54,17 @@ const pushHistory = (history: number[], value: number): number[] => {
 
 /**
  * Downsample `values` to exactly BASE_POINTS entries for the given range count.
- * Anchored from the right so each position always represents the same time offset
- * from the most recent sample — chart positions stay stable as new data arrives.
+ * A `bucketOffset` is computed once from completed buckets so every position
+ * is a fixed offset from that base — values only advance when a new complete
+ * bucket of `step` seconds is available, staying frozen in between.
  */
 const downsample = (values: number[], count: number): number[] => {
   const fill = values.length > 0 ? values[0] : 0
   const step = Math.max(1, Math.floor(count / BASE_POINTS))
+  const bucketOffset = Math.floor(values.length / step) - BASE_POINTS
   return Array.from({ length: BASE_POINTS }, (_, i) => {
-    const index = values.length - (BASE_POINTS - i) * step
-    return index >= 0 ? values[index] : fill
+    const index = (bucketOffset + i) * step
+    return index >= 0 && index < values.length ? values[index] : fill
   })
 }
 
