@@ -66,13 +66,16 @@ describe('usePerfMetricsStore', () => {
 
     it(`caps history at MAX_HISTORY_SIZE (${MAX_HISTORY_SIZE}) entries`, () => {
       const store = usePerfMetricsStore()
-      Array.from({ length: MAX_HISTORY_SIZE + 10 }).forEach((_, i) => {
-        store.tick(i, i)
-        store.recordSnapshot()
+      // Pre-fill to capacity via $patch to avoid running recordSnapshot MAX_HISTORY_SIZE times
+      const full = Array.from({ length: MAX_HISTORY_SIZE }, (_, i) => i)
+      store.$patch((state) => {
+        state.history = { fps: full, ms: full, drawCalls: full, triangles: full, heapMB: full }
       })
+      store.tick(9999, 9999)
+      store.recordSnapshot()
       expect(store.history.fps).toHaveLength(MAX_HISTORY_SIZE)
-      expect(store.history.fps[0]).toBe(10)
-      expect(store.history.fps[MAX_HISTORY_SIZE - 1]).toBe(MAX_HISTORY_SIZE + 9)
+      expect(store.history.fps[MAX_HISTORY_SIZE - 1]).toBe(9999)
+      expect(store.history.fps[0]).toBe(1)
     })
 
     it('tick does not append to history', () => {
