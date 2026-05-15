@@ -77,13 +77,35 @@ gh api \
 ### During Implementation
 
 1. **Add findings to issue**: Post discoveries, architectural insights, or approach changes as issue comments
-2. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+2. **Investigate performance before shipping**: Any PR that adds or modifies a 3D scene, generator, or asset must pass the performance checks below. Run them in order and fix violations before pushing.
+
+   | Tool           | Command                          | What it checks                                                                 |
+   | -------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+   | Debug panel    | `?debug=true` in the URL         | Live FPS, draw calls, triangles, heap MB                                       |
+   | Asset analysis | `pnpm analyze`                   | Triangle counts per GLB, draw-call anti-patterns in source                     |
+   | Asset CI gate  | `pnpm check:assets`              | Fails if any GLB exceeds the size or triangle budget                           |
+   | ESLint         | `pnpm lint`                      | `no-mesh-in-loop`, `no-alloc-in-animation-loop`, `no-redundant-threejs-loader` |
+   | Budget tests   | `pnpm test:unit -- assetBudgets` | Per-file triangle and size limits enforced in CI                               |
+
+   **Thresholds to stay under** (debug panel colour guide):
+
+   | Metric     | Green   | Red     |
+   | ---------- | ------- | ------- |
+   | FPS        | ≥ 55    | < 30    |
+   | Frame ms   | < 17 ms | ≥ 34 ms |
+   | Draw calls | < 100   | ≥ 500   |
+   | Triangles  | < 500 k | ≥ 1 M   |
+   | Heap MB    | < 100   | ≥ 500   |
+
+   If a metric is red, investigate using the tools above and apply the techniques documented in `documentation/docs/guides/reducing-performance-costs.md`.
+
+3. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
    - Command: `git fetch origin main && git rebase origin/main`
    - Resolve any conflicts, then force push: `git push --force-with-lease`
    - CI will fail if branch is behind main
-3. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-4. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-5. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
+4. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+5. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+6. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
 
 ### PR Description Format
 

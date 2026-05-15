@@ -98,9 +98,15 @@ export interface TreesChunkOptions {
   sizeVariation?: number
 }
 
+type SpriteInstance = {
+  position: THREE.Vector3
+  scale: THREE.Vector3
+}
+
 /**
  * Creates a group of textured tree/bush/rock billboards for a chunk.
- * Shares geometry and materials across all chunks to minimise draw-call overhead.
+ * Sprites sharing the same texture are batched into a single InstancedMesh,
+ * reducing draw calls from treesPerChunk to at most (distinct textures used).
  */
 export const createTreesChunk = (
   chunkX: number,
@@ -123,7 +129,11 @@ export const createTreesChunk = (
   const worldOffsetX = chunkX * chunkSize
   const worldOffsetZ = chunkZ * chunkSize
 
-  Array.from({ length: treesPerChunk }).forEach((_, index) => {
+  // Collect sprites grouped by texture URL so same-material sprites
+  // can be batched into one InstancedMesh (one draw call per texture used).
+  const byMaterial = new Map<string, SpriteInstance[]>()
+
+  Array.from({ length: treesPerChunk }).forEach(() => {
     const positionX = worldOffsetX + (random() - 0.5) * chunkSize
     const positionZ = worldOffsetZ + (random() - 0.5) * chunkSize
 
@@ -133,15 +143,36 @@ export const createTreesChunk = (
     const instanceScale = sizeScale * (1 + (random() - 0.5) * sizeVariation)
     const spriteWidth = textureEntry.width * instanceScale
     const spriteHeight = textureEntry.height * instanceScale
-
     const terrainY = heightSampler ? heightSampler(positionX, positionZ) : 0
 
-    const mesh = new THREE.Mesh(sharedPlaneGeometry, getOrCreateMaterial(textureEntry.url))
-    mesh.scale.set(spriteWidth, spriteHeight, 1)
-    mesh.position.set(positionX, terrainY + spriteHeight / 2, positionZ)
-    mesh.name = `tree-sprite-${chunkX},${chunkZ}-${index}`
+    const existing = byMaterial.get(textureEntry.url) ?? []
+    byMaterial.set(textureEntry.url, [
+      ...existing,
+      {
+        position: new THREE.Vector3(positionX, terrainY + spriteHeight / 2, positionZ),
+        scale: new THREE.Vector3(spriteWidth, spriteHeight, 1)
+      }
+    ])
+  })
 
-    group.add(mesh)
+  const matrixBuffer = new THREE.Matrix4()
+  const quaternionIdentity = new THREE.Quaternion()
+
+  byMaterial.forEach((instances, url) => {
+    const instancedMesh = new THREE.InstancedMesh(
+      sharedPlaneGeometry,
+      getOrCreateMaterial(url),
+      instances.length
+    )
+    instancedMesh.name = `trees-instanced-${chunkX},${chunkZ}-${url.slice(-8)}`
+
+    instances.forEach(({ position, scale }, index) => {
+      matrixBuffer.compose(position, quaternionIdentity, scale)
+      instancedMesh.setMatrixAt(index, matrixBuffer)
+    })
+    instancedMesh.instanceMatrix.needsUpdate = true
+
+    group.add(instancedMesh)
   })
 
   return group
