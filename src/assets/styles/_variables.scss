@@ -65,6 +65,11 @@
   --color-input: hsl(0 0% 89.8%);
   --color-ring: hsl(0 0% 3.9%);
 
+  // Performance metric status colors
+  --color-perf-ok: hsl(142 71% 45%);
+  --color-perf-warn: hsl(38 92% 50%);
+  --color-perf-bad: hsl(0 84% 60%);
+
   // Panel item colors
   --panel-item-bg: hsl(0 0% 98%);
   --panel-item-bg-hover: hsl(0 0% 94%);
@@ -189,6 +194,11 @@
   --color-input: hsl(0 0% 15%);
   --color-ring: hsl(0 0% 83%);
 
+  // Performance metric status colors (dark — brighter to stay visible)
+  --color-perf-ok: hsl(142 60% 55%);
+  --color-perf-warn: hsl(38 90% 58%);
+  --color-perf-bad: hsl(0 80% 65%);
+
   // Dark theme shadows (more prominent)
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
@@ -239,6 +249,10 @@
     --color-border: hsl(0 0% 15%);
     --color-input: hsl(0 0% 15%);
     --color-ring: hsl(0 0% 83%);
+
+    --color-perf-ok: hsl(142 60% 55%);
+    --color-perf-warn: hsl(38 90% 58%);
+    --color-perf-bad: hsl(0 80% 65%);
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);

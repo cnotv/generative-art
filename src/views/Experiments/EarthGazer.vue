@@ -125,7 +125,7 @@ const setupEarthGazer = (canvas: HTMLCanvasElement) => {
   scene.add(
     new THREE.AmbientLight(new THREE.Color(`rgb(${config.light.map(Math.round).join(',')})`))
   )
-  registerSceneElements(camera, scene.children)
+  registerSceneElements(camera, scene.children, undefined, renderer)
   video.record(canvas, route)
 
   const animate = () => {
