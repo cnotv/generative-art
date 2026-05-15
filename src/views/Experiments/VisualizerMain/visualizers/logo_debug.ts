@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { getAudioData } from '../audio'
 import type { VisualizerSetup } from '../visualizer'
-import { getModel } from '@webgamekit/threejs'
+import { getModel, textureLoader } from '@webgamekit/threejs'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import streetBg from '@/assets/images/generic/street2_blur.jpg'
 
@@ -111,13 +111,11 @@ export const boxVisualizer: VisualizerSetup = {
     if (!world) return {}
 
     // Setup background environment
-    const textureLoader = new THREE.TextureLoader()
     const bgTexture = textureLoader.load(streetBg)
     bgTexture.mapping = THREE.EquirectangularReflectionMapping
     scene.background = bgTexture
 
-    const textureLoader2 = new THREE.TextureLoader()
-    const bgTexture2 = textureLoader2.load(streetBg)
+    const bgTexture2 = textureLoader.load(streetBg)
     bgTexture2.mapping = THREE.EquirectangularReflectionMapping
     scene.environment = bgTexture2
 

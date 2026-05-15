@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { textureLoader } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -57,7 +58,6 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     // Load the texture
     // https://www.solarsystemscope.com/textures/
-    const textureLoader = new THREE.TextureLoader()
     const texture1 = textureLoader.load(earthDay)
     const texture2 = textureLoader.load(earthNight)
 

@@ -7,6 +7,7 @@ import functional from 'eslint-plugin-functional'
 import unicorn from 'eslint-plugin-unicorn'
 import prettierConfig from 'eslint-config-prettier'
 import noAllocInAnimationLoop from './rules/no-alloc-in-animation-loop.js'
+import noRedundantThreejsLoader from './rules/no-redundant-threejs-loader.js'
 
 export default [
   // Base recommended configs
@@ -33,7 +34,12 @@ export default [
       '@typescript-eslint': tseslint,
       functional,
       unicorn,
-      local: { rules: { 'no-alloc-in-animation-loop': noAllocInAnimationLoop } }
+      local: {
+        rules: {
+          'no-alloc-in-animation-loop': noAllocInAnimationLoop,
+          'no-redundant-threejs-loader': noRedundantThreejsLoader
+        }
+      }
     },
 
     languageOptions: {
@@ -308,7 +314,8 @@ export default [
       // ====================
 
       'vue/multi-word-component-names': 'off',
-      'local/no-alloc-in-animation-loop': 'error'
+      'local/no-alloc-in-animation-loop': 'error',
+      'local/no-redundant-threejs-loader': 'warn'
     }
   },
 

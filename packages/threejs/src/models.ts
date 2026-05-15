@@ -1,12 +1,11 @@
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation'
 import { ModelOptions, ComplexModel, Model, ModelType } from './types'
 import { getPhysic } from './getters'
 import { applyOriginTranslation } from './core'
+import { textureLoader, fbxLoader, gltfLoader } from './loaders'
 
 type BaseMaterialProperties = {
   opacity: number
@@ -179,7 +178,7 @@ export const getAnimations = (
 ): Promise<Record<string, THREE.AnimationAction>> => {
   const files = Array.isArray(filenames) ? filenames : [filenames]
   return new Promise((resolve, reject) => {
-    const loader = new FBXLoader()
+    const loader = fbxLoader
     const allActions: Record<string, THREE.AnimationAction> = {}
     let loadedCount = 0
     if (files.length === 0) {
@@ -258,7 +257,6 @@ const getCubeSizeArray = (size: number | CoordinateTuple): CoordinateTuple =>
 
 const applyTextureToMesh = (mesh: THREE.Mesh, texture: string | undefined): void => {
   if (!texture) return
-  const textureLoader = new THREE.TextureLoader()
   if (Array.isArray(mesh.material)) {
     ;(mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture)
   } else {
@@ -411,8 +409,7 @@ export const loadAnimation = (
   index: number = 0
 ): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve) => {
-    const loader = new FBXLoader()
-    loader.load(`/${fileName}`, (animation) => {
+    fbxLoader.load(`/${fileName}`, (animation) => {
       const mixer = new THREE.AnimationMixer(model)
       const action = mixer.clipAction(
         (model?.animations?.length ? model : animation).animations[index]
@@ -439,8 +436,7 @@ export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<M
   } = options
 
   return new Promise((resolve, reject) => {
-    const loader = new FBXLoader()
-    loader.load(
+    fbxLoader.load(
       `/${fileName}`,
       (model) => {
         model.position.set(...position)
@@ -483,8 +479,7 @@ export const loadGLTF = (
   } = options
 
   return new Promise((resolve, reject) => {
-    const loader = new GLTFLoader()
-    loader.load(
+    gltfLoader.load(
       `/${fileName}`,
       (gltf) => {
         const model = gltf.scene

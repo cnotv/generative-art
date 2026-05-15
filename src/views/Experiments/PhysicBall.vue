@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { textureLoader } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -303,7 +304,6 @@ const setModelPosition = (
  * @returns
  */
 const getTextures = (img: string) => {
-  const textureLoader = new THREE.TextureLoader()
   const texture = textureLoader.load(img)
 
   // Adjust the texture offset and repeat

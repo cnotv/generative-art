@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
+import { textureLoader } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
@@ -75,9 +76,6 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     renderer.setClearColor(new THREE.Color(`rgb(${config.background.map(Math.round).join(',')})`)) // Set background color to black
     renderer.shadowMap.enabled = true // Enable shadow maps
     renderer.shadowMap.type = THREE.PCFSoftShadowMap // Use soft shadows
-
-    // Load the texture
-    const textureLoader = new THREE.TextureLoader()
 
     const camera = new THREE.PerspectiveCamera(
       75,
