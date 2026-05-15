@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import {
   Accordion,
@@ -8,8 +8,10 @@ import {
   AccordionContent
 } from '@/components/ui/accordion'
 import { usePerfMetricsStore } from '@/stores/perfMetrics'
+import { usePanelsStore } from '@/stores/panels'
 
 const perfStore = usePerfMetricsStore()
+const panelsStore = usePanelsStore()
 
 let frameCount = 0
 let lastTime = performance.now()
@@ -72,12 +74,36 @@ const updateStats = () => {
   animationFrameId = requestAnimationFrame(updateStats)
 }
 
+const stopLoop = () => {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+}
+
+const startLoop = () => {
+  if (animationFrameId === null) {
+    lastTime = performance.now()
+    lastFrameTime = performance.now()
+    frameCount = 0
+    updateStats()
+  }
+}
+
+watch(
+  () => panelsStore.isDebugOpen,
+  (open) => {
+    if (open) startLoop()
+    else stopLoop()
+  }
+)
+
 onMounted(() => {
-  updateStats()
+  if (panelsStore.isDebugOpen) startLoop()
 })
 
 onUnmounted(() => {
-  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
+  stopLoop()
 })
 </script>
 

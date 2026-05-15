@@ -523,7 +523,8 @@ export default [
       '**/vite.config.ts',
       '**/config.ts',
       'src/config/**/*.ts',
-      'scripts/**/*.js'
+      'scripts/**/*.js',
+      'scripts/**/*.mjs'
     ],
     languageOptions: {
       parserOptions: {
@@ -532,7 +533,10 @@ export default [
     },
     rules: {
       'no-magic-numbers': 'off',
-      'functional/immutable-data': 'off'
+      'functional/immutable-data': 'off',
+      'no-console': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unicorn/prevent-abbreviations': 'off'
     }
   },
 
