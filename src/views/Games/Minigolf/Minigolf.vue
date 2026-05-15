@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, toRaw, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, toRaw, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
@@ -224,8 +224,9 @@ const startGame = async (): Promise<void> => {
   )
 }
 
-watch(phase, (newPhase) => {
+watch(phase, async (newPhase) => {
   if (newPhase === 'playing') {
+    await nextTick()
     startGame()
   }
 })
