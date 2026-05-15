@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { usePerfMetricsStore, HISTORY_SIZE } from './perfMetrics'
+import { usePerfMetricsStore, MAX_HISTORY_SIZE } from './perfMetrics'
 import type * as THREE from 'three'
 
 const makeRenderer = (calls = 0, triangles = 0): THREE.WebGLRenderer =>
@@ -54,26 +54,39 @@ describe('usePerfMetricsStore', () => {
       expect(store.history.heapMB).toHaveLength(0)
     })
 
-    it('appends a value to history on each tick', () => {
+    it('appends a value to history on each recordSnapshot', () => {
       const store = usePerfMetricsStore()
       store.tick(60, 16)
+      store.recordSnapshot()
       store.tick(58, 17)
+      store.recordSnapshot()
       expect(store.history.fps).toEqual([60, 58])
       expect(store.history.ms).toEqual([16, 17])
     })
 
-    it(`caps history at HISTORY_SIZE (${HISTORY_SIZE}) entries`, () => {
+    it(`caps history at MAX_HISTORY_SIZE (${MAX_HISTORY_SIZE}) entries`, () => {
       const store = usePerfMetricsStore()
-      Array.from({ length: HISTORY_SIZE + 10 }).forEach((_, i) => store.tick(i, i))
-      expect(store.history.fps).toHaveLength(HISTORY_SIZE)
+      Array.from({ length: MAX_HISTORY_SIZE + 10 }).forEach((_, i) => {
+        store.tick(i, i)
+        store.recordSnapshot()
+      })
+      expect(store.history.fps).toHaveLength(MAX_HISTORY_SIZE)
       expect(store.history.fps[0]).toBe(10)
-      expect(store.history.fps[HISTORY_SIZE - 1]).toBe(HISTORY_SIZE + 9)
+      expect(store.history.fps[MAX_HISTORY_SIZE - 1]).toBe(MAX_HISTORY_SIZE + 9)
     })
 
-    it('records draw calls and triangles from renderer into history', () => {
+    it('tick does not append to history', () => {
+      const store = usePerfMetricsStore()
+      store.tick(60, 16)
+      store.tick(58, 17)
+      expect(store.history.fps).toHaveLength(0)
+    })
+
+    it('records draw calls and triangles from renderer into history via recordSnapshot', () => {
       const store = usePerfMetricsStore()
       store.setRenderer(makeRenderer(5, 1000))
       store.tick(60, 16)
+      store.recordSnapshot()
       expect(store.history.drawCalls).toEqual([5])
       expect(store.history.triangles).toEqual([1000])
     })

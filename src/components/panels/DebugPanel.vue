@@ -9,7 +9,7 @@ import {
   AccordionContent
 } from '@/components/ui/accordion'
 import { Select } from '@/components/ui/select'
-import { Toggle } from '@/components/ui/toggle'
+import { Checkbox } from '@/components/ui/checkbox'
 import { usePerfMetricsStore, TIME_RANGE_OPTIONS } from '@/stores/perfMetrics'
 import { usePanelsStore } from '@/stores/panels'
 
@@ -28,7 +28,16 @@ const timeRange = ref<string>(TIME_RANGE_OPTIONS[0].value)
 
 const timeRangeCount = computed(() => parseInt(timeRange.value, 10))
 
-const sliceHistory = (values: number[]) => values.slice(-timeRangeCount.value)
+/**
+ * Returns exactly `timeRangeCount` values: real data right-aligned,
+ * left-padded with the earliest available value (or 0 when empty).
+ */
+const getChartValues = (values: number[]): number[] => {
+  const count = timeRangeCount.value
+  const fill = values.length > 0 ? values[0] : 0
+  if (values.length >= count) return values.slice(-count)
+  return [...Array(count - values.length).fill(fill), ...values]
+}
 
 const fpsColor = computed(() => {
   if (perfStore.fps >= 55) return 'ok'
@@ -77,6 +86,7 @@ const updateStats = () => {
     currentFps.value = frameCount
     frameCount = 0
     lastTime = now
+    perfStore.recordSnapshot()
   }
 
   perfStore.tick(currentFps.value, currentMs.value)
@@ -123,14 +133,10 @@ onUnmounted(() => {
         <AccordionTrigger class="text-sm font-medium py-2">Performance Stats</AccordionTrigger>
         <AccordionContent>
           <div class="debug-panel__chart-controls">
-            <Toggle
-              v-model="showCharts"
-              size="sm"
-              class="debug-panel__chart-toggle"
-              title="Toggle charts"
-            >
-              Chart
-            </Toggle>
+            <label class="debug-panel__chart-label">
+              <Checkbox v-model="showCharts" />
+              <span>Chart</span>
+            </label>
             <Select
               v-if="showCharts"
               v-model="timeRange"
@@ -151,7 +157,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="sliceHistory(perfStore.history.fps)"
+                :values="getChartValues(perfStore.history.fps)"
                 :color="`var(--color-perf-${fpsColor})`"
               />
             </div>
@@ -167,7 +173,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="sliceHistory(perfStore.history.ms)"
+                :values="getChartValues(perfStore.history.ms)"
                 :color="`var(--color-perf-${msColor})`"
               />
             </div>
@@ -183,7 +189,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="sliceHistory(perfStore.history.drawCalls)"
+                :values="getChartValues(perfStore.history.drawCalls)"
                 :color="`var(--color-perf-${drawCallsColor})`"
               />
             </div>
@@ -199,7 +205,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="sliceHistory(perfStore.history.triangles)"
+                :values="getChartValues(perfStore.history.triangles)"
                 :color="`var(--color-perf-${trianglesColor})`"
               />
             </div>
@@ -215,7 +221,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="sliceHistory(perfStore.history.heapMB)"
+                :values="getChartValues(perfStore.history.heapMB)"
                 :color="`var(--color-perf-${heapColor})`"
               />
             </div>
@@ -232,14 +238,18 @@ onUnmounted(() => {
 .debug-panel__chart-controls {
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
-  padding-bottom: var(--spacing-1);
+  gap: var(--spacing-2);
+  padding-bottom: var(--spacing-2);
 }
 
-.debug-panel__chart-toggle {
+.debug-panel__chart-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
   font-size: var(--font-size-xs);
-  height: auto;
-  padding: var(--spacing-1) var(--spacing-2);
+  color: var(--color-foreground);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .debug-panel__time-range {

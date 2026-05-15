@@ -13,23 +13,25 @@ export interface PerfMetrics {
 
 export type PerfHistory = Record<keyof PerfMetrics, number[]>
 
-/** Maximum samples retained — enough for the longest chart time range (30 s @ 60 fps). */
-export const MAX_HISTORY_SIZE = 1800
+/** One sample per second; max range is 1 h = 3 600 s. */
+export const MAX_HISTORY_SIZE = 3_600
 
-/** Legacy alias kept so existing tests importing HISTORY_SIZE still compile. */
+/** Legacy alias — keeps existing tests compiling. */
 export const HISTORY_SIZE = MAX_HISTORY_SIZE
 
 export const TIME_RANGE_OPTIONS = [
-  { value: '60', label: '1s' },
-  { value: '300', label: '5s' },
-  { value: '1800', label: '30s' }
+  { value: '60', label: '1m' },
+  { value: '300', label: '5m' },
+  { value: '900', label: '15m' },
+  { value: '1800', label: '30m' },
+  { value: '3600', label: '1h' }
 ] as const
 
 export type TimeRangeValue = (typeof TIME_RANGE_OPTIONS)[number]['value']
 
 const pushHistory = (history: number[], value: number): number[] => {
   const next = [...history, value]
-  return next.length > MAX_HISTORY_SIZE ? next.slice(next.length - MAX_HISTORY_SIZE) : next
+  return next.length > MAX_HISTORY_SIZE ? next.slice(1) : next
 }
 
 export const usePerfMetricsStore = defineStore('perfMetrics', () => {
@@ -59,10 +61,9 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   }
 
   /**
-   * Update all perf metrics for the current frame.
-   * Called once per rAF tick from DebugPanel.
+   * Update live metric values for the current frame. Called every rAF tick.
    * @param currentFps Frames per second calculated over the last second
-   * @param currentMs Time in ms for the last frame
+   * @param currentMs Frame duration in ms
    */
   const tick = (currentFps: number, currentMs: number) => {
     fps.value = currentFps
@@ -79,7 +80,13 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
         .memory
       heapMB.value = Math.round(memoryInfo.usedJSHeapSize / 1048576)
     }
+  }
 
+  /**
+   * Append the current metric snapshot to the history buffers.
+   * Should be called once per second, not per frame.
+   */
+  const recordSnapshot = () => {
     history.value = {
       fps: pushHistory(history.value.fps, fps.value),
       ms: pushHistory(history.value.ms, ms.value),
@@ -99,6 +106,7 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
     history,
     setRenderer,
     clearRenderer,
-    tick
+    tick,
+    recordSnapshot
   }
 })
