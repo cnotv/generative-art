@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { usePerfMetricsStore } from './perfMetrics'
+import { usePerfMetricsStore, HISTORY_SIZE } from './perfMetrics'
 import type * as THREE from 'three'
 
 const makeRenderer = (calls = 0, triangles = 0): THREE.WebGLRenderer =>
@@ -41,6 +41,41 @@ describe('usePerfMetricsStore', () => {
       expect(store.renderer).toBeNull()
       expect(store.drawCalls).toBe(0)
       expect(store.triangles).toBe(0)
+    })
+  })
+
+  describe('history', () => {
+    it('starts with empty history for all metrics', () => {
+      const store = usePerfMetricsStore()
+      expect(store.history.fps).toHaveLength(0)
+      expect(store.history.ms).toHaveLength(0)
+      expect(store.history.drawCalls).toHaveLength(0)
+      expect(store.history.triangles).toHaveLength(0)
+      expect(store.history.heapMB).toHaveLength(0)
+    })
+
+    it('appends a value to history on each tick', () => {
+      const store = usePerfMetricsStore()
+      store.tick(60, 16)
+      store.tick(58, 17)
+      expect(store.history.fps).toEqual([60, 58])
+      expect(store.history.ms).toEqual([16, 17])
+    })
+
+    it(`caps history at HISTORY_SIZE (${HISTORY_SIZE}) entries`, () => {
+      const store = usePerfMetricsStore()
+      Array.from({ length: HISTORY_SIZE + 10 }).forEach((_, i) => store.tick(i, i))
+      expect(store.history.fps).toHaveLength(HISTORY_SIZE)
+      expect(store.history.fps[0]).toBe(10)
+      expect(store.history.fps[HISTORY_SIZE - 1]).toBe(HISTORY_SIZE + 9)
+    })
+
+    it('records draw calls and triangles from renderer into history', () => {
+      const store = usePerfMetricsStore()
+      store.setRenderer(makeRenderer(5, 1000))
+      store.tick(60, 16)
+      expect(store.history.drawCalls).toEqual([5])
+      expect(store.history.triangles).toEqual([1000])
     })
   })
 

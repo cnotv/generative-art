@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
+import PerfChart from './PerfChart.vue'
 import {
   Accordion,
   AccordionItem,
@@ -114,44 +115,74 @@ onUnmounted(() => {
         <AccordionTrigger class="text-sm font-medium py-2">Performance Stats</AccordionTrigger>
         <AccordionContent>
           <div class="debug-panel__stats">
-            <div class="debug-panel__stat">
-              <span class="debug-panel__stat-label">FPS</span>
-              <span class="debug-panel__stat-value" :class="`debug-panel__stat-value--${fpsColor}`">
-                {{ perfStore.fps }}
-              </span>
+            <div class="debug-panel__stat-group">
+              <div class="debug-panel__stat">
+                <span class="debug-panel__stat-label">FPS</span>
+                <span
+                  class="debug-panel__stat-value"
+                  :class="`debug-panel__stat-value--${fpsColor}`"
+                >
+                  {{ perfStore.fps }}
+                </span>
+              </div>
+              <PerfChart :values="perfStore.history.fps" :color="`var(--color-perf-${fpsColor})`" />
             </div>
-            <div class="debug-panel__stat">
-              <span class="debug-panel__stat-label">Frame ms</span>
-              <span class="debug-panel__stat-value" :class="`debug-panel__stat-value--${msColor}`">
-                {{ perfStore.ms }}
-              </span>
+            <div class="debug-panel__stat-group">
+              <div class="debug-panel__stat">
+                <span class="debug-panel__stat-label">Frame ms</span>
+                <span
+                  class="debug-panel__stat-value"
+                  :class="`debug-panel__stat-value--${msColor}`"
+                >
+                  {{ perfStore.ms }}
+                </span>
+              </div>
+              <PerfChart :values="perfStore.history.ms" :color="`var(--color-perf-${msColor})`" />
             </div>
-            <div class="debug-panel__stat">
-              <span class="debug-panel__stat-label">Draw calls</span>
-              <span
-                class="debug-panel__stat-value"
-                :class="`debug-panel__stat-value--${drawCallsColor}`"
-              >
-                {{ perfStore.drawCalls }}
-              </span>
+            <div class="debug-panel__stat-group">
+              <div class="debug-panel__stat">
+                <span class="debug-panel__stat-label">Draw calls</span>
+                <span
+                  class="debug-panel__stat-value"
+                  :class="`debug-panel__stat-value--${drawCallsColor}`"
+                >
+                  {{ perfStore.drawCalls }}
+                </span>
+              </div>
+              <PerfChart
+                :values="perfStore.history.drawCalls"
+                :color="`var(--color-perf-${drawCallsColor})`"
+              />
             </div>
-            <div class="debug-panel__stat">
-              <span class="debug-panel__stat-label">Triangles</span>
-              <span
-                class="debug-panel__stat-value"
-                :class="`debug-panel__stat-value--${trianglesColor}`"
-              >
-                {{ formatTriangles }}
-              </span>
+            <div class="debug-panel__stat-group">
+              <div class="debug-panel__stat">
+                <span class="debug-panel__stat-label">Triangles</span>
+                <span
+                  class="debug-panel__stat-value"
+                  :class="`debug-panel__stat-value--${trianglesColor}`"
+                >
+                  {{ formatTriangles }}
+                </span>
+              </div>
+              <PerfChart
+                :values="perfStore.history.triangles"
+                :color="`var(--color-perf-${trianglesColor})`"
+              />
             </div>
-            <div v-if="perfStore.heapMB > 0" class="debug-panel__stat">
-              <span class="debug-panel__stat-label">Heap MB</span>
-              <span
-                class="debug-panel__stat-value"
-                :class="`debug-panel__stat-value--${heapColor}`"
-              >
-                {{ perfStore.heapMB }}
-              </span>
+            <div v-if="perfStore.heapMB > 0" class="debug-panel__stat-group">
+              <div class="debug-panel__stat">
+                <span class="debug-panel__stat-label">Heap MB</span>
+                <span
+                  class="debug-panel__stat-value"
+                  :class="`debug-panel__stat-value--${heapColor}`"
+                >
+                  {{ perfStore.heapMB }}
+                </span>
+              </div>
+              <PerfChart
+                :values="perfStore.history.heapMB"
+                :color="`var(--color-perf-${heapColor})`"
+              />
             </div>
           </div>
         </AccordionContent>
@@ -169,12 +200,16 @@ onUnmounted(() => {
   padding-bottom: var(--spacing-1);
 }
 
+.debug-panel__stat-group {
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  overflow: hidden;
+}
+
 .debug-panel__stat {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: var(--radius-sm);
-  background: var(--color-secondary);
   padding: var(--spacing-1);
 }
 

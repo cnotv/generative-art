@@ -11,6 +11,15 @@ export interface PerfMetrics {
   heapMB: number
 }
 
+export type PerfHistory = Record<keyof PerfMetrics, number[]>
+
+export const HISTORY_SIZE = 60
+
+const pushHistory = (history: number[], value: number): number[] => {
+  const next = [...history, value]
+  return next.length > HISTORY_SIZE ? next.slice(next.length - HISTORY_SIZE) : next
+}
+
 export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   const renderer = shallowRef<THREE.WebGLRenderer | null>(null)
   const fps = ref(0)
@@ -18,6 +27,14 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   const drawCalls = ref(0)
   const triangles = ref(0)
   const heapMB = ref(0)
+
+  const history = ref<PerfHistory>({
+    fps: [],
+    ms: [],
+    drawCalls: [],
+    triangles: [],
+    heapMB: []
+  })
 
   const setRenderer = (r: THREE.WebGLRenderer) => {
     renderer.value = r
@@ -50,7 +67,26 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
         .memory
       heapMB.value = Math.round(memoryInfo.usedJSHeapSize / 1048576)
     }
+
+    history.value = {
+      fps: pushHistory(history.value.fps, fps.value),
+      ms: pushHistory(history.value.ms, ms.value),
+      drawCalls: pushHistory(history.value.drawCalls, drawCalls.value),
+      triangles: pushHistory(history.value.triangles, triangles.value),
+      heapMB: pushHistory(history.value.heapMB, heapMB.value)
+    }
   }
 
-  return { renderer, fps, ms, drawCalls, triangles, heapMB, setRenderer, clearRenderer, tick }
+  return {
+    renderer,
+    fps,
+    ms,
+    drawCalls,
+    triangles,
+    heapMB,
+    history,
+    setRenderer,
+    clearRenderer,
+    tick
+  }
 })
