@@ -156,11 +156,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         y: 20,
         z: 40
       },
-      lookAt: {
-        x: 0,
-        y: 0,
-        z: 0
-      }
+      lookAt: [0, 0, 0] as [number, number, number]
     }
   }
   // Set stats
