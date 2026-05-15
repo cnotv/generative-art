@@ -37,24 +37,48 @@ const timeRangeCount = computed(() => parseInt(timeRange.value, 10))
 
 const BASE_POINTS = 60
 
-/**
- * Returns exactly BASE_POINTS values for the selected time range.
- * Data is right-aligned and left-padded with the earliest value (or 0).
- * For ranges longer than BASE_POINTS seconds, values are downsampled
- * by picking one entry per step so density stays constant across ranges.
- */
-const getChartValues = (values: number[]): number[] => {
-  const count = timeRangeCount.value
+const downsample = (values: number[], count: number): number[] => {
   const fill = values.length > 0 ? values[0] : 0
-
   const window =
     values.length >= count
       ? values.slice(-count)
       : [...Array(count - values.length).fill(fill), ...values]
-
   const step = Math.max(1, Math.floor(count / BASE_POINTS))
   return Array.from({ length: BASE_POINTS }, (_, i) => window[i * step] ?? fill)
 }
+
+type ChartSnapshot = {
+  fps: number[]
+  ms: number[]
+  drawCalls: number[]
+  triangles: number[]
+  heapMB: number[]
+}
+
+const emptySnapshot = (): ChartSnapshot => ({
+  fps: [],
+  ms: [],
+  drawCalls: [],
+  triangles: [],
+  heapMB: []
+})
+
+const chartData = ref<ChartSnapshot>(emptySnapshot())
+
+const rebuildChartData = () => {
+  const count = timeRangeCount.value
+  const h = perfStore.history
+  chartData.value = {
+    fps: downsample(h.fps, count),
+    ms: downsample(h.ms, count),
+    drawCalls: downsample(h.drawCalls, count),
+    triangles: downsample(h.triangles, count),
+    heapMB: downsample(h.heapMB, count)
+  }
+}
+
+watch(() => perfStore.history, rebuildChartData)
+watch(timeRangeCount, rebuildChartData)
 
 const fpsColor = computed(() => {
   if (perfStore.fps >= 55) return 'ok'
@@ -174,7 +198,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="getChartValues(perfStore.history.fps)"
+                :values="chartData.fps"
                 :color="`var(--color-perf-${fpsColor})`"
               />
             </div>
@@ -190,7 +214,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="getChartValues(perfStore.history.ms)"
+                :values="chartData.ms"
                 :color="`var(--color-perf-${msColor})`"
               />
             </div>
@@ -206,7 +230,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="getChartValues(perfStore.history.drawCalls)"
+                :values="chartData.drawCalls"
                 :color="`var(--color-perf-${drawCallsColor})`"
               />
             </div>
@@ -222,7 +246,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="getChartValues(perfStore.history.triangles)"
+                :values="chartData.triangles"
                 :color="`var(--color-perf-${trianglesColor})`"
               />
             </div>
@@ -238,7 +262,7 @@ onUnmounted(() => {
               </div>
               <PerfChart
                 v-if="showCharts"
-                :values="getChartValues(perfStore.history.heapMB)"
+                :values="chartData.heapMB"
                 :color="`var(--color-perf-${heapColor})`"
               />
             </div>
