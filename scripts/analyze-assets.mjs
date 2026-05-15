@@ -22,6 +22,11 @@ const SRC_DIR = resolve(ROOT, 'src')
 const args = process.argv.slice(2)
 const glbOnly = args.includes('--glb-only')
 const codeOnly = args.includes('--code-only')
+// In check mode the script exits with code 1 if any hard budgets are exceeded,
+// making it usable as a CI gate.
+const checkMode = args.includes('--check')
+
+const violationCount = { value: 0 }
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 const ok = (s) => `\x1b[32m${s}\x1b[0m`
@@ -104,8 +109,17 @@ const reportGlb = () => {
     .filter((f) => f.endsWith('.glb'))
     .sort()
 
+  const TRIANGLE_HARD_LIMIT = 200_000
+  const SIZE_HARD_LIMIT = 2_000_000
+
+  // Known exceptions — must match entries in src/tests/assetBudgets.test.ts
+  const SIZE_ALLOWLIST = new Set(['round_table.glb'])
+  const TRIANGLE_ALLOWLIST = new Set(['round_table.glb'])
+
   console.log(bold('\n── GLB asset analysis ───────────────────────────────────'))
-  console.log(dim('  Thresholds: triangles warn >50k, bad >200k | vertices warn >50k, bad >200k'))
+  console.log(
+    dim('  Thresholds: triangles warn >50k, bad >200k | file size warn >500 KB, bad >2 MB')
+  )
   console.log()
 
   const rows = glbFiles.map((file) => {
@@ -115,9 +129,15 @@ const reportGlb = () => {
 
     if (!parsed) return { file, error: 'not a GLB' }
 
-    const triColor = colorForValue(parsed.triangles, 50_000, 200_000)
+    const triColor = colorForValue(parsed.triangles, 50_000, TRIANGLE_HARD_LIMIT)
     const vtxColor = colorForValue(parsed.vertices, 50_000, 200_000)
-    const sizeColor = colorForValue(size, 500_000, 2_000_000)
+    const sizeColor = colorForValue(size, 500_000, SIZE_HARD_LIMIT)
+
+    if (checkMode) {
+      if (parsed.triangles > TRIANGLE_HARD_LIMIT && !TRIANGLE_ALLOWLIST.has(file))
+        violationCount.value++
+      if (size > SIZE_HARD_LIMIT && !SIZE_ALLOWLIST.has(file)) violationCount.value++
+    }
 
     return {
       file,
@@ -267,3 +287,14 @@ if (!codeOnly) reportGlb()
 if (!glbOnly) reportCode()
 
 console.log()
+
+if (checkMode) {
+  if (violationCount.value > 0) {
+    console.error(
+      bad(`\n✖ ${violationCount.value} budget violation(s) found. Fix or add to the allowlist.\n`)
+    )
+    process.exit(1)
+  } else {
+    console.log(ok('\n✔ All asset budgets within limits.\n'))
+  }
+}

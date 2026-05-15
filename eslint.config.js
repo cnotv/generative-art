@@ -8,6 +8,7 @@ import unicorn from 'eslint-plugin-unicorn'
 import prettierConfig from 'eslint-config-prettier'
 import noAllocInAnimationLoop from './rules/no-alloc-in-animation-loop.js'
 import noRedundantThreejsLoader from './rules/no-redundant-threejs-loader.js'
+import noMeshInLoop from './rules/no-mesh-in-loop.js'
 
 export default [
   // Base recommended configs
@@ -37,7 +38,8 @@ export default [
       local: {
         rules: {
           'no-alloc-in-animation-loop': noAllocInAnimationLoop,
-          'no-redundant-threejs-loader': noRedundantThreejsLoader
+          'no-redundant-threejs-loader': noRedundantThreejsLoader,
+          'no-mesh-in-loop': noMeshInLoop
         }
       }
     },
@@ -315,7 +317,8 @@ export default [
 
       'vue/multi-word-component-names': 'off',
       'local/no-alloc-in-animation-loop': 'error',
-      'local/no-redundant-threejs-loader': 'warn'
+      'local/no-redundant-threejs-loader': 'warn',
+      'local/no-mesh-in-loop': 'warn'
     }
   },
 
