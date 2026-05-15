@@ -13,6 +13,9 @@ export interface PerfMetrics {
 
 export type PerfHistory = Record<keyof PerfMetrics, number[]>
 
+/** Fixed number of data points rendered per chart, regardless of time range. */
+export const BASE_POINTS = 60
+
 /** One sample per second; max range is 1 h = 3 600 s. */
 export const MAX_HISTORY_SIZE = 3_600
 
@@ -29,10 +32,56 @@ export const TIME_RANGE_OPTIONS = [
 
 export type TimeRangeValue = (typeof TIME_RANGE_OPTIONS)[number]['value']
 
+export type ChartSnapshots = Record<TimeRangeValue, PerfHistory>
+
+const RANGE_VALUES = TIME_RANGE_OPTIONS.map((o) => o.value) as TimeRangeValue[]
+
+const emptyHistory = (): PerfHistory => ({
+  fps: [],
+  ms: [],
+  drawCalls: [],
+  triangles: [],
+  heapMB: []
+})
+
+const emptyChartSnapshots = (): ChartSnapshots =>
+  Object.fromEntries(RANGE_VALUES.map((v) => [v, emptyHistory()])) as ChartSnapshots
+
 const pushHistory = (history: number[], value: number): number[] => {
   const next = [...history, value]
   return next.length > MAX_HISTORY_SIZE ? next.slice(1) : next
 }
+
+/**
+ * Downsample `values` to exactly BASE_POINTS entries for the given range count.
+ * Anchored from the right so each position always represents the same time offset
+ * from the most recent sample — chart positions stay stable as new data arrives.
+ */
+const downsample = (values: number[], count: number): number[] => {
+  const fill = values.length > 0 ? values[0] : 0
+  const step = Math.max(1, Math.floor(count / BASE_POINTS))
+  return Array.from({ length: BASE_POINTS }, (_, i) => {
+    const index = values.length - (BASE_POINTS - i) * step
+    return index >= 0 ? values[index] : fill
+  })
+}
+
+const buildChartSnapshots = (h: PerfHistory): ChartSnapshots =>
+  Object.fromEntries(
+    RANGE_VALUES.map((v) => {
+      const count = parseInt(v, 10)
+      return [
+        v,
+        {
+          fps: downsample(h.fps, count),
+          ms: downsample(h.ms, count),
+          drawCalls: downsample(h.drawCalls, count),
+          triangles: downsample(h.triangles, count),
+          heapMB: downsample(h.heapMB, count)
+        }
+      ]
+    })
+  ) as ChartSnapshots
 
 export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   const renderer = shallowRef<THREE.WebGLRenderer | null>(null)
@@ -42,13 +91,8 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   const triangles = ref(0)
   const heapMB = ref(0)
 
-  const history = ref<PerfHistory>({
-    fps: [],
-    ms: [],
-    drawCalls: [],
-    triangles: [],
-    heapMB: []
-  })
+  const history = ref<PerfHistory>(emptyHistory())
+  const chartSnapshots = ref<ChartSnapshots>(emptyChartSnapshots())
 
   const setRenderer = (r: THREE.WebGLRenderer) => {
     renderer.value = r
@@ -61,7 +105,8 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   }
 
   const resetHistory = () => {
-    history.value = { fps: [], ms: [], drawCalls: [], triangles: [], heapMB: [] }
+    history.value = emptyHistory()
+    chartSnapshots.value = emptyChartSnapshots()
   }
 
   /**
@@ -87,17 +132,19 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
   }
 
   /**
-   * Append the current metric snapshot to the history buffers.
+   * Append the current metric snapshot to history and rebuild all range charts.
    * Should be called once per second, not per frame.
    */
   const recordSnapshot = () => {
-    history.value = {
+    const next: PerfHistory = {
       fps: pushHistory(history.value.fps, fps.value),
       ms: pushHistory(history.value.ms, ms.value),
       drawCalls: pushHistory(history.value.drawCalls, drawCalls.value),
       triangles: pushHistory(history.value.triangles, triangles.value),
       heapMB: pushHistory(history.value.heapMB, heapMB.value)
     }
+    history.value = next
+    chartSnapshots.value = buildChartSnapshots(next)
   }
 
   return {
@@ -108,6 +155,7 @@ export const usePerfMetricsStore = defineStore('perfMetrics', () => {
     triangles,
     heapMB,
     history,
+    chartSnapshots,
     setRenderer,
     clearRenderer,
     tick,

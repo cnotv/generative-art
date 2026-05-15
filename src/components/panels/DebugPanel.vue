@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { TimeRangeValue } from '@/stores/perfMetrics'
 import { useRoute } from 'vue-router'
 import GenericPanel from './GenericPanel.vue'
 import PerfChart from './PerfChart.vue'
@@ -33,53 +34,7 @@ const currentMs = ref(0)
 const showCharts = ref(true)
 const timeRange = ref<string>(TIME_RANGE_OPTIONS[0].value)
 
-const timeRangeCount = computed(() => parseInt(timeRange.value, 10))
-
-const BASE_POINTS = 60
-
-const downsample = (values: number[], count: number): number[] => {
-  const fill = values.length > 0 ? values[0] : 0
-  const step = Math.max(1, Math.floor(count / BASE_POINTS))
-  // Anchor from the right: position i always refers to the same time offset
-  // from the most recent sample, so chart positions stay stable as data arrives.
-  return Array.from({ length: BASE_POINTS }, (_, i) => {
-    const index = values.length - (BASE_POINTS - i) * step
-    return index >= 0 ? values[index] : fill
-  })
-}
-
-type ChartSnapshot = {
-  fps: number[]
-  ms: number[]
-  drawCalls: number[]
-  triangles: number[]
-  heapMB: number[]
-}
-
-const emptySnapshot = (): ChartSnapshot => ({
-  fps: [],
-  ms: [],
-  drawCalls: [],
-  triangles: [],
-  heapMB: []
-})
-
-const chartData = ref<ChartSnapshot>(emptySnapshot())
-
-const rebuildChartData = () => {
-  const count = timeRangeCount.value
-  const h = perfStore.history
-  chartData.value = {
-    fps: downsample(h.fps, count),
-    ms: downsample(h.ms, count),
-    drawCalls: downsample(h.drawCalls, count),
-    triangles: downsample(h.triangles, count),
-    heapMB: downsample(h.heapMB, count)
-  }
-}
-
-watch(() => perfStore.history, rebuildChartData)
-watch(timeRangeCount, rebuildChartData)
+const chartData = computed(() => perfStore.chartSnapshots[timeRange.value as TimeRangeValue])
 
 const fpsColor = computed(() => {
   if (perfStore.fps >= 55) return 'ok'
