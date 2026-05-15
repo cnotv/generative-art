@@ -157,7 +157,7 @@ export interface CameraConfig {
   position?: CoordinateTuple | THREE.Vector3
   fov?: number
   rotation?: CoordinateTuple | THREE.Vector3
-  lookAt?: CoordinateTuple | THREE.Vector3
+  lookAt?: CoordinateTuple | THREE.Vector3 | { x: number; y: number; z: number }
   near?: number
   far?: number
   up?: THREE.Vector3
