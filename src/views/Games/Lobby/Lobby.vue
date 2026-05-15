@@ -15,6 +15,7 @@ import { useLobbySession } from './useLobbySession'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
+import { useMinigolfStore } from '@/stores/minigolf'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
@@ -29,7 +30,8 @@ const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>>
   ),
   WordleMultiplayer: defineAsyncComponent(
     () => import('@/views/Games/WordleMultiplayer/WordleMultiplayer.vue')
-  )
+  ),
+  Minigolf: defineAsyncComponent(() => import('@/views/Games/Minigolf/Minigolf.vue'))
 }
 
 const route = useRoute()
@@ -37,6 +39,7 @@ const router = useRouter()
 const squaresStore = useSquaresMultiplayerStore()
 const pictionaryStore = usePictionaryStore()
 const wordleStore = useWordleMultiplayerStore()
+const minigolfStore = useMinigolfStore()
 
 const stored = loadProfile()
 const playerName = ref(stored?.name ?? `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`)
@@ -64,6 +67,7 @@ const gamePlayerList = computed(() => {
   if (activeGame.value === 'Pictionary') return pictionaryStore.playerList
   if (activeGame.value === 'SquaresMultiplayer') return squaresStore.playerList
   if (activeGame.value === 'WordleMultiplayer') return wordleStore.playerList
+  if (activeGame.value === 'Minigolf') return minigolfStore.playerList
   return []
 })
 
