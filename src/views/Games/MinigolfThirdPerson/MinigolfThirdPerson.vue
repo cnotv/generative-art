@@ -3,11 +3,17 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useSceneViewStore } from '@/stores/sceneView'
-import { buildGround, buildWalls, buildHoleMarker } from './helpers/course'
-import { createBall, syncBall, shootBall, isBallStopped, resetBall } from './helpers/ball'
-import { createAimState, beginDrag, updateDrag, endDrag } from './helpers/input'
-import { HOLES, CAMERA_OFFSET_THIRD, MAX_SHOT_POWER, WIN_DISTANCE, MAX_STROKES } from './config'
-import type { BallState } from './helpers/ball'
+import { buildGround, buildWalls, buildHoleMarker } from '../Minigolf/helpers/course'
+import { createBall, syncBall, shootBall, isBallStopped, resetBall } from '../Minigolf/helpers/ball'
+import { createAimState, beginDrag, updateDrag, endDrag } from '../Minigolf/helpers/input'
+import {
+  HOLES,
+  CAMERA_OFFSET_THIRD,
+  MAX_SHOT_POWER,
+  WIN_DISTANCE,
+  MAX_STROKES
+} from '../Minigolf/config'
+import type { BallState } from '../Minigolf/helpers/ball'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const store = useSceneViewStore()
