@@ -304,12 +304,19 @@ export const updateCamera = (
       camera.rotation.setFromVector3(config.rotation as THREE.Vector3)
     }
   }
-  if (config.lookAt) {
-    if (config.lookAt instanceof Array) {
-      camera.lookAt(...(config.lookAt as CoordinateTuple))
-    } else {
-      camera.lookAt(config.lookAt)
-    }
-  }
+  if (config.lookAt) applyCameraLookAt(camera, config.lookAt)
   camera.updateProjectionMatrix()
+}
+
+const applyCameraLookAt = (
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+  lookAt: NonNullable<CameraConfig['lookAt']>
+): void => {
+  if (lookAt instanceof Array) {
+    camera.lookAt(...(lookAt as CoordinateTuple))
+  } else if (lookAt instanceof THREE.Vector3) {
+    camera.lookAt(lookAt)
+  } else {
+    camera.lookAt(lookAt.x, lookAt.y, lookAt.z)
+  }
 }
