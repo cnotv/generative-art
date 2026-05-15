@@ -79,10 +79,11 @@ const updateStats = () => {
   lastFrameTime = now
 
   frameCount++
-  if (now - lastTime >= 1000) {
-    currentFps.value = frameCount
+  const elapsed = now - lastTime
+  if (elapsed >= 1000) {
+    currentFps.value = Math.round((frameCount * 1000) / elapsed)
     frameCount = 0
-    lastTime = now
+    lastTime += 1000
     perfStore.recordSnapshot()
   }
 
