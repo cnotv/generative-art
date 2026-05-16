@@ -6,6 +6,7 @@ import {
   WALL_COLOR,
   HOLE_COLOR,
   FLAG_COLOR,
+  GROUND_FRICTION,
   WALL_HEIGHT,
   WALL_THICKNESS,
   GROUND_THICKNESS,
@@ -40,7 +41,7 @@ export const buildGround = (
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
   const collider = RAPIER.ColliderDesc.cuboid(width / 2, GROUND_THICKNESS / 2, depth / 2)
     .setTranslation(mesh.position.x, mesh.position.y, mesh.position.z)
-    .setFriction(0.8)
+    .setFriction(GROUND_FRICTION)
   world.createCollider(collider, body)
 
   return mesh

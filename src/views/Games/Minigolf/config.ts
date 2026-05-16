@@ -8,9 +8,10 @@ export const HOLE_COLOR = 0x111111
 export const FLAG_COLOR = 0xff3333
 
 export const BALL_RESTITUTION = 0.5
-export const BALL_FRICTION = 0.8
-export const BALL_LINEAR_DAMPING = 0.6
-export const BALL_ANGULAR_DAMPING = 0.8
+export const BALL_FRICTION = 2.0
+export const GROUND_FRICTION = 2.0
+export const BALL_LINEAR_DAMPING = 1.2
+export const BALL_ANGULAR_DAMPING = 1.5
 export const MAX_SHOT_POWER = 20
 export const POWER_SCALE = 0.12
 

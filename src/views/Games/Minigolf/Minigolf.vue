@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, toRaw, watch, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
@@ -75,11 +75,6 @@ const isAiming = ref(false)
 const currentPlayer = computed(() => playerList.value[currentPlayerIndex.value])
 
 let cleanupListeners: (() => void) | null = null
-
-const setOrbitEnabled = (enabled: boolean): void => {
-  const orbit = toRaw(sceneStore.orbitReference)
-  if (orbit) orbit.enabled = enabled
-}
 
 interface GameContext {
   scene: THREE.Scene
@@ -212,10 +207,10 @@ const startGame = async (): Promise<void> => {
 
   await sceneStore.init(
     canvas.value,
-    { ground: false, sky: false },
+    { ground: false, sky: false, orbit: false },
     {
       playMode: true,
-      viewPanels: {},
+      viewPanels: { showElements: false, showConfig: false },
       defineSetup: ({ scene, camera, world, animate }) => {
         let ballState: BallState | null = null
         const aim = createAimState()
@@ -257,7 +252,6 @@ const startGame = async (): Promise<void> => {
           strokesThisHole.value = strokesThisHole.value.map((s, i) =>
             i === currentPlayerIndex.value ? s + 1 : s
           )
-          setOrbitEnabled(true)
           shootBall(ballState, aim.direction, aim.power, MAX_SHOT_POWER)
         }
 
@@ -276,7 +270,6 @@ const startGame = async (): Promise<void> => {
             if (!ballState) return
             syncBall(ballState)
             const stopped = isBallStopped(ballState)
-            setOrbitEnabled(!stopped || waiting.value)
             if (!waiting.value && stopped && strokesThisHole.value[currentPlayerIndex.value] > 0) {
               resolveTurn(ctx)
             }
@@ -388,7 +381,6 @@ onUnmounted(() => {
       </div>
       <div v-if="isAiming" class="mg-game__power-bar">
         <div class="mg-game__power-fill" :style="{ width: `${aimPower}%` }" />
-        <span class="mg-game__power-label">{{ aimPower }}%</span>
       </div>
       <div v-if="message" class="mg-game__message">{{ message }}</div>
       <div v-if="!isAiming" class="mg-game__hint">Drag to aim &amp; shoot</div>
@@ -528,23 +520,10 @@ canvas {
 }
 
 .mg-game__power-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
   height: 100%;
-  background: linear-gradient(90deg, hsl(120 70% 45%), hsl(60 90% 50%), hsl(0 80% 55%));
+  background: var(--color-primary);
   border-radius: var(--radius-sm);
   transition: width 0.05s ease-out;
-}
-
-.mg-game__power-label {
-  position: relative;
-  width: 100%;
-  text-align: center;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  color: var(--color-foreground);
-  mix-blend-mode: difference;
 }
 
 .mg-summary {
