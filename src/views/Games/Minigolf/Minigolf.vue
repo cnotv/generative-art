@@ -10,7 +10,15 @@ import { useMinigolfSession } from './useMinigolfSession'
 import { buildGround, buildWalls, buildHoleMarker } from './helpers/course'
 import { createBall, syncBall, shootBall, isBallStopped, resetBall } from './helpers/ball'
 import { createAimState, beginDrag, updateDrag, endDrag } from './helpers/input'
-import { HOLES, CAMERA_OFFSET_TOPDOWN, MAX_SHOT_POWER, WIN_DISTANCE, MAX_STROKES } from './config'
+import {
+  HOLES,
+  CAMERA_OFFSET_TOPDOWN,
+  MAX_SHOT_POWER,
+  WIN_DISTANCE,
+  MAX_STROKES,
+  AIM_LINE_COLOR,
+  AIM_LINE_MAX_LENGTH
+} from './config'
 import {
   loadProfile,
   saveProfile,
@@ -61,6 +69,8 @@ const currentPlayerIndex = ref(0)
 const strokesThisHole = ref<number[]>([])
 const message = ref('')
 const waiting = ref(false)
+const aimPower = ref(0)
+const isAiming = ref(false)
 
 const currentPlayer = computed(() => playerList.value[currentPlayerIndex.value])
 
@@ -87,6 +97,38 @@ const clearHoleObjects = (scene: THREE.Scene): void => {
 
 const tagHoleObject = (object: THREE.Object3D): void => {
   object.userData.mgHole = true
+}
+
+const createAimLine = (scene: THREE.Scene): THREE.Line => {
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, -1)
+  ])
+  const material = new THREE.LineBasicMaterial({ color: AIM_LINE_COLOR })
+  const line = new THREE.Line(geometry, material)
+  line.visible = false
+  scene.add(line)
+  return line
+}
+
+const updateAimLine = (
+  line: THREE.Line,
+  ball: BallState,
+  direction: THREE.Vector3,
+  power: number
+): void => {
+  const length = power * AIM_LINE_MAX_LENGTH
+  const end = ball.mesh.position.clone().addScaledVector(direction, length)
+  const positions = new Float32Array([
+    ball.mesh.position.x,
+    ball.mesh.position.y,
+    ball.mesh.position.z,
+    end.x,
+    end.y,
+    end.z
+  ])
+  line.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  line.geometry.attributes.position.needsUpdate = true
 }
 
 const buildHole = (ctx: GameContext): void => {
@@ -190,18 +232,26 @@ const startGame = async (): Promise<void> => {
 
         gameContext = ctx
         buildHole(ctx)
+        const aimLine = createAimLine(scene)
 
         const onPointerDown = (e: PointerEvent): void => {
           if (waiting.value || !ballState || !isBallStopped(ballState)) return
           beginDrag(aim, e.clientX, e.clientY)
+          isAiming.value = true
+          aimLine.visible = true
         }
         const onPointerMove = (e: PointerEvent): void => {
-          if (!aim.dragging) return
-          updateDrag(aim, e.clientX, e.clientY, camera, ballState!.mesh.position)
+          if (!aim.dragging || !ballState) return
+          updateDrag(aim, e.clientX, e.clientY, camera, ballState.mesh.position)
+          aimPower.value = Math.round(aim.power * 100)
+          updateAimLine(aimLine, ballState, aim.direction, aim.power)
         }
         const onPointerUp = (e: PointerEvent): void => {
           if (!aim.dragging || !ballState) return
           updateDrag(aim, e.clientX, e.clientY, camera, ballState.mesh.position)
+          aimLine.visible = false
+          isAiming.value = false
+          aimPower.value = 0
           if (!endDrag(aim) || strokesThisHole.value[currentPlayerIndex.value] >= MAX_STROKES)
             return
           strokesThisHole.value = strokesThisHole.value.map((s, i) =>
@@ -336,8 +386,12 @@ onUnmounted(() => {
           <span>Stroke {{ strokesThisHole[currentPlayerIndex] }}/{{ MAX_STROKES }}</span>
         </div>
       </div>
+      <div v-if="isAiming" class="mg-game__power-bar">
+        <div class="mg-game__power-fill" :style="{ width: `${aimPower}%` }" />
+        <span class="mg-game__power-label">{{ aimPower }}%</span>
+      </div>
       <div v-if="message" class="mg-game__message">{{ message }}</div>
-      <div class="mg-game__hint">Drag to aim &amp; shoot</div>
+      <div v-if="!isAiming" class="mg-game__hint">Drag to aim &amp; shoot</div>
     </div>
 
     <div v-else class="mg-summary">
@@ -457,6 +511,40 @@ canvas {
   font-size: var(--font-size-xs);
   color: var(--color-foreground);
   opacity: 0.5;
+}
+
+.mg-game__power-bar {
+  position: absolute;
+  bottom: var(--spacing-4);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 14px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.mg-game__power-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, hsl(120 70% 45%), hsl(60 90% 50%), hsl(0 80% 55%));
+  border-radius: var(--radius-sm);
+  transition: width 0.05s ease-out;
+}
+
+.mg-game__power-label {
+  position: relative;
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-foreground);
+  mix-blend-mode: difference;
 }
 
 .mg-summary {
