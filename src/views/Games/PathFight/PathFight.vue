@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
@@ -445,20 +445,13 @@ const setupScene = ({ scene, camera, world, animate }: SetupArguments): void => 
 
 // ─── start planning ───────────────────────────────────────────────────────────
 
-const startPlanning = async (): Promise<void> => {
+const initPlanningScene = async (): Promise<void> => {
   if (!canvas.value) return
-  store.phase = 'planning'
-  drawnPaths = Array.from({ length: GOOMBA_COUNT }, () => [])
-  selectedGoomba.value = 0
-  localScore.value = 0
-  timerSeconds.value = PLANNING_DURATION_S
-
   await sceneStore.init(
     canvas.value,
     { ...sceneSetupConfig, orbit: { disabled: true } },
     { playMode: true, viewPanels: { showElements: false }, defineSetup: setupScene }
   )
-
   timerInterval = setInterval(() => {
     if (timerSeconds.value <= 0) {
       submitPaths()
@@ -479,9 +472,7 @@ const submitPaths = (): void => {
     drawnPaths.map((path) => (path.length >= 2 ? drawInterpolateWaypoints(path) : path))
   )
   if (isHost.value) {
-    const allReady =
-      playerList.value.length >= 2 &&
-      playerList.value.every((p) => p.ready || p.id === localPeerId.value)
+    const allReady = playerList.value.every((p) => p.ready || p.id === localPeerId.value)
     if (allReady) session.broadcastStart()
     else gameMessage.value = 'Waiting for opponent…'
   } else {
@@ -489,10 +480,14 @@ const submitPaths = (): void => {
   }
 }
 
-// ─── watch for battle start ───────────────────────────────────────────────────
+// ─── watch phase transitions ──────────────────────────────────────────────────
 
 watch(phase, async (newPhase) => {
-  if (newPhase === 'planning') return
+  if (newPhase === 'planning') {
+    await nextTick()
+    await initPlanningScene()
+    return
+  }
   if (newPhase !== 'battle' || !sceneReference) return
 
   if (timerInterval) {
@@ -544,7 +539,7 @@ watch(phase, async (newPhase) => {
 
 watch(playerList, () => {
   if (phase.value !== 'planning' || !isHost.value) return
-  const allReady = playerList.value.length >= 2 && playerList.value.every((p) => p.ready)
+  const allReady = playerList.value.every((p) => p.ready)
   if (allReady) session.broadcastStart()
 })
 
@@ -576,9 +571,14 @@ const playAgain = (): void => {
 
 const onStart = (): void => {
   saveProfile({ name: playerName.value, color: playerColor.value })
-  session.init()
-  startPlanning()
+  drawnPaths = Array.from({ length: GOOMBA_COUNT }, () => [])
+  selectedGoomba.value = 0
+  localScore.value = 0
+  timerSeconds.value = PLANNING_DURATION_S
+  store.phase = 'planning'
 }
+
+onMounted(() => session.init())
 
 const handleMatchFound = (newRoomId: string): void => {
   roomId.value = newRoomId
@@ -736,7 +736,8 @@ watch(selectedGoomba, () => {
   display: flex;
   flex-direction: column;
   background: var(--game-surface);
-  --game-accent: var(--pf-orange, #e67e22);
+  --pf-orange: #e67e22;
+  --game-accent: var(--pf-orange);
 }
 
 /* ── game layout ─────────────────────────────────── */
