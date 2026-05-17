@@ -1,6 +1,6 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
 
-export const BALL_RADIUS = 0.5
+export const BALL_RADIUS = 0.35
 export const BALL_COLOR = 0xffffff
 export const GROUND_COLOR = 0x4caf50
 export const WALL_COLOR = 0xeeeeee
@@ -8,10 +8,10 @@ export const HOLE_COLOR = 0x111111
 export const FLAG_COLOR = 0xff3333
 
 export const BALL_RESTITUTION = 0.5
-export const BALL_FRICTION = 2.0
-export const GROUND_FRICTION = 2.0
-export const BALL_LINEAR_DAMPING = 1.2
-export const BALL_ANGULAR_DAMPING = 1.5
+export const BALL_FRICTION = 1.5
+export const GROUND_FRICTION = 1.5
+export const BALL_LINEAR_DAMPING = 0.8
+export const BALL_ANGULAR_DAMPING = 1.2
 export const MAX_SHOT_POWER = 20
 export const POWER_SCALE = 0.12
 
@@ -23,9 +23,15 @@ export const CAMERA_HEIGHT = 20
 export const CAMERA_OFFSET_TOPDOWN: CoordinateTuple = [0, CAMERA_HEIGHT, 0]
 
 export const HOLE_RADIUS = 0.5
+export const CUP_DEPTH = 1.2
 export const FLAG_HEIGHT = 2.5
 export const MAX_STROKES = 10
 export const WIN_DISTANCE = HOLE_RADIUS * 0.9
+export const HOLE_ENTRY_MAX_SPEED = 5
+export const SPIRAL_DURATION = 0.7
+export const CONFETTI_COUNT = 12
+export const CONFETTI_LIFETIME = 2.0
+export const CONFETTI_COLORS = [0xff6bcb, 0xffd93d, 0x4ecdc4, 0xff8c42, 0x6bcf7f, 0xa06cd5]
 
 export const AIM_LINE_COLOR = 0xffdd00
 export const AIM_LINE_MAX_LENGTH = 5
@@ -87,17 +93,12 @@ export const HOLES: HoleConfig[] = [
     holePosition: [3, 0, 5.5],
     par: 4
   },
-  // 6 — Dogleg right (L-shape simulated with two grounds and walls)
+  // 6 — Dogleg: single wall forces ball to go right before heading up
   {
-    ground: { width: 12, depth: 5, position: [3, 0, -4] },
-    walls: [
-      { width: 0.35, depth: 5, position: [-3, 0, -4] },
-      { width: 0.35, depth: 14, position: [9, 0, 3] },
-      { width: 12, depth: 0.35, position: [3, 0, -6.5] },
-      { width: 12, depth: 0.35, position: [3, 0, -1.5] }
-    ],
-    teePosition: [-2, R, -4],
-    holePosition: [7, 0, 5],
+    ground: { width: 10, depth: 18, position: [0, 0, 0] },
+    walls: [{ width: 8, depth: 0.35, position: [-1, 0, 0] }],
+    teePosition: [-3, R, -7],
+    holePosition: [3, 0, 7],
     par: 4
   },
   // 7 — Triple baffles

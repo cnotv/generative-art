@@ -21,7 +21,7 @@ import PictionaryChoosing from './PictionaryChoosing.vue'
 import PictionaryDrawing from './PictionaryDrawing.vue'
 import PictionaryIntermission from './PictionaryIntermission.vue'
 import PictionarySummary from './PictionarySummary.vue'
-import PictionarySidebar from './PictionarySidebar.vue'
+import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,6 +77,17 @@ const session = usePictionarySession({
 })
 
 const { isHost, isDrawer, localPeerId } = session
+
+const sidebarPlayers = computed((): MultiplayerPlayer[] =>
+  playerList.value.map((p) => ({
+    id: p.id,
+    name: p.name,
+    color: p.color,
+    score: p.score,
+    isHost: p.id === store.hostId,
+    isDrawer: p.id === round.value.drawerId
+  }))
+)
 
 const { timeLeft, intermissionLeft } = usePictionaryTimer({
   round,
@@ -216,14 +227,13 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <PictionarySidebar
-      :player-list="playerList"
-      :drawer-id="round.drawerId"
-      :host-id="store.hostId"
-      :messages="messages"
+    <MultiplayerSidebar
+      class="pictionary__sidebar"
+      :players="sidebarPlayers"
       :local-peer-id="localPeerId"
-      :is-drawer="isDrawer"
-      :phase="phase"
+      :messages="messages"
+      :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
+      :chat-disabled="isDrawer && phase === 'drawing'"
       @send="session.broadcastChat($event)"
     />
   </main>
@@ -267,7 +277,8 @@ onMounted(() => {
   animation: slide-up 0.28s ease both;
 }
 
-.pictionary :deep(.pictionary-sidebar) {
+.pictionary__sidebar {
+  grid-area: sidebar;
   animation: slide-from-right 0.32s ease both;
 }
 

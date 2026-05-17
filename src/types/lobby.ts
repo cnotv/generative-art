@@ -1,4 +1,11 @@
-export type GameType = 'Pictionary' | 'SquaresMultiplayer' | 'WordleMultiplayer' | 'Minigolf'
+export const GAME_TYPES = [
+  'Pictionary',
+  'SquaresMultiplayer',
+  'WordleMultiplayer',
+  'Minigolf'
+] as const
+
+export type GameType = (typeof GAME_TYPES)[number]
 
 export type LobbyPlayer = {
   id: string

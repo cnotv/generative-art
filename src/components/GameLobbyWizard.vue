@@ -79,6 +79,7 @@ const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
 
 const slots = useSlots()
 const hasRules = computed(() => !!slots.rules)
+const hasConfig = computed(() => !!slots.config)
 const rulesOpen = ref(false)
 
 watch(
@@ -263,6 +264,7 @@ watch(
             />
           </label>
         </div>
+        <slot v-if="hasConfig" name="config" />
       </div>
 
       <!-- Navigation -->
@@ -272,9 +274,11 @@ watch(
         </button>
         <div v-if="hasRules" class="glw__rules">
           <button class="glw__rules-btn" type="button" @click="rulesOpen = !rulesOpen">?</button>
-          <div v-if="rulesOpen" class="glw__rules-panel">
-            <slot name="rules" />
-          </div>
+          <Transition name="glw-rules">
+            <div v-if="rulesOpen" class="glw__rules-panel">
+              <slot name="rules" />
+            </div>
+          </Transition>
         </div>
         <span class="glw__nav-spacer" />
         <button
@@ -657,6 +661,19 @@ watch(
   font-size: var(--font-size-sm);
   line-height: 1.4;
   color: var(--game-ink);
+}
+
+.glw-rules-enter-active,
+.glw-rules-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.glw-rules-enter-from,
+.glw-rules-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 
 .glw__start-btn {

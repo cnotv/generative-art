@@ -16,12 +16,20 @@ export const useMinigolfStore = defineStore('minigolf', () => {
   const messages = ref<ChatMessage[]>([])
   const phase = ref<MgPhase>('lobby')
   const currentHole = ref(0)
-  const holeCount = ref(3)
+  const holeCount = ref(10)
+  const selectedHoles = ref<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+  const remoteBallPositions = ref<Record<string, { x: number; y: number; z: number }>>({})
+
+  const setRemoteBallPosition = (peerId: string, x: number, y: number, z: number): void => {
+    remoteBallPositions.value = { ...remoteBallPositions.value, [peerId]: { x, y, z } }
+  }
 
   const playerList = computed(() =>
-    Object.values(players.value).sort(
-      (a, b) => a.scores.reduce((sum, s) => sum + s, 0) - b.scores.reduce((sum, s) => sum + s, 0)
-    )
+    Object.values(players.value).sort((a, b) => {
+      const scoreDiff =
+        a.scores.reduce((sum, s) => sum + s, 0) - b.scores.reduce((sum, s) => sum + s, 0)
+      return scoreDiff !== 0 ? scoreDiff : a.id.localeCompare(b.id)
+    })
   )
 
   const hostId = computed(() => {
@@ -64,7 +72,9 @@ export const useMinigolfStore = defineStore('minigolf', () => {
     messages.value = []
     phase.value = 'lobby'
     currentHole.value = 0
-    holeCount.value = 3
+    holeCount.value = 10
+    selectedHoles.value = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    remoteBallPositions.value = {}
   }
 
   return {
@@ -73,12 +83,15 @@ export const useMinigolfStore = defineStore('minigolf', () => {
     phase,
     currentHole,
     holeCount,
+    selectedHoles,
     playerList,
     hostId,
     upsertPlayer,
     removePlayer,
     appendMessage,
     recordScore,
+    setRemoteBallPosition,
+    remoteBallPositions,
     reset
   }
 })

@@ -36,10 +36,12 @@ export const beginDrag = (state: AimState, x: number, y: number): void => {
 
 /**
  * Update aim direction and power while dragging.
+ * Uses camera matrix columns for reliable top-down projection, then points
+ * the direction opposite to where the mouse moved (slingshot mechanic).
  * @param state AimState to mutate
  * @param x Current client X
  * @param y Current client Y
- * @param camera Active camera (used to project drag into world space)
+ * @param camera Active camera
  * @param ballPosition Current ball world position
  */
 export const updateDrag = (
@@ -50,22 +52,24 @@ export const updateDrag = (
   ballPosition: THREE.Vector3
 ): void => {
   if (!state.dragging) return
+
   const dx = state.startX - x
   const dy = state.startY - y
   const dragLength = Math.hypot(dx, dy)
   state.power = Math.min(dragLength * POWER_SCALE, MAX_SHOT_POWER) / MAX_SHOT_POWER
 
-  const cameraDirection = new THREE.Vector3()
-  camera.getWorldDirection(cameraDirection)
-  cameraDirection.y = 0
-  cameraDirection.normalize()
+  // Read camera right and up axes from world matrix (works for any camera angle,
+  // including top-down where getWorldDirection().y≈0 makes the old approach fail).
+  const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0)
+  const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1)
+  right.y = 0
+  up.y = 0
 
-  const right = new THREE.Vector3()
-  right.crossVectors(cameraDirection, new THREE.Vector3(0, 1, 0)).normalize()
-
-  const worldDx = right.clone().multiplyScalar(dx)
-  const worldDz = cameraDirection.clone().multiplyScalar(dy)
-  const dir = worldDx.add(worldDz)
+  // Combine screen-space delta with world axes.
+  // dx uses (start – current) directly for slingshot.
+  // dy is negated because screen-Y increases downward while world-Z increases toward screen bottom,
+  // so without negation the vertical component gives direct control instead of slingshot.
+  const dir = right.multiplyScalar(dx).addScaledVector(up, -dy)
   dir.y = 0
 
   if (dir.lengthSq() > 0) {
