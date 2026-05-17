@@ -16,6 +16,7 @@ import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import { useMinigolfStore } from '@/stores/minigolf'
+import { usePathFightStore } from '@/stores/pathFight'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
@@ -31,7 +32,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     Pictionary: usePictionaryStore(),
     SquaresMultiplayer: useSquaresMultiplayerStore(),
     WordleMultiplayer: useWordleMultiplayerStore(),
-    Minigolf: useMinigolfStore()
+    Minigolf: useMinigolfStore(),
+    PathFight: usePathFightStore()
   }
 
 const stored = loadProfile()
