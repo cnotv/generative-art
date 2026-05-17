@@ -100,7 +100,7 @@ const emit = defineEmits<{
   border: 2px solid var(--game-border);
   border-radius: 999px;
   background: var(--game-ink);
-  color: #fff;
+  color: var(--game-surface);
   font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;

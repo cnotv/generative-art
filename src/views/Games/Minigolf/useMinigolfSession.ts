@@ -103,7 +103,7 @@ const sendConfig = (ctx: MgContext, target: P2PSession): void => {
 }
 
 const bindPeerEvents = (ctx: MgContext, joined: P2PSession): void => {
-  p2pOnPeerJoin(joined, (peerId) => {
+  p2pOnPeerJoin(joined, (_peerId) => {
     const hello: HelloPayload = {
       name: ctx.options.name,
       color: ctx.options.color,
@@ -111,7 +111,6 @@ const bindPeerEvents = (ctx: MgContext, joined: P2PSession): void => {
     }
     p2pSendData(joined, HELLO_CHANNEL, hello)
     if (ctx.isHost.value) sendConfig(ctx, joined)
-    p2pSendData(joined, HELLO_CHANNEL, { id: peerId })
   })
 
   p2pOnPeerLeave(joined, (peerId) => {

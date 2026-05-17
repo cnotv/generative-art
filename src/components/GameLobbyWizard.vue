@@ -232,6 +232,7 @@ watch(
       <!-- Step 3: Settings (host only) — also shown as step 2 when fromLobby -->
       <div v-else-if="contentStep === 3" class="glw__body">
         <h3 class="glw__step-title">Game settings</h3>
+        <slot v-if="hasConfig" name="config" />
         <div class="glw__players">
           <span class="glw__player-count">{{ playerList.length }} players ready</span>
           <span
@@ -264,7 +265,6 @@ watch(
             />
           </label>
         </div>
-        <slot v-if="hasConfig" name="config" />
       </div>
 
       <!-- Navigation -->

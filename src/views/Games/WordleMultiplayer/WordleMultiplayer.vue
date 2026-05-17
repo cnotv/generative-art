@@ -20,6 +20,7 @@ import WordleMultiplayerGame from './WordleMultiplayerGame.vue'
 import WordleMultiplayerIntermission from './WordleMultiplayerIntermission.vue'
 import WordleMultiplayerSummary from './WordleMultiplayerSummary.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +64,15 @@ const session = useWordleMultiplayerSession({
 })
 
 const { isHost, localPeerId } = session
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+watch(showSidebar, (open) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+watch(messages, () => {
+  if (showSidebar.value) lastReadCount.value = messages.value.length
+})
 
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   playerList.value.map((p) => ({
@@ -169,7 +179,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="wl" :class="`wl--${phase}`" :style="backgroundStyle">
+  <main
+    class="wl"
+    :class="[`wl--${phase}`, { 'wl--show-sidebar': showSidebar }]"
+    :style="backgroundStyle"
+  >
     <WordleMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
     <WordleMultiplayerLobby
@@ -233,12 +247,15 @@ onMounted(() => {
       chat-placeholder="Say something…"
       @send="session.broadcastChat($event)"
     />
+
+    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
   </main>
 </template>
 
 <style scoped>
 .wl {
   --wl-green: #6aaa64;
+  --game-accent: var(--wl-green);
   --wl-yellow: #c9b458;
 
   touch-action: manipulation;
@@ -270,19 +287,36 @@ onMounted(() => {
 @media (max-width: 720px) {
   .wl {
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto 1fr auto;
-    min-height: 100dvh;
+    grid-template-areas: 'header' 'main';
+    grid-template-rows: auto 1fr;
+    height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
-    padding-bottom: var(--spacing-2);
+    padding-bottom: 3rem;
     gap: var(--spacing-2);
-    overflow: auto;
+    overflow: hidden;
   }
 
   .wl--lobby {
     height: auto;
+    min-height: 100dvh;
     overflow: auto;
+  }
+
+  .wl__sidebar {
+    grid-area: main;
+    display: none;
+  }
+
+  .wl--show-sidebar :deep(.glw),
+  .wl--show-sidebar :deep(.wl-game),
+  .wl--show-sidebar :deep(.wl-intermission),
+  .wl--show-sidebar :deep(.wl-summary) {
+    display: none;
+  }
+
+  .wl--show-sidebar .wl__sidebar {
+    display: flex;
   }
 }
 </style>

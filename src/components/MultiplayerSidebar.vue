@@ -28,7 +28,6 @@ const emit = defineEmits<{
 <template>
   <aside class="multiplayer-sidebar">
     <div class="multiplayer-sidebar__players">
-      <h3 class="multiplayer-sidebar__title">Players</h3>
       <ul class="multiplayer-sidebar__player-list">
         <li
           v-for="player in players"
@@ -51,7 +50,6 @@ const emit = defineEmits<{
       </ul>
     </div>
     <div class="multiplayer-sidebar__chat">
-      <h3 class="multiplayer-sidebar__title">Chat</h3>
       <Chat
         :messages="messages"
         :local-peer-id="localPeerId"
@@ -74,18 +72,12 @@ const emit = defineEmits<{
   box-sizing: border-box;
 }
 
-.multiplayer-sidebar__title {
-  margin: 0 0 var(--spacing-2) 0;
-  font-size: var(--font-size-sm);
-  color: var(--game-ink);
-  font-weight: 700;
-}
-
 .multiplayer-sidebar__players {
   display: flex;
   flex-direction: column;
   flex-shrink: 1;
   min-height: 0;
+  max-height: 40%;
   overflow-y: auto;
 }
 

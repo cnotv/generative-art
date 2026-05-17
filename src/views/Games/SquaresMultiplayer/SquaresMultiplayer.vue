@@ -20,6 +20,7 @@ import SquaresMultiplayerGame from './SquaresMultiplayerGame.vue'
 import SquaresMultiplayerIntermission from './SquaresMultiplayerIntermission.vue'
 import SquaresMultiplayerSummary from './SquaresMultiplayerSummary.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +64,15 @@ const session = useSquaresMultiplayerSession({
 })
 
 const { isHost, localPeerId } = session
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+watch(showSidebar, (open) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+watch(messages, () => {
+  if (showSidebar.value) lastReadCount.value = messages.value.length
+})
 
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   playerList.value.map((p) => ({
@@ -167,7 +177,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="wm" :class="`wm--${phase}`" :style="backgroundStyle">
+  <main
+    class="wm"
+    :class="[`wm--${phase}`, { 'wm--show-sidebar': showSidebar }]"
+    :style="backgroundStyle"
+  >
     <SquaresMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
     <SquaresMultiplayerLobby
@@ -234,12 +248,15 @@ onMounted(() => {
       chat-placeholder="Say something…"
       @send="session.broadcastChat($event)"
     />
+
+    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
   </main>
 </template>
 
 <style scoped>
 .wm {
   --ws-green: #6bcf7f;
+  --game-accent: var(--ws-green);
   --ws-yellow: #ffd93d;
 
   touch-action: manipulation;
@@ -271,19 +288,36 @@ onMounted(() => {
 @media (max-width: 720px) {
   .wm {
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto 1fr auto;
-    min-height: 100dvh;
+    grid-template-areas: 'header' 'main';
+    grid-template-rows: auto 1fr;
+    height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
-    padding-bottom: var(--spacing-2);
+    padding-bottom: 3rem;
     gap: var(--spacing-2);
-    overflow: auto;
+    overflow: hidden;
   }
 
   .wm--lobby {
     height: auto;
+    min-height: 100dvh;
     overflow: auto;
+  }
+
+  .wm__sidebar {
+    grid-area: main;
+    display: none;
+  }
+
+  .wm--show-sidebar :deep(.glw),
+  .wm--show-sidebar :deep(.wm-game),
+  .wm--show-sidebar :deep(.wm-intermission),
+  .wm--show-sidebar :deep(.ws-summary) {
+    display: none;
+  }
+
+  .wm--show-sidebar .wm__sidebar {
+    display: flex;
   }
 }
 </style>

@@ -126,7 +126,7 @@ defineExpose({
 .pictionary-drawing__banner-label {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: var(--game-ink);
+  color: #111;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -136,9 +136,8 @@ defineExpose({
   font-size: clamp(1.25rem, 4vw, 2.5rem);
   font-weight: 900;
   letter-spacing: 0.1em;
-  color: var(--game-ink);
+  color: #111;
   text-transform: uppercase;
-  text-shadow: 2px 2px 0 #fff;
   word-break: break-word;
   overflow-wrap: anywhere;
   line-height: 1.15;
@@ -146,13 +145,13 @@ defineExpose({
 
 .pictionary-drawing__banner-word--masked {
   font-family: var(--font-mono);
-  color: var(--game-ink-medium);
+  color: #333;
 }
 
 .pictionary-drawing__banner-def {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--game-ink);
+  color: #111;
   opacity: 0.8;
   font-style: italic;
   max-width: 36ch;
@@ -165,7 +164,7 @@ defineExpose({
 .pictionary-drawing__banner-meta {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--game-ink);
+  color: #111;
   opacity: 0.8;
 }
 
