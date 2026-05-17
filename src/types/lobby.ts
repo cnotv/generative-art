@@ -2,7 +2,8 @@ export const GAME_TYPES = [
   'Pictionary',
   'SquaresMultiplayer',
   'WordleMultiplayer',
-  'Minigolf'
+  'Minigolf',
+  'PathFight'
 ] as const
 
 export type GameType = (typeof GAME_TYPES)[number]
