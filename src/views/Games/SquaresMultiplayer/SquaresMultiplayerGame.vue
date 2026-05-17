@@ -536,7 +536,7 @@ onUnmounted(() => {
   font-size: var(--font-size-xs);
   font-weight: 700;
   background: var(--ws-green);
-  color: #fff;
+  color: #1a3a1a;
   border-radius: 999px;
   padding: 0 var(--spacing-1);
   margin-left: auto;
@@ -589,7 +589,7 @@ onUnmounted(() => {
   left: calc(50% + var(--tt-offset, 0px));
   transform: translateX(-50%);
   background: var(--game-ink);
-  color: #fff;
+  color: var(--game-surface);
   font-size: var(--font-size-xs);
   font-weight: 500;
   font-style: italic;
@@ -611,7 +611,7 @@ onUnmounted(() => {
   left: calc(50% - var(--tt-offset, 0px));
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: var(--game-border);
+  border-top-color: var(--game-ink);
 }
 
 .wm-game__slot:hover .wm-game__slot-tooltip,

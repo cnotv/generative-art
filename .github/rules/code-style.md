@@ -98,6 +98,14 @@
 - **Dispose resources**: Call `.dispose()` on geometries, materials, textures, and render targets when removing objects from the scene. Undisposed GPU resources leak VRAM.
 - **Object pooling for projectiles/particles**: When many short-lived objects are created and destroyed each frame, use an object pool — allocate a fixed array upfront and recycle instances rather than creating and garbage-collecting them.
 
+## Multiplayer UI
+
+- **One shared component per UI concern**: When multiple games share a UI concept (player list, chat, sidebar, turn indicator), there must be exactly one shared component in `src/components/`. Never create a game-specific copy. If a game needs slight variation, add a prop to the shared component.
+- **`MultiplayerSidebar`**: All multiplayer games must use `src/components/MultiplayerSidebar.vue` for the player list + chat panel. The component accepts a `MultiplayerPlayer[]` prop; map your game's player type to that shape inside the view — do not add game-specific sidebar files.
+- **`GameTabBar`**: All multiplayer games must use `src/components/GameTabBar.vue` for the mobile Game/Chat toggle. Wire `unreadCount` for badge notifications.
+- **Layout contract**: Multiplayer game views must use a two-column CSS grid with `grid-area: main` for the game area and `grid-area: sidebar` for `MultiplayerSidebar`. On mobile (≤720px), sidebar is hidden/shown by a CSS modifier class toggled by `GameTabBar`.
+- **Adding a new multiplayer game**: Before building any UI, check that you are using `MultiplayerSidebar`, `GameTabBar`, and the two-column grid layout. Reuse `useMinigolfSession` as the reference pattern for P2P session management.
+
 ## Modular Architecture
 
 - **Reuse existing components**: Check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components and other reusables in `src/components/`. Never reinvent the wheel.

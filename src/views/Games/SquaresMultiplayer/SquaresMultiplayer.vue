@@ -19,7 +19,8 @@ import SquaresMultiplayerLobby from './SquaresMultiplayerLobby.vue'
 import SquaresMultiplayerGame from './SquaresMultiplayerGame.vue'
 import SquaresMultiplayerIntermission from './SquaresMultiplayerIntermission.vue'
 import SquaresMultiplayerSummary from './SquaresMultiplayerSummary.vue'
-import SquaresMultiplayerSidebar from './SquaresMultiplayerSidebar.vue'
+import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,8 +39,6 @@ const {
   claimedWords,
   hostId
 } = storeToRefs(store)
-
-const showChat = ref(false)
 
 const storedProfile = loadProfile()
 const playerName = ref(
@@ -65,6 +64,26 @@ const session = useSquaresMultiplayerSession({
 })
 
 const { isHost, localPeerId } = session
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+watch(showSidebar, (open) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+watch(messages, () => {
+  if (showSidebar.value) lastReadCount.value = messages.value.length
+})
+
+const sidebarPlayers = computed((): MultiplayerPlayer[] =>
+  playerList.value.map((p) => ({
+    id: p.id,
+    name: p.name,
+    color: p.color,
+    score: p.score,
+    isHost: p.id === hostId.value,
+    isSolved: claimedWords.value.some((cw) => cw.playerId === p.id)
+  }))
+)
 
 const timeLeft = ref<number | null>(null)
 const intermissionLeft = ref(0)
@@ -158,11 +177,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="wm" :class="`wm--${phase}`" :style="backgroundStyle">
+  <main
+    class="wm"
+    :class="[`wm--${phase}`, { 'wm--show-sidebar': showSidebar }]"
+    :style="backgroundStyle"
+  >
     <SquaresMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
 
     <SquaresMultiplayerLobby
-      v-if="phase === 'lobby' && !showChat"
+      v-if="phase === 'lobby'"
       :player-name="playerName"
       :player-color="playerColor"
       :is-host="isHost"
@@ -183,7 +206,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerGame
-      v-else-if="phase === 'playing' && !showChat"
+      v-else-if="phase === 'playing'"
       :grid="round.grid"
       :valid-words="round.validWords"
       :claimed-words="claimedWords"
@@ -196,7 +219,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerIntermission
-      v-else-if="phase === 'intermission' && !showChat"
+      v-else-if="phase === 'intermission'"
       :round-number="round.number"
       :total-rounds="totalRounds"
       :claimed-words="claimedWords"
@@ -207,7 +230,7 @@ onMounted(() => {
     />
 
     <SquaresMultiplayerSummary
-      v-else-if="!showChat"
+      v-else
       :player-list="playerList"
       :winner-id="winnerId"
       :is-host="isHost"
@@ -217,29 +240,30 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <SquaresMultiplayerSidebar
-      :player-list="playerList"
+    <MultiplayerSidebar
+      class="wm__sidebar"
+      :players="sidebarPlayers"
       :local-peer-id="localPeerId"
-      :host-id="hostId"
       :messages="messages"
-      :claimed-words="claimedWords"
-      :show-chat="showChat"
+      chat-placeholder="Say something…"
       @send="session.broadcastChat($event)"
-      @update:show-chat="showChat = $event"
     />
+
+    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
   </main>
 </template>
 
 <style scoped>
 .wm {
   --ws-green: #6bcf7f;
+  --game-accent: var(--ws-green);
   --ws-yellow: #ffd93d;
 
   touch-action: manipulation;
   display: grid;
   grid-template-columns: 1fr 280px;
   grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--spacing-3);
   padding: var(--spacing-3);
   padding-top: calc(var(--nav-height) + var(--spacing-3));
@@ -256,7 +280,8 @@ onMounted(() => {
   animation: slide-up 0.28s ease both;
 }
 
-.wm :deep(.ws-sidebar) {
+.wm__sidebar {
+  grid-area: sidebar;
   animation: slide-from-right 0.32s ease both;
 }
 
@@ -265,10 +290,10 @@ onMounted(() => {
     grid-template-columns: 1fr;
     grid-template-areas: 'header' 'main';
     grid-template-rows: auto 1fr;
-    min-height: 100dvh;
+    height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
-    padding-bottom: var(--spacing-2);
+    padding-bottom: 3rem;
     gap: var(--spacing-2);
     overflow: hidden;
   }
@@ -279,8 +304,20 @@ onMounted(() => {
     overflow: auto;
   }
 
-  .wm--playing {
-    grid-template-rows: auto minmax(0, 1fr) auto;
+  .wm__sidebar {
+    grid-area: main;
+    display: none;
+  }
+
+  .wm--show-sidebar :deep(.glw),
+  .wm--show-sidebar :deep(.wm-game),
+  .wm--show-sidebar :deep(.wm-intermission),
+  .wm--show-sidebar :deep(.ws-summary) {
+    display: none;
+  }
+
+  .wm--show-sidebar .wm__sidebar {
+    display: flex;
   }
 }
 </style>

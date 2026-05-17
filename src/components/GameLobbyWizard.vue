@@ -79,6 +79,7 @@ const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
 
 const slots = useSlots()
 const hasRules = computed(() => !!slots.rules)
+const hasConfig = computed(() => !!slots.config)
 const rulesOpen = ref(false)
 
 watch(
@@ -231,6 +232,7 @@ watch(
       <!-- Step 3: Settings (host only) — also shown as step 2 when fromLobby -->
       <div v-else-if="contentStep === 3" class="glw__body">
         <h3 class="glw__step-title">Game settings</h3>
+        <slot v-if="hasConfig" name="config" />
         <div class="glw__players">
           <span class="glw__player-count">{{ playerList.length }} players ready</span>
           <span
@@ -272,9 +274,11 @@ watch(
         </button>
         <div v-if="hasRules" class="glw__rules">
           <button class="glw__rules-btn" type="button" @click="rulesOpen = !rulesOpen">?</button>
-          <div v-if="rulesOpen" class="glw__rules-panel">
-            <slot name="rules" />
-          </div>
+          <Transition name="glw-rules">
+            <div v-if="rulesOpen" class="glw__rules-panel">
+              <slot name="rules" />
+            </div>
+          </Transition>
         </div>
         <span class="glw__nav-spacer" />
         <button
@@ -657,6 +661,19 @@ watch(
   font-size: var(--font-size-sm);
   line-height: 1.4;
   color: var(--game-ink);
+}
+
+.glw-rules-enter-active,
+.glw-rules-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.glw-rules-enter-from,
+.glw-rules-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 
 .glw__start-btn {

@@ -151,7 +151,7 @@ const wordGroups = computed((): WordGroup[] => {
   font-size: var(--font-size-xs);
   font-weight: 700;
   background: var(--ws-green);
-  color: #fff;
+  color: #1a3a1a;
   border-radius: 999px;
   padding: 0 var(--spacing-1);
   margin-left: auto;

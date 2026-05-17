@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePictionaryStore } from '@/stores/pictionary'
@@ -21,7 +21,8 @@ import PictionaryChoosing from './PictionaryChoosing.vue'
 import PictionaryDrawing from './PictionaryDrawing.vue'
 import PictionaryIntermission from './PictionaryIntermission.vue'
 import PictionarySummary from './PictionarySummary.vue'
-import PictionarySidebar from './PictionarySidebar.vue'
+import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,6 +78,26 @@ const session = usePictionarySession({
 })
 
 const { isHost, isDrawer, localPeerId } = session
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+watch(showSidebar, (open) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+watch(messages, () => {
+  if (showSidebar.value) lastReadCount.value = messages.value.length
+})
+
+const sidebarPlayers = computed((): MultiplayerPlayer[] =>
+  playerList.value.map((p) => ({
+    id: p.id,
+    name: p.name,
+    color: p.color,
+    score: p.score,
+    isHost: p.id === store.hostId,
+    isDrawer: p.id === round.value.drawerId
+  }))
+)
 
 const { timeLeft, intermissionLeft } = usePictionaryTimer({
   round,
@@ -146,7 +167,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="pictionary" :class="`pictionary--${phase}`" :style="backgroundStyle">
+  <main
+    class="pictionary"
+    :class="[`pictionary--${phase}`, { 'pictionary--show-sidebar': showSidebar }]"
+    :style="backgroundStyle"
+  >
     <PictionaryHeader :room-id="roomId" @copy-link="copyLink" />
 
     <PictionaryLobby
@@ -216,22 +241,24 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <PictionarySidebar
-      :player-list="playerList"
-      :drawer-id="round.drawerId"
-      :host-id="store.hostId"
-      :messages="messages"
+    <MultiplayerSidebar
+      class="pictionary__sidebar"
+      :players="sidebarPlayers"
       :local-peer-id="localPeerId"
-      :is-drawer="isDrawer"
-      :phase="phase"
+      :messages="messages"
+      :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
+      :chat-disabled="isDrawer && phase === 'drawing'"
       @send="session.broadcastChat($event)"
     />
+
+    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
   </main>
 </template>
 
 <style scoped>
 .pictionary {
   --pic-yellow: #ffd93d;
+  --game-accent: var(--pic-yellow);
   --pic-pink: #ff6bcb;
   --pic-blue: #4ecdc4;
   --pic-orange: #ff8c42;
@@ -267,39 +294,51 @@ onMounted(() => {
   animation: slide-up 0.28s ease both;
 }
 
-.pictionary :deep(.pictionary-sidebar) {
+.pictionary__sidebar {
+  grid-area: sidebar;
   animation: slide-from-right 0.32s ease both;
 }
 
 @media (max-width: 720px) {
   .pictionary {
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main' 'sidebar';
-    grid-template-rows: auto auto 1fr;
+    grid-template-areas: 'header' 'main';
+    grid-template-rows: auto minmax(0, 1fr);
     height: 100dvh;
     min-height: 0;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
-    padding-bottom: var(--spacing-2);
+    padding-bottom: 3rem;
     gap: var(--spacing-2);
     overflow: hidden;
   }
 
   .pictionary--lobby {
-    grid-template-rows: auto 1fr auto;
     height: auto;
     min-height: 100dvh;
     overflow: auto;
   }
 
-  .pictionary--drawing,
-  .pictionary--choosing {
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-
   .pictionary--drawing :deep(.pictionary-header),
   .pictionary--choosing :deep(.pictionary-header) {
     display: none;
+  }
+
+  .pictionary__sidebar {
+    grid-area: main;
+    display: none;
+  }
+
+  .pictionary--show-sidebar :deep(.glw),
+  .pictionary--show-sidebar :deep(.pictionary-choosing),
+  .pictionary--show-sidebar :deep(.pictionary-drawing),
+  .pictionary--show-sidebar :deep(.pictionary-intermission),
+  .pictionary--show-sidebar :deep(.pictionary-summary) {
+    display: none;
+  }
+
+  .pictionary--show-sidebar .pictionary__sidebar {
+    display: flex;
   }
 }
 </style>

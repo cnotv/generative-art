@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { Check } from 'lucide-vue-next'
@@ -15,28 +15,24 @@ import { useLobbySession } from './useLobbySession'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
+import { useMinigolfStore } from '@/stores/minigolf'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import { useLobbyStore } from '@/stores/lobby'
 import type { GameType, LobbyRoom } from '@/types/lobby'
-import { GAME_LABELS, GAME_TYPES } from './constants'
-
-const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {
-  Pictionary: defineAsyncComponent(() => import('@/views/Games/Pictionary/Pictionary.vue')),
-  SquaresMultiplayer: defineAsyncComponent(
-    () => import('@/views/Games/SquaresMultiplayer/SquaresMultiplayer.vue')
-  ),
-  WordleMultiplayer: defineAsyncComponent(
-    () => import('@/views/Games/WordleMultiplayer/WordleMultiplayer.vue')
-  )
-}
+import { GAME_LABELS, GAME_TYPES, GAME_COMPONENTS } from './constants'
 
 const route = useRoute()
 const router = useRouter()
-const squaresStore = useSquaresMultiplayerStore()
-const pictionaryStore = usePictionaryStore()
-const wordleStore = useWordleMultiplayerStore()
+
+const gameStores: Record<GameType, { playerList: { id: string; name: string; color: string }[] }> =
+  {
+    Pictionary: usePictionaryStore(),
+    SquaresMultiplayer: useSquaresMultiplayerStore(),
+    WordleMultiplayer: useWordleMultiplayerStore(),
+    Minigolf: useMinigolfStore()
+  }
 
 const stored = loadProfile()
 const playerName = ref(stored?.name ?? `${randomPick(NAME_ADJECTIVES)} ${randomPick(NAME_ANIMALS)}`)
@@ -59,13 +55,9 @@ const activeGame = computed(() => route.query.game as GameType | undefined)
 const activeComponent = computed(() =>
   activeGame.value ? GAME_COMPONENTS[activeGame.value] : null
 )
-// Watch the active game's player list to keep the lobby room count current
-const gamePlayerList = computed(() => {
-  if (activeGame.value === 'Pictionary') return pictionaryStore.playerList
-  if (activeGame.value === 'SquaresMultiplayer') return squaresStore.playerList
-  if (activeGame.value === 'WordleMultiplayer') return wordleStore.playerList
-  return []
-})
+const gamePlayerList = computed(() =>
+  activeGame.value ? gameStores[activeGame.value].playerList : []
+)
 
 watch(
   gamePlayerList,

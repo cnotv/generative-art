@@ -1,0 +1,446 @@
+import { ref, watch, type Ref, type ComputedRef } from 'vue'
+import { storeToRefs } from 'pinia'
+import * as THREE from 'three'
+import { createTimelineManager } from '@webgamekit/animation'
+import { activeRendererReference } from '@webgamekit/threejs'
+import { useSceneViewStore } from '@/stores/sceneView'
+import { useMinigolfStore } from '@/stores/minigolf'
+import { buildGround, buildWalls, buildHoleMarker } from './helpers/course'
+import {
+  createBall,
+  syncBall,
+  shootBall,
+  isBallStopped,
+  resetBall,
+  freezeBall,
+  spawnConfetti,
+  stepConfetti,
+  type BallState,
+  type ConfettiParticle
+} from './helpers/ball'
+import { createAimState, beginDrag, updateDrag, endDrag } from './helpers/input'
+import {
+  BALL_RADIUS,
+  CAMERA_OFFSET_TOPDOWN,
+  MAX_SHOT_POWER,
+  MAX_STROKES,
+  AIM_LINE_MAX_LENGTH,
+  CONFETTI_LIFETIME,
+  WALL_HEIGHT,
+  WALL_THICKNESS,
+  type HoleConfig
+} from './config'
+import type { useMinigolfSession } from './useMinigolfSession'
+
+type RigidBody = import('@dimforge/rapier3d-compat').default.RigidBody
+type World = import('@dimforge/rapier3d-compat').default.World
+
+type GameContext = {
+  scene: THREE.Scene
+  camera: THREE.Camera
+  world: World
+  getBall: () => BallState | null
+  setBall: (b: BallState) => void
+  aim: ReturnType<typeof createAimState>
+  holeBodies: RigidBody[]
+  confetti: ConfettiParticle[]
+}
+
+type GameState = {
+  message: Ref<string>
+  waiting: Ref<boolean>
+  aimPower: Ref<number>
+  isAiming: Ref<boolean>
+  localStrokes: Ref<number>
+}
+
+type SessionDep = Pick<
+  ReturnType<typeof useMinigolfSession>,
+  'broadcastBallPosition' | 'broadcastScore' | 'broadcastAdvanceHole' | 'localPeerId'
+>
+
+type GameDeps = {
+  state: GameState
+  store: ReturnType<typeof useMinigolfStore>
+  activeHoles: ComputedRef<HoleConfig[]>
+  session: SessionDep
+  canvas: Ref<HTMLCanvasElement | null>
+}
+
+type PointerDeps = {
+  state: GameState
+  orbitReference: Ref<{ enabled: boolean } | null | undefined>
+  canvas: Ref<HTMLCanvasElement | null>
+}
+
+const SCENE_LIGHTS = {
+  directional: {
+    shadow: {
+      mapSize: { width: 2048, height: 2048 },
+      bias: -0.001,
+      radius: 1,
+      camera: { left: -20, right: 20, top: 20, bottom: -20, near: 0.5, far: 50 }
+    }
+  }
+}
+
+const AIM_DASH_COUNT = 8
+const AIM_DASH_RADIUS = 0.09
+
+const safeRemoveBody = (body: RigidBody, world: World): void => {
+  try {
+    world.removeRigidBody(body)
+  } catch {
+    /* already removed */
+  }
+}
+
+const tagHoleObject = (object: THREE.Object3D): void => {
+  object.userData.mgHole = true
+}
+
+const clearHoleObjects = (ctx: GameContext): void => {
+  ctx.scene.children.filter((c) => c.userData.mgHole).forEach((c) => ctx.scene.remove(c))
+  ctx.holeBodies.forEach((body) => safeRemoveBody(body, ctx.world))
+  ctx.holeBodies.length = 0
+  ctx.confetti.length = 0
+  const ball = ctx.getBall()
+  if (ball) safeRemoveBody(ball.body, ctx.world)
+}
+
+const fitCamera = (
+  camera: THREE.Camera,
+  ground: { width: number; depth: number },
+  canvasElement: HTMLCanvasElement | null
+): void => {
+  if (!('fov' in camera)) return
+  const perspCamera = camera as THREE.PerspectiveCamera
+  const aspect =
+    canvasElement && canvasElement.clientWidth > 0 && canvasElement.clientHeight > 0
+      ? canvasElement.clientWidth / canvasElement.clientHeight
+      : perspCamera.aspect
+  perspCamera.aspect = aspect
+  const padding = 1.5
+  const halfFovRad = (perspCamera.fov * Math.PI) / 360
+  const halfWidth = ground.width / 2 + WALL_THICKNESS + padding
+  const halfDepth = ground.depth / 2 + WALL_THICKNESS + padding
+  const heightForDepth = halfDepth / Math.tan(halfFovRad)
+  const heightForWidth = halfWidth / (aspect * Math.tan(halfFovRad))
+  camera.position.y = Math.max(heightForDepth, heightForWidth, CAMERA_OFFSET_TOPDOWN[1])
+  perspCamera.updateProjectionMatrix()
+}
+
+const buildHole = (ctx: GameContext, deps: GameDeps): void => {
+  const { state, store, activeHoles, canvas } = deps
+  clearHoleObjects(ctx)
+  const hole = activeHoles.value[store.currentHole]
+  const midX = (hole.teePosition[0] + hole.holePosition[0]) / 2
+  const midZ = (hole.teePosition[2] + hole.holePosition[2]) / 2
+  ctx.camera.position.set(
+    midX + CAMERA_OFFSET_TOPDOWN[0],
+    CAMERA_OFFSET_TOPDOWN[1],
+    midZ + CAMERA_OFFSET_TOPDOWN[2]
+  )
+  fitCamera(ctx.camera, hole.ground, canvas.value)
+  ctx.camera.up.set(0, 0, -1)
+  ctx.camera.lookAt(midX, 0, midZ)
+  const { meshes: groundMeshes, bodies: groundBodies } = buildGround(hole, ctx.scene, ctx.world)
+  groundMeshes.forEach(tagHoleObject)
+  groundBodies.forEach((b) => ctx.holeBodies.push(b))
+  const { meshes: wallMeshes, bodies: wallBodies } = buildWalls(hole, ctx.scene, ctx.world)
+  wallMeshes.forEach(tagHoleObject)
+  wallBodies.forEach((b) => ctx.holeBodies.push(b))
+  tagHoleObject(buildHoleMarker(hole.holePosition, ctx.scene))
+  const ball = createBall(hole.teePosition, ctx.scene, ctx.world)
+  tagHoleObject(ball.mesh)
+  ctx.setBall(ball)
+  ctx.aim.direction.set(0, 0, -1)
+  state.message.value = ''
+  state.waiting.value = false
+  state.localStrokes.value = 0
+}
+
+const resolveTurn = (deps: GameDeps, holed = false): void => {
+  const { state, store, activeHoles, session } = deps
+  const finalStrokes = holed ? state.localStrokes.value : MAX_STROKES
+  state.waiting.value = true
+  const par = activeHoles.value[store.currentHole].par
+  state.message.value = holed
+    ? `${finalStrokes} stroke${finalStrokes !== 1 ? 's' : ''}! Par ${par}`
+    : 'Max strokes — waiting…'
+  session.broadcastScore(store.currentHole, finalStrokes)
+}
+
+const checkHoleEntry = (ballState: BallState, ctx: GameContext, deps: GameDeps): void => {
+  const { state, activeHoles, store } = deps
+  if (ballState.mesh.position.y < -BALL_RADIUS) {
+    freezeBall(ballState)
+    const hp = activeHoles.value[store.currentHole].holePosition
+    ctx.confetti = spawnConfetti(ctx.scene, hp[0], hp[2])
+    resolveTurn(deps, true)
+    return
+  }
+  if (isBallStopped(ballState) && state.localStrokes.value >= MAX_STROKES) resolveTurn(deps)
+}
+
+const runFrame = (ballState: BallState, ctx: GameContext, deps: GameDeps): void => {
+  const { state, store, activeHoles } = deps
+  ctx.confetti = stepConfetti(ctx.confetti, ctx.scene, CONFETTI_LIFETIME)
+  syncBall(ballState)
+  const vel = ballState.body.linvel()
+  const speed = Math.hypot(vel.x, vel.y, vel.z)
+  if (speed > 0.01 && speed < 1.5) {
+    ballState.body.setLinvel({ x: vel.x * 0.88, y: vel.y, z: vel.z * 0.88 }, false)
+  }
+  if (ballState.mesh.position.y > WALL_HEIGHT + 1) {
+    resetBall(ballState, activeHoles.value[store.currentHole].teePosition)
+    return
+  }
+  if (!state.waiting.value && state.localStrokes.value > 0) checkHoleEntry(ballState, ctx, deps)
+}
+
+const createAimDots = (scene: THREE.Scene): THREE.Mesh[] => {
+  const geo = new THREE.SphereGeometry(AIM_DASH_RADIUS, 8, 8)
+  const mat = new THREE.MeshToonMaterial({ color: 0xffffff })
+  return Array.from({ length: AIM_DASH_COUNT }, () => {
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.castShadow = true
+    mesh.visible = false
+    scene.add(mesh)
+    return mesh
+  })
+}
+
+const updateAimDots = (
+  dots: THREE.Mesh[],
+  ball: BallState,
+  direction: THREE.Vector3,
+  power: number
+): void => {
+  const length = power * AIM_LINE_MAX_LENGTH
+  const step = length / (AIM_DASH_COUNT + 1)
+  const origin = ball.mesh.position
+  dots.forEach((dot, index) => {
+    const t = step * (index + 1)
+    dot.position.set(
+      origin.x + direction.x * t,
+      origin.y + AIM_DASH_RADIUS,
+      origin.z + direction.z * t
+    )
+  })
+}
+
+const createGhostBallSync = (
+  scene: THREE.Scene,
+  ghostGeo: THREE.SphereGeometry,
+  store: ReturnType<typeof useMinigolfStore>,
+  localPeerId: Ref<string>
+): (() => void) => {
+  const ghostMeshes: Record<string, THREE.Mesh> = {}
+  return () => {
+    const positions = store.remoteBallPositions
+    Object.keys(positions).forEach((peerId) => {
+      if (peerId === localPeerId.value) return
+      const player = store.players[peerId]
+      if (!player) return
+      const pos = positions[peerId]
+      if (!ghostMeshes[peerId]) {
+        const mat = new THREE.MeshToonMaterial({
+          color: new THREE.Color(player.color),
+          transparent: true,
+          opacity: 0.45
+        })
+        ghostMeshes[peerId] = new THREE.Mesh(ghostGeo, mat)
+        scene.add(ghostMeshes[peerId])
+      }
+      ghostMeshes[peerId].position.set(pos.x, pos.y, pos.z)
+    })
+  }
+}
+
+const bindPointerEvents = (
+  aim: ReturnType<typeof createAimState>,
+  camera: THREE.Camera,
+  aimDots: THREE.Mesh[],
+  getBall: () => BallState | null,
+  pdeps: PointerDeps
+): (() => void) => {
+  const { state, orbitReference, canvas } = pdeps
+  const onPointerDown = (e: PointerEvent): void => {
+    const ball = getBall()
+    if (state.waiting.value || !ball || !isBallStopped(ball) || orbitReference.value?.enabled)
+      return
+    beginDrag(aim, e.clientX, e.clientY)
+    state.isAiming.value = true
+  }
+  const onPointerMove = (e: PointerEvent): void => {
+    const ball = getBall()
+    if (!aim.dragging || !ball) return
+    updateDrag(aim, e.clientX, e.clientY, camera, ball.mesh.position)
+    state.aimPower.value = Math.round(aim.power * 100)
+    updateAimDots(aimDots, ball, aim.direction, aim.power)
+    aimDots.forEach((d) => {
+      d.visible = true
+    })
+  }
+  const onPointerUp = (e: PointerEvent): void => {
+    const ball = getBall()
+    if (!aim.dragging || !ball) return
+    updateDrag(aim, e.clientX, e.clientY, camera, ball.mesh.position)
+    aimDots.forEach((d) => {
+      d.visible = false
+    })
+    state.isAiming.value = false
+    state.aimPower.value = 0
+    if (!endDrag(aim) || state.localStrokes.value >= MAX_STROKES) return
+    state.localStrokes.value++
+    shootBall(ball, aim.direction, aim.power, MAX_SHOT_POWER)
+  }
+  canvas.value!.addEventListener('pointerdown', onPointerDown)
+  canvas.value!.addEventListener('pointermove', onPointerMove)
+  canvas.value!.addEventListener('pointerup', onPointerUp)
+  return () => {
+    canvas.value?.removeEventListener('pointerdown', onPointerDown)
+    canvas.value?.removeEventListener('pointermove', onPointerMove)
+    canvas.value?.removeEventListener('pointerup', onPointerUp)
+  }
+}
+
+/**
+ * Manage the Minigolf Three.js/Rapier game scene: hole building, ball physics, aim, confetti.
+ * @param canvas - Ref to the canvas element for scene initialisation.
+ * @param session - Session methods for broadcasting ball position and score.
+ * @param activeHoles - Computed list of holes to play through.
+ * @returns Reactive game state and lifecycle controls.
+ */
+export const useMinigolfGame = (
+  canvas: Ref<HTMLCanvasElement | null>,
+  session: SessionDep,
+  activeHoles: ComputedRef<HoleConfig[]>
+) => {
+  const store = useMinigolfStore()
+  const sceneStore = useSceneViewStore()
+  const { orbitReference } = storeToRefs(sceneStore)
+
+  const state: GameState = {
+    message: ref(''),
+    waiting: ref(false),
+    aimPower: ref(0),
+    isAiming: ref(false),
+    localStrokes: ref(0)
+  }
+
+  let gameContext: GameContext | null = null
+  let cleanupListeners: (() => void) | null = null
+  let canvasResizeObserver: ResizeObserver | null = null
+
+  type SceneSetupArguments = Parameters<
+    Parameters<typeof sceneStore.init>[2]['defineSetup'] extends (a: infer A) => void
+      ? (a: A) => void
+      : never
+  >[0]
+
+  const refitCurrentHole = (ctx: GameContext): void => {
+    const hole = activeHoles.value[store.currentHole]
+    if (!hole || !canvas.value) return
+    const midX = (hole.teePosition[0] + hole.holePosition[0]) / 2
+    const midZ = (hole.teePosition[2] + hole.holePosition[2]) / 2
+    // Three.js setSize() injects inline style.width/height onto the canvas, overriding CSS
+    // width:100%/height:100%. Remove them so the container's CSS size is used instead.
+    canvas.value.style.removeProperty('width')
+    canvas.value.style.removeProperty('height')
+    const w = canvas.value.clientWidth
+    const h = canvas.value.clientHeight
+    if (w > 0 && h > 0) {
+      // false = don't override CSS styles again
+      activeRendererReference.current?.setSize(w, h, false)
+    }
+    fitCamera(ctx.camera, hole.ground, canvas.value)
+    ctx.camera.lookAt(midX, 0, midZ)
+  }
+
+  const setupGameScene = ({ scene, camera, world, animate }: SceneSetupArguments): void => {
+    let ballState: BallState | null = null
+    const aim = createAimState()
+    const ctx: GameContext = {
+      scene,
+      camera,
+      world,
+      aim,
+      holeBodies: [],
+      confetti: [],
+      getBall: () => ballState,
+      setBall: (b) => {
+        ballState = b
+      }
+    }
+    const deps: GameDeps = { state, store, activeHoles, session, canvas }
+    gameContext = ctx
+    buildHole(ctx, deps)
+    refitCurrentHole(ctx)
+    if (canvas.value) {
+      canvasResizeObserver = new ResizeObserver(() => refitCurrentHole(ctx))
+      canvasResizeObserver.observe(canvas.value)
+    }
+    const aimDots = createAimDots(scene)
+    const ghostGeo = new THREE.SphereGeometry(BALL_RADIUS, 12, 12)
+    const syncGhostBalls = createGhostBallSync(scene, ghostGeo, store, session.localPeerId)
+    cleanupListeners = bindPointerEvents(aim, camera, aimDots, () => ballState, {
+      state,
+      orbitReference,
+      canvas
+    })
+    animate({
+      timeline: createTimelineManager(),
+      beforeTimeline: () => {
+        syncGhostBalls()
+        if (!ballState) return
+        const pos = ballState.mesh.position
+        session.broadcastBallPosition(pos.x, pos.y, pos.z)
+        runFrame(ballState, ctx, deps)
+      }
+    })
+  }
+
+  /**
+   * Initialise the Three.js scene and start the game round.
+   * @returns Promise that resolves when the scene is ready.
+   */
+  const startGame = async (): Promise<void> => {
+    if (!canvas.value) return
+    store.playerList
+      .map((p) => ({ ...p, scores: [] as number[] }))
+      .forEach((p) => store.upsertPlayer(p))
+    store.currentHole = 0
+    state.localStrokes.value = 0
+    await sceneStore.init(
+      canvas.value,
+      { ground: false, sky: false, orbit: { disabled: true }, lights: SCENE_LIGHTS },
+      { playMode: true, viewPanels: { showElements: false }, defineSetup: setupGameScene }
+    )
+  }
+
+  /**
+   * Tear down the scene and reset local game state.
+   */
+  const cleanup = (): void => {
+    cleanupListeners?.()
+    canvasResizeObserver?.disconnect()
+    canvasResizeObserver = null
+    sceneStore.cleanup()
+    gameContext = null
+  }
+
+  watch(
+    () => store.currentHole,
+    (next, previous) => {
+      if (next === previous || !gameContext || store.phase !== 'playing') return
+      state.message.value = ''
+      state.waiting.value = false
+      state.localStrokes.value = 0
+      buildHole(gameContext, { state, store, activeHoles, session, canvas })
+    }
+  )
+
+  return { ...state, startGame, cleanup }
+}
