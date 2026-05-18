@@ -1,8 +1,8 @@
 import type { SetupConfig } from '@webgamekit/threejs'
 import { GOOMBA_COUNT } from './constants'
 
-export const STAGE_WIDTH = 22
-export const STAGE_DEPTH = 32
+export const STAGE_WIDTH = 11
+export const STAGE_DEPTH = 16
 export const STAGE_HALF_W = STAGE_WIDTH / 2
 export const STAGE_HALF_D = STAGE_DEPTH / 2
 
@@ -16,10 +16,11 @@ export const EXIT_X = STAGE_HALF_W - 1
 export const GOOMBA_GROUND_Y = 0.5
 export const GOOMBA_SCALE = 1
 
-/** X positions for a row of GOOMBA_COUNT goombas, centered */
+/** X positions for a row of GOOMBA_COUNT goombas, centered within stage width */
 const goombaXPositions = (): number[] => {
-  const half = (GOOMBA_COUNT - 1) / 2
-  return Array.from({ length: GOOMBA_COUNT }, (_, i) => (i - half) * 1.8)
+  const step = (STAGE_WIDTH - 2) / (GOOMBA_COUNT - 1)
+  const half = (STAGE_WIDTH - 2) / 2
+  return Array.from({ length: GOOMBA_COUNT }, (_, i) => i * step - half)
 }
 
 export const GOOMBA_POSITIONS_P1: [number, number, number][] = goombaXPositions().map((x) => [
@@ -34,15 +35,15 @@ export const GOOMBA_POSITIONS_P2: [number, number, number][] = goombaXPositions(
   STAGE_HALF_D - 3
 ])
 
-export const ITEM_COUNT = 15
-export const ITEM_SIZE: [number, number, number] = [1.2, 1.2, 1.2]
+export const ITEM_COUNT = 8
+export const ITEM_SIZE: [number, number, number] = [0.8, 0.8, 0.8]
 export const ITEM_GROUND_Y = GOOMBA_GROUND_Y
 
-export const GOOMBA_PUSH_RANGE = 1.8
-export const GOOMBA_PUSH_IMPULSE = 8
-export const GOOMBA_FOLLOW_SPEED = 6
+export const GOOMBA_PUSH_RANGE = 1.2
+export const GOOMBA_PUSH_IMPULSE = 6
+export const GOOMBA_FOLLOW_SPEED = 5
 
-export const MIN_WAYPOINT_DISTANCE = 1.5
+export const MIN_WAYPOINT_DISTANCE = 0.8
 
 export const GOOMBA_COLOR_LOCAL = 0x3498db
 export const GOOMBA_COLOR_REMOTE = 0xe74c3c
@@ -69,8 +70,8 @@ export const sceneSetupConfig: SetupConfig = {
       }
     }
   },
-  ground: { color: STAGE_COLOR, size: 60 },
+  ground: { color: STAGE_COLOR, size: 30 },
   sky: false,
   orbit: false,
-  camera: { position: [0, 28, 0], fov: 60 }
+  camera: { position: [0, 16, 0], fov: 60 }
 }

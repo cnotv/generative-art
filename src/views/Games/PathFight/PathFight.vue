@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, type StyleValue } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
@@ -24,7 +24,7 @@ import {
   buildRandomGradient
 } from '@/utils/playerProfile'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
-import GameTabBar from '@/components/GameTabBar.vue'
+import MultiplayerGameLayout from '@/components/MultiplayerGameLayout.vue'
 import PathFightLobby from './PathFightLobby.vue'
 import {
   STAGE_WIDTH,
@@ -335,6 +335,7 @@ const updateGoombaPath = (ref: SceneReference, index: number): void => {
 
 const highlightSelected = (ref: SceneReference): void => {
   ref.localGoombas.forEach((g, i) => {
+    if (!g.mesh.visible) return
     const mat = g.mesh.material as THREE.MeshToonMaterial
     mat.color.setHex(i === selectedGoomba.value ? SELECTED_GOOMBA_COLOR : GOOMBA_COLOR_LOCAL)
   })
@@ -368,7 +369,23 @@ const onPointerMove = (event: PointerEvent): void => {
 }
 
 const onPointerUp = (): void => {
+  if (!isDrawing) return
   isDrawing = false
+  const currentPath = drawnPaths[selectedGoomba.value]
+  if (currentPath.length < 2 || !sceneReference) return
+
+  // Reveal next goomba or submit if all done
+  const next = selectedGoomba.value + 1
+  if (next < GOOMBA_COUNT) {
+    selectGoomba(next)
+    const nextGoomba = sceneReference.localGoombas[next]
+    if (nextGoomba) {
+      nextGoomba.mesh.visible = true
+      ;(nextGoomba.mesh.material as THREE.MeshToonMaterial).color.setHex(SELECTED_GOOMBA_COLOR)
+    }
+  } else if (drawnPaths.every((p) => p.length >= 2)) {
+    submitPaths()
+  }
 }
 
 // ─── scene setup callback ─────────────────────────────────────────────────────
@@ -380,7 +397,7 @@ type SetupArguments = Parameters<
 >[0]
 
 const setupScene = ({ scene, camera, world, animate }: SetupArguments): void => {
-  camera.position.set(0, 28, 0)
+  camera.position.set(0, 16, 0)
   camera.up.set(0, 0, -1)
   camera.lookAt(0, 0, 0)
   if ('updateProjectionMatrix' in camera)
@@ -388,12 +405,18 @@ const setupScene = ({ scene, camera, world, animate }: SetupArguments): void => 
 
   const edgeMeshes = buildStageEdges(scene)
 
-  const localGoombas: GoombaObject[] = GOOMBA_POSITIONS_P1.map((pos) => ({
-    mesh: makeGoomba(scene, pos, GOOMBA_COLOR_LOCAL),
-    pathLine: null,
-    waypoints: [],
-    followState: null
-  }))
+  // Start hidden — revealed one-by-one as paths are drawn
+  const localGoombas: GoombaObject[] = GOOMBA_POSITIONS_P1.map((pos) => {
+    const mesh = makeGoomba(scene, pos, GOOMBA_COLOR_LOCAL)
+    mesh.visible = false
+    return { mesh, pathLine: null, waypoints: [], followState: null }
+  })
+
+  // Show the first goomba as the current selection
+  if (localGoombas[0]) {
+    localGoombas[0].mesh.visible = true
+    localGoombas[0].mesh.material = new THREE.MeshToonMaterial({ color: SELECTED_GOOMBA_COLOR })
+  }
 
   const remoteGoombas: GoombaObject[] = []
   const items: ItemObject[] = []
@@ -619,8 +642,20 @@ watch(selectedGoomba, () => {
 </script>
 
 <template>
-  <div class="pf" :style="backgroundStyle">
-    <!-- LOBBY -->
+  <MultiplayerGameLayout
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :unread-count="unreadCount"
+    :style="
+      {
+        ...backgroundStyle,
+        '--pf-orange': '#e67e22',
+        '--game-accent': 'var(--pf-orange)'
+      } as StyleValue
+    "
+    @update:show-sidebar="showSidebar = $event"
+  >
+    <!-- Main content slot -->
     <PathFightLobby
       v-if="phase === 'lobby'"
       :player-name="playerName"
@@ -636,64 +671,20 @@ watch(selectedGoomba, () => {
       @leave-room="handleLeaveRoom"
     />
 
-    <!-- GAME (planning + battle) -->
-    <template v-else-if="phase === 'planning' || phase === 'battle'">
-      <div class="pf__game" :class="{ 'pf__game--show-sidebar': showSidebar }">
-        <!-- Header bar -->
-        <div class="pf__header">
-          <span class="pf__phase-label">{{ phase === 'planning' ? 'Planning' : 'Battle' }}</span>
-          <span class="pf__timer" :class="{ 'pf__timer--urgent': timerSeconds <= 10 }">
-            {{ timerSeconds }}s
-          </span>
-          <span v-if="gameMessage" class="pf__message">{{ gameMessage }}</span>
-          <span class="pf__score">Score: {{ localScore }}</span>
-        </div>
-
-        <!-- Canvas -->
-        <div class="pf__canvas-wrap">
-          <canvas ref="canvas" />
-        </div>
-
-        <!-- Planning controls -->
-        <div v-if="phase === 'planning'" class="pf__controls">
-          <div class="pf__goomba-picker">
-            <button
-              v-for="i in GOOMBA_COUNT"
-              :key="i"
-              class="pf__goomba-btn"
-              :class="{ 'pf__goomba-btn--active': selectedGoomba === i - 1 }"
-              type="button"
-              :title="`Select goomba ${i}`"
-              @click="selectGoomba(i - 1)"
-            >
-              {{ i }}
-            </button>
-          </div>
-          <button class="pf__ctrl-btn" type="button" @click="clearCurrentPath">Clear</button>
-          <button class="pf__ctrl-btn pf__ctrl-btn--ready" type="button" @click="submitPaths">
-            Ready ✓
-          </button>
-        </div>
-
-        <!-- Sidebar -->
-        <MultiplayerSidebar
-          class="pf__sidebar"
-          :players="sidebarPlayers"
-          :local-peer-id="localPeerId"
-          :messages="messages"
-          chat-placeholder="Say something…"
-          @send="session.broadcastChat"
-        />
+    <div v-else-if="phase === 'planning' || phase === 'battle'" class="pf__game">
+      <div class="pf__status">
+        <span class="pf__phase-label">{{ phase === 'planning' ? 'Planning' : 'Battle' }}</span>
+        <span class="pf__timer" :class="{ 'pf__timer--urgent': timerSeconds <= 10 }">
+          {{ timerSeconds }}s
+        </span>
+        <span v-if="gameMessage" class="pf__message">{{ gameMessage }}</span>
+        <span class="pf__score">{{ localScore }} pts</span>
       </div>
+      <div class="pf__canvas-wrap">
+        <canvas ref="canvas" />
+      </div>
+    </div>
 
-      <GameTabBar
-        :show-sidebar="showSidebar"
-        :unread-count="unreadCount"
-        @toggle="showSidebar = !showSidebar"
-      />
-    </template>
-
-    <!-- SUMMARY -->
     <div v-else-if="phase === 'summary'" class="pf__summary">
       <div class="pf__summary-card">
         <h2 class="pf__summary-title">Results</h2>
@@ -724,45 +715,36 @@ watch(selectedGoomba, () => {
         <p v-else class="pf__waiting-host">Waiting for host to restart…</p>
       </div>
     </div>
-  </div>
+
+    <!-- Sidebar slot -->
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat"
+      />
+    </template>
+  </MultiplayerGameLayout>
 </template>
 
 <style scoped>
-.pf {
-  width: 100%;
-  height: 100vh;
-  padding-top: var(--nav-height);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  background: var(--game-surface);
-  --pf-orange: #e67e22;
-  --game-accent: var(--pf-orange);
-}
-
-/* ── game layout ─────────────────────────────────── */
+/* ── game area ───────────────────────────────────── */
 
 .pf__game {
-  display: grid;
-  grid-template-columns: 1fr var(--sidebar-width, 260px);
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas:
-    'header header'
-    'canvas sidebar'
-    'controls controls';
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overflow: hidden;
 }
 
-.pf__header {
-  grid-area: header;
+.pf__status {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--game-surface-dim);
-  border-bottom: 2px solid var(--game-border);
+  padding: var(--spacing-1) var(--spacing-2);
+  flex-shrink: 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--game-ink);
@@ -805,112 +787,16 @@ watch(selectedGoomba, () => {
 }
 
 .pf__canvas-wrap {
-  grid-area: canvas;
-  position: relative;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
+  border-radius: var(--radius-md);
 }
 
 .pf__canvas-wrap canvas {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.pf__controls {
-  grid-area: controls;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--game-surface-dim);
-  border-top: 2px solid var(--game-border);
-  overflow-x: auto;
-}
-
-.pf__goomba-picker {
-  display: flex;
-  gap: var(--spacing-1);
-  flex-wrap: nowrap;
-}
-
-.pf__goomba-btn {
-  width: 2rem;
-  height: 2rem;
-  border: 2px solid var(--game-border);
-  border-radius: 50%;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: transform 0.1s ease;
-}
-
-.pf__goomba-btn:hover {
-  transform: translate(-1px, -1px);
-}
-
-.pf__goomba-btn--active {
-  background: #f1c40f;
-  border-color: #d4ac0d;
-  color: #111;
-}
-
-.pf__ctrl-btn {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.pf__ctrl-btn--ready {
-  margin-left: auto;
-  background: var(--pf-orange, #e67e22);
-  color: #fff;
-  border-color: transparent;
-}
-
-.pf__sidebar {
-  grid-area: sidebar;
-}
-
-/* ── mobile ──────────────────────────────────────── */
-
-@media (max-width: 720px) {
-  .pf__game {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-    grid-template-areas:
-      'header'
-      'canvas'
-      'controls';
-    padding-bottom: 3rem;
-  }
-
-  .pf__sidebar {
-    display: none;
-    position: fixed;
-    inset: var(--nav-height) 0 3rem 0;
-    z-index: 20;
-    background: var(--game-surface);
-    overflow-y: auto;
-  }
-
-  .pf__game--show-sidebar .pf__sidebar {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .pf__game--show-sidebar .pf__canvas-wrap {
-    display: none;
-  }
 }
 
 /* ── summary ─────────────────────────────────────── */
@@ -920,7 +806,6 @@ watch(selectedGoomba, () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-4);
 }
 
 .pf__summary-card {
