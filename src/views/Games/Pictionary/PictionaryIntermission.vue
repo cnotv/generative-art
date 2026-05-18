@@ -22,6 +22,7 @@ defineProps<{
 <style scoped>
 .pictionary-intermission {
   grid-area: main;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);

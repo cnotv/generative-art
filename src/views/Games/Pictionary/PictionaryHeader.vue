@@ -1,78 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-
-defineProps<{
-  roomId: string
-}>()
-
-const emit = defineEmits<{
-  copyLink: []
-}>()
-
-const route = useRoute()
-const router = useRouter()
-const fromLobby = computed(() => !!route.query.game)
+defineProps<{ roomId: string }>()
+const emit = defineEmits<{ copyLink: [] }>()
 </script>
 
 <template>
   <header class="pictionary-header">
     <div class="pictionary-header__room">
-      <template v-if="fromLobby">
-        <button
-          class="pictionary-header__lobby-btn"
-          type="button"
-          @click="router.replace({ query: {} })"
-        >
-          ← Lobby
-        </button>
-      </template>
-      <template v-else>
-        <span class="pictionary-header__room-label">Room:</span>
-        <code class="pictionary-header__room-id">{{ roomId.slice(0, 8) }}</code>
-        <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
-          Copy link
-        </button>
-      </template>
+      <span class="pictionary-header__room-label">Room:</span>
+      <code class="pictionary-header__room-id">{{ roomId.slice(0, 8) }}</code>
+      <button class="pictionary-header__copy-btn" type="button" @click="emit('copyLink')">
+        Copy link
+      </button>
     </div>
   </header>
 </template>
 
 <style scoped>
 .pictionary-header {
-  grid-area: header;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-2);
-  overflow: visible;
-  position: relative;
-  z-index: 10;
 }
 
 .pictionary-header__room {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-}
-
-.pictionary-header__lobby-btn {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--pic-bg);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-}
-
-.pictionary-header__lobby-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .pictionary-header__room-id {

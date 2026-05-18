@@ -22,10 +22,11 @@ import PictionaryDrawing from './PictionaryDrawing.vue'
 import PictionaryIntermission from './PictionaryIntermission.vue'
 import PictionarySummary from './PictionarySummary.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
-import GameTabBar from '@/components/GameTabBar.vue'
+import MultiplayerGameLayout from '@/layouts/MultiplayerGameLayout.vue'
 
 const route = useRoute()
 const router = useRouter()
+const fromLobby = computed(() => !!route.query.game)
 const store = usePictionaryStore()
 const {
   phase,
@@ -167,12 +168,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <main
-    class="pictionary"
-    :class="[`pictionary--${phase}`, { 'pictionary--show-sidebar': showSidebar }]"
+  <MultiplayerGameLayout
+    :phase="phase"
+    v-model:show-sidebar="showSidebar"
+    :unread-count="unreadCount"
     :style="backgroundStyle"
+    class="pictionary"
+    style="--mgl-sidebar-width: 320px"
   >
-    <PictionaryHeader :room-id="roomId" @copy-link="copyLink" />
+    <template v-if="!fromLobby" #header>
+      <PictionaryHeader :room-id="roomId" @copy-link="copyLink" />
+    </template>
 
     <PictionaryLobby
       v-if="phase === 'lobby'"
@@ -241,18 +247,17 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <MultiplayerSidebar
-      class="pictionary__sidebar"
-      :players="sidebarPlayers"
-      :local-peer-id="localPeerId"
-      :messages="messages"
-      :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
-      :chat-disabled="isDrawer && phase === 'drawing'"
-      @send="session.broadcastChat($event)"
-    />
-
-    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
-  </main>
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
+        :chat-disabled="isDrawer && phase === 'drawing'"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
+  </MultiplayerGameLayout>
 </template>
 
 <style scoped>
@@ -264,81 +269,8 @@ onMounted(() => {
   --pic-orange: #ff8c42;
   --pic-purple: #a06cd5;
   --pic-green: #6bcf7f;
-
   touch-action: manipulation;
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  height: 100dvh;
-  box-sizing: border-box;
-  overflow: hidden;
-  background: var(--pic-bg);
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
-}
-
-.pictionary--lobby {
-  height: auto;
-  min-height: 100dvh;
-  overflow: auto;
-}
-
-.pictionary :deep(.glw),
-.pictionary :deep(.pictionary-choosing),
-.pictionary :deep(.pictionary-drawing),
-.pictionary :deep(.pictionary-intermission),
-.pictionary :deep(.pictionary-summary) {
-  animation: slide-up 0.28s ease both;
-}
-
-.pictionary__sidebar {
-  grid-area: sidebar;
-  animation: slide-from-right 0.32s ease both;
-}
-
-@media (max-width: 720px) {
-  .pictionary {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto minmax(0, 1fr);
-    height: 100dvh;
-    min-height: 0;
-    padding: 0 var(--spacing-2);
-    padding-top: var(--nav-height);
-    padding-bottom: 3rem;
-    gap: var(--spacing-2);
-    overflow: hidden;
-  }
-
-  .pictionary--lobby {
-    height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-  }
-
-  .pictionary--drawing :deep(.pictionary-header),
-  .pictionary--choosing :deep(.pictionary-header) {
-    display: none;
-  }
-
-  .pictionary__sidebar {
-    grid-area: main;
-    display: none;
-  }
-
-  .pictionary--show-sidebar :deep(.glw),
-  .pictionary--show-sidebar :deep(.pictionary-choosing),
-  .pictionary--show-sidebar :deep(.pictionary-drawing),
-  .pictionary--show-sidebar :deep(.pictionary-intermission),
-  .pictionary--show-sidebar :deep(.pictionary-summary) {
-    display: none;
-  }
-
-  .pictionary--show-sidebar .pictionary__sidebar {
-    display: flex;
-  }
+  background: var(--pic-bg);
 }
 </style>

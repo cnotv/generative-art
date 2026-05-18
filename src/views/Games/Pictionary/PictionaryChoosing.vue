@@ -55,6 +55,7 @@ const drawerName = (playerList: PictionaryPlayer[], drawerId: string): string =>
 <style scoped>
 .pictionary-choosing {
   grid-area: main;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4, 1.5rem);

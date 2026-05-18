@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GameTabBar from '@/components/GameTabBar.vue'
 
@@ -15,19 +15,56 @@ defineEmits<{
 
 const route = useRoute()
 const router = useRouter()
+const slots = useSlots()
 const fromLobby = computed(() => !!route.query.game)
+const hasHeader = computed(() => !!slots.header)
 const backToLobby = (): void => {
   router.replace({ query: {} })
 }
+
+const gridAreas = computed(() => {
+  if (fromLobby.value && hasHeader.value) return "'nav nav' 'header header' 'main sidebar'"
+  if (fromLobby.value) return "'nav nav' 'main sidebar'"
+  if (hasHeader.value) return "'header header' 'main sidebar'"
+  return "'main sidebar'"
+})
+
+const gridRows = computed(() => {
+  if (fromLobby.value && hasHeader.value) return 'auto auto minmax(0, 1fr)'
+  if (fromLobby.value || hasHeader.value) return 'auto minmax(0, 1fr)'
+  return 'minmax(0, 1fr)'
+})
+
+const mobileGridAreas = computed(() => {
+  if (fromLobby.value && hasHeader.value) return "'nav' 'header' 'main'"
+  if (fromLobby.value) return "'nav' 'main'"
+  if (hasHeader.value) return "'header' 'main'"
+  return "'main'"
+})
+
+const mobileGridRows = computed(() => {
+  if (fromLobby.value && hasHeader.value) return 'auto auto minmax(0, 1fr)'
+  if (fromLobby.value || hasHeader.value) return 'auto minmax(0, 1fr)'
+  return 'minmax(0, 1fr)'
+})
 </script>
 
 <template>
   <main
     class="mgl"
-    :class="[`mgl--${phase}`, { 'mgl--show-sidebar': showSidebar, 'mgl--from-lobby': fromLobby }]"
+    :class="[`mgl--${phase}`, { 'mgl--show-sidebar': showSidebar }]"
+    :style="{
+      gridTemplateAreas: gridAreas,
+      gridTemplateRows: gridRows,
+      '--mgl-mobile-areas': mobileGridAreas,
+      '--mgl-mobile-rows': mobileGridRows
+    }"
   >
-    <div v-if="fromLobby" class="mgl__topbar">
+    <div v-if="fromLobby" class="mgl__nav">
       <button class="mgl__back-btn" type="button" @click="backToLobby">← Lobby</button>
+    </div>
+    <div v-if="hasHeader" class="mgl__header">
+      <slot name="header" />
     </div>
     <div class="mgl__main">
       <slot />
@@ -47,8 +84,6 @@ const backToLobby = (): void => {
 .mgl {
   display: grid;
   grid-template-columns: 1fr var(--mgl-sidebar-width, 280px);
-  grid-template-areas: 'main sidebar';
-  grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
   box-sizing: border-box;
   overflow: hidden;
@@ -57,23 +92,14 @@ const backToLobby = (): void => {
   gap: var(--spacing-3);
 }
 
-.mgl--from-lobby {
-  grid-template-areas: 'topbar topbar' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
 .mgl--lobby {
   height: auto;
   min-height: 100dvh;
   overflow: auto;
 }
 
-.mgl--lobby.mgl--from-lobby {
-  grid-template-rows: auto auto;
-}
-
-.mgl__topbar {
-  grid-area: topbar;
+.mgl__nav {
+  grid-area: nav;
   display: flex;
   align-items: center;
 }
@@ -97,6 +123,12 @@ const backToLobby = (): void => {
   box-shadow: 3px 3px 0 var(--game-border);
 }
 
+.mgl__header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+}
+
 .mgl__main {
   grid-area: main;
   min-height: 0;
@@ -112,27 +144,19 @@ const backToLobby = (): void => {
 @media (max-width: 720px) {
   .mgl {
     grid-template-columns: 1fr;
-    grid-template-areas: 'main';
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: var(--mgl-mobile-areas, 'main');
+    grid-template-rows: var(--mgl-mobile-rows, minmax(0, 1fr));
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);
     padding-bottom: 3rem;
-    gap: 0;
-  }
-
-  .mgl--from-lobby {
-    grid-template-areas: 'topbar' 'main';
-    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--spacing-2);
+    overflow: hidden;
   }
 
   .mgl--lobby {
     height: auto;
     min-height: 100dvh;
     overflow: auto;
-  }
-
-  .mgl--lobby.mgl--from-lobby {
-    grid-template-rows: auto auto;
   }
 
   .mgl__sidebar {
