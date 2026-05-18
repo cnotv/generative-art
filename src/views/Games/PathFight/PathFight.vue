@@ -24,7 +24,7 @@ import {
   buildRandomGradient
 } from '@/utils/playerProfile'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
-import MultiplayerGameLayout from '@/components/MultiplayerGameLayout.vue'
+import MultiplayerGameLayout from '@/layouts/MultiplayerGameLayout.vue'
 import PathFightLobby from './PathFightLobby.vue'
 import {
   STAGE_WIDTH,
