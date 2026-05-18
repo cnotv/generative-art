@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, type Ref } from 'vue'
 import {
   p2pIsSupported,
   p2pLobbyJoin,
@@ -21,8 +21,13 @@ type UseGameLobbyOptions = {
  * @param options - Lobby configuration.
  * @returns Reactive state and handlers for lobby search/accept/ignore.
  */
-export const useGameLobby = ({ matchmakerRoom, getRoomId, getPlayerName }: UseGameLobbyOptions) => {
-  const lobbyHandle = ref<LobbyHandle | null>(null)
+export const useGameLobby = ({
+  matchmakerRoom,
+  getRoomId,
+  getPlayerName,
+  onMatchAccepted
+}: UseGameLobbyOptions & { onMatchAccepted?: () => void }) => {
+  const lobbyHandle = ref<LobbyHandle | null>(null) as Ref<LobbyHandle | null>
   const pendingRequests = ref<PendingRequest[]>([])
   const peerNames = ref<Record<string, string>>({})
   const isSearching = computed(() => lobbyHandle.value !== null)
@@ -49,7 +54,11 @@ export const useGameLobby = ({ matchmakerRoom, getRoomId, getPlayerName }: UseGa
           pendingRequests.value = [...pendingRequests.value, { request, fromPeerId }]
         }
       },
-      onAccepted: () => {},
+      onAccepted: () => {
+        // Our outgoing request was accepted — peer is switching to our room
+        stopSearching()
+        onMatchAccepted?.()
+      },
       onIgnored: () => {},
       onPeerName: (peerId, name) => {
         peerNames.value = { ...peerNames.value, [peerId]: name }

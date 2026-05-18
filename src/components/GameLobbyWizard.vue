@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, useSlots } from 'vue'
+import { ref, computed, watch, onMounted, useSlots } from 'vue'
 import { useRoute } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
@@ -32,13 +32,10 @@ const route = useRoute()
 const fromLobby = computed(() => !!route.query.game)
 
 const step = ref(1)
-// From lobby: matchmaking step is skipped. Host: profile + settings (2). Guest: profile only (1).
-const totalSteps = computed(() => {
-  if (fromLobby.value) return props.isHost ? 2 : 1
-  return props.isHost ? 3 : 2
-})
-// Maps visual step to content slot: when fromLobby, step 2 shows settings (slot 3).
-const contentStep = computed(() => (fromLobby.value && step.value === 2 ? 3 : step.value))
+// Host: profile (1) + settings (2). Guest: profile only (1).
+const totalSteps = computed(() => (props.isHost ? 2 : 1))
+
+const isPrivate = ref(false)
 
 const {
   isSearching,
@@ -51,7 +48,8 @@ const {
 } = useGameLobby({
   matchmakerRoom: props.matchmakerRoom,
   getRoomId: () => props.roomId,
-  getPlayerName: () => props.playerName
+  getPlayerName: () => props.playerName,
+  onMatchAccepted: () => emit('matchFound', props.roomId)
 })
 
 const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
@@ -66,10 +64,7 @@ const goNext = (): void => {
 }
 
 const goBack = (): void => {
-  if (step.value > 1) {
-    if (step.value === 2 && isSearching.value) stopSearching()
-    step.value--
-  }
+  if (step.value > 1) step.value--
 }
 
 const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
@@ -82,12 +77,21 @@ const hasRules = computed(() => !!slots.rules)
 const hasConfig = computed(() => !!slots.config)
 const rulesOpen = ref(false)
 
+watch(isPrivate, (priv) => {
+  if (priv) stopSearching()
+  else if (!fromLobby.value) startSearching()
+})
+
 watch(
   () => props.isHost,
   (isHost) => {
     if (!isHost) stopSearching()
   }
 )
+
+onMounted(() => {
+  if (!fromLobby.value && !isPrivate.value) startSearching()
+})
 </script>
 
 <template>
@@ -103,7 +107,7 @@ watch(
       </div>
 
       <!-- Step 1: Profile -->
-      <div v-if="contentStep === 1" class="glw__body">
+      <div v-if="step === 1" class="glw__body">
         <h3 class="glw__step-title">Your profile</h3>
         <input
           :value="playerName"
@@ -130,35 +134,17 @@ watch(
             <Check v-if="playerColor === color" class="glw__swatch-check" />
           </button>
         </div>
-      </div>
 
-      <!-- Step 2: Matchmaker (host) / Waiting (guest) — skipped when fromLobby -->
-      <div v-else-if="contentStep === 2" class="glw__body">
-        <template v-if="isHost">
-          <h3 class="glw__step-title">Find players</h3>
-          <div class="glw__players">
-            <span class="glw__player-count">{{ playerList.length }} players</span>
-            <span
-              v-for="player in playerList"
-              :key="player.id"
-              class="glw__player-dot"
-              :style="{ background: player.color }"
-              :title="player.name"
-            />
-          </div>
+        <!-- Matchmaking status (hidden when fromLobby) -->
+        <template v-if="!fromLobby">
+          <label class="glw__private-toggle">
+            <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
+            <span>Private — only players with the link can join</span>
+          </label>
 
-          <template v-if="!isSearching">
-            <p v-if="playerList.length < 2" class="glw__hint">No one else here yet.</p>
-            <div class="glw__actions">
-              <button class="glw__btn" type="button" @click="startSearching">
-                Search for players
-              </button>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="glw__searching">
-              Searching
+          <template v-if="!isPrivate">
+            <div v-if="isSearching" class="glw__searching">
+              Looking for players
               <span class="glw__dots" aria-hidden="true"
                 ><span>.</span><span>.</span><span>.</span></span
               >
@@ -184,53 +170,31 @@ watch(
                 </div>
               </li>
             </ul>
-            <div class="glw__actions">
-              <button class="glw__btn glw__btn--ghost" type="button" @click="stopSearching">
-                Stop searching
-              </button>
-            </div>
           </template>
-        </template>
 
-        <template v-else>
-          <h3 class="glw__step-title">Waiting for host</h3>
-          <div class="glw__players">
-            <span class="glw__player-count">
-              {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
-            </span>
-            <span
-              v-for="player in playerList"
-              :key="player.id"
-              class="glw__player-dot"
-              :style="{ background: player.color }"
-              :title="player.name"
-            />
-          </div>
-          <div class="glw__searching">
-            <span class="glw__dots" aria-hidden="true"
-              ><span>.</span><span>.</span><span>.</span></span
-            >
-          </div>
-          <dl v-if="configFields.length" class="glw__settings-list">
-            <div v-for="field in configFields" :key="field.key" class="glw__settings-item">
-              <dt class="glw__settings-label">{{ field.label }}</dt>
-              <dd class="glw__settings-value">
-                {{
-                  field.type === 'select'
-                    ? (field.options?.find((o) => o.value === field.value)?.label ?? field.value)
-                    : field.value
-                }}
-              </dd>
+          <!-- Guest: waiting for host -->
+          <template v-if="!isHost && playerList.length > 1">
+            <div class="glw__players">
+              <span class="glw__player-count">
+                {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
+              </span>
+              <span
+                v-for="player in playerList"
+                :key="player.id"
+                class="glw__player-dot"
+                :style="{ background: player.color }"
+                :title="player.name"
+              />
             </div>
-          </dl>
-          <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
-            Leave room
-          </button>
+            <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+              Leave room
+            </button>
+          </template>
         </template>
       </div>
 
-      <!-- Step 3: Settings (host only) — also shown as step 2 when fromLobby -->
-      <div v-else-if="contentStep === 3" class="glw__body">
+      <!-- Step 2: Settings (host only) -->
+      <div v-else-if="step === 2" class="glw__body">
         <h3 class="glw__step-title">Game settings</h3>
         <slot v-if="hasConfig" name="config" />
         <div class="glw__players">
@@ -445,6 +409,25 @@ watch(
   display: flex;
   gap: var(--spacing-2);
   flex-wrap: wrap;
+}
+
+.glw__private-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--game-ink-medium);
+  cursor: pointer;
+  user-select: none;
+}
+
+.glw__private-checkbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--glw-accent);
+  flex-shrink: 0;
 }
 
 .glw__searching {
