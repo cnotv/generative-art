@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import GameTabBar from '@/components/GameTabBar.vue'
 
 defineProps<{
@@ -10,10 +12,23 @@ defineProps<{
 defineEmits<{
   'update:showSidebar': [value: boolean]
 }>()
+
+const route = useRoute()
+const router = useRouter()
+const fromLobby = computed(() => !!route.query.game)
+const backToLobby = (): void => {
+  router.replace({ query: {} })
+}
 </script>
 
 <template>
-  <main class="mgl" :class="[`mgl--${phase}`, { 'mgl--show-sidebar': showSidebar }]">
+  <main
+    class="mgl"
+    :class="[`mgl--${phase}`, { 'mgl--show-sidebar': showSidebar, 'mgl--from-lobby': fromLobby }]"
+  >
+    <div v-if="fromLobby" class="mgl__topbar">
+      <button class="mgl__back-btn" type="button" @click="backToLobby">← Lobby</button>
+    </div>
     <div class="mgl__main">
       <slot />
     </div>
@@ -42,11 +57,44 @@ defineEmits<{
   gap: var(--spacing-3);
 }
 
+.mgl--from-lobby {
+  grid-template-areas: 'topbar topbar' 'main sidebar';
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .mgl--lobby {
   height: auto;
   min-height: 100dvh;
   overflow: auto;
-  grid-template-rows: auto;
+}
+
+.mgl--lobby.mgl--from-lobby {
+  grid-template-rows: auto auto;
+}
+
+.mgl__topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+}
+
+.mgl__back-btn {
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid var(--game-border);
+  border-radius: 999px;
+  background: var(--game-surface-subtle);
+  color: var(--game-ink);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--game-border);
+  transition: transform 0.1s ease;
+  font-family: inherit;
+}
+
+.mgl__back-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .mgl__main {
@@ -72,11 +120,19 @@ defineEmits<{
     gap: 0;
   }
 
+  .mgl--from-lobby {
+    grid-template-areas: 'topbar' 'main';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
   .mgl--lobby {
     height: auto;
     min-height: 100dvh;
     overflow: auto;
-    grid-template-rows: auto;
+  }
+
+  .mgl--lobby.mgl--from-lobby {
+    grid-template-rows: auto auto;
   }
 
   .mgl__sidebar {
