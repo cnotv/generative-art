@@ -135,61 +135,60 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Matchmaking status (hidden when fromLobby) -->
-        <template v-if="!fromLobby">
-          <label class="glw__private-toggle">
-            <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
-            <span>Private — only players with the link can join</span>
-          </label>
+        <!-- Private toggle — always visible -->
+        <label class="glw__private-toggle">
+          <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
+          <span>Private — only players with the link can join</span>
+        </label>
 
-          <template v-if="!isPrivate">
-            <div v-if="isSearching" class="glw__searching">
-              Looking for players
-              <span class="glw__dots" aria-hidden="true"
-                ><span>.</span><span>.</span><span>.</span></span
+        <!-- Matchmaking status — only when not fromLobby -->
+        <template v-if="!fromLobby && !isPrivate">
+          <div v-if="isSearching" class="glw__searching">
+            Looking for players
+            <span class="glw__dots" aria-hidden="true"
+              ><span>.</span><span>.</span><span>.</span></span
+            >
+          </div>
+          <ul v-if="pendingRequests.length" class="glw__requests">
+            <li
+              v-for="entry in pendingRequests"
+              :key="entry.request.requestId"
+              class="glw__request"
+            >
+              <span class="glw__request-name"
+                >{{ displayName(entry.fromPeerId) }} wants to play</span
               >
-            </div>
-            <ul v-if="pendingRequests.length" class="glw__requests">
-              <li
-                v-for="entry in pendingRequests"
-                :key="entry.request.requestId"
-                class="glw__request"
-              >
-                <span class="glw__request-name"
-                  >{{ displayName(entry.fromPeerId) }} wants to play</span
+              <div class="glw__request-actions">
+                <button class="glw__btn" type="button" @click="handleAccept(entry)">Join</button>
+                <button
+                  class="glw__btn glw__btn--ghost"
+                  type="button"
+                  @click="ignoreRequest(entry)"
                 >
-                <div class="glw__request-actions">
-                  <button class="glw__btn" type="button" @click="handleAccept(entry)">Join</button>
-                  <button
-                    class="glw__btn glw__btn--ghost"
-                    type="button"
-                    @click="ignoreRequest(entry)"
-                  >
-                    Ignore
-                  </button>
-                </div>
-              </li>
-            </ul>
-          </template>
+                  Ignore
+                </button>
+              </div>
+            </li>
+          </ul>
+        </template>
 
-          <!-- Guest: waiting for host -->
-          <template v-if="!isHost && playerList.length > 1">
-            <div class="glw__players">
-              <span class="glw__player-count">
-                {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
-              </span>
-              <span
-                v-for="player in playerList"
-                :key="player.id"
-                class="glw__player-dot"
-                :style="{ background: player.color }"
-                :title="player.name"
-              />
-            </div>
-            <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
-              Leave room
-            </button>
-          </template>
+        <!-- Guest: waiting for host -->
+        <template v-if="!isHost && playerList.length > 1">
+          <div class="glw__players">
+            <span class="glw__player-count">
+              {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
+            </span>
+            <span
+              v-for="player in playerList"
+              :key="player.id"
+              class="glw__player-dot"
+              :style="{ background: player.color }"
+              :title="player.name"
+            />
+          </div>
+          <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+            Leave room
+          </button>
         </template>
       </div>
 
