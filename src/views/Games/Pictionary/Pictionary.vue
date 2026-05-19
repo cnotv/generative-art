@@ -15,7 +15,8 @@ import {
   NAME_ANIMALS,
   PLAYER_COLORS
 } from './constants'
-import PictionaryHeader from './PictionaryHeader.vue'
+import GameHeader from '@/components/GameHeader.vue'
+import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
 import PictionaryLobby from './PictionaryLobby.vue'
 import PictionaryChoosing from './PictionaryChoosing.vue'
 import PictionaryDrawing from './PictionaryDrawing.vue'
@@ -167,12 +168,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <main
+  <LobbyLayout
     class="pictionary"
-    :class="[`pictionary--${phase}`, { 'pictionary--show-sidebar': showSidebar }]"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    sidebar-width="320px"
+    :hide-header-on-mobile="['drawing', 'choosing'].includes(phase)"
     :style="backgroundStyle"
   >
-    <PictionaryHeader :room-id="roomId" @copy-link="copyLink" />
+    <template #header>
+      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+    </template>
+
+    <template #rules>
+      <ul>
+        <li>The drawer is given a word and must draw it without speaking</li>
+        <li>Guessers earn points based on speed — faster guesses score more</li>
+        <li>First correct guess gets a bonus</li>
+        <li>The drawer earns points per correct guess, scaled by time remaining</li>
+        <li>Hints reveal extra letters (configurable)</li>
+        <li>Round ends when time runs out or all players guess correctly</li>
+      </ul>
+    </template>
 
     <PictionaryLobby
       v-if="phase === 'lobby'"
@@ -241,18 +258,21 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <MultiplayerSidebar
-      class="pictionary__sidebar"
-      :players="sidebarPlayers"
-      :local-peer-id="localPeerId"
-      :messages="messages"
-      :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
-      :chat-disabled="isDrawer && phase === 'drawing'"
-      @send="session.broadcastChat($event)"
-    />
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        :chat-placeholder="isDrawer ? 'Drawer cannot chat' : 'Say something…'"
+        :chat-disabled="isDrawer && phase === 'drawing'"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
 
-    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
-  </main>
+    <template #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+    </template>
+  </LobbyLayout>
 </template>
 
 <style scoped>
@@ -265,80 +285,7 @@ onMounted(() => {
   --pic-purple: #a06cd5;
   --pic-green: #6bcf7f;
 
-  touch-action: manipulation;
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  height: 100dvh;
-  box-sizing: border-box;
-  overflow: hidden;
   background: var(--pic-bg);
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
-}
-
-.pictionary--lobby {
-  height: auto;
-  min-height: 100dvh;
-  overflow: auto;
-}
-
-.pictionary :deep(.glw),
-.pictionary :deep(.pictionary-choosing),
-.pictionary :deep(.pictionary-drawing),
-.pictionary :deep(.pictionary-intermission),
-.pictionary :deep(.pictionary-summary) {
-  animation: slide-up 0.28s ease both;
-}
-
-.pictionary__sidebar {
-  grid-area: sidebar;
-  animation: slide-from-right 0.32s ease both;
-}
-
-@media (max-width: 720px) {
-  .pictionary {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto minmax(0, 1fr);
-    height: 100dvh;
-    min-height: 0;
-    padding: 0 var(--spacing-2);
-    padding-top: var(--nav-height);
-    padding-bottom: 3rem;
-    gap: var(--spacing-2);
-    overflow: hidden;
-  }
-
-  .pictionary--lobby {
-    height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-  }
-
-  .pictionary--drawing :deep(.pictionary-header),
-  .pictionary--choosing :deep(.pictionary-header) {
-    display: none;
-  }
-
-  .pictionary__sidebar {
-    grid-area: main;
-    display: none;
-  }
-
-  .pictionary--show-sidebar :deep(.glw),
-  .pictionary--show-sidebar :deep(.pictionary-choosing),
-  .pictionary--show-sidebar :deep(.pictionary-drawing),
-  .pictionary--show-sidebar :deep(.pictionary-intermission),
-  .pictionary--show-sidebar :deep(.pictionary-summary) {
-    display: none;
-  }
-
-  .pictionary--show-sidebar .pictionary__sidebar {
-    display: flex;
-  }
 }
 </style>

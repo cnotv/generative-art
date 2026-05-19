@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { Check } from 'lucide-vue-next'
@@ -16,6 +16,7 @@ import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import { useMinigolfStore } from '@/stores/minigolf'
+import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
@@ -31,7 +32,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     Pictionary: usePictionaryStore(),
     SquaresMultiplayer: useSquaresMultiplayerStore(),
     WordleMultiplayer: useWordleMultiplayerStore(),
-    Minigolf: useMinigolfStore()
+    Minigolf: useMinigolfStore(),
+    BubbleShooter: useBubbleShooterStore()
   }
 
 const stored = loadProfile()
@@ -51,6 +53,12 @@ const {
 } = useLobbySession(playerName.value, playerColor.value)
 
 const ownRoomId = computed(() => ownRoom.value?.id ?? null)
+
+provide('setRoomHidden', (hidden: boolean) => {
+  if (ownRoom.value && ownRoom.value.isHidden !== hidden) {
+    toggleRoomVisibility()
+  }
+})
 const activeGame = computed(() => route.query.game as GameType | undefined)
 const activeComponent = computed(() =>
   activeGame.value ? GAME_COMPONENTS[activeGame.value] : null

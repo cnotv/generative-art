@@ -106,15 +106,6 @@ const toggleHole = (index: number): void => {
         </div>
       </div>
     </template>
-
-    <template #rules>
-      <ul>
-        <li>Each player takes turns shooting their ball toward the hole</li>
-        <li><strong>Drag</strong> on the canvas to aim and set power, then release to shoot</li>
-        <li>Fewest total strokes across all holes wins</li>
-        <li>Maximum {{ 10 }} strokes per hole — ball is holed automatically after that</li>
-      </ul>
-    </template>
   </GameLobbyWizard>
 </template>
 

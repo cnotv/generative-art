@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, useSlots } from 'vue'
+import { ref, computed, watch, onMounted, useSlots, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
@@ -73,11 +73,12 @@ const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
 }
 
 const slots = useSlots()
-const hasRules = computed(() => !!slots.rules)
 const hasConfig = computed(() => !!slots.config)
-const rulesOpen = ref(false)
+
+const setRoomHidden = inject<((hidden: boolean) => void) | undefined>('setRoomHidden', undefined)
 
 watch(isPrivate, (priv) => {
+  setRoomHidden?.(priv)
   if (priv) stopSearching()
   else if (!fromLobby.value) startSearching()
 })
@@ -235,14 +236,6 @@ onMounted(() => {
         <button v-if="step > 1" class="glw__btn glw__btn--ghost" type="button" @click="goBack">
           ← Back
         </button>
-        <div v-if="hasRules" class="glw__rules">
-          <button class="glw__rules-btn" type="button" @click="rulesOpen = !rulesOpen">?</button>
-          <Transition name="glw-rules">
-            <div v-if="rulesOpen" class="glw__rules-panel">
-              <slot name="rules" />
-            </div>
-          </Transition>
-        </div>
         <span class="glw__nav-spacer" />
         <button
           v-if="step < totalSteps"
@@ -599,63 +592,6 @@ onMounted(() => {
 
 .glw__nav-spacer {
   flex: 1;
-}
-
-.glw__rules {
-  position: relative;
-}
-
-.glw__rules-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid var(--game-border);
-  border-radius: 50%;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: 0.875rem;
-  font-weight: 900;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-}
-
-.glw__rules-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-border);
-}
-
-.glw__rules-panel {
-  position: absolute;
-  bottom: calc(100% + var(--spacing-2));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  background: var(--game-surface-subtle);
-  border: 2px solid var(--game-border);
-  border-radius: 0.75rem;
-  box-shadow: 3px 3px 0 var(--game-border);
-  width: 18rem;
-  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-5);
-  font-size: var(--font-size-sm);
-  line-height: 1.4;
-  color: var(--game-ink);
-}
-
-.glw-rules-enter-active,
-.glw-rules-leave-active {
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-
-.glw-rules-enter-from,
-.glw-rules-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(6px);
 }
 
 .glw__start-btn {

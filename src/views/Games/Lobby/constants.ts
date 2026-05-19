@@ -9,7 +9,8 @@ export const GAME_LABELS: Record<GameType, string> = {
   Pictionary: 'Pictionary',
   SquaresMultiplayer: 'Squares',
   WordleMultiplayer: 'Wordle',
-  Minigolf: 'Minigolf'
+  Minigolf: 'Minigolf',
+  BubbleShooter: 'Bubbles'
 }
 
 export const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {
@@ -20,5 +21,6 @@ export const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComp
   WordleMultiplayer: defineAsyncComponent(
     () => import('@/views/Games/WordleMultiplayer/WordleMultiplayer.vue')
   ),
-  Minigolf: defineAsyncComponent(() => import('@/views/Games/Minigolf/Minigolf.vue'))
+  Minigolf: defineAsyncComponent(() => import('@/views/Games/Minigolf/Minigolf.vue')),
+  BubbleShooter: defineAsyncComponent(() => import('@/views/Games/BubbleShooter/BubbleShooter.vue'))
 }

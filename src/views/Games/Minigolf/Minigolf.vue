@@ -15,8 +15,9 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
+import GameHeader from '@/components/GameHeader.vue'
+import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
 import MinigolfLobby from './MinigolfLobby.vue'
-import MinigolfHeader from './MinigolfHeader.vue'
 import MinigolfGame from './MinigolfGame.vue'
 import MinigolfSummary from './MinigolfSummary.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
@@ -169,16 +170,22 @@ onUnmounted(() => cleanup())
 </script>
 
 <template>
-  <main
-    class="mg"
-    :class="[`mg--${phase}`, { 'mg--show-sidebar': showSidebar }]"
-    :style="backgroundStyle"
-  >
-    <MinigolfHeader :room-id="roomId" @copy-link="copyLink" />
+  <LobbyLayout class="mg" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+    <template #header>
+      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+    </template>
+
+    <template #rules>
+      <ul>
+        <li>Each player takes turns shooting their ball toward the hole</li>
+        <li><strong>Drag</strong> on the canvas to aim and set power, then release to shoot</li>
+        <li>Fewest total strokes across all holes wins</li>
+        <li>Maximum 10 strokes per hole — ball is holed automatically after that</li>
+      </ul>
+    </template>
 
     <MinigolfLobby
       v-if="phase === 'lobby'"
-      class="mg__main"
       :player-name="playerName"
       :player-color="playerColor"
       :is-host="isHost"
@@ -198,7 +205,6 @@ onUnmounted(() => cleanup())
     <MinigolfGame
       v-else-if="phase === 'playing'"
       ref="gameReference"
-      class="mg__main"
       :message="message"
       :waiting="waiting"
       :is-aiming="isAiming"
@@ -211,24 +217,26 @@ onUnmounted(() => cleanup())
 
     <MinigolfSummary
       v-else
-      class="mg__main"
       :player-list="playerList"
       :active-holes="activeHoles"
       :is-host="isHost"
       @play-again="handlePlayAgain"
     />
 
-    <MultiplayerSidebar
-      class="mg__sidebar"
-      :players="sidebarPlayers"
-      :local-peer-id="localPeerId"
-      :messages="messages"
-      chat-placeholder="Say something…"
-      @send="session.broadcastChat($event)"
-    />
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
 
-    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
-  </main>
+    <template #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+    </template>
+  </LobbyLayout>
 </template>
 
 <style scoped>
@@ -237,72 +245,7 @@ onUnmounted(() => cleanup())
   --mg-yellow: #ffd93d;
   --game-accent: var(--mg-green);
 
-  touch-action: manipulation;
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100dvh;
-  box-sizing: border-box;
-  overflow: hidden;
-  padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  gap: var(--spacing-3);
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
   background: var(--mg-bg);
-}
-
-.mg--lobby {
-  height: auto;
-  min-height: 100dvh;
-  overflow: auto;
-}
-
-.mg :deep(.mg-header) {
-  animation: slide-from-right 0.32s ease both;
-}
-
-.mg__main {
-  grid-area: main;
-  min-height: 0;
-  animation: slide-up 0.28s ease both;
-}
-
-.mg__sidebar {
-  grid-area: sidebar;
-  animation: slide-from-right 0.32s ease both;
-}
-
-@media (max-width: 720px) {
-  .mg {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto 1fr;
-    height: 100dvh;
-    padding: 0 var(--spacing-2);
-    padding-top: var(--nav-height);
-    padding-bottom: 3rem;
-    gap: var(--spacing-2);
-    overflow: hidden;
-  }
-
-  .mg--lobby {
-    height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-  }
-
-  .mg__sidebar {
-    grid-area: main;
-    display: none;
-  }
-
-  .mg--show-sidebar .mg__main {
-    display: none;
-  }
-
-  .mg--show-sidebar .mg__sidebar {
-    display: flex;
-  }
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
 }
 </style>
