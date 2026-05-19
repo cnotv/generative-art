@@ -106,6 +106,17 @@
 - **Layout contract**: Multiplayer game views must use a two-column CSS grid with `grid-area: main` for the game area and `grid-area: sidebar` for `MultiplayerSidebar`. On mobile (≤720px), sidebar is hidden/shown by a CSS modifier class toggled by `GameTabBar`.
 - **Adding a new multiplayer game**: Before building any UI, check that you are using `MultiplayerSidebar`, `GameTabBar`, and the two-column grid layout. Reuse `useMinigolfSession` as the reference pattern for P2P session management.
 
+## Lobby Game Development
+
+- **Single-player + multiplayer by default**: Every game must work in both solo mode and multiplayer unless the issue explicitly states otherwise. When only one player is present at game start, the game auto-starts in solo mode without requiring any extra UI.
+- **Always use `GameLobbyWizard`**: The lobby/profile/settings step must always use `src/components/GameLobbyWizard.vue`. Wrap it in a game-specific `<GameName>Lobby.vue` component that passes `configFields` (game-specific settings) and a `#rules` slot. Never build a custom lobby form.
+- **Standalone + Lobby-embedded**: Every game must work both as a direct route (`/games/<name>`) and when embedded in the Lobby view. Do not assume a parent context.
+- **Use `useRoomId()`**: Call `useRoomId()` from `src/composables/useRoomId.ts` at the top of the root game component to resolve or create a stable room ID. Never inline an IIFE pattern for this purpose.
+- **Use `useMultiplayerLobbyHandlers()`**: Call `useMultiplayerLobbyHandlers()` from `src/composables/useMultiplayerLobbyHandlers.ts` for standard lobby events (name change, color change, match found, leave room). Add only game-specific overrides on top; do not duplicate the shared logic.
+- **Vue-only logic → composable**: Any logic that is exclusively Vue reactive (refs, watchers, router, lifecycle hooks) and shared across games belongs in `src/composables/`. Framework-agnostic game logic belongs in `@webgamekit/*` packages.
+- **Header with "← Lobby" navigation**: Every game view must include a header component that navigates back to the Lobby. Follow the pattern established by `PictionaryHeader.vue` and `BubbleShooterHeader.vue` — a dedicated `<GameName>Header.vue` component that emits `leave-room`.
+- **Game-specific session composable**: Each game's P2P session logic must live in its own `use<GameName>Session.ts` composable co-located with the view. Use `useBubbleShooterSession` or `useMinigolfSession` as the reference pattern.
+
 ## Modular Architecture
 
 - **Reuse existing components**: Check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components and other reusables in `src/components/`. Never reinvent the wheel.

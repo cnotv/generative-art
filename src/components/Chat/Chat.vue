@@ -171,7 +171,7 @@ watch(() => props.messages.length, scrollToBottom)
   border-radius: var(--radius-sm);
   background: var(--color-background);
   color: var(--color-foreground);
-  font-size: inherit;
+  font-size: var(--font-size-md, 1rem);
 }
 
 .chat__input:disabled {

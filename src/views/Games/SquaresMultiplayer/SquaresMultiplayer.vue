@@ -14,7 +14,8 @@ import {
   NAME_ANIMALS,
   PLAYER_COLORS
 } from '@/utils/playerProfile'
-import SquaresMultiplayerHeader from './SquaresMultiplayerHeader.vue'
+import GameHeader from '@/components/GameHeader.vue'
+import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
 import SquaresMultiplayerLobby from './SquaresMultiplayerLobby.vue'
 import SquaresMultiplayerGame from './SquaresMultiplayerGame.vue'
 import SquaresMultiplayerIntermission from './SquaresMultiplayerIntermission.vue'
@@ -177,12 +178,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <main
-    class="wm"
-    :class="[`wm--${phase}`, { 'wm--show-sidebar': showSidebar }]"
-    :style="backgroundStyle"
-  >
-    <SquaresMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
+  <LobbyLayout class="wm" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+    <template #header>
+      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+    </template>
+
+    <template #rules>
+      <ul>
+        <li>A grid of letters hides several target words — grouped by length</li>
+        <li>
+          <strong>Click and drag</strong> through adjacent letters (diagonals OK) to trace a word
+        </li>
+        <li>Release to submit — if the word is in the list, you claim it</li>
+        <li>First to claim a word gets the points</li>
+        <li>3–4 letters = 1 pt · 5 = 2 pt · 6 = 3 pt · 7 = 5 pt · 8+ = 11 pt</li>
+        <li>Round ends when all words are found or time runs out</li>
+      </ul>
+    </template>
 
     <SquaresMultiplayerLobby
       v-if="phase === 'lobby'"
@@ -240,17 +252,20 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <MultiplayerSidebar
-      class="wm__sidebar"
-      :players="sidebarPlayers"
-      :local-peer-id="localPeerId"
-      :messages="messages"
-      chat-placeholder="Say something…"
-      @send="session.broadcastChat($event)"
-    />
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
 
-    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
-  </main>
+    <template #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+    </template>
+  </LobbyLayout>
 </template>
 
 <style scoped>
@@ -259,65 +274,7 @@ onMounted(() => {
   --game-accent: var(--ws-green);
   --ws-yellow: #ffd93d;
 
-  touch-action: manipulation;
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  min-height: 100vh;
-  box-sizing: border-box;
   background: var(--wm-bg);
   font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.wm :deep(.glw),
-.wm :deep(.wm-game),
-.wm :deep(.wm-intermission),
-.wm :deep(.ws-summary) {
-  animation: slide-up 0.28s ease both;
-}
-
-.wm__sidebar {
-  grid-area: sidebar;
-  animation: slide-from-right 0.32s ease both;
-}
-
-@media (max-width: 720px) {
-  .wm {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto 1fr;
-    height: 100dvh;
-    padding: 0 var(--spacing-2);
-    padding-top: var(--nav-height);
-    padding-bottom: 3rem;
-    gap: var(--spacing-2);
-    overflow: hidden;
-  }
-
-  .wm--lobby {
-    height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-  }
-
-  .wm__sidebar {
-    grid-area: main;
-    display: none;
-  }
-
-  .wm--show-sidebar :deep(.glw),
-  .wm--show-sidebar :deep(.wm-game),
-  .wm--show-sidebar :deep(.wm-intermission),
-  .wm--show-sidebar :deep(.ws-summary) {
-    display: none;
-  }
-
-  .wm--show-sidebar .wm__sidebar {
-    display: flex;
-  }
 }
 </style>

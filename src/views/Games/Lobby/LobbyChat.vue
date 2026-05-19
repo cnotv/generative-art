@@ -110,7 +110,7 @@ const handleSend = (): void => {
 }
 
 .lb-chat__message--own .lb-chat__text {
-  background: var(--game-ink);
+  background: var(--game-own-msg-bg, var(--game-ink));
   color: #fff;
 }
 

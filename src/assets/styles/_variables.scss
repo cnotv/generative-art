@@ -5,6 +5,7 @@
 // Light mode defaults; overridden in the dark-mode block below.
 :root {
   --game-ink: #111;
+  --game-own-msg-bg: #111;
   --game-ink-medium: #555;
   --game-ink-muted: #888;
   --game-border: rgba(0, 0, 0, 0.28);
@@ -173,6 +174,7 @@
 
   --game-msg-system-bg: #2a2208;
   --game-msg-error-bg: #2a0d0d;
+  --game-own-msg-bg: #3a3020;
 
   --panel-item-bg: hsl(0 0% 12%);
   --panel-item-bg-hover: hsl(0 0% 18%);

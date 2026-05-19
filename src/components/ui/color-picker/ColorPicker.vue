@@ -13,7 +13,6 @@ const emit = defineEmits<{
 }>()
 
 const internalValue = ref(props.modelValue ?? '#000000')
-const colorInputReference = ref<HTMLInputElement | null>(null)
 
 watch(
   () => props.modelValue,
@@ -29,20 +28,10 @@ const handleColorChange = (event: Event) => {
   internalValue.value = target.value
   emit('update:modelValue', target.value)
 }
-
-const handleClick = () => {
-  if (!props.disabled && colorInputReference.value) {
-    colorInputReference.value.click()
-  }
-}
 </script>
 
 <template>
-  <div
-    class="color-picker"
-    :class="[$props.class, { 'color-picker--disabled': disabled }]"
-    @click="handleClick"
-  >
+  <div class="color-picker" :class="[$props.class, { 'color-picker--disabled': disabled }]">
     <div class="color-picker__swatch" :style="{ backgroundColor: internalValue }" />
     <span v-if="!hideValue" class="color-picker__hex">{{ internalValue }}</span>
     <input
@@ -61,6 +50,7 @@ const handleClick = () => {
   display: flex;
   align-items: center;
   cursor: pointer;
+  position: relative;
 }
 
 .color-picker--disabled {
@@ -83,9 +73,12 @@ const handleClick = () => {
 
 .color-picker__input {
   position: absolute;
+  inset: 0;
   opacity: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
 }
 </style>

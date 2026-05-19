@@ -14,7 +14,8 @@ import {
   NAME_ANIMALS,
   PLAYER_COLORS
 } from '@/utils/playerProfile'
-import WordleMultiplayerHeader from './WordleMultiplayerHeader.vue'
+import GameHeader from '@/components/GameHeader.vue'
+import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
 import WordleMultiplayerLobby from './WordleMultiplayerLobby.vue'
 import WordleMultiplayerGame from './WordleMultiplayerGame.vue'
 import WordleMultiplayerIntermission from './WordleMultiplayerIntermission.vue'
@@ -179,12 +180,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <main
-    class="wl"
-    :class="[`wl--${phase}`, { 'wl--show-sidebar': showSidebar }]"
-    :style="backgroundStyle"
-  >
-    <WordleMultiplayerHeader :room-id="roomId" @copy-link="copyLink" />
+  <LobbyLayout class="wl" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+    <template #header>
+      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+    </template>
+
+    <template #rules>
+      <ul>
+        <li>Guess the secret word — all players guess simultaneously</li>
+        <li>Green = correct letter and position · Yellow = letter in word but wrong position</li>
+        <li>Fewer attempts and faster guesses earn more points</li>
+        <li>First to solve gets a bonus</li>
+        <li>Round ends when everyone finishes or time runs out</li>
+      </ul>
+    </template>
 
     <WordleMultiplayerLobby
       v-if="phase === 'lobby'"
@@ -239,17 +248,20 @@ onMounted(() => {
       @restart="session.restartGame()"
     />
 
-    <MultiplayerSidebar
-      class="wl__sidebar"
-      :players="sidebarPlayers"
-      :local-peer-id="localPeerId"
-      :messages="messages"
-      chat-placeholder="Say something…"
-      @send="session.broadcastChat($event)"
-    />
+    <template #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
 
-    <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
-  </main>
+    <template #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+    </template>
+  </LobbyLayout>
 </template>
 
 <style scoped>
@@ -258,65 +270,7 @@ onMounted(() => {
   --game-accent: var(--wl-green);
   --wl-yellow: #c9b458;
 
-  touch-action: manipulation;
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  grid-template-areas: 'header header' 'main sidebar';
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  padding-top: calc(var(--nav-height) + var(--spacing-3));
-  min-height: 100vh;
-  box-sizing: border-box;
   background: var(--wl-bg);
   font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.wl :deep(.glw),
-.wl :deep(.wl-game),
-.wl :deep(.wl-intermission),
-.wl :deep(.wl-summary) {
-  animation: slide-up 0.28s ease both;
-}
-
-.wl__sidebar {
-  grid-area: sidebar;
-  animation: slide-from-right 0.32s ease both;
-}
-
-@media (max-width: 720px) {
-  .wl {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto 1fr;
-    height: 100dvh;
-    padding: 0 var(--spacing-2);
-    padding-top: var(--nav-height);
-    padding-bottom: 3rem;
-    gap: var(--spacing-2);
-    overflow: hidden;
-  }
-
-  .wl--lobby {
-    height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-  }
-
-  .wl__sidebar {
-    grid-area: main;
-    display: none;
-  }
-
-  .wl--show-sidebar :deep(.glw),
-  .wl--show-sidebar :deep(.wl-game),
-  .wl--show-sidebar :deep(.wl-intermission),
-  .wl--show-sidebar :deep(.wl-summary) {
-    display: none;
-  }
-
-  .wl--show-sidebar .wl__sidebar {
-    display: flex;
-  }
 }
 </style>
