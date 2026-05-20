@@ -1,3 +1,7 @@
+<script lang="ts">
+const rememberedSteps = new Map<string, number>()
+</script>
+
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, useSlots, inject } from 'vue'
 import { useRoute } from 'vue-router'
@@ -92,6 +96,8 @@ watch(
 
 onMounted(() => {
   if (!fromLobby.value && !isPrivate.value) startSearching()
+  const remembered = rememberedSteps.get(props.matchmakerRoom)
+  if (remembered !== undefined) step.value = Math.min(remembered, totalSteps.value)
 })
 </script>
 
@@ -251,7 +257,10 @@ onMounted(() => {
           class="glw__start-btn"
           type="button"
           :disabled="false"
-          @click="emit('startGame')"
+          @click="
+            rememberedSteps.set(matchmakerRoom, totalSteps)
+            emit('startGame')
+          "
         >
           Start
         </button>

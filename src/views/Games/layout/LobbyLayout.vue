@@ -24,8 +24,7 @@ const rulesOpen = ref(false)
 
 const layoutStyle = computed(() => ({
   '--ll-columns': hasSidebar.value ? `1fr ${props.sidebarWidth}` : '1fr',
-  '--ll-areas': hasSidebar.value ? "'header header' 'main sidebar'" : "'header' 'main'",
-  '--ll-place-items': props.mainPlacement === 'center' ? 'center' : 'stretch'
+  '--ll-areas': hasSidebar.value ? "'header header' 'main sidebar'" : "'header' 'main'"
 }))
 </script>
 
@@ -58,7 +57,10 @@ const layoutStyle = computed(() => ({
         </div>
       </Transition>
     </div>
-    <div class="lobby-layout__main">
+    <div
+      class="lobby-layout__main"
+      :class="{ 'lobby-layout__main--center': mainPlacement === 'center' }"
+    >
       <slot />
     </div>
     <div v-if="hasSidebar" class="lobby-layout__sidebar">
@@ -159,9 +161,13 @@ const layoutStyle = computed(() => ({
 .lobby-layout__main {
   grid-area: main;
   min-height: 0;
-  display: grid;
-  place-items: var(--ll-place-items);
   animation: slide-up 0.28s ease both;
+}
+
+.lobby-layout__main--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lobby-layout__sidebar {

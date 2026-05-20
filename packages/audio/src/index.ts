@@ -1,6 +1,9 @@
-import type { SoundConfig, NoteSequence } from './types'
+import type { SoundConfig, NoteSequence, ScheduledNote } from './types'
 
-export type { SoundConfig, NoteSequence }
+export type { SoundConfig, NoteSequence, ScheduledNote }
+export type { NoteScheduler, AudioContextFactory } from './scheduler'
+export { midiNoteToFreq } from './midiNote'
+export { createNoteScheduler } from './scheduler'
 
 // Audio utility for game sound effects and soundtrack
 
