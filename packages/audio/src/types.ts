@@ -16,4 +16,5 @@ export type ScheduledNote = {
   duration: number
   volume?: number
   waveType?: OscillatorType
+  attackTime?: number
 }

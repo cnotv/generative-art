@@ -23,6 +23,39 @@ export const LANE_FREQS = LANE_MIDI_NOTES.map(midiNoteToFreq) as [number, number
 export type RgDifficulty = 'easy' | 'medium' | 'hard'
 export type RgSong = 'electric-pulse' | 'neon-chase' | 'grid-storm'
 export type RgLane = 0 | 1 | 2 | 3
+export type RgInstrument = 'piano' | 'bass' | 'guitar'
+
+type InstrumentPreset = {
+  waveType: 'sine' | 'square' | 'sawtooth' | 'triangle'
+  durationMs: number
+  volume: number
+  freqMultiplier: number
+  attackTimeSec: number
+}
+
+export const INSTRUMENT_PRESETS: Record<RgInstrument, InstrumentPreset> = {
+  piano: {
+    waveType: 'triangle',
+    durationMs: 90,
+    volume: 0.25,
+    freqMultiplier: 1,
+    attackTimeSec: 0.005
+  },
+  bass: {
+    waveType: 'triangle',
+    durationMs: 220,
+    volume: 0.3,
+    freqMultiplier: 0.5,
+    attackTimeSec: 0.003
+  },
+  guitar: {
+    waveType: 'sawtooth',
+    durationMs: 110,
+    volume: 0.2,
+    freqMultiplier: 1,
+    attackTimeSec: 0.002
+  }
+}
 export type HitResult = 'perfect' | 'good' | 'miss'
 
 export type RhythmNote = {

@@ -23,7 +23,8 @@ import type { RgSong, RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
 
 const store = useRhythmGameStore()
-const { phase, playerList, messages, winnerId, hostId, song, difficulty, solo } = storeToRefs(store)
+const { phase, playerList, messages, winnerId, hostId, song, difficulty, instrument, solo } =
+  storeToRefs(store)
 
 const storedProfile = loadProfile()
 const playerName = ref(
@@ -169,12 +170,14 @@ onMounted(() => {
       :room-id="roomId"
       :song="song"
       :difficulty="difficulty"
+      :instrument="instrument"
       :winner-id="winnerId"
       :local-peer-id="localPeerId"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
       @update:song="store.song = $event"
       @update:difficulty="store.difficulty = $event"
+      @update:instrument="store.instrument = $event"
       @name-change="handleNameChange"
       @start-game="handleStartGame"
       @match-found="handleMatchFound"
@@ -186,6 +189,7 @@ onMounted(() => {
       v-else-if="phase === 'playing'"
       :song="song"
       :difficulty="difficulty"
+      :instrument="instrument"
       :start-at="gameStartAt"
       :opponent-name="opponentPlayer?.name"
       :opponent-score="opponentPlayer?.score"

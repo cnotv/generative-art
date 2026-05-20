@@ -11,10 +11,12 @@ import {
   LANE_KEYS,
   LANE_DIRECTIONS,
   LANE_FREQS,
+  INSTRUMENT_PRESETS,
   type RgLane,
   type RhythmNote,
   type RgDifficulty,
   type RgSong,
+  type RgInstrument,
   SONGS
 } from './config'
 import {
@@ -43,6 +45,7 @@ type GameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   song: RgSong
   difficulty: RgDifficulty
+  instrument: RgInstrument
   startAt: number
   onScoreUpdate: (data: RgScore) => void
   onSongEnd: () => void
@@ -53,14 +56,20 @@ const getSongNotes = (song: RgSong, difficulty: RgDifficulty): RhythmNote[] => {
   return songDefinition ? songDefinition.notes[difficulty].map((n) => ({ ...n })) : []
 }
 
-const buildScheduledNotes = (songNotes: RhythmNote[]): ScheduledNote[] =>
-  songNotes.map((n) => ({
+const buildScheduledNotes = (
+  songNotes: RhythmNote[],
+  instrument: RgInstrument
+): ScheduledNote[] => {
+  const preset = INSTRUMENT_PRESETS[instrument]
+  return songNotes.map((n) => ({
     time: n.time,
-    freq: LANE_FREQS[n.lane],
-    duration: 80,
-    volume: 0.2,
-    waveType: 'triangle'
+    freq: LANE_FREQS[n.lane] * preset.freqMultiplier,
+    duration: preset.durationMs,
+    volume: preset.volume,
+    waveType: preset.waveType,
+    attackTime: preset.attackTimeSec
   }))
+}
 
 const buildControlsMapping = (
   laneActive: Ref<boolean[]>,
@@ -400,7 +409,7 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const init = (): void => {
     notes = getSongNotes(deps.song, deps.difficulty)
-    const scheduled = buildScheduledNotes(notes)
+    const scheduled = buildScheduledNotes(notes, deps.instrument)
     scheduler.start(scheduled, deps.startAt)
     lastFrameTime = performance.now()
     rafId = requestAnimationFrame(gameLoop)

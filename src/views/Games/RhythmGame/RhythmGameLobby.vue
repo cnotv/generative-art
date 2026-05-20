@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
 import RhythmGameSummary from './RhythmGameSummary.vue'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, SONGS, type RgSong, type RgDifficulty } from './config'
+import { MATCHMAKER_ROOM, SONGS, type RgSong, type RgDifficulty, type RgInstrument } from './config'
 import type { RgPlayer } from '@/stores/rhythmGame'
 
 const props = defineProps<{
@@ -14,6 +14,7 @@ const props = defineProps<{
   roomId: string
   song: RgSong
   difficulty: RgDifficulty
+  instrument: RgInstrument
   showResults?: boolean
   winnerId?: string | null
   localPeerId?: string
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   'update:playerColor': [value: string]
   'update:song': [value: RgSong]
   'update:difficulty': [value: RgDifficulty]
+  'update:instrument': [value: RgInstrument]
   nameChange: []
   startGame: []
   matchFound: [roomId: string]
@@ -49,12 +51,24 @@ const configFields = computed((): LobbyConfigField[] => [
       { value: 'medium', label: 'Medium' },
       { value: 'hard', label: 'Hard' }
     ]
+  },
+  {
+    type: 'select',
+    key: 'instrument',
+    label: 'Instrument',
+    value: props.instrument,
+    options: [
+      { value: 'piano', label: 'Piano' },
+      { value: 'bass', label: 'Bass' },
+      { value: 'guitar', label: 'Guitar' }
+    ]
   }
 ])
 
 const handleConfig = (key: string, value: string | number): void => {
   if (key === 'song') emit('update:song', value as RgSong)
   if (key === 'difficulty') emit('update:difficulty', value as RgDifficulty)
+  if (key === 'instrument') emit('update:instrument', value as RgInstrument)
 }
 
 const summaryPlayerList = computed((): RgPlayer[] =>

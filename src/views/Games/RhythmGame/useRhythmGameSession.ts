@@ -12,7 +12,7 @@ import {
 import { chatMessageCreate } from '@webgamekit/chat'
 import { useRhythmGameStore, type RgPlayer, type RgScore } from '@/stores/rhythmGame'
 import { MATCHMAKER_ROOM } from './config'
-import type { RgSong, RgDifficulty } from './config'
+import type { RgSong, RgDifficulty, RgInstrument } from './config'
 
 const AVATAR_CHANNEL = 'rg-avatar'
 const CONFIG_CHANNEL = 'rg-config'
@@ -64,7 +64,11 @@ const bindData = (s: P2PSession, context: BindContext): void => {
   p2pOnPeerJoin(s, () => {
     p2pSendData(s, AVATAR_CHANNEL, { name: options.name, color: options.color })
     if (isHost.value) {
-      p2pSendData(s, CONFIG_CHANNEL, { song: store.song, difficulty: store.difficulty })
+      p2pSendData(s, CONFIG_CHANNEL, {
+        song: store.song,
+        difficulty: store.difficulty,
+        instrument: store.instrument
+      })
     }
   })
 
@@ -87,10 +91,15 @@ const bindData = (s: P2PSession, context: BindContext): void => {
     })
   })
 
-  p2pOnData(s, CONFIG_CHANNEL, (_peerId, data: { song: RgSong; difficulty: RgDifficulty }) => {
-    store.song = data.song
-    store.difficulty = data.difficulty
-  })
+  p2pOnData(
+    s,
+    CONFIG_CHANNEL,
+    (_peerId, data: { song: RgSong; difficulty: RgDifficulty; instrument: RgInstrument }) => {
+      store.song = data.song
+      store.difficulty = data.difficulty
+      store.instrument = data.instrument
+    }
+  )
 
   p2pOnData(s, START_CHANNEL, (_peerId, data: StartPayload) => {
     store.phase = 'playing'

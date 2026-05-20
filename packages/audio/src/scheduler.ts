@@ -51,8 +51,9 @@ export const createNoteScheduler = (
 
     const vol = note.volume ?? 0.25
     const dur = note.duration / 1000
+    const attack = note.attackTime ?? 0.005
     gain.gain.setValueAtTime(0, startAtSec)
-    gain.gain.linearRampToValueAtTime(vol, startAtSec + 0.005)
+    gain.gain.linearRampToValueAtTime(vol, startAtSec + attack)
     gain.gain.exponentialRampToValueAtTime(0.001, startAtSec + dur - 0.01)
 
     osc.start(startAtSec)
