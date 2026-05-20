@@ -317,9 +317,7 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const pressLane = (lane: RgLane): void => {
     const currentMs = scheduler.currentMs
-    console.warn(
-      `[RhythmGame] lane ${lane} pressed at ${currentMs}ms, playing=${scheduler.isPlaying}`
-    )
+
     const index = findHittableNote(notes, lane, currentMs)
     if (index === -1) return
 
