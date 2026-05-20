@@ -32,6 +32,7 @@ defineProps<{
   --chat-message-radius: var(--radius-sm);
   --chat-message-radius-adjacent: var(--radius-sm);
   --chat-message-bg: var(--color-secondary);
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0);
@@ -40,7 +41,7 @@ defineProps<{
   background: var(--chat-message-bg);
   font-size: inherit;
   color: #111;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .chat-message--own {

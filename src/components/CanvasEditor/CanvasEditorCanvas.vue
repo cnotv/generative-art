@@ -165,12 +165,14 @@ defineExpose({
 <style scoped>
 .canvas-editor-canvas {
   position: relative;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--canvas-border, 1px solid var(--color-border));
+  border-radius: var(--canvas-radius, var(--radius-md));
+  box-shadow: var(--canvas-shadow, none);
   overflow: hidden;
   background: #fff;
   width: 100%;
-  flex-grow: 1;
+  flex-grow: var(--canvas-flex-grow, 1);
+  height: var(--canvas-height, auto);
   aspect-ratio: v-bind('`${width} / ${height}`');
 }
 

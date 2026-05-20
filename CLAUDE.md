@@ -38,6 +38,17 @@ Before implementing any task where the intent, scope, or expected behavior is un
 
 Ask a single focused question covering all missing details. Do not start implementation until you have enough information to proceed confidently.
 
+## HTML markup discipline
+
+**Never add wrapper elements that serve no purpose.** Before writing any `<div>`, `<section>`, or other container, ask: does this element add layout, semantics, or behaviour that the parent cannot already provide? If not, remove it.
+
+Specific rules:
+
+- Do not wrap a single child component in a `<section>` or `<div>` just to apply `display: flex; align-items: center` — if the parent slot already handles centering (e.g. `LobbyLayout` with `mainPlacement="center"`), the wrapper is redundant.
+- Do not add `grid-area` on a component's root element when the parent grid already assigns `grid-area: main` to the slot's direct child.
+- Lobby components (`*Lobby.vue`) must render `GameLobbyWizard` as the root element, with no enclosing `<section>` or `<div>`.
+- If you find yourself adding a wrapper only to transfer styles that the parent layout already provides, delete the wrapper and rely on the layout instead.
+
 @.github/rules/code-style.md
 @.github/rules/testing.md
 @.github/rules/security.md

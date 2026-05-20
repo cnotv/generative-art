@@ -348,12 +348,6 @@ const roomsOpen = ref(true)
   min-height: 0;
 }
 
-.lobby__game-embed :deep(.wm),
-.lobby__game-embed :deep(.wl),
-.lobby__game-embed :deep(.pictionary) {
-  padding-top: var(--nav-height);
-}
-
 /* Sidebar */
 .lobby__sidebar {
   grid-area: sidebar;
@@ -463,7 +457,7 @@ const roomsOpen = ref(true)
   overflow: hidden;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .lobby {
     grid-template-columns: 1fr;
     grid-template-areas: 'main' 'sidebar';

@@ -160,32 +160,19 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
 
-.multiplayer-sidebar__chat :deep(.chat) {
-  flex: 1;
-  background: var(--game-surface-subtle);
-  border: 3px solid var(--game-border);
-  border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 var(--game-border);
-  padding: var(--spacing-2);
-  box-sizing: border-box;
-}
-
-.multiplayer-sidebar__chat :deep(.chat__input),
-.multiplayer-sidebar__chat :deep(.chat__send-btn),
-.multiplayer-sidebar__chat :deep(.chat__zoom-btn) {
-  border-radius: 999px;
-  border: 2px solid var(--game-border);
-}
-
-.multiplayer-sidebar__chat :deep(.chat__list) {
-  border-radius: 1rem;
-  border: 2px solid var(--game-border);
-  background: var(--game-surface-subtle);
-}
-
-.multiplayer-sidebar__chat :deep(.chat-message) {
+  --chat-flex: 1;
+  --chat-bg: var(--game-surface-subtle);
+  --chat-border: 3px solid var(--game-border);
+  --chat-radius: 1.25rem;
+  --chat-shadow: 3px 3px 0 var(--game-border);
+  --chat-padding: var(--spacing-2);
+  --chat-box-sizing: border-box;
+  --chat-control-radius: 999px;
+  --chat-control-border: 2px solid var(--game-border);
+  --chat-list-radius: 1rem;
+  --chat-list-border: 2px solid var(--game-border);
+  --chat-list-bg: var(--game-surface-subtle);
   --chat-message-radius: var(--radius-xl);
   --chat-message-radius-adjacent: 4px;
   --chat-message-bg: #d7d8d9;

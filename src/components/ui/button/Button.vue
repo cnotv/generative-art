@@ -52,7 +52,7 @@ const classes = computed(() =>
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  border-radius: var(--radius-md);
+  border-radius: var(--btn-radius, var(--radius-md));
   font-size: 0.875rem;
   font-weight: 500;
   transition: all 150ms;

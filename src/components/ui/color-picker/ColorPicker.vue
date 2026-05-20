@@ -61,7 +61,7 @@ const handleColorChange = (event: Event) => {
 .color-picker__swatch {
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--swatch-radius, var(--radius-sm));
   flex-shrink: 0;
 }
 
