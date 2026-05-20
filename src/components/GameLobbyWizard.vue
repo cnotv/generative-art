@@ -229,7 +229,12 @@ onMounted(() => {
                 :value="field.value"
                 @change="handleFieldChange(field, $event)"
               >
-                <option v-for="opt in field.options" :key="opt.value" :value="opt.value">
+                <option
+                  v-for="opt in field.options"
+                  :key="opt.value"
+                  :value="opt.value"
+                  :selected="opt.value === field.value"
+                >
                   {{ opt.label }}
                 </option>
               </select>
