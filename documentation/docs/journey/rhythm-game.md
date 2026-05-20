@@ -156,6 +156,44 @@ sequenceDiagram
 
 Adding a new instrument only requires a new entry in `INSTRUMENT_PRESETS` in `config.ts` — the scheduler and game loop pick it up automatically. For a more realistic feel, the next step would be `PeriodicWave` with custom harmonic tables, or a convolution reverb impulse; the current architecture supports both without changing the game logic.
 
+## Canvas rendering: Canvas 2D API and glow effects
+
+The game loop renders entirely on a `<canvas>` element using the browser's **Canvas 2D API** — no WebGL, no Three.js. The choice was deliberate: the game is a 2D rhythm game with flat geometry (rectangles, circles, arcs), and Canvas 2D handles that with minimal setup overhead.
+
+Each animation frame is driven by `requestAnimationFrame`. The loop reads `scheduler.currentMs` for the current playhead position, derives every note's y-position from the elapsed time, and redraws the entire canvas from scratch. No retained-mode scene graph is involved — every pixel is painted from scratch each frame.
+
+**Glow is `ctx.shadowBlur` + `ctx.shadowColor`.** The Canvas 2D API's shadow system is the simplest way to produce a neon glow: set `shadowColor` to the lane colour and `shadowBlur` to a radius (12–24 px for notes, 24 px for active lane indicators). The shadow is rendered behind every path or fill operation that follows. It must be reset to `shadowBlur = 0` after each glowing element, or every subsequent draw inherits the shadow.
+
+```mermaid
+flowchart LR
+    A[ctx.shadowColor = lane colour] --> B[ctx.shadowBlur = 12]
+    B --> C[ctx.fill — draws note + glow]
+    C --> D[ctx.shadowBlur = 0 — reset]
+```
+
+**Hit flash.** When a note is hit, a semi-transparent rectangle floods the lane for one frame and fades over ~250 ms. The alpha is encoded directly into the hex fill colour: `flashColor + hex(alpha * 100)`. `alpha` starts at 1 and decreases each frame by `dt × 0.004`.
+
+**Perfect shockwave.** A perfect hit additionally draws an expanding ring: `ctx.arc` with a radius that grows as `(1 − alpha) × 90` while the alpha fades. The ring uses `ctx.shadowBlur` for the glow, giving it a neon pulse feel that distinguishes it visually from a good hit.
+
+**Particles.** Each hit spawns 3–8 circles at the hit-zone y-position. On every frame, each particle's `x` and `y` are jittered by a random offset (`±10 px`) and its radius shrinks by 3 %. Alpha decreases by `dt × 0.003`. Dead particles (alpha ≤ 0) are filtered out. The particle list is a plain array — no object pool — because the count is low enough that GC pressure is negligible.
+
+**Lane indicators (key labels at the bottom).** Each lane's indicator circle uses `ctx.arc` with a fill and stroke. When the lane is active, `ctx.shadowBlur = 24` creates a bright glow ring. The key letter (`D`, `F`, `J`, `K`) is drawn with `ctx.fillText` centered inside the arc.
+
+```mermaid
+flowchart TD
+    A[requestAnimationFrame] --> B[clearRect — black background]
+    B --> C[draw lane dividers]
+    C --> D[draw hit zone line]
+    D --> E[draw notes — roundRect + shadowBlur]
+    E --> F[draw lane flashes]
+    F --> G[draw particles]
+    G --> H[draw lane indicators]
+    H --> I[draw combo counter]
+    I --> A
+```
+
+The combo multiplier text (`12× COMBO (×4)`) is rendered with `ctx.fillText` at `textAlign: center` above the hit zone. It only appears when `combo > 1` to avoid noise during quiet passages.
+
 ## Controls: three separate failures before input worked
 
 Getting keyboard input working took three separate fixes, each invisible until the previous one was solved.
