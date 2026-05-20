@@ -166,6 +166,7 @@ const emit = defineEmits<{
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -175,6 +176,7 @@ const emit = defineEmits<{
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }

@@ -199,7 +199,7 @@ onMounted(() => {
 }
 
 .player__container {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgb(255, 255, 255, 0.9);
   padding: 20px;
   border-radius: 10px;
   backdrop-filter: blur(5px);
@@ -223,7 +223,7 @@ onMounted(() => {
   border: none;
   color: black;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
   cursor: pointer;
   font-size: 16px;
   padding: 4px 6px;
@@ -237,7 +237,7 @@ onMounted(() => {
 }
 
 .control-button:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgb(0, 0, 0, 0.1);
 }
 
 .progress-container {
@@ -248,7 +248,7 @@ onMounted(() => {
 .progress-bar {
   width: 200px;
   height: 6px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0, 0, 0, 0.2);
   border-radius: 3px;
   position: relative;
   overflow: hidden;
@@ -259,13 +259,13 @@ onMounted(() => {
   background: black;
   border-radius: 3px;
   transition: width 0.1s ease;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 4px rgb(0, 0, 0, 0.3);
 }
 
 .time-display {
   color: black;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
   font-size: 14px;
   min-width: 80px;
   text-align: center;
@@ -284,7 +284,7 @@ onMounted(() => {
 .volume-slider {
   width: 80px;
   height: 6px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0, 0, 0, 0.2);
   outline: none;
   border-radius: 3px;
   appearance: none;
@@ -298,7 +298,7 @@ onMounted(() => {
   background: black;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
   transition: transform 0.2s ease;
 }
 
@@ -313,11 +313,11 @@ onMounted(() => {
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
 }
 
 .volume-slider::-moz-range-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0, 0, 0, 0.2);
   height: 6px;
   border-radius: 3px;
 }
@@ -326,25 +326,25 @@ onMounted(() => {
   text-align: center;
   color: black;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
 }
 
 .player__song-title {
   font-size: 18px;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
 }
 
 .player__artist {
   font-size: 14px;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
 }
 
 .player__link {
   color: #444;
   font-weight: 900;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 2px rgb(255, 255, 255, 0.7);
 }
 
 .player__link:hover {

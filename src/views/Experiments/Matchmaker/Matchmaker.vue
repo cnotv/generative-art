@@ -262,6 +262,7 @@ onUnmounted(() => {
     transform: translateY(0);
     opacity: 0.4;
   }
+
   30% {
     transform: translateY(-0.3em);
     opacity: 1;
@@ -281,6 +282,7 @@ onUnmounted(() => {
 .matchmaker__dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
+
 .matchmaker__dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
@@ -390,7 +392,7 @@ onUnmounted(() => {
 .matchmaker__matched-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, var(--overlay-opacity, 0.5));
+  background-color: rgb(0, 0, 0, var(--overlay-opacity, 0.5));
   display: flex;
   align-items: center;
   justify-content: center;

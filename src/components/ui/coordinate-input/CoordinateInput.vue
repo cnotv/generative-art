@@ -202,24 +202,23 @@ const handleInputZ = (event: Event) => {
 }
 
 .coordinate-input__input:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255, 255, 255, 0.05);
 }
 
 .coordinate-input__input:focus {
-  background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background-color: rgb(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgb(255, 255, 255, 0.2);
 }
 
 /* Hide spinner buttons in number input */
 .coordinate-input__input::-webkit-outer-spin-button,
 .coordinate-input__input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 .coordinate-input__input[type='number'] {
   appearance: textfield;
-  -moz-appearance: textfield;
 }
 
 .coordinate-input__sliders {

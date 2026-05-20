@@ -88,7 +88,7 @@ defineExpose({ canvas })
 .mg-game__power-bar {
   width: 160px;
   height: 14px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgb(255, 255, 255, 0.25);
   border: 2px solid #fff;
   overflow: hidden;
 }

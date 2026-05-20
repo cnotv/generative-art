@@ -183,7 +183,7 @@ const fromLobby = computed(() => !!route.query.game)
   color: var(--game-ink);
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .pictionary-header__room-id {
     color: var(--color-foreground);
   }

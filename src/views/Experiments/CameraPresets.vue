@@ -663,7 +663,7 @@ onUnmounted(() => {
   top: 10px;
   left: 10px;
   color: white;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0, 0, 0, 0.5);
   padding: 5px 10px;
   font-family: monospace;
 }
@@ -673,7 +673,7 @@ onUnmounted(() => {
   bottom: 10px;
   left: 10px;
   color: white;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgb(0, 0, 0, 0.7);
   padding: 10px;
   font-family: monospace;
   font-size: 12px;

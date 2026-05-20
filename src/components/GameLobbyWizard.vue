@@ -470,6 +470,7 @@ onMounted(() => {
     transform: translateY(0);
     opacity: 0.4;
   }
+
   30% {
     transform: translateY(-0.35em);
     opacity: 1;
@@ -480,9 +481,11 @@ onMounted(() => {
   display: inline-block;
   animation: glw-bounce 1.2s ease-in-out infinite;
 }
+
 .glw__dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
+
 .glw__dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
@@ -658,7 +661,7 @@ onMounted(() => {
   gap: var(--spacing-3);
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .glw__card {
     max-width: 100%;
     box-sizing: border-box;

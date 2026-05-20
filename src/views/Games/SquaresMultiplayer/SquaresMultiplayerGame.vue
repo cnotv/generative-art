@@ -335,6 +335,7 @@ onUnmounted(() => {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0.5;
   }
@@ -458,6 +459,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -619,7 +621,7 @@ onUnmounted(() => {
   display: block;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .wm-game__grid-cell {
     width: 2.5rem;
     height: 2.5rem;

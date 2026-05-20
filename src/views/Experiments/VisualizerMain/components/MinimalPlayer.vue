@@ -257,7 +257,7 @@ onMounted(() => {
 .progress-bar {
   width: 80px;
   height: 3px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0, 0, 0, 0.3);
   border-radius: 2px;
   position: relative;
   box-shadow: 0 0 0 1px white;
@@ -293,7 +293,7 @@ onMounted(() => {
 .volume-slider {
   width: 50px;
   height: 3px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0, 0, 0, 0.3);
   outline: none;
   border-radius: 2px;
   appearance: none;

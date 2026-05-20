@@ -33,6 +33,6 @@ defineProps<{
 .tabs-trigger[data-state='active'] {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgb(0, 0, 0, 0.1);
 }
 </style>

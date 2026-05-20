@@ -124,8 +124,8 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 }
 
 .rg-summary__card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgb(255, 255, 255, 0.04);
+  border: 2px solid rgb(255, 255, 255, 0.1);
   border-radius: var(--radius-lg, 1.25rem);
   padding: var(--spacing-5);
   max-width: 26rem;
@@ -148,7 +148,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
   font-size: 5rem;
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 30px currentColor;
+  text-shadow: 0 0 30px currentcolor;
 }
 
 .rg-summary__result {
@@ -175,15 +175,17 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgb(255, 255, 255, 0.4);
 }
 
 .rg-summary__stat-label--perfect {
   color: #ffd740;
 }
+
 .rg-summary__stat-label--good {
   color: #69ff47;
 }
+
 .rg-summary__stat-label--miss {
   color: #ff4081;
 }
@@ -200,7 +202,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
   flex-direction: column;
   gap: var(--spacing-1);
   width: 100%;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(255, 255, 255, 0.1);
   padding-top: var(--spacing-3);
 }
 
@@ -213,7 +215,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 }
 
 .rg-summary__row--local {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(255, 255, 255, 0.06);
 }
 
 .rg-summary__player-dot {
@@ -226,7 +228,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 .rg-summary__player-name {
   flex: 1;
   font-size: var(--font-size-sm);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(255, 255, 255, 0.8);
   text-align: left;
 }
 
@@ -246,10 +248,10 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 
 .rg-summary__btn {
   padding: var(--spacing-2) var(--spacing-4);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgb(255, 255, 255, 0.2);
   border-radius: 999px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255, 255, 255, 0.7);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
@@ -258,7 +260,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 }
 
 .rg-summary__btn:hover {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgb(255, 255, 255, 0.5);
   color: #fff;
 }
 

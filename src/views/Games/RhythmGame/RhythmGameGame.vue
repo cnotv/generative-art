@@ -160,8 +160,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-2) var(--spacing-3);
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgb(255, 255, 255, 0.08);
   flex-shrink: 0;
   gap: var(--spacing-2);
 }
@@ -183,7 +183,7 @@ onUnmounted(() => {
 .rg-game__label {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgb(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
 .rg-game__difficulty {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgb(255, 255, 255, 0.4);
   text-transform: capitalize;
 }
 
@@ -243,10 +243,12 @@ onUnmounted(() => {
     opacity 0.2s ease,
     transform 0.2s ease;
 }
+
 .rg-countdown-enter-from {
   opacity: 0;
   transform: scale(1.5);
 }
+
 .rg-countdown-leave-to {
   opacity: 0;
   transform: scale(0.8);
@@ -262,7 +264,7 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
   pointer-events: none;
   z-index: 5;
-  text-shadow: 0 0 16px currentColor;
+  text-shadow: 0 0 16px currentcolor;
   animation: rg-hit-fade 0.5s ease forwards;
 }
 
@@ -283,10 +285,12 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateX(-50%) translateY(-80%) scale(0.8);
   }
+
   25% {
     opacity: 1;
     transform: translateX(-50%) translateY(-100%) scale(1.05);
   }
+
   100% {
     opacity: 0;
     transform: translateX(-50%) translateY(-140%);

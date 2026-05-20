@@ -121,10 +121,12 @@ const drawerName = (playerList: PictionaryPlayer[], drawerId: string): string =>
   background: var(--pic-pink);
   transform: rotate(-2deg);
 }
+
 .pictionary-choosing__choice-btn--1 {
   background: var(--pic-blue);
   transform: rotate(1.5deg);
 }
+
 .pictionary-choosing__choice-btn--2 {
   background: var(--pic-yellow);
   transform: rotate(-1deg);
@@ -139,6 +141,6 @@ const drawerName = (playerList: PictionaryPlayer[], drawerId: string): string =>
   background: #fff;
   color: #bbb;
   cursor: default;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: 3px 3px 0 rgb(0, 0, 0, 0.15);
 }
 </style>
