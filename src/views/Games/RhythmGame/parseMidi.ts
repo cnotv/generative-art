@@ -16,17 +16,13 @@ const pitchToLane = (pitch: number, min: number, range: number): RgLane =>
   (range === 0 ? 0 : Math.min(3, Math.floor(((pitch - min) / range) * 4))) as RgLane
 
 /**
- * Parse a MIDI file into a RhythmNote array, mapping pitches to 4 lanes by
- * quartile range and filtering note density by difficulty.
- * @param file - The .mid file uploaded by the user.
+ * Parse a MIDI ArrayBuffer into a RhythmNote array, mapping pitches to 4 lanes
+ * by quartile range and filtering note density by difficulty.
+ * @param buffer - Raw MIDI binary data.
  * @param difficulty - Controls minimum gap between consecutive notes.
  * @returns Parsed and filtered note array sorted by time.
  */
-export const parseMidiFile = async (
-  file: File,
-  difficulty: RgDifficulty
-): Promise<RhythmNote[]> => {
-  const buffer = await file.arrayBuffer()
+export const parseMidiBuffer = (buffer: ArrayBuffer, difficulty: RgDifficulty): RhythmNote[] => {
   const midi = new Midi(buffer)
 
   const track = [...midi.tracks]
@@ -48,3 +44,12 @@ export const parseMidiFile = async (
 
   return applyDifficulty(allNotes, difficulty)
 }
+
+/**
+ * Convenience wrapper — reads a File into an ArrayBuffer then delegates to parseMidiBuffer.
+ * @param file - The .mid file uploaded by the user.
+ * @param difficulty - Controls minimum gap between consecutive notes.
+ * @returns Parsed and filtered note array sorted by time.
+ */
+export const parseMidiFile = async (file: File, difficulty: RgDifficulty): Promise<RhythmNote[]> =>
+  parseMidiBuffer(await file.arrayBuffer(), difficulty)

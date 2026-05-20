@@ -21,7 +21,8 @@ import RhythmGameLobby from './RhythmGameLobby.vue'
 import RhythmGameGame from './RhythmGameGame.vue'
 import type { RgSong, RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
-import { parseMidiFile } from './parseMidi'
+import { parseMidiFile, parseMidiBuffer } from './parseMidi'
+import { midiStorageSave, midiStorageLoad } from './midiStorage'
 
 const store = useRhythmGameStore()
 const {
@@ -101,9 +102,26 @@ const handleLeaveRoom = (): void => {
 
 const handleMidiUpload = async (file: File): Promise<void> => {
   try {
-    const notes = await parseMidiFile(file, difficulty.value)
+    const buffer = await file.arrayBuffer()
+    const name = file.name.replace(/\.midi?$/i, '')
+    const notes = parseMidiBuffer(buffer, difficulty.value)
+    await midiStorageSave(name, buffer)
     store.customNotes = notes
-    store.customSongName = file.name.replace(/\.mid$/i, '')
+    store.customSongName = name
+    store.song = 'custom'
+  } catch {
+    store.customNotes = null
+    store.customSongName = ''
+    store.song = 'electric-pulse'
+  }
+}
+
+const handleMidiSelect = async (id: string, name: string): Promise<void> => {
+  try {
+    const buffer = await midiStorageLoad(id)
+    if (!buffer) return
+    store.customNotes = parseMidiBuffer(buffer, difficulty.value)
+    store.customSongName = name
     store.song = 'custom'
   } catch {
     store.customNotes = null
@@ -212,6 +230,7 @@ onMounted(() => {
       @leave-room="handleLeaveRoom"
       @play-again="handleRestart"
       @midi-upload="handleMidiUpload"
+      @midi-select="handleMidiSelect"
     />
 
     <RhythmGameGame
