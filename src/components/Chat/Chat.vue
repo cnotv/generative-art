@@ -110,26 +110,14 @@ watch(() => props.messages.length, scrollToBottom)
 <style scoped>
 .chat {
   --chat-font-scale: 1;
-  --chat-flex: initial;
-  --chat-bg: transparent;
-  --chat-border: none;
-  --chat-radius: 0;
-  --chat-shadow: none;
-  --chat-padding: 0;
-  --chat-box-sizing: content-box;
-  --chat-control-radius: var(--radius-sm);
-  --chat-control-border: 1px solid var(--color-border);
-  --chat-list-radius: var(--radius-sm);
-  --chat-list-border: 1px solid var(--color-border);
-  --chat-list-bg: var(--color-background);
 
-  flex: var(--chat-flex);
-  background: var(--chat-bg);
-  border: var(--chat-border);
-  border-radius: var(--chat-radius);
-  box-shadow: var(--chat-shadow);
-  padding: var(--chat-padding);
-  box-sizing: var(--chat-box-sizing);
+  flex: var(--chat-flex, initial);
+  background: var(--chat-bg, transparent);
+  border: var(--chat-border, none);
+  border-radius: var(--chat-radius, 0);
+  box-shadow: var(--chat-shadow, none);
+  padding: var(--chat-padding, 0);
+  box-sizing: var(--chat-box-sizing, content-box);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
@@ -149,8 +137,8 @@ watch(() => props.messages.length, scrollToBottom)
   align-items: center;
   justify-content: center;
   padding: var(--spacing-1);
-  border: var(--chat-control-border);
-  border-radius: var(--chat-control-radius);
+  border: var(--chat-control-border, 1px solid var(--color-border));
+  border-radius: var(--chat-control-radius, var(--radius-sm));
   background: var(--color-secondary);
   color: var(--color-foreground);
   cursor: pointer;
@@ -174,9 +162,9 @@ watch(() => props.messages.length, scrollToBottom)
   flex-direction: column;
   gap: var(--spacing-1);
   padding: var(--spacing-1);
-  background: var(--chat-list-bg);
-  border: var(--chat-list-border);
-  border-radius: var(--chat-list-radius);
+  background: var(--chat-list-bg, var(--color-background));
+  border: var(--chat-list-border, 1px solid var(--color-border));
+  border-radius: var(--chat-list-radius, var(--radius-sm));
 }
 
 .chat__form {
@@ -187,8 +175,8 @@ watch(() => props.messages.length, scrollToBottom)
 .chat__input {
   flex: 1;
   padding: var(--spacing-1) var(--spacing-2);
-  border: var(--chat-control-border);
-  border-radius: var(--chat-control-radius);
+  border: var(--chat-control-border, 1px solid var(--color-border));
+  border-radius: var(--chat-control-radius, var(--radius-sm));
   background: var(--color-background);
   color: var(--color-foreground);
   font-size: var(--font-size-md, 1rem);
@@ -204,8 +192,8 @@ watch(() => props.messages.length, scrollToBottom)
   align-items: center;
   justify-content: center;
   padding: var(--spacing-1) var(--spacing-2);
-  border: var(--chat-control-border);
-  border-radius: var(--chat-control-radius);
+  border: var(--chat-control-border, 1px solid var(--color-border));
+  border-radius: var(--chat-control-radius, var(--radius-sm));
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   cursor: pointer;
