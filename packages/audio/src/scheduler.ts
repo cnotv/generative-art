@@ -6,6 +6,7 @@ const TICK_INTERVAL_MS = 30
 export interface NoteScheduler {
   start(notes: ScheduledNote[], wallClockStartMs: number): void
   stop(): void
+  destroy(): void
   readonly currentMs: number
   readonly isPlaying: boolean
 }
@@ -100,9 +101,18 @@ export const createNoteScheduler = (
     }
   }
 
+  const destroy = (): void => {
+    stop()
+    if (audioContext) {
+      audioContext.close().catch(() => undefined)
+      audioContext = null
+    }
+  }
+
   return {
     start,
     stop,
+    destroy,
     get currentMs() {
       return playing ? Date.now() - startMs : 0
     },

@@ -417,7 +417,7 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const destroy = (): void => {
     cancelAnimationFrame(rafId)
-    scheduler.stop()
+    scheduler.destroy()
     if (deps.canvas.value) {
       const ctx = deps.canvas.value.getContext('2d')
       if (ctx) ctx.clearRect(0, 0, deps.canvas.value.width, deps.canvas.value.height)
