@@ -3,7 +3,7 @@ import { p2pSendData, p2pOnData, type P2PSession } from '@webgamekit/multiplayer
 import { useBaseMultiplayerSession } from '@/composables/useBaseMultiplayerSession'
 import { useRhythmGameStore, type RgPlayer, type RgScore } from '@/stores/rhythmGame'
 import { MATCHMAKER_ROOM } from './config'
-import type { RgSong, RgDifficulty, RgInstrument } from './config'
+import type { RgSong, RgDifficulty, RgInstrument, RhythmNote } from './config'
 
 const AVATAR_CHANNEL = 'rg-avatar'
 const CONFIG_CHANNEL = 'rg-config'
@@ -14,7 +14,19 @@ const CHAT_CHANNEL = 'rg-chat'
 const RESTART_CHANNEL = 'rg-restart'
 
 type SessionOptions = { name: string; color: string; roomId: string }
-type StartPayload = { song: RgSong; difficulty: RgDifficulty; startAt: number }
+type ConfigPayload = {
+  song: RgSong
+  difficulty: RgDifficulty
+  instrument: RgInstrument
+  customNotes?: RhythmNote[] | null
+  customSongName?: string
+}
+type StartPayload = {
+  song: RgSong
+  difficulty: RgDifficulty
+  startAt: number
+  customNotes?: RhythmNote[] | null
+}
 type ScorePayload = RgScore
 
 const makeSelfPlayer = (peerId: string, options: SessionOptions): RgPlayer => ({
@@ -52,17 +64,16 @@ const bindGameData = (
   store: ReturnType<typeof useRhythmGameStore>,
   onStartCallback: { current: ((payload: StartPayload) => void) | null }
 ): void => {
-  p2pOnData(
-    s,
-    CONFIG_CHANNEL,
-    (data: { song: RgSong; difficulty: RgDifficulty; instrument: RgInstrument }) => {
-      store.song = data.song ?? 'electric-pulse'
-      store.difficulty = data.difficulty ?? 'medium'
-      store.instrument = data.instrument ?? 'piano'
-    }
-  )
+  p2pOnData(s, CONFIG_CHANNEL, (data: ConfigPayload) => {
+    store.song = data.song ?? 'electric-pulse'
+    store.difficulty = data.difficulty ?? 'medium'
+    store.instrument = data.instrument ?? 'piano'
+    store.customNotes = data.customNotes ?? null
+    store.customSongName = data.customSongName ?? ''
+  })
 
   p2pOnData(s, START_CHANNEL, (data: StartPayload) => {
+    if (data.customNotes) store.customNotes = data.customNotes
     store.phase = 'playing'
     onStartCallback.current?.(data)
   })
@@ -105,11 +116,14 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     makePeerPlayer,
     onPeerJoin: (s, isHost) => {
       if (isHost.value) {
-        p2pSendData(s, CONFIG_CHANNEL, {
+        const config: ConfigPayload = {
           song: store.song,
           difficulty: store.difficulty,
-          instrument: store.instrument
-        })
+          instrument: store.instrument,
+          customNotes: store.customNotes,
+          customSongName: store.customSongName
+        }
+        p2pSendData(s, CONFIG_CHANNEL, config)
       }
     },
     onData: (s, localPeerId, isHost) =>
@@ -124,7 +138,12 @@ export const useRhythmGameSession = (options: SessionOptions) => {
   const startGame = (): void => {
     if (!session.value) return
     const startAt = Date.now() + 3000
-    const payload: StartPayload = { song: store.song, difficulty: store.difficulty, startAt }
+    const payload: StartPayload = {
+      song: store.song,
+      difficulty: store.difficulty,
+      startAt,
+      customNotes: store.customNotes
+    }
     p2pSendData(session.value, START_CHANNEL, payload)
     store.phase = 'playing'
     onStartCallback.current?.(payload)

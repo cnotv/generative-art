@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRhythmGame } from './useRhythmGame'
-import { LANES, type RgLane, type RgSong, type RgDifficulty, type RgInstrument } from './config'
+import {
+  LANES,
+  type RgLane,
+  type RgSong,
+  type RgDifficulty,
+  type RgInstrument,
+  type RhythmNote
+} from './config'
 import type { RgScore } from '@/stores/rhythmGame'
 
 const props = defineProps<{
@@ -9,6 +16,7 @@ const props = defineProps<{
   difficulty: RgDifficulty
   instrument: RgInstrument
   startAt: number
+  customNotes?: RhythmNote[] | null
   opponentName?: string
   opponentScore?: number
 }>()
@@ -29,6 +37,7 @@ const game = useRhythmGame({
   difficulty: props.difficulty,
   instrument: props.instrument,
   startAt: props.startAt,
+  customNotes: props.customNotes,
   onScoreUpdate: (data) => emit('scoreUpdate', data),
   onSongEnd: () => emit('songEnd')
 })

@@ -21,10 +21,22 @@ import RhythmGameLobby from './RhythmGameLobby.vue'
 import RhythmGameGame from './RhythmGameGame.vue'
 import type { RgSong, RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
+import { parseMidiFile } from './parseMidi'
 
 const store = useRhythmGameStore()
-const { phase, playerList, messages, winnerId, hostId, song, difficulty, instrument, solo } =
-  storeToRefs(store)
+const {
+  phase,
+  playerList,
+  messages,
+  winnerId,
+  hostId,
+  song,
+  difficulty,
+  instrument,
+  customNotes,
+  customSongName,
+  solo
+} = storeToRefs(store)
 
 const storedProfile = loadProfile()
 const playerName = ref(
@@ -82,7 +94,22 @@ const {
 
 const handleLeaveRoom = (): void => {
   store.solo = false
+  store.customNotes = null
+  store.customSongName = ''
   leaveRoom()
+}
+
+const handleMidiUpload = async (file: File): Promise<void> => {
+  try {
+    const notes = await parseMidiFile(file, difficulty.value)
+    store.customNotes = notes
+    store.customSongName = file.name.replace(/\.mid$/i, '')
+    store.song = 'custom'
+  } catch {
+    store.customNotes = null
+    store.customSongName = ''
+    store.song = 'electric-pulse'
+  }
 }
 
 const handleStartGame = (): void => {
@@ -171,6 +198,7 @@ onMounted(() => {
       :song="song"
       :difficulty="difficulty"
       :instrument="instrument"
+      :custom-song-name="customSongName"
       :winner-id="winnerId"
       :local-peer-id="localPeerId || 'solo'"
       @update:player-name="playerName = $event"
@@ -183,6 +211,7 @@ onMounted(() => {
       @match-found="handleMatchFound"
       @leave-room="handleLeaveRoom"
       @play-again="handleRestart"
+      @midi-upload="handleMidiUpload"
     />
 
     <RhythmGameGame
@@ -190,6 +219,7 @@ onMounted(() => {
       :song="song"
       :difficulty="difficulty"
       :instrument="instrument"
+      :custom-notes="customNotes"
       :start-at="gameStartAt"
       :opponent-name="opponentPlayer?.name"
       :opponent-score="opponentPlayer?.score"

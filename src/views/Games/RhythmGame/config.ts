@@ -21,7 +21,7 @@ export const LANE_MIDI_NOTES = [60, 64, 67, 72] as const
 export const LANE_FREQS = LANE_MIDI_NOTES.map(midiNoteToFreq) as [number, number, number, number]
 
 export type RgDifficulty = 'easy' | 'medium' | 'hard'
-export type RgSong = 'electric-pulse' | 'neon-chase' | 'grid-storm'
+export type RgSong = 'electric-pulse' | 'neon-chase' | 'grid-storm' | 'custom'
 export type RgLane = 0 | 1 | 2 | 3
 export type RgInstrument = 'piano' | 'bass' | 'guitar'
 

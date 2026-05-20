@@ -47,6 +47,7 @@ type GameDeps = {
   difficulty: RgDifficulty
   instrument: RgInstrument
   startAt: number
+  customNotes?: RhythmNote[] | null
   onScoreUpdate: (data: RgScore) => void
   onSongEnd: () => void
 }
@@ -55,6 +56,11 @@ const getSongNotes = (song: RgSong, difficulty: RgDifficulty): RhythmNote[] => {
   const songDefinition = SONGS.find((s) => s.id === song)
   return songDefinition ? songDefinition.notes[difficulty].map((n) => ({ ...n })) : []
 }
+
+const resolveNotes = (deps: GameDeps): RhythmNote[] =>
+  deps.song === 'custom' && deps.customNotes?.length
+    ? deps.customNotes.map((n) => ({ ...n }))
+    : getSongNotes(deps.song, deps.difficulty)
 
 const buildScheduledNotes = (
   songNotes: RhythmNote[],
@@ -408,7 +414,7 @@ export const useRhythmGame = (deps: GameDeps) => {
   }
 
   const init = (): void => {
-    notes = getSongNotes(deps.song, deps.difficulty)
+    notes = resolveNotes(deps)
     const scheduled = buildScheduledNotes(notes, deps.instrument)
     scheduler.start(scheduled, deps.startAt)
     lastFrameTime = performance.now()
