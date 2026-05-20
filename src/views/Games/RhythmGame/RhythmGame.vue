@@ -33,13 +33,12 @@ const playerName = ref(
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
 const backgroundStyle = { backgroundImage: buildRandomGradient() }
 
-const { roomId, resolvedRoomId, isCreator } = useRoomId()
+const { roomId, resolvedRoomId } = useRoomId()
 
 const session = useRhythmGameSession({
   name: playerName.value,
   color: playerColor.value,
-  roomId: resolvedRoomId,
-  isCreator
+  roomId: resolvedRoomId
 })
 const { isHost, localPeerId } = session
 
@@ -168,6 +167,7 @@ onMounted(() => {
       :player-color="playerColor"
       :is-host="isHost || store.solo"
       :player-list="playerList"
+      :rg-player-list="playerList"
       :room-id="roomId"
       :song="song"
       :difficulty="difficulty"

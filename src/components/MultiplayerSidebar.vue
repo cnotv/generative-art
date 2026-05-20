@@ -51,6 +51,7 @@ const emit = defineEmits<{
     </div>
     <div class="multiplayer-sidebar__chat">
       <Chat
+        variant="game"
         :messages="messages"
         :local-peer-id="localPeerId"
         :placeholder="chatPlaceholder"
@@ -160,21 +161,5 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   overflow: hidden;
-
-  --chat-flex: 1;
-  --chat-bg: var(--game-surface-subtle);
-  --chat-border: 3px solid var(--game-border);
-  --chat-radius: 1.25rem;
-  --chat-shadow: 3px 3px 0 var(--game-border);
-  --chat-padding: var(--spacing-2);
-  --chat-box-sizing: border-box;
-  --chat-control-radius: 999px;
-  --chat-control-border: 2px solid var(--game-border);
-  --chat-list-radius: 1rem;
-  --chat-list-border: 2px solid var(--game-border);
-  --chat-list-bg: var(--game-surface-subtle);
-  --chat-message-radius: var(--radius-xl);
-  --chat-message-radius-adjacent: 4px;
-  --chat-message-bg: #d7d8d9;
 }
 </style>

@@ -11,6 +11,7 @@ const props = defineProps<{
   playerColor: string
   isHost: boolean
   playerList: LobbyPlayer[]
+  rgPlayerList: RgPlayer[]
   roomId: string
   song: RgSong
   difficulty: RgDifficulty
@@ -70,20 +71,6 @@ const handleConfig = (key: string, value: string | number): void => {
   if (key === 'difficulty') emit('update:difficulty', value as RgDifficulty)
   if (key === 'instrument') emit('update:instrument', value as RgInstrument)
 }
-
-const summaryPlayerList = computed((): RgPlayer[] =>
-  props.playerList.map((p) => ({
-    id: p.id,
-    name: p.name,
-    color: p.color,
-    score: p.score ?? 0,
-    combo: 0,
-    maxCombo: 0,
-    perfect: 0,
-    good: 0,
-    miss: 0
-  }))
-)
 </script>
 
 <template>
@@ -108,7 +95,7 @@ const summaryPlayerList = computed((): RgPlayer[] =>
   >
     <template #summary>
       <RhythmGameSummary
-        :player-list="summaryPlayerList"
+        :player-list="rgPlayerList"
         :winner-id="winnerId ?? null"
         :local-peer-id="localPeerId ?? ''"
         :is-host="isHost"

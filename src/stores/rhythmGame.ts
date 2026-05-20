@@ -35,11 +35,13 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
   const song = ref<RgSong>('electric-pulse')
   const difficulty = ref<RgDifficulty>('medium')
   const instrument = ref<RgInstrument>('piano')
-  const hostPeerId = ref('')
 
   const playerList = computed(() => Object.values(players.value).sort((a, b) => b.score - a.score))
 
-  const hostId = computed(() => hostPeerId.value)
+  const hostId = computed(() => {
+    const ids = Object.keys(players.value)
+    return ids.length > 0 ? ids[0] : ''
+  })
 
   const upsertPlayer = (player: RgPlayer): void => {
     players.value = { ...players.value, [player.id]: { ...players.value[player.id], ...player } }
@@ -76,7 +78,6 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
     song,
     difficulty,
     instrument,
-    hostPeerId,
     playerList,
     hostId,
     upsertPlayer,

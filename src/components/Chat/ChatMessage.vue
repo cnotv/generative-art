@@ -29,16 +29,12 @@ defineProps<{
 
 <style scoped>
 .chat-message {
-  --chat-message-radius: var(--radius-sm);
-  --chat-message-radius-adjacent: var(--radius-sm);
-  --chat-message-bg: var(--color-secondary);
-
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0);
   padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--chat-message-radius);
-  background: var(--chat-message-bg);
+  border-radius: var(--chat-message-radius, var(--radius-sm));
+  background: var(--chat-message-bg, var(--color-secondary));
   font-size: inherit;
   color: #111;
   overflow-wrap: break-word;
@@ -55,17 +51,17 @@ defineProps<{
 }
 
 .chat-message--group-top {
-  border-bottom-left-radius: var(--chat-message-radius-adjacent);
-  border-bottom-right-radius: var(--chat-message-radius-adjacent);
+  border-bottom-left-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
+  border-bottom-right-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
 }
 
 .chat-message--group-middle {
-  border-radius: var(--chat-message-radius-adjacent);
+  border-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
 }
 
 .chat-message--group-bottom {
-  border-top-left-radius: var(--chat-message-radius-adjacent);
-  border-top-right-radius: var(--chat-message-radius-adjacent);
+  border-top-left-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
+  border-top-right-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
 }
 
 .chat-message--system {
