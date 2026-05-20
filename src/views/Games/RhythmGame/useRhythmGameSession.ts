@@ -94,10 +94,11 @@ const bindData = (s: P2PSession, context: BindContext): void => {
   p2pOnData(
     s,
     CONFIG_CHANNEL,
-    (_peerId, data: { song: RgSong; difficulty: RgDifficulty; instrument: RgInstrument }) => {
-      store.song = data.song
-      store.difficulty = data.difficulty
-      store.instrument = data.instrument
+    (peerId, data: { song: RgSong; difficulty: RgDifficulty; instrument: RgInstrument }) => {
+      store.song = data.song ?? 'electric-pulse'
+      store.difficulty = data.difficulty ?? 'medium'
+      store.instrument = data.instrument ?? 'piano'
+      store.hostPeerId = peerId
     }
   )
 
@@ -141,6 +142,7 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     const s = await p2pJoin(options.roomId, MATCHMAKER_ROOM)
     session.value = s
     localPeerId.value = s.peerId
+    store.hostPeerId = s.peerId
     announceSelf(s, options, store)
     bindData(s, { options, isHost, store, onStartCallback })
   }
@@ -151,6 +153,7 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     const s = await p2pJoin(newRoomId, MATCHMAKER_ROOM)
     session.value = s
     localPeerId.value = s.peerId
+    store.hostPeerId = s.peerId
     announceSelf(s, options, store)
     bindData(s, { options, isHost, store, onStartCallback })
   }

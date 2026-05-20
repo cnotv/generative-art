@@ -12,7 +12,7 @@ const props = withDefaults(
   {
     showSidebar: false,
     sidebarWidth: '280px',
-    mainPlacement: 'fill',
+    mainPlacement: 'center',
     hideHeaderOnMobile: false
   }
 )
@@ -86,9 +86,7 @@ const layoutStyle = computed(() => ({
 }
 
 .lobby-layout--lobby {
-  height: auto;
-  min-height: 100dvh;
-  overflow: auto;
+  overflow-y: auto;
 }
 
 .lobby-layout__header {
@@ -166,8 +164,7 @@ const layoutStyle = computed(() => ({
 
 .lobby-layout__main--center {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  place-content: center;
 }
 
 .lobby-layout__sidebar {
@@ -188,11 +185,9 @@ const layoutStyle = computed(() => ({
   transform: translateY(-0.25rem);
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .lobby-layout {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'main';
-    grid-template-rows: auto 1fr;
+    grid-template: 'header' auto 'main' 1fr / 1fr;
     height: 100dvh;
     padding: 0 var(--spacing-2);
     padding-top: var(--nav-height);

@@ -114,3 +114,44 @@ sequenceDiagram
 - **Hit zone as a pulsing bar** at 80 % of canvas height, not at the very bottom, so there is a small "reaction buffer" below it.
 - **Lane buttons always visible** at the bottom — they animate on press to give tactile feedback on both desktop and mobile.
 - **Feedback is immediate and local** — a ring-expand burst on perfect, a flash on good, a red cross on miss. Players should know the quality of each hit within one frame.
+
+## Instrument simulation with Web Audio API
+
+Real instruments cannot be bundled as audio files without a CDN or large asset pipeline. Instead each "instrument" is approximated by a different oscillator configuration — a combination of wave shape, duration, frequency offset, and envelope.
+
+```mermaid
+flowchart LR
+    A[Instrument preset] --> B[waveType]
+    A --> C[freqMultiplier]
+    A --> D[durationMs]
+    A --> E[attackTimeSec]
+    A --> F[volume]
+    B & C & D & E & F --> G[Web Audio OscillatorNode]
+```
+
+The three presets and their rationale:
+
+| Instrument | Wave       | Freq mult | Duration | Character                                                                    |
+| ---------- | ---------- | --------- | -------- | ---------------------------------------------------------------------------- |
+| Piano      | `triangle` | ×1        | 90 ms    | Bright, short decay — triangle is softer than square but not as pure as sine |
+| Bass       | `triangle` | ×0.5      | 220 ms   | Same warmth, one octave lower, held longer                                   |
+| Guitar     | `sawtooth` | ×1        | 110 ms   | Sawtooth carries strong odd+even harmonics that read as "stringy"            |
+
+The frequency multiplier is applied uniformly to every lane's MIDI-derived frequency so the entire key layout shifts as a chord without reauthoring the song.
+
+The attack envelope (`attackTimeSec`) is an `AudioParam` ramp — short for piano (5 ms, key-click feel), medium for bass (3 ms), and very short for guitar (2 ms, percussive string pluck). Without the envelope, oscillators start at full amplitude and produce a digital click on every note.
+
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant OscNode as OscillatorNode
+    participant GainNode
+
+    Scheduler->>OscNode: start at scheduledTime
+    Scheduler->>GainNode: linearRampToValueAtTime(volume, scheduledTime + attack)
+    Scheduler->>GainNode: linearRampToValueAtTime(0, scheduledTime + duration)
+    OscNode->>GainNode: audio signal
+    GainNode->>AudioCtx: output
+```
+
+Adding a new instrument only requires a new entry in `INSTRUMENT_PRESETS` in `config.ts` — the scheduler and game loop pick it up automatically. For a more realistic feel, the next step would be `PeriodicWave` with custom harmonic tables, or a convolution reverb impulse; the current architecture supports both without changing the game logic.

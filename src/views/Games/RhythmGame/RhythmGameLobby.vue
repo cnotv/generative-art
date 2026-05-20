@@ -87,46 +87,33 @@ const summaryPlayerList = computed((): RgPlayer[] =>
 </script>
 
 <template>
-  <section class="rgl-lobby">
-    <GameLobbyWizard
-      :player-name="playerName"
-      :player-color="playerColor"
-      :is-host="isHost"
-      :player-list="playerList"
-      :room-id="roomId"
-      :matchmaker-room="MATCHMAKER_ROOM"
-      :config-fields="configFields"
-      accent-color="var(--rg-accent)"
-      :show-results="showResults"
-      @update:player-name="emit('update:playerName', $event)"
-      @update:player-color="emit('update:playerColor', $event)"
-      @name-change="emit('nameChange')"
-      @config-change="handleConfig"
-      @start-game="emit('startGame')"
-      @match-found="emit('matchFound', $event)"
-      @leave-room="emit('leaveRoom')"
-      @play-again="emit('playAgain')"
-    >
-      <template #summary>
-        <RhythmGameSummary
-          :player-list="summaryPlayerList"
-          :winner-id="winnerId ?? null"
-          :local-peer-id="localPeerId ?? ''"
-          :is-host="isHost"
-          results-only
-        />
-      </template>
-    </GameLobbyWizard>
-  </section>
+  <GameLobbyWizard
+    :player-name="playerName"
+    :player-color="playerColor"
+    :is-host="isHost"
+    :player-list="playerList"
+    :room-id="roomId"
+    :matchmaker-room="MATCHMAKER_ROOM"
+    :config-fields="configFields"
+    accent-color="var(--rg-accent)"
+    :show-results="showResults"
+    @update:player-name="emit('update:playerName', $event)"
+    @update:player-color="emit('update:playerColor', $event)"
+    @name-change="emit('nameChange')"
+    @config-change="handleConfig"
+    @start-game="emit('startGame')"
+    @match-found="emit('matchFound', $event)"
+    @leave-room="emit('leaveRoom')"
+    @play-again="emit('playAgain')"
+  >
+    <template #summary>
+      <RhythmGameSummary
+        :player-list="summaryPlayerList"
+        :winner-id="winnerId ?? null"
+        :local-peer-id="localPeerId ?? ''"
+        :is-host="isHost"
+        results-only
+      />
+    </template>
+  </GameLobbyWizard>
 </template>
-
-<style scoped>
-.rgl-lobby {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
-}
-</style>

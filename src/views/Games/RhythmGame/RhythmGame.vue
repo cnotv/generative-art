@@ -172,7 +172,7 @@ onMounted(() => {
       :difficulty="difficulty"
       :instrument="instrument"
       :winner-id="winnerId"
-      :local-peer-id="localPeerId"
+      :local-peer-id="localPeerId || 'solo'"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
       @update:song="store.song = $event"
