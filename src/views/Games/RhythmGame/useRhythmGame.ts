@@ -131,16 +131,16 @@ const drawLaneIndicators = (
     const isActive = laneActive[lane]
     const color = LANE_COLORS[lane]
     ctx.strokeStyle = isActive ? color : `${color}60`
-    ctx.lineWidth = isActive ? 3 : 1.5
-    ctx.fillStyle = isActive ? `${color}30` : 'transparent'
-    ctx.shadowBlur = isActive ? 10 : 0
+    ctx.lineWidth = isActive ? 4 : 1.5
+    ctx.fillStyle = isActive ? `${color}70` : 'transparent'
+    ctx.shadowBlur = isActive ? 24 : 0
     ctx.shadowColor = color
     ctx.beginPath()
     ctx.arc(cx, h - 40, 22, 0, Math.PI * 2)
     ctx.fill()
     ctx.stroke()
     ctx.shadowBlur = 0
-    ctx.fillStyle = isActive ? color : `${color}aa`
+    ctx.fillStyle = isActive ? '#ffffff' : `${color}aa`
     ctx.font = `bold 13px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -316,6 +316,9 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const pressLane = (lane: RgLane): void => {
     const currentMs = scheduler.currentMs
+    console.warn(
+      `[RhythmGame] lane ${lane} pressed at ${currentMs}ms, playing=${scheduler.isPlaying}`
+    )
     const index = findHittableNote(notes, lane, currentMs)
     if (index === -1) return
 
@@ -420,9 +423,6 @@ export const useRhythmGame = (deps: GameDeps) => {
       touchTarget: touchTarget ?? null
     })
 
-  const getAccuracyValue = () => getAccuracy(perfect.value, good.value, miss.value)
-  const getGradeValue = () => getGrade(getAccuracyValue())
-
   onUnmounted(destroy)
 
   return {
@@ -439,7 +439,7 @@ export const useRhythmGame = (deps: GameDeps) => {
     destroy,
     pressLane,
     mountControls,
-    getAccuracy: getAccuracyValue,
-    getGrade: getGradeValue
+    getAccuracy: () => getAccuracy(perfect.value, good.value, miss.value),
+    getGrade: () => getGrade(getAccuracy(perfect.value, good.value, miss.value))
   }
 }
