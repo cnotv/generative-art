@@ -29,6 +29,10 @@ defineProps<{
 
 <style scoped>
 .chat-message {
+  --chat-message-radius: var(--radius-sm);
+  --chat-message-radius-adjacent: var(--radius-sm);
+  --chat-message-bg: var(--color-secondary);
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0);
