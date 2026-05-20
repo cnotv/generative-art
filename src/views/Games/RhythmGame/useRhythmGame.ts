@@ -413,11 +413,11 @@ export const useRhythmGame = (deps: GameDeps) => {
     }
   }
 
-  const mountControls = (target?: HTMLElement | null) =>
+  const mountControls = (touchTarget?: HTMLElement | null) =>
     createControls({
       ...buildControlsMapping(laneActive, pressLane, () => {}),
-      keyboardTarget: target ?? null,
-      touchTarget: target ?? null
+      keyboardTarget: null,
+      touchTarget: touchTarget ?? null
     })
 
   const getAccuracyValue = () => getAccuracy(perfect.value, good.value, miss.value)

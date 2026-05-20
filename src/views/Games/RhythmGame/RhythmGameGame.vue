@@ -43,8 +43,6 @@ onMounted(async () => {
   window.addEventListener('resize', resizeCanvas)
   controls = game.mountControls(gameContainer.value)
 
-  gameContainer.value?.focus()
-
   const delay = Math.max(0, props.startAt - Date.now())
   if (delay >= 3000) countdownValue.value = 3
   if (delay >= 2000)
