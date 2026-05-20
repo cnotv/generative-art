@@ -145,9 +145,6 @@ const drawLaneIndicators = (
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(LANE_KEYS[lane], cx, h - 40)
-    ctx.fillStyle = `${color}60`
-    ctx.font = '10px monospace'
-    ctx.fillText(LANE_DIRECTIONS[lane][0].toUpperCase(), cx, h - 16)
   })
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
@@ -224,8 +221,8 @@ const drawFrame = (
   context.laneFlashes.forEach((flash, lane) => {
     if (flash.alpha <= 0) return
     const laneColor = LANE_COLORS[lane]
-    const flashColor =
-      flash.result === 'perfect' ? laneColor : flash.result === 'good' ? '#ffffff' : '#ff4040'
+    const effectColor = flash.result === 'perfect' ? '#ffd740' : laneColor
+    const flashColor = flash.result === 'miss' ? '#ff4040' : effectColor
     const hex = (v: number): string => Math.round(v).toString(16).padStart(2, '0')
     const cx = laneW * lane + laneW / 2
 
@@ -234,10 +231,10 @@ const drawFrame = (
 
     if (flash.result === 'perfect') {
       const shockRadius = (1 - flash.alpha) * 90
-      ctx.strokeStyle = laneColor + hex(flash.alpha * 200)
+      ctx.strokeStyle = effectColor + hex(flash.alpha * 200)
       ctx.lineWidth = 2.5
       ctx.shadowBlur = 14
-      ctx.shadowColor = laneColor
+      ctx.shadowColor = effectColor
       ctx.beginPath()
       ctx.arc(cx, hitZoneY, shockRadius, 0, Math.PI * 2)
       ctx.stroke()
@@ -249,8 +246,8 @@ const drawFrame = (
       const nw = (laneW - 12) * popScale
       ctx.globalAlpha = flash.alpha
       ctx.shadowBlur = 20
-      ctx.shadowColor = laneColor
-      ctx.fillStyle = laneColor
+      ctx.shadowColor = effectColor
+      ctx.fillStyle = effectColor
       ctx.beginPath()
       ctx.roundRect(
         cx - nw / 2,

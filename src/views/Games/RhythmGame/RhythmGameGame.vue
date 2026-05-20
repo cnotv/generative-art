@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import TouchControl from '@/components/TouchControl.vue'
 import { useRhythmGame } from './useRhythmGame'
-import { LANE_DIRECTIONS, type RgSong, type RgDifficulty } from './config'
+import { type RgSong, type RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
 
 const props = defineProps<{
@@ -37,23 +36,6 @@ const resizeCanvas = (): void => {
   if (!element) return
   element.width = element.offsetWidth
   element.height = element.offsetHeight
-}
-
-const fauxPadMapping: Record<string, string> = Object.fromEntries(
-  LANE_DIRECTIONS.map((dir, i) => [dir, `lane-${i}`])
-)
-
-const handleFauxAction = (action: string): void => {
-  const laneAction = fauxPadMapping[action] ?? action
-  if (!laneAction.startsWith('lane-')) return
-  const lane = parseInt(laneAction.split('-')[1]) as import('./config').RgLane
-  game.laneActive.value = game.laneActive.value.map((_, i) => i === lane) as boolean[]
-  game.pressLane(lane)
-  setTimeout(() => {
-    game.laneActive.value = game.laneActive.value.map((_, i) =>
-      i === lane ? false : game.laneActive.value[i]
-    ) as boolean[]
-  }, 120)
 }
 
 onMounted(async () => {
@@ -126,10 +108,6 @@ onUnmounted(() => {
               : 'MISS'
         }}
       </div>
-    </div>
-
-    <div class="rg-game__faux-pad">
-      <TouchControl :mapping="fauxPadMapping" mode="faux-pad" :on-action="handleFauxAction" />
     </div>
   </div>
 </template>
@@ -283,19 +261,6 @@ onUnmounted(() => {
   100% {
     opacity: 0;
     transform: translateX(-50%) translateY(-140%);
-  }
-}
-
-.rg-game__faux-pad {
-  display: none;
-}
-
-@media (max-width: 720px) {
-  .rg-game__faux-pad {
-    display: flex;
-    justify-content: center;
-    padding: var(--spacing-2);
-    flex-shrink: 0;
   }
 }
 </style>
