@@ -69,6 +69,17 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
     solo.value = false
   }
 
+  const resetForReplay = (): void => {
+    players.value = Object.fromEntries(
+      Object.entries(players.value).map(([id, p]) => [
+        id,
+        { ...p, score: 0, combo: 0, maxCombo: 0, perfect: 0, good: 0, miss: 0 }
+      ])
+    )
+    phase.value = 'lobby'
+    winnerId.value = null
+  }
+
   return {
     players,
     messages,
@@ -84,6 +95,7 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
     removePlayer,
     updateScore,
     appendMessage,
-    reset
+    reset,
+    resetForReplay
   }
 })

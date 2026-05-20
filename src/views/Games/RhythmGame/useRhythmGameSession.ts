@@ -115,8 +115,7 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     onData: (s, localPeerId, isHost) =>
       bindGameData(s, localPeerId, isHost, store, onStartCallback),
     onRestart: () => {
-      store.reset()
-      store.phase = 'lobby'
+      store.resetForReplay()
     }
   })
 

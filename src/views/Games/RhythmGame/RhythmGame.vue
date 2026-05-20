@@ -126,7 +126,7 @@ const handleSongEnd = (): void => {
 
 const handleRestart = (): void => {
   if (store.solo) {
-    store.phase = 'lobby'
+    store.resetForReplay()
   } else {
     session.restartGame()
   }
