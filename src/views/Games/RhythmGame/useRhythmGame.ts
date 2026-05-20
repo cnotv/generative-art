@@ -223,18 +223,47 @@ const drawFrame = (
 
   context.laneFlashes.forEach((flash, lane) => {
     if (flash.alpha <= 0) return
-    const color =
-      flash.result === 'perfect'
-        ? LANE_COLORS[lane]
-        : flash.result === 'good'
-          ? '#ffffff'
-          : '#ff4040'
-    ctx.fillStyle =
-      color +
-      Math.round(flash.alpha * 40)
-        .toString(16)
-        .padStart(2, '0')
-    ctx.fillRect(laneW * lane, hitZoneY - 30, laneW, 60)
+    const laneColor = LANE_COLORS[lane]
+    const flashColor =
+      flash.result === 'perfect' ? laneColor : flash.result === 'good' ? '#ffffff' : '#ff4040'
+    const hex = (v: number): string => Math.round(v).toString(16).padStart(2, '0')
+    const cx = laneW * lane + laneW / 2
+
+    ctx.fillStyle = flashColor + hex(flash.alpha * 100)
+    ctx.fillRect(laneW * lane, hitZoneY - 40, laneW, 80)
+
+    if (flash.result === 'perfect') {
+      const shockRadius = (1 - flash.alpha) * 90
+      ctx.strokeStyle = laneColor + hex(flash.alpha * 200)
+      ctx.lineWidth = 2.5
+      ctx.shadowBlur = 14
+      ctx.shadowColor = laneColor
+      ctx.beginPath()
+      ctx.arc(cx, hitZoneY, shockRadius, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.shadowBlur = 0
+    }
+
+    if (flash.result !== 'miss') {
+      const popScale = 1 + (1 - flash.alpha) * 0.9
+      const nw = (laneW - 12) * popScale
+      ctx.globalAlpha = flash.alpha
+      ctx.shadowBlur = 20
+      ctx.shadowColor = laneColor
+      ctx.fillStyle = laneColor
+      ctx.beginPath()
+      ctx.roundRect(
+        cx - nw / 2,
+        hitZoneY - (NOTE_HEIGHT * popScale) / 2,
+        nw,
+        NOTE_HEIGHT * popScale,
+        NOTE_RADIUS
+      )
+      ctx.fill()
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = 1
+    }
+
     context.laneFlashes[lane].alpha = Math.max(0, flash.alpha - dt * 0.004)
   })
 
