@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRhythmGame } from './useRhythmGame'
-import { type RgSong, type RgDifficulty } from './config'
+import { LANES, type RgLane, type RgSong, type RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
 
 const props = defineProps<{
@@ -36,6 +36,30 @@ const resizeCanvas = (): void => {
   if (!element) return
   element.width = element.offsetWidth
   element.height = element.offsetHeight
+}
+
+const pressLaneAt = (clientX: number): void => {
+  const element = canvas.value
+  if (!element) return
+  const { left, width } = element.getBoundingClientRect()
+  const lane = Math.min(
+    LANES - 1,
+    Math.max(0, Math.floor(((clientX - left) / width) * LANES))
+  ) as RgLane
+  game.laneActive.value = game.laneActive.value.map((_, i) => i === lane) as boolean[]
+  game.pressLane(lane)
+  setTimeout(() => {
+    game.laneActive.value = game.laneActive.value.map((_, i) =>
+      i === lane ? false : game.laneActive.value[i]
+    ) as boolean[]
+  }, 120)
+}
+
+const handleCanvasClick = (event: MouseEvent): void => pressLaneAt(event.clientX)
+
+const handleCanvasTouch = (event: TouchEvent): void => {
+  event.preventDefault()
+  ;[...event.changedTouches].forEach((t) => pressLaneAt(t.clientX))
 }
 
 onMounted(async () => {
@@ -86,7 +110,12 @@ onUnmounted(() => {
     </div>
 
     <div class="rg-game__canvas-wrap">
-      <canvas ref="canvas" class="rg-game__canvas" />
+      <canvas
+        ref="canvas"
+        class="rg-game__canvas"
+        @click="handleCanvasClick"
+        @touchstart="handleCanvasTouch"
+      />
       <Transition name="rg-countdown">
         <div v-if="countdownValue !== null" class="rg-game__countdown">
           {{ countdownValue === 0 ? 'GO!' : countdownValue }}
