@@ -43,8 +43,8 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
 </script>
 
 <template>
-  <div class="rg-summary">
-    <div class="rg-summary__card">
+  <div class="rg-summary" :class="{ 'rg-summary--flat': resultsOnly }">
+    <div class="rg-summary__card" :class="{ 'rg-summary__card--flat': resultsOnly }">
       <div class="rg-summary__grade" :style="{ color: gradeColor }">{{ grade }}</div>
 
       <div v-if="winnerId" class="rg-summary__result">
@@ -119,6 +119,10 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
   padding: var(--spacing-4);
 }
 
+.rg-summary--flat {
+  padding: 0;
+}
+
 .rg-summary__card {
   background: rgba(255, 255, 255, 0.04);
   border: 2px solid rgba(255, 255, 255, 0.1);
@@ -131,6 +135,13 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
   gap: var(--spacing-4);
   align-items: center;
   text-align: center;
+}
+
+.rg-summary__card--flat {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 .rg-summary__grade {

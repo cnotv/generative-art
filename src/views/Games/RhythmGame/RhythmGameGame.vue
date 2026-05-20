@@ -112,6 +112,20 @@ onUnmounted(() => {
           {{ countdownValue === 0 ? 'GO!' : countdownValue }}
         </div>
       </Transition>
+      <div
+        v-if="game.lastHit.value"
+        :key="game.hitKey.value"
+        class="rg-game__hit-text"
+        :class="`rg-game__hit-text--${game.lastHit.value}`"
+      >
+        {{
+          game.lastHit.value === 'perfect'
+            ? 'PERFECT!'
+            : game.lastHit.value === 'good'
+              ? 'GOOD!'
+              : 'MISS'
+        }}
+      </div>
     </div>
 
     <div class="rg-game__faux-pad">
@@ -229,6 +243,47 @@ onUnmounted(() => {
 .rg-countdown-leave-to {
   opacity: 0;
   transform: scale(0.8);
+}
+
+.rg-game__hit-text {
+  position: absolute;
+  left: 50%;
+  top: 78%;
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  z-index: 5;
+  text-shadow: 0 0 16px currentColor;
+  animation: rg-hit-fade 0.5s ease forwards;
+}
+
+.rg-game__hit-text--perfect {
+  color: #ffd740;
+}
+
+.rg-game__hit-text--good {
+  color: #69ff47;
+}
+
+.rg-game__hit-text--miss {
+  color: #ff4040;
+}
+
+@keyframes rg-hit-fade {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-80%) scale(0.8);
+  }
+  25% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-140%);
+  }
 }
 
 .rg-game__faux-pad {

@@ -285,6 +285,8 @@ export const useRhythmGame = (deps: GameDeps) => {
     result: 'perfect' as const
   }))
   let lastFrameTime = 0
+  const lastHit = ref<'perfect' | 'good' | 'miss' | null>(null)
+  const hitKey = ref(0)
 
   const pressLane = (lane: RgLane): void => {
     const currentMs = scheduler.currentMs
@@ -308,6 +310,8 @@ export const useRhythmGame = (deps: GameDeps) => {
     }
 
     laneFlashes[lane] = { alpha: 1, result }
+    lastHit.value = result
+    hitKey.value++
     if (deps.canvas.value) spawnParticles(deps.canvas.value, particles, lane, result)
     deps.onScoreUpdate({
       score: score.value,
@@ -383,14 +387,12 @@ export const useRhythmGame = (deps: GameDeps) => {
     }
   }
 
-  const mountControls = (target?: HTMLElement | null) => {
-    const options = buildControlsMapping(laneActive, pressLane, () => {})
-    return createControls({
-      ...options,
+  const mountControls = (target?: HTMLElement | null) =>
+    createControls({
+      ...buildControlsMapping(laneActive, pressLane, () => {}),
       keyboardTarget: target ?? null,
       touchTarget: target ?? null
     })
-  }
 
   const getAccuracyValue = () => getAccuracy(perfect.value, good.value, miss.value)
   const getGradeValue = () => getGrade(getAccuracyValue())
@@ -405,6 +407,8 @@ export const useRhythmGame = (deps: GameDeps) => {
     good,
     miss,
     laneActive,
+    lastHit,
+    hitKey,
     init,
     destroy,
     pressLane,
