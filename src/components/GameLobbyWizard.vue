@@ -101,10 +101,21 @@ watch(
   }
 )
 
-onMounted(() => {
-  if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
+const restoreStep = (): void => {
   const remembered = rememberedSteps.get(props.matchmakerRoom)
   if (remembered !== undefined) step.value = Math.min(remembered, totalSteps.value)
+}
+
+watch(
+  () => props.showResults,
+  (showResults) => {
+    if (!showResults) restoreStep()
+  }
+)
+
+onMounted(() => {
+  if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
+  restoreStep()
 })
 </script>
 
