@@ -63,6 +63,11 @@ const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
 
 const canGoNext = computed(() => step.value < totalSteps.value)
 
+const handleStartGame = (): void => {
+  rememberedSteps.set(props.matchmakerRoom, totalSteps.value)
+  emit('startGame')
+}
+
 const goNext = (): void => {
   if (step.value < totalSteps.value) step.value++
 }
@@ -257,10 +262,7 @@ onMounted(() => {
           class="glw__start-btn"
           type="button"
           :disabled="false"
-          @click="
-            rememberedSteps.set(matchmakerRoom, totalSteps)
-            emit('startGame')
-          "
+          @click="handleStartGame"
         >
           Start
         </button>
