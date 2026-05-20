@@ -16,7 +16,7 @@ import {
   PLAYER_COLORS
 } from './constants'
 import GameHeader from '@/components/GameHeader.vue'
-import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
 import PictionaryLobby from './PictionaryLobby.vue'
 import PictionaryChoosing from './PictionaryChoosing.vue'
 import PictionaryDrawing from './PictionaryDrawing.vue'

@@ -13,7 +13,7 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
-import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
 import GameHeader from '@/components/GameHeader.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
