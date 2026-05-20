@@ -24,7 +24,7 @@ const RESTART_CHANNEL = 'rg-restart'
 
 const REANNOUNCE_DELAY_MS = 2000
 
-type SessionOptions = { name: string; color: string; roomId: string }
+type SessionOptions = { name: string; color: string; roomId: string; isCreator: boolean }
 type StartPayload = { song: RgSong; difficulty: RgDifficulty; startAt: number }
 type ScorePayload = RgScore
 
@@ -142,7 +142,7 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     const s = await p2pJoin(options.roomId, MATCHMAKER_ROOM)
     session.value = s
     localPeerId.value = s.peerId
-    store.hostPeerId = s.peerId
+    if (options.isCreator) store.hostPeerId = s.peerId
     announceSelf(s, options, store)
     bindData(s, { options, isHost, store, onStartCallback })
   }
@@ -153,7 +153,7 @@ export const useRhythmGameSession = (options: SessionOptions) => {
     const s = await p2pJoin(newRoomId, MATCHMAKER_ROOM)
     session.value = s
     localPeerId.value = s.peerId
-    store.hostPeerId = s.peerId
+    if (options.isCreator) store.hostPeerId = s.peerId
     announceSelf(s, options, store)
     bindData(s, { options, isHost, store, onStartCallback })
   }
