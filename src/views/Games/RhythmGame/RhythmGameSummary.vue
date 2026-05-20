@@ -8,6 +8,7 @@ const props = defineProps<{
   winnerId: string | null
   localPeerId: string
   isHost: boolean
+  resultsOnly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -92,7 +93,7 @@ const isWinner = computed(() => props.winnerId === props.localPeerId)
         </div>
       </div>
 
-      <div class="rg-summary__actions">
+      <div v-if="!resultsOnly" class="rg-summary__actions">
         <button
           v-if="isHost"
           class="rg-summary__btn rg-summary__btn--primary"

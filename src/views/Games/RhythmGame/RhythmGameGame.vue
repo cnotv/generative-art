@@ -19,6 +19,8 @@ const emit = defineEmits<{
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const gameContainer = ref<HTMLDivElement | null>(null)
+const countdownValue = ref<number | null>(null)
 let controls: { destroyControls: () => void } | null = null
 
 const game = useRhythmGame({
@@ -42,8 +44,9 @@ const fauxPadMapping: Record<string, string> = Object.fromEntries(
 )
 
 const handleFauxAction = (action: string): void => {
-  if (!action.startsWith('lane-')) return
-  const lane = parseInt(action.split('-')[1]) as import('./config').RgLane
+  const laneAction = fauxPadMapping[action] ?? action
+  if (!laneAction.startsWith('lane-')) return
+  const lane = parseInt(laneAction.split('-')[1]) as import('./config').RgLane
   game.laneActive.value = game.laneActive.value.map((_, i) => i === lane) as boolean[]
   game.pressLane(lane)
   setTimeout(() => {
@@ -56,11 +59,25 @@ const handleFauxAction = (action: string): void => {
 onMounted(async () => {
   resizeCanvas()
   window.addEventListener('resize', resizeCanvas)
-  controls = game.mountControls(canvas.value)
+  controls = game.mountControls(gameContainer.value)
 
-  // Wait until startAt
-  const delay = props.startAt - Date.now()
-  if (delay > 0) await new Promise((r) => setTimeout(r, delay))
+  gameContainer.value?.focus()
+
+  const delay = Math.max(0, props.startAt - Date.now())
+  if (delay >= 3000) countdownValue.value = 3
+  if (delay >= 2000)
+    setTimeout(() => {
+      countdownValue.value = 2
+    }, delay - 2000)
+  if (delay >= 1000)
+    setTimeout(() => {
+      countdownValue.value = 1
+    }, delay - 1000)
+
+  await new Promise<void>((r) => setTimeout(r, delay))
+  countdownValue.value = 0
+  await new Promise<void>((r) => setTimeout(r, 400))
+  countdownValue.value = null
   game.init()
 })
 
@@ -72,7 +89,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="rg-game">
+  <div ref="gameContainer" class="rg-game" tabindex="0">
     <div class="rg-game__hud">
       <div class="rg-game__hud-left">
         <span class="rg-game__label">Score</span>
@@ -90,6 +107,11 @@ onUnmounted(() => {
 
     <div class="rg-game__canvas-wrap">
       <canvas ref="canvas" class="rg-game__canvas" />
+      <Transition name="rg-countdown">
+        <div v-if="countdownValue !== null" class="rg-game__countdown">
+          {{ countdownValue === 0 ? 'GO!' : countdownValue }}
+        </div>
+      </Transition>
     </div>
 
     <div class="rg-game__faux-pad">
@@ -109,6 +131,7 @@ onUnmounted(() => {
   border: 2px solid var(--game-border);
   box-shadow: 4px 4px 0 var(--game-border);
   background: #07070f;
+  outline: none;
 }
 
 .rg-game__hud {
@@ -176,6 +199,36 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.rg-game__countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6rem;
+  font-weight: 900;
+  font-family: monospace;
+  color: #fff;
+  text-shadow: 0 0 40px var(--game-accent, #00e5ff);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.rg-countdown-enter-active,
+.rg-countdown-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.rg-countdown-enter-from {
+  opacity: 0;
+  transform: scale(1.5);
+}
+.rg-countdown-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .rg-game__faux-pad {

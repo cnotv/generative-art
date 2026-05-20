@@ -19,7 +19,6 @@ import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/Multipl
 import GameTabBar from '@/components/GameTabBar.vue'
 import RhythmGameLobby from './RhythmGameLobby.vue'
 import RhythmGameGame from './RhythmGameGame.vue'
-import RhythmGameSummary from './RhythmGameSummary.vue'
 import type { RgSong, RgDifficulty } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
 
@@ -161,14 +160,17 @@ onMounted(() => {
     </template>
 
     <RhythmGameLobby
-      v-if="phase === 'lobby'"
+      v-if="phase === 'lobby' || phase === 'summary'"
+      :show-results="phase === 'summary'"
       :player-name="playerName"
       :player-color="playerColor"
-      :is-host="isHost"
+      :is-host="isHost || store.solo"
       :player-list="playerList"
       :room-id="roomId"
       :song="song"
       :difficulty="difficulty"
+      :winner-id="winnerId"
+      :local-peer-id="localPeerId"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
       @update:song="store.song = $event"
@@ -177,6 +179,7 @@ onMounted(() => {
       @start-game="handleStartGame"
       @match-found="handleMatchFound"
       @leave-room="handleLeaveRoom"
+      @play-again="handleRestart"
     />
 
     <RhythmGameGame
@@ -188,16 +191,6 @@ onMounted(() => {
       :opponent-score="opponentPlayer?.score"
       @score-update="handleScoreUpdate"
       @song-end="handleSongEnd"
-    />
-
-    <RhythmGameSummary
-      v-else
-      :player-list="playerList"
-      :winner-id="winnerId"
-      :local-peer-id="localPeerId"
-      :is-host="isHost || store.solo"
-      @restart="handleRestart"
-      @leave-room="handleLeaveRoom"
     />
 
     <template v-if="!store.solo" #sidebar>

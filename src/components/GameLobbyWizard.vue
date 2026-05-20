@@ -20,6 +20,7 @@ const props = defineProps<{
   matchmakerRoom: string
   configFields: LobbyConfigField[]
   accentColor: string
+  showResults?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +31,7 @@ const emit = defineEmits<{
   startGame: []
   matchFound: [roomId: string]
   leaveRoom: []
+  playAgain: []
 }>()
 
 const route = useRoute()
@@ -100,7 +102,7 @@ watch(
 )
 
 onMounted(() => {
-  if (!fromLobby.value && !isPrivate.value) startSearching()
+  if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
   const remembered = rememberedSteps.get(props.matchmakerRoom)
   if (remembered !== undefined) step.value = Math.min(remembered, totalSteps.value)
 })
@@ -109,87 +111,108 @@ onMounted(() => {
 <template>
   <section class="glw" :style="{ '--glw-accent': accentColor }">
     <GameCard class="glw__card">
-      <div class="glw__steps">
-        <span
-          v-for="n in totalSteps"
-          :key="n"
-          class="glw__step-dot"
-          :class="{ 'glw__step-dot--active': n === step, 'glw__step-dot--done': n < step }"
-        />
-      </div>
-
-      <!-- Step 1: Profile -->
-      <div v-if="step === 1" class="glw__body">
-        <h3 class="glw__step-title">Your profile</h3>
-        <input
-          :value="playerName"
-          type="text"
-          maxlength="20"
-          class="glw__name-input"
-          placeholder="Your name"
-          @input="emit('update:playerName', ($event.target as HTMLInputElement).value)"
-          @change="emit('nameChange')"
-          @blur="emit('nameChange')"
-        />
-        <div class="glw__swatches">
-          <button
-            v-for="color in PLAYER_COLORS"
-            :key="color"
-            class="glw__swatch-btn"
-            :class="{ 'glw__swatch-btn--active': playerColor === color }"
-            :style="{ background: color }"
-            type="button"
-            :title="`Pick color ${color}`"
-            @click="emit('update:playerColor', color)"
-            @touchend.prevent="emit('update:playerColor', color)"
-          >
-            <Check v-if="playerColor === color" class="glw__swatch-check" />
-          </button>
+      <div v-if="!showResults">
+        <div class="glw__steps">
+          <span
+            v-for="n in totalSteps"
+            :key="n"
+            class="glw__step-dot"
+            :class="{ 'glw__step-dot--active': n === step, 'glw__step-dot--done': n < step }"
+          />
         </div>
 
-        <!-- Private toggle — always visible -->
-        <label class="glw__private-toggle">
-          <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
-          <span>Private — only players with the link can join</span>
-        </label>
-
-        <!-- Matchmaking status — only when not fromLobby -->
-        <template v-if="!fromLobby && !isPrivate">
-          <div v-if="isSearching" class="glw__searching">
-            Looking for players
-            <span class="glw__dots" aria-hidden="true"
-              ><span>.</span><span>.</span><span>.</span></span
+        <!-- Step 1: Profile -->
+        <div v-if="step === 1" class="glw__body">
+          <h3 class="glw__step-title">Your profile</h3>
+          <input
+            :value="playerName"
+            type="text"
+            maxlength="20"
+            class="glw__name-input"
+            placeholder="Your name"
+            @input="emit('update:playerName', ($event.target as HTMLInputElement).value)"
+            @change="emit('nameChange')"
+            @blur="emit('nameChange')"
+          />
+          <div class="glw__swatches">
+            <button
+              v-for="color in PLAYER_COLORS"
+              :key="color"
+              class="glw__swatch-btn"
+              :class="{ 'glw__swatch-btn--active': playerColor === color }"
+              :style="{ background: color }"
+              type="button"
+              :title="`Pick color ${color}`"
+              @click="emit('update:playerColor', color)"
+              @touchend.prevent="emit('update:playerColor', color)"
             >
+              <Check v-if="playerColor === color" class="glw__swatch-check" />
+            </button>
           </div>
-          <ul v-if="pendingRequests.length" class="glw__requests">
-            <li
-              v-for="entry in pendingRequests"
-              :key="entry.request.requestId"
-              class="glw__request"
-            >
-              <span class="glw__request-name"
-                >{{ displayName(entry.fromPeerId) }} wants to play</span
-              >
-              <div class="glw__request-actions">
-                <button class="glw__btn" type="button" @click="handleAccept(entry)">Join</button>
-                <button
-                  class="glw__btn glw__btn--ghost"
-                  type="button"
-                  @click="ignoreRequest(entry)"
-                >
-                  Ignore
-                </button>
-              </div>
-            </li>
-          </ul>
-        </template>
 
-        <!-- Guest: waiting for host -->
-        <template v-if="!isHost && playerList.length > 1">
+          <!-- Private toggle — always visible -->
+          <label class="glw__private-toggle">
+            <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
+            <span>Private — only players with the link can join</span>
+          </label>
+
+          <!-- Matchmaking status — only when not fromLobby -->
+          <template v-if="!fromLobby && !isPrivate">
+            <div v-if="isSearching" class="glw__searching">
+              Looking for players
+              <span class="glw__dots" aria-hidden="true"
+                ><span>.</span><span>.</span><span>.</span></span
+              >
+            </div>
+            <ul v-if="pendingRequests.length" class="glw__requests">
+              <li
+                v-for="entry in pendingRequests"
+                :key="entry.request.requestId"
+                class="glw__request"
+              >
+                <span class="glw__request-name"
+                  >{{ displayName(entry.fromPeerId) }} wants to play</span
+                >
+                <div class="glw__request-actions">
+                  <button class="glw__btn" type="button" @click="handleAccept(entry)">Join</button>
+                  <button
+                    class="glw__btn glw__btn--ghost"
+                    type="button"
+                    @click="ignoreRequest(entry)"
+                  >
+                    Ignore
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </template>
+
+          <!-- Guest: waiting for host -->
+          <template v-if="!isHost && playerList.length > 1">
+            <div class="glw__players">
+              <span class="glw__player-count">
+                {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
+              </span>
+              <span
+                v-for="player in playerList"
+                :key="player.id"
+                class="glw__player-dot"
+                :style="{ background: player.color }"
+                :title="player.name"
+              />
+            </div>
+            <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+              Leave room
+            </button>
+          </template>
+        </div>
+
+        <!-- Step 2: Settings (host only) -->
+        <div v-else-if="step === 2" class="glw__body">
+          <h3 class="glw__step-title">Game settings</h3>
+          <slot v-if="hasConfig" name="config" />
           <div class="glw__players">
-            <span class="glw__player-count">
-              {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
-            </span>
+            <span class="glw__player-count">{{ playerList.length }} players ready</span>
             <span
               v-for="player in playerList"
               :key="player.id"
@@ -198,74 +221,67 @@ onMounted(() => {
               :title="player.name"
             />
           </div>
-          <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
-            Leave room
+          <div class="glw__fields">
+            <label v-for="field in configFields" :key="field.key" class="glw__field">
+              {{ field.label }}
+              <select
+                v-if="field.type === 'select'"
+                :value="field.value"
+                @change="handleFieldChange(field, $event)"
+              >
+                <option v-for="opt in field.options" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+              <input
+                v-else
+                type="number"
+                :value="field.value"
+                :min="field.min"
+                :max="field.max"
+                @input="handleFieldChange(field, $event)"
+              />
+            </label>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="glw__nav">
+          <button v-if="step > 1" class="glw__btn glw__btn--ghost" type="button" @click="goBack">
+            ← Back
           </button>
-        </template>
-      </div>
-
-      <!-- Step 2: Settings (host only) -->
-      <div v-else-if="step === 2" class="glw__body">
-        <h3 class="glw__step-title">Game settings</h3>
-        <slot v-if="hasConfig" name="config" />
-        <div class="glw__players">
-          <span class="glw__player-count">{{ playerList.length }} players ready</span>
-          <span
-            v-for="player in playerList"
-            :key="player.id"
-            class="glw__player-dot"
-            :style="{ background: player.color }"
-            :title="player.name"
-          />
-        </div>
-        <div class="glw__fields">
-          <label v-for="field in configFields" :key="field.key" class="glw__field">
-            {{ field.label }}
-            <select
-              v-if="field.type === 'select'"
-              :value="field.value"
-              @change="handleFieldChange(field, $event)"
-            >
-              <option v-for="opt in field.options" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-            <input
-              v-else
-              type="number"
-              :value="field.value"
-              :min="field.min"
-              :max="field.max"
-              @input="handleFieldChange(field, $event)"
-            />
-          </label>
+          <span class="glw__nav-spacer" />
+          <button
+            v-if="step < totalSteps"
+            class="glw__btn"
+            type="button"
+            :disabled="!canGoNext"
+            @click="goNext"
+          >
+            Next →
+          </button>
+          <button
+            v-else-if="isHost"
+            class="glw__start-btn"
+            type="button"
+            :disabled="false"
+            @click="handleStartGame"
+          >
+            Start
+          </button>
         </div>
       </div>
 
-      <!-- Navigation -->
-      <div class="glw__nav">
-        <button v-if="step > 1" class="glw__btn glw__btn--ghost" type="button" @click="goBack">
-          ← Back
-        </button>
-        <span class="glw__nav-spacer" />
-        <button
-          v-if="step < totalSteps"
-          class="glw__btn"
-          type="button"
-          :disabled="!canGoNext"
-          @click="goNext"
-        >
-          Next →
-        </button>
-        <button
-          v-else-if="isHost"
-          class="glw__start-btn"
-          type="button"
-          :disabled="false"
-          @click="handleStartGame"
-        >
-          Start
-        </button>
+      <div v-else class="glw__results">
+        <slot name="summary" />
+        <div class="glw__nav">
+          <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+            ← Leave
+          </button>
+          <button class="glw__start-btn" type="button" @click="emit('playAgain')">
+            Play Again
+          </button>
+        </div>
       </div>
     </GameCard>
   </section>
@@ -629,6 +645,12 @@ onMounted(() => {
   opacity: 0.4;
   cursor: not-allowed;
   box-shadow: 2px 2px 0 var(--game-border);
+}
+
+.glw__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
 }
 
 @media (max-width: 720px) {

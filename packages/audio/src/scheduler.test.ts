@@ -53,6 +53,7 @@ describe('createNoteScheduler', () => {
       currentTime: 0,
       destination: {},
       resume: vi.fn().mockResolvedValue(undefined),
+      suspend: vi.fn().mockResolvedValue(undefined),
       createOscillator: vi.fn().mockReturnValue(mockOscillator),
       createGain: vi.fn().mockReturnValue(mockGain)
     }

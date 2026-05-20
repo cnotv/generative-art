@@ -94,6 +94,9 @@ export const createNoteScheduler = (
       tickId = null
     }
     nextNoteIndex = 0
+    if (audioContext?.state === 'running') {
+      audioContext.suspend().catch(() => undefined)
+    }
   }
 
   return {
