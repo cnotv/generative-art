@@ -69,7 +69,8 @@ const buildControlsMapping = (
 ) => ({
   mapping: {
     keyboard: Object.fromEntries([
-      ...LANE_KEYS.map((k, i) => [k, `lane-${i}`]),
+      ...LANE_KEYS.map((k, i) => [k.toLowerCase(), `lane-${i}`]),
+      ...LANE_KEYS.map((k, i) => [k.toUpperCase(), `lane-${i}`]),
       ['ArrowLeft', 'lane-0'],
       ['ArrowDown', 'lane-1'],
       ['ArrowUp', 'lane-2'],
