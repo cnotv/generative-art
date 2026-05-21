@@ -37,10 +37,15 @@ const trackToNotes = (track: Midi['tracks'][number], difficulty: RgDifficulty): 
  * @param buffer - Raw MIDI binary data.
  * @returns Track metadata sorted by note count descending.
  */
+const resolveTrackLabel = (track: Midi['tracks'][number], index: number): string => {
+  const parts = [track.name, track.instrument?.name].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : `Track ${index + 1}`
+}
+
 export const getMidiTracks = (buffer: ArrayBuffer): MidiTrackInfo[] => {
   const midi = new Midi(buffer)
   return midi.tracks
-    .map((t, i) => ({ index: i, name: t.name || `Track ${i + 1}`, noteCount: t.notes.length }))
+    .map((t, i) => ({ index: i, name: resolveTrackLabel(t, i), noteCount: t.notes.length }))
     .filter((t) => t.noteCount > 0)
     .sort((a, b) => b.noteCount - a.noteCount)
 }

@@ -136,6 +136,7 @@ const handleDelete = async (): Promise<void> => {
     :config-fields="[]"
     accent-color="var(--rg-accent)"
     :show-results="showResults"
+    :can-start="selectedMidiId !== null"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"

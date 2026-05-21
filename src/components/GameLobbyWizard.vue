@@ -21,6 +21,7 @@ const props = defineProps<{
   configFields: LobbyConfigField[]
   accentColor: string
   showResults?: boolean
+  canStart?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -280,7 +281,7 @@ onMounted(() => {
             v-else-if="isHost"
             class="glw__start-btn"
             type="button"
-            :disabled="false"
+            :disabled="props.canStart === false"
             @click="handleStartGame"
           >
             Start
@@ -319,6 +320,7 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
+  min-width: min(20rem, 100%);
   max-width: 28rem;
   width: 100%;
 }

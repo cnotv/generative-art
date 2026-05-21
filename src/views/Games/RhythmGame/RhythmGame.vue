@@ -94,6 +94,7 @@ const {
 } = useMultiplayerLobbyHandlers(playerName, playerColor, roomId, session)
 
 const handleLeaveRoom = (): void => {
+  store.phase = 'lobby'
   store.solo = false
   store.customNotes = null
   store.backgroundNotes = null
