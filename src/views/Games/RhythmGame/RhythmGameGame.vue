@@ -10,6 +10,7 @@ import {
   type RhythmNote
 } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
+import type { ScheduledNote } from '@webgamekit/audio'
 
 const props = defineProps<{
   song: RgSong
@@ -17,7 +18,7 @@ const props = defineProps<{
   instrument: RgInstrument
   startAt: number
   customNotes?: RhythmNote[] | null
-  backgroundNotes?: RhythmNote[] | null
+  backgroundNotes?: ScheduledNote[] | null
   opponentName?: string
   opponentScore?: number
 }>()
@@ -122,6 +123,10 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div v-if="game.songDurationMs.value > 0" class="rg-game__progress">
+      <div class="rg-game__progress-fill" :style="{ width: `${game.progressPct.value * 100}%` }" />
+    </div>
+
     <div class="rg-game__canvas-wrap">
       <canvas
         ref="canvas"
@@ -219,6 +224,18 @@ onUnmounted(() => {
   font-size: 10px;
   color: rgb(255, 255, 255, 0.4);
   text-transform: capitalize;
+}
+
+.rg-game__progress {
+  height: 3px;
+  background: rgb(255 255 255 / 8%);
+  flex-shrink: 0;
+}
+
+.rg-game__progress-fill {
+  height: 100%;
+  background: var(--game-accent, #00e5ff);
+  transition: width 0.1s linear;
 }
 
 .rg-game__canvas-wrap {

@@ -1,6 +1,6 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
-import { createNoteScheduler, midiNoteToFreq } from '@webgamekit/audio'
+import { createNoteScheduler } from '@webgamekit/audio'
 import {
   LANES,
   NOTE_SPEED_PX_PER_MS,
@@ -48,7 +48,7 @@ type GameDeps = {
   instrument: RgInstrument
   startAt: number
   customNotes?: RhythmNote[] | null
-  backgroundNotes?: RhythmNote[] | null
+  backgroundNotes?: ScheduledNote[] | null
   onScoreUpdate: (data: RgScore) => void
   onSongEnd: () => void
 }
@@ -316,16 +316,6 @@ const clearCanvas = (canvas: HTMLCanvasElement | null): void => {
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
 }
 
-const buildBackgroundScheduledNotes = (bgNotes: RhythmNote[]): ScheduledNote[] =>
-  bgNotes.map((n) => ({
-    time: n.time,
-    freq: midiNoteToFreq(n.midiNote),
-    duration: 180,
-    volume: 0.07,
-    waveType: 'sine' as const,
-    attackTime: 0.01
-  }))
-
 export const useRhythmGame = (deps: GameDeps) => {
   const score = ref(0)
   const combo = ref(0)
@@ -336,7 +326,6 @@ export const useRhythmGame = (deps: GameDeps) => {
   const laneActive = ref<boolean[]>([false, false, false, false])
 
   const scheduler = createNoteScheduler()
-  const bgScheduler = createNoteScheduler()
   let rafId = 0
   let notes: RhythmNote[] = []
   let particles: Particle[] = []
@@ -347,6 +336,17 @@ export const useRhythmGame = (deps: GameDeps) => {
   let lastFrameTime = 0
   const lastHit = ref<'perfect' | 'good' | 'miss' | null>(null)
   const hitKey = ref(0)
+  const progressPct = ref(0)
+  const songDurationMs = ref(0)
+  const emitScore = (): void =>
+    deps.onScoreUpdate({
+      score: score.value,
+      combo: combo.value,
+      maxCombo: maxCombo.value,
+      perfect: perfect.value,
+      good: good.value,
+      miss: miss.value
+    })
 
   const pressLane = (lane: RgLane): void => {
     const currentMs = scheduler.currentMs
@@ -374,14 +374,7 @@ export const useRhythmGame = (deps: GameDeps) => {
     lastHit.value = result
     hitKey.value++
     if (deps.canvas.value) spawnParticles(deps.canvas.value, particles, lane, result)
-    deps.onScoreUpdate({
-      score: score.value,
-      combo: combo.value,
-      maxCombo: maxCombo.value,
-      perfect: perfect.value,
-      good: good.value,
-      miss: miss.value
-    })
+    emitScore()
   }
 
   const gameLoop = (timestamp: number): void => {
@@ -402,16 +395,7 @@ export const useRhythmGame = (deps: GameDeps) => {
       laneFlashes[notes[i].lane] = { alpha: 0.6, result: 'miss' }
       if (deps.canvas.value) spawnParticles(deps.canvas.value, particles, notes[i].lane, 'miss')
     })
-    if (expired.length > 0) {
-      deps.onScoreUpdate({
-        score: score.value,
-        combo: combo.value,
-        maxCombo: maxCombo.value,
-        perfect: perfect.value,
-        good: good.value,
-        miss: miss.value
-      })
-    }
+    if (expired.length > 0) emitScore()
 
     const drawContext: DrawContext = {
       notes,
@@ -420,6 +404,7 @@ export const useRhythmGame = (deps: GameDeps) => {
       laneFlashes
     }
     particles = drawFrame(canvas, currentMs, dt, drawContext, particles)
+    if (songDurationMs.value > 0) progressPct.value = Math.min(1, currentMs / songDurationMs.value)
 
     const lastNote = notes.at(-1)
     if (lastNote && currentMs > lastNote.time + 2000 && notes.every((n) => n.hit !== undefined)) {
@@ -433,11 +418,15 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const init = (): void => {
     notes = resolveNotes(deps)
-    const scheduled = buildScheduledNotes(notes, deps.instrument)
-    scheduler.start(scheduled, deps.startAt)
-    if (deps.backgroundNotes?.length) {
-      bgScheduler.start(buildBackgroundScheduledNotes(deps.backgroundNotes), deps.startAt)
-    }
+    songDurationMs.value = Math.max(
+      deps.backgroundNotes?.at(-1)?.time ?? 0,
+      notes.at(-1)?.time ?? 0
+    )
+    const gameNotes = buildScheduledNotes(notes, deps.instrument)
+    const allNotes = deps.backgroundNotes?.length
+      ? [...gameNotes, ...deps.backgroundNotes]
+      : gameNotes
+    scheduler.start(allNotes, deps.startAt)
     lastFrameTime = performance.now()
     rafId = requestAnimationFrame(gameLoop)
   }
@@ -445,7 +434,6 @@ export const useRhythmGame = (deps: GameDeps) => {
   const destroy = (): void => {
     cancelAnimationFrame(rafId)
     scheduler.destroy()
-    bgScheduler.destroy()
     clearCanvas(deps.canvas.value)
   }
 
@@ -472,6 +460,8 @@ export const useRhythmGame = (deps: GameDeps) => {
     destroy,
     pressLane,
     mountControls,
+    songDurationMs,
+    progressPct,
     getAccuracy: () => getAccuracy(perfect.value, good.value, miss.value),
     getGrade: () => getGrade(getAccuracy(perfect.value, good.value, miss.value))
   }

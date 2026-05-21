@@ -19,9 +19,9 @@ import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/Multipl
 import GameTabBar from '@/components/GameTabBar.vue'
 import RhythmGameLobby from './RhythmGameLobby.vue'
 import RhythmGameGame from './RhythmGameGame.vue'
-import type { RgSong, RgDifficulty } from './config'
+import type { RgSong, RgDifficulty, RhythmNote } from './config'
 import type { RgScore } from '@/stores/rhythmGame'
-import type { RhythmNote } from './config'
+import type { ScheduledNote } from '@webgamekit/audio'
 
 const store = useRhythmGameStore()
 const {
@@ -103,7 +103,7 @@ const handleLeaveRoom = (): void => {
 
 const handleMidiParsed = (
   gameNotes: RhythmNote[],
-  bgNotes: RhythmNote[],
+  bgNotes: ScheduledNote[],
   songName: string
 ): void => {
   store.customNotes = gameNotes.length > 0 ? gameNotes : null

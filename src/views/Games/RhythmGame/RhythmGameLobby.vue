@@ -13,6 +13,7 @@ import {
   type MidiLibraryEntry
 } from './midiStorage'
 import { getMidiTracks, parseMidiTrack, parseAllMidiNotes } from './parseMidi'
+import type { ScheduledNote } from '@webgamekit/audio'
 import type { RhythmNote } from './config'
 
 const props = defineProps<{
@@ -35,7 +36,7 @@ const emit = defineEmits<{
   matchFound: [roomId: string]
   leaveRoom: []
   playAgain: []
-  midiParsed: [gameNotes: RhythmNote[], backgroundNotes: RhythmNote[], songName: string]
+  midiParsed: [gameNotes: RhythmNote[], backgroundNotes: ScheduledNote[], songName: string]
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)

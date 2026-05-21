@@ -1,4 +1,6 @@
 import { Midi } from '@tonejs/midi'
+import { midiNoteToFreq } from '@webgamekit/audio'
+import type { ScheduledNote } from '@webgamekit/audio'
 import type { RhythmNote, RgLane, RgDifficulty } from './config'
 
 const MIN_GAP_MS: Record<RgDifficulty, number> = { easy: 450, medium: 180, hard: 0 }
@@ -83,13 +85,23 @@ export const parseMidiFile = async (file: File, difficulty: RgDifficulty): Promi
   parseMidiBuffer(await file.arrayBuffer(), difficulty)
 
 /**
- * Parse every note from every track in a MIDI file into a single flat array.
- * Notes preserve their original MIDI pitch in the midiNote field.
+ * Convert every note in every MIDI track into audio-ready ScheduledNotes using
+ * real pitches and actual note durations. Intended for background playback.
  * @param buffer - Raw MIDI binary data.
- * @returns All notes across all tracks sorted by time.
+ * @returns All notes across all tracks as ScheduledNote[], sorted by time.
  */
-export const parseAllMidiNotes = (buffer: ArrayBuffer): RhythmNote[] => {
+export const parseAllMidiNotes = (buffer: ArrayBuffer): ScheduledNote[] => {
   const midi = new Midi(buffer)
-  const all = midi.tracks.flatMap((track) => trackToNotes(track, 'hard'))
-  return all.sort((a, b) => a.time - b.time)
+  return midi.tracks
+    .flatMap((track) =>
+      track.notes.map((n) => ({
+        time: Math.round(n.time * 1000),
+        freq: midiNoteToFreq(n.midi),
+        duration: Math.max(50, Math.round(n.duration * 1000)),
+        volume: 0.12,
+        waveType: 'sine' as const,
+        attackTime: 0.01
+      }))
+    )
+    .sort((a, b) => a.time - b.time)
 }
