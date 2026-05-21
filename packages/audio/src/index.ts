@@ -4,6 +4,8 @@ export type { SoundConfig, NoteSequence, ScheduledNote }
 export type { NoteScheduler, AudioContextFactory } from './scheduler'
 export { midiNoteToFreq } from './midiNote'
 export { createNoteScheduler } from './scheduler'
+export { midiGetTracks, midiParseBackground } from './midi'
+export type { MidiTrackInfo } from './midi'
 
 // Audio utility for game sound effects and soundtrack
 
