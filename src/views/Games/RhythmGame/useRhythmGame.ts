@@ -310,6 +310,19 @@ const drawFrame = (
   return alive
 }
 
+const applyHitFeedback = (
+  result: 'perfect' | 'good' | 'miss',
+  lane: RgLane,
+  laneFlashes: LaneFlash[],
+  canvas: HTMLCanvasElement | null,
+  particles: Particle[]
+): void => {
+  if (result !== 'miss') {
+    laneFlashes[lane] = { alpha: 1, result }
+    if (canvas) spawnParticles(canvas, particles, lane, result)
+  }
+}
+
 const clearCanvas = (canvas: HTMLCanvasElement | null): void => {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
@@ -370,10 +383,9 @@ export const useRhythmGame = (deps: GameDeps) => {
       combo.value = 0
     }
 
-    laneFlashes[lane] = { alpha: 1, result }
+    applyHitFeedback(result, lane, laneFlashes, deps.canvas.value, particles)
     lastHit.value = result
     hitKey.value++
-    if (deps.canvas.value) spawnParticles(deps.canvas.value, particles, lane, result)
     emitScore()
   }
 
