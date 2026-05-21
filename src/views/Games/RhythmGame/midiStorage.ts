@@ -1,8 +1,12 @@
+import type { MidiTrackInfo } from './parseMidi'
+
 const DB_NAME = 'rg-midi-library'
 const STORE = 'tracks'
 const VERSION = 1
 
-export type MidiTrackMeta = { id: string; name: string }
+type StoredMidi = { id: string; name: string; data: ArrayBuffer; tracks: MidiTrackInfo[] }
+
+export type MidiLibraryEntry = { id: string; name: string; tracks: MidiTrackInfo[] }
 
 const open = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
@@ -15,17 +19,17 @@ const open = (): Promise<IDBDatabase> =>
   })
 
 /**
- * List all stored MIDI track metadata (id + name, no binary data).
- * @returns Array of track descriptors sorted by name.
+ * List all stored MIDI entries with their track metadata (no binary data loaded).
+ * @returns Entries sorted alphabetically by name.
  */
-export const midiStorageList = async (): Promise<MidiTrackMeta[]> => {
+export const midiStorageList = async (): Promise<MidiLibraryEntry[]> => {
   const db = await open()
   return new Promise((resolve, reject) => {
     const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll()
     req.onsuccess = () =>
       resolve(
-        (req.result as Array<{ id: string; name: string }>)
-          .map(({ id, name }) => ({ id, name }))
+        (req.result as StoredMidi[])
+          .map(({ id, name, tracks }) => ({ id, name, tracks: tracks ?? [] }))
           .sort((a, b) => a.name.localeCompare(b.name))
       )
     req.onerror = () => reject(req.error)
@@ -33,38 +37,46 @@ export const midiStorageList = async (): Promise<MidiTrackMeta[]> => {
 }
 
 /**
- * Persist a MIDI ArrayBuffer under the given name and return its generated ID.
- * @param name - Display name (typically the filename without extension).
- * @param data - Raw MIDI binary data.
- * @returns The UUID assigned to the stored track.
+ * Persist a MIDI file alongside its parsed track metadata.
+ * @param name - Display name (filename without extension).
+ * @param data - Raw MIDI binary.
+ * @param tracks - Track list from getMidiTracks().
+ * @returns The UUID assigned to the entry.
  */
-export const midiStorageSave = async (name: string, data: ArrayBuffer): Promise<string> => {
+export const midiStorageSave = async (
+  name: string,
+  data: ArrayBuffer,
+  tracks: MidiTrackInfo[]
+): Promise<string> => {
   const db = await open()
   const id = crypto.randomUUID()
   return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE, 'readwrite').objectStore(STORE).put({ id, name, data })
+    const req = db
+      .transaction(STORE, 'readwrite')
+      .objectStore(STORE)
+      .put({ id, name, data, tracks })
     req.onsuccess = () => resolve(id)
     req.onerror = () => reject(req.error)
   })
 }
 
 /**
- * Load a previously saved MIDI's binary data by ID.
+ * Load the raw binary for a stored MIDI by ID.
  * @param id - UUID returned by midiStorageSave.
- * @returns The raw ArrayBuffer, or null if not found.
+ * @returns The ArrayBuffer, or null if not found.
  */
 export const midiStorageLoad = async (id: string): Promise<ArrayBuffer | null> => {
   const db = await open()
   return new Promise((resolve, reject) => {
     const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(id)
-    req.onsuccess = () => resolve((req.result as { data: ArrayBuffer } | undefined)?.data ?? null)
+    req.onsuccess = () => resolve((req.result as StoredMidi | undefined)?.data ?? null)
     req.onerror = () => reject(req.error)
   })
 }
 
 /**
- * Permanently remove a stored MIDI track.
- * @param id - UUID of the track to delete.
+ * Permanently remove a stored MIDI.
+ * @param id - UUID of the entry to delete.
  */
 export const midiStorageDelete = async (id: string): Promise<void> => {
   const db = await open()

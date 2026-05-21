@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
 import RhythmGameSummary from './RhythmGameSummary.vue'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
@@ -10,9 +10,9 @@ import {
   midiStorageLoad,
   midiStorageSave,
   midiStorageDelete,
-  type MidiTrackMeta
+  type MidiLibraryEntry
 } from './midiStorage'
-import { getMidiTracks, parseMidiTrack, type MidiTrackInfo } from './parseMidi'
+import { getMidiTracks, parseMidiTrack } from './parseMidi'
 import type { RhythmNote } from './config'
 
 const props = defineProps<{
@@ -43,72 +43,70 @@ const emit = defineEmits<{
   leaveRoom: []
   playAgain: []
   midiParsed: [notes: RhythmNote[], songName: string]
-  'update:customSong': []
 }>()
 
-// ── IDB state ──────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null)
-const tracks = ref<MidiTrackMeta[]>([])
-const selectedId = ref('')
+const library = ref<MidiLibraryEntry[]>([])
+const selectedValue = ref('')
 
-// ── Buffer + track state ───────────────────────────────────────────────────
-const midiBuffer = ref<ArrayBuffer | null>(null)
-const midiTracks = ref<MidiTrackInfo[]>([])
-const selectedTrackIndex = ref<number | null>(null)
-
-const loadTracks = async (): Promise<void> => {
-  tracks.value = await midiStorageList()
-  if (props.song === 'custom' && props.customSongName) {
-    const match = tracks.value.find((t) => t.name === props.customSongName)
-    if (match) selectedId.value = match.id
-  }
+const loadLibrary = async (): Promise<void> => {
+  library.value = await midiStorageList()
 }
 
-const loadBuffer = async (id: string): Promise<void> => {
-  const buf = await midiStorageLoad(id)
-  if (!buf) return
-  midiBuffer.value = buf
-  midiTracks.value = getMidiTracks(buf)
-  selectedTrackIndex.value = midiTracks.value[0]?.index ?? null
-}
+onMounted(loadLibrary)
 
-const applyTrack = (): void => {
-  if (!midiBuffer.value || selectedTrackIndex.value === null) return
-  const songName =
-    tracks.value.find((t) => t.id === selectedId.value)?.name ?? props.customSongName ?? ''
-  try {
-    const notes = parseMidiTrack(midiBuffer.value, selectedTrackIndex.value, props.difficulty)
-    emit('midiParsed', notes, songName)
-  } catch {
-    // track empty — nothing to do
-  }
-}
+// ── Combined value helpers ─────────────────────────────────────────────────
+// Value format: "preset:<songId>"  |  "midi:<id>:<trackIndex>"  |  "__upload__"
 
-watch(() => props.difficulty, applyTrack)
-watch(selectedTrackIndex, applyTrack)
-
-onMounted(async () => {
-  await loadTracks()
-  if (selectedId.value) await loadBuffer(selectedId.value)
+const currentSelectedValue = computed(() => {
+  if (props.song === 'custom') return selectedValue.value
+  return `preset:${props.song}`
 })
 
-// ── IDB dropdown handlers ──────────────────────────────────────────────────
-const handleSelectChange = async (event: Event): Promise<void> => {
+const selectedLibraryId = computed(() => {
+  const [type, id] = selectedValue.value.split(':')
+  return type === 'midi' ? id : null
+})
+
+const parseMidiOption = async (
+  midiId: string,
+  trackIndex: number,
+  songName: string
+): Promise<void> => {
+  const buf = await midiStorageLoad(midiId)
+  if (!buf) return
+  const notes = parseMidiTrack(buf, trackIndex, props.difficulty)
+  emit('midiParsed', notes, songName)
+}
+
+const buildTrackLabel = (midiId: string, trackIndex: number): string => {
+  const entry = library.value.find((e) => e.id === midiId)
+  const trackInfo = entry?.tracks.find((t) => t.index === trackIndex)
+  if (!entry) return ''
+  return entry.tracks.length > 1
+    ? `${entry.name} — ${trackInfo?.name ?? `Track ${trackIndex + 1}`}`
+    : entry.name
+}
+
+const handleMidiSelection = async (midiId: string, trackIndex: number): Promise<void> => {
+  await parseMidiOption(midiId, trackIndex, buildTrackLabel(midiId, trackIndex))
+}
+
+const handleChange = async (event: Event): Promise<void> => {
   const value = (event.target as HTMLSelectElement).value
   if (value === '__upload__') {
-    ;(event.target as HTMLSelectElement).value = selectedId.value
+    ;(event.target as HTMLSelectElement).value = currentSelectedValue.value
     fileInput.value?.click()
     return
   }
-  selectedId.value = value
-  if (!value) {
-    midiBuffer.value = null
-    midiTracks.value = []
-    selectedTrackIndex.value = null
-    emit('update:song', 'electric-pulse')
+  selectedValue.value = value
+  const [type, id, trackString] = value.split(':')
+  if (type === 'preset') {
+    emit('update:song', id as RgSong)
     return
   }
-  await loadBuffer(value)
+  if (type === 'midi') await handleMidiSelection(id, Number(trackString))
 }
 
 const handleFileChange = async (event: Event): Promise<void> => {
@@ -117,46 +115,28 @@ const handleFileChange = async (event: Event): Promise<void> => {
   if (fileInput.value) fileInput.value.value = ''
   const name = file.name.replace(/\.midi?$/i, '')
   const buf = await file.arrayBuffer()
-  const id = await midiStorageSave(name, buf)
-  await loadTracks()
-  selectedId.value = id
-  midiBuffer.value = buf
-  midiTracks.value = getMidiTracks(buf)
-  selectedTrackIndex.value = midiTracks.value[0]?.index ?? null
+  const tracks = getMidiTracks(buf)
+  const id = await midiStorageSave(name, buf, tracks)
+  await loadLibrary()
+  const firstTrack = tracks[0]
+  if (!firstTrack) return
+  const value = `midi:${id}:${firstTrack.index}`
+  selectedValue.value = value
+  const trackLabel = tracks.length > 1 ? `${name} — ${firstTrack.name}` : name
+  const notes = parseMidiTrack(buf, firstTrack.index, props.difficulty)
+  emit('midiParsed', notes, trackLabel)
 }
 
 const handleDelete = async (): Promise<void> => {
-  if (!selectedId.value) return
-  await midiStorageDelete(selectedId.value)
-  selectedId.value = ''
-  midiBuffer.value = null
-  midiTracks.value = []
-  selectedTrackIndex.value = null
+  if (!selectedLibraryId.value) return
+  await midiStorageDelete(selectedLibraryId.value)
+  selectedValue.value = ''
   emit('update:song', 'electric-pulse')
-  await loadTracks()
+  await loadLibrary()
 }
 
-const handleTrackChange = (event: Event): void => {
-  selectedTrackIndex.value = Number((event.target as HTMLSelectElement).value)
-}
-
-// ── Config fields ──────────────────────────────────────────────────────────
-const songOptions = computed(() => {
-  const presets = SONGS.map((s) => ({ value: s.id, label: s.label }))
-  if (props.song === 'custom' && props.customSongName) {
-    return [{ value: 'custom' as RgSong, label: `🎵 ${props.customSongName}` }, ...presets]
-  }
-  return presets
-})
-
+// ── Config fields (difficulty + instrument only, song handled above) ────────
 const configFields = computed((): LobbyConfigField[] => [
-  {
-    type: 'select',
-    key: 'song',
-    label: 'Song',
-    value: props.song,
-    options: songOptions.value
-  },
   {
     type: 'select',
     key: 'difficulty',
@@ -182,7 +162,6 @@ const configFields = computed((): LobbyConfigField[] => [
 ])
 
 const handleConfig = (key: string, value: string | number): void => {
-  if (key === 'song') emit('update:song', value as RgSong)
   if (key === 'difficulty') emit('update:difficulty', value as RgDifficulty)
   if (key === 'instrument') emit('update:instrument', value as RgInstrument)
 }
@@ -209,19 +188,41 @@ const handleConfig = (key: string, value: string | number): void => {
     @play-again="emit('playAgain')"
   >
     <template #config>
-      <div class="rgl-midi">
-        <label class="rgl-midi__label">MIDI Library</label>
-        <div class="rgl-midi__row">
-          <select class="rgl-midi__select" :value="selectedId" @change="handleSelectChange">
-            <option value="">— Select a MIDI —</option>
-            <option v-for="track in tracks" :key="track.id" :value="track.id">
-              {{ track.name }}
-            </option>
-            <option value="__upload__">↑ Upload new MIDI…</option>
+      <div class="rgl-song">
+        <label class="rgl-song__label">Song</label>
+        <div class="rgl-song__row">
+          <select class="rgl-song__select" :value="currentSelectedValue" @change="handleChange">
+            <optgroup label="Presets">
+              <option v-for="s in SONGS" :key="s.id" :value="`preset:${s.id}`">
+                {{ s.label }}
+              </option>
+            </optgroup>
+
+            <optgroup v-if="library.length" label="My Library">
+              <template v-for="entry in library" :key="entry.id">
+                <option
+                  v-if="entry.tracks.length <= 1"
+                  :value="`midi:${entry.id}:${entry.tracks[0]?.index ?? 0}`"
+                >
+                  {{ entry.name }}
+                </option>
+                <option
+                  v-for="track in entry.tracks"
+                  v-else
+                  :key="track.index"
+                  :value="`midi:${entry.id}:${track.index}`"
+                >
+                  {{ entry.name }} — {{ track.name }} ({{ track.noteCount }}n)
+                </option>
+              </template>
+            </optgroup>
+
+            <option value="__upload__">↑ Upload MIDI…</option>
           </select>
+
           <button
-            v-if="selectedId"
-            class="rgl-midi__delete"
+            v-if="selectedLibraryId"
+            class="rgl-song__delete"
             type="button"
             title="Remove from library"
             @click="handleDelete"
@@ -230,24 +231,11 @@ const handleConfig = (key: string, value: string | number): void => {
           </button>
         </div>
 
-        <template v-if="midiTracks.length > 1">
-          <label class="rgl-midi__label">Track</label>
-          <select
-            class="rgl-midi__select"
-            :value="selectedTrackIndex ?? ''"
-            @change="handleTrackChange"
-          >
-            <option v-for="t in midiTracks" :key="t.index" :value="t.index">
-              {{ t.name }} ({{ t.noteCount }} notes)
-            </option>
-          </select>
-        </template>
-
         <input
           ref="fileInput"
           type="file"
           accept=".mid,.midi"
-          class="rgl-midi__input"
+          class="rgl-song__input"
           @change="handleFileChange"
         />
       </div>
@@ -266,13 +254,13 @@ const handleConfig = (key: string, value: string | number): void => {
 </template>
 
 <style scoped>
-.rgl-midi {
+.rgl-song {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
 }
 
-.rgl-midi__label {
+.rgl-song__label {
   font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--game-ink-muted, rgb(255, 255, 255, 0.5));
@@ -280,12 +268,12 @@ const handleConfig = (key: string, value: string | number): void => {
   letter-spacing: 0.05em;
 }
 
-.rgl-midi__row {
+.rgl-song__row {
   display: flex;
   gap: var(--spacing-1);
 }
 
-.rgl-midi__select {
+.rgl-song__select {
   flex: 1;
   padding: var(--spacing-1) var(--spacing-2);
   border: 2px solid var(--game-border);
@@ -297,7 +285,7 @@ const handleConfig = (key: string, value: string | number): void => {
   cursor: pointer;
 }
 
-.rgl-midi__delete {
+.rgl-song__delete {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -313,13 +301,13 @@ const handleConfig = (key: string, value: string | number): void => {
   flex-shrink: 0;
 }
 
-.rgl-midi__delete:hover {
+.rgl-song__delete:hover {
   background: #ff4040;
   border-color: #ff4040;
   color: #fff;
 }
 
-.rgl-midi__input {
+.rgl-song__input {
   display: none;
 }
 </style>
