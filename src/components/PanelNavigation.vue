@@ -90,11 +90,11 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .panel-navigation__button:hover {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgb(0, 0, 0, 0.7);
 }
 
 .panel-navigation__button--active {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgb(0, 0, 0, 0.7);
 }
 </style>

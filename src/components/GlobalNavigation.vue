@@ -140,20 +140,20 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .global-navigation__button--active {
-  background-color: hsl(0 0% 83%);
+  background-color: hsl(0deg 0% 83%);
 }
 
 .global-navigation__button:hover {
-  background-color: hsl(0 0% 90%);
+  background-color: hsl(0deg 0% 90%);
 }
 
 @media (prefers-color-scheme: dark) {
   .global-navigation__button--active {
-    background-color: hsl(0 0% 25%);
+    background-color: hsl(0deg 0% 25%);
   }
 
   .global-navigation__button:hover {
-    background-color: hsl(0 0% 20%);
+    background-color: hsl(0deg 0% 20%);
   }
 }
 </style>

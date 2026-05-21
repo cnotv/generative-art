@@ -180,13 +180,12 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 
 .brush-size__input::-webkit-outer-spin-button,
 .brush-size__input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 .brush-size__input[type='number'] {
   appearance: textfield;
-  -moz-appearance: textfield;
 }
 
 .brush-size__slider {

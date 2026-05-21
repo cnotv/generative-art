@@ -20,7 +20,7 @@ defineProps<{
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border-width: 0;
 }
@@ -38,7 +38,7 @@ defineProps<{
   position: fixed;
   inset: 0;
   z-index: var(--z-overlay);
-  background-color: rgba(0, 0, 0, 0.01);
+  background-color: rgb(0, 0, 0, 0.01);
   cursor: pointer;
 
   &[data-state='open'] {
@@ -59,11 +59,12 @@ defineProps<{
   align-items: flex-start;
   z-index: calc(var(--z-overlay) + 1);
   pointer-events: none;
+
   > * {
     pointer-events: auto;
   }
 
-  @media (max-width: 768px) {
+  @media (width <= 768px) {
     overflow-y: auto;
   }
 }
@@ -82,8 +83,7 @@ defineProps<{
   gap: var(--spacing-1);
   background-color: var(--color-background);
   padding: var(--spacing-2);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -130,6 +130,7 @@ defineProps<{
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -139,6 +140,7 @@ defineProps<{
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -148,6 +150,7 @@ defineProps<{
   from {
     height: 0;
   }
+
   to {
     height: var(--radix-accordion-content-height);
   }
@@ -157,6 +160,7 @@ defineProps<{
   from {
     height: var(--radix-accordion-content-height);
   }
+
   to {
     height: 0;
   }

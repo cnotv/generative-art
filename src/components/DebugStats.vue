@@ -84,7 +84,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 0.5rem;
   border-radius: var(--radius-sm, 0.25rem);
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgb(0, 0, 0, 0.3);
 }
 
 .debug-stats__label {

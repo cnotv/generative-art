@@ -60,7 +60,7 @@ const emit = defineEmits<{
   height: 16px;
   border-radius: 9999px;
   background-color: var(--color-background);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgb(0, 0, 0, 0.4);
   transition: transform 0.2s;
   pointer-events: none;
 }

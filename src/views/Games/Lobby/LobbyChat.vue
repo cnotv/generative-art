@@ -106,7 +106,7 @@ const handleSend = (): void => {
   background: var(--color-muted);
   font-size: var(--font-size-sm);
   line-height: 1.4;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .lb-chat__message--own .lb-chat__text {

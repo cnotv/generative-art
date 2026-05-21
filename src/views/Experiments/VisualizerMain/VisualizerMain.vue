@@ -477,12 +477,12 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   top: 100%;
   right: 0;
   margin-top: 8px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgb(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 4px;
   padding: 4px 0;
   min-width: 120px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0, 0, 0, 0.1);
 }
 
 .visualizer__option {
@@ -503,17 +503,17 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 }
 
 .visualizer__option:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgb(0, 0, 0, 0.1);
 }
 
 .visualizer__option--active {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgb(0, 0, 0, 0.15);
   font-weight: 900;
 }
 
 .visualizer__option:focus {
   outline: none;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgb(0, 0, 0, 0.1);
 }
 
 /* Player Toggle */
@@ -564,6 +564,6 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
 .audio-source-toggle:hover {
   opacity: 0.7;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255, 255, 255, 0.1);
 }
 </style>

@@ -142,8 +142,8 @@ const winnerLabel = computed(() => {
   height: 6px;
   border-radius: 50%;
   box-shadow:
-    0 0 0 2px currentColor,
-    0 0 12px 2px currentColor;
+    0 0 0 2px currentcolor,
+    0 0 12px 2px currentcolor;
   opacity: 0;
   animation: pictionary-firework 2.4s infinite;
 }
@@ -153,9 +153,11 @@ const winnerLabel = computed(() => {
     transform: scale(0) translate(0, 0);
     opacity: 1;
   }
+
   60% {
     opacity: 1;
   }
+
   100% {
     transform: scale(2.5) translate(var(--firework-dx, 0), var(--firework-dy, 0));
     opacity: 0;
@@ -167,94 +169,117 @@ const winnerLabel = computed(() => {
   top: 20%;
   left: 15%;
   animation-delay: 0s;
+
   --firework-dx: -40px;
   --firework-dy: -30px;
 }
+
 .pictionary-summary__firework--2 {
   color: var(--pic-yellow);
   top: 25%;
   left: 80%;
   animation-delay: 0.3s;
+
   --firework-dx: 50px;
   --firework-dy: -20px;
 }
+
 .pictionary-summary__firework--3 {
   color: var(--pic-blue);
   top: 60%;
   left: 10%;
   animation-delay: 0.6s;
+
   --firework-dx: -30px;
   --firework-dy: 40px;
 }
+
 .pictionary-summary__firework--4 {
   color: var(--pic-orange);
   top: 15%;
   left: 50%;
   animation-delay: 0.9s;
+
   --firework-dx: 0;
   --firework-dy: -50px;
 }
+
 .pictionary-summary__firework--5 {
   color: var(--pic-purple);
   top: 70%;
   left: 75%;
   animation-delay: 1.2s;
+
   --firework-dx: 40px;
   --firework-dy: 30px;
 }
+
 .pictionary-summary__firework--6 {
   color: var(--pic-green);
   top: 40%;
   left: 20%;
   animation-delay: 0.15s;
+
   --firework-dx: -50px;
   --firework-dy: 0;
 }
+
 .pictionary-summary__firework--7 {
   color: var(--pic-pink);
   top: 50%;
   left: 90%;
   animation-delay: 0.45s;
+
   --firework-dx: 60px;
   --firework-dy: 0;
 }
+
 .pictionary-summary__firework--8 {
   color: var(--pic-yellow);
   top: 80%;
   left: 40%;
   animation-delay: 0.75s;
+
   --firework-dx: 0;
   --firework-dy: 50px;
 }
+
 .pictionary-summary__firework--9 {
   color: var(--pic-blue);
   top: 30%;
   left: 35%;
   animation-delay: 1.05s;
+
   --firework-dx: -20px;
   --firework-dy: -40px;
 }
+
 .pictionary-summary__firework--10 {
   color: var(--pic-orange);
   top: 65%;
   left: 55%;
   animation-delay: 1.35s;
+
   --firework-dx: 30px;
   --firework-dy: 30px;
 }
+
 .pictionary-summary__firework--11 {
   color: var(--pic-purple);
   top: 10%;
   left: 70%;
   animation-delay: 1.65s;
+
   --firework-dx: 40px;
   --firework-dy: -50px;
 }
+
 .pictionary-summary__firework--12 {
   color: var(--pic-green);
   top: 85%;
   left: 20%;
   animation-delay: 1.95s;
+
   --firework-dx: -40px;
   --firework-dy: 30px;
 }

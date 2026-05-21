@@ -52,7 +52,7 @@ const expanded = ref(false)
   line-height: 1;
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .controls-logger__toggle {
     display: inline;
   }

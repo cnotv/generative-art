@@ -8,13 +8,12 @@
   --game-own-msg-bg: #111;
   --game-ink-medium: #555;
   --game-ink-muted: #888;
-  --game-border: rgba(0, 0, 0, 0.28);
+  --game-border: rgb(0, 0, 0, 0.28);
   --game-surface: #fff;
   --game-surface-subtle: #f5f5f5;
   --game-surface-dim: #f0f0f0;
   --game-border-secondary: #ccc;
   --game-border-light: #ddd;
-
   --lb-bg: #fff7e6;
   --lb-sidebar-bg: #fffbf0;
   --lb-card-hover: #ffefc0;
@@ -22,7 +21,6 @@
   --wm-bg: #f0fff4;
   --wl-bg: #f9f9f9;
   --mg-bg: #e8f5e9;
-
   --game-msg-system-bg: #fff4c2;
   --game-msg-error-bg: #ffeaea;
 }
@@ -32,6 +30,7 @@
     opacity: 0;
     transform: translateY(14px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -43,6 +42,7 @@
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -51,35 +51,35 @@
 
 :root {
   // Light theme (default)
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(0 0% 3.9%);
-  --color-primary: hsl(0 0% 9%);
-  --color-primary-foreground: hsl(0 0% 98%);
-  --color-secondary: hsl(0 0% 96.1%);
-  --color-secondary-foreground: hsl(0 0% 9%);
-  --color-muted: hsl(0 0% 96.1%);
-  --color-muted-foreground: hsl(0 0% 45.1%);
-  --color-accent: hsl(0 0% 96.1%);
-  --color-accent-foreground: hsl(0 0% 9%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(0 0% 89.8%);
-  --color-input: hsl(0 0% 89.8%);
-  --color-ring: hsl(0 0% 3.9%);
+  --color-background: hsl(0deg 0% 100%);
+  --color-foreground: hsl(0deg 0% 3.9%);
+  --color-primary: hsl(0deg 0% 9%);
+  --color-primary-foreground: hsl(0deg 0% 98%);
+  --color-secondary: hsl(0deg 0% 96.1%);
+  --color-secondary-foreground: hsl(0deg 0% 9%);
+  --color-muted: hsl(0deg 0% 96.1%);
+  --color-muted-foreground: hsl(0deg 0% 45.1%);
+  --color-accent: hsl(0deg 0% 96.1%);
+  --color-accent-foreground: hsl(0deg 0% 9%);
+  --color-destructive: hsl(0deg 84.2% 60.2%);
+  --color-destructive-foreground: hsl(0deg 0% 98%);
+  --color-border: hsl(0deg 0% 89.8%);
+  --color-input: hsl(0deg 0% 89.8%);
+  --color-ring: hsl(0deg 0% 3.9%);
 
   // Performance metric status colors
-  --color-perf-ok: hsl(142 71% 45%);
-  --color-perf-warn: hsl(38 92% 50%);
-  --color-perf-bad: hsl(0 84% 60%);
+  --color-perf-ok: hsl(142deg 71% 45%);
+  --color-perf-warn: hsl(38deg 92% 50%);
+  --color-perf-bad: hsl(0deg 84% 60%);
 
   // Panel item colors
-  --panel-item-bg: hsl(0 0% 98%);
-  --panel-item-bg-hover: hsl(0 0% 94%);
-  --panel-item-bg-selected: hsl(0 0% 90%);
-  --panel-content-bg: hsl(0 0% 97%);
-  --panel-toggle-active-bg: hsl(0 0% 83%);
-  --panel-overlay-bg: hsl(0 0% 0% / 0.6);
-  --panel-remove-color: hsl(0 80% 65%);
+  --panel-item-bg: hsl(0deg 0% 98%);
+  --panel-item-bg-hover: hsl(0deg 0% 94%);
+  --panel-item-bg-selected: hsl(0deg 0% 90%);
+  --panel-content-bg: hsl(0deg 0% 97%);
+  --panel-toggle-active-bg: hsl(0deg 0% 83%);
+  --panel-overlay-bg: hsl(0deg 0% 0% / 0.6);
+  --panel-remove-color: hsl(0deg 80% 65%);
 
   // Spacing scale
   --spacing-0-5: 0.125rem; // 2px
@@ -103,7 +103,7 @@
   --radius-full: 9999px;
 
   // Typography — font families
-  --font-sans: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-sans: inter, system-ui, avenir, helvetica, arial, sans-serif;
   --font-mono: 'Monaco', 'Courier New', monospace;
 
   // Typography — font sizes
@@ -157,13 +157,12 @@
   --game-ink: #e0d5c0;
   --game-ink-medium: #b0a590;
   --game-ink-muted: #7a6e60;
-  --game-border: rgba(255, 240, 220, 0.22);
+  --game-border: rgb(255, 240, 220, 0.22);
   --game-surface: #262218;
   --game-surface-subtle: #2e2820;
   --game-surface-dim: #222016;
   --game-border-secondary: #4a4035;
   --game-border-light: #3a3028;
-
   --lb-bg: #1c1812;
   --lb-sidebar-bg: #161210;
   --lb-card-hover: #252015;
@@ -171,37 +170,34 @@
   --wm-bg: #0d1a10;
   --wl-bg: #181818;
   --mg-bg: #0d1a0e;
-
   --game-msg-system-bg: #2a2208;
   --game-msg-error-bg: #2a0d0d;
   --game-own-msg-bg: #3a3020;
-
-  --panel-item-bg: hsl(0 0% 12%);
-  --panel-item-bg-hover: hsl(0 0% 18%);
-  --panel-item-bg-selected: hsl(0 0% 22%);
-  --panel-content-bg: hsl(0 0% 10%);
-  --panel-toggle-active-bg: hsl(0 0% 25%);
-
-  --color-background: hsl(0 0% 9%);
-  --color-foreground: hsl(0 0% 95%);
-  --color-primary: hsl(0 0% 98%);
-  --color-primary-foreground: hsl(0 0% 9%);
-  --color-secondary: hsl(0 0% 15%);
-  --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(0 0% 15%);
-  --color-muted-foreground: hsl(0 0% 64%);
-  --color-accent: hsl(0 0% 15%);
-  --color-accent-foreground: hsl(0 0% 98%);
-  --color-destructive: hsl(0 62% 30%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(0 0% 15%);
-  --color-input: hsl(0 0% 15%);
-  --color-ring: hsl(0 0% 83%);
+  --panel-item-bg: hsl(0deg 0% 12%);
+  --panel-item-bg-hover: hsl(0deg 0% 18%);
+  --panel-item-bg-selected: hsl(0deg 0% 22%);
+  --panel-content-bg: hsl(0deg 0% 10%);
+  --panel-toggle-active-bg: hsl(0deg 0% 25%);
+  --color-background: hsl(0deg 0% 9%);
+  --color-foreground: hsl(0deg 0% 95%);
+  --color-primary: hsl(0deg 0% 98%);
+  --color-primary-foreground: hsl(0deg 0% 9%);
+  --color-secondary: hsl(0deg 0% 15%);
+  --color-secondary-foreground: hsl(0deg 0% 98%);
+  --color-muted: hsl(0deg 0% 15%);
+  --color-muted-foreground: hsl(0deg 0% 64%);
+  --color-accent: hsl(0deg 0% 15%);
+  --color-accent-foreground: hsl(0deg 0% 98%);
+  --color-destructive: hsl(0deg 62% 30%);
+  --color-destructive-foreground: hsl(0deg 0% 98%);
+  --color-border: hsl(0deg 0% 15%);
+  --color-input: hsl(0deg 0% 15%);
+  --color-ring: hsl(0deg 0% 83%);
 
   // Performance metric status colors (dark — brighter to stay visible)
-  --color-perf-ok: hsl(142 60% 55%);
-  --color-perf-warn: hsl(38 90% 58%);
-  --color-perf-bad: hsl(0 80% 65%);
+  --color-perf-ok: hsl(142deg 60% 55%);
+  --color-perf-warn: hsl(38deg 90% 58%);
+  --color-perf-bad: hsl(0deg 80% 65%);
 
   // Dark theme shadows (more prominent)
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -216,13 +212,12 @@
     --game-ink: #e0d5c0;
     --game-ink-medium: #b0a590;
     --game-ink-muted: #7a6e60;
-    --game-border: rgba(255, 240, 220, 0.22);
+    --game-border: rgb(255, 240, 220, 0.22);
     --game-surface: #262218;
     --game-surface-subtle: #2e2820;
     --game-surface-dim: #222016;
     --game-border-secondary: #4a4035;
     --game-border-light: #3a3028;
-
     --lb-bg: #1c1812;
     --lb-sidebar-bg: #161210;
     --lb-card-hover: #252015;
@@ -230,35 +225,31 @@
     --wm-bg: #0d1a10;
     --wl-bg: #181818;
     --mg-bg: #0d1a0e;
-
     --game-msg-system-bg: #2a2208;
     --game-msg-error-bg: #2a0d0d;
-    --panel-item-bg: hsl(0 0% 12%);
-    --panel-item-bg-hover: hsl(0 0% 18%);
-    --panel-item-bg-selected: hsl(0 0% 22%);
-    --panel-content-bg: hsl(0 0% 10%);
-    --panel-toggle-active-bg: hsl(0 0% 25%);
-
-    --color-background: hsl(0 0% 9%);
-    --color-foreground: hsl(0 0% 95%);
-    --color-primary: hsl(0 0% 98%);
-    --color-primary-foreground: hsl(0 0% 9%);
-    --color-secondary: hsl(0 0% 15%);
-    --color-secondary-foreground: hsl(0 0% 98%);
-    --color-muted: hsl(0 0% 15%);
-    --color-muted-foreground: hsl(0 0% 64%);
-    --color-accent: hsl(0 0% 15%);
-    --color-accent-foreground: hsl(0 0% 98%);
-    --color-destructive: hsl(0 62% 30%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-    --color-border: hsl(0 0% 15%);
-    --color-input: hsl(0 0% 15%);
-    --color-ring: hsl(0 0% 83%);
-
-    --color-perf-ok: hsl(142 60% 55%);
-    --color-perf-warn: hsl(38 90% 58%);
-    --color-perf-bad: hsl(0 80% 65%);
-
+    --panel-item-bg: hsl(0deg 0% 12%);
+    --panel-item-bg-hover: hsl(0deg 0% 18%);
+    --panel-item-bg-selected: hsl(0deg 0% 22%);
+    --panel-content-bg: hsl(0deg 0% 10%);
+    --panel-toggle-active-bg: hsl(0deg 0% 25%);
+    --color-background: hsl(0deg 0% 9%);
+    --color-foreground: hsl(0deg 0% 95%);
+    --color-primary: hsl(0deg 0% 98%);
+    --color-primary-foreground: hsl(0deg 0% 9%);
+    --color-secondary: hsl(0deg 0% 15%);
+    --color-secondary-foreground: hsl(0deg 0% 98%);
+    --color-muted: hsl(0deg 0% 15%);
+    --color-muted-foreground: hsl(0deg 0% 64%);
+    --color-accent: hsl(0deg 0% 15%);
+    --color-accent-foreground: hsl(0deg 0% 98%);
+    --color-destructive: hsl(0deg 62% 30%);
+    --color-destructive-foreground: hsl(0deg 0% 98%);
+    --color-border: hsl(0deg 0% 15%);
+    --color-input: hsl(0deg 0% 15%);
+    --color-ring: hsl(0deg 0% 83%);
+    --color-perf-ok: hsl(142deg 60% 55%);
+    --color-perf-warn: hsl(38deg 90% 58%);
+    --color-perf-bad: hsl(0deg 80% 65%);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);

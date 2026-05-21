@@ -204,6 +204,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0.5;
   }
@@ -385,7 +386,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   border-color: #d32f2f;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .wl-game__tile {
     width: 2.5rem;
     height: 2.5rem;

@@ -23,14 +23,14 @@ withDefaults(defineProps<Properties>(), { size: 'md', variant: 'ghost', active: 
   </Button>
 </template>
 
-<style scoped>
+<style>
 .icon-btn--sm {
   width: var(--btn-sm-height);
   height: var(--btn-sm-height);
   flex-shrink: 0;
 }
 
-.icon-btn--sm :deep(svg) {
+.icon-btn--sm svg {
   width: var(--font-size-base);
   height: var(--font-size-base);
 }
@@ -41,7 +41,7 @@ withDefaults(defineProps<Properties>(), { size: 'md', variant: 'ghost', active: 
   flex-shrink: 0;
 }
 
-.icon-btn--md :deep(svg) {
+.icon-btn--md svg {
   width: var(--font-size-md);
   height: var(--font-size-md);
 }
@@ -52,7 +52,7 @@ withDefaults(defineProps<Properties>(), { size: 'md', variant: 'ghost', active: 
   flex-shrink: 0;
 }
 
-.icon-btn--lg :deep(svg) {
+.icon-btn--lg svg {
   width: var(--font-size-md);
   height: var(--font-size-md);
 }

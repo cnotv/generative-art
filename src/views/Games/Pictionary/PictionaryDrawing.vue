@@ -82,28 +82,16 @@ defineExpose({
   min-height: 0;
   max-width: 100%;
   overflow: hidden;
-}
 
-.pictionary-drawing :deep(.canvas-editor) {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.pictionary-drawing :deep(.canvas-editor-canvas) {
-  flex-grow: 0;
-  height: auto;
-  border: 3px solid var(--game-border);
-  border-radius: 1.25rem;
-  box-shadow: 3px 3px 0 var(--game-border);
-}
-
-.pictionary-drawing :deep(.btn) {
-  border-radius: 999px;
-}
-
-.pictionary-drawing :deep(.color-picker__swatch) {
-  border-radius: 50%;
+  --canvas-editor-flex: 1;
+  --canvas-editor-min-height: 0;
+  --canvas-editor-overflow: hidden;
+  --canvas-flex-grow: 0;
+  --canvas-border: 3px solid var(--game-border);
+  --canvas-radius: 1.25rem;
+  --canvas-shadow: 3px 3px 0 var(--game-border);
+  --btn-radius: 999px;
+  --swatch-radius: 50%;
 }
 
 .pictionary-drawing__word-banner {
@@ -138,7 +126,6 @@ defineExpose({
   letter-spacing: 0.1em;
   color: #111;
   text-transform: uppercase;
-  word-break: break-word;
   overflow-wrap: anywhere;
   line-height: 1.15;
 }
@@ -168,15 +155,14 @@ defineExpose({
   opacity: 0.8;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .pictionary-drawing {
     gap: var(--spacing-1);
     min-height: 0;
   }
 
   .pictionary-drawing__word-banner {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     justify-content: center;
     padding: var(--spacing-1) var(--spacing-2);
     gap: var(--spacing-1);

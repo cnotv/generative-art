@@ -17,5 +17,5 @@ export const useRoomId = () => {
     router.replace({ query: { ...route.query, room: resolved } })
   }
 
-  return { roomId: ref(resolved), resolvedRoomId: resolved }
+  return { roomId: ref(resolved), resolvedRoomId: resolved, isCreator: !existing }
 }

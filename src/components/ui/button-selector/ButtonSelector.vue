@@ -53,14 +53,12 @@ const getDisabled = (opt: string | ButtonOption): boolean =>
 <style scoped>
 .button-selector {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   gap: 0.25rem;
 }
 
 .button-selector--column {
-  flex-direction: column;
-  flex-wrap: nowrap;
+  flex-flow: column nowrap;
 }
 
 .button-selector__btn {

@@ -731,7 +731,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgb(0, 0, 0, 0.2);
   z-index: 10;
 }
 

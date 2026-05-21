@@ -377,24 +377,23 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 }
 
 .config-controls__inline-input:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255, 255, 255, 0.05);
 }
 
 .config-controls__inline-input:focus {
-  background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background-color: rgb(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgb(255, 255, 255, 0.2);
 }
 
 /* Hide spinner buttons in number input */
 .config-controls__inline-input::-webkit-outer-spin-button,
 .config-controls__inline-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 .config-controls__inline-input[type='number'] {
   appearance: textfield;
-  -moz-appearance: textfield;
 }
 
 .config-controls__color-row {

@@ -27,7 +27,9 @@ const handleBack = (): void => {
 <template>
   <header class="game-header">
     <div class="game-header__left">
-      <button class="game-header__back" type="button" @click="handleBack">← Lobby</button>
+      <button v-if="fromLobby" class="game-header__back" type="button" @click="handleBack">
+        ← Lobby
+      </button>
     </div>
     <div v-if="!fromLobby && roomId" class="game-header__room">
       <span class="game-header__room-label">Room:</span>

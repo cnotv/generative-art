@@ -19,6 +19,7 @@ const props = defineProps<{
   localPeerId: string
   placeholder?: string
   disabled?: boolean
+  variant?: 'game'
 }>()
 
 const emit = defineEmits<{
@@ -56,7 +57,7 @@ watch(() => props.messages.length, scrollToBottom)
 </script>
 
 <template>
-  <div class="chat" :style="fontScaleStyle">
+  <div class="chat" :class="{ 'chat--game': variant === 'game' }" :style="fontScaleStyle">
     <div class="chat__zoom">
       <button
         class="chat__zoom-btn"
@@ -110,12 +111,27 @@ watch(() => props.messages.length, scrollToBottom)
 <style scoped>
 .chat {
   --chat-font-scale: 1;
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
   height: 100%;
   min-height: 0;
   font-size: calc(var(--font-size-md, 1rem) * var(--chat-font-scale));
+}
+
+.chat--game {
+  flex: 1;
+  background: var(--game-surface-subtle);
+  border: 3px solid var(--game-border);
+  border-radius: 1.25rem;
+  box-shadow: 3px 3px 0 var(--game-border);
+  padding: var(--spacing-2);
+  box-sizing: border-box;
+
+  --chat-message-radius: var(--radius-xl);
+  --chat-message-radius-adjacent: 4px;
+  --chat-message-bg: #d7d8d9;
 }
 
 .chat__zoom {
@@ -134,6 +150,11 @@ watch(() => props.messages.length, scrollToBottom)
   background: var(--color-secondary);
   color: var(--color-foreground);
   cursor: pointer;
+}
+
+.chat--game .chat__zoom-btn {
+  border-radius: 999px;
+  border: 2px solid var(--game-border);
 }
 
 .chat__zoom-btn:disabled {
@@ -159,6 +180,12 @@ watch(() => props.messages.length, scrollToBottom)
   border-radius: var(--radius-sm);
 }
 
+.chat--game .chat__list {
+  border-radius: 1rem;
+  border: 2px solid var(--game-border);
+  background: var(--game-surface-subtle);
+}
+
 .chat__form {
   display: flex;
   gap: var(--spacing-1);
@@ -172,6 +199,11 @@ watch(() => props.messages.length, scrollToBottom)
   background: var(--color-background);
   color: var(--color-foreground);
   font-size: var(--font-size-md, 1rem);
+}
+
+.chat--game .chat__input {
+  border-radius: 999px;
+  border: 2px solid var(--game-border);
 }
 
 .chat__input:disabled {
@@ -189,6 +221,11 @@ watch(() => props.messages.length, scrollToBottom)
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   cursor: pointer;
+}
+
+.chat--game .chat__send-btn {
+  border-radius: 999px;
+  border: 2px solid var(--game-border);
 }
 
 .chat__send-btn:disabled {

@@ -76,6 +76,8 @@
 
 ## CSS Conventions
 
+- **Never use `:deep()`**: The `:deep()` combinator is absolutely forbidden. No exceptions unless the user explicitly writes permission for a specific case in the codebase. If a parent needs to style a child component's internals, the child must expose CSS custom properties that the parent sets on its own element — CSS variables cascade naturally without piercing scoped styles. Stylelint enforces this automatically via `selector-pseudo-class-disallowed-list`.
+
 - **BEM methodology**: Use Block\_\_Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
 - **Example**: `.player-controls__button--active`, `.game-ui__score-display`

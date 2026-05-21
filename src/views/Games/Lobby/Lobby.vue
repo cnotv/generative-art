@@ -17,6 +17,7 @@ import { usePictionaryStore } from '@/stores/pictionary'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import { useMinigolfStore } from '@/stores/minigolf'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
+import { useRhythmGameStore } from '@/stores/rhythmGame'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
@@ -33,7 +34,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     SquaresMultiplayer: useSquaresMultiplayerStore(),
     WordleMultiplayer: useWordleMultiplayerStore(),
     Minigolf: useMinigolfStore(),
-    BubbleShooter: useBubbleShooterStore()
+    BubbleShooter: useBubbleShooterStore(),
+    RhythmGame: useRhythmGameStore()
   }
 
 const stored = loadProfile()
@@ -346,12 +348,6 @@ const roomsOpen = ref(true)
   min-height: 0;
 }
 
-.lobby__game-embed :deep(.wm),
-.lobby__game-embed :deep(.wl),
-.lobby__game-embed :deep(.pictionary) {
-  padding-top: var(--nav-height);
-}
-
 /* Sidebar */
 .lobby__sidebar {
   grid-area: sidebar;
@@ -461,7 +457,7 @@ const roomsOpen = ref(true)
   overflow: hidden;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .lobby {
     grid-template-columns: 1fr;
     grid-template-areas: 'main' 'sidebar';

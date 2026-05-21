@@ -16,7 +16,7 @@ import {
   buildRandomGradient
 } from '@/utils/playerProfile'
 import GameHeader from '@/components/GameHeader.vue'
-import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
 import MinigolfLobby from './MinigolfLobby.vue'
 import MinigolfGame from './MinigolfGame.vue'
 import MinigolfSummary from './MinigolfSummary.vue'

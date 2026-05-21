@@ -116,36 +116,36 @@ const handleSliderChange = (value: number[]) => {
 }
 
 .recording-controls__button--start {
-  background-color: hsl(142 71% 45%);
+  background-color: hsl(142deg 71% 45%);
 }
 
 .recording-controls__button--start:hover {
-  background-color: hsl(142 71% 35%);
+  background-color: hsl(142deg 71% 35%);
 }
 
 .recording-controls__button--stop {
-  background-color: hsl(0 84% 60%);
+  background-color: hsl(0deg 84% 60%);
 }
 
 .recording-controls__button--stop:hover {
-  background-color: hsl(0 84% 50%);
+  background-color: hsl(0deg 84% 50%);
 }
 
 @media (prefers-color-scheme: dark) {
   .recording-controls__button--start {
-    background-color: hsl(142 71% 35%);
+    background-color: hsl(142deg 71% 35%);
   }
 
   .recording-controls__button--start:hover {
-    background-color: hsl(142 71% 28%);
+    background-color: hsl(142deg 71% 28%);
   }
 
   .recording-controls__button--stop {
-    background-color: hsl(0 62% 45%);
+    background-color: hsl(0deg 62% 45%);
   }
 
   .recording-controls__button--stop:hover {
-    background-color: hsl(0 62% 38%);
+    background-color: hsl(0deg 62% 38%);
   }
 }
 

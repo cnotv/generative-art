@@ -15,7 +15,7 @@ import {
   PLAYER_COLORS
 } from '@/utils/playerProfile'
 import GameHeader from '@/components/GameHeader.vue'
-import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
 import SquaresMultiplayerLobby from './SquaresMultiplayerLobby.vue'
 import SquaresMultiplayerGame from './SquaresMultiplayerGame.vue'
 import SquaresMultiplayerIntermission from './SquaresMultiplayerIntermission.vue'

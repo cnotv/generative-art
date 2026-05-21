@@ -38,7 +38,7 @@ const emit = defineEmits<{
   display: none;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .game-tab-bar {
     display: flex;
     position: fixed;

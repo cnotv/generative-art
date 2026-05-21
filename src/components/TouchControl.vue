@@ -115,17 +115,13 @@ const handleButtonAction = (action: string, event: Event) => {
   width: calc(2 * 44px + 8px);
   height: auto;
   gap: 8px;
-  flex-wrap: wrap;
-  flex-direction: row;
+  flex-flow: row wrap;
   justify-content: flex-start;
 }
 
 .touch-control__edge {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: var(--touch-color-background-dark);
   border-radius: 50%;
   opacity: 0.5;
@@ -136,7 +132,7 @@ const handleButtonAction = (action: string, event: Event) => {
   height: 50px;
   background-color: var(--touch-color-background-light);
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgb(255, 255, 255, 0.2);
   opacity: 0.5;
   z-index: 1;
 }
@@ -145,11 +141,10 @@ const handleButtonAction = (action: string, event: Event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: bold;
   user-select: none;
-  -webkit-user-select: none;
   cursor: pointer;
 }
 
@@ -159,7 +154,7 @@ const handleButtonAction = (action: string, event: Event) => {
   border-radius: 50%;
   border: none;
   background-color: var(--touch-color-background-dark);
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255, 255, 255, 0.5);
   font-size: 12px;
   font-weight: bold;
   cursor: pointer;
@@ -168,7 +163,6 @@ const handleButtonAction = (action: string, event: Event) => {
   align-items: center;
   justify-content: center;
   user-select: none;
-  -webkit-user-select: none;
   touch-action: none;
 }
 </style>

@@ -38,6 +38,7 @@ defineProps<{
   from {
     height: 0;
   }
+
   to {
     height: var(--radix-accordion-content-height);
   }
@@ -47,6 +48,7 @@ defineProps<{
   from {
     height: var(--radix-accordion-content-height);
   }
+
   to {
     height: 0;
   }

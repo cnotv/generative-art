@@ -216,7 +216,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  flex-grow: 1;
+  flex: var(--canvas-editor-flex, 1 1 auto);
+  min-height: var(--canvas-editor-min-height, auto);
+  overflow: var(--canvas-editor-overflow, visible);
   margin: 0.8em;
 }
 </style>

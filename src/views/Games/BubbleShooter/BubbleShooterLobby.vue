@@ -58,34 +58,21 @@ const handleConfig = (key: string, value: string | number): void => {
 </script>
 
 <template>
-  <section class="bs-lobby">
-    <GameLobbyWizard
-      :player-name="playerName"
-      :player-color="playerColor"
-      :is-host="isHost"
-      :player-list="playerList"
-      :room-id="roomId"
-      :matchmaker-room="MATCHMAKER_ROOM"
-      :config-fields="configFields"
-      accent-color="var(--bs-accent)"
-      @update:player-name="emit('update:playerName', $event)"
-      @update:player-color="emit('update:playerColor', $event)"
-      @name-change="emit('nameChange')"
-      @config-change="handleConfig"
-      @start-game="emit('startGame')"
-      @match-found="emit('matchFound', $event)"
-      @leave-room="emit('leaveRoom')"
-    />
-  </section>
+  <GameLobbyWizard
+    :player-name="playerName"
+    :player-color="playerColor"
+    :is-host="isHost"
+    :player-list="playerList"
+    :room-id="roomId"
+    :matchmaker-room="MATCHMAKER_ROOM"
+    :config-fields="configFields"
+    accent-color="var(--bs-accent)"
+    @update:player-name="emit('update:playerName', $event)"
+    @update:player-color="emit('update:playerColor', $event)"
+    @name-change="emit('nameChange')"
+    @config-change="handleConfig"
+    @start-game="emit('startGame')"
+    @match-found="emit('matchFound', $event)"
+    @leave-room="emit('leaveRoom')"
+  />
 </template>
-
-<style scoped>
-.bs-lobby {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
-}
-</style>

@@ -17,7 +17,7 @@ import {
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
 import GameHeader from '@/components/GameHeader.vue'
-import LobbyLayout from '@/views/Games/layout/LobbyLayout.vue'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
 import BubbleShooterLobby from './BubbleShooterLobby.vue'
 import BubbleShooterGame from './BubbleShooterGame.vue'
 import BubbleShooterSummary from './BubbleShooterSummary.vue'
