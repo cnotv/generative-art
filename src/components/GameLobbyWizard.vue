@@ -107,6 +107,11 @@ const restoreStep = (): void => {
   if (remembered !== undefined) step.value = Math.min(remembered, totalSteps.value)
 }
 
+const handleLeaveRoom = (): void => {
+  rememberedSteps.delete(props.matchmakerRoom)
+  emit('leaveRoom')
+}
+
 watch(
   () => props.showResults,
   (showResults) => {
@@ -116,7 +121,7 @@ watch(
 
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
-  restoreStep()
+  if (props.showResults) restoreStep()
 })
 </script>
 
@@ -213,7 +218,7 @@ onMounted(() => {
                 :title="player.name"
               />
             </div>
-            <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+            <button class="glw__btn glw__btn--ghost" type="button" @click="handleLeaveRoom">
               Leave room
             </button>
           </template>
@@ -292,7 +297,7 @@ onMounted(() => {
       <div v-else class="glw__results">
         <slot name="summary" />
         <div class="glw__nav">
-          <button class="glw__btn glw__btn--ghost" type="button" @click="emit('leaveRoom')">
+          <button class="glw__btn glw__btn--ghost" type="button" @click="handleLeaveRoom">
             ← Leave
           </button>
           <button class="glw__start-btn" type="button" @click="emit('playAgain')">
