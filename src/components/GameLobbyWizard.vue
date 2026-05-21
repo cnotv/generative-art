@@ -311,7 +311,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 0;
+  min-width: min(320px, 100%);
   max-width: 100%;
 }
 
@@ -320,7 +320,7 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  min-width: min(20rem, 100%);
+  min-width: min(320px, 100%);
   max-width: 28rem;
   width: 100%;
 }
