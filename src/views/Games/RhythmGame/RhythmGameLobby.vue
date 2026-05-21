@@ -2,8 +2,8 @@
 import { computed, ref, onMounted } from 'vue'
 import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
 import RhythmGameSummary from './RhythmGameSummary.vue'
-import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, SONGS, type RgSong, type RgDifficulty, type RgInstrument } from './config'
+import type { LobbyPlayer } from '@/types/lobbyWizard'
+import { MATCHMAKER_ROOM, type RgInstrument } from './config'
 import type { RgPlayer } from '@/stores/rhythmGame'
 import {
   midiStorageList,
@@ -22,10 +22,7 @@ const props = defineProps<{
   playerList: LobbyPlayer[]
   rgPlayerList: RgPlayer[]
   roomId: string
-  song: RgSong
-  difficulty: RgDifficulty
   instrument: RgInstrument
-  customSongName?: string
   showResults?: boolean
   winnerId?: string | null
   localPeerId?: string
@@ -34,8 +31,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:playerName': [value: string]
   'update:playerColor': [value: string]
-  'update:song': [value: RgSong]
-  'update:difficulty': [value: RgDifficulty]
   'update:instrument': [value: RgInstrument]
   nameChange: []
   startGame: []
@@ -45,7 +40,6 @@ const emit = defineEmits<{
   midiParsed: [notes: RhythmNote[], songName: string]
 }>()
 
-// ── State ─────────────────────────────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null)
 const library = ref<MidiLibraryEntry[]>([])
 const selectedValue = ref('')
@@ -55,14 +49,6 @@ const loadLibrary = async (): Promise<void> => {
 }
 
 onMounted(loadLibrary)
-
-// ── Combined value helpers ─────────────────────────────────────────────────
-// Value format: "preset:<songId>"  |  "midi:<id>:<trackIndex>"  |  "__upload__"
-
-const currentSelectedValue = computed(() => {
-  if (props.song === 'custom') return selectedValue.value
-  return `preset:${props.song}`
-})
 
 const selectedLibraryId = computed(() => {
   const [type, id] = selectedValue.value.split(':')
@@ -76,7 +62,7 @@ const parseMidiOption = async (
 ): Promise<void> => {
   const buf = await midiStorageLoad(midiId)
   if (!buf) return
-  const notes = parseMidiTrack(buf, trackIndex, props.difficulty)
+  const notes = parseMidiTrack(buf, trackIndex, 'hard')
   emit('midiParsed', notes, songName)
 }
 
@@ -96,16 +82,12 @@ const handleMidiSelection = async (midiId: string, trackIndex: number): Promise<
 const handleChange = async (event: Event): Promise<void> => {
   const value = (event.target as HTMLSelectElement).value
   if (value === '__upload__') {
-    ;(event.target as HTMLSelectElement).value = currentSelectedValue.value
+    ;(event.target as HTMLSelectElement).value = selectedValue.value
     fileInput.value?.click()
     return
   }
   selectedValue.value = value
   const [type, id, trackString] = value.split(':')
-  if (type === 'preset') {
-    emit('update:song', id as RgSong)
-    return
-  }
   if (type === 'midi') await handleMidiSelection(id, Number(trackString))
 }
 
@@ -120,10 +102,9 @@ const handleFileChange = async (event: Event): Promise<void> => {
   await loadLibrary()
   const firstTrack = tracks[0]
   if (!firstTrack) return
-  const value = `midi:${id}:${firstTrack.index}`
-  selectedValue.value = value
+  selectedValue.value = `midi:${id}:${firstTrack.index}`
   const trackLabel = tracks.length > 1 ? `${name} — ${firstTrack.name}` : name
-  const notes = parseMidiTrack(buf, firstTrack.index, props.difficulty)
+  const notes = parseMidiTrack(buf, firstTrack.index, 'hard')
   emit('midiParsed', notes, trackLabel)
 }
 
@@ -131,39 +112,12 @@ const handleDelete = async (): Promise<void> => {
   if (!selectedLibraryId.value) return
   await midiStorageDelete(selectedLibraryId.value)
   selectedValue.value = ''
-  emit('update:song', 'electric-pulse')
+  emit('midiParsed', [], '')
   await loadLibrary()
 }
 
-// ── Config fields (difficulty + instrument only, song handled above) ────────
-const configFields = computed((): LobbyConfigField[] => [
-  {
-    type: 'select',
-    key: 'difficulty',
-    label: 'Difficulty',
-    value: props.difficulty,
-    options: [
-      { value: 'easy', label: 'Easy' },
-      { value: 'medium', label: 'Medium' },
-      { value: 'hard', label: 'Hard' }
-    ]
-  },
-  {
-    type: 'select',
-    key: 'instrument',
-    label: 'Instrument',
-    value: props.instrument,
-    options: [
-      { value: 'piano', label: 'Piano' },
-      { value: 'bass', label: 'Bass' },
-      { value: 'guitar', label: 'Guitar' }
-    ]
-  }
-])
-
-const handleConfig = (key: string, value: string | number): void => {
-  if (key === 'difficulty') emit('update:difficulty', value as RgDifficulty)
-  if (key === 'instrument') emit('update:instrument', value as RgInstrument)
+const handleInstrumentChange = (event: Event): void => {
+  emit('update:instrument', (event.target as HTMLSelectElement).value as RgInstrument)
 }
 </script>
 
@@ -175,28 +129,23 @@ const handleConfig = (key: string, value: string | number): void => {
     :player-list="playerList"
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
-    :config-fields="configFields"
+    :config-fields="[]"
     accent-color="var(--rg-accent)"
     :show-results="showResults"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"
-    @config-change="handleConfig"
     @start-game="emit('startGame')"
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
     @play-again="emit('playAgain')"
   >
     <template #config>
-      <div class="rgl-song">
-        <label class="rgl-song__label">Song</label>
-        <div class="rgl-song__row">
-          <select class="rgl-song__select" :value="currentSelectedValue" @change="handleChange">
-            <optgroup label="Presets">
-              <option v-for="s in SONGS" :key="s.id" :value="`preset:${s.id}`">
-                {{ s.label }}
-              </option>
-            </optgroup>
+      <div class="rgl-field">
+        <label class="rgl-field__label">Song</label>
+        <div class="rgl-field__row">
+          <select class="rgl-field__select" :value="selectedValue" @change="handleChange">
+            <option value="" disabled>— Select a song —</option>
 
             <optgroup v-if="library.length" label="My Library">
               <template v-for="entry in library" :key="entry.id">
@@ -222,7 +171,7 @@ const handleConfig = (key: string, value: string | number): void => {
 
           <button
             v-if="selectedLibraryId"
-            class="rgl-song__delete"
+            class="rgl-field__delete"
             type="button"
             title="Remove from library"
             @click="handleDelete"
@@ -235,9 +184,18 @@ const handleConfig = (key: string, value: string | number): void => {
           ref="fileInput"
           type="file"
           accept=".mid,.midi"
-          class="rgl-song__input"
+          class="rgl-field__input"
           @change="handleFileChange"
         />
+      </div>
+
+      <div class="rgl-field">
+        <label class="rgl-field__label">Instrument</label>
+        <select class="rgl-field__select" :value="instrument" @change="handleInstrumentChange">
+          <option value="piano">Piano</option>
+          <option value="bass">Bass</option>
+          <option value="guitar">Guitar</option>
+        </select>
       </div>
     </template>
 
@@ -254,26 +212,26 @@ const handleConfig = (key: string, value: string | number): void => {
 </template>
 
 <style scoped>
-.rgl-song {
+.rgl-field {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
 }
 
-.rgl-song__label {
+.rgl-field__label {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  color: var(--game-ink-muted, rgb(255, 255, 255, 0.5));
+  color: var(--game-ink-muted, rgb(255 255 255 / 50%));
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.rgl-song__row {
+.rgl-field__row {
   display: flex;
   gap: var(--spacing-1);
 }
 
-.rgl-song__select {
+.rgl-field__select {
   flex: 1;
   padding: var(--spacing-1) var(--spacing-2);
   border: 2px solid var(--game-border);
@@ -285,7 +243,7 @@ const handleConfig = (key: string, value: string | number): void => {
   cursor: pointer;
 }
 
-.rgl-song__delete {
+.rgl-field__delete {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,13 +259,13 @@ const handleConfig = (key: string, value: string | number): void => {
   flex-shrink: 0;
 }
 
-.rgl-song__delete:hover {
-  background: #ff4040;
-  border-color: #ff4040;
+.rgl-field__delete:hover {
+  background: var(--color-error, #ff4040);
+  border-color: var(--color-error, #ff4040);
   color: #fff;
 }
 
-.rgl-song__input {
+.rgl-field__input {
   display: none;
 }
 </style>
