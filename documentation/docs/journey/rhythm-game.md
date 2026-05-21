@@ -265,3 +265,90 @@ Getting the host/guest split right in the wizard (host sees Game Settings + Star
 **Attempt 3 — `hostPeerId` set via CONFIG_CHANNEL sender (broken).** CONFIG is broadcast by the host when a peer joins. The guest receiving CONFIG can infer the sender is the host. But there is a race: both tabs fire `p2pOnPeerJoin` before any messages have been exchanged, so both briefly think they are host and both send CONFIG. Each tab's CONFIG handler then sets `hostPeerId` to whoever sent CONFIG last, which could be the guest — leaving both without a Start button.
 
 **Resolution — match all other games.** Every other game in the suite (Minigolf, Squares, Pictionary…) uses insertion-order: `hostId = Object.keys(players)[0]`. The trick is that the CONFIG channel is only sent by the player who was already in the room (the real host), whose `p2pOnPeerJoin` fires with `isHost = true` because they inserted themselves first and no other player has arrived yet. The guest's `p2pOnPeerJoin` fires moments later, but by then the CONFIG has either already arrived or is in flight, and the guest's `isHost` resolves correctly after the avatar exchange completes. The approach is eventually consistent and matches what already works across all other games.
+
+## MIDI playback: from file to falling notes and background audio
+
+The rhythm game can play any MIDI file uploaded by the player. The pipeline has three distinct stages: persistence, extraction, and dual scheduling.
+
+### Stage 1 — upload and persistence (IndexedDB)
+
+When a MIDI file is selected, the browser reads it as an `ArrayBuffer`. Before any game-specific processing, the raw bytes and their extracted track metadata are written into an IndexedDB object store (`rg-midi-library`). Only track metadata (name, note count, index) is stored alongside the binary — the game never fetches all buffers at once. The song-picker dropdown is populated from metadata alone; the binary is loaded on demand when a track is actually selected.
+
+```mermaid
+flowchart LR
+    A[MIDI file chosen] --> B[ArrayBuffer in memory]
+    B --> C[midiGetTracks — extract metadata]
+    B --> D[IndexedDB — store binary + metadata]
+    C --> E[Track dropdown populated]
+    D --> F[Library persists across sessions]
+```
+
+Storing metadata separately from the binary avoids loading every file into memory just to render the dropdown. A library with dozens of files remains fast.
+
+### Stage 2 — track extraction and pitch-to-lane mapping
+
+`midiGetTracks` uses `@tonejs/midi` to parse the binary and returns one entry per track that contains at least one note, sorted by note count descending. The track label combines the MIDI track name and the instrument name (when present) so the dropdown is self-describing even for multi-track orchestral files.
+
+When the player selects a track, `parseMidiTrack` converts that track's notes into the game's `RhythmNote` format. Two transforms are applied.
+
+**Pitch-to-lane mapping.** The game has four lanes. A MIDI track can span any portion of the 128-note MIDI range. Rather than fixing a global mapping, the converter measures the pitch range of the selected track and divides it into four equal-width quartiles. Each note falls into whichever quartile contains its pitch.
+
+```mermaid
+flowchart LR
+    A[Track notes sorted by pitch] --> B[min pitch + range computed]
+    B --> C[quartile width = range ÷ 4]
+    C --> D["lane = floor((pitch − min) ÷ quartileWidth)"]
+    D --> E[clamped to 0–3]
+```
+
+This keeps the lane spread natural regardless of whether the track covers a full piano range or a narrow bass line. A track that spans only five semitones still uses all four lanes proportionally.
+
+**Difficulty gap filtering.** At easy and medium difficulty, notes closer than a minimum time gap are dropped so the stream is sparse enough for less experienced players. Hard difficulty disables filtering entirely. When a MIDI file is used for gameplay, the track is always parsed at hard (no filtering) because the player chose the song and is expected to want all of it.
+
+```mermaid
+flowchart TD
+    A[All notes in time order] --> B{Gap to previous note}
+    B -- gap ≥ minGap --> C[Keep]
+    B -- gap < minGap --> D[Drop]
+    C --> E[RhythmNote array]
+    D --> E
+```
+
+### Stage 3 — dual scheduling: gameplay notes and background audio
+
+Once the gameplay notes are derived, a second pass over the entire MIDI file produces background audio. `midiParseBackground` reads every note from every track — not just the gameplay track — and converts each to a `ScheduledNote` with the actual MIDI pitch frequency and the actual note duration from the file. This is the key difference from the gameplay notes: gameplay notes are pitch-bucketed to four lanes; background notes preserve every pitch and every duration.
+
+Both sets of notes are merged into a single array and handed to the same `createNoteScheduler` instance before the game starts. One Web Audio `AudioContext` handles everything, which avoids the browser's limit on concurrent audio contexts and guarantees that gameplay and background audio are synchronised to the same hardware clock.
+
+```mermaid
+flowchart TD
+    A[MIDI binary loaded] --> B[parseMidiTrack — gameplay track only]
+    A --> C[midiParseBackground — all tracks, all pitches]
+    B --> D[4-lane RhythmNote array — falls on screen]
+    C --> E[ScheduledNote array — sine waves at real pitch]
+    D --> F[buildScheduledNotes — lane freq × instrument preset]
+    F --> G[merge with background notes]
+    E --> G
+    G --> H[createNoteScheduler.start at game startAt]
+    H --> I[Single AudioContext — gameplay + background in sync]
+```
+
+Background notes play at a lower volume than gameplay notes so they serve as ambient accompaniment rather than competing with the hit feedback sounds. The result is that the player hears a synthesised rendition of the original song while tapping the falling notes derived from a single chosen track.
+
+### Why the same `AudioContext`
+
+An earlier implementation used two separate schedulers — one for gameplay notes, one for background. Both created their own `AudioContext`. Browsers cap the number of simultaneous audio contexts (Chrome allows six), and two contexts cannot be synchronised to the same hardware clock without additional latency compensation. The merged approach eliminates both problems: one context, one clock, one scheduler, one `start` call.
+
+```mermaid
+sequenceDiagram
+    participant Lobby as Lobby
+    participant Store as Pinia store
+    participant Game as RhythmGameGame
+    participant Scheduler as NoteScheduler
+
+    Lobby->>Store: midiParsed(gameNotes, bgNotes, songName)
+    Store->>Game: customNotes + backgroundNotes props
+    Game->>Scheduler: start([...gameNotes, ...bgNotes], startAt)
+    Scheduler-->>Scheduler: Web Audio lookahead scheduling
+    Note over Scheduler: Single AudioContext for all audio
+```
