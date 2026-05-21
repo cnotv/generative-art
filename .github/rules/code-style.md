@@ -119,6 +119,10 @@
 - **Header with "← Lobby" navigation**: Every game view must include a header component that navigates back to the Lobby. Follow the pattern established by `PictionaryHeader.vue` and `BubbleShooterHeader.vue` — a dedicated `<GameName>Header.vue` component that emits `leave-room`.
 - **Game-specific session composable**: Each game's P2P session logic must live in its own `use<GameName>Session.ts` composable co-located with the view. Use `useBubbleShooterSession` or `useMinigolfSession` as the reference pattern.
 
+## Dependencies
+
+- **No discontinued or unmaintained libraries**: Before adding any npm package, verify it is actively maintained. Check the repository's last commit date, open issues, and whether the maintainer responds to bug reports. Never use a library that has been archived, deprecated by its author, or has had no releases in over a year without a clear reason. If a well-maintained alternative exists, prefer it.
+
 ## Modular Architecture
 
 - **Reuse existing components**: Check and use existing components/libraries before creating new ones. Check `src/components/ui/` for shadcn UI components and other reusables in `src/components/`. Never reinvent the wheel.
