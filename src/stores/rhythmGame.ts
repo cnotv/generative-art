@@ -42,6 +42,7 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
   const instrument = ref<RgInstrument>('piano')
   const customNotes = ref<RhythmNote[] | null>(null)
   const customSongName = ref('')
+  const backgroundNotes = ref<RhythmNote[] | null>(null)
 
   const playerList = computed(() => Object.values(players.value).sort((a, b) => b.score - a.score))
 
@@ -98,6 +99,7 @@ export const useRhythmGameStore = defineStore('rhythmGame', () => {
     instrument,
     customNotes,
     customSongName,
+    backgroundNotes,
     playerList,
     hostId,
     upsertPlayer,

@@ -35,6 +35,7 @@ const {
   instrument,
   customNotes,
   customSongName,
+  backgroundNotes,
   solo
 } = storeToRefs(store)
 
@@ -95,12 +96,18 @@ const {
 const handleLeaveRoom = (): void => {
   store.solo = false
   store.customNotes = null
+  store.backgroundNotes = null
   store.customSongName = ''
   leaveRoom()
 }
 
-const handleMidiParsed = (notes: RhythmNote[], songName: string): void => {
-  store.customNotes = notes
+const handleMidiParsed = (
+  gameNotes: RhythmNote[],
+  bgNotes: RhythmNote[],
+  songName: string
+): void => {
+  store.customNotes = gameNotes.length > 0 ? gameNotes : null
+  store.backgroundNotes = bgNotes.length > 0 ? bgNotes : null
   store.customSongName = songName
   store.song = 'custom'
 }
@@ -188,12 +195,10 @@ onMounted(() => {
       :player-list="playerList"
       :rg-player-list="playerList"
       :room-id="roomId"
-      :instrument="instrument"
       :winner-id="winnerId"
       :local-peer-id="localPeerId || 'solo'"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
-      @update:instrument="store.instrument = $event"
       @name-change="handleNameChange"
       @start-game="handleStartGame"
       @match-found="handleMatchFound"
@@ -208,6 +213,7 @@ onMounted(() => {
       :difficulty="difficulty"
       :instrument="instrument"
       :custom-notes="customNotes"
+      :background-notes="backgroundNotes"
       :start-at="gameStartAt"
       :opponent-name="opponentPlayer?.name"
       :opponent-score="opponentPlayer?.score"

@@ -1,6 +1,6 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
-import { createNoteScheduler } from '@webgamekit/audio'
+import { createNoteScheduler, midiNoteToFreq } from '@webgamekit/audio'
 import {
   LANES,
   NOTE_SPEED_PX_PER_MS,
@@ -48,6 +48,7 @@ type GameDeps = {
   instrument: RgInstrument
   startAt: number
   customNotes?: RhythmNote[] | null
+  backgroundNotes?: RhythmNote[] | null
   onScoreUpdate: (data: RgScore) => void
   onSongEnd: () => void
 }
@@ -309,6 +310,22 @@ const drawFrame = (
   return alive
 }
 
+const clearCanvas = (canvas: HTMLCanvasElement | null): void => {
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+}
+
+const buildBackgroundScheduledNotes = (bgNotes: RhythmNote[]): ScheduledNote[] =>
+  bgNotes.map((n) => ({
+    time: n.time,
+    freq: midiNoteToFreq(n.midiNote),
+    duration: 180,
+    volume: 0.07,
+    waveType: 'sine' as const,
+    attackTime: 0.01
+  }))
+
 export const useRhythmGame = (deps: GameDeps) => {
   const score = ref(0)
   const combo = ref(0)
@@ -319,6 +336,7 @@ export const useRhythmGame = (deps: GameDeps) => {
   const laneActive = ref<boolean[]>([false, false, false, false])
 
   const scheduler = createNoteScheduler()
+  const bgScheduler = createNoteScheduler()
   let rafId = 0
   let notes: RhythmNote[] = []
   let particles: Particle[] = []
@@ -417,6 +435,9 @@ export const useRhythmGame = (deps: GameDeps) => {
     notes = resolveNotes(deps)
     const scheduled = buildScheduledNotes(notes, deps.instrument)
     scheduler.start(scheduled, deps.startAt)
+    if (deps.backgroundNotes?.length) {
+      bgScheduler.start(buildBackgroundScheduledNotes(deps.backgroundNotes), deps.startAt)
+    }
     lastFrameTime = performance.now()
     rafId = requestAnimationFrame(gameLoop)
   }
@@ -424,10 +445,8 @@ export const useRhythmGame = (deps: GameDeps) => {
   const destroy = (): void => {
     cancelAnimationFrame(rafId)
     scheduler.destroy()
-    if (deps.canvas.value) {
-      const ctx = deps.canvas.value.getContext('2d')
-      if (ctx) ctx.clearRect(0, 0, deps.canvas.value.width, deps.canvas.value.height)
-    }
+    bgScheduler.destroy()
+    clearCanvas(deps.canvas.value)
   }
 
   const mountControls = (touchTarget?: HTMLElement | null) =>

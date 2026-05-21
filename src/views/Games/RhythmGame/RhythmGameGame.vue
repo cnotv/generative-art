@@ -17,6 +17,7 @@ const props = defineProps<{
   instrument: RgInstrument
   startAt: number
   customNotes?: RhythmNote[] | null
+  backgroundNotes?: RhythmNote[] | null
   opponentName?: string
   opponentScore?: number
 }>()
@@ -38,6 +39,7 @@ const game = useRhythmGame({
   instrument: props.instrument,
   startAt: props.startAt,
   customNotes: props.customNotes,
+  backgroundNotes: props.backgroundNotes,
   onScoreUpdate: (data) => emit('scoreUpdate', data),
   onSongEnd: () => emit('songEnd')
 })

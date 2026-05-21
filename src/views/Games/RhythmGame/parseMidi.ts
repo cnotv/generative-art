@@ -81,3 +81,15 @@ export const parseMidiBuffer = (buffer: ArrayBuffer, difficulty: RgDifficulty): 
  */
 export const parseMidiFile = async (file: File, difficulty: RgDifficulty): Promise<RhythmNote[]> =>
   parseMidiBuffer(await file.arrayBuffer(), difficulty)
+
+/**
+ * Parse every note from every track in a MIDI file into a single flat array.
+ * Notes preserve their original MIDI pitch in the midiNote field.
+ * @param buffer - Raw MIDI binary data.
+ * @returns All notes across all tracks sorted by time.
+ */
+export const parseAllMidiNotes = (buffer: ArrayBuffer): RhythmNote[] => {
+  const midi = new Midi(buffer)
+  const all = midi.tracks.flatMap((track) => trackToNotes(track, 'hard'))
+  return all.sort((a, b) => a.time - b.time)
+}
