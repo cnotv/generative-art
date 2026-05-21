@@ -215,6 +215,7 @@ onMounted(() => {
       :instrument="instrument"
       :custom-notes="customNotes"
       :background-notes="backgroundNotes"
+      :song-name="customSongName || undefined"
       :start-at="gameStartAt"
       :opponent-name="opponentPlayer?.name"
       :opponent-score="opponentPlayer?.score"

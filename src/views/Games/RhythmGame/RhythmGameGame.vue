@@ -19,6 +19,7 @@ const props = defineProps<{
   startAt: number
   customNotes?: RhythmNote[] | null
   backgroundNotes?: ScheduledNote[] | null
+  songName?: string
   opponentName?: string
   opponentScore?: number
 }>()
@@ -114,8 +115,7 @@ onUnmounted(() => {
         <span class="rg-game__value">{{ game.score.value.toLocaleString() }}</span>
       </div>
       <div class="rg-game__hud-center">
-        <span class="rg-game__song-label">{{ song.replace(/-/g, ' ').toUpperCase() }}</span>
-        <span class="rg-game__difficulty">{{ difficulty }}</span>
+        <span class="rg-game__song-label">{{ (songName || song).toUpperCase() }}</span>
       </div>
       <div v-if="opponentName" class="rg-game__hud-right">
         <span class="rg-game__label">{{ opponentName }}</span>
