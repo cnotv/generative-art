@@ -239,7 +239,20 @@ onUnmounted(() => {
       @dragleave.prevent="isDragging = false"
       @drop.prevent="onDrop"
     >
-      <span class="image-converter__dropzone-icon">🖼</span>
+      <svg
+        class="image-converter__dropzone-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+        />
+      </svg>
       <span class="image-converter__dropzone-text">Drop images here or</span>
       <label class="image-converter__btn image-converter__btn--primary">
         Browse
@@ -457,8 +470,9 @@ onUnmounted(() => {
 }
 
 .image-converter__dropzone-icon {
-  font-size: 2.5rem;
-  line-height: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--color-muted-foreground);
 }
 
 .image-converter__dropzone-text {
