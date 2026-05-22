@@ -1,5 +1,9 @@
 # Code Style Guidelines
 
+## Tone and Content
+
+- **No emoji**: Never use emoji in code, comments, UI text, commit messages, documentation, or any other output unless the user explicitly requests it. Use plain SVG icons or text instead of emoji in UI.
+
 ## Uncertainty & Debugging
 
 - **Ask before assuming**: If uncertain about expected behavior, physics interactions, or edge cases, ask for clarification before implementing
