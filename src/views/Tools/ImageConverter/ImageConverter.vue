@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import ConverterWorker from './imageConverter.worker?worker'
+import DropZone from './DropZone.vue'
 import {
   FORMAT_OPTIONS,
   DEFAULT_FORMAT,
   DEFAULT_QUALITY,
   DEFAULT_MAX_DIMENSION,
+  DEFAULT_SCALE_PCT,
   ACCEPTED_TYPES,
   type ImageFormat,
   type ConvertRequest,
@@ -31,7 +33,7 @@ const format = ref<ImageFormat>(DEFAULT_FORMAT)
 const quality = ref(DEFAULT_QUALITY)
 const maxWidth = ref(DEFAULT_MAX_DIMENSION)
 const maxHeight = ref(DEFAULT_MAX_DIMENSION)
-const isDragging = ref(false)
+const scalePct = ref(DEFAULT_SCALE_PCT)
 const files = ref<FileEntry[]>([])
 
 const selectedFormatOption = computed(() => FORMAT_OPTIONS.find((f) => f.value === format.value)!)
@@ -86,7 +88,8 @@ const processEntry = (entry: FileEntry): void => {
     format: format.value,
     quality: quality.value,
     maxWidth: maxWidth.value,
-    maxHeight: maxHeight.value
+    maxHeight: maxHeight.value,
+    scalePct: scalePct.value
   }
   worker.postMessage(request)
 }
@@ -111,20 +114,10 @@ const readFile = (file: File): Promise<FileEntry> =>
     reader.readAsArrayBuffer(file)
   })
 
-const addFiles = async (fileList: FileList | null): Promise<void> => {
-  if (!fileList) return
+const addFiles = async (fileList: FileList): Promise<void> => {
   const entries = await Promise.all([...fileList].map(readFile))
   files.value = [...files.value, ...entries]
   entries.forEach(processEntry)
-}
-
-const onDrop = (event: DragEvent): void => {
-  isDragging.value = false
-  addFiles(event.dataTransfer?.files ?? null)
-}
-
-const onInputChange = (event: Event): void => {
-  addFiles((event.target as HTMLInputElement).files)
 }
 
 const reconvertAll = (): void => {
@@ -218,6 +211,17 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <div class="image-converter__control-group">
+        <label class="image-converter__label">Scale — {{ scalePct }}%</label>
+        <input
+          v-model.number="scalePct"
+          type="range"
+          min="1"
+          max="100"
+          class="image-converter__range"
+        />
+      </div>
+
       <div v-if="files.length > 0" class="image-converter__actions">
         <button class="image-converter__btn" type="button" @click="reconvertAll">
           Re-convert all
@@ -232,39 +236,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div
-      class="image-converter__dropzone"
-      :class="{ 'image-converter__dropzone--dragging': isDragging }"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
-      @drop.prevent="onDrop"
-    >
-      <svg
-        class="image-converter__dropzone-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        aria-hidden="true"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-        />
-      </svg>
-      <span class="image-converter__dropzone-text">Drop images here or</span>
-      <label class="image-converter__btn image-converter__btn--primary">
-        Browse
-        <input
-          type="file"
-          multiple
-          :accept="ACCEPTED_TYPES"
-          class="image-converter__file-input"
-          @change="onInputChange"
-        />
-      </label>
-    </div>
+    <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
 
     <ul v-if="files.length > 0" class="image-converter__file-list">
       <li v-for="entry in files" :key="entry.id" class="image-converter__file-item">
@@ -442,42 +414,6 @@ onUnmounted(() => {
 .image-converter__btn--ghost {
   background: transparent;
   border-color: transparent;
-}
-
-.image-converter__file-input {
-  display: none;
-}
-
-.image-converter__dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-10);
-  border: 2px dashed var(--color-muted-foreground);
-  border-radius: var(--radius-lg);
-  background: var(--color-secondary);
-  transition:
-    border-color 0.15s,
-    background 0.15s;
-  cursor: default;
-}
-
-.image-converter__dropzone--dragging {
-  border-color: var(--color-primary);
-  background: var(--color-muted);
-}
-
-.image-converter__dropzone-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  color: var(--color-muted-foreground);
-}
-
-.image-converter__dropzone-text {
-  color: var(--color-muted-foreground);
-  font-size: var(--font-size-md);
 }
 
 .image-converter__file-list {

@@ -1,12 +1,13 @@
 import type { ConvertRequest, ConvertResult, ConvertError } from './config'
 
 const convertImage = async (request: ConvertRequest): Promise<void> => {
-  const { id, buffer, mimeType, format, quality, maxWidth, maxHeight } = request
+  const { id, buffer, mimeType, format, quality, maxWidth, maxHeight, scalePct } = request
 
   const blob = new Blob([buffer], { type: mimeType })
   const bitmap = await createImageBitmap(blob)
 
-  const scale =
+  const pctScale = scalePct > 0 ? scalePct / 100 : 1
+  const dimScale =
     maxWidth > 0 || maxHeight > 0
       ? Math.min(
           maxWidth > 0 ? maxWidth / bitmap.width : 1,
@@ -14,6 +15,7 @@ const convertImage = async (request: ConvertRequest): Promise<void> => {
           1
         )
       : 1
+  const scale = pctScale * dimScale
 
   const width = Math.round(bitmap.width * scale)
   const height = Math.round(bitmap.height * scale)

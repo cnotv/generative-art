@@ -8,6 +8,7 @@ export type ConvertRequest = {
   quality: number
   maxWidth: number
   maxHeight: number
+  scalePct: number
 }
 
 export type ConvertResult = {
@@ -40,4 +41,5 @@ export const FORMAT_OPTIONS: FormatOption[] = [
 export const DEFAULT_FORMAT: ImageFormat = 'image/webp'
 export const DEFAULT_QUALITY = 85
 export const DEFAULT_MAX_DIMENSION = 0
+export const DEFAULT_SCALE_PCT = 100
 export const ACCEPTED_TYPES = 'image/*'
