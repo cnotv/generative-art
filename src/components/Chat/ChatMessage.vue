@@ -6,6 +6,7 @@ defineProps<{
   isOwn: boolean
   groupedWithPrevious?: boolean
   groupedWithNext?: boolean
+  variant?: 'game'
 }>()
 </script>
 
@@ -13,6 +14,7 @@ defineProps<{
   <div
     class="chat-message"
     :class="{
+      'chat-message--game': variant === 'game',
       'chat-message--own': isOwn,
       'chat-message--system': message.kind === 'system',
       'chat-message--success': message.kind === 'success',
@@ -33,11 +35,16 @@ defineProps<{
   flex-direction: column;
   gap: var(--spacing-0);
   padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--chat-message-radius, var(--radius-sm));
-  background: var(--chat-message-bg, var(--color-secondary));
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
   font-size: inherit;
   color: #111;
   overflow-wrap: break-word;
+}
+
+.chat-message--game {
+  border-radius: var(--radius-xl);
+  background: #d7d8d9;
 }
 
 .chat-message--own {
@@ -51,17 +58,31 @@ defineProps<{
 }
 
 .chat-message--group-top {
-  border-bottom-left-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
-  border-bottom-right-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.chat-message--game.chat-message--group-top {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 
 .chat-message--group-middle {
-  border-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
+  border-radius: var(--radius-sm);
+}
+
+.chat-message--game.chat-message--group-middle {
+  border-radius: 4px;
 }
 
 .chat-message--group-bottom {
-  border-top-left-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
-  border-top-right-radius: var(--chat-message-radius-adjacent, var(--radius-sm));
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+}
+
+.chat-message--game.chat-message--group-bottom {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
 }
 
 .chat-message--system {

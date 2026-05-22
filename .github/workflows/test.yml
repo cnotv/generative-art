@@ -49,6 +49,9 @@ jobs:
     - name: Run Linter
       run: pnpm run lint
 
+    - name: Run Stylelint
+      run: pnpm run lint:css
+
   format:
     runs-on: ubuntu-latest
     needs: check-rebase

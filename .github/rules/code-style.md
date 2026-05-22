@@ -76,7 +76,9 @@
 
 ## CSS Conventions
 
-- **Never use `:deep()`**: The `:deep()` combinator is absolutely forbidden. No exceptions unless the user explicitly writes permission for a specific case in the codebase. If a parent needs to style a child component's internals, the child must expose CSS custom properties that the parent sets on its own element — CSS variables cascade naturally without piercing scoped styles. Stylelint enforces this automatically via `selector-pseudo-class-disallowed-list`.
+- **Never use `:deep()`**: The `:deep()` combinator is absolutely forbidden. No exceptions unless the user explicitly writes permission for a specific case in the codebase. Stylelint enforces this automatically via `selector-pseudo-class-disallowed-list`.
+
+- **No cross-component CSS**: Never use CSS custom properties to pass style information from a parent component into a child's internals. Setting `--some-var` on a parent element so a child reads it is the same violation as `:deep()` — it couples the parent to the child's implementation details. If a child component needs different styling in different contexts, add a `variant` prop to the child and apply BEM modifier classes (`.component--variant`) internally. The parent simply passes `:variant="..."` — it has no knowledge of the child's CSS.
 
 - **BEM methodology**: Use Block\_\_Element--Modifier naming for all CSS classes
 - **Scoped styles**: Use `<style scoped>` in Vue components
@@ -118,6 +120,10 @@
 - **Vue-only logic → composable**: Any logic that is exclusively Vue reactive (refs, watchers, router, lifecycle hooks) and shared across games belongs in `src/composables/`. Framework-agnostic game logic belongs in `@webgamekit/*` packages.
 - **Header with "← Lobby" navigation**: Every game view must include a header component that navigates back to the Lobby. Follow the pattern established by `PictionaryHeader.vue` and `BubbleShooterHeader.vue` — a dedicated `<GameName>Header.vue` component that emits `leave-room`.
 - **Game-specific session composable**: Each game's P2P session logic must live in its own `use<GameName>Session.ts` composable co-located with the view. Use `useBubbleShooterSession` or `useMinigolfSession` as the reference pattern.
+
+## Dependencies
+
+- **No discontinued or unmaintained libraries**: Before adding any npm package, verify it is actively maintained. Check the repository's last commit date, open issues, and whether the maintainer responds to bug reports. Never use a library that has been archived, deprecated by its author, or has had no releases in over a year without a clear reason. If a well-maintained alternative exists, prefer it.
 
 ## Modular Architecture
 

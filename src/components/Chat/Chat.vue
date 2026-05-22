@@ -83,6 +83,7 @@ watch(() => props.messages.length, scrollToBottom)
         v-for="(message, index) in messages"
         :key="message.id"
         :message="message"
+        :variant="variant"
         :is-own="message.senderId === localPeerId"
         :grouped-with-previous="index > 0 && isSameUser(messages[index - 1], message)"
         :grouped-with-next="index < messages.length - 1 && isSameUser(messages[index + 1], message)"
@@ -128,10 +129,6 @@ watch(() => props.messages.length, scrollToBottom)
   box-shadow: 3px 3px 0 var(--game-border);
   padding: var(--spacing-2);
   box-sizing: border-box;
-
-  --chat-message-radius: var(--radius-xl);
-  --chat-message-radius-adjacent: 4px;
-  --chat-message-bg: #d7d8d9;
 }
 
 .chat__zoom {
