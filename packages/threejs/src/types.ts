@@ -62,6 +62,7 @@ export interface ModelOptions extends CommonOptions {
   animations?: string[]
   materialColors?: number[]
   onSpawn?: () => boolean
+  onProgress?: OnProgress
 }
 
 export interface PhysicOptions extends CommonOptions {
@@ -79,11 +80,20 @@ export interface RouteLike {
   name?: string
 }
 
+export type LoadProgress = {
+  stage: string
+  detail?: string
+  done: boolean
+}
+
+export type OnProgress = (progress: LoadProgress) => void
+
 export interface ToolsConfig {
   stats?: StatsLike
   route?: RouteLike
   canvas: HTMLCanvasElement
   resize?: boolean
+  onProgress?: OnProgress
 }
 
 export interface LightsConfig {

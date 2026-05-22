@@ -2,7 +2,16 @@ import * as THREE from 'three'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { getAnimationsModel, CoordinateTuple } from '@webgamekit/animation'
-import { ModelOptions, ComplexModel, Model, ModelType } from './types'
+import { ModelOptions, ComplexModel, Model, ModelType, OnProgress } from './types'
+
+const emitProgress = (
+  callback: OnProgress | undefined,
+  stage: string,
+  detail?: string,
+  done = false
+): void => {
+  callback?.({ stage, detail, done })
+}
 import { getPhysic } from './getters'
 import { applyOriginTranslation } from './core'
 import { textureLoader, fbxLoader, gltfLoader } from './loaders'
@@ -174,7 +183,8 @@ const getUniqueName = (
  */
 export const getAnimations = (
   mixer: THREE.AnimationMixer,
-  filenames: string | string[]
+  filenames: string | string[],
+  onProgress?: OnProgress
 ): Promise<Record<string, THREE.AnimationAction>> => {
   const files = Array.isArray(filenames) ? filenames : [filenames]
   return new Promise((resolve, reject) => {
@@ -186,12 +196,12 @@ export const getAnimations = (
       return
     }
     files.forEach((filename) => {
+      const baseName = (filename.split('/').pop() ?? filename).replace(/\.[^./]+$/, '')
+      emitProgress(onProgress, 'Animations', `${baseName} (${loadedCount + 1}/${files.length})`)
       loader.load(
         `/${filename}`,
         (animation) => {
           animation.animations.forEach((anim) => {
-            let baseName = filename.split('/').pop() ?? filename
-            baseName = baseName.replace(/\.[^./]+$/, '')
             const name = getUniqueName(allActions, baseName, 1)
             allActions[name] = mixer.clipAction(anim)
           })
@@ -234,11 +244,12 @@ const loadAnimationActions = async (
   mixer: THREE.AnimationMixer,
   mesh: Model,
   animations: string | string[] | undefined,
-  gltf: GLTF | undefined
+  gltf: GLTF | undefined,
+  onProgress?: OnProgress
 ): Promise<Record<string, THREE.AnimationAction>> => {
   let actions: Record<string, THREE.AnimationAction> = {}
   if (animations) {
-    actions = { ...actions, ...(await getAnimations(mixer, animations)) }
+    actions = { ...actions, ...(await getAnimations(mixer, animations, onProgress)) }
   }
   if (gltf && gltf.animations?.length) {
     actions = { ...actions, ...getAnimationsModel(mixer, mesh, gltf) }
@@ -334,6 +345,7 @@ export const getModel = async (
     helperColor,
     animations,
     onSpawn,
+    onProgress,
     size = 1,
     position = [0, 0, 0] as CoordinateTuple,
     rotation = [0, 0, 0] as CoordinateTuple,
@@ -342,6 +354,7 @@ export const getModel = async (
     receiveShadow = false
   } = options
 
+  emitProgress(onProgress, 'Model', path)
   const { mesh, gltf } = await loadModelFile(path, options)
   applyModelShadows(mesh, castShadow, receiveShadow)
 
@@ -356,7 +369,7 @@ export const getModel = async (
   }
 
   const mixer = new THREE.AnimationMixer(mesh)
-  const actions = await loadAnimationActions(mixer, mesh, animations, gltf)
+  const actions = await loadAnimationActions(mixer, mesh, animations, gltf, onProgress)
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     position,

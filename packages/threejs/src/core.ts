@@ -11,7 +11,8 @@ import {
   ComplexModel,
   LightsConfig,
   GroundConfig,
-  CameraConfig
+  CameraConfig,
+  OnProgress
 } from './types'
 import { getEnvironment, getLights, getGround, getSky } from './getters'
 import { disposeScene } from './dispose'
@@ -134,11 +135,27 @@ const applySceneConfig = (
  */
 export const activeRendererReference: { current: THREE.WebGLRenderer | null } = { current: null }
 
-export const getTools = async ({ stats, route, canvas, resize = true }: ToolsConfig) => {
+const emitProgress = (
+  callback: OnProgress | undefined,
+  stage: string,
+  detail?: string,
+  done = false
+): void => {
+  callback?.({ stage, detail, done })
+}
+
+export const getTools = async ({
+  stats,
+  route,
+  canvas,
+  resize = true,
+  onProgress
+}: ToolsConfig) => {
   const clock = new THREE.Clock()
   let delta = 0
   let simulationFrame = 0
   let frameRate = 1 / 60
+  emitProgress(onProgress, 'Physics')
   const { renderer, scene, camera, world } = await getEnvironment(canvas)
   activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
@@ -146,7 +163,6 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
   const getDelta = () => delta
   let orbit: OrbitControls | null = null
   let animationFrameId = 0
-
   /**
    * Setup scene
    * @param config Configuration for camera, ground and lights
@@ -172,6 +188,7 @@ export const getTools = async ({ stats, route, canvas, resize = true }: ToolsCon
         config: config.postprocessing
       })
     if (defineSetup) await defineSetup({ ground })
+    emitProgress(onProgress, 'Ready', undefined, true)
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }
   }
