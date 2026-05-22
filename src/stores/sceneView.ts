@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import { getTools, getCube, generateAreaPositions, SCENE_DEFAULTS } from '@webgamekit/threejs'
-import type { SetupConfig, CoordinateTuple, AreaConfig } from '@webgamekit/threejs'
+import type { SetupConfig, CoordinateTuple, AreaConfig, OnProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { usePanelsStore } from '@/stores/panels'
 import { useViewPanelsStore } from '@/stores/viewPanels'
@@ -71,6 +71,7 @@ export interface InitOptions {
   defineSetup?: (context: DefineSetupContext) => Promise<void> | void
   viewPanels?: Record<string, boolean>
   playMode?: boolean
+  onProgress?: OnProgress
 }
 
 export interface TextureAreaDefinition {
@@ -1113,7 +1114,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       getDelta,
       clock
     } = await getTools({
-      canvas
+      canvas,
+      onProgress: options.onProgress
     })
 
     if (options.defineSetup) {

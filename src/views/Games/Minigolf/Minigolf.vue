@@ -16,6 +16,8 @@ import {
   buildRandomGradient
 } from '@/utils/playerProfile'
 import GameHeader from '@/components/GameHeader.vue'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import type { LoadProgress } from '@webgamekit/threejs'
 import LobbyLayout from '@/layout/LobbyLayout.vue'
 import MinigolfLobby from './MinigolfLobby.vue'
 import MinigolfGame from './MinigolfGame.vue'
@@ -73,10 +75,20 @@ const activeHoles = computed(() =>
 const gameReference = ref<InstanceType<typeof MinigolfGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
+const loadingVisible = ref(false)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
+
 const { message, waiting, aimPower, isAiming, localStrokes, startGame, cleanup } = useMinigolfGame(
   canvas,
   session,
-  activeHoles
+  activeHoles,
+  handleProgress
 )
 
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
@@ -222,6 +234,8 @@ onUnmounted(() => cleanup())
       :is-host="isHost"
       @play-again="handlePlayAgain"
     />
+
+    <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
     <template #sidebar>
       <MultiplayerSidebar

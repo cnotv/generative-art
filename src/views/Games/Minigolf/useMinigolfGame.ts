@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
 import { activeRendererReference } from '@webgamekit/threejs'
+import type { OnProgress } from '@webgamekit/threejs'
 import { useSceneViewStore } from '@/stores/sceneView'
 import { useMinigolfStore } from '@/stores/minigolf'
 import { buildGround, buildWalls, buildHoleMarker } from './helpers/course'
@@ -316,7 +317,8 @@ const bindPointerEvents = (
 export const useMinigolfGame = (
   canvas: Ref<HTMLCanvasElement | null>,
   session: SessionDep,
-  activeHoles: ComputedRef<HoleConfig[]>
+  activeHoles: ComputedRef<HoleConfig[]>,
+  onProgress?: OnProgress
 ) => {
   const store = useMinigolfStore()
   const sceneStore = useSceneViewStore()
@@ -416,7 +418,12 @@ export const useMinigolfGame = (
     await sceneStore.init(
       canvas.value,
       { ground: false, sky: false, orbit: { disabled: true }, lights: SCENE_LIGHTS },
-      { playMode: true, viewPanels: { showElements: false }, defineSetup: setupGameScene }
+      {
+        playMode: true,
+        viewPanels: { showElements: false },
+        defineSetup: setupGameScene,
+        onProgress
+      }
     )
   }
 
