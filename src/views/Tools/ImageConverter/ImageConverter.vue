@@ -455,7 +455,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: var(--spacing-3);
   padding: var(--spacing-10);
-  border: 2px dashed var(--color-border);
+  border: 2px dashed var(--color-muted-foreground);
   border-radius: var(--radius-lg);
   background: var(--color-secondary);
   transition:
