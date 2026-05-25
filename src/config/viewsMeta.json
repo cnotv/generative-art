@@ -46,7 +46,7 @@
   "Threejs Example Controller Tools": {
     "description": "Controller tooling playground for Three.js character movement."
   },
-  "Timeline Game": {
+  "Timeline": {
     "description": "Game built entirely on the custom timeline animation system."
   },
   "Visualizer Main": { "description": "Music visualiser with frequency-reactive 3D geometry." },

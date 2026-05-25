@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LoaderCube from '@/components/LoaderCube.vue'
+
 defineProps<{
   visible: boolean
   stage?: string
@@ -10,13 +12,7 @@ defineProps<{
   <Transition name="loading-overlay">
     <div v-if="visible" class="loading-overlay" aria-live="polite" aria-label="Loading">
       <div class="loading-overlay__content">
-        <div class="loading-overlay__cube-scene" aria-hidden="true">
-          <div class="loading-overlay__cube">
-            <div class="loading-overlay__cube-face loading-overlay__cube-face--front" />
-            <div class="loading-overlay__cube-face loading-overlay__cube-face--right" />
-            <div class="loading-overlay__cube-face loading-overlay__cube-face--top" />
-          </div>
-        </div>
+        <LoaderCube />
         <p class="loading-overlay__stage">{{ stage }}</p>
         <p v-if="detail" class="loading-overlay__detail">{{ detail }}</p>
       </div>
@@ -40,8 +36,9 @@ defineProps<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
   padding: var(--spacing-6);
+  padding-top: var(--spacing-8);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -49,44 +46,8 @@ defineProps<{
   text-align: center;
 }
 
-.loading-overlay__cube-scene {
-  perspective: 120px;
-  width: 2.5rem;
-  height: 2.5rem;
-}
-
-.loading-overlay__cube {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: cube-rotate-y 1.6s linear infinite;
-}
-
-.loading-overlay__cube-face {
-  position: absolute;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 2px solid var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 25%, transparent);
-}
-
-.loading-overlay__cube-face--front {
-  transform: translateZ(1.25rem);
-}
-
-.loading-overlay__cube-face--right {
-  transform: rotateY(90deg) translateZ(1.25rem);
-  filter: brightness(0.65);
-}
-
-.loading-overlay__cube-face--top {
-  transform: rotateX(90deg) translateZ(1.25rem);
-  filter: brightness(1.4);
-}
-
 .loading-overlay__stage {
-  margin: 0;
+  margin: var(--spacing-4) 0 0;
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-foreground);
@@ -110,15 +71,5 @@ defineProps<{
 .loading-overlay-enter-from,
 .loading-overlay-leave-to {
   opacity: 0;
-}
-
-@keyframes cube-rotate-y {
-  from {
-    transform: rotateX(-25deg) rotateY(0deg);
-  }
-
-  to {
-    transform: rotateX(-25deg) rotateY(360deg);
-  }
 }
 </style>

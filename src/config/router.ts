@@ -36,5 +36,6 @@ export const generatedRoutes = [
   ...getRoutes(import.meta.glob(`/src/views/Generative/**/*.vue`), 'Generative'),
   ...getRoutes(import.meta.glob(`/src/views/Games/**/*.vue`), 'Games'),
   ...getRoutes(import.meta.glob(`/src/views/Experiments/**/*.vue`), 'Experiments'),
+  ...getRoutes(import.meta.glob(`/src/views/Tests/**/*.vue`), 'Tests'),
   ...getRoutes(import.meta.glob(`/src/views/Stages/**/*.vue`), 'Stages')
 ]

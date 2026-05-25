@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import LoaderCube from '@/components/LoaderCube.vue'
 
 const stage = ref('Loading assets…')
 const detail = ref('mushroom.glb (3 / 12)')
@@ -8,13 +9,7 @@ const detail = ref('mushroom.glb (3 / 12)')
 <template>
   <div class="loader-preview">
     <div class="loader-preview__card">
-      <div class="loader-preview__cube-scene" aria-hidden="true">
-        <div class="loader-preview__cube">
-          <div class="loader-preview__cube-face loader-preview__cube-face--front" />
-          <div class="loader-preview__cube-face loader-preview__cube-face--right" />
-          <div class="loader-preview__cube-face loader-preview__cube-face--top" />
-        </div>
-      </div>
+      <LoaderCube />
       <p class="loader-preview__stage">{{ stage }}</p>
       <p class="loader-preview__detail">{{ detail }}</p>
 
@@ -46,8 +41,9 @@ const detail = ref('mushroom.glb (3 / 12)')
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
   padding: var(--spacing-6);
+  padding-top: var(--spacing-8);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -55,44 +51,8 @@ const detail = ref('mushroom.glb (3 / 12)')
   text-align: center;
 }
 
-.loader-preview__cube-scene {
-  perspective: 120px;
-  width: 2.5rem;
-  height: 2.5rem;
-}
-
-.loader-preview__cube {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: cube-rotate-y 1.6s linear infinite;
-}
-
-.loader-preview__cube-face {
-  position: absolute;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 2px solid var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 25%, transparent);
-}
-
-.loader-preview__cube-face--front {
-  transform: translateZ(1.25rem);
-}
-
-.loader-preview__cube-face--right {
-  transform: rotateY(90deg) translateZ(1.25rem);
-  filter: brightness(0.65);
-}
-
-.loader-preview__cube-face--top {
-  transform: rotateX(90deg) translateZ(1.25rem);
-  filter: brightness(1.4);
-}
-
 .loader-preview__stage {
-  margin: 0;
+  margin: var(--spacing-4) 0 0;
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-foreground);
@@ -134,15 +94,5 @@ const detail = ref('mushroom.glb (3 / 12)')
   background: var(--color-background);
   color: var(--color-foreground);
   font-size: var(--font-size-sm);
-}
-
-@keyframes cube-rotate-y {
-  from {
-    transform: rotateX(-25deg) rotateY(0deg);
-  }
-
-  to {
-    transform: rotateX(-25deg) rotateY(360deg);
-  }
 }
 </style>
