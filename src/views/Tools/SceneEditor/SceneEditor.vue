@@ -5,7 +5,8 @@ import { useViewPanelsStore } from '@/stores/viewPanels'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
 import type { CameraSlot } from '@/stores/cameraConfig'
 import { getTools, CameraPreset, cameraPresets, setCameraPreset } from '@webgamekit/threejs'
-import type { CoordinateTuple } from '@webgamekit/threejs'
+import type { CoordinateTuple, LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createTimelineManager } from '@webgamekit/animation'
 import * as THREE from 'three'
 import { createReactiveConfig } from '@/stores/viewConfig'
@@ -29,6 +30,14 @@ import type { SceneEditorConfig } from './config'
 import { getNestedValue } from '@/utils/nestedObjects'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const { openPanel } = usePanelsStore()
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 const { setSceneElements, clearSceneElements } = useDebugSceneStore()
@@ -552,7 +561,8 @@ const initScene = async () => {
   if (!canvas.value) return
 
   const { setup, animate, scene, world, camera } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
 
   // Store references for live updates
@@ -785,6 +795,7 @@ defineExpose({
 <template>
   <div class="texture-editor">
     <canvas ref="canvas"></canvas>
+    <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   </div>
 </template>
 

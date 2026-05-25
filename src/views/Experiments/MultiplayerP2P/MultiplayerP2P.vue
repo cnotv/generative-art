@@ -7,8 +7,10 @@ import {
   getModel,
   cameraFollowPlayer,
   textureLoader,
-  type ComplexModel
+  type ComplexModel,
+  type LoadProgress
 } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   type CoordinateTuple,
   type AnimationData,
@@ -289,6 +291,14 @@ const panelsStore = usePanelsStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const isMobileDevice = isMobile()
 const peerCount = ref(0)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 
 const hudLogs = computed(() => [
   `Players: ${peerCount.value + 1}`,
@@ -336,7 +346,8 @@ const playRemoteAction = (model: ComplexModel, action: PlayerAction): void => {
 const init = async (): Promise<void> => {
   if (!canvas.value) return
   const { setup, animate, scene, world, camera, getDelta } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
 
   const { orbit } = await setup({
@@ -538,6 +549,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <ControlsLogger :logs="hudLogs" />
 
   <Teleport defer to="#config-panel-extra">

@@ -5,6 +5,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { stats } from '@/utils/stats'
 import { getTools, createTextSprite, textureLoader } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -91,6 +93,15 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 
 let showcaseSphere: THREE.Mesh | null = null
@@ -596,7 +607,11 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
 
   loadTextures()
 
-  const { setup, renderer, scene } = await getTools({ canvas: canvasElement, resize: false })
+  const { setup, renderer, scene } = await getTools({
+    canvas: canvasElement,
+    resize: false,
+    onProgress: handleProgress
+  })
   sceneReference = scene
   rendererReference = renderer
   envMap = createEnvironmentMap(renderer)
@@ -690,6 +705,7 @@ const init = async (canvasElement: HTMLCanvasElement, statsElementNode: HTMLElem
 <template>
   <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <nav v-if="showMenu" class="materials-list__menu">
     <section class="materials-list__group">
       <h3 class="materials-list__group-title">Materials</h3>

@@ -7,6 +7,8 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import type { Font } from 'three/addons/loaders/FontLoader.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { getTools, getWalls, getModel, getPhysic } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -17,6 +19,14 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 
 let animationId = 0
 let cleanupReference: (() => void) | null = null
@@ -413,7 +423,8 @@ const createResetTimeline = (bodies: PhysicsBodies) => {
 const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const { renderer, scene, world } = await getTools({
     canvas: canvasElement,
-    resize: false
+    resize: false,
+    onProgress: handleProgress
   })
 
   renderer.setClearColor(BACKGROUND_COLOR, 1)
@@ -523,6 +534,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" class="landing-page__canvas" />
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
 <style scoped>

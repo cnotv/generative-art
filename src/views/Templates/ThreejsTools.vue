@@ -5,11 +5,22 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 
 import { getTools } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { bindAnimatedElements, createTimelineManager } from '@webgamekit/animation'
 
 const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 
 let initInstance: () => void
 onMounted(() => {
@@ -38,7 +49,8 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     const { animate, setup, world, getDelta } = await getTools({
       stats,
       route,
-      canvas
+      canvas,
+      onProgress: handleProgress
     })
     setup({
       config: {
@@ -66,4 +78,5 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 <template>
   <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>

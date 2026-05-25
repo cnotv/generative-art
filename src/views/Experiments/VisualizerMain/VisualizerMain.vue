@@ -6,6 +6,8 @@ import { stats } from '@/utils/stats'
 import * as THREE from 'three'
 
 import { getTools } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { bindAnimatedElements, createTimelineManager } from '@webgamekit/animation'
 import { setupAudio, cleanup, toggleAudioSource, getAudioSource } from './audio'
 import {
@@ -22,6 +24,15 @@ const statsElement = ref(null)
 const canvas = ref(null)
 const audioElement = ref<HTMLAudioElement>()
 const route = useRoute()
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const router = useRouter()
 
 // Get available visualizer names first
@@ -271,7 +282,8 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     const { animate, setup, world, getDelta, scene, camera } = await getTools({
       stats,
       route,
-      canvas
+      canvas,
+      onProgress: handleProgress
     })
     setup({
       config: {
@@ -357,6 +369,7 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 <template>
   <div ref="statsElement"></div>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
   <div class="header">
     <!-- Player style toggle button -->

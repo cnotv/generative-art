@@ -19,7 +19,8 @@ import {
   updateAnimation,
   createTimelineManager
 } from '@webgamekit/animation'
-import type { ComplexModel } from '@webgamekit/threejs'
+import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createGame } from '@webgamekit/game'
 import { createControls } from '@webgamekit/controls'
 import { initializeAudio, stopMusic, playAudioFile } from '@webgamekit/audio'
@@ -195,10 +196,19 @@ const bindings = {
 const { destroyControls, currentActions, remapControlsOptions } = createControls(bindings)
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const init = async (): Promise<void> => {
   if (!canvas.value) return
   const { camera, setup, animate, scene, world, getDelta } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
   cameraPreset = camera
   await setup({
@@ -339,6 +349,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <ControlsLogger v-if="gameState" :logs="logs">
     <div>
       <span>{{ isJumping ? 'Jumping' : 'On ground' }},</span>

@@ -88,8 +88,8 @@ const controlBindings = {
     keyboard: {
       a: 'move-left',
       d: 'move-right',
-      w: 'move-up',
-      s: 'move-down',
+      w: 'move-down',
+      s: 'move-up',
       p: 'print-log',
       Enter: 'run',
       ' ': 'jump',
@@ -106,18 +106,18 @@ const controlBindings = {
       circle: 'roll',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-down',
-      'dpad-up': 'move-up',
+      'dpad-down': 'move-up',
+      'dpad-up': 'move-down',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-up',
-      'axis1-down': 'move-down'
+      'axis1-up': 'move-down',
+      'axis1-down': 'move-up'
     },
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-up',
-      down: 'move-down'
+      up: 'move-down',
+      down: 'move-up'
     }
   },
   axisThreshold: 0.5
@@ -314,8 +314,8 @@ onUnmounted(() => {
       :mapping="{
         left: 'move-left',
         right: 'move-right',
-        up: 'move-up',
-        down: 'move-down'
+        up: 'move-down',
+        down: 'move-up'
       }"
       :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"
