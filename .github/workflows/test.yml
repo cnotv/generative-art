@@ -190,7 +190,7 @@ jobs:
         path: dist/
 
     - name: Run Lighthouse
-      run: pnpm lighthouse
+      run: mkdir -p .lighthouseci && pnpm lighthouse
 
     - name: Print Lighthouse scores
       if: always()
