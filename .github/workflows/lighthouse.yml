@@ -10,33 +10,32 @@ permissions:
   contents: write
 
 jobs:
-  lighthouse:
+  lighthouse-production:
+    name: Lighthouse (GitHub Pages)
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run Lighthouse
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          urls: https://cnotv.github.io/generative-art/
-          uploadArtifacts: true
-          temporaryPublicStorage: false
-        id: lighthouse
-
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Lighthouse
+        run: pnpm lighthouse:prod
 
       - name: Generate badge JSON files
         run: |

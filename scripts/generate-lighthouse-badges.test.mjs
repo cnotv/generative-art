@@ -17,6 +17,11 @@ const makeReport = (categoryScores = {}) => ({
     'best-practices': { score: 0.58 },
     seo: { score: 0.43 },
     ...categoryScores
+  },
+  audits: {
+    'largest-contentful-paint': { numericValue: 2000, displayValue: '2.0 s' },
+    'cumulative-layout-shift': { numericValue: 0.05, displayValue: '0.05' },
+    'total-blocking-time': { numericValue: 150, displayValue: '150 ms' }
   }
 })
 
@@ -25,7 +30,9 @@ const savedBadges = {}
 beforeEach(() => {
   mkdirSync(FIXTURES_DIR, { recursive: true })
   const entries = Object.fromEntries(
-    readdirSync(BADGES_DIR).map((file) => [file, readFileSync(resolve(BADGES_DIR, file), 'utf8')])
+    readdirSync(BADGES_DIR)
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => [file, readFileSync(resolve(BADGES_DIR, file), 'utf8')])
   )
   Object.assign(savedBadges, entries)
 })
@@ -43,41 +50,83 @@ const runWithReport = (report) => {
   return execFileSync('node', [SCRIPT, reportPath], { encoding: 'utf8' })
 }
 
-const readBadge = (key) =>
+const readBadgeJson = (key) =>
   JSON.parse(readFileSync(resolve(BADGES_DIR, `lighthouse-${key}.json`), 'utf8'))
 
 describe('generate-lighthouse-badges', () => {
-  it('writes all four badge files', () => {
+  it('writes all four category and three CWV badge files', () => {
     runWithReport(makeReport())
-    ;['performance', 'accessibility', 'best-practices', 'seo'].forEach((key) => {
-      const badge = readBadge(key)
-      expect(badge.schemaVersion).toBe(1)
-      expect(typeof badge.label).toBe('string')
-      expect(typeof badge.message).toBe('string')
-      expect(typeof badge.color).toBe('string')
-    })
+    ;['performance', 'accessibility', 'best-practices', 'seo', 'lcp', 'cls', 'tbt'].forEach(
+      (key) => {
+        const badge = readBadgeJson(key)
+        expect(badge.schemaVersion).toBe(1)
+        expect(badge.cacheSeconds).toBe(300)
+      }
+    )
   })
 
   it.each([
-    [0.92, '92', 'brightgreen'],
-    [0.9, '90', 'brightgreen'],
-    [0.89, '89', 'orange'],
-    [0.85, '85', 'orange'],
-    [0.5, '50', 'orange'],
-    [0.49, '49', 'red'],
-    [0.43, '43', 'red'],
-    [0.0, '0', 'red']
-  ])('score %.2f → message "%s", color "%s"', (rawScore, expectedMessage, expectedColor) => {
+    [0.92, '92', '4c1'],
+    [0.9, '90', '4c1'],
+    [0.89, '89', 'fe7d37'],
+    [0.85, '85', 'fe7d37'],
+    [0.5, '50', 'fe7d37'],
+    [0.49, '49', 'e05d44'],
+    [0.43, '43', 'e05d44'],
+    [0.0, '0', 'e05d44']
+  ])('score %.2f → message "%s", color "%s"', (rawScore, expectedScore, expectedColor) => {
     runWithReport({ categories: { performance: { score: rawScore } } })
-    const badge = readBadge('performance')
-    expect(badge.message).toBe(expectedMessage)
+    const badge = readBadgeJson('performance')
+    expect(badge.message).toBe(expectedScore)
     expect(badge.color).toBe(expectedColor)
   })
 
   it('label uses spaces not hyphens', () => {
     runWithReport(makeReport())
-    const badge = readBadge('best-practices')
+    const badge = readBadgeJson('best-practices')
     expect(badge.label).toBe('best practices')
+  })
+
+  it.each([
+    [2000, '2.0 s', '4c1'],
+    [2499, '2.0 s', '4c1'],
+    [2500, '2.0 s', 'fe7d37'],
+    [3999, '2.0 s', 'fe7d37'],
+    [4000, '2.0 s', 'e05d44']
+  ])('lcp %dms → color "%s"', (numericValue, displayValue, expectedColor) => {
+    runWithReport({
+      ...makeReport(),
+      audits: { 'largest-contentful-paint': { numericValue, displayValue } }
+    })
+    expect(readBadgeJson('lcp').color).toBe(expectedColor)
+  })
+
+  it.each([
+    [0.05, '0.05', '4c1'],
+    [0.09, '0.09', '4c1'],
+    [0.1, '0.10', 'fe7d37'],
+    [0.24, '0.24', 'fe7d37'],
+    [0.25, '0.25', 'e05d44']
+  ])('cls %f → color "%s"', (numericValue, displayValue, expectedColor) => {
+    runWithReport({
+      ...makeReport(),
+      audits: { 'cumulative-layout-shift': { numericValue, displayValue } }
+    })
+    expect(readBadgeJson('cls').color).toBe(expectedColor)
+  })
+
+  it.each([
+    [150, '150 ms', '4c1'],
+    [199, '199 ms', '4c1'],
+    [200, '200 ms', 'fe7d37'],
+    [599, '599 ms', 'fe7d37'],
+    [600, '600 ms', 'e05d44']
+  ])('tbt %dms → color "%s"', (numericValue, displayValue, expectedColor) => {
+    runWithReport({
+      ...makeReport(),
+      audits: { 'total-blocking-time': { numericValue, displayValue } }
+    })
+    expect(readBadgeJson('tbt').color).toBe(expectedColor)
   })
 
   it('skips categories with null or missing scores', () => {
