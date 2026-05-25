@@ -13,7 +13,13 @@ if (isLocalhost && !existsSync('dist/index.html')) {
 
 const chromeFlags = isCI ? '--no-sandbox --disable-dev-shm-usage --disable-gpu' : ''
 
-const args = ['collect', `--url=${targetUrl}`, `--numberOfRuns=${isCI ? 3 : 1}`]
+const args = [
+  'collect',
+  `--url=${targetUrl}`,
+  `--numberOfRuns=${isCI ? 3 : 1}`,
+  '--settings.maxWaitForFcp=30000',
+  '--settings.maxWaitForLoad=45000'
+]
 
 if (chromeFlags) args.push(`--settings.chromeFlags=${chromeFlags}`)
 
