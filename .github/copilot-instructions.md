@@ -135,7 +135,38 @@ Closes #<issue-number>
 
 ### Journey Documentation
 
-After merging a PR, update `documentation/docs/journey/overview.md`:
+#### Write a journey doc as part of the PR
+
+When a PR involves a non-trivial technical finding — a Vue or Three.js quirk, a counter-intuitive API behaviour, a bug that took multiple attempts to fix, or a design decision with hard-won context — **create or update a journey doc before the PR is merged**, not after.
+
+The doc lives in `documentation/docs/journey/`. Use an existing file if the topic fits; otherwise create a new one named `<topic>.md` with the standard front matter:
+
+```markdown
+---
+sidebar_position: 99
+---
+
+# Title: Subtitle
+
+One sentence on the scope of what this page covers (PR number optional).
+
+## Finding title
+
+Abstract prose explaining what the problem was, what made it non-obvious, and what the fix
+or correct mental model is. Use Mermaid diagrams to show flow or sequencing.
+Never include raw code snippets — the code is in the repo; the doc captures the _why_.
+```
+
+A good journey doc answers: "What would have saved me an hour if I had read it first?"
+
+Write one when any of the following is true:
+
+- The fix required more than one attempt
+- The root cause was in a library or framework, not in your own code
+- A constraint is invisible in the codebase (e.g. must always call `setup()` to get `done: true`)
+- The same mistake is plausible for anyone touching this area in the future
+
+#### After merging a PR, update `documentation/docs/journey/overview.md`
 
 - Add any **new architectural pattern** introduced by the PR to the Key Patterns section
 - Add any **key technical lesson** to the relevant domain group in Technical Complexities
