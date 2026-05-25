@@ -48,6 +48,7 @@ defineExpose({ canvas })
   border-radius: 1.25rem;
   border: 3px solid var(--game-border);
   box-shadow: 4px 4px 0 var(--game-border);
+  width: 100%;
 }
 
 .mg-game__bar {
