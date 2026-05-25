@@ -266,15 +266,24 @@ const createEnvironmentMap = (rendererInstance: THREE.WebGLRenderer): THREE.Text
   return renderTarget.texture
 }
 
-const buildMaterial = (
-  typeName: MaterialTypeName,
-  supported: MapToggleKey[],
-  maps: Record<MapToggleKey, boolean>,
-  configValues: MaterialsListConfig
-): THREE.Material => {
-  const parameters: Record<string, unknown> = {}
-  const hasFeature = (key: MapToggleKey): boolean => supported.includes(key) && maps[key]
+type HasFeature = (key: MapToggleKey) => boolean
 
+const MATERIAL_CONSTRUCTORS: Record<MaterialTypeName, new (p: never) => THREE.Material> = {
+  MeshBasicMaterial: THREE.MeshBasicMaterial,
+  MeshLambertMaterial: THREE.MeshLambertMaterial,
+  MeshPhongMaterial: THREE.MeshPhongMaterial,
+  MeshStandardMaterial: THREE.MeshStandardMaterial,
+  MeshPhysicalMaterial: THREE.MeshPhysicalMaterial,
+  MeshToonMaterial: THREE.MeshToonMaterial,
+  MeshNormalMaterial: THREE.MeshNormalMaterial,
+  MeshDepthMaterial: THREE.MeshDepthMaterial
+}
+
+const applyBasicMaps = (
+  parameters: Record<string, unknown>,
+  hasFeature: HasFeature,
+  typeName: MaterialTypeName
+): void => {
   if (!['MeshNormalMaterial', 'MeshDepthMaterial'].includes(typeName)) {
     parameters.color = MATERIAL_COLOR
   }
@@ -293,6 +302,13 @@ const buildMaterial = (
     parameters.displacementMap = textures.displacement
     parameters.displacementScale = DISPLACEMENT_SCALE
   }
+}
+
+const applyAdvancedMaps = (
+  parameters: Record<string, unknown>,
+  hasFeature: HasFeature,
+  typeName: MaterialTypeName
+): void => {
   if (hasFeature('emissive') && typeName !== 'MeshBasicMaterial') {
     parameters.emissiveMap = textures.emissive
     parameters.emissive = new THREE.Color(EMISSIVE_COLOR)
@@ -308,6 +324,13 @@ const buildMaterial = (
       parameters.reflectivity = ENV_MAP_REFLECTIVITY
     }
   }
+}
+
+const applyTypeParameters = (
+  parameters: Record<string, unknown>,
+  typeName: MaterialTypeName,
+  configValues: MaterialsListConfig
+): void => {
   if (['MeshStandardMaterial', 'MeshPhysicalMaterial'].includes(typeName)) {
     parameters.roughness = configValues.properties.roughness
     parameters.metalness = configValues.properties.metalness
@@ -323,19 +346,20 @@ const buildMaterial = (
   if (typeName === 'MeshNormalMaterial') {
     parameters.flatShading = configValues.properties.flatShading
   }
+}
 
-  const materialConstructors: Record<MaterialTypeName, new (p: never) => THREE.Material> = {
-    MeshBasicMaterial: THREE.MeshBasicMaterial,
-    MeshLambertMaterial: THREE.MeshLambertMaterial,
-    MeshPhongMaterial: THREE.MeshPhongMaterial,
-    MeshStandardMaterial: THREE.MeshStandardMaterial,
-    MeshPhysicalMaterial: THREE.MeshPhysicalMaterial,
-    MeshToonMaterial: THREE.MeshToonMaterial,
-    MeshNormalMaterial: THREE.MeshNormalMaterial,
-    MeshDepthMaterial: THREE.MeshDepthMaterial
-  }
-
-  const Constructor = materialConstructors[typeName]
+const buildMaterial = (
+  typeName: MaterialTypeName,
+  supported: MapToggleKey[],
+  maps: Record<MapToggleKey, boolean>,
+  configValues: MaterialsListConfig
+): THREE.Material => {
+  const parameters: Record<string, unknown> = {}
+  const hasFeature: HasFeature = (key) => supported.includes(key) && maps[key]
+  applyBasicMaps(parameters, hasFeature, typeName)
+  applyAdvancedMaps(parameters, hasFeature, typeName)
+  applyTypeParameters(parameters, typeName, configValues)
+  const Constructor = MATERIAL_CONSTRUCTORS[typeName]
   const material = new Constructor(parameters as never)
   ;(material as THREE.MeshBasicMaterial).wireframe = configValues.properties.wireframe
   return material
