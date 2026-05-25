@@ -110,12 +110,14 @@ const announceSelf = (ctx: WmContext, joined: P2PSession): void => {
 }
 
 const endRoundForContext = (ctx: WmContext, startRound: () => void): void => {
-  if (!ctx.session.value || !ctx.isHost.value) return
+  if (!ctx.isHost.value) return
   const intermissionEndsAt = Date.now() + INTERMISSION_MS
-  p2pSendData(ctx.session.value, ROUND_END_CHANNEL, {
-    number: ctx.store.round.number,
-    intermissionEndsAt
-  })
+  if (ctx.session.value) {
+    p2pSendData(ctx.session.value, ROUND_END_CHANNEL, {
+      number: ctx.store.round.number,
+      intermissionEndsAt
+    })
+  }
   applyRoundEnd(ctx, intermissionEndsAt)
   if (ctx.store.phase === 'intermission') {
     setTimeout(() => {
@@ -233,7 +235,16 @@ const bindGameEvents = (ctx: WmContext, joined: P2PSession): void => {
 }
 
 const initSessionForContext = (ctx: WmContext, roomId: string): void => {
-  if (!p2pIsSupported()) return
+  if (!p2pIsSupported()) {
+    ctx.localPeerId.value = crypto.randomUUID()
+    ctx.store.upsertPlayer({
+      id: ctx.localPeerId.value,
+      name: ctx.options.name,
+      color: ctx.options.color,
+      score: 0
+    })
+    return
+  }
   const joined = p2pJoin(roomId)
   ctx.session.value = joined
   ctx.localPeerId.value = joined.peerId
@@ -272,8 +283,8 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
   const isHost = computed(() => store.hostId === localPeerId.value && localPeerId.value !== '')
 
   const startRound = (): void => {
-    if (!isHost.value || !session.value) return
-    broadcastConfig(ctx, session.value)
+    if (!isHost.value) return
+    if (session.value) broadcastConfig(ctx, session.value)
 
     const eligible = buildEligibleWords(store.difficulty)
     const candidates = shuffleArray(eligible)
@@ -300,7 +311,7 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
     store.round = { number: nextNumber, grid, validWords, endsAt }
     store.phase = 'playing'
     store.resetRound()
-    p2pSendData(session.value, ROUND_CHANNEL, payload)
+    if (session.value) p2pSendData(session.value, ROUND_CHANNEL, payload)
   }
 
   const endRound = (): void => endRoundForContext(ctx, startRound)
@@ -316,7 +327,6 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
   }
 
   const submitWord = (word: string): void => {
-    if (!session.value) return
     const upperWord = word.toUpperCase()
     const isValid = store.round.validWords.some((w) => w.toUpperCase() === upperWord)
     if (!isValid) return
@@ -327,7 +337,7 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
     const claim: WmClaimedWord = { word: upperWord, playerId: localPeerId.value, points }
     store.addClaim(claim)
     store.addScore(localPeerId.value, points)
-    p2pSendData(session.value, WORD_CLAIM_CHANNEL, claim)
+    if (session.value) p2pSendData(session.value, WORD_CLAIM_CHANNEL, claim)
 
     const allClaimed = store.claimedWords.length >= store.round.validWords.length
     if (allClaimed && isHost.value) endRound()
@@ -350,8 +360,8 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
   }
 
   const restartGame = (): void => {
-    if (!isHost.value || !session.value) return
-    p2pSendData(session.value, RESTART_CHANNEL, { ts: Date.now() })
+    if (!isHost.value) return
+    if (session.value) p2pSendData(session.value, RESTART_CHANNEL, { ts: Date.now() })
     const preserved = Object.fromEntries(
       Object.entries(store.players).map(([id, p]) => [id, { ...p, score: 0 }])
     )

@@ -4,7 +4,12 @@ import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import type { DictionaryDifficulty } from '@webgamekit/dictionary'
 import type { PictionaryPlayer } from '@/stores/pictionary'
-import { ROUND_DURATION_OPTIONS, WORD_COUNT_OPTIONS, HINT_COUNT_OPTIONS } from './constants'
+import {
+  ROUND_DURATION_OPTIONS,
+  WORD_COUNT_OPTIONS,
+  HINT_COUNT_OPTIONS,
+  MIN_PLAYERS
+} from './constants'
 
 const MATCHMAKER_ROOM = 'pictionary-matchmaker'
 
@@ -96,6 +101,7 @@ const handleConfig = (key: string, value: string | number): void => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     accent-color="var(--pic-orange)"
+    :can-start="playerList.length >= MIN_PLAYERS"
     :config-fields="configFields"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"

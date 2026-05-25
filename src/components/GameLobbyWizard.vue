@@ -11,18 +11,21 @@ import { useGameLobby } from '@/composables/useGameLobby'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
 
-const props = defineProps<{
-  playerName: string
-  playerColor: string
-  isHost: boolean
-  playerList: LobbyPlayer[]
-  roomId: string
-  matchmakerRoom: string
-  configFields: LobbyConfigField[]
-  accentColor: string
-  showResults?: boolean
-  canStart?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    playerName: string
+    playerColor: string
+    isHost: boolean
+    playerList: LobbyPlayer[]
+    roomId: string
+    matchmakerRoom: string
+    configFields: LobbyConfigField[]
+    accentColor: string
+    showResults?: boolean
+    canStart?: boolean
+  }>(),
+  { canStart: true }
+)
 
 const emit = defineEmits<{
   'update:playerName': [value: string]
