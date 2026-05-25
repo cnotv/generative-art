@@ -192,6 +192,22 @@ jobs:
     - name: Run Lighthouse
       run: pnpm lighthouse
 
+    - name: Print Lighthouse scores
+      if: always()
+      run: |
+        REPORT=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+        if [ -z "$REPORT" ]; then echo "No Lighthouse report found"; exit 0; fi
+        node -e "
+          const r = JSON.parse(require('fs').readFileSync('$REPORT', 'utf8'));
+          const c = r.categories;
+          const score = (k) => Math.round((c[k]?.score ?? 0) * 100);
+          console.log('Lighthouse scores');
+          console.log('  Performance:    ' + score('performance'));
+          console.log('  Accessibility:  ' + score('accessibility'));
+          console.log('  Best Practices: ' + score('best-practices'));
+          console.log('  SEO:            ' + score('seo'));
+        "
+
     - name: Upload Lighthouse results
       uses: actions/upload-artifact@v4
       if: always()
