@@ -3,6 +3,8 @@ import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { getTools, getCube, type ComplexModel } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { type CoordinateTuple } from '@webgamekit/animation'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
@@ -39,6 +41,14 @@ const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const hasPath = shallowRef(false)
 const isDragging = shallowRef(false)
 const dragAction = shallowRef<CellType | null>(null)
@@ -582,7 +592,10 @@ const init = async (): Promise<void> => {
 
   if (animFrameId !== null) cancelAnimationFrame(animFrameId)
 
-  const { setup, renderer, scene, world } = await getTools({ canvas: canvas.value })
+  const { setup, renderer, scene, world } = await getTools({
+    canvas: canvas.value,
+    onProgress: handleProgress
+  })
 
   const orthoCamera = createOrthoCamera(window.innerWidth, window.innerHeight)
   scene.add(orthoCamera)
@@ -721,6 +734,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
   <!-- Status indicator (bottom-right) -->
   <div class="pf-toolbar">

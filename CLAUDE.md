@@ -53,6 +53,10 @@ Specific rules:
 - Lobby components (`*Lobby.vue`) must render `GameLobbyWizard` as the root element, with no enclosing `<section>` or `<div>`.
 - If you find yourself adding a wrapper only to transfer styles that the parent layout already provides, delete the wrapper and rely on the layout instead.
 
+## ESLint configuration
+
+**Never modify `eslint.config.js` unless the user explicitly asks.** This includes adding overrides, disabling rules for new directories, or adjusting thresholds. Fix lint violations by refactoring the code to comply with existing rules — not by loosening them.
+
 @.github/rules/code-style.md
 @.github/rules/testing.md
 @.github/rules/security.md

@@ -3,6 +3,8 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { getTools, getBall, getModel, type ComplexModel } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import type { Waypoint, PathFollowState } from '@webgamekit/logic'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -64,6 +66,14 @@ const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 const { registerElementProperties, clearAllElementProperties } = useElementPropertiesStore()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const reactiveConfig = createReactiveConfig(defaultConfigValues)
 const sceneConfig = createReactiveConfig(defaultSceneValues)
 
@@ -545,7 +555,10 @@ const runAnimation = (state: SceneState): void => {
 const init = async (): Promise<void> => {
   if (!canvas.value) return
 
-  const { setup, renderer, scene, camera, world } = await getTools({ canvas: canvas.value })
+  const { setup, renderer, scene, camera, world } = await getTools({
+    canvas: canvas.value,
+    onProgress: handleProgress
+  })
 
   // getTools' getDelta only updates inside animate() which we don't use.
   // Use our own clock so delta is correct in our requestAnimationFrame loop.
@@ -687,6 +700,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
 <style scoped>

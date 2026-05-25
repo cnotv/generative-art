@@ -9,6 +9,8 @@ import { createControls } from '@webgamekit/controls'
 import { stats } from '@/utils/stats'
 import { initializeAudio, stopMusic } from '@webgamekit/audio'
 import { getTools } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { useUiStore } from '@/stores/ui'
 import {
   enableZoomPrevention,
@@ -45,6 +47,15 @@ import type { ControlsOptions } from 'packages/controls/dist'
 type LightObject = { color: { getHex: () => number; set: (v: number) => void }; intensity: number }
 
 const uiStore = useUiStore()
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const fontName = 'goomba-runner-font'
 const shouldClearObstacles = ref(false)
 const statsElement = ref(null)
@@ -336,7 +347,8 @@ const createScene = async (canvas: HTMLCanvasElement) => {
   const { animate, setup, world, scene, getDelta, camera } = await getTools({
     stats,
     route,
-    canvas
+    canvas,
+    onProgress: handleProgress
   })
   remapControlsOptions(getBindingsWithTarget('idle'))
   const { elements, orbit } = await setup({ config: setupConfig })
@@ -469,6 +481,7 @@ onUnmounted(() => {
 <template>
   <div ref="statsElement"></div>
   <canvas ref="canvas" tabindex="0" style="position: relative; z-index: 0; outline: none"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <StartScreen v-if="isGameStart" @start="handleStartGame" />
   <GameOver v-if="isGameOver" @restart="handleRestartGame" />
   <ScoreDisplay v-if="isGamePlaying || isGameOver" />

@@ -16,6 +16,8 @@ import { createControls, isMobile } from '@webgamekit/controls'
 
 import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import type { LoadProgress } from '@webgamekit/threejs'
 import grassTextureImg from '@/assets/images/textures/grass.jpg'
 import { getActionName } from './MixamoPlayground.helpers'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -86,8 +88,8 @@ const controlBindings = {
     keyboard: {
       a: 'move-left',
       d: 'move-right',
-      w: 'move-up',
-      s: 'move-down',
+      w: 'move-down',
+      s: 'move-up',
       p: 'print-log',
       Enter: 'run',
       ' ': 'jump',
@@ -104,18 +106,18 @@ const controlBindings = {
       circle: 'roll',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-down',
-      'dpad-up': 'move-up',
+      'dpad-down': 'move-up',
+      'dpad-up': 'move-down',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-up',
-      'axis1-down': 'move-down'
+      'axis1-up': 'move-down',
+      'axis1-down': 'move-up'
     },
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-up',
-      down: 'move-down'
+      up: 'move-down',
+      down: 'move-up'
     }
   },
   axisThreshold: 0.5
@@ -151,6 +153,16 @@ const handleBlockingAction = (actionName: string): void => {
 const logs = shallowRef<string[]>([])
 const showLogs = true
 const isMobileDevice = isMobile()
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 
 const getActionData = (
   player: ComplexModel,
@@ -200,7 +212,8 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const init = async (): Promise<void> => {
   if (!canvas.value) return
   const { setup, animate, scene, world, camera, getDelta, renderer } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
   const { orbit } = await setup({
     config: setupConfig,
@@ -210,7 +223,10 @@ const init = async (): Promise<void> => {
       const obstacles: ComplexModel[] = []
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple
 
-      const player = await getModel(scene, world, 'character2.fbx', playerSettings.model)
+      const player = await getModel(scene, world, 'character2.fbx', {
+        ...playerSettings.model,
+        onProgress: handleProgress
+      })
       // console.log(player.userData.actions)
       const groundBodies: ComplexModel[] = ground?.mesh
         ? [ground.mesh as unknown as ComplexModel]
@@ -289,6 +305,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <ControlsLogger v-if="showLogs" :logs="logs" />
 
   <template v-if="isMobileDevice">
@@ -297,8 +314,8 @@ onUnmounted(() => {
       :mapping="{
         left: 'move-left',
         right: 'move-right',
-        up: 'move-up',
-        down: 'move-down'
+        up: 'move-down',
+        down: 'move-up'
       }"
       :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"

@@ -8,6 +8,8 @@ import { createTimelineManager } from '@webgamekit/animation'
 import { createGame, type GameState } from '@webgamekit/game'
 import { createControls, isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import type { LoadProgress } from '@webgamekit/threejs'
 import { updateAnimation } from '@webgamekit/animation'
 import type { Grid } from '@webgamekit/logic'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
@@ -79,6 +81,15 @@ createGame({ data: { score: 0, level: 1 } }, gameState, onUnmounted)
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const minimapCanvas = ref<HTMLCanvasElement | null>(null)
+
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 
 const toggleAutoMode = () => {
   const cfg = reactiveConfig.value as unknown as { autoMode: { enabled: boolean } }
@@ -463,6 +474,7 @@ onMounted(async () => {
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: false, showElements: false },
     playMode: true,
+    onProgress: handleProgress,
     defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
       const cameraOffset = CAMERA_OFFSET as CoordinateTuple
       createOfficeWalls(scene, world)
@@ -532,6 +544,7 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas" />
   <canvas ref="minimapCanvas" class="maze__minimap" width="160" height="160" />
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <TouchControl
     v-if="isMobileDevice"
     style="left: 25px; bottom: 25px"

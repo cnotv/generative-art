@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { getTools, getModel, gltfLoader, fbxLoader } from '@webgamekit/threejs'
 import { updateAnimation, createTimelineManager } from '@webgamekit/animation'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 
 const chameleonConfig = {
   position: [0, -0.75, 0],
@@ -50,6 +51,14 @@ const setupConfig = {
 }
 
 const canvas = ref(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref(undefined)
+const handleProgress = (progress) => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
 const availableAnimations = ref([])
 const selectedAnimation = ref('')
 const modelFile = ref(null)
@@ -115,7 +124,8 @@ const closePanel = () => {
 
 const init = async () => {
   const { setup, animate, scene, world, getDelta, camera } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
 
   sceneReference = scene
@@ -670,6 +680,7 @@ onMounted(async () => init())
 <template>
   <div class="container">
     <canvas ref="canvas"></canvas>
+    <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
     <!-- Mesh Inspector Panel (left side) -->
     <div v-if="panelsVisible" class="side-panel">

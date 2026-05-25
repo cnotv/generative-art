@@ -540,7 +540,7 @@ onUnmounted(() => {
   <canvas ref="canvas"></canvas>
   <ControlsLogger :logs="hudLogs" />
 
-  <Teleport defer to="#config-panel-extra">
+  <Teleport to="#config-panel-extra">
     <TextureEditor
       :front-default="stickmanFront as string"
       :back-default="stickmanBack as string"

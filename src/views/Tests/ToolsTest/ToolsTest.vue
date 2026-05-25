@@ -19,7 +19,8 @@ import {
   updateAnimation,
   createTimelineManager
 } from '@webgamekit/animation'
-import type { ComplexModel } from '@webgamekit/threejs'
+import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createGame } from '@webgamekit/game'
 import { createControls } from '@webgamekit/controls'
 import { initializeAudio, stopMusic, playAudioFile } from '@webgamekit/audio'
@@ -116,6 +117,9 @@ const getLogs = (actions: Record<string, any>): string[] =>
     .map((action) => `${action} triggered by ${actions[action].trigger} ${actions[action].device}`)
 let cameraPreset: any = null // TODO: Identified issue for tooling block scoping
 
+const cameraPresetSet = new Set<string>(Object.values(CameraPreset))
+const cameraSideSet = new Set<string>(Object.values(CameraSide))
+
 // Return binding 1 to x for each preset
 const cameraPresetBindings = Object.values(CameraPreset).reduce(
   (accumulator, preset, index) => ({ ...accumulator, [index + 1]: preset }),
@@ -160,33 +164,11 @@ const bindings = {
   axisThreshold: 0.3, // Lower threshold for more sensitive analog stick
   onAction: (action: string) => {
     logs.value = getLogs(currentActions)
-
-    switch (action) {
-      case 'jump':
-        handleJump()
-        break
-      case 'print-log':
-        console.warn('Current camera:', cameraPreset)
-        break
-
-      // TODO: Iterate instead of hardcoding
-      case CameraPreset.Perspective:
-      case CameraPreset.Orthographic:
-      case CameraPreset.Fisheye:
-      case CameraPreset.Cinematic:
-      case CameraPreset.Orbit:
-      case CameraPreset.OrthographicFollowing:
-      case CameraPreset.TopDown:
-        setCameraPreset(cameraPreset, action as CameraPreset)
-        break
-
-      case CameraSide.CameraDown:
-      case CameraSide.CameraUp:
-      case CameraSide.CameraLeft:
-      case CameraSide.CameraRight:
-        setCameraSide(cameraPreset, cameraPreset, action as CameraSide)
-        break
-    }
+    if (action === 'jump') return handleJump()
+    if (action === 'print-log') return console.warn('Current camera:', cameraPreset)
+    if (cameraPresetSet.has(action)) return setCameraPreset(cameraPreset, action as CameraPreset)
+    if (cameraSideSet.has(action))
+      return setCameraSide(cameraPreset, cameraPreset, action as CameraSide)
   },
   onRelease: () => {
     logs.value = getLogs(currentActions)
@@ -195,133 +177,128 @@ const bindings = {
 const { destroyControls, currentActions, remapControlsOptions } = createControls(bindings)
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadingVisible = ref(true)
+const loadingStage = ref('Loading…')
+const loadingDetail = ref<string | undefined>(undefined)
+const handleProgress = (progress: LoadProgress): void => {
+  loadingVisible.value = !progress.done
+  loadingStage.value = progress.stage
+  loadingDetail.value = progress.detail
+}
+type ToolsResult = Awaited<ReturnType<typeof getTools>>
+
+const buildScene = async ({
+  scene,
+  world,
+  getDelta,
+  animate
+}: Pick<ToolsResult, 'scene' | 'world' | 'getDelta' | 'animate'>): Promise<void> => {
+  const angle = 90
+  const distance = 0.08
+  const speed = { movement: 1, turning: 4, jump: 3 }
+  const maxJump = 2
+  const obstacles: ComplexModel[] = []
+
+  const player = await getModel(scene, world, 'mushroom.glb', mushroomConfig)
+
+  Object.keys(illustrations).forEach((key) => {
+    const config = (illustrations as Record<string, any>)[key]
+    getCube(scene, world, config)
+  })
+
+  remapControlsOptions(bindings)
+
+  const timelineManager = createTimelineManager()
+
+  timelineManager.addAction({
+    frequency: speed.movement,
+    name: 'Walk',
+    category: 'user-input',
+    action: () => {
+      const walkAnimData: AnimationData = {
+        player,
+        actionName: 'Esqueleto|walking',
+        delta: getDelta() * 2,
+        speed: 10,
+        distance,
+        backward: true
+      }
+      const idleAnimData: AnimationData = {
+        player,
+        actionName: 'Esqueleto|idle',
+        delta: getDelta(),
+        speed: 10
+      }
+      if (!currentActions['toggle-move'] || currentActions['moving'])
+        controllerForward(obstacles, [], walkAnimData)
+      else updateAnimation(idleAnimData)
+    }
+  })
+
+  timelineManager.addAction({
+    name: 'Loop: Turn player',
+    frequency: speed.movement * angle,
+    category: 'user-input',
+    action: () => {
+      if (!currentActions['toggle-move']) controllerTurn(player, angle)
+    }
+  })
+
+  timelineManager.addAction({
+    name: 'Free: Turn player',
+    frequency: speed.movement,
+    category: 'user-input',
+    action: () => {
+      if (currentActions['toggle-move']) {
+        if (currentActions['turn-left']) controllerTurn(player, speed.turning)
+        if (currentActions['turn-right']) controllerTurn(player, -speed.turning)
+      }
+    }
+  })
+
+  timelineManager.addAction({
+    name: 'Loop: Set score',
+    frequency: speed.movement * angle * 4,
+    category: 'game-logic',
+    action: () => {
+      if (!currentActions['toggle-move'] && gameState.value)
+        gameState.value.setData('score', (gameState.value.data.score || 0) + 1)
+    }
+  })
+
+  timelineManager.addAction({
+    name: 'Jump action',
+    category: 'physics',
+    action: () => {
+      if (isJumping.value) {
+        if (player.position.y >= mushroomConfig.position[1] + maxJump) {
+          isJumping.value = false
+        } else {
+          player.position.y += speed.jump * 0.1
+        }
+      } else {
+        player.position.y -= speed.jump * 0.1
+      }
+      if (player.position.y <= mushroomConfig.position[1] + 0.1) {
+        canJump.value = true
+        player.position.y = mushroomConfig.position[1]
+      }
+    }
+  })
+
+  animate({ beforeTimeline: () => {}, timeline: timelineManager })
+}
+
 const init = async (): Promise<void> => {
   if (!canvas.value) return
   const { camera, setup, animate, scene, world, getDelta } = await getTools({
-    canvas: canvas.value
+    canvas: canvas.value,
+    onProgress: handleProgress
   })
   cameraPreset = camera
   await setup({
     config: setupConfig,
-    defineSetup: async () => {
-      const angle = 90
-      const distance = 0.08
-      const speed = {
-        movement: 1,
-        turning: 4,
-        jump: 3
-      }
-      const maxJump = 2
-      const obstacles: ComplexModel[] = []
-
-      const player = await getModel(scene, world, 'mushroom.glb', mushroomConfig)
-      // obstacles.push(await getModel(scene, world, "sand_block.glb", blockConfig));
-
-      Object.keys(illustrations).forEach((key) => {
-        const config = (illustrations as Record<string, any>)[key]
-        getCube(scene, world, config)
-        // obstacles.push(model);
-      })
-
-      // const flower = getCube(scene, world, flowerConfig);
-      // instanceMatrixMesh(flower, scene, [
-      //   { position: [12, 0.8, -10] },
-      //   { position: [15, 0.8, -15] },
-      //   { position: [18, 0.8, -12] },
-      // ]);
-
-      // colorModel(player, chameleonConfig.materialColors);
-      remapControlsOptions(bindings)
-
-      const timelineManager = createTimelineManager()
-
-      timelineManager.addAction({
-        frequency: speed.movement,
-        name: 'Walk',
-        category: 'user-input',
-        action: () => {
-          const walkAnimData: AnimationData = {
-            player,
-            actionName: 'Esqueleto|walking',
-            delta: getDelta() * 2,
-            speed: 10,
-            distance,
-            backward: true
-          }
-          const idleAnimData: AnimationData = {
-            player,
-            actionName: 'Esqueleto|idle',
-            delta: getDelta(),
-            speed: 10
-          }
-          if (!currentActions['toggle-move'] || currentActions['moving'])
-            controllerForward(obstacles, [], walkAnimData)
-          else updateAnimation(idleAnimData)
-        }
-      })
-
-      timelineManager.addAction({
-        name: 'Loop: Turn player',
-        frequency: speed.movement * angle,
-        category: 'user-input',
-        action: () => {
-          if (!currentActions['toggle-move']) {
-            controllerTurn(player, angle)
-          }
-        }
-      })
-
-      timelineManager.addAction({
-        name: 'Free: Turn player',
-        frequency: speed.movement,
-        category: 'user-input',
-        action: () => {
-          if (currentActions['toggle-move']) {
-            if (currentActions['turn-left']) controllerTurn(player, speed.turning)
-            if (currentActions['turn-right']) controllerTurn(player, -speed.turning)
-          }
-        }
-      })
-
-      timelineManager.addAction({
-        name: 'Loop: Set score',
-        frequency: speed.movement * angle * 4,
-        category: 'game-logic',
-        action: () => {
-          if (!currentActions['toggle-move']) {
-            if (gameState.value)
-              gameState.value.setData('score', (gameState.value.data.score || 0) + 1)
-          }
-        }
-      })
-
-      timelineManager.addAction({
-        name: 'Jump action',
-        category: 'physics',
-        action: () => {
-          if (isJumping.value) {
-            if (player.position.y >= mushroomConfig.position[1] + maxJump) {
-              isJumping.value = false
-            } else {
-              player.position.y += speed.jump * 0.1
-            }
-          } else {
-            player.position.y -= speed.jump * 0.1
-          }
-
-          // Fake gravity
-          if (player.position.y <= mushroomConfig.position[1] + 0.1) {
-            canJump.value = true
-            player.position.y = mushroomConfig.position[1]
-          }
-        }
-      })
-
-      animate({
-        beforeTimeline: () => {},
-        timeline: timelineManager
-      })
-    }
+    defineSetup: async () => buildScene({ scene, world, getDelta, animate })
   })
 }
 
@@ -339,6 +316,7 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
+  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   <ControlsLogger v-if="gameState" :logs="logs">
     <div>
       <span>{{ isJumping ? 'Jumping' : 'On ground' }},</span>

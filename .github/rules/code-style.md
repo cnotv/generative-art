@@ -91,6 +91,10 @@
 - **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
 - **No `!important`**: Never use `!important` in CSS unless it is in a utility class specifically designed to override styles (e.g., vendor overrides in `vendor.scss`). If a style isn't applying, fix the specificity or selector instead.
 
+## API Changes
+
+- **Update all call sites**: When changing a function signature, type, or exported API in any package or shared utility, find every usage across the entire codebase (`grep -r`) and update them before committing. Never leave stale callers or add backward-compatibility shims — fix all consumers in the same PR.
+
 ## DRY and KISS Principles
 
 - **Don't Repeat Yourself (DRY)**: Extract shared logic into reusable functions, composables, or utilities. If the same pattern appears more than once, abstract it into a shared helper
