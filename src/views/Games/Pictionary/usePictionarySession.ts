@@ -148,10 +148,9 @@ const scheduleHints = (ctx: PictionaryContext): void => {
 }
 
 const startRoundForContext = (ctx: PictionaryContext): void => {
-  if (!ctx.session.value) return
+  if (!ctx.isHost.value) return
   const ids = Object.keys(ctx.store.players).sort()
-  if (ids.length < 2) return
-  broadcastConfig(ctx, ctx.session.value)
+  if (ctx.session.value) broadcastConfig(ctx, ctx.session.value)
   const nextNumber = ctx.store.round.number + 1
   const drawerId = ids[(nextNumber - 1) % ids.length]
   const buildChoice = (): string =>
@@ -169,11 +168,10 @@ const startRoundForContext = (ctx: PictionaryContext): void => {
     endsAt: Date.now() + CHOICE_DURATION_MS
   }
   ctx.applyChoices(payload)
-  p2pSendData(ctx.session.value, ROUND_CHOICES_CHANNEL, payload)
+  if (ctx.session.value) p2pSendData(ctx.session.value, ROUND_CHOICES_CHANNEL, payload)
 }
 
 const pickWordForContext = (ctx: PictionaryContext, word: string): void => {
-  if (!ctx.session.value) return
   if (!ctx.store.round.choices.includes(word)) return
   const payload: PictionaryRoundPayload = {
     number: ctx.store.round.number,
@@ -182,12 +180,11 @@ const pickWordForContext = (ctx: PictionaryContext, word: string): void => {
     endsAt: Date.now() + ctx.store.roundDuration * 1000
   }
   ctx.applyRound(payload)
-  p2pSendData(ctx.session.value, ROUND_CHANNEL, payload)
+  if (ctx.session.value) p2pSendData(ctx.session.value, ROUND_CHANNEL, payload)
 }
 
 const restartGameForContext = (ctx: PictionaryContext): void => {
-  if (!ctx.session.value) return
-  p2pSendData(ctx.session.value, RESTART_CHANNEL, { ts: Date.now() })
+  if (ctx.session.value) p2pSendData(ctx.session.value, RESTART_CHANNEL, { ts: Date.now() })
   ctx.applyRestart()
 }
 
@@ -359,13 +356,15 @@ const bindDrawingEvents = (ctx: PictionaryContext, joined: P2PSession): void => 
 }
 
 const endRoundForContext = (ctx: PictionaryContext, startRound: () => void): void => {
-  if (!ctx.session.value || !ctx.isHost.value) return
+  if (!ctx.isHost.value) return
   clearHintTimers(ctx)
   const intermissionEndsAt = Date.now() + INTERMISSION_MS
-  p2pSendData(ctx.session.value, ROUND_END_CHANNEL, {
-    number: ctx.store.round.number,
-    intermissionEndsAt
-  })
+  if (ctx.session.value) {
+    p2pSendData(ctx.session.value, ROUND_END_CHANNEL, {
+      number: ctx.store.round.number,
+      intermissionEndsAt
+    })
+  }
   ctx.applyRoundEnd(intermissionEndsAt)
   if (ctx.store.phase === 'intermission') {
     setTimeout(() => {
@@ -375,7 +374,16 @@ const endRoundForContext = (ctx: PictionaryContext, startRound: () => void): voi
 }
 
 const initSessionForContext = (ctx: PictionaryContext, roomId: string): void => {
-  if (!p2pIsSupported()) return
+  if (!p2pIsSupported()) {
+    ctx.localPeerId.value = crypto.randomUUID()
+    ctx.store.upsertPlayer({
+      id: ctx.localPeerId.value,
+      name: ctx.options.name,
+      color: ctx.options.color,
+      score: 0
+    })
+    return
+  }
   const joined = p2pJoin(roomId)
   ctx.session.value = joined
   ctx.localPeerId.value = joined.peerId

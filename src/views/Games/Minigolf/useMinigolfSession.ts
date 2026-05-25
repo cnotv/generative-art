@@ -179,7 +179,16 @@ const bindDataEvents = (ctx: MgContext, joined: P2PSession): void => {
 }
 
 const initSessionForContext = (ctx: MgContext, roomId: string): void => {
-  if (!p2pIsSupported()) return
+  if (!p2pIsSupported()) {
+    ctx.localPeerId.value = crypto.randomUUID()
+    ctx.store.upsertPlayer({
+      id: ctx.localPeerId.value,
+      name: ctx.options.name,
+      color: ctx.options.color,
+      scores: []
+    })
+    return
+  }
   const joined = p2pJoin(roomId)
   ctx.session.value = joined
   ctx.localPeerId.value = joined.peerId
@@ -229,25 +238,26 @@ export const useMinigolfSession = (options: UseMinigolfSessionOptions) => {
    * @param selectedHoles - Indices of the selected holes to play.
    */
   const broadcastConfig = (holeCount: number, selectedHoles: number[]): void => {
-    if (!session.value) return
     store.holeCount = holeCount
     store.selectedHoles = selectedHoles
-    const payload: ConfigPayload = { holeCount, selectedHoles }
-    p2pSendData(session.value, CONFIG_CHANNEL, payload)
+    if (session.value) {
+      const payload: ConfigPayload = { holeCount, selectedHoles }
+      p2pSendData(session.value, CONFIG_CHANNEL, payload)
+    }
   }
 
   /**
    * Broadcast the game start signal to all peers (host only).
    */
   const broadcastStart = (): void => {
-    if (!session.value || !isHost.value) return
+    if (!isHost.value) return
     const payload: StartPayload = {
       holeCount: store.holeCount,
       selectedHoles: store.selectedHoles
     }
     store.currentHole = 0
     store.phase = 'playing'
-    p2pSendData(session.value, START_CHANNEL, payload)
+    if (session.value) p2pSendData(session.value, START_CHANNEL, payload)
   }
 
   /**
@@ -256,10 +266,11 @@ export const useMinigolfSession = (options: UseMinigolfSessionOptions) => {
    * @param strokes - Number of strokes taken.
    */
   const broadcastScore = (holeIndex: number, strokes: number): void => {
-    if (!session.value) return
     store.recordScore(localPeerId.value, holeIndex, strokes)
-    const payload: ScorePayload = { id: localPeerId.value, holeIndex, strokes }
-    p2pSendData(session.value, SCORE_CHANNEL, payload)
+    if (session.value) {
+      const payload: ScorePayload = { id: localPeerId.value, holeIndex, strokes }
+      p2pSendData(session.value, SCORE_CHANNEL, payload)
+    }
   }
 
   /**
@@ -267,8 +278,7 @@ export const useMinigolfSession = (options: UseMinigolfSessionOptions) => {
    * @param holeIndex - Next hole index, or -1 for summary.
    */
   const broadcastAdvanceHole = (holeIndex: number): void => {
-    if (!session.value) return
-    p2pSendData(session.value, ADVANCE_CHANNEL, { holeIndex })
+    if (session.value) p2pSendData(session.value, ADVANCE_CHANNEL, { holeIndex })
   }
 
   /**
@@ -278,9 +288,10 @@ export const useMinigolfSession = (options: UseMinigolfSessionOptions) => {
    * @param z - Ball Z position.
    */
   const broadcastBallPosition = (x: number, y: number, z: number): void => {
-    if (!session.value) return
-    const payload: BallPosPayload = { id: localPeerId.value, x, y, z }
-    p2pSendData(session.value, BALL_POS_CHANNEL, payload)
+    if (session.value) {
+      const payload: BallPosPayload = { id: localPeerId.value, x, y, z }
+      p2pSendData(session.value, BALL_POS_CHANNEL, payload)
+    }
   }
 
   /**
