@@ -28,6 +28,10 @@ STEP 5  implement
 
 **Never open a pull request unless the user explicitly asks for one.**
 
+## When the user asks a question — give an opinion
+
+When the user asks a question ("what do you think?", "is X better than Y?", "why is this happening?"), always provide a direct opinion or recommendation alongside any explanation. Do not hedge with "it depends" and stop there — state what you would do and why.
+
 ## When information is insufficient — ask first
 
 Before implementing any task where the intent, scope, or expected behavior is unclear, **ask the user for clarification**. Do not assume or guess. This applies especially to:

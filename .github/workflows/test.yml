@@ -220,6 +220,20 @@ jobs:
           console.log('  TTFB (Time to First Byte):        ' + ms('server-response-time'));
         "
 
+    - name: Save Lighthouse screenshot
+      if: always()
+      run: |
+        REPORT=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+        if [ -z "$REPORT" ]; then echo "No Lighthouse report found"; exit 0; fi
+        node -e "
+          const r = JSON.parse(require('fs').readFileSync('$REPORT', 'utf8'));
+          const shot = r.audits?.['final-screenshot']?.details?.data;
+          if (!shot) { console.log('No screenshot in report'); process.exit(0); }
+          const base64 = shot.replace(/^data:image\/\w+;base64,/, '');
+          require('fs').writeFileSync('.lighthouseci/screenshot.jpg', Buffer.from(base64, 'base64'));
+          console.log('Screenshot saved');
+        "
+
     - name: Upload Lighthouse results
       uses: actions/upload-artifact@v4
       if: always()
