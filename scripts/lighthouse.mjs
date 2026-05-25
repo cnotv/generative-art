@@ -11,7 +11,7 @@ if (isLocalhost && !existsSync('dist/index.html')) {
   if (buildResult.status !== 0) process.exit(buildResult.status ?? 1)
 }
 
-const chromeFlags = isCI ? '--no-sandbox --disable-dev-shm-usage --disable-gpu' : ''
+const chromeFlags = isCI ? '--no-sandbox --disable-dev-shm-usage' : ''
 
 const args = [
   'collect',
