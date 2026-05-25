@@ -422,7 +422,7 @@ export const loadAnimation = (
   index: number = 0
 ): Promise<THREE.AnimationMixer> => {
   return new Promise((resolve) => {
-    fbxLoader.load(`/${fileName}`, (animation) => {
+    fbxLoader.load(`${import.meta.env.BASE_URL}${fileName}`, (animation) => {
       const mixer = new THREE.AnimationMixer(model)
       const action = mixer.clipAction(
         (model?.animations?.length ? model : animation).animations[index]
@@ -450,7 +450,7 @@ export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<M
 
   return new Promise((resolve, reject) => {
     fbxLoader.load(
-      `/${fileName}`,
+      `${import.meta.env.BASE_URL}${fileName}`,
       (model) => {
         model.position.set(...position)
         model.scale.set(...scale)
@@ -493,7 +493,7 @@ export const loadGLTF = (
 
   return new Promise((resolve, reject) => {
     gltfLoader.load(
-      `/${fileName}`,
+      `${import.meta.env.BASE_URL}${fileName}`,
       (gltf) => {
         const model = gltf.scene
         model.castShadow = castShadow
