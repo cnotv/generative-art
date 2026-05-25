@@ -578,18 +578,6 @@ export default [
     }
   },
 
-  // Test views - dev/debug pages with intentionally complex or magic-number-heavy setups
-  {
-    files: ['src/views/Tests/**/*.vue'],
-    rules: {
-      'max-lines-per-function': ['error', { max: 350, skipBlankLines: true, skipComments: true }],
-      complexity: ['error', { max: 20 }],
-      'max-params': ['error', { max: 10 }],
-      'no-magic-numbers': 'off',
-      'functional/no-loop-statements': 'off'
-    }
-  },
-
   // Vendored algorithm files - exempt from functional and complexity rules
   {
     files: ['src/utils/simplex.js'],
