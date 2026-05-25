@@ -200,12 +200,24 @@ jobs:
         node -e "
           const r = JSON.parse(require('fs').readFileSync('$REPORT', 'utf8'));
           const c = r.categories;
+          const a = r.audits;
           const score = (k) => Math.round((c[k]?.score ?? 0) * 100);
-          console.log('Lighthouse scores');
+          const ms = (k) => a[k]?.displayValue ?? 'n/a';
+          console.log('');
+          console.log('Category scores');
           console.log('  Performance:    ' + score('performance'));
           console.log('  Accessibility:  ' + score('accessibility'));
           console.log('  Best Practices: ' + score('best-practices'));
           console.log('  SEO:            ' + score('seo'));
+          console.log('');
+          console.log('Performance metrics');
+          console.log('  FCP  (First Contentful Paint):    ' + ms('first-contentful-paint'));
+          console.log('  LCP  (Largest Contentful Paint):  ' + ms('largest-contentful-paint'));
+          console.log('  TBT  (Total Blocking Time):       ' + ms('total-blocking-time'));
+          console.log('  CLS  (Cumulative Layout Shift):   ' + ms('cumulative-layout-shift'));
+          console.log('  SI   (Speed Index):               ' + ms('speed-index'));
+          console.log('  TTI  (Time to Interactive):       ' + ms('interactive'));
+          console.log('  TTFB (Time to First Byte):        ' + ms('server-response-time'));
         "
 
     - name: Upload Lighthouse results
