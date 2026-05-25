@@ -39,9 +39,6 @@ defineProps<{
   gap: var(--spacing-2);
   padding: var(--spacing-6);
   padding-top: var(--spacing-8);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   min-width: 16rem;
   text-align: center;
 }

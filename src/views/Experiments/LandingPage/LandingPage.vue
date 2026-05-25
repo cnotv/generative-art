@@ -509,6 +509,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     renderer.render(scene, camera)
   }
   runAnimation()
+  loadingVisible.value = false
 
   cleanupReference = () => {
     window.removeEventListener('resize', onResize)
