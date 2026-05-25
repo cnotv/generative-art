@@ -46,6 +46,6 @@ export default defineConfig({
     exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr']
   },
   server: {
-    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz']
+    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
   }
 })
