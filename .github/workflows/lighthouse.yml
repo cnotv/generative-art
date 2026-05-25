@@ -5,13 +5,15 @@ on:
     workflows: ["Deploy to GitHub Pages"]
     types: [completed]
   workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   lighthouse:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
