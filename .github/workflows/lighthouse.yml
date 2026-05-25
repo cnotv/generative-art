@@ -36,7 +36,7 @@ jobs:
       - name: Run Lighthouse
         run: pnpm lighthouse
 
-      - name: Generate badge SVG files
+      - name: Generate badge JSON files
         if: success()
         run: |
           REPORT=$(ls .lighthouseci/lhr-*.json | head -1)

@@ -135,9 +135,6 @@ importers:
       autoprefixer:
         specifier: ^10.4.24
         version: 10.4.24(postcss@8.5.6)
-      badgen:
-        specifier: ^3.3.2
-        version: 3.3.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1800,9 +1797,6 @@ packages:
     peerDependenciesMeta:
       react-native-b4a:
         optional: true
-
-  badgen@3.3.2:
-    resolution: {integrity: sha512-fbQwK9norfdzbdsoPwbLIAmgBXDGEme3jeIyqPAH7o6vp9lmuLHS7uXULvOiQ6XnMLkYNG4gDjILf74hgtTAug==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -6032,8 +6026,6 @@ snapshots:
   axe-core@4.11.4: {}
 
   b4a@1.8.1: {}
-
-  badgen@3.3.2: {}
 
   balanced-match@1.0.2: {}
 

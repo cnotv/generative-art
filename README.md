@@ -6,10 +6,10 @@ A monorepo containing **WebGameKit** - a framework-agnostic toolkit for creating
 
 Scores measured by [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) against the live site after each deploy to GitHub Pages.
 
-[![Performance](badges/lighthouse-performance.svg)](https://cnotv.github.io/generative-art/)
-[![Accessibility](badges/lighthouse-accessibility.svg)](https://cnotv.github.io/generative-art/)
-[![Best Practices](badges/lighthouse-best-practices.svg)](https://cnotv.github.io/generative-art/)
-[![SEO](badges/lighthouse-seo.svg)](https://cnotv.github.io/generative-art/)
+[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-performance.json)](https://cnotv-generative-art.netlify.app/)
+[![Accessibility](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-accessibility.json)](https://cnotv-generative-art.netlify.app/)
+[![Best Practices](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-best-practices.json)](https://cnotv-generative-art.netlify.app/)
+[![SEO](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cnotv/generative-art/main/badges/lighthouse-seo.json)](https://cnotv-generative-art.netlify.app/)
 
 ## 🎮 Live Demo
 

@@ -25,7 +25,9 @@ const savedBadges = {}
 beforeEach(() => {
   mkdirSync(FIXTURES_DIR, { recursive: true })
   const entries = Object.fromEntries(
-    readdirSync(BADGES_DIR).map((file) => [file, readFileSync(resolve(BADGES_DIR, file), 'utf8')])
+    readdirSync(BADGES_DIR)
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => [file, readFileSync(resolve(BADGES_DIR, file), 'utf8')])
   )
   Object.assign(savedBadges, entries)
 })
@@ -43,14 +45,16 @@ const runWithReport = (report) => {
   return execFileSync('node', [SCRIPT, reportPath], { encoding: 'utf8' })
 }
 
-const readBadgeSvg = (key) => readFileSync(resolve(BADGES_DIR, `lighthouse-${key}.svg`), 'utf8')
+const readBadgeJson = (key) =>
+  JSON.parse(readFileSync(resolve(BADGES_DIR, `lighthouse-${key}.json`), 'utf8'))
 
 describe('generate-lighthouse-badges', () => {
-  it('writes all four SVG badge files', () => {
+  it('writes all four JSON badge files', () => {
     runWithReport(makeReport())
     ;['performance', 'accessibility', 'best-practices', 'seo'].forEach((key) => {
-      const svg = readBadgeSvg(key)
-      expect(svg).toContain('<svg')
+      const badge = readBadgeJson(key)
+      expect(badge.schemaVersion).toBe(1)
+      expect(badge.cacheSeconds).toBe(300)
     })
   })
 
@@ -63,17 +67,17 @@ describe('generate-lighthouse-badges', () => {
     [0.49, '49', 'e05d44'],
     [0.43, '43', 'e05d44'],
     [0.0, '0', 'e05d44']
-  ])('score %.2f → score text "%s", color "%s"', (rawScore, expectedScore, expectedColor) => {
+  ])('score %.2f → message "%s", color "%s"', (rawScore, expectedScore, expectedColor) => {
     runWithReport({ categories: { performance: { score: rawScore } } })
-    const svg = readBadgeSvg('performance')
-    expect(svg).toContain(expectedScore)
-    expect(svg).toContain(expectedColor)
+    const badge = readBadgeJson('performance')
+    expect(badge.message).toBe(expectedScore)
+    expect(badge.color).toBe(expectedColor)
   })
 
   it('label uses spaces not hyphens', () => {
     runWithReport(makeReport())
-    const svg = readBadgeSvg('best-practices')
-    expect(svg).toContain('best practices')
+    const badge = readBadgeJson('best-practices')
+    expect(badge.label).toBe('best practices')
   })
 
   it('skips categories with null or missing scores', () => {

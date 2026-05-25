@@ -1,13 +1,6 @@
-/**
- * Reads a Lighthouse JSON report and writes SVG badge files to badges/.
- *
- * Usage: node scripts/generate-lighthouse-badges.mjs <report.json>
- */
-
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { badgen } from 'badgen'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BADGES_DIR = resolve(ROOT, 'badges')
@@ -38,13 +31,14 @@ mkdirSync(BADGES_DIR, { recursive: true })
 Object.entries(categories).map(([key, rawScore]) => {
   if (rawScore == null) return
   const score = Math.round(rawScore * 100)
-  const svg = badgen({
+  const badge = {
+    schemaVersion: 1,
     label: key.replace(/-/g, ' '),
-    status: String(score),
+    message: String(score),
     color: scoreColor(score),
-    style: 'flat'
-  })
-  const outPath = resolve(BADGES_DIR, `lighthouse-${key}.svg`)
-  writeFileSync(outPath, svg)
+    cacheSeconds: 300
+  }
+  const outPath = resolve(BADGES_DIR, `lighthouse-${key}.json`)
+  writeFileSync(outPath, JSON.stringify(badge, null, 2))
   process.stdout.write(`Wrote ${outPath} (score: ${score})\n`)
 })
