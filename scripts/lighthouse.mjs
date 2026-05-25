@@ -25,7 +25,7 @@ if (chromeFlags) args.push(`--settings.chromeFlags=${chromeFlags}`)
 
 if (isLocalhost) {
   args.push('--startServerCommand=pnpm preview')
-  args.push('--startServerReadyPattern=Local:')
+  args.push('--startServerReadyPattern=http://localhost')
 }
 
 const result = spawnSync('node_modules/.bin/lhci', args, { stdio: 'inherit', shell: false })
