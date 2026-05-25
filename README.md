@@ -13,7 +13,7 @@ Scores measured by [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci
 
 ## 🎮 Live Demo
 
-**Main App**: [https://cnotv.github.io/generative-art/](https://cnotv.github.io/generative-art/)
+**Main App**: [https://cnotv-generative-art.netlify.app/](https://cnotv-generative-art.netlify.app/)
 
 **Documentation**: [https://cnotv.github.io/generative-art/docs/](https://cnotv.github.io/generative-art/docs/)
 
