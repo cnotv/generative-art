@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
+import { TIME_PENALTY_FALL } from './config'
 
 const props = defineProps<{
   elapsed: number
   finished: boolean
+  penaltyCount: number
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -15,6 +17,27 @@ const elapsedDisplay = computed((): string => {
   const secs = total % 60
   return `${mins}:${secs.toString().padStart(2, '0')}`
 })
+
+const PENALTY_DISPLAY_MS = 1500
+const showPenalty = ref(false)
+let penaltyTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.penaltyCount,
+  (count) => {
+    if (count === 0) return
+    if (penaltyTimer) clearTimeout(penaltyTimer)
+    showPenalty.value = true
+    penaltyTimer = setTimeout(() => {
+      showPenalty.value = false
+      penaltyTimer = null
+    }, PENALTY_DISPLAY_MS)
+  }
+)
+
+onUnmounted(() => {
+  if (penaltyTimer) clearTimeout(penaltyTimer)
+})
 </script>
 
 <template>
@@ -24,6 +47,11 @@ const elapsedDisplay = computed((): string => {
       <span v-if="finished" class="mm-game__done">Finished!</span>
       <span v-else class="mm-game__hint">WASD / Arrow keys to roll</span>
     </div>
+    <Transition name="mm-penalty">
+      <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
+        +{{ TIME_PENALTY_FALL }}s
+      </span>
+    </Transition>
     <canvas ref="canvas" class="mm-game__canvas" />
   </div>
 </template>
@@ -79,5 +107,48 @@ const elapsedDisplay = computed((): string => {
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--mm-accent);
+}
+
+.mm-game__penalty {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  font-size: var(--font-size-2xl, 1.75rem);
+  font-weight: 900;
+  color: var(--color-danger, #d32f2f);
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px rgb(0, 0, 0, 0.5);
+}
+
+.mm-penalty-enter-active {
+  animation: mm-penalty-float 1.5s ease-out forwards;
+}
+
+.mm-penalty-leave-active {
+  display: none;
+}
+
+@keyframes mm-penalty-float {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-8px);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-20px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-36px);
+  }
 }
 </style>

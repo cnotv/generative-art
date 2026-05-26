@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import * as THREE from 'three'
 import { storeToRefs } from 'pinia'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
 import { useMarbleMadnessSession } from './useMarbleMadnessSession'
@@ -14,6 +15,7 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
+import { TRACKS } from './config'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
 import GameHeader from '@/components/GameHeader.vue'
@@ -34,6 +36,9 @@ const backgroundStyle = { backgroundImage: buildRandomGradient() }
 
 const { roomId, resolvedRoomId } = useRoomId()
 
+const trackIndex = ref(0)
+const track = computed(() => TRACKS[trackIndex.value] ?? TRACKS[0])
+
 const gameReference = ref<InstanceType<typeof MarbleMadnessGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
@@ -41,7 +46,7 @@ const session = useMarbleMadnessSession(
   { name: playerName.value, color: playerColor.value, roomId: resolvedRoomId },
   (peerId, pos) => {
     const player = store.players[peerId]
-    if (player) game.updateGhostPosition(peerId, player.color, pos)
+    if (player) game.updateGhostPosition(peerId, new THREE.Color(player.color).getHex(), pos)
   }
 )
 const { isHost, localPeerId } = session
@@ -51,6 +56,7 @@ const solo = computed(() => store.solo)
 const game = useMarbleMadnessGame({
   canvas,
   isSolo: solo,
+  track,
   onWin: () => {
     if (store.solo) {
       store.phase = 'summary'
@@ -111,6 +117,10 @@ const handleLeaveRoom = (): void => {
   leaveRoom()
 }
 
+const handleConfigChange = (key: string, value: string | number): void => {
+  if (key === 'trackIndex') trackIndex.value = Number(value)
+}
+
 const handleStartGame = (): void => {
   const isSolo = playerList.value.length <= 1
   if (isSolo) {
@@ -147,6 +157,7 @@ onMounted(() => {
     class="mm"
     :phase="phase"
     :show-sidebar="showSidebar"
+    :sidebar-visible="!store.solo"
     :main-placement="phase === 'playing' ? 'fill' : 'center'"
     :style="backgroundStyle"
   >
@@ -178,6 +189,7 @@ onMounted(() => {
       @start-game="handleStartGame"
       @match-found="handleMatchFound"
       @leave-room="handleLeaveRoom"
+      @config-change="handleConfigChange"
     />
 
     <MarbleMadnessGame
@@ -185,6 +197,7 @@ onMounted(() => {
       ref="gameReference"
       :elapsed="game.elapsed.value"
       :finished="game.finished.value"
+      :penalty-count="game.penaltyCount.value"
     />
 
     <MarbleMadnessSummary

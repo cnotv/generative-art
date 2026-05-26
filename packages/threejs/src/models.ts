@@ -542,6 +542,7 @@ const attachBallPhysics = (
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     ...options,
+    type,
     shape: 'ball',
     boundary: 0.8,
     rotation: [0.5, 0.5, 0.5] as CoordinateTuple

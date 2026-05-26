@@ -242,7 +242,7 @@ export const cameraFollowPlayer = (
     if (orbit) orbit.target.z = player.position.z
   }
 
-  if (orbit) orbit.update()
+  if (!orbit) camera.lookAt(player.position)
 
   return [camera.position.x, camera.position.y, camera.position.z]
 }

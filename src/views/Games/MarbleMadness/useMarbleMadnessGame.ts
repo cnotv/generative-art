@@ -1,9 +1,23 @@
 import { ref, watch, onUnmounted } from 'vue'
+import type { Ref } from 'vue'
 import * as THREE from 'three'
-import { getTools, getBall, getCube } from '@webgamekit/threejs'
+import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import {
+  getTools,
+  getBall,
+  getCube,
+  cameraFollowPlayer,
+  moveDynamic,
+  type ComplexModel
+} from '@webgamekit/threejs'
+import { createControls } from '@webgamekit/controls'
+import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
+import { registerCameraProperties } from '@/utils/cameraProperties'
+import marbleTexture from '@/assets/images/textures/marble_ball.webp'
 import {
   MARBLE_RADIUS,
+  MARBLE_WEIGHT,
   MARBLE_RESTITUTION,
   MARBLE_FRICTION,
   MARBLE_LINEAR_DAMPING,
@@ -12,97 +26,80 @@ import {
   MAX_LINEAR_SPEED,
   CAMERA_HEIGHT,
   CAMERA_BACK,
-  CAMERA_LERP,
   FALL_THRESHOLD_Y,
-  FINISH_CHECK_Z,
-  FINISH_CHECK_RADIUS,
+  TIME_PENALTY_FALL,
   POS_BROADCAST_MS,
-  PLATFORMS,
-  OBSTACLES,
-  SPAWN_POSITION,
-  FINISH_POSITION,
-  OBSTACLE_COLOR
+  OBSTACLE_COLOR,
+  KEYBOARD_MAPPING,
+  LIGHT_AMBIENT_INTENSITY,
+  LIGHT_DIRECTIONAL_INTENSITY,
+  LIGHT_DIRECTIONAL_POSITION,
+  FINISH_DISC_RADIUS_RATIO,
+  type TrackConfig
 } from './config'
 import type { GameDeps, BallPosPayload } from './types'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>
-type SceneContext = Pick<GetToolsResult, 'scene' | 'world' | 'camera' | 'getDelta' | 'animate'>
+type SceneContext = Omit<
+  Pick<GetToolsResult, 'scene' | 'world' | 'camera' | 'getDelta' | 'animate' | 'orbit'>,
+  'orbit'
+> & {
+  orbit: OrbitControls | null
+}
 
 type Vec3 = { x: number; y: number; z: number }
-type MarbleBody = {
-  translation: () => Vec3
-  linvel: () => Vec3
-  setLinvel: (v: Vec3, wake: boolean) => void
-  applyImpulse: (v: Vec3, wake: boolean) => void
-  setTranslation: (v: Vec3, wake: boolean) => void
-  setAngvel: (v: Vec3, wake: boolean) => void
+
+type MarbleState = {
+  marbleMesh: ComplexModel | null
+  controls: ControlsExtras | null
+  posAccumulator: number
+  finished: Ref<boolean>
+  elapsed: Ref<number>
+  penaltyCount: Ref<number>
 }
 
-const cameraOffset = new THREE.Vector3(0, CAMERA_HEIGHT, CAMERA_BACK)
-const targetCameraPos = new THREE.Vector3()
-const cameraTarget = new THREE.Vector3()
-const forceVec: Vec3 = { x: 0, y: 0, z: 0 }
-const zeroVec: Vec3 = { x: 0, y: 0, z: 0 }
-const emptyTimeline = createTimelineManager()
+const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
+const FINISH_DISC_HEIGHT = 0.6
+const FINISH_DISC_THICKNESS = 0.15
+const FINISH_DISC_SEGMENTS = 32
 
-const applyDamping = (body: unknown): void => {
-  const rb = body as {
-    setLinearDamping: (d: number) => void
-    setAngularDamping: (d: number) => void
-  }
-  rb.setLinearDamping(MARBLE_LINEAR_DAMPING)
-  rb.setAngularDamping(MARBLE_ANGULAR_DAMPING)
+const applyDamping = (model: ComplexModel): void => {
+  model.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
+  model.userData.body.setAngularDamping(MARBLE_ANGULAR_DAMPING)
 }
 
-const clampSpeed = (body: MarbleBody): void => {
-  const vel = body.linvel()
-  const speedSq = vel.x * vel.x + vel.z * vel.z
-  if (speedSq > MAX_LINEAR_SPEED * MAX_LINEAR_SPEED) {
-    const scale = MAX_LINEAR_SPEED / Math.sqrt(speedSq)
-    body.setLinvel({ x: vel.x * scale, y: vel.y, z: vel.z * scale }, false)
-  }
-}
-
-const respawn = (body: MarbleBody): void => {
-  body.setTranslation({ x: SPAWN_POSITION[0], y: SPAWN_POSITION[1], z: SPAWN_POSITION[2] }, true)
-  body.setLinvel(zeroVec, true)
-  body.setAngvel(zeroVec, true)
-}
-
-const applyForce = (body: MarbleBody, keys: Set<string>): void => {
-  forceVec.x = 0
-  forceVec.z = 0
-  if (keys.has('w') || keys.has('arrowup')) forceVec.z -= MOVE_FORCE
-  if (keys.has('s') || keys.has('arrowdown')) forceVec.z += MOVE_FORCE
-  if (keys.has('a') || keys.has('arrowleft')) forceVec.x -= MOVE_FORCE
-  if (keys.has('d') || keys.has('arrowright')) forceVec.x += MOVE_FORCE
-  if (forceVec.x !== 0 || forceVec.z !== 0) {
-    body.applyImpulse(forceVec, true)
-    clampSpeed(body)
-  }
-}
-
-const followCamera = (camera: THREE.Camera, marblePos: THREE.Vector3): void => {
-  targetCameraPos.set(
-    marblePos.x + cameraOffset.x,
-    marblePos.y + cameraOffset.y,
-    marblePos.z + cameraOffset.z
+const respawn = (model: ComplexModel, spawnPosition: CoordinateTuple): void => {
+  model.userData.body.setTranslation(
+    { x: spawnPosition[0], y: spawnPosition[1], z: spawnPosition[2] },
+    true
   )
-  camera.position.lerp(targetCameraPos, CAMERA_LERP)
-  cameraTarget.copy(marblePos)
-  camera.lookAt(cameraTarget)
+  model.userData.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
+  model.userData.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
 }
 
-const isInFinishZone = (marblePos: THREE.Vector3): boolean => {
-  if (marblePos.z >= FINISH_CHECK_Z) return false
-  const dx = marblePos.x - FINISH_POSITION.x
-  const dz = marblePos.z - FINISH_POSITION.z
-  return Math.hypot(dx, dz) < FINISH_CHECK_RADIUS
+const computeImpulse = (currentActions: ControlsCurrents): Vec3 => {
+  const x =
+    ('left' in currentActions ? -MOVE_FORCE : 0) + ('right' in currentActions ? MOVE_FORCE : 0)
+  const z =
+    ('forward' in currentActions ? -MOVE_FORCE : 0) +
+    ('backward' in currentActions ? MOVE_FORCE : 0)
+  return { x, y: 0, z }
 }
 
-const buildCourse = (scene: THREE.Scene, world: NonNullable<GetToolsResult['world']>): void => {
-  PLATFORMS.forEach(({ size, position, color }) => {
+const isInFinishZone = (pos: THREE.Vector3, track: TrackConfig): boolean => {
+  if (pos.z >= track.finishCheckZ) return false
+  const dx = pos.x - track.finishPosition[0]
+  const dz = pos.z - track.finishPosition[2]
+  return Math.hypot(dx, dz) < track.finishCheckRadius
+}
+
+const buildCourse = (
+  scene: THREE.Scene,
+  world: NonNullable<GetToolsResult['world']>,
+  track: TrackConfig
+): void => {
+  track.platforms.forEach(({ size, position, color }) => {
     getCube(scene, world, {
       size: size as CoordinateTuple,
       position: position as CoordinateTuple,
@@ -112,24 +109,32 @@ const buildCourse = (scene: THREE.Scene, world: NonNullable<GetToolsResult['worl
       friction: 0.9
     })
   })
-  OBSTACLES.forEach(({ size, position }) => {
-    getCube(scene, world, {
-      size: size as CoordinateTuple,
-      position: position as CoordinateTuple,
-      type: 'fixed',
-      color: OBSTACLE_COLOR,
-      restitution: 0.3,
-      friction: 0.5
+  if (track.obstacles.length > 0) {
+    const geometry = new THREE.BoxGeometry(1, 1, 1)
+    const material = new THREE.MeshStandardMaterial({ color: OBSTACLE_COLOR })
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, track.obstacles.length)
+    instancedMesh.castShadow = true
+    const matrix = new THREE.Matrix4()
+    track.obstacles.forEach(({ size, position }, index) => {
+      matrix.compose(
+        new THREE.Vector3(position[0], position[1], position[2]),
+        new THREE.Quaternion(),
+        new THREE.Vector3(size[0], size[1], size[2])
+      )
+      instancedMesh.setMatrixAt(index, matrix)
     })
-  })
+    instancedMesh.instanceMatrix.needsUpdate = true
+    scene.add(instancedMesh)
+  }
 }
 
-const addFinishMarker = (scene: THREE.Scene): void => {
+const addFinishMarker = (scene: THREE.Scene, track: TrackConfig): void => {
+  const discRadius = track.finishCheckRadius * FINISH_DISC_RADIUS_RATIO
   const geometry = new THREE.CylinderGeometry(
-    FINISH_CHECK_RADIUS * 0.5,
-    FINISH_CHECK_RADIUS * 0.5,
-    0.15,
-    32
+    discRadius,
+    discRadius,
+    FINISH_DISC_THICKNESS,
+    FINISH_DISC_SEGMENTS
   )
   const material = new THREE.MeshStandardMaterial({
     color: 0xffd700,
@@ -137,136 +142,204 @@ const addFinishMarker = (scene: THREE.Scene): void => {
     emissiveIntensity: 0.3
   })
   const disc = new THREE.Mesh(geometry, material)
-  disc.position.copy(FINISH_POSITION)
-  disc.position.y = 0.6
+  disc.position.set(track.finishPosition[0], FINISH_DISC_HEIGHT, track.finishPosition[2])
   scene.add(disc)
 }
 
-const makeGhostMarble = (scene: THREE.Scene, color: string): THREE.Mesh => {
-  const geo = new THREE.SphereGeometry(MARBLE_RADIUS, 16, 16)
-  const mat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(color),
+const makeGhostMarble = (scene: THREE.Scene, colorHex: number): THREE.Mesh =>
+  getBall(scene, undefined, {
+    size: MARBLE_RADIUS,
+    color: colorHex,
     transparent: true,
-    opacity: 0.7
+    opacity: 0.7,
+    segments: 16
   })
-  const mesh = new THREE.Mesh(geo, mat)
-  scene.add(mesh)
-  return mesh
+
+const buildTimeline = (
+  camera: THREE.Camera,
+  getDelta: () => number,
+  state: MarbleState,
+  deps: GameDeps,
+  orbit: OrbitControls | null
+) => {
+  const timeline = createTimelineManager()
+
+  timeline.addAction({
+    name: 'marble-input',
+    category: 'physics',
+    start: 0,
+    action: () => {
+      if (!state.marbleMesh || state.finished.value || !state.controls) return
+      const impulse = computeImpulse(state.controls.currentActions)
+      if (impulse.x !== 0 || impulse.z !== 0) {
+        moveDynamic(state.marbleMesh, impulse, MAX_LINEAR_SPEED)
+      }
+    }
+  })
+
+  timeline.addAction({
+    name: 'marble-sync',
+    category: 'physics',
+    start: 0,
+    action: () => {
+      if (!state.marbleMesh) return
+      const pos = state.marbleMesh.userData.body.translation()
+      state.marbleMesh.position.set(pos.x, pos.y, pos.z)
+      const rot = state.marbleMesh.userData.body.rotation()
+      state.marbleMesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
+    }
+  })
+
+  timeline.addAction({
+    name: 'camera-follow',
+    category: 'camera',
+    start: 0,
+    action: () => {
+      if (!state.marbleMesh || orbit?.enabled) return
+      cameraFollowPlayer(camera, state.marbleMesh, CAMERA_OFFSET, orbit)
+    }
+  })
+
+  timeline.addAction({
+    name: 'fall-check',
+    category: 'physics',
+    start: 0,
+    action: () => {
+      if (!state.marbleMesh) return
+      if (state.marbleMesh.position.y < FALL_THRESHOLD_Y) {
+        state.elapsed.value += TIME_PENALTY_FALL
+        state.penaltyCount.value += 1
+        respawn(state.marbleMesh, deps.track.value.spawnPosition)
+      }
+    }
+  })
+
+  timeline.addAction({
+    name: 'finish-check',
+    category: 'game',
+    start: 0,
+    action: () => {
+      if (!state.marbleMesh || state.finished.value) return
+      if (isInFinishZone(state.marbleMesh.position, deps.track.value)) {
+        state.finished.value = true
+        deps.onWin()
+      }
+    }
+  })
+
+  timeline.addAction({
+    name: 'pos-broadcast',
+    category: 'network',
+    start: 0,
+    action: () => {
+      if (deps.isSolo.value || !state.marbleMesh) return
+      state.posAccumulator += getDelta() * 1000
+      if (state.posAccumulator >= POS_BROADCAST_MS) {
+        const pos = state.marbleMesh.userData.body.translation()
+        deps.onPositionUpdate({ x: pos.x, y: pos.y, z: pos.z })
+        state.posAccumulator = 0
+      }
+    }
+  })
+
+  timeline.addAction({
+    name: 'timer',
+    category: 'ui',
+    start: 0,
+    action: () => {
+      state.elapsed.value += getDelta()
+    }
+  })
+
+  return timeline
 }
 
 /**
  * Set up and manage the MarbleMadness Three.js scene, physics, and game loop.
- * @param deps - Canvas ref, solo flag, win/position callbacks.
+ * @param deps - Canvas ref, solo flag, track config, win/position callbacks.
  * @returns Controls to init, destroy, update ghost positions, and reactive elapsed time.
  */
 export const useMarbleMadnessGame = (deps: GameDeps) => {
-  const elapsed = ref(0)
-  const finished = ref(false)
-  const keys = new Set<string>()
-  let posAccumulator = 0
-  let marbleMesh: THREE.Mesh | null = null
-  let marbleBody: MarbleBody | null = null
+  const state: MarbleState = {
+    marbleMesh: null,
+    controls: null,
+    posAccumulator: 0,
+    finished: ref(false),
+    elapsed: ref(0),
+    penaltyCount: ref(0)
+  }
   let cleanupTools: (() => void) | null = null
   const ghostMeshes = new Map<string, THREE.Mesh>()
   let sceneReference: THREE.Scene | null = null
 
-  const onKeyDown = (e: KeyboardEvent): void => {
-    keys.add(e.key.toLowerCase())
-  }
-  const onKeyUp = (e: KeyboardEvent): void => {
-    keys.delete(e.key.toLowerCase())
-  }
-
-  const buildGame = async ({
-    scene,
-    world,
-    camera,
-    getDelta,
-    animate
-  }: SceneContext): Promise<void> => {
+  const buildGame = async ({ scene, world, camera, getDelta, animate, orbit }: SceneContext) => {
     if (!world) return
     sceneReference = scene
-    buildCourse(scene, world)
-    addFinishMarker(scene)
-
-    marbleMesh = getBall(scene, world, {
+    const track = deps.track.value
+    buildCourse(scene, world, track)
+    addFinishMarker(scene, track)
+    state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
-      position: SPAWN_POSITION,
+      position: track.spawnPosition,
       restitution: MARBLE_RESTITUTION,
       friction: MARBLE_FRICTION,
-      color: 0xffffff,
-      segments: 16
-    })
-    marbleBody = marbleMesh.userData.body as MarbleBody
-    if (marbleBody) applyDamping(marbleBody)
-
-    animate({
-      timeline: emptyTimeline,
-      beforeTimeline: () => {
-        if (!marbleBody || !marbleMesh) return
-        if (!finished.value) applyForce(marbleBody, keys)
-        const pos = marbleBody.translation()
-        marbleMesh.position.set(pos.x, pos.y, pos.z)
-        followCamera(camera, marbleMesh.position)
-        if (pos.y < FALL_THRESHOLD_Y) respawn(marbleBody)
-        if (!finished.value && isInFinishZone(marbleMesh.position)) {
-          finished.value = true
-          deps.onWin()
-        }
-        if (!deps.isSolo.value) {
-          posAccumulator += getDelta() * 1000
-          if (posAccumulator >= POS_BROADCAST_MS) {
-            deps.onPositionUpdate({ x: pos.x, y: pos.y, z: pos.z })
-            posAccumulator = 0
-          }
-        }
-        elapsed.value += getDelta()
-      }
-    })
+      weight: MARBLE_WEIGHT,
+      texture: marbleTexture,
+      segments: 32,
+      type: 'dynamic'
+    }) as unknown as ComplexModel
+    applyDamping(state.marbleMesh)
+    animate({ timeline: buildTimeline(camera, getDelta, state, deps, orbit) })
   }
 
   const init = async (): Promise<void> => {
     if (!deps.canvas.value) return
-    finished.value = false
-    elapsed.value = 0
-    posAccumulator = 0
-    keys.clear()
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
-
+    state.finished.value = false
+    state.elapsed.value = 0
+    state.penaltyCount.value = 0
+    state.posAccumulator = 0
+    state.controls = createControls({ mapping: KEYBOARD_MAPPING })
+    const track = deps.track.value
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
     await tools.setup({
       config: {
         camera: {
           position: [
-            SPAWN_POSITION[0],
-            SPAWN_POSITION[1] + CAMERA_HEIGHT,
-            SPAWN_POSITION[2] + CAMERA_BACK
+            track.spawnPosition[0],
+            track.spawnPosition[1] + CAMERA_HEIGHT,
+            track.spawnPosition[2] + CAMERA_BACK
           ] as CoordinateTuple
         },
-        orbit: false,
+        orbit: { disabled: true },
         ground: false,
         sky: false,
-        lights: { directional: { intensity: 1.8, position: [10, 20, 10] as CoordinateTuple } }
+        lights: {
+          ambient: { intensity: LIGHT_AMBIENT_INTENSITY },
+          directional: {
+            intensity: LIGHT_DIRECTIONAL_INTENSITY,
+            position: LIGHT_DIRECTIONAL_POSITION as CoordinateTuple
+          }
+        }
       },
-      defineSetup: async () =>
-        buildGame({
+      defineSetup: async ({ orbit }) => {
+        await buildGame({
           scene: tools.scene,
           world: tools.world,
           camera: tools.camera,
           getDelta: tools.getDelta,
-          animate: tools.animate
+          animate: tools.animate,
+          orbit
         })
+        registerCameraProperties({ camera: tools.camera, orbit })
+      }
     })
   }
 
   const destroy = (): void => {
-    window.removeEventListener('keydown', onKeyDown)
-    window.removeEventListener('keyup', onKeyUp)
-    keys.clear()
-    marbleMesh = null
-    marbleBody = null
+    state.controls?.destroyControls()
+    state.marbleMesh = null
+    state.controls = null
     ghostMeshes.clear()
     sceneReference = null
     if (cleanupTools) {
@@ -275,9 +348,9 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     }
   }
 
-  const updateGhostPosition = (peerId: string, color: string, pos: BallPosPayload): void => {
+  const updateGhostPosition = (peerId: string, colorHex: number, pos: BallPosPayload): void => {
     if (!sceneReference) return
-    const ghost = ghostMeshes.get(peerId) ?? makeGhostMarble(sceneReference, color)
+    const ghost = ghostMeshes.get(peerId) ?? makeGhostMarble(sceneReference, colorHex)
     ghostMeshes.set(peerId, ghost)
     ghost.position.set(pos.x, pos.y, pos.z)
   }
@@ -300,5 +373,13 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
   )
   onUnmounted(destroy)
 
-  return { elapsed, finished, init, destroy, updateGhostPosition, removeGhost }
+  return {
+    elapsed: state.elapsed,
+    finished: state.finished,
+    penaltyCount: state.penaltyCount,
+    init,
+    destroy,
+    updateGhostPosition,
+    removeGhost
+  }
 }

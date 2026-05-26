@@ -103,6 +103,10 @@
 - **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 - **Abstract complex UI into components**: When a view contains a non-trivial interactive element (e.g., a canvas editor, a timeline scrubber, a drag-and-drop zone), extract it into a dedicated component under `src/components/`. The view should be a thin wrapper that wires props and emits. Split large components further into sub-components by responsibility (e.g., `CanvasEditorTools`, `CanvasEditorCanvas`, `CanvasEditorStorage`) and extract stateful logic into co-located composables (`useCanvasEditor.ts`)
 
+## Input Handling
+
+- **Always use `@webgamekit/controls`**: For any keyboard, gamepad, or touch input, use `createControls` from `@webgamekit/controls`. Never add raw `window.addEventListener('keydown', ...)` / `window.addEventListener('keyup', ...)` directly. The controls package handles action mapping, multi-device support, and cleanup. Define a `KEYBOARD_MAPPING` constant in the co-located `config.ts`, call `createControls({ mapping })` in `init()`, read `controls.currentActions` in the game loop, and call `controls.destroyControls()` in `destroy()`. If a needed feature is missing, extend the package.
+
 ## Three.js Performance
 
 - **No `new` in the animation loop**: Do not instantiate Three.js objects (`new Vector3()`, `new Matrix4()`, `new Quaternion()`, etc.) inside timeline actions or `requestAnimationFrame` callbacks. Each call allocates memory that the GC must collect every frame. Create objects once outside the loop and mutate them with `.set()`, `.copy()`, or `.multiplyScalars()`.

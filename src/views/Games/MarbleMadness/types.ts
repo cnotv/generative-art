@@ -1,4 +1,5 @@
 import type { Ref, ComputedRef } from 'vue'
+import type { TrackConfig } from './config'
 import type { P2PSession } from '@webgamekit/multiplayer-p2p'
 import type { useMarbleMadnessStore } from '@/stores/marbleMadness'
 
@@ -26,6 +27,7 @@ export type MmContext = {
 export type GameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   isSolo: Ref<boolean>
+  track: Ref<TrackConfig>
   onWin: () => void
   onPositionUpdate: (pos: BallPosPayload) => void
 }
