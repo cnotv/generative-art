@@ -1,7 +1,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { getTools, getBall, getCube } from '@webgamekit/threejs'
-import type { CoordinateTuple } from '@webgamekit/animation'
+import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import {
   MARBLE_RADIUS,
   MARBLE_RESTITUTION,
@@ -44,6 +44,16 @@ const targetCameraPos = new THREE.Vector3()
 const cameraTarget = new THREE.Vector3()
 const forceVec: Vec3 = { x: 0, y: 0, z: 0 }
 const zeroVec: Vec3 = { x: 0, y: 0, z: 0 }
+const emptyTimeline = createTimelineManager()
+
+const applyDamping = (body: unknown): void => {
+  const rb = body as {
+    setLinearDamping: (d: number) => void
+    setAngularDamping: (d: number) => void
+  }
+  rb.setLinearDamping(MARBLE_LINEAR_DAMPING)
+  rb.setAngularDamping(MARBLE_ANGULAR_DAMPING)
+}
 
 const clampSpeed = (body: MarbleBody): void => {
   const vel = body.linvel()
@@ -188,17 +198,10 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       segments: 16
     })
     marbleBody = marbleMesh.userData.body as MarbleBody
-
-    if (marbleBody) {
-      const rb = marbleBody as unknown as {
-        setLinearDamping: (d: number) => void
-        setAngularDamping: (d: number) => void
-      }
-      rb.setLinearDamping(MARBLE_LINEAR_DAMPING)
-      rb.setAngularDamping(MARBLE_ANGULAR_DAMPING)
-    }
+    if (marbleBody) applyDamping(marbleBody)
 
     animate({
+      timeline: emptyTimeline,
       beforeTimeline: () => {
         if (!marbleBody || !marbleMesh) return
         if (!finished.value) applyForce(marbleBody, keys)
