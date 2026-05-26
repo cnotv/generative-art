@@ -18,6 +18,7 @@ import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
 import { useMinigolfStore } from '@/stores/minigolf'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
+import { useMarbleMadnessStore } from '@/stores/marbleMadness'
 import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
@@ -35,7 +36,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     WordleMultiplayer: useWordleMultiplayerStore(),
     Minigolf: useMinigolfStore(),
     BubbleShooter: useBubbleShooterStore(),
-    RhythmGame: useRhythmGameStore()
+    RhythmGame: useRhythmGameStore(),
+    MarbleMadness: useMarbleMadnessStore()
   }
 
 const stored = loadProfile()
