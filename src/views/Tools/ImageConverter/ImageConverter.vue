@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import ConverterWorker from './imageConverter.worker?worker'
 import DropZone from './DropZone.vue'
 import {
@@ -27,6 +27,10 @@ type FileEntry = {
   convertedSize?: number
   downloadUrl?: string
   error?: string
+  imageWidth?: number
+  imageHeight?: number
+  convertedWidth?: number
+  convertedHeight?: number
 }
 
 const format = ref<ImageFormat>(DEFAULT_FORMAT)
@@ -35,9 +39,13 @@ const maxWidth = ref(DEFAULT_MAX_DIMENSION)
 const maxHeight = ref(DEFAULT_MAX_DIMENSION)
 const scalePct = ref(DEFAULT_SCALE_PCT)
 const files = ref<FileEntry[]>([])
+const inputCollapsed = ref(false)
+const resultsReference = ref<HTMLElement | null>(null)
+const hasScrolledToResults = ref(false)
 
 const selectedFormatOption = computed(() => FORMAT_OPTIONS.find((f) => f.value === format.value)!)
 const isLossy = computed(() => selectedFormatOption.value.lossy)
+const doneCount = computed(() => files.value.filter((f) => f.status === 'done').length)
 
 const worker = new ConverterWorker()
 
@@ -75,8 +83,17 @@ worker.onmessage = (event: MessageEvent<ConvertResult | ConvertError>) => {
   const blob = new Blob([result.buffer], { type: result.format })
   entry.convertedBlob = blob
   entry.convertedSize = result.convertedSize
+  entry.convertedWidth = result.width
+  entry.convertedHeight = result.height
   entry.downloadUrl = URL.createObjectURL(blob)
   entry.status = 'done'
+
+  if (!hasScrolledToResults.value) {
+    hasScrolledToResults.value = true
+    nextTick().then(() => {
+      resultsReference.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 }
 
 const processEntry = (entry: FileEntry): void => {
@@ -100,7 +117,8 @@ const readFile = (file: File): Promise<FileEntry> =>
     reader.onload = (e) => {
       const buffer = e.target?.result as ArrayBuffer
       const previewUrl = URL.createObjectURL(file)
-      resolve({
+      const img = new Image()
+      const entry: FileEntry = {
         id: `${Date.now()}-${Math.random()}`,
         name: file.name,
         originalSize: file.size,
@@ -108,19 +126,28 @@ const readFile = (file: File): Promise<FileEntry> =>
         buffer,
         previewUrl,
         status: 'pending'
-      })
+      }
+      img.onload = () => {
+        entry.imageWidth = img.naturalWidth
+        entry.imageHeight = img.naturalHeight
+        resolve(entry)
+      }
+      img.onerror = () => resolve(entry)
+      img.src = previewUrl
     }
     reader.onerror = () => reject(reader.error)
     reader.readAsArrayBuffer(file)
   })
 
 const addFiles = async (fileList: FileList): Promise<void> => {
+  hasScrolledToResults.value = false
   const entries = await Promise.all([...fileList].map(readFile))
   files.value = [...files.value, ...entries]
   entries.forEach(processEntry)
 }
 
 const reconvertAll = (): void => {
+  hasScrolledToResults.value = false
   files.value.forEach((entry) => {
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
     entry.downloadUrl = undefined
@@ -129,6 +156,19 @@ const reconvertAll = (): void => {
     entry.error = undefined
     processEntry(entry)
   })
+}
+
+const downloadAll = (): void => {
+  files.value
+    .filter((entry) => entry.status === 'done' && entry.downloadUrl)
+    .forEach((entry) => {
+      const anchor = document.createElement('a')
+      anchor.href = entry.downloadUrl!
+      anchor.download = downloadName(entry)
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+    })
 }
 
 const removeEntry = (id: string): void => {
@@ -146,6 +186,7 @@ const clearAll = (): void => {
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
   })
   files.value = []
+  hasScrolledToResults.value = false
 }
 
 onUnmounted(() => {
@@ -156,89 +197,120 @@ onUnmounted(() => {
 
 <template>
   <div class="image-converter">
-    <div class="image-converter__controls">
-      <div class="image-converter__control-group">
-        <label class="image-converter__label">Format</label>
-        <div class="image-converter__format-options">
-          <label
-            v-for="opt in FORMAT_OPTIONS"
-            :key="opt.value"
-            class="image-converter__format-option"
-            :class="{ 'image-converter__format-option--active': format === opt.value }"
-          >
-            <input
-              v-model="format"
-              type="radio"
-              :value="opt.value"
-              class="image-converter__radio"
-            />
-            {{ opt.label }}
-          </label>
-        </div>
-      </div>
-
-      <div v-if="isLossy" class="image-converter__control-group">
-        <label class="image-converter__label">Quality — {{ quality }}%</label>
-        <input
-          v-model.number="quality"
-          type="range"
-          min="1"
-          max="100"
-          class="image-converter__range"
-        />
-      </div>
-
-      <div class="image-converter__control-group image-converter__control-group--row">
-        <div class="image-converter__control-group">
-          <label class="image-converter__label">Max width (px)</label>
-          <input
-            v-model.number="maxWidth"
-            type="number"
-            min="0"
-            placeholder="0 = no limit"
-            class="image-converter__input"
-          />
-        </div>
-        <div class="image-converter__control-group">
-          <label class="image-converter__label">Max height (px)</label>
-          <input
-            v-model.number="maxHeight"
-            type="number"
-            min="0"
-            placeholder="0 = no limit"
-            class="image-converter__input"
-          />
-        </div>
-      </div>
-
-      <div class="image-converter__control-group">
-        <label class="image-converter__label">Scale — {{ scalePct }}%</label>
-        <input
-          v-model.number="scalePct"
-          type="range"
-          min="1"
-          max="100"
-          class="image-converter__range"
-        />
-      </div>
-
-      <div v-if="files.length > 0" class="image-converter__actions">
-        <button class="image-converter__btn" type="button" @click="reconvertAll">
-          Re-convert all
-        </button>
-        <button
-          class="image-converter__btn image-converter__btn--ghost"
-          type="button"
-          @click="clearAll"
+    <div class="image-converter__input-section">
+      <button
+        class="image-converter__input-toggle"
+        type="button"
+        @click="inputCollapsed = !inputCollapsed"
+      >
+        <svg
+          class="image-converter__chevron"
+          :class="{ 'image-converter__chevron--collapsed': inputCollapsed }"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
         >
-          Clear all
-        </button>
-      </div>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        {{ inputCollapsed ? 'Show settings &amp; upload' : 'Hide settings &amp; upload' }}
+      </button>
+
+      <template v-if="!inputCollapsed">
+        <div class="image-converter__controls">
+          <div class="image-converter__control-group">
+            <label class="image-converter__label">Format</label>
+            <div class="image-converter__format-options">
+              <label
+                v-for="opt in FORMAT_OPTIONS"
+                :key="opt.value"
+                class="image-converter__format-option"
+                :class="{ 'image-converter__format-option--active': format === opt.value }"
+              >
+                <input
+                  v-model="format"
+                  type="radio"
+                  :value="opt.value"
+                  class="image-converter__radio"
+                />
+                {{ opt.label }}
+              </label>
+            </div>
+          </div>
+
+          <div v-if="isLossy" class="image-converter__control-group">
+            <label class="image-converter__label">Quality — {{ quality }}%</label>
+            <input
+              v-model.number="quality"
+              type="range"
+              min="1"
+              max="100"
+              class="image-converter__range"
+            />
+          </div>
+
+          <div class="image-converter__control-group image-converter__control-group--row">
+            <div class="image-converter__control-group">
+              <label class="image-converter__label">Max width (px)</label>
+              <input
+                v-model.number="maxWidth"
+                type="number"
+                min="0"
+                placeholder="0 = no limit"
+                class="image-converter__input"
+              />
+            </div>
+            <div class="image-converter__control-group">
+              <label class="image-converter__label">Max height (px)</label>
+              <input
+                v-model.number="maxHeight"
+                type="number"
+                min="0"
+                placeholder="0 = no limit"
+                class="image-converter__input"
+              />
+            </div>
+          </div>
+
+          <div class="image-converter__control-group">
+            <label class="image-converter__label">Scale — {{ scalePct }}%</label>
+            <input
+              v-model.number="scalePct"
+              type="range"
+              min="1"
+              max="100"
+              class="image-converter__range"
+            />
+          </div>
+        </div>
+
+        <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+      </template>
     </div>
 
-    <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+    <div v-if="files.length > 0" class="image-converter__actions">
+      <button class="image-converter__btn" type="button" @click="reconvertAll">
+        Re-convert all
+      </button>
+      <button
+        v-if="doneCount > 0"
+        class="image-converter__btn image-converter__btn--primary"
+        type="button"
+        @click="downloadAll"
+      >
+        Download all ({{ doneCount }})
+      </button>
+      <button
+        class="image-converter__btn image-converter__btn--ghost"
+        type="button"
+        @click="clearAll"
+      >
+        Clear all
+      </button>
+    </div>
 
-    <ul v-if="files.length > 0" class="image-converter__file-list">
+    <ul v-if="files.length > 0" ref="resultsReference" class="image-converter__file-list">
       <li v-for="entry in files" :key="entry.id" class="image-converter__file-item">
         <img :src="entry.previewUrl" :alt="entry.name" class="image-converter__thumb" />
 
@@ -259,6 +331,23 @@ onUnmounted(() => {
               >
                 {{ savings(entry) }}
               </span>
+            </template>
+          </div>
+          <div
+            v-if="entry.imageWidth && entry.imageHeight"
+            class="image-converter__file-dimensions"
+          >
+            <span>{{ entry.imageWidth }} × {{ entry.imageHeight }}</span>
+            <template
+              v-if="
+                entry.convertedWidth &&
+                entry.convertedHeight &&
+                (entry.convertedWidth !== entry.imageWidth ||
+                  entry.convertedHeight !== entry.imageHeight)
+              "
+            >
+              <span class="image-converter__arrow">→</span>
+              <span>{{ entry.convertedWidth }} × {{ entry.convertedHeight }}</span>
             </template>
           </div>
           <span v-if="entry.status === 'processing'" class="image-converter__status">
@@ -385,9 +474,46 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+.image-converter__input-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.image-converter__input-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+.image-converter__input-toggle:hover {
+  color: var(--color-foreground);
+}
+
+.image-converter__chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.image-converter__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
 .image-converter__actions {
   display: flex;
   gap: var(--spacing-2);
+  flex-wrap: wrap;
 }
 
 .image-converter__btn {
@@ -466,6 +592,15 @@ onUnmounted(() => {
   gap: var(--spacing-2);
   font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
+}
+
+.image-converter__file-dimensions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .image-converter__arrow {
