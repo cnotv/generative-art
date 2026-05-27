@@ -66,6 +66,9 @@ const isAvailable = (marbleId: string): boolean =>
             <img :src="marble.url" :alt="marble.name" class="mml__marble-img" />
           </button>
         </div>
+        <span class="mml__marble-selected-name">
+          {{ MARBLE_OPTIONS.find((m) => m.id === playerMarble)?.name }}
+        </span>
       </div>
     </template>
   </GameLobbyWizard>
@@ -84,6 +87,15 @@ const isAvailable = (marbleId: string): boolean =>
   color: var(--game-ink);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.mml__marble-selected-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--game-ink-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
 }
 
 .mml__marble-grid {
