@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import ConverterWorker from './imageConverter.worker?worker'
 import DropZone from './DropZone.vue'
 import {
@@ -35,9 +35,13 @@ const maxWidth = ref(DEFAULT_MAX_DIMENSION)
 const maxHeight = ref(DEFAULT_MAX_DIMENSION)
 const scalePct = ref(DEFAULT_SCALE_PCT)
 const files = ref<FileEntry[]>([])
+const uploadCollapsed = ref(false)
+const resultsReference = ref<HTMLElement | null>(null)
+const hasScrolledToResults = ref(false)
 
 const selectedFormatOption = computed(() => FORMAT_OPTIONS.find((f) => f.value === format.value)!)
 const isLossy = computed(() => selectedFormatOption.value.lossy)
+const doneCount = computed(() => files.value.filter((f) => f.status === 'done').length)
 
 const worker = new ConverterWorker()
 
@@ -77,6 +81,13 @@ worker.onmessage = (event: MessageEvent<ConvertResult | ConvertError>) => {
   entry.convertedSize = result.convertedSize
   entry.downloadUrl = URL.createObjectURL(blob)
   entry.status = 'done'
+
+  if (!hasScrolledToResults.value) {
+    hasScrolledToResults.value = true
+    nextTick().then(() => {
+      resultsReference.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 }
 
 const processEntry = (entry: FileEntry): void => {
@@ -115,12 +126,14 @@ const readFile = (file: File): Promise<FileEntry> =>
   })
 
 const addFiles = async (fileList: FileList): Promise<void> => {
+  hasScrolledToResults.value = false
   const entries = await Promise.all([...fileList].map(readFile))
   files.value = [...files.value, ...entries]
   entries.forEach(processEntry)
 }
 
 const reconvertAll = (): void => {
+  hasScrolledToResults.value = false
   files.value.forEach((entry) => {
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
     entry.downloadUrl = undefined
@@ -129,6 +142,19 @@ const reconvertAll = (): void => {
     entry.error = undefined
     processEntry(entry)
   })
+}
+
+const downloadAll = (): void => {
+  files.value
+    .filter((entry) => entry.status === 'done' && entry.downloadUrl)
+    .forEach((entry) => {
+      const anchor = document.createElement('a')
+      anchor.href = entry.downloadUrl!
+      anchor.download = downloadName(entry)
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+    })
 }
 
 const removeEntry = (id: string): void => {
@@ -146,6 +172,7 @@ const clearAll = (): void => {
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
   })
   files.value = []
+  hasScrolledToResults.value = false
 }
 
 onUnmounted(() => {
@@ -221,24 +248,52 @@ onUnmounted(() => {
           class="image-converter__range"
         />
       </div>
-
-      <div v-if="files.length > 0" class="image-converter__actions">
-        <button class="image-converter__btn" type="button" @click="reconvertAll">
-          Re-convert all
-        </button>
-        <button
-          class="image-converter__btn image-converter__btn--ghost"
-          type="button"
-          @click="clearAll"
-        >
-          Clear all
-        </button>
-      </div>
     </div>
 
-    <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+    <div class="image-converter__upload-section">
+      <button
+        class="image-converter__upload-toggle"
+        type="button"
+        @click="uploadCollapsed = !uploadCollapsed"
+      >
+        <svg
+          class="image-converter__chevron"
+          :class="{ 'image-converter__chevron--collapsed': uploadCollapsed }"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        {{ uploadCollapsed ? 'Show upload area' : 'Hide upload area' }}
+      </button>
+      <DropZone v-if="!uploadCollapsed" multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+    </div>
 
-    <ul v-if="files.length > 0" class="image-converter__file-list">
+    <div v-if="files.length > 0" class="image-converter__actions">
+      <button class="image-converter__btn" type="button" @click="reconvertAll">
+        Re-convert all
+      </button>
+      <button
+        v-if="doneCount > 0"
+        class="image-converter__btn image-converter__btn--primary"
+        type="button"
+        @click="downloadAll"
+      >
+        Download all ({{ doneCount }})
+      </button>
+      <button
+        class="image-converter__btn image-converter__btn--ghost"
+        type="button"
+        @click="clearAll"
+      >
+        Clear all
+      </button>
+    </div>
+
+    <ul v-if="files.length > 0" ref="resultsReference" class="image-converter__file-list">
       <li v-for="entry in files" :key="entry.id" class="image-converter__file-item">
         <img :src="entry.previewUrl" :alt="entry.name" class="image-converter__thumb" />
 
@@ -385,9 +440,46 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+.image-converter__upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.image-converter__upload-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+.image-converter__upload-toggle:hover {
+  color: var(--color-foreground);
+}
+
+.image-converter__chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.image-converter__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
 .image-converter__actions {
   display: flex;
   gap: var(--spacing-2);
+  flex-wrap: wrap;
 }
 
 .image-converter__btn {
