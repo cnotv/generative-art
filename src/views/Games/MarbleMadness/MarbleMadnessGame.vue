@@ -95,12 +95,12 @@ onUnmounted(() => {
   top: var(--spacing-3);
   left: 50%;
   transform: translateX(-50%);
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
   font-variant-numeric: tabular-nums;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   z-index: 10;
   white-space: nowrap;
   pointer-events: none;
@@ -111,14 +111,14 @@ onUnmounted(() => {
   position: absolute;
   top: 5rem;
   left: 50%;
-  font-size: clamp(2rem, 6vw, 4rem);
+  font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
   color: #f44;
   pointer-events: none;
   z-index: 20;
   white-space: nowrap;
-  text-shadow: var(--shadow-text-game-large);
+  text-shadow: var(--shadow-text-game);
   line-height: 1;
 }
 

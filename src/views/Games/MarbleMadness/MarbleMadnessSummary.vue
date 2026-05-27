@@ -213,7 +213,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   min-width: 1.5rem;
   text-align: center;
 }
@@ -231,7 +231,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   text-align: left;
 }
 
@@ -240,7 +240,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   font-variant-numeric: tabular-nums;
 }
 
@@ -265,7 +265,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   cursor: pointer;
   transition: transform 0.1s ease;
   text-transform: uppercase;
@@ -285,7 +285,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   text-transform: uppercase;
 }
 </style>
