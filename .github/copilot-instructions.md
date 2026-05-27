@@ -99,13 +99,14 @@ gh api \
 
    If a metric is red, investigate using the tools above and apply the techniques documented in `documentation/docs/guides/reducing-performance-costs.md`.
 
-3. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+3. **Write journey doc**: ALWAYS create or update a journey doc in `documentation/docs/journey/` before opening a PR. Every new game gets its own `<game-name>.md` file. Any PR that fixes a non-obvious bug, works around a framework quirk, or makes a hard-won design decision must record it there. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be merged.
+4. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
    - Command: `git fetch origin main && git rebase origin/main`
    - Resolve any conflicts, then force push: `git push --force-with-lease`
    - CI will fail if branch is behind main
-4. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-5. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-6. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
+5. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+6. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+7. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
 
 ### PR Description Format
 
