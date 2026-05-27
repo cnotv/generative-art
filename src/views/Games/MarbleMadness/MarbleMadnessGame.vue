@@ -98,7 +98,7 @@ onUnmounted(() => {
   font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   font-variant-numeric: tabular-nums;
   text-shadow: var(--shadow-text-game-large);
   z-index: 10;
@@ -131,7 +131,7 @@ onUnmounted(() => {
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game);
   pointer-events: none;
   z-index: 15;

@@ -60,8 +60,8 @@ onUnmounted(() => {
     </template>
 
     <div v-else class="mm-summary__card">
-      <div v-if="winnerId !== localPeerId" class="mm-summary__winner-name">
-        {{ winnerName() }}
+      <div v-if="winnerId !== localPeerId" class="mm-summary__winner-name-wrap">
+        <div class="mm-summary__winner-name">{{ winnerName() }}</div>
       </div>
       <h2 class="mm-summary__title">
         {{ winnerId === localPeerId ? 'You win!' : 'Wins!' }}
@@ -116,7 +116,7 @@ onUnmounted(() => {
   font-size: clamp(4rem, 12vw, 8rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   font-variant-numeric: tabular-nums;
   text-shadow: var(--shadow-text-game-large);
   animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
@@ -128,7 +128,7 @@ onUnmounted(() => {
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game);
   animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
 }
@@ -143,7 +143,7 @@ onUnmounted(() => {
   font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game);
   text-transform: uppercase;
   animation:
@@ -184,8 +184,13 @@ onUnmounted(() => {
   }
 }
 
+.mm-summary__winner-name-wrap {
+  max-width: 90vw;
+  overflow: hidden;
+  animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
 .mm-summary__winner-name {
-  margin: 0;
   font-size: clamp(2rem, 8vw, 5rem);
   font-weight: 900;
   font-family: var(--font-playful);
@@ -194,10 +199,8 @@ onUnmounted(() => {
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
-  max-width: 90vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  padding: 0.55em 0.65em;
+  margin: -0.55em -0.65em;
 }
 
 .mm-summary__title {
@@ -231,7 +234,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game-large);
   min-width: 1.5rem;
   text-align: center;
@@ -249,7 +252,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-size: 1.25rem;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game-large);
   text-align: left;
 }
@@ -258,7 +261,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-size: 1.25rem;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game-large);
   font-variant-numeric: tabular-nums;
 }
@@ -283,7 +286,7 @@ onUnmounted(() => {
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game-large);
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -303,7 +306,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: var(--game-text-color, #111);
   text-shadow: var(--shadow-text-game-large);
   text-transform: uppercase;
 }

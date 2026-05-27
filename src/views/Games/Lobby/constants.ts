@@ -12,7 +12,7 @@ export const GAME_LABELS: Record<GameType, string> = {
   Minigolf: 'Minigolf',
   BubbleShooter: 'Bubbles',
   RhythmGame: 'Rhythm',
-  MarbleMadness: 'Marble'
+  MarbleMadness: 'Marbles'
 }
 
 export const GAME_COMPONENTS: Record<GameType, ReturnType<typeof defineAsyncComponent>> = {

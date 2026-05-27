@@ -91,6 +91,12 @@
 - **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
 - **No `!important`**: Never use `!important` in CSS unless it is in a utility class specifically designed to override styles (e.g., vendor overrides in `vendor.scss`). If a style isn't applying, fix the specificity or selector instead.
 
+- **Never clip shadows with `overflow: hidden`**: Do not apply `overflow: hidden` to an element that also has `text-shadow` or `box-shadow` — the overflow boundary clips the shadow. If both clipping and a shadow are needed, split responsibility: use a wrapper element for `overflow: hidden` + `max-width`, and on the inner element add `padding` equal to the maximum shadow offset with a compensating negative `margin`, so the shadow paints inside the padding area and the wrapper clips only text overflow. Example: wrapper gets `overflow: hidden; max-width: 90vw`, inner element gets `padding: 0.55em 0.65em; margin: -0.55em -0.65em`.
+
+- **Game text shadow tokens are em-based**: The `--shadow-text-game` and `--shadow-text-game-large` drop-shadow values use `em` units so they scale proportionally with the element's `font-size`. The white outline strokes stay at `1px` (fixed, always crisp). Never override the tokens with hardcoded `rem` or `px` drop-shadow values — that breaks proportionality at large font sizes.
+
+- **Game text color is dark by default**: Elements using `--shadow-text-game` or `--shadow-text-game-large` must use `var(--game-text-color, #111)` as their text fill. The white 1px outline provides contrast against any background; the dark fill makes the text readable on both light and dark surfaces. Use semantic color overrides (`#ffd700` for winner highlight, `#f44` for danger) only where meaning requires it.
+
 ## API Changes
 
 - **Update all call sites**: When changing a function signature, type, or exported API in any package or shared utility, find every usage across the entire codebase (`grep -r`) and update them before committing. Never leave stale callers or add backward-compatibility shims — fix all consumers in the same PR.

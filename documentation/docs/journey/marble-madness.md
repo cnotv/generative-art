@@ -2,7 +2,7 @@
 sidebar_position: 99
 ---
 
-# Marble Madness: Multiplayer Physics Racing
+# Marbles: Multiplayer Physics Racing
 
 Non-obvious problems encountered while building the marble racing game (PR #162): texture discovery, P2P deduplication, ghost rendering, and game-UI style extraction.
 

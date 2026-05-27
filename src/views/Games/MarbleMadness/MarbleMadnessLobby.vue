@@ -126,5 +126,9 @@ const isAvailable = (marbleId: string): boolean =>
   object-fit: cover;
   display: block;
   border-radius: 50%;
+  box-shadow:
+    inset -4px -4px 8px rgb(0 0 0 / 0.45),
+    inset 3px 3px 6px rgb(255 255 255 / 0.35),
+    2px 4px 8px rgb(0 0 0 / 0.35);
 }
 </style>

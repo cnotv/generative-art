@@ -3,8 +3,12 @@
 
 :root {
   --font-playful: 'Darumadrop One', 'Arial Black', sans-serif;
+  --game-text-color: #111;
 
-  // White 8-direction inner outline + stacked black offset drops
+  // White 1px outline (fixed px so it stays crisp at all sizes) +
+  // stacked black drops in em so they scale proportionally with font-size.
+  // Text fill should be dark (--game-text-color) so the white outline
+  // provides contrast against any background.
   --shadow-text-game:
     -1px -1px 0 #fff,
     1px -1px 0 #fff,
@@ -14,9 +18,9 @@
     1px 0 0 #fff,
     0 -1px 0 #fff,
     0 1px 0 #fff,
-    0.2rem 0.2rem 0px #000,
-    0.25rem 0.25rem 0px #000,
-    0.3rem 0.3rem 0px #000;
+    0.2em 0.2em 0 #000,
+    0.25em 0.25em 0 #000,
+    0.3em 0.3em 0 #000;
   --shadow-text-game-large:
     -1px -1px 0 #fff,
     1px -1px 0 #fff,
@@ -26,9 +30,9 @@
     1px 0 0 #fff,
     0 -1px 0 #fff,
     0 1px 0 #fff,
-    0.2rem 0.2rem 0px #000,
-    0.25rem 0.25rem 0px #000,
-    0.3rem 0.3rem 0px #000,
-    0.4rem 0.4rem 0px #000,
-    0.5rem 0.5rem 0px #000;
+    0.2em 0.2em 0 #000,
+    0.25em 0.25em 0 #000,
+    0.3em 0.3em 0 #000,
+    0.4em 0.4em 0 #000,
+    0.5em 0.5em 0 #000;
 }

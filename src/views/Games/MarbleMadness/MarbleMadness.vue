@@ -149,6 +149,12 @@ watch(phase, async (newPhase) => {
   }
 })
 
+watch(winnerId, (id) => {
+  if (id && id !== localPeerId.value) {
+    game.finished.value = true
+  }
+})
+
 const {
   handleNameChange,
   handleColorChange,
