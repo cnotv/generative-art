@@ -60,8 +60,11 @@ onUnmounted(() => {
     </template>
 
     <div v-else class="mm-summary__card">
+      <div v-if="winnerId !== localPeerId" class="mm-summary__winner-name">
+        {{ winnerName() }}
+      </div>
       <h2 class="mm-summary__title">
-        {{ winnerId === localPeerId ? 'You win!' : `${winnerName()} wins!` }}
+        {{ winnerId === localPeerId ? 'You win!' : 'Wins!' }}
       </h2>
 
       <ul class="mm-summary__scores">
@@ -179,6 +182,22 @@ onUnmounted(() => {
   50% {
     opacity: 0.45;
   }
+}
+
+.mm-summary__winner-name {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 5rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #ffd700;
+  text-shadow: var(--shadow-text-game-large);
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 90vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .mm-summary__title {
