@@ -1,0 +1,34 @@
+// Game UI shared styles — import per-game, not globally
+// Usage: import '@/assets/styles/game-ui.scss' in the root game component's <script setup>
+
+:root {
+  --font-playful: 'Darumadrop One', 'Arial Black', sans-serif;
+
+  // White 8-direction inner outline + stacked black offset drops
+  --shadow-text-game:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    -1px 0 0 #fff,
+    1px 0 0 #fff,
+    0 -1px 0 #fff,
+    0 1px 0 #fff,
+    0.2rem 0.2rem 0px #000,
+    0.25rem 0.25rem 0px #000,
+    0.3rem 0.3rem 0px #000;
+  --shadow-text-game-large:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    -1px 0 0 #fff,
+    1px 0 0 #fff,
+    0 -1px 0 #fff,
+    0 1px 0 #fff,
+    0.2rem 0.2rem 0px #000,
+    0.25rem 0.25rem 0px #000,
+    0.3rem 0.3rem 0px #000,
+    0.4rem 0.4rem 0px #000,
+    0.5rem 0.5rem 0px #000;
+}

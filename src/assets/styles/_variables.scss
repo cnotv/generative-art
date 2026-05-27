@@ -105,19 +105,6 @@
   // Typography — font families
   --font-sans: inter, system-ui, avenir, helvetica, arial, sans-serif;
   --font-mono: 'Monaco', 'Courier New', monospace;
-  --font-playful: 'Darumadrop One', 'Arial Black', sans-serif;
-
-  // Game UI — text shadow stacks for the crisp layered outline style
-  // White inner outline + stacked black offset drops (GoombaRunner style)
-  --shadow-text-game:
-    -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff,
-    0.2rem 0.2rem 0 #000, 0.25rem 0.25rem 0 #000, 0.3rem 0.3rem 0 #000;
-  --shadow-text-game-large:
-    -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-    -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff,
-    0.2rem 0.2rem 0 #000, 0.25rem 0.25rem 0 #000, 0.3rem 0.3rem 0 #000,
-    0.4rem 0.4rem 0 #000, 0.5rem 0.5rem 0 #000;
 
   // Typography — font sizes
   --font-size-2xs: 0.5625rem; // 9px

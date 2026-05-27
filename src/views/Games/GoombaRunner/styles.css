@@ -13,7 +13,6 @@
     0.2rem 0.2rem 0px #000, 0.25rem 0.25rem 0px #000, 0.3rem 0.3rem 0px #000,
     0.4rem 0.4rem 0px #000, 0.5rem 0.5rem 0px #000;
   --border-mario: 3px solid var(--color-mario-gold);
-  --font-playful: 'Darumadrop One', 'Arial Black', sans-serif;
 }
 
 /* Global CSS variables for Mario theme */

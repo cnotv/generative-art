@@ -443,7 +443,7 @@ Every game view must use the crisp layered text style established by GoombaRunne
 
 ### Typography
 
-- **Font**: `var(--font-playful)` (`'Darumadrop One', 'Arial Black', sans-serif`) — defined in `_variables.scss`
+- **Font**: `var(--font-playful)` (`'Darumadrop One', 'Arial Black', sans-serif`) — defined in `src/assets/styles/game-ui.scss` (import per-game, not globally)
 - **Weight**: always `900`; never lighter for in-game HUD or overlay text
 - **Size**: large by default — `clamp(2rem, 5vw, 3.5rem)` for counters/timers, `clamp(3rem, 10vw, 6rem)` for titles, `clamp(1rem, 2.5vw, 1.5rem)` for hints
 - **Case**: `text-transform: uppercase`
@@ -462,7 +462,7 @@ text-shadow: var(--shadow-text-game);
 text-shadow: var(--shadow-text-game-large);
 ```
 
-Both tokens apply a white inner outline + stacked black offset drops (defined in `_variables.scss`).
+Both tokens apply a white 8-direction inner outline + stacked black offset drops (defined in `src/assets/styles/game-ui.scss`). This is the same style used in GoombaRunner.
 
 ### Backgrounds
 
@@ -475,6 +475,14 @@ Both tokens apply a white inner outline + stacked black offset drops (defined in
 - **No border** on hover or selection — use `transform: scale(1.2–1.3)` only
 - `transition: transform 0.15s` — snappy, not slow
 - Taken/disabled state: `opacity: 0.25; cursor: not-allowed`
+
+### Style Import
+
+Import `game-ui.scss` in the root game component's `<script setup>` — not in `main.ts` or any global stylesheet:
+
+```typescript
+import '@/assets/styles/game-ui.scss'
+```
 
 ### Font Loading
 

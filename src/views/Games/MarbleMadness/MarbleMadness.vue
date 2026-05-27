@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/game-ui.scss'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import * as THREE from 'three'
