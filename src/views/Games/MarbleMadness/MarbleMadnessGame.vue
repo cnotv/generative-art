@@ -6,6 +6,7 @@ const props = defineProps<{
   elapsed: number
   finished: boolean
   penaltyCount: number
+  trackName: string
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -41,15 +42,32 @@ const hideInstructions = (): void => {
   showInstructions.value = false
 }
 
+const TRACK_NAME_DISPLAY_MS = 2200
+const showTrackName = ref(false)
+let trackNameTimer: ReturnType<typeof setTimeout> | null = null
+
+const flashTrackName = (): void => {
+  if (trackNameTimer) clearTimeout(trackNameTimer)
+  showTrackName.value = true
+  trackNameTimer = setTimeout(() => {
+    showTrackName.value = false
+    trackNameTimer = null
+  }, TRACK_NAME_DISPLAY_MS)
+}
+
+watch(() => props.trackName, flashTrackName)
+
 onMounted(() => {
   window.addEventListener('keydown', hideInstructions, { once: true })
   window.addEventListener('touchstart', hideInstructions, { once: true })
+  flashTrackName()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', hideInstructions)
   window.removeEventListener('touchstart', hideInstructions)
   if (penaltyTimer) clearTimeout(penaltyTimer)
+  if (trackNameTimer) clearTimeout(trackNameTimer)
 })
 </script>
 
@@ -61,6 +79,10 @@ onUnmounted(() => {
       <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
         +{{ TIME_PENALTY_FALL }}s
       </span>
+    </Transition>
+
+    <Transition name="mm-track-name">
+      <div v-if="showTrackName" class="mm-game__track-name">{{ trackName }}</div>
     </Transition>
 
     <Transition name="mm-instructions">
@@ -120,6 +142,43 @@ onUnmounted(() => {
   white-space: nowrap;
   text-shadow: var(--shadow-text-game);
   line-height: 1;
+}
+
+.mm-game__track-name {
+  position: absolute;
+  top: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #fff;
+  text-shadow: var(--shadow-text-game-large);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  line-height: 1;
+}
+
+.mm-track-name-enter-active {
+  animation: mm-track-name-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.mm-track-name-leave-active {
+  animation: mm-track-name-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse both;
+}
+
+@keyframes mm-track-name-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .mm-game__instructions {

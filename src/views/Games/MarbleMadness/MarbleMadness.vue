@@ -276,6 +276,7 @@ onUnmounted(() => {
         :elapsed="game.elapsed.value"
         :finished="game.finished.value"
         :penalty-count="game.penaltyCount.value"
+        :track-name="track.name"
       />
       <MarbleMadnessSummary
         v-if="phase === 'summary'"
