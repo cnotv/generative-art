@@ -129,7 +129,17 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game-large);
+  text-shadow:
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff,
+    2px 2px 0 #fff,
+    -2px 0 0 #fff,
+    2px 0 0 #fff,
+    0 -2px 0 #fff,
+    0 2px 0 #fff,
+    0.08em 0.1em 0 #000,
+    0.14em 0.17em 0 rgb(0 0 0 / 0.5);
   animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
 }
 
@@ -144,7 +154,17 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game-large);
+  text-shadow:
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff,
+    2px 2px 0 #fff,
+    -2px 0 0 #fff,
+    2px 0 0 #fff,
+    0 -2px 0 #fff,
+    0 2px 0 #fff,
+    0.08em 0.1em 0 #000,
+    0.14em 0.17em 0 rgb(0 0 0 / 0.5);
   text-transform: uppercase;
   animation:
     mm-summary-slide-in 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both,
