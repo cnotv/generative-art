@@ -170,6 +170,8 @@ onMounted(() => {
             </button>
           </div>
 
+          <slot name="profile-extra" />
+
           <!-- Private toggle — always visible -->
           <label class="glw__private-toggle">
             <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />

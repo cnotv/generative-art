@@ -3,8 +3,8 @@ import type { TrackConfig } from './config'
 import type { P2PSession } from '@webgamekit/multiplayer-p2p'
 import type { useMarbleMadnessStore } from '@/stores/marbleMadness'
 
-export type HelloPayload = { name: string; color: string }
-export type AvatarPayload = { name: string; color: string }
+export type HelloPayload = { name: string; color: string; marble: string }
+export type AvatarPayload = { name: string; color: string; marble: string }
 export type StartPayload = { timestamp: number }
 export type BallPosPayload = { x: number; y: number; z: number }
 export type FinishPayload = { playerId: string; time: number }
@@ -12,6 +12,7 @@ export type FinishPayload = { playerId: string; time: number }
 export type UseMarbleMadnessSessionOptions = {
   name: string
   color: string
+  marble: string
   roomId: string
 }
 
@@ -28,6 +29,7 @@ export type GameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   isSolo: Ref<boolean>
   track: Ref<TrackConfig>
+  marble: Ref<string>
   onWin: () => void
   onPositionUpdate: (pos: BallPosPayload) => void
 }

@@ -2,6 +2,23 @@ import type { CoordinateTuple } from '@webgamekit/animation'
 
 export const MATCHMAKER_ROOM = 'marble-madness-matchmaker'
 
+export type MarbleOption = { id: string; name: string; url: string }
+
+const marbleGlobs = import.meta.glob('@/assets/images/marbles/*.webp', {
+  eager: true,
+  import: 'default'
+}) as Record<string, string>
+
+export const MARBLE_OPTIONS: MarbleOption[] = Object.entries(marbleGlobs)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([path, url]) => {
+    const filename = path.split('/').pop()!.replace('.webp', '')
+    const name = filename.replace(/^\d+ · /, '')
+    return { id: filename, name, url }
+  })
+
+export const DEFAULT_MARBLE = MARBLE_OPTIONS[0]
+
 export const MARBLE_RADIUS = 0.8
 export const MARBLE_WEIGHT = 3.0
 export const MARBLE_RESTITUTION = 0.1

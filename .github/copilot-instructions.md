@@ -437,6 +437,70 @@ Example: [ForestGame/config.ts](../src/views/Games/ForestGame/config.ts)
 
 **Docker**: Use `docker-compose up` for containerized development (runs `pnpm host`)
 
+## Game UI Style — Default for All Games
+
+Every game view must use the crisp layered text style established by GoombaRunner **by default**. Deviate only when the game's brief explicitly calls for a different visual language.
+
+### Typography
+
+- **Font**: `var(--font-playful)` (`'Darumadrop One', 'Arial Black', sans-serif`) — defined in `_variables.scss`
+- **Weight**: always `900`; never lighter for in-game HUD or overlay text
+- **Size**: large by default — `clamp(2rem, 5vw, 3.5rem)` for counters/timers, `clamp(3rem, 10vw, 6rem)` for titles, `clamp(1rem, 2.5vw, 1.5rem)` for hints
+- **Case**: `text-transform: uppercase`
+- **Numerics**: `font-variant-numeric: tabular-nums` on timers and scores
+- **Line height**: `1` (font already has generous built-in spacing)
+
+### Text Shadow
+
+Use the global token — never raw `text-shadow` values:
+
+```css
+/* Standard HUD labels, hints, sub-text */
+text-shadow: var(--shadow-text-game);
+
+/* Titles, big time displays, win screens */
+text-shadow: var(--shadow-text-game-large);
+```
+
+Both tokens apply a white inner outline + stacked black offset drops (defined in `_variables.scss`).
+
+### Backgrounds
+
+- **HUD overlays** (timer, penalty, instructions): no background — transparent, text only
+- **Summary/game-over screens**: no card background — floating text directly over the canvas
+- **Buttons on overlays**: `background: transparent; border: none` — styled via text-shadow only
+
+### Interactive Elements (marble pickers, icon buttons)
+
+- **No border** on hover or selection — use `transform: scale(1.2–1.3)` only
+- `transition: transform 0.15s` — snappy, not slow
+- Taken/disabled state: `opacity: 0.25; cursor: not-allowed`
+
+### Font Loading
+
+Load `Darumadrop One` per-game using `loadGoogleFont` / `removeGoogleFont` from `@/utils/ui`:
+
+```typescript
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
+
+const FONT_KEY = 'my-game-font'
+onMounted(() =>
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', FONT_KEY)
+)
+onUnmounted(() => removeGoogleFont(FONT_KEY))
+```
+
+### Color Palette (default — override per game)
+
+| Role               | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| Text base          | `#fff` (over dark canvas)                               |
+| Highlight / accent | `#ffd700` (gold)                                        |
+| Danger / penalty   | `#ff4444`                                               |
+| Muted / hint       | `#fff` at reduced opacity via `mm-hint-pulse` animation |
+
+---
+
 ## Router Conventions
 
 - Routes auto-generate from `src/views/{Group}/{Name}/{Name}.vue` structure

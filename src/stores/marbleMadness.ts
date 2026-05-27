@@ -6,6 +6,7 @@ export type MmPlayer = {
   id: string
   name: string
   color: string
+  marble: string
   finishTime: number | null
 }
 

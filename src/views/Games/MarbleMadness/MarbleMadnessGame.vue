@@ -82,8 +82,6 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-lg, 1.25rem);
-  border: 3px solid var(--game-border);
-  box-shadow: 4px 4px 0 var(--game-border);
 }
 
 .mm-game__canvas {
@@ -97,27 +95,31 @@ onUnmounted(() => {
   top: var(--spacing-3);
   left: 50%;
   transform: translateX(-50%);
-  font-size: var(--font-size-lg, 1.25rem);
-  font-weight: 800;
-  color: var(--game-ink);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #fff;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 4px rgb(0, 0, 0, 0.4);
+  text-shadow: var(--shadow-text-game);
   z-index: 10;
   white-space: nowrap;
   pointer-events: none;
+  line-height: 1;
 }
 
 .mm-game__penalty {
   position: absolute;
-  top: 70px;
+  top: 5rem;
   left: 50%;
-  font-size: var(--font-size-2xl, 1.75rem);
+  font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 900;
-  color: var(--color-danger, #d32f2f);
+  font-family: var(--font-playful);
+  color: #f44;
   pointer-events: none;
   z-index: 20;
   white-space: nowrap;
-  text-shadow: 0 2px 6px rgb(0, 0, 0, 0.5);
+  text-shadow: var(--shadow-text-game-large);
+  line-height: 1;
 }
 
 .mm-game__instructions {
@@ -126,12 +128,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-lg, 1.25rem);
-  font-weight: 700;
-  color: var(--game-ink);
-  text-shadow: 0 2px 8px rgb(0, 0, 0, 0.5);
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #fff;
+  text-shadow: var(--shadow-text-game);
   pointer-events: none;
   z-index: 15;
+  text-transform: uppercase;
 }
 
 .mm-penalty-enter-active {

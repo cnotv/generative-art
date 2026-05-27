@@ -11,7 +11,7 @@ import {
 } from '@webgamekit/multiplayer-p2p'
 import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
 import { useMarbleMadnessStore, type MmPlayer } from '@/stores/marbleMadness'
-import { MATCHMAKER_ROOM } from './config'
+import { MATCHMAKER_ROOM, MARBLE_OPTIONS, DEFAULT_MARBLE } from './config'
 import type {
   HelloPayload,
   AvatarPayload,
@@ -32,26 +32,60 @@ const RESTART_CHANNEL = 'mm-restart'
 
 const REANNOUNCE_DELAY_MS = 2000
 
+/**
+ * Resolve a marble id that isn't already claimed by another peer.
+ * Returns the requested marble if it's free, otherwise the first unclaimed one.
+ */
+const resolveMarble = (
+  requestedMarble: string,
+  store: ReturnType<typeof useMarbleMadnessStore>,
+  ownPeerId: string
+): string => {
+  const taken = new Set(
+    Object.entries(store.players)
+      .filter(([id]) => id !== ownPeerId)
+      .map(([, p]) => p.marble)
+  )
+  if (!taken.has(requestedMarble)) return requestedMarble
+  const free = MARBLE_OPTIONS.find((m) => !taken.has(m.id))
+  return free?.id ?? DEFAULT_MARBLE.id
+}
+
 const announceSelf = (ctx: MmContext, joined: P2PSession): void => {
+  const marble = resolveMarble(ctx.options.marble, ctx.store, joined.peerId)
+  ctx.options.marble = marble
   const player: MmPlayer = {
     id: joined.peerId,
     name: ctx.options.name,
     color: ctx.options.color,
+    marble,
     finishTime: null
   }
   ctx.store.upsertPlayer(player)
-  p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+  p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color, marble })
   setTimeout(() => {
     if (ctx.session.value) {
-      p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+      p2pSendData(joined, AVATAR_CHANNEL, {
+        name: ctx.options.name,
+        color: ctx.options.color,
+        marble: ctx.options.marble
+      })
     }
   }, REANNOUNCE_DELAY_MS)
 }
 
 const bindPeerEvents = (ctx: MmContext, joined: P2PSession): void => {
   p2pOnPeerJoin(joined, (_peerId) => {
-    p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
-    p2pSendData(joined, HELLO_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+    p2pSendData(joined, AVATAR_CHANNEL, {
+      name: ctx.options.name,
+      color: ctx.options.color,
+      marble: ctx.options.marble
+    })
+    p2pSendData(joined, HELLO_CHANNEL, {
+      name: ctx.options.name,
+      color: ctx.options.color,
+      marble: ctx.options.marble
+    })
   })
 
   p2pOnPeerLeave(joined, (peerId) => {
@@ -79,21 +113,29 @@ const bindPeerEvents = (ctx: MmContext, joined: P2PSession): void => {
   })
 
   p2pOnData<HelloPayload>(joined, HELLO_CHANNEL, (payload, peerId) => {
+    const marble = resolveMarble(payload.marble, ctx.store, peerId)
     ctx.store.upsertPlayer({
       id: peerId,
       name: payload.name,
       color: payload.color,
+      marble,
       finishTime: null
     })
-    p2pSendData(joined, AVATAR_CHANNEL, { name: ctx.options.name, color: ctx.options.color })
+    p2pSendData(joined, AVATAR_CHANNEL, {
+      name: ctx.options.name,
+      color: ctx.options.color,
+      marble: ctx.options.marble
+    })
   })
 
   p2pOnData<AvatarPayload>(joined, AVATAR_CHANNEL, (payload, peerId) => {
     const existing = ctx.store.players[peerId]
+    const marble = resolveMarble(payload.marble, ctx.store, peerId)
     ctx.store.upsertPlayer({
       id: peerId,
       name: payload.name,
       color: payload.color,
+      marble,
       finishTime: existing?.finishTime ?? null
     })
   })
@@ -187,17 +229,20 @@ export const useMarbleMadnessSession = (
     p2pSendData(session.value, CHAT_CHANNEL, message)
   }
 
-  const updateProfile = (name: string, color: string): void => {
+  const updateProfile = (name: string, color: string, marble?: string): void => {
     options.name = name
     options.color = color
+    if (marble !== undefined) options.marble = marble
     const existing = store.players[localPeerId.value]
     store.upsertPlayer({
       id: localPeerId.value,
       name,
       color,
+      marble: options.marble,
       finishTime: existing?.finishTime ?? null
     })
-    if (session.value) p2pSendData(session.value, AVATAR_CHANNEL, { name, color })
+    if (session.value)
+      p2pSendData(session.value, AVATAR_CHANNEL, { name, color, marble: options.marble })
   }
 
   const restartGame = (): void => {

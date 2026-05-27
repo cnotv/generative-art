@@ -14,7 +14,6 @@ import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
-import marbleTexture from '@/assets/images/textures/marble_ball.webp'
 import {
   MARBLE_RADIUS,
   MARBLE_WEIGHT,
@@ -140,10 +139,11 @@ const addFinishMarker = (scene: THREE.Scene, track: TrackConfig): void => {
   scene.add(disc)
 }
 
-const makeGhostMarble = (scene: THREE.Scene, colorHex: number): THREE.Mesh =>
+const makeGhostMarble = (scene: THREE.Scene, colorHex: number, texture?: string): THREE.Mesh =>
   getBall(scene, undefined, {
     size: MARBLE_RADIUS,
     color: colorHex,
+    texture,
     transparent: true,
     opacity: 0.7,
     segments: 16
@@ -279,7 +279,7 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       restitution: MARBLE_RESTITUTION,
       friction: MARBLE_FRICTION,
       weight: MARBLE_WEIGHT,
-      texture: marbleTexture,
+      texture: deps.marble.value,
       segments: 32,
       type: 'dynamic'
     }) as unknown as ComplexModel
@@ -343,9 +343,14 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     }
   }
 
-  const updateGhostPosition = (peerId: string, colorHex: number, pos: BallPosPayload): void => {
+  const updateGhostPosition = (
+    peerId: string,
+    colorHex: number,
+    pos: BallPosPayload,
+    texture?: string
+  ): void => {
     if (!sceneReference) return
-    const ghost = ghostMeshes.get(peerId) ?? makeGhostMarble(sceneReference, colorHex)
+    const ghost = ghostMeshes.get(peerId) ?? makeGhostMarble(sceneReference, colorHex, texture)
     ghostMeshes.set(peerId, ghost)
     ghost.position.set(pos.x, pos.y, pos.z)
   }

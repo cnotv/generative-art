@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import * as THREE from 'three'
 import { storeToRefs } from 'pinia'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
@@ -15,7 +16,7 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
-import { TRACKS } from './config'
+import { TRACKS, MARBLE_OPTIONS, DEFAULT_MARBLE } from './config'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
 import GameHeader from '@/components/GameHeader.vue'
@@ -32,6 +33,7 @@ const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
+const playerMarble = ref(DEFAULT_MARBLE.id)
 const backgroundStyle = { backgroundImage: buildRandomGradient() }
 
 const { roomId, resolvedRoomId } = useRoomId()
@@ -52,11 +54,22 @@ const bestTime = ref<number | null>(
 const gameReference = ref<InstanceType<typeof MarbleMadnessGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
+const marbleUrl = computed(
+  () => MARBLE_OPTIONS.find((m) => m.id === playerMarble.value)?.url ?? DEFAULT_MARBLE.url
+)
+
 const session = useMarbleMadnessSession(
-  { name: playerName.value, color: playerColor.value, roomId: resolvedRoomId },
+  {
+    name: playerName.value,
+    color: playerColor.value,
+    marble: playerMarble.value,
+    roomId: resolvedRoomId
+  },
   (peerId, pos) => {
     const player = store.players[peerId]
-    if (player) game.updateGhostPosition(peerId, new THREE.Color(player.color).getHex(), pos)
+    if (!player) return
+    const marbleOption = MARBLE_OPTIONS.find((m) => m.id === player.marble)
+    game.updateGhostPosition(peerId, new THREE.Color(player.color).getHex(), pos, marbleOption?.url)
   }
 )
 const { isHost, localPeerId } = session
@@ -67,6 +80,7 @@ const game = useMarbleMadnessGame({
   canvas,
   isSolo: solo,
   track,
+  marble: marbleUrl,
   onWin: () => {
     if (store.solo) {
       if (trackIndex.value < TRACKS.length - 1) {
@@ -141,6 +155,18 @@ const {
   handleLeaveRoom: leaveRoom
 } = useMultiplayerLobbyHandlers(playerName, playerColor, roomId, session)
 
+const handleMarbleChange = (marbleId: string): void => {
+  playerMarble.value = marbleId
+  session.updateProfile(playerName.value, playerColor.value, marbleId)
+}
+
+const takenMarbles = computed(() =>
+  playerList.value
+    .filter((p) => p.id !== localPeerId.value)
+    .map((p) => p.marble)
+    .filter(Boolean)
+)
+
 const handleLeaveRoom = (): void => {
   store.solo = false
   leaveRoom()
@@ -158,6 +184,7 @@ const handleStartGame = (): void => {
       id: localPeerId.value || 'solo',
       name: playerName.value,
       color: playerColor.value,
+      marble: playerMarble.value,
       finishTime: null
     })
     store.raceStartTime = Date.now()
@@ -178,8 +205,18 @@ const handleRestart = (): void => {
   }
 }
 
+const MM_FONT_KEY = 'mm-font'
+
 onMounted(() => {
   session.init()
+  loadGoogleFont(
+    'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',
+    MM_FONT_KEY
+  )
+})
+
+onUnmounted(() => {
+  removeGoogleFont(MM_FONT_KEY)
 })
 </script>
 
@@ -211,6 +248,8 @@ onMounted(() => {
       v-if="phase === 'lobby'"
       :player-name="playerName"
       :player-color="playerColor"
+      :player-marble="playerMarble"
+      :taken-marbles="takenMarbles"
       :is-host="isHost"
       :player-list="playerList"
       :room-id="roomId"
@@ -221,6 +260,7 @@ onMounted(() => {
       @match-found="handleMatchFound"
       @leave-room="handleLeaveRoom"
       @config-change="handleConfigChange"
+      @marble-change="handleMarbleChange"
     />
 
     <div v-else class="mm__play-area">
