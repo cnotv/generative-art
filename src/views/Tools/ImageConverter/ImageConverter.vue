@@ -27,6 +27,10 @@ type FileEntry = {
   convertedSize?: number
   downloadUrl?: string
   error?: string
+  imageWidth?: number
+  imageHeight?: number
+  convertedWidth?: number
+  convertedHeight?: number
 }
 
 const format = ref<ImageFormat>(DEFAULT_FORMAT)
@@ -35,7 +39,7 @@ const maxWidth = ref(DEFAULT_MAX_DIMENSION)
 const maxHeight = ref(DEFAULT_MAX_DIMENSION)
 const scalePct = ref(DEFAULT_SCALE_PCT)
 const files = ref<FileEntry[]>([])
-const uploadCollapsed = ref(false)
+const inputCollapsed = ref(false)
 const resultsReference = ref<HTMLElement | null>(null)
 const hasScrolledToResults = ref(false)
 
@@ -79,6 +83,8 @@ worker.onmessage = (event: MessageEvent<ConvertResult | ConvertError>) => {
   const blob = new Blob([result.buffer], { type: result.format })
   entry.convertedBlob = blob
   entry.convertedSize = result.convertedSize
+  entry.convertedWidth = result.width
+  entry.convertedHeight = result.height
   entry.downloadUrl = URL.createObjectURL(blob)
   entry.status = 'done'
 
@@ -111,7 +117,8 @@ const readFile = (file: File): Promise<FileEntry> =>
     reader.onload = (e) => {
       const buffer = e.target?.result as ArrayBuffer
       const previewUrl = URL.createObjectURL(file)
-      resolve({
+      const img = new Image()
+      const entry: FileEntry = {
         id: `${Date.now()}-${Math.random()}`,
         name: file.name,
         originalSize: file.size,
@@ -119,7 +126,14 @@ const readFile = (file: File): Promise<FileEntry> =>
         buffer,
         previewUrl,
         status: 'pending'
-      })
+      }
+      img.onload = () => {
+        entry.imageWidth = img.naturalWidth
+        entry.imageHeight = img.naturalHeight
+        resolve(entry)
+      }
+      img.onerror = () => resolve(entry)
+      img.src = previewUrl
     }
     reader.onerror = () => reject(reader.error)
     reader.readAsArrayBuffer(file)
@@ -183,82 +197,15 @@ onUnmounted(() => {
 
 <template>
   <div class="image-converter">
-    <div class="image-converter__controls">
-      <div class="image-converter__control-group">
-        <label class="image-converter__label">Format</label>
-        <div class="image-converter__format-options">
-          <label
-            v-for="opt in FORMAT_OPTIONS"
-            :key="opt.value"
-            class="image-converter__format-option"
-            :class="{ 'image-converter__format-option--active': format === opt.value }"
-          >
-            <input
-              v-model="format"
-              type="radio"
-              :value="opt.value"
-              class="image-converter__radio"
-            />
-            {{ opt.label }}
-          </label>
-        </div>
-      </div>
-
-      <div v-if="isLossy" class="image-converter__control-group">
-        <label class="image-converter__label">Quality — {{ quality }}%</label>
-        <input
-          v-model.number="quality"
-          type="range"
-          min="1"
-          max="100"
-          class="image-converter__range"
-        />
-      </div>
-
-      <div class="image-converter__control-group image-converter__control-group--row">
-        <div class="image-converter__control-group">
-          <label class="image-converter__label">Max width (px)</label>
-          <input
-            v-model.number="maxWidth"
-            type="number"
-            min="0"
-            placeholder="0 = no limit"
-            class="image-converter__input"
-          />
-        </div>
-        <div class="image-converter__control-group">
-          <label class="image-converter__label">Max height (px)</label>
-          <input
-            v-model.number="maxHeight"
-            type="number"
-            min="0"
-            placeholder="0 = no limit"
-            class="image-converter__input"
-          />
-        </div>
-      </div>
-
-      <div class="image-converter__control-group">
-        <label class="image-converter__label">Scale — {{ scalePct }}%</label>
-        <input
-          v-model.number="scalePct"
-          type="range"
-          min="1"
-          max="100"
-          class="image-converter__range"
-        />
-      </div>
-    </div>
-
-    <div class="image-converter__upload-section">
+    <div class="image-converter__input-section">
       <button
-        class="image-converter__upload-toggle"
+        class="image-converter__input-toggle"
         type="button"
-        @click="uploadCollapsed = !uploadCollapsed"
+        @click="inputCollapsed = !inputCollapsed"
       >
         <svg
           class="image-converter__chevron"
-          :class="{ 'image-converter__chevron--collapsed': uploadCollapsed }"
+          :class="{ 'image-converter__chevron--collapsed': inputCollapsed }"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -267,9 +214,79 @@ onUnmounted(() => {
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
-        {{ uploadCollapsed ? 'Show upload area' : 'Hide upload area' }}
+        {{ inputCollapsed ? 'Show settings &amp; upload' : 'Hide settings &amp; upload' }}
       </button>
-      <DropZone v-if="!uploadCollapsed" multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+
+      <template v-if="!inputCollapsed">
+        <div class="image-converter__controls">
+          <div class="image-converter__control-group">
+            <label class="image-converter__label">Format</label>
+            <div class="image-converter__format-options">
+              <label
+                v-for="opt in FORMAT_OPTIONS"
+                :key="opt.value"
+                class="image-converter__format-option"
+                :class="{ 'image-converter__format-option--active': format === opt.value }"
+              >
+                <input
+                  v-model="format"
+                  type="radio"
+                  :value="opt.value"
+                  class="image-converter__radio"
+                />
+                {{ opt.label }}
+              </label>
+            </div>
+          </div>
+
+          <div v-if="isLossy" class="image-converter__control-group">
+            <label class="image-converter__label">Quality — {{ quality }}%</label>
+            <input
+              v-model.number="quality"
+              type="range"
+              min="1"
+              max="100"
+              class="image-converter__range"
+            />
+          </div>
+
+          <div class="image-converter__control-group image-converter__control-group--row">
+            <div class="image-converter__control-group">
+              <label class="image-converter__label">Max width (px)</label>
+              <input
+                v-model.number="maxWidth"
+                type="number"
+                min="0"
+                placeholder="0 = no limit"
+                class="image-converter__input"
+              />
+            </div>
+            <div class="image-converter__control-group">
+              <label class="image-converter__label">Max height (px)</label>
+              <input
+                v-model.number="maxHeight"
+                type="number"
+                min="0"
+                placeholder="0 = no limit"
+                class="image-converter__input"
+              />
+            </div>
+          </div>
+
+          <div class="image-converter__control-group">
+            <label class="image-converter__label">Scale — {{ scalePct }}%</label>
+            <input
+              v-model.number="scalePct"
+              type="range"
+              min="1"
+              max="100"
+              class="image-converter__range"
+            />
+          </div>
+        </div>
+
+        <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+      </template>
     </div>
 
     <div v-if="files.length > 0" class="image-converter__actions">
@@ -314,6 +331,23 @@ onUnmounted(() => {
               >
                 {{ savings(entry) }}
               </span>
+            </template>
+          </div>
+          <div
+            v-if="entry.imageWidth && entry.imageHeight"
+            class="image-converter__file-dimensions"
+          >
+            <span>{{ entry.imageWidth }} × {{ entry.imageHeight }}</span>
+            <template
+              v-if="
+                entry.convertedWidth &&
+                entry.convertedHeight &&
+                (entry.convertedWidth !== entry.imageWidth ||
+                  entry.convertedHeight !== entry.imageHeight)
+              "
+            >
+              <span class="image-converter__arrow">→</span>
+              <span>{{ entry.convertedWidth }} × {{ entry.convertedHeight }}</span>
             </template>
           </div>
           <span v-if="entry.status === 'processing'" class="image-converter__status">
@@ -440,13 +474,13 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.image-converter__upload-section {
+.image-converter__input-section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--spacing-4);
 }
 
-.image-converter__upload-toggle {
+.image-converter__input-toggle {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -462,7 +496,7 @@ onUnmounted(() => {
   align-self: flex-start;
 }
 
-.image-converter__upload-toggle:hover {
+.image-converter__input-toggle:hover {
   color: var(--color-foreground);
 }
 
@@ -558,6 +592,15 @@ onUnmounted(() => {
   gap: var(--spacing-2);
   font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
+}
+
+.image-converter__file-dimensions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .image-converter__arrow {

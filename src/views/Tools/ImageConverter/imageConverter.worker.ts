@@ -39,7 +39,9 @@ const convertImage = async (request: ConvertRequest): Promise<void> => {
     buffer: outputBuffer,
     format,
     originalSize: buffer.byteLength,
-    convertedSize: outputBuffer.byteLength
+    convertedSize: outputBuffer.byteLength,
+    width,
+    height
   }
 
   self.postMessage(result, [outputBuffer])

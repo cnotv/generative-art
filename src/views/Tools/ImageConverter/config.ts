@@ -17,6 +17,8 @@ export type ConvertResult = {
   format: ImageFormat
   originalSize: number
   convertedSize: number
+  width: number
+  height: number
 }
 
 export type ConvertError = {
