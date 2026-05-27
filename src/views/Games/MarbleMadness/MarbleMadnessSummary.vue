@@ -129,7 +129,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
 }
 
@@ -144,7 +144,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game);
+  text-shadow: var(--shadow-text-game-large);
   text-transform: uppercase;
   animation:
     mm-summary-slide-in 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both,
