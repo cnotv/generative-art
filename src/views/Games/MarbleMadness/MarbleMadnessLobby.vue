@@ -88,7 +88,7 @@ const isAvailable = (marbleId: string): boolean =>
 
 .mml__marble-grid {
   display: flex;
-  gap: var(--spacing-1);
+  gap: var(--spacing-3);
   flex-wrap: wrap;
 }
 
