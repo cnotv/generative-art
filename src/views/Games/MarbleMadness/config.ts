@@ -8,8 +8,8 @@ export const MARBLE_RESTITUTION = 0.1
 export const MARBLE_FRICTION = 8.0
 export const MARBLE_LINEAR_DAMPING = 2.0
 export const MARBLE_ANGULAR_DAMPING = 0.3
-export const MOVE_FORCE = 3
-export const MAX_LINEAR_SPEED = 10
+export const MOVE_FORCE = 10
+export const MAX_LINEAR_SPEED = 20
 
 export const CAMERA_HEIGHT = 14
 export const CAMERA_BACK = 12
@@ -19,7 +19,7 @@ export const LIGHT_AMBIENT_INTENSITY = 1.2
 export const LIGHT_DIRECTIONAL_INTENSITY = 2.5
 export const LIGHT_DIRECTIONAL_POSITION: [number, number, number] = [10, 20, 10]
 
-export const FALL_THRESHOLD_Y = -8
+export const FALL_THRESHOLD_Y = -12
 export const TIME_PENALTY_FALL = 10
 export const FINISH_DISC_RADIUS_RATIO = 0.5
 
@@ -34,6 +34,7 @@ export type PlatformDef = {
   size: CoordinateTuple
   position: CoordinateTuple
   color: number
+  rotation?: CoordinateTuple
   isFinish?: boolean
 }
 
@@ -52,71 +53,80 @@ export type TrackConfig = {
   finishCheckZ: number
 }
 
+// Classic: S-curve with 3 platforms connected by bridges, no overlaps
 const CLASSIC_TRACK: TrackConfig = {
   name: 'Classic',
   spawnPosition: [0, 1.5, 4],
-  finishPosition: [9, 1, -84],
-  finishCheckZ: -78,
-  finishCheckRadius: 6,
+  finishPosition: [-8, 1, -92],
+  finishCheckZ: -84,
+  finishCheckRadius: 7,
   platforms: [
     { size: [18, 1, 14], position: [0, 0, 0], color: PLATFORM_COLOR },
-    { size: [5, 1, 26], position: [0, 0, -20], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [0, 0, -40], color: PLATFORM_COLOR },
-    { size: [5, 1, 22], position: [-4, 0, -57], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [-8, 0, -74], color: PLATFORM_COLOR },
-    { size: [18, 1, 5], position: [0, 0, -82], color: BRIDGE_COLOR },
-    { size: [16, 1, 16], position: [9, 0, -84], color: FINISH_COLOR, isFinish: true }
+    { size: [5, 1, 14], position: [0, 0, -14], color: BRIDGE_COLOR },
+    { size: [14, 1, 14], position: [0, 0, -28], color: PLATFORM_COLOR },
+    { size: [5, 1, 22], position: [-4, 0, -46], color: BRIDGE_COLOR },
+    { size: [14, 1, 14], position: [-8, 0, -64], color: PLATFORM_COLOR },
+    { size: [5, 1, 14], position: [-8, 0, -78], color: BRIDGE_COLOR },
+    { size: [14, 1, 16], position: [-8, 0, -92], color: FINISH_COLOR, isFinish: true }
   ],
   obstacles: [
-    { size: [1.5, 5, 1.5], position: [-3, 3, -37] },
-    { size: [1.5, 5, 1.5], position: [0, 3, -41] },
-    { size: [1.5, 5, 1.5], position: [3, 3, -37] }
+    { size: [1.5, 4, 1.5], position: [-2, 2.5, -25] },
+    { size: [1.5, 4, 1.5], position: [2, 2.5, -31] },
+    { size: [1.5, 4, 1.5], position: [0, 2.5, -28] }
   ]
 }
 
+// Zigzag: alternates left and right across the path
 const ZIGZAG_TRACK: TrackConfig = {
   name: 'Zigzag',
   spawnPosition: [0, 1.5, 4],
-  finishPosition: [31, 1, -80],
-  finishCheckZ: 9999,
-  finishCheckRadius: 6,
+  finishPosition: [0, 1, -102],
+  finishCheckZ: -96,
+  finishCheckRadius: 7,
   platforms: [
     { size: [18, 1, 14], position: [0, 0, 0], color: PLATFORM_COLOR },
-    { size: [5, 1, 26], position: [0, 0, -20], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [0, 0, -40], color: PLATFORM_COLOR },
-    { size: [30, 1, 5], position: [17, 0, -40], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [31, 0, -40], color: PLATFORM_COLOR },
-    { size: [5, 1, 26], position: [31, 0, -60], color: BRIDGE_COLOR },
-    { size: [16, 1, 16], position: [31, 0, -80], color: FINISH_COLOR, isFinish: true }
+    { size: [5, 1, 14], position: [0, 0, -14], color: BRIDGE_COLOR },
+    { size: [14, 1, 14], position: [0, 0, -28], color: PLATFORM_COLOR },
+    { size: [14, 1, 16], position: [10, 0, -43], color: BRIDGE_COLOR },
+    { size: [14, 1, 14], position: [20, 0, -58], color: PLATFORM_COLOR },
+    { size: [14, 1, 16], position: [10, 0, -73], color: BRIDGE_COLOR },
+    { size: [14, 1, 14], position: [0, 0, -88], color: PLATFORM_COLOR },
+    { size: [16, 1, 16], position: [0, 0, -104], color: FINISH_COLOR, isFinish: true }
   ],
   obstacles: [
-    { size: [1.5, 5, 1.5], position: [-2, 3, -37] },
-    { size: [1.5, 5, 1.5], position: [2, 3, -43] },
-    { size: [1.5, 5, 1.5], position: [30, 3, -57] },
-    { size: [1.5, 5, 1.5], position: [32, 3, -63] }
+    { size: [1.5, 4, 1.5], position: [-2, 2.5, -25] },
+    { size: [1.5, 4, 1.5], position: [2, 2.5, -31] },
+    { size: [1.5, 4, 1.5], position: [19, 2.5, -55] },
+    { size: [1.5, 4, 1.5], position: [21, 2.5, -61] }
   ]
 }
 
+// Long Road: descends via a slope, crosses a lower section, ascends back up
+// Slope angle ~0.1 rad (~5.7°), length 30 units → 3-unit height change
+// rotation.x = -0.1 → downhill in -Z; rotation.x = +0.1 → uphill in -Z
 const LONG_ROAD_TRACK: TrackConfig = {
   name: 'Long Road',
   spawnPosition: [0, 1.5, 4],
-  finishPosition: [0, 1, -130],
-  finishCheckZ: -124,
-  finishCheckRadius: 6,
+  finishPosition: [0, 1, -159],
+  finishCheckZ: -151,
+  finishCheckRadius: 7,
   platforms: [
     { size: [18, 1, 14], position: [0, 0, 0], color: PLATFORM_COLOR },
-    { size: [5, 1, 30], position: [0, 0, -22], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [0, 0, -44], color: PLATFORM_COLOR },
-    { size: [5, 1, 30], position: [0, 0, -66], color: BRIDGE_COLOR },
-    { size: [14, 1, 14], position: [0, 0, -88], color: PLATFORM_COLOR },
-    { size: [5, 1, 30], position: [0, 0, -110], color: BRIDGE_COLOR },
-    { size: [16, 1, 16], position: [0, 0, -130], color: FINISH_COLOR, isFinish: true }
+    { size: [5, 1, 16], position: [0, 0, -15], color: BRIDGE_COLOR },
+    { size: [5, 1, 30], position: [0, -1.5, -38], color: BRIDGE_COLOR, rotation: [-0.1, 0, 0] },
+    { size: [14, 1, 22], position: [0, -3, -64], color: PLATFORM_COLOR },
+    { size: [5, 1, 14], position: [0, -3, -82], color: BRIDGE_COLOR },
+    { size: [14, 1, 16], position: [0, -3, -97], color: PLATFORM_COLOR },
+    { size: [5, 1, 30], position: [0, -1.5, -120], color: BRIDGE_COLOR, rotation: [0.1, 0, 0] },
+    { size: [5, 1, 16], position: [0, 0, -143], color: BRIDGE_COLOR },
+    { size: [16, 1, 16], position: [0, 0, -159], color: FINISH_COLOR, isFinish: true }
   ],
   obstacles: [
-    { size: [1.5, 5, 1.5], position: [-1.5, 3, -41] },
-    { size: [1.5, 5, 1.5], position: [1.5, 3, -47] },
-    { size: [1.5, 5, 1.5], position: [-1.5, 3, -85] },
-    { size: [1.5, 5, 1.5], position: [1.5, 3, -91] }
+    { size: [1.5, 4, 1.5], position: [-2, -0.5, -61] },
+    { size: [1.5, 4, 1.5], position: [2, -0.5, -67] },
+    { size: [1.5, 4, 1.5], position: [0, -0.5, -64] },
+    { size: [1.5, 4, 1.5], position: [-2, -0.5, -94] },
+    { size: [1.5, 4, 1.5], position: [2, -0.5, -100] }
   ]
 }
 

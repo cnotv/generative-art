@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { TIME_PENALTY_FALL } from './config'
 
 const props = defineProps<{
@@ -35,23 +35,40 @@ watch(
   }
 )
 
+const showInstructions = ref(true)
+
+const hideInstructions = (): void => {
+  showInstructions.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', hideInstructions, { once: true })
+  window.addEventListener('touchstart', hideInstructions, { once: true })
+})
+
 onUnmounted(() => {
+  window.removeEventListener('keydown', hideInstructions)
+  window.removeEventListener('touchstart', hideInstructions)
   if (penaltyTimer) clearTimeout(penaltyTimer)
 })
 </script>
 
 <template>
   <div class="mm-game">
-    <div class="mm-game__hud">
-      <span class="mm-game__time">{{ elapsedDisplay }}</span>
-      <span v-if="finished" class="mm-game__done">Finished!</span>
-      <span v-else class="mm-game__hint">WASD / Arrow keys to roll</span>
-    </div>
+    <span class="mm-game__time">{{ elapsedDisplay }}</span>
+
     <Transition name="mm-penalty">
       <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
         +{{ TIME_PENALTY_FALL }}s
       </span>
     </Transition>
+
+    <Transition name="mm-instructions">
+      <div v-if="showInstructions && !finished" class="mm-game__instructions">
+        WASD / Arrow keys to roll
+      </div>
+    </Transition>
+
     <canvas ref="canvas" class="mm-game__canvas" />
   </div>
 </template>
@@ -75,38 +92,19 @@ onUnmounted(() => {
   display: block;
 }
 
-.mm-game__hud {
+.mm-game__time {
   position: absolute;
   top: var(--spacing-3);
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  background: color-mix(in srgb, var(--game-surface-subtle) 85%, transparent);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  padding: var(--spacing-1) var(--spacing-4);
-  backdrop-filter: blur(4px);
-  z-index: 10;
-}
-
-.mm-game__time {
   font-size: var(--font-size-lg, 1.25rem);
   font-weight: 800;
   color: var(--game-ink);
   font-variant-numeric: tabular-nums;
-}
-
-.mm-game__hint {
-  font-size: var(--font-size-sm);
-  color: var(--game-ink-muted);
-}
-
-.mm-game__done {
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--mm-accent);
+  text-shadow: 0 1px 4px rgb(0, 0, 0, 0.4);
+  z-index: 10;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .mm-game__penalty {
@@ -120,6 +118,20 @@ onUnmounted(() => {
   z-index: 20;
   white-space: nowrap;
   text-shadow: 0 2px 6px rgb(0, 0, 0, 0.5);
+}
+
+.mm-game__instructions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg, 1.25rem);
+  font-weight: 700;
+  color: var(--game-ink);
+  text-shadow: 0 2px 8px rgb(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 15;
 }
 
 .mm-penalty-enter-active {
@@ -150,5 +162,13 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateX(-50%) translateY(-36px);
   }
+}
+
+.mm-instructions-leave-active {
+  transition: opacity 0.6s ease;
+}
+
+.mm-instructions-leave-to {
+  opacity: 0;
 }
 </style>

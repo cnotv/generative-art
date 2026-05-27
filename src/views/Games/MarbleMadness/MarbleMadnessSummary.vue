@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import type { MmPlayer } from '@/stores/marbleMadness'
 
 const props = defineProps<{
@@ -7,7 +8,9 @@ const props = defineProps<{
   localPeerId: string
   isHost: boolean
   isSolo: boolean
-  elapsedTime: number
+  soloFinalTime: number
+  bestTime: number | null
+  isNewBest: boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,11 +30,36 @@ const winnerName = (): string => {
   const winner = props.playerList.find((p) => p.id === props.winnerId)
   return winner?.name ?? 'Unknown'
 }
+
+const handlePlayAgain = (): void => {
+  emit('restart')
+}
+
+onMounted(() => {
+  if (props.isSolo) {
+    window.addEventListener('keydown', handlePlayAgain, { once: true })
+    window.addEventListener('touchstart', handlePlayAgain, { once: true })
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handlePlayAgain)
+  window.removeEventListener('touchstart', handlePlayAgain)
+})
 </script>
 
 <template>
-  <section class="mm-summary">
-    <div class="mm-summary__card">
+  <div class="mm-summary" :class="{ 'mm-summary--solo': isSolo }">
+    <template v-if="isSolo">
+      <div class="mm-summary__solo-time">{{ formatTime(soloFinalTime) }}</div>
+      <div v-if="isNewBest" class="mm-summary__best mm-summary__best--new">New best!</div>
+      <div v-else-if="bestTime !== null" class="mm-summary__best">
+        Best: {{ formatTime(bestTime) }}
+      </div>
+      <div class="mm-summary__move-hint">Move to play again</div>
+    </template>
+
+    <div v-else class="mm-summary__card">
       <h2 class="mm-summary__title">
         {{ winnerId === localPeerId ? 'You win!' : `${winnerName()} wins!` }}
       </h2>
@@ -47,13 +75,7 @@ const winnerName = (): string => {
           <span class="mm-summary__dot" :style="{ background: player.color }" />
           <span class="mm-summary__name">{{ player.name }}</span>
           <span class="mm-summary__time">
-            {{
-              player.finishTime !== null
-                ? formatTime(player.finishTime)
-                : isSolo
-                  ? formatTime(elapsedTime)
-                  : 'DNF'
-            }}
+            {{ player.finishTime !== null ? formatTime(player.finishTime) : 'DNF' }}
           </span>
         </li>
       </ul>
@@ -68,24 +90,68 @@ const winnerName = (): string => {
           Play again
         </button>
         <p v-else class="mm-summary__waiting">Waiting for host to restart…</p>
-        <button class="mm-summary__btn" type="button" @click="emit('leaveRoom')">
-          Back to lobby
-        </button>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
 .mm-summary {
-  grid-area: main;
+  position: absolute;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-4);
+  pointer-events: none;
+  z-index: var(--z-overlay, 100);
 }
 
+/* Solo: no background, just floating text */
+.mm-summary--solo {
+  gap: var(--spacing-2);
+}
+
+.mm-summary__solo-time {
+  font-size: clamp(3.5rem, 10vw, 6rem);
+  font-weight: 900;
+  color: var(--game-ink);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 2px 12px rgb(0, 0, 0, 0.5),
+    0 0 40px rgb(0, 0, 0, 0.2);
+  animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  line-height: 1;
+}
+
+.mm-summary__best {
+  font-size: var(--font-size-lg, 1.25rem);
+  font-weight: 700;
+  color: var(--game-ink-muted);
+  text-shadow: 0 1px 6px rgb(0, 0, 0, 0.4);
+  animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
+}
+
+.mm-summary__best--new {
+  color: var(--mm-accent);
+  font-size: var(--font-size-xl, 1.5rem);
+}
+
+.mm-summary__move-hint {
+  margin-top: var(--spacing-3);
+  font-size: var(--font-size-md, 1rem);
+  font-weight: 600;
+  color: var(--game-ink-muted);
+  text-shadow: 0 1px 4px rgb(0, 0, 0, 0.4);
+  animation:
+    mm-summary-slide-in 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both,
+    mm-hint-pulse 2s ease-in-out 0.75s infinite;
+}
+
+/* Multiplayer: card with slide-in */
 .mm-summary__card {
+  pointer-events: all;
   background: var(--game-surface-subtle);
   color: var(--game-ink);
   border: 3px solid var(--game-border);
@@ -98,6 +164,30 @@ const winnerName = (): string => {
   flex-direction: column;
   gap: var(--spacing-4, 1.5rem);
   text-align: center;
+  animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes mm-summary-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mm-hint-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .mm-summary__title {

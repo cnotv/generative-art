@@ -39,6 +39,16 @@ const { roomId, resolvedRoomId } = useRoomId()
 const trackIndex = ref(0)
 const track = computed(() => TRACKS[trackIndex.value] ?? TRACKS[0])
 
+const SOLO_BEST_KEY = 'mm-solo-best'
+const runElapsed = ref(0)
+const soloFinalTime = ref(0)
+const isNewBest = ref(false)
+const bestTime = ref<number | null>(
+  localStorage.getItem(SOLO_BEST_KEY) !== null
+    ? parseFloat(localStorage.getItem(SOLO_BEST_KEY)!)
+    : null
+)
+
 const gameReference = ref<InstanceType<typeof MarbleMadnessGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
@@ -59,7 +69,26 @@ const game = useMarbleMadnessGame({
   track,
   onWin: () => {
     if (store.solo) {
-      store.phase = 'summary'
+      if (trackIndex.value < TRACKS.length - 1) {
+        runElapsed.value += game.elapsed.value
+        game.destroy()
+        trackIndex.value += 1
+        nextTick().then(() => game.init())
+      } else {
+        const finalTime = runElapsed.value + game.elapsed.value
+        soloFinalTime.value = finalTime
+        runElapsed.value = 0
+        const stored = bestTime.value
+        if (stored === null || finalTime < stored) {
+          isNewBest.value = true
+          bestTime.value = finalTime
+          localStorage.setItem(SOLO_BEST_KEY, String(finalTime))
+        } else {
+          isNewBest.value = false
+        }
+        store.winnerId = localPeerId.value || 'solo'
+        store.phase = 'summary'
+      }
     } else {
       const raceTime =
         store.raceStartTime !== null
@@ -140,8 +169,10 @@ const handleStartGame = (): void => {
 
 const handleRestart = (): void => {
   if (store.solo) {
-    store.phase = 'lobby'
-    store.solo = false
+    runElapsed.value = 0
+    trackIndex.value = 0
+    store.winnerId = null
+    store.phase = 'playing'
   } else {
     session.restartGame()
   }
@@ -158,7 +189,7 @@ onMounted(() => {
     :phase="phase"
     :show-sidebar="showSidebar"
     :sidebar-visible="!store.solo"
-    :main-placement="phase === 'playing' ? 'fill' : 'center'"
+    :main-placement="phase !== 'lobby' ? 'fill' : 'center'"
     :style="backgroundStyle"
   >
     <template #header>
@@ -192,25 +223,27 @@ onMounted(() => {
       @config-change="handleConfigChange"
     />
 
-    <MarbleMadnessGame
-      v-else-if="phase === 'playing'"
-      ref="gameReference"
-      :elapsed="game.elapsed.value"
-      :finished="game.finished.value"
-      :penalty-count="game.penaltyCount.value"
-    />
-
-    <MarbleMadnessSummary
-      v-else
-      :player-list="playerList"
-      :winner-id="winnerId"
-      :local-peer-id="localPeerId"
-      :is-host="isHost || store.solo"
-      :is-solo="store.solo"
-      :elapsed-time="game.elapsed.value"
-      @restart="handleRestart"
-      @leave-room="handleLeaveRoom"
-    />
+    <div v-else class="mm__play-area">
+      <MarbleMadnessGame
+        ref="gameReference"
+        :elapsed="game.elapsed.value"
+        :finished="game.finished.value"
+        :penalty-count="game.penaltyCount.value"
+      />
+      <MarbleMadnessSummary
+        v-if="phase === 'summary'"
+        :player-list="playerList"
+        :winner-id="winnerId"
+        :local-peer-id="localPeerId"
+        :is-host="isHost || store.solo"
+        :is-solo="store.solo"
+        :solo-final-time="soloFinalTime"
+        :best-time="bestTime"
+        :is-new-best="isNewBest"
+        @restart="handleRestart"
+        @leave-room="handleLeaveRoom"
+      />
+    </div>
 
     <template v-if="!store.solo" #sidebar>
       <MultiplayerSidebar
@@ -234,5 +267,11 @@ onMounted(() => {
 
   background: var(--lb-bg);
   font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.mm__play-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 </style>

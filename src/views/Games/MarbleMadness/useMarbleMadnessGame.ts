@@ -99,33 +99,27 @@ const buildCourse = (
   world: NonNullable<GetToolsResult['world']>,
   track: TrackConfig
 ): void => {
-  track.platforms.forEach(({ size, position, color }) => {
+  track.platforms.forEach(({ size, position, color, rotation }) => {
     getCube(scene, world, {
       size: size as CoordinateTuple,
       position: position as CoordinateTuple,
+      rotation: rotation as CoordinateTuple | undefined,
       type: 'fixed',
       color,
       restitution: 0.2,
       friction: 0.9
     })
   })
-  if (track.obstacles.length > 0) {
-    const geometry = new THREE.BoxGeometry(1, 1, 1)
-    const material = new THREE.MeshStandardMaterial({ color: OBSTACLE_COLOR })
-    const instancedMesh = new THREE.InstancedMesh(geometry, material, track.obstacles.length)
-    instancedMesh.castShadow = true
-    const matrix = new THREE.Matrix4()
-    track.obstacles.forEach(({ size, position }, index) => {
-      matrix.compose(
-        new THREE.Vector3(position[0], position[1], position[2]),
-        new THREE.Quaternion(),
-        new THREE.Vector3(size[0], size[1], size[2])
-      )
-      instancedMesh.setMatrixAt(index, matrix)
+  track.obstacles.forEach(({ size, position }) => {
+    getCube(scene, world, {
+      size: size as CoordinateTuple,
+      position: position as CoordinateTuple,
+      type: 'fixed',
+      color: OBSTACLE_COLOR,
+      restitution: 0.1,
+      friction: 0.5
     })
-    instancedMesh.instanceMatrix.needsUpdate = true
-    scene.add(instancedMesh)
-  }
+  })
 }
 
 const addFinishMarker = (scene: THREE.Scene, track: TrackConfig): void => {
@@ -247,6 +241,7 @@ const buildTimeline = (
     category: 'ui',
     start: 0,
     action: () => {
+      if (state.finished.value) return
       state.elapsed.value += getDelta()
     }
   })
