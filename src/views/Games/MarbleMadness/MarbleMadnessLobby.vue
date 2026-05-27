@@ -93,6 +93,7 @@ const isAvailable = (marbleId: string): boolean =>
 }
 
 .mml__marble-btn {
+  position: relative;
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
@@ -100,11 +101,22 @@ const isAvailable = (marbleId: string): boolean =>
   border-radius: 50%;
   background: none;
   cursor: pointer;
-  overflow: hidden;
+  box-shadow: 2px 4px 8px rgb(0 0 0 / 0.45);
   transition:
     transform 0.15s,
     opacity 0.15s;
   flex-shrink: 0;
+}
+
+.mml__marble-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 32%, rgb(255 255 255 / 0.55) 0%, transparent 52%),
+    radial-gradient(circle at 68% 72%, rgb(0 0 0 / 0.28) 0%, transparent 45%);
+  pointer-events: none;
 }
 
 .mml__marble-btn:hover:not(:disabled) {
@@ -126,9 +138,5 @@ const isAvailable = (marbleId: string): boolean =>
   object-fit: cover;
   display: block;
   border-radius: 50%;
-  box-shadow:
-    inset -4px -4px 8px rgb(0 0 0 / 0.45),
-    inset 3px 3px 6px rgb(255 255 255 / 0.35),
-    2px 4px 8px rgb(0 0 0 / 0.35);
 }
 </style>
