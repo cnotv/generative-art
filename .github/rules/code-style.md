@@ -95,7 +95,7 @@
 
 - **Game text shadow tokens are em-based**: The `--shadow-text-game` and `--shadow-text-game-large` drop-shadow values use `em` units so they scale proportionally with the element's `font-size`. The white outline strokes stay at `1px` (fixed, always crisp). Never override the tokens with hardcoded `rem` or `px` drop-shadow values — that breaks proportionality at large font sizes.
 
-- **Game text color is dark by default**: Elements using `--shadow-text-game` or `--shadow-text-game-large` must use `var(--game-text-color, #111)` as their text fill. The white 1px outline provides contrast against any background; the dark fill makes the text readable on both light and dark surfaces. Use semantic color overrides (`#ffd700` for winner highlight, `#f44` for danger) only where meaning requires it.
+- **Game timer uses dark fill, other game text uses color**: Timer and counter text uses a dark fill (`#333`) so the white outline creates crisp contrast. All other game text (instructions, titles, scores, buttons) uses a saturated or white fill for visual energy. Never apply a dark fill to semantic colors — `#ffd700` (winner), `#f44` (danger/penalty) must stay as-is.
 
 ## API Changes
 

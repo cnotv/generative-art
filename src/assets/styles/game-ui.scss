@@ -3,12 +3,10 @@
 
 :root {
   --font-playful: 'Darumadrop One', 'Arial Black', sans-serif;
-  --game-text-color: #111;
 
-  // White 1px outline (fixed px so it stays crisp at all sizes) +
-  // stacked black drops in em so they scale proportionally with font-size.
-  // Text fill should be dark (--game-text-color) so the white outline
-  // provides contrast against any background.
+  // White 1px outline (fixed px — crisp at any size) +
+  // one or two em-based drop shadows that scale proportionally.
+  // Keep em values small: at large font sizes even 0.1em is several pixels.
   --shadow-text-game:
     -1px -1px 0 #fff,
     1px -1px 0 #fff,
@@ -18,9 +16,7 @@
     1px 0 0 #fff,
     0 -1px 0 #fff,
     0 1px 0 #fff,
-    0.2em 0.2em 0 #000,
-    0.25em 0.25em 0 #000,
-    0.3em 0.3em 0 #000;
+    0.06em 0.08em 0 #000;
   --shadow-text-game-large:
     -1px -1px 0 #fff,
     1px -1px 0 #fff,
@@ -30,9 +26,6 @@
     1px 0 0 #fff,
     0 -1px 0 #fff,
     0 1px 0 #fff,
-    0.2em 0.2em 0 #000,
-    0.25em 0.25em 0 #000,
-    0.3em 0.3em 0 #000,
-    0.4em 0.4em 0 #000,
-    0.5em 0.5em 0 #000;
+    0.06em 0.08em 0 #000,
+    0.1em 0.12em 0 rgb(0 0 0 / 0.45);
 }

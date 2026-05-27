@@ -116,7 +116,7 @@ onUnmounted(() => {
   font-size: clamp(4rem, 12vw, 8rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   font-variant-numeric: tabular-nums;
   text-shadow: var(--shadow-text-game-large);
   animation: mm-summary-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
@@ -128,7 +128,7 @@ onUnmounted(() => {
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game);
   animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
 }
@@ -143,7 +143,7 @@ onUnmounted(() => {
   font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game);
   text-transform: uppercase;
   animation:
@@ -234,7 +234,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game-large);
   min-width: 1.5rem;
   text-align: center;
@@ -252,7 +252,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-size: 1.25rem;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game-large);
   text-align: left;
 }
@@ -261,7 +261,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-size: 1.25rem;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game-large);
   font-variant-numeric: tabular-nums;
 }
@@ -286,7 +286,7 @@ onUnmounted(() => {
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game-large);
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -306,7 +306,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 900;
   font-family: var(--font-playful);
-  color: var(--game-text-color, #111);
+  color: #fff;
   text-shadow: var(--shadow-text-game-large);
   text-transform: uppercase;
 }
