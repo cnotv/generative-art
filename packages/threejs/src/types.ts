@@ -30,6 +30,7 @@ export interface ModelOptions extends CommonOptions {
   reflectivity?: number
   roughness?: number
   metalness?: number
+  displacementScale?: number
   transmission?: number
   transparent?: boolean
   material?: THREE.Material | typeof THREE.Material | string | boolean

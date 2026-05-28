@@ -192,7 +192,7 @@ const handleInputZ = (event: Event) => {
   color: inherit;
   font: inherit;
   text-align: center;
-  width: 4em;
+  width: 5.5em;
   padding: 2px 4px;
   outline: none;
   border-radius: 2px;

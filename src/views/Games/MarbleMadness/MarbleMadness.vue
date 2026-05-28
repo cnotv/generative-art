@@ -71,6 +71,9 @@ const session = useMarbleMadnessSession(
     if (!player) return
     const marbleOption = MARBLE_OPTIONS.find((m) => m.id === player.marble)
     game.updateGhostPosition(peerId, new THREE.Color(player.color).getHex(), pos, marbleOption?.url)
+  },
+  (receivedTrackIndex) => {
+    trackIndex.value = receivedTrackIndex
   }
 )
 const { isHost, localPeerId } = session
@@ -197,7 +200,7 @@ const handleStartGame = (): void => {
     store.raceStartTime = Date.now()
     store.phase = 'playing'
   } else {
-    session.startGame()
+    session.startGame(trackIndex.value)
   }
 }
 
@@ -277,6 +280,7 @@ onUnmounted(() => {
         :finished="game.finished.value"
         :penalty-count="game.penaltyCount.value"
         :track-name="track.name"
+        :current-actions="game.currentActions.value"
         @escape="store.phase = 'lobby'"
       />
       <MarbleMadnessSummary

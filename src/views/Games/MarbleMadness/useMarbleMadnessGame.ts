@@ -1,5 +1,5 @@
 import cloudUrl from '@/assets/images/goomba/cloud.png'
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, reactive, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -23,7 +23,6 @@ import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
-import { registerObjectProperties } from '@/utils/objectProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import {
@@ -92,8 +91,11 @@ const CLOUD_AREA_CENTER: CoordinateTuple = [0, CLOUD_Y, CLOUD_AREA_CENTER_Z]
 const CLOUD_AREA_SIZE: CoordinateTuple = [CLOUD_AREA_WIDTH, 0, CLOUD_AREA_DEPTH]
 const CLOUD_BASE_SIZE: CoordinateTuple = [CLOUD_BASE_WIDTH, CLOUD_BASE_HEIGHT, CLOUD_BASE_DEPTH]
 
-const GROUND_SPHERE_RADIUS = 600
-const GROUND_SPHERE_Y = -700
+const FOG_COLOR = 0xb0d8f0
+const FOG_DENSITY = 0.0015
+
+const GROUND_SPHERE_RADIUS = 1500
+const GROUND_SPHERE_Y = -1700
 const GROUND_SPHERE_Z = -120
 const GROUND_SPHERE_CENTER: CoordinateTuple = [0, GROUND_SPHERE_Y, GROUND_SPHERE_Z]
 const GROUND_SPHERE_COLOR = 0x4a7a3a
@@ -152,7 +154,7 @@ const buildCloudObjects = (
       material: 'MeshBasicMaterial',
       transparent: true,
       opacity,
-      alphaTest: 0.1,
+      alphaTest: 0.4,
       type: 'fixed',
       castShadow: false,
       receiveShadow: false
@@ -242,6 +244,32 @@ const makeGhostMarble = (scene: THREE.Scene, colorHex: number, texture?: string)
     segments: 16
   })
 
+type GhostRegistry = { meshes: Map<string, THREE.Mesh>; scene: THREE.Scene | null }
+
+const placeGhost = (
+  registry: GhostRegistry,
+  peerId: string,
+  colorHex: number,
+  pos: BallPosPayload,
+  texture?: string
+): void => {
+  if (!registry.scene) return
+  const ghost = registry.meshes.get(peerId) ?? makeGhostMarble(registry.scene, colorHex, texture)
+  registry.meshes.set(peerId, ghost)
+  ghost.position.set(pos.x, pos.y + PLATFORM_HALF_HEIGHT, pos.z)
+  ghost.quaternion.set(pos.rx, pos.ry, pos.rz, pos.rw)
+}
+
+const disposeGhost = (registry: GhostRegistry, peerId: string): void => {
+  const ghost = registry.meshes.get(peerId)
+  if (ghost && registry.scene) {
+    registry.scene.remove(ghost)
+    ghost.geometry.dispose()
+    if (ghost.material instanceof THREE.Material) ghost.material.dispose()
+  }
+  registry.meshes.delete(peerId)
+}
+
 const buildTimeline = (
   camera: THREE.Camera,
   getDelta: () => number,
@@ -315,7 +343,16 @@ const buildTimeline = (
       state.posAccumulator += getDelta() * 1000
       if (state.posAccumulator >= POS_BROADCAST_MS) {
         const pos = state.marbleMesh.userData.body.translation()
-        deps.onPositionUpdate({ x: pos.x, y: pos.y, z: pos.z })
+        const rot = state.marbleMesh.userData.body.rotation()
+        deps.onPositionUpdate({
+          x: pos.x,
+          y: pos.y,
+          z: pos.z,
+          rx: rot.x,
+          ry: rot.y,
+          rz: rot.z,
+          rw: rot.w
+        })
         state.posAccumulator = 0
       }
     }
@@ -428,6 +465,52 @@ const buildSceneSetupConfig = (track: TrackConfig) => ({
   }
 })
 
+const registerGroundSphereProperties = (groundMesh: THREE.Mesh): void => {
+  const state = reactive({
+    position: { x: groundMesh.position.x, y: groundMesh.position.y, z: groundMesh.position.z },
+    radius: groundMesh.scale.x * GROUND_SPHERE_RADIUS,
+    color: (groundMesh.material as THREE.MeshStandardMaterial).color.getHex()
+  })
+
+  useDebugSceneStore().addSceneElement({ name: 'Ground', type: 'Mesh', hidden: false })
+  useElementPropertiesStore().registerElementProperties('Ground', {
+    title: 'Ground',
+    type: 'Mesh',
+    schema: {
+      position: {
+        label: 'Position',
+        component: 'CoordinateInput',
+        min: { x: -2000, y: -2000, z: -2000 },
+        max: { x: 2000, y: 2000, z: 2000 },
+        step: { x: 10, y: 10, z: 10 }
+      },
+      radius: { label: 'Radius', min: 100, max: 2000, step: 10 },
+      color: { label: 'Color', color: true }
+    },
+    getValue: (path: string) => {
+      if (path === 'position')
+        return { x: state.position.x, y: state.position.y, z: state.position.z }
+      if (path === 'radius') return state.radius
+      if (path === 'color') return state.color
+      return undefined
+    },
+    updateValue: (path: string, value: unknown) => {
+      if (path === 'position') {
+        const v = value as { x: number; y: number; z: number }
+        state.position = { x: v.x, y: v.y, z: v.z }
+        groundMesh.position.set(v.x, v.y, v.z)
+      } else if (path === 'radius') {
+        state.radius = value as number
+        const scale = (value as number) / GROUND_SPHERE_RADIUS
+        groundMesh.scale.set(scale, scale, scale)
+      } else if (path === 'color') {
+        state.color = value as number
+        ;(groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value as number)
+      }
+    }
+  })
+}
+
 /**
  * Set up and manage the MarbleMadness Three.js scene, physics, and game loop.
  * @param deps - Canvas ref, solo flag, track config, win/position callbacks.
@@ -445,16 +528,20 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     directionalLight: null
   }
   let cleanupTools: (() => void) | null = null
-  const ghostMeshes = new Map<string, THREE.Mesh>()
+  const ghostRegistry: GhostRegistry = { meshes: new Map(), scene: null }
   let sceneReference: THREE.Scene | null = null
   let worldReference: NonNullable<GetToolsResult['world']> | null = null
   let cloudObjects: ComplexModel[] = []
+  const currentActionsReference = ref<Record<string, unknown>>({})
   const areaConfigs = ref<Record<string, Record<string, unknown>>>({})
 
   const buildGame = async ({ scene, world, camera, getDelta, animate, orbit }: SceneContext) => {
     if (!world) return
     sceneReference = scene
+    ghostRegistry.scene = scene
     worldReference = world
+    scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY)
+    scene.background = new THREE.Color(FOG_COLOR)
     state.directionalLight =
       (scene.children.find((c) => c instanceof THREE.DirectionalLight) as THREE.DirectionalLight) ??
       null
@@ -473,8 +560,7 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       castShadow: false,
       receiveShadow: false
     })
-    useDebugSceneStore().addSceneElement({ name: 'Ground', type: 'Mesh', hidden: false })
-    registerObjectProperties({ object: state.groundSphereMesh, name: 'Ground', title: 'Ground' })
+    registerGroundSphereProperties(state.groundSphereMesh)
     state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
       position: track.spawnPosition,
@@ -482,22 +568,19 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       friction: MARBLE_FRICTION,
       weight: MARBLE_WEIGHT,
       texture: deps.marble.value,
-      segments: 32,
+      roughness: 0.08,
+      metalness: 0.2,
+      displacementScale: 0.08,
+      segments: 48,
       type: 'dynamic'
     }) as unknown as ComplexModel
     applyDamping(state.marbleMesh)
     animate({ timeline: buildTimeline(camera, getDelta, state, deps, orbit) })
   }
 
-  const init = async (): Promise<void> => {
-    if (!deps.canvas.value) return
-    state.finished.value = false
-    state.elapsed.value = 0
-    state.penaltyCount.value = 0
-    state.posAccumulator = 0
-    state.controls = createControls({ mapping: KEYBOARD_MAPPING })
+  const initScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     const track = deps.track.value
-    const tools = await getTools({ canvas: deps.canvas.value })
+    const tools = await getTools({ canvas })
     cleanupTools = tools.cleanup
     await tools.setup({
       config: buildSceneSetupConfig(track),
@@ -515,12 +598,27 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     })
   }
 
+  const init = async (): Promise<void> => {
+    if (!deps.canvas.value) return
+    state.finished.value = false
+    state.elapsed.value = 0
+    state.penaltyCount.value = 0
+    state.posAccumulator = 0
+    state.controls = createControls({ mapping: KEYBOARD_MAPPING })
+    currentActionsReference.value = state.controls.currentActions as unknown as Record<
+      string,
+      unknown
+    >
+    await initScene(deps.canvas.value)
+  }
+
   const destroy = (): void => {
     state.controls?.destroyControls()
     state.marbleMesh = null
     state.controls = null
     state.directionalLight = null
-    ghostMeshes.clear()
+    ghostRegistry.meshes.clear()
+    ghostRegistry.scene = null
     sceneReference = null
     worldReference = null
     cloudObjects = []
@@ -540,22 +638,9 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     colorHex: number,
     pos: BallPosPayload,
     texture?: string
-  ): void => {
-    if (!sceneReference) return
-    const ghost = ghostMeshes.get(peerId) ?? makeGhostMarble(sceneReference, colorHex, texture)
-    ghostMeshes.set(peerId, ghost)
-    ghost.position.set(pos.x, pos.y, pos.z)
-  }
+  ): void => placeGhost(ghostRegistry, peerId, colorHex, pos, texture)
 
-  const removeGhost = (peerId: string): void => {
-    const ghost = ghostMeshes.get(peerId)
-    if (ghost && sceneReference) {
-      sceneReference.remove(ghost)
-      ghost.geometry.dispose()
-      if (ghost.material instanceof THREE.Material) ghost.material.dispose()
-    }
-    ghostMeshes.delete(peerId)
-  }
+  const removeGhost = (peerId: string): void => disposeGhost(ghostRegistry, peerId)
 
   watch(
     () => deps.canvas.value,
@@ -569,6 +654,7 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     elapsed: state.elapsed,
     finished: state.finished,
     penaltyCount: state.penaltyCount,
+    currentActions: currentActionsReference,
     init,
     destroy,
     updateGhostPosition,
