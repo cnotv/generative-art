@@ -165,6 +165,7 @@ const buildCloudObjects = (
     cloudMesh.geometry.dispose()
     cloudMesh.geometry = new THREE.PlaneGeometry(instanceSize[0], instanceSize[2])
     if (cloudMesh.material instanceof THREE.Material) cloudMesh.material.side = THREE.DoubleSide
+    cloudMesh.rotation.set(0, instanceRotation[1], instanceRotation[2])
     return cloud
   })
 }
