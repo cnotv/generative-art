@@ -91,6 +91,12 @@
 - **No Tailwind/utility classes in components**: Never use Tailwind utility classes (e.g. `flex`, `gap-1`, `text-sm`, `h-7`) inside Vue components in `src/components/`. Use BEM class names with `<style scoped>` and `var(--...)` tokens instead. Tailwind utilities are only acceptable in page-level views or layout wrappers.
 - **No `!important`**: Never use `!important` in CSS unless it is in a utility class specifically designed to override styles (e.g., vendor overrides in `vendor.scss`). If a style isn't applying, fix the specificity or selector instead.
 
+- **Never clip shadows with `overflow: hidden`**: Do not apply `overflow: hidden` to an element that also has `text-shadow` or `box-shadow` — the overflow boundary clips the shadow. If both clipping and a shadow are needed, split responsibility: use a wrapper element for `overflow: hidden` + `max-width`, and on the inner element add `padding` equal to the maximum shadow offset with a compensating negative `margin`, so the shadow paints inside the padding area and the wrapper clips only text overflow. Example: wrapper gets `overflow: hidden; max-width: 90vw`, inner element gets `padding: 0.55em 0.65em; margin: -0.55em -0.65em`.
+
+- **Game text shadow tokens are em-based**: The `--shadow-text-game` and `--shadow-text-game-large` drop-shadow values use `em` units so they scale proportionally with the element's `font-size`. The white outline strokes stay at `1px` (fixed, always crisp). Never override the tokens with hardcoded `rem` or `px` drop-shadow values — that breaks proportionality at large font sizes.
+
+- **Game timer uses dark fill, other game text uses color**: Timer and counter text uses a dark fill (`#333`) so the white outline creates crisp contrast. All other game text (instructions, titles, scores, buttons) uses a saturated or white fill for visual energy. Never apply a dark fill to semantic colors — `#ffd700` (winner), `#f44` (danger/penalty) must stay as-is.
+
 ## API Changes
 
 - **Update all call sites**: When changing a function signature, type, or exported API in any package or shared utility, find every usage across the entire codebase (`grep -r`) and update them before committing. Never leave stale callers or add backward-compatibility shims — fix all consumers in the same PR.
@@ -102,6 +108,10 @@
 - **Shared setup patterns → helper**: When multiple views share a lifecycle pattern (e.g., registering scene elements, initializing Three.js scenes), extract it into a composable or helper function
 - **No duplicate boilerplate**: Views and components that share the same setup/teardown logic must use the shared composable. Never copy-paste the same block across multiple files
 - **Abstract complex UI into components**: When a view contains a non-trivial interactive element (e.g., a canvas editor, a timeline scrubber, a drag-and-drop zone), extract it into a dedicated component under `src/components/`. The view should be a thin wrapper that wires props and emits. Split large components further into sub-components by responsibility (e.g., `CanvasEditorTools`, `CanvasEditorCanvas`, `CanvasEditorStorage`) and extract stateful logic into co-located composables (`useCanvasEditor.ts`)
+
+## Input Handling
+
+- **Always use `@webgamekit/controls`**: For any keyboard, gamepad, or touch input, use `createControls` from `@webgamekit/controls`. Never add raw `window.addEventListener('keydown', ...)` / `window.addEventListener('keyup', ...)` directly. The controls package handles action mapping, multi-device support, and cleanup. Define a `KEYBOARD_MAPPING` constant in the co-located `config.ts`, call `createControls({ mapping })` in `init()`, read `controls.currentActions` in the game loop, and call `controls.destroyControls()` in `destroy()`. If a needed feature is missing, extend the package.
 
 ## Three.js Performance
 

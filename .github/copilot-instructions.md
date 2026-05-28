@@ -99,13 +99,14 @@ gh api \
 
    If a metric is red, investigate using the tools above and apply the techniques documented in `documentation/docs/guides/reducing-performance-costs.md`.
 
-3. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+3. **Write journey doc**: ALWAYS create or update a journey doc in `documentation/docs/journey/` before opening a PR. Every new game gets its own `<game-name>.md` file. Any PR that fixes a non-obvious bug, works around a framework quirk, or makes a hard-won design decision must record it there. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be merged.
+4. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
    - Command: `git fetch origin main && git rebase origin/main`
    - Resolve any conflicts, then force push: `git push --force-with-lease`
    - CI will fail if branch is behind main
-4. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-5. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-6. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
+5. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+6. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+7. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
 
 ### PR Description Format
 
@@ -436,6 +437,120 @@ Example: [ForestGame/config.ts](../src/views/Games/ForestGame/config.ts)
 **Package development**: Edit `packages/*/src/**` files directly. Vite resolves aliases for HMR.
 
 **Docker**: Use `docker-compose up` for containerized development (runs `pnpm host`)
+
+## Game UI Style — Default for All Games
+
+Every game view must use the crisp layered text style established by GoombaRunner **by default**. Deviate only when the game's brief explicitly calls for a different visual language.
+
+### Typography
+
+- **Font**: `var(--font-playful)` (`'Darumadrop One', 'Arial Black', sans-serif`) — defined in `src/assets/styles/game-ui.scss` (import per-game, not globally)
+- **Weight**: always `900`; never lighter for in-game HUD or overlay text
+- **Size**: large by default — `clamp(2rem, 5vw, 3.5rem)` for counters/timers, `clamp(3rem, 10vw, 6rem)` for titles, `clamp(1rem, 2.5vw, 1.5rem)` for hints
+- **Case**: `text-transform: uppercase`
+- **Numerics**: `font-variant-numeric: tabular-nums` on timers and scores
+- **Line height**: `1` (font already has generous built-in spacing)
+
+### Text Shadow
+
+Use the global token — never raw `text-shadow` values:
+
+```css
+/* Standard HUD labels, hints, sub-text */
+text-shadow: var(--shadow-text-game);
+
+/* Titles, big time displays, win screens */
+text-shadow: var(--shadow-text-game-large);
+```
+
+Both tokens apply a white 8-direction inner outline + stacked black offset drops (defined in `src/assets/styles/game-ui.scss`). This is the same style used in GoombaRunner.
+
+### Backgrounds
+
+- **HUD overlays** (timer, penalty, instructions): no background — transparent, text only
+- **Summary/game-over screens**: no card background — floating text directly over the canvas
+- **Buttons on overlays**: `background: transparent; border: none` — styled via text-shadow only
+
+### Interactive Elements (marble pickers, icon buttons)
+
+- **No border** on hover or selection — use `transform: scale(1.2–1.3)` only
+- `transition: transform 0.15s` — snappy, not slow
+- Taken/disabled state: `opacity: 0.25; cursor: not-allowed`
+
+### Style Import
+
+Import `game-ui.scss` in the root game component's `<script setup>` — not in `main.ts` or any global stylesheet:
+
+```typescript
+import '@/assets/styles/game-ui.scss'
+```
+
+### Font Loading
+
+Load `Darumadrop One` per-game using `loadGoogleFont` / `removeGoogleFont` from `@/utils/ui`:
+
+```typescript
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
+
+const FONT_KEY = 'my-game-font'
+onMounted(() =>
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', FONT_KEY)
+)
+onUnmounted(() => removeGoogleFont(FONT_KEY))
+```
+
+### Color Palette (default — override per game)
+
+| Role               | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| Text base          | `#fff` (over dark canvas)                               |
+| Highlight / accent | `#ffd700` (gold)                                        |
+| Danger / penalty   | `#ff4444`                                               |
+| Muted / hint       | `#fff` at reduced opacity via `mm-hint-pulse` animation |
+
+### Game Lighting — Crisp Shadows by Default
+
+Every 3D game must use crisp, contact-quality directional shadows unless the brief explicitly calls for soft shadows. Apply this config pattern (from `config.ts`) in every new game:
+
+```typescript
+lights: {
+  directional: {
+    shadow: {
+      radius: 1,      // no PCF blur
+      bias: 0,        // no halo at tight frustum
+      camera: { left: -25, right: 25, top: 25, bottom: -25, near: 0.5, far: 300 }
+    }
+  }
+}
+```
+
+The `±25` frustum gives ~82 px/unit shadow detail at 4096×4096 — six times sharper than the default `±150`. Adjust the range to fit the scene, but keep it as tight as possible.
+
+**The light must follow the player/camera every frame.** Use `createDirectionalLightFollowAction` from `src/utils/gameTimelineActions.ts`:
+
+```typescript
+timeline.addAction(
+  createDirectionalLightFollowAction(
+    () => state.directionalLight,
+    () => state.playerMesh,
+    LIGHT_DIRECTIONAL_POSITION as CoordinateTuple
+  )
+)
+```
+
+`LIGHT_DIRECTIONAL_POSITION` is a fixed world-space offset (e.g. `[15, 30, 10]`). Both `light.position` and `light.target.position` move with the player, keeping the shadow angle constant and the frustum centered on the action.
+
+Also use the other timeline action factories from `src/utils/gameTimelineActions.ts` to avoid boilerplate:
+
+| Factory                              | Purpose                                                |
+| ------------------------------------ | ------------------------------------------------------ |
+| `createPhysicsSyncAction`            | Sync Rapier body → Three.js mesh each frame            |
+| `createDirectionalLightFollowAction` | Move light + target to track a mesh                    |
+| `createCameraFollowAction`           | Smooth camera follow with orbit-controls bypass        |
+| `createTimerAction`                  | Accumulate elapsed time, stop when finished            |
+| `createFallCheckAction`              | Trigger a callback when mesh drops below a Y threshold |
+
+---
 
 ## Router Conventions
 

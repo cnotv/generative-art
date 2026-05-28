@@ -173,7 +173,10 @@ export const getTools = async ({
     defineSetup
   }: {
     config?: SetupConfig
-    defineSetup?: (context: { ground: ReturnType<typeof getGround> | null }) => Promise<void> | void
+    defineSetup?: (context: {
+      ground: ReturnType<typeof getGround> | null
+      orbit: OrbitControls | null
+    }) => Promise<void> | void
   }) => {
     const resolved = resolveSetupConfig(config)
     const childrenCountBefore = scene.children.length
@@ -187,7 +190,7 @@ export const getTools = async ({
         camera,
         config: config.postprocessing
       })
-    if (defineSetup) await defineSetup({ ground })
+    if (defineSetup) await defineSetup({ ground, orbit })
     emitProgress(onProgress, 'Ready', undefined, true)
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }

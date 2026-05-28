@@ -124,7 +124,7 @@ watch(
 
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
-  if (props.showResults) restoreStep()
+  restoreStep()
 })
 </script>
 
@@ -169,6 +169,8 @@ onMounted(() => {
               <Check v-if="playerColor === color" class="glw__swatch-check" />
             </button>
           </div>
+
+          <slot name="profile-extra" />
 
           <!-- Private toggle — always visible -->
           <label class="glw__private-toggle">

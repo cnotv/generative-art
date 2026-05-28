@@ -81,6 +81,15 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     spawnHandlers.value = rest
   }
 
+  const addSceneElement = (element: SceneElement) => {
+    if (sceneElements.value.some((e) => e.name === element.name)) return
+    sceneElements.value = [...sceneElements.value, element]
+  }
+
+  const removeSceneElement = (name: string) => {
+    sceneElements.value = sceneElements.value.filter((e) => e.name !== name)
+  }
+
   const clearSceneElements = () => {
     sceneElements.value = []
     sceneGroups.value = {}
@@ -102,6 +111,8 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     sceneGroups,
     spawns,
     setSceneElements,
+    addSceneElement,
+    removeSceneElement,
     registerSceneElements,
     registerSpawn,
     unregisterSpawn,

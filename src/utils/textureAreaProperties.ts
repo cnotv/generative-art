@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { useDebugSceneStore } from '@/stores/debugScene'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
 interface TextureAreaLayer {
@@ -13,6 +14,9 @@ interface TextureAreaLayer {
   seed: number
   speed: number
   opacity: number
+  pattern?: 'random' | 'grid' | 'grid-jitter'
+  sizeVariation?: [number, number, number]
+  rotationVariation?: [number, number, number]
 }
 
 interface RegisterTextureAreaOptions {
@@ -38,10 +42,21 @@ export const buildTextureAreaConfig = (layers: TextureAreaLayer[]): Record<strin
       size: { x: firstLayer.size[0], y: firstLayer.size[1], z: firstLayer.size[2] }
     },
     textures: {
-      baseSize: { x: firstLayer.baseSize[0], y: firstLayer.baseSize[1], z: firstLayer.baseSize[2] }
+      baseSize: { x: firstLayer.baseSize[0], y: firstLayer.baseSize[1], z: firstLayer.baseSize[2] },
+      sizeVariation: {
+        x: firstLayer.sizeVariation?.[0] ?? 0,
+        y: firstLayer.sizeVariation?.[1] ?? 0,
+        z: firstLayer.sizeVariation?.[2] ?? 0
+      },
+      rotationVariation: {
+        x: firstLayer.rotationVariation?.[0] ?? 0,
+        y: firstLayer.rotationVariation?.[1] ?? 0,
+        z: firstLayer.rotationVariation?.[2] ?? 0
+      }
     },
     instances: {
       density: firstLayer.density,
+      pattern: firstLayer.pattern ?? 'grid-jitter',
       seed: firstLayer.seed
     },
     rendering: {
@@ -69,6 +84,8 @@ export const registerTextureAreaProperties = ({
   onUpdate
 }: RegisterTextureAreaOptions): void => {
   const elementPropertiesStore = useElementPropertiesStore()
+  const debugSceneStore = useDebugSceneStore()
+  debugSceneStore.addSceneElement({ name: areaName, type: 'TextureArea', hidden: false })
 
   // Initialize config for this area if not already present
   if (!areaConfigs.value[areaName]) {

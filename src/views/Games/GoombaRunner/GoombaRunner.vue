@@ -25,6 +25,7 @@ import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { createTimeline } from './animation'
 import '@/assets/prevents.css'
+import '@/assets/styles/game-ui.scss'
 import './styles.css'
 
 import { handleJumpGoomba } from './helpers/events'

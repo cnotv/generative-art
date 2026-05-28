@@ -8,17 +8,19 @@ const props = withDefaults(
     sidebarWidth?: string
     mainPlacement?: 'fill' | 'center'
     hideHeaderOnMobile?: boolean
+    sidebarVisible?: boolean
   }>(),
   {
     showSidebar: false,
     sidebarWidth: '280px',
     mainPlacement: 'center',
-    hideHeaderOnMobile: false
+    hideHeaderOnMobile: false,
+    sidebarVisible: undefined
   }
 )
 
 const slots = useSlots()
-const hasSidebar = computed(() => !!slots.sidebar)
+const hasSidebar = computed(() => (props.sidebarVisible ?? true) && !!slots.sidebar)
 const hasRules = computed(() => !!slots.rules)
 const rulesOpen = ref(false)
 
