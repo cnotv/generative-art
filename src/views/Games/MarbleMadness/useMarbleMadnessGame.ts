@@ -146,7 +146,7 @@ const buildCloudObjects = (
       rotation[1] + applyVariation(0, rotationVariation[1]),
       rotation[2] + applyVariation(0, rotationVariation[2])
     ]
-    return getCube(scene, world, {
+    const cloud = getCube(scene, world, {
       size: instanceSize,
       position,
       rotation: instanceRotation,
@@ -154,12 +154,18 @@ const buildCloudObjects = (
       material: 'MeshBasicMaterial',
       transparent: true,
       opacity,
-      alphaTest: 0.4,
+      alphaTest: 0.5,
       depthWrite: false,
+      renderOrder: 1,
       type: 'fixed',
       castShadow: false,
       receiveShadow: false
     })
+    const cloudMesh = cloud as unknown as THREE.Mesh
+    cloudMesh.geometry.dispose()
+    cloudMesh.geometry = new THREE.PlaneGeometry(instanceSize[0], instanceSize[2])
+    if (cloudMesh.material instanceof THREE.Material) cloudMesh.material.side = THREE.DoubleSide
+    return cloud
   })
 }
 
