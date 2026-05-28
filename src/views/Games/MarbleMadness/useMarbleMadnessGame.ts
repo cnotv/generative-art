@@ -155,6 +155,7 @@ const buildCloudObjects = (
       transparent: true,
       opacity,
       alphaTest: 0.4,
+      depthWrite: false,
       type: 'fixed',
       castShadow: false,
       receiveShadow: false
