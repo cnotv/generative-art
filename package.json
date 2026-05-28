@@ -39,6 +39,7 @@
       "eslint --fix"
     ],
     "*.{vue,scss,css}": [
+      "prettier --write",
       "stylelint --fix"
     ],
     "*.{json,md}": [
