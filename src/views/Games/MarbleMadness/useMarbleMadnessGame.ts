@@ -23,6 +23,7 @@ import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
+import { registerObjectProperties } from '@/utils/objectProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import {
@@ -67,6 +68,7 @@ type Vec3 = { x: number; y: number; z: number }
 
 type MarbleState = {
   marbleMesh: ComplexModel | null
+  groundSphereMesh: THREE.Mesh | null
   controls: ControlsExtras | null
   posAccumulator: number
   finished: Ref<boolean>
@@ -155,6 +157,20 @@ const buildCloudObjects = (
       castShadow: false,
       receiveShadow: false
     })
+  })
+}
+
+const disposeClouds = (
+  objects: ComplexModel[],
+  scene: THREE.Scene | null,
+  world: NonNullable<GetToolsResult['world']> | null
+): void => {
+  objects.forEach((cloudObject) => {
+    const mesh = cloudObject as unknown as THREE.Mesh
+    scene?.remove(cloudObject)
+    mesh.geometry.dispose()
+    if (mesh.material instanceof THREE.Material) mesh.material.dispose()
+    world?.removeRigidBody(cloudObject.userData.body)
   })
 }
 
@@ -420,6 +436,7 @@ const buildSceneSetupConfig = (track: TrackConfig) => ({
 export const useMarbleMadnessGame = (deps: GameDeps) => {
   const state: MarbleState = {
     marbleMesh: null,
+    groundSphereMesh: null,
     controls: null,
     posAccumulator: 0,
     finished: ref(false),
@@ -434,17 +451,6 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
   let cloudObjects: ComplexModel[] = []
   const areaConfigs = ref<Record<string, Record<string, unknown>>>({})
 
-  const clearClouds = (): void => {
-    cloudObjects.forEach((cloudObject) => {
-      const mesh = cloudObject as unknown as THREE.Mesh
-      sceneReference?.remove(cloudObject)
-      mesh.geometry.dispose()
-      if (mesh.material instanceof THREE.Material) mesh.material.dispose()
-      worldReference?.removeRigidBody(cloudObject.userData.body)
-    })
-    cloudObjects = []
-  }
-
   const buildGame = async ({ scene, world, camera, getDelta, animate, orbit }: SceneContext) => {
     if (!world) return
     sceneReference = scene
@@ -455,11 +461,11 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     const track = deps.track.value
     cloudObjects = setupCloudArea(scene, world, areaConfigs, (options) => {
       if (!sceneReference || !worldReference) return
-      clearClouds()
+      disposeClouds(cloudObjects, sceneReference, worldReference)
       cloudObjects = buildCloudObjects(sceneReference, worldReference, options)
     })
     buildCourse(scene, world, track)
-    getBall(scene, undefined, {
+    state.groundSphereMesh = getBall(scene, undefined, {
       size: GROUND_SPHERE_RADIUS,
       position: GROUND_SPHERE_CENTER,
       color: GROUND_SPHERE_COLOR,
@@ -467,6 +473,8 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       castShadow: false,
       receiveShadow: false
     })
+    useDebugSceneStore().addSceneElement({ name: 'Ground', type: 'Mesh', hidden: false })
+    registerObjectProperties({ object: state.groundSphereMesh, name: 'Ground', title: 'Ground' })
     state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
       position: track.spawnPosition,
@@ -516,8 +524,11 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     sceneReference = null
     worldReference = null
     cloudObjects = []
+    state.groundSphereMesh = null
     useDebugSceneStore().removeSceneElement(CLOUD_AREA_NAME)
+    useDebugSceneStore().removeSceneElement('Ground')
     useElementPropertiesStore().unregisterElementProperties(CLOUD_AREA_NAME)
+    useElementPropertiesStore().unregisterElementProperties('Ground')
     if (cleanupTools) {
       cleanupTools()
       cleanupTools = null
