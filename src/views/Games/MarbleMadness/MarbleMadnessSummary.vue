@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import type { MmPlayer } from '@/stores/marbleMadness'
 
 const props = defineProps<{
@@ -31,19 +31,51 @@ const winnerName = (): string => {
   return winner?.name ?? 'Unknown'
 }
 
+const RESTART_KEYS = new Set([
+  'w',
+  'a',
+  's',
+  'd',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight'
+])
+const RESTART_DELAY_MS = 2000
+
+const showPlayAgain = ref(false)
+let restartTimer: ReturnType<typeof setTimeout> | null = null
+
 const handlePlayAgain = (): void => {
   emit('restart')
 }
 
+const handleEscKey = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') emit('leaveRoom')
+}
+
+const handleRestartKey = (event: KeyboardEvent): void => {
+  if (!RESTART_KEYS.has(event.key)) return
+  window.removeEventListener('keydown', handleRestartKey)
+  handlePlayAgain()
+}
+
 onMounted(() => {
   if (props.isSolo) {
-    window.addEventListener('keydown', handlePlayAgain, { once: true })
-    window.addEventListener('touchstart', handlePlayAgain, { once: true })
+    window.addEventListener('keydown', handleEscKey)
+    restartTimer = setTimeout(() => {
+      showPlayAgain.value = true
+      window.addEventListener('keydown', handleRestartKey)
+      window.addEventListener('touchstart', handlePlayAgain, { once: true })
+      restartTimer = null
+    }, RESTART_DELAY_MS)
   }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handlePlayAgain)
+  if (restartTimer) clearTimeout(restartTimer)
+  window.removeEventListener('keydown', handleEscKey)
+  window.removeEventListener('keydown', handleRestartKey)
   window.removeEventListener('touchstart', handlePlayAgain)
 })
 </script>
@@ -56,7 +88,12 @@ onUnmounted(() => {
       <div v-else-if="bestTime !== null" class="mm-summary__best">
         Best: {{ formatTime(bestTime) }}
       </div>
-      <div class="mm-summary__move-hint">Move to play again</div>
+      <Transition name="mm-summary-fade">
+        <div v-if="showPlayAgain" class="mm-summary__move-hint">Move to play again</div>
+      </Transition>
+      <Transition name="mm-summary-fade">
+        <div v-if="showPlayAgain" class="mm-summary__esc-hint">Esc — Settings</div>
+      </Transition>
     </template>
 
     <div v-else class="mm-summary__card">
@@ -128,18 +165,8 @@ onUnmounted(() => {
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
-  text-shadow:
-    -2px -2px 0 #fff,
-    2px -2px 0 #fff,
-    -2px 2px 0 #fff,
-    2px 2px 0 #fff,
-    -2px 0 0 #fff,
-    2px 0 0 #fff,
-    0 -2px 0 #fff,
-    0 2px 0 #fff,
-    0.08em 0.1em 0 #000,
-    0.14em 0.17em 0 rgb(0 0 0 / 0.5);
+  color: #333;
+  text-shadow: var(--shadow-text-game-large);
   animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s both;
 }
 
@@ -153,7 +180,7 @@ onUnmounted(() => {
   font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
-  color: #fff;
+  color: #f44;
   text-shadow:
     -2px -2px 0 #fff,
     2px -2px 0 #fff,
@@ -169,6 +196,18 @@ onUnmounted(() => {
   animation:
     mm-summary-slide-in 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both,
     mm-hint-pulse 2s ease-in-out 0.75s infinite;
+}
+
+.mm-summary__esc-hint {
+  margin-top: var(--spacing-2);
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-weight: 700;
+  font-family: var(--font-playful);
+  color: #fff;
+  text-shadow: var(--shadow-text-game);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  animation: mm-summary-slide-in 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s both;
 }
 
 /* Multiplayer: transparent card with playful type */
@@ -319,6 +358,10 @@ onUnmounted(() => {
 
 .mm-summary__btn:hover {
   transform: scale(1.08);
+}
+
+.mm-summary-fade-enter-active {
+  animation: mm-summary-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .mm-summary__waiting {

@@ -1,3 +1,4 @@
+import cloudUrl from '@/assets/images/goomba/cloud.png'
 import { ref, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
@@ -6,14 +7,24 @@ import {
   getTools,
   getBall,
   getCube,
-  cameraFollowPlayer,
   moveDynamic,
+  generateAreaPositions,
   type ComplexModel
 } from '@webgamekit/threejs'
+import {
+  createCameraFollowAction,
+  createDirectionalLightFollowAction,
+  createPhysicsSyncAction,
+  createTimerAction,
+  createFallCheckAction
+} from '@/utils/gameTimelineActions'
 import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
+import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
+import { useDebugSceneStore } from '@/stores/debugScene'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
 import {
   MARBLE_RADIUS,
   MARBLE_WEIGHT,
@@ -33,7 +44,12 @@ import {
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
-  FINISH_DISC_RADIUS_RATIO,
+  CLOUD_AREA_NAME,
+  CLOUD_AREA_SEED,
+  CLOUD_AREA_CONTROLS,
+  LIGHT_SHADOW_RADIUS,
+  LIGHT_SHADOW_BIAS,
+  LIGHT_SHADOW_CAMERA,
   type TrackConfig
 } from './config'
 import type { GameDeps, BallPosPayload } from './types'
@@ -56,12 +72,53 @@ type MarbleState = {
   finished: Ref<boolean>
   elapsed: Ref<number>
   penaltyCount: Ref<number>
+  directionalLight: THREE.DirectionalLight | null
 }
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
-const FINISH_DISC_HEIGHT = 0.6
-const FINISH_DISC_THICKNESS = 0.15
-const FINISH_DISC_SEGMENTS = 32
+const PLATFORM_HALF_HEIGHT = 0.5
+const CLOUD_Y = -14
+const CLOUD_AREA_CENTER_Z = -700
+const CLOUD_AREA_WIDTH = 600
+const CLOUD_AREA_DEPTH = 1400
+const CLOUD_BASE_WIDTH = 100
+const CLOUD_BASE_HEIGHT = 0.5
+const CLOUD_BASE_DEPTH = 60
+const CLOUD_DENSITY = 30
+const CLOUD_AREA_CENTER: CoordinateTuple = [0, CLOUD_Y, CLOUD_AREA_CENTER_Z]
+const CLOUD_AREA_SIZE: CoordinateTuple = [CLOUD_AREA_WIDTH, 0, CLOUD_AREA_DEPTH]
+const CLOUD_BASE_SIZE: CoordinateTuple = [CLOUD_BASE_WIDTH, CLOUD_BASE_HEIGHT, CLOUD_BASE_DEPTH]
+
+type CloudBuildOptions = {
+  center: CoordinateTuple
+  size: CoordinateTuple
+  baseSize: CoordinateTuple
+  count: number
+  seed: number
+  opacity: number
+}
+
+const buildCloudObjects = (
+  scene: THREE.Scene,
+  world: NonNullable<GetToolsResult['world']>,
+  options: CloudBuildOptions
+): ComplexModel[] => {
+  const { center, size, baseSize, count, seed, opacity } = options
+  const positions = generateAreaPositions({ center, size, count, pattern: 'grid-jitter', seed })
+  return positions.map((position) =>
+    getCube(scene, world, {
+      size: baseSize,
+      position,
+      texture: cloudUrl,
+      material: 'MeshBasicMaterial',
+      transparent: true,
+      opacity,
+      type: 'fixed',
+      castShadow: false,
+      receiveShadow: false
+    })
+  )
+}
 
 const applyDamping = (model: ComplexModel): void => {
   model.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
@@ -121,24 +178,6 @@ const buildCourse = (
   })
 }
 
-const addFinishMarker = (scene: THREE.Scene, track: TrackConfig): void => {
-  const discRadius = track.finishCheckRadius * FINISH_DISC_RADIUS_RATIO
-  const geometry = new THREE.CylinderGeometry(
-    discRadius,
-    discRadius,
-    FINISH_DISC_THICKNESS,
-    FINISH_DISC_SEGMENTS
-  )
-  const material = new THREE.MeshStandardMaterial({
-    color: 0xffd700,
-    emissive: 0xffd700,
-    emissiveIntensity: 0.3
-  })
-  const disc = new THREE.Mesh(geometry, material)
-  disc.position.set(track.finishPosition[0], FINISH_DISC_HEIGHT, track.finishPosition[2])
-  scene.add(disc)
-}
-
 const makeGhostMarble = (scene: THREE.Scene, colorHex: number, texture?: string): THREE.Mesh =>
   getBall(scene, undefined, {
     size: MARBLE_RADIUS,
@@ -171,42 +210,34 @@ const buildTimeline = (
     }
   })
 
-  timeline.addAction({
-    name: 'marble-sync',
-    category: 'physics',
-    start: 0,
-    action: () => {
-      if (!state.marbleMesh) return
-      const pos = state.marbleMesh.userData.body.translation()
-      state.marbleMesh.position.set(pos.x, pos.y, pos.z)
-      const rot = state.marbleMesh.userData.body.rotation()
-      state.marbleMesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
-    }
-  })
+  timeline.addAction(createPhysicsSyncAction(() => state.marbleMesh, PLATFORM_HALF_HEIGHT))
+  timeline.addAction(
+    createDirectionalLightFollowAction(
+      () => state.directionalLight,
+      () => state.marbleMesh,
+      LIGHT_DIRECTIONAL_POSITION as CoordinateTuple
+    )
+  )
+  timeline.addAction(
+    createCameraFollowAction(
+      camera,
+      () => state.marbleMesh,
+      CAMERA_OFFSET,
+      () => orbit
+    )
+  )
 
-  timeline.addAction({
-    name: 'camera-follow',
-    category: 'camera',
-    start: 0,
-    action: () => {
-      if (!state.marbleMesh || orbit?.enabled) return
-      cameraFollowPlayer(camera, state.marbleMesh, CAMERA_OFFSET, orbit)
-    }
-  })
-
-  timeline.addAction({
-    name: 'fall-check',
-    category: 'physics',
-    start: 0,
-    action: () => {
-      if (!state.marbleMesh) return
-      if (state.marbleMesh.position.y < FALL_THRESHOLD_Y) {
+  timeline.addAction(
+    createFallCheckAction(
+      () => state.marbleMesh,
+      FALL_THRESHOLD_Y,
+      () => {
         state.elapsed.value += TIME_PENALTY_FALL
         state.penaltyCount.value += 1
-        respawn(state.marbleMesh, deps.track.value.spawnPosition)
+        if (state.marbleMesh) respawn(state.marbleMesh, deps.track.value.spawnPosition)
       }
-    }
-  })
+    )
+  )
 
   timeline.addAction({
     name: 'finish-check',
@@ -236,18 +267,87 @@ const buildTimeline = (
     }
   })
 
-  timeline.addAction({
-    name: 'timer',
-    category: 'ui',
-    start: 0,
-    action: () => {
-      if (state.finished.value) return
-      state.elapsed.value += getDelta()
-    }
-  })
+  timeline.addAction(createTimerAction(state.elapsed, () => state.finished.value, getDelta))
 
   return timeline
 }
+
+type CloudAreaRebuildCallback = (options: CloudBuildOptions) => void
+
+const setupCloudArea = (
+  scene: THREE.Scene,
+  world: NonNullable<GetToolsResult['world']>,
+  areaConfigs: Ref<Record<string, Record<string, unknown>>>,
+  onRebuild: CloudAreaRebuildCallback
+): ComplexModel[] => {
+  const initialObjects = buildCloudObjects(scene, world, {
+    center: CLOUD_AREA_CENTER,
+    size: CLOUD_AREA_SIZE,
+    baseSize: CLOUD_BASE_SIZE,
+    count: CLOUD_DENSITY,
+    seed: CLOUD_AREA_SEED,
+    opacity: 1
+  })
+  registerTextureAreaProperties({
+    areaName: CLOUD_AREA_NAME,
+    layers: [
+      {
+        name: CLOUD_AREA_NAME,
+        texture: cloudUrl,
+        baseSize: CLOUD_BASE_SIZE,
+        center: CLOUD_AREA_CENTER,
+        size: CLOUD_AREA_SIZE,
+        density: CLOUD_DENSITY,
+        seed: CLOUD_AREA_SEED,
+        speed: 0,
+        opacity: 1
+      }
+    ],
+    schema: CLOUD_AREA_CONTROLS,
+    areaConfigs,
+    onUpdate: (name) => {
+      const config = areaConfigs.value[name]
+      if (!config) return
+      const area = config.area as {
+        center: { x: number; y: number; z: number }
+        size: { x: number; y: number; z: number }
+      }
+      const textures = config.textures as { baseSize: { x: number; y: number; z: number } }
+      const instances = config.instances as { density: number; seed: number }
+      const rendering = config.rendering as { opacity: number }
+      onRebuild({
+        center: [area.center.x, area.center.y, area.center.z],
+        size: [area.size.x, area.size.y, area.size.z],
+        baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z],
+        count: instances.density,
+        seed: instances.seed,
+        opacity: rendering.opacity
+      })
+    }
+  })
+  return initialObjects
+}
+
+const buildSceneSetupConfig = (track: TrackConfig) => ({
+  camera: {
+    position: [
+      track.spawnPosition[0],
+      track.spawnPosition[1] + CAMERA_HEIGHT,
+      track.spawnPosition[2] + CAMERA_BACK
+    ] as CoordinateTuple
+  },
+  orbit: { disabled: true },
+  ground: false as const,
+  sky: false as const,
+  lights: {
+    ambient: { intensity: LIGHT_AMBIENT_INTENSITY },
+    directional: {
+      intensity: LIGHT_DIRECTIONAL_INTENSITY,
+      position: LIGHT_DIRECTIONAL_POSITION as CoordinateTuple,
+      shadow: { radius: LIGHT_SHADOW_RADIUS, bias: LIGHT_SHADOW_BIAS, camera: LIGHT_SHADOW_CAMERA }
+    }
+  }
+})
 
 /**
  * Set up and manage the MarbleMadness Three.js scene, physics, and game loop.
@@ -261,18 +361,41 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     posAccumulator: 0,
     finished: ref(false),
     elapsed: ref(0),
-    penaltyCount: ref(0)
+    penaltyCount: ref(0),
+    directionalLight: null
   }
   let cleanupTools: (() => void) | null = null
   const ghostMeshes = new Map<string, THREE.Mesh>()
   let sceneReference: THREE.Scene | null = null
+  let worldReference: NonNullable<GetToolsResult['world']> | null = null
+  let cloudObjects: ComplexModel[] = []
+  const areaConfigs = ref<Record<string, Record<string, unknown>>>({})
+
+  const clearClouds = (): void => {
+    cloudObjects.forEach((cloudObject) => {
+      const mesh = cloudObject as unknown as THREE.Mesh
+      sceneReference?.remove(cloudObject)
+      mesh.geometry.dispose()
+      if (mesh.material instanceof THREE.Material) mesh.material.dispose()
+      worldReference?.removeRigidBody(cloudObject.userData.body)
+    })
+    cloudObjects = []
+  }
 
   const buildGame = async ({ scene, world, camera, getDelta, animate, orbit }: SceneContext) => {
     if (!world) return
     sceneReference = scene
+    worldReference = world
+    state.directionalLight =
+      (scene.children.find((c) => c instanceof THREE.DirectionalLight) as THREE.DirectionalLight) ??
+      null
     const track = deps.track.value
+    cloudObjects = setupCloudArea(scene, world, areaConfigs, (options) => {
+      if (!sceneReference || !worldReference) return
+      clearClouds()
+      cloudObjects = buildCloudObjects(sceneReference, worldReference, options)
+    })
     buildCourse(scene, world, track)
-    addFinishMarker(scene, track)
     state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
       position: track.spawnPosition,
@@ -298,25 +421,7 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
     await tools.setup({
-      config: {
-        camera: {
-          position: [
-            track.spawnPosition[0],
-            track.spawnPosition[1] + CAMERA_HEIGHT,
-            track.spawnPosition[2] + CAMERA_BACK
-          ] as CoordinateTuple
-        },
-        orbit: { disabled: true },
-        ground: false,
-        sky: false,
-        lights: {
-          ambient: { intensity: LIGHT_AMBIENT_INTENSITY },
-          directional: {
-            intensity: LIGHT_DIRECTIONAL_INTENSITY,
-            position: LIGHT_DIRECTIONAL_POSITION as CoordinateTuple
-          }
-        }
-      },
+      config: buildSceneSetupConfig(track),
       defineSetup: async ({ orbit }) => {
         await buildGame({
           scene: tools.scene,
@@ -335,8 +440,13 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     state.controls?.destroyControls()
     state.marbleMesh = null
     state.controls = null
+    state.directionalLight = null
     ghostMeshes.clear()
     sceneReference = null
+    worldReference = null
+    cloudObjects = []
+    useDebugSceneStore().removeSceneElement(CLOUD_AREA_NAME)
+    useElementPropertiesStore().unregisterElementProperties(CLOUD_AREA_NAME)
     if (cleanupTools) {
       cleanupTools()
       cleanupTools = null

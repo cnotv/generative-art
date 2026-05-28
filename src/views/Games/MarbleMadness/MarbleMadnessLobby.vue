@@ -100,8 +100,10 @@ const isAvailable = (marbleId: string): boolean =>
 
 .mml__marble-grid {
   display: flex;
-  gap: var(--spacing-3);
+  column-gap: var(--spacing-4);
+  row-gap: var(--spacing-6);
   flex-wrap: wrap;
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-8);
 }
 
 .mml__marble-btn {
@@ -113,7 +115,10 @@ const isAvailable = (marbleId: string): boolean =>
   border-radius: 50%;
   background: none;
   cursor: pointer;
-  box-shadow: 2px 4px 8px rgb(0 0 0 / 0.45);
+  box-shadow:
+    0 14px 6px 0 rgb(0 0 0 / 0.5),
+    0 30px 14px -2px rgb(0 0 0 / 0.28),
+    0 52px 28px -6px rgb(0 0 0 / 0.1);
   transition:
     transform 0.15s,
     opacity 0.15s;

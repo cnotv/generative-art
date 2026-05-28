@@ -508,6 +508,48 @@ onUnmounted(() => removeGoogleFont(FONT_KEY))
 | Danger / penalty   | `#ff4444`                                               |
 | Muted / hint       | `#fff` at reduced opacity via `mm-hint-pulse` animation |
 
+### Game Lighting — Crisp Shadows by Default
+
+Every 3D game must use crisp, contact-quality directional shadows unless the brief explicitly calls for soft shadows. Apply this config pattern (from `config.ts`) in every new game:
+
+```typescript
+lights: {
+  directional: {
+    shadow: {
+      radius: 1,      // no PCF blur
+      bias: 0,        // no halo at tight frustum
+      camera: { left: -25, right: 25, top: 25, bottom: -25, near: 0.5, far: 300 }
+    }
+  }
+}
+```
+
+The `±25` frustum gives ~82 px/unit shadow detail at 4096×4096 — six times sharper than the default `±150`. Adjust the range to fit the scene, but keep it as tight as possible.
+
+**The light must follow the player/camera every frame.** Use `createDirectionalLightFollowAction` from `src/utils/gameTimelineActions.ts`:
+
+```typescript
+timeline.addAction(
+  createDirectionalLightFollowAction(
+    () => state.directionalLight,
+    () => state.playerMesh,
+    LIGHT_DIRECTIONAL_POSITION as CoordinateTuple
+  )
+)
+```
+
+`LIGHT_DIRECTIONAL_POSITION` is a fixed world-space offset (e.g. `[15, 30, 10]`). Both `light.position` and `light.target.position` move with the player, keeping the shadow angle constant and the frustum centered on the action.
+
+Also use the other timeline action factories from `src/utils/gameTimelineActions.ts` to avoid boilerplate:
+
+| Factory                              | Purpose                                                |
+| ------------------------------------ | ------------------------------------------------------ |
+| `createPhysicsSyncAction`            | Sync Rapier body → Three.js mesh each frame            |
+| `createDirectionalLightFollowAction` | Move light + target to track a mesh                    |
+| `createCameraFollowAction`           | Smooth camera follow with orbit-controls bypass        |
+| `createTimerAction`                  | Accumulate elapsed time, stop when finished            |
+| `createFallCheckAction`              | Trigger a callback when mesh drops below a Y threshold |
+
 ---
 
 ## Router Conventions

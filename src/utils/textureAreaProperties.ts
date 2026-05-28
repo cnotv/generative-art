@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { useDebugSceneStore } from '@/stores/debugScene'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
 interface TextureAreaLayer {
@@ -69,6 +70,8 @@ export const registerTextureAreaProperties = ({
   onUpdate
 }: RegisterTextureAreaOptions): void => {
   const elementPropertiesStore = useElementPropertiesStore()
+  const debugSceneStore = useDebugSceneStore()
+  debugSceneStore.addSceneElement({ name: areaName, type: 'TextureArea', hidden: false })
 
   // Initialize config for this area if not already present
   if (!areaConfigs.value[areaName]) {
