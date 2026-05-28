@@ -64,6 +64,7 @@ const buildPhysicalMaterial = (
   if (options.ior !== undefined) props.ior = options.ior
   if (options.thickness !== undefined) props.thickness = options.thickness
   if (options.envMapIntensity !== undefined) props.envMapIntensity = options.envMapIntensity
+  if (options.displacementScale !== undefined) props.displacementScale = options.displacementScale
   return new THREE.MeshPhysicalMaterial(props)
 }
 
@@ -266,12 +267,19 @@ const applyModelMaterial = (
 const getCubeSizeArray = (size: number | CoordinateTuple): CoordinateTuple =>
   typeof size === 'number' ? [size, size, size] : size
 
-const applyTextureToMesh = (mesh: THREE.Mesh, texture: string | undefined): void => {
+const applyTextureToMesh = (
+  mesh: THREE.Mesh,
+  texture: string | undefined,
+  options: ModelOptions = {}
+): void => {
   if (!texture) return
-  if (Array.isArray(mesh.material)) {
-    ;(mesh.material[0] as THREE.MeshStandardMaterial).map = textureLoader.load(texture)
-  } else {
-    ;(mesh.material as THREE.MeshStandardMaterial).map = textureLoader.load(texture)
+  const tex = textureLoader.load(texture)
+  const mat = Array.isArray(mesh.material)
+    ? (mesh.material[0] as THREE.MeshPhysicalMaterial)
+    : (mesh.material as THREE.MeshPhysicalMaterial)
+  mat.map = tex
+  if (options.displacementScale !== undefined && options.displacementScale > 0) {
+    mat.displacementMap = tex
   }
 }
 
@@ -598,7 +606,7 @@ export const getBall = (
   if (setUV2) geometry.setAttribute('uv2', geometry.attributes['uv'])
   const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
 
-  applyTextureToMesh(mesh, texture)
+  applyTextureToMesh(mesh, texture, options)
 
   if (name) mesh.name = name
   mesh.position.set(...position)

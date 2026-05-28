@@ -116,8 +116,8 @@ const LONG_ROAD_TRACK: TrackConfig = {
 const SLOPES_TRACK: TrackConfig = {
   name: 'Slopes',
   spawnPosition: [0, 1.5, 4],
-  finishPosition: [0, -4, -170],
-  finishCheckZ: -157,
+  finishPosition: [0, -4, -163],
+  finishCheckZ: -155,
   finishCheckRadius: 8,
   platforms: [
     { size: [18, 1, 14], position: [0, 0, 0], color: PLATFORM_COLOR },
@@ -135,7 +135,7 @@ const SLOPES_TRACK: TrackConfig = {
     // Diagonal: combines forward slope and side tilt
     { size: [7, 1, 20], position: [0, -2, -137], color: BRIDGE_COLOR, rotation: [-0.2, 0, 0.2] },
     { size: [8, 1, 8], position: [0, -4.5, -153], color: BRIDGE_COLOR },
-    { size: [16, 1, 16], position: [0, -4.5, -170], color: FINISH_COLOR, isFinish: true }
+    { size: [16, 1, 16], position: [0, -4.5, -163], color: FINISH_COLOR, isFinish: true }
   ],
   obstacles: [
     { size: [2.5, 2, 2.5], position: [-2, -5.5, -48] },

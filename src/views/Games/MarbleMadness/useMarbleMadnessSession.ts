@@ -145,6 +145,7 @@ const bindGameEvents = (ctx: MmContext, joined: P2PSession): void => {
   p2pOnData<ChatMessage>(joined, CHAT_CHANNEL, (message) => ctx.store.appendMessage(message))
 
   p2pOnData<StartPayload>(joined, START_CHANNEL, (payload) => {
+    ctx.onStart(payload.trackIndex)
     ctx.store.raceStartTime = payload.timestamp
     ctx.store.phase = 'playing'
   })
@@ -193,18 +194,19 @@ const initSessionForContext = (ctx: MmContext, roomId: string): void => {
  */
 export const useMarbleMadnessSession = (
   options: UseMarbleMadnessSessionOptions,
-  onBallPos: (peerId: string, pos: BallPosPayload) => void = () => {}
+  onBallPos: (peerId: string, pos: BallPosPayload) => void = () => {},
+  onStart: (trackIndex: number) => void = () => {}
 ) => {
   const store = useMarbleMadnessStore()
   const session = ref<P2PSession | null>(null)
   const localPeerId = ref<string>('')
   const isHost = computed(() => store.hostId === localPeerId.value && localPeerId.value !== '')
 
-  const ctx: MmContext = { options, store, session, localPeerId, isHost, onBallPos }
+  const ctx: MmContext = { options, store, session, localPeerId, isHost, onBallPos, onStart }
 
-  const startGame = (): void => {
+  const startGame = (trackIndex: number): void => {
     if (!session.value || !isHost.value) return
-    const payload: StartPayload = { timestamp: Date.now() }
+    const payload: StartPayload = { timestamp: Date.now(), trackIndex }
     p2pSendData(session.value, START_CHANNEL, payload)
     store.raceStartTime = payload.timestamp
     store.phase = 'playing'

@@ -5,8 +5,16 @@ import type { useMarbleMadnessStore } from '@/stores/marbleMadness'
 
 export type HelloPayload = { name: string; color: string; marble: string }
 export type AvatarPayload = { name: string; color: string; marble: string }
-export type StartPayload = { timestamp: number }
-export type BallPosPayload = { x: number; y: number; z: number }
+export type StartPayload = { timestamp: number; trackIndex: number }
+export type BallPosPayload = {
+  x: number
+  y: number
+  z: number
+  rx: number
+  ry: number
+  rz: number
+  rw: number
+}
 export type FinishPayload = { playerId: string; time: number }
 
 export type UseMarbleMadnessSessionOptions = {
@@ -23,6 +31,7 @@ export type MmContext = {
   localPeerId: Ref<string>
   isHost: ComputedRef<boolean>
   onBallPos: (peerId: string, pos: BallPosPayload) => void
+  onStart: (trackIndex: number) => void
 }
 
 export type GameDeps = {

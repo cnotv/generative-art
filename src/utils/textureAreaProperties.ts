@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { toRaw } from 'vue'
 import * as THREE from 'three'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -87,24 +88,21 @@ export const registerTextureAreaProperties = ({
   const debugSceneStore = useDebugSceneStore()
   debugSceneStore.addSceneElement({ name: areaName, type: 'TextureArea', hidden: false })
 
-  // Initialize config for this area if not already present
   if (!areaConfigs.value[areaName]) {
-    areaConfigs.value = {
-      ...areaConfigs.value,
-      [areaName]: buildTextureAreaConfig(layers)
-    }
+    toRaw(areaConfigs.value)[areaName] = buildTextureAreaConfig(layers)
   }
 
   elementPropertiesStore.registerElementProperties(areaName, {
     title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
     type: 'TextureArea',
     schema,
-    getValue: (path: string) => getNestedValue(areaConfigs.value[areaName], path),
+    getValue: (path: string) => {
+      const raw = toRaw(areaConfigs.value)
+      return getNestedValue(raw[areaName], path)
+    },
     updateValue: (path: string, value: unknown) => {
-      areaConfigs.value = {
-        ...areaConfigs.value,
-        [areaName]: setNestedValueImmutable(areaConfigs.value[areaName], path, value)
-      }
+      const raw = toRaw(areaConfigs.value)
+      raw[areaName] = setNestedValueImmutable(raw[areaName], path, value)
       onUpdate?.(areaName, path, value)
     }
   })

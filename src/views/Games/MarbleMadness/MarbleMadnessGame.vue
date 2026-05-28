@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { isMobile } from '@webgamekit/controls'
+import TouchControl from '@/components/TouchControl.vue'
 import { TIME_PENALTY_FALL } from './config'
+
+const isMobileDevice = isMobile()
 
 const props = defineProps<{
   elapsed: number
   finished: boolean
   penaltyCount: number
   trackName: string
+  currentActions?: Record<string, unknown>
 }>()
 
 const emit = defineEmits<{ escape: [] }>()
@@ -101,6 +106,15 @@ onUnmounted(() => {
     </Transition>
 
     <canvas ref="canvas" class="mm-game__canvas" />
+
+    <TouchControl
+      v-if="isMobileDevice && currentActions"
+      class="mm-game__fauxpad"
+      :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
+      :options="{ deadzone: 0.15 }"
+      :current-actions="currentActions"
+      :on-action="() => {}"
+    />
   </div>
 </template>
 
@@ -119,6 +133,12 @@ onUnmounted(() => {
   flex: 1;
   width: 100%;
   display: block;
+}
+
+.mm-game__fauxpad {
+  position: absolute;
+  left: var(--spacing-6);
+  bottom: var(--spacing-6);
 }
 
 .mm-game__time {

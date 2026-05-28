@@ -81,6 +81,54 @@ flowchart LR
 
 The shadow token value matches the GoombaRunner pattern: eight 1 px text-shadows form a full white outline, followed by a stack of progressively offset black drops that create the layered 3-D effect. Two sizes are defined — standard and large — for body text and titles respectively.
 
+## Scene polish: fog, ball shading, and mobile controls
+
+### Exponential fog with matched background
+
+Adding `THREE.FogExp2` to the scene gives the ground sphere a natural fade at a distance, preventing the hard visual cut where the sphere edge meets the sky. The fog colour (`FOG_COLOR`) is assigned to both `scene.fog` and `scene.background` so the Three.js clear colour matches the fog — without this, the background renders as a distinct band behind the faded geometry.
+
+Exponential fog (`FogExp2`) was preferred over linear fog because the density increase is perceptually smoother: distant objects fade quickly while nearby geometry stays crisp.
+
+```mermaid
+flowchart LR
+    A[scene.fog = FogExp2] --> B[fragments blended toward fog colour by distance]
+    A --> C[scene.background = same colour]
+    B --> D[ground sphere fades naturally]
+    C --> D
+```
+
+### Ball shading via MeshPhysicalMaterial properties
+
+The player marble uses `MeshPhysicalMaterial` (the default for `getBall`). Passing `roughness` and `metalness` through `ModelOptions` into the material constructor gives specular highlights without any external texture file. Low roughness concentrates the specular lobe; moderate metalness tints the reflection toward the diffuse colour.
+
+The same marble texture is reused as the `displacementMap`. This pushes vertices outward along their normals proportional to the texture's brightness, adding subtle surface relief to the sphere. The sphere segment count was raised to 48 to give the displacement enough geometry to work with.
+
+```mermaid
+flowchart TD
+    A[ModelOptions: roughness, metalness, displacementScale] --> B[buildPhysicalMaterial]
+    B --> C[MeshPhysicalMaterial with props]
+    D[applyTextureToMesh] --> E[mat.map = tex]
+    D --> F[mat.displacementMap = tex\nwhen displacementScale > 0]
+```
+
+### Mobile faux-pad via existing TouchControl
+
+The `@webgamekit/controls` package already ships `createFauxPadController`, and the app already has a `TouchControl.vue` component wrapping it. Wiring the faux-pad to the marble game required exposing the controls' `currentActions` object from `useMarbleMadnessGame` — it is created inside `buildGame` (async), so a `ref` initialised to `{}` is assigned the live object after `createControls` resolves.
+
+`TouchControl` receives this ref's value as a prop and mutates it directly when directions change. Because the game loop reads `state.controls.currentActions` every frame, the same object reference means touch input is picked up with no extra glue.
+
+```mermaid
+sequenceDiagram
+    participant T as TouchControl
+    participant R as currentActionsReference (ref)
+    participant L as game loop
+
+    T->>R: currentActions['forward'] = …
+    L->>R: read currentActions each frame
+    L->>L: computeImpulse → apply force
+    T->>R: delete currentActions['forward']
+```
+
 ## Winner name overflow: viewport-relative sizing
 
 The multiplayer summary screen shows the winning player's name above a "Wins!" heading. Long player names broke the layout in two ways: the text wrapped to a second line, or it overflowed the container on narrow viewports.
