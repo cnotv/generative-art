@@ -124,7 +124,7 @@ watch(
 
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
-  if (props.showResults) restoreStep()
+  restoreStep()
 })
 </script>
 

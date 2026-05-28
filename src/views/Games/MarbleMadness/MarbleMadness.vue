@@ -277,6 +277,7 @@ onUnmounted(() => {
         :finished="game.finished.value"
         :penalty-count="game.penaltyCount.value"
         :track-name="track.name"
+        @escape="store.phase = 'lobby'"
       />
       <MarbleMadnessSummary
         v-if="phase === 'summary'"

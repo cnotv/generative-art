@@ -9,6 +9,8 @@ const props = defineProps<{
   trackName: string
 }>()
 
+const emit = defineEmits<{ escape: [] }>()
+
 const canvas = ref<HTMLCanvasElement | null>(null)
 defineExpose({ canvas })
 
@@ -42,6 +44,10 @@ const hideInstructions = (): void => {
   showInstructions.value = false
 }
 
+const handleEscKey = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') emit('escape')
+}
+
 const TRACK_NAME_DISPLAY_MS = 2200
 const showTrackName = ref(false)
 let trackNameTimer: ReturnType<typeof setTimeout> | null = null
@@ -60,12 +66,14 @@ watch(() => props.trackName, flashTrackName)
 onMounted(() => {
   window.addEventListener('keydown', hideInstructions, { once: true })
   window.addEventListener('touchstart', hideInstructions, { once: true })
+  window.addEventListener('keydown', handleEscKey)
   flashTrackName()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', hideInstructions)
   window.removeEventListener('touchstart', hideInstructions)
+  window.removeEventListener('keydown', handleEscKey)
   if (penaltyTimer) clearTimeout(penaltyTimer)
   if (trackNameTimer) clearTimeout(trackNameTimer)
 })
@@ -87,7 +95,8 @@ onUnmounted(() => {
 
     <Transition name="mm-instructions">
       <div v-if="showInstructions && !finished" class="mm-game__instructions">
-        WASD / Arrow keys to roll
+        <span class="mm-game__instructions-move">WASD / Arrow keys to roll</span>
+        <span class="mm-game__instructions-esc">Esc — Settings</span>
       </div>
     </Transition>
 
@@ -185,16 +194,32 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-2);
+  pointer-events: none;
+  z-index: 15;
+  text-transform: uppercase;
+}
+
+.mm-game__instructions-move {
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
   text-shadow: var(--shadow-text-game);
-  pointer-events: none;
-  z-index: 15;
-  text-transform: uppercase;
+  line-height: 1;
+}
+
+.mm-game__instructions-esc {
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-weight: 700;
+  font-family: var(--font-playful);
+  color: #fff;
+  text-shadow: var(--shadow-text-game);
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 .mm-penalty-enter-active {

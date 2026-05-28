@@ -38,10 +38,10 @@ export const LIGHT_DIRECTIONAL_POSITION: [number, number, number] = [10, 20, 10]
 export const LIGHT_SHADOW_RADIUS = 1
 export const LIGHT_SHADOW_BIAS = 0
 export const LIGHT_SHADOW_CAMERA = {
-  left: -25,
-  right: 25,
-  top: 25,
-  bottom: -25,
+  left: -35,
+  right: 35,
+  top: 35,
+  bottom: -35,
   near: 0.5,
   far: 300
 }
@@ -250,8 +250,8 @@ const GAUNTLET_TRACK: TrackConfig = {
 const SPEED_RUN_TRACK: TrackConfig = {
   name: 'Speed Run',
   spawnPosition: [0, 2, 4],
-  finishPosition: [0, -10, -138],
-  finishCheckZ: -131,
+  finishPosition: [0, -10, -128],
+  finishCheckZ: -121,
   finishCheckRadius: 6,
   platforms: [
     // Wide start — z: 6→-6
@@ -302,8 +302,8 @@ export const CLOUD_AREA_CONTROLS = {
     center: {
       label: 'Center Position',
       component: 'CoordinateInput',
-      min: { x: -2000, y: -100, z: -5000 },
-      max: { x: 2000, y: 0, z: 0 },
+      min: { x: -2000, y: -200, z: -500 },
+      max: { x: 2000, y: 0, z: 500 },
       step: { x: 10, y: 1, z: 10 }
     },
     size: {
@@ -321,10 +321,28 @@ export const CLOUD_AREA_CONTROLS = {
       min: { x: 10, y: 0.1, z: 10 },
       max: { x: 500, y: 5, z: 500 },
       step: { x: 5, y: 0.1, z: 5 }
+    },
+    sizeVariation: {
+      label: 'Size Variation',
+      component: 'CoordinateInput',
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 200, y: 5, z: 200 },
+      step: { x: 5, y: 0.1, z: 5 }
+    },
+    rotationVariation: {
+      label: 'Rotation Variation',
+      component: 'CoordinateInput',
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 6.28, y: 6.28, z: 6.28 },
+      step: { x: 0.1, y: 0.1, z: 0.1 }
     }
   },
   instances: {
     density: { min: 1, max: 100, step: 1, label: 'Count' },
+    pattern: {
+      label: 'Distribution Pattern',
+      options: ['random', 'grid', 'grid-jitter']
+    },
     seed: { min: 0, max: 9999, step: 1, label: 'Seed' }
   },
   rendering: {

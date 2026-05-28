@@ -77,47 +77,85 @@ type MarbleState = {
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
 const PLATFORM_HALF_HEIGHT = 0.5
-const CLOUD_Y = -14
-const CLOUD_AREA_CENTER_Z = -700
+const CLOUD_Y = -100
+const CLOUD_AREA_CENTER_Z = 50
+const CLOUD_ROTATION: CoordinateTuple = [Math.PI / 2, 0, 0]
 const CLOUD_AREA_WIDTH = 600
 const CLOUD_AREA_DEPTH = 1400
-const CLOUD_BASE_WIDTH = 100
-const CLOUD_BASE_HEIGHT = 0.5
+const CLOUD_BASE_WIDTH = 145
+const CLOUD_BASE_HEIGHT = 0.001
 const CLOUD_BASE_DEPTH = 60
 const CLOUD_DENSITY = 30
 const CLOUD_AREA_CENTER: CoordinateTuple = [0, CLOUD_Y, CLOUD_AREA_CENTER_Z]
 const CLOUD_AREA_SIZE: CoordinateTuple = [CLOUD_AREA_WIDTH, 0, CLOUD_AREA_DEPTH]
 const CLOUD_BASE_SIZE: CoordinateTuple = [CLOUD_BASE_WIDTH, CLOUD_BASE_HEIGHT, CLOUD_BASE_DEPTH]
 
+const GROUND_SPHERE_RADIUS = 600
+const GROUND_SPHERE_Y = -700
+const GROUND_SPHERE_Z = -120
+const GROUND_SPHERE_CENTER: CoordinateTuple = [0, GROUND_SPHERE_Y, GROUND_SPHERE_Z]
+const GROUND_SPHERE_COLOR = 0x4a7a3a
+
 type CloudBuildOptions = {
   center: CoordinateTuple
   size: CoordinateTuple
   baseSize: CoordinateTuple
+  rotation: CoordinateTuple
+  sizeVariation: CoordinateTuple
+  rotationVariation: CoordinateTuple
+  pattern: 'random' | 'grid' | 'grid-jitter'
   count: number
   seed: number
   opacity: number
 }
+
+const HALF = 0.5
+const applyVariation = (base: number, variation: number): number =>
+  base + (Math.random() - HALF) * 2 * variation
 
 const buildCloudObjects = (
   scene: THREE.Scene,
   world: NonNullable<GetToolsResult['world']>,
   options: CloudBuildOptions
 ): ComplexModel[] => {
-  const { center, size, baseSize, count, seed, opacity } = options
-  const positions = generateAreaPositions({ center, size, count, pattern: 'grid-jitter', seed })
-  return positions.map((position) =>
-    getCube(scene, world, {
-      size: baseSize,
+  const {
+    center,
+    size,
+    baseSize,
+    rotation,
+    sizeVariation,
+    rotationVariation,
+    pattern,
+    count,
+    seed,
+    opacity
+  } = options
+  const positions = generateAreaPositions({ center, size, count, pattern, seed })
+  return positions.map((position) => {
+    const instanceSize: CoordinateTuple = [
+      Math.max(1, applyVariation(baseSize[0], sizeVariation[0])),
+      baseSize[1],
+      Math.max(1, applyVariation(baseSize[2], sizeVariation[2]))
+    ]
+    const instanceRotation: CoordinateTuple = [
+      rotation[0] + applyVariation(0, rotationVariation[0]),
+      rotation[1] + applyVariation(0, rotationVariation[1]),
+      rotation[2] + applyVariation(0, rotationVariation[2])
+    ]
+    return getCube(scene, world, {
+      size: instanceSize,
       position,
+      rotation: instanceRotation,
       texture: cloudUrl,
       material: 'MeshBasicMaterial',
       transparent: true,
       opacity,
+      alphaTest: 0.1,
       type: 'fixed',
       castShadow: false,
       receiveShadow: false
     })
-  )
+  })
 }
 
 const applyDamping = (model: ComplexModel): void => {
@@ -280,10 +318,15 @@ const setupCloudArea = (
   areaConfigs: Ref<Record<string, Record<string, unknown>>>,
   onRebuild: CloudAreaRebuildCallback
 ): ComplexModel[] => {
+  const NO_VARIATION: CoordinateTuple = [0, 0, 0]
   const initialObjects = buildCloudObjects(scene, world, {
     center: CLOUD_AREA_CENTER,
     size: CLOUD_AREA_SIZE,
     baseSize: CLOUD_BASE_SIZE,
+    rotation: CLOUD_ROTATION,
+    sizeVariation: NO_VARIATION,
+    rotationVariation: NO_VARIATION,
+    pattern: 'grid-jitter',
     count: CLOUD_DENSITY,
     seed: CLOUD_AREA_SEED,
     opacity: 1
@@ -312,13 +355,33 @@ const setupCloudArea = (
         center: { x: number; y: number; z: number }
         size: { x: number; y: number; z: number }
       }
-      const textures = config.textures as { baseSize: { x: number; y: number; z: number } }
-      const instances = config.instances as { density: number; seed: number }
+      const textures = config.textures as {
+        baseSize: { x: number; y: number; z: number }
+        sizeVariation: { x: number; y: number; z: number }
+        rotationVariation: { x: number; y: number; z: number }
+      }
+      const instances = config.instances as {
+        density: number
+        pattern: 'random' | 'grid' | 'grid-jitter'
+        seed: number
+      }
       const rendering = config.rendering as { opacity: number }
       onRebuild({
         center: [area.center.x, area.center.y, area.center.z],
         size: [area.size.x, area.size.y, area.size.z],
         baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z],
+        rotation: CLOUD_ROTATION,
+        sizeVariation: [
+          textures.sizeVariation.x,
+          textures.sizeVariation.y,
+          textures.sizeVariation.z
+        ],
+        rotationVariation: [
+          textures.rotationVariation.x,
+          textures.rotationVariation.y,
+          textures.rotationVariation.z
+        ],
+        pattern: instances.pattern,
         count: instances.density,
         seed: instances.seed,
         opacity: rendering.opacity
@@ -396,6 +459,14 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       cloudObjects = buildCloudObjects(sceneReference, worldReference, options)
     })
     buildCourse(scene, world, track)
+    getBall(scene, undefined, {
+      size: GROUND_SPHERE_RADIUS,
+      position: GROUND_SPHERE_CENTER,
+      color: GROUND_SPHERE_COLOR,
+      segments: 64,
+      castShadow: false,
+      receiveShadow: false
+    })
     state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
       position: track.spawnPosition,
