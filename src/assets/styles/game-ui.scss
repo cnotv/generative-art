@@ -13,6 +13,5 @@
     clamp(2px, 0.16em, 3px) clamp(2px, 0.2em, 4px) 0 #000;
   --shadow-text-game-large:
     -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff,
-    0 -1px 0 #fff, 0 1px 0 #fff, 0.06em 0.1em 0.12em rgb(0 0 0 / 0.6),
-    0.1em 0.18em 0.28em rgb(0 0 0 / 0.35);
+    0 -1px 0 #fff, 0 1px 0 #fff, clamp(2px, 0.16em, 4px) clamp(2px, 0.2em, 6px) 0 #333;
 }
