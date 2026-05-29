@@ -136,13 +136,40 @@ const applyColorCorrection = async (composer: EffectComposer, config: PostProces
   })
 }
 
+const applyOutline = async (
+  composer: EffectComposer,
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+  config: PostProcessingConfig
+): Promise<((sceneReference: THREE.Scene) => void) | null> => {
+  if (!config?.outline) return null
+  const { OutlinePass } = await import('three/examples/jsm/postprocessing/OutlinePass.js')
+  const { color = 0x333333, strength = 3, thickness = 1 } = config.outline
+  const pass = new OutlinePass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    scene,
+    camera
+  )
+  pass.visibleEdgeColor.set(color)
+  pass.hiddenEdgeColor.set(color)
+  pass.edgeStrength = strength
+  pass.edgeThickness = thickness
+  pass.edgeGlow = 0
+  composer.addPass(pass)
+  return (sceneReference: THREE.Scene) => {
+    sceneReference.traverse((object) => {
+      if (object instanceof THREE.Mesh) pass.selectedObjects.push(object)
+    })
+  }
+}
+
 /**
  * Abstracted postprocessing setup function
  * @param renderer
  * @param scene
  * @param camera
  * @param config
- * @returns EffectComposer|null
+ * @returns composer and optional populateOutline callback to call after scene is built
  */
 const setupPostprocessing = async ({
   renderer,
@@ -154,7 +181,10 @@ const setupPostprocessing = async ({
   scene: THREE.Scene
   camera: THREE.Camera
   config: PostProcessingConfig
-}) => {
+}): Promise<{
+  composer: EffectComposer
+  populateOutline: ((sceneReference: THREE.Scene) => void) | null
+} | null> => {
   const hasEffects =
     config && Object.keys(config).some((key) => !!(config as Record<string, unknown>)[key])
   if (!hasEffects) return null
@@ -176,8 +206,9 @@ const setupPostprocessing = async ({
   await applySimplePasses(composer, scene, camera, config)
   await applyVignette(composer, config)
   await applyColorCorrection(composer, config)
+  const populateOutline = await applyOutline(composer, scene, camera, config)
 
-  return composer
+  return { composer, populateOutline }
 }
 
 export { setupPostprocessing, addShaderPass, EffectComposer, RenderPass, ShaderPass }

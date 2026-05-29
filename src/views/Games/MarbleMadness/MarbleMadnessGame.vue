@@ -182,7 +182,7 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #fff;
-  text-shadow: var(--shadow-text-game-large);
+  text-shadow: var(--shadow-text-game);
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;

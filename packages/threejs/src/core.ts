@@ -144,6 +144,21 @@ const emitProgress = (
   callback?.({ stage, detail, done })
 }
 
+const createResizeHandler =
+  (renderer: THREE.WebGLRenderer, camera: THREE.Camera): (() => void) =>
+  () => {
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    if (camera instanceof THREE.OrthographicCamera) {
+      const halfH = camera.top
+      const newHalfW = halfH * (window.innerWidth / window.innerHeight)
+      camera.left = -newHalfW
+      camera.right = newHalfW
+    } else {
+      ;(camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight
+    }
+    ;(camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).updateProjectionMatrix()
+  }
+
 export const getTools = async ({
   stats,
   route,
@@ -159,6 +174,7 @@ export const getTools = async ({
   const { renderer, scene, camera, world } = await getEnvironment(canvas)
   activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
+  let populateOutline: ((sceneReference: THREE.Scene) => void) | null = null
   if (video && route) video.record(canvas, route)
   const getDelta = () => delta
   let orbit: OrbitControls | null = null
@@ -183,14 +199,20 @@ export const getTools = async ({
     frameRate = resolved?.global?.frameRate || frameRate
     if (resolved.orbit !== false) orbit = createOrbitControls(camera, renderer, resolved.orbit)
     const ground = applySceneConfig(scene, camera, world, resolved)
-    if (config.postprocessing)
-      composer = await setupPostprocessing({
+    if (config.postprocessing) {
+      const pp = await setupPostprocessing({
         renderer,
         scene,
         camera,
         config: config.postprocessing
       })
+      if (pp) {
+        composer = pp.composer
+        populateOutline = pp.populateOutline
+      }
+    }
     if (defineSetup) await defineSetup({ ground, orbit })
+    if (populateOutline) populateOutline(scene)
     emitProgress(onProgress, 'Ready', undefined, true)
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }
@@ -257,18 +279,7 @@ export const getTools = async ({
     runAnimation()
   }
 
-  const handleResize = () => {
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    if (camera instanceof THREE.OrthographicCamera) {
-      const halfH = camera.top
-      const newHalfW = halfH * (window.innerWidth / window.innerHeight)
-      camera.left = -newHalfW
-      camera.right = newHalfW
-    } else {
-      ;(camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight
-    }
-    camera.updateProjectionMatrix()
-  }
+  const handleResize = createResizeHandler(renderer, camera)
 
   if (resize !== false) {
     window.addEventListener('resize', handleResize)

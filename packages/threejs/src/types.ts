@@ -161,6 +161,11 @@ export interface PostProcessingConfig {
     saturation?: number
     brightness?: number
   }
+  outline?: {
+    color?: number
+    strength?: number
+    thickness?: number
+  }
 }
 
 export interface CameraConfig {
