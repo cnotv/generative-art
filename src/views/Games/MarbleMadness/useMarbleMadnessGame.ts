@@ -578,7 +578,6 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
       texture: deps.marble.value,
       roughness: 0.08,
       metalness: 0.2,
-      displacementScale: 0.08,
       segments: 48,
       type: 'dynamic'
     }) as unknown as ComplexModel
