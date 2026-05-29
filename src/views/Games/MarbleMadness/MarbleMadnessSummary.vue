@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import type { MmPlayer } from '@/stores/marbleMadness'
+import type { GameMode } from './types'
 
 const props = defineProps<{
+  mode: GameMode
   playerList: MmPlayer[]
   winnerId: string | null
   localPeerId: string
@@ -11,6 +13,9 @@ const props = defineProps<{
   soloFinalTime: number
   bestTime: number | null
   isNewBest: boolean
+  rushDistance: number
+  rushBestDistance: number | null
+  isNewRushBest: boolean
 }>()
 
 const emit = defineEmits<{
@@ -82,7 +87,21 @@ onUnmounted(() => {
 
 <template>
   <div class="mm-summary" :class="{ 'mm-summary--solo': isSolo }">
-    <template v-if="isSolo">
+    <template v-if="isSolo && mode === 'rush'">
+      <div class="mm-summary__solo-time">{{ rushDistance }}m</div>
+      <div v-if="isNewRushBest" class="mm-summary__best mm-summary__best--new">New best!</div>
+      <div v-else-if="rushBestDistance !== null" class="mm-summary__best">
+        Best: {{ rushBestDistance }}m
+      </div>
+      <Transition name="mm-summary-fade">
+        <div v-if="showPlayAgain" class="mm-summary__move-hint">Move to play again</div>
+      </Transition>
+      <Transition name="mm-summary-fade">
+        <div v-if="showPlayAgain" class="mm-summary__esc-hint">Esc — Settings</div>
+      </Transition>
+    </template>
+
+    <template v-else-if="isSolo">
       <div class="mm-summary__solo-time">{{ formatTime(soloFinalTime) }}</div>
       <div v-if="isNewBest" class="mm-summary__best mm-summary__best--new">New best!</div>
       <div v-else-if="bestTime !== null" class="mm-summary__best">

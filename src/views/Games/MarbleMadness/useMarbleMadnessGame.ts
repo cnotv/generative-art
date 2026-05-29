@@ -50,6 +50,7 @@ import {
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA,
+  PLATFORM_HALF_HEIGHT,
   type TrackConfig
 } from './config'
 import type { GameDeps, BallPosPayload } from './types'
@@ -77,7 +78,6 @@ type MarbleState = {
 }
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
-const PLATFORM_HALF_HEIGHT = 0.5
 const STROKE_COLOR = 0x333333
 const STROKE_SCALE = 1.05
 const STROKE_MATERIAL = new THREE.MeshBasicMaterial({ color: STROKE_COLOR, side: THREE.BackSide })

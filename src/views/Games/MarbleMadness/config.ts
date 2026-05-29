@@ -56,7 +56,7 @@ export const BRIDGE_COLOR = 0x9e9e9e
 export const OBSTACLE_COLOR = 0xd32f2f
 export const FINISH_COLOR = 0xffd700
 
-export type PlatformDef = {
+export type PlatformDefinition = {
   size: CoordinateTuple
   position: CoordinateTuple
   color: number
@@ -71,7 +71,7 @@ export type ObstacleDef = {
 
 export type TrackConfig = {
   name: string
-  platforms: PlatformDef[]
+  platforms: PlatformDefinition[]
   obstacles: ObstacleDef[]
   spawnPosition: CoordinateTuple
   finishPosition: CoordinateTuple
@@ -350,6 +350,24 @@ export const CLOUD_AREA_CONTROLS = {
     speed: { min: 0, max: 0, step: 0, label: 'Speed' }
   }
 }
+
+export const PLATFORM_HALF_HEIGHT = 0.5
+
+export const RUSH_COUNTDOWN = 30
+export const RUSH_TIME_BONUS = 3
+export const RUSH_FALL_PENALTY = 5
+export const RUSH_LOOKAHEAD_Z = 120
+export const RUSH_DISPOSE_BEHIND = 80
+export const RUSH_MAX_DIFFICULTY_DISTANCE = 400
+export const RUSH_BEST_KEY = 'mm-rush-best'
+export const RUSH_SPAWN: CoordinateTuple = [0, 1.5, 0]
+export const RUSH_PLATFORM_COLOR = 0x1565c0
+export const RUSH_BRIDGE_COLOR = 0x0097a7
+export const RUSH_PICKUP_COLOR = 0xffc107
+export const RUSH_PICKUP_RADIUS = 0.45
+export const RUSH_PICKUP_COLLECT_RADIUS = 1.8
+export const RUSH_SKY_COLOR = 0x87ceeb
+export const RUSH_FOG_DENSITY = 0.006
 
 export const KEYBOARD_MAPPING = {
   keyboard: {

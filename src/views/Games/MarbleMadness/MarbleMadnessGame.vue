@@ -3,11 +3,15 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { TIME_PENALTY_FALL } from './config'
+import type { GameMode } from './types'
 
 const isMobileDevice = isMobile()
 
 const props = defineProps<{
+  mode: GameMode
   elapsed: number
+  countdown: number
+  distance: number
   finished: boolean
   penaltyCount: number
   trackName: string
@@ -25,6 +29,10 @@ const elapsedDisplay = computed((): string => {
   const secs = total % 60
   return `${mins}:${secs.toString().padStart(2, '0')}`
 })
+
+const countdownDisplay = computed((): string => String(Math.ceil(props.countdown)).padStart(2, '0'))
+const distanceDisplay = computed((): string => `${Math.floor(props.distance)}m`)
+const countdownLow = computed((): boolean => props.countdown <= 10)
 
 const PENALTY_DISPLAY_MS = 1500
 const showPenalty = ref(false)
@@ -86,16 +94,24 @@ onUnmounted(() => {
 
 <template>
   <div class="mm-game">
-    <span class="mm-game__time">{{ elapsedDisplay }}</span>
+    <template v-if="mode === 'rush'">
+      <span class="mm-game__time" :class="{ 'mm-game__time--low': countdownLow }">
+        {{ countdownDisplay }}
+      </span>
+      <span class="mm-game__distance">{{ distanceDisplay }}</span>
+    </template>
+    <span v-else class="mm-game__time">{{ elapsedDisplay }}</span>
 
     <Transition name="mm-penalty">
       <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
-        +{{ TIME_PENALTY_FALL }}s
+        {{ mode === 'rush' ? `-${TIME_PENALTY_FALL}s` : `+${TIME_PENALTY_FALL}s` }}
       </span>
     </Transition>
 
     <Transition name="mm-track-name">
-      <div v-if="showTrackName" class="mm-game__track-name">{{ trackName }}</div>
+      <div v-if="showTrackName && mode === 'race'" class="mm-game__track-name">
+        {{ trackName }}
+      </div>
     </Transition>
 
     <Transition name="mm-instructions">
@@ -152,6 +168,26 @@ onUnmounted(() => {
   color: #333;
   font-variant-numeric: tabular-nums;
   text-shadow: var(--shadow-text-game-large);
+  z-index: 10;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.mm-game__time--low {
+  color: #f44;
+}
+
+.mm-game__distance {
+  position: absolute;
+  top: var(--spacing-3);
+  right: var(--spacing-4);
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--shadow-text-game);
   z-index: 10;
   white-space: nowrap;
   pointer-events: none;

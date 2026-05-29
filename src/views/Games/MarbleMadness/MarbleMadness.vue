@@ -7,7 +7,9 @@ import { storeToRefs } from 'pinia'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
 import { useMarbleMadnessSession } from './useMarbleMadnessSession'
 import { useMarbleMadnessGame } from './useMarbleMadnessGame'
+import { useMarbleMadnessRushGame } from './useMarbleMadnessRushGame'
 import { useRoomId } from '@/composables/useRoomId'
+import type { GameMode } from './types'
 import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
 import {
   loadProfile,
@@ -55,6 +57,8 @@ const bestTime = ref<number | null>(
 const gameReference = ref<InstanceType<typeof MarbleMadnessGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
+const gameMode = ref<GameMode>('race')
+
 const marbleUrl = computed(
   () => MARBLE_OPTIONS.find((m) => m.id === playerMarble.value)?.url ?? DEFAULT_MARBLE.url
 )
@@ -79,6 +83,15 @@ const session = useMarbleMadnessSession(
 const { isHost, localPeerId } = session
 
 const solo = computed(() => store.solo)
+
+const rushGame = useMarbleMadnessRushGame({
+  canvas,
+  marble: marbleUrl,
+  onGameOver: () => {
+    store.winnerId = localPeerId.value || 'solo'
+    store.phase = 'summary'
+  }
+})
 
 const game = useMarbleMadnessGame({
   canvas,
@@ -145,10 +158,15 @@ const sidebarPlayers = computed((): MultiplayerPlayer[] =>
 watch(phase, async (newPhase) => {
   if (newPhase === 'playing') {
     await nextTick()
-    game.init()
+    if (gameMode.value === 'rush') {
+      rushGame.init()
+    } else {
+      game.init()
+    }
   }
   if (newPhase === 'lobby') {
     game.destroy()
+    rushGame.destroy()
   }
 })
 
@@ -188,7 +206,7 @@ const handleConfigChange = (key: string, value: string | number): void => {
 
 const handleStartGame = (): void => {
   const isSolo = playerList.value.length <= 1
-  if (isSolo) {
+  if (isSolo || gameMode.value === 'rush') {
     store.solo = true
     store.upsertPlayer({
       id: localPeerId.value || 'solo',
@@ -209,6 +227,11 @@ const handleRestart = (): void => {
     runElapsed.value = 0
     trackIndex.value = 0
     store.winnerId = null
+    if (gameMode.value === 'rush') {
+      rushGame.destroy()
+    } else {
+      game.destroy()
+    }
     store.phase = 'playing'
   } else {
     session.restartGame()
@@ -263,6 +286,7 @@ onUnmounted(() => {
       :is-host="isHost"
       :player-list="playerList"
       :room-id="roomId"
+      :mode="gameMode"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
       @name-change="handleNameChange"
@@ -271,20 +295,27 @@ onUnmounted(() => {
       @leave-room="handleLeaveRoom"
       @config-change="handleConfigChange"
       @marble-change="handleMarbleChange"
+      @mode-change="gameMode = $event"
     />
 
     <div v-else class="mm__play-area">
       <MarbleMadnessGame
         ref="gameReference"
+        :mode="gameMode"
         :elapsed="game.elapsed.value"
-        :finished="game.finished.value"
-        :penalty-count="game.penaltyCount.value"
+        :countdown="rushGame.countdown.value"
+        :distance="rushGame.distance.value"
+        :finished="gameMode === 'rush' ? rushGame.finished.value : game.finished.value"
+        :penalty-count="gameMode === 'rush' ? rushGame.penaltyCount.value : game.penaltyCount.value"
         :track-name="track.name"
-        :current-actions="game.currentActions.value"
+        :current-actions="
+          gameMode === 'rush' ? rushGame.currentActions.value : game.currentActions.value
+        "
         @escape="store.phase = 'lobby'"
       />
       <MarbleMadnessSummary
         v-if="phase === 'summary'"
+        :mode="gameMode"
         :player-list="playerList"
         :winner-id="winnerId"
         :local-peer-id="localPeerId"
@@ -293,6 +324,9 @@ onUnmounted(() => {
         :solo-final-time="soloFinalTime"
         :best-time="bestTime"
         :is-new-best="isNewBest"
+        :rush-distance="Math.floor(rushGame.distance.value)"
+        :rush-best-distance="rushGame.bestDistance.value"
+        :is-new-rush-best="rushGame.isNewBest.value"
         @restart="handleRestart"
         @leave-room="handleLeaveRoom"
       />
