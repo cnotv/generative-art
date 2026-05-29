@@ -364,15 +364,7 @@ const initRushScene = async (
   ) as THREE.DirectionalLight | null
 
   state.controls = createControls({ mapping: KEYBOARD_MAPPING })
-  state.controls.onAction((action, actionState) => {
-    if (actionState === 'start')
-      reactives.currentActions.value = { ...reactives.currentActions.value, [action]: true }
-    else {
-      const next = { ...reactives.currentActions.value }
-      delete next[action]
-      reactives.currentActions.value = next
-    }
-  })
+  reactives.currentActions.value = state.controls.currentActions as unknown as ControlsCurrents
 
   const initialMeshes = spawnChunkMeshes(scene, world, [
     {
@@ -499,7 +491,8 @@ export const useMarbleMadnessRushGame = (deps: RushDeps) => {
   let state = makeInitialState()
 
   const init = (): void => {
-    if (deps.canvas.value) initRushScene(deps.canvas.value, deps, state, reactives)
+    if (deps.canvas.value)
+      initRushScene(deps.canvas.value, deps, state, reactives).catch(console.error)
   }
 
   const destroy = (): void => {
