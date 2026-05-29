@@ -1,4 +1,5 @@
 import cloudUrl from '@/assets/images/goomba/cloud.png'
+import { attachBallStroke, addEdgeLinesToScene } from './marbleVisuals'
 import { ref, reactive, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
@@ -78,49 +79,6 @@ type MarbleState = {
 }
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
-const STROKE_COLOR = 0x333333
-const STROKE_SCALE = 1.05
-const STROKE_MATERIAL = new THREE.MeshBasicMaterial({ color: STROKE_COLOR, side: THREE.BackSide })
-const EDGE_THRESHOLD_ANGLE = 15
-const EDGE_LINE_WIDTH = 2
-
-const attachBallStroke = (mesh: THREE.Mesh): void => {
-  const hull = new THREE.Mesh(mesh.geometry, STROKE_MATERIAL)
-  hull.scale.setScalar(STROKE_SCALE)
-  hull.userData.skipEdgeLines = true
-  mesh.add(hull)
-}
-
-const isSolidMesh = (object: THREE.Object3D): object is THREE.Mesh => {
-  if (!(object instanceof THREE.Mesh)) return false
-  if (object.userData.skipEdgeLines) return false
-  const mat = Array.isArray(object.material) ? object.material[0] : object.material
-  return !(mat instanceof THREE.Material && mat.transparent)
-}
-
-const attachEdgeLines = async (mesh: THREE.Mesh): Promise<void> => {
-  const [{ LineMaterial }, { LineSegments2 }, { LineSegmentsGeometry }] = await Promise.all([
-    import('three/examples/jsm/lines/LineMaterial.js'),
-    import('three/examples/jsm/lines/LineSegments2.js'),
-    import('three/examples/jsm/lines/LineSegmentsGeometry.js')
-  ])
-  const edges = new THREE.EdgesGeometry(mesh.geometry, EDGE_THRESHOLD_ANGLE)
-  const geometry = new LineSegmentsGeometry().fromEdgesGeometry(edges)
-  const material = new LineMaterial({
-    color: STROKE_COLOR,
-    linewidth: EDGE_LINE_WIDTH,
-    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
-  })
-  const lines = new LineSegments2(geometry, material)
-  lines.userData.skipEdgeLines = true
-  mesh.add(lines)
-}
-
-const addEdgeLinesToScene = (scene: THREE.Scene): void => {
-  scene.traverse((object) => {
-    if (isSolidMesh(object)) attachEdgeLines(object)
-  })
-}
 
 const CLOUD_Y = -100
 const CLOUD_AREA_CENTER_Z = 50

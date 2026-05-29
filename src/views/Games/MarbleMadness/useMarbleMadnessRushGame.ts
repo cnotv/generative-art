@@ -17,6 +17,7 @@ import {
   createPhysicsSyncAction,
   createFallCheckAction
 } from '@/utils/gameTimelineActions'
+import { attachBallStroke, addEdgeLinesToScene } from './marbleVisuals'
 import {
   MARBLE_RADIUS,
   MARBLE_WEIGHT,
@@ -248,6 +249,7 @@ const spawnNextChunk = (
   })
   state.cursor = { z: endZ, x: state.cursor.x }
   state.chunkId += 1
+  addEdgeLinesToScene(scene)
 }
 
 const disposeChunk = (world: WorldReference, chunk: RushChunk): void => {
@@ -399,6 +401,8 @@ const initRushScene = async (
   }) as unknown as ComplexModel
   state.marble.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
   state.marble.userData.body.setAngularDamping(MARBLE_ANGULAR_DAMPING)
+  attachBallStroke(state.marble as unknown as THREE.Mesh)
+  addEdgeLinesToScene(scene)
 
   const timeline = createTimelineManager()
   timeline.addAction(createPhysicsSyncAction(() => state.marble, PLATFORM_HALF_HEIGHT))
