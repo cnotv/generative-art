@@ -156,7 +156,7 @@ const createResizeHandler =
     } else {
       ;(camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight
     }
-    camera.updateProjectionMatrix()
+    ;(camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).updateProjectionMatrix()
   }
 
 export const getTools = async ({
