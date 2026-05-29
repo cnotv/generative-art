@@ -142,6 +142,7 @@ const isAvailable = (marbleId: string): boolean =>
 
 .mml__marble-btn--active {
   transform: scale(1.3);
+  border: 2px solid #333;
 }
 
 .mml__marble-btn--taken {
