@@ -53,6 +53,8 @@ import {
   RUSH_PICKUP_COLLECT_RADIUS,
   RUSH_SKY_COLOR,
   RUSH_FOG_DENSITY,
+  RUSH_GAP_MIN,
+  RUSH_GAP_MAX,
   type PlatformDefinition
 } from './config'
 
@@ -167,7 +169,7 @@ const buildNarrow = (cursor: ChunkCursor, difficulty: number): ChunkBuildResult 
 }
 
 const buildGap = (cursor: ChunkCursor, difficulty: number): ChunkBuildResult => {
-  const gapSize = 1.5 + difficulty * 2.5
+  const gapSize = RUSH_GAP_MIN + difficulty * (RUSH_GAP_MAX - RUSH_GAP_MIN)
   const landingLength = 10
   const width = Math.max(6, Math.round(12 - difficulty * 6))
   const landingCenterZ = cursor.z - gapSize - landingLength / 2

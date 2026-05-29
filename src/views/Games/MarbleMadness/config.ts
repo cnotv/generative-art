@@ -353,6 +353,15 @@ export const CLOUD_AREA_CONTROLS = {
 
 export const PLATFORM_HALF_HEIGHT = 0.5
 
+const RUSH_GRAVITY = 9.81
+// Ball center is MARBLE_RADIUS above the platform top; that is the available fall height.
+// At MAX_LINEAR_SPEED the ball crosses: v * sqrt(2 * r / g) before dropping below the edge.
+export const RUSH_JUMP_RANGE = MAX_LINEAR_SPEED * Math.sqrt((2 * MARBLE_RADIUS) / RUSH_GRAVITY)
+// Minimum gap that forces the ball to jump: just wider than its diameter.
+export const RUSH_GAP_MIN = 2 * MARBLE_RADIUS
+// At max difficulty the gap reaches this fraction of the theoretical maximum.
+export const RUSH_GAP_MAX = RUSH_JUMP_RANGE * 0.5
+
 export const RUSH_COUNTDOWN = 30
 export const RUSH_TIME_BONUS = 3
 export const RUSH_FALL_PENALTY = 5
