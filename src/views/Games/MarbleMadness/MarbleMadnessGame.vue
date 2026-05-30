@@ -151,7 +151,7 @@ onUnmounted(() => {
       v-if="isMobileDevice && currentActions"
       class="mm-game__fauxpad"
       :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
-      :options="{ deadzone: 0.15 }"
+      :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"
       :on-action="() => {}"
     />
@@ -236,7 +236,7 @@ onUnmounted(() => {
 .mm-game__pickup {
   position: absolute;
   top: 5rem;
-  right: var(--spacing-6);
+  left: 50%;
   font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 900;
   font-family: var(--font-playful);

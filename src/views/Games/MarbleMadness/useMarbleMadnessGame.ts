@@ -1,17 +1,16 @@
-import cloudUrl from '@/assets/images/goomba/cloud.png'
 import { attachBallStroke, addEdgeLinesToScene } from './marbleVisuals'
-import { ref, reactive, watch, onUnmounted } from 'vue'
+import {
+  setupCloudArea,
+  teardownCloudArea,
+  addGroundSphereToScene,
+  registerGroundSphereProperties,
+  teardownGroundSphere
+} from './marbleEnvironment'
+import { ref, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import {
-  getTools,
-  getBall,
-  getCube,
-  moveDynamic,
-  generateAreaPositions,
-  type ComplexModel
-} from '@webgamekit/threejs'
+import { getTools, getBall, getCube, moveDynamic, type ComplexModel } from '@webgamekit/threejs'
 import {
   createCameraFollowAction,
   createDirectionalLightFollowAction,
@@ -23,9 +22,6 @@ import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
-import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
-import { useDebugSceneStore } from '@/stores/debugScene'
-import { useElementPropertiesStore } from '@/stores/elementProperties'
 import {
   MARBLE_RADIUS,
   MARBLE_WEIGHT,
@@ -45,9 +41,6 @@ import {
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
-  CLOUD_AREA_NAME,
-  CLOUD_AREA_SEED,
-  CLOUD_AREA_CONTROLS,
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA,
@@ -80,111 +73,8 @@ type MarbleState = {
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
 
-const CLOUD_Y = -100
-const CLOUD_AREA_CENTER_Z = 50
-const CLOUD_ROTATION: CoordinateTuple = [Math.PI / 2, 0, 0]
-const CLOUD_AREA_WIDTH = 600
-const CLOUD_AREA_DEPTH = 1400
-const CLOUD_BASE_WIDTH = 145
-const CLOUD_BASE_HEIGHT = 0.001
-const CLOUD_BASE_DEPTH = 60
-const CLOUD_DENSITY = 30
-const CLOUD_AREA_CENTER: CoordinateTuple = [0, CLOUD_Y, CLOUD_AREA_CENTER_Z]
-const CLOUD_AREA_SIZE: CoordinateTuple = [CLOUD_AREA_WIDTH, 0, CLOUD_AREA_DEPTH]
-const CLOUD_BASE_SIZE: CoordinateTuple = [CLOUD_BASE_WIDTH, CLOUD_BASE_HEIGHT, CLOUD_BASE_DEPTH]
-
 const FOG_COLOR = 0xb0d8f0
 const FOG_DENSITY = 0.0015
-
-const GROUND_SPHERE_RADIUS = 1500
-const GROUND_SPHERE_Y = -1700
-const GROUND_SPHERE_Z = -120
-const GROUND_SPHERE_CENTER: CoordinateTuple = [0, GROUND_SPHERE_Y, GROUND_SPHERE_Z]
-const GROUND_SPHERE_COLOR = 0x4a7a3a
-
-type CloudBuildOptions = {
-  center: CoordinateTuple
-  size: CoordinateTuple
-  baseSize: CoordinateTuple
-  rotation: CoordinateTuple
-  sizeVariation: CoordinateTuple
-  rotationVariation: CoordinateTuple
-  pattern: 'random' | 'grid' | 'grid-jitter'
-  count: number
-  seed: number
-  opacity: number
-}
-
-const HALF = 0.5
-const applyVariation = (base: number, variation: number): number =>
-  base + (Math.random() - HALF) * 2 * variation
-
-const buildCloudObjects = (
-  scene: THREE.Scene,
-  world: NonNullable<GetToolsResult['world']>,
-  options: CloudBuildOptions
-): ComplexModel[] => {
-  const {
-    center,
-    size,
-    baseSize,
-    rotation,
-    sizeVariation,
-    rotationVariation,
-    pattern,
-    count,
-    seed,
-    opacity
-  } = options
-  const positions = generateAreaPositions({ center, size, count, pattern, seed })
-  return positions.map((position) => {
-    const instanceSize: CoordinateTuple = [
-      Math.max(1, applyVariation(baseSize[0], sizeVariation[0])),
-      baseSize[1],
-      Math.max(1, applyVariation(baseSize[2], sizeVariation[2]))
-    ]
-    const instanceRotation: CoordinateTuple = [
-      rotation[0] + applyVariation(0, rotationVariation[0]),
-      rotation[1] + applyVariation(0, rotationVariation[1]),
-      rotation[2] + applyVariation(0, rotationVariation[2])
-    ]
-    const cloud = getCube(scene, world, {
-      size: instanceSize,
-      position,
-      rotation: instanceRotation,
-      texture: cloudUrl,
-      material: 'MeshBasicMaterial',
-      transparent: true,
-      opacity,
-      alphaTest: 0.5,
-      depthWrite: false,
-      renderOrder: 1,
-      type: 'fixed',
-      castShadow: false,
-      receiveShadow: false
-    })
-    const cloudMesh = cloud as unknown as THREE.Mesh
-    cloudMesh.geometry.dispose()
-    cloudMesh.geometry = new THREE.PlaneGeometry(instanceSize[0], instanceSize[2])
-    if (cloudMesh.material instanceof THREE.Material) cloudMesh.material.side = THREE.DoubleSide
-    cloudMesh.rotation.set(0, instanceRotation[1], instanceRotation[2])
-    return cloud
-  })
-}
-
-const disposeClouds = (
-  objects: ComplexModel[],
-  scene: THREE.Scene | null,
-  world: NonNullable<GetToolsResult['world']> | null
-): void => {
-  objects.forEach((cloudObject) => {
-    const mesh = cloudObject as unknown as THREE.Mesh
-    scene?.remove(cloudObject)
-    mesh.geometry.dispose()
-    if (mesh.material instanceof THREE.Material) mesh.material.dispose()
-    world?.removeRigidBody(cloudObject.userData.body)
-  })
-}
 
 const applyDamping = (model: ComplexModel): void => {
   model.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
@@ -373,87 +263,6 @@ const buildTimeline = (
   return timeline
 }
 
-type CloudAreaRebuildCallback = (options: CloudBuildOptions) => void
-
-const setupCloudArea = (
-  scene: THREE.Scene,
-  world: NonNullable<GetToolsResult['world']>,
-  areaConfigs: Ref<Record<string, Record<string, unknown>>>,
-  onRebuild: CloudAreaRebuildCallback
-): ComplexModel[] => {
-  const NO_VARIATION: CoordinateTuple = [0, 0, 0]
-  const initialObjects = buildCloudObjects(scene, world, {
-    center: CLOUD_AREA_CENTER,
-    size: CLOUD_AREA_SIZE,
-    baseSize: CLOUD_BASE_SIZE,
-    rotation: CLOUD_ROTATION,
-    sizeVariation: NO_VARIATION,
-    rotationVariation: NO_VARIATION,
-    pattern: 'grid-jitter',
-    count: CLOUD_DENSITY,
-    seed: CLOUD_AREA_SEED,
-    opacity: 1
-  })
-  registerTextureAreaProperties({
-    areaName: CLOUD_AREA_NAME,
-    layers: [
-      {
-        name: CLOUD_AREA_NAME,
-        texture: cloudUrl,
-        baseSize: CLOUD_BASE_SIZE,
-        center: CLOUD_AREA_CENTER,
-        size: CLOUD_AREA_SIZE,
-        density: CLOUD_DENSITY,
-        seed: CLOUD_AREA_SEED,
-        speed: 0,
-        opacity: 1
-      }
-    ],
-    schema: CLOUD_AREA_CONTROLS,
-    areaConfigs,
-    onUpdate: (name) => {
-      const config = areaConfigs.value[name]
-      if (!config) return
-      const area = config.area as {
-        center: { x: number; y: number; z: number }
-        size: { x: number; y: number; z: number }
-      }
-      const textures = config.textures as {
-        baseSize: { x: number; y: number; z: number }
-        sizeVariation: { x: number; y: number; z: number }
-        rotationVariation: { x: number; y: number; z: number }
-      }
-      const instances = config.instances as {
-        density: number
-        pattern: 'random' | 'grid' | 'grid-jitter'
-        seed: number
-      }
-      const rendering = config.rendering as { opacity: number }
-      onRebuild({
-        center: [area.center.x, area.center.y, area.center.z],
-        size: [area.size.x, area.size.y, area.size.z],
-        baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z],
-        rotation: CLOUD_ROTATION,
-        sizeVariation: [
-          textures.sizeVariation.x,
-          textures.sizeVariation.y,
-          textures.sizeVariation.z
-        ],
-        rotationVariation: [
-          textures.rotationVariation.x,
-          textures.rotationVariation.y,
-          textures.rotationVariation.z
-        ],
-        pattern: instances.pattern,
-        count: instances.density,
-        seed: instances.seed,
-        opacity: rendering.opacity
-      })
-    }
-  })
-  return initialObjects
-}
-
 const buildSceneSetupConfig = (track: TrackConfig) => ({
   camera: {
     position: [
@@ -475,52 +284,6 @@ const buildSceneSetupConfig = (track: TrackConfig) => ({
   }
 })
 
-const registerGroundSphereProperties = (groundMesh: THREE.Mesh): void => {
-  const state = reactive({
-    position: { x: groundMesh.position.x, y: groundMesh.position.y, z: groundMesh.position.z },
-    radius: groundMesh.scale.x * GROUND_SPHERE_RADIUS,
-    color: (groundMesh.material as THREE.MeshStandardMaterial).color.getHex()
-  })
-
-  useDebugSceneStore().addSceneElement({ name: 'Ground', type: 'Mesh', hidden: false })
-  useElementPropertiesStore().registerElementProperties('Ground', {
-    title: 'Ground',
-    type: 'Mesh',
-    schema: {
-      position: {
-        label: 'Position',
-        component: 'CoordinateInput',
-        min: { x: -2000, y: -2000, z: -2000 },
-        max: { x: 2000, y: 2000, z: 2000 },
-        step: { x: 10, y: 10, z: 10 }
-      },
-      radius: { label: 'Radius', min: 100, max: 2000, step: 10 },
-      color: { label: 'Color', color: true }
-    },
-    getValue: (path: string) => {
-      if (path === 'position')
-        return { x: state.position.x, y: state.position.y, z: state.position.z }
-      if (path === 'radius') return state.radius
-      if (path === 'color') return state.color
-      return undefined
-    },
-    updateValue: (path: string, value: unknown) => {
-      if (path === 'position') {
-        const v = value as { x: number; y: number; z: number }
-        state.position = { x: v.x, y: v.y, z: v.z }
-        groundMesh.position.set(v.x, v.y, v.z)
-      } else if (path === 'radius') {
-        state.radius = value as number
-        const scale = (value as number) / GROUND_SPHERE_RADIUS
-        groundMesh.scale.set(scale, scale, scale)
-      } else if (path === 'color') {
-        state.color = value as number
-        ;(groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value as number)
-      }
-    }
-  })
-}
-
 /**
  * Set up and manage the MarbleMadness Three.js scene, physics, and game loop.
  * @param deps - Canvas ref, solo flag, track config, win/position callbacks.
@@ -539,38 +302,20 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
   }
   let cleanupTools: (() => void) | null = null
   const ghostRegistry: GhostRegistry = { meshes: new Map(), scene: null }
-  let sceneReference: THREE.Scene | null = null
-  let worldReference: NonNullable<GetToolsResult['world']> | null = null
-  let cloudObjects: ComplexModel[] = []
   const currentActionsReference = ref<Record<string, unknown>>({})
-  const areaConfigs = ref<Record<string, Record<string, unknown>>>({})
 
   const buildGame = async ({ scene, world, camera, getDelta, animate, orbit }: SceneContext) => {
     if (!world) return
-    sceneReference = scene
     ghostRegistry.scene = scene
-    worldReference = world
     scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY)
     scene.background = new THREE.Color(FOG_COLOR)
     state.directionalLight =
       (scene.children.find((c) => c instanceof THREE.DirectionalLight) as THREE.DirectionalLight) ??
       null
     const track = deps.track.value
-    cloudObjects = setupCloudArea(scene, world, areaConfigs, (options) => {
-      if (!sceneReference || !worldReference) return
-      disposeClouds(cloudObjects, sceneReference, worldReference)
-      cloudObjects = buildCloudObjects(sceneReference, worldReference, options)
-    })
+    setupCloudArea(scene, world, () => {})
     buildCourse(scene, world, track)
-    state.groundSphereMesh = getBall(scene, undefined, {
-      size: GROUND_SPHERE_RADIUS,
-      position: GROUND_SPHERE_CENTER,
-      color: GROUND_SPHERE_COLOR,
-      segments: 64,
-      castShadow: false,
-      receiveShadow: false
-    })
-    state.groundSphereMesh.userData.skipEdgeLines = true
+    state.groundSphereMesh = addGroundSphereToScene(scene)
     registerGroundSphereProperties(state.groundSphereMesh)
     state.marbleMesh = getBall(scene, world, {
       size: MARBLE_RADIUS,
@@ -631,14 +376,9 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     state.directionalLight = null
     ghostRegistry.meshes.clear()
     ghostRegistry.scene = null
-    sceneReference = null
-    worldReference = null
-    cloudObjects = []
     state.groundSphereMesh = null
-    useDebugSceneStore().removeSceneElement(CLOUD_AREA_NAME)
-    useDebugSceneStore().removeSceneElement('Ground')
-    useElementPropertiesStore().unregisterElementProperties(CLOUD_AREA_NAME)
-    useElementPropertiesStore().unregisterElementProperties('Ground')
+    teardownCloudArea()
+    teardownGroundSphere()
     if (cleanupTools) {
       cleanupTools()
       cleanupTools = null
