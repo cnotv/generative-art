@@ -359,8 +359,15 @@ const RUSH_GRAVITY = 9.81
 export const RUSH_JUMP_RANGE = MAX_LINEAR_SPEED * Math.sqrt((2 * MARBLE_RADIUS) / RUSH_GRAVITY)
 // Minimum gap that forces the ball to jump: just wider than its diameter.
 export const RUSH_GAP_MIN = 2 * MARBLE_RADIUS
-// At max difficulty the gap reaches this fraction of the theoretical maximum.
-export const RUSH_GAP_MAX = RUSH_JUMP_RANGE * 0.5
+// At max difficulty the gap reaches this fraction of the theoretical maximum (–30% from original 0.5).
+export const RUSH_GAP_MAX = RUSH_JUMP_RANGE * 0.35
+
+// Lateral drift: max X the cursor can shift per chunk, and absolute X boundary.
+export const RUSH_WIDE_X_DRIFT = 4
+export const RUSH_MEDIUM_X_DRIFT = 2.5
+export const RUSH_NARROW_X_DRIFT = 1.5
+export const RUSH_GAP_X_DRIFT = 4
+export const RUSH_MAX_X_OFFSET = 15
 
 export const RUSH_COUNTDOWN = 30
 export const RUSH_TIME_BONUS = 3

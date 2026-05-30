@@ -41,7 +41,7 @@ const isSolo = (): boolean => props.playerList.length <= 1
     :player-list="playerList"
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
-    :config-fields="[TRACK_SELECT_FIELD]"
+    :config-fields="mode === 'race' ? [TRACK_SELECT_FIELD] : []"
     accent-color="var(--mm-accent)"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"

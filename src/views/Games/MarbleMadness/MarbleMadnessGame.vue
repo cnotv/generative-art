@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
-import { TIME_PENALTY_FALL } from './config'
+import { TIME_PENALTY_FALL, RUSH_TIME_BONUS } from './config'
 import type { GameMode } from './types'
 
 const isMobileDevice = isMobile()
@@ -14,6 +14,7 @@ const props = defineProps<{
   distance: number
   finished: boolean
   penaltyCount: number
+  pickupCount: number
   trackName: string
   currentActions?: Record<string, unknown>
 }>()
@@ -34,7 +35,7 @@ const countdownDisplay = computed((): string => String(Math.ceil(props.countdown
 const distanceDisplay = computed((): string => `${Math.floor(props.distance)}m`)
 const countdownLow = computed((): boolean => props.countdown <= 10)
 
-const PENALTY_DISPLAY_MS = 1500
+const FLASH_DISPLAY_MS = 1500
 const showPenalty = ref(false)
 let penaltyTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -47,7 +48,23 @@ watch(
     penaltyTimer = setTimeout(() => {
       showPenalty.value = false
       penaltyTimer = null
-    }, PENALTY_DISPLAY_MS)
+    }, FLASH_DISPLAY_MS)
+  }
+)
+
+const showPickup = ref(false)
+let pickupTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.pickupCount,
+  (count) => {
+    if (count === 0) return
+    if (pickupTimer) clearTimeout(pickupTimer)
+    showPickup.value = true
+    pickupTimer = setTimeout(() => {
+      showPickup.value = false
+      pickupTimer = null
+    }, FLASH_DISPLAY_MS)
   }
 )
 
@@ -88,6 +105,7 @@ onUnmounted(() => {
   window.removeEventListener('touchstart', hideInstructions)
   window.removeEventListener('keydown', handleEscKey)
   if (penaltyTimer) clearTimeout(penaltyTimer)
+  if (pickupTimer) clearTimeout(pickupTimer)
   if (trackNameTimer) clearTimeout(trackNameTimer)
 })
 </script>
@@ -105,6 +123,12 @@ onUnmounted(() => {
     <Transition name="mm-penalty">
       <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
         {{ mode === 'rush' ? `-${TIME_PENALTY_FALL}s` : `+${TIME_PENALTY_FALL}s` }}
+      </span>
+    </Transition>
+
+    <Transition name="mm-penalty">
+      <span v-if="showPickup" :key="pickupCount" class="mm-game__pickup">
+        +{{ RUSH_TIME_BONUS }}s
       </span>
     </Transition>
 
@@ -202,6 +226,21 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #f44;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  text-shadow: var(--shadow-text-game);
+  line-height: 1;
+}
+
+.mm-game__pickup {
+  position: absolute;
+  top: 5rem;
+  right: var(--spacing-6);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #4caf50;
   pointer-events: none;
   z-index: 20;
   white-space: nowrap;

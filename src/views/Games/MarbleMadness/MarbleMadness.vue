@@ -57,7 +57,7 @@ const bestTime = ref<number | null>(
 const gameReference = ref<InstanceType<typeof MarbleMadnessGame> | null>(null)
 const canvas = computed(() => gameReference.value?.canvas ?? null)
 
-const gameMode = ref<GameMode>('race')
+const gameMode = ref<GameMode>('rush')
 
 const marbleUrl = computed(
   () => MARBLE_OPTIONS.find((m) => m.id === playerMarble.value)?.url ?? DEFAULT_MARBLE.url
@@ -307,6 +307,7 @@ onUnmounted(() => {
         :distance="rushGame.distance.value"
         :finished="gameMode === 'rush' ? rushGame.finished.value : game.finished.value"
         :penalty-count="gameMode === 'rush' ? rushGame.penaltyCount.value : game.penaltyCount.value"
+        :pickup-count="rushGame.pickupCount.value"
         :track-name="track.name"
         :current-actions="
           gameMode === 'rush' ? rushGame.currentActions.value : game.currentActions.value

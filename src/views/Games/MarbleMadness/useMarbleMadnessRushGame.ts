@@ -55,6 +55,11 @@ import {
   RUSH_FOG_DENSITY,
   RUSH_GAP_MIN,
   RUSH_GAP_MAX,
+  RUSH_WIDE_X_DRIFT,
+  RUSH_MEDIUM_X_DRIFT,
+  RUSH_NARROW_X_DRIFT,
+  RUSH_GAP_X_DRIFT,
+  RUSH_MAX_X_OFFSET,
   type PlatformDefinition
 } from './config'
 
@@ -84,6 +89,7 @@ type ChunkBuildResult = {
   platforms: PlatformDefinition[]
   chunkLength: number
   pickupCenterZ: number | null
+  maxXDrift: number
 }
 
 type RushReactives = {
@@ -93,6 +99,7 @@ type RushReactives = {
   isNewBest: Ref<boolean>
   finished: Ref<boolean>
   penaltyCount: Ref<number>
+  pickupCount: Ref<number>
   currentActions: Ref<ControlsCurrents>
 }
 
@@ -133,7 +140,8 @@ const buildWide = (cursor: ChunkCursor): ChunkBuildResult => {
       }
     ],
     chunkLength: length,
-    pickupCenterZ: Math.random() < 0.6 ? cursor.z - length / 2 : null
+    pickupCenterZ: Math.random() < 0.6 ? cursor.z - length / 2 : null,
+    maxXDrift: RUSH_WIDE_X_DRIFT
   }
 }
 
@@ -148,7 +156,8 @@ const buildMedium = (cursor: ChunkCursor): ChunkBuildResult => {
       }
     ],
     chunkLength: length,
-    pickupCenterZ: Math.random() < 0.5 ? cursor.z - length / 2 : null
+    pickupCenterZ: Math.random() < 0.5 ? cursor.z - length / 2 : null,
+    maxXDrift: RUSH_MEDIUM_X_DRIFT
   }
 }
 
@@ -164,7 +173,8 @@ const buildNarrow = (cursor: ChunkCursor, difficulty: number): ChunkBuildResult 
       }
     ],
     chunkLength: length,
-    pickupCenterZ: Math.random() < 0.35 ? cursor.z - length / 2 : null
+    pickupCenterZ: Math.random() < 0.35 ? cursor.z - length / 2 : null,
+    maxXDrift: RUSH_NARROW_X_DRIFT
   }
 }
 
@@ -182,8 +192,17 @@ const buildGap = (cursor: ChunkCursor, difficulty: number): ChunkBuildResult => 
       }
     ],
     chunkLength: gapSize + landingLength,
-    pickupCenterZ: landingCenterZ
+    pickupCenterZ: landingCenterZ,
+    maxXDrift: RUSH_GAP_X_DRIFT
   }
+}
+
+const computeNextX = (currentX: number, maxDrift: number): number => {
+  const drift = (Math.random() * 2 - 1) * maxDrift
+  const next = currentX + drift
+  if (next > RUSH_MAX_X_OFFSET) return RUSH_MAX_X_OFFSET * 2 - next
+  if (next < -RUSH_MAX_X_OFFSET) return -RUSH_MAX_X_OFFSET * 2 - next
+  return next
 }
 
 const selectChunkType = (difficulty: number): string => {
@@ -249,7 +268,7 @@ const spawnNextChunk = (
     pickupBaseY: pickupMesh?.position.y ?? 0,
     pickupCollected: pickupMesh === null
   })
-  state.cursor = { z: endZ, x: state.cursor.x }
+  state.cursor = { z: endZ, x: computeNextX(state.cursor.x, result.maxXDrift) }
   state.chunkId += 1
   addEdgeLinesToScene(scene)
 }
@@ -289,7 +308,8 @@ const animatePickups = (chunks: RushChunk[], time: number): void => {
 const checkPickupCollection = (
   chunks: RushChunk[],
   marblePos: THREE.Vector3,
-  countdown: Ref<number>
+  countdown: Ref<number>,
+  pickupCount: Ref<number>
 ): void => {
   chunks.forEach((chunk) => {
     if (chunk.pickupCollected || !chunk.pickupMesh) return
@@ -298,6 +318,7 @@ const checkPickupCollection = (
       chunk.pickupMesh = null
       chunk.pickupCollected = true
       countdown.value = Math.min(countdown.value + RUSH_TIME_BONUS, RUSH_COUNTDOWN * 2)
+      pickupCount.value += 1
     }
   })
 }
@@ -450,7 +471,7 @@ const initRushScene = async (
         reactives.distance.value = Math.max(reactives.distance.value, Math.max(0, spawnZ - pos.z))
         const velY = state.marble.userData.body?.linvel?.()?.y ?? 0
         updateLastSafePosition(state, pos, velY)
-        checkPickupCollection(state.chunks, pos, reactives.countdown)
+        checkPickupCollection(state.chunks, pos, reactives.countdown, reactives.pickupCount)
         const difficulty = Math.min(1, reactives.distance.value / RUSH_MAX_DIFFICULTY_DISTANCE)
         pruneOldChunks(world, state, pos.z)
         ensureChunksAhead(scene, world, state, pos.z, difficulty)
@@ -483,6 +504,7 @@ export const useMarbleMadnessRushGame = (deps: RushDeps) => {
   const isNewBest = ref(false)
   const finished = ref(false)
   const penaltyCount = ref(0)
+  const pickupCount = ref(0)
   const currentActions = ref<ControlsCurrents>({})
 
   const reactives: RushReactives = {
@@ -492,6 +514,7 @@ export const useMarbleMadnessRushGame = (deps: RushDeps) => {
     isNewBest,
     finished,
     penaltyCount,
+    pickupCount,
     currentActions
   }
   let state = makeInitialState()
@@ -510,6 +533,7 @@ export const useMarbleMadnessRushGame = (deps: RushDeps) => {
     isNewBest.value = false
     finished.value = false
     penaltyCount.value = 0
+    pickupCount.value = 0
     currentActions.value = {}
   }
 
@@ -520,6 +544,7 @@ export const useMarbleMadnessRushGame = (deps: RushDeps) => {
     isNewBest,
     finished,
     penaltyCount,
+    pickupCount,
     currentActions,
     init,
     destroy
