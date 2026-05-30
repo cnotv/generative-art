@@ -1,9 +1,5 @@
-<script lang="ts">
-const rememberedSteps = new Map<string, number>()
-</script>
-
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, useSlots, inject } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { Check } from 'lucide-vue-next'
 import GameCard from '@/components/GameCard.vue'
@@ -41,10 +37,6 @@ const emit = defineEmits<{
 const route = useRoute()
 const fromLobby = computed(() => !!route.query.game)
 
-const step = ref(1)
-// Host: profile (1) + settings (2). Guest: profile only (1).
-const totalSteps = computed(() => (props.isHost ? 2 : 1))
-
 const isPrivate = ref(false)
 
 const {
@@ -67,28 +59,14 @@ const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
   if (gameRoomId) emit('matchFound', gameRoomId)
 }
 
-const canGoNext = computed(() => step.value < totalSteps.value)
-
 const handleStartGame = (): void => {
-  rememberedSteps.set(props.matchmakerRoom, totalSteps.value)
   emit('startGame')
-}
-
-const goNext = (): void => {
-  if (step.value < totalSteps.value) step.value++
-}
-
-const goBack = (): void => {
-  if (step.value > 1) step.value--
 }
 
 const handleFieldChange = (field: LobbyConfigField, event: Event): void => {
   const raw = (event.target as HTMLInputElement | HTMLSelectElement).value
   emit('configChange', field.key, field.type === 'number' ? Number(raw) : raw)
 }
-
-const slots = useSlots()
-const hasConfig = computed(() => !!slots.config)
 
 const setRoomHidden = inject<((hidden: boolean) => void) | undefined>('setRoomHidden', undefined)
 
@@ -105,26 +83,12 @@ watch(
   }
 )
 
-const restoreStep = (): void => {
-  const remembered = rememberedSteps.get(props.matchmakerRoom)
-  if (remembered !== undefined) step.value = Math.min(remembered, totalSteps.value)
-}
-
 const handleLeaveRoom = (): void => {
-  rememberedSteps.delete(props.matchmakerRoom)
   emit('leaveRoom')
 }
 
-watch(
-  () => props.showResults,
-  (showResults) => {
-    if (!showResults) restoreStep()
-  }
-)
-
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
-  restoreStep()
 })
 </script>
 
@@ -132,17 +96,7 @@ onMounted(() => {
   <section class="glw" :style="{ '--glw-accent': accentColor }">
     <GameCard class="glw__card">
       <div v-if="!showResults">
-        <div class="glw__steps">
-          <span
-            v-for="n in totalSteps"
-            :key="n"
-            class="glw__step-dot"
-            :class="{ 'glw__step-dot--active': n === step, 'glw__step-dot--done': n < step }"
-          />
-        </div>
-
-        <!-- Step 1: Profile -->
-        <div v-if="step === 1" class="glw__body">
+        <div class="glw__body">
           <h3 class="glw__step-title">Your profile</h3>
           <input
             :value="playerName"
@@ -172,13 +126,39 @@ onMounted(() => {
 
           <slot name="profile-extra" />
 
-          <!-- Private toggle — always visible -->
+          <div v-if="configFields.length" class="glw__fields">
+            <label v-for="field in configFields" :key="field.key" class="glw__field">
+              {{ field.label }}
+              <select
+                v-if="field.type === 'select'"
+                :value="field.value"
+                @change="handleFieldChange(field, $event)"
+              >
+                <option
+                  v-for="opt in field.options"
+                  :key="opt.value"
+                  :value="opt.value"
+                  :selected="opt.value === field.value"
+                >
+                  {{ opt.label }}
+                </option>
+              </select>
+              <input
+                v-else
+                type="number"
+                :value="field.value"
+                :min="field.min"
+                :max="field.max"
+                @input="handleFieldChange(field, $event)"
+              />
+            </label>
+          </div>
+
           <label class="glw__private-toggle">
             <input v-model="isPrivate" type="checkbox" class="glw__private-checkbox" />
             <span>Private — only players with the link can join</span>
           </label>
 
-          <!-- Matchmaking status — only when not fromLobby -->
           <template v-if="!fromLobby && !isPrivate">
             <div v-if="isSearching" class="glw__searching">
               Looking for players
@@ -209,11 +189,11 @@ onMounted(() => {
             </ul>
           </template>
 
-          <!-- Guest: waiting for host -->
-          <template v-if="!isHost && playerList.length > 1">
+          <template v-if="playerList.length > 1">
             <div class="glw__players">
               <span class="glw__player-count">
-                {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }} in room
+                {{ playerList.length }} player{{ playerList.length !== 1 ? 's' : '' }}
+                {{ isHost ? 'ready' : 'in room' }}
               </span>
               <span
                 v-for="player in playerList"
@@ -223,74 +203,24 @@ onMounted(() => {
                 :title="player.name"
               />
             </div>
-            <button class="glw__btn glw__btn--ghost" type="button" @click="handleLeaveRoom">
+            <button
+              v-if="!isHost"
+              class="glw__btn glw__btn--ghost"
+              type="button"
+              @click="handleLeaveRoom"
+            >
               Leave room
             </button>
           </template>
         </div>
 
-        <!-- Step 2: Settings (host only) -->
-        <div v-else-if="step === 2" class="glw__body">
-          <h3 class="glw__step-title">Game settings</h3>
-          <slot v-if="hasConfig" name="config" />
-          <div class="glw__players">
-            <span class="glw__player-count">{{ playerList.length }} players ready</span>
-            <span
-              v-for="player in playerList"
-              :key="player.id"
-              class="glw__player-dot"
-              :style="{ background: player.color }"
-              :title="player.name"
-            />
-          </div>
-          <div class="glw__fields">
-            <label v-for="field in configFields" :key="field.key" class="glw__field">
-              {{ field.label }}
-              <select
-                v-if="field.type === 'select'"
-                :value="field.value"
-                @change="handleFieldChange(field, $event)"
-              >
-                <option
-                  v-for="opt in field.options"
-                  :key="opt.value"
-                  :value="opt.value"
-                  :selected="opt.value === field.value"
-                >
-                  {{ opt.label }}
-                </option>
-              </select>
-              <input
-                v-else
-                type="number"
-                :value="field.value"
-                :min="field.min"
-                :max="field.max"
-                @input="handleFieldChange(field, $event)"
-              />
-            </label>
-          </div>
-        </div>
-
-        <!-- Navigation -->
         <div class="glw__nav">
-          <button v-if="step > 1" class="glw__btn glw__btn--ghost" type="button" @click="goBack">
-            ← Back
-          </button>
           <span class="glw__nav-spacer" />
           <button
-            v-if="step < totalSteps"
-            class="glw__btn"
-            type="button"
-            :disabled="!canGoNext"
-            @click="goNext"
-          >
-            Next →
-          </button>
-          <button
-            v-else-if="isHost"
+            v-if="isHost"
             class="glw__start-btn"
             type="button"
+            autofocus
             :disabled="props.canStart === false"
             @click="handleStartGame"
           >
@@ -333,33 +263,6 @@ onMounted(() => {
   min-width: min(320px, 100%);
   max-width: 28rem;
   width: 100%;
-}
-
-.glw__steps {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-2);
-}
-
-.glw__step-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: var(--game-border-light);
-  border: 2px solid var(--game-border-secondary);
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.glw__step-dot--active {
-  background: var(--game-ink);
-  border-color: var(--game-border);
-}
-
-.glw__step-dot--done {
-  background: var(--glw-accent);
-  border-color: var(--glw-accent);
 }
 
 .glw__body {
@@ -443,19 +346,6 @@ onMounted(() => {
   border-radius: 50%;
   border: 2px solid var(--game-border);
   flex-shrink: 0;
-}
-
-.glw__hint {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--game-ink-medium);
-}
-
-.glw__actions {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
 }
 
 .glw__private-toggle {
@@ -542,35 +432,6 @@ onMounted(() => {
 .glw__request-actions {
   display: flex;
   gap: var(--spacing-1);
-}
-
-.glw__settings-list {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2) var(--spacing-4);
-}
-
-.glw__settings-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.glw__settings-label {
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  color: var(--game-ink-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.glw__settings-value {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--game-ink);
 }
 
 .glw__fields {

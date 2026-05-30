@@ -2,14 +2,19 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
-import { TIME_PENALTY_FALL } from './config'
+import { TIME_PENALTY_FALL, RUSH_TIME_BONUS } from './config'
+import type { GameMode } from './types'
 
 const isMobileDevice = isMobile()
 
 const props = defineProps<{
+  mode: GameMode
   elapsed: number
+  countdown: number
+  distance: number
   finished: boolean
   penaltyCount: number
+  pickupCount: number
   trackName: string
   currentActions?: Record<string, unknown>
 }>()
@@ -26,7 +31,11 @@ const elapsedDisplay = computed((): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 })
 
-const PENALTY_DISPLAY_MS = 1500
+const countdownDisplay = computed((): string => String(Math.ceil(props.countdown)).padStart(2, '0'))
+const distanceDisplay = computed((): string => `${Math.floor(props.distance)}m`)
+const countdownLow = computed((): boolean => props.countdown <= 10)
+
+const FLASH_DISPLAY_MS = 1500
 const showPenalty = ref(false)
 let penaltyTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -39,7 +48,23 @@ watch(
     penaltyTimer = setTimeout(() => {
       showPenalty.value = false
       penaltyTimer = null
-    }, PENALTY_DISPLAY_MS)
+    }, FLASH_DISPLAY_MS)
+  }
+)
+
+const showPickup = ref(false)
+let pickupTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.pickupCount,
+  (count) => {
+    if (count === 0) return
+    if (pickupTimer) clearTimeout(pickupTimer)
+    showPickup.value = true
+    pickupTimer = setTimeout(() => {
+      showPickup.value = false
+      pickupTimer = null
+    }, FLASH_DISPLAY_MS)
   }
 )
 
@@ -80,22 +105,37 @@ onUnmounted(() => {
   window.removeEventListener('touchstart', hideInstructions)
   window.removeEventListener('keydown', handleEscKey)
   if (penaltyTimer) clearTimeout(penaltyTimer)
+  if (pickupTimer) clearTimeout(pickupTimer)
   if (trackNameTimer) clearTimeout(trackNameTimer)
 })
 </script>
 
 <template>
   <div class="mm-game">
-    <span class="mm-game__time">{{ elapsedDisplay }}</span>
+    <template v-if="mode === 'rush'">
+      <span class="mm-game__time" :class="{ 'mm-game__time--low': countdownLow }">
+        {{ countdownDisplay }}
+      </span>
+      <span class="mm-game__distance">{{ distanceDisplay }}</span>
+    </template>
+    <span v-else class="mm-game__time">{{ elapsedDisplay }}</span>
 
     <Transition name="mm-penalty">
       <span v-if="showPenalty" :key="penaltyCount" class="mm-game__penalty">
-        +{{ TIME_PENALTY_FALL }}s
+        {{ mode === 'rush' ? `-${TIME_PENALTY_FALL}s` : `+${TIME_PENALTY_FALL}s` }}
+      </span>
+    </Transition>
+
+    <Transition name="mm-penalty">
+      <span v-if="showPickup" :key="pickupCount" class="mm-game__pickup">
+        +{{ RUSH_TIME_BONUS }}s
       </span>
     </Transition>
 
     <Transition name="mm-track-name">
-      <div v-if="showTrackName" class="mm-game__track-name">{{ trackName }}</div>
+      <div v-if="showTrackName && mode === 'race'" class="mm-game__track-name">
+        {{ trackName }}
+      </div>
     </Transition>
 
     <Transition name="mm-instructions">
@@ -111,7 +151,7 @@ onUnmounted(() => {
       v-if="isMobileDevice && currentActions"
       class="mm-game__fauxpad"
       :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
-      :options="{ deadzone: 0.15 }"
+      :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"
       :on-action="() => {}"
     />
@@ -158,6 +198,26 @@ onUnmounted(() => {
   line-height: 1;
 }
 
+.mm-game__time--low {
+  color: #f44;
+}
+
+.mm-game__distance {
+  position: absolute;
+  top: var(--spacing-3);
+  right: var(--spacing-4);
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--shadow-text-game);
+  z-index: 10;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1;
+}
+
 .mm-game__penalty {
   position: absolute;
   top: 5rem;
@@ -166,6 +226,21 @@ onUnmounted(() => {
   font-weight: 900;
   font-family: var(--font-playful);
   color: #f44;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  text-shadow: var(--shadow-text-game);
+  line-height: 1;
+}
+
+.mm-game__pickup {
+  position: absolute;
+  top: 5rem;
+  left: 50%;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  font-family: var(--font-playful);
+  color: #4caf50;
   pointer-events: none;
   z-index: 20;
   white-space: nowrap;

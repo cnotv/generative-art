@@ -5,7 +5,7 @@ import { cameraFollowPlayer } from '@webgamekit/threejs'
 import type { ComplexModel } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 
-type TimelineAction = {
+export type TimelineAction = {
   name: string
   category: string
   start: number
@@ -139,5 +139,31 @@ export const createFallCheckAction = (
     const mesh = getMesh()
     if (!mesh) return
     if (mesh.position.y < threshold) onFall()
+  }
+})
+
+/**
+ * Creates a timeline action that translates a Three.js mesh to follow a target's X/Z
+ * with a fixed Z offset. Used for ground/sky meshes that should track a moving player.
+ *
+ * @param getMesh - Getter returning the mesh to move (or null to skip)
+ * @param getTarget - Getter returning the target whose position drives the follow (or null to skip)
+ * @param offsetZ - Constant Z offset added to the target's z so the mesh stays slightly ahead/behind
+ * @returns Timeline action object for addAction()
+ */
+export const createMeshFollowAction = (
+  getMesh: () => THREE.Object3D | null,
+  getTarget: () => THREE.Object3D | null,
+  offsetZ: number
+): TimelineAction => ({
+  name: 'mesh-follow',
+  category: 'environment',
+  start: 0,
+  action: () => {
+    const mesh = getMesh()
+    const target = getTarget()
+    if (!mesh || !target) return
+    mesh.position.x = target.position.x
+    mesh.position.z = target.position.z + offsetZ
   }
 })

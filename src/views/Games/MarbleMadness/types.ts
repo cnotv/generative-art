@@ -34,6 +34,8 @@ export type MmContext = {
   onStart: (trackIndex: number) => void
 }
 
+export type GameMode = 'race' | 'rush'
+
 export type GameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   isSolo: Ref<boolean>

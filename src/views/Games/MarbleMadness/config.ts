@@ -56,7 +56,7 @@ export const BRIDGE_COLOR = 0x9e9e9e
 export const OBSTACLE_COLOR = 0xd32f2f
 export const FINISH_COLOR = 0xffd700
 
-export type PlatformDef = {
+export type PlatformDefinition = {
   size: CoordinateTuple
   position: CoordinateTuple
   color: number
@@ -64,15 +64,15 @@ export type PlatformDef = {
   isFinish?: boolean
 }
 
-export type ObstacleDef = {
+export type ObstacleDefinition = {
   size: CoordinateTuple
   position: CoordinateTuple
 }
 
 export type TrackConfig = {
   name: string
-  platforms: PlatformDef[]
-  obstacles: ObstacleDef[]
+  platforms: PlatformDefinition[]
+  obstacles: ObstacleDefinition[]
   spawnPosition: CoordinateTuple
   finishPosition: CoordinateTuple
   finishCheckRadius: number
@@ -350,6 +350,76 @@ export const CLOUD_AREA_CONTROLS = {
     speed: { min: 0, max: 0, step: 0, label: 'Speed' }
   }
 }
+
+export const PLATFORM_HALF_HEIGHT = 0.5
+
+const RUSH_GRAVITY = 9.81
+// Ball center is MARBLE_RADIUS above the platform top; that is the available fall height.
+// At MAX_LINEAR_SPEED the ball crosses: v * sqrt(2 * r / g) before dropping below the edge.
+export const RUSH_JUMP_RANGE = MAX_LINEAR_SPEED * Math.sqrt((2 * MARBLE_RADIUS) / RUSH_GRAVITY)
+// Minimum gap that forces the ball to jump: just wider than its diameter.
+export const RUSH_GAP_MIN = 2 * MARBLE_RADIUS
+// At max difficulty the gap reaches this fraction of the theoretical maximum (–30% from original 0.5).
+export const RUSH_GAP_MAX = RUSH_JUMP_RANGE * 0.35
+
+// Lateral drift: max X the cursor can shift per chunk, and absolute X boundary.
+export const RUSH_WIDE_X_DRIFT = 4
+export const RUSH_MEDIUM_X_DRIFT = 2.5
+export const RUSH_NARROW_X_DRIFT = 1.5
+export const RUSH_GAP_X_DRIFT = 4
+export const RUSH_MAX_X_OFFSET = 15
+
+export const RUSH_COUNTDOWN = 30
+export const RUSH_TIME_BONUS = 20
+export const RUSH_FALL_PENALTY = 5
+export const RUSH_LOOKAHEAD_Z = 120
+export const RUSH_DISPOSE_BEHIND = 80
+export const RUSH_MAX_DIFFICULTY_DISTANCE = 400
+export const RUSH_BEST_KEY = 'mm-rush-best'
+export const RUSH_SPAWN: CoordinateTuple = [0, 1.5, 0]
+export const RUSH_PLATFORM_COLOR = 0x1565c0
+export const RUSH_BRIDGE_COLOR = 0x0097a7
+export const RUSH_OBSTACLE_COLOR = 0xd32f2f
+export const RUSH_PICKUP_COLOR = 0xffc107
+export const RUSH_PICKUP_RADIUS = 0.45
+export const RUSH_PICKUP_COLLECT_RADIUS = 1.8
+export const RUSH_SKY_COLOR = 0xb0d8f0
+export const RUSH_FOG_DENSITY = 0.0015
+
+// Slope/ramp: gentle angle so transitions between flat platforms stay reachable.
+// Surface drop across a slope = length * sin(angle).
+export const RUSH_SLOPE_ANGLE = 0.12
+export const RUSH_SLOPE_LENGTH = 20
+export const RUSH_RAMP_ANGLE = 0.18
+export const RUSH_RAMP_LENGTH = 14
+export const RUSH_MIN_Y = -16
+export const RUSH_MAX_Y = 0
+
+// Obstacles sit on top of platforms; size & spacing tuned for marble radius 0.8.
+export const RUSH_OBSTACLE_SIZE: CoordinateTuple = [2.5, 2, 2.5]
+export const RUSH_OBSTACLE_LIFT = 1
+
+// Cloud chunks: spawn ahead of the marble, dispose behind. Keeps active cloud count bounded.
+export const RUSH_CLOUD_CHUNK_LENGTH = 300
+export const RUSH_CLOUD_LOOKAHEAD_Z = 900
+export const RUSH_CLOUD_DISPOSE_BEHIND = 200
+export const RUSH_CLOUD_COUNT_PER_CHUNK = 8
+
+// Ground sphere follows the marble at this Z offset (kept below/ahead of camera).
+export const RUSH_GROUND_FOLLOW_OFFSET_Z = -120
+
+// Moving platforms / obstacles / pickups: probabilities and ranges.
+// Speed is the time (ms) for one full sinusoidal cycle, so smaller = faster.
+export const RUSH_MOVING_PLATFORM_CHANCE = 0.3
+export const RUSH_MOVING_OBSTACLE_CHANCE = 0.6
+export const RUSH_MOVING_PICKUP_CHANCE = 0.5
+export const RUSH_PLATFORM_SWAY_X = 2
+export const RUSH_PLATFORM_BOB_Y = 0.6
+export const RUSH_OBSTACLE_SWAY = 1.6
+export const RUSH_PICKUP_SWAY = 1.2
+export const RUSH_PLATFORM_CYCLE_MS = 2800
+export const RUSH_OBSTACLE_CYCLE_MS = 1600
+export const RUSH_PICKUP_CYCLE_MS = 2000
 
 export const KEYBOARD_MAPPING = {
   keyboard: {

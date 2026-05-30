@@ -45,31 +45,20 @@ const buildWrapper = (overrides: Record<string, unknown> = {}): VueWrapper => {
 }
 
 describe('GameLobbyWizard — host single player', () => {
-  it('starts on step 1 (profile) and shows no Start button yet', () => {
+  it('shows profile step with a Start button', () => {
     const wrapper = buildWrapper()
-    expect(wrapper.find('.glw__start-btn').exists()).toBe(false)
     expect(wrapper.find('.glw__step-title').text()).toBe('Your profile')
+    expect(wrapper.find('.glw__start-btn').exists()).toBe(true)
   })
 
-  it('shows Next button on step 1 when there are 2 steps', () => {
+  it('shows no Next button', () => {
     const wrapper = buildWrapper()
     const nextButton = wrapper.findAll('button').find((b) => b.text().includes('Next'))
-    expect(nextButton).toBeDefined()
+    expect(nextButton).toBeUndefined()
   })
 
-  it('advances to step 2 (settings) when Next is clicked', async () => {
+  it('shows enabled Start button by default', () => {
     const wrapper = buildWrapper()
-    const nextButton = wrapper.findAll('button').find((b) => b.text().includes('Next'))
-    await nextButton!.trigger('click')
-    expect(wrapper.find('.glw__step-title').text()).toBe('Game settings')
-  })
-
-  it('shows enabled Start button on step 2 by default', async () => {
-    const wrapper = buildWrapper()
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     const startButton = wrapper.find('.glw__start-btn')
     expect(startButton.exists()).toBe(true)
     expect((startButton.element as HTMLButtonElement).disabled).toBe(false)
@@ -77,66 +66,39 @@ describe('GameLobbyWizard — host single player', () => {
 
   it('emits startGame when Start is clicked', async () => {
     const wrapper = buildWrapper()
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
-    const startButton = wrapper.find('.glw__start-btn')
-    expect((startButton.element as HTMLButtonElement).disabled).toBe(false)
-    await startButton.trigger('click')
+    await wrapper.find('.glw__start-btn').trigger('click')
     expect(wrapper.emitted('startGame')).toHaveLength(1)
   })
 })
 
 describe('GameLobbyWizard — canStart prop', () => {
-  it('disables Start button when canStart is false', async () => {
+  it('disables Start button when canStart is false', () => {
     const wrapper = buildWrapper({ canStart: false })
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     const startButton = wrapper.find('.glw__start-btn')
     expect(startButton.attributes('disabled')).toBeDefined()
   })
 
-  it('enables Start button when canStart is true', async () => {
+  it('enables Start button when canStart is true', () => {
     const wrapper = buildWrapper({ canStart: true })
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     const startButton = wrapper.find('.glw__start-btn')
     expect((startButton.element as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('enables Start button when canStart is undefined (not passed)', async () => {
+  it('enables Start button when canStart is undefined (not passed)', () => {
     const wrapper = buildWrapper()
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     const startButton = wrapper.find('.glw__start-btn')
     expect((startButton.element as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('does not emit startGame when Start is disabled', async () => {
     const wrapper = buildWrapper({ canStart: false })
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     await wrapper.find('.glw__start-btn').trigger('click')
     expect(wrapper.emitted('startGame')).toBeFalsy()
   })
 })
 
 describe('GameLobbyWizard — guest player (isHost=false)', () => {
-  it('has only 1 step for a guest', () => {
-    const wrapper = buildWrapper({ isHost: false })
-    expect(wrapper.findAll('.glw__step-dot')).toHaveLength(1)
-  })
-
-  it('shows no Next button for a guest on the only step', () => {
+  it('shows no Next button for a guest', () => {
     const wrapper = buildWrapper({ isHost: false })
     const nextButton = wrapper.findAll('button').find((b) => b.text().includes('Next'))
     expect(nextButton).toBeUndefined()
@@ -145,43 +107,6 @@ describe('GameLobbyWizard — guest player (isHost=false)', () => {
   it('shows no Start button for a guest', () => {
     const wrapper = buildWrapper({ isHost: false })
     expect(wrapper.find('.glw__start-btn').exists()).toBe(false)
-  })
-})
-
-describe('GameLobbyWizard — step navigation', () => {
-  it('Back button appears on step 2', async () => {
-    const wrapper = buildWrapper()
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
-    const backButton = wrapper.findAll('button').find((b) => b.text().includes('Back'))
-    expect(backButton).toBeDefined()
-  })
-
-  it('Back returns to step 1', async () => {
-    const wrapper = buildWrapper()
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Back'))!
-      .trigger('click')
-    expect(wrapper.find('.glw__step-title').text()).toBe('Your profile')
-  })
-
-  it('step dots reflect current step', async () => {
-    const wrapper = buildWrapper()
-    const dotsStep1 = wrapper.findAll('.glw__step-dot--active')
-    expect(dotsStep1).toHaveLength(1)
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
-    const dotsStep2 = wrapper.findAll('.glw__step-dot--active')
-    expect(dotsStep2).toHaveLength(1)
   })
 })
 
@@ -215,14 +140,10 @@ describe('GameLobbyWizard — profile step', () => {
 })
 
 describe('GameLobbyWizard — player count display', () => {
-  it('shows player count on step 2', async () => {
+  it('shows player count when multiple players are present', () => {
     const wrapper = buildWrapper({
       playerList: [SOLO_PLAYER, { id: 'peer-2', name: 'Other', color: '#0000ff' }]
     })
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text().includes('Next'))!
-      .trigger('click')
     expect(wrapper.find('.glw__player-count').text()).toContain('2')
   })
 })
