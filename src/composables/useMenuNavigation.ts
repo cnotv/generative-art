@@ -1,0 +1,112 @@
+import { onMounted, onUnmounted } from 'vue'
+import { createControls } from '@webgamekit/controls'
+import type { ControlsExtras } from '@webgamekit/controls'
+
+export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'activate' | 'cancel' | 'decrease'
+
+const MENU_ACTIONS = new Set<MenuAction>([
+  'up',
+  'down',
+  'left',
+  'right',
+  'activate',
+  'cancel',
+  'decrease'
+])
+
+const MENU_MAPPING = {
+  keyboard: {
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    Enter: 'activate',
+    Escape: 'cancel'
+  },
+  gamepad: {
+    'dpad-up': 'up',
+    'dpad-down': 'down',
+    'dpad-left': 'left',
+    'dpad-right': 'right',
+    'axis1-up': 'up',
+    'axis1-down': 'down',
+    'axis0-left': 'left',
+    'axis0-right': 'right',
+    'axis3-up': 'up',
+    'axis3-down': 'down',
+    'axis2-left': 'left',
+    'axis2-right': 'right',
+    // South face button (PS cross / Xbox A / Switch B) = activate; on number input → increase.
+    cross: 'activate',
+    a: 'activate',
+    // West face button (PS square / Xbox X / Switch Y) = decrease on number input.
+    square: 'decrease',
+    x: 'decrease',
+    y: 'decrease',
+    // East face button = cancel.
+    circle: 'cancel',
+    b: 'cancel'
+  }
+}
+
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
+const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'password', 'search', 'tel', 'url'])
+// Keys that would otherwise open the native <select> picker. Blocked when the
+// active element is a <select> so the kit can run its own focus-trap behavior
+// without the OS dropdown popping up on top.
+const SELECT_OPEN_KEYS = new Set(['Enter', ' ', 'Spacebar', 'F4'])
+
+const shouldPreventDefault = (event: KeyboardEvent): boolean => {
+  const active = document.activeElement
+  if (active instanceof HTMLSelectElement && SELECT_OPEN_KEYS.has(event.key)) return true
+  if (!SCROLL_KEYS.has(event.key)) return false
+  if (active instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(active.type)) return false
+  if (active instanceof HTMLTextAreaElement) return false
+  return true
+}
+
+const preventScrollKeys = (event: KeyboardEvent): void => {
+  if (shouldPreventDefault(event)) event.preventDefault()
+}
+
+const announceGamepad = (event: GamepadEvent): void => {
+  console.warn(
+    '[useMenuNavigation] gamepad connected:',
+    event.gamepad.id,
+    `(index ${event.gamepad.index}, ${event.gamepad.buttons.length} buttons, ${event.gamepad.axes.length} axes)`
+  )
+}
+
+/**
+ * Registers a callback for menu-style navigation events emitted by either the
+ * keyboard arrow cluster or a connected gamepad's d-pad / left stick / A / B.
+ * Filters out unmapped inputs so the handler only ever sees known MenuActions.
+ * @param handler Called with the semantic action whenever a navigation input fires.
+ * @returns Object with `destroy()` for manual teardown; the composable also cleans up on unmount.
+ */
+export function useMenuNavigation(handler: (action: MenuAction) => void): { destroy: () => void } {
+  let controls: ControlsExtras | null = null
+
+  const setup = (): void => {
+    controls = createControls({
+      mapping: MENU_MAPPING,
+      onAction: (action) => {
+        if (MENU_ACTIONS.has(action as MenuAction)) handler(action as MenuAction)
+      }
+    })
+    window.addEventListener('keydown', preventScrollKeys)
+    window.addEventListener('gamepadconnected', announceGamepad)
+  }
+
+  const destroy = (): void => {
+    controls?.destroyControls()
+    controls = null
+    window.removeEventListener('keydown', preventScrollKeys)
+    window.removeEventListener('gamepadconnected', announceGamepad)
+  }
+
+  onMounted(setup)
+  onUnmounted(destroy)
+
+  return { destroy }
+}
