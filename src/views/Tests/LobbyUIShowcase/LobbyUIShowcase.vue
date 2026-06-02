@@ -60,25 +60,21 @@ type HintPart = { glyph: string; label: string }
 const focusedHint = ref<{ rect: HintRect; parts: HintPart[] } | null>(null)
 type LocalInputSource = MenuSource | 'mouse'
 const inputSource = ref<LocalInputSource | null>(null)
-// Element currently in "edit mode" — Up/Down cycles its value while held here.
-// Only populated for <select> and <input type="number">.
-const editing = ref<HTMLElement | null>(null)
 
 const HINT_GAP_PX = 12
 
-const isEditing = (element: HTMLElement | null): boolean => !!element && editing.value === element
+const CYCLE_HINT_PARTS: HintPart[] = [
+  { glyph: '↕', label: 'Change' },
+  { glyph: '✕', label: 'Confirm' }
+]
 
 const describeControl = (element: HTMLElement): HintPart[] => {
   if (element instanceof HTMLInputElement) {
     if (element.type === 'checkbox') return [{ glyph: '✕', label: 'Toggle' }]
-    if (element.type === 'number') {
-      return [{ glyph: '✕', label: isEditing(element) ? 'Confirm' : 'Change' }]
-    }
+    if (element.type === 'number') return CYCLE_HINT_PARTS
     return [{ glyph: '✕', label: 'Edit' }]
   }
-  if (element instanceof HTMLSelectElement) {
-    return [{ glyph: '✕', label: isEditing(element) ? 'Confirm' : 'Change' }]
-  }
+  if (element instanceof HTMLSelectElement) return CYCLE_HINT_PARTS
   return [{ glyph: '✕', label: 'Confirm' }]
 }
 
@@ -131,9 +127,6 @@ const cycleSelect = (select: HTMLSelectElement, direction: 1 | -1): void => {
 }
 
 const moveRow = (delta: number, rowCount: number): void => {
-  // Leaving a row always exits edit mode — Up/Down on a dropdown/number when
-  // not editing falls through to row navigation, so this is the natural exit.
-  editing.value = null
   focusRow.value = Math.min(Math.max(focusRow.value + delta, 0), rowCount - 1)
   focusCol.value = 0
   applyFocus()
@@ -141,7 +134,6 @@ const moveRow = (delta: number, rowCount: number): void => {
 
 const moveCol = (delta: number, row: HTMLElement | undefined): void => {
   if (!row) return
-  editing.value = null
   const focusables = queryFocusables(row)
   focusCol.value = Math.min(Math.max(focusCol.value + delta, 0), focusables.length - 1)
   applyFocus()
@@ -172,43 +164,33 @@ const refreshDiagnostics = (): void => {
   }
 }
 
-const handleNumberAction = (input: HTMLInputElement, action: MenuAction): boolean => {
-  if (!isEditing(input)) {
-    if (action === 'activate') {
-      editing.value = input
-      updateFocusedHint(input)
-      return true
-    }
-    return false // up/down fall through to row nav
-  }
+const handleNumberAction = (
+  input: HTMLInputElement,
+  action: MenuAction,
+  rowCount: number
+): boolean => {
   if (action === 'up' || action === 'down') {
     bumpNumberInput(input, action === 'up' ? 1 : -1)
     return true
   }
   if (action === 'activate') {
-    editing.value = null
-    updateFocusedHint(input)
+    moveRow(1, rowCount)
     return true
   }
   return false
 }
 
-const handleSelectAction = (select: HTMLSelectElement, action: MenuAction): boolean => {
-  if (!isEditing(select)) {
-    if (action === 'activate') {
-      editing.value = select
-      updateFocusedHint(select)
-      return true
-    }
-    return false // up/down fall through to row nav
-  }
+const handleSelectAction = (
+  select: HTMLSelectElement,
+  action: MenuAction,
+  rowCount: number
+): boolean => {
   if (action === 'up' || action === 'down') {
     cycleSelect(select, action === 'down' ? 1 : -1)
     return true
   }
   if (action === 'activate') {
-    editing.value = null
-    updateFocusedHint(select)
+    moveRow(1, rowCount)
     return true
   }
   return false
@@ -218,10 +200,14 @@ const handleSelectAction = (select: HTMLSelectElement, action: MenuAction): bool
  * Returns true if the action was consumed by control-specific handling and the
  * row/col navigation should be skipped.
  */
-const handleControlAction = (active: Element | null, action: MenuAction): boolean => {
+const handleControlAction = (
+  active: Element | null,
+  action: MenuAction,
+  rowCount: number
+): boolean => {
   if (isTextInput(active) && (action === 'left' || action === 'right')) return true
-  if (isNumberInput(active)) return handleNumberAction(active, action)
-  if (isSelect(active)) return handleSelectAction(active, action)
+  if (isNumberInput(active)) return handleNumberAction(active, action, rowCount)
+  if (isSelect(active)) return handleSelectAction(active, action, rowCount)
   return false
 }
 
@@ -231,7 +217,7 @@ const handleMenu = (action: MenuAction, source: MenuSource): void => {
   lastActionCount.value += 1
   const active = document.activeElement
   const rows = queryRows()
-  if (!rows.length || handleControlAction(active, action)) {
+  if (!rows.length || handleControlAction(active, action, rows.length)) {
     refreshDiagnostics()
     return
   }
