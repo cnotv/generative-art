@@ -113,38 +113,63 @@ function pollAxes(
   })
 }
 
+export function findActiveGamepad(preferredIndex: number | null): Gamepad | null {
+  const gamepads = navigator.getGamepads()
+  if (preferredIndex !== null) {
+    const preferred = gamepads[preferredIndex]
+    if (preferred) return preferred
+  }
+  return gamepads.find((gp): gp is Gamepad => !!gp) ?? null
+}
+
 export function createGamepadController(
   mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,
   buttonMap: string[],
   axisThreshold: number = 0.5
 ): GamepadController {
-  let gamepadIndex: number | null = null
+  let pinnedIndex: number | null = null
   let gamepadInterval: number | null = null
   let lastButtons: boolean[] = []
   let lastAxesStates: Record<string, boolean> = {}
 
   function pollGamepad() {
-    const gamepads = navigator.getGamepads()
-    const gp = gamepadIndex !== null ? gamepads[gamepadIndex] : null
+    const gp = findActiveGamepad(pinnedIndex)
     if (!gp) return
+    if (pinnedIndex === null) pinnedIndex = gp.index
 
     pollButtons(gp, mappingReference, handlers, buttonMap, lastButtons)
     pollAxes(gp, mappingReference, handlers, axisThreshold, lastAxesStates)
   }
 
-  function bind(index = 0) {
-    gamepadIndex = index
+  function onConnect(event: GamepadEvent) {
+    if (pinnedIndex === null) pinnedIndex = event.gamepad.index
+  }
+
+  function onDisconnect(event: GamepadEvent) {
+    if (pinnedIndex === event.gamepad.index) {
+      pinnedIndex = null
+      lastButtons = []
+      lastAxesStates = {}
+    }
+  }
+
+  function bind(index?: number) {
+    pinnedIndex = index ?? null
     lastButtons = []
+    window.addEventListener('gamepadconnected', onConnect)
+    window.addEventListener('gamepaddisconnected', onDisconnect)
     gamepadInterval = window.setInterval(pollGamepad, 1000 / 30)
   }
 
   function unbind() {
     if (gamepadInterval) window.clearInterval(gamepadInterval)
     gamepadInterval = null
-    gamepadIndex = null
+    pinnedIndex = null
     lastButtons = []
     lastAxesStates = {}
+    window.removeEventListener('gamepadconnected', onConnect)
+    window.removeEventListener('gamepaddisconnected', onDisconnect)
   }
 
   function isSupported() {
