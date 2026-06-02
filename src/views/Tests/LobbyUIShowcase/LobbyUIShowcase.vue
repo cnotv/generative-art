@@ -15,7 +15,11 @@ import {
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import { MARBLE_OPTIONS } from '@/views/Games/MarbleMadness/config'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
-import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
+import {
+  useMenuNavigation,
+  type MenuAction,
+  type MenuSource
+} from '@/composables/useMenuNavigation'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
 
 type Screen = 'lobby' | 'results'
@@ -54,14 +58,26 @@ type HintRect = { top: number; left: number; width: number; height: number }
 type HintPart = { glyph: string; label: string }
 
 const focusedHint = ref<{ rect: HintRect; parts: HintPart[] } | null>(null)
+type LocalInputSource = MenuSource | 'mouse'
+const inputSource = ref<LocalInputSource | null>(null)
+// Element currently in "edit mode" — Up/Down cycles its value while held here.
+// Only populated for <select> and <input type="number">.
+const editing = ref<HTMLElement | null>(null)
 
 const HINT_GAP_PX = 12
+
+const isEditing = (element: HTMLElement | null): boolean => !!element && editing.value === element
 
 const describeControl = (element: HTMLElement): HintPart[] => {
   if (element instanceof HTMLInputElement) {
     if (element.type === 'checkbox') return [{ glyph: '✕', label: 'Toggle' }]
-    if (element.type === 'number') return [{ glyph: '✕', label: 'Confirm' }]
+    if (element.type === 'number') {
+      return [{ glyph: '✕', label: isEditing(element) ? 'Confirm' : 'Change' }]
+    }
     return [{ glyph: '✕', label: 'Edit' }]
+  }
+  if (element instanceof HTMLSelectElement) {
+    return [{ glyph: '✕', label: isEditing(element) ? 'Confirm' : 'Change' }]
   }
   return [{ glyph: '✕', label: 'Confirm' }]
 }
@@ -115,6 +131,9 @@ const cycleSelect = (select: HTMLSelectElement, direction: 1 | -1): void => {
 }
 
 const moveRow = (delta: number, rowCount: number): void => {
+  // Leaving a row always exits edit mode — Up/Down on a dropdown/number when
+  // not editing falls through to row navigation, so this is the natural exit.
+  editing.value = null
   focusRow.value = Math.min(Math.max(focusRow.value + delta, 0), rowCount - 1)
   focusCol.value = 0
   applyFocus()
@@ -122,6 +141,7 @@ const moveRow = (delta: number, rowCount: number): void => {
 
 const moveCol = (delta: number, row: HTMLElement | undefined): void => {
   if (!row) return
+  editing.value = null
   const focusables = queryFocusables(row)
   focusCol.value = Math.min(Math.max(focusCol.value + delta, 0), focusables.length - 1)
   applyFocus()
@@ -152,39 +172,43 @@ const refreshDiagnostics = (): void => {
   }
 }
 
-const handleNumberAction = (
-  input: HTMLInputElement,
-  action: MenuAction,
-  rowCount: number
-): boolean => {
+const handleNumberAction = (input: HTMLInputElement, action: MenuAction): boolean => {
+  if (!isEditing(input)) {
+    if (action === 'activate') {
+      editing.value = input
+      updateFocusedHint(input)
+      return true
+    }
+    return false // up/down fall through to row nav
+  }
   if (action === 'up' || action === 'down') {
     bumpNumberInput(input, action === 'up' ? 1 : -1)
     return true
   }
   if (action === 'activate') {
-    // X confirms the cycled value and exits focus-trap by moving down a row,
-    // matching the dropdown UX. Native browser stepping never fires because
-    // arrow keys are preventDefault'd by useMenuNavigation.
-    moveRow(1, rowCount)
+    editing.value = null
+    updateFocusedHint(input)
     return true
   }
   return false
 }
 
-const handleSelectAction = (
-  select: HTMLSelectElement,
-  action: MenuAction,
-  rowCount: number
-): boolean => {
+const handleSelectAction = (select: HTMLSelectElement, action: MenuAction): boolean => {
+  if (!isEditing(select)) {
+    if (action === 'activate') {
+      editing.value = select
+      updateFocusedHint(select)
+      return true
+    }
+    return false // up/down fall through to row nav
+  }
   if (action === 'up' || action === 'down') {
     cycleSelect(select, action === 'down' ? 1 : -1)
     return true
   }
   if (action === 'activate') {
-    // X confirms the currently-cycled value and exits the dropdown's
-    // focus-trap mode by moving down to the next row. The native picker is
-    // never invoked, so the dropdown stays closed throughout.
-    moveRow(1, rowCount)
+    editing.value = null
+    updateFocusedHint(select)
     return true
   }
   return false
@@ -194,23 +218,20 @@ const handleSelectAction = (
  * Returns true if the action was consumed by control-specific handling and the
  * row/col navigation should be skipped.
  */
-const handleControlAction = (
-  active: Element | null,
-  action: MenuAction,
-  rowCount: number
-): boolean => {
+const handleControlAction = (active: Element | null, action: MenuAction): boolean => {
   if (isTextInput(active) && (action === 'left' || action === 'right')) return true
-  if (isNumberInput(active)) return handleNumberAction(active, action, rowCount)
-  if (isSelect(active)) return handleSelectAction(active, action, rowCount)
+  if (isNumberInput(active)) return handleNumberAction(active, action)
+  if (isSelect(active)) return handleSelectAction(active, action)
   return false
 }
 
-const handleMenu = (action: MenuAction): void => {
+const handleMenu = (action: MenuAction, source: MenuSource): void => {
+  inputSource.value = source
   lastAction.value = action
   lastActionCount.value += 1
   const active = document.activeElement
   const rows = queryRows()
-  if (!rows.length || handleControlAction(active, action, rows.length)) {
+  if (!rows.length || handleControlAction(active, action)) {
     refreshDiagnostics()
     return
   }
@@ -246,11 +267,17 @@ const onWindowFocus = (): void => {
   if (active instanceof HTMLElement) updateFocusedHint(active)
 }
 
+const onMouseActivity = (): void => {
+  inputSource.value = 'mouse'
+}
+
 onMounted(() => {
   window.addEventListener('gamepadconnected', onGamepadConnected)
   window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
   window.addEventListener('blur', onWindowBlur)
   window.addEventListener('focus', onWindowFocus)
+  window.addEventListener('mousedown', onMouseActivity)
+  window.addEventListener('mousemove', onMouseActivity, { passive: true })
 })
 
 onUnmounted(() => {
@@ -258,6 +285,8 @@ onUnmounted(() => {
   window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
   window.removeEventListener('blur', onWindowBlur)
   window.removeEventListener('focus', onWindowFocus)
+  window.removeEventListener('mousedown', onMouseActivity)
+  window.removeEventListener('mousemove', onMouseActivity)
 })
 
 useMenuNavigation(handleMenu)
@@ -433,7 +462,7 @@ const isMarbleAvailable = (_id: string): boolean => true
     </main>
 
     <div
-      v-if="focusedHint"
+      v-if="focusedHint && inputSource === 'gamepad'"
       class="lui-showcase__hint"
       aria-hidden="true"
       :style="{
@@ -556,7 +585,7 @@ const isMarbleAvailable = (_id: string): boolean => true
   font-size: var(--lui-text-small);
   line-height: 1;
   color: #000;
-  background: #ffd700;
+  background: var(--lui-focus-color);
   padding-inline: 0.7em;
   padding-block: 0.4em;
   border-radius: 999px;

@@ -77,21 +77,30 @@ const announceGamepad = (event: GamepadEvent): void => {
   )
 }
 
+export type MenuSource = 'keyboard' | 'gamepad'
+
+const sourceOf = (rawSource: string | undefined): MenuSource =>
+  rawSource === 'gamepad' || rawSource === 'gamepad-axis' ? 'gamepad' : 'keyboard'
+
 /**
  * Registers a callback for menu-style navigation events emitted by either the
  * keyboard arrow cluster or a connected gamepad's d-pad / left stick / A / B.
  * Filters out unmapped inputs so the handler only ever sees known MenuActions.
- * @param handler Called with the semantic action whenever a navigation input fires.
+ * @param handler Called with the semantic action and its originating input source.
  * @returns Object with `destroy()` for manual teardown; the composable also cleans up on unmount.
  */
-export function useMenuNavigation(handler: (action: MenuAction) => void): { destroy: () => void } {
+export function useMenuNavigation(handler: (action: MenuAction, source: MenuSource) => void): {
+  destroy: () => void
+} {
   let controls: ControlsExtras | null = null
 
   const setup = (): void => {
     controls = createControls({
       mapping: MENU_MAPPING,
-      onAction: (action) => {
-        if (MENU_ACTIONS.has(action as MenuAction)) handler(action as MenuAction)
+      onAction: (action, _key, rawSource) => {
+        if (MENU_ACTIONS.has(action as MenuAction)) {
+          handler(action as MenuAction, sourceOf(rawSource as string | undefined))
+        }
       }
     })
     window.addEventListener('keydown', preventScrollKeys)

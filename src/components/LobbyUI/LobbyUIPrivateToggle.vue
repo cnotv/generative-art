@@ -54,7 +54,12 @@ const handleChange = (event: Event): void => {
 
 .lui-private__native:focus + .lui-private__box,
 .lui-private__native:focus-visible + .lui-private__box {
-  outline: 3px solid #ffd700;
-  outline-offset: 4px;
+  outline: none;
+  border-color: var(--lui-focus-color);
+}
+
+.lui-private__native:focus + .lui-private__box.lui-private__box--checked,
+.lui-private__native:focus-visible + .lui-private__box.lui-private__box--checked {
+  background: var(--lui-focus-color);
 }
 </style>
