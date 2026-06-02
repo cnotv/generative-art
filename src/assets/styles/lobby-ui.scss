@@ -1,0 +1,65 @@
+// LobbyUI theme — design tokens for the transparent game-overlay lobby kit.
+// Import this file from the root component that mounts LobbyUIWizard so the
+// tokens are available without polluting global _variables.scss.
+// Always rendered above a 3D scene or image backdrop, so the stroke and text
+// colors are fixed regardless of host light/dark theme.
+// Pulls in `game-ui.scss` so the dependent tokens (`--font-playful`,
+// `--shadow-text-game-large`) are guaranteed to be defined wherever this file
+// is imported — no need for consumers to remember a second import.
+@use 'game-ui';
+
+:root {
+  --lui-stroke: rgb(255 255 255);
+  --lui-stroke-faint: rgb(255 255 255 / 0.5);
+
+  // White fill for every LobbyUI text, with a layered black/white/black
+  // shadow: tight black inner outline → white halo → thick black drop.
+  // Inverts the white→black + grey→white of the original `--shadow-text-game-large`
+  // and keeps the soft drop, but in black for punch on the saturated game backdrop.
+  --lui-text-color: #fff;
+  --lui-text-shadow:
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
+    0 -1px 0 #000, 0 1px 0 #000, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff,
+    -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff,
+    clamp(3px, 0.22em, 6px) clamp(3px, 0.26em, 7px) 0 #000;
+  --lui-font: var(--font-playful);
+
+  // Exactly three text levels:
+  //   --lui-text-important: page title + CTAs (Start, Play Again)
+  //   --lui-text-medium:    picked option / control value (input, button, select)
+  //   --lui-text-small:     row labels ("Mode", "Marble", ...)
+  --lui-text-important: clamp(2rem, 5vw, 3.25rem);
+  --lui-text-medium: clamp(1.4rem, 2.6vw, 1.75rem);
+  --lui-text-small: clamp(1rem, 1.8vw, 1.25rem);
+
+  // Tiny: standalone descriptors that sit under a category label (e.g. the
+  // selected marble's name beneath the marble grid).
+  --lui-text-tiny: clamp(0.85rem, 1.3vw, 1rem);
+
+  // Width of the label column in the row layout — keeps controls aligned.
+  --lui-label-column: 8rem;
+
+  // Hard-edge offset shadow for white borders (CTA button, active toggle,
+  // checkbox box). Matches the text-shadow vocabulary: solid black, no blur.
+  --lui-border-shadow: 3px 3px 0 #000;
+
+  // Inverted variation — white text on a black "chip" background. The text
+  // shadow is preserved so the inverted text still has depth/legibility.
+  --lui-text-color-inverted: #fff;
+  --lui-bg-inverted: #000;
+}
+
+// Modifier: apply to any element (LobbyUI or plain) to flip into the inverted
+// style. Self-contained — explicitly sets font, color, and shadow so it works
+// on bare elements, AND redefines `--lui-text-color` so any LobbyUI descendants
+// inherit the white fill through the existing token chain.
+.lui--inverted {
+  --lui-text-color: var(--lui-text-color-inverted);
+
+  background-color: var(--lui-bg-inverted);
+  color: var(--lui-text-color-inverted);
+  font-family: var(--lui-font);
+  text-shadow: var(--lui-text-shadow);
+  padding-inline: 0.4em;
+  padding-block: 0.05em;
+}
