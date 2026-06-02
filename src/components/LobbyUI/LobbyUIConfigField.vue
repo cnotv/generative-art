@@ -61,16 +61,15 @@ const onChange = (field: LobbyConfigField, event: Event): void => {
   width: 4rem;
 }
 
-.lui-field__control:hover,
-.lui-field__control:focus,
-.lui-field__control:focus-visible {
+.lui-field__control:hover {
   border-bottom-color: var(--lui-stroke);
 }
 
 .lui-field__control:focus,
 .lui-field__control:focus-visible {
-  outline: 3px solid #ffd700;
-  outline-offset: 4px;
+  outline: none;
+  color: var(--lui-focus-color);
+  border-bottom-color: var(--lui-focus-color);
 }
 
 .lui-field__control option {

@@ -53,11 +53,15 @@ const onInput = (event: Event): void => {
   text-shadow: var(--lui-text-shadow);
 }
 
-.lui-name-input:hover,
+.lui-name-input:hover {
+  border-bottom-color: var(--lui-stroke);
+}
+
 .lui-name-input:focus,
 .lui-name-input:focus-visible {
-  border-bottom-color: var(--lui-stroke);
   outline: none;
-  box-shadow: 0 0 0 3px #ffd700;
+  color: var(--lui-focus-color);
+  border-bottom-color: var(--lui-focus-color);
+  caret-color: var(--lui-focus-color);
 }
 </style>

@@ -102,8 +102,9 @@ const selectedName = (): string =>
 
 .lui-grid__btn:focus,
 .lui-grid__btn:focus-visible {
-  outline: 3px solid #ffd700;
-  outline-offset: 4px;
+  outline: none;
+  transform: scale(1.2);
+  border-color: var(--lui-focus-color);
 }
 
 .lui-grid__btn--disabled {

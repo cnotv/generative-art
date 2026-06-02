@@ -65,7 +65,8 @@ withDefaults(
 
 .lui-btn:focus,
 .lui-btn:focus-visible {
-  outline: 3px solid #ffd700;
-  outline-offset: 4px;
+  outline: none;
+  border-color: var(--lui-focus-color);
+  color: var(--lui-focus-color);
 }
 </style>
