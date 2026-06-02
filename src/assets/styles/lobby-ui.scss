@@ -43,6 +43,11 @@
   // checkbox box). Matches the text-shadow vocabulary: solid black, no blur.
   --lui-border-shadow: 3px 3px 0 #000;
 
+  // Focus highlight color. Applied to the text fill of simple controls
+  // (text input, dropdown value, number value) and to the border / box fill
+  // of complex controls (button, toggle option, checkbox).
+  --lui-focus-color: #ffd700;
+
   // Inverted variation — white text on a black "chip" background. The text
   // shadow is preserved so the inverted text still has depth/legibility.
   --lui-text-color-inverted: #fff;

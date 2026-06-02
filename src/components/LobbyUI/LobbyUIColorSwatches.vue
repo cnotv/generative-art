@@ -51,12 +51,15 @@ const emit = defineEmits<{
   transition: transform 0.1s ease;
 }
 
-.lui-swatch:hover,
+.lui-swatch:hover {
+  transform: scale(1.15);
+}
+
 .lui-swatch:focus,
 .lui-swatch:focus-visible {
+  outline: none;
   transform: scale(1.15);
-  outline: 3px solid #ffd700;
-  outline-offset: 4px;
+  border-color: var(--lui-focus-color);
 }
 
 .lui-swatch--active {

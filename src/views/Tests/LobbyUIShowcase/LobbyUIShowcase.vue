@@ -15,7 +15,11 @@ import {
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import { MARBLE_OPTIONS } from '@/views/Games/MarbleMadness/config'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
-import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
+import {
+  useMenuNavigation,
+  type MenuAction,
+  type MenuSource
+} from '@/composables/useMenuNavigation'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
 
 type Screen = 'lobby' | 'results'
@@ -54,15 +58,23 @@ type HintRect = { top: number; left: number; width: number; height: number }
 type HintPart = { glyph: string; label: string }
 
 const focusedHint = ref<{ rect: HintRect; parts: HintPart[] } | null>(null)
+type LocalInputSource = MenuSource | 'mouse'
+const inputSource = ref<LocalInputSource | null>(null)
 
 const HINT_GAP_PX = 12
+
+const CYCLE_HINT_PARTS: HintPart[] = [
+  { glyph: '↕', label: 'Change' },
+  { glyph: '✕', label: 'Confirm' }
+]
 
 const describeControl = (element: HTMLElement): HintPart[] => {
   if (element instanceof HTMLInputElement) {
     if (element.type === 'checkbox') return [{ glyph: '✕', label: 'Toggle' }]
-    if (element.type === 'number') return [{ glyph: '✕', label: 'Confirm' }]
+    if (element.type === 'number') return CYCLE_HINT_PARTS
     return [{ glyph: '✕', label: 'Edit' }]
   }
+  if (element instanceof HTMLSelectElement) return CYCLE_HINT_PARTS
   return [{ glyph: '✕', label: 'Confirm' }]
 }
 
@@ -162,9 +174,6 @@ const handleNumberAction = (
     return true
   }
   if (action === 'activate') {
-    // X confirms the cycled value and exits focus-trap by moving down a row,
-    // matching the dropdown UX. Native browser stepping never fires because
-    // arrow keys are preventDefault'd by useMenuNavigation.
     moveRow(1, rowCount)
     return true
   }
@@ -181,9 +190,6 @@ const handleSelectAction = (
     return true
   }
   if (action === 'activate') {
-    // X confirms the currently-cycled value and exits the dropdown's
-    // focus-trap mode by moving down to the next row. The native picker is
-    // never invoked, so the dropdown stays closed throughout.
     moveRow(1, rowCount)
     return true
   }
@@ -205,7 +211,8 @@ const handleControlAction = (
   return false
 }
 
-const handleMenu = (action: MenuAction): void => {
+const handleMenu = (action: MenuAction, source: MenuSource): void => {
+  inputSource.value = source
   lastAction.value = action
   lastActionCount.value += 1
   const active = document.activeElement
@@ -246,11 +253,17 @@ const onWindowFocus = (): void => {
   if (active instanceof HTMLElement) updateFocusedHint(active)
 }
 
+const onMouseActivity = (): void => {
+  inputSource.value = 'mouse'
+}
+
 onMounted(() => {
   window.addEventListener('gamepadconnected', onGamepadConnected)
   window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
   window.addEventListener('blur', onWindowBlur)
   window.addEventListener('focus', onWindowFocus)
+  window.addEventListener('mousedown', onMouseActivity)
+  window.addEventListener('mousemove', onMouseActivity, { passive: true })
 })
 
 onUnmounted(() => {
@@ -258,6 +271,8 @@ onUnmounted(() => {
   window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
   window.removeEventListener('blur', onWindowBlur)
   window.removeEventListener('focus', onWindowFocus)
+  window.removeEventListener('mousedown', onMouseActivity)
+  window.removeEventListener('mousemove', onMouseActivity)
 })
 
 useMenuNavigation(handleMenu)
@@ -433,7 +448,7 @@ const isMarbleAvailable = (_id: string): boolean => true
     </main>
 
     <div
-      v-if="focusedHint"
+      v-if="focusedHint && inputSource === 'gamepad'"
       class="lui-showcase__hint"
       aria-hidden="true"
       :style="{
@@ -556,7 +571,7 @@ const isMarbleAvailable = (_id: string): boolean => true
   font-size: var(--lui-text-small);
   line-height: 1;
   color: #000;
-  background: #ffd700;
+  background: var(--lui-focus-color);
   padding-inline: 0.7em;
   padding-block: 0.4em;
   border-radius: 999px;
