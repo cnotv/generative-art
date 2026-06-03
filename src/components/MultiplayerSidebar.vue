@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ChatMessage } from '@webgamekit/chat'
 import { Chat } from '@/components/Chat'
+import '@/assets/styles/lobby-ui.scss'
 
 export type MultiplayerPlayer = {
   id: string
@@ -94,29 +95,31 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  font-size: var(--font-size-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: none;
+  border-bottom: 1px solid var(--lui-stroke-faint);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  color: var(--game-ink);
-  box-shadow: 2px 2px 0 var(--game-border);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .multiplayer-sidebar__player--local {
-  background: var(--game-surface-dim);
+  opacity: 0.8;
 }
 
 .multiplayer-sidebar__player--drawer {
-  background: var(--pic-yellow, #ffd93d);
-  transform: rotate(-1deg);
+  color: var(--lui-focus-color);
 }
 
 .multiplayer-sidebar__player-dot {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
+  border: 1.5px solid var(--lui-stroke-faint);
   flex-shrink: 0;
 }
 
@@ -128,9 +131,9 @@ const emit = defineEmits<{
 }
 
 .multiplayer-sidebar__player-tag {
-  font-size: var(--font-size-xs);
+  font-size: var(--lui-text-tiny);
   font-weight: 600;
-  color: var(--game-ink-muted);
+  opacity: 0.6;
   flex-shrink: 0;
 }
 
@@ -141,9 +144,9 @@ const emit = defineEmits<{
 }
 
 .multiplayer-sidebar__player-solved {
-  color: #2e7d32;
+  color: var(--lui-focus-color);
   font-weight: 900;
-  font-size: var(--font-size-sm);
+  font-size: var(--lui-text-small);
   flex-shrink: 0;
 }
 
