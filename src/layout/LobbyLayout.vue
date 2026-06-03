@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, useSlots } from 'vue'
-import { LobbyUIButton } from '@/components/LobbyUI'
+import { LobbyUIButton, LobbyUIConfirm } from '@/components/LobbyUI'
 import { useMenuNavigation } from '@/composables/useMenuNavigation'
 import '@/assets/styles/lobby-ui.scss'
 
@@ -26,18 +26,38 @@ const slots = useSlots()
 const hasSidebar = computed(() => (props.sidebarVisible ?? true) && !!slots.sidebar)
 const hasRules = computed(() => !!slots.rules)
 const rulesOpen = ref(false)
+const confirmOpen = ref(false)
 
 const emit = defineEmits<{ leaveRoom: [] }>()
+
+const requestLeave = (): void => {
+  if (props.phase === 'lobby') {
+    emit('leaveRoom')
+  } else {
+    confirmOpen.value = true
+  }
+}
+
+const confirmLeave = (): void => {
+  confirmOpen.value = false
+  emit('leaveRoom')
+}
+
+const cancelLeave = (): void => {
+  confirmOpen.value = false
+}
 
 useMenuNavigation((action) => {
   if (action === 'cancel') {
     if (rulesOpen.value) {
       rulesOpen.value = false
     } else {
-      emit('leaveRoom')
+      requestLeave()
     }
   }
 })
+
+defineExpose({ requestLeave })
 
 const layoutStyle = computed(() => ({
   '--ll-columns': hasSidebar.value ? `1fr ${props.sidebarWidth}` : '1fr',
@@ -87,6 +107,15 @@ const layoutStyle = computed(() => ({
       <slot name="sidebar" />
     </div>
     <slot name="tabbar" />
+
+    <LobbyUIConfirm
+      v-if="confirmOpen"
+      message="Leave the game?"
+      confirm-label="Leave"
+      cancel-label="Stay"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
   </main>
 </template>
 
