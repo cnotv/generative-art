@@ -88,6 +88,7 @@ onMounted(() => {
 const wizardRoot = ref<HTMLElement | null>(null)
 const focusRow = ref(0)
 const focusCol = ref(0)
+const editingElement = ref<HTMLElement | null>(null)
 
 const FOCUSABLE_SELECTOR =
   'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
@@ -145,11 +146,22 @@ const handleCyclableControl = (
   action: MenuAction,
   rowCount: number
 ): boolean => {
+  const isEditing = editingElement.value === active
+
+  if (!isEditing) {
+    if (action === 'activate') {
+      editingElement.value = active
+      return true
+    }
+    return false
+  }
+
   if (action === 'up' || action === 'down') {
     bumpControl(active, action === 'up' ? 1 : -1)
     return true
   }
   if (action === 'activate') {
+    editingElement.value = null
     focusRow.value = Math.min(rowCount - 1, focusRow.value + 1)
     focusCol.value = 0
     applyFocus()
@@ -161,11 +173,13 @@ const handleCyclableControl = (
 const handleRowNav = (action: MenuAction, rows: HTMLElement[], active: Element | null): void => {
   const handlers: Partial<Record<MenuAction, () => void>> = {
     up: () => {
+      editingElement.value = null
       focusRow.value = Math.max(0, focusRow.value - 1)
       focusCol.value = 0
       applyFocus()
     },
     down: () => {
+      editingElement.value = null
       focusRow.value = Math.min(rows.length - 1, focusRow.value + 1)
       focusCol.value = 0
       applyFocus()

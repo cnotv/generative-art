@@ -431,5 +431,17 @@ export const KEYBOARD_MAPPING = {
     ArrowLeft: 'left',
     d: 'right',
     ArrowRight: 'right'
+  },
+  gamepad: {
+    // Left stick
+    'axis1-up': 'forward',
+    'axis1-down': 'backward',
+    'axis0-left': 'left',
+    'axis0-right': 'right',
+    // D-pad
+    'dpad-up': 'forward',
+    'dpad-down': 'backward',
+    'dpad-left': 'left',
+    'dpad-right': 'right'
   }
 }
