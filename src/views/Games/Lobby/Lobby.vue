@@ -212,6 +212,7 @@ const handleNavRight = (rows: HTMLElement[]): void => {
 }
 
 useMenuNavigation((action) => {
+  if (activeComponent.value) return
   const rows = queryRows()
   if (!rows.length) return
   const active = document.activeElement
@@ -231,6 +232,7 @@ useMenuNavigation((action) => {
 })
 
 onMounted(async () => {
+  await nextTick()
   await nextTick()
   applyFocus()
 })

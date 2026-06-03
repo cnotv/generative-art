@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LobbyUIButton } from '@/components/LobbyUI'
+import { useMenuNavigation } from '@/composables/useMenuNavigation'
 import '@/assets/styles/lobby-ui.scss'
 
 const props = defineProps<{
@@ -24,6 +25,10 @@ const handleBack = (): void => {
     emit('leaveRoom')
   }
 }
+
+useMenuNavigation((action) => {
+  if (action === 'cancel') handleBack()
+})
 </script>
 
 <template>

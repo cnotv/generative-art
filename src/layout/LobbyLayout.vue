@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, useSlots } from 'vue'
+import { LobbyUIButton } from '@/components/LobbyUI'
+import { useMenuNavigation } from '@/composables/useMenuNavigation'
+import '@/assets/styles/lobby-ui.scss'
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +27,18 @@ const hasSidebar = computed(() => (props.sidebarVisible ?? true) && !!slots.side
 const hasRules = computed(() => !!slots.rules)
 const rulesOpen = ref(false)
 
+const emit = defineEmits<{ leaveRoom: [] }>()
+
+useMenuNavigation((action) => {
+  if (action === 'cancel') {
+    if (rulesOpen.value) {
+      rulesOpen.value = false
+    } else {
+      emit('leaveRoom')
+    }
+  }
+})
+
 const layoutStyle = computed(() => ({
   '--ll-columns': hasSidebar.value ? `1fr ${props.sidebarWidth}` : '1fr',
   '--ll-areas': hasSidebar.value ? "'header header' 'main sidebar'" : "'header' 'main'"
@@ -41,20 +56,23 @@ const layoutStyle = computed(() => ({
       :class="{ 'lobby-layout__header--hide-mobile': hideHeaderOnMobile }"
     >
       <slot name="header" />
-      <button
+      <LobbyUIButton
         v-if="hasRules"
-        class="lobby-layout__rules-btn"
-        type="button"
+        variant="ghost"
         :aria-expanded="rulesOpen"
         @click="rulesOpen = !rulesOpen"
       >
         ?
-      </button>
+      </LobbyUIButton>
       <Transition name="ll-rules">
         <div v-if="rulesOpen" class="lobby-layout__rules-panel">
-          <button class="lobby-layout__rules-close" type="button" @click="rulesOpen = false">
+          <LobbyUIButton
+            variant="ghost"
+            class="lobby-layout__rules-close"
+            @click="rulesOpen = false"
+          >
             ×
-          </button>
+          </LobbyUIButton>
           <slot name="rules" />
         </div>
       </Transition>
@@ -99,35 +117,15 @@ const layoutStyle = computed(() => ({
   position: relative;
 }
 
-.lobby-layout__rules-btn {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-  flex-shrink: 0;
-}
-
-.lobby-layout__rules-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-border);
-}
-
 .lobby-layout__rules-panel {
   position: absolute;
   top: calc(100% + var(--spacing-2));
   left: 0;
   z-index: var(--z-overlay, 100);
-  background: var(--game-surface-subtle);
-  border: 2px solid var(--game-border);
+  background: rgb(0 0 0 / 0.85);
+  border: 2px solid var(--lui-stroke-faint);
   border-radius: var(--radius-md, 0.75rem);
-  box-shadow: 3px 3px 0 var(--game-border);
+  box-shadow: var(--lui-border-shadow);
   padding: var(--spacing-3);
   min-width: 18rem;
   max-width: 24rem;
@@ -135,27 +133,8 @@ const layoutStyle = computed(() => ({
 
 .lobby-layout__rules-close {
   position: absolute;
-  top: var(--spacing-2);
-  right: var(--spacing-2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid var(--game-border);
-  border-radius: 50%;
-  background: var(--game-surface-dim, var(--game-surface-subtle));
-  color: var(--game-ink);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  font-family: inherit;
-  flex-shrink: 0;
-}
-
-.lobby-layout__rules-close:hover {
-  background: var(--game-border);
+  top: var(--spacing-1);
+  right: var(--spacing-1);
 }
 
 .lobby-layout__main {

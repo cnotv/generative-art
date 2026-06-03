@@ -71,6 +71,20 @@ watch(
 
 const showInstructions = ref(true)
 const gamepadActive = ref(false)
+const gameStarted = ref(false)
+
+watch(
+  () => props.elapsed,
+  (v) => {
+    if (v > 0) gameStarted.value = true
+  }
+)
+watch(
+  () => props.countdown,
+  (v, previous) => {
+    if (v < previous) gameStarted.value = true
+  }
+)
 
 const hideInstructions = (): void => {
   showInstructions.value = false
@@ -164,15 +178,11 @@ onUnmounted(() => {
     </Transition>
 
     <Transition name="mm-instructions">
-      <div v-if="showInstructions && !finished" class="mm-game__instructions">
+      <div v-if="showInstructions && !finished && !gameStarted" class="mm-game__instructions">
         <span class="mm-game__instructions-move">WASD / Arrows / Left stick to roll</span>
         <span class="mm-game__instructions-esc">Esc / O — Settings</span>
       </div>
     </Transition>
-
-    <div v-if="gamepadActive && !finished" class="mm-game__pad-hint">
-      <span class="mm-game__pad-hint-chip">O Back</span>
-    </div>
 
     <canvas ref="canvas" class="mm-game__canvas" />
 

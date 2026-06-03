@@ -82,7 +82,7 @@ watch(
 
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
-  nextTick(() => applyFocus())
+  nextTick(() => jumpToAutofocus())
 })
 
 const wizardRoot = ref<HTMLElement | null>(null)
@@ -121,6 +121,19 @@ const applyFocus = (): void => {
   const items = queryFocusables(row)
   const target = items[Math.min(focusCol.value, items.length - 1)]
   target?.focus()
+}
+
+const jumpToAutofocus = (): void => {
+  if (!wizardRoot.value) return
+  const autofocused = wizardRoot.value.querySelector<HTMLElement>('[autofocus]')
+  if (!autofocused) return
+  const rows = queryRows()
+  const rowIndex = rows.findIndex((row) => row.contains(autofocused))
+  if (rowIndex === -1) return
+  focusRow.value = rowIndex
+  const items = queryFocusables(rows[rowIndex])
+  focusCol.value = items.indexOf(autofocused)
+  autofocused.focus()
 }
 
 const bumpControl = (element: HTMLElement, direction: 1 | -1): void => {
