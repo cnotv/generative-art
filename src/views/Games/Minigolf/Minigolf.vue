@@ -177,7 +177,10 @@ const copyLink = async (): Promise<void> => {
   await navigator.clipboard.writeText(url.toString())
 }
 
-onMounted(() => session.init())
+onMounted(() => {
+  store.reset()
+  session.init()
+})
 onUnmounted(() => cleanup())
 </script>
 

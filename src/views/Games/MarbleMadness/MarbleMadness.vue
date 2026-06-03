@@ -247,6 +247,7 @@ const handleRestart = (): void => {
 const MM_FONT_KEY = 'mm-font'
 
 onMounted(() => {
+  store.reset()
   session.init()
   loadGoogleFont(
     'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',

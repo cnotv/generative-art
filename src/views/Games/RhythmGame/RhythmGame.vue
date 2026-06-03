@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useRhythmGameSession } from './useRhythmGameSession'
@@ -161,6 +161,7 @@ const handleRestart = (): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>

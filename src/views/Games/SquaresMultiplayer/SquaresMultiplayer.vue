@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onUnmounted, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
@@ -173,6 +173,7 @@ const handleColorChange = (color: string): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>

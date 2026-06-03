@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useBubbleShooterSession } from './useBubbleShooterSession'
@@ -137,6 +137,7 @@ const handleRestart = (): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
