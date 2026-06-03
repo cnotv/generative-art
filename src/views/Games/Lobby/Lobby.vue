@@ -441,7 +441,7 @@ onMounted(async () => {
   font-family: var(--lui-font);
   font-size: var(--lui-text-medium);
   font-weight: 900;
-  color: var(--lui-text-color);
+  color: inherit;
   text-shadow: var(--lui-text-shadow);
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -487,13 +487,22 @@ onMounted(async () => {
   cursor: pointer;
   font-family: var(--lui-font);
   gap: var(--spacing-2);
+  color: var(--lui-text-color);
+  transition: color 0.1s ease;
+}
+
+.lobby__section-toggle:hover,
+.lobby__section-toggle:focus,
+.lobby__section-toggle:focus-visible {
+  outline: none;
+  color: var(--lui-focus-color);
 }
 
 .lobby__section-label {
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
   font-weight: 800;
-  color: var(--lui-text-color);
+  color: inherit;
   text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -501,7 +510,7 @@ onMounted(async () => {
 
 .lobby__section-chevron {
   font-size: var(--lui-text-small);
-  color: var(--lui-text-color);
+  color: inherit;
   opacity: 0.6;
   transition: transform 0.15s ease;
   transform: rotate(90deg);
