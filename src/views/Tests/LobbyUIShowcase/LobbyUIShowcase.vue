@@ -60,21 +60,23 @@ type HintPart = { glyph: string; label: string }
 const focusedHint = ref<{ rect: HintRect; parts: HintPart[] } | null>(null)
 type LocalInputSource = MenuSource | 'mouse'
 const inputSource = ref<LocalInputSource | null>(null)
+const editingElement = ref<HTMLElement | null>(null)
 
 const HINT_GAP_PX = 12
 
-const CYCLE_HINT_PARTS: HintPart[] = [
-  { glyph: '↕', label: 'Change' },
-  { glyph: '✕', label: 'Confirm' }
-]
-
 const describeControl = (element: HTMLElement): HintPart[] => {
+  const hasUpDownBehavior =
+    (element instanceof HTMLInputElement && element.type === 'number') ||
+    element instanceof HTMLSelectElement
+  if (hasUpDownBehavior) {
+    return editingElement.value === element
+      ? [{ glyph: '✕', label: 'Confirm' }]
+      : [{ glyph: '↕', label: 'Change' }]
+  }
   if (element instanceof HTMLInputElement) {
     if (element.type === 'checkbox') return [{ glyph: '✕', label: 'Toggle' }]
-    if (element.type === 'number') return CYCLE_HINT_PARTS
     return [{ glyph: '✕', label: 'Edit' }]
   }
-  if (element instanceof HTMLSelectElement) return CYCLE_HINT_PARTS
   return [{ glyph: '✕', label: 'Confirm' }]
 }
 
@@ -127,6 +129,7 @@ const cycleSelect = (select: HTMLSelectElement, direction: 1 | -1): void => {
 }
 
 const moveRow = (delta: number, rowCount: number): void => {
+  editingElement.value = null
   focusRow.value = Math.min(Math.max(focusRow.value + delta, 0), rowCount - 1)
   focusCol.value = 0
   applyFocus()
@@ -164,17 +167,31 @@ const refreshDiagnostics = (): void => {
   }
 }
 
+const refreshHint = (element: HTMLElement): void => {
+  const r = element.getBoundingClientRect()
+  focusedHint.value = {
+    rect: { top: r.top, left: r.left, width: r.width, height: r.height },
+    parts: describeControl(element)
+  }
+}
+
 const handleNumberAction = (
   input: HTMLInputElement,
   action: MenuAction,
   rowCount: number
 ): boolean => {
-  if (action === 'up' || action === 'down') {
-    bumpNumberInput(input, action === 'up' ? 1 : -1)
+  if (action === 'activate') {
+    if (editingElement.value !== input) {
+      editingElement.value = input
+      refreshHint(input)
+      return true
+    }
+    editingElement.value = null
+    moveRow(1, rowCount)
     return true
   }
-  if (action === 'activate') {
-    moveRow(1, rowCount)
+  if ((action === 'up' || action === 'down') && editingElement.value === input) {
+    bumpNumberInput(input, action === 'up' ? 1 : -1)
     return true
   }
   return false
@@ -185,12 +202,18 @@ const handleSelectAction = (
   action: MenuAction,
   rowCount: number
 ): boolean => {
-  if (action === 'up' || action === 'down') {
-    cycleSelect(select, action === 'down' ? 1 : -1)
+  if (action === 'activate') {
+    if (editingElement.value !== select) {
+      editingElement.value = select
+      refreshHint(select)
+      return true
+    }
+    editingElement.value = null
+    moveRow(1, rowCount)
     return true
   }
-  if (action === 'activate') {
-    moveRow(1, rowCount)
+  if ((action === 'up' || action === 'down') && editingElement.value === select) {
+    cycleSelect(select, action === 'down' ? 1 : -1)
     return true
   }
   return false
@@ -246,6 +269,14 @@ const onGamepadDisconnected = (): void => {
 
 const onWindowBlur = (): void => {
   focusedHint.value = null
+  editingElement.value = null
+}
+
+const onFocusOut = (event: FocusEvent): void => {
+  if (event.relatedTarget instanceof Element && panelReference.value?.contains(event.relatedTarget))
+    return
+  focusedHint.value = null
+  editingElement.value = null
 }
 
 const onWindowFocus = (): void => {
@@ -383,7 +414,12 @@ const isMarbleAvailable = (_id: string): boolean => true
     </aside>
 
     <main class="lui-showcase__stage">
-      <section v-if="screen === 'lobby'" ref="panelReference" class="lui-showcase__panel">
+      <section
+        v-if="screen === 'lobby'"
+        ref="panelReference"
+        class="lui-showcase__panel"
+        @focusout="onFocusOut"
+      >
         <h1 class="lui-showcase__title">Lobby</h1>
 
         <LobbyUIRow label="Name">
@@ -423,7 +459,7 @@ const isMarbleAvailable = (_id: string): boolean => true
         </div>
       </section>
 
-      <section v-else ref="panelReference" class="lui-showcase__panel">
+      <section v-else ref="panelReference" class="lui-showcase__panel" @focusout="onFocusOut">
         <h1 class="lui-showcase__title">Round Complete</h1>
 
         <LobbyUIRow label="Match">

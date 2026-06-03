@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useRhythmGameSession } from './useRhythmGameSession'
@@ -161,20 +161,23 @@ const handleRestart = (): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
 
 <template>
   <LobbyLayout
+    ref="layoutReference"
     class="rg"
     :phase="phase"
     :show-sidebar="showSidebar"
     :main-placement="phase === 'playing' ? 'fill' : 'center'"
     :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="handleLeaveRoom" />
+      <GameHeader @leave-room="requestLeave" />
     </template>
 
     <template #rules>

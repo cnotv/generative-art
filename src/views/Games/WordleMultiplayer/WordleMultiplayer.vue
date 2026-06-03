@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onUnmounted, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useWordleMultiplayerStore } from '@/stores/wordleMultiplayer'
@@ -175,14 +175,21 @@ const handleColorChange = (color: string): void => {
 const myGuesses = computed(() => playerGuesses.value[localPeerId.value] ?? [])
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
 
 <template>
-  <LobbyLayout class="wl" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+  <LobbyLayout
+    ref="layoutReference"
+    class="wl"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :style="backgroundStyle"
+  >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
     </template>
 
     <template #rules>

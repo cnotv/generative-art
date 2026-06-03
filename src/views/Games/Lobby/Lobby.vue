@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { Check } from 'lucide-vue-next'
+import { LobbyUINameInput, LobbyUIColorSwatches } from '@/components/LobbyUI'
+import { useMenuNavigation } from '@/composables/useMenuNavigation'
+import { Chat } from '@/components/Chat'
+import '@/assets/styles/game-ui.scss'
+import '@/assets/styles/lobby-ui.scss'
 import {
   loadProfile,
   saveProfile,
@@ -11,6 +15,7 @@ import {
   NAME_ADJECTIVES,
   NAME_ANIMALS
 } from '@/utils/playerProfile'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { useLobbySession } from './useLobbySession'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
@@ -19,12 +24,13 @@ import { useMinigolfStore } from '@/stores/minigolf'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
-import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import { useLobbyStore } from '@/stores/lobby'
 import type { GameType, LobbyRoom } from '@/types/lobby'
 import { GAME_LABELS, GAME_TYPES, GAME_COMPONENTS } from './constants'
+
+const FONT_KEY = 'lobby-font'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,6 +102,11 @@ watch(activeGame, (game, previous) => {
 onMounted(() => {
   saveProfile(playerName.value, playerColor.value)
   init()
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', FONT_KEY)
+})
+
+onUnmounted(() => {
+  removeGoogleFont(FONT_KEY)
 })
 
 const handleNameCommit = (): void => {
@@ -131,17 +142,104 @@ const handleJoin = (room: LobbyRoom): void => {
 }
 
 const lobbyStore = useLobbyStore()
-const { players: lobbyPlayers, rooms: lobbyRooms } = storeToRefs(lobbyStore)
+const {
+  players: lobbyPlayers,
+  rooms: lobbyRooms,
+  messages: lobbyMessages
+} = storeToRefs(lobbyStore)
 const onlineCount = computed(() => Object.keys(lobbyPlayers.value).length)
 const roomCount = computed(() => Object.keys(lobbyRooms.value).length)
 
 const profileOpen = ref(true)
 const presenceOpen = ref(true)
 const roomsOpen = ref(true)
+
+const lobbyRoot = ref<HTMLElement | null>(null)
+const focusRow = ref(0)
+const focusCol = ref(0)
+
+const FOCUSABLE_SELECTOR =
+  'button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]'
+
+const queryRows = (): HTMLElement[] => {
+  if (!lobbyRoot.value) return []
+  return [...lobbyRoot.value.querySelectorAll<HTMLElement>('[data-nav-row]')].filter(
+    (row) => row.querySelectorAll(FOCUSABLE_SELECTOR).length > 0
+  )
+}
+
+const queryFocusables = (row: HTMLElement): HTMLElement[] => [
+  ...row.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+]
+
+const applyFocus = (): void => {
+  const rows = queryRows()
+  const row = rows[focusRow.value]
+  if (!row) return
+  const items = queryFocusables(row)
+  const target = items[Math.min(focusCol.value, items.length - 1)]
+  target?.focus()
+}
+
+const isTextInput = (element: Element | null): boolean =>
+  element instanceof HTMLInputElement &&
+  new Set(['text', 'number', 'email', 'password']).has(element.type)
+
+const handleNavUp = (rows: HTMLElement[]): void => {
+  focusRow.value = Math.max(0, focusRow.value - 1)
+  focusCol.value = 0
+  applyFocus()
+  rows.length // suppress unused-param warning
+}
+
+const handleNavDown = (rows: HTMLElement[]): void => {
+  focusRow.value = Math.min(rows.length - 1, focusRow.value + 1)
+  focusCol.value = 0
+  applyFocus()
+}
+
+const handleNavLeft = (rows: HTMLElement[]): void => {
+  if (!rows[focusRow.value]) return
+  focusCol.value = Math.max(0, focusCol.value - 1)
+  applyFocus()
+}
+
+const handleNavRight = (rows: HTMLElement[]): void => {
+  const row = rows[focusRow.value]
+  if (!row) return
+  focusCol.value = Math.min(queryFocusables(row).length - 1, focusCol.value + 1)
+  applyFocus()
+}
+
+useMenuNavigation((action) => {
+  if (activeComponent.value) return
+  const rows = queryRows()
+  if (!rows.length) return
+  const active = document.activeElement
+  if (isTextInput(active) && (action === 'left' || action === 'right')) return
+
+  const handlers: Partial<Record<typeof action, () => void>> = {
+    up: () => handleNavUp(rows),
+    down: () => handleNavDown(rows),
+    left: () => handleNavLeft(rows),
+    right: () => handleNavRight(rows),
+    activate: () => {
+      if (active instanceof HTMLElement && !isTextInput(active)) active.click()
+    },
+    cancel: () => (active as HTMLElement | null)?.blur?.()
+  }
+  handlers[action]?.()
+})
+
+onMounted(async () => {
+  await nextTick()
+  await nextTick()
+  applyFocus()
+})
 </script>
 
 <template>
-  <div class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
+  <div ref="lobbyRoot" class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
     <!-- Main content area -->
     <main class="lobby__main">
       <div v-if="activeComponent" class="lobby__game-embed">
@@ -150,7 +248,7 @@ const roomsOpen = ref(true)
 
       <div v-else class="lobby__picker">
         <p class="lobby__picker-label">Pick a game to create a room</p>
-        <div class="lobby__picker-games">
+        <div class="lobby__picker-games" data-nav-row>
           <button
             v-for="game in GAME_TYPES"
             :key="game"
@@ -168,7 +266,12 @@ const roomsOpen = ref(true)
     <aside v-if="!activeComponent" class="lobby__sidebar">
       <!-- Profile -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !profileOpen }">
-        <button class="lobby__section-toggle" type="button" @click="profileOpen = !profileOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="profileOpen = !profileOpen"
+        >
           <span class="lobby__section-label">Profile</span>
           <span
             class="lobby__section-chevron"
@@ -177,34 +280,34 @@ const roomsOpen = ref(true)
           >
         </button>
         <div v-show="profileOpen" class="lobby__profile">
-          <input
-            v-model="playerName"
-            class="lobby__name-input"
-            type="text"
-            maxlength="20"
-            placeholder="Your name"
-            @change="handleNameCommit"
-            @blur="handleNameCommit"
-          />
-          <div class="lobby__swatches">
-            <button
-              v-for="color in PLAYER_COLORS"
-              :key="color"
-              class="lobby__swatch"
-              :class="{ 'lobby__swatch--active': playerColor === color }"
-              :style="{ background: color }"
-              type="button"
-              @click="handleColorPick(color)"
-            >
-              <Check v-if="playerColor === color" class="lobby__swatch-check" />
-            </button>
+          <div data-nav-row>
+            <LobbyUINameInput
+              :model-value="playerName"
+              :maxlength="20"
+              placeholder="Your name"
+              @update:model-value="playerName = $event"
+              @change="handleNameCommit"
+              @blur="handleNameCommit"
+            />
+          </div>
+          <div data-nav-row>
+            <LobbyUIColorSwatches
+              :model-value="playerColor"
+              :colors="PLAYER_COLORS"
+              @update:model-value="handleColorPick"
+            />
           </div>
         </div>
       </div>
 
       <!-- Presence -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !presenceOpen }">
-        <button class="lobby__section-toggle" type="button" @click="presenceOpen = !presenceOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="presenceOpen = !presenceOpen"
+        >
           <span class="lobby__section-label">Online ({{ onlineCount }})</span>
           <span
             class="lobby__section-chevron"
@@ -219,7 +322,12 @@ const roomsOpen = ref(true)
 
       <!-- Rooms -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !roomsOpen }">
-        <button class="lobby__section-toggle" type="button" @click="roomsOpen = !roomsOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="roomsOpen = !roomsOpen"
+        >
           <span class="lobby__section-label">Rooms ({{ roomCount }})</span>
           <span
             class="lobby__section-chevron"
@@ -239,7 +347,12 @@ const roomsOpen = ref(true)
 
       <!-- Chat -->
       <div class="lobby__chat">
-        <LobbyChat :local-peer-id="localPeerId" @send="sendChat" />
+        <Chat
+          :messages="lobbyMessages"
+          :local-peer-id="localPeerId"
+          placeholder="Say something…"
+          @send="sendChat"
+        />
       </div>
     </aside>
   </div>
@@ -247,11 +360,6 @@ const roomsOpen = ref(true)
 
 <style scoped>
 .lobby {
-  --lb-yellow: #ffd93d;
-  --lb-pink: #ff6bcb;
-  --lb-blue: #4ecdc4;
-  --lb-orange: #ff8c42;
-
   display: grid;
   grid-template-columns: 1fr 280px;
   grid-template-areas: 'main sidebar';
@@ -259,7 +367,7 @@ const roomsOpen = ref(true)
   box-sizing: border-box;
   overflow: hidden;
   background: var(--lb-bg);
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
+  font-family: var(--lui-font);
 }
 
 .lobby--in-game {
@@ -289,9 +397,13 @@ const roomsOpen = ref(true)
 
 .lobby__picker-label {
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  color: var(--color-muted-foreground);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .lobby__picker-games {
@@ -307,34 +419,33 @@ const roomsOpen = ref(true)
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
-  border: 3px solid var(--game-border);
+  border: 3px solid var(--lui-stroke);
   border-radius: 1.25rem;
-  background: var(--lb-yellow);
-  box-shadow: 5px 5px 0 var(--game-border);
+  background: transparent;
+  box-shadow: var(--lui-border-shadow);
   cursor: pointer;
   transition: transform 0.1s ease;
   min-width: 9rem;
   touch-action: manipulation;
 }
 
-.lobby__game-card:nth-child(2) {
-  background: var(--lb-blue);
-}
-
-.lobby__game-card:nth-child(3) {
-  background: var(--lb-pink);
-}
-
-.lobby__game-card:hover {
+.lobby__game-card:hover,
+.lobby__game-card:focus,
+.lobby__game-card:focus-visible {
+  outline: none;
   transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 var(--game-border);
+  border-color: var(--lui-focus-color);
+  color: var(--lui-focus-color);
 }
 
 .lobby__game-name {
-  font-size: var(--font-size-md, 1rem);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-medium);
   font-weight: 900;
-  color: #111;
+  color: inherit;
+  text-shadow: var(--lui-text-shadow);
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 /* Picker and embedded game slide up on mount */
@@ -356,14 +467,14 @@ const roomsOpen = ref(true)
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--lb-sidebar-bg);
+  background: transparent;
   padding-top: var(--nav-height);
-  border-left: 3px solid var(--game-border);
+  border-left: 2px solid var(--lui-stroke-faint);
   animation: slide-from-right 0.32s ease both;
 }
 
 .lobby__section {
-  border-bottom: 3px solid var(--game-border);
+  border-bottom: 2px solid var(--lui-stroke-faint);
 }
 
 .lobby__section-toggle {
@@ -375,21 +486,33 @@ const roomsOpen = ref(true)
   background: none;
   border: none;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--lui-font);
   gap: var(--spacing-2);
+  color: var(--lui-text-color);
+  transition: color 0.1s ease;
+}
+
+.lobby__section-toggle:hover,
+.lobby__section-toggle:focus,
+.lobby__section-toggle:focus-visible {
+  outline: none;
+  color: var(--lui-focus-color);
 }
 
 .lobby__section-label {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 800;
-  color: var(--color-muted-foreground);
+  color: inherit;
+  text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .lobby__section-chevron {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
+  font-size: var(--lui-text-small);
+  color: inherit;
+  opacity: 0.6;
   transition: transform 0.15s ease;
   transform: rotate(90deg);
   display: inline-block;
@@ -403,52 +526,7 @@ const roomsOpen = ref(true)
   padding: 0 var(--spacing-3) var(--spacing-2);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.lobby__name-input {
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.lobby__swatches {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.lobby__swatch {
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid var(--game-border);
-  border-radius: 50%;
-  cursor: pointer;
-  padding: 0;
-  box-shadow: 1px 1px 0 var(--game-border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.1s ease;
-}
-
-.lobby__swatch:hover {
-  transform: scale(1.15);
-}
-
-.lobby__swatch-check {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: #fff;
-  stroke-width: 4;
+  gap: var(--spacing-2);
 }
 
 .lobby__chat {
@@ -474,7 +552,7 @@ const roomsOpen = ref(true)
     max-height: 50dvh;
     padding-top: 0;
     border-left: none;
-    border-top: 3px solid var(--game-border);
+    border-top: 2px solid var(--lui-stroke-faint);
   }
 
   .lobby__picker-games {

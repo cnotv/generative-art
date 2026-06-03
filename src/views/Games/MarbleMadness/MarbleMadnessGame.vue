@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isMobile } from '@webgamekit/controls'
+import { useMenuNavigation, type MenuSource } from '@/composables/useMenuNavigation'
 import TouchControl from '@/components/TouchControl.vue'
 import { TIME_PENALTY_FALL, RUSH_TIME_BONUS } from './config'
 import type { GameMode } from './types'
@@ -69,9 +70,46 @@ watch(
 )
 
 const showInstructions = ref(true)
+const gamepadActive = ref(false)
+const gameStarted = ref(false)
+
+watch(
+  () => props.elapsed,
+  (v) => {
+    if (v > 0) gameStarted.value = true
+  }
+)
+watch(
+  () => props.countdown,
+  (v, previous) => {
+    if (v < previous) gameStarted.value = true
+  }
+)
 
 const hideInstructions = (): void => {
   showInstructions.value = false
+}
+
+useMenuNavigation((action, source: MenuSource) => {
+  if (source === 'gamepad') gamepadActive.value = true
+  if (action === 'cancel') emit('escape')
+})
+
+// Also dismiss on first gamepad button press (any button on a connected pad)
+const onGamepadButtonForInstructions = (): void => {
+  let rafId = 0
+  const poll = (): void => {
+    if (!showInstructions.value) return
+    const pressed = navigator.getGamepads().some((gp) => gp?.buttons.some((b) => b.pressed))
+    if (pressed) {
+      hideInstructions()
+    } else {
+      rafId = requestAnimationFrame(poll)
+    }
+  }
+  rafId = requestAnimationFrame(poll)
+  const stop = (): void => cancelAnimationFrame(rafId)
+  window.addEventListener('gamepaddisconnected', stop, { once: true })
 }
 
 const handleEscKey = (event: KeyboardEvent): void => {
@@ -96,6 +134,7 @@ watch(() => props.trackName, flashTrackName)
 onMounted(() => {
   window.addEventListener('keydown', hideInstructions, { once: true })
   window.addEventListener('touchstart', hideInstructions, { once: true })
+  window.addEventListener('gamepadconnected', onGamepadButtonForInstructions, { once: true })
   window.addEventListener('keydown', handleEscKey)
   flashTrackName()
 })
@@ -139,9 +178,9 @@ onUnmounted(() => {
     </Transition>
 
     <Transition name="mm-instructions">
-      <div v-if="showInstructions && !finished" class="mm-game__instructions">
-        <span class="mm-game__instructions-move">WASD / Arrow keys to roll</span>
-        <span class="mm-game__instructions-esc">Esc — Settings</span>
+      <div v-if="showInstructions && !finished && !gameStarted" class="mm-game__instructions">
+        <span class="mm-game__instructions-move">WASD / Arrows / Left stick to roll</span>
+        <span class="mm-game__instructions-esc">Esc / O — Settings</span>
       </div>
     </Transition>
 
@@ -315,6 +354,30 @@ onUnmounted(() => {
   text-shadow: var(--shadow-text-game);
   letter-spacing: 0.08em;
   line-height: 1;
+}
+
+.mm-game__pad-hint {
+  position: absolute;
+  top: var(--spacing-3);
+  right: var(--spacing-3);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.mm-game__pad-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.3em 0.7em;
+  border-radius: 999px;
+  background: #ffd700;
+  color: #000;
+  font-family: var(--font-playful);
+  font-size: clamp(0.75rem, 1.8vw, 1rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .mm-penalty-enter-active {

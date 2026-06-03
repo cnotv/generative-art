@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
+import { LobbyUIWizard } from '@/components/LobbyUI'
+import '@/assets/styles/lobby-ui.scss'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import type { MgPlayer } from '@/stores/minigolf'
 import { MATCHMAKER_ROOM } from './constants'
@@ -50,14 +51,13 @@ const toggleHole = (index: number): void => {
 </script>
 
 <template>
-  <GameLobbyWizard
+  <LobbyUIWizard
     :player-name="playerName"
     :player-color="playerColor"
     :is-host="isHost"
     :player-list="playerList"
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
-    accent-color="var(--mg-green)"
     :config-fields="configFields"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
@@ -106,7 +106,7 @@ const toggleHole = (index: number): void => {
         </div>
       </div>
     </template>
-  </GameLobbyWizard>
+  </LobbyUIWizard>
 </template>
 
 <style scoped>
@@ -117,15 +117,19 @@ const toggleHole = (index: number): void => {
 }
 
 .mgl-hole-picker__label {
-  font-size: var(--font-size-sm);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  color: var(--game-ink);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   margin: 0;
 }
 
 .mgl-hole-picker__count {
   font-weight: 600;
-  color: var(--game-ink-muted);
+  opacity: 0.7;
   margin-left: var(--spacing-1);
 }
 
@@ -133,7 +137,6 @@ const toggleHole = (index: number): void => {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--spacing-1);
-  overflow: hidden;
 }
 
 .mgl-hole-picker__item {
@@ -142,14 +145,14 @@ const toggleHole = (index: number): void => {
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1);
-  border: 2px solid var(--game-border);
+  border: 2px solid var(--lui-stroke-faint);
   border-radius: var(--radius-sm);
-  background: var(--game-surface-subtle);
-  box-shadow: 2px 2px 0 var(--game-border);
+  background: transparent;
+  box-shadow: var(--lui-border-shadow);
   cursor: pointer;
   transition:
     transform 0.1s ease,
-    box-shadow 0.1s ease;
+    border-color 0.15s ease;
 }
 
 .mgl-hole-picker__item:disabled {
@@ -158,13 +161,11 @@ const toggleHole = (index: number): void => {
 
 .mgl-hole-picker__item:hover:not(:disabled) {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-border);
 }
 
 .mgl-hole-picker__item--selected {
-  border-color: var(--mg-green, #4caf50);
-  background: color-mix(in srgb, var(--mg-green, #4caf50) 20%, var(--game-surface-subtle));
-  box-shadow: 2px 2px 0 var(--mg-green, #4caf50);
+  border-color: var(--lui-stroke);
+  box-shadow: var(--lui-border-shadow);
 }
 
 .mgl-hole-picker__svg {
@@ -176,9 +177,11 @@ const toggleHole = (index: number): void => {
 }
 
 .mgl-hole-picker__hole-label {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-tiny);
   font-weight: 700;
-  color: var(--game-ink);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   white-space: nowrap;
 }
 </style>

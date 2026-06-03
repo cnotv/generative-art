@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
+import { LobbyUIWizard } from '@/components/LobbyUI'
+import '@/assets/styles/lobby-ui.scss'
 import RhythmGameSummary from './RhythmGameSummary.vue'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM } from './config'
@@ -126,7 +127,7 @@ const handleDelete = async (): Promise<void> => {
 </script>
 
 <template>
-  <GameLobbyWizard
+  <LobbyUIWizard
     :player-name="playerName"
     :player-color="playerColor"
     :is-host="isHost"
@@ -134,9 +135,8 @@ const handleDelete = async (): Promise<void> => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="[]"
-    accent-color="var(--rg-accent)"
     :show-results="showResults"
-    :can-start="selectedMidiId !== null"
+    :can-start="true"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"
@@ -204,7 +204,7 @@ const handleDelete = async (): Promise<void> => {
         results-only
       />
     </template>
-  </GameLobbyWizard>
+  </LobbyUIWizard>
 </template>
 
 <style scoped>
@@ -215,9 +215,11 @@ const handleDelete = async (): Promise<void> => {
 }
 
 .rgl-field__label {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  color: var(--game-ink-muted, rgb(255 255 255 / 50%));
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -230,13 +232,26 @@ const handleDelete = async (): Promise<void> => {
 .rgl-field__select {
   flex: 1;
   padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid var(--game-border);
-  border-radius: var(--radius-md);
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
+  border: none;
+  border-bottom: 2px solid var(--lui-stroke-faint);
+  background: transparent;
+  color: var(--lui-text-color);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-medium);
+  font-weight: 900;
   cursor: pointer;
+  appearance: none;
+}
+
+.rgl-field__select:focus {
+  outline: none;
+  border-bottom-color: var(--lui-focus-color);
+  color: var(--lui-focus-color);
+}
+
+.rgl-field__select option {
+  background: #000;
+  color: #fff;
 }
 
 .rgl-field__delete {
@@ -245,20 +260,20 @@ const handleDelete = async (): Promise<void> => {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 2px solid var(--game-border);
+  border: 2px solid var(--lui-stroke-faint);
   border-radius: var(--radius-md);
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
+  background: transparent;
+  color: var(--lui-text-color);
   font-size: 1.1rem;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--lui-font);
   flex-shrink: 0;
+  transition: border-color 0.15s ease;
 }
 
 .rgl-field__delete:hover {
-  background: var(--color-error, #ff4040);
-  border-color: var(--color-error, #ff4040);
-  color: #fff;
+  border-color: var(--lui-stroke);
+  color: var(--lui-stroke);
 }
 
 .rgl-field__input {

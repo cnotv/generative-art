@@ -195,9 +195,15 @@ const takenMarbles = computed(() =>
     .filter(Boolean)
 )
 
+const layoutReference = ref<{ requestLeave: () => void } | null>(null)
+
 const handleLeaveRoom = (): void => {
   store.solo = false
   leaveRoom()
+}
+
+const requestLeave = (): void => {
+  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
 }
 
 const handleConfigChange = (key: string, value: string | number): void => {
@@ -241,6 +247,7 @@ const handleRestart = (): void => {
 const MM_FONT_KEY = 'mm-font'
 
 onMounted(() => {
+  store.reset()
   session.init()
   loadGoogleFont(
     'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',
@@ -255,15 +262,17 @@ onUnmounted(() => {
 
 <template>
   <LobbyLayout
+    ref="layoutReference"
     class="mm"
     :phase="phase"
     :show-sidebar="showSidebar"
     :sidebar-visible="!store.solo"
     :main-placement="phase !== 'lobby' ? 'fill' : 'center'"
     :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="handleLeaveRoom" />
+      <GameHeader @leave-room="requestLeave" />
     </template>
 
     <template #rules>
@@ -312,7 +321,7 @@ onUnmounted(() => {
         :current-actions="
           gameMode === 'rush' ? rushGame.currentActions.value : game.currentActions.value
         "
-        @escape="store.phase = 'lobby'"
+        @escape="requestLeave"
       />
       <MarbleMadnessSummary
         v-if="phase === 'summary'"

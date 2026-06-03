@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onUnmounted, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
@@ -173,14 +173,21 @@ const handleColorChange = (color: string): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
 
 <template>
-  <LobbyLayout class="wm" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+  <LobbyLayout
+    ref="layoutReference"
+    class="wm"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :style="backgroundStyle"
+  >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
     </template>
 
     <template #rules>

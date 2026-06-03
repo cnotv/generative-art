@@ -24,7 +24,7 @@ withDefaults(
 <style scoped>
 .lui-btn {
   padding: var(--spacing-2) var(--spacing-4);
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -34,6 +34,7 @@ withDefaults(
   text-transform: uppercase;
   letter-spacing: 0.05em;
   transition: opacity 0.15s ease;
+  border-radius: 1.25rem;
 }
 
 .lui-btn--cta {

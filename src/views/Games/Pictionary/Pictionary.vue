@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePictionaryStore } from '@/stores/pictionary'
@@ -163,21 +163,24 @@ const handleUndoRedo = (dataUrl: string): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
 
 <template>
   <LobbyLayout
+    ref="layoutReference"
     class="pictionary"
     :phase="phase"
     :show-sidebar="showSidebar"
     sidebar-width="320px"
     :hide-header-on-mobile="['drawing', 'choosing'].includes(phase)"
     :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
     </template>
 
     <template #rules>

@@ -177,14 +177,23 @@ const copyLink = async (): Promise<void> => {
   await navigator.clipboard.writeText(url.toString())
 }
 
-onMounted(() => session.init())
+onMounted(() => {
+  store.reset()
+  session.init()
+})
 onUnmounted(() => cleanup())
 </script>
 
 <template>
-  <LobbyLayout class="mg" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+  <LobbyLayout
+    ref="layoutReference"
+    class="mg"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :style="backgroundStyle"
+  >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
     </template>
 
     <template #rules>

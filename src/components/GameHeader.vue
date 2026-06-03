@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { LobbyUIButton } from '@/components/LobbyUI'
+import { useMenuNavigation } from '@/composables/useMenuNavigation'
+import '@/assets/styles/lobby-ui.scss'
 
 const props = defineProps<{
   roomId?: string
@@ -22,21 +25,21 @@ const handleBack = (): void => {
     emit('leaveRoom')
   }
 }
+
+useMenuNavigation((action) => {
+  if (action === 'cancel') handleBack()
+})
 </script>
 
 <template>
   <header class="game-header">
     <div class="game-header__left">
-      <button v-if="fromLobby" class="game-header__back" type="button" @click="handleBack">
-        ← Lobby
-      </button>
+      <LobbyUIButton v-if="fromLobby" variant="ghost" @click="handleBack"> ← Lobby </LobbyUIButton>
     </div>
     <div v-if="!fromLobby && roomId" class="game-header__room">
       <span class="game-header__room-label">Room:</span>
       <code class="game-header__room-id">{{ roomId.slice(0, 8) }}</code>
-      <button class="game-header__copy-btn" type="button" @click="emit('copyLink')">
-        Copy link
-      </button>
+      <LobbyUIButton variant="primary" @click="emit('copyLink')">Copy link</LobbyUIButton>
     </div>
   </header>
 </template>
@@ -56,54 +59,21 @@ const handleBack = (): void => {
   gap: var(--spacing-2);
 }
 
-.game-header__back {
-  padding: var(--spacing-1) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-}
-
-.game-header__back:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-border);
-}
-
 .game-header__room-label {
-  color: var(--game-ink);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .game-header__room-id {
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: var(--lui-text-tiny);
   padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-secondary);
+  border: 1px solid var(--lui-stroke-faint);
   border-radius: var(--radius-sm);
-}
-
-.game-header__copy-btn {
-  padding: var(--spacing-2) var(--spacing-4, 1rem);
-  border: 3px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-accent, var(--color-primary));
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 3px 3px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-}
-
-.game-header__copy-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--game-border);
+  color: var(--lui-text-color);
+  opacity: 0.8;
 }
 </style>

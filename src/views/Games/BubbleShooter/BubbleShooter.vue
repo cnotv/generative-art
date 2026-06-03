@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useBubbleShooterSession } from './useBubbleShooterSession'
@@ -137,20 +137,23 @@ const handleRestart = (): void => {
 }
 
 onMounted(() => {
+  store.reset()
   session.init()
 })
 </script>
 
 <template>
   <LobbyLayout
+    ref="layoutReference"
     class="bs"
     :phase="phase"
     :show-sidebar="showSidebar"
     :main-placement="phase === 'playing' ? 'fill' : 'center'"
     :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="handleLeaveRoom" />
+      <GameHeader @leave-room="requestLeave" />
     </template>
 
     <template #rules>
