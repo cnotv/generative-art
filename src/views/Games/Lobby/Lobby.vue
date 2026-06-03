@@ -348,7 +348,6 @@ onMounted(async () => {
       <!-- Chat -->
       <div class="lobby__chat">
         <Chat
-          variant="lobby-ui"
           :messages="lobbyMessages"
           :local-peer-id="localPeerId"
           placeholder="Say something…"

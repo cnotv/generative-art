@@ -51,7 +51,6 @@ const emit = defineEmits<{
     </div>
     <div class="multiplayer-sidebar__chat">
       <Chat
-        variant="game"
         :messages="messages"
         :local-peer-id="localPeerId"
         :placeholder="chatPlaceholder"

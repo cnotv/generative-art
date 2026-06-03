@@ -19,7 +19,7 @@ const props = defineProps<{
   localPeerId: string
   placeholder?: string
   disabled?: boolean
-  variant?: 'game' | 'lobby-ui'
+  variant?: 'game' | 'lobby-ui' | 'web'
 }>()
 
 const emit = defineEmits<{
@@ -59,7 +59,10 @@ watch(() => props.messages.length, scrollToBottom)
 <template>
   <div
     class="chat"
-    :class="{ 'chat--game': variant === 'game', 'chat--lobby-ui': variant === 'lobby-ui' }"
+    :class="{
+      'chat--game': variant === 'game',
+      'chat--lobby-ui': !variant || variant === 'lobby-ui'
+    }"
     :style="fontScaleStyle"
   >
     <div class="chat__zoom">
@@ -268,7 +271,7 @@ watch(() => props.messages.length, scrollToBottom)
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
-  font-size: var(--lui-text-small);
+  font-size: inherit;
   font-weight: 700;
 }
 
