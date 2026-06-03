@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, provide, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { LobbyUINameInput, LobbyUIColorSwatches } from '@/components/LobbyUI'
 import { useMenuNavigation } from '@/composables/useMenuNavigation'
+import { Chat } from '@/components/Chat'
+import '@/assets/styles/game-ui.scss'
 import '@/assets/styles/lobby-ui.scss'
 import {
   loadProfile,
@@ -13,6 +15,7 @@ import {
   NAME_ADJECTIVES,
   NAME_ANIMALS
 } from '@/utils/playerProfile'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { useLobbySession } from './useLobbySession'
 import { useSquaresMultiplayerStore } from '@/stores/squaresMultiplayer'
 import { usePictionaryStore } from '@/stores/pictionary'
@@ -21,12 +24,13 @@ import { useMinigolfStore } from '@/stores/minigolf'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
-import LobbyChat from './LobbyChat.vue'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import { useLobbyStore } from '@/stores/lobby'
 import type { GameType, LobbyRoom } from '@/types/lobby'
 import { GAME_LABELS, GAME_TYPES, GAME_COMPONENTS } from './constants'
+
+const FONT_KEY = 'lobby-font'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,6 +102,11 @@ watch(activeGame, (game, previous) => {
 onMounted(() => {
   saveProfile(playerName.value, playerColor.value)
   init()
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', FONT_KEY)
+})
+
+onUnmounted(() => {
+  removeGoogleFont(FONT_KEY)
 })
 
 const handleNameCommit = (): void => {
@@ -133,7 +142,11 @@ const handleJoin = (room: LobbyRoom): void => {
 }
 
 const lobbyStore = useLobbyStore()
-const { players: lobbyPlayers, rooms: lobbyRooms } = storeToRefs(lobbyStore)
+const {
+  players: lobbyPlayers,
+  rooms: lobbyRooms,
+  messages: lobbyMessages
+} = storeToRefs(lobbyStore)
 const onlineCount = computed(() => Object.keys(lobbyPlayers.value).length)
 const roomCount = computed(() => Object.keys(lobbyRooms.value).length)
 
@@ -332,7 +345,13 @@ onMounted(async () => {
 
       <!-- Chat -->
       <div class="lobby__chat">
-        <LobbyChat :local-peer-id="localPeerId" @send="sendChat" />
+        <Chat
+          variant="game"
+          :messages="lobbyMessages"
+          :local-peer-id="localPeerId"
+          placeholder="Say something…"
+          @send="sendChat"
+        />
       </div>
     </aside>
   </div>

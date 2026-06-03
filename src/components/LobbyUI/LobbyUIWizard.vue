@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, inject } from 'vue'
+import { ref, computed, watch, onMounted, inject, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameLobby } from '@/composables/useGameLobby'
+import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
 import '@/assets/styles/lobby-ui.scss'
@@ -81,11 +82,132 @@ watch(
 
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
+  nextTick(() => applyFocus())
 })
+
+const wizardRoot = ref<HTMLElement | null>(null)
+const focusRow = ref(0)
+const focusCol = ref(0)
+
+const FOCUSABLE_SELECTOR =
+  'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
+
+const isTextInput = (element: Element | null): boolean =>
+  element instanceof HTMLInputElement &&
+  new Set(['text', 'number', 'email', 'password']).has(element.type)
+
+const isNumberInput = (element: Element | null): element is HTMLInputElement =>
+  element instanceof HTMLInputElement && element.type === 'number'
+
+const isSelectElement = (element: Element | null): element is HTMLSelectElement =>
+  element instanceof HTMLSelectElement
+
+const queryRows = (): HTMLElement[] => {
+  if (!wizardRoot.value) return []
+  return [...wizardRoot.value.querySelectorAll<HTMLElement>('[data-lui-row]')].filter(
+    (row) => row.querySelectorAll(FOCUSABLE_SELECTOR).length > 0
+  )
+}
+
+const queryFocusables = (row: HTMLElement): HTMLElement[] => [
+  ...row.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+]
+
+const applyFocus = (): void => {
+  const rows = queryRows()
+  const row = rows[focusRow.value]
+  if (!row) return
+  const items = queryFocusables(row)
+  const target = items[Math.min(focusCol.value, items.length - 1)]
+  target?.focus()
+}
+
+const bumpControl = (element: HTMLElement, direction: 1 | -1): void => {
+  if (isNumberInput(element)) {
+    if (direction === 1) element.stepUp()
+    else element.stepDown()
+    element.dispatchEvent(new Event('input', { bubbles: true }))
+    element.dispatchEvent(new Event('change', { bubbles: true }))
+  } else if (isSelectElement(element)) {
+    const next = Math.max(
+      0,
+      Math.min(element.options.length - 1, element.selectedIndex + direction)
+    )
+    if (next !== element.selectedIndex) {
+      element.selectedIndex = next
+      element.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+  }
+}
+
+const handleCyclableControl = (
+  active: HTMLElement,
+  action: MenuAction,
+  rowCount: number
+): boolean => {
+  if (action === 'up' || action === 'down') {
+    bumpControl(active, action === 'up' ? 1 : -1)
+    return true
+  }
+  if (action === 'activate') {
+    focusRow.value = Math.min(rowCount - 1, focusRow.value + 1)
+    focusCol.value = 0
+    applyFocus()
+    return true
+  }
+  return false
+}
+
+const handleRowNav = (action: MenuAction, rows: HTMLElement[], active: Element | null): void => {
+  const handlers: Partial<Record<MenuAction, () => void>> = {
+    up: () => {
+      focusRow.value = Math.max(0, focusRow.value - 1)
+      focusCol.value = 0
+      applyFocus()
+    },
+    down: () => {
+      focusRow.value = Math.min(rows.length - 1, focusRow.value + 1)
+      focusCol.value = 0
+      applyFocus()
+    },
+    left: () => {
+      if (!rows[focusRow.value]) return
+      focusCol.value = Math.max(0, focusCol.value - 1)
+      applyFocus()
+    },
+    right: () => {
+      const row = rows[focusRow.value]
+      if (!row) return
+      focusCol.value = Math.min(queryFocusables(row).length - 1, focusCol.value + 1)
+      applyFocus()
+    },
+    activate: () => {
+      if (active instanceof HTMLElement && !isTextInput(active)) active.click()
+    },
+    cancel: () => (active as HTMLElement | null)?.blur?.()
+  }
+  handlers[action]?.()
+}
+
+const handleWizardAction = (action: MenuAction): void => {
+  const rows = queryRows()
+  if (!rows.length) return
+  const active = document.activeElement
+  if (isTextInput(active) && (action === 'left' || action === 'right')) return
+  if (
+    active instanceof HTMLElement &&
+    (isNumberInput(active) || isSelectElement(active)) &&
+    handleCyclableControl(active, action, rows.length)
+  )
+    return
+  handleRowNav(action, rows, active)
+}
+
+useMenuNavigation(handleWizardAction)
 </script>
 
 <template>
-  <section class="lui-wizard">
+  <section ref="wizardRoot" class="lui-wizard">
     <div v-if="!showResults" class="lui-wizard__body">
       <h2 class="lui-wizard__title">Profile</h2>
 
@@ -158,7 +280,7 @@ onMounted(() => {
         Leave room
       </LobbyUIButton>
 
-      <div class="lui-wizard__nav">
+      <div class="lui-wizard__nav" data-lui-row>
         <LobbyUIButton
           v-if="isHost"
           variant="cta"
@@ -173,7 +295,7 @@ onMounted(() => {
 
     <div v-else class="lui-wizard__results">
       <slot name="summary" />
-      <div class="lui-wizard__nav lui-wizard__nav--results">
+      <div class="lui-wizard__nav lui-wizard__nav--results" data-lui-row>
         <LobbyUIButton variant="ghost" @click="emit('leaveRoom')">← Leave</LobbyUIButton>
         <LobbyUIButton variant="cta" @click="emit('playAgain')">Play Again</LobbyUIButton>
       </div>
