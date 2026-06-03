@@ -136,7 +136,7 @@ const handleDelete = async (): Promise<void> => {
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="[]"
     :show-results="showResults"
-    :can-start="selectedMidiId !== null"
+    :can-start="true"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"
