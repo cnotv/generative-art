@@ -35,7 +35,7 @@ const emit = defineEmits<{
 .lui-toggle__btn {
   padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid transparent;
-  border-radius: var(--radius-md, 0.5rem);
+  border-radius: var(--radius-xl, 1.25rem);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);

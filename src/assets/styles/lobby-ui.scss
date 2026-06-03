@@ -18,10 +18,8 @@
   // and keeps the soft drop, but in black for punch on the saturated game backdrop.
   --lui-text-color: #fff;
   --lui-text-shadow:
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
-    0 -1px 0 #000, 0 1px 0 #000, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff,
-    -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff,
-    clamp(3px, 0.22em, 6px) clamp(3px, 0.26em, 7px) 0 #000;
+    -1px -1px 0 #111, 1px -1px 0 #111, -1px 1px 0 #111, 1px 1px 0 #111, -1px 0 0 #111, 1px 0 0 #111,
+    0 -1px 0 #111, 0 1px 0 #111, clamp(3px, 0.22em, 6px) clamp(3px, 0.26em, 7px) 0 #111;
   --lui-font: var(--font-playful);
 
   // Exactly three text levels:
