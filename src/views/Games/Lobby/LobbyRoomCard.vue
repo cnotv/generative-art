@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LobbyUIButton } from '@/components/LobbyUI'
 import type { LobbyRoom } from '@/types/lobby'
 import { GAME_LABELS } from './constants'
 
@@ -20,18 +21,15 @@ const emit = defineEmits<{
       </span>
     </div>
     <div class="lb-room-card__actions">
-      <button
+      <LobbyUIButton
         v-if="isOwn"
-        class="lb-room-card__toggle"
-        type="button"
+        variant="ghost"
         :title="room.isHidden ? 'Make public' : 'Hide room'"
         @click="emit('toggle', room)"
       >
         {{ room.isHidden ? 'Show' : 'Hide' }}
-      </button>
-      <button v-else class="lb-room-card__join" type="button" @click="emit('join', room)">
-        Join
-      </button>
+      </LobbyUIButton>
+      <LobbyUIButton v-else variant="primary" @click="emit('join', room)"> Join </LobbyUIButton>
     </div>
   </div>
 </template>
@@ -45,15 +43,11 @@ const emit = defineEmits<{
   padding: var(--spacing-2);
   border-radius: var(--radius-md);
   border: 2px solid transparent;
-  transition: background 0.1s ease;
-}
-
-.lb-room-card:hover {
-  background: var(--lb-card-hover);
+  transition: opacity 0.1s ease;
 }
 
 .lb-room-card--own {
-  border-color: var(--game-border-secondary);
+  border-color: var(--lui-stroke-faint);
 }
 
 .lb-room-card__info {
@@ -64,9 +58,13 @@ const emit = defineEmits<{
 }
 
 .lb-room-card__game {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 800;
-  color: var(--game-ink);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
@@ -74,49 +72,26 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-tiny);
   font-weight: 600;
-  color: var(--game-ink-medium);
+  color: var(--lui-text-color);
+  opacity: 0.7;
 }
 
 .lb-room-card__dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1.5px solid var(--game-border);
+  border: 1.5px solid var(--lui-stroke-faint);
   flex-shrink: 0;
 }
 
 .lb-room-card__count {
-  color: var(--color-muted-foreground);
+  opacity: 0.7;
 }
 
 .lb-room-card__actions {
   flex-shrink: 0;
-}
-
-.lb-room-card__join {
-  padding: 2px var(--spacing-2);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-ink);
-  color: var(--game-surface);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-
-.lb-room-card__join:hover {
-  transform: translate(-1px, -1px);
-}
-
-.lb-room-card__toggle {
-  padding: 2px var(--spacing-1);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  line-height: 1;
 }
 </style>

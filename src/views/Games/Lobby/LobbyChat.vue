@@ -95,29 +95,33 @@ const handleSend = (): void => {
 }
 
 .lb-chat__sender {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-tiny);
   font-weight: 700;
-  color: var(--color-muted-foreground);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  opacity: 0.7;
 }
 
 .lb-chat__text {
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--radius-md);
-  background: var(--color-muted);
-  font-size: var(--font-size-sm);
+  background: rgb(255 255 255 / 0.1);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   line-height: 1.4;
   overflow-wrap: break-word;
 }
 
 .lb-chat__message--own .lb-chat__text {
-  background: var(--game-own-msg-bg, var(--game-ink));
-  color: #fff;
+  background: rgb(255 255 255 / 0.2);
 }
 
 .lb-chat__message--system .lb-chat__text {
   background: transparent;
-  color: var(--color-muted-foreground);
-  font-size: var(--font-size-xs);
+  opacity: 0.6;
   font-style: italic;
   padding: 0;
 }
@@ -126,36 +130,44 @@ const handleSend = (): void => {
   display: flex;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  border-top: 3px solid var(--game-border);
+  border-top: 2px solid var(--lui-stroke-faint);
 }
 
 .lb-chat__input {
   flex: 1;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  padding: var(--spacing-1) 0;
+  border: none;
+  border-bottom: 2px solid var(--lui-stroke-faint);
+  background: transparent;
+  color: var(--lui-text-color);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  font-weight: 700;
   outline: none;
+  caret-color: var(--lui-stroke);
+}
+
+.lb-chat__input:focus {
+  border-bottom-color: var(--lui-stroke);
 }
 
 .lb-chat__send {
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid var(--game-border);
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid var(--lui-stroke-faint);
   border-radius: 999px;
-  background: var(--game-ink);
-  color: var(--game-surface);
-  font-size: var(--font-size-sm);
+  background: transparent;
+  color: var(--lui-text-color);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
+  text-shadow: var(--lui-text-shadow);
   cursor: pointer;
-  box-shadow: 2px 2px 0 var(--game-ink-medium);
+  box-shadow: var(--lui-border-shadow);
   transition: transform 0.1s ease;
 }
 
 .lb-chat__send:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--game-ink-medium);
+  border-color: var(--lui-stroke);
 }
 </style>

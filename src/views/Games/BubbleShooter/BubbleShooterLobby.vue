@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import GameLobbyWizard from '@/components/GameLobbyWizard.vue'
+import { LobbyUIWizard } from '@/components/LobbyUI'
+import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM, type BsColorCount, type BsSpeed } from './config'
@@ -58,7 +59,7 @@ const handleConfig = (key: string, value: string | number): void => {
 </script>
 
 <template>
-  <GameLobbyWizard
+  <LobbyUIWizard
     :player-name="playerName"
     :player-color="playerColor"
     :is-host="isHost"
@@ -66,7 +67,6 @@ const handleConfig = (key: string, value: string | number): void => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="configFields"
-    accent-color="var(--bs-accent)"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"

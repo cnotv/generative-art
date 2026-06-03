@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, watch, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { Check } from 'lucide-vue-next'
+import { LobbyUINameInput, LobbyUIColorSwatches } from '@/components/LobbyUI'
+import '@/assets/styles/lobby-ui.scss'
 import {
   loadProfile,
   saveProfile,
@@ -177,28 +178,19 @@ const roomsOpen = ref(true)
           >
         </button>
         <div v-show="profileOpen" class="lobby__profile">
-          <input
-            v-model="playerName"
-            class="lobby__name-input"
-            type="text"
-            maxlength="20"
+          <LobbyUINameInput
+            :model-value="playerName"
+            :maxlength="20"
             placeholder="Your name"
+            @update:model-value="playerName = $event"
             @change="handleNameCommit"
             @blur="handleNameCommit"
           />
-          <div class="lobby__swatches">
-            <button
-              v-for="color in PLAYER_COLORS"
-              :key="color"
-              class="lobby__swatch"
-              :class="{ 'lobby__swatch--active': playerColor === color }"
-              :style="{ background: color }"
-              type="button"
-              @click="handleColorPick(color)"
-            >
-              <Check v-if="playerColor === color" class="lobby__swatch-check" />
-            </button>
-          </div>
+          <LobbyUIColorSwatches
+            :model-value="playerColor"
+            :colors="PLAYER_COLORS"
+            @update:model-value="handleColorPick"
+          />
         </div>
       </div>
 
@@ -380,9 +372,11 @@ const roomsOpen = ref(true)
 }
 
 .lobby__section-label {
-  font-size: var(--font-size-xs);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 800;
-  color: var(--color-muted-foreground);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -403,52 +397,7 @@ const roomsOpen = ref(true)
   padding: 0 var(--spacing-3) var(--spacing-2);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.lobby__name-input {
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid var(--game-border);
-  border-radius: 999px;
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.lobby__swatches {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.lobby__swatch {
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid var(--game-border);
-  border-radius: 50%;
-  cursor: pointer;
-  padding: 0;
-  box-shadow: 1px 1px 0 var(--game-border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.1s ease;
-}
-
-.lobby__swatch:hover {
-  transform: scale(1.15);
-}
-
-.lobby__swatch-check {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: #fff;
-  stroke-width: 4;
+  gap: var(--spacing-2);
 }
 
 .lobby__chat {
