@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, provide } from 'vue'
+import { ref, computed, onMounted, watch, provide, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { LobbyUINameInput, LobbyUIColorSwatches } from '@/components/LobbyUI'
+import { useMenuNavigation } from '@/composables/useMenuNavigation'
 import '@/assets/styles/lobby-ui.scss'
 import {
   loadProfile,
@@ -139,10 +140,91 @@ const roomCount = computed(() => Object.keys(lobbyRooms.value).length)
 const profileOpen = ref(true)
 const presenceOpen = ref(true)
 const roomsOpen = ref(true)
+
+const lobbyRoot = ref<HTMLElement | null>(null)
+const focusRow = ref(0)
+const focusCol = ref(0)
+
+const FOCUSABLE_SELECTOR =
+  'button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]'
+
+const queryRows = (): HTMLElement[] => {
+  if (!lobbyRoot.value) return []
+  return [...lobbyRoot.value.querySelectorAll<HTMLElement>('[data-nav-row]')].filter(
+    (row) => row.querySelectorAll(FOCUSABLE_SELECTOR).length > 0
+  )
+}
+
+const queryFocusables = (row: HTMLElement): HTMLElement[] => [
+  ...row.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+]
+
+const applyFocus = (): void => {
+  const rows = queryRows()
+  const row = rows[focusRow.value]
+  if (!row) return
+  const items = queryFocusables(row)
+  const target = items[Math.min(focusCol.value, items.length - 1)]
+  target?.focus()
+}
+
+const isTextInput = (element: Element | null): boolean =>
+  element instanceof HTMLInputElement &&
+  new Set(['text', 'number', 'email', 'password']).has(element.type)
+
+const handleNavUp = (rows: HTMLElement[]): void => {
+  focusRow.value = Math.max(0, focusRow.value - 1)
+  focusCol.value = 0
+  applyFocus()
+  rows.length // suppress unused-param warning
+}
+
+const handleNavDown = (rows: HTMLElement[]): void => {
+  focusRow.value = Math.min(rows.length - 1, focusRow.value + 1)
+  focusCol.value = 0
+  applyFocus()
+}
+
+const handleNavLeft = (rows: HTMLElement[]): void => {
+  if (!rows[focusRow.value]) return
+  focusCol.value = Math.max(0, focusCol.value - 1)
+  applyFocus()
+}
+
+const handleNavRight = (rows: HTMLElement[]): void => {
+  const row = rows[focusRow.value]
+  if (!row) return
+  focusCol.value = Math.min(queryFocusables(row).length - 1, focusCol.value + 1)
+  applyFocus()
+}
+
+useMenuNavigation((action) => {
+  const rows = queryRows()
+  if (!rows.length) return
+  const active = document.activeElement
+  if (isTextInput(active) && (action === 'left' || action === 'right')) return
+
+  const handlers: Partial<Record<typeof action, () => void>> = {
+    up: () => handleNavUp(rows),
+    down: () => handleNavDown(rows),
+    left: () => handleNavLeft(rows),
+    right: () => handleNavRight(rows),
+    activate: () => {
+      if (active instanceof HTMLElement && !isTextInput(active)) active.click()
+    },
+    cancel: () => (active as HTMLElement | null)?.blur?.()
+  }
+  handlers[action]?.()
+})
+
+onMounted(async () => {
+  await nextTick()
+  applyFocus()
+})
 </script>
 
 <template>
-  <div class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
+  <div ref="lobbyRoot" class="lobby" :class="{ 'lobby--in-game': !!activeComponent }">
     <!-- Main content area -->
     <main class="lobby__main">
       <div v-if="activeComponent" class="lobby__game-embed">
@@ -151,7 +233,7 @@ const roomsOpen = ref(true)
 
       <div v-else class="lobby__picker">
         <p class="lobby__picker-label">Pick a game to create a room</p>
-        <div class="lobby__picker-games">
+        <div class="lobby__picker-games" data-nav-row>
           <button
             v-for="game in GAME_TYPES"
             :key="game"
@@ -169,7 +251,12 @@ const roomsOpen = ref(true)
     <aside v-if="!activeComponent" class="lobby__sidebar">
       <!-- Profile -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !profileOpen }">
-        <button class="lobby__section-toggle" type="button" @click="profileOpen = !profileOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="profileOpen = !profileOpen"
+        >
           <span class="lobby__section-label">Profile</span>
           <span
             class="lobby__section-chevron"
@@ -178,25 +265,34 @@ const roomsOpen = ref(true)
           >
         </button>
         <div v-show="profileOpen" class="lobby__profile">
-          <LobbyUINameInput
-            :model-value="playerName"
-            :maxlength="20"
-            placeholder="Your name"
-            @update:model-value="playerName = $event"
-            @change="handleNameCommit"
-            @blur="handleNameCommit"
-          />
-          <LobbyUIColorSwatches
-            :model-value="playerColor"
-            :colors="PLAYER_COLORS"
-            @update:model-value="handleColorPick"
-          />
+          <div data-nav-row>
+            <LobbyUINameInput
+              :model-value="playerName"
+              :maxlength="20"
+              placeholder="Your name"
+              @update:model-value="playerName = $event"
+              @change="handleNameCommit"
+              @blur="handleNameCommit"
+            />
+          </div>
+          <div data-nav-row>
+            <LobbyUIColorSwatches
+              :model-value="playerColor"
+              :colors="PLAYER_COLORS"
+              @update:model-value="handleColorPick"
+            />
+          </div>
         </div>
       </div>
 
       <!-- Presence -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !presenceOpen }">
-        <button class="lobby__section-toggle" type="button" @click="presenceOpen = !presenceOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="presenceOpen = !presenceOpen"
+        >
           <span class="lobby__section-label">Online ({{ onlineCount }})</span>
           <span
             class="lobby__section-chevron"
@@ -211,7 +307,12 @@ const roomsOpen = ref(true)
 
       <!-- Rooms -->
       <div class="lobby__section" :class="{ 'lobby__section--collapsed': !roomsOpen }">
-        <button class="lobby__section-toggle" type="button" @click="roomsOpen = !roomsOpen">
+        <button
+          class="lobby__section-toggle"
+          data-nav-row
+          type="button"
+          @click="roomsOpen = !roomsOpen"
+        >
           <span class="lobby__section-label">Rooms ({{ roomCount }})</span>
           <span
             class="lobby__section-chevron"
@@ -239,11 +340,6 @@ const roomsOpen = ref(true)
 
 <style scoped>
 .lobby {
-  --lb-yellow: #ffd93d;
-  --lb-pink: #ff6bcb;
-  --lb-blue: #4ecdc4;
-  --lb-orange: #ff8c42;
-
   display: grid;
   grid-template-columns: 1fr 280px;
   grid-template-areas: 'main sidebar';
@@ -251,7 +347,7 @@ const roomsOpen = ref(true)
   box-sizing: border-box;
   overflow: hidden;
   background: var(--lb-bg);
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
+  font-family: var(--lui-font);
 }
 
 .lobby--in-game {
@@ -281,9 +377,13 @@ const roomsOpen = ref(true)
 
 .lobby__picker-label {
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  color: var(--color-muted-foreground);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .lobby__picker-games {
@@ -299,34 +399,33 @@ const roomsOpen = ref(true)
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
-  border: 3px solid var(--game-border);
+  border: 3px solid var(--lui-stroke);
   border-radius: 1.25rem;
-  background: var(--lb-yellow);
-  box-shadow: 5px 5px 0 var(--game-border);
+  background: transparent;
+  box-shadow: var(--lui-border-shadow);
   cursor: pointer;
   transition: transform 0.1s ease;
   min-width: 9rem;
   touch-action: manipulation;
 }
 
-.lobby__game-card:nth-child(2) {
-  background: var(--lb-blue);
-}
-
-.lobby__game-card:nth-child(3) {
-  background: var(--lb-pink);
-}
-
-.lobby__game-card:hover {
+.lobby__game-card:hover,
+.lobby__game-card:focus,
+.lobby__game-card:focus-visible {
+  outline: none;
   transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 var(--game-border);
+  border-color: var(--lui-focus-color);
+  color: var(--lui-focus-color);
 }
 
 .lobby__game-name {
-  font-size: var(--font-size-md, 1rem);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-medium);
   font-weight: 900;
-  color: #111;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 /* Picker and embedded game slide up on mount */
@@ -348,14 +447,14 @@ const roomsOpen = ref(true)
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--lb-sidebar-bg);
+  background: transparent;
   padding-top: var(--nav-height);
-  border-left: 3px solid var(--game-border);
+  border-left: 2px solid var(--lui-stroke-faint);
   animation: slide-from-right 0.32s ease both;
 }
 
 .lobby__section {
-  border-bottom: 3px solid var(--game-border);
+  border-bottom: 2px solid var(--lui-stroke-faint);
 }
 
 .lobby__section-toggle {
@@ -367,7 +466,7 @@ const roomsOpen = ref(true)
   background: none;
   border: none;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--lui-font);
   gap: var(--spacing-2);
 }
 
@@ -382,8 +481,9 @@ const roomsOpen = ref(true)
 }
 
 .lobby__section-chevron {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  opacity: 0.6;
   transition: transform 0.15s ease;
   transform: rotate(90deg);
   display: inline-block;
@@ -423,7 +523,7 @@ const roomsOpen = ref(true)
     max-height: 50dvh;
     padding-top: 0;
     border-left: none;
-    border-top: 3px solid var(--game-border);
+    border-top: 2px solid var(--lui-stroke-faint);
   }
 
   .lobby__picker-games {

@@ -266,7 +266,7 @@ const handleDelete = async (): Promise<void> => {
   color: var(--lui-text-color);
   font-size: 1.1rem;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--lui-font);
   flex-shrink: 0;
   transition: border-color 0.15s ease;
 }
