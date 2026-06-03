@@ -81,9 +81,15 @@ watch(
   }
 )
 
+const MOUNT_DEBOUNCE_MS = 150
+const readyForInput = ref(false)
+
 onMounted(() => {
   if (!props.showResults && !fromLobby.value && !isPrivate.value) startSearching()
   nextTick(() => jumpToAutofocus())
+  setTimeout(() => {
+    readyForInput.value = true
+  }, MOUNT_DEBOUNCE_MS)
 })
 
 const wizardRoot = ref<HTMLElement | null>(null)
@@ -231,6 +237,7 @@ const handleWizardAction = (
   action: MenuAction,
   source: Parameters<typeof onInputSource>[0]
 ): void => {
+  if (!readyForInput.value) return
   onInputSource(source)
   const rows = queryRows()
   if (!rows.length) return
