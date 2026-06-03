@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, inject, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameLobby } from '@/composables/useGameLobby'
 import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
+import { useGamepadHint } from '@/composables/useGamepadHint'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
 import '@/assets/styles/lobby-ui.scss'
@@ -90,6 +91,10 @@ const focusRow = ref(0)
 const focusCol = ref(0)
 const editingElement = ref<HTMLElement | null>(null)
 
+const HINT_GAP_PX = 12
+const { focusedHint, inputSource, updateFocusedHint, onInputSource } =
+  useGamepadHint(editingElement)
+
 const FOCUSABLE_SELECTOR =
   'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
 
@@ -121,6 +126,7 @@ const applyFocus = (): void => {
   const items = queryFocusables(row)
   const target = items[Math.min(focusCol.value, items.length - 1)]
   target?.focus()
+  updateFocusedHint(target ?? null)
 }
 
 const jumpToAutofocus = (): void => {
@@ -164,6 +170,7 @@ const handleCyclableControl = (
   if (!isEditing) {
     if (action === 'activate') {
       editingElement.value = active
+      updateFocusedHint(active)
       return true
     }
     return false
@@ -183,10 +190,14 @@ const handleCyclableControl = (
   return false
 }
 
+const handleRowNavClearEdit = (): void => {
+  editingElement.value = null
+}
+
 const handleRowNav = (action: MenuAction, rows: HTMLElement[], active: Element | null): void => {
   const handlers: Partial<Record<MenuAction, () => void>> = {
     up: () => {
-      editingElement.value = null
+      handleRowNavClearEdit()
       focusRow.value = Math.max(0, focusRow.value - 1)
       focusCol.value = 0
       applyFocus()
@@ -216,7 +227,11 @@ const handleRowNav = (action: MenuAction, rows: HTMLElement[], active: Element |
   handlers[action]?.()
 }
 
-const handleWizardAction = (action: MenuAction): void => {
+const handleWizardAction = (
+  action: MenuAction,
+  source: Parameters<typeof onInputSource>[0]
+): void => {
+  onInputSource(source)
   const rows = queryRows()
   if (!rows.length) return
   const active = document.activeElement
@@ -234,6 +249,23 @@ useMenuNavigation(handleWizardAction)
 </script>
 
 <template>
+  <teleport to="body">
+    <div
+      v-if="focusedHint && inputSource === 'gamepad'"
+      class="lui-wizard__hint"
+      aria-hidden="true"
+      :style="{
+        top: `${focusedHint.rect.top + focusedHint.rect.height / 2}px`,
+        left: `${focusedHint.rect.left + focusedHint.rect.width + HINT_GAP_PX}px`
+      }"
+    >
+      <span v-for="part in focusedHint.parts" :key="part.glyph" class="lui-wizard__hint-part">
+        <span class="lui-wizard__hint-glyph">{{ part.glyph }}</span>
+        {{ part.label }}
+      </span>
+    </div>
+  </teleport>
+
   <section ref="wizardRoot" class="lui-wizard">
     <div v-if="!showResults" class="lui-wizard__body">
       <h2 class="lui-wizard__title">Profile</h2>
@@ -453,5 +485,38 @@ useMenuNavigation(handleWizardAction)
   .lui-wizard__results {
     padding: var(--spacing-3);
   }
+}
+</style>
+
+<style>
+/* Teleported hint chip — outside scoped because it renders in <body> */
+.lui-wizard__hint {
+  position: fixed;
+  z-index: 9999;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  line-height: 1;
+  color: #000;
+  background: var(--lui-focus-color, #ffd700);
+  padding-inline: 0.7em;
+  padding-block: 0.4em;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9em;
+}
+
+.lui-wizard__hint-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.lui-wizard__hint-glyph {
+  font-weight: 900;
 }
 </style>

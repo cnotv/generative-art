@@ -6,7 +6,7 @@ defineProps<{
   isOwn: boolean
   groupedWithPrevious?: boolean
   groupedWithNext?: boolean
-  variant?: 'game'
+  variant?: 'game' | 'lobby-ui'
 }>()
 </script>
 
@@ -15,6 +15,7 @@ defineProps<{
     class="chat-message"
     :class="{
       'chat-message--game': variant === 'game',
+      'chat-message--lobby-ui': variant === 'lobby-ui',
       'chat-message--own': isOwn,
       'chat-message--system': message.kind === 'system',
       'chat-message--success': message.kind === 'success',
@@ -105,5 +106,33 @@ defineProps<{
 
 .chat-message__text {
   line-height: 1.3;
+}
+
+/* lobby-ui theme */
+.chat-message--lobby-ui {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--lui-text-color);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  border-radius: var(--radius-xl);
+}
+
+.chat-message--lobby-ui .chat-message__sender {
+  text-shadow: var(--lui-text-shadow);
+}
+
+.chat-message--lobby-ui .chat-message__text {
+  text-shadow: var(--lui-text-shadow);
+}
+
+.chat-message--lobby-ui.chat-message--own {
+  background: rgb(255 255 255 / 0.18);
+  color: var(--lui-text-color);
+  align-self: flex-end;
+}
+
+.chat-message--lobby-ui.chat-message--system {
+  background: transparent;
+  opacity: 0.6;
 }
 </style>

@@ -19,7 +19,7 @@ const props = defineProps<{
   localPeerId: string
   placeholder?: string
   disabled?: boolean
-  variant?: 'game'
+  variant?: 'game' | 'lobby-ui'
 }>()
 
 const emit = defineEmits<{
@@ -57,7 +57,11 @@ watch(() => props.messages.length, scrollToBottom)
 </script>
 
 <template>
-  <div class="chat" :class="{ 'chat--game': variant === 'game' }" :style="fontScaleStyle">
+  <div
+    class="chat"
+    :class="{ 'chat--game': variant === 'game', 'chat--lobby-ui': variant === 'lobby-ui' }"
+    :style="fontScaleStyle"
+  >
     <div class="chat__zoom">
       <button
         class="chat__zoom-btn"
@@ -233,5 +237,55 @@ watch(() => props.messages.length, scrollToBottom)
 .chat__send-icon {
   width: 1rem;
   height: 1rem;
+}
+
+/* lobby-ui theme — transparent, uses LobbyUI design tokens */
+.chat--lobby-ui {
+  flex: 1;
+  background: transparent;
+}
+
+.chat--lobby-ui .chat__zoom-btn {
+  border-radius: 999px;
+  border: 2px solid var(--lui-stroke-faint);
+  background: transparent;
+  color: var(--lui-text-color);
+}
+
+.chat--lobby-ui .chat__zoom-btn:hover {
+  border-color: var(--lui-stroke);
+}
+
+.chat--lobby-ui .chat__list {
+  border: none;
+  background: transparent;
+}
+
+.chat--lobby-ui .chat__input {
+  border: none;
+  border-bottom: 2px solid var(--lui-stroke-faint);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lui-text-color);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  font-weight: 700;
+}
+
+.chat--lobby-ui .chat__input:focus {
+  outline: none;
+  border-bottom-color: var(--lui-stroke);
+}
+
+.chat--lobby-ui .chat__send-btn {
+  border-radius: 999px;
+  border: 2px solid var(--lui-stroke-faint);
+  background: transparent;
+  color: var(--lui-text-color);
+  box-shadow: var(--lui-border-shadow);
+}
+
+.chat--lobby-ui .chat__send-btn:hover:not(:disabled) {
+  border-color: var(--lui-stroke);
 }
 </style>
