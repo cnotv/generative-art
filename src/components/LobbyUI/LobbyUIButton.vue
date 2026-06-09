@@ -61,7 +61,8 @@ withDefaults(
 }
 
 .lui-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
 }
 
 .lui-btn:focus,

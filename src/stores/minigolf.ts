@@ -77,6 +77,17 @@ export const useMinigolfStore = defineStore('minigolf', () => {
     remoteBallPositions.value = {}
   }
 
+  const resetGameState = (): void => {
+    currentHole.value = 0
+    remoteBallPositions.value = {}
+    players.value = Object.fromEntries(
+      Object.entries(players.value).map(([id, player]) => [
+        id,
+        { ...player, scores: [] as number[] }
+      ])
+    )
+  }
+
   return {
     players,
     messages,
@@ -92,6 +103,7 @@ export const useMinigolfStore = defineStore('minigolf', () => {
     recordScore,
     setRemoteBallPosition,
     remoteBallPositions,
-    reset
+    reset,
+    resetGameState
   }
 })

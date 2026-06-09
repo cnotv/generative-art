@@ -15,20 +15,22 @@ orbitControls.addEventListener('change', () => {
   cameraConfigStore.position = {
     x: camera.position.x,
     y: camera.position.y,
-    z: camera.position.z,
-  };
-});
+    z: camera.position.z
+  }
+})
 ```
 
 **`toRaw` for Three.js objects**: wrapping a Three.js object in a Vue `ref` or `reactive` causes Vue to deeply proxy every property, which breaks internal Three.js assumptions (e.g. `instanceof` checks, internal `__webglTexture` references). Use `markRaw` when storing Three.js objects in reactive state, or `toRaw` before passing them to Three.js APIs.
 
 ```ts
-const orbit = toRaw(store.orbitReference); // unwrap before use
+const orbit = toRaw(store.orbitReference) // unwrap before use
 ```
 
 **One-way data flow for config**: UI sliders write config values into a Pinia store. The animation loop reads from the store each frame and applies the values to Three.js objects. This avoids two-way bindings that would cause feedback loops.
 
 ## Issues Encountered
+
+- **Canvas component inside a flex wrapper collapses to zero height**: When a Three.js component is wrapped in a `display: flex; flex-direction: column` container (e.g. to stack an absolute overlay on top of the canvas), the canvas component's root element is treated as a flex item. Flex items do not stretch along the main axis unless explicitly told to — so without `flex: 1; min-height: 0` on that root element the canvas collapses to its intrinsic content height and Three.js sees a tiny or zero-height canvas. Grid wrappers avoid this because grid items stretch to fill their track by default. The fix is to add `flex: 1; min-height: 0` to the root element of the canvas component, not to the wrapper.
 
 - **OrbitControls bypassing reactivity**: panning/zooming with OrbitControls directly mutates `camera.position` without going through any store. The camera panel stayed stale until a `change` listener was wired to sync back.
 - **Reactive proxy breaking `instanceof`**: storing a `THREE.Scene` inside `reactive({})` wrapped it in a Proxy. Rapier physics checks `obj instanceof THREE.Mesh` internally and failed silently. Fix: `markRaw(scene)` before storing.

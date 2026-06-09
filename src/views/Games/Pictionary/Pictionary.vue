@@ -170,7 +170,6 @@ onMounted(() => {
 
 <template>
   <LobbyLayout
-    ref="layoutReference"
     class="pictionary"
     :phase="phase"
     :show-sidebar="showSidebar"
@@ -180,7 +179,7 @@ onMounted(() => {
     @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
     </template>
 
     <template #rules>

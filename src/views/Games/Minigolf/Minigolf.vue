@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useMinigolfStore } from '@/stores/minigolf'
 import { useMinigolfSession } from './useMinigolfSession'
-import { useMinigolfGame } from './useMinigolfGame'
+import { useMinigolfGame, setOnPlayAgainPressed } from './useMinigolfGame'
 import { HOLES } from './config'
 import {
   loadProfile,
@@ -15,6 +15,7 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
+import '@/assets/styles/lobby-ui.scss'
 import GameHeader from '@/components/GameHeader.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { LoadProgress } from '@webgamekit/threejs'
@@ -56,6 +57,7 @@ const session = useMinigolfSession({
 
 const { isHost, localPeerId } = session
 
+const isSolo = computed(() => playerList.value.length <= 1)
 const showSidebar = ref(false)
 const lastReadCount = ref(0)
 const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
@@ -84,12 +86,21 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
-const { message, waiting, aimPower, isAiming, localStrokes, startGame, cleanup } = useMinigolfGame(
-  canvas,
-  session,
-  activeHoles,
-  handleProgress
-)
+const {
+  message,
+  scoreLabel,
+  scoreType,
+  waiting,
+  aimPower,
+  isAiming,
+  localStrokes,
+  startGame,
+  cleanup
+} = useMinigolfGame(canvas, session, activeHoles, handleProgress)
+
+setOnPlayAgainPressed(() => {
+  if (isHost.value) handlePlayAgain()
+})
 
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   playerList.value.map((p) => ({
@@ -110,6 +121,7 @@ const allPlayersScored = computed(() => {
 
 watch(phase, async (newPhase) => {
   if (newPhase === 'playing') {
+    cleanup()
     await nextTick()
     startGame()
   }
@@ -133,6 +145,12 @@ const handleMatchFound = (gameRoomId: string): void => {
   roomId.value = gameRoomId
   router.replace({ query: { room: gameRoomId } })
   session.reconnect(gameRoomId)
+}
+
+const layoutReference = ref<{ requestLeave: () => void } | null>(null)
+
+const requestLeave = (): void => {
+  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
 }
 
 const handleLeaveRoom = (): void => {
@@ -164,11 +182,9 @@ const handleStartGame = (): void => {
 }
 
 const handlePlayAgain = (): void => {
-  store.phase = 'lobby'
-  store.currentHole = 0
-  waiting.value = false
-  playerList.value.map((p) => ({ ...p, scores: [] })).forEach((p) => store.upsertPlayer(p))
   cleanup()
+  store.resetGameState()
+  store.phase = 'lobby'
 }
 
 const copyLink = async (): Promise<void> => {
@@ -181,7 +197,10 @@ onMounted(() => {
   store.reset()
   session.init()
 })
-onUnmounted(() => cleanup())
+onUnmounted(() => {
+  setOnPlayAgainPressed(null)
+  cleanup()
+})
 </script>
 
 <template>
@@ -190,6 +209,7 @@ onUnmounted(() => cleanup())
     class="mg"
     :phase="phase"
     :show-sidebar="showSidebar"
+    :sidebar-visible="!isSolo"
     :style="backgroundStyle"
   >
     <template #header>
@@ -223,26 +243,28 @@ onUnmounted(() => cleanup())
       @leave-room="handleLeaveRoom"
     />
 
-    <MinigolfGame
-      v-else-if="phase === 'playing'"
-      ref="gameReference"
-      :message="message"
-      :waiting="waiting"
-      :is-aiming="isAiming"
-      :aim-power="aimPower"
-      :current-hole="currentHole"
-      :active-holes-length="activeHoles.length"
-      :par="activeHoles[currentHole]?.par ?? 0"
-      :local-strokes="localStrokes"
-    />
-
-    <MinigolfSummary
-      v-else
-      :player-list="playerList"
-      :active-holes="activeHoles"
-      :is-host="isHost"
-      @play-again="handlePlayAgain"
-    />
+    <div v-else class="mg-game-wrapper">
+      <MinigolfGame
+        ref="gameReference"
+        :message="message"
+        :score-label="scoreLabel"
+        :score-type="scoreType"
+        :waiting="waiting"
+        :is-aiming="isAiming"
+        :aim-power="aimPower"
+        :current-hole="currentHole"
+        :active-holes-length="activeHoles.length"
+        :par="activeHoles[currentHole]?.par ?? 0"
+        :local-strokes="localStrokes"
+      />
+      <MinigolfSummary
+        v-if="phase === 'summary'"
+        :player-list="playerList"
+        :active-holes="activeHoles"
+        :is-host="isHost"
+        @play-again="handlePlayAgain"
+      />
+    </div>
 
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
@@ -257,7 +279,7 @@ onUnmounted(() => cleanup())
     </template>
 
     <template #tabbar>
-      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+      <GameTabBar v-if="!isSolo" v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
     </template>
   </LobbyLayout>
 </template>
@@ -269,6 +291,14 @@ onUnmounted(() => cleanup())
   --game-accent: var(--mg-green);
 
   background: var(--mg-bg);
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
+  font-family: var(--lui-font);
+}
+
+.mg-game-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 </style>

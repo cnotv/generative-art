@@ -168,7 +168,6 @@ onMounted(() => {
 
 <template>
   <LobbyLayout
-    ref="layoutReference"
     class="rg"
     :phase="phase"
     :show-sidebar="showSidebar"
@@ -177,7 +176,7 @@ onMounted(() => {
     @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="requestLeave" />
+      <GameHeader @leave-room="handleLeaveRoom" />
     </template>
 
     <template #rules>

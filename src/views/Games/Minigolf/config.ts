@@ -21,6 +21,7 @@ export const GROUND_THICKNESS = 0.4
 
 export const CAMERA_HEIGHT = 20
 export const CAMERA_OFFSET_TOPDOWN: CoordinateTuple = [0, CAMERA_HEIGHT, 0]
+export const CAMERA_FIT_PADDING = 1.5
 
 export const HOLE_RADIUS = 0.5
 export const CUP_DEPTH = 1.2
@@ -35,6 +36,20 @@ export const CONFETTI_COLORS = [0xff6bcb, 0xffd93d, 0x4ecdc4, 0xff8c42, 0x6bcf7f
 
 export const AIM_LINE_COLOR = 0xffdd00
 export const AIM_LINE_MAX_LENGTH = 5
+
+export const GAMEPAD_AIM_SPEED = 4
+export const GAMEPAD_CHARGE_SPEED = 0.8
+export const GAMEPAD_AIM_PREVIEW_POWER = 0.15
+
+export const GAMEPAD_MAPPING = {
+  gamepad: {
+    // Left stick rotates the aim direction
+    'axis0-left': 'aim-left',
+    'axis0-right': 'aim-right',
+    // Bottom face button charges power on hold, fires on release
+    cross: 'fire'
+  }
+}
 
 export interface HoleConfig {
   ground: { width: number; depth: number; position: CoordinateTuple }

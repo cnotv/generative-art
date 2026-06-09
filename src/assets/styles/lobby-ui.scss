@@ -19,7 +19,7 @@
   --lui-text-color: #fff;
   --lui-text-shadow:
     -1px -1px 0 #111, 1px -1px 0 #111, -1px 1px 0 #111, 1px 1px 0 #111, -1px 0 0 #111, 1px 0 0 #111,
-    0 -1px 0 #111, 0 1px 0 #111, clamp(3px, 0.22em, 6px) clamp(3px, 0.26em, 7px) 0 #111;
+    0 -1px 0 #111, 0 1px 0 #111, clamp(3px, 0.12em, 6px) clamp(3px, 0.16em, 7px) 0 #111;
   --lui-font: var(--font-playful);
 
   // Exactly three text levels:
@@ -50,6 +50,11 @@
   // shadow is preserved so the inverted text still has depth/legibility.
   --lui-text-color-inverted: #fff;
   --lui-bg-inverted: #000;
+
+  // Dedicated button tokens — kept separate from the generic text/stroke
+  // tokens so button styling can be tuned without affecting plain text.
+  --lui-button-text-color: var(--lui-text-color);
+  --lui-button-border-color: var(--lui-stroke-faint);
 }
 
 // Modifier: apply to any element (LobbyUI or plain) to flip into the inverted

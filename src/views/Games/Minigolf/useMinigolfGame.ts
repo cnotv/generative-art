@@ -2,6 +2,8 @@ import { ref, watch, type Ref, type ComputedRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
+import { createControls } from '@webgamekit/controls'
+import type { ControlsCurrents } from '@webgamekit/controls'
 import { activeRendererReference } from '@webgamekit/threejs'
 import type { OnProgress } from '@webgamekit/threejs'
 import { useSceneViewStore } from '@/stores/sceneView'
@@ -20,15 +22,21 @@ import {
   type ConfettiParticle
 } from './helpers/ball'
 import { createAimState, beginDrag, updateDrag, endDrag } from './helpers/input'
+import { classifyScore, type ScoreType } from './helpers/score'
 import {
   BALL_RADIUS,
   CAMERA_OFFSET_TOPDOWN,
+  CAMERA_FIT_PADDING,
   MAX_SHOT_POWER,
   MAX_STROKES,
   AIM_LINE_MAX_LENGTH,
   CONFETTI_LIFETIME,
   WALL_HEIGHT,
   WALL_THICKNESS,
+  GAMEPAD_MAPPING,
+  GAMEPAD_AIM_SPEED,
+  GAMEPAD_CHARGE_SPEED,
+  GAMEPAD_AIM_PREVIEW_POWER,
   type HoleConfig
 } from './config'
 import type { useMinigolfSession } from './useMinigolfSession'
@@ -49,6 +57,8 @@ type GameContext = {
 
 type GameState = {
   message: Ref<string>
+  scoreLabel: Ref<string | null>
+  scoreType: Ref<ScoreType | null>
   waiting: Ref<boolean>
   aimPower: Ref<number>
   isAiming: Ref<boolean>
@@ -77,9 +87,9 @@ type PointerDeps = {
 const SCENE_LIGHTS = {
   directional: {
     shadow: {
-      mapSize: { width: 2048, height: 2048 },
-      bias: -0.001,
-      radius: 1,
+      mapSize: { width: 4096, height: 4096 },
+      bias: -0.0005,
+      radius: 0,
       camera: { left: -20, right: 20, top: 20, bottom: -20, near: 0.5, far: 50 }
     }
   }
@@ -87,6 +97,22 @@ const SCENE_LIGHTS = {
 
 const AIM_DASH_COUNT = 8
 const AIM_DASH_RADIUS = 0.09
+
+const onPlayAgainPressedHolder = { current: null as (() => void) | null }
+
+export const setOnPlayAgainPressed = (callback: (() => void) | null): void => {
+  onPlayAgainPressedHolder.current = callback
+}
+
+const clearGameState = (state: GameState): void => {
+  state.message.value = ''
+  state.scoreLabel.value = null
+  state.scoreType.value = null
+  state.waiting.value = false
+  state.aimPower.value = 0
+  state.isAiming.value = false
+  state.localStrokes.value = 0
+}
 
 const safeRemoveBody = (body: RigidBody, world: World): void => {
   try {
@@ -121,13 +147,12 @@ const fitCamera = (
       ? canvasElement.clientWidth / canvasElement.clientHeight
       : perspCamera.aspect
   perspCamera.aspect = aspect
-  const padding = 1.5
   const halfFovRad = (perspCamera.fov * Math.PI) / 360
-  const halfWidth = ground.width / 2 + WALL_THICKNESS + padding
-  const halfDepth = ground.depth / 2 + WALL_THICKNESS + padding
+  const halfWidth = ground.width / 2 + WALL_THICKNESS + CAMERA_FIT_PADDING
+  const halfDepth = ground.depth / 2 + WALL_THICKNESS + CAMERA_FIT_PADDING
   const heightForDepth = halfDepth / Math.tan(halfFovRad)
   const heightForWidth = halfWidth / (aspect * Math.tan(halfFovRad))
-  camera.position.y = Math.max(heightForDepth, heightForWidth, CAMERA_OFFSET_TOPDOWN[1])
+  camera.position.y = Math.max(heightForDepth, heightForWidth)
   perspCamera.updateProjectionMatrix()
 }
 
@@ -157,6 +182,8 @@ const buildHole = (ctx: GameContext, deps: GameDeps): void => {
   ctx.setBall(ball)
   ctx.aim.direction.set(0, 0, -1)
   state.message.value = ''
+  state.scoreLabel.value = null
+  state.scoreType.value = null
   state.waiting.value = false
   state.localStrokes.value = 0
 }
@@ -166,9 +193,16 @@ const resolveTurn = (deps: GameDeps, holed = false): void => {
   const finalStrokes = holed ? state.localStrokes.value : MAX_STROKES
   state.waiting.value = true
   const par = activeHoles.value[store.currentHole].par
-  state.message.value = holed
-    ? `${finalStrokes} stroke${finalStrokes !== 1 ? 's' : ''}! Par ${par}`
-    : 'Max strokes — waiting…'
+  if (holed) {
+    const score = classifyScore(finalStrokes, par)
+    state.scoreType.value = score.type
+    state.scoreLabel.value = score.label
+    state.message.value = `${finalStrokes} stroke${finalStrokes !== 1 ? 's' : ''} (Par ${par})`
+  } else {
+    state.scoreType.value = null
+    state.scoreLabel.value = null
+    state.message.value = 'Max strokes — waiting…'
+  }
   session.broadcastScore(store.currentHole, finalStrokes)
 }
 
@@ -212,6 +246,32 @@ const createAimDots = (scene: THREE.Scene): THREE.Mesh[] => {
   })
 }
 
+/**
+ * Show a single dash dot ahead of the ball along the aim direction, matching
+ * the regular aim-dash size, hiding the rest — used for the gamepad's aim preview.
+ * @param dots Aim preview dot meshes
+ * @param ball Ball state to anchor the indicator to
+ * @param direction Current aim direction
+ * @param distance Distance ahead of the ball to place the indicator
+ */
+const updateAimPreviewDot = (
+  dots: THREE.Mesh[],
+  ball: BallState,
+  direction: THREE.Vector3,
+  distance: number
+): void => {
+  const origin = ball.mesh.position
+  dots.forEach((dot, index) => {
+    dot.visible = index === 0
+    if (index !== 0) return
+    dot.position.set(
+      origin.x + direction.x * distance,
+      origin.y + AIM_DASH_RADIUS,
+      origin.z + direction.z * distance
+    )
+  })
+}
+
 const updateAimDots = (
   dots: THREE.Mesh[],
   ball: BallState,
@@ -222,6 +282,7 @@ const updateAimDots = (
   const step = length / (AIM_DASH_COUNT + 1)
   const origin = ball.mesh.position
   dots.forEach((dot, index) => {
+    dot.scale.setScalar(1)
     const t = step * (index + 1)
     dot.position.set(
       origin.x + direction.x * t,
@@ -257,6 +318,101 @@ const createGhostBallSync = (
       ghostMeshes[peerId].position.set(pos.x, pos.y, pos.z)
     })
   }
+}
+
+const GAMEPAD_AIM_AXIS = new THREE.Vector3(0, 1, 0)
+
+type GamepadAimResult = { fire: boolean; power: number }
+
+/**
+ * Build a per-frame stepper that drives aiming/shooting from gamepad actions:
+ * the left stick rotates the aim direction and the fire button charges power
+ * on hold, releasing it as a shot — mirroring the pointer drag-to-aim gesture.
+ * @param aim AimState shared with pointer input
+ * @param aimDots Aim preview dot meshes
+ * @param getBall Accessor for the current ball
+ * @param state Reactive game state
+ * @returns Stepper invoked each frame with current actions and frame delta
+ */
+const createGamepadAimStepper = (
+  aim: ReturnType<typeof createAimState>,
+  aimDots: THREE.Mesh[],
+  getBall: () => BallState | null,
+  state: GameState
+): ((currentActions: ControlsCurrents, delta: number) => GamepadAimResult) => {
+  let charging = false
+  let hasRotated = false
+  return (currentActions, delta) => {
+    const ball = getBall()
+    if (aim.dragging) return { fire: false, power: 0 }
+    if (state.waiting.value || !ball || !isBallStopped(ball)) {
+      hasRotated = false
+      aimDots.forEach((d) => {
+        d.visible = false
+      })
+      return { fire: false, power: 0 }
+    }
+
+    const rotatingLeft = 'aim-left' in currentActions
+    const rotatingRight = 'aim-right' in currentActions
+    if (rotatingLeft) aim.direction.applyAxisAngle(GAMEPAD_AIM_AXIS, -GAMEPAD_AIM_SPEED * delta)
+    if (rotatingRight) aim.direction.applyAxisAngle(GAMEPAD_AIM_AXIS, GAMEPAD_AIM_SPEED * delta)
+    if (rotatingLeft || rotatingRight) hasRotated = true
+
+    if ('fire' in currentActions) {
+      charging = true
+      aim.power = Math.min(aim.power + GAMEPAD_CHARGE_SPEED * delta, 1)
+      state.isAiming.value = true
+      state.aimPower.value = Math.round(aim.power * 100)
+      updateAimDots(aimDots, ball, aim.direction, aim.power)
+      aimDots.forEach((d) => {
+        d.visible = true
+      })
+      return { fire: false, power: 0 }
+    }
+
+    if (charging) {
+      charging = false
+      const power = aim.power
+      aim.power = 0
+      state.isAiming.value = false
+      state.aimPower.value = 0
+      return { fire: power > 0, power }
+    }
+
+    if (hasRotated) {
+      updateAimPreviewDot(
+        aimDots,
+        ball,
+        aim.direction,
+        GAMEPAD_AIM_PREVIEW_POWER * AIM_LINE_MAX_LENGTH
+      )
+    } else {
+      aimDots.forEach((d) => {
+        d.visible = false
+      })
+    }
+    return { fire: false, power: 0 }
+  }
+}
+
+/**
+ * Apply a gamepad aim-stepper result: fires the shot and counts the stroke
+ * when the fire button was released with charge and strokes remain.
+ * @param result Stepper result for this frame
+ * @param ball Ball to shoot
+ * @param aim Shared aim state holding the current direction
+ * @param state Reactive game state
+ */
+const applyGamepadFire = (
+  result: GamepadAimResult,
+  ball: BallState,
+  aim: ReturnType<typeof createAimState>,
+  state: GameState
+): void => {
+  if (!result.fire || state.localStrokes.value >= MAX_STROKES) return
+  state.localStrokes.value++
+  shootBall(ball, aim.direction, result.power, MAX_SHOT_POWER)
 }
 
 const bindPointerEvents = (
@@ -307,6 +463,28 @@ const bindPointerEvents = (
   }
 }
 
+type SceneSetupArguments = Parameters<
+  Parameters<ReturnType<typeof useSceneViewStore>['init']>[2]['defineSetup'] extends (
+    a: infer A
+  ) => void
+    ? (a: A) => void
+    : never
+>[0]
+
+const refitHole = (ctx: GameContext, hole: HoleConfig, canvasElement: HTMLCanvasElement): void => {
+  const midX = (hole.teePosition[0] + hole.holePosition[0]) / 2
+  const midZ = (hole.teePosition[2] + hole.holePosition[2]) / 2
+  canvasElement.style.removeProperty('width')
+  canvasElement.style.removeProperty('height')
+  const w = canvasElement.clientWidth
+  const h = canvasElement.clientHeight
+  if (w > 0 && h > 0) {
+    activeRendererReference.current?.setSize(w, h, false)
+  }
+  fitCamera(ctx.camera, hole.ground, canvasElement)
+  ctx.camera.lookAt(midX, 0, midZ)
+}
+
 /**
  * Manage the Minigolf Three.js/Rapier game scene: hole building, ball physics, aim, confetti.
  * @param canvas - Ref to the canvas element for scene initialisation.
@@ -326,6 +504,8 @@ export const useMinigolfGame = (
 
   const state: GameState = {
     message: ref(''),
+    scoreLabel: ref(null),
+    scoreType: ref(null),
     waiting: ref(false),
     aimPower: ref(0),
     isAiming: ref(false),
@@ -335,33 +515,21 @@ export const useMinigolfGame = (
   let gameContext: GameContext | null = null
   let cleanupListeners: (() => void) | null = null
   let canvasResizeObserver: ResizeObserver | null = null
-
-  type SceneSetupArguments = Parameters<
-    Parameters<typeof sceneStore.init>[2]['defineSetup'] extends (a: infer A) => void
-      ? (a: A) => void
-      : never
-  >[0]
+  let gamepadControls: ReturnType<typeof createControls> | null = null
 
   const refitCurrentHole = (ctx: GameContext): void => {
     const hole = activeHoles.value[store.currentHole]
     if (!hole || !canvas.value) return
-    const midX = (hole.teePosition[0] + hole.holePosition[0]) / 2
-    const midZ = (hole.teePosition[2] + hole.holePosition[2]) / 2
-    // Three.js setSize() injects inline style.width/height onto the canvas, overriding CSS
-    // width:100%/height:100%. Remove them so the container's CSS size is used instead.
-    canvas.value.style.removeProperty('width')
-    canvas.value.style.removeProperty('height')
-    const w = canvas.value.clientWidth
-    const h = canvas.value.clientHeight
-    if (w > 0 && h > 0) {
-      // false = don't override CSS styles again
-      activeRendererReference.current?.setSize(w, h, false)
-    }
-    fitCamera(ctx.camera, hole.ground, canvas.value)
-    ctx.camera.lookAt(midX, 0, midZ)
+    refitHole(ctx, hole, canvas.value)
   }
 
-  const setupGameScene = ({ scene, camera, world, animate }: SceneSetupArguments): void => {
+  const setupGameScene = ({
+    scene,
+    camera,
+    world,
+    animate,
+    getDelta
+  }: SceneSetupArguments): void => {
     let ballState: BallState | null = null
     const aim = createAimState()
     const ctx: GameContext = {
@@ -392,11 +560,30 @@ export const useMinigolfGame = (
       orbitReference,
       canvas
     })
+    const stepGamepadAim = createGamepadAimStepper(aim, aimDots, () => ballState, state)
+    gamepadControls = createControls({
+      mapping: GAMEPAD_MAPPING,
+      keyboard: false,
+      touch: false,
+      mouse: false
+    })
+    let summaryFireLast = false
     animate({
       timeline: createTimelineManager(),
       beforeTimeline: () => {
+        if (gameContext !== ctx) return
         syncGhostBalls()
-        if (!ballState) return
+        const summaryFire =
+          store.phase === 'summary' && !!gamepadControls && 'fire' in gamepadControls.currentActions
+        if (summaryFire && !summaryFireLast) onPlayAgainPressedHolder.current?.()
+        summaryFireLast = summaryFire
+        if (!ballState || !gamepadControls) return
+        applyGamepadFire(
+          stepGamepadAim(gamepadControls.currentActions, getDelta()),
+          ballState,
+          aim,
+          state
+        )
         const pos = ballState.mesh.position
         session.broadcastBallPosition(pos.x, pos.y, pos.z)
         runFrame(ballState, ctx, deps)
@@ -413,7 +600,6 @@ export const useMinigolfGame = (
     store.playerList
       .map((p) => ({ ...p, scores: [] as number[] }))
       .forEach((p) => store.upsertPlayer(p))
-    store.currentHole = 0
     state.localStrokes.value = 0
     await sceneStore.init(
       canvas.value,
@@ -432,19 +618,21 @@ export const useMinigolfGame = (
    */
   const cleanup = (): void => {
     cleanupListeners?.()
+    cleanupListeners = null
     canvasResizeObserver?.disconnect()
     canvasResizeObserver = null
+    gamepadControls?.destroyControls()
+    gamepadControls = null
     sceneStore.cleanup()
     gameContext = null
+    clearGameState(state)
   }
 
   watch(
     () => store.currentHole,
     (next, previous) => {
       if (next === previous || !gameContext || store.phase !== 'playing') return
-      state.message.value = ''
-      state.waiting.value = false
-      state.localStrokes.value = 0
+      clearGameState(state)
       buildHole(gameContext, { state, store, activeHoles, session, canvas })
     }
   )

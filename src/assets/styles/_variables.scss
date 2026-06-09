@@ -23,6 +23,15 @@
   --mg-bg: #e8f5e9;
   --game-msg-system-bg: #fff4c2;
   --game-msg-error-bg: #ffeaea;
+
+  // Minigolf score-type feedback colors. Always rendered over the 3D scene as
+  // an overlay (like LobbyUI), so they stay fixed regardless of light/dark theme.
+  --score-hole-in-one: #ffd700;
+  --score-eagle: #4ecdc4;
+  --score-birdie: #6bcf7f;
+  --score-par: #fff;
+  --score-bogey: #ff8c42;
+  --score-double-bogey-plus: #f44;
 }
 
 @keyframes slide-up {
