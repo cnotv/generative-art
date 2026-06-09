@@ -57,6 +57,7 @@ const session = useMinigolfSession({
 
 const { isHost, localPeerId } = session
 
+const isSolo = computed(() => playerList.value.length <= 1)
 const showSidebar = ref(false)
 const lastReadCount = ref(0)
 const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
@@ -208,6 +209,7 @@ onUnmounted(() => {
     class="mg"
     :phase="phase"
     :show-sidebar="showSidebar"
+    :sidebar-visible="!isSolo"
     :style="backgroundStyle"
   >
     <template #header>
@@ -277,7 +279,7 @@ onUnmounted(() => {
     </template>
 
     <template #tabbar>
-      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+      <GameTabBar v-if="!isSolo" v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
     </template>
   </LobbyLayout>
 </template>
