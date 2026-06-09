@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { LobbyUIButton } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { MgPlayer } from '@/stores/minigolf'
 import type { HoleConfig } from './config'
 
-defineProps<{
+const props = defineProps<{
   playerList: MgPlayer[]
   activeHoles: HoleConfig[]
   isHost: boolean
@@ -13,6 +14,13 @@ defineProps<{
 const emit = defineEmits<{
   'play-again': []
 }>()
+
+const playAgainReference = ref<InstanceType<typeof LobbyUIButton> | null>(null)
+
+onMounted(() => {
+  if (!props.isHost) return
+  ;(playAgainReference.value?.$el as HTMLElement | undefined)?.focus()
+})
 
 const totalScore = (scores: number[]): number => scores.reduce((a, b) => a + b, 0)
 
@@ -50,7 +58,9 @@ const bestTotal = (players: MgPlayer[]): number =>
           </tr>
         </tbody>
       </table>
-      <LobbyUIButton v-if="isHost" @click="emit('play-again')">Play again</LobbyUIButton>
+      <LobbyUIButton v-if="isHost" ref="playAgainReference" @click="emit('play-again')"
+        >Play again</LobbyUIButton
+      >
       <p v-else class="mg-summary__hint">Waiting for host to restart…</p>
     </div>
   </div>
@@ -103,12 +113,7 @@ const bestTotal = (players: MgPlayer[]): number =>
   letter-spacing: 0.06em;
   padding: var(--spacing-1) var(--spacing-2);
   text-align: center;
-  border-bottom: 2px solid var(--lui-stroke-faint);
   opacity: 0.7;
-}
-
-.mg-summary__th:first-child {
-  text-align: left;
 }
 
 .mg-summary__td {
@@ -119,18 +124,14 @@ const bestTotal = (players: MgPlayer[]): number =>
   text-shadow: var(--lui-text-shadow);
   padding: var(--spacing-1) var(--spacing-2);
   text-align: center;
-  border-bottom: 1px solid var(--lui-stroke-faint);
 }
 
 .mg-summary__td--name {
-  text-align: left;
+  text-align: center;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-1);
-}
-
-.mg-summary__td--total {
-  font-size: var(--lui-text-medium);
 }
 
 .mg-summary__row--winner .mg-summary__td {

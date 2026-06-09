@@ -43,12 +43,19 @@ export const useGamepadHint = (editingElement: { value: HTMLElement | null }) =>
     return [{ glyph: '✕', label: 'Confirm' }]
   }
 
+  const getHintAnchor = (element: HTMLElement): HTMLElement => {
+    if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+      return element.closest('label') ?? element
+    }
+    return element
+  }
+
   const updateFocusedHint = (element: HTMLElement | null): void => {
     if (!element) {
       focusedHint.value = null
       return
     }
-    const r = element.getBoundingClientRect()
+    const r = getHintAnchor(element).getBoundingClientRect()
     focusedHint.value = {
       rect: { top: r.top, left: r.left, width: r.width, height: r.height },
       parts: describeControl(element)

@@ -24,6 +24,7 @@ const handleChange = (event: Event): void => {
 
 <style scoped>
 .lui-private {
+  position: relative;
   display: inline-flex;
   align-items: center;
   cursor: pointer;

@@ -98,6 +98,22 @@ const SCENE_LIGHTS = {
 const AIM_DASH_COUNT = 8
 const AIM_DASH_RADIUS = 0.09
 
+const onPlayAgainPressedHolder = { current: null as (() => void) | null }
+
+export const setOnPlayAgainPressed = (callback: (() => void) | null): void => {
+  onPlayAgainPressedHolder.current = callback
+}
+
+const clearGameState = (state: GameState): void => {
+  state.message.value = ''
+  state.scoreLabel.value = null
+  state.scoreType.value = null
+  state.waiting.value = false
+  state.aimPower.value = 0
+  state.isAiming.value = false
+  state.localStrokes.value = 0
+}
+
 const safeRemoveBody = (body: RigidBody, world: World): void => {
   try {
     world.removeRigidBody(body)
@@ -551,10 +567,16 @@ export const useMinigolfGame = (
       touch: false,
       mouse: false
     })
+    let summaryFireLast = false
     animate({
       timeline: createTimelineManager(),
       beforeTimeline: () => {
+        if (gameContext !== ctx) return
         syncGhostBalls()
+        const summaryFire =
+          store.phase === 'summary' && !!gamepadControls && 'fire' in gamepadControls.currentActions
+        if (summaryFire && !summaryFireLast) onPlayAgainPressedHolder.current?.()
+        summaryFireLast = summaryFire
         if (!ballState || !gamepadControls) return
         applyGamepadFire(
           stepGamepadAim(gamepadControls.currentActions, getDelta()),
@@ -578,7 +600,6 @@ export const useMinigolfGame = (
     store.playerList
       .map((p) => ({ ...p, scores: [] as number[] }))
       .forEach((p) => store.upsertPlayer(p))
-    store.currentHole = 0
     state.localStrokes.value = 0
     await sceneStore.init(
       canvas.value,
@@ -597,23 +618,21 @@ export const useMinigolfGame = (
    */
   const cleanup = (): void => {
     cleanupListeners?.()
+    cleanupListeners = null
     canvasResizeObserver?.disconnect()
     canvasResizeObserver = null
     gamepadControls?.destroyControls()
     gamepadControls = null
     sceneStore.cleanup()
     gameContext = null
+    clearGameState(state)
   }
 
   watch(
     () => store.currentHole,
     (next, previous) => {
       if (next === previous || !gameContext || store.phase !== 'playing') return
-      state.message.value = ''
-      state.scoreLabel.value = null
-      state.scoreType.value = null
-      state.waiting.value = false
-      state.localStrokes.value = 0
+      clearGameState(state)
       buildHole(gameContext, { state, store, activeHoles, session, canvas })
     }
   )

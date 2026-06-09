@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useMinigolfStore } from '@/stores/minigolf'
 import { useMinigolfSession } from './useMinigolfSession'
-import { useMinigolfGame } from './useMinigolfGame'
+import { useMinigolfGame, setOnPlayAgainPressed } from './useMinigolfGame'
 import { HOLES } from './config'
 import {
   loadProfile,
@@ -97,6 +97,10 @@ const {
   cleanup
 } = useMinigolfGame(canvas, session, activeHoles, handleProgress)
 
+setOnPlayAgainPressed(() => {
+  if (isHost.value) handlePlayAgain()
+})
+
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   playerList.value.map((p) => ({
     id: p.id,
@@ -116,6 +120,7 @@ const allPlayersScored = computed(() => {
 
 watch(phase, async (newPhase) => {
   if (newPhase === 'playing') {
+    cleanup()
     await nextTick()
     startGame()
   }
@@ -176,11 +181,9 @@ const handleStartGame = (): void => {
 }
 
 const handlePlayAgain = (): void => {
-  store.phase = 'lobby'
-  store.currentHole = 0
-  waiting.value = false
-  playerList.value.map((p) => ({ ...p, scores: [] })).forEach((p) => store.upsertPlayer(p))
   cleanup()
+  store.resetGameState()
+  store.phase = 'lobby'
 }
 
 const copyLink = async (): Promise<void> => {
@@ -193,7 +196,10 @@ onMounted(() => {
   store.reset()
   session.init()
 })
-onUnmounted(() => cleanup())
+onUnmounted(() => {
+  setOnPlayAgainPressed(null)
+  cleanup()
+})
 </script>
 
 <template>
