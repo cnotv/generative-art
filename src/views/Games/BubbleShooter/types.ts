@@ -70,6 +70,9 @@ export type BsGameContext = {
   inFlightDx: number
   inFlightDy: number
   rowDropAccumulator: number
+  dropAnimActive: boolean
+  dropAnimElapsed: number
+  dropAnimOffset: number
   scene: THREE.Scene | null
   camera: THREE.PerspectiveCamera | null
   shooterGroup: THREE.Group | null
@@ -87,5 +90,6 @@ export type BsGameContext = {
   nextColor: Ref<BubbleColor>
   isGameOver: Ref<boolean>
   pendingGarbage: Ref<number>
+  onGameOverInternal: () => void
   deps: GameDeps
 }

@@ -210,7 +210,7 @@ export const trajectoryPoints = (
     wallRight,
     ceilingY,
     maxReflections = 2,
-    stepSize = 0.15,
+    stepSize = 0.08,
     maxSteps = 300
   } = config
 

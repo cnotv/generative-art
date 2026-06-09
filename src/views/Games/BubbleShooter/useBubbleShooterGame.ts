@@ -14,6 +14,7 @@ import {
   GARBAGE_THRESHOLD,
   WALL_LEFT,
   WALL_RIGHT,
+  HEX_ROW_HEIGHT,
   COLOR_HEX,
   type BubbleColor
 } from './config'
@@ -50,6 +51,27 @@ const MAX_TRAJ_PTS = 500
 const POP_PARTICLE_COUNT = 6
 const POP_LIFETIME = 0.35
 const POP_SPEED = 3.5
+const GAME_OVER_DELAY_MS = 2000
+const SHAKE_THRESHOLD_MS = 4000
+const SHAKE_AMPLITUDE = 0.08
+const SHAKE_FREQUENCY = 8
+const DROP_ANIM_DURATION = 0.25
+const ROW_DROP_COUNT = 2
+const HIGH_SCORE_KEY = 'bubble-shooter-high-score'
+
+type SessionHandles = {
+  animFrameId: number
+  cleanupTools: (() => void) | null
+  unbindInput: (() => void) | null
+  canvasResizeObserver: ResizeObserver | null
+  gameOverTimeoutId: ReturnType<typeof setTimeout> | undefined
+  lastTime: number
+}
+
+const loadHighScore = (): number => {
+  const parsed = Number(localStorage.getItem(HIGH_SCORE_KEY) ?? '0')
+  return isNaN(parsed) ? 0 : parsed
+}
 
 const getMaterial = (ctx: BsGameContext, color: BubbleColor): THREE.MeshStandardMaterial => {
   if (!ctx.materials[color]) {
@@ -154,6 +176,11 @@ const buildStaticScene = (
   fireLine.position.set(0, FIRE_LINE_Y, 0)
   sc.add(fireLine)
 
+  // Pick initial colors BEFORE creating the shooter meshes so they match the HUD
+  ctx.grid = createGrid(undefined, ctx.deps.colorCount.value)
+  ctx.currentColor.value = pickNextColor(ctx.grid)
+  ctx.nextColor.value = pickNextColor(ctx.grid)
+
   ctx.shooterGroup = new THREE.Group()
   const barrel = new THREE.Mesh(
     new THREE.CylinderGeometry(
@@ -195,9 +222,6 @@ const buildStaticScene = (
   )
   sc.add(ctx.trajectoryLine)
 
-  ctx.grid = createGrid(undefined, ctx.deps.colorCount.value)
-  ctx.currentColor.value = pickNextColor(ctx.grid)
-  ctx.nextColor.value = pickNextColor(ctx.grid)
   rebuildAllMeshes(ctx)
   updateTrajectoryLine(ctx)
 }
@@ -262,6 +286,75 @@ const tickPopParticles = (ctx: BsGameContext, delta: number): void => {
   })
 }
 
+const tickMeshAnimations = (ctx: BsGameContext, delta: number): void => {
+  const rowDropMs = SPEED_ROW_DROP_MS[ctx.deps.speed.value]
+  const timeToNextDrop = rowDropMs - ctx.rowDropAccumulator
+  const inShakeWindow =
+    !ctx.dropAnimActive && timeToNextDrop <= SHAKE_THRESHOLD_MS && !ctx.isGameOver.value
+  const shakeIntensity = inShakeWindow ? 1 - timeToNextDrop / SHAKE_THRESHOLD_MS : 0
+  const shakeX = inShakeWindow
+    ? Math.sin((performance.now() / 1000) * SHAKE_FREQUENCY * Math.PI * 2) *
+      SHAKE_AMPLITUDE *
+      shakeIntensity
+    : 0
+
+  if (ctx.dropAnimActive) ctx.dropAnimElapsed += delta
+  const dropProgress = ctx.dropAnimActive
+    ? Math.min(ctx.dropAnimElapsed / DROP_ANIM_DURATION, 1)
+    : 1
+  const smoothed = dropProgress * dropProgress * (3 - 2 * dropProgress)
+  const dropOffsetY = ctx.dropAnimActive ? ctx.dropAnimOffset * (1 - smoothed) : 0
+
+  ctx.bubbleMeshes.forEach((mesh, key) => {
+    const separatorIndex = key.indexOf(',')
+    const row = Number(key.slice(0, separatorIndex))
+    const col = Number(key.slice(separatorIndex + 1))
+    const { x: baseX, y: baseY } = cellToWorld(row, col)
+    mesh.position.x = baseX + shakeX
+    mesh.position.y = baseY + dropOffsetY
+  })
+
+  if (ctx.dropAnimActive && dropProgress >= 1) {
+    ctx.dropAnimActive = false
+    ctx.dropAnimElapsed = 0
+    ctx.dropAnimOffset = 0
+  }
+}
+
+const resetContextAndHandles = (ctx: BsGameContext, handles: SessionHandles): void => {
+  cancelAnimationFrame(handles.animFrameId)
+  handles.cleanupTools?.()
+  handles.canvasResizeObserver?.disconnect()
+  handles.unbindInput?.()
+  clearTimeout(handles.gameOverTimeoutId)
+  handles.cleanupTools = null
+  handles.unbindInput = null
+  handles.canvasResizeObserver = null
+  handles.gameOverTimeoutId = undefined
+  handles.lastTime = 0
+  ctx.score.value = 0
+  ctx.shotCount.value = 0
+  ctx.isGameOver.value = false
+  ctx.pendingGarbage.value = 0
+  ctx.rowDropAccumulator = 0
+  ctx.dropAnimActive = false
+  ctx.dropAnimElapsed = 0
+  ctx.dropAnimOffset = 0
+  ctx.isFlying = false
+  ctx.aimAngle = 0
+  ctx.inFlightDx = 0
+  ctx.inFlightDy = 0
+  ctx.popParticles = []
+  ctx.bubbleMeshes.clear()
+  ctx.inFlightMesh = null
+  ctx.scene = null
+  ctx.camera = null
+  ctx.shooterGroup = null
+  ctx.trajectoryLine = null
+  ctx.loadedMesh = null
+  ctx.nextMesh = null
+}
+
 const handleCollision = (
   ctx: BsGameContext,
   hitX: number,
@@ -312,9 +405,7 @@ const handleCollision = (
   ctx.shotCount.value++
 
   if (hasReachedFireLine(ctx.grid, FIRE_LINE_Y)) {
-    ctx.isGameOver.value = true
-    ctx.isFlying = false
-    ctx.deps.onGameOver()
+    ctx.onGameOverInternal()
     return
   }
 
@@ -337,17 +428,22 @@ const runGameLoop = (ctx: BsGameContext, delta: number): void => {
     const rowDropMs = SPEED_ROW_DROP_MS[ctx.deps.speed.value]
     if (ctx.rowDropAccumulator >= rowDropMs) {
       ctx.rowDropAccumulator -= rowDropMs
-      ctx.grid = addTopRows(ctx.grid, 2)
+      ctx.grid = addTopRows(ctx.grid, ROW_DROP_COUNT)
+      ctx.dropAnimActive = true
+      ctx.dropAnimElapsed = 0
+      ctx.dropAnimOffset = ROW_DROP_COUNT * HEX_ROW_HEIGHT
       rebuildAllMeshes(ctx)
       if (hasReachedFireLine(ctx.grid, FIRE_LINE_Y)) {
-        ctx.isGameOver.value = true
-        ctx.deps.onGameOver()
+        ctx.onGameOverInternal()
         return
       }
     }
   }
 
-  if (ctx.isGameOver.value || !ctx.isFlying || !ctx.inFlightMesh) return
+  if (ctx.isGameOver.value || !ctx.isFlying || !ctx.inFlightMesh) {
+    tickMeshAnimations(ctx, delta)
+    return
+  }
   const distance = BUBBLE_SPEED * delta
   let nx = ctx.inFlightMesh.position.x + ctx.inFlightDx * distance
   const ny = ctx.inFlightMesh.position.y + ctx.inFlightDy * distance
@@ -367,6 +463,7 @@ const runGameLoop = (ctx: BsGameContext, delta: number): void => {
     ctx.scene?.remove(ctx.inFlightMesh)
     ctx.inFlightMesh = null
     handleCollision(ctx, nx, GRID_TOP_Y, color)
+    tickMeshAnimations(ctx, delta)
     return
   }
 
@@ -383,6 +480,7 @@ const runGameLoop = (ctx: BsGameContext, delta: number): void => {
     ctx.inFlightMesh = null
     handleCollision(ctx, nx, ny, color)
   }
+  tickMeshAnimations(ctx, delta)
 }
 
 const computeAimAngle = (
@@ -478,6 +576,7 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
   const nextColor = ref<BubbleColor>('blue')
   const isGameOver = ref(false)
   const pendingGarbage = ref(0)
+  const highScore = ref(loadHighScore())
 
   const ctx: BsGameContext = {
     grid: [],
@@ -486,6 +585,9 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
     inFlightDx: 0,
     inFlightDy: 0,
     rowDropAccumulator: 0,
+    dropAnimActive: false,
+    dropAnimElapsed: 0,
+    dropAnimOffset: 0,
     scene: null,
     camera: null,
     shooterGroup: null,
@@ -503,13 +605,30 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
     nextColor,
     isGameOver,
     pendingGarbage,
+    onGameOverInternal: () => {},
     deps
   }
 
-  let cleanupTools: (() => void) | null = null
-  let unbindInput: (() => void) | null = null
-  let canvasResizeObserver: ResizeObserver | null = null
-  let lastTime = 0
+  const handles: SessionHandles = {
+    animFrameId: 0,
+    cleanupTools: null,
+    unbindInput: null,
+    canvasResizeObserver: null,
+    gameOverTimeoutId: undefined,
+    lastTime: 0
+  }
+
+  ctx.onGameOverInternal = (): void => {
+    ctx.isGameOver.value = true
+    ctx.isFlying = false
+    if (score.value > highScore.value) {
+      highScore.value = score.value
+      localStorage.setItem(HIGH_SCORE_KEY, score.value.toString())
+    }
+    handles.gameOverTimeoutId = setTimeout(() => {
+      ctx.deps.onGameOver()
+    }, GAME_OVER_DELAY_MS)
+  }
 
   const receiveGarbage = (count: number): void => {
     const rows = count % 2 === 0 ? count : count + 1
@@ -520,32 +639,25 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
     ctx.grid = addGarbageRows(ctx.grid, rows)
     rebuildAllMeshes(ctx)
     if (hasReachedFireLine(ctx.grid, FIRE_LINE_Y)) {
-      isGameOver.value = true
-      deps.onGameOver()
+      ctx.onGameOverInternal()
     }
   }
 
-  let animFrameId = 0
-
   const init = (): void => {
+    resetContextAndHandles(ctx, handles)
     const element = deps.canvas.value
     if (!element) return
-
     const w = element.clientWidth || element.offsetWidth || 400
     const h = element.clientHeight || element.offsetHeight || 600
-
     const renderer = new THREE.WebGLRenderer({ canvas: element, antialias: true })
     renderer.setSize(w, h, false)
     renderer.setPixelRatio(window.devicePixelRatio)
-
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(CAMERA_FOV, w / h, 0.1, 1000)
     camera.position.set(0, CAMERA_Y, CAMERA_Z)
     camera.lookAt(0, CAMERA_Y, 0)
-
     buildStaticScene(ctx, scene, camera)
-
-    canvasResizeObserver = new ResizeObserver(() => {
+    handles.canvasResizeObserver = new ResizeObserver(() => {
       const nw = element.clientWidth
       const nh = element.clientHeight
       if (nw > 0 && nh > 0) {
@@ -554,43 +666,40 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
         renderer.setSize(nw, nh, false)
       }
     })
-    canvasResizeObserver.observe(element)
-    unbindInput = bindInputEvents(ctx)
-
+    handles.canvasResizeObserver.observe(element)
+    handles.unbindInput = bindInputEvents(ctx)
     const tick = (): void => {
-      animFrameId = requestAnimationFrame(tick)
+      handles.animFrameId = requestAnimationFrame(tick)
       const now = performance.now()
-      const delta = Math.min((now - lastTime) / 1000, 0.05)
-      lastTime = now
+      const delta = handles.lastTime === 0 ? 0 : Math.min((now - handles.lastTime) / 1000, 0.05)
+      handles.lastTime = now
       runGameLoop(ctx, delta)
       renderer.render(scene, camera)
     }
     tick()
-
-    cleanupTools = (): void => {
-      cancelAnimationFrame(animFrameId)
+    handles.cleanupTools = (): void => {
+      cancelAnimationFrame(handles.animFrameId)
       renderer.dispose()
     }
   }
 
   const cleanup = (): void => {
-    unbindInput?.()
-    canvasResizeObserver?.disconnect()
-    cleanupTools?.()
+    resetContextAndHandles(ctx, handles)
     Object.values(ctx.materials).forEach((mat) => mat?.dispose())
     ctx.bubbleGeo.dispose()
-    ctx.bubbleMeshes.clear()
-    ctx.popParticles.forEach((p) => {
-      ctx.scene?.remove(p.mesh)
-      ;(p.mesh.material as THREE.MeshStandardMaterial).dispose()
-    })
-    ctx.popParticles = []
-    ctx.inFlightMesh = null
-    ctx.scene = null
-    ctx.camera = null
   }
 
   onUnmounted(cleanup)
 
-  return { score, shotCount, currentColor, nextColor, isGameOver, init, cleanup, receiveGarbage }
+  return {
+    score,
+    shotCount,
+    currentColor,
+    nextColor,
+    isGameOver,
+    highScore,
+    init,
+    cleanup,
+    receiveGarbage
+  }
 }

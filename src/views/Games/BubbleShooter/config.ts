@@ -23,9 +23,9 @@ export type BsColorCount = 3 | 4 | 5
 export type BsSpeed = 'slow' | 'medium' | 'fast'
 
 export const SPEED_ROW_DROP_MS: Record<BsSpeed, number> = {
-  slow: 30_000,
-  medium: 20_000,
-  fast: 12_000
+  slow: 45_000,
+  medium: 22_000,
+  fast: 10_000
 }
 
 export const COLOR_HEX: Record<BubbleColor, number> = {

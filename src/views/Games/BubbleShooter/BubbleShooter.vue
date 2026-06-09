@@ -191,6 +191,8 @@ onMounted(() => {
       :shot-count="game.shotCount.value"
       :current-color="game.currentColor.value"
       :next-color="game.nextColor.value"
+      :is-game-over="game.isGameOver.value"
+      :high-score="game.highScore.value"
       :opponent-score="opponentPlayer?.score"
       :opponent-name="opponentPlayer?.name"
     />
@@ -201,6 +203,7 @@ onMounted(() => {
       :winner-id="winnerId"
       :local-peer-id="localPeerId"
       :is-host="isHost || store.solo"
+      :high-score="game.highScore.value"
       @restart="handleRestart"
       @leave-room="handleLeaveRoom"
     />

@@ -8,6 +8,8 @@ defineProps<{
   shotCount: number
   currentColor: BubbleColor
   nextColor: BubbleColor
+  isGameOver: boolean
+  highScore: number
   opponentScore?: number
   opponentName?: string
 }>()
@@ -22,6 +24,7 @@ defineExpose({ canvas })
       <div class="bs-game__hud-left">
         <span class="bs-game__label">Score</span>
         <span class="bs-game__value">{{ score }}</span>
+        <span v-if="highScore > 0" class="bs-game__best">Best: {{ highScore }}</span>
       </div>
       <div class="bs-game__next">
         <span
@@ -41,6 +44,10 @@ defineExpose({ canvas })
     </div>
     <div class="bs-game__canvas-wrap">
       <canvas ref="canvas" />
+      <div v-if="isGameOver" class="bs-game__over">
+        <span class="bs-game__over-title">GAME OVER</span>
+        <span class="bs-game__over-score">{{ score }} pts</span>
+      </div>
     </div>
   </div>
 </template>
@@ -92,6 +99,13 @@ defineExpose({ canvas })
   text-align: right;
 }
 
+.bs-game__best {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--game-ink-muted);
+  opacity: 0.7;
+}
+
 .bs-game__next-bubble {
   width: 1.25rem;
   height: 1.25rem;
@@ -117,5 +131,43 @@ canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.bs-game__over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  background: color-mix(in srgb, var(--game-surface, #1a1a2e) 80%, transparent);
+  animation: bs-gameover-in var(--duration-normal, 0.3s) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bs-game__over-title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--game-ink, #fff);
+  letter-spacing: 0.08em;
+  text-shadow: var(--shadow-text-game-large, 0 0 20px currentColor);
+}
+
+.bs-game__over-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--game-ink-muted, #aaa);
+}
+
+@keyframes bs-gameover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

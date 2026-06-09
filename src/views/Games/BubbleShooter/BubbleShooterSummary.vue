@@ -6,6 +6,7 @@ defineProps<{
   winnerId: string | null
   localPeerId: string
   isHost: boolean
+  highScore?: number
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,10 @@ const emit = defineEmits<{
           <span class="bs-summary__pts">{{ player.score }} pts</span>
         </li>
       </ul>
+
+      <p v-if="highScore && highScore > 0" class="bs-summary__best">
+        Personal best: {{ highScore }} pts
+      </p>
 
       <div class="bs-summary__actions">
         <button
@@ -169,6 +174,13 @@ const emit = defineEmits<{
 .bs-summary__waiting {
   margin: 0;
   font-size: var(--font-size-sm);
+  color: var(--game-ink-muted);
+}
+
+.bs-summary__best {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
   color: var(--game-ink-muted);
 }
 </style>
