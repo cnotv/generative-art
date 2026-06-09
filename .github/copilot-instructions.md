@@ -99,7 +99,10 @@ gh api \
 
    If a metric is red, investigate using the tools above and apply the techniques documented in `documentation/docs/guides/reducing-performance-costs.md`.
 
-3. **Write journey doc**: ALWAYS create or update a journey doc in `documentation/docs/journey/` before opening a PR. Every new game gets its own `<game-name>.md` file. Any PR that fixes a non-obvious bug, works around a framework quirk, or makes a hard-won design decision must record it there. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be merged.
+3. **Write documentation before opening a PR**: Documentation must be complete before the PR is created — not after. Two types are required when applicable:
+   - **Journey doc** (`documentation/docs/journey/`): Create or update one when the PR fixes a non-obvious bug, works around a framework/library quirk, or makes a hard-won design decision. Every new game gets its own `<game-name>.md` file. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be opened.
+   - **Package API doc** (`documentation/docs/packages/`): Create or update one when a `@webgamekit/*` package gains new exported functions, changes its public API, or deprecates something. The doc must list the updated exports with their purpose and basic usage. A PR that changes a package's public API without updating its doc must not be opened.
+
 4. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
    - Command: `git fetch origin main && git rebase origin/main`
    - Resolve any conflicts, then force push: `git push --force-with-lease`

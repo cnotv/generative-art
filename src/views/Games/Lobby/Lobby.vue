@@ -438,11 +438,17 @@ onMounted(async () => {
   color: var(--lui-focus-color);
 }
 
+.lobby__game-card:hover .lobby__game-name,
+.lobby__game-card:focus .lobby__game-name,
+.lobby__game-card:focus-visible .lobby__game-name {
+  color: var(--lui-focus-color);
+}
+
 .lobby__game-name {
   font-family: var(--lui-font);
   font-size: var(--lui-text-medium);
   font-weight: 900;
-  color: inherit;
+  color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
   letter-spacing: 0.02em;
   text-transform: uppercase;

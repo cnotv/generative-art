@@ -15,6 +15,7 @@ import {
   PLAYER_COLORS,
   buildRandomGradient
 } from '@/utils/playerProfile'
+import '@/assets/styles/lobby-ui.scss'
 import GameHeader from '@/components/GameHeader.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { LoadProgress } from '@webgamekit/threejs'
@@ -84,12 +85,17 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
-const { message, waiting, aimPower, isAiming, localStrokes, startGame, cleanup } = useMinigolfGame(
-  canvas,
-  session,
-  activeHoles,
-  handleProgress
-)
+const {
+  message,
+  scoreLabel,
+  scoreType,
+  waiting,
+  aimPower,
+  isAiming,
+  localStrokes,
+  startGame,
+  cleanup
+} = useMinigolfGame(canvas, session, activeHoles, handleProgress)
 
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   playerList.value.map((p) => ({
@@ -133,6 +139,12 @@ const handleMatchFound = (gameRoomId: string): void => {
   roomId.value = gameRoomId
   router.replace({ query: { room: gameRoomId } })
   session.reconnect(gameRoomId)
+}
+
+const layoutReference = ref<{ requestLeave: () => void } | null>(null)
+
+const requestLeave = (): void => {
+  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
 }
 
 const handleLeaveRoom = (): void => {
@@ -223,26 +235,28 @@ onUnmounted(() => cleanup())
       @leave-room="handleLeaveRoom"
     />
 
-    <MinigolfGame
-      v-else-if="phase === 'playing'"
-      ref="gameReference"
-      :message="message"
-      :waiting="waiting"
-      :is-aiming="isAiming"
-      :aim-power="aimPower"
-      :current-hole="currentHole"
-      :active-holes-length="activeHoles.length"
-      :par="activeHoles[currentHole]?.par ?? 0"
-      :local-strokes="localStrokes"
-    />
-
-    <MinigolfSummary
-      v-else
-      :player-list="playerList"
-      :active-holes="activeHoles"
-      :is-host="isHost"
-      @play-again="handlePlayAgain"
-    />
+    <div v-else class="mg-game-wrapper">
+      <MinigolfGame
+        ref="gameReference"
+        :message="message"
+        :score-label="scoreLabel"
+        :score-type="scoreType"
+        :waiting="waiting"
+        :is-aiming="isAiming"
+        :aim-power="aimPower"
+        :current-hole="currentHole"
+        :active-holes-length="activeHoles.length"
+        :par="activeHoles[currentHole]?.par ?? 0"
+        :local-strokes="localStrokes"
+      />
+      <MinigolfSummary
+        v-if="phase === 'summary'"
+        :player-list="playerList"
+        :active-holes="activeHoles"
+        :is-host="isHost"
+        @play-again="handlePlayAgain"
+      />
+    </div>
 
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 
@@ -269,6 +283,14 @@ onUnmounted(() => cleanup())
   --game-accent: var(--mg-green);
 
   background: var(--mg-bg);
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, system-ui;
+  font-family: var(--lui-font);
+}
+
+.mg-game-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 </style>

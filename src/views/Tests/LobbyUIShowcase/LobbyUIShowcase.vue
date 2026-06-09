@@ -80,12 +80,21 @@ const describeControl = (element: HTMLElement): HintPart[] => {
   return [{ glyph: '✕', label: 'Confirm' }]
 }
 
+// Visually-hidden inputs (e.g. the native checkbox behind `.lui-private__box`)
+// collapse to a zero-size rect at the label's origin, so anchor the hint to the
+// label — which wraps the visible control — instead.
+const getHintAnchorElement = (element: HTMLElement): HTMLElement => {
+  const r = element.getBoundingClientRect()
+  if (r.width === 0 && r.height === 0) return element.closest('label') ?? element
+  return element
+}
+
 const updateFocusedHint = (element: HTMLElement | null): void => {
   if (!element) {
     focusedHint.value = null
     return
   }
-  const r = element.getBoundingClientRect()
+  const r = getHintAnchorElement(element).getBoundingClientRect()
   focusedHint.value = {
     rect: { top: r.top, left: r.left, width: r.width, height: r.height },
     parts: describeControl(element)
@@ -168,7 +177,7 @@ const refreshDiagnostics = (): void => {
 }
 
 const refreshHint = (element: HTMLElement): void => {
-  const r = element.getBoundingClientRect()
+  const r = getHintAnchorElement(element).getBoundingClientRect()
   focusedHint.value = {
     rect: { top: r.top, left: r.left, width: r.width, height: r.height },
     parts: describeControl(element)

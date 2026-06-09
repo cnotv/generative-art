@@ -66,13 +66,13 @@ const toggleHole = (index: number): void => {
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
   >
-    <template #config>
+    <template #profile-extra>
       <div class="mgl-hole-picker">
         <p class="mgl-hole-picker__label">
           Select holes to play
           <span class="mgl-hole-picker__count">({{ selectedHoles.length }} selected)</span>
         </p>
-        <div class="mgl-hole-picker__grid">
+        <div class="mgl-hole-picker__grid" data-lui-row>
           <button
             v-for="preview in holePreviews"
             :key="preview.index"
@@ -145,10 +145,9 @@ const toggleHole = (index: number): void => {
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1);
-  border: 2px solid var(--lui-stroke-faint);
+  border: 2px solid transparent;
   border-radius: var(--radius-sm);
-  background: transparent;
-  box-shadow: var(--lui-border-shadow);
+  background: #2a5c2a;
   cursor: pointer;
   transition:
     transform 0.1s ease,
@@ -159,13 +158,16 @@ const toggleHole = (index: number): void => {
   cursor: default;
 }
 
-.mgl-hole-picker__item:hover:not(:disabled) {
+.mgl-hole-picker__item:hover:not(:disabled),
+.mgl-hole-picker__item:focus,
+.mgl-hole-picker__item:focus-visible {
+  outline: none;
   transform: translate(-1px, -1px);
+  border-color: var(--lui-focus-color);
 }
 
 .mgl-hole-picker__item--selected {
   border-color: var(--lui-stroke);
-  box-shadow: var(--lui-border-shadow);
 }
 
 .mgl-hole-picker__svg {
@@ -181,7 +183,6 @@ const toggleHole = (index: number): void => {
   font-size: var(--lui-text-tiny);
   font-weight: 700;
   color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
   white-space: nowrap;
 }
 </style>
