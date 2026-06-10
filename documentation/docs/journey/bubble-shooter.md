@@ -190,3 +190,61 @@ sequenceDiagram
 ```
 
 Gray (garbage) bubbles participate in snap and dangle but not in match — they cannot form a color group and cannot be popped directly.
+
+## Aim rotation: raycaster-to-angle and gamepad ramping
+
+The shooter's barrel rotation is driven by a single radians value, the aim angle, clamped to a fixed cone of ±81° either side of straight up. Two completely different methods feed this value depending on input device, and they meet at the same step that rotates the shooter group and recomputes the trajectory preview.
+
+**Pointer and touch:** the pointer position is unprojected through the camera with a raycaster onto a flat plane positioned at the same depth as the trajectory dots and the in-flight bubble. The angle is then the arctangent of the horizontal and vertical offset from the shooter's position to that intersection point. Because this is a direct geometric mapping, the aim follows the pointer exactly — there is no smoothing or stepping. The only way this becomes imprecise is if the raycast plane drifts out of sync with the depth the bubble actually travels at, which is why both are defined from the same constant.
+
+**Gamepad:** there is no absolute position to map, so the angle is integrated frame by frame. Holding a direction starts at a slow rotation speed and ramps linearly to a faster one over a fixed ramp duration; releasing the direction resets the ramp immediately. This gives coarse, fast sweeps for long holds and fine, single-frame adjustments for taps.
+
+```mermaid
+flowchart TD
+    subgraph Pointer / touch
+        A[Pointer position] --> B[Raycast onto aim plane]
+        B --> C["angle = atan2(dx, dy)"]
+        C --> D[Clamp to +/-81 degrees]
+    end
+
+    subgraph Gamepad
+        E{Direction held?}
+        E -- No --> F[holdMs = 0, angle unchanged]
+        E -- Yes --> G[holdMs += delta]
+        G --> H[speed = ramp from holdMs]
+        H --> I[angle += direction * speed * delta]
+        I --> D
+    end
+
+    D --> J[Rotate shooter, recompute trajectory]
+```
+
+To make the gamepad aim more precise — i.e. allow finer single-tap adjustments without slowing down long sweeps — lower the minimum ramp speed so a single frame moves the barrel less, or extend the ramp duration so the speed stays low for longer before reaching the maximum. To make pointer aim more precise, the only lever is the raycast plane depth: it must stay equal to the depth used for the trajectory dots and the in-flight bubble, otherwise the visual aim and the actual shot direction diverge.
+
+## Game phases: lobby, playing, summary
+
+The whole view is driven by a single phase value (lobby / playing / summary) held in the shared store. Each phase swaps which child component is rendered; the Three.js scene itself is only ever created in the playing phase and is fully torn down and rebuilt on every transition into it.
+
+- **lobby** — the wizard for name/color/room settings and game options. No canvas, no scene.
+- **playing** — the game canvas and HUD render, and a transition into this phase (whether from the lobby or from a restart) re-initialises the renderer, scene, controls and game context from scratch.
+- **summary** — the game-over screen renders as a transparent overlay on top of the still-mounted game canvas, so the final board state and the CSS "water rise" background animation remain visible underneath the score panel.
+
+```mermaid
+stateDiagram-v2
+    [*] --> lobby
+    lobby --> playing: start game
+    playing --> summary: fire line crossed (solo) or game-over received (multiplayer)
+    summary --> playing: restart (host or solo)
+    playing --> lobby: leave room
+    summary --> lobby: leave room
+```
+
+**Why the summary is an overlay, not a separate screen:** earlier the game-over screen replaced the canvas entirely, so the final grid state — and the in-progress water-rise flood animation — disappeared the instant the timer expired. The summary component now renders with a transparent background on top of the unchanged game view, fading in while the flood animation continues underneath. The canvas, HUD and water overlay stay mounted; only a translucent panel with the scores and "Play again" button is layered above them.
+
+## Known gap: pointer/touch input bypasses `@webgamekit/controls`
+
+Gamepad input goes through `@webgamekit/controls` with a mapping that only covers aim-left, aim-right and fire — keyboard, touch and mouse are explicitly disabled in that configuration. Aiming and shooting with the mouse or a finger are instead wired up as raw pointer and touch listeners attached directly to the canvas.
+
+This split exists because aiming by pointer needs an absolute screen position to raycast toward, which the action-based mapping in `@webgamekit/controls` isn't designed to express — it maps discrete inputs to named actions, not continuous pointer coordinates. The result is two independent input pipelines: one action-based (gamepad), one raw-coordinate-based (pointer/touch), with no keyboard aiming at all.
+
+This is a known deviation from the project's "always use `@webgamekit/controls`" convention. A future pass could extend the package with a continuous "pointer position" or "aim toward" action type so all input devices share one pipeline. Until then, any change to aiming behaviour (e.g. adjusting the clamp angles or the raycast plane) needs to be applied to the pointer/touch handlers and the gamepad step function separately.
