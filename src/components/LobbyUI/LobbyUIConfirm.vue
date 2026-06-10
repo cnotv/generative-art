@@ -17,10 +17,8 @@ const emit = defineEmits<{
 const confirmReference = ref<InstanceType<typeof LobbyUIButton> | null>(null)
 
 onMounted(() => {
-  const element = (confirmReference.value?.$el as HTMLElement | undefined)?.querySelector?.(
-    'button'
-  )
-  element?.focus()
+  const element = confirmReference.value?.$el as HTMLElement | undefined
+  element?.focus?.()
 })
 
 useMenuNavigation((action) => {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { LobbyUIButton } from '@/components/LobbyUI'
-import '@/assets/styles/lobby-ui.scss'
+import GameScores from '@/components/GameScores.vue'
 import type { MgPlayer } from '@/stores/minigolf'
 import type { HoleConfig } from './config'
 
@@ -29,75 +29,44 @@ const bestTotal = (players: MgPlayer[]): number =>
 </script>
 
 <template>
-  <div class="mg-summary">
-    <div class="mg-summary__card">
-      <h2 class="mg-summary__title">Final Scores</h2>
-      <table class="mg-summary__table">
-        <thead>
-          <tr>
-            <th class="mg-summary__th">Player</th>
-            <th v-for="(_, n) in activeHoles" :key="n" class="mg-summary__th">H{{ n + 1 }}</th>
-            <th class="mg-summary__th">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="player in playerList"
-            :key="player.id"
-            class="mg-summary__row"
-            :class="{
-              'mg-summary__row--winner': totalScore(player.scores) === bestTotal(playerList)
-            }"
-          >
-            <td class="mg-summary__td mg-summary__td--name">
-              <span class="mg-summary__dot" :style="{ background: player.color }" />
-              {{ player.name }}
-            </td>
-            <td v-for="(score, i) in player.scores" :key="i" class="mg-summary__td">{{ score }}</td>
-            <td class="mg-summary__td mg-summary__td--total">{{ totalScore(player.scores) }}</td>
-          </tr>
-        </tbody>
-      </table>
+  <GameScores title="Final Scores">
+    <table class="mg-summary__table">
+      <thead>
+        <tr>
+          <th class="mg-summary__th">Player</th>
+          <th v-for="(_, n) in activeHoles" :key="n" class="mg-summary__th">H{{ n + 1 }}</th>
+          <th class="mg-summary__th">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="player in playerList"
+          :key="player.id"
+          class="mg-summary__row"
+          :class="{
+            'mg-summary__row--winner': totalScore(player.scores) === bestTotal(playerList)
+          }"
+        >
+          <td class="mg-summary__td mg-summary__td--name">
+            <span class="mg-summary__dot" :style="{ background: player.color }" />
+            {{ player.name }}
+          </td>
+          <td v-for="(score, i) in player.scores" :key="i" class="mg-summary__td">{{ score }}</td>
+          <td class="mg-summary__td mg-summary__td--total">{{ totalScore(player.scores) }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <template #actions>
       <LobbyUIButton v-if="isHost" ref="playAgainReference" @click="emit('play-again')"
         >Play again</LobbyUIButton
       >
       <p v-else class="mg-summary__hint">Waiting for host to restart…</p>
-    </div>
-  </div>
+    </template>
+  </GameScores>
 </template>
 
 <style scoped>
-.mg-summary {
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(0 0 0 / 0.55);
-  padding: var(--spacing-4);
-}
-
-.mg-summary__card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  padding: var(--spacing-5) var(--spacing-6);
-  align-items: center;
-  width: min(560px, 100%);
-}
-
-.mg-summary__title {
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-important);
-  font-weight: 900;
-  color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .mg-summary__table {
   width: 100%;
   border-collapse: collapse;

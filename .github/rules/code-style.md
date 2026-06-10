@@ -69,6 +69,7 @@
   - Keep styles close to the components that use them
   - **No arbitrary values**: Never define fonts, spacing, colors, z-index, radiuses, or borders directly inside a component style block. Always use `var(--...)` referencing a token defined in `_variables.scss`. If a needed token is missing, add it to `_variables.scss` first (including dark-theme overrides in `.dark` / `@media (prefers-color-scheme: dark)`).
   - **No SCSS variables in components**: Do not use `$name: value` SCSS variables inside `<style scoped>`. CSS custom properties are the single source of truth for design tokens.
+- **LobbyUI text sizing**: All text inside LobbyUI components (`*Lobby.vue`, `GameLobbyWizard`, summary/game-over screens, in-game HUD) must use one of the `--lui-text-*` presets defined in `src/assets/styles/lobby-ui.scss` (`--lui-text-important`, `--lui-text-medium`, `--lui-text-small`, `--lui-text-tiny`) — never a raw `rem`/`px`/`clamp()` font-size. If no existing preset fits, add a new `--lui-text-*` token to `lobby-ui.scss` and document its purpose in the comment block above the existing presets, rather than hardcoding a size.
 
 ## Layout
 
@@ -77,6 +78,7 @@
 ## Accessibility
 
 - **Add tooltips to buttons**: Every interactive button must include a tooltip describing its action. Use the `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` components from `src/components/ui/tooltip/`. Wrap the button in `TooltipTrigger` and provide a `TooltipContent` with a concise label.
+- **Auto-focus the primary CTA on summary/game-over screens**: When a game-over or results screen mounts, the host's primary action button (e.g. "Play again") must receive focus automatically so gamepad/keyboard "fire"/"confirm" activates it immediately. Hold a `ref` to the `LobbyUIButton`, and in `onMounted` call `(reference.value?.$el as HTMLElement | undefined)?.focus()` guarded by the host check. See `MinigolfSummary.vue` / `BubbleShooterSummary.vue` for the reference pattern. The `.lui-btn--cta` focus state (`border-color`/`color: var(--lui-focus-color)`) provides the visual highlight — do not add component-specific focus styles.
 
 ## CSS Conventions
 

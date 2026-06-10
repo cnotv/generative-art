@@ -116,6 +116,61 @@ flowchart TD
 
 **Fire line position:** the fire line Y coordinate is derived from the grid dimensions — `top position minus (rows − 2) × row height`. An earlier version hardcoded it to a fixed value that sat below the grid's actual bottom, so the game-over check never triggered. The formula ensures the line is always just above the last playable row, regardless of grid size.
 
+## Game-over transition: CSS water rise, not WebGL
+
+When the fire line is crossed, a full-screen "flooding" effect plays before the summary screen appears. This is a plain HTML/CSS overlay layered on top of the canvas, not a Three.js effect — a gradient panel grows from `height: 0%` to `height: 100%` over a fixed duration, with a wavy strip riding its top edge using two looping background-position/transform keyframe animations (one for the ripple texture scrolling, one for a side-to-side sway).
+
+The duration is a single shared constant, exposed to the CSS via a custom property set inline (`--bs-gameover-duration`). Re-entering the game (returning from the summary screen to a fresh round) plays the same overlay in reverse — a "drain" variant that animates `height` from `100%` back to `0%` using the same keyframes with start/end swapped, rather than a second set of keyframes.
+
+```mermaid
+flowchart LR
+    A[Fire line crossed] --> B[isGameOver = true]
+    B --> C[Water overlay mounts: height 0% to 100%]
+    C --> D[GAME_OVER_DELAY_MS elapsed]
+    D --> E[Summary screen shown]
+    E --> F[Player restarts]
+    F --> G[Drain overlay mounts: height 100% to 0%]
+    G --> H[New round begins]
+```
+
+Keeping this in CSS rather than the WebGL scene means it can run independently of the render loop and isn't affected by camera or canvas resizing — it simply sits in a `position: absolute; inset: 0` layer above the canvas.
+
+## Row-pressure shake: a state-driven vibration, not a one-shot animation
+
+As the next forced row-drop approaches, the entire bubble grid trembles with increasing intensity — a visual countdown that warns the player before new rows are prepended. This is implemented as a continuous per-frame offset applied to every bubble mesh's base position, not a triggered animation with a start and end.
+
+Each frame, the time remaining until the next row drop is compared against a threshold window. Once inside that window, an intensity value ramps from 0 to 1 as the deadline approaches. The horizontal offset itself is a sine wave sampled from the wall-clock time (so all bubbles oscillate in phase), scaled by both a fixed amplitude and the current intensity. Outside the window — or while a row-drop animation or game over is in progress — the offset is zero and meshes sit at their exact grid position.
+
+```mermaid
+flowchart TD
+    A[Frame tick] --> B{Within shake threshold and not dropping/game over?}
+    B -- No --> C[shakeX = 0]
+    B -- Yes --> D[intensity = 1 - timeRemaining / threshold]
+    D --> E["shakeX = sin(time * frequency) * amplitude * intensity"]
+    C --> F[Apply shakeX + drop offset to every bubble mesh]
+    E --> F
+```
+
+This is a good fit for a hand-rolled per-frame offset rather than a timeline action: it has no fixed start or end, its intensity is continuously derived from unrelated game state (the row-drop accumulator), and it must reset to exactly zero the instant a row drops — a one-shot animation would need to be restarted every frame to track a moving target.
+
+## Ball roll: a Timeline action driven by a derived frame counter
+
+The "next bubble" preview rolls along the ground track in two legs: first from off-screen into the waiting spot beside the cannon (triggered the moment the player shoots), then from the waiting spot up into the loaded position (triggered once the in-flight shot resolves and the queue advances). Both legs share one mesh, distinguished by a `rollPhase` state (`idle | waiting | docking`), and are each driven by a `@webgamekit/animation` `Timeline` action added to a per-game `TimelineManager`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> waiting: player shoots (startWaitingRoll adds a Timeline action)
+    waiting --> docking: shot resolves (startDockingRoll cancels/replaces the action)
+    docking --> idle: action onComplete fires (dockRollMesh)
+```
+
+Each Timeline action carries a `start` frame, a fixed `duration` in frames, an `action` callback that runs every frame while active, and an `onComplete` callback that fires once. Inside `action`, progress is `(frame - start) / duration`, passed through a smoothstep curve (`t² (3 − 2t)`) for ease-in/ease-out, and used to `lerpVectors` the mesh between the leg's start and end positions (with a parallel scale lerp on the first leg, growing the preview-sized mesh to full size). To make the ball look like it is physically rolling — not sliding — the mesh's Z-rotation is advanced each frame by the horizontal distance travelled divided by the bubble radius (rolling-without-slipping), so the marble texture visibly spins in the direction of travel. `onComplete` snaps the mesh exactly to the end position/scale and either clears the action reference (end of the waiting leg) or removes/resets the roll mesh (end of the docking leg, via `dockRollMesh`).
+
+**Frame counter, not `getTools()`'s `simulationFrame`:** other games using `Timeline`/`animateTimeline` (Minigolf, Marble Madness) run through `getTools()`'s `animate()` loop, which steps a fixed-rate `simulationFrame` counter every physics tick. BubbleShooter intentionally bypasses `getTools()` (see "Camera aspect ratio" above) and drives its own `requestAnimationFrame` loop with a clamped wall-clock `delta`. To keep `Timeline.duration` meaningful in real time, BubbleShooter maintains its own `ctx.frame` counter, advanced each tick by `delta * 60` (a 60fps-equivalent), and passes it to `animateTimeline`. A roll leg's duration is expressed as `0.3 * 60` frames — the same real-world 0.3s duration as before, just expressed as a frame count derived from elapsed time rather than an `requestAnimationFrame`-tick count.
+
+Starting a new leg cancels any in-flight action for the roll mesh (`cancelRollAction`) before adding the next one, so a docking roll that interrupts an unfinished waiting roll snaps the mesh to the waiting position first and continues from there — the same interruption behavior as the original hand-rolled state machine, now expressed as add/remove calls on the `TimelineManager`.
+
 ## Multiplayer: separate grids, garbage rows
 
 Each player manages their own local grid. The opponent's grid is never transmitted — only their score is broadcast over the network.

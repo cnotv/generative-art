@@ -224,8 +224,6 @@ const bindGameEvents = (ctx: WmContext, joined: P2PSession): void => {
     )
     ctx.store.$patch({
       players: preserved,
-      phase: 'lobby',
-      round: { number: 0, grid: [], validWords: [], endsAt: null },
       winnerId: null,
       intermissionEndsAt: null,
       messages: []
@@ -367,13 +365,12 @@ export const useSquaresMultiplayerSession = (options: UseSquaresMultiplayerSessi
     )
     store.$patch({
       players: preserved,
-      phase: 'lobby',
-      round: { number: 0, grid: [], validWords: [], endsAt: null },
       winnerId: null,
       intermissionEndsAt: null,
       messages: []
     })
     store.resetRound()
+    startRound()
   }
 
   const init = (): void => initSessionForContext(ctx, options.roomId)

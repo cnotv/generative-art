@@ -155,8 +155,11 @@ const handleSongEnd = (): void => {
 const handleRestart = (): void => {
   if (store.solo) {
     store.resetForReplay()
+    gameStartAt.value = Date.now() + 3000
+    store.phase = 'playing'
   } else {
     session.restartGame()
+    session.startGame()
   }
 }
 
@@ -176,7 +179,7 @@ onMounted(() => {
     @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="handleLeaveRoom" />
+      <GameHeader />
     </template>
 
     <template #rules>

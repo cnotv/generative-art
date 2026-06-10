@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createGrid,
   cellToWorld,
+  averageCellPosition,
   worldToNearestCell,
   getNeighbors,
   findMatch,
@@ -10,7 +11,9 @@ import {
   trajectoryPoints,
   hasReachedFireLine,
   addGarbageRows,
-  addTopRows
+  addTopRows,
+  computeGamepadAimSpeed,
+  stepGamepadAimAngle
 } from './bubbleShooterUtilities'
 import {
   GRID_ROWS,
@@ -21,7 +24,10 @@ import {
   BUBBLE_RADIUS,
   FIRE_LINE_Y,
   WALL_LEFT,
-  WALL_RIGHT
+  WALL_RIGHT,
+  GAMEPAD_AIM_SPEED_MIN,
+  GAMEPAD_AIM_SPEED_MAX,
+  GAMEPAD_AIM_RAMP_MS
 } from './config'
 import type { Grid } from './bubbleShooterUtilities'
 
@@ -73,6 +79,27 @@ describe('cellToWorld', () => {
     const r0 = cellToWorld(0, 0)
     const r1 = cellToWorld(1, 0)
     expect(r0.y - r1.y).toBeCloseTo(HEX_ROW_HEIGHT)
+  })
+})
+
+describe('averageCellPosition', () => {
+  it('returns the origin for an empty list', () => {
+    expect(averageCellPosition([])).toEqual({ x: 0, y: 0 })
+  })
+
+  it('returns the cell position for a single cell', () => {
+    expect(averageCellPosition([[0, 0]])).toEqual(cellToWorld(0, 0))
+  })
+
+  it('averages the world positions of multiple cells', () => {
+    const a = cellToWorld(0, 0)
+    const b = cellToWorld(0, 1)
+    const result = averageCellPosition([
+      [0, 0],
+      [0, 1]
+    ])
+    expect(result.x).toBeCloseTo((a.x + b.x) / 2)
+    expect(result.y).toBeCloseTo((a.y + b.y) / 2)
   })
 })
 
@@ -264,6 +291,55 @@ describe('addGarbageRows', () => {
   it('keeps total row count the same', () => {
     const newGrid = addGarbageRows(emptyGrid(), 2)
     expect(newGrid).toHaveLength(GRID_ROWS)
+  })
+})
+
+describe('computeGamepadAimSpeed', () => {
+  it.each([
+    [0, GAMEPAD_AIM_SPEED_MIN],
+    [GAMEPAD_AIM_RAMP_MS, GAMEPAD_AIM_SPEED_MAX],
+    [GAMEPAD_AIM_RAMP_MS * 2, GAMEPAD_AIM_SPEED_MAX]
+  ])('returns %i for holdMs %i', (holdMs, expected) => {
+    expect(computeGamepadAimSpeed(holdMs)).toBeCloseTo(expected)
+  })
+
+  it('ramps up between the min and max speed while held', () => {
+    const midSpeed = computeGamepadAimSpeed(GAMEPAD_AIM_RAMP_MS / 2)
+    expect(midSpeed).toBeGreaterThan(GAMEPAD_AIM_SPEED_MIN)
+    expect(midSpeed).toBeLessThan(GAMEPAD_AIM_SPEED_MAX)
+  })
+})
+
+describe('stepGamepadAimAngle', () => {
+  const bounds = { minAngle: -1, maxAngle: 1 }
+
+  it('resets the hold duration and keeps the angle when not aiming', () => {
+    const result = stepGamepadAimAngle(0.2, 0, 500, 1 / 60, bounds)
+    expect(result).toEqual({ angle: 0.2, holdMs: 0 })
+  })
+
+  it('rotates slowly on the first frame of holding a direction', () => {
+    const delta = 1 / 60
+    const result = stepGamepadAimAngle(0, 1, 0, delta, bounds)
+    expect(result.angle).toBeCloseTo(GAMEPAD_AIM_SPEED_MIN * delta)
+    expect(result.holdMs).toBeCloseTo(delta * 1000)
+  })
+
+  it('rotates faster the longer a direction is held', () => {
+    const delta = 1 / 60
+    const early = stepGamepadAimAngle(0, 1, 0, delta, bounds)
+    const late = stepGamepadAimAngle(0, 1, GAMEPAD_AIM_RAMP_MS, delta, bounds)
+    expect(late.angle).toBeGreaterThan(early.angle)
+  })
+
+  it('rotates left when direction is -1', () => {
+    const result = stepGamepadAimAngle(0, -1, 0, 1 / 60, bounds)
+    expect(result.angle).toBeLessThan(0)
+  })
+
+  it('clamps the angle to the provided bounds', () => {
+    const result = stepGamepadAimAngle(bounds.maxAngle, 1, GAMEPAD_AIM_RAMP_MS, 1, bounds)
+    expect(result.angle).toBe(bounds.maxAngle)
   })
 })
 

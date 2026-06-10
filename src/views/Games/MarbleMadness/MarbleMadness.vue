@@ -272,7 +272,7 @@ onUnmounted(() => {
     @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader @leave-room="requestLeave" />
+      <GameHeader />
     </template>
 
     <template #rules>

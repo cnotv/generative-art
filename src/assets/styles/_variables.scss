@@ -32,6 +32,14 @@
   --score-par: #fff;
   --score-bogey: #ff8c42;
   --score-double-bogey-plus: #f44;
+
+  // Game-over "rising water" overlay. Always rendered over the 3D scene, so it
+  // stays fixed regardless of light/dark theme.
+  --color-water-surface: #4ecdc4;
+  --color-water-deep: #1565a0;
+
+  // Fade transition between game phases (lobby/playing/summary).
+  --transition-game-phase: 1s;
 }
 
 @keyframes slide-up {

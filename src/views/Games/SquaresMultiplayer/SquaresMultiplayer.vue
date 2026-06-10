@@ -179,9 +179,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <LobbyLayout class="wm" :phase="phase" :show-sidebar="showSidebar" :style="backgroundStyle">
+  <LobbyLayout
+    class="wm"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
+  >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="handleLeaveRoom" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @copy-link="copyLink" />
     </template>
 
     <template #rules>

@@ -1,6 +1,7 @@
 import type * as THREE from 'three'
 import type { Ref } from 'vue'
 import type { computed } from 'vue'
+import type { TimelineManager } from '@webgamekit/animation'
 import type { P2PSession } from '@webgamekit/multiplayer-p2p'
 import type { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import type { BubbleColor, BsColorCount, BsSpeed } from './config'
@@ -46,12 +47,21 @@ export type BsContext = {
 
 // ---- Game ----
 
+export type ScorePopup = {
+  points: number
+  comboPoints: number
+  xPercent: number
+  yPercent: number
+}
+
+export type ScorePopupItem = ScorePopup & { id: number }
+
 export type GameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   isSolo: Ref<boolean>
   colorCount: Ref<BsColorCount>
   speed: Ref<BsSpeed>
-  onScore: (points: number) => void
+  onScore: (popup: ScorePopup) => void
   onGarbageSent: (count: number) => void
   onGameOver: () => void
 }
@@ -76,12 +86,22 @@ export type BsGameContext = {
   scene: THREE.Scene | null
   camera: THREE.PerspectiveCamera | null
   shooterGroup: THREE.Group | null
-  trajectoryLine: THREE.Line | null
+  trajectoryDots: THREE.Mesh[]
+  trajectoryPoints: { x: number; y: number }[]
+  trajectoryCumulative: number[]
+  trajectoryTotalLength: number
+  trajectoryPhase: number
   loadedMesh: THREE.Mesh | null
   nextMesh: THREE.Mesh | null
   inFlightMesh: THREE.Mesh | null
+  rollMesh: THREE.Mesh | null
+  rollPhase: 'idle' | 'waiting' | 'docking'
+  rollActionId: string | null
+  rollTimeline: TimelineManager
+  frame: number
   bubbleGeo: THREE.SphereGeometry
   bubbleMeshes: Map<string, THREE.Mesh>
+  gravityVelocities: Map<string, { vx: number; vy: number }>
   materials: Partial<Record<BubbleColor, THREE.MeshStandardMaterial>>
   popParticles: PopParticle[]
   score: Ref<number>
@@ -90,6 +110,9 @@ export type BsGameContext = {
   nextColor: Ref<BubbleColor>
   isGameOver: Ref<boolean>
   pendingGarbage: Ref<number>
+  gamepadFirePressed: boolean
+  gamepadAimHoldMs: number
+  gamepadInputInitialized: boolean
   onGameOverInternal: () => void
   deps: GameDeps
 }

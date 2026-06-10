@@ -10,7 +10,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  leaveRoom: []
   copyLink: []
 }>()
 
@@ -19,15 +18,11 @@ const router = useRouter()
 const fromLobby = computed(() => !!route.query.game)
 
 const handleBack = (): void => {
-  if (fromLobby.value) {
-    router.replace({ query: {} })
-  } else {
-    emit('leaveRoom')
-  }
+  router.replace({ query: {} })
 }
 
 useMenuNavigation((action) => {
-  if (action === 'cancel') handleBack()
+  if (action === 'cancel' && fromLobby.value) handleBack()
 })
 </script>
 
