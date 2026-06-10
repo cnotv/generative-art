@@ -147,12 +147,6 @@ const handleMatchFound = (gameRoomId: string): void => {
   session.reconnect(gameRoomId)
 }
 
-const layoutReference = ref<{ requestLeave: () => void } | null>(null)
-
-const requestLeave = (): void => {
-  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
-}
-
 const handleLeaveRoom = (): void => {
   const freshId = crypto.randomUUID()
   roomId.value = freshId
@@ -182,9 +176,8 @@ const handleStartGame = (): void => {
 }
 
 const handlePlayAgain = (): void => {
-  cleanup()
   store.resetGameState()
-  store.phase = 'lobby'
+  session.broadcastStart()
 }
 
 const copyLink = async (): Promise<void> => {
@@ -205,15 +198,15 @@ onUnmounted(() => {
 
 <template>
   <LobbyLayout
-    ref="layoutReference"
     class="mg"
     :phase="phase"
     :show-sidebar="showSidebar"
     :sidebar-visible="!isSolo"
     :style="backgroundStyle"
+    @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader :room-id="roomId" @leave-room="requestLeave" @copy-link="copyLink" />
+      <GameHeader :room-id="roomId" @copy-link="copyLink" />
     </template>
 
     <template #rules>

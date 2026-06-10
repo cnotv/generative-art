@@ -8,6 +8,9 @@ import {
   MIN_MATCH_SIZE,
   BUBBLE_COLORS,
   INITIAL_FILLED_ROWS,
+  GAMEPAD_AIM_SPEED_MIN,
+  GAMEPAD_AIM_SPEED_MAX,
+  GAMEPAD_AIM_RAMP_MS,
   type BubbleColor
 } from './config'
 import type { GridCell, Grid, Coord, TrajectoryConfig } from './types'
@@ -50,6 +53,21 @@ export const cellToWorld = (row: number, col: number): { x: number; y: number } 
   x: (col - (GRID_COLS - 1) / 2) * BUBBLE_DIAMETER + (row % 2 === 1 ? BUBBLE_RADIUS : 0),
   y: GRID_TOP_Y - row * HEX_ROW_HEIGHT
 })
+
+/**
+ * Compute the world-space centroid of a set of grid cells.
+ * @param cells - Grid coordinates to average.
+ * @returns World-space centroid, or the origin if `cells` is empty.
+ */
+export const averageCellPosition = (cells: Coord[]): { x: number; y: number } => {
+  if (cells.length === 0) return { x: 0, y: 0 }
+  const positions = cells.map(([row, col]) => cellToWorld(row, col))
+  const sum = positions.reduce(
+    (accumulator, p) => ({ x: accumulator.x + p.x, y: accumulator.y + p.y }),
+    { x: 0, y: 0 }
+  )
+  return { x: sum.x / positions.length, y: sum.y / positions.length }
+}
 
 /**
  * Find the grid cell nearest to a world-space position (may be occupied).
@@ -210,7 +228,7 @@ export const trajectoryPoints = (
     wallRight,
     ceilingY,
     maxReflections = 2,
-    stepSize = 0.15,
+    stepSize = 0.08,
     maxSteps = 300
   } = config
 
@@ -362,4 +380,43 @@ export const countClearedRows = (grid: Grid): number => {
     .reverse()
     .findIndex((r) => grid[r].some((cell) => cell.color !== null))
   return firstNonEmpty === -1 ? GRID_ROWS : firstNonEmpty
+}
+
+/**
+ * Compute the gamepad aim rotation speed, ramping from a slow start up to full speed.
+ * @param holdMs - How long the aim direction has been held, in milliseconds.
+ * @returns Rotation speed in radians per second.
+ */
+export const computeGamepadAimSpeed = (holdMs: number): number => {
+  const progress = Math.min(holdMs / GAMEPAD_AIM_RAMP_MS, 1)
+  return GAMEPAD_AIM_SPEED_MIN + (GAMEPAD_AIM_SPEED_MAX - GAMEPAD_AIM_SPEED_MIN) * progress
+}
+
+export type AimAngleBounds = { minAngle: number; maxAngle: number }
+
+/**
+ * Step the aim angle for one frame of gamepad input, ramping up rotation speed the
+ * longer a direction is held and resetting the ramp once released.
+ * @param currentAngle - Current aim angle in radians.
+ * @param direction - Aim direction: -1 for left, 1 for right, 0 when not aiming.
+ * @param holdMs - How long the aim direction has been held, in milliseconds.
+ * @param delta - Frame time in seconds.
+ * @param bounds - Minimum and maximum allowed aim angle in radians.
+ * @returns The updated aim angle and hold duration.
+ */
+export const stepGamepadAimAngle = (
+  currentAngle: number,
+  direction: -1 | 0 | 1,
+  holdMs: number,
+  delta: number,
+  bounds: AimAngleBounds
+): { angle: number; holdMs: number } => {
+  if (direction === 0) return { angle: currentAngle, holdMs: 0 }
+  const nextHoldMs = holdMs + delta * 1000
+  const speed = computeGamepadAimSpeed(nextHoldMs)
+  const angle = Math.max(
+    bounds.minAngle,
+    Math.min(bounds.maxAngle, currentAngle + direction * speed * delta)
+  )
+  return { angle, holdMs: nextHoldMs }
 }

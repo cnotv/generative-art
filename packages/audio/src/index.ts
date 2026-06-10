@@ -12,6 +12,34 @@ export type { MidiTrackInfo } from './midi'
 let gameAudioContext: AudioContext | null = null
 let soundtrackTimeout: number | null = null
 let musicPlaying = false
+const reverbImpulseCache = new WeakMap<AudioContext, AudioBuffer>()
+
+const REVERB_DURATION_SECONDS = 1.5
+const REVERB_DECAY = 3
+
+/**
+ * Builds (and caches per AudioContext) a noise-decay impulse response buffer
+ * used to drive a ConvolverNode for a simple reverb effect.
+ * @param ctx - The audio context the impulse response will be played through.
+ * @returns An AudioBuffer containing the impulse response.
+ */
+const getReverbImpulse = (ctx: AudioContext): AudioBuffer => {
+  const cached = reverbImpulseCache.get(ctx)
+  if (cached) return cached
+
+  const length = Math.floor(ctx.sampleRate * REVERB_DURATION_SECONDS)
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate)
+  Array.from({ length: impulse.numberOfChannels }).forEach((_, channel) => {
+    const channelData = impulse.getChannelData(channel)
+    Array.from({ length }).forEach((_, sampleIndex) => {
+      channelData[sampleIndex] =
+        (Math.random() * 2 - 1) * (1 - sampleIndex / length) ** REVERB_DECAY
+    })
+  })
+
+  reverbImpulseCache.set(ctx, impulse)
+  return impulse
+}
 
 // Initialize audio context on first user interaction (required for iOS)
 const initializeAudio = async () => {
@@ -91,6 +119,16 @@ const createSound = async (config: SoundConfig) => {
       0.001,
       ctx.currentTime + config.duration - releaseTime
     )
+
+    if (config.reverbAmount) {
+      const convolver = ctx.createConvolver()
+      convolver.buffer = getReverbImpulse(ctx)
+      const wetGain = ctx.createGain()
+      wetGain.gain.value = config.reverbAmount
+      gainNode.connect(convolver)
+      convolver.connect(wetGain)
+      wetGain.connect(ctx.destination)
+    }
 
     // Play the sound
     oscillator.start(ctx.currentTime)

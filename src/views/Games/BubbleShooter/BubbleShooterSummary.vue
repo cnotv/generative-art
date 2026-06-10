@@ -1,89 +1,59 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { LobbyUIButton } from '@/components/LobbyUI'
+import GameScores from '@/components/GameScores.vue'
 import type { BsPlayer } from '@/stores/bubbleShooter'
 
-defineProps<{
+const props = defineProps<{
   playerList: BsPlayer[]
   winnerId: string | null
   localPeerId: string
   isHost: boolean
+  highScore?: number
 }>()
 
 const emit = defineEmits<{
   restart: []
-  leaveRoom: []
 }>()
+
+const playAgainReference = ref<InstanceType<typeof LobbyUIButton> | null>(null)
+
+onMounted(() => {
+  if (!props.isHost) return
+  ;(playAgainReference.value?.$el as HTMLElement | undefined)?.focus()
+})
 </script>
 
 <template>
-  <section class="bs-summary">
-    <div class="bs-summary__card">
-      <h2 class="bs-summary__title">
-        {{ winnerId === localPeerId ? 'You win! 🎉' : 'Game over!' }}
-      </h2>
+  <GameScores variant="transparent" :title="winnerId === localPeerId ? 'You win!' : 'Game over!'">
+    <ul class="bs-summary__scores">
+      <li
+        v-for="(player, index) in playerList"
+        :key="player.id"
+        class="bs-summary__row"
+        :class="{ 'bs-summary__row--winner': player.id === winnerId }"
+      >
+        <span class="bs-summary__rank">{{ index + 1 }}</span>
+        <span class="bs-summary__dot" :style="{ background: player.color }" />
+        <span class="bs-summary__name">{{ player.name }}</span>
+        <span class="bs-summary__pts">{{ player.score }} pts</span>
+      </li>
+    </ul>
 
-      <ul class="bs-summary__scores">
-        <li
-          v-for="(player, index) in playerList"
-          :key="player.id"
-          class="bs-summary__row"
-          :class="{ 'bs-summary__row--winner': player.id === winnerId }"
-        >
-          <span class="bs-summary__rank">{{ index + 1 }}</span>
-          <span class="bs-summary__dot" :style="{ background: player.color }" />
-          <span class="bs-summary__name">{{ player.name }}</span>
-          <span class="bs-summary__pts">{{ player.score }} pts</span>
-        </li>
-      </ul>
+    <p v-if="highScore && highScore > 0" class="bs-summary__best">
+      Personal best: {{ highScore }} pts
+    </p>
 
-      <div class="bs-summary__actions">
-        <button
-          v-if="isHost"
-          class="bs-summary__btn bs-summary__btn--primary"
-          type="button"
-          @click="emit('restart')"
-        >
-          Play again
-        </button>
-        <p v-else class="bs-summary__waiting">Waiting for host to restart…</p>
-        <button class="bs-summary__btn" type="button" @click="emit('leaveRoom')">
-          Back to lobby
-        </button>
-      </div>
-    </div>
-  </section>
+    <template #actions>
+      <LobbyUIButton v-if="isHost" ref="playAgainReference" variant="cta" @click="emit('restart')">
+        Play again
+      </LobbyUIButton>
+      <p v-else class="bs-summary__waiting">Waiting for host to restart…</p>
+    </template>
+  </GameScores>
 </template>
 
 <style scoped>
-.bs-summary {
-  grid-area: main;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-4);
-}
-
-.bs-summary__card {
-  background: var(--game-surface-subtle);
-  color: var(--game-ink);
-  border: 3px solid var(--game-border);
-  border-radius: var(--radius-lg, 1.25rem);
-  box-shadow: 5px 5px 0 var(--game-border);
-  padding: var(--spacing-5, 2rem);
-  max-width: 26rem;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4, 1.5rem);
-  text-align: center;
-}
-
-.bs-summary__title {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--game-ink);
-}
-
 .bs-summary__scores {
   list-style: none;
   margin: 0;
@@ -91,6 +61,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+  width: 100%;
 }
 
 .bs-summary__row {
@@ -98,77 +69,66 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  border: 2px solid var(--game-surface-dim);
-  border-radius: 999px;
 }
 
-.bs-summary__row--winner {
-  border-color: var(--bs-accent);
-  background: color-mix(in srgb, var(--bs-accent) 10%, transparent);
+.bs-summary__row--winner .bs-summary__name,
+.bs-summary__row--winner .bs-summary__pts {
+  color: var(--lui-focus-color);
 }
 
 .bs-summary__rank {
-  font-size: var(--font-size-sm);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 800;
-  color: var(--game-ink-muted);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   min-width: 1.25rem;
   text-align: center;
+  opacity: 0.7;
 }
 
 .bs-summary__dot {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid var(--game-border);
   flex-shrink: 0;
 }
 
 .bs-summary__name {
   flex: 1;
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
   font-weight: 700;
-  font-size: var(--font-size-sm);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
   text-align: left;
 }
 
 .bs-summary__pts {
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-medium);
   font-weight: 800;
-  font-size: var(--font-size-sm);
-}
-
-.bs-summary__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  align-items: center;
-}
-
-.bs-summary__btn {
-  padding: var(--spacing-3) var(--spacing-5, 1.5rem);
-  border: 3px solid var(--game-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--game-ink);
-  font-size: var(--font-size-md, 1rem);
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 3px 3px 0 var(--game-border);
-  transition: transform 0.1s ease;
-  font-family: inherit;
-}
-
-.bs-summary__btn--primary {
-  background: var(--bs-accent);
-  color: #fff;
-}
-
-.bs-summary__btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--game-border);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .bs-summary__waiting {
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-tiny);
+  font-weight: 600;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  opacity: 0.7;
   margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--game-ink-muted);
+}
+
+.bs-summary__best {
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  font-weight: 700;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  opacity: 0.7;
+  margin: 0;
 }
 </style>

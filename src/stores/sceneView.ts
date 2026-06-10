@@ -424,6 +424,7 @@ interface DefineSetupRunOptions {
   clock: THREE.Clock
   config: SetupConfig
   defineSetupCallback: (context: DefineSetupContext) => Promise<void> | void
+  cleanup: () => void
 }
 
 const runSetupWithDefineSetup = async (
@@ -438,7 +439,8 @@ const runSetupWithDefineSetup = async (
     getDelta,
     clock,
     config,
-    defineSetupCallback
+    defineSetupCallback,
+    cleanup
   } = runOptions
   const result = await setup({
     config,
@@ -454,7 +456,14 @@ const runSetupWithDefineSetup = async (
       })
     }
   })
-  return { ground: result.ground, orbit: result.orbit as OrbitControls, scene, camera, world }
+  return {
+    ground: result.ground,
+    orbit: result.orbit as OrbitControls,
+    scene,
+    camera,
+    world,
+    cleanup
+  }
 }
 
 interface SceneSetupResult {
@@ -463,6 +472,7 @@ interface SceneSetupResult {
   world: import('@dimforge/rapier3d-compat').default.World
   orbit: OrbitControls
   ground: { mesh?: THREE.Mesh } | null
+  cleanup: () => void
 }
 
 const resolveSceneReferencesFromResult = (
@@ -828,6 +838,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const textureAreaDefinitions = ref<TextureAreaDefinition[]>([])
   const areaMeshCache = ref<Record<string, THREE.Object3D[]>>({})
 
+  let activeToolsCleanup: (() => void) | null = null
+
   const panelsStore = usePanelsStore()
   const viewPanelsStore = useViewPanelsStore()
   const debugSceneStore = useDebugSceneStore()
@@ -1112,7 +1124,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       camera,
       world,
       getDelta,
-      clock
+      clock,
+      cleanup: toolsCleanup
     } = await getTools({
       canvas,
       onProgress: options.onProgress
@@ -1128,13 +1141,21 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         getDelta,
         clock,
         config,
-        defineSetupCallback: options.defineSetup
+        defineSetupCallback: options.defineSetup,
+        cleanup: toolsCleanup
       })
     }
 
     const result = await setup({ config })
     toolsAnimate({ timeline: createTimelineManager() })
-    return { ground: result.ground, orbit: result.orbit as OrbitControls, scene, camera, world }
+    return {
+      ground: result.ground,
+      orbit: result.orbit as OrbitControls,
+      scene,
+      camera,
+      world,
+      cleanup: toolsCleanup
+    }
   }
 
   const init = async (canvas: HTMLCanvasElement, config: SetupConfig, options?: InitOptions) => {
@@ -1142,7 +1163,15 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     playMode.value = resolvedOptions.playMode ?? false
     buildInitConfig(config, { cameraConfig, groundConfig, lightsConfig, skyConfig })
 
-    const { ground, orbit, scene, camera, world } = await runInit(canvas, config, resolvedOptions)
+    const {
+      ground,
+      orbit,
+      scene,
+      camera,
+      world,
+      cleanup: toolsCleanup
+    } = await runInit(canvas, config, resolvedOptions)
+    activeToolsCleanup = toolsCleanup
 
     resolveSceneReferencesFromResult(
       { scene, camera, world, orbit: orbit ?? ({} as OrbitControls), ground },
@@ -1213,6 +1242,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   }
 
   const cleanup = () => {
+    activeToolsCleanup?.()
+    activeToolsCleanup = null
     viewPanelsStore.clearViewPanels()
     debugSceneStore.clearSceneElements()
     elementPropertiesStore.clearAllElementProperties()

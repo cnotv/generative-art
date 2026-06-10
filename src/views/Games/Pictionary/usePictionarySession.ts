@@ -186,6 +186,7 @@ const pickWordForContext = (ctx: PictionaryContext, word: string): void => {
 const restartGameForContext = (ctx: PictionaryContext): void => {
   if (ctx.session.value) p2pSendData(ctx.session.value, RESTART_CHANNEL, { ts: Date.now() })
   ctx.applyRestart()
+  if (ctx.isHost.value) startRoundForContext(ctx)
 }
 
 const updateProfileForContext = (ctx: PictionaryContext, name: string, color: string): void => {
@@ -482,7 +483,6 @@ export const usePictionarySession = (options: UsePictionarySessionOptions) => {
     )
     store.$patch({
       players: preserved,
-      phase: 'lobby',
       round: { number: 0, drawerId: '', word: null, endsAt: null, choices: [] },
       winnerId: null,
       intermissionEndsAt: null,

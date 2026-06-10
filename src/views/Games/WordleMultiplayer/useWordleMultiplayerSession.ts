@@ -259,8 +259,6 @@ const bindGameEvents = (ctx: WlContext, joined: P2PSession): void => {
     )
     ctx.store.$patch({
       players: preserved,
-      phase: 'lobby',
-      round: { number: 0, word: '', endsAt: null, maxAttempts: MAX_ATTEMPTS },
       winnerId: null,
       intermissionEndsAt: null,
       messages: []
@@ -379,14 +377,13 @@ export const useWordleMultiplayerSession = (options: UseWordleMultiplayerSession
     )
     store.$patch({
       players: preserved,
-      phase: 'lobby',
-      round: { number: 0, word: '', endsAt: null, maxAttempts: MAX_ATTEMPTS },
       winnerId: null,
       intermissionEndsAt: null,
       messages: []
     })
     store.resetRound()
     solvedCount.value = 0
+    startRound()
   }
 
   const init = (): void => initSessionForContext(ctx, options.roomId)

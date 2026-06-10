@@ -18,6 +18,7 @@ import type {
   StartPayload,
   BallPosPayload,
   FinishPayload,
+  RestartPayload,
   UseMarbleMadnessSessionOptions,
   MmContext
 } from './types'
@@ -162,16 +163,16 @@ const bindGameEvents = (ctx: MmContext, joined: P2PSession): void => {
     }
   })
 
-  p2pOnData<Record<string, never>>(joined, RESTART_CHANNEL, () => {
+  p2pOnData<RestartPayload>(joined, RESTART_CHANNEL, (payload) => {
     const preserved = Object.fromEntries(
       Object.entries(ctx.store.players).map(([id, p]) => [id, { ...p, finishTime: null }])
     )
     ctx.store.$patch({
       players: preserved,
-      phase: 'lobby',
+      phase: 'playing',
       winnerId: null,
       messages: [],
-      raceStartTime: null
+      raceStartTime: payload.timestamp
     })
   })
 }
@@ -249,16 +250,17 @@ export const useMarbleMadnessSession = (
 
   const restartGame = (): void => {
     if (!isHost.value || !session.value) return
-    p2pSendData(session.value, RESTART_CHANNEL, {})
+    const timestamp = Date.now()
+    p2pSendData(session.value, RESTART_CHANNEL, { timestamp })
     const preserved = Object.fromEntries(
       Object.entries(store.players).map(([id, p]) => [id, { ...p, finishTime: null }])
     )
     store.$patch({
       players: preserved,
-      phase: 'lobby',
+      phase: 'playing',
       winnerId: null,
       messages: [],
-      raceStartTime: null
+      raceStartTime: timestamp
     })
   }
 

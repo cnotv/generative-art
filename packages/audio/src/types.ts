@@ -6,6 +6,7 @@ export type SoundConfig = {
   waveType?: OscillatorType
   attackTime?: number
   releaseTime?: number
+  reverbAmount?: number
 }
 
 export type NoteSequence = [number, number][]

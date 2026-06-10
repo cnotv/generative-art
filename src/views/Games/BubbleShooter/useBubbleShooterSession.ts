@@ -128,7 +128,7 @@ const bindGameEvents = (ctx: BsContext, joined: P2PSession): void => {
     const preserved = Object.fromEntries(
       Object.entries(ctx.store.players).map(([id, p]) => [id, { ...p, score: 0 }])
     )
-    ctx.store.$patch({ players: preserved, phase: 'lobby', winnerId: null, messages: [] })
+    ctx.store.$patch({ players: preserved, phase: 'playing', winnerId: null, messages: [] })
   })
 }
 
@@ -212,7 +212,7 @@ export const useBubbleShooterSession = (
     const preserved = Object.fromEntries(
       Object.entries(store.players).map(([id, p]) => [id, { ...p, score: 0 }])
     )
-    store.$patch({ players: preserved, phase: 'lobby', winnerId: null, messages: [] })
+    store.$patch({ players: preserved, phase: 'playing', winnerId: null, messages: [] })
   }
 
   const init = (): void => initSessionForContext(ctx, options.roomId)

@@ -16,6 +16,7 @@ export type BallPosPayload = {
   rw: number
 }
 export type FinishPayload = { playerId: string; time: number }
+export type RestartPayload = { timestamp: number }
 
 export type UseMarbleMadnessSessionOptions = {
   name: string
