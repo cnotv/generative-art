@@ -469,6 +469,8 @@ describe('usePanelsStore', () => {
       ['debug', ['debug', 'scene', 'config'], 0],
       ['scene', ['debug', 'scene', 'config'], 1],
       ['config', ['debug', 'scene', 'config'], 2],
+      ['timeline', ['timeline'], 0],
+      ['timeline', ['debug', 'scene', 'config', 'timeline'], 3],
       // Left-side panels — single panel open always has offset 0
       ['elements', ['elements'], 0]
     ] as const)(

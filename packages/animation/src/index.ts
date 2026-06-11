@@ -1165,7 +1165,8 @@ export {
   createDurationAction,
   createOneShotAction,
   createIntervalAction,
-  canAddAction
+  canAddAction,
+  getTimelineActionSpan
 } from './actions'
 
 export {

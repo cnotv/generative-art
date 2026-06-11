@@ -79,3 +79,17 @@ export const canAddAction = (player: ComplexModel, blocking: number = 0): boolea
   if (!currentAction) return true
   return currentAction.time >= blocking
 }
+
+/**
+ * Derive the frame range a timeline action occupies, from whichever time
+ * properties it defines (`start`/`end`, `start`+`duration`, or `delay`+`interval`).
+ * @param action Timeline action to inspect
+ * @returns Frame range `{ start, end }`, defaulting to a zero-length span at frame 0
+ */
+export const getTimelineActionSpan = (action: Timeline): { start: number; end: number } => {
+  const start = action.start ?? action.delay ?? 0
+  if (action.duration !== undefined) return { start, end: start + action.duration }
+  if (action.end !== undefined) return { start, end: action.end }
+  if (action.interval) return { start, end: start + action.interval[0] }
+  return { start, end: start }
+}

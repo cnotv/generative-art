@@ -23,6 +23,7 @@ import { getBall, getCube } from '@webgamekit/threejs'
 import brickTexture from '@/assets/images/textures/brick.jpg'
 import { getCoinBlock } from '@/utils/custom-models'
 import type { RotationMap } from '@/types/three'
+import { useTimelinePanelStore } from '@/stores/timelinePanel'
 
 const statsElement = ref(null)
 const canvas = ref(null)
@@ -37,6 +38,8 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
+const timelinePanelStore = useTimelinePanelStore()
+
 let initInstance: () => void
 onMounted(() => {
   initInstance = () => {
@@ -46,7 +49,10 @@ onMounted(() => {
   initInstance()
   window.addEventListener('resize', initInstance)
 })
-onUnmounted(() => window.removeEventListener('resize', initInstance))
+onUnmounted(() => {
+  window.removeEventListener('resize', initInstance)
+  timelinePanelStore.unregister()
+})
 
 const config = {
   directional: {
@@ -263,8 +269,13 @@ const buildTimeline = async ({
   scene,
   world,
   getDelta,
-  animate
-}: Pick<TimelineTools, 'scene' | 'world' | 'getDelta' | 'animate'>): Promise<void> => {
+  animate,
+  getSimulationFrame,
+  getFrameRate
+}: Pick<
+  TimelineTools,
+  'scene' | 'world' | 'getDelta' | 'animate' | 'getSimulationFrame' | 'getFrameRate'
+>): Promise<void> => {
   const { coins, cubes, balls, movingCube } = setupStaticObjects({ scene, world })
   const [goomba1, goomba2, goomba3, goomba4, goomba5, goomba6] = await loadGoombas({ scene, world })
 
@@ -314,6 +325,11 @@ const buildTimeline = async ({
     action: () =>
       elements.push(getBall(scene, world, { size: 10, position: [0, 90, -30], showHelper: false }))
   })
+  timelinePanelStore.register({
+    getTimeline: () => timelineManager.getTimeline(),
+    getCurrentFrame: getSimulationFrame,
+    getFrameRate
+  })
   animate({
     beforeTimeline: () => bindAnimatedElements(elements, world, getDelta()),
     timeline: timelineManager
@@ -321,12 +337,13 @@ const buildTimeline = async ({
 }
 
 const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
-  const { animate, setup, scene, world, getDelta } = await getTools({
-    stats,
-    route,
-    canvas,
-    onProgress: handleProgress
-  })
+  const { animate, setup, scene, world, getDelta, getSimulationFrame, getFrameRate } =
+    await getTools({
+      stats,
+      route,
+      canvas,
+      onProgress: handleProgress
+    })
   setup({
     config: {
       camera: { position: [-184, 84, 48] },
@@ -334,7 +351,8 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
       sky: { texture: '../assets/landscape.jpg', size: 700 },
       lights: { directional: { intensity: config.directional.intensity } }
     },
-    defineSetup: async () => buildTimeline({ scene, world, getDelta, animate })
+    defineSetup: async () =>
+      buildTimeline({ scene, world, getDelta, animate, getSimulationFrame, getFrameRate })
   })
 }
 

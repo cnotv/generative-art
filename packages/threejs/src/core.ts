@@ -297,6 +297,8 @@ export const getTools = async ({
     animate,
     clock,
     getDelta,
+    getSimulationFrame: () => simulationFrame,
+    getFrameRate: () => frameRate,
     renderer,
     scene,
     camera,

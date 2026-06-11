@@ -4,7 +4,8 @@ import {
   createDurationAction,
   createOneShotAction,
   createIntervalAction,
-  canAddAction
+  canAddAction,
+  getTimelineActionSpan
 } from './actions'
 import * as THREE from 'three'
 import type { ComplexModel } from './types'
@@ -273,6 +274,27 @@ describe('helpers', () => {
 
       expect(canAddAction(player500, 500)).toBe(true)
       expect(canAddAction(player1000, 1000)).toBe(true)
+    })
+  })
+
+  describe('getTimelineActionSpan', () => {
+    it.each([
+      ['start + end', { start: 10, end: 50 }, { start: 10, end: 50 }],
+      ['start + duration', { start: 10, duration: 20 }, { start: 10, end: 30 }],
+      [
+        'delay + interval',
+        { delay: 5, interval: [10, 5] as [number, number] },
+        { start: 5, end: 15 }
+      ],
+      ['start only', { start: 10 }, { start: 10, end: 10 }],
+      ['no time properties', {}, { start: 0, end: 0 }],
+      [
+        'duration takes priority over end',
+        { start: 0, end: 100, duration: 10 },
+        { start: 0, end: 10 }
+      ]
+    ])('%s', (_label, action, expected) => {
+      expect(getTimelineActionSpan(action)).toEqual(expected)
     })
   })
 
