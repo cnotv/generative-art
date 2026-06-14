@@ -9,11 +9,13 @@ interface Properties {
   panelType: PanelType
   side?: 'left' | 'right' | 'top' | 'bottom'
   title?: string
+  wide?: boolean
 }
 
 const props = withDefaults(defineProps<Properties>(), {
   side: 'right',
-  title: undefined
+  title: undefined,
+  wide: false
 })
 
 const panelsStore = usePanelsStore()
@@ -37,7 +39,7 @@ const closePanel = () => {
 </script>
 
 <template>
-  <Sheet :open="isOpen" :side="side" @update:open="handleOpenChange">
+  <Sheet :open="isOpen" :side="side" :wide="wide" @update:open="handleOpenChange">
     <div class="generic-panel" :class="{ 'generic-panel--collapsed': collapsed }">
       <div
         v-if="title"

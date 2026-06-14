@@ -25,6 +25,7 @@ export interface Timeline {
   priority?: number // Execution priority (higher = earlier, default: 0)
   enabled?: boolean // Can be toggled on/off (default: true)
   metadata?: Record<string, unknown> // Custom data
+  segments?: { name: string; frames: number }[] // Repeating per-cycle move breakdown for timeline visualization
 }
 
 export interface ComplexModel extends Model {

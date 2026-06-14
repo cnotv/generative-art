@@ -2,9 +2,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import { Slider } from '@/components/ui/slider'
+import { Checkbox } from '@/components/ui/checkbox'
 import { usePanelsStore } from '@/stores/panels'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
-import { getTimelineActionSpan, type Timeline } from '@webgamekit/animation'
+import { getTimelineChartBars, type Timeline } from '@webgamekit/animation'
 
 interface TimelineBar {
   id: string
@@ -12,25 +13,16 @@ interface TimelineBar {
   left: number
   width: number
   lane: number
+  colorIndex: number
+  enabled: boolean
   action: Timeline
 }
 
-/** Greedily assign each bar to the first lane whose previous bar has ended, stacking overlaps */
-const assignLanes = (rawBars: Omit<TimelineBar, 'lane'>[]): TimelineBar[] => {
-  const sorted = [...rawBars].sort((a, b) => a.left - b.left)
-  const result = sorted.reduce<{ bars: TimelineBar[]; laneEnds: number[] }>(
-    (accumulator, bar) => {
-      const existingLane = accumulator.laneEnds.findIndex((end) => end <= bar.left)
-      const lane = existingLane === -1 ? accumulator.laneEnds.length : existingLane
-      const laneEnds =
-        existingLane === -1
-          ? [...accumulator.laneEnds, bar.left + bar.width]
-          : accumulator.laneEnds.map((end, index) => (index === lane ? bar.left + bar.width : end))
-      return { bars: [...accumulator.bars, { ...bar, lane }], laneEnds }
-    },
-    { bars: [], laneEnds: [] }
-  )
-  return result.bars
+interface TimelineLane {
+  lane: number
+  name: string
+  enabled: boolean
+  action: Timeline
 }
 
 const panelsStore = usePanelsStore()
@@ -86,38 +78,45 @@ const cursorPercent = computed(
   () => ((currentTimeSeconds.value - windowStart.value) / timelinePanelStore.windowSeconds) * 100
 )
 
+/**
+ * Enabled overrides keyed by action id, applied on top of `action.enabled` so
+ * a checkbox toggle is reflected immediately without waiting for the next
+ * timeline recompute (e.g. while the animation is paused).
+ */
+const enabledOverrides = ref<Map<string, boolean>>(new Map())
+
+const isActionEnabled = (action: Timeline): boolean => {
+  const override = action.id ? enabledOverrides.value.get(action.id) : undefined
+  return override ?? action.enabled !== false
+}
+
 const bars = computed<TimelineBar[]>(() => {
   const source = timelinePanelStore.source
   if (!source) return []
 
-  const rate = frameRate.value
-  const window = timelinePanelStore.windowSeconds
   const rangeStart = windowStart.value
-  const rangeEnd = rangeStart + window
+  const rangeEnd = rangeStart + timelinePanelStore.windowSeconds
 
-  const rawBars = source
-    .getTimeline()
-    .map((action, index) => {
-      const span = getTimelineActionSpan(action)
-      return { action, index, startSec: span.start * rate, endSec: span.end * rate }
-    })
-    .filter(({ startSec, endSec }) => endSec >= rangeStart && startSec <= rangeEnd)
-    .map(({ action, index, startSec, endSec }) => {
-      const clippedStart = Math.max(startSec, rangeStart)
-      const clippedEnd = Math.max(Math.min(endSec, rangeEnd), clippedStart)
-      return {
-        id: action.id ?? `action-${index}`,
-        name: action.name ?? action.category ?? `Action ${index + 1}`,
-        left: ((clippedStart - rangeStart) / window) * 100,
-        width: Math.max(((clippedEnd - clippedStart) / window) * 100, 1),
-        action
-      }
-    })
-
-  return assignLanes(rawBars)
+  return getTimelineChartBars(source.getTimeline(), {
+    rangeStart,
+    rangeEnd,
+    rate: frameRate.value
+  }).map((bar) => ({ ...bar, enabled: isActionEnabled(bar.action) }))
 })
 
-const laneCount = computed(() => Math.max(1, ...bars.value.map((bar) => bar.lane + 1)))
+const laneCount = computed(() => Math.max(1, lanes.value.length))
+
+/** One row per registered action, used to render the row gutter (name + enabled checkbox). */
+const lanes = computed<TimelineLane[]>(() => {
+  const source = timelinePanelStore.source
+  if (!source) return []
+  return source.getTimeline().map((action, lane) => ({
+    lane,
+    name: action.name ?? action.category ?? `Action ${lane + 1}`,
+    enabled: isActionEnabled(action),
+    action
+  }))
+})
 
 const selectedAction = computed(
   () => bars.value.find((bar) => bar.id === selectedActionId.value)?.action ?? null
@@ -131,12 +130,18 @@ const handleWindowChange = (value: number[]) => {
   timelinePanelStore.setWindowSeconds(value[0])
 }
 
+const handleToggleEnabled = (id: string | undefined, enabled: boolean) => {
+  if (!id) return
+  enabledOverrides.value = new Map(enabledOverrides.value).set(id, enabled)
+  timelinePanelStore.source?.setActionEnabled(id, enabled)
+}
+
 const formatFramesAsSeconds = (frames: number | undefined): string =>
   frames === undefined ? '—' : `${(frames * frameRate.value).toFixed(2)}s`
 </script>
 
 <template>
-  <GenericPanel panel-type="timeline" side="right" title="Timeline">
+  <GenericPanel panel-type="timeline" side="right" title="Timeline" wide>
     <div v-if="!timelinePanelStore.isAvailable" class="timeline-panel__empty">
       No timeline registered for this view.
     </div>
@@ -153,29 +158,60 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
           :step="1"
           @update:model-value="handleWindowChange"
         />
+        <label class="timeline-panel__pause-label">
+          <Checkbox
+            :model-value="timelinePanelStore.isPaused"
+            @update:model-value="timelinePanelStore.setPaused"
+          />
+          <span>Pause animation</span>
+        </label>
       </div>
 
-      <div
-        class="timeline-panel__track"
-        :style="{ height: `calc(var(--spacing-6) * ${laneCount})` }"
-      >
-        <button
-          v-for="bar in bars"
-          :key="bar.id"
-          type="button"
-          class="timeline-panel__bar"
-          :class="{ 'timeline-panel__bar--selected': bar.id === selectedActionId }"
-          :style="{
-            left: `${bar.left}%`,
-            width: `${bar.width}%`,
-            top: `calc(var(--spacing-6) * ${bar.lane})`
-          }"
-          :title="bar.name"
-          @click="toggleSelection(bar.id)"
+      <div class="timeline-panel__timeline">
+        <div
+          class="timeline-panel__gutter"
+          :style="{ height: `calc(var(--spacing-6) * ${laneCount})` }"
         >
-          <span class="timeline-panel__bar-label">{{ bar.name }}</span>
-        </button>
-        <div class="timeline-panel__cursor" :style="{ left: `${cursorPercent}%` }" />
+          <label
+            v-for="row in lanes"
+            :key="row.lane"
+            class="timeline-panel__row-toggle"
+            :style="{ top: `calc(var(--spacing-6) * ${row.lane})` }"
+            :title="row.name"
+          >
+            <Checkbox
+              :model-value="row.enabled"
+              @update:model-value="(value: boolean) => handleToggleEnabled(row.action.id, value)"
+            />
+            <span class="timeline-panel__row-label">{{ row.name }}</span>
+          </label>
+        </div>
+        <div
+          class="timeline-panel__track"
+          :style="{ height: `calc(var(--spacing-6) * ${laneCount})` }"
+        >
+          <button
+            v-for="bar in bars"
+            :key="bar.id"
+            type="button"
+            class="timeline-panel__bar"
+            :class="{
+              'timeline-panel__bar--selected': bar.id === selectedActionId,
+              'timeline-panel__bar--disabled': !bar.enabled
+            }"
+            :style="{
+              left: `${bar.left}%`,
+              width: `${bar.width}%`,
+              top: `calc(var(--spacing-6) * ${bar.lane})`,
+              background: `var(--timeline-color-${bar.colorIndex})`
+            }"
+            :title="bar.name"
+            @click="toggleSelection(bar.id)"
+          >
+            <span class="timeline-panel__bar-label">{{ bar.name }}</span>
+          </button>
+          <div class="timeline-panel__cursor" :style="{ left: `${cursorPercent}%` }" />
+        </div>
       </div>
 
       <div v-if="selectedAction" class="timeline-panel__details">
@@ -211,7 +247,14 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
         </div>
         <div class="timeline-panel__detail-row">
           <span class="timeline-panel__detail-label">Enabled</span>
-          <span class="timeline-panel__detail-value">{{ selectedAction.enabled !== false }}</span>
+          <label class="timeline-panel__enabled-toggle">
+            <Checkbox
+              :model-value="isActionEnabled(selectedAction)"
+              @update:model-value="
+                (value: boolean) => handleToggleEnabled(selectedAction?.id, value)
+              "
+            />
+          </label>
         </div>
         <div class="timeline-panel__detail-row">
           <span class="timeline-panel__detail-label">Priority</span>
@@ -252,8 +295,48 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
   color: var(--color-foreground);
 }
 
+.timeline-panel__pause-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.timeline-panel__timeline {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.timeline-panel__gutter {
+  position: relative;
+  flex: 0 0 var(--timeline-gutter-width);
+}
+
+.timeline-panel__row-toggle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--spacing-6);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-2xs);
+  color: var(--color-foreground);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.timeline-panel__row-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .timeline-panel__track {
   position: relative;
+  flex: 1;
   min-height: var(--spacing-10);
   background: var(--color-secondary);
   border-radius: var(--radius-sm);
@@ -262,16 +345,15 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
 
 .timeline-panel__bar {
   position: absolute;
+  padding: 0;
   height: var(--spacing-6);
   display: flex;
   align-items: center;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
   opacity: 0.5;
   cursor: pointer;
   overflow: hidden;
-  padding: 0 var(--spacing-1);
   transition: opacity 150ms;
 }
 
@@ -283,9 +365,20 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
   opacity: 1;
 }
 
+.timeline-panel__bar--disabled {
+  opacity: var(--opacity-disabled);
+}
+
+.timeline-panel__enabled-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .timeline-panel__bar-label {
+  padding: 0 var(--spacing-1);
   font-size: var(--font-size-2xs);
-  color: var(--color-primary-foreground);
+  color: var(--timeline-bar-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

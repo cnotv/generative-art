@@ -217,17 +217,18 @@ export const getTools = async ({
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }
   }
-
   /**
    * The animation loop.
    * @param beforeTimeline Actions required to be performed before the timeline
    * @param afterTimeline Actions required to be performed after the timeline
    * @param timeline TimelineManager instance for managing animations
+   * @param isPaused When true, skip physics/timeline updates for this frame while still rendering and updating orbit controls
    */
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
     timeline,
+    isPaused = () => false,
     config = {
       orbit: {
         debug: false
@@ -237,6 +238,7 @@ export const getTools = async ({
     beforeTimeline?: () => void
     afterTimeline?: () => void
     timeline: TimelineManager
+    isPaused?: () => boolean
     config?: {
       orbit?: {
         debug?: boolean
@@ -244,35 +246,35 @@ export const getTools = async ({
     }
   }) => {
     let accumulator = 0
-
     const renderFrame = () => {
       if (composer) composer.render()
       else renderer.render(scene, camera)
     }
-
+    const updateOrbitAndRender = () => {
+      if (orbit) orbit.update()
+      if (orbit && config.orbit?.debug) console.warn(camera)
+      renderFrame()
+    }
     const tickSimulation = () => {
       world.step()
       beforeTimeline()
       animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true })
       afterTimeline()
-      if (orbit) {
-        orbit.update()
-        if (config.orbit?.debug) console.warn(camera)
-      }
-      renderFrame()
+      updateOrbitAndRender()
       if (video?.stop && route) video.stop(renderer.info.render.frame, route)
     }
-
     function runAnimation() {
       if (stats?.start && route) stats.start(route.name ?? '')
       delta = clock.getDelta()
       animationFrameId = requestAnimationFrame(runAnimation)
-
+      if (isPaused()) {
+        updateOrbitAndRender()
+        return
+      }
       accumulator += delta
       if (accumulator < frameRate) return
       accumulator -= frameRate
       simulationFrame += 1
-
       tickSimulation()
       if (stats?.end && route) stats.end(route.name ?? '')
     }
@@ -281,9 +283,7 @@ export const getTools = async ({
 
   const handleResize = createResizeHandler(renderer, camera)
 
-  if (resize !== false) {
-    window.addEventListener('resize', handleResize)
-  }
+  if (resize !== false) window.addEventListener('resize', handleResize)
 
   const cleanup = () => {
     if (animationFrameId) cancelAnimationFrame(animationFrameId)
@@ -393,24 +393,17 @@ export const instanceMatrixModel = (
 }
 
 /**
- * Apply origin-based translation to geometry
- * Translates geometry so specified edges align with the origin coordinates
- * @param geometry The geometry to translate
+ * Compute the position offset for an origin specification, e.g. so a cube's
+ * `position` represents a corner/edge instead of its center
  * @param size The size [x, y, z] of the geometry
  * @param origin The origin point specification { x?, y?, z? }
+ * @returns The [x, y, z] offset to add to a center-based position, zero on axes where origin is not set
  */
-export const applyOriginTranslation = (
-  geometry: THREE.BufferGeometry,
+export const getOriginOffset = (
   size: CoordinateTuple,
   origin?: { x?: number; y?: number; z?: number }
-): void => {
-  if (!origin) return
-
-  const translateX = origin.x !== undefined ? size[0] / 2 : 0
-  const translateY = origin.y !== undefined ? size[1] / 2 : 0
-  const translateZ = origin.z !== undefined ? size[2] / 2 : 0
-
-  if (translateX !== 0 || translateY !== 0 || translateZ !== 0) {
-    geometry.translate(translateX, translateY, translateZ)
-  }
-}
+): CoordinateTuple => [
+  origin?.x !== undefined ? size[0] / 2 : 0,
+  origin?.y !== undefined ? size[1] / 2 : 0,
+  origin?.z !== undefined ? size[2] / 2 : 0
+]

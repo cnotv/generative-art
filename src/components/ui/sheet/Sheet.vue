@@ -16,6 +16,7 @@ const props = withDefaults(
   defineProps<{
     open?: boolean
     side?: SheetSide
+    wide?: boolean
   }>(),
   {
     side: 'right'
@@ -33,7 +34,9 @@ const sideClasses: Record<SheetSide, string> = {
   right: 'sheet-content--right'
 }
 
-const contentClasses = computed(() => cn('panel-ui', 'sheet-content', sideClasses[props.side]))
+const contentClasses = computed(() =>
+  cn('panel-ui', 'sheet-content', sideClasses[props.side], { 'sheet-content--wide': props.wide })
+)
 
 const portalTarget = computed(() => (props.side === 'left' ? '#left-panels' : '#right-panels'))
 </script>
