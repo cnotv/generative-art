@@ -26,16 +26,22 @@ const DEFAULT_NEAR = 0.1
 const DEFAULT_FAR = 10000
 const DEFAULT_ORBIT_DISTANCE = 10
 
+const safeVec3 = (vec?: { x?: number; y?: number; z?: number }) => ({
+  x: vec?.x ?? 0,
+  y: vec?.y ?? 0,
+  z: vec?.z ?? 0
+})
+
 const buildCameraDefaults = (cam: THREE.Camera, orbit?: OrbitControls | null) => {
   const persp = cam as THREE.PerspectiveCamera
   const orbitTarget = orbit?.target ?? { x: 0, y: 0, z: 0 }
   return {
-    position: { x: cam.position.x, y: cam.position.y, z: cam.position.z },
-    rotation: { x: cam.rotation.x, y: cam.rotation.y, z: cam.rotation.z },
+    position: safeVec3(cam.position),
+    rotation: safeVec3(cam.rotation),
     fov: persp.fov ?? DEFAULT_FOV,
     near: persp.near ?? DEFAULT_NEAR,
     far: persp.far ?? DEFAULT_FAR,
-    orbitTarget: { x: orbitTarget.x, y: orbitTarget.y, z: orbitTarget.z },
+    orbitTarget: safeVec3(orbitTarget),
     orbitEnabled: orbit?.enabled ?? false
   }
 }
