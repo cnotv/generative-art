@@ -93,6 +93,15 @@ const updateSceneElements = (scene: THREE.Scene) => {
     [
       ...cameraElements,
       ...scene.children.map((child: any) => {
+        const stampId = stampGroupIdFromName(child.name ?? '')
+        if (stampId) {
+          return {
+            name: child.name,
+            type: 'Stamp',
+            hidden: hiddenElements.value.has(child.name),
+            groupId: stampId
+          }
+        }
         const groupId = textureGroups.value.find(
           (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
         )?.id
@@ -276,6 +285,19 @@ let currentWorld: any = null
 let currentGround: any = null
 let currentAmbientLight: THREE.Light | null = null
 let currentDirectionalLight: THREE.Light | null = null
+let stampGroupId: string | null = null
+const stampedMeshes: THREE.Mesh[] = []
+const STAMP_Y_OFFSET = 0.01
+const STAMP_DEFAULT_SIZE = 2
+const STAMP_AREA_DENSITY = 5
+const STAMP_SEPARATOR = '__'
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+
+const stampGroupIdFromName = (name: string): string | undefined => {
+  if (!name.startsWith(`stamp${STAMP_SEPARATOR}`)) return undefined
+  const parts = name.split(STAMP_SEPARATOR)
+  return parts[1]
+}
 // Live-update ground properties without reinit
 const applyGroundUpdate = (field: string, value: unknown) => {
   if (field === 'enabled' || field === 'size') {
@@ -339,17 +361,67 @@ onMounted(() => {
     onManualUpdate: () => {
       if (selectedGroupId.value) regenerateGroupMeshes(selectedGroupId.value)
     },
-    onAddElement: () => {}
+    onAddElement: () => {},
+    onStampGroupSelect: (groupId) => {
+      stampGroupId = groupId
+      if (canvas.value) canvas.value.style.cursor = groupId ? 'crosshair' : ''
+    },
+    onConvertStampToArea: (stampName) => {
+      if (!currentScene || !currentWorld) return
+      const groupId = stampGroupIdFromName(stampName)
+      if (!groupId) return
+      const group = textureGroups.value.find((g) => g.id === groupId)
+      if (!group) return
+
+      const stampMesh = currentScene.children.find((c: any) => c.name === stampName) as
+        | THREE.Mesh
+        | undefined
+      const position = stampMesh?.position.clone() ?? new THREE.Vector3()
+
+      // Remove the billboard mesh
+      if (stampMesh) {
+        currentScene.remove(stampMesh)
+        const index = stampedMeshes.indexOf(stampMesh)
+        if (index !== -1) stampedMeshes.splice(index, 1)
+        ;(stampMesh.material as THREE.Material).dispose()
+        stampMesh.geometry.dispose()
+      }
+
+      // Configure the group to use an area centred on the stamp position
+      const name = getGroupName(groupId)
+      const existing =
+        textureStore.groupConfigRegistry[name] ?? textureStore.createDefaultGroupConfig()
+      const areaSpread = STAMP_DEFAULT_SIZE * 4
+      textureStore.groupConfigRegistry[name] = {
+        ...existing,
+        area: {
+          center: [position.x, 0, position.z] as [number, number, number],
+          size: [areaSpread, 0, areaSpread] as [number, number, number]
+        },
+        instances: { ...existing.instances, density: STAMP_AREA_DENSITY }
+      }
+
+      addGroupMeshes(currentScene, currentWorld, group, getGroupConfig, () =>
+        updateSceneElements(currentScene)
+      )
+    }
   })
 
   if (canvas.value) {
     initScene()
+    canvas.value.addEventListener('click', handleStampClick)
   }
 
   openPanel('elements')
 })
 
 onBeforeUnmount(() => {
+  canvas.value?.removeEventListener('click', handleStampClick)
+  stampedMeshes.forEach((mesh) => {
+    mesh.geometry.dispose()
+    ;(mesh.material as THREE.Material).dispose()
+  })
+  stampedMeshes.length = 0
   clearViewPanels()
   clearSceneElements()
   unregisterCameraHandlers()
@@ -539,6 +611,41 @@ const regenerateGroupMeshes = (groupId: string) => {
   )
 }
 
+const handleStampClick = (event: MouseEvent): void => {
+  if (!stampGroupId || !currentScene || !currentCamera || !canvas.value) return
+  const group = textureGroups.value.find((g) => g.id === stampGroupId)
+  const texture = group?.textures[0]
+  if (!texture) return
+
+  const rect = canvas.value.getBoundingClientRect()
+  const mouse = new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(mouse, currentCamera)
+
+  const hitPoint = new THREE.Vector3()
+  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return
+
+  const billboardWidth = STAMP_DEFAULT_SIZE
+  const billboardHeight = STAMP_DEFAULT_SIZE
+  const tex = new THREE.TextureLoader().load(texture.url)
+  const geometry = new THREE.PlaneGeometry(billboardWidth, billboardHeight)
+  const material = new THREE.MeshStandardMaterial({
+    map: tex,
+    side: THREE.DoubleSide,
+    transparent: true,
+    alphaTest: 0.5
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(hitPoint.x, billboardHeight / 2, hitPoint.z)
+  mesh.name = ['stamp', stampGroupId, Date.now()].join(STAMP_SEPARATOR)
+  currentScene.add(mesh)
+  stampedMeshes.push(mesh)
+  updateSceneElements(currentScene)
+}
+
 // Reinitialize scene
 const reinitScene = () => {
   if (animationId) {
@@ -647,8 +754,8 @@ const initScene = async () => {
       {
         id: 'cam-1',
         label: 'Camera 1',
-        preset: CameraPreset.Perspective,
-        position: [0, 50, 100],
+        preset: CameraPreset.Orthographic,
+        position: [30, 30, 30],
         fov: 60,
         orbitTarget: [0, 0, 0]
       }
