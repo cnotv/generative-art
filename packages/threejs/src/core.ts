@@ -172,6 +172,7 @@ export const getTools = async ({
   let frameRate = 1 / 60
   emitProgress(onProgress, 'Physics')
   const { renderer, scene, camera, world } = await getEnvironment(canvas)
+  let activeCamera: THREE.Camera = camera
   activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
   let populateOutline: ((sceneReference: THREE.Scene) => void) | null = null
@@ -179,11 +180,6 @@ export const getTools = async ({
   const getDelta = () => delta
   let orbit: OrbitControls | null = null
   let animationFrameId = 0
-  /**
-   * Setup scene
-   * @param config Configuration for camera, ground and lights
-   * @param defineSetup Actions required to be performed before the animation loop
-   */
   const setup = async ({
     config = {},
     defineSetup
@@ -217,13 +213,6 @@ export const getTools = async ({
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }
   }
-  /**
-   * The animation loop.
-   * @param beforeTimeline Actions required to be performed before the timeline
-   * @param afterTimeline Actions required to be performed after the timeline
-   * @param timeline TimelineManager instance for managing animations
-   * @param isPaused When true, skip physics/timeline updates for this frame while still rendering and updating orbit controls
-   */
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
@@ -248,11 +237,11 @@ export const getTools = async ({
     let accumulator = 0
     const renderFrame = () => {
       if (composer) composer.render()
-      else renderer.render(scene, camera)
+      else renderer.render(scene, activeCamera)
     }
     const updateOrbitAndRender = () => {
       if (orbit) orbit.update()
-      if (orbit && config.orbit?.debug) console.warn(camera)
+      if (orbit && config.orbit?.debug) console.warn(activeCamera)
       renderFrame()
     }
     const tickSimulation = () => {
@@ -281,9 +270,21 @@ export const getTools = async ({
     runAnimation()
   }
 
-  const handleResize = createResizeHandler(renderer, camera)
+  let handleResize = createResizeHandler(renderer, activeCamera)
 
   if (resize !== false) window.addEventListener('resize', handleResize)
+
+  const setActiveCamera = (newCamera: THREE.Camera): OrbitControls | null => {
+    activeCamera = newCamera
+    if (resize !== false) window.removeEventListener('resize', handleResize)
+    handleResize = createResizeHandler(renderer, newCamera)
+    if (resize !== false) window.addEventListener('resize', handleResize)
+    if (orbit) {
+      orbit.object = newCamera as THREE.PerspectiveCamera
+      orbit.update()
+    }
+    return orbit
+  }
 
   const cleanup = () => {
     if (animationFrameId) cancelAnimationFrame(animationFrameId)
@@ -304,7 +305,8 @@ export const getTools = async ({
     camera,
     orbit,
     world,
-    cleanup
+    cleanup,
+    setActiveCamera
   }
 }
 

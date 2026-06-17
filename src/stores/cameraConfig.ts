@@ -10,6 +10,7 @@ export interface CameraSlot {
   position: CoordinateTuple
   fov: number
   orbitTarget: CoordinateTuple
+  supportedCameraTypes?: Array<'perspective' | 'orthographic'>
 }
 
 export interface CameraConfigHandlers {

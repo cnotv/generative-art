@@ -7,7 +7,6 @@ import ElementCamera from './ElementCamera.vue'
 import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
 import IconButton from '@/components/IconButton.vue'
-import { Button } from '@/components/ui/button'
 import { Box, Camera, CheckSquare, Image, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -149,23 +148,23 @@ const hasExpandedSchema = computed(
     <!-- Add bar -->
     <div class="elements-panel__add-bar">
       <span class="elements-panel__add-label">Add</span>
-      <Button
+      <IconButton
         v-for="btn in addButtons"
         :key="btn.type"
-        variant="outline"
-        size="sm"
-        class="elements-panel__add-btn"
+        size="xs"
+        panel-colors
         :title="btn.title"
         @click="addElement(btn.type)"
       >
-        <component :is="btn.icon" class="h-3 w-3 mr-1" />{{ btn.label }}
-      </Button>
+        <component :is="btn.icon" />
+      </IconButton>
     </div>
 
     <!-- Filter bar -->
     <div class="elements-panel__filter-bar">
       <IconButton
-        size="sm"
+        size="xs"
+        panel-colors
         :active="allVisible"
         :title="allVisible ? 'Hide all' : 'Show all'"
         @click="allVisible ? hideAllCategories() : showAllCategories()"
@@ -177,7 +176,8 @@ const hasExpandedSchema = computed(
       <IconButton
         v-for="cat in ELEMENT_CATEGORIES"
         :key="cat.category"
-        size="sm"
+        size="xs"
+        panel-colors
         :active="!hiddenCategories.has(cat.category)"
         :title="hiddenCategories.has(cat.category) ? `Show ${cat.label}` : `Hide ${cat.label}`"
         @click="toggleCategory(cat.category)"
@@ -212,9 +212,7 @@ const hasExpandedSchema = computed(
           class="elements-panel__item-content"
           :class="`elements-panel__item-content--${element.type.toLowerCase()}`"
         >
-          <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">
-            Texture Area
-          </p>
+          <p class="elements-panel__type-description">{{ element.type }}</p>
           <ElementCamera
             v-if="isCameraExpanded"
             :is-recording="isRecording"
@@ -282,25 +280,20 @@ const hasExpandedSchema = computed(
   flex-shrink: 0;
 }
 
-.elements-panel__add-btn {
-  height: var(--btn-sm-height);
-  padding: 0 var(--spacing-2);
-  font-size: var(--font-size-xs);
-  gap: var(--spacing-1);
-}
-
 .elements-panel__filter-bar {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
-  padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-1);
   margin-bottom: var(--spacing-1-5);
+  background: var(--panel-item-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .elements-panel__filter-separator {
   width: 1px;
-  height: var(--btn-sm-height);
+  height: var(--btn-xs-height);
   background: var(--color-border);
   flex-shrink: 0;
 }
@@ -324,7 +317,7 @@ const hasExpandedSchema = computed(
 .elements-panel__list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: var(--spacing-0-5);
 }
 
 .elements-panel__item {

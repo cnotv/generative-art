@@ -42,6 +42,7 @@ export interface ModelOptions extends CommonOptions {
   castShadow?: boolean
   receiveShadow?: boolean
   hasGravity?: boolean
+  gravityScale?: number
   showHelper?: boolean
   helperColor?: number
   texture?: string
@@ -123,6 +124,7 @@ export interface LightsConfig {
   }
   hemisphere?: {
     colors?: [number, number]
+    intensity?: number
   }
 }
 
@@ -188,6 +190,7 @@ export interface GroundConfig {
   texture?: string
   textureRepeat?: [number, number]
   textureOffset?: [number, number]
+  restitution?: number
 }
 
 export interface SetupConfig {

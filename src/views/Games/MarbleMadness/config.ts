@@ -322,6 +322,13 @@ export const CLOUD_AREA_CONTROLS = {
       max: { x: 500, y: 5, z: 500 },
       step: { x: 5, y: 0.1, z: 5 }
     },
+    rotation: {
+      label: 'Rotation',
+      component: 'CoordinateInput',
+      min: { x: -Math.PI, y: -Math.PI, z: -Math.PI },
+      max: { x: Math.PI, y: Math.PI, z: Math.PI },
+      step: { x: 0.01, y: 0.01, z: 0.01 }
+    },
     sizeVariation: {
       label: 'Size Variation',
       component: 'CoordinateInput',

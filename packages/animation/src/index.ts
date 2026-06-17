@@ -188,18 +188,18 @@ const isGrounded = (model: ComplexModel, world: RAPIER.World): boolean => {
 const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: ComplexModel) => {
     const mesh = model
-    const { body: rigidBody, helper, type, hasGravity } = model.userData
+    const { body: rigidBody, helper, type, hasGravity, gravityScale = 1 } = model.userData
     if (type === 'fixed') return
     if (type === 'kinematicPositionBased') {
       const grounded = isGrounded(model, world)
-      const gravity = hasGravity && !grounded ? -9.8 * delta - 1 : 0
+      const gravity = hasGravity && !grounded ? (-9.8 * delta - 1) * gravityScale : 0
       mesh.position.y += gravity
       rigidBody.setNextKinematicTranslation(mesh.position)
     } else {
       const position = rigidBody.translation()
       mesh.position.set(position.x, position.y, position.z)
       const rotation = rigidBody.rotation()
-      mesh.rotation.set(rotation.x, rotation.y, rotation.z)
+      mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w)
     }
 
     if (helper) {

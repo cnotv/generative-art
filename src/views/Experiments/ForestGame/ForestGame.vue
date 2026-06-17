@@ -151,19 +151,20 @@ const populateIllustrations = (
         const element = getCube(scene, world, elementConfig)
         element.name = `area-${categoryName}-${animationIndex}`
 
+        const elementY = element.position.y
         const animation =
           categoryName === 'clouds'
             ? createSlideInFromSides({
                 object: element,
-                startY: position[1],
-                endY: position[1],
+                startY: elementY,
+                endY: elementY,
                 duration: 60,
                 delay: delays[index]
               })
             : createPopUpBounce({
                 object: element,
-                startY: position[1] - 3,
-                endY: position[1],
+                startY: elementY - 3,
+                endY: elementY,
                 duration: 30,
                 delay: delays[index]
               })

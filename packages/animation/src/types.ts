@@ -42,6 +42,7 @@ export interface ComplexModel extends Model {
     characterController?: RAPIER.KinematicCharacterController
     helper?: THREE.Object3D
     hasGravity?: boolean
+    gravityScale?: number
     actions: Record<string, THREE.AnimationAction | undefined>
     mixer?: THREE.AnimationMixer
   }

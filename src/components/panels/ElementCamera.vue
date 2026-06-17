@@ -82,6 +82,11 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
         <div class="element-camera__type-toggle">
           <Button
             :variant="activePresetType === 'perspective' ? 'default' : 'outline'"
+            :disabled="
+              !(activeSlot?.supportedCameraTypes ?? ['perspective', 'orthographic']).includes(
+                'perspective'
+              )
+            "
             size="sm"
             class="w-full text-xs"
             @click="handleTypeToggle('perspective')"
@@ -89,6 +94,11 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
           >
           <Button
             :variant="activePresetType === 'orthographic' ? 'default' : 'outline'"
+            :disabled="
+              !(activeSlot?.supportedCameraTypes ?? ['perspective', 'orthographic']).includes(
+                'orthographic'
+              )
+            "
             size="sm"
             class="w-full text-xs"
             @click="handleTypeToggle('orthographic')"

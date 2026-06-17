@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import ElementRow from './ElementRow.vue'
 import IconPreview from '@/components/IconPreview.vue'
-import { Button } from '@/components/ui/button'
+import IconButton from '@/components/IconButton.vue'
 import { Eye, EyeOff, Trash2 } from 'lucide-vue-next'
 import type { SceneElement } from '@/stores/debugScene'
 import { getElementIcon, getElementColor } from './elementUtilities'
@@ -20,77 +21,36 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="element-item" :class="{ 'element-item--selected': selected }" @click="emit('click')">
-    <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" />
-    <div class="element-item__info">
+  <ElementRow :selected="selected" :hidden="element.hidden" @click="emit('click')">
+    <template #default="{ hovered }">
+      <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" size="sm" />
       <span class="element-item__name">{{ element.label ?? element.name }}</span>
-      <span class="element-item__type">{{ element.type }}</span>
-    </div>
-    <div class="element-item__actions">
-      <Button
-        :variant="element.hidden ? 'default' : 'ghost'"
-        size="icon"
-        class="element-item__action-btn"
-        :title="element.hidden ? 'Show element' : 'Hide element'"
-        @click.stop="emit('toggle-visibility')"
-      >
-        <EyeOff v-if="element.hidden" class="element-item__action-icon" />
-        <Eye v-else class="element-item__action-icon" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        class="element-item__action-btn"
-        title="Remove element"
-        @click.stop="emit('remove')"
-      >
-        <Trash2 class="element-item__action-icon" />
-      </Button>
-    </div>
-  </div>
+      <div class="element-item__actions" :class="{ 'element-item__actions--visible': hovered }">
+        <IconButton
+          panel-colors
+          :active="element.hidden"
+          size="xs"
+          :title="element.hidden ? 'Show element' : 'Hide element'"
+          @click.stop="emit('toggle-visibility')"
+        >
+          <EyeOff v-if="element.hidden" />
+          <Eye v-else />
+        </IconButton>
+        <IconButton panel-colors size="xs" title="Remove element" @click.stop="emit('remove')">
+          <Trash2 />
+        </IconButton>
+      </div>
+    </template>
+  </ElementRow>
 </template>
 
 <style scoped>
-.element-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1-5);
-  padding: var(--spacing-1-5) var(--spacing-2);
-  cursor: pointer;
-  background: var(--panel-item-bg);
-  transition: background-color 150ms;
-}
-
-.element-item:hover {
-  background-color: var(--panel-item-bg-hover);
-}
-
-.element-item--selected {
-  background-color: var(--panel-item-bg-selected);
-}
-
-.element-item__info {
+.element-item__name {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-0-5);
-}
-
-.element-item__name {
   font-size: var(--font-size-xs);
   font-weight: 500;
   font-family: monospace;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.element-item__type {
-  font-size: var(--font-size-2xs);
-  color: var(--color-muted-foreground);
-  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -98,17 +58,13 @@ const emit = defineEmits<{
 
 .element-item__actions {
   display: flex;
-  gap: var(--spacing-1);
+  gap: var(--spacing-0-5);
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 100ms;
 }
 
-.element-item__action-btn {
-  width: var(--btn-sm-height);
-  height: var(--btn-sm-height);
-}
-
-.element-item__action-icon {
-  width: var(--font-size-base);
-  height: var(--font-size-base);
+.element-item__actions--visible {
+  opacity: 1;
 }
 </style>

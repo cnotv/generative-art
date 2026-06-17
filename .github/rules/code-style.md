@@ -23,6 +23,11 @@
 - **No section label comments**: Do not add comments that only name what follows (e.g., `// Player` before `PLAYER_*` constants, `// Assets` before imports). Let variable and function names speak for themselves
 - **JSDoc for package exports**: Every exported function in `packages/*/src/` must have a JSDoc comment with `@param` and `@returns` tags. This is enforced by `eslint-plugin-jsdoc` (`jsdoc/require-jsdoc`, `jsdoc/require-param`, `jsdoc/require-returns`). Keep descriptions concise — one line is enough
 
+## Elements Panel
+
+- **Descriptive element names**: Every element registered in the elements panel via `addSceneElement` or `registerElementProperties` must have a descriptive `name` and `title` — never a generic Three.js type string like `"Mesh"`, `"Object3D"`, or `"Group"`. Use the object's role in the scene (e.g., `"ground"`, `"player-ball"`, `"coin-block"`).
+- **Properties are mandatory**: Every element that appears in the panel must have a non-empty schema registered via `addSceneElement` (which requires properties) or `registerElementProperties`. Elements with no configurable properties must not be added to the panel.
+
 ## State Management
 
 - **Pinia for global state**: When state is shared by many unrelated components (scene elements, texture groups, camera config, active panels), use a Pinia store (`defineStore` in `src/stores/`). This provides Vue DevTools visibility, consistent structure, and automatic SSR behavior.

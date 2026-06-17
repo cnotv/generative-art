@@ -335,12 +335,13 @@ const placeTextureMesh = (meshOptions: TextureMeshOptions): THREE.Object3D =>
 
 const computeMeshTransform = (
   baseSize: CoordinateTuple,
+  rotation: CoordinateTuple,
   sizeVariation: CoordinateTuple,
   rotationVariation: CoordinateTuple,
   hasVariation: boolean
 ): { meshSize: CoordinateTuple; meshRotation: CoordinateTuple } => {
   if (!hasVariation) {
-    return { meshSize: baseSize, meshRotation: [0, 0, 0] }
+    return { meshSize: baseSize, meshRotation: rotation }
   }
   return {
     meshSize: [
@@ -349,9 +350,9 @@ const computeMeshTransform = (
       baseSize[2] + (Math.random() - HALF) * sizeVariation[2]
     ],
     meshRotation: [
-      (Math.random() - HALF) * rotationVariation[0],
-      (Math.random() - HALF) * rotationVariation[1],
-      (Math.random() - HALF) * rotationVariation[2]
+      rotation[0] + (Math.random() - HALF) * rotationVariation[0],
+      rotation[1] + (Math.random() - HALF) * rotationVariation[1],
+      rotation[2] + (Math.random() - HALF) * rotationVariation[2]
     ]
   }
 }
@@ -374,12 +375,18 @@ const populateTextureArea = (
   }
 
   const allPositions = generateAreaPositions(areaConfig)
-  const { baseSize, sizeVariation, rotationVariation } = config.textures
+  const {
+    baseSize,
+    rotation = [0, 0, 0] as CoordinateTuple,
+    sizeVariation,
+    rotationVariation
+  } = config.textures
   const hasVariation = sizeVariation.some((v) => v !== 0) || rotationVariation.some((v) => v !== 0)
 
   return allPositions.map((position: CoordinateTuple, index: number) => {
     const { meshSize, meshRotation } = computeMeshTransform(
       baseSize,
+      rotation,
       sizeVariation,
       rotationVariation,
       hasVariation

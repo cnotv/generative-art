@@ -5,7 +5,7 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 import * as THREE from 'three'
 
-import { getModel, getTools, type ComplexModel } from '@webgamekit/threejs'
+import { getModel, getTools, removeElements, type ComplexModel } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
@@ -22,10 +22,13 @@ import {
 import { getBall, getCube } from '@webgamekit/threejs'
 import brickTexture from '@/assets/images/textures/brick.jpg'
 import { getCoinBlock } from '@/utils/custom-models'
-import { buildCloudObjects } from '@/views/Games/MarbleMadness/marbleEnvironment'
+import { setupCloudAreaAsGroup } from '@/views/Games/MarbleMadness/marbleEnvironment'
+import { useTextureGroupsStore } from '@/stores/textureGroups'
 import type { RotationMap } from '@/types/three'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import { registerLightProperties } from '@/utils/lightProperties'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
 
 const statsElement = ref(null)
 const canvas = ref(null)
@@ -42,6 +45,7 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const timelinePanelStore = useTimelinePanelStore()
 const debugSceneStore = useDebugSceneStore()
+const textureGroupsStore = useTextureGroupsStore()
 
 let initInstance: () => void
 let cleanupScene: (() => void) | undefined
@@ -58,13 +62,14 @@ onUnmounted(() => {
   cleanupScene?.()
   timelinePanelStore.unregister()
   debugSceneStore.clearSceneElements()
+  textureGroupsStore.clear()
 })
 
 const config = {
   directional: {
     enabled: true,
     helper: false,
-    intensity: 1.2
+    intensity: 1.5
   }
 }
 
@@ -85,10 +90,11 @@ const SPAWN_HEIGHT = GRID_UNIT * 3
 const GROUND_HEIGHT = 0
 const CUBE_STEP_HEIGHT = 0.5
 const CUBE_CLUSTER_X_FAR = -2
-const WALL_BANG_CUBE_Z_OFFSET = -5
+const WALL_BANG_CUBE_Z_OFFSET = 5
 const GOOMBA_SCALE = 0.3
 const GOOMBA_1_SPAWN_Z = 22
 const GOOMBA_2_SPAWN_X = 68
+const GOOMBA_4_SPAWN_X = -GRID_UNIT * 2
 const COIN_SCALE = 20
 const BALL_SPAWN_PAUSE_FRAMES = 50
 const CLOUD_CENTER_HEIGHT = 200
@@ -97,16 +103,25 @@ const CLOUD_BASE_WIDTH = 80
 const CLOUD_BASE_THICKNESS = 0.001
 const CLOUD_BASE_DEPTH = 40
 const CLOUD_WIDTH_VARIATION = 20
-const CAMERA_POSITION_X = -184
-const CAMERA_POSITION_Y = 84
-const CAMERA_POSITION_Z = 48
+const CAMERA_POSITION_X = -50.12
+const CAMERA_POSITION_Y = 102.3
+const CAMERA_POSITION_Z = 199.28
+const CAMERA_ORBIT_TARGET_X = -44.66
+const CAMERA_ORBIT_TARGET_Y = 77.17
+const CAMERA_ORBIT_TARGET_Z = -27.78
 const SKY_COLOR_TOP = 0xaee9ff
 const SKY_COLOR_BOTTOM = 0x6fae6f
 
 const APPROACH_FRAMES = 30
 const CROSS_FRAMES = 60
+const JUMP_RISE_FRAMES = 20
 const STEP_CYCLE = 200
 const MOVING_BLOCK_JUMP_HEIGHT = 60
+// bindAnimatedElements applies ~1.163 gravity/frame at 60fps (-9.8*delta - 1)
+const GRAVITY_PER_FRAME_ESTIMATE = 1.2
+// Net rise per frame = JUMP_HEIGHT_PER_FRAME - gravity, so total ≈ MOVING_BLOCK_JUMP_HEIGHT
+const JUMP_HEIGHT_PER_FRAME =
+  MOVING_BLOCK_JUMP_HEIGHT / JUMP_RISE_FRAMES + GRAVITY_PER_FRAME_ESTIMATE
 
 /** Helper to create AnimationData for goomba models */
 const createGoombaAnimData = (
@@ -159,6 +174,8 @@ const WALL_BANG_APPROACH_FRAMES = 100
 const WALL_BANG_HOP_FRAMES = 20
 const WALL_BANG_RESET_FRAMES = 1
 const GOOMBA_1_JUMP_HEIGHT = 3.2
+const GOOMBA_1_GRAVITY_SCALE = 2
+const GOOMBA_1_HOP_FRAMES = 40
 
 /** Walks forward into the cube wall, hops, then resets back to the starting position on a loop */
 const makeWallBangMoves =
@@ -182,36 +199,57 @@ const makeWallBangMoves =
     }
   ]
 
-// Every patrol leg covers exactly one cube side (GRID_UNIT) at character.speed
+// Every patrol step covers exactly one cube side (GRID_UNIT) at character.speed
 const ONE_CUBE_FRAMES = GRID_UNIT / character.speed
 
-const GOOMBA_1_PATROL_LEGS: { rotation: number; legCount: number; jumpLegIndices?: number[] }[] = [
-  { rotation: rotationMap.forward, legCount: 3, jumpLegIndices: [0, 2] },
-  { rotation: rotationMap.right, legCount: 2 },
-  { rotation: rotationMap.backward, legCount: 3 },
-  { rotation: rotationMap.left, legCount: 2 }
-]
+type GoombaPatrolJump = { stepIndex: number; startFrame: number; frames: number; height: number }
+
+const GOOMBA_1_PATROL_STEPS: { rotation: number; stepCount: number; jumps?: GoombaPatrolJump[] }[] =
+  [
+    {
+      rotation: rotationMap.forward,
+      stepCount: 3,
+      jumps: [0, 2].map((stepIndex) => ({
+        stepIndex,
+        startFrame: 0,
+        frames: GOOMBA_1_HOP_FRAMES,
+        height: GOOMBA_1_JUMP_HEIGHT
+      }))
+    },
+    { rotation: rotationMap.right, stepCount: 2 },
+    { rotation: rotationMap.backward, stepCount: 3 },
+    { rotation: rotationMap.left, stepCount: 2 }
+  ]
 
 /**
  * Walks a rectangular patrol around the cube cluster, turning left between each
- * leg group. Every leg is exactly one cube side long (ONE_CUBE_FRAMES); the first
- * and last legs of the first group hop onto and off the cube cluster, before
+ * step group. Every step is exactly one cube side long (ONE_CUBE_FRAMES); the first
+ * and last steps of the first group hop onto and off the cube cluster, before
  * resetting back to the starting position on a loop.
  */
 const makeGoomba1PatrolMoves =
-  (cubes: ComplexModel[], getDelta: () => number, jumpHeight: number) =>
+  (cubes: ComplexModel[], getDelta: () => number) =>
   (model: ComplexModel): GoombaMove[] => [
-    ...GOOMBA_1_PATROL_LEGS.flatMap(({ rotation, legCount, jumpLegIndices = [] }) =>
-      Array.from({ length: legCount }, (_, legIndex) => {
-        const isJumpLeg = jumpLegIndices.includes(legIndex)
+    ...GOOMBA_1_PATROL_STEPS.flatMap(({ rotation, stepCount, jumps = [] }) =>
+      Array.from({ length: stepCount }, (_, stepIndex) => {
+        const jump = jumps.find((candidate) => candidate.stepIndex === stepIndex)
         return {
-          name: `patrol: face ${rotation} leg ${legIndex + 1}${isJumpLeg ? ' (jump)' : ''}`,
+          name: `patrol: face ${rotation} step ${stepIndex + 1}${jump ? ' (jump)' : ''}`,
           frames: ONE_CUBE_FRAMES,
-          ...(legIndex === 0 ? { actionStart: () => setRotation(model, rotation) } : {}),
+          ...(stepIndex === 0 ? { actionStart: () => setRotation(model, rotation) } : {}),
           action: (frameInMove: number) => {
-            controllerForward(cubes, [], createGoombaAnimData(model, getDelta))
-            if (isJumpLeg && frameInMove < WALL_BANG_HOP_FRAMES) {
-              controllerJump(model, cubes, character.speed, jumpHeight)
+            const isJumping =
+              !!jump &&
+              frameInMove >= jump.startFrame &&
+              frameInMove < jump.startFrame + jump.frames
+            const isAboveCluster = model.position.y > GRID_UNIT / 2 - 1
+            controllerForward(
+              isJumping && isAboveCluster ? [] : cubes,
+              [],
+              createGoombaAnimData(model, getDelta)
+            )
+            if (isJumping) {
+              controllerJump(model, cubes, character.speed, jump.height)
             }
           }
         }
@@ -224,9 +262,7 @@ const makeGoomba1PatrolMoves =
     }
   ]
 
-const JUMP_MOVING_BLOCK_GAP_FRAMES = STEP_CYCLE - (APPROACH_FRAMES * 2 + CROSS_FRAMES * 2 + 1)
-
-/** Hops up and over the moving up/down block, then crosses back the other way */
+/** Jumps over the moving block using physics: upward push during rise, gravity handles the fall */
 const makeJumpMovingBlockMoves =
   (getDelta: () => number, facing: number) =>
   (model: ComplexModel): GoombaMove[] => [
@@ -237,17 +273,20 @@ const makeJumpMovingBlockMoves =
       action: () => controllerForward([], [], createGoombaAnimData(model, getDelta))
     },
     {
-      name: 'walk jump',
-      frames: 1,
-      action: () => controllerJump(model, [], character.speed, MOVING_BLOCK_JUMP_HEIGHT)
+      name: 'rise',
+      frames: JUMP_RISE_FRAMES,
+      action: () => {
+        controllerJump(model, [], 0, JUMP_HEIGHT_PER_FRAME)
+        controllerForward([], [], createGoombaAnimData(model, getDelta))
+      }
     },
     {
-      name: 'walk cross',
+      name: 'cross',
       frames: CROSS_FRAMES,
       action: () => controllerForward([], [], createGoombaAnimData(model, getDelta))
     },
     {
-      name: 'walk cross back',
+      name: 'cross back',
       frames: CROSS_FRAMES,
       action: () => controllerForward([], [], createGoombaAnimData(model, getDelta, true))
     },
@@ -255,8 +294,7 @@ const makeJumpMovingBlockMoves =
       name: 'walk return',
       frames: APPROACH_FRAMES,
       action: () => controllerForward([], [], createGoombaAnimData(model, getDelta, true))
-    },
-    { name: 'idle', frames: JUMP_MOVING_BLOCK_GAP_FRAMES }
+    }
   ]
 
 const toSegments = (moves: GoombaMove[]): { name: string; frames: number }[] =>
@@ -267,22 +305,18 @@ const makeGoombaTimelineActions = (
   cubes: ComplexModel[],
   getDelta: () => number,
   getSimulationFrame: () => number,
-  [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock]: [
+  [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2]: [
     ComplexModel,
     ComplexModel,
     ComplexModel
   ]
 ): Timeline[] => {
-  const goomba1Moves = makeGoomba1PatrolMoves(
-    cubes,
-    getDelta,
-    GOOMBA_1_JUMP_HEIGHT
-  )(goombaWallBangA)
+  const goomba1Moves = makeGoomba1PatrolMoves(cubes, getDelta)(goombaWallBangA)
   const goomba2Moves = makeWallBangMoves(cubes, getDelta, rotationMap['right'])(goombaWallBangB)
   const goomba4Moves = makeJumpMovingBlockMoves(
     getDelta,
-    rotationMap['right']
-  )(goombaJumpMovingBlock)
+    rotationMap['left']
+  )(goombaJumpMovingBlock2)
 
   return [
     {
@@ -305,6 +339,76 @@ const makeGoombaTimelineActions = (
 
 type SceneWorld = Pick<TimelineTools, 'scene' | 'world'>
 
+const BALL_NOISE_TEXTURE_SIZE = 64
+const BALL_NOISE_REPEAT_X = 8
+const BALL_NOISE_REPEAT_Y = 8
+const BALL_NOISE_DOT_THRESHOLD = 0.82
+const BALL_COLOR = 0x888888
+const BALL_ROUGHNESS = 0.15
+const BALL_METALNESS = 0.95
+const BALL_CLEARCOAT = 0.8
+const BALL_CLEARCOAT_ROUGHNESS = 0.08
+const BALL_FRICTION = 0.8
+const BALL_ANGULAR_DAMPING = 0.05
+const BALL_RESTITUTION = 0.8
+const BALL_ENV_MAP_INTENSITY = 2.5
+const BALL_BUMP_SCALE = 0.06
+const COLOR_BYTE_MAX = 255
+const BALL_NOISE_DARK = 40
+const BALL_NOISE_LIGHT = 105
+const BALL_NOISE_TINT_R = -4
+const BALL_NOISE_TINT_B = 7
+const COLOR_WHITE = 0xffffff
+
+/**
+ * Generates a stipple dot texture: each pixel is independently random,
+ * lit only when it clears BALL_NOISE_DOT_THRESHOLD, giving isolated dots
+ * instead of the connected blobs produced by interpolated value noise.
+ */
+const createBallGrainTexture = (): THREE.CanvasTexture => {
+  const pixelCount = BALL_NOISE_TEXTURE_SIZE * BALL_NOISE_TEXTURE_SIZE
+  const dots = Array.from({ length: pixelCount }, () => Math.random() > BALL_NOISE_DOT_THRESHOLD)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = BALL_NOISE_TEXTURE_SIZE
+  canvas.height = BALL_NOISE_TEXTURE_SIZE
+  const context = canvas.getContext('2d')
+  if (context) {
+    const imageData = context.createImageData(BALL_NOISE_TEXTURE_SIZE, BALL_NOISE_TEXTURE_SIZE)
+    imageData.data.set(
+      Uint8ClampedArray.from({ length: imageData.data.length }, (_, index) => {
+        const pixel = Math.floor(index / 4)
+        const channel = index % 4
+        if (channel === 3) return COLOR_BYTE_MAX
+        const base = dots[pixel] ? BALL_NOISE_LIGHT : BALL_NOISE_DARK
+        if (channel === 0) return Math.max(0, base + BALL_NOISE_TINT_R)
+        if (channel === 2) return Math.min(COLOR_BYTE_MAX, base + BALL_NOISE_TINT_B)
+        return base
+      })
+    )
+    context.putImageData(imageData, 0, 0)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(BALL_NOISE_REPEAT_X, BALL_NOISE_REPEAT_Y)
+  return texture
+}
+
+const BALL_GRAIN_TEXTURE = createBallGrainTexture()
+
+/** Applies the gritty noise as a visible color map, bump, and roughness variation */
+const applyBallGrain = (mesh: THREE.Mesh): THREE.Mesh => {
+  const material = mesh.material as THREE.MeshPhysicalMaterial
+  material.map = BALL_GRAIN_TEXTURE
+  material.color.set(COLOR_WHITE)
+  material.roughnessMap = BALL_GRAIN_TEXTURE
+  material.bumpMap = BALL_GRAIN_TEXTURE
+  material.bumpScale = BALL_BUMP_SCALE
+  material.needsUpdate = true
+  return mesh
+}
+
 const setupStaticObjects = ({ scene, world }: SceneWorld) => {
   const cubes = [
     [0, 0, 0],
@@ -316,8 +420,9 @@ const setupStaticObjects = ({ scene, world }: SceneWorld) => {
     [CUBE_CLUSTER_X_FAR, 0, 1],
     [CUBE_CLUSTER_X_FAR, 0, 2],
     [1, 0, WALL_BANG_CUBE_Z_OFFSET]
-  ].map(([x, y, z]) =>
+  ].map(([x, y, z], index) =>
     getCube(scene, world, {
+      name: `brick-${index + 1}`,
       size: [GRID_UNIT, GRID_UNIT, GRID_UNIT],
       restitution: 0,
       position: [GRID_UNIT * x, GRID_UNIT * y - 1, -GRID_UNIT * z],
@@ -328,21 +433,43 @@ const setupStaticObjects = ({ scene, world }: SceneWorld) => {
     })
   )
   const coin = getCoinBlock(scene, world, { position: [0, SPAWN_HEIGHT, -GRID_UNIT * 2] })
+  coin.name = 'coin-block'
   coin.scale.setScalar(COIN_SCALE)
-  const ballOptions = { size: 10, showHelper: false, weight: 150 }
+  const ballOptions = {
+    size: 10,
+    showHelper: false,
+    weight: 150,
+    restitution: BALL_RESTITUTION,
+    color: BALL_COLOR,
+    roughness: BALL_ROUGHNESS,
+    metalness: BALL_METALNESS,
+    clearcoat: BALL_CLEARCOAT,
+    clearcoatRoughness: BALL_CLEARCOAT_ROUGHNESS,
+    envMapIntensity: BALL_ENV_MAP_INTENSITY,
+    friction: BALL_FRICTION,
+    angular: BALL_ANGULAR_DAMPING
+  }
   const balls = [
-    getBall(scene, world, { ...ballOptions, position: [0, SPAWN_HEIGHT, -GRID_UNIT] }),
-    getBall(scene, world, {
-      ...ballOptions,
-      position: [GRID_UNIT, SPAWN_HEIGHT, GRID_UNIT],
-      hasGravity: true,
-      type: 'kinematicPositionBased'
-    })
+    applyBallGrain(
+      getBall(scene, world, {
+        ...ballOptions,
+        name: 'ball-1',
+        position: [0, SPAWN_HEIGHT, -GRID_UNIT]
+      })
+    ),
+    applyBallGrain(
+      getBall(scene, world, {
+        ...ballOptions,
+        name: 'ball-2',
+        position: [GRID_UNIT, SPAWN_HEIGHT, GRID_UNIT]
+      })
+    )
   ]
   const movingCube = getCube(scene, world, {
+    name: 'moving-cube',
     size: [GRID_UNIT, GRID_UNIT, GRID_UNIT],
     restitution: 0,
-    position: [0, -1, GRID_UNIT * 5],
+    position: [0, 0, GRID_UNIT * -5],
     type: 'kinematicPositionBased',
     texture: brickTexture,
     boundary: 0.5,
@@ -352,8 +479,14 @@ const setupStaticObjects = ({ scene, world }: SceneWorld) => {
 }
 
 const loadGoombas = async ({ scene, world }: SceneWorld) => {
-  const getGoomba = (position: CoordinateTuple, hasGravity = true) =>
+  const getGoomba = (
+    name: string,
+    position: CoordinateTuple,
+    hasGravity = true,
+    gravityScale = 1
+  ) =>
     getModel(scene, world, 'goomba.glb', {
+      name,
       position,
       scale: [GOOMBA_SCALE, GOOMBA_SCALE, GOOMBA_SCALE],
       size: 3,
@@ -365,17 +498,18 @@ const loadGoombas = async ({ scene, world }: SceneWorld) => {
       showHelper: false,
       enabledRotations: [false, true, false],
       hasGravity,
+      gravityScale,
       castShadow: true
     })
   return Promise.all([
-    getGoomba([0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z]),
-    getGoomba([GOOMBA_2_SPAWN_X, GRID_UNIT, 0]),
-    getGoomba([GRID_UNIT, GRID_UNIT, GRID_UNIT * 5])
+    getGoomba('goomba-1', [0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z], true, GOOMBA_1_GRAVITY_SCALE),
+    getGoomba('goomba-2', [GOOMBA_2_SPAWN_X, GRID_UNIT, 0]),
+    getGoomba('goomba-4', [GOOMBA_4_SPAWN_X, GRID_UNIT, GRID_UNIT * -5])
   ])
 }
 
 const buildScenery = ({ scene, world }: SceneWorld): void => {
-  buildCloudObjects(scene, world, {
+  setupCloudAreaAsGroup(scene, world, {
     center: [0, CLOUD_CENTER_HEIGHT, 0],
     size: [CLOUD_FIELD_SIZE, 0, CLOUD_FIELD_SIZE],
     baseSize: [CLOUD_BASE_WIDTH, CLOUD_BASE_THICKNESS, CLOUD_BASE_DEPTH],
@@ -400,9 +534,8 @@ const buildTimeline = async ({
   TimelineTools,
   'scene' | 'world' | 'getDelta' | 'animate' | 'getSimulationFrame' | 'getFrameRate'
 >): Promise<void> => {
-  buildScenery({ scene, world })
   const { coin, cubes, balls, movingCube, ballOptions } = setupStaticObjects({ scene, world })
-  const [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock] = await loadGoombas({
+  const [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2] = await loadGoombas({
     scene,
     world
   })
@@ -427,10 +560,10 @@ const buildTimeline = async ({
   ]
 
   const elements: ComplexModel[] = [
-    ...balls,
+    ...(balls as unknown as ComplexModel[]),
     goombaWallBangA,
     goombaWallBangB,
-    goombaJumpMovingBlock,
+    goombaJumpMovingBlock2,
     movingCube,
     ...cubes
   ]
@@ -440,7 +573,7 @@ const buildTimeline = async ({
     ...makeGoombaTimelineActions(cubes, getDelta, getSimulationFrame, [
       goombaWallBangA,
       goombaWallBangB,
-      goombaJumpMovingBlock
+      goombaJumpMovingBlock2
     ]),
     ...movingCubeTimeline
   ])
@@ -456,7 +589,9 @@ const buildTimeline = async ({
     category: 'physics',
     action: () =>
       elements.push(
-        getBall(scene, world, { ...ballOptions, position: [0, SPAWN_HEIGHT, -GRID_UNIT] })
+        applyBallGrain(
+          getBall(scene, world, { ...ballOptions, position: [0, SPAWN_HEIGHT, -GRID_UNIT] })
+        ) as unknown as ComplexModel
       )
   })
   timelinePanelStore.register({
@@ -484,7 +619,8 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     getDelta,
     getSimulationFrame,
     getFrameRate,
-    cleanup
+    cleanup,
+    setActiveCamera
   } = await getTools({
     stats,
     route,
@@ -492,25 +628,83 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     onProgress: handleProgress
   })
   cleanupScene = cleanup
-  const { elements } = await setup({
+  const { elements, orbit } = await setup({
     config: {
       camera: { position: [CAMERA_POSITION_X, CAMERA_POSITION_Y, CAMERA_POSITION_Z] },
+      orbit: {
+        target: new THREE.Vector3(
+          CAMERA_ORBIT_TARGET_X,
+          CAMERA_ORBIT_TARGET_Y,
+          CAMERA_ORBIT_TARGET_Z
+        )
+      },
       ground: { size: 100000, color: 0x227755 },
       sky: { color: 0x8ecae6, size: 700 },
       lights: {
+        ambient: { intensity: 2 },
         directional: {
           intensity: config.directional.intensity,
           shadow: {
-            camera: { left: -250, right: 250, top: 250, bottom: -250 }
+            camera: { left: -400, right: 400, top: 400, bottom: -400 }
           }
         },
-        hemisphere: { colors: [SKY_COLOR_TOP, SKY_COLOR_BOTTOM] }
+        hemisphere: { colors: [SKY_COLOR_TOP, SKY_COLOR_BOTTOM], intensity: 0 }
       }
     },
     defineSetup: async () =>
       buildTimeline({ scene, world, getDelta, animate, getSimulationFrame, getFrameRate })
   })
-  debugSceneStore.registerSceneElements(camera, elements, undefined, renderer)
+  debugSceneStore.registerSceneElements(
+    camera,
+    elements,
+    {
+      onRemove: (name) => {
+        const sceneObject = elements.find((e) => (e as ComplexModel).name === name) as
+          | ComplexModel
+          | undefined
+        if (sceneObject) removeElements(world, [sceneObject])
+      }
+    },
+    { renderer, orbit, setCamera: setActiveCamera }
+  )
+  buildScenery({ scene, world })
+  debugSceneStore.moveElementAfter('clouds', 'sky')
+  const ambientLight = scene.getObjectByName('ambient-light') as THREE.Light | undefined
+  const directionalLight = scene.getObjectByName('directional-light') as THREE.Light | undefined
+  if (ambientLight)
+    registerLightProperties({ light: ambientLight, name: 'ambient-light', title: 'Ambient Light' })
+  if (directionalLight)
+    registerLightProperties({
+      light: directionalLight,
+      name: 'directional-light',
+      title: 'Directional Light'
+    })
+  const hemisphereLight = scene.getObjectByName('hemisphere-light') as
+    | THREE.HemisphereLight
+    | undefined
+  if (hemisphereLight) {
+    const hemisphereSchema = {
+      skyColor: { color: true, label: 'Sky Color' },
+      groundColor: { color: true, label: 'Ground Color' },
+      intensity: { min: 0, max: 10, step: 0.1, label: 'Intensity' }
+    }
+    const hemisphereState = {
+      skyColor: hemisphereLight.color.getHex(),
+      groundColor: hemisphereLight.groundColor.getHex(),
+      intensity: hemisphereLight.intensity
+    }
+    useElementPropertiesStore().registerElementProperties('hemisphere-light', {
+      title: 'Hemisphere Light',
+      schema: hemisphereSchema,
+      getValue: (path: string) => (hemisphereState as Record<string, unknown>)[path],
+      updateValue: (path: string, value: unknown) => {
+        ;(hemisphereState as Record<string, unknown>)[path] = value
+        if (path === 'skyColor') hemisphereLight.color.set(value as number)
+        else if (path === 'groundColor') hemisphereLight.groundColor.set(value as number)
+        else hemisphereLight.intensity = value as number
+      }
+    })
+  }
 }
 
 const init = async (canvasElement: HTMLCanvasElement, statsElement: HTMLElement): Promise<void> => {

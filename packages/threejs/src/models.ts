@@ -347,6 +347,7 @@ export const getModel = async (
     name,
     materialColors,
     hasGravity = false,
+    gravityScale,
     showHelper = false,
     helperColor,
     animations,
@@ -406,6 +407,7 @@ export const getModel = async (
       type,
       characterController,
       hasGravity,
+      gravityScale,
       onSpawn
     }
   })
