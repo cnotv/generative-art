@@ -301,11 +301,22 @@ const registerCameraPresetHandlers = ({
 
         if (presetConfig) {
           const active = getActiveCamera()
-          setCameraPreset(
-            active as THREE.PerspectiveCamera | THREE.OrthographicCamera,
-            preset,
-            aspect
-          )
+          if (active instanceof THREE.OrthographicCamera) {
+            setCameraPreset(active, preset, aspect)
+          } else if (active instanceof THREE.PerspectiveCamera) {
+            if (presetConfig.fov !== undefined) {
+              active.fov = presetConfig.fov
+              active.updateProjectionMatrix()
+            }
+            if (presetConfig.near !== undefined) {
+              active.near = presetConfig.near
+              active.updateProjectionMatrix()
+            }
+            if (presetConfig.far !== undefined) {
+              active.far = presetConfig.far
+              active.updateProjectionMatrix()
+            }
+          }
           const updates: Record<string, unknown> = {
             position: { x: active.position.x, y: active.position.y, z: active.position.z }
           }
