@@ -172,6 +172,7 @@ export const getTools = async ({
   let frameRate = 1 / 60
   emitProgress(onProgress, 'Physics')
   const { renderer, scene, camera, world } = await getEnvironment(canvas)
+  let activeCamera: THREE.Camera = camera
   activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
   let populateOutline: ((sceneReference: THREE.Scene) => void) | null = null
@@ -179,11 +180,6 @@ export const getTools = async ({
   const getDelta = () => delta
   let orbit: OrbitControls | null = null
   let animationFrameId = 0
-  /**
-   * Setup scene
-   * @param config Configuration for camera, ground and lights
-   * @param defineSetup Actions required to be performed before the animation loop
-   */
   const setup = async ({
     config = {},
     defineSetup
@@ -217,17 +213,11 @@ export const getTools = async ({
     const elements = scene.children.slice(childrenCountBefore)
     return { orbit, ground, elements }
   }
-
-  /**
-   * The animation loop.
-   * @param beforeTimeline Actions required to be performed before the timeline
-   * @param afterTimeline Actions required to be performed after the timeline
-   * @param timeline TimelineManager instance for managing animations
-   */
   const animate = ({
     beforeTimeline = () => {},
     afterTimeline = () => {},
     timeline,
+    isPaused = () => false,
     config = {
       orbit: {
         debug: false
@@ -237,6 +227,7 @@ export const getTools = async ({
     beforeTimeline?: () => void
     afterTimeline?: () => void
     timeline: TimelineManager
+    isPaused?: () => boolean
     config?: {
       orbit?: {
         debug?: boolean
@@ -244,45 +235,55 @@ export const getTools = async ({
     }
   }) => {
     let accumulator = 0
-
     const renderFrame = () => {
       if (composer) composer.render()
-      else renderer.render(scene, camera)
+      else renderer.render(scene, activeCamera)
     }
-
+    const updateOrbitAndRender = () => {
+      if (orbit) orbit.update()
+      if (orbit && config.orbit?.debug) console.warn(activeCamera)
+      renderFrame()
+    }
     const tickSimulation = () => {
       world.step()
       beforeTimeline()
       animateTimeline(timeline, simulationFrame, undefined, { enableAutoRemoval: true })
       afterTimeline()
-      if (orbit) {
-        orbit.update()
-        if (config.orbit?.debug) console.warn(camera)
-      }
-      renderFrame()
+      updateOrbitAndRender()
       if (video?.stop && route) video.stop(renderer.info.render.frame, route)
     }
-
     function runAnimation() {
       if (stats?.start && route) stats.start(route.name ?? '')
       delta = clock.getDelta()
       animationFrameId = requestAnimationFrame(runAnimation)
-
+      if (isPaused()) {
+        updateOrbitAndRender()
+        return
+      }
       accumulator += delta
       if (accumulator < frameRate) return
       accumulator -= frameRate
       simulationFrame += 1
-
       tickSimulation()
       if (stats?.end && route) stats.end(route.name ?? '')
     }
     runAnimation()
   }
 
-  const handleResize = createResizeHandler(renderer, camera)
+  let handleResize = createResizeHandler(renderer, activeCamera)
 
-  if (resize !== false) {
-    window.addEventListener('resize', handleResize)
+  if (resize !== false) window.addEventListener('resize', handleResize)
+
+  const setActiveCamera = (newCamera: THREE.Camera): OrbitControls | null => {
+    activeCamera = newCamera
+    if (resize !== false) window.removeEventListener('resize', handleResize)
+    handleResize = createResizeHandler(renderer, newCamera)
+    if (resize !== false) window.addEventListener('resize', handleResize)
+    if (orbit) {
+      orbit.object = newCamera as THREE.PerspectiveCamera
+      orbit.update()
+    }
+    return orbit
   }
 
   const cleanup = () => {
@@ -297,12 +298,15 @@ export const getTools = async ({
     animate,
     clock,
     getDelta,
+    getSimulationFrame: () => simulationFrame,
+    getFrameRate: () => frameRate,
     renderer,
     scene,
     camera,
     orbit,
     world,
-    cleanup
+    cleanup,
+    setActiveCamera
   }
 }
 
@@ -391,24 +395,17 @@ export const instanceMatrixModel = (
 }
 
 /**
- * Apply origin-based translation to geometry
- * Translates geometry so specified edges align with the origin coordinates
- * @param geometry The geometry to translate
+ * Compute the position offset for an origin specification, e.g. so a cube's
+ * `position` represents a corner/edge instead of its center
  * @param size The size [x, y, z] of the geometry
  * @param origin The origin point specification { x?, y?, z? }
+ * @returns The [x, y, z] offset to add to a center-based position, zero on axes where origin is not set
  */
-export const applyOriginTranslation = (
-  geometry: THREE.BufferGeometry,
+export const getOriginOffset = (
   size: CoordinateTuple,
   origin?: { x?: number; y?: number; z?: number }
-): void => {
-  if (!origin) return
-
-  const translateX = origin.x !== undefined ? size[0] / 2 : 0
-  const translateY = origin.y !== undefined ? size[1] / 2 : 0
-  const translateZ = origin.z !== undefined ? size[2] / 2 : 0
-
-  if (translateX !== 0 || translateY !== 0 || translateZ !== 0) {
-    geometry.translate(translateX, translateY, translateZ)
-  }
-}
+): CoordinateTuple => [
+  origin?.x !== undefined ? size[0] / 2 : 0,
+  origin?.y !== undefined ? size[1] / 2 : 0,
+  origin?.z !== undefined ? size[2] / 2 : 0
+]

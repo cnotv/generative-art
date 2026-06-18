@@ -13,7 +13,7 @@ const emitProgress = (
   callback?.({ stage, detail, done })
 }
 import { getPhysic } from './getters'
-import { applyOriginTranslation } from './core'
+import { getOriginOffset } from './core'
 import { textureLoader, fbxLoader, gltfLoader } from './loaders'
 
 type BaseMaterialProperties = {
@@ -287,11 +287,9 @@ const setupCubeMesh = (
   options: ModelOptions,
   size: CoordinateTuple,
   rotation: CoordinateTuple,
-  position: CoordinateTuple,
-  origin: { x?: number; y?: number; z?: number }
+  position: CoordinateTuple
 ): THREE.Mesh => {
   const geometry = new THREE.BoxGeometry(...size)
-  applyOriginTranslation(geometry, size, origin)
   const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
   applyTextureToMesh(mesh, options.texture)
   mesh.position.set(...(position as CoordinateTuple))
@@ -349,6 +347,7 @@ export const getModel = async (
     name,
     materialColors,
     hasGravity = false,
+    gravityScale,
     showHelper = false,
     helperColor,
     animations,
@@ -408,6 +407,7 @@ export const getModel = async (
       type,
       characterController,
       hasGravity,
+      gravityScale,
       onSpawn
     }
   })
@@ -646,15 +646,23 @@ export const getCube = (
     type = 'dynamic'
   } = options
 
-  const initialValues = { size, rotation, position, color: options.color }
   const sizeArray = getCubeSizeArray(size)
-  const mesh = setupCubeMesh(options, sizeArray, rotation, position, origin)
+  const [offsetX, offsetY, offsetZ] = getOriginOffset(sizeArray, origin)
+  const centerPosition: CoordinateTuple = [
+    position[0] + offsetX,
+    position[1] + offsetY,
+    position[2] + offsetZ
+  ]
+
+  const initialValues = { size, rotation, position: centerPosition, color: options.color }
+  const mesh = setupCubeMesh(options, sizeArray, rotation, centerPosition)
 
   if (name) mesh.name = name
   scene.add(mesh)
 
   const { rigidBody, collider, characterController } = getPhysic(world, {
     ...options,
+    position: centerPosition,
     size: sizeArray,
     shape: 'cuboid'
   })

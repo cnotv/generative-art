@@ -1,7 +1,6 @@
 import type { Ref } from 'vue'
 import { toRaw } from 'vue'
 import * as THREE from 'three'
-import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
@@ -9,6 +8,7 @@ interface TextureAreaLayer {
   name: string
   texture: string
   baseSize: [number, number, number]
+  rotation?: [number, number, number]
   center: [number, number, number]
   size: [number, number, number]
   density: number
@@ -29,6 +29,12 @@ interface RegisterTextureAreaOptions {
   onUpdate?: (areaName: string, path: string, value: unknown) => void
 }
 
+const tupleToVec3 = (tuple?: [number, number, number]) => ({
+  x: tuple?.[0] ?? 0,
+  y: tuple?.[1] ?? 0,
+  z: tuple?.[2] ?? 0
+})
+
 /**
  * Builds initial config state for a texture area from its layers.
  * Extracts area center/size, texture baseSize, instance density/seed, and rendering opacity/speed
@@ -39,21 +45,14 @@ export const buildTextureAreaConfig = (layers: TextureAreaLayer[]): Record<strin
   const firstLayer = layers[0]
   return {
     area: {
-      center: { x: firstLayer.center[0], y: firstLayer.center[1], z: firstLayer.center[2] },
-      size: { x: firstLayer.size[0], y: firstLayer.size[1], z: firstLayer.size[2] }
+      center: tupleToVec3(firstLayer.center),
+      size: tupleToVec3(firstLayer.size)
     },
     textures: {
-      baseSize: { x: firstLayer.baseSize[0], y: firstLayer.baseSize[1], z: firstLayer.baseSize[2] },
-      sizeVariation: {
-        x: firstLayer.sizeVariation?.[0] ?? 0,
-        y: firstLayer.sizeVariation?.[1] ?? 0,
-        z: firstLayer.sizeVariation?.[2] ?? 0
-      },
-      rotationVariation: {
-        x: firstLayer.rotationVariation?.[0] ?? 0,
-        y: firstLayer.rotationVariation?.[1] ?? 0,
-        z: firstLayer.rotationVariation?.[2] ?? 0
-      }
+      baseSize: tupleToVec3(firstLayer.baseSize),
+      rotation: tupleToVec3(firstLayer.rotation),
+      sizeVariation: tupleToVec3(firstLayer.sizeVariation),
+      rotationVariation: tupleToVec3(firstLayer.rotationVariation)
     },
     instances: {
       density: firstLayer.density,
@@ -84,26 +83,27 @@ export const registerTextureAreaProperties = ({
   areaConfigs,
   onUpdate
 }: RegisterTextureAreaOptions): void => {
-  const elementPropertiesStore = useElementPropertiesStore()
   const debugSceneStore = useDebugSceneStore()
-  debugSceneStore.addSceneElement({ name: areaName, type: 'TextureArea', hidden: false })
 
   if (!areaConfigs.value[areaName]) {
     toRaw(areaConfigs.value)[areaName] = buildTextureAreaConfig(layers)
   }
 
-  elementPropertiesStore.registerElementProperties(areaName, {
-    title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
-    type: 'TextureArea',
-    schema,
-    getValue: (path: string) => {
-      const raw = toRaw(areaConfigs.value)
-      return getNestedValue(raw[areaName], path)
-    },
-    updateValue: (path: string, value: unknown) => {
-      const raw = toRaw(areaConfigs.value)
-      raw[areaName] = setNestedValueImmutable(raw[areaName], path, value)
-      onUpdate?.(areaName, path, value)
+  debugSceneStore.addSceneElement(
+    { name: areaName, type: 'TextureArea', hidden: false },
+    {
+      title: areaName.charAt(0).toUpperCase() + areaName.slice(1),
+      type: 'TextureArea',
+      schema,
+      getValue: (path: string) => {
+        const raw = toRaw(areaConfigs.value)
+        return getNestedValue(raw[areaName], path)
+      },
+      updateValue: (path: string, value: unknown) => {
+        const raw = toRaw(areaConfigs.value)
+        raw[areaName] = setNestedValueImmutable(raw[areaName], path, value)
+        onUpdate?.(areaName, path, value)
+      }
     }
-  })
+  )
 }

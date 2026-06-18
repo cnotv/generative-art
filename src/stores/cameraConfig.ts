@@ -10,6 +10,7 @@ export interface CameraSlot {
   position: CoordinateTuple
   fov: number
   orbitTarget: CoordinateTuple
+  supportedCameraTypes?: Array<'perspective' | 'orthographic'>
 }
 
 export interface CameraConfigHandlers {
@@ -17,6 +18,7 @@ export interface CameraConfigHandlers {
   onSlotActivate: (slotId: string) => void
   onCleanup: () => void
   onUpdate?: (slotId: string) => void
+  onRotate?: (slotId: string, degrees: number) => void
 }
 
 const DEFAULT_CAMERA_SLOT_ID = 'cam-default'
@@ -37,6 +39,11 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
   const cameraSlots = ref<CameraSlot[]>([DEFAULT_CAMERA_SLOT])
   const activeSlotId = ref<string | null>(DEFAULT_CAMERA_SLOT_ID)
   const handlers = ref<CameraConfigHandlers | null>(null)
+  const transitionEnabled = ref(false)
+
+  const setTransitionEnabled = (enabled: boolean) => {
+    transitionEnabled.value = enabled
+  }
 
   const activeSlot = computed<CameraSlot | null>(
     () => cameraSlots.value.find((s) => s.id === activeSlotId.value) ?? null
@@ -105,6 +112,11 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
     handlers.value?.onPresetChange(slotId, preset)
   }
 
+  const rotateActiveSlot = (degrees: number) => {
+    if (!activeSlotId.value) return
+    handlers.value?.onRotate?.(activeSlotId.value, degrees)
+  }
+
   const updateActiveSlotField = (field: keyof CameraSlot, value: unknown) => {
     if (!activeSlotId.value) return
 
@@ -141,6 +153,9 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
     renameCameraSlot,
     activateCameraSlot,
     applyPresetToActiveSlot,
+    rotateActiveSlot,
+    transitionEnabled,
+    setTransitionEnabled,
     updateActiveSlotField,
     syncActiveSlotPosition,
     syncActiveSlotOrbitTarget

@@ -4,10 +4,12 @@ import {
   createDurationAction,
   createOneShotAction,
   createIntervalAction,
-  canAddAction
+  canAddAction,
+  getTimelineActionSpan,
+  getTimelineChartBars
 } from './actions'
 import * as THREE from 'three'
-import type { ComplexModel } from './types'
+import type { ComplexModel, Timeline } from './types'
 
 describe('helpers', () => {
   describe('generateTimelineId', () => {
@@ -273,6 +275,92 @@ describe('helpers', () => {
 
       expect(canAddAction(player500, 500)).toBe(true)
       expect(canAddAction(player1000, 1000)).toBe(true)
+    })
+  })
+
+  describe('getTimelineActionSpan', () => {
+    it.each([
+      ['start + end', { start: 10, end: 50 }, { start: 10, end: 50 }],
+      ['start + duration', { start: 10, duration: 20 }, { start: 10, end: 30 }],
+      [
+        'delay + interval',
+        { delay: 5, interval: [10, 5] as [number, number] },
+        { start: 5, end: 15 }
+      ],
+      ['start only', { start: 10 }, { start: 10, end: 10 }],
+      ['no time properties', {}, { start: 0, end: 0 }],
+      [
+        'duration takes priority over end',
+        { start: 0, end: 100, duration: 10 },
+        { start: 0, end: 10 }
+      ]
+    ])('%s', (_label, action, expected) => {
+      expect(getTimelineActionSpan(action)).toEqual(expected)
+    })
+  })
+
+  describe('getTimelineChartBars', () => {
+    const range = { rangeStart: 0, rangeEnd: 10, rate: 1 / 60 }
+
+    it('positions a bounded action as a single bar within the window', () => {
+      const timeline: Timeline[] = [{ name: 'intro', start: 0, duration: 300 }]
+
+      const bars = getTimelineChartBars(timeline, range)
+
+      expect(bars).toHaveLength(1)
+      expect(bars[0]).toMatchObject({ name: 'intro', lane: 0, left: 0, width: 50 })
+    })
+
+    it('renders a continuous action (no end/duration/interval) across the full window', () => {
+      const timeline: Timeline[] = [{ name: 'coin: flip', start: 0, category: 'visual-effects' }]
+
+      const firstWindow = getTimelineChartBars(timeline, range)
+      const laterWindow = getTimelineChartBars(timeline, {
+        rangeStart: 100,
+        rangeEnd: 110,
+        rate: 1 / 60
+      })
+
+      expect(firstWindow[0]).toMatchObject({ left: 0, width: 100 })
+      expect(laterWindow[0]).toMatchObject({ left: 0, width: 100 })
+    })
+
+    it('expands segments into one bar per occurrence overlapping the window', () => {
+      const timeline: Timeline[] = [
+        {
+          name: 'cube: move',
+          segments: [
+            { name: 'rise', frames: 300 },
+            { name: 'fall', frames: 300 }
+          ]
+        }
+      ]
+
+      const bars = getTimelineChartBars(timeline, range)
+
+      expect(bars.map(({ name }) => name)).toEqual(['rise', 'fall'])
+      expect(bars[0]).toMatchObject({ left: 0, width: 50 })
+      expect(bars[1]).toMatchObject({ left: 50, width: 50 })
+    })
+
+    it('clamps a tiny occurrence to a minimum readable width without overlapping the next occurrence', () => {
+      const timeline: Timeline[] = [{ name: 'blip', interval: [1, 599] }]
+
+      const bars = getTimelineChartBars(timeline, range)
+
+      expect(bars[0].width).toBe(1)
+      expect(bars[0].left + bars[0].width).toBeLessThanOrEqual(bars[1].left)
+    })
+
+    it('expands repeating interval actions into one bar per occurrence', () => {
+      const timeline: Timeline[] = [{ name: 'ball: spawn', interval: [60, 180] }]
+
+      const bars = getTimelineChartBars(timeline, range)
+
+      expect(bars).toHaveLength(3)
+      expect(bars[0]).toMatchObject({ left: 0, width: 10 })
+      expect(bars[1]).toMatchObject({ left: 40, width: 10 })
+      expect(bars[2]).toMatchObject({ left: 80, width: 10 })
     })
   })
 

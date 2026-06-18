@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { Menu, Settings, Bug, Box, X } from 'lucide-vue-next'
+import { Menu, Settings, Bug, Box, Clock, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { usePanelsStore } from '@/stores/panels'
 import type { PanelType } from '@/stores/panels'
@@ -33,7 +33,8 @@ const navigationButton = computed<PanelButton>(() => ({
 const panelButtons = computed<PanelButton[]>(() => [
   { type: 'elements', icon: Box, label: 'Elements' },
   { type: 'config', icon: Settings, label: 'Config' },
-  { type: 'debug', icon: Bug, label: 'Debug' }
+  { type: 'debug', icon: Bug, label: 'Debug' },
+  { type: 'timeline', icon: Clock, label: 'Timeline' }
 ])
 
 const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType)

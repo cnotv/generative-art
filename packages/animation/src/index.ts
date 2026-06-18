@@ -165,32 +165,20 @@ const animateTimeline = <T>(
   }
 }
 
-const isGrounded = (
-  rigidBody: RAPIER.RigidBody,
-  world: RAPIER.World,
-  elements: ComplexModel[]
-): boolean => {
-  const originPosition = rigidBody.translation()
-  const maxToi = 4.0
-  const solid = true
+/** Half the collider's vertical extent, used to find the distance from its center to its bottom face */
+const getColliderHalfHeight = (collider: RAPIER.Collider): number =>
+  collider.shapeType() === RAPIER.ShapeType.Ball ? collider.radius() : collider.halfExtents().y
 
-  return elements.some((model) => {
-    const rigidBody = model.userData.body
-    const position = rigidBody.translation()
-    const ray = new RAPIER.Ray(
-      { x: originPosition.x, y: 3, z: originPosition.z }, // Origin
-      position // Direction (ground)
-    )
+const GROUND_CHECK_MARGIN = 2
 
-    const hit = world.castRay(ray, maxToi, solid)
-    if (hit) {
-      const hitPoint = ray.pointAt(hit.timeOfImpact)
-      const distance = originPosition.y - hitPoint.y
-      return distance < 0.0
-    }
+/** Whether the model's collider is resting on (or overlapping) another body directly beneath it */
+const isGrounded = (model: ComplexModel, world: RAPIER.World): boolean => {
+  const { body: rigidBody, collider } = model.userData
+  const origin = rigidBody.translation()
+  const maxToi = getColliderHalfHeight(collider) + GROUND_CHECK_MARGIN
+  const ray = new RAPIER.Ray(origin, { x: 0, y: -1, z: 0 })
 
-    return false
-  })
+  return world.castRay(ray, maxToi, true, undefined, undefined, undefined, rigidBody) !== null
 }
 
 /**
@@ -200,18 +188,18 @@ const isGrounded = (
 const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: ComplexModel) => {
     const mesh = model
-    const { body: rigidBody, helper, type, hasGravity } = model.userData
+    const { body: rigidBody, helper, type, hasGravity, gravityScale = 1 } = model.userData
     if (type === 'fixed') return
     if (type === 'kinematicPositionBased') {
-      const grounded = isGrounded(rigidBody, world, elements)
-      const gravity = hasGravity && !grounded ? -9.8 * delta - 1 : 0
+      const grounded = isGrounded(model, world)
+      const gravity = hasGravity && !grounded ? (-9.8 * delta - 1) * gravityScale : 0
       mesh.position.y += gravity
       rigidBody.setNextKinematicTranslation(mesh.position)
     } else {
       const position = rigidBody.translation()
       mesh.position.set(position.x, position.y, position.z)
       const rotation = rigidBody.rotation()
-      mesh.rotation.set(rotation.x, rotation.y, rotation.z)
+      mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w)
     }
 
     if (helper) {
@@ -1165,8 +1153,13 @@ export {
   createDurationAction,
   createOneShotAction,
   createIntervalAction,
-  canAddAction
+  canAddAction,
+  getTimelineActionSpan,
+  getTimelineSegmentOccurrences,
+  getTimelineChartBars
 } from './actions'
+
+export type { TimelineChartBar, TimelineChartRange } from './actions'
 
 export {
   createPopUpBounce,

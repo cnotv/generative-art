@@ -64,7 +64,8 @@ export const getGround = (
     color = SCENE_DEFAULTS.ground.color,
     texture,
     textureRepeat = SCENE_DEFAULTS.ground.textureRepeat,
-    textureOffset = SCENE_DEFAULTS.ground.textureOffset
+    textureOffset = SCENE_DEFAULTS.ground.textureOffset,
+    restitution = 0
   }: {
     size?: CoordinateTuple | number
     position?: CoordinateTuple
@@ -73,6 +74,7 @@ export const getGround = (
     texture?: string
     textureRepeat?: [number, number]
     textureOffset?: [number, number]
+    restitution?: number
   }
 ) => {
   const defaultProps = { color }
@@ -96,7 +98,8 @@ export const getGround = (
   const { rigidBody, collider } = getPhysic(world, {
     position: groundPosition,
     size: groundSizes,
-    boundary: 0.5
+    boundary: 0.5,
+    restitution
   })
 
   const helper = new THREE.BoxHelper(mesh, 0x000000)
@@ -213,6 +216,8 @@ export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
 
   if (hemisphere?.colors) {
     const hemisphereLight = new THREE.HemisphereLight(...hemisphere.colors)
+    hemisphereLight.name = 'hemisphere-light'
+    if (hemisphere.intensity !== undefined) hemisphereLight.intensity = hemisphere.intensity
     scene.add(hemisphereLight)
   }
 

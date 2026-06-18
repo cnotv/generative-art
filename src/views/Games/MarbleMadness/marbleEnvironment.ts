@@ -1,6 +1,6 @@
 import cloudUrl from '@/assets/images/goomba/cloud.png'
 export { cloudUrl }
-import { ref, reactive } from 'vue'
+import { ref, reactive, toRaw } from 'vue'
 import * as THREE from 'three'
 import {
   getCube,
@@ -10,9 +10,14 @@ import {
   type ComplexModel
 } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
-import { registerTextureAreaProperties } from '@/utils/textureAreaProperties'
+import {
+  registerTextureAreaProperties,
+  buildTextureAreaConfig
+} from '@/utils/textureAreaProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import { useTextureGroupsStore } from '@/stores/textureGroups'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 import { CLOUD_AREA_NAME, CLOUD_AREA_SEED, CLOUD_AREA_CONTROLS } from './config'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
@@ -54,7 +59,7 @@ export const buildCloudObjects = (
     opacity
   } = options
   const positions = generateAreaPositions({ center, size, count, pattern, seed })
-  return positions.map((position) => {
+  return positions.map((position, index) => {
     const instanceSize: CoordinateTuple = [
       Math.max(1, applyVariation(baseSize[0], sizeVariation[0])),
       baseSize[1],
@@ -66,6 +71,7 @@ export const buildCloudObjects = (
       rotation[2] + applyVariation(0, rotationVariation[2])
     ]
     const cloud = getCube(scene, world, {
+      name: `cloud-${index + 1}`,
       size: instanceSize,
       position,
       rotation: instanceRotation,
@@ -149,6 +155,7 @@ export const setupCloudArea = (
       }
       const textures = config.textures as {
         baseSize: { x: number; y: number; z: number }
+        rotation: { x: number; y: number; z: number }
         sizeVariation: { x: number; y: number; z: number }
         rotationVariation: { x: number; y: number; z: number }
       }
@@ -163,7 +170,7 @@ export const setupCloudArea = (
         center: [area.center.x, area.center.y, area.center.z],
         size: [area.size.x, area.size.y, area.size.z],
         baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z],
-        rotation: SHARED_CLOUD_OPTIONS.rotation,
+        rotation: [textures.rotation.x, textures.rotation.y, textures.rotation.z],
         sizeVariation: [
           textures.sizeVariation.x,
           textures.sizeVariation.y,
@@ -187,7 +194,154 @@ export const setupCloudArea = (
 
 export const teardownCloudArea = (): void => {
   useDebugSceneStore().removeSceneElement(CLOUD_AREA_NAME)
-  useElementPropertiesStore().unregisterElementProperties(CLOUD_AREA_NAME)
+}
+
+/**
+ * Registers the cloud area as an ElementGroup in the elements panel (same style as ForestGame).
+ * Wires up the textureStore group, schema controls, and rebuild handlers.
+ *
+ * @param scene - Three.js scene
+ * @param world - Rapier world
+ * @param initialOptions - Initial cloud build configuration
+ * @returns The built cloud ComplexModel array
+ */
+export const setupCloudAreaAsGroup = (
+  scene: THREE.Scene,
+  world: WorldReference,
+  initialOptions: CloudBuildOptions
+): ComplexModel[] => {
+  const textureStore = useTextureGroupsStore()
+  const debugSceneStore = useDebugSceneStore()
+  const elementPropertiesStore = useElementPropertiesStore()
+
+  const areaConfigs = ref<Record<string, Record<string, unknown>>>({})
+  areaConfigs.value[CLOUD_AREA_NAME] = buildTextureAreaConfig([
+    {
+      name: CLOUD_AREA_NAME,
+      texture: cloudUrl,
+      baseSize: initialOptions.baseSize,
+      rotation: initialOptions.rotation,
+      center: initialOptions.center,
+      size: initialOptions.size,
+      density: initialOptions.count,
+      seed: initialOptions.seed,
+      speed: 0,
+      opacity: initialOptions.opacity,
+      pattern: initialOptions.pattern,
+      sizeVariation: initialOptions.sizeVariation,
+      rotationVariation: initialOptions.rotationVariation
+    }
+  ])
+
+  let currentObjects = buildCloudObjects(scene, world, initialOptions)
+  currentObjects.forEach((sceneObject) => {
+    sceneObject.userData.textureGroupId = CLOUD_AREA_NAME
+  })
+
+  textureStore.$patch({
+    groups: [
+      ...textureStore.groups,
+      {
+        id: CLOUD_AREA_NAME,
+        name: 'Clouds',
+        textures: [{ id: 'cloud-tex', name: 'cloud.png', filename: 'cloud.png', url: cloudUrl }],
+        instanceCount: initialOptions.count
+      }
+    ]
+  })
+
+  debugSceneStore.$patch({
+    sceneGroups: { ...debugSceneStore.sceneGroups, [CLOUD_AREA_NAME]: 'Clouds' }
+  })
+
+  const rebuild = () => {
+    const config = areaConfigs.value[CLOUD_AREA_NAME]
+    if (!config) return
+    const area = config.area as {
+      center: { x: number; y: number; z: number }
+      size: { x: number; y: number; z: number }
+    }
+    const textures = config.textures as {
+      baseSize: { x: number; y: number; z: number }
+      rotation: { x: number; y: number; z: number }
+      sizeVariation: { x: number; y: number; z: number }
+      rotationVariation: { x: number; y: number; z: number }
+    }
+    const instances = config.instances as {
+      density: number
+      pattern: 'random' | 'grid' | 'grid-jitter'
+      seed: number
+    }
+    const rendering = config.rendering as { opacity: number }
+    disposeClouds(currentObjects, scene, world)
+    currentObjects = buildCloudObjects(scene, world, {
+      center: [area.center.x, area.center.y, area.center.z],
+      size: [area.size.x, area.size.y, area.size.z],
+      baseSize: [textures.baseSize.x, textures.baseSize.y, textures.baseSize.z],
+      rotation: [textures.rotation.x, textures.rotation.y, textures.rotation.z],
+      sizeVariation: [textures.sizeVariation.x, textures.sizeVariation.y, textures.sizeVariation.z],
+      rotationVariation: [
+        textures.rotationVariation.x,
+        textures.rotationVariation.y,
+        textures.rotationVariation.z
+      ],
+      pattern: instances.pattern,
+      count: instances.density,
+      seed: instances.seed,
+      opacity: rendering.opacity
+    })
+    currentObjects.forEach((sceneObject) => {
+      sceneObject.userData.textureGroupId = CLOUD_AREA_NAME
+    })
+    textureStore.$patch({
+      groups: textureStore.groups.map((g) =>
+        g.id === CLOUD_AREA_NAME ? { ...g, instanceCount: instances.density } : g
+      )
+    })
+  }
+
+  debugSceneStore.addSceneElement(
+    { name: CLOUD_AREA_NAME, type: 'TextureArea', hidden: false, groupId: CLOUD_AREA_NAME },
+    {
+      title: 'Clouds',
+      type: 'TextureArea',
+      schema: CLOUD_AREA_CONTROLS,
+      getValue: (path: string) => getNestedValue(toRaw(areaConfigs.value)[CLOUD_AREA_NAME], path),
+      updateValue: (path: string, value: unknown) => {
+        const raw = toRaw(areaConfigs.value)
+        raw[CLOUD_AREA_NAME] = setNestedValueImmutable(raw[CLOUD_AREA_NAME], path, value)
+        if (textureStore.autoUpdate) rebuild()
+      }
+    }
+  )
+
+  textureStore.registerHandlers({
+    onSelectGroup: (id) => {
+      if (id === CLOUD_AREA_NAME) elementPropertiesStore.openElementProperties(CLOUD_AREA_NAME)
+    },
+    onToggleVisibility: (id) => {
+      if (id !== CLOUD_AREA_NAME) return
+      const group = textureStore.groups.find((g) => g.id === id)
+      const isNowHidden = !group?.hidden
+      textureStore.$patch({
+        groups: textureStore.groups.map((g) => (g.id === id ? { ...g, hidden: isNowHidden } : g))
+      })
+      currentObjects.forEach((sceneObject) => {
+        sceneObject.visible = !isNowHidden
+      })
+    },
+    onToggleWireframe: () => {},
+    onRemoveGroup: () => {
+      disposeClouds(currentObjects, scene, world)
+    },
+    onRemoveTexture: () => {},
+    onAddTextureToGroup: () => {},
+    onAddNewGroup: () => {},
+    onManualUpdate: rebuild,
+    onAddElement: () => {}
+  })
+
+  return currentObjects
 }
 
 const GROUND_SPHERE_RADIUS = 1500
@@ -215,48 +369,49 @@ export const registerGroundSphereProperties = (groundMesh: THREE.Mesh): void => 
     radius: groundMesh.scale.x * GROUND_SPHERE_RADIUS,
     color: (groundMesh.material as THREE.MeshStandardMaterial).color.getHex()
   })
-  useDebugSceneStore().addSceneElement({ name: 'Ground', type: 'Mesh', hidden: false })
-  useElementPropertiesStore().registerElementProperties('Ground', {
-    title: 'Ground',
-    type: 'Mesh',
-    schema: {
-      position: {
-        label: 'Position',
-        component: 'CoordinateInput',
-        min: { x: -2000, y: -2000, z: -2000 },
-        max: { x: 2000, y: 2000, z: 2000 },
-        step: { x: 10, y: 10, z: 10 }
+  useDebugSceneStore().addSceneElement(
+    { name: 'Ground', type: 'Mesh', hidden: false },
+    {
+      title: 'Ground',
+      type: 'Mesh',
+      schema: {
+        position: {
+          label: 'Position',
+          component: 'CoordinateInput',
+          min: { x: -2000, y: -2000, z: -2000 },
+          max: { x: 2000, y: 2000, z: 2000 },
+          step: { x: 10, y: 10, z: 10 }
+        },
+        radius: { label: 'Radius', min: 100, max: 2000, step: 10 },
+        color: { label: 'Color', color: true }
       },
-      radius: { label: 'Radius', min: 100, max: 2000, step: 10 },
-      color: { label: 'Color', color: true }
-    },
-    getValue: (path: string) => {
-      if (path === 'position')
-        return { x: state.position.x, y: state.position.y, z: state.position.z }
-      if (path === 'radius') return state.radius
-      if (path === 'color') return state.color
-      return undefined
-    },
-    updateValue: (path: string, value: unknown) => {
-      if (path === 'position') {
-        const v = value as { x: number; y: number; z: number }
-        state.position = { x: v.x, y: v.y, z: v.z }
-        groundMesh.position.set(v.x, v.y, v.z)
-      } else if (path === 'radius') {
-        state.radius = value as number
-        const scale = (value as number) / GROUND_SPHERE_RADIUS
-        groundMesh.scale.set(scale, scale, scale)
-      } else if (path === 'color') {
-        state.color = value as number
-        ;(groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value as number)
+      getValue: (path: string) => {
+        if (path === 'position')
+          return { x: state.position.x, y: state.position.y, z: state.position.z }
+        if (path === 'radius') return state.radius
+        if (path === 'color') return state.color
+        return undefined
+      },
+      updateValue: (path: string, value: unknown) => {
+        if (path === 'position') {
+          const v = value as { x: number; y: number; z: number }
+          state.position = { x: v.x, y: v.y, z: v.z }
+          groundMesh.position.set(v.x, v.y, v.z)
+        } else if (path === 'radius') {
+          state.radius = value as number
+          const scale = (value as number) / GROUND_SPHERE_RADIUS
+          groundMesh.scale.set(scale, scale, scale)
+        } else if (path === 'color') {
+          state.color = value as number
+          ;(groundMesh.material as THREE.MeshStandardMaterial).color.setHex(value as number)
+        }
       }
     }
-  })
+  )
 }
 
 export const teardownGroundSphere = (): void => {
   useDebugSceneStore().removeSceneElement('Ground')
-  useElementPropertiesStore().unregisterElementProperties('Ground')
 }
 
 export const moveGroundSphere = (mesh: THREE.Mesh, x: number, z: number): void => {

@@ -6,9 +6,10 @@ import ElementItem from './ElementItem.vue'
 import ElementCamera from './ElementCamera.vue'
 import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
+import ElementInstancedGroup from './ElementInstancedGroup.vue'
+import ElementSpawnGroup from './ElementSpawnGroup.vue'
 import IconButton from '@/components/IconButton.vue'
-import { Button } from '@/components/ui/button'
-import { Box, Camera, CheckSquare, Image, Square } from 'lucide-vue-next'
+import { Box, Camera, CheckSquare, Image, Plus, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -33,7 +34,8 @@ defineProps<Properties>()
 const emit = defineEmits<Emits>()
 
 const debugSceneStore = useDebugSceneStore()
-const { sceneElements, sceneGroups, spawns } = storeToRefs(debugSceneStore)
+const { sceneElements, sceneGroups, spawns, instancedGroups, spawnGroups } =
+  storeToRefs(debugSceneStore)
 
 const elementPropertiesStore = useElementPropertiesStore()
 const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore)
@@ -87,9 +89,17 @@ const handleGroupToggle = (groupId: string) => {
   }
 }
 
+const handleSpawnGroupToggle = (groupId: string) => {
+  expandedName.value = expandedName.value === groupId ? null : groupId
+  if (expandedName.value) openElementProperties(groupId)
+}
+
 type AddElementType = 'camera' | 'mesh' | 'textureArea'
 
+const addMenuOpen = ref(false)
+
 const addElement = (type: AddElementType) => {
+  addMenuOpen.value = false
   if (type === 'textureArea') {
     triggerFileUpload((e) => textureStore.handlers?.onAddNewGroup(e))
   } else {
@@ -136,7 +146,12 @@ const grouped = computed(() => {
 })
 
 const hasContent = computed(
-  () => sceneElements.value.length > 0 || textureStore.groups.length > 0 || spawns.value.length > 0
+  () =>
+    sceneElements.value.length > 0 ||
+    textureStore.groups.length > 0 ||
+    spawns.value.length > 0 ||
+    instancedGroups.value.length > 0 ||
+    spawnGroups.value.length > 0
 )
 
 const hasExpandedSchema = computed(
@@ -146,26 +161,11 @@ const hasExpandedSchema = computed(
 
 <template>
   <GenericPanel panel-type="elements" side="left" title="Elements">
-    <!-- Add bar -->
-    <div class="elements-panel__add-bar">
-      <span class="elements-panel__add-label">Add</span>
-      <Button
-        v-for="btn in addButtons"
-        :key="btn.type"
-        variant="outline"
-        size="sm"
-        class="elements-panel__add-btn"
-        :title="btn.title"
-        @click="addElement(btn.type)"
-      >
-        <component :is="btn.icon" class="h-3 w-3 mr-1" />{{ btn.label }}
-      </Button>
-    </div>
-
     <!-- Filter bar -->
     <div class="elements-panel__filter-bar">
       <IconButton
-        size="sm"
+        size="xs"
+        panel-colors
         :active="allVisible"
         :title="allVisible ? 'Hide all' : 'Show all'"
         @click="allVisible ? hideAllCategories() : showAllCategories()"
@@ -177,13 +177,45 @@ const hasExpandedSchema = computed(
       <IconButton
         v-for="cat in ELEMENT_CATEGORIES"
         :key="cat.category"
-        size="sm"
+        size="xs"
+        panel-colors
         :active="!hiddenCategories.has(cat.category)"
         :title="hiddenCategories.has(cat.category) ? `Show ${cat.label}` : `Hide ${cat.label}`"
         @click="toggleCategory(cat.category)"
       >
         <component :is="cat.icon" />
       </IconButton>
+
+      <div class="elements-panel__add">
+        <IconButton
+          size="xs"
+          panel-colors
+          :active="addMenuOpen"
+          title="Add element"
+          @click="addMenuOpen = !addMenuOpen"
+        >
+          <Plus />
+        </IconButton>
+        <template v-if="addMenuOpen">
+          <button
+            class="elements-panel__add-backdrop"
+            aria-label="Close add menu"
+            @click="addMenuOpen = false"
+          />
+          <div class="elements-panel__add-menu">
+            <button
+              v-for="btn in addButtons"
+              :key="btn.type"
+              class="elements-panel__add-option"
+              :title="btn.title"
+              @click="addElement(btn.type)"
+            >
+              <component :is="btn.icon" class="elements-panel__add-option-icon" />
+              <span>{{ btn.label }}</span>
+            </button>
+          </div>
+        </template>
+      </div>
     </div>
 
     <p v-if="!hasContent" class="elements-panel__empty">No scene elements.</p>
@@ -212,9 +244,7 @@ const hasExpandedSchema = computed(
           class="elements-panel__item-content"
           :class="`elements-panel__item-content--${element.type.toLowerCase()}`"
         >
-          <p v-if="element.type === 'TextureArea'" class="elements-panel__type-description">
-            Texture Area
-          </p>
+          <p class="elements-panel__type-description">{{ element.type }}</p>
           <ElementCamera
             v-if="isCameraExpanded"
             :is-recording="isRecording"
@@ -234,6 +264,24 @@ const hasExpandedSchema = computed(
           </template>
         </div>
       </div>
+
+      <!-- Instanced mesh groups -->
+      <ElementInstancedGroup
+        v-for="group in instancedGroups"
+        :key="group.id"
+        :group="group"
+        :is-expanded="expandedName === group.id"
+        @toggle="expandedName = expandedName === group.id ? null : group.id"
+      />
+
+      <!-- Spawn groups -->
+      <ElementSpawnGroup
+        v-for="group in spawnGroups"
+        :key="group.id"
+        :group="group"
+        :is-expanded="expandedName === group.id"
+        @toggle="handleSpawnGroupToggle(group.id)"
+      />
 
       <!-- Texture groups -->
       <ElementGroup
@@ -266,42 +314,77 @@ const hasExpandedSchema = computed(
 </template>
 
 <style scoped>
-.elements-panel__add-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1-5);
-  padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-1-5);
-  flex-wrap: wrap;
-}
-
-.elements-panel__add-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  flex-shrink: 0;
-}
-
-.elements-panel__add-btn {
-  height: var(--btn-sm-height);
-  padding: 0 var(--spacing-2);
-  font-size: var(--font-size-xs);
-  gap: var(--spacing-1);
-}
-
 .elements-panel__filter-bar {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
-  padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-1);
   margin-bottom: var(--spacing-1-5);
+  background: var(--panel-item-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .elements-panel__filter-separator {
   width: 1px;
-  height: var(--btn-sm-height);
+  height: var(--btn-xs-height);
   background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.elements-panel__add {
+  position: relative;
+  margin-left: auto;
+}
+
+.elements-panel__add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dropdown);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.elements-panel__add-menu {
+  position: absolute;
+  top: calc(100% + var(--spacing-1));
+  right: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  min-width: var(--dropdown-min-width);
+  padding: var(--spacing-1);
+  gap: var(--spacing-0-5);
+  background: var(--panel-content-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.elements-panel__add-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-1) var(--spacing-1-5);
+  font-size: var(--font-size-xs);
+  color: var(--color-foreground);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 100ms;
+}
+
+.elements-panel__add-option:hover {
+  background-color: var(--panel-item-bg-hover);
+}
+
+.elements-panel__add-option-icon {
+  width: var(--font-size-md);
+  height: var(--font-size-md);
   flex-shrink: 0;
 }
 
@@ -324,7 +407,7 @@ const hasExpandedSchema = computed(
 .elements-panel__list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: var(--spacing-0-5);
 }
 
 .elements-panel__item {

@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
   AccordionContent
 } from '@/components/ui/accordion'
+import { RotateCcw, RotateCw } from 'lucide-vue-next'
 import { CameraPreset, cameraPresets } from '@webgamekit/threejs'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -28,8 +29,10 @@ const emit = defineEmits<{
 }>()
 
 const cameraConfigStore = useCameraConfigStore()
-const { activeSlot } = storeToRefs(cameraConfigStore)
-const { applyPresetToActiveSlot } = cameraConfigStore
+const { activeSlot, transitionEnabled } = storeToRefs(cameraConfigStore)
+const { applyPresetToActiveSlot, rotateActiveSlot, setTransitionEnabled } = cameraConfigStore
+
+const ROTATION_STEP_DEGREES = 45
 
 const elementPropertiesStore = useElementPropertiesStore()
 const { activeProperties } = storeToRefs(elementPropertiesStore)
@@ -82,6 +85,11 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
         <div class="element-camera__type-toggle">
           <Button
             :variant="activePresetType === 'perspective' ? 'default' : 'outline'"
+            :disabled="
+              !(activeSlot?.supportedCameraTypes ?? ['perspective', 'orthographic']).includes(
+                'perspective'
+              )
+            "
             size="sm"
             class="w-full text-xs"
             @click="handleTypeToggle('perspective')"
@@ -89,6 +97,11 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
           >
           <Button
             :variant="activePresetType === 'orthographic' ? 'default' : 'outline'"
+            :disabled="
+              !(activeSlot?.supportedCameraTypes ?? ['perspective', 'orthographic']).includes(
+                'orthographic'
+              )
+            "
             size="sm"
             class="w-full text-xs"
             @click="handleTypeToggle('orthographic')"
@@ -106,6 +119,37 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
             >{{ label }}</Button
           >
         </div>
+        <div class="element-camera__rotate-row">
+          <Button
+            variant="outline"
+            size="sm"
+            class="w-full text-xs"
+            title="Rotate camera 45° left around Y"
+            @click="rotateActiveSlot(ROTATION_STEP_DEGREES)"
+          >
+            <RotateCcw />
+            45°
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="w-full text-xs"
+            title="Rotate camera 45° right around Y"
+            @click="rotateActiveSlot(-ROTATION_STEP_DEGREES)"
+          >
+            <RotateCw />
+            45°
+          </Button>
+        </div>
+        <Button
+          :variant="transitionEnabled ? 'default' : 'outline'"
+          size="sm"
+          class="element-camera__transition-toggle w-full text-xs"
+          title="Animate transitions between camera states"
+          @click="setTransitionEnabled(!transitionEnabled)"
+        >
+          Transitions: {{ transitionEnabled ? 'On' : 'Off' }}
+        </Button>
       </AccordionContent>
     </AccordionItem>
     <AccordionItem v-if="hasExpandedSchema" value="properties">
@@ -145,5 +189,16 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-1);
+}
+
+.element-camera__rotate-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-1);
+}
+
+.element-camera__transition-toggle {
+  margin-top: var(--spacing-1);
 }
 </style>

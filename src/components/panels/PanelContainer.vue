@@ -97,6 +97,10 @@ defineProps<{
     width: var(--panel-width, 20rem);
     border-left: 1px solid var(--color-border);
   }
+
+  &--wide {
+    width: var(--panel-width-wide, 32rem);
+  }
 }
 
 .sheet-close {

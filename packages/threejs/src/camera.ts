@@ -147,11 +147,16 @@ export const setCameraPreset = (
     camera.position.set(...preset.position)
     camera.aspect = aspect
     if (preset.fov !== undefined) camera.fov = preset.fov
+    if (preset.near !== undefined) camera.near = preset.near
+    if (preset.far !== undefined) camera.far = preset.far
   } else if (isOrthographic && camera instanceof THREE.OrthographicCamera) {
+    camera.position.set(...preset.position)
     camera.left = (frustumSize * aspect) / -2
     camera.right = (frustumSize * aspect) / 2
     camera.top = frustumSize / 2 + verticalOffset
     camera.bottom = frustumSize / -2 + verticalOffset
+    if (preset.near !== undefined) camera.near = preset.near
+    if (preset.far !== undefined) camera.far = preset.far
   }
   camera.lookAt(new THREE.Vector3(...lookAt))
   camera.updateProjectionMatrix()

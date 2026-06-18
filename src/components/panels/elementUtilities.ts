@@ -21,6 +21,7 @@ export const getElementCategory = (element: SceneElement): ElementCategory => {
   if (name.includes('sky')) return 'sky'
   if (name.includes('ground')) return 'ground'
   if (type === 'texturearea' || element.groupId !== undefined) return 'textureArea'
+  if (name.includes('cloud')) return 'mesh'
   return 'mesh'
 }
 

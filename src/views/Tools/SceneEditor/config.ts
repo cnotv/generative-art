@@ -136,6 +136,13 @@ export const configControls = {
       max: { x: 200, y: 200, z: 10 },
       step: { x: 1, y: 1, z: 0.1 }
     },
+    rotation: {
+      label: 'Rotation',
+      component: 'CoordinateInput',
+      min: { x: -Math.PI, y: -Math.PI, z: -Math.PI },
+      max: { x: Math.PI, y: Math.PI, z: Math.PI },
+      step: { x: 0.01, y: 0.01, z: 0.01 }
+    },
     sizeVariation: {
       label: 'Size Variation',
       component: 'CoordinateInput',
@@ -180,7 +187,16 @@ export const cameraSchema = {
     max: { x: 500, y: 500, z: 500 },
     step: { x: 1, y: 1, z: 1 }
   },
+  rotation: {
+    component: 'CoordinateInput',
+    label: 'Rotation',
+    min: { x: -Math.PI, y: -Math.PI, z: -Math.PI },
+    max: { x: Math.PI, y: Math.PI, z: Math.PI },
+    step: { x: 0.01, y: 0.01, z: 0.01 }
+  },
   fov: { min: 10, max: 170, step: 1, label: 'FOV' },
+  near: { min: 0.01, max: 100, step: 0.01, label: 'Near Clip' },
+  far: { min: 1, max: 100000, step: 10, label: 'Far Clip' },
   orbitTarget: {
     component: 'CoordinateInput',
     label: 'Orbit Target',

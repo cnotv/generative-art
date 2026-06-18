@@ -14,6 +14,7 @@ export interface TextureGroup {
   textures: TextureItem[]
   hidden?: boolean
   showWireframe?: boolean
+  instanceCount?: number
 }
 
 export interface GroupConfig {
@@ -23,6 +24,7 @@ export interface GroupConfig {
   }
   textures: {
     baseSize: CoordinateTuple
+    rotation: CoordinateTuple
     sizeVariation: CoordinateTuple
     rotationVariation: CoordinateTuple
   }
@@ -54,6 +56,7 @@ const DEFAULT_GROUP_CONFIG: GroupConfig = {
   },
   textures: {
     baseSize: [DEFAULT_BASE_SIZE, DEFAULT_BASE_SIZE, 0] as CoordinateTuple,
+    rotation: [0, 0, 0] as CoordinateTuple,
     sizeVariation: [10, 10, 0] as CoordinateTuple,
     rotationVariation: [0, 0, 0] as CoordinateTuple
   },
@@ -82,6 +85,7 @@ export const useTextureGroupsStore = defineStore('textureGroups', {
         },
         textures: {
           baseSize: [...DEFAULT_GROUP_CONFIG.textures.baseSize] as CoordinateTuple,
+          rotation: [...DEFAULT_GROUP_CONFIG.textures.rotation] as CoordinateTuple,
           sizeVariation: [...DEFAULT_GROUP_CONFIG.textures.sizeVariation] as CoordinateTuple,
           rotationVariation: [...DEFAULT_GROUP_CONFIG.textures.rotationVariation] as CoordinateTuple
         },

@@ -4,15 +4,17 @@ import type { Component } from 'vue'
 interface Properties {
   icon: Component
   color?: string
+  size?: 'sm' | 'md'
 }
 
-const props = withDefaults(defineProps<Properties>(), {
-  color: 'text-gray-400'
+withDefaults(defineProps<Properties>(), {
+  color: 'text-gray-400',
+  size: 'md'
 })
 </script>
 
 <template>
-  <div class="icon-preview">
+  <div class="icon-preview" :class="`icon-preview--${size}`">
     <component :is="icon" :class="['icon-preview__icon', color]" />
   </div>
 </template>
@@ -20,13 +22,7 @@ const props = withDefaults(defineProps<Properties>(), {
 <style scoped>
 .icon-preview {
   position: relative;
-  min-width: 48px;
-  min-height: 48px;
-  max-width: 64px;
-  max-height: 64px;
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
   display: flex;
@@ -36,8 +32,23 @@ const props = withDefaults(defineProps<Properties>(), {
   border: 1px solid hsl(var(--border));
 }
 
-.icon-preview__icon {
-  width: 24px;
-  height: 24px;
+.icon-preview--md {
+  width: var(--icon-preview-md-size);
+  height: var(--icon-preview-md-size);
+}
+
+.icon-preview--md .icon-preview__icon {
+  width: var(--icon-preview-md-icon-size);
+  height: var(--icon-preview-md-icon-size);
+}
+
+.icon-preview--sm {
+  width: var(--btn-sm-height);
+  height: var(--btn-sm-height);
+}
+
+.icon-preview--sm .icon-preview__icon {
+  width: var(--font-size-base);
+  height: var(--font-size-base);
 }
 </style>

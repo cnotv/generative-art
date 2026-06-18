@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import ElementRow from './ElementRow.vue'
 import SchemaControls from './ConfigControls.vue'
 import TexturePreview from '@/components/TexturePreview.vue'
 import IconPreview from '@/components/IconPreview.vue'
@@ -47,49 +48,54 @@ const group = computed(() => textureStore.groups.find((g) => g.id === props.grou
 
 <template>
   <div class="element-group">
-    <div
-      class="element-group__header"
-      :class="{
-        'element-group__header--active': isSelected || isExpanded,
-        'element-group__header--hidden': group?.hidden
-      }"
-      role="button"
-      tabindex="0"
+    <ElementRow
+      :selected="isSelected || isExpanded"
+      :hidden="group?.hidden"
       @click="emit('toggle')"
-      @keydown.enter.space.prevent="emit('toggle')"
     >
-      <IconPreview :icon="Box" color="text-gray-400" />
-      <div class="element-group__info">
-        <span class="element-group__label">{{ label }}</span>
-        <span class="element-group__type">TextureArea</span>
-      </div>
-      <div v-if="group" class="element-group__actions">
-        <IconButton
-          :active="group.hidden"
-          size="sm"
-          :title="group.hidden ? 'Show group' : 'Hide group'"
-          @click.stop="textureStore.handlers?.onToggleVisibility(groupId)"
+      <template #default="{ hovered }">
+        <IconPreview :icon="Box" color="text-gray-400" size="sm" />
+        <span class="element-group__label">
+          {{ label
+          }}<template v-if="group?.instanceCount !== undefined">
+            ({{ group.instanceCount }})</template
+          >
+        </span>
+        <div
+          v-if="group"
+          class="element-group__actions"
+          :class="{ 'element-group__actions--visible': hovered }"
         >
-          <EyeOff v-if="group.hidden" />
-          <Eye v-else />
-        </IconButton>
-        <IconButton
-          :active="group.showWireframe"
-          size="sm"
-          :title="group.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
-          @click.stop="textureStore.handlers?.onToggleWireframe(groupId)"
-        >
-          <Box />
-        </IconButton>
-        <IconButton
-          size="sm"
-          title="Delete group"
-          @click.stop="textureStore.handlers?.onRemoveGroup(groupId)"
-        >
-          <Trash2 />
-        </IconButton>
-      </div>
-    </div>
+          <IconButton
+            panel-colors
+            :active="group.hidden"
+            size="xs"
+            :title="group.hidden ? 'Show group' : 'Hide group'"
+            @click.stop="textureStore.handlers?.onToggleVisibility(groupId)"
+          >
+            <EyeOff v-if="group.hidden" />
+            <Eye v-else />
+          </IconButton>
+          <IconButton
+            panel-colors
+            :active="group.showWireframe"
+            size="xs"
+            :title="group.showWireframe ? 'Hide wireframe' : 'Show wireframe'"
+            @click.stop="textureStore.handlers?.onToggleWireframe(groupId)"
+          >
+            <Box />
+          </IconButton>
+          <IconButton
+            panel-colors
+            size="xs"
+            title="Delete group"
+            @click.stop="textureStore.handlers?.onRemoveGroup(groupId)"
+          >
+            <Trash2 />
+          </IconButton>
+        </div>
+      </template>
+    </ElementRow>
 
     <div v-if="isExpanded" class="element-group__content">
       <template v-if="group">
@@ -151,59 +157,28 @@ const group = computed(() => textureStore.groups.find((g) => g.id === props.grou
   overflow: hidden;
 }
 
-.element-group__header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1-5);
-  padding: var(--spacing-1-5) var(--spacing-2);
-  background: var(--panel-item-bg);
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  color: var(--color-foreground);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: background-color 150ms;
-  overflow: hidden;
-}
-
-.element-group__header:hover {
-  background-color: var(--panel-item-bg-hover);
-}
-
-.element-group__header--active {
-  background-color: var(--panel-item-bg-selected);
-}
-
-.element-group__header--hidden {
-  opacity: var(--opacity-muted);
-}
-
-.element-group__info {
+.element-group__label {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-0-5);
-}
-
-.element-group__label {
   font-size: var(--font-size-xs);
   font-weight: 500;
   font-family: monospace;
-  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.element-group__type {
-  font-size: var(--font-size-2xs);
-  color: var(--color-muted-foreground);
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.element-group__actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  gap: var(--spacing-0-5);
+  opacity: 0;
+  transition: opacity 100ms;
+}
+
+.element-group__actions--visible {
+  opacity: 1;
 }
 
 .element-group__content {
@@ -213,53 +188,6 @@ const group = computed(() => textureStore.groups.find((g) => g.id === props.grou
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-}
-
-.element-group__children {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.element-group__child {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-1-5);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-muted) 30%, transparent);
-}
-
-.element-group__child--hidden {
-  opacity: var(--opacity-muted);
-}
-
-.element-group__child-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-0-5);
-}
-
-.element-group__child-name {
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  font-family: monospace;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.element-group__child-type {
-  font-size: var(--font-size-2xs);
-  color: var(--color-muted-foreground);
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .element-group__variants {
@@ -325,13 +253,6 @@ const group = computed(() => textureStore.groups.find((g) => g.id === props.grou
 .element-group__variant-add-icon {
   width: var(--font-size-md);
   height: var(--font-size-md);
-}
-
-.element-group__actions {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  gap: var(--spacing-0-5);
 }
 
 .element-group__update-bar {

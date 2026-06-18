@@ -89,6 +89,19 @@
   --color-perf-warn: hsl(38deg 92% 50%);
   --color-perf-bad: hsl(0deg 84% 60%);
 
+  // Timeline panel action colors. Cycled by row index to visually distinguish
+  // actions; foreground stays fixed white across themes.
+  --timeline-color-0: hsl(0deg 60% 50%);
+  --timeline-color-1: hsl(45deg 60% 45%);
+  --timeline-color-2: hsl(90deg 50% 40%);
+  --timeline-color-3: hsl(135deg 50% 40%);
+  --timeline-color-4: hsl(180deg 50% 40%);
+  --timeline-color-5: hsl(225deg 55% 50%);
+  --timeline-color-6: hsl(270deg 50% 50%);
+  --timeline-color-7: hsl(315deg 55% 50%);
+  --timeline-bar-foreground: hsl(0deg 0% 100%);
+  --timeline-gutter-width: 8rem;
+
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
   --panel-item-bg-hover: hsl(0deg 0% 94%);
@@ -99,6 +112,7 @@
   --panel-remove-color: hsl(0deg 80% 65%);
 
   // Spacing scale
+  --spacing-px: 0.0625rem; // 1px
   --spacing-0-5: 0.125rem; // 2px
   --spacing-1: 0.25rem; // 4px
   --spacing-1-5: 0.375rem; // 6px
@@ -132,12 +146,16 @@
 
   // Opacity
   --opacity-muted: 0.5;
+  --opacity-disabled: 0.15;
 
   // Component sizes
+  --btn-xs-height: 1.25rem; // 20px
   --btn-sm-height: 1.75rem; // 28px
   --btn-md-height: 2rem; // 32px
   --btn-lg-height: 2.5rem; // 40px
   --thumbnail-size: 2.5rem; // 40px
+  --icon-preview-md-size: 3rem; // 48px
+  --icon-preview-md-icon-size: 1.5rem; // 24px
 
   // Shadows
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -148,6 +166,8 @@
   // Layout dimensions
   --nav-height: 3rem;
   --panel-width: 20rem;
+  --panel-width-wide: 32rem;
+  --dropdown-min-width: 9rem;
 
   // Minimap
   --minimap-size: 160px;
@@ -216,6 +236,16 @@
   --color-perf-warn: hsl(38deg 90% 58%);
   --color-perf-bad: hsl(0deg 80% 65%);
 
+  // Timeline panel action colors (dark — brighter to stay visible)
+  --timeline-color-0: hsl(0deg 65% 60%);
+  --timeline-color-1: hsl(45deg 65% 55%);
+  --timeline-color-2: hsl(90deg 55% 50%);
+  --timeline-color-3: hsl(135deg 55% 50%);
+  --timeline-color-4: hsl(180deg 55% 50%);
+  --timeline-color-5: hsl(225deg 60% 60%);
+  --timeline-color-6: hsl(270deg 55% 60%);
+  --timeline-color-7: hsl(315deg 60% 60%);
+
   // Dark theme shadows (more prominent)
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
@@ -267,6 +297,14 @@
     --color-perf-ok: hsl(142deg 60% 55%);
     --color-perf-warn: hsl(38deg 90% 58%);
     --color-perf-bad: hsl(0deg 80% 65%);
+    --timeline-color-0: hsl(0deg 65% 60%);
+    --timeline-color-1: hsl(45deg 65% 55%);
+    --timeline-color-2: hsl(90deg 55% 50%);
+    --timeline-color-3: hsl(135deg 55% 50%);
+    --timeline-color-4: hsl(180deg 55% 50%);
+    --timeline-color-5: hsl(225deg 60% 60%);
+    --timeline-color-6: hsl(270deg 55% 60%);
+    --timeline-color-7: hsl(315deg 60% 60%);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
