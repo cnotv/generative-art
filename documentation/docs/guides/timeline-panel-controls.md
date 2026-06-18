@@ -8,9 +8,16 @@ The Timeline panel (`src/components/panels/TimelinePanel.vue`) offers two
 distinct ways to stop animation: pausing the entire simulation, and disabling
 a single action's row without affecting any other action.
 
+Both controls are rendered as flat, ghost-style play/pause icon buttons
+(`IconButton` with a `Play`/`Pause` icon) rather than checkboxes: a `Pause`
+icon means the target is currently running (click to stop), and a `Play` icon
+means it is stopped (click to resume). The same convention is used for the
+global pause, each per-row toggle, and the selected action's "Enabled" row in
+the details panel.
+
 ## Pausing the whole simulation
 
-The "Pause animation" checkbox is backed by `timelinePanelStore.isPaused` /
+The global play/pause button is backed by `timelinePanelStore.isPaused` /
 `setPaused(boolean)` in `src/stores/timelinePanel.ts`. The view that owns the
 scene passes this flag straight into `animate()`:
 
@@ -31,8 +38,8 @@ together. This is a global switch with no per-action granularity.
 
 ## Disabling a single action row
 
-Each row in the Timeline panel's gutter has its own checkbox, bound to that
-action's `enabled` state. Toggling it calls `handleToggleEnabled`:
+Each row in the Timeline panel's gutter has its own play/pause button, bound to
+that action's `enabled` state. Toggling it calls `handleToggleEnabled`:
 
 ```typescript
 const handleToggleEnabled = (id: string | undefined, enabled: boolean) => {
@@ -49,7 +56,7 @@ single action stops executing while the rest of the timeline — and the
 simulation clock itself — keeps running.
 
 `enabledOverrides` is a local `Map<string, boolean>` ref that mirrors the
-toggle immediately in the UI (via `isActionEnabled`), so the checkbox and bar
+toggle immediately in the UI (via `isActionEnabled`), so the button icon and bar
 opacity update on the same frame even while the panel is paused and `bars`
 hasn't recomputed yet:
 
@@ -62,10 +69,10 @@ const isActionEnabled = (action: Timeline): boolean => {
 
 ## Summary
 
-| Control                    | Scope             | Mechanism                                                              |
-| -------------------------- | ----------------- | ---------------------------------------------------------------------- |
-| "Pause animation" checkbox | Entire simulation | `timelinePanelStore.isPaused` read by `animate({ isPaused })`          |
-| Per-row checkbox           | Single action     | `TimelineManager.updateAction(id, { enabled })` via `setActionEnabled` |
+| Control                   | Scope             | Mechanism                                                              |
+| ------------------------- | ----------------- | ---------------------------------------------------------------------- |
+| Global play/pause button  | Entire simulation | `timelinePanelStore.isPaused` read by `animate({ isPaused })`          |
+| Per-row play/pause button | Single action     | `TimelineManager.updateAction(id, { enabled })` via `setActionEnabled` |
 
 Use the global pause to freeze a frame for inspection (e.g. taking a
 screenshot). Use a row toggle to isolate or silence one action — for example,

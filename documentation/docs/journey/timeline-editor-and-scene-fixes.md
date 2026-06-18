@@ -92,3 +92,35 @@ sequenceDiagram
 ## Heavier balls
 
 The bouncing balls in the scene used the default mass/weight values from the model-options helper, which made them feel light and "floaty" against the much larger cubes. Increasing the weight option passed to every ball — including the one spawned periodically by its own timeline action — gives them noticeably more inertia and a heavier landing impact, better matching their visual size relative to the rest of the scene.
+
+## Orthographic camera presets zoomed in far too close
+
+Switching the camera to an orthographic preset made the scene jump to an extreme close-up, showing only a tiny patch of geometry. The root cause is a fundamental difference between the two projection types. A perspective camera's apparent zoom depends on how far it sits from what it looks at, so moving it back reveals more of the scene. An orthographic camera ignores distance entirely: its zoom is governed solely by the size of its viewing box (the frustum). The preset definitions carried a fixed frustum size that had been tuned for a small reference scene where objects span a handful of units. Dropped into this scene — where the camera sits hundreds of units back and the ground stretches across thousands — that same small box framed only a sliver of the world.
+
+The fix makes the orthographic preset _scene-aware_. Instead of applying the preset's literal frustum size and position, it treats those values as a direction and a proportion. It reads the camera's current distance from the orbit target as a measure of the scene's scale, then scales both the preset's offset and its frustum size by that distance. The preset's intended viewing angle and its framing ratio (how much of the view the subject fills) are preserved, but the absolute zoom now matches whatever scene it is applied to.
+
+```mermaid
+flowchart TD
+    A[Apply orthographic preset] --> B[Measure current distance from camera to orbit target]
+    B --> C[Scale preset offset by distance, position at same angle]
+    B --> D[Scale preset frustum by distance, zoom matches scene]
+    C --> E[Look at orbit target]
+    D --> E
+    E --> F[Consistent framing at any scene size]
+```
+
+## Orthographic views clipping the scene
+
+Even with the zoom corrected, parts of the scene vanished — the near and far clipping planes were cutting through geometry. An orthographic camera placed far from the scene needs a depth range that brackets everything in front of and behind the focal point, but the preset's near/far values were small constants left over from the reference scene. Because the camera can end up positioned such that some objects fall behind its near plane, the range also needs to extend _behind_ the camera, not just in front of it.
+
+The fix derives a generous depth span from the same distance-and-frustum measure used for zoom, pushing the near plane well behind the camera and the far plane well past the subject. Orthographic projection has linear depth, so widening this range does not cost the depth precision that the same change would cost on a perspective camera. The panel's near/far controls were also extended to drive orthographic cameras, which previously only responded on the perspective path.
+
+## Preserving position on same-type preset changes
+
+Camera presets come in two flavours: ones that change the projection type (perspective to orthographic, or back) and ones that only restyle the current camera. A regression briefly made _every_ preset reset the camera's position to the preset's reference coordinates, so re-styling a perspective camera — for example switching to a wider field of view — teleported it away from wherever the user had positioned it.
+
+The corrected behaviour treats the two cases differently. A perspective-to-perspective change only touches lens properties (field of view and clip planes) and leaves position and rotation untouched. A change that alters the projection type, or any orthographic preset, runs the scene-aware repositioning described above, because those genuinely intend to reframe the view. This split is covered by a unit test that asserts a same-type field-of-view preset changes the lens without moving the camera.
+
+## Booting the test scene straight into an orthographic view
+
+The Timeline test scene is most readable from a fixed three-quarter orthographic angle, so it should open in that view rather than the default perspective one. Rather than hand-construct an orthographic camera and copy in captured coordinates — which would drift out of sync the moment the preset logic changed — the scene reuses the preset machinery itself. After the camera registers, the scene programmatically applies the orthographic preset and then repeats the same 45° rotation the panel button performs, twice, to reach the desired angle. The result is identical to a user clicking those controls by hand, and it automatically inherits any future improvement to the preset logic. This boot sequence lives in the scene's own setup, so no other view is affected.

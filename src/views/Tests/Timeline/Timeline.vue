@@ -5,7 +5,13 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 import * as THREE from 'three'
 
-import { getModel, getTools, removeElements, type ComplexModel } from '@webgamekit/threejs'
+import {
+  getModel,
+  getTools,
+  removeElements,
+  CameraPreset,
+  type ComplexModel
+} from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
@@ -27,6 +33,7 @@ import { useTextureGroupsStore } from '@/stores/textureGroups'
 import type { RotationMap } from '@/types/three'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import type { InstancedGroupHandlers } from '@/stores/debugScene'
@@ -126,6 +133,7 @@ const CLOUD_WIDTH_VARIATION = 20
 const CAMERA_POSITION_X = -167.87
 const CAMERA_POSITION_Y = 225.02
 const CAMERA_POSITION_Z = 95.43
+const ORTHO_DEFAULT_ROTATION_DEGREES = 45
 const CAMERA_ORBIT_TARGET_X = -44.66
 const CAMERA_ORBIT_TARGET_Y = 77.17
 const CAMERA_ORBIT_TARGET_Z = -27.78
@@ -899,8 +907,16 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     },
     { renderer, orbit, setCamera: setActiveCamera }
   )
+  const cameraConfigStore = useCameraConfigStore()
+  cameraConfigStore.applyPresetToActiveSlot(CameraPreset.Orthographic)
+  cameraConfigStore.rotateActiveSlot(-ORTHO_DEFAULT_ROTATION_DEGREES)
+  cameraConfigStore.rotateActiveSlot(-ORTHO_DEFAULT_ROTATION_DEGREES)
   buildScenery({ scene, world })
   debugSceneStore.moveElementAfter('clouds', 'sky')
+  registerSceneLights(scene)
+}
+
+const registerSceneLights = (scene: THREE.Scene): void => {
   const ambientLight = scene.getObjectByName('ambient-light') as THREE.Light | undefined
   const directionalLight = scene.getObjectByName('directional-light') as THREE.Light | undefined
   if (ambientLight)
@@ -914,29 +930,27 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
   const hemisphereLight = scene.getObjectByName('hemisphere-light') as
     | THREE.HemisphereLight
     | undefined
-  if (hemisphereLight) {
-    const hemisphereSchema = {
+  if (!hemisphereLight) return
+  const hemisphereState = {
+    skyColor: hemisphereLight.color.getHex(),
+    groundColor: hemisphereLight.groundColor.getHex(),
+    intensity: hemisphereLight.intensity
+  }
+  useElementPropertiesStore().registerElementProperties('hemisphere-light', {
+    title: 'Hemisphere Light',
+    schema: {
       skyColor: { color: true, label: 'Sky Color' },
       groundColor: { color: true, label: 'Ground Color' },
       intensity: { min: 0, max: 10, step: 0.1, label: 'Intensity' }
+    },
+    getValue: (path: string) => (hemisphereState as Record<string, unknown>)[path],
+    updateValue: (path: string, value: unknown) => {
+      ;(hemisphereState as Record<string, unknown>)[path] = value
+      if (path === 'skyColor') hemisphereLight.color.set(value as number)
+      else if (path === 'groundColor') hemisphereLight.groundColor.set(value as number)
+      else hemisphereLight.intensity = value as number
     }
-    const hemisphereState = {
-      skyColor: hemisphereLight.color.getHex(),
-      groundColor: hemisphereLight.groundColor.getHex(),
-      intensity: hemisphereLight.intensity
-    }
-    useElementPropertiesStore().registerElementProperties('hemisphere-light', {
-      title: 'Hemisphere Light',
-      schema: hemisphereSchema,
-      getValue: (path: string) => (hemisphereState as Record<string, unknown>)[path],
-      updateValue: (path: string, value: unknown) => {
-        ;(hemisphereState as Record<string, unknown>)[path] = value
-        if (path === 'skyColor') hemisphereLight.color.set(value as number)
-        else if (path === 'groundColor') hemisphereLight.groundColor.set(value as number)
-        else hemisphereLight.intensity = value as number
-      }
-    })
-  }
+  })
 }
 
 const init = async (canvasElement: HTMLCanvasElement, statsElement: HTMLElement): Promise<void> => {
