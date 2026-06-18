@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
-import { CameraPreset, cameraPresets, setCameraPreset } from '@webgamekit/threejs'
+import { CameraPreset, cameraPresets } from '@webgamekit/threejs'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
@@ -81,6 +81,57 @@ const buildOrthoToPersp = (
   return persp
 }
 
+type CameraPresetConfig = (typeof cameraPresets)[CameraPreset]
+const ORIGIN = new THREE.Vector3(0, 0, 0)
+const DEFAULT_FRUSTUM_SIZE = 40
+
+/**
+ * Applies an orthographic preset scaled to the current scene framing.
+ * The preset's position direction and frustumSize/distance ratio are preserved,
+ * but scaled to the camera's current distance from the orbit target so the zoom
+ * level stays consistent regardless of scene scale.
+ * @param camera - The orthographic camera to reconfigure
+ * @param preset - The preset configuration providing direction and frustum ratio
+ * @param orbit - Optional orbit controls supplying the look-at target
+ * @param aspect - The viewport aspect ratio
+ */
+const applyOrthographicPreset = (
+  camera: THREE.OrthographicCamera,
+  preset: CameraPresetConfig,
+  orbit: OrbitControls | null | undefined,
+  aspect: number
+): void => {
+  const target = orbit ? orbit.target : ORIGIN
+  const presetPosition = new THREE.Vector3(...preset.position)
+  const presetDistance = presetPosition.length() || DEFAULT_ORBIT_DISTANCE
+  const currentDistance = camera.position.distanceTo(target) || presetDistance
+  const scale = currentDistance / presetDistance
+  const frustumHeight = (preset.frustumSize ?? DEFAULT_FRUSTUM_SIZE) * scale
+  const halfH = frustumHeight / 2
+
+  // Generous depth range so the scene is never clipped: near is pushed behind the
+  // camera and far well past it, scaled to the distance and visible frustum size.
+  const reach = (currentDistance + frustumHeight) * 2
+
+  camera.position.copy(target).add(presetPosition.multiplyScalar(scale))
+  camera.left = -halfH * aspect
+  camera.right = halfH * aspect
+  camera.top = halfH
+  camera.bottom = -halfH
+  camera.near = -reach
+  camera.far = reach
+  camera.lookAt(target)
+  camera.updateProjectionMatrix()
+  if (orbit) orbit.update()
+}
+
+const applyPerspectivePreset = (cam: THREE.PerspectiveCamera, preset: CameraPresetConfig): void => {
+  if (preset.fov !== undefined) cam.fov = preset.fov
+  if (preset.near !== undefined) cam.near = preset.near
+  if (preset.far !== undefined) cam.far = preset.far
+  cam.updateProjectionMatrix()
+}
+
 const applyPerspectiveProperty = (
   path: string,
   value: unknown,
@@ -109,6 +160,115 @@ const applyOrbitProperty = (path: string, value: unknown, orbit: OrbitControls):
   } else if (path === 'orbitEnabled') {
     setOrbitEnabled(orbit, value as boolean)
   }
+}
+
+const Y_AXIS = new THREE.Vector3(0, 1, 0)
+const rotationOffset = new THREE.Vector3()
+
+const TRANSITION_DURATION_MS = 500
+
+interface CameraSnapshot {
+  position: THREE.Vector3
+  target: THREE.Vector3
+  fov: number
+  left: number
+  right: number
+  top: number
+  bottom: number
+  near: number
+  far: number
+}
+
+const snapshotCamera = (
+  camera: THREE.Camera,
+  orbit: OrbitControls | null | undefined
+): CameraSnapshot => {
+  const persp = camera as THREE.PerspectiveCamera
+  const ortho = camera as THREE.OrthographicCamera
+  return {
+    position: camera.position.clone(),
+    target: (orbit ? orbit.target : ORIGIN).clone(),
+    fov: persp.fov ?? DEFAULT_FOV,
+    left: ortho.left ?? 0,
+    right: ortho.right ?? 0,
+    top: ortho.top ?? 0,
+    bottom: ortho.bottom ?? 0,
+    near: camera instanceof THREE.OrthographicCamera ? ortho.near : (persp.near ?? DEFAULT_NEAR),
+    far: camera instanceof THREE.OrthographicCamera ? ortho.far : (persp.far ?? DEFAULT_FAR)
+  }
+}
+
+const applyCameraSnapshot = (
+  camera: THREE.Camera,
+  orbit: OrbitControls | null | undefined,
+  from: CameraSnapshot,
+  to: CameraSnapshot,
+  amount: number
+): void => {
+  camera.position.lerpVectors(from.position, to.position, amount)
+  if (camera instanceof THREE.PerspectiveCamera) {
+    camera.fov = THREE.MathUtils.lerp(from.fov, to.fov, amount)
+  } else if (camera instanceof THREE.OrthographicCamera) {
+    camera.left = THREE.MathUtils.lerp(from.left, to.left, amount)
+    camera.right = THREE.MathUtils.lerp(from.right, to.right, amount)
+    camera.top = THREE.MathUtils.lerp(from.top, to.top, amount)
+    camera.bottom = THREE.MathUtils.lerp(from.bottom, to.bottom, amount)
+  }
+  camera.updateProjectionMatrix()
+  if (orbit) {
+    orbit.target.lerpVectors(from.target, to.target, amount)
+    orbit.update()
+  } else {
+    camera.lookAt(to.target)
+  }
+}
+
+const tweenState: { id: number | null } = { id: null }
+
+/**
+ * Smoothly animates a camera from one snapshot to another over a fixed duration.
+ * @param camera - The camera to animate
+ * @param orbit - Optional orbit controls kept in sync during the tween
+ * @param from - The starting camera snapshot
+ * @param to - The destination camera snapshot
+ * @param onFrame - Called each frame after the camera is updated
+ */
+const tweenCamera = (
+  camera: THREE.Camera,
+  orbit: OrbitControls | null | undefined,
+  from: CameraSnapshot,
+  to: CameraSnapshot,
+  onFrame: () => void
+): void => {
+  if (tweenState.id !== null) cancelAnimationFrame(tweenState.id)
+  const startTime = performance.now()
+  const step = () => {
+    const progress = Math.min(1, (performance.now() - startTime) / TRANSITION_DURATION_MS)
+    const eased = progress < 0.5 ? 2 * progress * progress : 1 - (-2 * progress + 2) ** 2 / 2
+    applyCameraSnapshot(camera, orbit, from, to, eased)
+    onFrame()
+    tweenState.id = progress < 1 ? requestAnimationFrame(step) : null
+  }
+  tweenState.id = requestAnimationFrame(step)
+}
+
+/**
+ * Orbits the camera around the target on the world Y axis by the given angle.
+ * @param camera - The camera to reposition
+ * @param orbit - Optional orbit controls supplying the pivot target
+ * @param degrees - Rotation angle in degrees (positive is counter-clockwise)
+ */
+const rotateCameraAroundY = (
+  camera: THREE.Camera,
+  orbit: OrbitControls | null | undefined,
+  degrees: number
+): void => {
+  const target = orbit ? orbit.target : ORIGIN
+  rotationOffset.subVectors(camera.position, target)
+  rotationOffset.applyAxisAngle(Y_AXIS, THREE.MathUtils.degToRad(degrees))
+  camera.position.copy(target).add(rotationOffset)
+  camera.lookAt(target)
+  if (orbit) orbit.update()
 }
 
 /**
@@ -147,6 +307,12 @@ export const registerCameraProperties = ({
   const applyCameraUpdate = (path: string, value: unknown) => {
     if (activeCamera instanceof THREE.PerspectiveCamera) {
       applyPerspectiveProperty(path, value, activeCamera)
+    } else if (
+      activeCamera instanceof THREE.OrthographicCamera &&
+      (path === 'near' || path === 'far')
+    ) {
+      activeCamera[path] = value as number
+      activeCamera.updateProjectionMatrix()
     }
     if (path === 'position') {
       const pos = value as Vec3
@@ -256,6 +422,24 @@ const registerCameraPresetHandlers = ({
     return buildOrthoToPersp(active as THREE.OrthographicCamera, orbit, aspect)
   }
 
+  const syncConfig = (active: THREE.Camera) => {
+    cameraConfig.value = { ...cameraConfig.value, ...buildDefaults(active) }
+  }
+
+  /** Applies a same-type camera change, tweening between states when transitions are enabled. */
+  const applyWithOptionalTween = (active: THREE.Camera, applyChange: () => void) => {
+    if (!cameraConfigStore.transitionEnabled) {
+      applyChange()
+      syncConfig(active)
+      return
+    }
+    const from = snapshotCamera(active, orbit)
+    applyChange()
+    const to = snapshotCamera(active, orbit)
+    applyCameraSnapshot(active, orbit, from, to, 0)
+    tweenCamera(active, orbit, from, to, () => syncConfig(active))
+  }
+
   const initialPreset =
     cameraType === 'perspective' ? CameraPreset.Perspective : CameraPreset.Orthographic
   const supportedCameraTypes: Array<'perspective' | 'orthographic'> = setCamera
@@ -281,50 +465,36 @@ const registerCameraPresetHandlers = ({
     {
       onPresetChange: (_slotId, preset) => {
         const presetConfig = cameraPresets[preset]
-        const targetType = presetConfig?.type as 'perspective' | 'orthographic' | undefined
+        if (!presetConfig) return
+        const targetType = presetConfig.type as 'perspective' | 'orthographic'
         const aspect = getAspect()
+        const isTypeSwitch = targetType !== getCameraType()
 
-        if (targetType && targetType !== getCameraType()) {
+        const applyPreset = (camera: THREE.Camera) => {
+          if (camera instanceof THREE.OrthographicCamera) {
+            applyOrthographicPreset(camera, presetConfig, orbit, aspect)
+          } else if (camera instanceof THREE.PerspectiveCamera) {
+            applyPerspectivePreset(camera, presetConfig)
+          }
+        }
+
+        if (isTypeSwitch) {
           if (!setCamera) return
-          const newCamera = buildNewCamera(targetType)
-          setCameraPreset(
-            newCamera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
-            preset,
-            aspect
-          )
-          setCamera(newCamera)
-          setActiveCamera(newCamera)
+          const active = buildNewCamera(targetType)
+          setCamera(active)
+          setActiveCamera(active)
           setCameraType(targetType)
-          cameraConfig.value = { ...cameraConfig.value, ...buildDefaults(newCamera) }
+          applyPreset(active)
+          syncConfig(active)
           return
         }
 
-        if (presetConfig) {
-          const active = getActiveCamera()
-          if (active instanceof THREE.OrthographicCamera) {
-            setCameraPreset(active, preset, aspect)
-          } else if (active instanceof THREE.PerspectiveCamera) {
-            if (presetConfig.fov !== undefined) {
-              active.fov = presetConfig.fov
-              active.updateProjectionMatrix()
-            }
-            if (presetConfig.near !== undefined) {
-              active.near = presetConfig.near
-              active.updateProjectionMatrix()
-            }
-            if (presetConfig.far !== undefined) {
-              active.far = presetConfig.far
-              active.updateProjectionMatrix()
-            }
-          }
-          const updates: Record<string, unknown> = {
-            position: { x: active.position.x, y: active.position.y, z: active.position.z }
-          }
-          if (presetConfig.fov !== undefined) updates.fov = presetConfig.fov
-          if (presetConfig.near !== undefined) updates.near = presetConfig.near
-          if (presetConfig.far !== undefined) updates.far = presetConfig.far
-          cameraConfig.value = { ...cameraConfig.value, ...updates }
-        }
+        const active = getActiveCamera()
+        applyWithOptionalTween(active, () => applyPreset(active))
+      },
+      onRotate: (_slotId, degrees) => {
+        const active = getActiveCamera()
+        applyWithOptionalTween(active, () => rotateCameraAroundY(active, orbit, degrees))
       },
       onSlotActivate: () => {},
       onCleanup: () => {}

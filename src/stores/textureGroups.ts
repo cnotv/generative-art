@@ -14,6 +14,7 @@ export interface TextureGroup {
   textures: TextureItem[]
   hidden?: boolean
   showWireframe?: boolean
+  instanceCount?: number
 }
 
 export interface GroupConfig {

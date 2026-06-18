@@ -55,7 +55,12 @@ const group = computed(() => textureStore.groups.find((g) => g.id === props.grou
     >
       <template #default="{ hovered }">
         <IconPreview :icon="Box" color="text-gray-400" size="sm" />
-        <span class="element-group__label">{{ label }}</span>
+        <span class="element-group__label">
+          {{ label
+          }}<template v-if="group?.instanceCount !== undefined">
+            ({{ group.instanceCount }})</template
+          >
+        </span>
         <div
           v-if="group"
           class="element-group__actions"

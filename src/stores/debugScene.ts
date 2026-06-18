@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import type { CoordinateTuple } from '@webgamekit/threejs'
 import { usePerfMetricsStore } from './perfMetrics'
 import { useElementPropertiesStore, type ElementPropertiesConfig } from './elementProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -47,10 +48,41 @@ export interface DebugSceneHandlers {
   onRemove: (name: string) => void
 }
 
+export interface InstancedGroupHandlers {
+  onAdd: (position: CoordinateTuple) => void
+  onDelete: (index: number) => void
+  onUpdate: (index: number, position: CoordinateTuple) => void
+  onToggleVisibility: (hidden: boolean) => void
+  onRemove: () => void
+}
+
+export interface InstancedGroup {
+  id: string
+  label: string
+  positions: CoordinateTuple[]
+  hidden?: boolean
+  handlers: InstancedGroupHandlers
+}
+
+export interface SpawnGroupHandlers {
+  onToggleVisibility: (hidden: boolean) => void
+  onRemove: () => void
+}
+
+export interface SpawnGroup {
+  id: string
+  label: string
+  count: number
+  hidden?: boolean
+  handlers: SpawnGroupHandlers
+}
+
 export const useDebugSceneStore = defineStore('debugScene', () => {
   const sceneElements = ref<SceneElement[]>([])
   const sceneGroups = ref<Record<string, string>>({})
   const spawns = ref<SpawnEntry[]>([])
+  const instancedGroups = ref<InstancedGroup[]>([])
+  const spawnGroups = ref<SpawnGroup[]>([])
   const handlers = ref<DebugSceneHandlers | null>(null)
   const spawnHandlers = ref<Record<string, () => void>>({})
 
@@ -148,6 +180,8 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     sceneElements.value = []
     sceneGroups.value = {}
     spawns.value = []
+    instancedGroups.value = []
+    spawnGroups.value = []
     handlers.value = null
     usePerfMetricsStore().clearRenderer()
   }
@@ -164,6 +198,64 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     removeSceneElement(name)
   }
 
+  const addInstancedGroup = (group: InstancedGroup) => {
+    const existing = instancedGroups.value.find((g) => g.id === group.id)
+    const merged = { ...group, hidden: group.hidden ?? existing?.hidden ?? false }
+    instancedGroups.value = [...instancedGroups.value.filter((g) => g.id !== group.id), merged]
+  }
+
+  const removeInstancedGroup = (id: string) => {
+    const group = instancedGroups.value.find((g) => g.id === id)
+    group?.handlers.onRemove()
+    instancedGroups.value = instancedGroups.value.filter((g) => g.id !== id)
+  }
+
+  const toggleInstancedGroupVisibility = (id: string) => {
+    instancedGroups.value = instancedGroups.value.map((g) => {
+      if (g.id !== id) return g
+      const hidden = !g.hidden
+      g.handlers.onToggleVisibility(hidden)
+      return { ...g, hidden }
+    })
+  }
+
+  const updateInstancedGroupPosition = (id: string, index: number, position: CoordinateTuple) => {
+    instancedGroups.value = instancedGroups.value.map((g) =>
+      g.id !== id
+        ? g
+        : {
+            ...g,
+            positions: g.positions.map((p, i) => (i === index ? position : p))
+          }
+    )
+  }
+
+  const addSpawnGroup = (group: SpawnGroup) => {
+    const existing = spawnGroups.value.find((g) => g.id === group.id)
+    const merged = { ...group, hidden: group.hidden ?? existing?.hidden ?? false }
+    spawnGroups.value = [...spawnGroups.value.filter((g) => g.id !== group.id), merged]
+  }
+
+  const removeSpawnGroup = (id: string) => {
+    const group = spawnGroups.value.find((g) => g.id === id)
+    group?.handlers.onRemove()
+    spawnGroups.value = spawnGroups.value.filter((g) => g.id !== id)
+    useElementPropertiesStore().unregisterElementProperties(id)
+  }
+
+  const toggleSpawnGroupVisibility = (id: string) => {
+    spawnGroups.value = spawnGroups.value.map((g) => {
+      if (g.id !== id) return g
+      const hidden = !g.hidden
+      g.handlers.onToggleVisibility(hidden)
+      return { ...g, hidden }
+    })
+  }
+
+  const setSpawnGroupCount = (id: string, count: number) => {
+    spawnGroups.value = spawnGroups.value.map((g) => (g.id === id ? { ...g, count } : g))
+  }
+
   const moveElementAfter = (name: string, afterName: string) => {
     const index = sceneElements.value.findIndex((e) => e.name === name)
     const afterIndex = sceneElements.value.findIndex((e) => e.name === afterName)
@@ -178,10 +270,20 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     sceneElements,
     sceneGroups,
     spawns,
+    instancedGroups,
+    spawnGroups,
     setSceneElements,
     addSceneElement,
     removeSceneElement,
     registerSceneElements,
+    addInstancedGroup,
+    removeInstancedGroup,
+    toggleInstancedGroupVisibility,
+    updateInstancedGroupPosition,
+    addSpawnGroup,
+    removeSpawnGroup,
+    toggleSpawnGroupVisibility,
+    setSpawnGroupCount,
     registerSpawn,
     unregisterSpawn,
     toggleSpawnVisibility,

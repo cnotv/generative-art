@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
@@ -29,6 +29,7 @@ import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import type { InstancedGroupHandlers } from '@/stores/debugScene'
 
 const statsElement = ref(null)
 const canvas = ref(null)
@@ -88,24 +89,43 @@ const character = {
 const GRID_UNIT = 30
 const SPAWN_HEIGHT = GRID_UNIT * 3
 const GROUND_HEIGHT = 0
+const GROUND_SIZE = 2000
 const CUBE_STEP_HEIGHT = 0.5
 const CUBE_CLUSTER_X_FAR = -2
 const WALL_BANG_CUBE_Z_OFFSET = 5
+
+const BRICK_GRID_POSITIONS: [number, number, number][] = [
+  [0, 0, 0],
+  [0, 0, 1],
+  [0, 0, 2],
+  [0, 1, 2],
+  [-1, 0, 2],
+  [CUBE_CLUSTER_X_FAR, 0, 0],
+  [CUBE_CLUSTER_X_FAR, 0, 1],
+  [CUBE_CLUSTER_X_FAR, 0, 2],
+  [1, 0, WALL_BANG_CUBE_Z_OFFSET]
+]
+
+const gridToScene = ([x, y, z]: [number, number, number]): CoordinateTuple => [
+  GRID_UNIT * x,
+  GRID_UNIT * y - 1,
+  -GRID_UNIT * z
+]
 const GOOMBA_SCALE = 0.3
 const GOOMBA_1_SPAWN_Z = 22
 const GOOMBA_2_SPAWN_X = 68
 const GOOMBA_4_SPAWN_X = -GRID_UNIT * 2
 const COIN_SCALE = 20
-const BALL_SPAWN_PAUSE_FRAMES = 50
+const BALL_SPAWN_PAUSE_FRAMES = 100
 const CLOUD_CENTER_HEIGHT = 200
 const CLOUD_FIELD_SIZE = 600
 const CLOUD_BASE_WIDTH = 80
 const CLOUD_BASE_THICKNESS = 0.001
 const CLOUD_BASE_DEPTH = 40
 const CLOUD_WIDTH_VARIATION = 20
-const CAMERA_POSITION_X = -50.12
-const CAMERA_POSITION_Y = 102.3
-const CAMERA_POSITION_Z = 199.28
+const CAMERA_POSITION_X = -167.87
+const CAMERA_POSITION_Y = 225.02
+const CAMERA_POSITION_Z = 95.43
 const CAMERA_ORBIT_TARGET_X = -44.66
 const CAMERA_ORBIT_TARGET_Y = 77.17
 const CAMERA_ORBIT_TARGET_Z = -27.78
@@ -343,9 +363,9 @@ const BALL_NOISE_TEXTURE_SIZE = 64
 const BALL_NOISE_REPEAT_X = 8
 const BALL_NOISE_REPEAT_Y = 8
 const BALL_NOISE_DOT_THRESHOLD = 0.82
-const BALL_COLOR = 0x888888
-const BALL_ROUGHNESS = 0.15
-const BALL_METALNESS = 0.95
+const BALL_COLOR = 0xffffff
+const BALL_ROUGHNESS = 1
+const BALL_METALNESS = 1
 const BALL_CLEARCOAT = 0.8
 const BALL_CLEARCOAT_ROUGHNESS = 0.08
 const BALL_FRICTION = 0.8
@@ -409,34 +429,97 @@ const applyBallGrain = (mesh: THREE.Mesh): THREE.Mesh => {
   return mesh
 }
 
-const setupStaticObjects = ({ scene, world }: SceneWorld) => {
-  const cubes = [
-    [0, 0, 0],
-    [0, 0, 1],
-    [0, 0, 2],
-    [0, 1, 2],
-    [-1, 0, 2],
-    [CUBE_CLUSTER_X_FAR, 0, 0],
-    [CUBE_CLUSTER_X_FAR, 0, 1],
-    [CUBE_CLUSTER_X_FAR, 0, 2],
-    [1, 0, WALL_BANG_CUBE_Z_OFFSET]
-  ].map(([x, y, z], index) =>
-    getCube(scene, world, {
-      name: `brick-${index + 1}`,
-      size: [GRID_UNIT, GRID_UNIT, GRID_UNIT],
-      restitution: 0,
-      position: [GRID_UNIT * x, GRID_UNIT * y - 1, -GRID_UNIT * z],
-      type: 'fixed',
-      texture: brickTexture,
-      boundary: 0.5,
-      color: 0x888888
+const makeBrick = (
+  scene: SceneWorld['scene'],
+  world: SceneWorld['world'],
+  position: CoordinateTuple,
+  index: number
+) =>
+  getCube(scene, world, {
+    name: `brick-${index + 1}`,
+    size: [GRID_UNIT, GRID_UNIT, GRID_UNIT],
+    restitution: 0,
+    position,
+    type: 'fixed',
+    texture: brickTexture,
+    boundary: 0.5,
+    color: 0x888888
+  })
+
+interface BricksGroupContext {
+  scene: SceneWorld['scene']
+  world: SceneWorld['world']
+  cubes: ReturnType<typeof makeBrick>[]
+  brickPositions: CoordinateTuple[]
+  elements: ComplexModel[]
+}
+
+const isGroupedPanelElement = (element: { name?: string }) =>
+  (element.name?.startsWith('brick-') || element.name?.startsWith('ball')) ?? false
+
+const registerBricksGroup = ({
+  scene,
+  world,
+  cubes,
+  brickPositions,
+  elements
+}: BricksGroupContext): void => {
+  const sync = () =>
+    useDebugSceneStore().addInstancedGroup({
+      id: 'bricks',
+      label: 'Bricks',
+      positions: [...brickPositions],
+      handlers
     })
-  )
+
+  const handlers: InstancedGroupHandlers = {
+    onAdd: (position) => {
+      const newBrick = makeBrick(scene, world, position, cubes.length)
+      cubes.push(newBrick)
+      brickPositions.push(position)
+      elements.push(newBrick as unknown as ComplexModel)
+      sync()
+    },
+    onDelete: (index) => {
+      const [removed] = cubes.splice(index, 1)
+      brickPositions.splice(index, 1)
+      const elementIndex = elements.indexOf(removed as unknown as ComplexModel)
+      if (elementIndex !== -1) elements.splice(elementIndex, 1)
+      removeElements(world, [removed] as unknown as ComplexModel[])
+      sync()
+    },
+    onUpdate: (index, position) => {
+      const brick = cubes[index]
+      brick.userData.body.setTranslation({ x: position[0], y: position[1], z: position[2] }, true)
+      brickPositions[index] = position
+    },
+    onToggleVisibility: (hidden) => {
+      cubes.forEach((brick) => {
+        brick.visible = !hidden
+      })
+    },
+    onRemove: () => {
+      removeElements(world, cubes as unknown as ComplexModel[])
+      cubes.forEach((brick) => {
+        const elementIndex = elements.indexOf(brick as unknown as ComplexModel)
+        if (elementIndex !== -1) elements.splice(elementIndex, 1)
+      })
+      cubes.length = 0
+      brickPositions.length = 0
+    }
+  }
+
+  sync()
+}
+
+const setupStaticObjects = ({ scene, world }: SceneWorld) => {
+  const brickPositions = BRICK_GRID_POSITIONS.map(gridToScene)
+  const cubes = brickPositions.map((position, index) => makeBrick(scene, world, position, index))
   const coin = getCoinBlock(scene, world, { position: [0, SPAWN_HEIGHT, -GRID_UNIT * 2] })
   coin.name = 'coin-block'
   coin.scale.setScalar(COIN_SCALE)
   const ballOptions = {
-    size: 10,
+    size: 8,
     showHelper: false,
     weight: 150,
     restitution: BALL_RESTITUTION,
@@ -475,7 +558,144 @@ const setupStaticObjects = ({ scene, world }: SceneWorld) => {
     boundary: 0.5,
     color: 0x888888
   })
-  return { coin, cubes, balls, movingCube, ballOptions }
+  return { coin, cubes, brickPositions, balls, movingCube, ballOptions }
+}
+
+type BallOptions = ReturnType<typeof setupStaticObjects>['ballOptions']
+
+interface BallSpawnContext {
+  scene: SceneWorld['scene']
+  world: SceneWorld['world']
+  ballOptions: BallOptions
+  elements: ComplexModel[]
+  onCountChange: (count: number) => void
+}
+
+const isBall = (element: ComplexModel) => element.name?.startsWith('ball') ?? false
+
+const isBallOutOfBounds = (element: ComplexModel) =>
+  isBall(element) &&
+  (Math.abs(element.position.x) > GROUND_SIZE || Math.abs(element.position.y) > GROUND_SIZE)
+
+/** Spawns a new ball each interval and removes any balls that have left the ground bounds */
+const makeBallSpawnAction = ({
+  scene,
+  world,
+  ballOptions,
+  elements,
+  onCountChange
+}: BallSpawnContext): Timeline => {
+  let ballSpawnCounter = 0
+  return {
+    name: 'ball: spawn',
+    interval: [1, BALL_SPAWN_PAUSE_FRAMES] as [number, number],
+    category: 'physics',
+    action: () => {
+      ballSpawnCounter += 1
+      elements.push(
+        applyBallGrain(
+          getBall(scene, world, {
+            ...ballOptions,
+            name: `ball-spawn-${ballSpawnCounter}`,
+            position: [0, SPAWN_HEIGHT, -GRID_UNIT]
+          })
+        ) as unknown as ComplexModel
+      )
+      const outOfBounds = elements.filter(isBallOutOfBounds)
+      if (outOfBounds.length > 0) {
+        removeElements(world, outOfBounds)
+        outOfBounds.forEach((ball) => {
+          const index = elements.indexOf(ball)
+          if (index !== -1) elements.splice(index, 1)
+        })
+      }
+      onCountChange(elements.filter(isBall).length)
+    }
+  }
+}
+
+interface BallSpawnGroupContext {
+  world: SceneWorld['world']
+  elements: ComplexModel[]
+  ballOptions: BallOptions
+  timelineManager: ReturnType<typeof createTimelineManager>
+  spawnActionId: string
+}
+
+const BALL_SPAWN_GROUP_ID = 'balls'
+
+const BALL_SPAWN_SCHEMA = {
+  spawnInterval: { min: 1, max: 200, step: 1, label: 'Spawn interval (frames)' },
+  size: { min: 1, max: 30, step: 1, label: 'Size' },
+  color: { color: true, label: 'Color' },
+  roughness: { min: 0, max: 1, step: 0.01, label: 'Roughness' },
+  metalness: { min: 0, max: 1, step: 0.01, label: 'Metalness' }
+}
+
+/** Registers the balls spawn group: a single panel entry exposing the spawn timer
+ * and shared mesh material, applying edits to every live ball and future spawns. */
+const registerBallSpawnGroup = ({
+  world,
+  elements,
+  ballOptions,
+  timelineManager,
+  spawnActionId
+}: BallSpawnGroupContext): void => {
+  const debugSceneStore = useDebugSceneStore()
+  const config = reactive<Record<string, number>>({
+    spawnInterval: BALL_SPAWN_PAUSE_FRAMES,
+    size: ballOptions.size,
+    color: ballOptions.color,
+    roughness: ballOptions.roughness,
+    metalness: ballOptions.metalness
+  })
+
+  const forEachBallMaterial = (apply: (material: THREE.MeshPhysicalMaterial) => void) =>
+    elements
+      .filter(isBall)
+      .forEach((ball) =>
+        apply((ball as unknown as THREE.Mesh).material as THREE.MeshPhysicalMaterial)
+      )
+
+  const updateValue = (path: string, value: unknown) => {
+    config[path] = value as number
+    if (path === 'spawnInterval') {
+      timelineManager.updateAction(spawnActionId, { interval: [1, value as number] })
+      return
+    }
+    ;(ballOptions as unknown as Record<string, number>)[path] = value as number
+    if (path === 'color') forEachBallMaterial((m) => m.color.set(value as number))
+    else if (path === 'roughness') forEachBallMaterial((m) => (m.roughness = value as number))
+    else if (path === 'metalness') forEachBallMaterial((m) => (m.metalness = value as number))
+  }
+
+  useElementPropertiesStore().registerElementProperties(BALL_SPAWN_GROUP_ID, {
+    title: 'Balls',
+    schema: BALL_SPAWN_SCHEMA,
+    getValue: (path: string) => config[path],
+    updateValue
+  })
+
+  debugSceneStore.addSpawnGroup({
+    id: BALL_SPAWN_GROUP_ID,
+    label: 'Balls',
+    count: elements.filter(isBall).length,
+    handlers: {
+      onToggleVisibility: (hidden) =>
+        elements.filter(isBall).forEach((ball) => {
+          ball.visible = !hidden
+        }),
+      onRemove: () => {
+        const balls = elements.filter(isBall)
+        removeElements(world, balls)
+        balls.forEach((ball) => {
+          const index = elements.indexOf(ball)
+          if (index !== -1) elements.splice(index, 1)
+        })
+        timelineManager.removeAction(spawnActionId)
+      }
+    }
+  })
 }
 
 const loadGoombas = async ({ scene, world }: SceneWorld) => {
@@ -534,7 +754,10 @@ const buildTimeline = async ({
   TimelineTools,
   'scene' | 'world' | 'getDelta' | 'animate' | 'getSimulationFrame' | 'getFrameRate'
 >): Promise<void> => {
-  const { coin, cubes, balls, movingCube, ballOptions } = setupStaticObjects({ scene, world })
+  const { coin, cubes, brickPositions, balls, movingCube, ballOptions } = setupStaticObjects({
+    scene,
+    world
+  })
   const [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2] = await loadGoombas({
     scene,
     world
@@ -583,23 +806,31 @@ const buildTimeline = async ({
     category: 'visual-effects',
     action: () => (coin.rotation.z += 0.05)
   })
-  timelineManager.addAction({
-    name: 'ball: spawn',
-    interval: [1, BALL_SPAWN_PAUSE_FRAMES] as [number, number],
-    category: 'physics',
-    action: () =>
-      elements.push(
-        applyBallGrain(
-          getBall(scene, world, { ...ballOptions, position: [0, SPAWN_HEIGHT, -GRID_UNIT] })
-        ) as unknown as ComplexModel
-      )
-  })
+  const ballSpawnActionId = timelineManager.addAction(
+    makeBallSpawnAction({
+      scene,
+      world,
+      ballOptions,
+      elements,
+      onCountChange: (count) => debugSceneStore.setSpawnGroupCount(BALL_SPAWN_GROUP_ID, count)
+    })
+  )
   timelinePanelStore.register({
     getTimeline: () => timelineManager.getTimeline(),
     getCurrentFrame: getSimulationFrame,
     getFrameRate,
     setActionEnabled: (id, enabled) => timelineManager.updateAction(id, { enabled })
   })
+
+  registerBricksGroup({ scene, world, cubes, brickPositions, elements })
+  registerBallSpawnGroup({
+    world,
+    elements,
+    ballOptions,
+    timelineManager,
+    spawnActionId: ballSpawnActionId
+  })
+
   animate({
     beforeTimeline: () => bindAnimatedElements(elements, world, getDelta()),
     timeline: timelineManager,
@@ -638,8 +869,8 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
           CAMERA_ORBIT_TARGET_Z
         )
       },
-      ground: { size: 100000, color: 0x227755 },
-      sky: { color: 0x8ecae6, size: 700 },
+      ground: { size: GROUND_SIZE, color: 0x227755 },
+      sky: { color: 0x8ecae6, size: 1000 },
       lights: {
         ambient: { intensity: 2 },
         directional: {
@@ -654,9 +885,10 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     defineSetup: async () =>
       buildTimeline({ scene, world, getDelta, animate, getSimulationFrame, getFrameRate })
   })
+  const panelElements = elements.filter((e) => !isGroupedPanelElement(e as { name?: string }))
   debugSceneStore.registerSceneElements(
     camera,
-    elements,
+    panelElements,
     {
       onRemove: (name) => {
         const sceneObject = elements.find((e) => (e as ComplexModel).name === name) as

@@ -2,7 +2,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import { Slider } from '@/components/ui/slider'
-import { Checkbox } from '@/components/ui/checkbox'
+import IconButton from '@/components/IconButton.vue'
+import { Pause, Play } from 'lucide-vue-next'
 import { usePanelsStore } from '@/stores/panels'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { getTimelineChartBars, type Timeline } from '@webgamekit/animation'
@@ -158,13 +159,17 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
           :step="1"
           @update:model-value="handleWindowChange"
         />
-        <label class="timeline-panel__pause-label">
-          <Checkbox
-            :model-value="timelinePanelStore.isPaused"
-            @update:model-value="timelinePanelStore.setPaused"
-          />
-          <span>Pause animation</span>
-        </label>
+        <div class="timeline-panel__pause-label">
+          <IconButton
+            size="sm"
+            :title="timelinePanelStore.isPaused ? 'Resume animation' : 'Pause animation'"
+            @click="timelinePanelStore.setPaused(!timelinePanelStore.isPaused)"
+          >
+            <Play v-if="timelinePanelStore.isPaused" />
+            <Pause v-else />
+          </IconButton>
+          <span>{{ timelinePanelStore.isPaused ? 'Paused' : 'Playing' }}</span>
+        </div>
       </div>
 
       <div class="timeline-panel__timeline">
@@ -172,19 +177,23 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
           class="timeline-panel__gutter"
           :style="{ height: `calc(var(--spacing-6) * ${laneCount})` }"
         >
-          <label
+          <div
             v-for="row in lanes"
             :key="row.lane"
             class="timeline-panel__row-toggle"
             :style="{ top: `calc(var(--spacing-6) * ${row.lane})` }"
             :title="row.name"
           >
-            <Checkbox
-              :model-value="row.enabled"
-              @update:model-value="(value: boolean) => handleToggleEnabled(row.action.id, value)"
-            />
+            <IconButton
+              size="xs"
+              :title="row.enabled ? `Disable ${row.name}` : `Enable ${row.name}`"
+              @click="handleToggleEnabled(row.action.id, !row.enabled)"
+            >
+              <Pause v-if="row.enabled" />
+              <Play v-else />
+            </IconButton>
             <span class="timeline-panel__row-label">{{ row.name }}</span>
-          </label>
+          </div>
         </div>
         <div
           class="timeline-panel__track"
@@ -247,14 +256,14 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
         </div>
         <div class="timeline-panel__detail-row">
           <span class="timeline-panel__detail-label">Enabled</span>
-          <label class="timeline-panel__enabled-toggle">
-            <Checkbox
-              :model-value="isActionEnabled(selectedAction)"
-              @update:model-value="
-                (value: boolean) => handleToggleEnabled(selectedAction?.id, value)
-              "
-            />
-          </label>
+          <IconButton
+            size="xs"
+            :title="isActionEnabled(selectedAction) ? 'Disable action' : 'Enable action'"
+            @click="handleToggleEnabled(selectedAction?.id, !isActionEnabled(selectedAction))"
+          >
+            <Pause v-if="isActionEnabled(selectedAction)" />
+            <Play v-else />
+          </IconButton>
         </div>
         <div class="timeline-panel__detail-row">
           <span class="timeline-panel__detail-label">Priority</span>
@@ -367,12 +376,6 @@ const formatFramesAsSeconds = (frames: number | undefined): string =>
 
 .timeline-panel__bar--disabled {
   opacity: var(--opacity-disabled);
-}
-
-.timeline-panel__enabled-toggle {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
 }
 
 .timeline-panel__bar-label {

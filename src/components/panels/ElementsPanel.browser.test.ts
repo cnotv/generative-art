@@ -141,6 +141,16 @@ const FauxPage = defineComponent({
 
 const getSheetContent = () => document.body.querySelector('.sheet-content')
 
+const findButtonByTitle = (title: string) =>
+  [...(getSheetContent()?.querySelectorAll('button') ?? [])].find(
+    (b) => b.getAttribute('title') === title
+  )
+
+const openAddMenu = async () => {
+  findButtonByTitle('Add element')!.click()
+  await nextTick()
+}
+
 // Shared setup helpers
 const buildRouter = async () => {
   const router = createRouter({
@@ -366,15 +376,13 @@ describe('ElementsPanel - texture upload handler', () => {
       onchange: null as ((e: Event) => void) | null,
       click: vi.fn()
     }
+    await openAddMenu()
+    const textureButton = findButtonByTitle('Add Texture Area')
+    expect(textureButton).toBeDefined()
+
     const spy = vi
       .spyOn(document, 'createElement')
       .mockImplementationOnce(() => mockInput as unknown as HTMLElement)
-
-    const panelContent = getSheetContent()
-    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])].find(
-      (b) => b.getAttribute('title') === 'Add Texture Area'
-    )
-    expect(textureButton).toBeDefined()
 
     textureButton!.click()
     await nextTick()
@@ -409,14 +417,13 @@ describe('ElementsPanel - texture upload handler', () => {
       },
       click: vi.fn()
     }
+    await openAddMenu()
+    const textureButton = findButtonByTitle('Add Texture Area')
+
     vi.spyOn(document, 'createElement').mockImplementationOnce(
       () => mockInput as unknown as HTMLElement
     )
 
-    const panelContent = getSheetContent()
-    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])].find(
-      (b) => b.getAttribute('title') === 'Add Texture Area'
-    )
     textureButton!.click()
     await nextTick()
 
@@ -470,13 +477,13 @@ describe('ElementsPanel - texture upload handler', () => {
       },
       click: vi.fn()
     }
+    await openAddMenu()
+    const textureButton = findButtonByTitle('Add Texture Area')
+
     vi.spyOn(document, 'createElement').mockImplementationOnce(
       () => mockInput as unknown as HTMLElement
     )
 
-    const textureButton = [...(panelContent?.querySelectorAll('button') ?? [])].find(
-      (b) => b.getAttribute('title') === 'Add Texture Area'
-    )
     textureButton!.click()
     await nextTick()
 

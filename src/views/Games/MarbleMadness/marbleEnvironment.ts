@@ -244,7 +244,8 @@ export const setupCloudAreaAsGroup = (
       {
         id: CLOUD_AREA_NAME,
         name: 'Clouds',
-        textures: [{ id: 'cloud-tex', name: 'cloud.png', filename: 'cloud.png', url: cloudUrl }]
+        textures: [{ id: 'cloud-tex', name: 'cloud.png', filename: 'cloud.png', url: cloudUrl }],
+        instanceCount: initialOptions.count
       }
     ]
   })
@@ -291,6 +292,11 @@ export const setupCloudAreaAsGroup = (
     })
     currentObjects.forEach((sceneObject) => {
       sceneObject.userData.textureGroupId = CLOUD_AREA_NAME
+    })
+    textureStore.$patch({
+      groups: textureStore.groups.map((g) =>
+        g.id === CLOUD_AREA_NAME ? { ...g, instanceCount: instances.density } : g
+      )
     })
   }
 
