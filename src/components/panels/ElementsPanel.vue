@@ -8,6 +8,7 @@ import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
 import ElementInstancedGroup from './ElementInstancedGroup.vue'
 import ElementSpawnGroup from './ElementSpawnGroup.vue'
+import ElementPathGroup from './ElementPathGroup.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Box, Camera, CheckSquare, Image, Plus, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
@@ -34,7 +35,7 @@ defineProps<Properties>()
 const emit = defineEmits<Emits>()
 
 const debugSceneStore = useDebugSceneStore()
-const { sceneElements, sceneGroups, spawns, instancedGroups, spawnGroups } =
+const { sceneElements, sceneGroups, spawns, instancedGroups, spawnGroups, paths } =
   storeToRefs(debugSceneStore)
 
 const elementPropertiesStore = useElementPropertiesStore()
@@ -94,6 +95,13 @@ const handleSpawnGroupToggle = (groupId: string) => {
   if (expandedName.value) openElementProperties(groupId)
 }
 
+const handlePathGroupToggle = (pathId: string) => {
+  expandedName.value = expandedName.value === pathId ? null : pathId
+  if (expandedName.value) openElementProperties(pathId)
+}
+
+const pathIds = computed(() => new Set(paths.value.map((p) => p.id)))
+
 type AddElementType = 'camera' | 'mesh' | 'textureArea'
 
 const addMenuOpen = ref(false)
@@ -151,7 +159,8 @@ const hasContent = computed(
     textureStore.groups.length > 0 ||
     spawns.value.length > 0 ||
     instancedGroups.value.length > 0 ||
-    spawnGroups.value.length > 0
+    spawnGroups.value.length > 0 ||
+    paths.value.length > 0
 )
 
 const hasExpandedSchema = computed(
@@ -234,9 +243,12 @@ const hasExpandedSchema = computed(
         <ElementItem
           :element="element"
           :selected="selectedElementName === element.name || expandedName === element.name"
+          :can-enable-path="!!debugSceneStore.enablePathForElement"
+          :has-path="pathIds.has(element.name)"
           @click="handleElementClick(element)"
           @toggle-visibility="debugSceneStore.handleToggleVisibility(element.name)"
           @remove="debugSceneStore.handleRemove(element.name)"
+          @enable-path="debugSceneStore.enablePathForElement(element.name)"
         />
 
         <div
@@ -281,6 +293,15 @@ const hasExpandedSchema = computed(
         :group="group"
         :is-expanded="expandedName === group.id"
         @toggle="handleSpawnGroupToggle(group.id)"
+      />
+
+      <!-- Path groups -->
+      <ElementPathGroup
+        v-for="path in paths"
+        :key="path.id"
+        :path="path"
+        :is-expanded="expandedName === path.id"
+        @toggle="handlePathGroupToggle(path.id)"
       />
 
       <!-- Texture groups -->

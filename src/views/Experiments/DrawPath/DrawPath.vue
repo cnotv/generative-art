@@ -14,6 +14,8 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { toggleObjectVisibility } from '@/utils/threeObjectUpdaters'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { registerLightProperties } from '@/utils/lightProperties'
+import { usePathInteraction } from '@/composables/usePathInteraction'
+import { pathGetEasingMultiplier } from '@/utils/pathEasing'
 
 import {
   sceneSetupConfig,
@@ -58,7 +60,6 @@ import {
   modelFollowApplyContactImpulses,
   modelFollowIsBlockedByFixedObstacle
 } from './helpers/modelFollow'
-import { getEasingSpeedMultiplier } from './helpers/easing'
 
 const route = useRoute()
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
@@ -109,46 +110,14 @@ type SceneState = {
   waypointNodeMat: THREE.MeshBasicMaterial
   /** Sphere meshes shown at each control waypoint when showNodes is true. */
   waypointNodes: THREE.Mesh[]
-  /** Index of the control waypoint currently being dragged, or null. */
-  selectedNodeIndex: number | null
 }
 
 let sceneState: SceneState | null = null
 let animFrameId: number | null = null
 let frameReference = 0
-let isPointerDown = false
 
 const timeline = createTimelineManager()
 let goombaActionId: string | null = null
-
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
-
-// ---------------------------------------------------------------------------
-// Input helpers
-// ---------------------------------------------------------------------------
-
-const getNdcCoords = (
-  event: MouseEvent | TouchEvent,
-  canvasElement: HTMLCanvasElement
-): THREE.Vector2 => {
-  const rect = canvasElement.getBoundingClientRect()
-  const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-  const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
-  return new THREE.Vector2(
-    ((clientX - rect.left) / rect.width) * 2 - 1,
-    -((clientY - rect.top) / rect.height) * 2 + 1
-  )
-}
-
-const raycastToGround = (
-  ndc: THREE.Vector2,
-  camera: THREE.PerspectiveCamera
-): THREE.Vector3 | null => {
-  const raycaster = new THREE.Raycaster()
-  raycaster.setFromCamera(ndc, camera)
-  const target = new THREE.Vector3()
-  return raycaster.ray.intersectPlane(groundPlane, target) ? target : null
-}
 
 // ---------------------------------------------------------------------------
 // Scene helpers
@@ -214,90 +183,42 @@ const clearPath = (): void => {
 }
 
 // ---------------------------------------------------------------------------
-// Pointer / touch interaction (hold to draw, start following on release)
+// Pointer / touch interaction — delegated to usePathInteraction composable
 // ---------------------------------------------------------------------------
 
-const tryAddWaypoint = (event: MouseEvent | TouchEvent): void => {
-  if (!sceneState || !canvas.value) return
-  const ndc = getNdcCoords(event, canvas.value)
-  const worldPos = raycastToGround(ndc, sceneState.camera)
-  if (!worldPos) return
-
-  // Enforce minimum distance between control waypoints
-  const previous = sceneState.controlWaypoints.at(-1)
-  if (previous) {
-    const dx = worldPos.x - previous.x
-    const dz = worldPos.z - previous.z
-    if (Math.hypot(dx, dz) < MIN_WAYPOINT_DISTANCE) return
-  }
-
-  const groundY = getFollowerGroundY()
-  const waypoint: Waypoint = { x: worldPos.x, y: groundY, z: worldPos.z }
-  sceneState.controlWaypoints = [...sceneState.controlWaypoints, waypoint]
-
-  refreshPathVisualization(sceneState)
-}
-
-const onPointerDown = (event: MouseEvent | TouchEvent): void => {
-  if (event instanceof TouchEvent) event.preventDefault()
-  if (!canvas.value) return
-  // When nodes are visible, check for node hit before starting path drawing
-  if (sceneState && reactiveConfig.value.showNodes && sceneState.waypointNodes.length > 0) {
-    const ndc = getNdcCoords(event, canvas.value)
-    const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(ndc, sceneState.camera)
-    const intersects = raycaster.intersectObjects(sceneState.waypointNodes)
-    if (intersects.length > 0) {
-      const index = sceneState.waypointNodes.indexOf(intersects[0].object as THREE.Mesh)
-      if (index !== -1) {
-        sceneState.selectedNodeIndex = index
-        return // Enter node-drag mode; do not draw
-      }
+const pathInteraction = usePathInteraction({
+  canvas,
+  getCamera: () => sceneState?.camera ?? null,
+  groundY: FOLLOWER_GROUND_Y,
+  minWaypointDistance: MIN_WAYPOINT_DISTANCE,
+  onAddWaypoint: ([posX, posY, posZ]) => {
+    if (!sceneState) return
+    const waypoint: Waypoint = { x: posX, y: posY, z: posZ }
+    sceneState.controlWaypoints = [...sceneState.controlWaypoints, waypoint]
+    refreshPathVisualization(sceneState)
+  },
+  onUpdateWaypoint: (index, [posX, posY, posZ]) => {
+    if (!sceneState) return
+    const groundY = getFollowerGroundY()
+    const moved: Waypoint = { x: posX, y: groundY, z: posZ }
+    sceneState.controlWaypoints[index] = moved
+    drawUpdateWaypointNodePosition(sceneState.waypointNodes[index], moved)
+    if (sceneState.controlWaypoints.length >= 2) {
+      sceneState.smoothWaypoints = drawInterpolateWaypoints(sceneState.controlWaypoints)
+      if (sceneState.pathLine) drawRemovePathVisualization(sceneState.scene, sceneState.pathLine)
+      sceneState.pathLine = drawCreatePathVisualization(
+        sceneState.scene,
+        sceneState.controlWaypoints
+      )
+      if (!reactiveConfig.value.showPath) sceneState.pathLine.visible = false
     }
-  }
-  isPointerDown = true
-  clearPath()
-  tryAddWaypoint(event)
-}
-
-const onPointerMove = (event: MouseEvent | TouchEvent): void => {
-  if (event instanceof TouchEvent) event.preventDefault()
-  if (sceneState && sceneState.selectedNodeIndex !== null) {
-    if (!canvas.value) return
-    const ndc = getNdcCoords(event, canvas.value)
-    const worldPos = raycastToGround(ndc, sceneState.camera)
-    if (worldPos) {
-      const groundY = getFollowerGroundY()
-      const moved: Waypoint = { x: worldPos.x, y: groundY, z: worldPos.z }
-      sceneState.controlWaypoints[sceneState.selectedNodeIndex] = moved
-      drawUpdateWaypointNodePosition(sceneState.waypointNodes[sceneState.selectedNodeIndex], moved)
-      // Rebuild smooth path and path line without touching other nodes
-      if (sceneState.controlWaypoints.length >= 2) {
-        sceneState.smoothWaypoints = drawInterpolateWaypoints(sceneState.controlWaypoints)
-        if (sceneState.pathLine) drawRemovePathVisualization(sceneState.scene, sceneState.pathLine)
-        sceneState.pathLine = drawCreatePathVisualization(
-          sceneState.scene,
-          sceneState.controlWaypoints
-        )
-        if (!reactiveConfig.value.showPath) sceneState.pathLine.visible = false
-      }
-    }
-    return
-  }
-  if (isPointerDown) tryAddWaypoint(event)
-}
-
-const onPointerUp = (): void => {
-  if (sceneState && sceneState.selectedNodeIndex !== null) {
-    sceneState.selectedNodeIndex = null
-    if (sceneState.smoothWaypoints.length >= 2) startFollowing(sceneState)
-    return
-  }
-  isPointerDown = false
-  if (sceneState && sceneState.smoothWaypoints.length >= 2) {
-    startFollowing(sceneState)
-  }
-}
+  },
+  onDrawStart: () => clearPath(),
+  onDrawEnd: () => {
+    if (sceneState && sceneState.smoothWaypoints.length >= 2) startFollowing(sceneState)
+  },
+  getNodes: () => sceneState?.waypointNodes ?? []
+})
 
 // ---------------------------------------------------------------------------
 // Mode switching
@@ -485,7 +406,7 @@ const runAnimation = (state: SceneState): void => {
   if (reactiveConfig.value.playing && follower && state.isFollowing && state.followState) {
     const { currentIndex, progress, waypoints } = state.followState
     const t = (currentIndex + progress) / Math.max(1, waypoints.length - 1)
-    const easingMultiplier = getEasingSpeedMultiplier(
+    const easingMultiplier = pathGetEasingMultiplier(
       t,
       reactiveConfig.value.easing as EasingName,
       reactiveConfig.value.easingIntensity
@@ -651,8 +572,7 @@ const init = async (): Promise<void> => {
     obstacles: [],
     waypointNodeGeo,
     waypointNodeMat,
-    waypointNodes: [],
-    selectedNodeIndex: null
+    waypointNodes: []
   }
 
   runAnimation(sceneState!)
@@ -668,13 +588,7 @@ const onResize = (): void => {
 onMounted(async () => {
   setViewPanels({ showConfig: true, showElements: true })
   registerViewConfig(route.name as string, reactiveConfig, configControls, undefined, { clearPath })
-
-  canvas.value?.addEventListener('mousedown', onPointerDown)
-  canvas.value?.addEventListener('mousemove', onPointerMove)
-  canvas.value?.addEventListener('mouseup', onPointerUp)
-  canvas.value?.addEventListener('touchstart', onPointerDown, { passive: false })
-  canvas.value?.addEventListener('touchmove', onPointerMove, { passive: false })
-  canvas.value?.addEventListener('touchend', onPointerUp)
+  pathInteraction.mount()
   window.addEventListener('resize', onResize)
   await init()
 })
@@ -686,12 +600,7 @@ onUnmounted(() => {
   clearAllElementProperties()
   sceneState?.waypointNodeGeo.dispose()
   sceneState?.waypointNodeMat.dispose()
-  canvas.value?.removeEventListener('mousedown', onPointerDown)
-  canvas.value?.removeEventListener('mousemove', onPointerMove)
-  canvas.value?.removeEventListener('mouseup', onPointerUp)
-  canvas.value?.removeEventListener('touchstart', onPointerDown)
-  canvas.value?.removeEventListener('touchmove', onPointerMove)
-  canvas.value?.removeEventListener('touchend', onPointerUp)
+  pathInteraction.unmount()
   window.removeEventListener('resize', onResize)
   unregisterViewConfig(route.name as string)
   clearViewPanels()
