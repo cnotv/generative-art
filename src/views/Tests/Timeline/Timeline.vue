@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
@@ -36,10 +36,23 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
-import type { InstancedGroupHandlers } from '@/stores/debugScene'
+import type { InstancedGroupHandlers, PathHandlers } from '@/stores/debugScene'
+import { usePathInteraction } from '@/composables/usePathInteraction'
+import {
+  pathCreateVisualization,
+  pathRemoveVisualization,
+  pathInterpolateWaypoints,
+  pathCreateWaypointNode,
+  pathRemoveWaypointNodes,
+  pathUpdateWaypointNodePosition
+} from '@/utils/pathVisualization'
+import { pathAdvanceMesh } from '@/utils/pathMeshFollow'
+import { pathGetEasingMultiplier } from '@/utils/pathEasing'
+import type { PathFollowState, Waypoint } from '@webgamekit/logic'
 
 const statsElement = ref(null)
 const canvas = ref(null)
+const canvasReference = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
 
 const loadingVisible = ref(true)
@@ -57,6 +70,61 @@ const textureGroupsStore = useTextureGroupsStore()
 
 let initInstance: () => void
 let cleanupScene: (() => void) | undefined
+let cleanupPaths: (() => void) | undefined
+
+const PATH_NODE_SIZE = 0.4
+
+/** Per-path follow state ticked inside beforeTimeline each frame. */
+interface ActivePathTick {
+  id: string
+  mesh: THREE.Object3D
+  nodeGeo: THREE.BoxGeometry
+  nodeMat: THREE.MeshBasicMaterial
+  pathLine: THREE.Group | null
+  waypointNodes: THREE.Mesh[]
+  smoothWaypoints: Waypoint[]
+  followState: PathFollowState | null
+  handlers: PathTickHandlers
+}
+
+interface PathTickHandlers {
+  onReset: () => void
+  onRemove: () => void
+}
+
+const activePathTicks: ActivePathTick[] = []
+
+const tickPaths = (getDelta: () => number): void => {
+  const store = useDebugSceneStore()
+  activePathTicks.forEach((tick) => {
+    const entry = store.paths.find((p) => p.id === tick.id)
+    if (!entry || !entry.config.playing || !tick.followState) return
+    const { currentIndex, progress, waypoints } = tick.followState
+    const t = (currentIndex + progress) / Math.max(1, waypoints.length - 1)
+    const easingMultiplier = pathGetEasingMultiplier(
+      t,
+      entry.config.easing as Parameters<typeof pathGetEasingMultiplier>[1],
+      entry.config.easingIntensity
+    )
+    const result = pathAdvanceMesh(
+      tick.mesh,
+      tick.followState,
+      entry.config.speed * easingMultiplier,
+      getDelta()
+    )
+    tick.followState = result.state
+    if (result.isComplete) {
+      if (entry.config.pingPong && tick.smoothWaypoints.length >= 2) {
+        tick.smoothWaypoints = [...tick.smoothWaypoints].reverse()
+        tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+      } else if (entry.config.loop && tick.smoothWaypoints.length >= 2) {
+        tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+      } else {
+        tick.followState = null
+      }
+    }
+  })
+}
 onMounted(() => {
   initInstance = () => {
     init(canvas.value as unknown as HTMLCanvasElement, statsElement.value as unknown as HTMLElement)
@@ -67,6 +135,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('resize', initInstance)
+  cleanupPaths?.()
   cleanupScene?.()
   timelinePanelStore.unregister()
   debugSceneStore.clearSceneElements()
@@ -840,13 +909,195 @@ const buildTimeline = async ({
   })
 
   animate({
-    beforeTimeline: () => bindAnimatedElements(elements, world, getDelta()),
+    beforeTimeline: () => {
+      bindAnimatedElements(elements, world, getDelta())
+      tickPaths(getDelta)
+    },
     timeline: timelineManager,
     isPaused: () => timelinePanelStore.isPaused
   })
 }
 
+const refreshPathLine = (
+  scene: THREE.Scene,
+  tick: ActivePathTick,
+  waypoints: CoordinateTuple[],
+  showPath: boolean
+): void => {
+  if (tick.pathLine) {
+    pathRemoveVisualization(scene, tick.pathLine)
+    tick.pathLine = null
+  }
+  if (waypoints.length < 2) return
+  tick.smoothWaypoints = pathInterpolateWaypoints(waypoints.map(([x, y, z]) => ({ x, y, z })))
+  tick.pathLine = pathCreateVisualization(scene, tick.smoothWaypoints)
+  tick.pathLine.visible = showPath
+  tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+}
+
+const makePathHandlers = (
+  scene: THREE.Scene,
+  tick: ActivePathTick,
+  pathId: string,
+  unmount: () => void
+): PathHandlers => {
+  const store = useDebugSceneStore()
+  const findEntry = () => store.paths.find((p) => p.id === pathId)
+  return {
+    onAddWaypoint: (position) => {
+      const entry = findEntry()
+      if (!entry) return
+      refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+      if (entry.config.showNodes) {
+        const [x, y, z] = position
+        tick.waypointNodes = [
+          ...tick.waypointNodes,
+          pathCreateWaypointNode(scene, { x, y, z }, tick.nodeGeo, tick.nodeMat)
+        ]
+      }
+    },
+    onRemoveWaypoint: (index) => {
+      pathRemoveWaypointNodes(scene, [tick.waypointNodes[index]])
+      tick.waypointNodes = tick.waypointNodes.filter((_, i) => i !== index)
+      const entry = findEntry()
+      if (entry) refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+    },
+    onUpdateWaypoint: (index, [x, y, z]) => {
+      if (tick.waypointNodes[index])
+        pathUpdateWaypointNodePosition(tick.waypointNodes[index], { x, y, z })
+      const entry = findEntry()
+      if (entry) refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+    },
+    onReset: () => {
+      if (tick.pathLine) {
+        pathRemoveVisualization(scene, tick.pathLine)
+        tick.pathLine = null
+      }
+      pathRemoveWaypointNodes(scene, tick.waypointNodes)
+      tick.waypointNodes = []
+      tick.smoothWaypoints = []
+      tick.followState = null
+    },
+    onToggleVisibility: (hidden) => {
+      if (tick.pathLine) tick.pathLine.visible = !hidden
+      tick.waypointNodes.forEach((node) => {
+        node.visible = !hidden
+      })
+    },
+    onRemove: () => {
+      if (tick.pathLine) pathRemoveVisualization(scene, tick.pathLine)
+      pathRemoveWaypointNodes(scene, tick.waypointNodes)
+      tick.nodeGeo.dispose()
+      tick.nodeMat.dispose()
+      unmount()
+      const index = activePathTicks.indexOf(tick)
+      if (index !== -1) activePathTicks.splice(index, 1)
+    },
+    onConfigChange: (key, value) => {
+      if (key === 'showPath' && tick.pathLine) tick.pathLine.visible = value as boolean
+      if (key === 'showNodes') {
+        if (value) {
+          tick.waypointNodes = (findEntry()?.waypoints ?? []).map(([x, y, z]) =>
+            pathCreateWaypointNode(scene, { x, y, z }, tick.nodeGeo, tick.nodeMat)
+          )
+        } else {
+          pathRemoveWaypointNodes(scene, tick.waypointNodes)
+          tick.waypointNodes = []
+        }
+      }
+    }
+  }
+}
+
+const enablePathForMesh = (
+  elementName: string,
+  mesh: THREE.Object3D,
+  scene: THREE.Scene,
+  canvasReference: Ref<HTMLCanvasElement | null>,
+  getCamera: () => THREE.Camera
+): void => {
+  const store = useDebugSceneStore()
+  const pathId = `path-${elementName}`
+  const nodeGeo = new THREE.BoxGeometry(PATH_NODE_SIZE, PATH_NODE_SIZE, PATH_NODE_SIZE)
+  const nodeMat = new THREE.MeshBasicMaterial({ color: 0xf0a000 })
+  const tick: ActivePathTick = {
+    id: pathId,
+    mesh,
+    nodeGeo,
+    nodeMat,
+    pathLine: null,
+    waypointNodes: [],
+    smoothWaypoints: [],
+    followState: null
+  }
+  activePathTicks.push(tick)
+
+  const interaction = usePathInteraction({
+    canvas: canvasReference,
+    getCamera,
+    groundY: mesh.position.y,
+    onDrawStart: () => store.paths.find((p) => p.id === pathId)?.handlers.onReset(),
+    onAddWaypoint: (position) => store.addPathWaypoint(pathId, position),
+    onUpdateWaypoint: (index, position) => store.updatePathWaypoint(pathId, index, position),
+    onDrawEnd: () => {
+      const entry = store.paths.find((p) => p.id === pathId)
+      if (entry && entry.waypoints.length >= 2)
+        refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+    },
+    getNodes: () => tick.waypointNodes
+  })
+  interaction.mount()
+
+  store.addPath({
+    id: pathId,
+    elementName,
+    label: `${elementName} path`,
+    waypoints: [],
+    config: {
+      speed: 20,
+      obstacleImpulse: 0,
+      easing: 'linear',
+      easingIntensity: 1,
+      playing: true,
+      loop: false,
+      pingPong: false,
+      showPath: true,
+      showNodes: false
+    },
+    handlers: makePathHandlers(scene, tick, pathId, interaction.unmount)
+  })
+}
+
+const registerTimelinePaths = (
+  scene: THREE.Scene,
+  elements: ComplexModel[],
+  canvasReference: Ref<HTMLCanvasElement | null>,
+  getCamera: () => THREE.Camera
+): (() => void) => {
+  const store = useDebugSceneStore()
+  store.registerPathContext({
+    onEnablePath: (elementName) => {
+      if (store.paths.some((p) => p.elementName === elementName)) return
+      const mesh = elements.find((e) => (e as ComplexModel).name === elementName)
+      if (mesh)
+        enablePathForMesh(
+          elementName,
+          mesh as unknown as THREE.Object3D,
+          scene,
+          canvasReference,
+          getCamera
+        )
+    }
+  })
+  return () => {
+    ;[...store.paths].forEach((p) => store.removePath(p.id))
+    store.unregisterPathContext()
+    activePathTicks.length = 0
+  }
+}
+
 const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
+  canvasReference.value = canvas
   cleanupScene?.()
   const {
     animate,
@@ -914,6 +1165,12 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
   buildScenery({ scene, world })
   debugSceneStore.moveElementAfter('clouds', 'sky')
   registerSceneLights(scene)
+  cleanupPaths = registerTimelinePaths(
+    scene,
+    elements as ComplexModel[],
+    canvasReference,
+    () => camera
+  )
 }
 
 const registerSceneLights = (scene: THREE.Scene): void => {
