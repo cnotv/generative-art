@@ -332,37 +332,37 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   const addPathWaypoint = (id: string, position: CoordinateTuple) => {
     const entry = paths.value.find((p) => p.id === id)
     if (!entry) return
-    entry.handlers.onAddWaypoint(position)
     paths.value = paths.value.map((p) =>
       p.id === id ? { ...p, waypoints: [...p.waypoints, position] } : p
     )
+    entry.handlers.onAddWaypoint(position)
   }
 
   const removePathWaypoint = (id: string, index: number) => {
     const entry = paths.value.find((p) => p.id === id)
     if (!entry) return
-    entry.handlers.onRemoveWaypoint(index)
     paths.value = paths.value.map((p) =>
       p.id === id ? { ...p, waypoints: p.waypoints.filter((_, i) => i !== index) } : p
     )
+    entry.handlers.onRemoveWaypoint(index)
   }
 
   const updatePathWaypoint = (id: string, index: number, position: CoordinateTuple) => {
     const entry = paths.value.find((p) => p.id === id)
     if (!entry) return
-    entry.handlers.onUpdateWaypoint(index, position)
     paths.value = paths.value.map((p) =>
       p.id === id ? { ...p, waypoints: p.waypoints.map((w, i) => (i === index ? position : w)) } : p
     )
+    entry.handlers.onUpdateWaypoint(index, position)
   }
 
   const updatePathConfig = (id: string, key: keyof PathConfig, value: unknown) => {
     const entry = paths.value.find((p) => p.id === id)
     if (!entry) return
-    entry.handlers.onConfigChange(key, value)
     paths.value = paths.value.map((p) =>
       p.id === id ? { ...p, config: { ...p.config, [key]: value } } : p
     )
+    entry.handlers.onConfigChange(key, value)
   }
 
   const moveElementAfter = (name: string, afterName: string) => {

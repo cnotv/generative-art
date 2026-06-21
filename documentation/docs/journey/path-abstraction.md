@@ -56,13 +56,17 @@ A `pathRegistrationContext` ref lets any view register an `onEnablePath(elementN
 
 ## Elements panel surface
 
-A new `ElementPathGroup.vue` component renders a collapsible group entry — path icon, label with waypoint count, hide/delete buttons — that expands to show the waypoint position list (the same inline X/Y/Z editor already used by `ElementInstancedGroup.vue`) plus `SchemaControls` for every path option: speed, push force, easing, easing intensity, playing, loop, ping pong, show path, show nodes, and reset.
+A path belongs to the mesh it is attached to, so its controls live _inside_ that mesh element's own expandable properties rather than as a separate top-level entry. `ElementItem.vue` gained an optional "Enable path" button (a `Route` icon) that appears on mesh elements when a `pathRegistrationContext` is registered. Clicking it calls `debugSceneStore.enablePathForElement(elementName)`.
 
-`ElementItem.vue` gained an optional "Enable path" button (a `Route` icon) that appears on mesh elements when a `pathRegistrationContext` is registered. Clicking it calls `debugSceneStore.enablePathForElement(elementName)`.
+Once a path exists for an element, expanding that element in the Elements panel reveals a collapsible `ElementPathSection.vue` beneath its normal properties. The section expands to show the waypoint position list (the same inline X/Y/Z editor used by `ElementInstancedGroup.vue`) plus `SchemaControls` for every path option: speed, push force, easing, easing intensity, playing, loop, ping pong, show path, show nodes, and reset. The panel maps each path to its element by name, so the section appears in the right place automatically.
+
+## Scaling the visualisation to the scene
+
+The path tube and waypoint nodes use small package defaults (tube radius 0.06, node 0.4) sized for the ~1-unit DrawPath reference scene. Dropped into a scene built on a much larger unit scale — for example the Timeline test scene with 30-unit grid cells viewed from a distant orthographic camera — those defaults are sub-pixel and effectively invisible. The consuming view passes scene-appropriate values (a tube radius and node size measured in the scene's own units) so the path reads clearly at whatever scale it is used.
 
 ## Syncing `playing` with the Timeline panel
 
-The `playing` config key is the one path option that has global consequences: it should pause all animation, not just the path. Inside `ElementPathGroup.vue`, writing `playing = false` also calls `useTimelinePanelStore().setPaused(true)`, and a watcher syncs in the reverse direction so the global Timeline play/pause button also controls the path.
+The `playing` config key is the one path option that has global consequences: it should pause all animation, not just the path. Inside `ElementPathSection.vue`, writing `playing = false` also calls `useTimelinePanelStore().setPaused(true)`, and a watcher syncs in the reverse direction so the global Timeline play/pause button also controls the path.
 
 ## DrawPath after the refactor
 

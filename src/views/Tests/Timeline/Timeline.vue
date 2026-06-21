@@ -72,7 +72,12 @@ let initInstance: () => void
 let cleanupScene: (() => void) | undefined
 let cleanupPaths: (() => void) | undefined
 
-const PATH_NODE_SIZE = 0.4
+// Path visuals are scaled to the GRID_UNIT-30 scene; the package defaults
+// (radius 0.06, node 0.4) are sized for a ~1-unit reference scene and would be
+// invisible from the orthographic camera here.
+const PATH_NODE_SIZE = 4
+const PATH_TUBE_RADIUS = 1.5
+const PATH_NODE_COLOR = 0xf0a000
 
 /** Per-path follow state ticked inside beforeTimeline each frame. */
 interface ActivePathTick {
@@ -930,7 +935,12 @@ const refreshPathLine = (
   }
   if (waypoints.length < 2) return
   tick.smoothWaypoints = pathInterpolateWaypoints(waypoints.map(([x, y, z]) => ({ x, y, z })))
-  tick.pathLine = pathCreateVisualization(scene, tick.smoothWaypoints)
+  tick.pathLine = pathCreateVisualization(
+    scene,
+    tick.smoothWaypoints,
+    PATH_NODE_COLOR,
+    PATH_TUBE_RADIUS
+  )
   tick.pathLine.visible = showPath
   tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
 }
@@ -1019,7 +1029,7 @@ const enablePathForMesh = (
   const store = useDebugSceneStore()
   const pathId = `path-${elementName}`
   const nodeGeo = new THREE.BoxGeometry(PATH_NODE_SIZE, PATH_NODE_SIZE, PATH_NODE_SIZE)
-  const nodeMat = new THREE.MeshBasicMaterial({ color: 0xf0a000 })
+  const nodeMat = new THREE.MeshBasicMaterial({ color: PATH_NODE_COLOR })
   const tick: ActivePathTick = {
     id: pathId,
     mesh,

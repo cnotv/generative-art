@@ -8,7 +8,7 @@ import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
 import ElementInstancedGroup from './ElementInstancedGroup.vue'
 import ElementSpawnGroup from './ElementSpawnGroup.vue'
-import ElementPathGroup from './ElementPathGroup.vue'
+import ElementPathSection from './ElementPathSection.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Box, Camera, CheckSquare, Image, Plus, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
@@ -95,12 +95,7 @@ const handleSpawnGroupToggle = (groupId: string) => {
   if (expandedName.value) openElementProperties(groupId)
 }
 
-const handlePathGroupToggle = (pathId: string) => {
-  expandedName.value = expandedName.value === pathId ? null : pathId
-  if (expandedName.value) openElementProperties(pathId)
-}
-
-const pathIds = computed(() => new Set(paths.value.map((p) => p.id)))
+const pathByElement = computed(() => new Map(paths.value.map((p) => [p.elementName, p])))
 
 type AddElementType = 'camera' | 'mesh' | 'textureArea'
 
@@ -244,7 +239,7 @@ const hasExpandedSchema = computed(
           :element="element"
           :selected="selectedElementName === element.name || expandedName === element.name"
           :can-enable-path="!!debugSceneStore.enablePathForElement"
-          :has-path="pathIds.has(element.name)"
+          :has-path="pathByElement.has(element.name)"
           @click="handleElementClick(element)"
           @toggle-visibility="debugSceneStore.handleToggleVisibility(element.name)"
           @remove="debugSceneStore.handleRemove(element.name)"
@@ -272,8 +267,15 @@ const hasExpandedSchema = computed(
               :get-value="activeProperties!.getValue"
               :on-update="activeProperties!.updateValue"
             />
-            <p v-else class="elements-panel__no-props">No configurable properties.</p>
+            <p v-else-if="!pathByElement.has(element.name)" class="elements-panel__no-props">
+              No configurable properties.
+            </p>
           </template>
+
+          <ElementPathSection
+            v-if="pathByElement.has(element.name)"
+            :path="pathByElement.get(element.name)!"
+          />
         </div>
       </div>
 
@@ -293,15 +295,6 @@ const hasExpandedSchema = computed(
         :group="group"
         :is-expanded="expandedName === group.id"
         @toggle="handleSpawnGroupToggle(group.id)"
-      />
-
-      <!-- Path groups -->
-      <ElementPathGroup
-        v-for="path in paths"
-        :key="path.id"
-        :path="path"
-        :is-expanded="expandedName === path.id"
-        @toggle="handlePathGroupToggle(path.id)"
       />
 
       <!-- Texture groups -->
