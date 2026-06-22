@@ -10,7 +10,7 @@ import ElementInstancedGroup from './ElementInstancedGroup.vue'
 import ElementSpawnGroup from './ElementSpawnGroup.vue'
 import ElementPathSection from './ElementPathSection.vue'
 import IconButton from '@/components/IconButton.vue'
-import { Box, Camera, CheckSquare, Image, Plus, Square } from 'lucide-vue-next'
+import { Box, Camera, CheckSquare, Image, Plus, Route, Square } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -96,6 +96,11 @@ const handleSpawnGroupToggle = (groupId: string) => {
 }
 
 const pathByElement = computed(() => new Map(paths.value.map((p) => [p.elementName, p])))
+
+const canHavePath = (element: SceneElement): boolean =>
+  !!debugSceneStore.enablePathForElement &&
+  getElementCategory(element) === 'mesh' &&
+  !element.name.toLowerCase().includes('camera')
 
 type AddElementType = 'camera' | 'mesh' | 'textureArea'
 
@@ -238,12 +243,10 @@ const hasExpandedSchema = computed(
         <ElementItem
           :element="element"
           :selected="selectedElementName === element.name || expandedName === element.name"
-          :can-enable-path="!!debugSceneStore.enablePathForElement"
           :has-path="pathByElement.has(element.name)"
           @click="handleElementClick(element)"
           @toggle-visibility="debugSceneStore.handleToggleVisibility(element.name)"
           @remove="debugSceneStore.handleRemove(element.name)"
-          @enable-path="debugSceneStore.enablePathForElement(element.name)"
         />
 
         <div
@@ -276,6 +279,14 @@ const hasExpandedSchema = computed(
             v-if="pathByElement.has(element.name)"
             :path="pathByElement.get(element.name)!"
           />
+          <button
+            v-else-if="canHavePath(element)"
+            class="elements-panel__enable-path"
+            @click="debugSceneStore.enablePathForElement(element.name)"
+          >
+            <Route class="elements-panel__enable-path-icon" />
+            <span>Enable path</span>
+          </button>
         </div>
       </div>
 
@@ -416,6 +427,34 @@ const hasExpandedSchema = computed(
   opacity: var(--opacity-muted);
   padding: var(--spacing-2) var(--spacing-1);
   margin: 0;
+}
+
+.elements-panel__enable-path {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
+  width: 100%;
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 100ms;
+}
+
+.elements-panel__enable-path:hover {
+  background-color: var(--panel-item-bg-hover);
+  color: var(--color-foreground);
+}
+
+.elements-panel__enable-path-icon {
+  width: var(--font-size-sm);
+  height: var(--font-size-sm);
+  flex-shrink: 0;
 }
 
 .elements-panel__list {
