@@ -64,6 +64,10 @@ Once a path exists for an element, expanding that element in the Elements panel 
 
 The path tube and waypoint nodes use small package defaults (tube radius 0.06, node 0.4) sized for the ~1-unit DrawPath reference scene. Dropped into a scene built on a much larger unit scale — for example the Timeline test scene with 30-unit grid cells viewed from a distant orthographic camera — those defaults are sub-pixel and effectively invisible. The consuming view passes scene-appropriate values (a tube radius and node size measured in the scene's own units) so the path reads clearly at whatever scale it is used.
 
+## Showing a path only for the selected element
+
+With several elements each carrying a looping path, drawing every tube at once clutters the scene. A path's tube and nodes are therefore shown only while that path's element is the currently selected one in the Elements panel — selection is the single source of truth, read from the element-properties store. A watcher re-evaluates every path's visibility whenever the selection changes, and a shared `updateTickVisibility` helper combines three conditions: the element is selected, the path is not hidden, and its own show-path / show-nodes toggles are on. Movement is unaffected — paths keep advancing their followers whether or not their tube is drawn — so deselecting an element simply hides its line without stopping it. Enabling a path also selects its element, so a freshly drawn path is visible immediately.
+
 ## Syncing `playing` with the Timeline panel
 
 The `playing` config key is the one path option that has global consequences: it should pause all animation, not just the path. Inside `ElementPathSection.vue`, writing `playing = false` also calls `useTimelinePanelStore().setPaused(true)`, and a watcher syncs in the reverse direction so the global Timeline play/pause button also controls the path.

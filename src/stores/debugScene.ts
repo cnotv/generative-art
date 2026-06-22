@@ -321,12 +321,11 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   }
 
   const togglePathVisibility = (id: string) => {
-    paths.value = paths.value.map((p) => {
-      if (p.id !== id) return p
-      const hidden = !p.hidden
-      p.handlers.onToggleVisibility(hidden)
-      return { ...p, hidden }
-    })
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    const hidden = !entry.hidden
+    paths.value = paths.value.map((p) => (p.id === id ? { ...p, hidden } : p))
+    entry.handlers.onToggleVisibility(hidden)
   }
 
   const addPathWaypoint = (id: string, position: CoordinateTuple) => {

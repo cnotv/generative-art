@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, type Ref } from 'vue'
+import { ref, reactive, watch, onMounted, onUnmounted, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
@@ -63,6 +63,12 @@ const handleProgress = (progress: LoadProgress): void => {
 const timelinePanelStore = useTimelinePanelStore()
 const debugSceneStore = useDebugSceneStore()
 const textureGroupsStore = useTextureGroupsStore()
+
+// A path is only shown while its element is the selected one; re-evaluate on change.
+watch(
+  () => useElementPropertiesStore().selectedElementName,
+  () => activePathTicks.forEach((tick) => updateTickVisibility(tick))
+)
 
 let initInstance: () => void
 let cleanupScene: (() => void) | undefined
@@ -684,11 +690,23 @@ const buildTimeline = async ({
   })
 }
 
+/** Path line + nodes are shown only when the path's element is the selected one
+ *  (and its own showPath/showNodes config + visibility allow it). */
+const updateTickVisibility = (tick: ActivePathTick): void => {
+  const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
+  if (!entry) return
+  const selected = useElementPropertiesStore().selectedElementName === entry.elementName
+  const baseVisible = selected && !entry.hidden
+  if (tick.pathLine) tick.pathLine.visible = baseVisible && entry.config.showPath
+  tick.waypointNodes.forEach((node) => {
+    node.visible = baseVisible && entry.config.showNodes
+  })
+}
+
 const refreshPathLine = (
   scene: THREE.Scene,
   tick: ActivePathTick,
-  waypoints: CoordinateTuple[],
-  showPath: boolean
+  waypoints: CoordinateTuple[]
 ): void => {
   if (tick.pathLine) {
     pathRemoveVisualization(scene, tick.pathLine)
@@ -702,8 +720,8 @@ const refreshPathLine = (
     PATH_NODE_COLOR,
     PATH_TUBE_RADIUS
   )
-  tick.pathLine.visible = showPath
   tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+  updateTickVisibility(tick)
 }
 
 const makePathHandlers = (
@@ -718,26 +736,27 @@ const makePathHandlers = (
     onAddWaypoint: (position) => {
       const entry = findEntry()
       if (!entry) return
-      refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+      refreshPathLine(scene, tick, entry.waypoints)
       if (entry.config.showNodes) {
         const [x, y, z] = position
         tick.waypointNodes = [
           ...tick.waypointNodes,
           pathCreateWaypointNode(scene, { x, y, z }, tick.nodeGeo, tick.nodeMat)
         ]
+        updateTickVisibility(tick)
       }
     },
     onRemoveWaypoint: (index) => {
       pathRemoveWaypointNodes(scene, [tick.waypointNodes[index]])
       tick.waypointNodes = tick.waypointNodes.filter((_, i) => i !== index)
       const entry = findEntry()
-      if (entry) refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+      if (entry) refreshPathLine(scene, tick, entry.waypoints)
     },
     onUpdateWaypoint: (index, [x, y, z]) => {
       if (tick.waypointNodes[index])
         pathUpdateWaypointNodePosition(tick.waypointNodes[index], { x, y, z })
       const entry = findEntry()
-      if (entry) refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+      if (entry) refreshPathLine(scene, tick, entry.waypoints)
     },
     onReset: () => {
       if (tick.pathLine) {
@@ -749,12 +768,7 @@ const makePathHandlers = (
       tick.smoothWaypoints = []
       tick.followState = null
     },
-    onToggleVisibility: (hidden) => {
-      if (tick.pathLine) tick.pathLine.visible = !hidden
-      tick.waypointNodes.forEach((node) => {
-        node.visible = !hidden
-      })
-    },
+    onToggleVisibility: () => updateTickVisibility(tick),
     onRemove: () => {
       if (tick.pathLine) pathRemoveVisualization(scene, tick.pathLine)
       pathRemoveWaypointNodes(scene, tick.waypointNodes)
@@ -765,18 +779,16 @@ const makePathHandlers = (
       const index = activePathTicks.indexOf(tick)
       if (index !== -1) activePathTicks.splice(index, 1)
     },
-    onConfigChange: (key, value) => {
-      if (key === 'showPath' && tick.pathLine) tick.pathLine.visible = value as boolean
+    onConfigChange: (key) => {
       if (key === 'showNodes') {
-        if (value) {
-          tick.waypointNodes = (findEntry()?.waypoints ?? []).map(([x, y, z]) =>
-            pathCreateWaypointNode(scene, { x, y, z }, tick.nodeGeo, tick.nodeMat)
-          )
-        } else {
-          pathRemoveWaypointNodes(scene, tick.waypointNodes)
-          tick.waypointNodes = []
-        }
+        pathRemoveWaypointNodes(scene, tick.waypointNodes)
+        tick.waypointNodes = findEntry()?.config.showNodes
+          ? (findEntry()?.waypoints ?? []).map(([x, y, z]) =>
+              pathCreateWaypointNode(scene, { x, y, z }, tick.nodeGeo, tick.nodeMat)
+            )
+          : []
       }
+      updateTickVisibility(tick)
     }
   }
 }
@@ -841,8 +853,7 @@ const enablePathForMesh = (
     onUpdateWaypoint: (index, position) => store.updatePathWaypoint(pathId, index, position),
     onDrawEnd: () => {
       const entry = store.paths.find((p) => p.id === pathId)
-      if (entry && entry.waypoints.length >= 2)
-        refreshPathLine(scene, tick, entry.waypoints, entry.config.showPath)
+      if (entry && entry.waypoints.length >= 2) refreshPathLine(scene, tick, entry.waypoints)
     },
     getNodes: () => tick.waypointNodes
   })
@@ -857,6 +868,8 @@ const enablePathForMesh = (
     handlers: makePathHandlers(scene, tick, pathId, interaction.unmount)
   })
   registerPathAction(tick, elementName)
+  // Selecting the element makes its (about to be drawn) path visible.
+  useElementPropertiesStore().requestElementSelection(elementName)
 }
 
 /** Create a path with predefined nodes (no canvas drawing) and start it looping. */
