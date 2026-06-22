@@ -311,8 +311,14 @@ interface BricksGroupContext {
   elements: ComplexModel[]
 }
 
-const isGroupedPanelElement = (element: { name?: string }) =>
-  (element.name?.startsWith('brick-') || element.name?.startsWith('ball')) ?? false
+const BRICK_GROUP_ID = 'bricks'
+
+/** Elements that should not appear as their own row in the panel: instanced/spawn
+ *  group members (bricks, balls) and path visualization objects (line + nodes). */
+const isGroupedPanelElement = (element: { name?: string; userData?: { isPathVisual?: boolean } }) =>
+  element.userData?.isPathVisual === true ||
+  element.name?.startsWith('brick-') === true ||
+  element.name?.startsWith('ball') === true
 
 const registerBricksGroup = ({
   scene,
@@ -323,7 +329,7 @@ const registerBricksGroup = ({
 }: BricksGroupContext): void => {
   const sync = () =>
     useDebugSceneStore().addInstancedGroup({
-      id: 'bricks',
+      id: BRICK_GROUP_ID,
       label: 'Bricks',
       positions: [...brickPositions],
       handlers
@@ -956,6 +962,31 @@ const registerTimelinePaths = (
   }
 }
 
+/** Click-to-select: maps a viewport click to its panel element/group while the
+ *  Elements panel is open. Bricks resolve to the Bricks group, balls to the Balls
+ *  group, and texture-area meshes (clouds) to their group via userData. */
+const registerScenePicker = (scene: THREE.Scene, getCamera: () => THREE.Camera): (() => void) => {
+  const panelsStore = usePanelsStore()
+  const store = useDebugSceneStore()
+  const picker = useSceneElementPicker({
+    canvas: canvasReference,
+    getCamera,
+    getObjects: () => scene.children,
+    matchObject: (object) => {
+      const name = object.name
+      if (name && store.sceneElements.some((e) => e.name === name)) return name
+      if (name?.startsWith('brick-')) return BRICK_GROUP_ID
+      if (name?.startsWith('ball')) return BALL_SPAWN_GROUP_ID
+      const groupId = (object.userData as { textureGroupId?: string } | undefined)?.textureGroupId
+      return typeof groupId === 'string' ? groupId : null
+    },
+    isEnabled: () => panelsStore.isElementsOpen,
+    onPick: (name) => useElementPropertiesStore().requestElementSelection(name)
+  })
+  picker.mount()
+  return picker.unmount
+}
+
 const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
   canvasReference.value = canvas
   cleanupScene?.()
@@ -1009,7 +1040,9 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     defineSetup: async () =>
       buildTimeline({ scene, world, getDelta, animate, getSimulationFrame, getFrameRate })
   })
-  const panelElements = elements.filter((e) => !isGroupedPanelElement(e as { name?: string }))
+  const panelElements = elements.filter(
+    (e) => !isGroupedPanelElement(e as { name?: string; userData?: { isPathVisual?: boolean } })
+  )
   debugSceneStore.registerSceneElements(
     camera,
     panelElements,
@@ -1037,17 +1070,7 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     () => activeCamera
   )
 
-  const panelsStore = usePanelsStore()
-  const picker = useSceneElementPicker({
-    canvas: canvasReference,
-    getCamera: () => activeCamera,
-    getObjects: () => scene.children,
-    getSelectableNames: () => new Set(debugSceneStore.sceneElements.map((e) => e.name)),
-    isEnabled: () => panelsStore.isElementsOpen,
-    onPick: (name) => useElementPropertiesStore().requestElementSelection(name)
-  })
-  picker.mount()
-  cleanupPicker = picker.unmount
+  cleanupPicker = registerScenePicker(scene, () => activeCamera)
 }
 
 const registerSceneLights = (scene: THREE.Scene): void => {

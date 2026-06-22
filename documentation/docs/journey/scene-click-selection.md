@@ -33,7 +33,15 @@ The viewport already responds to dragging — orbiting the camera, and drawing p
 
 ## Resolving a click to an element
 
-A ray cast into the scene hits whatever triangle is frontmost, which is often a deep child mesh — a sub-mesh of an imported model, not the named group the panel knows about. The picker walks up the parent chain from the hit object and returns the first ancestor whose name matches a registered scene element. Hits sorted by distance mean a goomba standing in front of the ground resolves to the goomba, while a click into open space resolves to the ground behind it.
+A ray cast into the scene hits whatever triangle is frontmost, which is often a deep child mesh — a sub-mesh of an imported model, not the named group the panel knows about. The picker walks up the parent chain from the hit object and, for each ancestor, asks a scene-supplied `matchObject` callback whether it maps to a selectable id. The first non-null answer wins. Hits sorted by distance mean a goomba standing in front of the ground resolves to the goomba, while a click into open space resolves to the ground behind it.
+
+## Mapping clicks to groups, not just elements
+
+Not everything visible has its own panel row. Instanced bricks share a single "Bricks" group entry; the spawned balls share a "Balls" group; clouds belong to a "Clouds" texture-area group. The individual `brick-3`/`ball-7`/`cloud-2` meshes are deliberately kept out of the panel list (they would bury the useful rows). So `matchObject` translates them: a name starting with `brick-` resolves to the Bricks group id, `ball` to the Balls group, and any mesh tagged with a texture-group id in its `userData` resolves to that group. Clicking any brick, ball, or cloud therefore selects and expands the group it belongs to, while clicking a standalone element (a goomba, the ground) selects that element directly. The mapping lives in the scene, so each scene decides how its own meshes roll up into panel rows.
+
+## Keeping path visuals out of the panel
+
+Drawing a path adds a tube and node meshes to the scene. Because those objects exist in the scene graph at the moment the panel's element list is captured, they would otherwise show up as anonymous "Group" rows. They are tagged with a `userData` flag when created and filtered out of the panel's element list alongside the grouped brick and ball meshes, so the panel only ever lists meaningful, selectable entries. `matchObject` likewise ignores them, so clicking a path tube selects whatever lies behind it rather than the path itself.
 
 ## Decoupling the picker from the panel
 

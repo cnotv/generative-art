@@ -8,11 +8,15 @@ interface SceneElementPickerOptions {
   getCamera: () => THREE.Camera | null
   /** Objects to hit-test (typically the scene's children). */
   getObjects: () => THREE.Object3D[]
-  /** Names that are selectable; a hit resolves to the nearest ancestor in this set. */
-  getSelectableNames: () => Set<string>
+  /**
+   * Maps a single hit object to a selectable id, or null if it is not selectable.
+   * The picker walks up the hit's ancestors calling this until it returns a value,
+   * so a deep child mesh can resolve to its named group (e.g. a brick → "bricks").
+   */
+  matchObject: (object: THREE.Object3D) => string | null
   /** Only pick while this returns true (e.g. the Elements panel being open). */
   isEnabled: () => boolean
-  /** Called with the resolved element name on a successful pick. */
+  /** Called with the resolved element/group id on a successful pick. */
   onPick: (name: string) => void
 }
 
@@ -27,10 +31,12 @@ const getNdc = (event: MouseEvent, canvasElement: HTMLCanvasElement): THREE.Vect
   )
 }
 
-const resolveName = (object: THREE.Object3D | null, selectable: Set<string>): string | null => {
+const resolveFromAncestors = (
+  object: THREE.Object3D | null,
+  match: (object: THREE.Object3D) => string | null
+): string | null => {
   if (!object) return null
-  if (object.name && selectable.has(object.name)) return object.name
-  return resolveName(object.parent, selectable)
+  return match(object) ?? resolveFromAncestors(object.parent, match)
 }
 
 /**
@@ -44,7 +50,7 @@ export const useSceneElementPicker = ({
   canvas,
   getCamera,
   getObjects,
-  getSelectableNames,
+  matchObject,
   isEnabled,
   onPick
 }: SceneElementPickerOptions) => {
@@ -65,8 +71,9 @@ export const useSceneElementPicker = ({
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(getNdc(event, canvasElement), camera)
     const hits = raycaster.intersectObjects(getObjects(), true)
-    const selectable = getSelectableNames()
-    const name = hits.map((hit) => resolveName(hit.object, selectable)).find((n) => n !== null)
+    const name = hits
+      .map((hit) => resolveFromAncestors(hit.object, matchObject))
+      .find((n) => n !== null)
     if (name) onPick(name)
   }
 

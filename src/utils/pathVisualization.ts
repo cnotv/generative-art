@@ -44,6 +44,7 @@ export const pathCreateVisualization = (
     group.add(new THREE.Mesh(tubeGeo, material))
   }
 
+  group.userData.isPathVisual = true
   scene.add(group)
   return group
 }
@@ -79,6 +80,7 @@ export const pathCreateWaypointNode = (
 ): THREE.Mesh => {
   const mesh = new THREE.Mesh(geo, mat)
   mesh.position.set(waypoint.x, waypoint.y, waypoint.z)
+  mesh.userData.isPathVisual = true
   scene.add(mesh)
   return mesh
 }
