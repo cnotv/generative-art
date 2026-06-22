@@ -15,28 +15,22 @@ import {
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
-  controllerForward,
-  resetAnimation,
   bindAnimatedElements,
-  controllerJump,
-  setRotation,
   createTimelineManager,
   type Timeline,
-  type CoordinateTuple,
-  type AnimationData
+  type CoordinateTuple
 } from '@webgamekit/animation'
 import { getBall, getCube } from '@webgamekit/threejs'
 import brickTexture from '@/assets/images/textures/brick.jpg'
 import { getCoinBlock } from '@/utils/custom-models'
 import { setupCloudAreaAsGroup } from '@/views/Games/MarbleMadness/marbleEnvironment'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
-import type { RotationMap } from '@/types/three'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
-import type { InstancedGroupHandlers, PathHandlers } from '@/stores/debugScene'
+import type { InstancedGroupHandlers, PathHandlers, PathConfig } from '@/stores/debugScene'
 import { usePathInteraction } from '@/composables/usePathInteraction'
 import {
   pathCreateVisualization,
@@ -79,7 +73,7 @@ const PATH_NODE_SIZE = 4
 const PATH_TUBE_RADIUS = 1.5
 const PATH_NODE_COLOR = 0xf0a000
 
-/** Per-path follow state ticked inside beforeTimeline each frame. */
+/** Per-path follow state advanced by its own timeline action each frame. */
 interface ActivePathTick {
   id: string
   mesh: THREE.Object3D
@@ -89,46 +83,58 @@ interface ActivePathTick {
   waypointNodes: THREE.Mesh[]
   smoothWaypoints: Waypoint[]
   followState: PathFollowState | null
-  handlers: PathTickHandlers
-}
-
-interface PathTickHandlers {
-  onReset: () => void
-  onRemove: () => void
+  /** Id of the timeline action that drives this path, for removal. */
+  actionId?: string
 }
 
 const activePathTicks: ActivePathTick[] = []
 
-const tickPaths = (getDelta: () => number): void => {
-  const store = useDebugSceneStore()
-  activePathTicks.forEach((tick) => {
-    const entry = store.paths.find((p) => p.id === tick.id)
-    if (!entry || !entry.config.playing || !tick.followState) return
-    const { currentIndex, progress, waypoints } = tick.followState
-    const t = (currentIndex + progress) / Math.max(1, waypoints.length - 1)
-    const easingMultiplier = pathGetEasingMultiplier(
-      t,
-      entry.config.easing as Parameters<typeof pathGetEasingMultiplier>[1],
-      entry.config.easingIntensity
-    )
-    const result = pathAdvanceMesh(
-      tick.mesh,
-      tick.followState,
-      entry.config.speed * easingMultiplier,
-      getDelta()
-    )
-    tick.followState = result.state
-    if (result.isComplete) {
-      if (entry.config.pingPong && tick.smoothWaypoints.length >= 2) {
-        tick.smoothWaypoints = [...tick.smoothWaypoints].reverse()
-        tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
-      } else if (entry.config.loop && tick.smoothWaypoints.length >= 2) {
-        tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
-      } else {
-        tick.followState = null
-      }
-    }
+/** Manager + delta accessor captured during buildTimeline so path creation
+ *  (preset or user-drawn) can register a driving timeline action. */
+let pathTimelineManager: ReturnType<typeof createTimelineManager> | null = null
+let pathGetDelta: () => number = () => 0
+
+/** Keep a kinematic body in sync with the mesh moved by the path follower. */
+const syncKinematicBody = (mesh: THREE.Object3D): void => {
+  const body = mesh.userData?.body as
+    | { setNextKinematicTranslation?: (t: { x: number; y: number; z: number }) => void }
+    | undefined
+  body?.setNextKinematicTranslation?.({
+    x: mesh.position.x,
+    y: mesh.position.y,
+    z: mesh.position.z
   })
+}
+
+/** Advance one path follower along its nodes by speed × delta. Loops/ping-pongs at the end. */
+const advancePathTick = (tick: ActivePathTick, getDelta: () => number): void => {
+  const store = useDebugSceneStore()
+  const entry = store.paths.find((p) => p.id === tick.id)
+  if (!entry || !entry.config.playing || !tick.followState) return
+  const { currentIndex, progress, waypoints } = tick.followState
+  const t = (currentIndex + progress) / Math.max(1, waypoints.length - 1)
+  const easingMultiplier = pathGetEasingMultiplier(
+    t,
+    entry.config.easing as Parameters<typeof pathGetEasingMultiplier>[1],
+    entry.config.easingIntensity
+  )
+  const result = pathAdvanceMesh(
+    tick.mesh,
+    tick.followState,
+    entry.config.speed * easingMultiplier,
+    getDelta()
+  )
+  tick.followState = result.state
+  syncKinematicBody(tick.mesh)
+  if (!result.isComplete) return
+  if (entry.config.pingPong && tick.smoothWaypoints.length >= 2) {
+    tick.smoothWaypoints = [...tick.smoothWaypoints].reverse()
+    tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+  } else if (entry.config.loop && tick.smoothWaypoints.length >= 2) {
+    tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
+  } else {
+    tick.followState = null
+  }
 }
 onMounted(() => {
   initInstance = () => {
@@ -155,23 +161,10 @@ const config = {
   }
 }
 
-const rotationMap: RotationMap = {
-  forward: 0,
-  left: 90,
-  backward: 180,
-  right: 270
-}
-
-const character = {
-  speed: 0.5,
-  jump: 2.8
-}
-
 const GRID_UNIT = 30
 const SPAWN_HEIGHT = GRID_UNIT * 3
 const GROUND_HEIGHT = 0
 const GROUND_SIZE = 2000
-const CUBE_STEP_HEIGHT = 0.5
 const CUBE_CLUSTER_X_FAR = -2
 const WALL_BANG_CUBE_Z_OFFSET = 5
 
@@ -196,6 +189,7 @@ const GOOMBA_SCALE = 0.3
 const GOOMBA_1_SPAWN_Z = 22
 const GOOMBA_2_SPAWN_X = 68
 const GOOMBA_4_SPAWN_X = -GRID_UNIT * 2
+const GOOMBA_1_GRAVITY_SCALE = 2
 const COIN_SCALE = 20
 const BALL_SPAWN_PAUSE_FRAMES = 100
 const CLOUD_CENTER_HEIGHT = 200
@@ -214,230 +208,7 @@ const CAMERA_ORBIT_TARGET_Z = -27.78
 const SKY_COLOR_TOP = 0xaee9ff
 const SKY_COLOR_BOTTOM = 0x6fae6f
 
-const APPROACH_FRAMES = 30
-const CROSS_FRAMES = 60
-const JUMP_RISE_FRAMES = 20
-const STEP_CYCLE = 200
-const MOVING_BLOCK_JUMP_HEIGHT = 60
-// bindAnimatedElements applies ~1.163 gravity/frame at 60fps (-9.8*delta - 1)
-const GRAVITY_PER_FRAME_ESTIMATE = 1.2
-// Net rise per frame = JUMP_HEIGHT_PER_FRAME - gravity, so total ≈ MOVING_BLOCK_JUMP_HEIGHT
-const JUMP_HEIGHT_PER_FRAME =
-  MOVING_BLOCK_JUMP_HEIGHT / JUMP_RISE_FRAMES + GRAVITY_PER_FRAME_ESTIMATE
-
-/** Helper to create AnimationData for goomba models */
-const createGoombaAnimData = (
-  model: ComplexModel,
-  getDelta: () => number,
-  backward = false
-): AnimationData => ({
-  player: model,
-  actionName: 'Take 001',
-  delta: getDelta(),
-  distance: character.speed,
-  backward
-})
-
 type TimelineTools = Awaited<ReturnType<typeof getTools>>
-
-interface GoombaMove {
-  name: string
-  frames: number
-  actionStart?: () => void
-  action?: (frameInMove: number) => void
-}
-
-/**
- * Builds a single action that steps through a fixed-length sequence of moves,
- * executing whichever move's frame range contains the current cycle position.
- * `actionStart` fires once when a move becomes active; `action` fires every
- * frame the move is active, receiving the 0-based frame index within the move.
- */
-const playMoveSequence = (moves: GoombaMove[], getSimulationFrame: () => number): (() => void) => {
-  const ranges = moves.reduce<{ move: GoombaMove; start: number; end: number }[]>(
-    (accumulated, move) => {
-      const start = accumulated.length > 0 ? accumulated[accumulated.length - 1].end : 0
-      return [...accumulated, { move, start, end: start + move.frames }]
-    },
-    []
-  )
-  const totalFrames = ranges.reduce((sum, { move }) => sum + move.frames, 0)
-
-  return () => {
-    const frameInCycle = getSimulationFrame() % totalFrames
-    const range = ranges.find(({ start, end }) => frameInCycle >= start && frameInCycle < end)
-    if (!range) return
-    if (frameInCycle === range.start) range.move.actionStart?.()
-    range.move.action?.(frameInCycle - range.start)
-  }
-}
-
-const WALL_BANG_APPROACH_FRAMES = 100
-const WALL_BANG_HOP_FRAMES = 20
-const WALL_BANG_RESET_FRAMES = 1
-const GOOMBA_1_JUMP_HEIGHT = 3.2
-const GOOMBA_1_GRAVITY_SCALE = 2
-const GOOMBA_1_HOP_FRAMES = 40
-
-/** Walks forward into the cube wall, hops, then resets back to the starting position on a loop */
-const makeWallBangMoves =
-  (cubes: ComplexModel[], getDelta: () => number, facing: number, jumpHeight = character.jump) =>
-  (model: ComplexModel): GoombaMove[] => [
-    {
-      name: 'walk approach',
-      frames: WALL_BANG_APPROACH_FRAMES,
-      actionStart: () => setRotation(model, facing),
-      action: () => controllerForward(cubes, [], createGoombaAnimData(model, getDelta))
-    },
-    {
-      name: 'walk hop',
-      frames: WALL_BANG_HOP_FRAMES,
-      action: () => controllerJump(model, cubes, character.speed, jumpHeight)
-    },
-    {
-      name: 'walk reset',
-      frames: WALL_BANG_RESET_FRAMES,
-      action: () => resetAnimation([model])
-    }
-  ]
-
-// Every patrol step covers exactly one cube side (GRID_UNIT) at character.speed
-const ONE_CUBE_FRAMES = GRID_UNIT / character.speed
-
-type GoombaPatrolJump = { stepIndex: number; startFrame: number; frames: number; height: number }
-
-const GOOMBA_1_PATROL_STEPS: { rotation: number; stepCount: number; jumps?: GoombaPatrolJump[] }[] =
-  [
-    {
-      rotation: rotationMap.forward,
-      stepCount: 3,
-      jumps: [0, 2].map((stepIndex) => ({
-        stepIndex,
-        startFrame: 0,
-        frames: GOOMBA_1_HOP_FRAMES,
-        height: GOOMBA_1_JUMP_HEIGHT
-      }))
-    },
-    { rotation: rotationMap.right, stepCount: 2 },
-    { rotation: rotationMap.backward, stepCount: 3 },
-    { rotation: rotationMap.left, stepCount: 2 }
-  ]
-
-/**
- * Walks a rectangular patrol around the cube cluster, turning left between each
- * step group. Every step is exactly one cube side long (ONE_CUBE_FRAMES); the first
- * and last steps of the first group hop onto and off the cube cluster, before
- * resetting back to the starting position on a loop.
- */
-const makeGoomba1PatrolMoves =
-  (cubes: ComplexModel[], getDelta: () => number) =>
-  (model: ComplexModel): GoombaMove[] => [
-    ...GOOMBA_1_PATROL_STEPS.flatMap(({ rotation, stepCount, jumps = [] }) =>
-      Array.from({ length: stepCount }, (_, stepIndex) => {
-        const jump = jumps.find((candidate) => candidate.stepIndex === stepIndex)
-        return {
-          name: `patrol: face ${rotation} step ${stepIndex + 1}${jump ? ' (jump)' : ''}`,
-          frames: ONE_CUBE_FRAMES,
-          ...(stepIndex === 0 ? { actionStart: () => setRotation(model, rotation) } : {}),
-          action: (frameInMove: number) => {
-            const isJumping =
-              !!jump &&
-              frameInMove >= jump.startFrame &&
-              frameInMove < jump.startFrame + jump.frames
-            const isAboveCluster = model.position.y > GRID_UNIT / 2 - 1
-            controllerForward(
-              isJumping && isAboveCluster ? [] : cubes,
-              [],
-              createGoombaAnimData(model, getDelta)
-            )
-            if (isJumping) {
-              controllerJump(model, cubes, character.speed, jump.height)
-            }
-          }
-        }
-      })
-    ),
-    {
-      name: 'patrol: reset',
-      frames: 1,
-      action: () => resetAnimation([model])
-    }
-  ]
-
-/** Jumps over the moving block using physics: upward push during rise, gravity handles the fall */
-const makeJumpMovingBlockMoves =
-  (getDelta: () => number, facing: number) =>
-  (model: ComplexModel): GoombaMove[] => [
-    {
-      name: 'walk approach',
-      frames: APPROACH_FRAMES,
-      actionStart: () => setRotation(model, facing),
-      action: () => controllerForward([], [], createGoombaAnimData(model, getDelta))
-    },
-    {
-      name: 'rise',
-      frames: JUMP_RISE_FRAMES,
-      action: () => {
-        controllerJump(model, [], 0, JUMP_HEIGHT_PER_FRAME)
-        controllerForward([], [], createGoombaAnimData(model, getDelta))
-      }
-    },
-    {
-      name: 'cross',
-      frames: CROSS_FRAMES,
-      action: () => controllerForward([], [], createGoombaAnimData(model, getDelta))
-    },
-    {
-      name: 'cross back',
-      frames: CROSS_FRAMES,
-      action: () => controllerForward([], [], createGoombaAnimData(model, getDelta, true))
-    },
-    {
-      name: 'walk return',
-      frames: APPROACH_FRAMES,
-      action: () => controllerForward([], [], createGoombaAnimData(model, getDelta, true))
-    }
-  ]
-
-const toSegments = (moves: GoombaMove[]): { name: string; frames: number }[] =>
-  moves.map(({ name, frames }) => ({ name, frames }))
-
-/** Builds the per-goomba movement timeline actions for the patrol, wall-bang, and moving-block goombas */
-const makeGoombaTimelineActions = (
-  cubes: ComplexModel[],
-  getDelta: () => number,
-  getSimulationFrame: () => number,
-  [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2]: [
-    ComplexModel,
-    ComplexModel,
-    ComplexModel
-  ]
-): Timeline[] => {
-  const goomba1Moves = makeGoomba1PatrolMoves(cubes, getDelta)(goombaWallBangA)
-  const goomba2Moves = makeWallBangMoves(cubes, getDelta, rotationMap['right'])(goombaWallBangB)
-  const goomba4Moves = makeJumpMovingBlockMoves(
-    getDelta,
-    rotationMap['left']
-  )(goombaJumpMovingBlock2)
-
-  return [
-    {
-      name: 'Goomba 1: Move',
-      segments: toSegments(goomba1Moves),
-      action: playMoveSequence(goomba1Moves, getSimulationFrame)
-    },
-    {
-      name: 'Goomba 2: Move',
-      segments: toSegments(goomba2Moves),
-      action: playMoveSequence(goomba2Moves, getSimulationFrame)
-    },
-    {
-      name: 'Goomba 4: Move',
-      segments: toSegments(goomba4Moves),
-      action: playMoveSequence(goomba4Moves, getSimulationFrame)
-    }
-  ]
-}
 
 type SceneWorld = Pick<TimelineTools, 'scene' | 'world'>
 
@@ -572,7 +343,8 @@ const registerBricksGroup = ({
     },
     onUpdate: (index, position) => {
       const brick = cubes[index]
-      brick.userData.body.setTranslation({ x: position[0], y: position[1], z: position[2] }, true)
+      brick.position.set(position[0], position[1], position[2])
+      brick.userData.body?.setTranslation({ x: position[0], y: position[1], z: position[2] }, true)
       brickPositions[index] = position
     },
     onToggleVisibility: (hidden) => {
@@ -845,25 +617,6 @@ const buildTimeline = async ({
     world
   })
 
-  const cubeUp = new THREE.Vector3(0, CUBE_STEP_HEIGHT, 0)
-  const cubeDown = new THREE.Vector3(0, -CUBE_STEP_HEIGHT, 0)
-  const movingCubeTimeline: Timeline[] = [
-    {
-      name: 'cube: move',
-      segments: [
-        { name: 'rise', frames: STEP_CYCLE / 2 },
-        { name: 'fall', frames: STEP_CYCLE / 2 }
-      ],
-      action: () => {
-        const isRising = getSimulationFrame() % STEP_CYCLE < STEP_CYCLE / 2
-        movingCube.userData.body.setTranslation(
-          movingCube.position.add(isRising ? cubeUp : cubeDown),
-          true
-        )
-      }
-    }
-  ]
-
   const elements: ComplexModel[] = [
     ...(balls as unknown as ComplexModel[]),
     goombaWallBangA,
@@ -874,14 +627,8 @@ const buildTimeline = async ({
   ]
 
   const timelineManager = createTimelineManager()
-  timelineManager.addActions([
-    ...makeGoombaTimelineActions(cubes, getDelta, getSimulationFrame, [
-      goombaWallBangA,
-      goombaWallBangB,
-      goombaJumpMovingBlock2
-    ]),
-    ...movingCubeTimeline
-  ])
+  pathTimelineManager = timelineManager
+  pathGetDelta = getDelta
   timelineManager.addAction({
     name: 'coin: flip',
     start: 0,
@@ -912,12 +659,16 @@ const buildTimeline = async ({
     timelineManager,
     spawnActionId: ballSpawnActionId
   })
+  createPresetMovementPaths({
+    scene,
+    goombaWallBangA,
+    goombaWallBangB,
+    goombaJumpMovingBlock2,
+    movingCube
+  })
 
   animate({
-    beforeTimeline: () => {
-      bindAnimatedElements(elements, world, getDelta())
-      tickPaths(getDelta)
-    },
+    beforeTimeline: () => bindAnimatedElements(elements, world, getDelta()),
     timeline: timelineManager,
     isPaused: () => timelinePanelStore.isPaused
   })
@@ -999,6 +750,7 @@ const makePathHandlers = (
       pathRemoveWaypointNodes(scene, tick.waypointNodes)
       tick.nodeGeo.dispose()
       tick.nodeMat.dispose()
+      if (tick.actionId) pathTimelineManager?.removeAction(tick.actionId)
       unmount()
       const index = activePathTicks.indexOf(tick)
       if (index !== -1) activePathTicks.splice(index, 1)
@@ -1019,6 +771,46 @@ const makePathHandlers = (
   }
 }
 
+const PATH_DEFAULT_SPEED = 20
+
+const makeDefaultPathConfig = (overrides: Partial<PathConfig> = {}): PathConfig => ({
+  speed: PATH_DEFAULT_SPEED,
+  obstacleImpulse: 0,
+  easing: 'linear',
+  easingIntensity: 1,
+  playing: true,
+  loop: false,
+  pingPong: false,
+  showPath: true,
+  showNodes: false,
+  ...overrides
+})
+
+const makePathTick = (elementName: string, mesh: THREE.Object3D): ActivePathTick => {
+  const tick: ActivePathTick = {
+    id: `path-${elementName}`,
+    mesh,
+    nodeGeo: new THREE.BoxGeometry(PATH_NODE_SIZE, PATH_NODE_SIZE, PATH_NODE_SIZE),
+    nodeMat: new THREE.MeshBasicMaterial({ color: PATH_NODE_COLOR }),
+    pathLine: null,
+    waypointNodes: [],
+    smoothWaypoints: [],
+    followState: null
+  }
+  activePathTicks.push(tick)
+  return tick
+}
+
+/** Register a timeline action that drives this path's follower each frame. */
+const registerPathAction = (tick: ActivePathTick, elementName: string): void => {
+  if (!pathTimelineManager) return
+  tick.actionId = pathTimelineManager.addAction({
+    name: `${elementName}: path`,
+    category: 'movement',
+    action: () => advancePathTick(tick, pathGetDelta)
+  })
+}
+
 const enablePathForMesh = (
   elementName: string,
   mesh: THREE.Object3D,
@@ -1028,19 +820,7 @@ const enablePathForMesh = (
 ): void => {
   const store = useDebugSceneStore()
   const pathId = `path-${elementName}`
-  const nodeGeo = new THREE.BoxGeometry(PATH_NODE_SIZE, PATH_NODE_SIZE, PATH_NODE_SIZE)
-  const nodeMat = new THREE.MeshBasicMaterial({ color: PATH_NODE_COLOR })
-  const tick: ActivePathTick = {
-    id: pathId,
-    mesh,
-    nodeGeo,
-    nodeMat,
-    pathLine: null,
-    waypointNodes: [],
-    smoothWaypoints: [],
-    followState: null
-  }
-  activePathTicks.push(tick)
+  const tick = makePathTick(elementName, mesh)
 
   const interaction = usePathInteraction({
     canvas: canvasReference,
@@ -1063,19 +843,85 @@ const enablePathForMesh = (
     elementName,
     label: `${elementName} path`,
     waypoints: [],
-    config: {
-      speed: 20,
-      obstacleImpulse: 0,
-      easing: 'linear',
-      easingIntensity: 1,
-      playing: true,
-      loop: false,
-      pingPong: false,
-      showPath: true,
-      showNodes: false
-    },
+    config: makeDefaultPathConfig(),
     handlers: makePathHandlers(scene, tick, pathId, interaction.unmount)
   })
+  registerPathAction(tick, elementName)
+}
+
+/** Create a path with predefined nodes (no canvas drawing) and start it looping. */
+const createPresetPath = (
+  elementName: string,
+  mesh: THREE.Object3D,
+  scene: THREE.Scene,
+  waypoints: CoordinateTuple[],
+  configOverrides: Partial<PathConfig> = {}
+): void => {
+  const store = useDebugSceneStore()
+  const pathId = `path-${elementName}`
+  const tick = makePathTick(elementName, mesh)
+  store.addPath({
+    id: pathId,
+    elementName,
+    label: `${elementName} path`,
+    waypoints: [],
+    config: makeDefaultPathConfig({ loop: true, ...configOverrides }),
+    handlers: makePathHandlers(scene, tick, pathId, () => {})
+  })
+  registerPathAction(tick, elementName)
+  waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
+}
+
+const PATH_LOOP_SPAN = GRID_UNIT * 2
+const PATH_CUBE_RISE = GRID_UNIT * 2
+
+/** A rectangular loop of nodes starting at the mesh's current position. */
+const loopWaypoints = (mesh: THREE.Object3D, span: number): CoordinateTuple[] => {
+  const { x, y, z } = mesh.position
+  return [
+    [x, y, z],
+    [x + span, y, z],
+    [x + span, y, z - span],
+    [x, y, z - span]
+  ]
+}
+
+interface PresetPathContext {
+  scene: THREE.Scene
+  goombaWallBangA: ComplexModel
+  goombaWallBangB: ComplexModel
+  goombaJumpMovingBlock2: ComplexModel
+  movingCube: ComplexModel
+}
+
+/** Replaces the previous hardcoded movement: the three goombas patrol a node
+ *  loop and the moving cube bobs vertically between two nodes, each driven by
+ *  its own timeline action. */
+const createPresetMovementPaths = ({
+  scene,
+  goombaWallBangA,
+  goombaWallBangB,
+  goombaJumpMovingBlock2,
+  movingCube
+}: PresetPathContext): void => {
+  const g1 = goombaWallBangA as unknown as THREE.Object3D
+  const g2 = goombaWallBangB as unknown as THREE.Object3D
+  const g4 = goombaJumpMovingBlock2 as unknown as THREE.Object3D
+  const cube = movingCube as unknown as THREE.Object3D
+  createPresetPath('goomba-1', g1, scene, loopWaypoints(g1, PATH_LOOP_SPAN))
+  createPresetPath('goomba-2', g2, scene, loopWaypoints(g2, PATH_LOOP_SPAN))
+  createPresetPath('goomba-4', g4, scene, loopWaypoints(g4, PATH_LOOP_SPAN))
+  const { x, y, z } = cube.position
+  createPresetPath(
+    'moving-cube',
+    cube,
+    scene,
+    [
+      [x, y, z],
+      [x, y + PATH_CUBE_RISE, z]
+    ],
+    { pingPong: true, loop: false }
+  )
 }
 
 const registerTimelinePaths = (
