@@ -28,10 +28,12 @@ import { useTextureGroupsStore } from '@/stores/textureGroups'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
+import { usePanelsStore } from '@/stores/panels'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import type { InstancedGroupHandlers, PathHandlers, PathConfig } from '@/stores/debugScene'
 import { usePathInteraction } from '@/composables/usePathInteraction'
+import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
 import {
   pathCreateVisualization,
   pathRemoveVisualization,
@@ -65,6 +67,7 @@ const textureGroupsStore = useTextureGroupsStore()
 let initInstance: () => void
 let cleanupScene: (() => void) | undefined
 let cleanupPaths: (() => void) | undefined
+let cleanupPicker: (() => void) | undefined
 
 // Path visuals are scaled to the GRID_UNIT-30 scene; the package defaults
 // (radius 0.06, node 0.4) are sized for a ~1-unit reference scene and would be
@@ -146,6 +149,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('resize', initInstance)
+  cleanupPicker?.()
   cleanupPaths?.()
   cleanupScene?.()
   timelinePanelStore.unregister()
@@ -974,6 +978,11 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     onProgress: handleProgress
   })
   cleanupScene = cleanup
+  let activeCamera: THREE.Camera = camera
+  const trackedSetActiveCamera = (newCamera: THREE.Camera) => {
+    activeCamera = newCamera
+    return setActiveCamera(newCamera)
+  }
   const { elements, orbit } = await setup({
     config: {
       camera: { position: [CAMERA_POSITION_X, CAMERA_POSITION_Y, CAMERA_POSITION_Z] },
@@ -1012,7 +1021,7 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
         if (sceneObject) removeElements(world, [sceneObject])
       }
     },
-    { renderer, orbit, setCamera: setActiveCamera }
+    { renderer, orbit, setCamera: trackedSetActiveCamera }
   )
   const cameraConfigStore = useCameraConfigStore()
   cameraConfigStore.applyPresetToActiveSlot(CameraPreset.Orthographic)
@@ -1025,8 +1034,20 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
     scene,
     elements as ComplexModel[],
     canvasReference,
-    () => camera
+    () => activeCamera
   )
+
+  const panelsStore = usePanelsStore()
+  const picker = useSceneElementPicker({
+    canvas: canvasReference,
+    getCamera: () => activeCamera,
+    getObjects: () => scene.children,
+    getSelectableNames: () => new Set(debugSceneStore.sceneElements.map((e) => e.name)),
+    isEnabled: () => panelsStore.isElementsOpen,
+    onPick: (name) => useElementPropertiesStore().requestElementSelection(name)
+  })
+  picker.mount()
+  cleanupPicker = picker.unmount
 }
 
 const registerSceneLights = (scene: THREE.Scene): void => {

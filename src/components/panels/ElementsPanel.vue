@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import GenericPanel from './GenericPanel.vue'
 import SchemaControls from './ConfigControls.vue'
 import ElementItem from './ElementItem.vue'
@@ -39,12 +39,18 @@ const { sceneElements, sceneGroups, spawns, instancedGroups, spawnGroups, paths 
   storeToRefs(debugSceneStore)
 
 const elementPropertiesStore = useElementPropertiesStore()
-const { selectedElementName, activeProperties } = storeToRefs(elementPropertiesStore)
+const { selectedElementName, activeProperties, selectionRequestNonce } =
+  storeToRefs(elementPropertiesStore)
 const { openElementProperties } = elementPropertiesStore
 const textureStore = useTextureGroupsStore()
 
 const expandedName = ref<string | null>(null)
 const hiddenCategories = ref<Set<ElementCategory>>(new Set())
+
+// Expand the element requested from outside the panel (e.g. a click in the scene).
+watch(selectionRequestNonce, () => {
+  if (selectedElementName.value) expandedName.value = selectedElementName.value
+})
 
 const allVisible = computed(() => hiddenCategories.value.size === 0)
 
