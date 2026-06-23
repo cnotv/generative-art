@@ -184,6 +184,17 @@
   # Your Title Here
   ```
 
+- **Keep tutorials in sync with the code**: When you change a file that a tutorial
+  documents (its APIs, options, file paths, or worked example), update that tutorial
+  in the same change so it never goes stale. Each tutorial lists the source files it
+  covers in a "Source files" note near the top — when you edit any of those files,
+  re-read the tutorial and fix every snippet, option name, and path that the change
+  affected. Specifically, the timeline + paths tutorial
+  (`documentation/docs/guides/defining-timelines-and-paths.md`) tracks
+  `packages/animation/src/TimelineManager.ts`, `packages/animation/src/types.ts`,
+  `src/stores/debugScene.ts`, `src/utils/pathVisualization.ts`, and
+  `src/views/Tests/Timeline/Timeline.vue`; update it whenever those change.
+
 ## Linting
 
 - **Run lint before commit**: Husky + lint-staged enforces this automatically
