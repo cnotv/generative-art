@@ -104,8 +104,6 @@ interface ActivePathTick {
   stepped?: boolean
   /** Active segment + progress for a stepped follower. */
   stepState?: { current: number; progress: number }
-  /** Ids of the per-segment timeline actions of a stepped path, for removal. */
-  stepActionIds?: string[]
   /** Id of the timeline action that drives this path, for removal. */
   actionId?: string
 }
@@ -266,33 +264,35 @@ const nextStepIndex = (segmentIndex: number, nodeCount: number, config: PathConf
   return segmentIndex >= nodeCount - 1 ? -1 : segmentIndex + 1
 }
 
-/** Advances the follower along one stepped-path segment; only the current step
- *  moves it. On completion it hands the active step to the next segment. */
-const advanceStep = (tick: ActivePathTick, segmentIndex: number, getDelta: () => number): void => {
+/** Length of a segment in scene units; an in-place jump is paced over its
+ *  vertical travel since it covers no horizontal distance. */
+const segmentLength = (a: CoordinateTuple, b: CoordinateTuple, type: SegmentType): number =>
+  type === 'jump'
+    ? JUMP_IN_PLACE_HEIGHT * 2
+    : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
+
+/** Advances the stepped follower along its current segment; the per-cycle
+ *  breakdown of these steps is shown as labelled segments on the path's single
+ *  timeline row. On completion it hands the active step to the next segment. */
+const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry || !entry.config.playing || entry.waypoints.length < 2) return
   const state = tick.stepState ?? (tick.stepState = { current: 0, progress: 0 })
-  if (state.current !== segmentIndex) return
   const model = tick.mesh as unknown as ComplexModel
   const delta = getDelta()
   const nodeCount = entry.waypoints.length
-  const a = entry.waypoints[segmentIndex]
-  const b = entry.waypoints[(segmentIndex + 1) % nodeCount]
+  const a = entry.waypoints[state.current]
+  const b = entry.waypoints[(state.current + 1) % nodeCount]
   const type = segmentType(a, b)
-  // An in-place jump has no horizontal length, so pace it over its vertical travel.
-  const length =
-    type === 'jump'
-      ? JUMP_IN_PLACE_HEIGHT * 2
-      : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
   const speed = entry.config.speed * (type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER)
-  state.progress = Math.min(1, state.progress + (speed * delta) / length)
+  state.progress = Math.min(1, state.progress + (speed * delta) / segmentLength(a, b, type))
   if (type !== 'jump')
     setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
   positionAlongSegment(model, a, b, state.progress, type)
   playWalkClip(model, delta)
   syncKinematicBody(model)
   if (state.progress >= 1) {
-    state.current = nextStepIndex(segmentIndex, nodeCount, entry.config)
+    state.current = nextStepIndex(state.current, nodeCount, entry.config)
     state.progress = 0
   }
 }
@@ -920,7 +920,8 @@ const buildTimeline = async ({
     goombaWallBangA,
     goombaWallBangB,
     goombaJumpMovingBlock2,
-    movingCube
+    movingCube,
+    rate: getFrameRate()
   })
 
   animate({
@@ -1030,7 +1031,6 @@ const makePathHandlers = (
       tick.nodeGeo.dispose()
       tick.nodeMat.dispose()
       if (tick.actionId) pathTimelineManager?.removeAction(tick.actionId)
-      tick.stepActionIds?.forEach((id) => pathTimelineManager?.removeAction(id))
       unmount()
       const index = activePathTicks.indexOf(tick)
       if (index !== -1) activePathTicks.splice(index, 1)
@@ -1089,22 +1089,34 @@ const registerPathAction = (tick: ActivePathTick, elementName: string): void => 
   })
 }
 
-/** Register one timeline action per path segment, each named by its movement type
- *  (walk / forward-jump / jump), so every step is its own row in the timeline. */
-const registerStepActions = (
+/** Per-cycle step breakdown (name + duration in frames) of a stepped path, used
+ *  to render labelled segments along the path's single timeline row. */
+const buildPathSegments = (
+  waypoints: CoordinateTuple[],
+  rate: number
+): { name: string; frames: number }[] =>
+  waypoints.map((a, index) => {
+    const b = waypoints[(index + 1) % waypoints.length]
+    const type = segmentType(a, b)
+    const factor = type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER
+    const seconds = segmentLength(a, b, type) / (PATH_DEFAULT_SPEED * factor)
+    return { name: type, frames: Math.max(1, Math.round(seconds / rate)) }
+  })
+
+/** Register the single timeline action that drives a stepped follower, carrying
+ *  the per-step breakdown as `segments` so the one row shows walk/jump pieces. */
+const registerSteppedPathAction = (
   tick: ActivePathTick,
   elementName: string,
-  waypoints: CoordinateTuple[]
+  waypoints: CoordinateTuple[],
+  rate: number
 ): void => {
   if (!pathTimelineManager) return
-  const manager = pathTimelineManager
-  tick.stepActionIds = waypoints.map((a, segmentIndex) => {
-    const b = waypoints[(segmentIndex + 1) % waypoints.length]
-    return manager.addAction({
-      name: `${elementName}: ${segmentType(a, b)}`,
-      category: 'movement',
-      action: () => advanceStep(tick, segmentIndex, pathGetDelta)
-    })
+  tick.actionId = pathTimelineManager.addAction({
+    name: `${elementName}: path`,
+    category: 'movement',
+    segments: buildPathSegments(waypoints, rate),
+    action: () => advanceSteppedFollower(tick, pathGetDelta)
   })
 }
 
@@ -1170,14 +1182,15 @@ const createPresetPath = (
   waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
 }
 
-/** Like createPresetPath, but the path is split into one timeline action per
- *  segment (a "step"), each segment coloured distinctly, and the follower walks
- *  straight along flat/downward steps and jumps a parabola up taller ones. */
+/** Like createPresetPath, but the follower walks straight along flat/downward
+ *  steps and jumps a parabola up taller ones (or in place). Its single timeline
+ *  row shows the per-step walk/jump breakdown via the action's `segments`. */
 const createSteppedPresetPath = (
   elementName: string,
   mesh: THREE.Object3D,
   scene: THREE.Scene,
-  waypoints: CoordinateTuple[]
+  waypoints: CoordinateTuple[],
+  rate: number
 ): void => {
   const store = useDebugSceneStore()
   const pathId = `path-${elementName}`
@@ -1192,7 +1205,7 @@ const createSteppedPresetPath = (
     config: makeDefaultPathConfig({ loop: true }),
     handlers: makePathHandlers(scene, tick, pathId, () => {})
   })
-  registerStepActions(tick, elementName, waypoints)
+  registerSteppedPathAction(tick, elementName, waypoints, rate)
   waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
 }
 
@@ -1251,6 +1264,8 @@ interface PresetPathContext {
   goombaWallBangB: ComplexModel
   goombaJumpMovingBlock2: ComplexModel
   movingCube: ComplexModel
+  /** Seconds per frame, for sizing the stepped path's timeline segments. */
+  rate: number
 }
 
 /** Replaces the previous hardcoded movement: the three goombas patrol a node
@@ -1261,13 +1276,14 @@ const createPresetMovementPaths = ({
   goombaWallBangA,
   goombaWallBangB,
   goombaJumpMovingBlock2,
-  movingCube
+  movingCube,
+  rate
 }: PresetPathContext): void => {
   const g1 = goombaWallBangA as unknown as THREE.Object3D
   const g2 = goombaWallBangB as unknown as THREE.Object3D
   const g4 = goombaJumpMovingBlock2 as unknown as THREE.Object3D
   const cube = movingCube as unknown as THREE.Object3D
-  createSteppedPresetPath('goomba-1', g1, scene, GOOMBA_1_CLIMB_PATH)
+  createSteppedPresetPath('goomba-1', g1, scene, GOOMBA_1_CLIMB_PATH, rate)
   createPresetPath('goomba-2', g2, scene, GOOMBA_2_WALL_BANG_PATH)
   createPresetPath('goomba-4', g4, scene, loopWaypoints(g4, PATH_LOOP_SPAN))
   const { x, y, z } = cube.position
