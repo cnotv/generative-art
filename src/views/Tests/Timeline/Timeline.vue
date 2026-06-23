@@ -134,6 +134,8 @@ const PATH_JUMP_MIN_RISE = 5
 const JUMP_ARC_HEIGHT = 16
 /** Apex height as a fraction of the climb, when taller than JUMP_ARC_HEIGHT. */
 const JUMP_ARC_RATIO = 0.65
+/** Jump steps advance this much faster than the path speed, so hops feel snappy. */
+const JUMP_SPEED_MULTIPLIER = 3
 
 type SegmentType = 'walk' | 'forward-jump' | 'jump'
 
@@ -282,7 +284,8 @@ const advanceStep = (tick: ActivePathTick, segmentIndex: number, getDelta: () =>
     type === 'jump'
       ? JUMP_IN_PLACE_HEIGHT * 2
       : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
-  state.progress = Math.min(1, state.progress + (entry.config.speed * delta) / length)
+  const speed = entry.config.speed * (type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER)
+  state.progress = Math.min(1, state.progress + (speed * delta) / length)
   if (type !== 'jump')
     setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
   positionAlongSegment(model, a, b, state.progress, type)
