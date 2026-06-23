@@ -24,23 +24,25 @@ export const pathInterpolateWaypoints = (waypoints: Waypoint[]): Waypoint[] => {
  * @param waypoints - Waypoints defining the path shape
  * @param color - Tube colour (default white)
  * @param tubeRadius - Tube cross-section radius (default 0.06)
+ * @param closed - Close the loop back to the start (for looping paths)
  * @returns The created group containing the path tube mesh
  */
 export const pathCreateVisualization = (
   scene: THREE.Scene,
   waypoints: Waypoint[],
   color: number = DEFAULT_PATH_COLOR,
-  tubeRadius: number = DEFAULT_TUBE_RADIUS
+  tubeRadius: number = DEFAULT_TUBE_RADIUS,
+  closed: boolean = false
 ): THREE.Group => {
   const group = new THREE.Group()
 
   if (waypoints.length >= 2) {
     const vectors = waypoints.map(({ x, y, z }) => new THREE.Vector3(x, y + PATH_Y_OFFSET, z))
-    const curve = new THREE.CatmullRomCurve3(vectors, false, 'centripetal')
+    const curve = new THREE.CatmullRomCurve3(vectors, closed, 'centripetal')
     const totalPoints = waypoints.length * 2
     const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 })
     group.userData.sharedMaterial = material
-    const tubeGeo = new THREE.TubeGeometry(curve, totalPoints, tubeRadius, 6, false)
+    const tubeGeo = new THREE.TubeGeometry(curve, totalPoints, tubeRadius, 6, closed)
     group.add(new THREE.Mesh(tubeGeo, material))
   }
 

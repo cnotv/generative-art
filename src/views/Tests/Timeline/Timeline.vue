@@ -17,11 +17,9 @@ import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   bindAnimatedElements,
   createTimelineManager,
-  controllerForward,
   setRotation,
   type Timeline,
-  type CoordinateTuple,
-  type AnimationData
+  type CoordinateTuple
 } from '@webgamekit/animation'
 import { getBall, getCube } from '@webgamekit/threejs'
 import brickTexture from '@/assets/images/textures/brick.jpg'
@@ -107,16 +105,18 @@ const activePathTicks: ActivePathTick[] = []
  *  (preset or user-drawn) can register a driving timeline action. */
 let pathTimelineManager: ReturnType<typeof createTimelineManager> | null = null
 let pathGetDelta: () => number = () => 0
-/** Brick obstacles a walking follower collides with (set during buildTimeline). */
+/** Static brick obstacles a walking follower collides with (set during buildTimeline). */
 let pathObstacles: ComplexModel[] = []
+/** Current dynamic obstacles (the spawned balls) a walking follower collides with. */
+let pathBallProvider: () => ComplexModel[] = () => []
 
 const GOOMBA_WALK_CLIP = 'Take 001'
 const PATH_ARRIVE_XZ = 8
 const PATH_ARRIVE_Y = 0.5
 const PATH_CLIMB_STEP = 3
 const PATH_FALL_STEP = 4
-// Above this height a follower is on top of the bricks and walks freely across them.
-const BRICK_WALK_HEIGHT = 10
+/** Extra distance ahead of the next step the collision ray probes for a wall. */
+const PATH_COLLISION_LOOKAHEAD = 3
 
 /** Keep a kinematic body in sync with the mesh moved by the path follower. */
 const syncKinematicBody = (mesh: THREE.Object3D): void => {
@@ -135,11 +135,57 @@ const syncKinematicBody = (mesh: THREE.Object3D): void => {
 const isWalkingFollower = (mesh: THREE.Object3D): boolean =>
   !!(mesh.userData as { actions?: Record<string, unknown> }).actions
 
+const navRaycaster = new THREE.Raycaster()
+const navDirection = new THREE.Vector3()
+
+/** Plays the model's walk clip and advances its mixer by delta. */
+const playWalkClip = (mesh: THREE.Object3D, delta: number): void => {
+  const userData = mesh.userData as {
+    mixer?: THREE.AnimationMixer
+    actions?: Record<string, THREE.AnimationAction>
+  }
+  if (!userData.mixer) return
+  const action = userData.actions?.[GOOMBA_WALK_CLIP] ?? Object.values(userData.actions ?? {})[0]
+  if (action && !action.isRunning()) action.play()
+  userData.mixer.update(delta)
+}
+
+/** Steps the model horizontally toward the target unless a brick/ball blocks the
+ *  ray ahead. Returns whether the way forward was blocked. */
+const stepFollowerHorizontal = (
+  model: ComplexModel,
+  dx: number,
+  dz: number,
+  distanceXZ: number,
+  step: number
+): boolean => {
+  if (distanceXZ <= Number.EPSILON) return false
+  navDirection.set(dx / distanceXZ, 0, dz / distanceXZ)
+  navRaycaster.set(model.position, navDirection)
+  navRaycaster.far = step + PATH_COLLISION_LOOKAHEAD
+  const blocked =
+    navRaycaster.intersectObjects([...pathObstacles, ...pathBallProvider()], true).length > 0
+  if (!blocked) {
+    const advance = Math.min(step, distanceXZ)
+    model.position.x += navDirection.x * advance
+    model.position.z += navDirection.z * advance
+  }
+  return blocked
+}
+
+/** Hops up toward a higher node only when blocked (climbing a wall); drops toward lower nodes. */
+const applyFollowerVertical = (model: ComplexModel, dy: number, blocked: boolean): void => {
+  if (dy > PATH_ARRIVE_Y) {
+    if (blocked) model.position.y += Math.min(PATH_CLIMB_STEP, dy)
+  } else if (dy < -PATH_ARRIVE_Y) {
+    model.position.y -= Math.min(PATH_FALL_STEP, -dy)
+  }
+}
+
 /**
- * Walks the follower toward its current path node: the node only points where to
- * go. `controllerForward` does the horizontal step (colliding with bricks and
- * playing the walk clip); height is closed with a hop up or a drop so the goomba
- * climbs onto / off the bricks rather than sliding through them.
+ * Walks the follower toward its current path node — the node only points where to
+ * go. The ray starts at the model's height, so it walks freely across brick tops
+ * yet is stopped by a taller wall ahead, climbing it with a hop.
  */
 const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
@@ -150,25 +196,16 @@ const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): 
   const [targetX, targetY, targetZ] = entry.waypoints[index]
   const dx = targetX - model.position.x
   const dz = targetZ - model.position.z
+  const distanceXZ = Math.hypot(dx, dz)
 
   setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(dx, -dz)))
-  // On top of the bricks the follower walks freely; on the ground the bricks block it.
-  const obstacles = model.position.y > BRICK_WALK_HEIGHT ? [] : pathObstacles
-  const animationData: AnimationData = {
-    player: model,
-    actionName: GOOMBA_WALK_CLIP,
-    delta,
-    distance: entry.config.speed * delta,
-    backward: false
-  }
-  controllerForward(obstacles, [], animationData)
-
+  const blocked = stepFollowerHorizontal(model, dx, dz, distanceXZ, entry.config.speed * delta)
   const dy = targetY - model.position.y
-  if (dy > PATH_ARRIVE_Y) model.position.y += Math.min(PATH_CLIMB_STEP, dy)
-  else if (dy < -PATH_ARRIVE_Y) model.position.y -= Math.min(PATH_FALL_STEP, -dy)
+  applyFollowerVertical(model, dy, blocked)
+  playWalkClip(model, delta)
   syncKinematicBody(model)
 
-  if (Math.hypot(dx, dz) < PATH_ARRIVE_XZ && Math.abs(dy) < PATH_CLIMB_STEP) {
+  if (distanceXZ < PATH_ARRIVE_XZ && Math.abs(dy) < PATH_CLIMB_STEP) {
     tick.targetIndex = (index + 1) % entry.waypoints.length
   }
 }
@@ -708,6 +745,7 @@ const buildTimeline = async ({
   pathTimelineManager = timelineManager
   pathGetDelta = getDelta
   pathObstacles = cubes
+  pathBallProvider = () => elements.filter((e) => isBall(e))
   timelineManager.addAction({
     name: 'coin: flip',
     start: 0,
@@ -776,12 +814,15 @@ const refreshPathLine = (
     tick.pathLine = null
   }
   if (waypoints.length < 2) return
+  // Looping paths close the tube back to the start so the whole loop is visible.
+  const closed = useDebugSceneStore().paths.find((p) => p.id === tick.id)?.config.loop ?? false
   tick.smoothWaypoints = pathInterpolateWaypoints(waypoints.map(([x, y, z]) => ({ x, y, z })))
   tick.pathLine = pathCreateVisualization(
     scene,
     tick.smoothWaypoints,
     PATH_NODE_COLOR,
-    PATH_TUBE_RADIUS
+    PATH_TUBE_RADIUS,
+    closed
   )
   tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
   updateTickVisibility(tick)
@@ -980,9 +1021,11 @@ const GOOMBA_1_CLIMB_PATH: CoordinateTuple[] = [
   [-GRID_UNIT * 2, GOOMBA_GROUND_Y, GRID_UNIT]
 ]
 
-/** A rectangular loop of nodes starting at the mesh's current position. */
+/** A rectangular loop of nodes at ground level, starting at the mesh's XZ.
+ *  Goombas spawn at brick height; a ground loop makes them walk down and patrol. */
 const loopWaypoints = (mesh: THREE.Object3D, span: number): CoordinateTuple[] => {
-  const { x, y, z } = mesh.position
+  const { x, z } = mesh.position
+  const y = GOOMBA_GROUND_Y
   return [
     [x, y, z],
     [x + span, y, z],
