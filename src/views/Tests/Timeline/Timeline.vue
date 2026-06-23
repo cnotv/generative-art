@@ -432,6 +432,10 @@ const gridToScene = ([x, y, z]: [number, number, number]): CoordinateTuple => [
   -GRID_UNIT * z
 ]
 const GOOMBA_SCALE = 0.3
+// Collider full extent (boundary 0.5 → half-extent GOOMBA_COLLIDER_SIZE/2),
+// matched to the visible goomba so balls collide with it instead of tunnelling.
+const GOOMBA_COLLIDER_SIZE = 12
+const GOOMBA_RESTITUTION = 0.5
 // goomba-1 spawns on its first path node so the stepped follower starts cleanly.
 const GOOMBA_1_SPAWN_Z = GRID_UNIT
 const GOOMBA_4_SPAWN_X = -GRID_UNIT * 2
@@ -820,8 +824,10 @@ const loadGoombas = async ({ scene, world }: SceneWorld) => {
       name,
       position,
       scale: [GOOMBA_SCALE, GOOMBA_SCALE, GOOMBA_SCALE],
-      size: 3,
-      restitution: -10,
+      // Collider sized to the visible goomba so falling balls hit it (the old
+      // size-3 box was a quarter of the model, so balls passed through).
+      size: GOOMBA_COLLIDER_SIZE,
+      restitution: GOOMBA_RESTITUTION,
       boundary: 0.5,
       type: 'kinematicPositionBased',
       weight: 250,
