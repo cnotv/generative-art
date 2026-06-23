@@ -37,6 +37,7 @@ import { usePathInteraction } from '@/composables/usePathInteraction'
 import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
 import {
   pathCreateVisualization,
+  pathCreateSteppedVisualization,
   pathRemoveVisualization,
   pathInterpolateWaypoints,
   pathCreateWaypointNode,
@@ -95,6 +96,16 @@ interface ActivePathTick {
   followState: PathFollowState | null
   /** Current target node index for controller-driven (walking/jumping) followers. */
   targetIndex?: number
+  /** Consecutive frames blocked against a same-height wall (wall-bang turn timer). */
+  blockedFrames?: number
+  /** Traversal direction for ping-pong walking followers (1 forward, -1 back). */
+  direction?: number
+  /** Whether this path is driven by one timeline action per segment (stepped). */
+  stepped?: boolean
+  /** Active segment + progress for a stepped follower. */
+  stepState?: { current: number; progress: number }
+  /** Ids of the per-segment timeline actions of a stepped path, for removal. */
+  stepActionIds?: string[]
   /** Id of the timeline action that drives this path, for removal. */
   actionId?: string
 }
@@ -117,6 +128,22 @@ const PATH_CLIMB_STEP = 3
 const PATH_FALL_STEP = 4
 /** Extra distance ahead of the next step the collision ray probes for a wall. */
 const PATH_COLLISION_LOOKAHEAD = 3
+/** Height rise to the next node above which a step is jumped as a parabola. */
+const PATH_JUMP_MIN_RISE = 5
+/** Minimum apex height of a forward jump above the straight chord between nodes. */
+const JUMP_ARC_HEIGHT = 16
+/** Apex height as a fraction of the climb, when taller than JUMP_ARC_HEIGHT. */
+const JUMP_ARC_RATIO = 0.65
+
+type SegmentType = 'walk' | 'forward-jump' | 'jump'
+
+/** Classifies a path segment by its endpoints: a same-spot node is an in-place
+ *  jump, a forward rise is a forward jump, everything else is a walk. */
+const segmentType = (a: CoordinateTuple, b: CoordinateTuple): SegmentType => {
+  const horizontal = Math.hypot(b[0] - a[0], b[2] - a[2])
+  if (horizontal < PATH_ARRIVE_Y) return 'jump'
+  return b[1] - a[1] > PATH_JUMP_MIN_RISE ? 'forward-jump' : 'walk'
+}
 
 /** Keep a kinematic body in sync with the mesh moved by the path follower. */
 const syncKinematicBody = (mesh: THREE.Object3D): void => {
@@ -137,6 +164,9 @@ const isWalkingFollower = (mesh: THREE.Object3D): boolean =>
 
 const navRaycaster = new THREE.Raycaster()
 const navDirection = new THREE.Vector3()
+/** Frames a walking follower stays blocked against a same-height wall before it
+ *  gives up and heads to the next node (so a wall-banging goomba turns around). */
+const PATH_BLOCKED_GIVEUP = 40
 
 /** Plays the model's walk clip and advances its mixer by delta. */
 const playWalkClip = (mesh: THREE.Object3D, delta: number): void => {
@@ -173,19 +203,15 @@ const stepFollowerHorizontal = (
   return blocked
 }
 
-/** Hops up toward a higher node only when blocked (climbing a wall); drops toward lower nodes. */
-const applyFollowerVertical = (model: ComplexModel, dy: number, blocked: boolean): void => {
-  if (dy > PATH_ARRIVE_Y) {
-    if (blocked) model.position.y += Math.min(PATH_CLIMB_STEP, dy)
-  } else if (dy < -PATH_ARRIVE_Y) {
-    model.position.y -= Math.min(PATH_FALL_STEP, -dy)
-  }
+/** Lowers the follower toward a lower node (walking off a ledge). */
+const applyFollowerDrop = (model: ComplexModel, dy: number): void => {
+  if (dy < -PATH_ARRIVE_Y) model.position.y -= Math.min(PATH_FALL_STEP, -dy)
 }
 
 /**
- * Walks the follower toward its current path node — the node only points where to
- * go. The ray starts at the model's height, so it walks freely across brick tops
- * yet is stopped by a taller wall ahead, climbing it with a hop.
+ * Walks a non-stepped follower toward its current node, colliding with bricks/balls
+ * via a forward ray (so a wall-banger stops and turns) and descending toward lower
+ * nodes. Climbing is the stepped follower's job, not this one's.
  */
 const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
@@ -197,16 +223,115 @@ const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): 
   const dx = targetX - model.position.x
   const dz = targetZ - model.position.z
   const distanceXZ = Math.hypot(dx, dz)
-
   setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(dx, -dz)))
+
   const blocked = stepFollowerHorizontal(model, dx, dz, distanceXZ, entry.config.speed * delta)
   const dy = targetY - model.position.y
-  applyFollowerVertical(model, dy, blocked)
+  applyFollowerDrop(model, dy)
+  advanceTargetIndex(tick, entry.waypoints.length, entry.config, { index, distanceXZ, dy, blocked })
   playWalkClip(model, delta)
   syncKinematicBody(model)
+}
 
-  if (distanceXZ < PATH_ARRIVE_XZ && Math.abs(dy) < PATH_CLIMB_STEP) {
-    tick.targetIndex = (index + 1) % entry.waypoints.length
+/** Position the follower a fraction `t` along the segment a→b according to its
+ *  type: a walk is a straight line; a forward jump arcs up and over onto the
+ *  ledge; an in-place jump hops straight up and back down at the same spot. */
+const positionAlongSegment = (
+  model: ComplexModel,
+  a: CoordinateTuple,
+  b: CoordinateTuple,
+  t: number,
+  type: SegmentType
+): void => {
+  const arc = 4 * t * (1 - t)
+  if (type === 'jump') {
+    model.position.set(a[0], a[1] + JUMP_IN_PLACE_HEIGHT * arc, a[2])
+    return
+  }
+  const horizontal = type === 'forward-jump' ? t * t * t * (t * (t * 6 - 15) + 10) : t
+  model.position.x = THREE.MathUtils.lerp(a[0], b[0], horizontal)
+  model.position.z = THREE.MathUtils.lerp(a[2], b[2], horizontal)
+  const chord = THREE.MathUtils.lerp(a[1], b[1], t)
+  const apex =
+    type === 'forward-jump' ? Math.max(JUMP_ARC_HEIGHT, (b[1] - a[1]) * JUMP_ARC_RATIO) : 0
+  model.position.y = chord + apex * arc
+}
+
+/** Picks the next active segment after one completes: wrap when looping, else stop
+ *  (sentinel -1) at the final segment. Ping-pong on stepped paths falls back to loop. */
+const nextStepIndex = (segmentIndex: number, nodeCount: number, config: PathConfig): number => {
+  if (config.loop || config.pingPong) return (segmentIndex + 1) % nodeCount
+  return segmentIndex >= nodeCount - 1 ? -1 : segmentIndex + 1
+}
+
+/** Advances the follower along one stepped-path segment; only the current step
+ *  moves it. On completion it hands the active step to the next segment. */
+const advanceStep = (tick: ActivePathTick, segmentIndex: number, getDelta: () => number): void => {
+  const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
+  if (!entry || !entry.config.playing || entry.waypoints.length < 2) return
+  const state = tick.stepState ?? (tick.stepState = { current: 0, progress: 0 })
+  if (state.current !== segmentIndex) return
+  const model = tick.mesh as unknown as ComplexModel
+  const delta = getDelta()
+  const nodeCount = entry.waypoints.length
+  const a = entry.waypoints[segmentIndex]
+  const b = entry.waypoints[(segmentIndex + 1) % nodeCount]
+  const type = segmentType(a, b)
+  // An in-place jump has no horizontal length, so pace it over its vertical travel.
+  const length =
+    type === 'jump'
+      ? JUMP_IN_PLACE_HEIGHT * 2
+      : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
+  state.progress = Math.min(1, state.progress + (entry.config.speed * delta) / length)
+  if (type !== 'jump')
+    setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
+  positionAlongSegment(model, a, b, state.progress, type)
+  playWalkClip(model, delta)
+  syncKinematicBody(model)
+  if (state.progress >= 1) {
+    state.current = nextStepIndex(segmentIndex, nodeCount, entry.config)
+    state.progress = 0
+  }
+}
+
+interface NavStepResult {
+  index: number
+  distanceXZ: number
+  dy: number
+  blocked: boolean
+}
+
+/** Next node for a walking follower: bounce for ping-pong, wrap for loop, else stop. */
+const nextWalkIndex = (
+  tick: ActivePathTick,
+  index: number,
+  nodeCount: number,
+  config: PathConfig
+): number => {
+  if (config.pingPong) {
+    const direction = tick.direction ?? 1
+    const bounced = index + direction >= nodeCount || index + direction < 0 ? -direction : direction
+    tick.direction = bounced
+    return index + bounced
+  }
+  if (config.loop) return (index + 1) % nodeCount
+  return Math.min(index + 1, nodeCount - 1)
+}
+
+/** Advances a walking follower to its next node when it arrives, or when it has
+ *  been banging a same-height wall long enough to "turn around". */
+const advanceTargetIndex = (
+  tick: ActivePathTick,
+  nodeCount: number,
+  config: PathConfig,
+  { index, distanceXZ, dy, blocked }: NavStepResult
+): void => {
+  const arrived = distanceXZ < PATH_ARRIVE_XZ && Math.abs(dy) < PATH_CLIMB_STEP
+  const banging = blocked && dy <= PATH_ARRIVE_Y
+  tick.blockedFrames = banging ? (tick.blockedFrames ?? 0) + 1 : 0
+  if (arrived || tick.blockedFrames > PATH_BLOCKED_GIVEUP) {
+    tick.targetIndex = nextWalkIndex(tick, index, nodeCount, config)
+    tick.blockedFrames = 0
   }
 }
 
@@ -276,6 +401,8 @@ const GROUND_HEIGHT = 0
 const GROUND_SIZE = 2000
 const CUBE_CLUSTER_X_FAR = -2
 const WALL_BANG_CUBE_Z_OFFSET = 5
+/** Lone brick (part of the brick group) that goomba-5 stands on. */
+const PEDESTAL_GRID_X = 3
 
 const BRICK_GRID_POSITIONS: [number, number, number][] = [
   [0, 0, 0],
@@ -286,7 +413,8 @@ const BRICK_GRID_POSITIONS: [number, number, number][] = [
   [CUBE_CLUSTER_X_FAR, 0, 0],
   [CUBE_CLUSTER_X_FAR, 0, 1],
   [CUBE_CLUSTER_X_FAR, 0, 2],
-  [1, 0, WALL_BANG_CUBE_Z_OFFSET]
+  [1, 0, WALL_BANG_CUBE_Z_OFFSET],
+  [PEDESTAL_GRID_X, 0, 0]
 ]
 
 const gridToScene = ([x, y, z]: [number, number, number]): CoordinateTuple => [
@@ -295,10 +423,17 @@ const gridToScene = ([x, y, z]: [number, number, number]): CoordinateTuple => [
   -GRID_UNIT * z
 ]
 const GOOMBA_SCALE = 0.3
-const GOOMBA_1_SPAWN_Z = 22
-const GOOMBA_2_SPAWN_X = 68
+// goomba-1 spawns on its first path node so the stepped follower starts cleanly.
+const GOOMBA_1_SPAWN_Z = GRID_UNIT
 const GOOMBA_4_SPAWN_X = -GRID_UNIT * 2
-const GOOMBA_1_GRAVITY_SCALE = 2
+// goomba-2 patrols in front of the lone wall-bang cube (grid x 1, z 5) and bangs it.
+const GOOMBA_2_WALL_X = GRID_UNIT
+const GOOMBA_2_WALL_Z = -GRID_UNIT * 3
+const GOOMBA_2_WALL_FAR_Z = -GRID_UNIT * WALL_BANG_CUBE_Z_OFFSET
+// goomba-5 spawns above the pedestal brick and falls to stand on top of it.
+const GOOMBA_5_X = GRID_UNIT * PEDESTAL_GRID_X
+const GOOMBA_5_Z = 0
+const GOOMBA_5_SPAWN_Y = GRID_UNIT * 2
 const COIN_SCALE = 20
 const BALL_SPAWN_PAUSE_FRAMES = 100
 const CLOUD_CENTER_HEIGHT = 200
@@ -668,12 +803,10 @@ const registerBallSpawnGroup = ({
 }
 
 const loadGoombas = async ({ scene, world }: SceneWorld) => {
-  const getGoomba = (
-    name: string,
-    position: CoordinateTuple,
-    hasGravity = true,
-    gravityScale = 1
-  ) =>
+  // Goombas are fully path-driven: their height comes from path nodes, not gravity.
+  // Leaving gravity on made bindAnimatedElements pull them down each frame, which
+  // fought the climb so they could never get over a brick top.
+  const getGoomba = (name: string, position: CoordinateTuple, hasGravity = false) =>
     getModel(scene, world, 'goomba.glb', {
       name,
       position,
@@ -687,13 +820,14 @@ const loadGoombas = async ({ scene, world }: SceneWorld) => {
       showHelper: false,
       enabledRotations: [false, true, false],
       hasGravity,
-      gravityScale,
       castShadow: true
     })
   return Promise.all([
-    getGoomba('goomba-1', [0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z], true, GOOMBA_1_GRAVITY_SCALE),
-    getGoomba('goomba-2', [GOOMBA_2_SPAWN_X, GRID_UNIT, 0]),
-    getGoomba('goomba-4', [GOOMBA_4_SPAWN_X, GRID_UNIT, GRID_UNIT * -5])
+    getGoomba('goomba-1', [0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z]),
+    getGoomba('goomba-2', [GOOMBA_2_WALL_X, GROUND_HEIGHT, GOOMBA_2_WALL_Z]),
+    getGoomba('goomba-4', [GOOMBA_4_SPAWN_X, GRID_UNIT, GRID_UNIT * -5]),
+    // goomba-5 has no path: gravity lets it drop and settle on the pedestal brick.
+    getGoomba('goomba-5', [GOOMBA_5_X, GOOMBA_5_SPAWN_Y, GOOMBA_5_Z], true)
   ])
 }
 
@@ -727,16 +861,18 @@ const buildTimeline = async ({
     scene,
     world
   })
-  const [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2] = await loadGoombas({
-    scene,
-    world
-  })
+  const [goombaWallBangA, goombaWallBangB, goombaJumpMovingBlock2, goombaPedestal] =
+    await loadGoombas({
+      scene,
+      world
+    })
 
   const elements: ComplexModel[] = [
     ...(balls as unknown as ComplexModel[]),
     goombaWallBangA,
     goombaWallBangB,
     goombaJumpMovingBlock2,
+    goombaPedestal,
     movingCube,
     ...cubes
   ]
@@ -816,14 +952,26 @@ const refreshPathLine = (
   if (waypoints.length < 2) return
   // Looping paths close the tube back to the start so the whole loop is visible.
   const closed = useDebugSceneStore().paths.find((p) => p.id === tick.id)?.config.loop ?? false
-  tick.smoothWaypoints = pathInterpolateWaypoints(waypoints.map(([x, y, z]) => ({ x, y, z })))
-  tick.pathLine = pathCreateVisualization(
-    scene,
-    tick.smoothWaypoints,
-    PATH_NODE_COLOR,
-    PATH_TUBE_RADIUS,
-    closed
-  )
+  const points = waypoints.map(([x, y, z]) => ({ x, y, z }))
+  if (tick.stepped) {
+    tick.smoothWaypoints = points
+    tick.pathLine = pathCreateSteppedVisualization(
+      scene,
+      points,
+      PATH_NODE_COLOR,
+      PATH_TUBE_RADIUS,
+      closed
+    )
+  } else {
+    tick.smoothWaypoints = pathInterpolateWaypoints(points)
+    tick.pathLine = pathCreateVisualization(
+      scene,
+      tick.smoothWaypoints,
+      PATH_NODE_COLOR,
+      PATH_TUBE_RADIUS,
+      closed
+    )
+  }
   tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
   updateTickVisibility(tick)
 }
@@ -879,6 +1027,7 @@ const makePathHandlers = (
       tick.nodeGeo.dispose()
       tick.nodeMat.dispose()
       if (tick.actionId) pathTimelineManager?.removeAction(tick.actionId)
+      tick.stepActionIds?.forEach((id) => pathTimelineManager?.removeAction(id))
       unmount()
       const index = activePathTicks.indexOf(tick)
       if (index !== -1) activePathTicks.splice(index, 1)
@@ -934,6 +1083,25 @@ const registerPathAction = (tick: ActivePathTick, elementName: string): void => 
     name: `${elementName}: path`,
     category: 'movement',
     action: () => advancePathTick(tick, pathGetDelta)
+  })
+}
+
+/** Register one timeline action per path segment, each named by its movement type
+ *  (walk / forward-jump / jump), so every step is its own row in the timeline. */
+const registerStepActions = (
+  tick: ActivePathTick,
+  elementName: string,
+  waypoints: CoordinateTuple[]
+): void => {
+  if (!pathTimelineManager) return
+  const manager = pathTimelineManager
+  tick.stepActionIds = waypoints.map((a, segmentIndex) => {
+    const b = waypoints[(segmentIndex + 1) % waypoints.length]
+    return manager.addAction({
+      name: `${elementName}: ${segmentType(a, b)}`,
+      category: 'movement',
+      action: () => advanceStep(tick, segmentIndex, pathGetDelta)
+    })
   })
 }
 
@@ -999,26 +1167,66 @@ const createPresetPath = (
   waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
 }
 
+/** Like createPresetPath, but the path is split into one timeline action per
+ *  segment (a "step"), each segment coloured distinctly, and the follower walks
+ *  straight along flat/downward steps and jumps a parabola up taller ones. */
+const createSteppedPresetPath = (
+  elementName: string,
+  mesh: THREE.Object3D,
+  scene: THREE.Scene,
+  waypoints: CoordinateTuple[]
+): void => {
+  const store = useDebugSceneStore()
+  const pathId = `path-${elementName}`
+  const tick = makePathTick(elementName, mesh)
+  tick.stepped = true
+  tick.stepState = { current: 0, progress: 0 }
+  store.addPath({
+    id: pathId,
+    elementName,
+    label: `${elementName} path`,
+    waypoints: [],
+    config: makeDefaultPathConfig({ loop: true }),
+    handlers: makePathHandlers(scene, tick, pathId, () => {})
+  })
+  registerStepActions(tick, elementName, waypoints)
+  waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
+}
+
 const PATH_LOOP_SPAN = GRID_UNIT * 2
 const PATH_CUBE_RISE = GRID_UNIT * 2
 
 // Goomba feet heights: on the ground, on a single brick top, and on the stacked
-// double-height brick. Brick cubes sit centred at GRID_UNIT * gy - 1 (top + ~1).
+// double-height brick. getCube shifts a cube up by half its size, so a brick placed
+// at grid y=0 spans y -1..29 (top at GRID_UNIT-1); feet sit GRID_UNIT above ground
+// so the collision ray clears the brick top when walking across it.
 const GOOMBA_GROUND_Y = 0
-const GOOMBA_BRICK_TOP_Y = 15
-const GOOMBA_STACK_TOP_Y = 45
+const GOOMBA_BRICK_TOP_Y = GRID_UNIT
+const GOOMBA_STACK_TOP_Y = GRID_UNIT * 2
+// In-place jump apex: from the stack top (GRID_UNIT*2) reaches the coin (GRID_UNIT*3).
+const JUMP_IN_PLACE_HEIGHT = GRID_UNIT
 
-/** Goomba 1 climbs the central brick column onto the stacked cube, crosses to the
- *  far column, drops back to the ground and loops — matching the old patrol. */
+/** Goomba 1 forward-jumps up the central brick column onto the stacked cube,
+ *  jumps in place to bump the coin block above it, then walks down the far column
+ *  back to the ground and loops. The duplicated stack node is the in-place jump;
+ *  segment types (walk / forward-jump / jump) are derived from the node geometry. */
 const GOOMBA_1_CLIMB_PATH: CoordinateTuple[] = [
   [0, GOOMBA_GROUND_Y, GRID_UNIT],
   [0, GOOMBA_BRICK_TOP_Y, 0],
   [0, GOOMBA_BRICK_TOP_Y, -GRID_UNIT],
   [0, GOOMBA_STACK_TOP_Y, -GRID_UNIT * 2],
+  [0, GOOMBA_STACK_TOP_Y, -GRID_UNIT * 2],
   [-GRID_UNIT, GOOMBA_BRICK_TOP_Y, -GRID_UNIT * 2],
   [-GRID_UNIT * 2, GOOMBA_BRICK_TOP_Y, -GRID_UNIT * 2],
   [-GRID_UNIT * 2, GOOMBA_BRICK_TOP_Y, 0],
   [-GRID_UNIT * 2, GOOMBA_GROUND_Y, GRID_UNIT]
+]
+
+/** Goomba 2 walks straight into the lone wall-bang cube, bangs it, turns around,
+ *  retreats, and repeats — the far node sits inside the cube so it stays blocked. */
+const GOOMBA_2_WALL_BANG_PATH: CoordinateTuple[] = [
+  [GOOMBA_2_WALL_X, GOOMBA_GROUND_Y, GOOMBA_2_WALL_Z],
+  [GOOMBA_2_WALL_X, GOOMBA_GROUND_Y, GOOMBA_2_WALL_FAR_Z]
 ]
 
 /** A rectangular loop of nodes at ground level, starting at the mesh's XZ.
@@ -1056,8 +1264,8 @@ const createPresetMovementPaths = ({
   const g2 = goombaWallBangB as unknown as THREE.Object3D
   const g4 = goombaJumpMovingBlock2 as unknown as THREE.Object3D
   const cube = movingCube as unknown as THREE.Object3D
-  createPresetPath('goomba-1', g1, scene, GOOMBA_1_CLIMB_PATH)
-  createPresetPath('goomba-2', g2, scene, loopWaypoints(g2, PATH_LOOP_SPAN))
+  createSteppedPresetPath('goomba-1', g1, scene, GOOMBA_1_CLIMB_PATH)
+  createPresetPath('goomba-2', g2, scene, GOOMBA_2_WALL_BANG_PATH)
   createPresetPath('goomba-4', g4, scene, loopWaypoints(g4, PATH_LOOP_SPAN))
   const { x, y, z } = cube.position
   createPresetPath(

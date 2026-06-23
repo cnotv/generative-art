@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import type { PathEntry, PathConfig } from '@/stores/debugScene'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import { useTimelinePanelStore } from '@/stores/timelinePanel'
 
 interface Properties {
   path: PathEntry
@@ -15,7 +14,6 @@ interface Properties {
 const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
-const timelinePanelStore = useTimelinePanelStore()
 
 const expanded = ref(true)
 
@@ -41,22 +39,10 @@ const handleAddWaypoint = () => {
   debugSceneStore.addPathWaypoint(props.path.id, next)
 }
 
+// Playing pauses only this element's path, independent of the global timeline.
 const handleConfigUpdate = (key: string, value: unknown) => {
-  const configKey = key as keyof PathConfig
-  debugSceneStore.updatePathConfig(props.path.id, configKey, value)
-  if (configKey === 'playing') {
-    timelinePanelStore.setPaused(!(value as boolean))
-  }
+  debugSceneStore.updatePathConfig(props.path.id, key as keyof PathConfig, value)
 }
-
-// Sync timeline pause → path playing
-watch(
-  () => timelinePanelStore.isPaused,
-  (paused) => {
-    if (props.path.config.playing === !paused) return
-    debugSceneStore.updatePathConfig(props.path.id, 'playing', !paused)
-  }
-)
 
 const pathSchema = {
   speed: { min: 1, max: 100, step: 1, label: 'Speed' },

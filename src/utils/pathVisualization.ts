@@ -52,6 +52,43 @@ export const pathCreateVisualization = (
 }
 
 /**
+ * Create one straight tube per path segment (so duplicate/in-place nodes are safe,
+ * unlike a single smoothed curve), all sharing one colour and grouped together.
+ * @param scene - The Three.js scene to add the path to
+ * @param waypoints - Ordered segment-endpoint waypoints
+ * @param color - Tube colour (default white)
+ * @param tubeRadius - Tube cross-section radius (default 0.06)
+ * @param closed - Whether to add the closing segment back to the first waypoint
+ * @returns The group containing the segment tubes
+ */
+export const pathCreateSteppedVisualization = (
+  scene: THREE.Scene,
+  waypoints: Waypoint[],
+  color: number = DEFAULT_PATH_COLOR,
+  tubeRadius: number = DEFAULT_TUBE_RADIUS,
+  closed: boolean = false
+): THREE.Group => {
+  const group = new THREE.Group()
+  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 })
+  group.userData.sharedMaterial = material
+  const segmentCount = Math.max(0, closed ? waypoints.length : waypoints.length - 1)
+  Array.from({ length: segmentCount }).forEach((_unused, index) => {
+    const start = waypoints[index]
+    const end = waypoints[(index + 1) % waypoints.length]
+    const a = new THREE.Vector3(start.x, start.y + PATH_Y_OFFSET, start.z)
+    const b = new THREE.Vector3(end.x, end.y + PATH_Y_OFFSET, end.z)
+    if (a.distanceTo(b) < Number.EPSILON) return
+    const tubeGeo = new THREE.TubeGeometry(new THREE.LineCurve3(a, b), 1, tubeRadius, 6, false)
+    const mesh = new THREE.Mesh(tubeGeo, material)
+    mesh.userData.isPathVisual = true
+    group.add(mesh)
+  })
+  group.userData.isPathVisual = true
+  scene.add(group)
+  return group
+}
+
+/**
  * Remove a path visualisation group from the scene and dispose its GPU resources.
  * @param scene - The Three.js scene
  * @param group - The group returned by pathCreateVisualization
@@ -62,7 +99,12 @@ export const pathRemoveVisualization = (scene: THREE.Scene, group: THREE.Group):
     ;(group.userData.sharedMaterial as THREE.Material).dispose()
   }
   group.children.forEach((child) => {
-    if (child instanceof THREE.Mesh) child.geometry.dispose()
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose()
+      const material = child.material
+      if (Array.isArray(material)) material.forEach((m) => m.dispose())
+      else material.dispose()
+    }
   })
 }
 
