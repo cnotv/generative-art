@@ -23,7 +23,9 @@ in the same change (see the "Keep tutorials in sync" rule in
 - `src/stores/debugScene.ts` — `PathConfig`, `PathEntry`, `addPath`, `addPathWaypoint`
 - `src/utils/pathVisualization.ts` — path tube + node rendering
 - `src/views/Tests/Timeline/Timeline.vue` — the worked example
-  :::
+
+Re-read this guide after editing any of the above and fix anything that drifted.
+:::
 
 ## 1. Create a timeline
 
