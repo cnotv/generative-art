@@ -237,7 +237,8 @@ const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): 
 }
 
 /** Position the follower a fraction `t` along the segment a→b according to its
- *  type: a walk is a straight line; a forward jump arcs up and over onto the
+ *  type: a walk moves straight horizontally (a descent keeps its height and lets
+ *  gravity drop it off the ledge); a forward jump arcs up and over onto the next
  *  ledge; an in-place jump hops straight up and back down at the same spot. */
 const positionAlongSegment = (
   model: ComplexModel,
@@ -246,18 +247,20 @@ const positionAlongSegment = (
   t: number,
   type: SegmentType
 ): void => {
-  const arc = 4 * t * (1 - t)
   if (type === 'jump') {
-    model.position.set(a[0], a[1] + JUMP_IN_PLACE_HEIGHT * arc, a[2])
+    model.position.set(a[0], a[1] + JUMP_IN_PLACE_HEIGHT * (4 * t * (1 - t)), a[2])
     return
   }
   const horizontal = type === 'forward-jump' ? t * t * t * (t * (t * 6 - 15) + 10) : t
   model.position.x = THREE.MathUtils.lerp(a[0], b[0], horizontal)
   model.position.z = THREE.MathUtils.lerp(a[2], b[2], horizontal)
-  const chord = THREE.MathUtils.lerp(a[1], b[1], t)
-  const apex =
-    type === 'forward-jump' ? Math.max(JUMP_ARC_HEIGHT, (b[1] - a[1]) * JUMP_ARC_RATIO) : 0
-  model.position.y = chord + apex * arc
+  if (type === 'forward-jump') {
+    const apex = Math.max(JUMP_ARC_HEIGHT, (b[1] - a[1]) * JUMP_ARC_RATIO)
+    model.position.y = THREE.MathUtils.lerp(a[1], b[1], t) + apex * (4 * t * (1 - t))
+  } else if (b[1] >= a[1]) {
+    // Flat walk: hold the height. A descent leaves Y to the gravity code.
+    model.position.y = a[1]
+  }
 }
 
 /** Picks the next active segment after one completes: wrap when looping, else stop
@@ -829,7 +832,9 @@ const loadGoombas = async ({ scene, world }: SceneWorld) => {
       castShadow: true
     })
   return Promise.all([
-    getGoomba('goomba-1', [0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z]),
+    // goomba-1's stepped follower sets its height for walks/jumps; gravity only
+    // takes over on descending walk steps, dropping it off each ledge.
+    getGoomba('goomba-1', [0, GROUND_HEIGHT, GOOMBA_1_SPAWN_Z], true),
     getGoomba('goomba-2', [GOOMBA_2_WALL_X, GROUND_HEIGHT, GOOMBA_2_WALL_Z]),
     getGoomba('goomba-4', [GOOMBA_4_SPAWN_X, GRID_UNIT, GRID_UNIT * -5]),
     // goomba-5 has no path: gravity lets it drop and settle on the pedestal brick.
@@ -1063,7 +1068,7 @@ const makeDefaultPathConfig = (overrides: Partial<PathConfig> = {}): PathConfig 
   loop: false,
   pingPong: false,
   showPath: true,
-  showNodes: false,
+  showNodes: true,
   ...overrides
 })
 
