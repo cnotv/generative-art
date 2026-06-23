@@ -157,10 +157,13 @@ const syncKinematicBody = (mesh: THREE.Object3D): void => {
   })
 }
 
-/** True for animated models (goombas) that should walk/jump toward path nodes
- *  rather than be snapped onto the path curve. */
-const isWalkingFollower = (mesh: THREE.Object3D): boolean =>
-  !!(mesh.userData as { actions?: Record<string, unknown> }).actions
+/** True for animated models (goombas, which carry animation clips) that should
+ *  walk/jump toward path nodes rather than be snapped onto the path curve. A cube
+ *  has an empty `actions` object, so it stays a snapped (lerp) follower. */
+const isWalkingFollower = (mesh: THREE.Object3D): boolean => {
+  const actions = (mesh.userData as { actions?: Record<string, unknown> }).actions
+  return !!actions && Object.keys(actions).length > 0
+}
 
 const navRaycaster = new THREE.Raycaster()
 const navDirection = new THREE.Vector3()
