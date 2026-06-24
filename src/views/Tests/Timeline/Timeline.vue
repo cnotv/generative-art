@@ -81,6 +81,7 @@ let initInstance: () => void
 let cleanupScene: (() => void) | undefined
 let cleanupPaths: (() => void) | undefined
 let cleanupPicker: (() => void) | undefined
+let cleanupPathDrag: (() => void) | undefined
 
 // Path visuals are scaled to the GRID_UNIT-30 scene; the package defaults
 // (radius 0.06, node 0.4) are sized for a ~1-unit reference scene and would be
@@ -384,6 +385,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('resize', initInstance)
+  cleanupPathDrag?.()
   cleanupPicker?.()
   cleanupPaths?.()
   cleanupScene?.()
@@ -1368,6 +1370,101 @@ const matchPickedElement = (
   return object.name ? matchPickedByName(object.name, store) : null
 }
 
+const dragRaycaster = new THREE.Raycaster()
+const dragGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+const dragNdc = new THREE.Vector2()
+const dragPoint = new THREE.Vector3()
+
+/** Ground-plane (y=0) intersection of the pointer, or null if it misses. */
+const groundPointFromEvent = (
+  event: MouseEvent,
+  canvasElement: HTMLCanvasElement,
+  camera: THREE.Camera
+): THREE.Vector3 | null => {
+  const rect = canvasElement.getBoundingClientRect()
+  dragNdc.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  dragRaycaster.setFromCamera(dragNdc, camera)
+  return dragRaycaster.ray.intersectPlane(dragGroundPlane, dragPoint) ? dragPoint : null
+}
+
+/** The selected element's path tick (with a built tube), or null. */
+const findSelectedPathTick = (): { entry: PathEntry; tick: ActivePathTick } | null => {
+  const name = useElementPropertiesStore().selectedElementName
+  if (!name) return null
+  const entry = useDebugSceneStore().paths.find((p) => p.elementName === name)
+  if (!entry) return null
+  const tick = activePathTicks.find((t) => t.id === entry.id)
+  return tick?.pathLine ? { entry, tick } : null
+}
+
+/** Drag the selected path's tube or nodes to translate the whole path on the
+ *  ground plane; orbit is suspended while dragging so the camera stays put. */
+const registerPathDrag = (
+  scene: THREE.Scene,
+  getCamera: () => THREE.Camera,
+  orbit: { enabled: boolean }
+): (() => void) => {
+  const panelsStore = usePanelsStore()
+  const store = useDebugSceneStore()
+  let drag: { id: string; lastX: number; lastZ: number } | null = null
+
+  const onDown = (event: PointerEvent): void => {
+    if (!panelsStore.isElementsOpen) return
+    const selected = findSelectedPathTick()
+    const canvasElement = canvasReference.value
+    const camera = getCamera()
+    if (!selected?.tick.pathLine || !canvasElement || !camera) return
+    const ground = groundPointFromEvent(event, canvasElement, camera)
+    if (!ground) return
+    const targets = [selected.tick.pathLine, ...selected.tick.waypointNodes]
+    if (dragRaycaster.intersectObjects(targets, true).length === 0) return
+    drag = { id: selected.entry.id, lastX: ground.x, lastZ: ground.z }
+    orbit.enabled = false
+    // Stop OrbitControls (also a pointerdown listener) from starting a camera orbit.
+    event.stopImmediatePropagation()
+  }
+
+  const onMove = (event: PointerEvent): void => {
+    const canvasElement = canvasReference.value
+    const camera = getCamera()
+    if (!drag || !canvasElement || !camera) return
+    const ground = groundPointFromEvent(event, canvasElement, camera)
+    const entry = store.paths.find((p) => p.id === drag?.id)
+    const tick = activePathTicks.find((t) => t.id === drag?.id)
+    if (!ground || !entry || !tick) return
+    const dx = ground.x - drag.lastX
+    const dz = ground.z - drag.lastZ
+    drag.lastX = ground.x
+    drag.lastZ = ground.z
+    entry.waypoints = entry.waypoints.map(([x, y, z]) => [x + dx, y, z + dz] as CoordinateTuple)
+    refreshPathLine(scene, tick, entry.waypoints)
+    tick.waypointNodes.forEach((node, index) => {
+      const [x, y, z] = entry.waypoints[index]
+      pathUpdateWaypointNodePosition(node, { x, y, z })
+    })
+  }
+
+  const onUp = (): void => {
+    if (!drag) return
+    drag = null
+    orbit.enabled = true
+  }
+
+  const canvasElement = canvasReference.value
+  // Capture phase so the path-grab runs before OrbitControls' own pointerdown.
+  canvasElement?.addEventListener('pointerdown', onDown, true)
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+  return () => {
+    canvasElement?.removeEventListener('pointerdown', onDown, true)
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+  }
+}
+
 /** Click-to-select: maps a viewport click to its panel element/group while the
  *  Elements panel is open. */
 const registerScenePicker = (scene: THREE.Scene, getCamera: () => THREE.Camera): (() => void) => {
@@ -1473,6 +1570,7 @@ const createScene = async (canvas: HTMLCanvasElement): Promise<void> => {
   )
 
   cleanupPicker = registerScenePicker(scene, () => activeCamera)
+  if (orbit) cleanupPathDrag = registerPathDrag(scene, () => activeCamera, orbit)
 }
 
 const registerSceneLights = (scene: THREE.Scene): void => {
