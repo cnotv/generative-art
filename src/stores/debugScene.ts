@@ -122,6 +122,11 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   const instancedGroups = ref<InstancedGroup[]>([])
   const spawnGroups = ref<SpawnGroup[]>([])
   const paths = ref<PathEntry[]>([])
+  /** Waypoint currently being interacted with (e.g. dragged), highlighted in the panel. */
+  const activeWaypoint = ref<{ pathId: string; index: number } | null>(null)
+  const setActiveWaypoint = (pathId: string, index: number | null) => {
+    activeWaypoint.value = index === null ? null : { pathId, index }
+  }
   const handlers = ref<DebugSceneHandlers | null>(null)
   const spawnHandlers = ref<Record<string, () => void>>({})
   const pathRegistrationContext = ref<PathRegistrationContext | null>(null)
@@ -383,6 +388,8 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     instancedGroups,
     spawnGroups,
     paths,
+    activeWaypoint,
+    setActiveWaypoint,
     setSceneElements,
     addSceneElement,
     removeSceneElement,

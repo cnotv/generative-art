@@ -32,7 +32,12 @@ import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { usePanelsStore } from '@/stores/panels'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
-import type { InstancedGroupHandlers, PathHandlers, PathConfig } from '@/stores/debugScene'
+import type {
+  InstancedGroupHandlers,
+  PathHandlers,
+  PathConfig,
+  PathEntry
+} from '@/stores/debugScene'
 import { usePathInteraction } from '@/composables/usePathInteraction'
 import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
 import {
@@ -89,9 +94,6 @@ let cleanupPathDrag: (() => void) | undefined
 const PATH_NODE_SIZE = 4
 const PATH_TUBE_RADIUS = 1.5
 const PATH_NODE_COLOR = 0xf0a000
-/** Tube opacity for the selected path (highlighted) vs the others (dimmed). */
-const PATH_OPACITY_SELECTED = 0.95
-const PATH_OPACITY_DIM = 0.2
 
 /** Per-path follow state advanced by its own timeline action each frame. */
 interface ActivePathTick {
@@ -242,7 +244,7 @@ const positionAlongSegment = (
   a: CoordinateTuple,
   b: CoordinateTuple,
   t: number,
-  type: SegmentType
+  type: PathStepType
 ): void => {
   if (type === 'jump') {
     model.position.set(a[0], a[1] + JUMP_IN_PLACE_HEIGHT * (4 * t * (1 - t)), a[2])
@@ -254,10 +256,9 @@ const positionAlongSegment = (
   if (type === 'forward-jump') {
     const apex = Math.max(JUMP_ARC_HEIGHT, (b[1] - a[1]) * JUMP_ARC_RATIO)
     model.position.y = THREE.MathUtils.lerp(a[1], b[1], t) + apex * (4 * t * (1 - t))
-  } else if (b[1] >= a[1]) {
-    // Flat walk: hold the height. A descent leaves Y to the gravity code.
-    model.position.y = a[1]
   }
+  // A walk never sets Y: every walk step is left to the gravity code, so the
+  // goomba rests on whatever surface (brick top or ground) is under it.
 }
 
 /** Picks the next active segment after one completes: wrap when looping, else stop
@@ -269,7 +270,7 @@ const nextStepIndex = (segmentIndex: number, nodeCount: number, config: PathConf
 
 /** Length of a segment in scene units; an in-place jump is paced over its
  *  vertical travel since it covers no horizontal distance. */
-const segmentLength = (a: CoordinateTuple, b: CoordinateTuple, type: SegmentType): number =>
+const segmentLength = (a: CoordinateTuple, b: CoordinateTuple, type: PathStepType): number =>
   type === 'jump'
     ? JUMP_IN_PLACE_HEIGHT * 2
     : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
@@ -288,16 +289,44 @@ const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): v
   const b = entry.waypoints[(state.current + 1) % nodeCount]
   const type = logicClassifyPathSegment(a, b)
   const speed = entry.config.speed * (type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER)
+  const previousProgress = state.progress
   state.progress = Math.min(1, state.progress + (speed * delta) / segmentLength(a, b, type))
   if (type !== 'jump')
     setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
-  positionAlongSegment(model, a, b, state.progress, type)
+  // A walk must not cross a wall (e.g. after the path is dragged into one): hold
+  // position and progress while a brick blocks the way. Jumps arc over, so skip.
+  if (type === 'walk' && wallBlocksWalk(model, a, b, state.progress)) {
+    state.progress = previousProgress
+  } else {
+    positionAlongSegment(model, a, b, state.progress, type)
+  }
   playWalkClip(model, delta)
   syncKinematicBody(model)
   if (state.progress >= 1) {
     state.current = nextStepIndex(state.current, nodeCount, entry.config)
     state.progress = 0
   }
+}
+
+/** True if a brick lies between the walker and the next lerped walk position, so
+ *  the goomba would cross a wall. The ray sits at the model's height, so brick
+ *  tops it is standing on don't block, but a taller wall ahead does. */
+const wallBlocksWalk = (
+  model: ComplexModel,
+  a: CoordinateTuple,
+  b: CoordinateTuple,
+  progress: number
+): boolean => {
+  const nextX = THREE.MathUtils.lerp(a[0], b[0], progress)
+  const nextZ = THREE.MathUtils.lerp(a[2], b[2], progress)
+  const dx = nextX - model.position.x
+  const dz = nextZ - model.position.z
+  const distance = Math.hypot(dx, dz)
+  if (distance < Number.EPSILON) return false
+  navDirection.set(dx / distance, 0, dz / distance)
+  navRaycaster.set(model.position, navDirection)
+  navRaycaster.far = distance + PATH_COLLISION_LOOKAHEAD
+  return navRaycaster.intersectObjects(pathObstacles, true).length > 0
 }
 
 interface NavStepResult {
@@ -943,20 +972,16 @@ const buildTimeline = async ({
   })
 }
 
-/** The path tube stays visible so it can be clicked to select its element —
- *  highlighted (opaque) when selected, dimmed otherwise. Nodes show only for the
- *  selected path (for editing), gated by its own showPath/showNodes config. */
+/** Path tube + nodes are shown only while the path's element is selected (and its
+ *  own showPath/showNodes config + visibility allow it). */
 const updateTickVisibility = (tick: ActivePathTick): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry) return
-  const selected = useElementPropertiesStore().selectedElementName === entry.elementName
-  if (tick.pathLine) {
-    tick.pathLine.visible = !entry.hidden && entry.config.showPath
-    const material = tick.pathLine.userData.sharedMaterial as THREE.MeshBasicMaterial | undefined
-    if (material) material.opacity = selected ? PATH_OPACITY_SELECTED : PATH_OPACITY_DIM
-  }
+  const baseVisible =
+    useElementPropertiesStore().selectedElementName === entry.elementName && !entry.hidden
+  if (tick.pathLine) tick.pathLine.visible = baseVisible && entry.config.showPath
   tick.waypointNodes.forEach((node) => {
-    node.visible = selected && !entry.hidden && entry.config.showNodes
+    node.visible = baseVisible && entry.config.showNodes
   })
 }
 
@@ -1372,8 +1397,26 @@ const matchPickedElement = (
 
 const dragRaycaster = new THREE.Raycaster()
 const dragGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+// Vertical plane (set per-drag) used for Shift = move along the Y axis only.
+const dragVerticalPlane = new THREE.Plane()
+const dragDirection = new THREE.Vector3()
+const dragAnchor = new THREE.Vector3()
 const dragNdc = new THREE.Vector2()
 const dragPoint = new THREE.Vector3()
+
+/** Aim the shared drag raycaster at the pointer position. */
+const setDragRayFromEvent = (
+  event: MouseEvent,
+  canvasElement: HTMLCanvasElement,
+  camera: THREE.Camera
+): void => {
+  const rect = canvasElement.getBoundingClientRect()
+  dragNdc.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  dragRaycaster.setFromCamera(dragNdc, camera)
+}
 
 /** Ground-plane (y=0) intersection of the pointer, or null if it misses. */
 const groundPointFromEvent = (
@@ -1381,13 +1424,28 @@ const groundPointFromEvent = (
   canvasElement: HTMLCanvasElement,
   camera: THREE.Camera
 ): THREE.Vector3 | null => {
-  const rect = canvasElement.getBoundingClientRect()
-  dragNdc.set(
-    ((event.clientX - rect.left) / rect.width) * 2 - 1,
-    -((event.clientY - rect.top) / rect.height) * 2 + 1
-  )
-  dragRaycaster.setFromCamera(dragNdc, camera)
+  setDragRayFromEvent(event, canvasElement, camera)
   return dragRaycaster.ray.intersectPlane(dragGroundPlane, dragPoint) ? dragPoint : null
+}
+
+/** Intersection of the pointer with the per-drag vertical plane (for Shift = Y). */
+const verticalPointFromEvent = (
+  event: MouseEvent,
+  canvasElement: HTMLCanvasElement,
+  camera: THREE.Camera
+): THREE.Vector3 | null => {
+  setDragRayFromEvent(event, canvasElement, camera)
+  return dragRaycaster.ray.intersectPlane(dragVerticalPlane, dragPoint) ? dragPoint : null
+}
+
+/** Anchor a camera-facing vertical plane at (x, 0, z) so Shift-drags read a Y. */
+const setDragVerticalPlane = (camera: THREE.Camera, x: number, z: number): void => {
+  camera.getWorldDirection(dragDirection)
+  dragDirection.y = 0
+  if (dragDirection.lengthSq() < Number.EPSILON) dragDirection.set(0, 0, 1)
+  dragDirection.normalize()
+  dragAnchor.set(x, 0, z)
+  dragVerticalPlane.setFromNormalAndCoplanarPoint(dragDirection, dragAnchor)
 }
 
 /** The selected element's path tick (with a built tube), or null. */
@@ -1400,8 +1458,82 @@ const findSelectedPathTick = (): { entry: PathEntry; tick: ActivePathTick } | nu
   return tick?.pathLine ? { entry, tick } : null
 }
 
-/** Drag the selected path's tube or nodes to translate the whole path on the
- *  ground plane; orbit is suspended while dragging so the camera stays put. */
+// nodeIndex null → drag the whole path; otherwise drag just that waypoint.
+interface PathDragState {
+  id: string
+  lastX: number
+  lastZ: number
+  lastY: number
+  nodeIndex: number | null
+  shift: boolean
+}
+
+/** Which node was grabbed on pointerdown (null = whole path via the tube), or
+ *  null overall if the pointer missed both the nodes and the tube. */
+const resolvePathGrab = (tick: ActivePathTick): { nodeIndex: number | null } | null => {
+  if (!tick.pathLine) return null
+  const nodeHit = dragRaycaster.intersectObjects(tick.waypointNodes, true)[0]
+  const nodeIndex = nodeHit ? tick.waypointNodes.indexOf(nodeHit.object as THREE.Mesh) : null
+  if (nodeIndex === null && dragRaycaster.intersectObject(tick.pathLine, true).length === 0)
+    return null
+  return { nodeIndex }
+}
+
+/** Pointer delta in world units for this move; null skips (miss or mode switch).
+ *  Holding Shift moves along Y only; otherwise along the ground X/Z. */
+const pathDragDelta = (
+  event: PointerEvent,
+  canvasElement: HTMLCanvasElement,
+  camera: THREE.Camera,
+  state: PathDragState
+): [number, number, number] | null => {
+  if (event.shiftKey) {
+    const vertical = verticalPointFromEvent(event, canvasElement, camera)
+    if (!vertical) return null
+    if (!state.shift) {
+      state.lastY = vertical.y
+      state.shift = true
+      return null
+    }
+    const dy = vertical.y - state.lastY
+    state.lastY = vertical.y
+    return [0, dy, 0]
+  }
+  const ground = groundPointFromEvent(event, canvasElement, camera)
+  if (!ground) return null
+  if (state.shift) {
+    state.lastX = ground.x
+    state.lastZ = ground.z
+    state.shift = false
+    return null
+  }
+  const delta: [number, number, number] = [ground.x - state.lastX, 0, ground.z - state.lastZ]
+  state.lastX = ground.x
+  state.lastZ = ground.z
+  return delta
+}
+
+/** Translate the dragged waypoint (or all of them, for a whole-path drag) and
+ *  refresh the tube + node meshes. */
+const applyPathDrag = (
+  scene: THREE.Scene,
+  entry: PathEntry,
+  tick: ActivePathTick,
+  movedIndex: number | null,
+  [dx, dy, dz]: [number, number, number]
+): void => {
+  entry.waypoints = entry.waypoints.map(([x, y, z], index) =>
+    movedIndex === null || movedIndex === index ? [x + dx, y + dy, z + dz] : [x, y, z]
+  ) as CoordinateTuple[]
+  refreshPathLine(scene, tick, entry.waypoints)
+  tick.waypointNodes.forEach((node, index) => {
+    const [x, y, z] = entry.waypoints[index]
+    pathUpdateWaypointNodePosition(node, { x, y, z })
+  })
+}
+
+/** Drag the selected path's tube (whole path) or a node (just that node) on the
+ *  ground plane — or along Y while Shift is held; orbit is suspended meanwhile. */
 const registerPathDrag = (
   scene: THREE.Scene,
   getCamera: () => THREE.Camera,
@@ -1409,19 +1541,28 @@ const registerPathDrag = (
 ): (() => void) => {
   const panelsStore = usePanelsStore()
   const store = useDebugSceneStore()
-  let drag: { id: string; lastX: number; lastZ: number } | null = null
+  let drag: PathDragState | null = null
 
   const onDown = (event: PointerEvent): void => {
     if (!panelsStore.isElementsOpen) return
     const selected = findSelectedPathTick()
     const canvasElement = canvasReference.value
     const camera = getCamera()
-    if (!selected?.tick.pathLine || !canvasElement || !camera) return
+    if (!selected || !canvasElement || !camera) return
     const ground = groundPointFromEvent(event, canvasElement, camera)
     if (!ground) return
-    const targets = [selected.tick.pathLine, ...selected.tick.waypointNodes]
-    if (dragRaycaster.intersectObjects(targets, true).length === 0) return
-    drag = { id: selected.entry.id, lastX: ground.x, lastZ: ground.z }
+    const grab = resolvePathGrab(selected.tick)
+    if (!grab) return
+    setDragVerticalPlane(camera, ground.x, ground.z)
+    drag = {
+      id: selected.entry.id,
+      lastX: ground.x,
+      lastZ: ground.z,
+      lastY: dragRaycaster.ray.intersectPlane(dragVerticalPlane, dragPoint)?.y ?? 0,
+      nodeIndex: grab.nodeIndex,
+      shift: event.shiftKey
+    }
+    store.setActiveWaypoint(selected.entry.id, grab.nodeIndex)
     orbit.enabled = false
     // Stop OrbitControls (also a pointerdown listener) from starting a camera orbit.
     event.stopImmediatePropagation()
@@ -1430,21 +1571,11 @@ const registerPathDrag = (
   const onMove = (event: PointerEvent): void => {
     const canvasElement = canvasReference.value
     const camera = getCamera()
-    if (!drag || !canvasElement || !camera) return
-    const ground = groundPointFromEvent(event, canvasElement, camera)
     const entry = store.paths.find((p) => p.id === drag?.id)
     const tick = activePathTicks.find((t) => t.id === drag?.id)
-    if (!ground || !entry || !tick) return
-    const dx = ground.x - drag.lastX
-    const dz = ground.z - drag.lastZ
-    drag.lastX = ground.x
-    drag.lastZ = ground.z
-    entry.waypoints = entry.waypoints.map(([x, y, z]) => [x + dx, y, z + dz] as CoordinateTuple)
-    refreshPathLine(scene, tick, entry.waypoints)
-    tick.waypointNodes.forEach((node, index) => {
-      const [x, y, z] = entry.waypoints[index]
-      pathUpdateWaypointNodePosition(node, { x, y, z })
-    })
+    if (!drag || !canvasElement || !camera || !entry || !tick) return
+    const delta = pathDragDelta(event, canvasElement, camera, drag)
+    if (delta) applyPathDrag(scene, entry, tick, drag.nodeIndex, delta)
   }
 
   const onUp = (): void => {

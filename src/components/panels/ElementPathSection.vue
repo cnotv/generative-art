@@ -30,6 +30,12 @@ const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
 
+/** True for the waypoint row currently being interacted with in the viewport. */
+const isActiveRow = (index: number): boolean => {
+  const active = debugSceneStore.activeWaypoint
+  return active?.pathId === props.path.id && active.index === index
+}
+
 const handleUpdateWaypoint = (index: number, axis: 0 | 1 | 2, rawValue: string | number) => {
   const parsed = Number(rawValue)
   if (Number.isNaN(parsed)) return
@@ -101,6 +107,7 @@ const pathSchema = {
           v-for="(position, index) in path.waypoints"
           :key="index"
           class="element-path-section__row"
+          :class="{ 'element-path-section__row--active': isActiveRow(index) }"
         >
           <span class="element-path-section__index">{{ index + 1 }}</span>
           <span
@@ -185,6 +192,11 @@ const pathSchema = {
 .element-path-section__head,
 .element-path-section__row {
   display: contents;
+}
+
+/* Row is display:contents, so tint each of its cells to highlight the active node. */
+.element-path-section__row--active > * {
+  background-color: var(--panel-item-bg-hover);
 }
 
 .element-path-section__axis-head {
