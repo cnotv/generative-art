@@ -103,13 +103,14 @@ gh api \
    - **Journey doc** (`documentation/docs/journey/`): Create or update one when the PR fixes a non-obvious bug, works around a framework/library quirk, or makes a hard-won design decision. Every new game gets its own `<game-name>.md` file. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be opened.
    - **Package API doc** (`documentation/docs/packages/`): Create or update one when a `@webgamekit/*` package gains new exported functions, changes its public API, or deprecates something. The doc must list the updated exports with their purpose and basic usage. A PR that changes a package's public API without updating its doc must not be opened.
 
-4. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
+4. **Commit messages — no redundant issue reference**: The feature branch name already encodes the issue number (e.g. `feat/185-attach-paths`), so never repeat that same issue number in commit subjects — it adds nothing. Write `feat: …` / `fix: …` / `docs: …`, not `feat(#185): …`. Only reference an issue in a commit if it is a _different_ issue than the one the current branch is for. (The PR body still carries `Closes #<issue-number>`.)
+5. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
    - Command: `git fetch origin main && git rebase origin/main`
    - Resolve any conflicts, then force push: `git push --force-with-lease`
    - CI will fail if branch is behind main
-5. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-6. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-7. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
+6. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
+7. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
+8. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
 
 ### PR Description Format
 
