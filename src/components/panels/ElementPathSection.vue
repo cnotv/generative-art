@@ -98,8 +98,9 @@ const pathSchema = {
         <div
           v-for="(position, index) in path.waypoints"
           :key="index"
-          class="element-path-section__waypoint"
+          class="element-path-section__row"
         >
+          <span class="element-path-section__index">{{ index + 1 }}</span>
           <span
             v-if="path.stepped"
             class="element-path-section__step"
@@ -107,26 +108,23 @@ const pathSchema = {
           >
             {{ stepTypeAt(path, index) }}
           </span>
-          <div class="element-path-section__row">
-            <span class="element-path-section__index">{{ index + 1 }}</span>
-            <template v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const" :key="axis">
-              <label class="element-path-section__axis-label">{{ axis }}</label>
-              <Input
-                class="element-path-section__input"
-                type="number"
-                :model-value="position[axisIndex as 0 | 1 | 2]"
-                @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
-              />
-            </template>
-            <IconButton
-              panel-colors
-              size="xs"
-              title="Remove waypoint"
-              @click="handleDeleteWaypoint(index)"
-            >
-              <Trash2 />
-            </IconButton>
-          </div>
+          <template v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const" :key="axis">
+            <label class="element-path-section__axis-label">{{ axis }}</label>
+            <Input
+              class="element-path-section__input"
+              type="number"
+              :model-value="position[axisIndex as 0 | 1 | 2]"
+              @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
+            />
+          </template>
+          <IconButton
+            panel-colors
+            size="xs"
+            title="Remove waypoint"
+            @click="handleDeleteWaypoint(index)"
+          >
+            <Trash2 />
+          </IconButton>
         </div>
 
         <Button
@@ -200,17 +198,11 @@ const pathSchema = {
 .element-path-section__waypoints {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.element-path-section__waypoint {
-  display: flex;
-  flex-direction: column;
   gap: var(--spacing-0-5);
 }
 
 .element-path-section__step {
-  align-self: flex-start;
+  flex-shrink: 0;
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--color-primary);
