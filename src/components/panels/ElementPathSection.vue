@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import { logicClassifyPathSegment, type PathStepType } from '@webgamekit/logic'
@@ -83,6 +82,9 @@ const pathSchema = {
         <ChevronRight v-else class="element-path-section__chevron" />
         <span>Path ({{ path.waypoints.length }})</span>
       </button>
+      <IconButton panel-colors size="xs" title="Add waypoint" @click.stop="handleAddWaypoint">
+        <Plus />
+      </IconButton>
       <IconButton
         panel-colors
         size="xs"
@@ -126,17 +128,6 @@ const pathSchema = {
             <Trash2 />
           </IconButton>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          class="element-path-section__add"
-          title="Add waypoint"
-          @click="handleAddWaypoint"
-        >
-          <Plus class="element-path-section__add-icon" />
-          Add waypoint
-        </Button>
       </div>
 
       <SchemaControls
@@ -159,7 +150,6 @@ const pathSchema = {
   flex-direction: column;
   margin-top: var(--spacing-2);
   border-top: 1px solid var(--color-border);
-  padding-top: var(--spacing-2);
 }
 
 .element-path-section__header {
@@ -203,10 +193,12 @@ const pathSchema = {
 
 .element-path-section__step {
   flex-shrink: 0;
+  width: 5.5rem;
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--color-primary);
   text-transform: capitalize;
+  white-space: nowrap;
   cursor: help;
 }
 
@@ -240,16 +232,5 @@ const pathSchema = {
   font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-.element-path-section__add {
-  width: 100%;
-  gap: var(--spacing-1);
-  margin-top: var(--spacing-0-5);
-}
-
-.element-path-section__add-icon {
-  width: var(--font-size-xs);
-  height: var(--font-size-xs);
 }
 </style>
