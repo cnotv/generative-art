@@ -46,7 +46,12 @@ import {
 } from '@/utils/pathVisualization'
 import { pathAdvanceMesh } from '@/utils/pathMeshFollow'
 import { pathGetEasingMultiplier } from '@/utils/pathEasing'
-import type { PathFollowState, Waypoint } from '@webgamekit/logic'
+import {
+  logicClassifyPathSegment,
+  type PathFollowState,
+  type PathStepType,
+  type Waypoint
+} from '@webgamekit/logic'
 
 const statsElement = ref(null)
 const canvas = ref(null)
@@ -126,24 +131,12 @@ const PATH_CLIMB_STEP = 3
 const PATH_FALL_STEP = 4
 /** Extra distance ahead of the next step the collision ray probes for a wall. */
 const PATH_COLLISION_LOOKAHEAD = 3
-/** Height rise to the next node above which a step is jumped as a parabola. */
-const PATH_JUMP_MIN_RISE = 5
 /** Minimum apex height of a forward jump above the straight chord between nodes. */
 const JUMP_ARC_HEIGHT = 16
 /** Apex height as a fraction of the climb, when taller than JUMP_ARC_HEIGHT. */
 const JUMP_ARC_RATIO = 0.65
 /** Jump steps advance this much faster than the path speed, so hops feel snappy. */
 const JUMP_SPEED_MULTIPLIER = 3
-
-type SegmentType = 'walk' | 'forward-jump' | 'jump'
-
-/** Classifies a path segment by its endpoints: a same-spot node is an in-place
- *  jump, a forward rise is a forward jump, everything else is a walk. */
-const segmentType = (a: CoordinateTuple, b: CoordinateTuple): SegmentType => {
-  const horizontal = Math.hypot(b[0] - a[0], b[2] - a[2])
-  if (horizontal < PATH_ARRIVE_Y) return 'jump'
-  return b[1] - a[1] > PATH_JUMP_MIN_RISE ? 'forward-jump' : 'walk'
-}
 
 /** Keep a kinematic body in sync with the mesh moved by the path follower. */
 const syncKinematicBody = (mesh: THREE.Object3D): void => {
@@ -289,7 +282,7 @@ const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): v
   const nodeCount = entry.waypoints.length
   const a = entry.waypoints[state.current]
   const b = entry.waypoints[(state.current + 1) % nodeCount]
-  const type = segmentType(a, b)
+  const type = logicClassifyPathSegment(a, b)
   const speed = entry.config.speed * (type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER)
   state.progress = Math.min(1, state.progress + (speed * delta) / segmentLength(a, b, type))
   if (type !== 'jump')
@@ -1111,7 +1104,7 @@ const buildPathSegments = (
 ): { name: string; frames: number }[] =>
   waypoints.map((a, index) => {
     const b = waypoints[(index + 1) % waypoints.length]
-    const type = segmentType(a, b)
+    const type = logicClassifyPathSegment(a, b)
     const factor = type === 'walk' ? 1 : JUMP_SPEED_MULTIPLIER
     const seconds = segmentLength(a, b, type) / (PATH_DEFAULT_SPEED * factor)
     return { name: type, frames: Math.max(1, Math.round(seconds / rate)) }
@@ -1217,6 +1210,7 @@ const createSteppedPresetPath = (
     label: `${elementName} path`,
     waypoints: [],
     config: makeDefaultPathConfig({ loop: true }),
+    stepped: true,
     handlers: makePathHandlers(scene, tick, pathId, () => {})
   })
   registerSteppedPathAction(tick, elementName, waypoints, rate)

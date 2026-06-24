@@ -106,6 +106,8 @@ export interface PathEntry {
   waypoints: CoordinateTuple[]
   config: PathConfig
   hidden?: boolean
+  /** Stepped paths classify each segment as a walk / forward-jump / in-place jump. */
+  stepped?: boolean
   handlers: PathHandlers
 }
 

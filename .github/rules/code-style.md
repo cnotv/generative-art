@@ -55,6 +55,7 @@
 - **Explicit types**: Define types/interfaces for configs, function parameters, and return values
 - **Type safety**: Use `CoordinateTuple` for position/rotation/scale arrays, avoid `any`
 - **Export types**: Re-export types from package `index.ts` for public APIs
+- **Exported types live in a types file**: Any exported `interface` or `type` must be declared in a dedicated types module — a `types.ts` file or a `type/` (or `types/`) folder — never exported from a file that also contains logic (a store, composable, util, or implementation). Those types files contain **only** type declarations: no functions, classes, runtime constants, or side effects. A component's own non-exported, local `interface Props {}` is exempt. When you add a new exported type, put it in the nearest types module (e.g. `packages/logic/src/types.ts`) and import it where the logic needs it; if a logic file currently exports a type, move that type to the types module and re-import it.
 
 ## Style Organization
 

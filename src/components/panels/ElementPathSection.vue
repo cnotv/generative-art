@@ -2,10 +2,27 @@
 import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
+import { logicClassifyPathSegment, type PathStepType } from '@webgamekit/logic'
 import type { PathEntry, PathConfig } from '@/stores/debugScene'
 import { useDebugSceneStore } from '@/stores/debugScene'
+
+/** Tooltip copy for each step type shown beside a stepped path's waypoints. */
+const STEP_DESCRIPTIONS: Record<PathStepType, string> = {
+  walk: 'Walk — straight horizontal move. A descent walks off the edge and falls via gravity.',
+  'forward-jump': 'Forward jump — a parabola up and over, landing on a higher ledge.',
+  jump: 'Jump — hops straight up and back down in place (e.g. to bump a block above).'
+}
+
+/** Step type of the segment from waypoint `index` to the next (wrapping at the end). */
+const stepTypeAt = (path: PathEntry, index: number): PathStepType =>
+  logicClassifyPathSegment(
+    path.waypoints[index],
+    path.waypoints[(index + 1) % path.waypoints.length]
+  )
 
 interface Properties {
   path: PathEntry
@@ -17,15 +34,12 @@ const debugSceneStore = useDebugSceneStore()
 
 const expanded = ref(true)
 
-const parseCoord = (value: string, fallback: number): number => {
-  const parsed = parseFloat(value)
-  return isNaN(parsed) ? fallback : parsed
-}
-
-const handleUpdateWaypoint = (index: number, axis: 0 | 1 | 2, rawValue: string) => {
+const handleUpdateWaypoint = (index: number, axis: 0 | 1 | 2, rawValue: string | number) => {
+  const parsed = Number(rawValue)
+  if (Number.isNaN(parsed)) return
   const current = props.path.waypoints[index]
   const next: CoordinateTuple = [current[0], current[1], current[2]]
-  next[axis] = parseCoord(rawValue, current[axis])
+  next[axis] = parsed
   debugSceneStore.updatePathWaypoint(props.path.id, index, next)
 }
 
@@ -35,8 +49,7 @@ const handleDeleteWaypoint = (index: number) => {
 
 const handleAddWaypoint = () => {
   const last = props.path.waypoints.at(-1) ?? [0, 0, 0]
-  const next: CoordinateTuple = [last[0], last[1], last[2]]
-  debugSceneStore.addPathWaypoint(props.path.id, next)
+  debugSceneStore.addPathWaypoint(props.path.id, [last[0], last[1], last[2]])
 }
 
 // Playing pauses only this element's path, independent of the global timeline.
@@ -55,19 +68,6 @@ const pathSchema = {
   showPath: { boolean: true, label: 'Show Path' },
   showNodes: { boolean: true, label: 'Show Nodes' },
   reset: { callback: 'reset', label: 'Reset Path' }
-}
-
-const editingCell = ref<string | null>(null)
-const editingValue = ref('')
-
-const startEdit = (key: string, value: number) => {
-  editingCell.value = key
-  editingValue.value = String(value)
-}
-
-const commitEdit = (index: number, axis: 0 | 1 | 2) => {
-  handleUpdateWaypoint(index, axis, editingValue.value)
-  editingCell.value = null
 }
 </script>
 
@@ -98,45 +98,47 @@ const commitEdit = (index: number, axis: 0 | 1 | 2) => {
         <div
           v-for="(position, index) in path.waypoints"
           :key="index"
-          class="element-path-section__row"
+          class="element-path-section__waypoint"
         >
-          <span class="element-path-section__index">{{ index + 1 }}</span>
-          <template v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const" :key="axis">
-            <label class="element-path-section__axis-label">{{ axis }}</label>
-            <input
-              v-if="editingCell === `${index}-${axisIndex}`"
-              class="element-path-section__input element-path-section__input--editing"
-              type="number"
-              :value="editingValue"
-              autofocus
-              @input="editingValue = ($event.target as HTMLInputElement).value"
-              @blur="commitEdit(index, axisIndex as 0 | 1 | 2)"
-              @keydown.enter="commitEdit(index, axisIndex as 0 | 1 | 2)"
-              @keydown.escape="editingCell = null"
-            />
-            <button
-              v-else
-              class="element-path-section__input"
-              :title="`Edit ${axis}`"
-              @click="startEdit(`${index}-${axisIndex}`, position[axisIndex as 0 | 1 | 2])"
-            >
-              {{ position[axisIndex as 0 | 1 | 2] }}
-            </button>
-          </template>
-          <IconButton
-            panel-colors
-            size="xs"
-            title="Remove waypoint"
-            @click="handleDeleteWaypoint(index)"
+          <span
+            v-if="path.stepped"
+            class="element-path-section__step"
+            :title="STEP_DESCRIPTIONS[stepTypeAt(path, index)]"
           >
-            <Trash2 />
-          </IconButton>
+            {{ stepTypeAt(path, index) }}
+          </span>
+          <div class="element-path-section__row">
+            <span class="element-path-section__index">{{ index + 1 }}</span>
+            <template v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const" :key="axis">
+              <label class="element-path-section__axis-label">{{ axis }}</label>
+              <Input
+                class="element-path-section__input"
+                type="number"
+                :model-value="position[axisIndex as 0 | 1 | 2]"
+                @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
+              />
+            </template>
+            <IconButton
+              panel-colors
+              size="xs"
+              title="Remove waypoint"
+              @click="handleDeleteWaypoint(index)"
+            >
+              <Trash2 />
+            </IconButton>
+          </div>
         </div>
 
-        <button class="element-path-section__add" title="Add waypoint" @click="handleAddWaypoint">
+        <Button
+          variant="outline"
+          size="sm"
+          class="element-path-section__add"
+          title="Add waypoint"
+          @click="handleAddWaypoint"
+        >
           <Plus class="element-path-section__add-icon" />
-          <span>Add waypoint</span>
-        </button>
+          Add waypoint
+        </Button>
       </div>
 
       <SchemaControls
@@ -198,7 +200,22 @@ const commitEdit = (index: number, axis: 0 | 1 | 2) => {
 .element-path-section__waypoints {
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.element-path-section__waypoint {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-0-5);
+}
+
+.element-path-section__step {
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-primary);
+  text-transform: capitalize;
+  cursor: help;
 }
 
 .element-path-section__row {
@@ -229,49 +246,14 @@ const commitEdit = (index: number, axis: 0 | 1 | 2) => {
   height: var(--btn-xs-height);
   padding: 0 var(--spacing-1);
   font-size: var(--font-size-xs);
-  font-family: monospace;
   font-variant-numeric: tabular-nums;
-  background: var(--panel-item-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-foreground);
-  cursor: pointer;
   text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: background-color 100ms;
-}
-
-.element-path-section__input:hover {
-  background-color: var(--panel-item-bg-hover);
-}
-
-.element-path-section__input--editing {
-  cursor: text;
-  outline: 1px solid var(--color-primary);
 }
 
 .element-path-section__add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-1);
-  padding: var(--spacing-1);
-  margin-top: var(--spacing-0-5);
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  background: transparent;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
   width: 100%;
-  transition: background-color 100ms;
-}
-
-.element-path-section__add:hover {
-  background-color: var(--panel-item-bg-hover);
-  color: var(--color-foreground);
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-0-5);
 }
 
 .element-path-section__add-icon {

@@ -20,8 +20,10 @@ in the same change (see the "Keep tutorials in sync" rule in
 
 - `packages/animation/src/TimelineManager.ts` — `createTimelineManager`
 - `packages/animation/src/types.ts` — the `Timeline` action shape (incl. `segments`)
+- `packages/logic/src/pathSteps.ts` — `logicClassifyPathSegment` (agnostic step classifier)
 - `src/stores/debugScene.ts` — `PathConfig`, `PathEntry`, `addPath`, `addPathWaypoint`
 - `src/utils/pathVisualization.ts` — path tube + node rendering
+- `src/components/panels/ElementPathSection.vue` — the waypoint + step-type editor
 - `src/views/Tests/Timeline/Timeline.vue` — the worked example
 
 Re-read this guide after editing any of the above and fix anything that drifted.
@@ -172,17 +174,20 @@ callback to wire `usePathInteraction` (ground-plane raycasting) to
 
 goomba-1 is a **stepped** follower. Its waypoints encode a loop that climbs the
 central column, bumps the coin block, and walks back down. Each pair of nodes is
-classified by geometry into a step type:
+classified by geometry into a step type with `logicClassifyPathSegment` from
+`@webgamekit/logic` (framework-agnostic, so the scene and the Elements panel
+agree):
 
 ```ts
-type SegmentType = 'walk' | 'forward-jump' | 'jump'
+import { logicClassifyPathSegment } from '@webgamekit/logic'
 
-const segmentType = (a, b) => {
-  const horizontal = Math.hypot(b[0] - a[0], b[2] - a[2])
-  if (horizontal < PATH_ARRIVE_Y) return 'jump' // same spot → hop in place
-  return b[1] - a[1] > PATH_JUMP_MIN_RISE ? 'forward-jump' : 'walk'
-}
+// 'walk' | 'forward-jump' | 'jump'
+const type = logicClassifyPathSegment(nodeA, nodeB)
+// same X/Z → 'jump'; higher → 'forward-jump'; otherwise → 'walk'
 ```
+
+The Elements panel shows that classification above each waypoint row (with a
+tooltip explaining the step), so you can read a stepped path at a glance.
 
 - **walk** — straight horizontal move. On a descent the follower keeps its
   height and lets the **gravity code** (`bindAnimatedElements`) drop it off the

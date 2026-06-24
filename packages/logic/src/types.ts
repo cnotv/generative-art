@@ -24,6 +24,8 @@ export type GridConfig = {
 
 export type Position2D = { x: number; z: number }
 
+export type PathStepType = 'walk' | 'forward-jump' | 'jump'
+
 export type Waypoint = { x: number; y: number; z: number }
 
 export type PathFollowState = {
