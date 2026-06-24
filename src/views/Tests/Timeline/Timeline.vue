@@ -88,6 +88,9 @@ let cleanupPicker: (() => void) | undefined
 const PATH_NODE_SIZE = 4
 const PATH_TUBE_RADIUS = 1.5
 const PATH_NODE_COLOR = 0xf0a000
+/** Tube opacity for the selected path (highlighted) vs the others (dimmed). */
+const PATH_OPACITY_SELECTED = 0.95
+const PATH_OPACITY_DIM = 0.2
 
 /** Per-path follow state advanced by its own timeline action each frame. */
 interface ActivePathTick {
@@ -938,16 +941,20 @@ const buildTimeline = async ({
   })
 }
 
-/** Path line + nodes are shown only when the path's element is the selected one
- *  (and its own showPath/showNodes config + visibility allow it). */
+/** The path tube stays visible so it can be clicked to select its element —
+ *  highlighted (opaque) when selected, dimmed otherwise. Nodes show only for the
+ *  selected path (for editing), gated by its own showPath/showNodes config. */
 const updateTickVisibility = (tick: ActivePathTick): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry) return
   const selected = useElementPropertiesStore().selectedElementName === entry.elementName
-  const baseVisible = selected && !entry.hidden
-  if (tick.pathLine) tick.pathLine.visible = baseVisible && entry.config.showPath
+  if (tick.pathLine) {
+    tick.pathLine.visible = !entry.hidden && entry.config.showPath
+    const material = tick.pathLine.userData.sharedMaterial as THREE.MeshBasicMaterial | undefined
+    if (material) material.opacity = selected ? PATH_OPACITY_SELECTED : PATH_OPACITY_DIM
+  }
   tick.waypointNodes.forEach((node) => {
-    node.visible = baseVisible && entry.config.showNodes
+    node.visible = selected && !entry.hidden && entry.config.showNodes
   })
 }
 
@@ -962,7 +969,8 @@ const refreshPathLine = (
   }
   if (waypoints.length < 2) return
   // Looping paths close the tube back to the start so the whole loop is visible.
-  const closed = useDebugSceneStore().paths.find((p) => p.id === tick.id)?.config.loop ?? false
+  const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
+  const closed = entry?.config.loop ?? false
   const points = waypoints.map(([x, y, z]) => ({ x, y, z }))
   if (tick.stepped) {
     tick.smoothWaypoints = points
@@ -983,6 +991,8 @@ const refreshPathLine = (
       closed
     )
   }
+  // Tag the tube so a viewport click on it resolves to this path's element.
+  if (tick.pathLine && entry) tick.pathLine.userData.pathElementName = entry.elementName
   tick.followState = { waypoints: tick.smoothWaypoints, currentIndex: 0, progress: 0 }
   updateTickVisibility(tick)
 }
@@ -1335,9 +1345,31 @@ const registerTimelinePaths = (
   }
 }
 
+/** Maps a clicked scene object to the panel element/group it belongs to: a path
+ *  tube to its element, bricks to the Bricks group, balls to the Balls group, and
+ *  texture-area meshes (clouds) to their group; null if nothing selectable. */
+const matchPickedByName = (
+  name: string,
+  store: ReturnType<typeof useDebugSceneStore>
+): string | null => {
+  if (store.sceneElements.some((e) => e.name === name)) return name
+  if (name.startsWith('brick-')) return BRICK_GROUP_ID
+  if (name.startsWith('ball')) return BALL_SPAWN_GROUP_ID
+  return null
+}
+
+const matchPickedElement = (
+  object: THREE.Object3D,
+  store: ReturnType<typeof useDebugSceneStore>
+): string | null => {
+  const data = object.userData as { textureGroupId?: string; pathElementName?: string } | undefined
+  if (typeof data?.pathElementName === 'string') return data.pathElementName
+  if (typeof data?.textureGroupId === 'string') return data.textureGroupId
+  return object.name ? matchPickedByName(object.name, store) : null
+}
+
 /** Click-to-select: maps a viewport click to its panel element/group while the
- *  Elements panel is open. Bricks resolve to the Bricks group, balls to the Balls
- *  group, and texture-area meshes (clouds) to their group via userData. */
+ *  Elements panel is open. */
 const registerScenePicker = (scene: THREE.Scene, getCamera: () => THREE.Camera): (() => void) => {
   const panelsStore = usePanelsStore()
   const store = useDebugSceneStore()
@@ -1345,14 +1377,7 @@ const registerScenePicker = (scene: THREE.Scene, getCamera: () => THREE.Camera):
     canvas: canvasReference,
     getCamera,
     getObjects: () => scene.children,
-    matchObject: (object) => {
-      const name = object.name
-      if (name && store.sceneElements.some((e) => e.name === name)) return name
-      if (name?.startsWith('brick-')) return BRICK_GROUP_ID
-      if (name?.startsWith('ball')) return BALL_SPAWN_GROUP_ID
-      const groupId = (object.userData as { textureGroupId?: string } | undefined)?.textureGroupId
-      return typeof groupId === 'string' ? groupId : null
-    },
+    matchObject: (object) => matchPickedElement(object, store),
     isEnabled: () => panelsStore.isElementsOpen,
     onPick: (name) => useElementPropertiesStore().requestElementSelection(name)
   })
