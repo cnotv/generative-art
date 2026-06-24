@@ -212,6 +212,27 @@ The single timeline action advances whichever step is current and hands off on
 completion, while its `segments` give the panel the walk/jump breakdown for that
 one `goomba-1: path` row.
 
+### Choosing each step's action — in the path itself
+
+There is **no action picker** in the Elements panel. A step's action is decided
+by where you place the **next** waypoint relative to the current one, so you set
+the action by editing the X/Y/Z of the waypoint rows in the path (Elements panel
+→ select the element → its path's waypoint list). The rule applies to the
+segment that runs **from each row to the next** (the last row loops to the
+first):
+
+| To make that step a… | Place the next waypoint…                                              |
+| -------------------- | --------------------------------------------------------------------- |
+| **walk** (flat)      | at the **same Y**, different X/Z                                      |
+| **walk** (descend)   | at a **lower Y** — the goomba walks off the edge and gravity drops it |
+| **forward-jump**     | at a **higher Y** (rise `> PATH_JUMP_MIN_RISE`), different X/Z        |
+| **jump** (in place)  | at the **same X/Z** as the current row (duplicate the row)            |
+
+So "walk", "jump", or "jump + walk" (forward-jump) is purely a function of the
+node coordinates — there is nothing else to toggle. To turn a step into an
+in-place jump, duplicate its row; to turn a forward-jump into a plain walk, lower
+the next row to the same height; and so on.
+
 :::tip Collider sizing
 A path-driven model is usually `kinematicPositionBased`, moved each frame with
 `setNextKinematicTranslation`. Kinematic bodies push dynamic ones (balls), but
