@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Input } from '@/components/ui/input'
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import { logicClassifyPathSegment, type PathStepType } from '@webgamekit/logic'
 import type { PathEntry, PathConfig } from '@/stores/debugScene'
@@ -30,8 +29,6 @@ interface Properties {
 const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
-
-const expanded = ref(true)
 
 const handleUpdateWaypoint = (index: number, axis: 0 | 1 | 2, rawValue: string | number) => {
   const parsed = Number(rawValue)
@@ -73,15 +70,7 @@ const pathSchema = {
 <template>
   <div class="element-path-section">
     <div class="element-path-section__header">
-      <button
-        class="element-path-section__toggle"
-        :title="expanded ? 'Collapse path' : 'Expand path'"
-        @click="expanded = !expanded"
-      >
-        <ChevronDown v-if="expanded" class="element-path-section__chevron" />
-        <ChevronRight v-else class="element-path-section__chevron" />
-        <span>Path ({{ path.waypoints.length }})</span>
-      </button>
+      <span class="element-path-section__title">Path ({{ path.waypoints.length }})</span>
       <IconButton panel-colors size="xs" title="Add waypoint" @click.stop="handleAddWaypoint">
         <Plus />
       </IconButton>
@@ -95,8 +84,19 @@ const pathSchema = {
       </IconButton>
     </div>
 
-    <div v-if="expanded" class="element-path-section__content">
-      <div class="element-path-section__waypoints">
+    <div class="element-path-section__content">
+      <div
+        class="element-path-section__grid"
+        :class="{ 'element-path-section__grid--stepped': path.stepped }"
+      >
+        <div class="element-path-section__head">
+          <span></span>
+          <span v-if="path.stepped"></span>
+          <span class="element-path-section__axis-head">x</span>
+          <span class="element-path-section__axis-head">y</span>
+          <span class="element-path-section__axis-head">z</span>
+          <span></span>
+        </div>
         <div
           v-for="(position, index) in path.waypoints"
           :key="index"
@@ -110,15 +110,14 @@ const pathSchema = {
           >
             {{ stepTypeAt(path, index) }}
           </span>
-          <template v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const" :key="axis">
-            <label class="element-path-section__axis-label">{{ axis }}</label>
-            <Input
-              class="element-path-section__input"
-              type="number"
-              :model-value="position[axisIndex as 0 | 1 | 2]"
-              @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
-            />
-          </template>
+          <Input
+            v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const"
+            :key="axis"
+            class="element-path-section__input"
+            type="number"
+            :model-value="position[axisIndex as 0 | 1 | 2]"
+            @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
+          />
           <IconButton
             panel-colors
             size="xs"
@@ -158,24 +157,11 @@ const pathSchema = {
   gap: var(--spacing-1);
 }
 
-.element-path-section__toggle {
+.element-path-section__title {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--color-foreground);
-}
-
-.element-path-section__chevron {
-  width: var(--font-size-sm);
-  height: var(--font-size-sm);
-  flex-shrink: 0;
 }
 
 .element-path-section__content {
@@ -185,15 +171,30 @@ const pathSchema = {
   margin-top: var(--spacing-1-5);
 }
 
-.element-path-section__waypoints {
-  display: flex;
-  flex-direction: column;
+.element-path-section__grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr auto;
+  align-items: center;
   gap: var(--spacing-0-5);
 }
 
+.element-path-section__grid--stepped {
+  grid-template-columns: auto auto 1fr 1fr 1fr auto;
+}
+
+.element-path-section__head,
+.element-path-section__row {
+  display: contents;
+}
+
+.element-path-section__axis-head {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+  font-family: monospace;
+  text-align: center;
+}
+
 .element-path-section__step {
-  flex-shrink: 0;
-  width: 5.5rem;
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--color-primary);
@@ -202,30 +203,14 @@ const pathSchema = {
   cursor: help;
 }
 
-.element-path-section__row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-0-5);
-}
-
 .element-path-section__index {
   font-size: var(--font-size-xs);
   color: var(--color-muted-foreground);
   font-variant-numeric: tabular-nums;
-  min-width: 1.4rem;
   text-align: right;
-  flex-shrink: 0;
-}
-
-.element-path-section__axis-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  font-family: monospace;
-  flex-shrink: 0;
 }
 
 .element-path-section__input {
-  flex: 1;
   min-width: 0;
   height: var(--btn-xs-height);
   padding: 0 var(--spacing-1);
