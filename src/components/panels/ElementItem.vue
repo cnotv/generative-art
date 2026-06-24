@@ -2,13 +2,14 @@
 import ElementRow from './ElementRow.vue'
 import IconPreview from '@/components/IconPreview.vue'
 import IconButton from '@/components/IconButton.vue'
-import { Eye, EyeOff, Trash2 } from 'lucide-vue-next'
+import { Eye, EyeOff, Route, Trash2 } from 'lucide-vue-next'
 import type { SceneElement } from '@/stores/debugScene'
 import { getElementIcon, getElementColor } from './elementUtilities'
 
 interface Properties {
   element: SceneElement
   selected?: boolean
+  hasPath?: boolean
 }
 
 defineProps<Properties>()
@@ -25,6 +26,7 @@ const emit = defineEmits<{
     <template #default="{ hovered }">
       <IconPreview :icon="getElementIcon(element)" :color="getElementColor(element)" size="sm" />
       <span class="element-item__name">{{ element.label ?? element.name }}</span>
+      <Route v-if="hasPath" class="element-item__path-badge" />
       <div class="element-item__actions" :class="{ 'element-item__actions--visible': hovered }">
         <IconButton
           panel-colors
@@ -54,6 +56,13 @@ const emit = defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.element-item__path-badge {
+  width: var(--font-size-xs);
+  height: var(--font-size-xs);
+  flex-shrink: 0;
+  color: var(--color-muted-foreground);
 }
 
 .element-item__actions {

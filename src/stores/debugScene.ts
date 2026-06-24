@@ -77,14 +77,59 @@ export interface SpawnGroup {
   handlers: SpawnGroupHandlers
 }
 
+export interface PathConfig {
+  speed: number
+  obstacleImpulse: number
+  easing: string
+  easingIntensity: number
+  playing: boolean
+  loop: boolean
+  pingPong: boolean
+  showPath: boolean
+  showNodes: boolean
+}
+
+export interface PathHandlers {
+  onAddWaypoint: (position: CoordinateTuple) => void
+  onRemoveWaypoint: (index: number) => void
+  onUpdateWaypoint: (index: number, position: CoordinateTuple) => void
+  onReset: () => void
+  onToggleVisibility: (hidden: boolean) => void
+  onRemove: () => void
+  onConfigChange: (key: keyof PathConfig, value: unknown) => void
+}
+
+export interface PathEntry {
+  id: string
+  elementName: string
+  label: string
+  waypoints: CoordinateTuple[]
+  config: PathConfig
+  hidden?: boolean
+  /** Stepped paths classify each segment as a walk / forward-jump / in-place jump. */
+  stepped?: boolean
+  handlers: PathHandlers
+}
+
+export interface PathRegistrationContext {
+  onEnablePath: (elementName: string) => void
+}
+
 export const useDebugSceneStore = defineStore('debugScene', () => {
   const sceneElements = ref<SceneElement[]>([])
   const sceneGroups = ref<Record<string, string>>({})
   const spawns = ref<SpawnEntry[]>([])
   const instancedGroups = ref<InstancedGroup[]>([])
   const spawnGroups = ref<SpawnGroup[]>([])
+  const paths = ref<PathEntry[]>([])
+  /** Waypoint currently being interacted with (e.g. dragged), highlighted in the panel. */
+  const activeWaypoint = ref<{ pathId: string; index: number } | null>(null)
+  const setActiveWaypoint = (pathId: string, index: number | null) => {
+    activeWaypoint.value = index === null ? null : { pathId, index }
+  }
   const handlers = ref<DebugSceneHandlers | null>(null)
   const spawnHandlers = ref<Record<string, () => void>>({})
+  const pathRegistrationContext = ref<PathRegistrationContext | null>(null)
 
   const setSceneElements = (
     elements: SceneElement[],
@@ -182,6 +227,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     spawns.value = []
     instancedGroups.value = []
     spawnGroups.value = []
+    paths.value = []
     handlers.value = null
     usePerfMetricsStore().clearRenderer()
   }
@@ -256,6 +302,75 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     spawnGroups.value = spawnGroups.value.map((g) => (g.id === id ? { ...g, count } : g))
   }
 
+  const registerPathContext = (context: PathRegistrationContext) => {
+    pathRegistrationContext.value = context
+  }
+
+  const unregisterPathContext = () => {
+    pathRegistrationContext.value = null
+  }
+
+  const enablePathForElement = (elementName: string) => {
+    pathRegistrationContext.value?.onEnablePath(elementName)
+  }
+
+  const addPath = (entry: PathEntry) => {
+    const existing = paths.value.find((p) => p.id === entry.id)
+    const merged = { ...entry, hidden: entry.hidden ?? existing?.hidden ?? false }
+    paths.value = [...paths.value.filter((p) => p.id !== entry.id), merged]
+  }
+
+  const removePath = (id: string) => {
+    const entry = paths.value.find((p) => p.id === id)
+    entry?.handlers.onRemove()
+    paths.value = paths.value.filter((p) => p.id !== id)
+    useElementPropertiesStore().unregisterElementProperties(id)
+  }
+
+  const togglePathVisibility = (id: string) => {
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    const hidden = !entry.hidden
+    paths.value = paths.value.map((p) => (p.id === id ? { ...p, hidden } : p))
+    entry.handlers.onToggleVisibility(hidden)
+  }
+
+  const addPathWaypoint = (id: string, position: CoordinateTuple) => {
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    paths.value = paths.value.map((p) =>
+      p.id === id ? { ...p, waypoints: [...p.waypoints, position] } : p
+    )
+    entry.handlers.onAddWaypoint(position)
+  }
+
+  const removePathWaypoint = (id: string, index: number) => {
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    paths.value = paths.value.map((p) =>
+      p.id === id ? { ...p, waypoints: p.waypoints.filter((_, i) => i !== index) } : p
+    )
+    entry.handlers.onRemoveWaypoint(index)
+  }
+
+  const updatePathWaypoint = (id: string, index: number, position: CoordinateTuple) => {
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    paths.value = paths.value.map((p) =>
+      p.id === id ? { ...p, waypoints: p.waypoints.map((w, i) => (i === index ? position : w)) } : p
+    )
+    entry.handlers.onUpdateWaypoint(index, position)
+  }
+
+  const updatePathConfig = (id: string, key: keyof PathConfig, value: unknown) => {
+    const entry = paths.value.find((p) => p.id === id)
+    if (!entry) return
+    paths.value = paths.value.map((p) =>
+      p.id === id ? { ...p, config: { ...p.config, [key]: value } } : p
+    )
+    entry.handlers.onConfigChange(key, value)
+  }
+
   const moveElementAfter = (name: string, afterName: string) => {
     const index = sceneElements.value.findIndex((e) => e.name === name)
     const afterIndex = sceneElements.value.findIndex((e) => e.name === afterName)
@@ -272,6 +387,9 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     spawns,
     instancedGroups,
     spawnGroups,
+    paths,
+    activeWaypoint,
+    setActiveWaypoint,
     setSceneElements,
     addSceneElement,
     removeSceneElement,
@@ -284,6 +402,16 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     removeSpawnGroup,
     toggleSpawnGroupVisibility,
     setSpawnGroupCount,
+    registerPathContext,
+    unregisterPathContext,
+    enablePathForElement,
+    addPath,
+    removePath,
+    togglePathVisibility,
+    addPathWaypoint,
+    removePathWaypoint,
+    updatePathWaypoint,
+    updatePathConfig,
     registerSpawn,
     unregisterSpawn,
     toggleSpawnVisibility,

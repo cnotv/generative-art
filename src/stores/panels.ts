@@ -51,6 +51,7 @@ export const usePanelsStore = defineStore('panels', () => {
   const isDebugOpen = computed(() => activePanels.value.has('debug'))
   const isSceneOpen = computed(() => activePanels.value.has('scene'))
   const isTimelineOpen = computed(() => activePanels.value.has('timeline'))
+  const isElementsOpen = computed(() => activePanels.value.has('elements'))
 
   // Returns the number of open panels stacked closer to the viewport edge on the same side.
   // Used to offset panels so they appear side-by-side instead of overlapping.
@@ -139,6 +140,7 @@ export const usePanelsStore = defineStore('panels', () => {
     isDebugOpen,
     isSceneOpen,
     isTimelineOpen,
+    isElementsOpen,
     getPanelOffset,
     initRouteSync,
     openPanel,

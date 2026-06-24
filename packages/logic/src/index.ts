@@ -5,6 +5,7 @@ export type {
   Grid,
   GridConfig,
   Position2D,
+  PathStepType,
   Waypoint,
   PathFollowState,
   PathFollowResult
@@ -23,3 +24,9 @@ export {
 export { logicGetBestRoute } from './pathfinding'
 
 export { logicAdvanceAlongPath } from './pathFollowing'
+
+export {
+  logicClassifyPathSegment,
+  LOGIC_STEP_SAME_SPOT_DISTANCE,
+  LOGIC_STEP_JUMP_MIN_RISE
+} from './pathSteps'
