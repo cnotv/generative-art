@@ -39,9 +39,35 @@ A ray cast into the scene hits whatever triangle is frontmost, which is often a 
 
 Not everything visible has its own panel row. Instanced bricks share a single "Bricks" group entry; the spawned balls share a "Balls" group; clouds belong to a "Clouds" texture-area group. The individual `brick-3`/`ball-7`/`cloud-2` meshes are deliberately kept out of the panel list (they would bury the useful rows). So `matchObject` translates them: a name starting with `brick-` resolves to the Bricks group id, `ball` to the Balls group, and any mesh tagged with a texture-group id in its `userData` resolves to that group. Clicking any brick, ball, or cloud therefore selects and expands the group it belongs to, while clicking a standalone element (a goomba, the ground) selects that element directly. The mapping lives in the scene, so each scene decides how its own meshes roll up into panel rows.
 
-## Keeping path visuals out of the panel
+## Keeping path visuals out of the panel — but still selectable
 
-Drawing a path adds a tube and node meshes to the scene. Because those objects exist in the scene graph at the moment the panel's element list is captured, they would otherwise show up as anonymous "Group" rows. They are tagged with a `userData` flag when created and filtered out of the panel's element list alongside the grouped brick and ball meshes, so the panel only ever lists meaningful, selectable entries. `matchObject` likewise ignores them, so clicking a path tube selects whatever lies behind it rather than the path itself.
+A path adds a tube and node meshes to the scene. Because those objects exist in the scene graph at the moment the panel's element list is captured, they would otherwise show up as anonymous "Group" rows. They are tagged with a `userData` flag when created and filtered out of the panel's element list alongside the grouped brick and ball meshes, so the panel only ever lists meaningful, selectable entries.
+
+The tube is not a panel row of its own, but it is not inert either: it carries a second `userData` tag naming the element it belongs to. So when `matchObject` meets a path tube it resolves the click to that element — clicking a goomba's path selects the goomba, the same as clicking the goomba itself — rather than falling through to whatever lies behind the tube.
+
+## Selecting and moving a path and its nodes
+
+A path is only drawn while its element is the selected one; deselecting hides it again, so the viewport never fills with every path at once. Selecting the element — from the panel row or by clicking the mesh or its tube — brings the path back, this time with its draggable nodes.
+
+Once a path is visible, it can be reshaped directly in the viewport. Grabbing the tube moves the whole path; grabbing a single node moves just that node. By default a drag slides along the ground plane (X/Z); holding **Shift** switches to moving along the vertical axis instead, by intersecting a camera-facing vertical plane so the pointer reads a height. Because a path grab needs to win the gesture before the camera does, it is taken on the pointer-down in the capture phase and stops there, suspending the orbit controls for the duration of the drag so the camera stays put.
+
+```mermaid
+flowchart TD
+    A[Pointer down on selected path] --> B{Hit a node?}
+    B -- yes --> C[Drag that one node]
+    B -- no, hit the tube --> D[Drag the whole path]
+    C --> E{Shift held?}
+    D --> E
+    E -- no --> F[Move on ground X/Z]
+    E -- yes --> G[Move on vertical Y]
+    F --> H[Waypoints update live]
+    G --> H
+    H --> I[Panel inputs reflect the new values]
+```
+
+## Linking a scene node to its panel row
+
+The waypoint list in the panel and the node meshes in the scene are two views of the same waypoints, and the link runs both ways. Editing a number in a panel row moves the matching node in the scene; dragging a node in the scene updates the matching row's inputs live. To make that correspondence visible, grabbing a node also records it as the "active waypoint" in the shared store, and the panel highlights that row — so it is always clear which scene node maps to which line of numbers. The whole-path drag clears the active waypoint, since no single node is the subject.
 
 ## Decoupling the picker from the panel
 
