@@ -8,6 +8,7 @@ const packages = [
   'animation',
   'threejs',
   'audio',
+  'music',
   'game',
   'controls',
   'recording',

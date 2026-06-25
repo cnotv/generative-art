@@ -2,7 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
-export type PanelType = 'navigation' | 'config' | 'scene' | 'debug' | 'elements' | 'timeline'
+export type PanelType =
+  | 'navigation'
+  | 'config'
+  | 'scene'
+  | 'debug'
+  | 'elements'
+  | 'timeline'
+  | 'music'
 
 const ALL_PANEL_TYPES: PanelType[] = [
   'navigation',
@@ -10,11 +17,12 @@ const ALL_PANEL_TYPES: PanelType[] = [
   'scene',
   'debug',
   'elements',
-  'timeline'
+  'timeline',
+  'music'
 ]
 
 // Panels stacked from edge inward; index 0 = closest to viewport edge
-const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'scene', 'config', 'timeline']
+const RIGHT_PANEL_ORDER: PanelType[] = ['debug', 'scene', 'config', 'timeline', 'music']
 const LEFT_PANEL_ORDER: PanelType[] = ['elements']
 
 const countOpenBefore = (order: PanelType[], index: number, active: Set<PanelType>): number =>
@@ -52,6 +60,7 @@ export const usePanelsStore = defineStore('panels', () => {
   const isSceneOpen = computed(() => activePanels.value.has('scene'))
   const isTimelineOpen = computed(() => activePanels.value.has('timeline'))
   const isElementsOpen = computed(() => activePanels.value.has('elements'))
+  const isMusicOpen = computed(() => activePanels.value.has('music'))
 
   // Returns the number of open panels stacked closer to the viewport edge on the same side.
   // Used to offset panels so they appear side-by-side instead of overlapping.
@@ -141,6 +150,7 @@ export const usePanelsStore = defineStore('panels', () => {
     isSceneOpen,
     isTimelineOpen,
     isElementsOpen,
+    isMusicOpen,
     getPanelOffset,
     initRouteSync,
     openPanel,

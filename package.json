@@ -47,12 +47,14 @@
     ]
   },
   "dependencies": {
+    "@strudel/web": "^1.3.0",
     "@tonejs/midi": "^2.0.28",
     "@webgamekit/canvas-editor": "workspace:*",
     "@webgamekit/chat": "workspace:*",
     "@webgamekit/controls": "workspace:^",
     "@webgamekit/dictionary": "workspace:*",
     "@webgamekit/logic": "workspace:^",
+    "@webgamekit/music": "workspace:*",
     "@webgamekit/multiplayer-p2p": "workspace:^",
     "@webgamekit/threejs": "workspace:^",
     "dat.gui": "^0.7.9",
