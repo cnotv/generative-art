@@ -15,4 +15,12 @@ export interface MusicHap {
 }
 
 /** Names of the built-in example patterns. */
-export type MusicPatternName = 'drums' | 'bass' | 'melody' | 'song'
+export type MusicPatternName =
+  | 'drums'
+  | 'bass'
+  | 'melody'
+  | 'song'
+  | 'techno'
+  | 'house'
+  | 'breakbeat'
+  | 'ambient'

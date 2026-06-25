@@ -10,7 +10,7 @@ import { useStrudel } from '@/composables/useStrudel'
 
 const { isPlaying, isLoading, error, play, stop, setTempo } = useStrudel()
 
-const presets: MusicPatternName[] = ['drums', 'bass', 'melody', 'song']
+const presets = Object.keys(MUSIC_PATTERNS) as MusicPatternName[]
 const pattern = ref<string>(MUSIC_PATTERNS.drums)
 const activePreset = ref<MusicPatternName | 'random'>('drums')
 const tempo = ref(0.5)

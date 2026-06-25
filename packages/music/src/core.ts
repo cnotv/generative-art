@@ -49,9 +49,13 @@ export const musicPlay = async (pattern: string): Promise<void> => {
   await strudelGlobals().evaluate?.(pattern)
 }
 
-/** Stop all currently playing Strudel patterns. */
+/** Stop all currently playing Strudel patterns. In @strudel/web 1.3.0 `hush()`
+ *  alone does not halt the running scheduler, so the active pattern is replaced
+ *  with `silence`, which reliably stops further note triggers. */
 export const musicStop = (): void => {
-  strudelGlobals().hush?.()
+  const strudel = strudelGlobals()
+  strudel.hush?.()
+  void strudel.evaluate?.('silence')
 }
 
 /**
