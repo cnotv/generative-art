@@ -35,6 +35,15 @@ export default defineConfig({
     },
     dedupe: ['three']
   },
+  css: {
+    preprocessorOptions: {
+      // Use Dart Sass's modern compiler API; the default legacy JS API is
+      // deprecated (https://sass-lang.com/d/legacy-js-api) and removed in Sass 2.
+      scss: {
+        api: 'modern-compiler'
+      }
+    }
+  },
   build: {
     target: 'esnext',
     sourcemap: true,
