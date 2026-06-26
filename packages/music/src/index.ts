@@ -1,6 +1,6 @@
 export type { MusicNoteEvent, MusicHap, MusicPatternName } from './types'
 
-export { musicInit, musicPlay, musicStop, musicSetTempo } from './core'
+export { musicInit, musicPlay, musicStop, musicSetTempo, musicCurrentSeconds } from './core'
 
 export { musicEventsFromHaps } from './events'
 

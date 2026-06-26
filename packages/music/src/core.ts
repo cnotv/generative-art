@@ -3,6 +3,7 @@ interface StrudelGlobals {
   hush: () => void
   setcps: (cyclesPerSecond: number) => void
   samples: (source: string) => Promise<unknown>
+  getAudioContext: () => { currentTime: number } | undefined
 }
 
 const strudelGlobals = (): Partial<StrudelGlobals> =>
@@ -65,3 +66,11 @@ export const musicStop = (): void => {
 export const musicSetTempo = (cyclesPerSecond: number): void => {
   strudelGlobals().setcps?.(cyclesPerSecond)
 }
+
+/**
+ * Current time of Strudel's audio clock in seconds — the transport a consumer
+ * (e.g. a rhythm game) can use as a master clock so visuals stay synced to audio.
+ * @returns The audio context's `currentTime`, or 0 before init.
+ */
+export const musicCurrentSeconds = (): number =>
+  strudelGlobals().getAudioContext?.()?.currentTime ?? 0
