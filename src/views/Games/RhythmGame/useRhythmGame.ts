@@ -1,6 +1,7 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
-import { createNoteScheduler } from '@webgamekit/audio'
+import { musicPlay, musicStop, musicSetTempo, musicCurrentSeconds } from '@webgamekit/music'
+import { chartToStrudel, rgSongCps } from './strudelChart'
 import {
   LANES,
   NOTE_SPEED_PX_PER_MS,
@@ -10,8 +11,6 @@ import {
   LANE_COLORS,
   LANE_KEYS,
   LANE_DIRECTIONS,
-  LANE_FREQS,
-  INSTRUMENT_PRESETS,
   type RgLane,
   type RhythmNote,
   type RgDifficulty,
@@ -53,30 +52,39 @@ type GameDeps = {
   onSongEnd: () => void
 }
 
+const RG_DEFAULT_BPM = 120
+
 const getSongNotes = (song: RgSong, difficulty: RgDifficulty): RhythmNote[] => {
   const songDefinition = SONGS.find((s) => s.id === song)
   return songDefinition ? songDefinition.notes[difficulty].map((n) => ({ ...n })) : []
+}
+
+const getSongBpm = (song: RgSong): number => SONGS.find((s) => s.id === song)?.bpm ?? RG_DEFAULT_BPM
+
+/** Trailing time after the last note before the song is considered finished. */
+const SONG_END_PAD_MS = 2000
+
+const isSongComplete = (notes: RhythmNote[], currentMs: number): boolean => {
+  const last = notes.at(-1)
+  return (
+    !!last && currentMs > last.time + SONG_END_PAD_MS && notes.every((n) => n.hit !== undefined)
+  )
+}
+
+/** Set the tempo, play the chart's Strudel audio, and report the start time. */
+const playStrudelChart = (
+  notes: RhythmNote[],
+  bpm: number,
+  onStarted: (startSeconds: number) => void
+): void => {
+  musicSetTempo(rgSongCps(bpm))
+  void musicPlay(chartToStrudel(notes, bpm)).then(() => onStarted(musicCurrentSeconds()))
 }
 
 const resolveNotes = (deps: GameDeps): RhythmNote[] =>
   deps.song === 'custom' && deps.customNotes?.length
     ? deps.customNotes.map((n) => ({ ...n }))
     : getSongNotes(deps.song, deps.difficulty)
-
-const buildScheduledNotes = (
-  songNotes: RhythmNote[],
-  instrument: RgInstrument
-): ScheduledNote[] => {
-  const preset = INSTRUMENT_PRESETS[instrument]
-  return songNotes.map((n) => ({
-    time: n.time,
-    freq: LANE_FREQS[n.lane] * preset.freqMultiplier,
-    duration: preset.durationMs,
-    volume: preset.volume,
-    waveType: preset.waveType,
-    attackTime: preset.attackTimeSec
-  }))
-}
 
 const buildControlsMapping = (
   laneActive: Ref<boolean[]>,
@@ -338,8 +346,11 @@ export const useRhythmGame = (deps: GameDeps) => {
   const miss = ref(0)
   const laneActive = ref<boolean[]>([false, false, false, false])
 
-  const scheduler = createNoteScheduler()
   let rafId = 0
+  let strudelStartSec = 0
+  let started = false
+  const getCurrentMs = (): number =>
+    started ? (musicCurrentSeconds() - strudelStartSec) * 1000 : 0
   let notes: RhythmNote[] = []
   let particles: Particle[] = []
   const laneFlashes: LaneFlash[] = Array.from({ length: LANES }, () => ({
@@ -362,7 +373,7 @@ export const useRhythmGame = (deps: GameDeps) => {
     })
 
   const pressLane = (lane: RgLane): void => {
-    const currentMs = scheduler.currentMs
+    const currentMs = getCurrentMs()
 
     const index = findHittableNote(notes, lane, currentMs)
     if (index === -1) return
@@ -392,7 +403,7 @@ export const useRhythmGame = (deps: GameDeps) => {
   const gameLoop = (timestamp: number): void => {
     const dt = timestamp - lastFrameTime
     lastFrameTime = timestamp
-    const currentMs = scheduler.currentMs
+    const currentMs = getCurrentMs()
     const canvas = deps.canvas.value
     if (!canvas) {
       rafId = requestAnimationFrame(gameLoop)
@@ -418,9 +429,8 @@ export const useRhythmGame = (deps: GameDeps) => {
     particles = drawFrame(canvas, currentMs, dt, drawContext, particles)
     if (songDurationMs.value > 0) progressPct.value = Math.min(1, currentMs / songDurationMs.value)
 
-    const lastNote = notes.at(-1)
-    if (lastNote && currentMs > lastNote.time + 2000 && notes.every((n) => n.hit !== undefined)) {
-      scheduler.stop()
+    if (started && isSongComplete(notes, currentMs)) {
+      musicStop()
       deps.onSongEnd()
       return
     }
@@ -430,22 +440,19 @@ export const useRhythmGame = (deps: GameDeps) => {
 
   const init = (): void => {
     notes = resolveNotes(deps)
-    songDurationMs.value = Math.max(
-      deps.backgroundNotes?.at(-1)?.time ?? 0,
-      notes.at(-1)?.time ?? 0
-    )
-    const gameNotes = buildScheduledNotes(notes, deps.instrument)
-    const allNotes = deps.backgroundNotes?.length
-      ? [...gameNotes, ...deps.backgroundNotes]
-      : gameNotes
-    scheduler.start(allNotes, deps.startAt)
+    songDurationMs.value = notes.at(-1)?.time ?? 0
     lastFrameTime = performance.now()
     rafId = requestAnimationFrame(gameLoop)
+    // Notes wait at the top until playback starts; the clock is then anchored to it.
+    playStrudelChart(notes, getSongBpm(deps.song), (startSeconds) => {
+      strudelStartSec = startSeconds
+      started = true
+    })
   }
 
   const destroy = (): void => {
     cancelAnimationFrame(rafId)
-    scheduler.destroy()
+    musicStop()
     clearCanvas(deps.canvas.value)
   }
 
