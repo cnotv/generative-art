@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import type { Font } from 'three/addons/loaders/FontLoader.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
+import helvetikerBoldUrl from 'three/examples/fonts/helvetiker_bold.typeface.json?url'
 import { getTools, getWalls, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
@@ -443,12 +444,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const bodies: PhysicsBodies = new Map()
   await loadLogo(scene, world, bodies, contentMaterial)
 
-  new FontLoader().load(
-    '/node_modules/three/examples/fonts/helvetiker_bold.typeface.json',
-    (font) => {
-      loadText(scene, world, bodies, contentMaterial, font)
-    }
-  )
+  new FontLoader().load(helvetikerBoldUrl, (font) => {
+    loadText(scene, world, bodies, contentMaterial, font)
+  })
 
   const wallAspect = window.innerWidth / window.innerHeight
   const wallLength = Math.ceil(FRUSTUM_HEIGHT * wallAspect)
