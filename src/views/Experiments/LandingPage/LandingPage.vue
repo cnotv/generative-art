@@ -15,6 +15,7 @@ import { registerLightProperties } from '@/utils/lightProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
@@ -41,10 +42,9 @@ const ORBIT_TARGET_Z = -0.08
 const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
-const BACKGROUND_COLOR = 0x0a0a0a
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 5
-const DIR_LIGHT_INTENSITY = 4
+const AMBIENT_INTENSITY = 0.1
+const DIR_LIGHT_INTENSITY = 0.2
 const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
@@ -52,19 +52,56 @@ const GAP = 1.4
 const LETTER_SPACING = 0.3
 const COLLIDER_RESTITUTION = 0.4
 const COLLIDER_FRICTION = 0.6
-const LINEAR_DAMPING = 2.0
-const ANGULAR_DAMPING = 2.0
+const LINEAR_DAMPING = 4.0
+const ANGULAR_DAMPING = 4.0
 const PHYSICS_FPS = 60
 const PHYSICS_STEP = 1 / PHYSICS_FPS
 const DEFAULT_IMPULSE = 2
 const IMPULSE_SCALE = 0.1
-const LOGO_IMPULSE_MULTIPLIER = 0.1
+const LOGO_IMPULSE_MULTIPLIER = 0.15
 const DEFAULT_TORQUE = 3
 const RESET_DURATION_FRAMES = 60
 const RESET_INTERVAL_FRAMES = 300
 const WALL_DEPTH = 0.3
 const WALL_Z = -2
 const WALL_SIZE_MULTIPLIER = 10
+const WAVE_PLANE_Z = -3.5
+const WAVE_PLANE_SIZE = 80
+const WAVE_AMPLITUDE_MAX = 1.0
+const WAVE_LERP_SPEED = 0.05
+const BACKGROUND_COLOR = 0x1c1814
+const WAVE_PLANE_COLOR = 0x2e2318
+const GRAIN_TEXTURE_SIZE = 256
+const GRAIN_WORLD_DENSITY = 1.5
+const GRAIN_MIN = 90
+const GRAIN_MAX = 255
+const BACKGROUND_GRAIN_STRENGTH = 0.04
+
+const WAVE_VERTEX_SHADER = `
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const WAVE_FRAGMENT_SHADER = `
+  uniform float uGrainTime;
+  uniform float uGrainStrength;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  void main() {
+    float grain = (hash(gl_FragCoord.xy + uGrainTime) - 0.5) * uGrainStrength;
+    vec3 col = uColor + grain;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight
@@ -114,6 +151,88 @@ interface PhysicsBody {
 type BodyEntry = { body: PhysicsBody; originalPos: THREE.Vector3 }
 type PhysicsBodies = Map<THREE.Object3D, BodyEntry>
 
+interface WaveState {
+  targetAmplitude: number
+  currentAmplitude: number
+  grainTime: number
+}
+
+interface WavePlane {
+  mesh: THREE.Mesh
+  material: THREE.ShaderMaterial
+}
+
+const createGrainTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas')
+  canvas.width = GRAIN_TEXTURE_SIZE
+  canvas.height = GRAIN_TEXTURE_SIZE
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Unable to create 2D context for grain texture')
+
+  const imageData = context.createImageData(GRAIN_TEXTURE_SIZE, GRAIN_TEXTURE_SIZE)
+  Array.from({ length: GRAIN_TEXTURE_SIZE * GRAIN_TEXTURE_SIZE }).forEach((_, index) => {
+    const value = GRAIN_MIN + Math.random() * (GRAIN_MAX - GRAIN_MIN)
+    const offset = index * 4
+    imageData.data[offset] = value
+    imageData.data[offset + 1] = value
+    imageData.data[offset + 2] = value
+    imageData.data[offset + 3] = 255
+  })
+  context.putImageData(imageData, 0, 0)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+const projectTriplanar = (point: THREE.Vector3, normal: THREE.Vector3): [number, number] => {
+  const axisX = Math.abs(normal.x)
+  const axisY = Math.abs(normal.y)
+  const axisZ = Math.abs(normal.z)
+  if (axisX >= axisY && axisX >= axisZ) return [point.z, point.y]
+  if (axisY >= axisX && axisY >= axisZ) return [point.x, point.z]
+  return [point.x, point.y]
+}
+
+const applyTriplanarGrainUVs = (mesh: THREE.Mesh): void => {
+  mesh.updateWorldMatrix(true, false)
+  const geometry = mesh.geometry
+  if (!geometry.getAttribute('normal')) geometry.computeVertexNormals()
+  const position = geometry.getAttribute('position')
+  const normal = geometry.getAttribute('normal')
+  const worldVertex = new THREE.Vector3()
+  const worldNormal = new THREE.Vector3()
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
+  const uvArray = new Float32Array(position.count * 2)
+  Array.from({ length: position.count }).forEach((_, index) => {
+    worldVertex.fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld)
+    worldNormal.fromBufferAttribute(normal, index).applyMatrix3(normalMatrix)
+    const [u, v] = projectTriplanar(worldVertex, worldNormal)
+    uvArray[index * 2] = u * GRAIN_WORLD_DENSITY
+    uvArray[index * 2 + 1] = v * GRAIN_WORLD_DENSITY
+  })
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
+}
+
+const createWavePlane = (scene: THREE.Scene): WavePlane => {
+  const geometry = new THREE.PlaneGeometry(WAVE_PLANE_SIZE, WAVE_PLANE_SIZE)
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uGrainTime: { value: 0 },
+      uGrainStrength: { value: BACKGROUND_GRAIN_STRENGTH },
+      uColor: { value: new THREE.Color(WAVE_PLANE_COLOR) }
+    },
+    vertexShader: WAVE_VERTEX_SHADER,
+    fragmentShader: WAVE_FRAGMENT_SHADER
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(0, FRUSTUM_HEIGHT / 2, WAVE_PLANE_Z)
+  scene.add(mesh)
+  return { mesh, material }
+}
+
 const loadLogo = async (
   scene: THREE.Scene,
   world: PhysicsWorld,
@@ -139,11 +258,14 @@ const loadLogo = async (
   const scaledSize = box.getSize(new THREE.Vector3())
   const logoPos = new THREE.Vector3(-center.x, -center.y + scaledSize.y / 2 + GAP, -center.z)
   model.position.copy(logoPos)
+  model.updateMatrixWorld(true)
 
   model.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) {
-      ;(child as THREE.Mesh).material = material
-      ;(child as THREE.Mesh).castShadow = true
+    const childMesh = child as THREE.Mesh
+    if (childMesh.isMesh) {
+      childMesh.material = material
+      childMesh.castShadow = true
+      applyTriplanarGrainUVs(childMesh)
     }
   })
 
@@ -223,6 +345,7 @@ const loadText = (
   const centerX = currentX / 2
   meshes.forEach(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
     mesh.position.x -= centerX
+    applyTriplanarGrainUVs(mesh)
     const { rigidBody } = getPhysic(world, {
       type: 'dynamic',
       position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -258,7 +381,12 @@ const physicsConfigSchema = {
 }
 
 const createClickHandler =
-  (camera: THREE.OrthographicCamera, bodies: PhysicsBodies, config: { value: PhysicsConfig }) =>
+  (
+    camera: THREE.OrthographicCamera,
+    bodies: PhysicsBodies,
+    config: { value: PhysicsConfig },
+    onInteract: () => void
+  ) =>
   (event: PointerEvent): void => {
     const pointer = new THREE.Vector2(
       (event.clientX / window.innerWidth) * 2 - 1,
@@ -276,6 +404,8 @@ const createClickHandler =
     const hit = hits[0]
     const body = findBodyForObject(hit.object, bodies)
     if (!body) return
+
+    onInteract()
 
     const center = body.translation()
     const offset = new THREE.Vector3(
@@ -316,14 +446,39 @@ interface RegisterPanelsOptions {
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
   wallsGroup: THREE.Group
+  contentMaterial: THREE.MeshStandardMaterial
 }
+
+const createContentConfig = (
+  contentMaterial: THREE.MeshStandardMaterial,
+  title: string
+): ElementPropertiesConfig => ({
+  title,
+  schema: {
+    color: { color: true, label: 'Color' },
+    metalness: { min: 0, max: 1, step: 0.01, label: 'Metalness' },
+    roughness: { min: 0, max: 1, step: 0.01, label: 'Roughness' }
+  },
+  getValue: (path) => {
+    if (path === 'color') return contentMaterial.color.getHex()
+    if (path === 'metalness') return contentMaterial.metalness
+    if (path === 'roughness') return contentMaterial.roughness
+    return undefined
+  },
+  updateValue: (path, value) => {
+    if (path === 'color') contentMaterial.color.set(value as number)
+    if (path === 'metalness') contentMaterial.metalness = value as number
+    if (path === 'roughness') contentMaterial.roughness = value as number
+  }
+})
 
 const registerPanels = ({
   camera,
   orbit,
   ambientLight,
   dirLight,
-  wallsGroup
+  wallsGroup,
+  contentMaterial
 }: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
@@ -342,10 +497,16 @@ const registerPanels = ({
     name: 'directional-light',
     title: 'Directional Light'
   })
-  useDebugSceneStore().registerSceneElements(camera as unknown as THREE.Camera, [
-    ambientLight,
-    dirLight
-  ])
+  const debugStore = useDebugSceneStore()
+  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [ambientLight, dirLight])
+  debugStore.addSceneElement(
+    { name: 'logo', type: 'Group', hidden: false },
+    createContentConfig(contentMaterial, 'Logo')
+  )
+  debugStore.addSceneElement(
+    { name: 'cnotv-text', type: 'Group', hidden: false },
+    createContentConfig(contentMaterial, 'CNOTV Text')
+  )
 
   const elementStore = useElementPropertiesStore()
   elementStore.registerElementProperties('walls', {
@@ -435,10 +596,13 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
   const camera = createOrthographicCamera()
   const { ambientLight, dirLight } = createLights(scene)
+  const grainTexture = createGrainTexture()
   const contentMaterial = new THREE.MeshStandardMaterial({
     color: 0xdddddd,
-    roughness: 0.3,
-    metalness: 0.6
+    roughness: 0.5,
+    metalness: 0.6,
+    map: grainTexture,
+    roughnessMap: grainTexture
   })
 
   const bodies: PhysicsBodies = new Map()
@@ -457,6 +621,17 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   })
   wallsGroup.rotation.x = Math.PI / 2
   wallsGroup.position.z = WALL_Z
+  wallsGroup.visible = false
+
+  const wavePlane = createWavePlane(scene)
+  const waveState: WaveState = {
+    targetAmplitude: 0,
+    currentAmplitude: 0,
+    grainTime: 0
+  }
+  const startWave = (): void => {
+    waveState.targetAmplitude = WAVE_AMPLITUDE_MAX
+  }
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -472,12 +647,12 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     physicsConfig as ReturnType<typeof createReactiveConfig>,
     physicsConfigSchema
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup })
+  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup, contentMaterial })
 
   const timelineManager = createResetTimeline(bodies)
 
   const onResize = createResizeHandler(camera, renderer)
-  const onPointerDown = createClickHandler(camera, bodies, physicsConfig)
+  const onPointerDown = createClickHandler(camera, bodies, physicsConfig, startWave)
   window.addEventListener('resize', onResize)
   canvasElement.addEventListener('pointerdown', onPointerDown)
 
@@ -504,6 +679,14 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
     })
 
+    waveState.currentAmplitude +=
+      (waveState.targetAmplitude - waveState.currentAmplitude) * WAVE_LERP_SPEED
+    const grainActivation = waveState.currentAmplitude / WAVE_AMPLITUDE_MAX
+    waveState.grainTime += delta * grainActivation
+    wavePlane.material.uniforms.uGrainTime.value = waveState.grainTime
+    wavePlane.material.uniforms.uGrainStrength.value =
+      BACKGROUND_GRAIN_STRENGTH * (1 + grainActivation)
+
     renderer.render(scene, camera)
   }
   runAnimation()
@@ -512,7 +695,10 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   cleanupReference = () => {
     window.removeEventListener('resize', onResize)
     canvasElement.removeEventListener('pointerdown', onPointerDown)
+    grainTexture.dispose()
     contentMaterial.dispose()
+    wavePlane.material.dispose()
+    wavePlane.mesh.geometry.dispose()
     renderer.dispose()
   }
 }
@@ -533,6 +719,20 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" class="landing-page__canvas" />
+  <div class="landing-page__frame">
+    <div class="landing-page__corner landing-page__corner--tl" />
+    <div class="landing-page__corner landing-page__corner--tr" />
+    <div class="landing-page__corner landing-page__corner--bl" />
+    <div class="landing-page__corner landing-page__corner--br" />
+    <span class="landing-page__label landing-page__label--top">Generative playground</span>
+    <span class="landing-page__label landing-page__label--bottom">2026</span>
+    <span class="landing-page__flyer landing-page__flyer--tagline">
+      Generative and Game Development
+    </span>
+    <span class="landing-page__flyer landing-page__flyer--left">UI · K8S</span>
+    <span class="landing-page__flyer landing-page__flyer--right"> Web · Three.js · Physics </span>
+    <span class="landing-page__flyer landing-page__flyer--sub"> Click the logo or letters </span>
+  </div>
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
@@ -543,5 +743,109 @@ onUnmounted(() => {
   height: 100%;
   position: fixed;
   inset: 0;
+  background-color: var(--color-paper-dark);
+  z-index: calc(var(--z-base) + 0);
+}
+
+.landing-page__frame {
+  position: fixed;
+  inset: var(--spacing-8);
+  pointer-events: none;
+  z-index: calc(var(--z-base) + 1);
+}
+
+.landing-page__corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+}
+
+.landing-page__corner--tl {
+  top: 0;
+  left: 0;
+  border-top: 1px solid rgb(255, 255, 255, 0.22);
+  border-left: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--tr {
+  top: 0;
+  right: 0;
+  border-top: 1px solid rgb(255, 255, 255, 0.22);
+  border-right: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
+  border-left: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
+  border-right: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__label {
+  position: absolute;
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.18em;
+  color: rgb(255, 255, 255, 0.18);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.landing-page__label--top {
+  top: var(--spacing-2);
+  left: var(--spacing-4);
+}
+
+.landing-page__label--bottom {
+  bottom: var(--spacing-2);
+  right: var(--spacing-4);
+}
+
+.landing-page__flyer {
+  position: absolute;
+  font-family: var(--font-mono);
+  color: rgb(255, 255, 255, 0.13);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.landing-page__flyer--tagline {
+  bottom: var(--spacing-8);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.22em;
+  color: rgb(255, 255, 255, 0.16);
+}
+
+.landing-page__flyer--left {
+  left: var(--spacing-2);
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.3em;
+}
+
+.landing-page__flyer--right {
+  right: var(--spacing-2);
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.2em;
+}
+
+.landing-page__flyer--sub {
+  bottom: var(--spacing-4);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.35em;
+  color: rgb(255, 255, 255, 0.08);
 }
 </style>
