@@ -41,10 +41,9 @@ const ORBIT_TARGET_Z = -0.08
 const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
-const BACKGROUND_COLOR = 0x0a0a0a
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 5
-const DIR_LIGHT_INTENSITY = 4
+const AMBIENT_INTENSITY = 0.1
+const DIR_LIGHT_INTENSITY = 0.2
 const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
@@ -52,19 +51,57 @@ const GAP = 1.4
 const LETTER_SPACING = 0.3
 const COLLIDER_RESTITUTION = 0.4
 const COLLIDER_FRICTION = 0.6
-const LINEAR_DAMPING = 2.0
-const ANGULAR_DAMPING = 2.0
+const LINEAR_DAMPING = 4.0
+const ANGULAR_DAMPING = 4.0
 const PHYSICS_FPS = 60
 const PHYSICS_STEP = 1 / PHYSICS_FPS
 const DEFAULT_IMPULSE = 2
 const IMPULSE_SCALE = 0.1
-const LOGO_IMPULSE_MULTIPLIER = 0.1
+const LOGO_IMPULSE_MULTIPLIER = 0.15
 const DEFAULT_TORQUE = 3
 const RESET_DURATION_FRAMES = 60
 const RESET_INTERVAL_FRAMES = 300
 const WALL_DEPTH = 0.3
 const WALL_Z = -2
 const WALL_SIZE_MULTIPLIER = 10
+const WAVE_PLANE_Z = -3.5
+const WAVE_PLANE_SIZE = 80
+const WAVE_AMPLITUDE_MAX = 0.04
+const WAVE_LERP_SPEED = 0.05
+const BACKGROUND_COLOR = 0x1c1814
+const WAVE_PLANE_COLOR = 0x2e2318
+
+const WAVE_VERTEX_SHADER = `
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const WAVE_FRAGMENT_SHADER = `
+  uniform float uTime;
+  uniform float uAmplitude;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  void main() {
+    float bend = sin(vUv.x * 6.0 + uTime * 0.6) * 0.6;
+    float phase = vUv.y * 38.0 + bend - uTime * 1.2;
+    float slope = cos(phase) * 38.0;
+    vec3 normal = normalize(vec3(0.0, -slope * uAmplitude, 1.0));
+    float light = clamp(dot(normal, normalize(vec3(0.25, 0.55, 1.0))), 0.0, 1.0);
+    float shade = mix(0.45, 1.0, light);
+    float grain = (hash(gl_FragCoord.xy) - 0.5) * 0.12;
+    vec3 col = uColor * shade + grain;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight
@@ -113,6 +150,34 @@ interface PhysicsBody {
 }
 type BodyEntry = { body: PhysicsBody; originalPos: THREE.Vector3 }
 type PhysicsBodies = Map<THREE.Object3D, BodyEntry>
+
+interface WaveState {
+  targetAmplitude: number
+  currentAmplitude: number
+  timeValue: number
+}
+
+interface WavePlane {
+  mesh: THREE.Mesh
+  material: THREE.ShaderMaterial
+}
+
+const createWavePlane = (scene: THREE.Scene): WavePlane => {
+  const geometry = new THREE.PlaneGeometry(WAVE_PLANE_SIZE, WAVE_PLANE_SIZE)
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uAmplitude: { value: 0 },
+      uColor: { value: new THREE.Color(WAVE_PLANE_COLOR) }
+    },
+    vertexShader: WAVE_VERTEX_SHADER,
+    fragmentShader: WAVE_FRAGMENT_SHADER
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(0, FRUSTUM_HEIGHT / 2, WAVE_PLANE_Z)
+  scene.add(mesh)
+  return { mesh, material }
+}
 
 const loadLogo = async (
   scene: THREE.Scene,
@@ -258,7 +323,12 @@ const physicsConfigSchema = {
 }
 
 const createClickHandler =
-  (camera: THREE.OrthographicCamera, bodies: PhysicsBodies, config: { value: PhysicsConfig }) =>
+  (
+    camera: THREE.OrthographicCamera,
+    bodies: PhysicsBodies,
+    config: { value: PhysicsConfig },
+    onInteract: () => void
+  ) =>
   (event: PointerEvent): void => {
     const pointer = new THREE.Vector2(
       (event.clientX / window.innerWidth) * 2 - 1,
@@ -276,6 +346,8 @@ const createClickHandler =
     const hit = hits[0]
     const body = findBodyForObject(hit.object, bodies)
     if (!body) return
+
+    onInteract()
 
     const center = body.translation()
     const offset = new THREE.Vector3(
@@ -457,6 +529,17 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   })
   wallsGroup.rotation.x = Math.PI / 2
   wallsGroup.position.z = WALL_Z
+  wallsGroup.visible = false
+
+  const wavePlane = createWavePlane(scene)
+  const waveState: WaveState = {
+    targetAmplitude: 0,
+    currentAmplitude: 0,
+    timeValue: 0
+  }
+  const startWave = (): void => {
+    waveState.targetAmplitude = WAVE_AMPLITUDE_MAX
+  }
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -477,7 +560,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const timelineManager = createResetTimeline(bodies)
 
   const onResize = createResizeHandler(camera, renderer)
-  const onPointerDown = createClickHandler(camera, bodies, physicsConfig)
+  const onPointerDown = createClickHandler(camera, bodies, physicsConfig, startWave)
   window.addEventListener('resize', onResize)
   canvasElement.addEventListener('pointerdown', onPointerDown)
 
@@ -504,6 +587,12 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
     })
 
+    waveState.timeValue += delta
+    waveState.currentAmplitude +=
+      (waveState.targetAmplitude - waveState.currentAmplitude) * WAVE_LERP_SPEED
+    wavePlane.material.uniforms.uTime.value = waveState.timeValue
+    wavePlane.material.uniforms.uAmplitude.value = waveState.currentAmplitude
+
     renderer.render(scene, camera)
   }
   runAnimation()
@@ -513,6 +602,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     window.removeEventListener('resize', onResize)
     canvasElement.removeEventListener('pointerdown', onPointerDown)
     contentMaterial.dispose()
+    wavePlane.material.dispose()
+    wavePlane.mesh.geometry.dispose()
     renderer.dispose()
   }
 }
@@ -533,6 +624,20 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas" class="landing-page__canvas" />
+  <div class="landing-page__frame">
+    <div class="landing-page__corner landing-page__corner--tl" />
+    <div class="landing-page__corner landing-page__corner--tr" />
+    <div class="landing-page__corner landing-page__corner--bl" />
+    <div class="landing-page__corner landing-page__corner--br" />
+    <span class="landing-page__label landing-page__label--top">Generative playground</span>
+    <span class="landing-page__label landing-page__label--bottom">2026</span>
+    <span class="landing-page__flyer landing-page__flyer--tagline">
+      Generative and Game Development
+    </span>
+    <span class="landing-page__flyer landing-page__flyer--left">UI · K8S</span>
+    <span class="landing-page__flyer landing-page__flyer--right"> Web · Three.js · Physics </span>
+    <span class="landing-page__flyer landing-page__flyer--sub"> Click the logo or letters </span>
+  </div>
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
@@ -543,5 +648,109 @@ onUnmounted(() => {
   height: 100%;
   position: fixed;
   inset: 0;
+  background-color: var(--color-paper-dark);
+  z-index: calc(var(--z-base) + 0);
+}
+
+.landing-page__frame {
+  position: fixed;
+  inset: var(--spacing-8);
+  pointer-events: none;
+  z-index: calc(var(--z-base) + 1);
+}
+
+.landing-page__corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+}
+
+.landing-page__corner--tl {
+  top: 0;
+  left: 0;
+  border-top: 1px solid rgb(255, 255, 255, 0.22);
+  border-left: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--tr {
+  top: 0;
+  right: 0;
+  border-top: 1px solid rgb(255, 255, 255, 0.22);
+  border-right: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
+  border-left: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__corner--br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
+  border-right: 1px solid rgb(255, 255, 255, 0.22);
+}
+
+.landing-page__label {
+  position: absolute;
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.18em;
+  color: rgb(255, 255, 255, 0.18);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.landing-page__label--top {
+  top: var(--spacing-2);
+  left: var(--spacing-4);
+}
+
+.landing-page__label--bottom {
+  bottom: var(--spacing-2);
+  right: var(--spacing-4);
+}
+
+.landing-page__flyer {
+  position: absolute;
+  font-family: var(--font-mono);
+  color: rgb(255, 255, 255, 0.13);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.landing-page__flyer--tagline {
+  bottom: var(--spacing-8);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.22em;
+  color: rgb(255, 255, 255, 0.16);
+}
+
+.landing-page__flyer--left {
+  left: var(--spacing-2);
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.3em;
+}
+
+.landing-page__flyer--right {
+  right: var(--spacing-2);
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.2em;
+}
+
+.landing-page__flyer--sub {
+  bottom: var(--spacing-4);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.35em;
+  color: rgb(255, 255, 255, 0.08);
 }
 </style>
