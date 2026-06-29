@@ -15,6 +15,7 @@ import { registerLightProperties } from '@/utils/lightProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
+import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
@@ -66,10 +67,15 @@ const WALL_Z = -2
 const WALL_SIZE_MULTIPLIER = 10
 const WAVE_PLANE_Z = -3.5
 const WAVE_PLANE_SIZE = 80
-const WAVE_AMPLITUDE_MAX = 0.04
+const WAVE_AMPLITUDE_MAX = 1.0
 const WAVE_LERP_SPEED = 0.05
 const BACKGROUND_COLOR = 0x1c1814
 const WAVE_PLANE_COLOR = 0x2e2318
+const GRAIN_TEXTURE_SIZE = 256
+const GRAIN_WORLD_DENSITY = 1.5
+const GRAIN_MIN = 90
+const GRAIN_MAX = 255
+const BACKGROUND_GRAIN_STRENGTH = 0.04
 
 const WAVE_VERTEX_SHADER = `
   varying vec2 vUv;
@@ -81,8 +87,8 @@ const WAVE_VERTEX_SHADER = `
 `
 
 const WAVE_FRAGMENT_SHADER = `
-  uniform float uTime;
-  uniform float uAmplitude;
+  uniform float uGrainTime;
+  uniform float uGrainStrength;
   uniform vec3 uColor;
   varying vec2 vUv;
 
@@ -91,14 +97,8 @@ const WAVE_FRAGMENT_SHADER = `
   }
 
   void main() {
-    float bend = sin(vUv.x * 6.0 + uTime * 0.6) * 0.6;
-    float phase = vUv.y * 38.0 + bend - uTime * 1.2;
-    float slope = cos(phase) * 38.0;
-    vec3 normal = normalize(vec3(0.0, -slope * uAmplitude, 1.0));
-    float light = clamp(dot(normal, normalize(vec3(0.25, 0.55, 1.0))), 0.0, 1.0);
-    float shade = mix(0.45, 1.0, light);
-    float grain = (hash(gl_FragCoord.xy) - 0.5) * 0.12;
-    vec3 col = uColor * shade + grain;
+    float grain = (hash(gl_FragCoord.xy + uGrainTime) - 0.5) * uGrainStrength;
+    vec3 col = uColor + grain;
     gl_FragColor = vec4(col, 1.0);
   }
 `
@@ -154,7 +154,7 @@ type PhysicsBodies = Map<THREE.Object3D, BodyEntry>
 interface WaveState {
   targetAmplitude: number
   currentAmplitude: number
-  timeValue: number
+  grainTime: number
 }
 
 interface WavePlane {
@@ -162,12 +162,66 @@ interface WavePlane {
   material: THREE.ShaderMaterial
 }
 
+const createGrainTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas')
+  canvas.width = GRAIN_TEXTURE_SIZE
+  canvas.height = GRAIN_TEXTURE_SIZE
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Unable to create 2D context for grain texture')
+
+  const imageData = context.createImageData(GRAIN_TEXTURE_SIZE, GRAIN_TEXTURE_SIZE)
+  Array.from({ length: GRAIN_TEXTURE_SIZE * GRAIN_TEXTURE_SIZE }).forEach((_, index) => {
+    const value = GRAIN_MIN + Math.random() * (GRAIN_MAX - GRAIN_MIN)
+    const offset = index * 4
+    imageData.data[offset] = value
+    imageData.data[offset + 1] = value
+    imageData.data[offset + 2] = value
+    imageData.data[offset + 3] = 255
+  })
+  context.putImageData(imageData, 0, 0)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+const projectTriplanar = (point: THREE.Vector3, normal: THREE.Vector3): [number, number] => {
+  const axisX = Math.abs(normal.x)
+  const axisY = Math.abs(normal.y)
+  const axisZ = Math.abs(normal.z)
+  if (axisX >= axisY && axisX >= axisZ) return [point.z, point.y]
+  if (axisY >= axisX && axisY >= axisZ) return [point.x, point.z]
+  return [point.x, point.y]
+}
+
+const applyTriplanarGrainUVs = (mesh: THREE.Mesh): void => {
+  mesh.updateWorldMatrix(true, false)
+  const geometry = mesh.geometry
+  if (!geometry.getAttribute('normal')) geometry.computeVertexNormals()
+  const position = geometry.getAttribute('position')
+  const normal = geometry.getAttribute('normal')
+  const worldVertex = new THREE.Vector3()
+  const worldNormal = new THREE.Vector3()
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
+  const uvArray = new Float32Array(position.count * 2)
+  Array.from({ length: position.count }).forEach((_, index) => {
+    worldVertex.fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld)
+    worldNormal.fromBufferAttribute(normal, index).applyMatrix3(normalMatrix)
+    const [u, v] = projectTriplanar(worldVertex, worldNormal)
+    uvArray[index * 2] = u * GRAIN_WORLD_DENSITY
+    uvArray[index * 2 + 1] = v * GRAIN_WORLD_DENSITY
+  })
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
+}
+
 const createWavePlane = (scene: THREE.Scene): WavePlane => {
   const geometry = new THREE.PlaneGeometry(WAVE_PLANE_SIZE, WAVE_PLANE_SIZE)
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      uTime: { value: 0 },
-      uAmplitude: { value: 0 },
+      uGrainTime: { value: 0 },
+      uGrainStrength: { value: BACKGROUND_GRAIN_STRENGTH },
       uColor: { value: new THREE.Color(WAVE_PLANE_COLOR) }
     },
     vertexShader: WAVE_VERTEX_SHADER,
@@ -204,11 +258,14 @@ const loadLogo = async (
   const scaledSize = box.getSize(new THREE.Vector3())
   const logoPos = new THREE.Vector3(-center.x, -center.y + scaledSize.y / 2 + GAP, -center.z)
   model.position.copy(logoPos)
+  model.updateMatrixWorld(true)
 
   model.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) {
-      ;(child as THREE.Mesh).material = material
-      ;(child as THREE.Mesh).castShadow = true
+    const childMesh = child as THREE.Mesh
+    if (childMesh.isMesh) {
+      childMesh.material = material
+      childMesh.castShadow = true
+      applyTriplanarGrainUVs(childMesh)
     }
   })
 
@@ -288,6 +345,7 @@ const loadText = (
   const centerX = currentX / 2
   meshes.forEach(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
     mesh.position.x -= centerX
+    applyTriplanarGrainUVs(mesh)
     const { rigidBody } = getPhysic(world, {
       type: 'dynamic',
       position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -388,14 +446,39 @@ interface RegisterPanelsOptions {
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
   wallsGroup: THREE.Group
+  contentMaterial: THREE.MeshStandardMaterial
 }
+
+const createContentConfig = (
+  contentMaterial: THREE.MeshStandardMaterial,
+  title: string
+): ElementPropertiesConfig => ({
+  title,
+  schema: {
+    color: { color: true, label: 'Color' },
+    metalness: { min: 0, max: 1, step: 0.01, label: 'Metalness' },
+    roughness: { min: 0, max: 1, step: 0.01, label: 'Roughness' }
+  },
+  getValue: (path) => {
+    if (path === 'color') return contentMaterial.color.getHex()
+    if (path === 'metalness') return contentMaterial.metalness
+    if (path === 'roughness') return contentMaterial.roughness
+    return undefined
+  },
+  updateValue: (path, value) => {
+    if (path === 'color') contentMaterial.color.set(value as number)
+    if (path === 'metalness') contentMaterial.metalness = value as number
+    if (path === 'roughness') contentMaterial.roughness = value as number
+  }
+})
 
 const registerPanels = ({
   camera,
   orbit,
   ambientLight,
   dirLight,
-  wallsGroup
+  wallsGroup,
+  contentMaterial
 }: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
@@ -414,10 +497,16 @@ const registerPanels = ({
     name: 'directional-light',
     title: 'Directional Light'
   })
-  useDebugSceneStore().registerSceneElements(camera as unknown as THREE.Camera, [
-    ambientLight,
-    dirLight
-  ])
+  const debugStore = useDebugSceneStore()
+  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [ambientLight, dirLight])
+  debugStore.addSceneElement(
+    { name: 'logo', type: 'Group', hidden: false },
+    createContentConfig(contentMaterial, 'Logo')
+  )
+  debugStore.addSceneElement(
+    { name: 'cnotv-text', type: 'Group', hidden: false },
+    createContentConfig(contentMaterial, 'CNOTV Text')
+  )
 
   const elementStore = useElementPropertiesStore()
   elementStore.registerElementProperties('walls', {
@@ -507,10 +596,13 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
   const camera = createOrthographicCamera()
   const { ambientLight, dirLight } = createLights(scene)
+  const grainTexture = createGrainTexture()
   const contentMaterial = new THREE.MeshStandardMaterial({
     color: 0xdddddd,
-    roughness: 0.3,
-    metalness: 0.6
+    roughness: 0.5,
+    metalness: 0.6,
+    map: grainTexture,
+    roughnessMap: grainTexture
   })
 
   const bodies: PhysicsBodies = new Map()
@@ -535,7 +627,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const waveState: WaveState = {
     targetAmplitude: 0,
     currentAmplitude: 0,
-    timeValue: 0
+    grainTime: 0
   }
   const startWave = (): void => {
     waveState.targetAmplitude = WAVE_AMPLITUDE_MAX
@@ -555,7 +647,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     physicsConfig as ReturnType<typeof createReactiveConfig>,
     physicsConfigSchema
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup })
+  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup, contentMaterial })
 
   const timelineManager = createResetTimeline(bodies)
 
@@ -587,11 +679,13 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
     })
 
-    waveState.timeValue += delta
     waveState.currentAmplitude +=
       (waveState.targetAmplitude - waveState.currentAmplitude) * WAVE_LERP_SPEED
-    wavePlane.material.uniforms.uTime.value = waveState.timeValue
-    wavePlane.material.uniforms.uAmplitude.value = waveState.currentAmplitude
+    const grainActivation = waveState.currentAmplitude / WAVE_AMPLITUDE_MAX
+    waveState.grainTime += delta * grainActivation
+    wavePlane.material.uniforms.uGrainTime.value = waveState.grainTime
+    wavePlane.material.uniforms.uGrainStrength.value =
+      BACKGROUND_GRAIN_STRENGTH * (1 + grainActivation)
 
     renderer.render(scene, camera)
   }
@@ -601,6 +695,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   cleanupReference = () => {
     window.removeEventListener('resize', onResize)
     canvasElement.removeEventListener('pointerdown', onPointerDown)
+    grainTexture.dispose()
     contentMaterial.dispose()
     wavePlane.material.dispose()
     wavePlane.mesh.geometry.dispose()
