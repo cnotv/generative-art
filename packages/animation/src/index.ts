@@ -1129,28 +1129,29 @@ const getRotation = (
 }
 
 /**
- * Resolve the target heading from directional input and smoothly turn the model
- * to face it. Movement should be applied toward the returned heading (forward, via
- * getMovementDirection's headingDegrees) so movement direction and model facing stay
- * consistent across games. A front/back-inverted model is corrected automatically via
- * its `facingOffset` (declared in the model's load options and stored on userData).
+ * Resolve the movement heading from directional input and smoothly turn the model
+ * to face it. The returned heading drives forward movement (via getMovementDirection's
+ * headingDegrees). The model's visual facing is corrected per model, declared in its
+ * load options and read from userData: `facingOffset` degrees for a front/back-inverted
+ * model, and `mirroredFacing` to turn along the mirrored (left/right-swapped) heading.
  * @param player The player model to face toward the input direction
  * @param currentActions Record of active control actions
  * @param stepDegrees Maximum degrees to rotate this step
- * @param mirrored Whether to use the mirrored directional map
- * @returns Target heading in degrees, or null when there is no directional input
+ * @returns Movement heading in degrees, or null when there is no directional input
  */
 const updatePlayerFacing = (
   player: ComplexModel,
   currentActions: Record<string, unknown>,
-  stepDegrees: number = DEFAULT_ROTATION_STEP_DEGREES,
-  mirrored: boolean = false
+  stepDegrees: number = DEFAULT_ROTATION_STEP_DEGREES
 ): number | null => {
-  const targetRotation = getRotation(currentActions, mirrored)
-  if (targetRotation !== null) {
-    rotateTowards(player, targetRotation, stepDegrees, player.userData.facingOffset ?? 0)
+  const movementHeading = getRotation(currentActions, false)
+  if (movementHeading !== null) {
+    const facingHeading = player.userData.mirroredFacing
+      ? (getRotation(currentActions, true) ?? movementHeading)
+      : movementHeading
+    rotateTowards(player, facingHeading, stepDegrees, player.userData.facingOffset ?? 0)
   }
-  return targetRotation
+  return movementHeading
 }
 
 const bodyJump = (

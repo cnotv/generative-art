@@ -409,6 +409,7 @@ export const getModel = async (
       hasGravity,
       gravityScale,
       facingOffset: options.facingOffset,
+      mirroredFacing: options.mirroredFacing,
       onSpawn
     }
   })

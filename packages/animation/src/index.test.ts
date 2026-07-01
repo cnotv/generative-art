@@ -836,15 +836,14 @@ describe('animation', () => {
       expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
     })
 
-    it('uses the mirrored map when requested', () => {
+    it('keeps the movement heading but faces the mirrored heading when mirroredFacing is set', () => {
       const model = createFacingModel()
-      const heading = updatePlayerFacing(
-        model,
-        { 'move-left': true },
-        DEFAULT_ROTATION_STEP_DEGREES,
-        true
-      )
-      expect(heading).toBe(90)
+      model.userData.mirroredFacing = true
+      const heading = updatePlayerFacing(model, { 'move-left': true })
+      // Movement heading stays non-mirrored (left = 270)
+      expect(heading).toBe(270)
+      // Facing uses the mirrored map (left = 90), turned toward within one step
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
     })
   })
 

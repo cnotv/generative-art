@@ -65,6 +65,8 @@ export interface ModelOptions extends CommonOptions {
   materialColors?: number[]
   /** Degrees to add to the model's facing so a front/back-inverted model faces its travel direction (e.g. 180) */
   facingOffset?: number
+  /** Face the model along the mirrored (left/right-swapped) heading, for models authored to turn the mirror-image way */
+  mirroredFacing?: boolean
   onSpawn?: () => boolean
   onProgress?: OnProgress
 }
