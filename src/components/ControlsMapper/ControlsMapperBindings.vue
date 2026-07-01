@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -13,6 +13,21 @@ const { listeningDevice, capture, cancel } = useBindingCapture()
 
 const captureDevices: ControlDevice[] = ['keyboard', 'gamepad']
 const activeDevice = ref<ControlDevice>('keyboard')
+
+const toDeviceTab = (device: string): ControlDevice | null => {
+  if (device === 'keyboard') return 'keyboard'
+  if (device.startsWith('gamepad')) return 'gamepad'
+  if (device === 'faux-pad') return 'faux-pad'
+  return null
+}
+
+watch(
+  () => store.lastDevice,
+  (device) => {
+    const tab = toDeviceTab(device)
+    if (tab) activeDevice.value = tab
+  }
+)
 
 const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : trigger)
 

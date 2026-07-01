@@ -33,6 +33,7 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
   const presets = ref<ControlPreset[]>(loadPresets())
   const liveActions = ref<string[]>([])
   const recentEvents = ref<LiveEvent[]>([])
+  const lastDevice = ref('')
 
   const bindTrigger = (device: ControlDevice, trigger: string, action: string) => {
     mapping.value = assignBinding(mapping.value, device, trigger, action)
@@ -83,6 +84,7 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
   }
 
   const recordAction = (action: string, trigger: string, device: string) => {
+    lastDevice.value = device
     if (!liveActions.value.includes(action)) {
       liveActions.value = [...liveActions.value, action]
     }
@@ -106,6 +108,7 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
     presets,
     liveActions,
     recentEvents,
+    lastDevice,
     bindTrigger,
     clearTrigger,
     resetToDefaults,

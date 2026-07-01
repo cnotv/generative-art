@@ -98,4 +98,13 @@ describe('useControlsMapperStore', () => {
     store.recordRelease('jump')
     expect(store.liveActions).not.toContain('jump')
   })
+
+  it('tracks the device of the most recent action', () => {
+    const store = useControlsMapperStore()
+    expect(store.lastDevice).toBe('')
+    store.recordAction('jump', ' ', 'keyboard')
+    expect(store.lastDevice).toBe('keyboard')
+    store.recordAction('move-forward', 'dpad-up', 'gamepad')
+    expect(store.lastDevice).toBe('gamepad')
+  })
 })
