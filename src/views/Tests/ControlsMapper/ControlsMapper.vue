@@ -23,6 +23,7 @@ import ControlsMapper from '@/components/ControlsMapper/ControlsMapper.vue'
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  color: var(--color-foreground);
 }
 
 .controls-mapper-view__header {

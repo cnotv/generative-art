@@ -77,10 +77,13 @@ onUnmounted(() => {
 }
 
 .controls-mapper__panel {
-  display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
   overflow: visible;
+}
+
+.controls-mapper__panel:not([hidden]) {
+  display: flex;
 }
 
 .controls-mapper__reset-icon {
