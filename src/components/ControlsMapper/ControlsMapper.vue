@@ -14,13 +14,15 @@ import ControlsMapperTester from './ControlsMapperTester.vue'
 const store = useControlsMapperStore()
 
 const panelReference = ref<HTMLElement | null>(null)
-const activeTab = ref<'bindings' | 'test'>('bindings')
+type MapperTab = 'bindings' | 'test' | 'presets'
+const activeTab = ref<MapperTab>('bindings')
 const tabOptions = [
   { value: 'bindings', label: 'Bindings' },
-  { value: 'test', label: 'Test' }
+  { value: 'test', label: 'Test' },
+  { value: 'presets', label: 'Presets' }
 ]
 const setTab = (value: string) => {
-  activeTab.value = value as 'bindings' | 'test'
+  activeTab.value = value as MapperTab
 }
 
 const saveCurrent = () => store.savePreset(new Date().toLocaleString())
@@ -62,7 +64,13 @@ onUnmounted(() => {
 
 <template>
   <section ref="panelReference" class="controls-mapper">
-    <h1 class="controls-mapper__title">Controls Mapper</h1>
+    <header class="controls-mapper__header" data-lui-row>
+      <h1 class="controls-mapper__title">Controls Mapper</h1>
+      <div class="controls-mapper__actions">
+        <LobbyUIButton variant="primary" @click="saveCurrent">Save</LobbyUIButton>
+        <LobbyUIButton variant="ghost" @click="store.resetToDefaults()">Reset</LobbyUIButton>
+      </div>
+    </header>
 
     <div class="controls-mapper__tabs" data-lui-row>
       <LobbyUIOptionToggle
@@ -74,17 +82,14 @@ onUnmounted(() => {
 
     <template v-if="activeTab === 'bindings'">
       <ControlsMapperBindings />
-      <ControlsMapperPresets />
     </template>
-    <template v-else>
+    <template v-else-if="activeTab === 'test'">
       <ControlsMapperStyle />
       <ControlsMapperTester />
     </template>
-
-    <div class="controls-mapper__footer" data-lui-row>
-      <LobbyUIButton variant="primary" size="lg" @click="saveCurrent">Save</LobbyUIButton>
-      <LobbyUIButton variant="ghost" @click="store.resetToDefaults()">Reset</LobbyUIButton>
-    </div>
+    <template v-else>
+      <ControlsMapperPresets />
+    </template>
 
     <div
       v-if="focusedHint && inputSource === 'gamepad'"
@@ -105,15 +110,24 @@ onUnmounted(() => {
 .controls-mapper {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: var(--spacing-6);
   width: 100%;
   max-width: 40rem;
   font-family: var(--lui-font);
   color: var(--lui-text-color);
 }
 
+.controls-mapper__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
 .controls-mapper__title {
   margin: 0;
+  flex: 1 1 auto;
   font-weight: 900;
   font-size: var(--lui-text-important);
   text-shadow: var(--lui-text-shadow);
@@ -122,8 +136,13 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.controls-mapper__tabs,
-.controls-mapper__footer {
+.controls-mapper__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.controls-mapper__tabs {
   display: flex;
   gap: var(--spacing-2);
 }

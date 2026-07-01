@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, type Component } from 'vue'
-import { Ear, X, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
+import { Signal, X, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
   LobbyUIRow,
   LobbyUIButton,
@@ -113,7 +113,7 @@ const isListening = computed(() => listeningDevice.value !== null)
           :title="`Listen for a ${activeDevice} input to bind to ${action.label}`"
           @click="listen(activeDevice, action.id)"
         >
-          <Ear class="mapper-bindings__icon" />
+          <Signal class="mapper-bindings__icon" />
         </LobbyUIButton>
         <LobbyUIButton
           variant="primary"
