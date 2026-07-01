@@ -1,5 +1,6 @@
 import type {
   ControlAction,
+  ControlMapping,
   ControlsOptions,
   ControlsExtras,
   ControlsCurrents,
@@ -189,7 +190,26 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     autoBind()
   }
 
+  function getMapping(): ControlMapping {
+    return structuredClone(mappingReference.current)
+  }
+
+  function setMapping(newMapping: ControlMapping) {
+    unbindAll()
+    options.mapping = newMapping
+    mappingReference.current = newMapping
+    autoBind()
+  }
+
   autoBind()
 
-  return { destroyControls, remapControlsOptions, currentActions, logs, buttonMap }
+  return {
+    destroyControls,
+    remapControlsOptions,
+    getMapping,
+    setMapping,
+    currentActions,
+    logs,
+    buttonMap
+  }
 }

@@ -148,3 +148,44 @@ describe('createControls - Multi-trigger support', () => {
     controls.destroyControls()
   })
 })
+
+describe('createControls - getMapping / setMapping', () => {
+  const disabledDevices = { keyboard: false, gamepad: false, touch: false, mouse: false }
+
+  it('getMapping returns a copy that does not mutate internal state', () => {
+    const controls = createControls({
+      mapping: { keyboard: { w: 'move-forward' } },
+      ...disabledDevices
+    })
+
+    const snapshot = controls.getMapping()
+    snapshot.keyboard!.w = 'tampered'
+
+    expect(controls.getMapping().keyboard!.w).toBe('move-forward')
+
+    controls.destroyControls()
+  })
+
+  it('setMapping replaces the mapping while preserving the action callback', () => {
+    const onActionMock = vi.fn()
+    const controls = createControls({
+      mapping: { keyboard: { w: 'move-forward' } },
+      onAction: onActionMock,
+      ...disabledDevices
+    })
+
+    controls.setMapping({ keyboard: { ArrowUp: 'move-forward' } })
+
+    expect(controls.getMapping()).toEqual({ keyboard: { ArrowUp: 'move-forward' } })
+
+    controls.currentActions['move-forward'] = {
+      action: 'move-forward',
+      trigger: 'ArrowUp',
+      device: 'keyboard',
+      triggers: new Set(['keyboard:ArrowUp'])
+    }
+    expect(controls.currentActions['move-forward']).toBeDefined()
+
+    controls.destroyControls()
+  })
+})

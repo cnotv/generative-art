@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import {
   createFauxPadController,
   type FauxPadController,
   type FauxPadOptions
 } from '@webgamekit/controls'
 
-const props = defineProps<{
-  mapping: Record<string, string>
-  options?: FauxPadOptions
-  mode?: 'faux-pad' | 'button' // Default is 'faux-pad'
-  currentActions?: Record<string, any> // Reference to currentActions from createControls
-  onAction: (action: string) => void
-}>()
+const props = withDefaults(
+  defineProps<{
+    mapping: Record<string, string>
+    options?: FauxPadOptions
+    mode?: 'faux-pad' | 'button' // Default is 'faux-pad'
+    skin?: string
+    inline?: boolean // Render in-flow (for previews) instead of fixed to the viewport
+    position?: { x: number; y: number } // Normalized -1..1 drive for the pad (e.g. gamepad stick)
+    currentActions?: Record<string, any> // Reference to currentActions from createControls
+    onAction: (action: string) => void
+  }>(),
+  { skin: 'default', inline: false }
+)
+
+const rootClasses = computed(() => [
+  `touch-control--${props.skin}`,
+  { 'touch-control--inline': props.inline }
+])
 
 const touchControlInside = ref<HTMLElement | null>(null)
 const touchControlEdge = ref<HTMLElement | null>(null)
@@ -23,6 +34,19 @@ const isButtonMode = computed(() => props.mode === 'button')
 const buttonEntries = computed(() => Object.entries(props.mapping))
 const isMultiButton = computed(() => buttonEntries.value.length > 1)
 const singleEntry = computed(() => buttonEntries.value[0])
+
+watch(
+  () => props.position,
+  (pos) => {
+    const inside = touchControlInside.value
+    const edge = touchControlEdge.value
+    if (isButtonMode.value || !inside || !edge || !pos) return
+    const limitX = (edge.offsetWidth - inside.offsetWidth) / 2
+    const limitY = (edge.offsetHeight - inside.offsetHeight) / 2
+    inside.style.transform = `translate(${pos.x * limitX}px, ${pos.y * limitY}px)`
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   if (isButtonMode.value) return
@@ -71,6 +95,7 @@ const handleButtonAction = (action: string, event: Event) => {
   <div
     v-if="isButtonMode && !isMultiButton"
     class="touch-control"
+    :class="rootClasses"
     @click="handleButtonAction(singleEntry[1], $event)"
     @touchend="handleButtonAction(singleEntry[1], $event)"
   >
@@ -79,7 +104,7 @@ const handleButtonAction = (action: string, event: Event) => {
   </div>
 
   <!-- Multi-button: horizontal row of smaller buttons -->
-  <div v-else-if="isButtonMode" class="touch-control touch-control--buttons">
+  <div v-else-if="isButtonMode" class="touch-control touch-control--buttons" :class="rootClasses">
     <button
       v-for="(action, label) in mapping"
       :key="label"
@@ -92,7 +117,7 @@ const handleButtonAction = (action: string, event: Event) => {
   </div>
 
   <!-- Faux-pad: directional joystick -->
-  <div v-else class="touch-control">
+  <div v-else class="touch-control" :class="rootClasses">
     <div ref="touchControlEdge" class="touch-control__edge"></div>
     <div ref="touchControlInside" class="touch-control__inside"></div>
   </div>
@@ -117,6 +142,11 @@ const handleButtonAction = (action: string, event: Event) => {
   gap: 8px;
   flex-flow: row wrap;
   justify-content: flex-start;
+}
+
+.touch-control--inline {
+  position: relative;
+  z-index: auto;
 }
 
 .touch-control__edge {
@@ -164,5 +194,33 @@ const handleButtonAction = (action: string, event: Event) => {
   justify-content: center;
   user-select: none;
   touch-action: none;
+}
+
+.touch-control--neon .touch-control__edge {
+  background-color: transparent;
+  box-shadow:
+    inset 0 0 0 2px var(--touch-skin-neon-color),
+    0 0 16px var(--touch-skin-neon-glow);
+  opacity: 0.9;
+}
+
+.touch-control--neon .touch-control__inside,
+.touch-control--neon .touch-control__button {
+  background-color: var(--touch-skin-neon-color);
+  box-shadow: 0 0 12px var(--touch-skin-neon-glow);
+  opacity: 0.9;
+}
+
+.touch-control--minimal .touch-control__edge {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--touch-skin-minimal-color);
+  opacity: 0.4;
+}
+
+.touch-control--minimal .touch-control__inside,
+.touch-control--minimal .touch-control__button {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--touch-skin-minimal-color);
+  opacity: 0.4;
 }
 </style>

@@ -1,4 +1,5 @@
 export type ControlAction = string
+export type ControlDevice = 'keyboard' | 'gamepad' | 'touch' | 'faux-pad'
 export type ControlEvent = 'touchstart' | 'touchend' | 'mousedown' | 'mouseup'
 
 export interface ControlMapping {
@@ -44,9 +45,25 @@ export type ControlsLogs = Array<{
 export type ControlsExtras = {
   destroyControls: () => void
   remapControlsOptions: (newOptions: ControlsOptions) => void
+  getMapping: () => ControlMapping
+  setMapping: (mapping: ControlMapping) => void
   currentActions: ControlsCurrents
   logs: ControlsLogs
   buttonMap: string[]
+}
+
+export type ControlSkinId = string
+
+export interface ControlSkin {
+  id: ControlSkinId
+  label: string
+  isDefault?: boolean
+}
+
+export interface ControlPreset {
+  name: string
+  mapping: ControlMapping
+  skin: ControlSkinId
 }
 
 export interface ControlHandlers {
