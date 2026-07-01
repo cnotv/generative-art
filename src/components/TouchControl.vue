@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import {
   createFauxPadController,
   type FauxPadController,
@@ -13,6 +13,7 @@ const props = withDefaults(
     mode?: 'faux-pad' | 'button' // Default is 'faux-pad'
     skin?: string
     inline?: boolean // Render in-flow (for previews) instead of fixed to the viewport
+    position?: { x: number; y: number } // Normalized -1..1 drive for the pad (e.g. gamepad stick)
     currentActions?: Record<string, any> // Reference to currentActions from createControls
     onAction: (action: string) => void
   }>(),
@@ -33,6 +34,19 @@ const isButtonMode = computed(() => props.mode === 'button')
 const buttonEntries = computed(() => Object.entries(props.mapping))
 const isMultiButton = computed(() => buttonEntries.value.length > 1)
 const singleEntry = computed(() => buttonEntries.value[0])
+
+watch(
+  () => props.position,
+  (pos) => {
+    const inside = touchControlInside.value
+    const edge = touchControlEdge.value
+    if (isButtonMode.value || !inside || !edge || !pos) return
+    const limitX = (edge.offsetWidth - inside.offsetWidth) / 2
+    const limitY = (edge.offsetHeight - inside.offsetHeight) / 2
+    inside.style.transform = `translate(${pos.x * limitX}px, ${pos.y * limitY}px)`
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   if (isButtonMode.value) return

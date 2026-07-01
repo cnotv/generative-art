@@ -4,8 +4,11 @@ import { CONTROL_SKINS } from '@webgamekit/controls'
 import { Button } from '@/components/ui/button'
 import TouchControl from '@/components/TouchControl.vue'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
+import { useGamepadStick } from './useGamepadStick'
 
 const store = useControlsMapperStore()
+
+const { position: stickPosition } = useGamepadStick()
 
 const fauxPadMapping = computed(() => store.mapping['faux-pad'] ?? {})
 
@@ -42,6 +45,7 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
           mode="faux-pad"
           :skin="store.selectedSkin"
           :mapping="fauxPadMapping"
+          :position="stickPosition"
           :on-action="previewAction"
         />
       </div>
@@ -56,7 +60,9 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
         />
       </div>
     </div>
-    <p class="mapper-style__hint">Drag the pad or tap the button to preview and test it.</p>
+    <p class="mapper-style__hint">
+      Drag the pad, move a gamepad stick, or tap the button to preview and test it.
+    </p>
   </div>
 </template>
 
