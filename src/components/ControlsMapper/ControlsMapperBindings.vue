@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { Button } from '@/components/ui/button'
-import { Select } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { computed, watch } from 'vue'
+import {
+  LobbyUIRow,
+  LobbyUIButton,
+  LobbyUIOptionToggle,
+  LobbyUIConfigField
+} from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import type { ControlDevice } from '@webgamekit/controls'
+import type { LobbyConfigField } from '@/types/lobbyWizard'
 import { MAPPER_ACTIONS, MAPPER_DEVICES, FAUX_PAD_DIRECTIONS } from './config'
 import { useBindingCapture } from './useBindingCapture'
 
@@ -12,7 +16,11 @@ const store = useControlsMapperStore()
 const { listeningDevice, capture, cancel } = useBindingCapture()
 
 const captureDevices: ControlDevice[] = ['keyboard', 'gamepad']
-const activeDevice = ref<ControlDevice>('keyboard')
+
+const deviceOptions = MAPPER_DEVICES.map((device) => ({ value: device.id, label: device.label }))
+
+const activeDevice = computed(() => store.activeDevice)
+const setDevice = (device: string) => store.setActiveDevice(device as ControlDevice)
 
 const toDeviceTab = (device: string): ControlDevice | null => {
   if (device === 'keyboard') return 'keyboard'
@@ -25,7 +33,7 @@ watch(
   () => store.lastDevice,
   (device) => {
     const tab = toDeviceTab(device)
-    if (tab) activeDevice.value = tab
+    if (tab) store.setActiveDevice(tab)
   }
 )
 
@@ -51,19 +59,21 @@ const clearAction = (device: ControlDevice, actionId: string) => {
 
 const NONE_OPTION = 'none'
 
-const actionOptions = [
-  { value: NONE_OPTION, label: 'None' },
-  ...MAPPER_ACTIONS.map((action) => ({ value: action.id, label: action.label }))
-]
+const fauxPadField = (direction: string): LobbyConfigField => ({
+  type: 'select',
+  key: direction,
+  label: direction,
+  value: store.mapping['faux-pad']?.[direction] ?? NONE_OPTION,
+  options: [
+    { value: NONE_OPTION, label: 'None' },
+    ...MAPPER_ACTIONS.map((action) => ({ value: action.id, label: action.label }))
+  ]
+})
 
-const fauxPadAction = (direction: string) => store.mapping['faux-pad']?.[direction] ?? NONE_OPTION
-
-const setFauxPad = (direction: string, action: string) => {
-  if (action === NONE_OPTION) {
-    store.clearTrigger('faux-pad', direction)
-  } else {
-    store.bindTrigger('faux-pad', direction, action)
-  }
+const setFauxPad = (direction: string, value: string | number) => {
+  const action = String(value)
+  if (action === NONE_OPTION) store.clearTrigger('faux-pad', direction)
+  else store.bindTrigger('faux-pad', direction, action)
 }
 
 const isListening = computed(() => listeningDevice.value !== null)
@@ -71,112 +81,57 @@ const isListening = computed(() => listeningDevice.value !== null)
 
 <template>
   <div class="mapper-bindings">
-    <Tabs v-model="activeDevice" class="mapper-bindings__tabs">
-      <TabsList>
-        <TabsTrigger v-for="device in MAPPER_DEVICES" :key="device.id" :value="device.id">
-          {{ device.label }}
-        </TabsTrigger>
-      </TabsList>
+    <div class="mapper-bindings__tabs" data-lui-row>
+      <LobbyUIOptionToggle
+        :model-value="activeDevice"
+        :options="deviceOptions"
+        @update:model-value="setDevice"
+      />
+    </div>
 
-      <TabsContent
-        v-for="device in captureDevices"
-        :key="device"
-        :value="device"
-        class="mapper-bindings__panel"
-      >
-        <ul class="mapper-bindings__list">
-          <li v-for="action in MAPPER_ACTIONS" :key="action.id" class="mapper-bindings__row">
-            <span class="mapper-bindings__action">{{ action.label }}</span>
-            <span class="mapper-bindings__trigger">
-              {{ triggersForAction(device, action.id).map(formatTrigger).join(', ') || '—' }}
-            </span>
-            <Button
-              variant="outline"
-              :disabled="isListening"
-              :title="`Listen for a ${device} input to bind to ${action.label}`"
-              @click="listen(device, action.id)"
-            >
-              {{ listeningDevice === device ? 'Press…' : 'Listen' }}
-            </Button>
-            <Button
-              variant="ghost"
-              title="Clear all bindings for this action"
-              @click="clearAction(device, action.id)"
-            >
-              Clear
-            </Button>
-          </li>
-        </ul>
-      </TabsContent>
+    <template v-if="activeDevice !== 'faux-pad'">
+      <LobbyUIRow v-for="action in MAPPER_ACTIONS" :key="action.id" :label="action.label">
+        <span class="mapper-bindings__trigger">
+          {{ triggersForAction(activeDevice, action.id).map(formatTrigger).join(', ') || '—' }}
+        </span>
+        <LobbyUIButton
+          variant="primary"
+          :disabled="isListening"
+          @click="listen(activeDevice, action.id)"
+        >
+          {{ listeningDevice === activeDevice ? 'Press…' : 'Listen' }}
+        </LobbyUIButton>
+        <LobbyUIButton variant="ghost" @click="clearAction(activeDevice, action.id)">
+          Clear
+        </LobbyUIButton>
+      </LobbyUIRow>
+    </template>
 
-      <TabsContent value="faux-pad" class="mapper-bindings__panel">
-        <ul class="mapper-bindings__list">
-          <li
-            v-for="direction in FAUX_PAD_DIRECTIONS"
-            :key="direction"
-            class="mapper-bindings__row"
-          >
-            <span class="mapper-bindings__action">{{ direction }}</span>
-            <Select
-              class="mapper-bindings__select"
-              :model-value="fauxPadAction(direction)"
-              :options="actionOptions"
-              @update:model-value="setFauxPad(direction, $event)"
-            />
-          </li>
-        </ul>
-      </TabsContent>
+    <template v-else>
+      <LobbyUIRow v-for="direction in FAUX_PAD_DIRECTIONS" :key="direction" :label="direction">
+        <LobbyUIConfigField :field="fauxPadField(direction)" @change="setFauxPad" />
+      </LobbyUIRow>
+    </template>
 
-      <Button
-        v-if="isListening"
-        variant="secondary"
-        title="Cancel listening"
-        class="mapper-bindings__cancel"
-        @click="cancel"
-      >
-        Cancel
-      </Button>
-    </Tabs>
+    <div v-if="isListening" class="mapper-bindings__cancel" data-lui-row>
+      <LobbyUIButton variant="ghost" @click="cancel">Cancel</LobbyUIButton>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.mapper-bindings__panel {
-  overflow: visible;
-}
-
-.mapper-bindings__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.mapper-bindings {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.mapper-bindings__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.mapper-bindings__action {
-  flex: 1 1 8rem;
+  gap: var(--spacing-3);
 }
 
 .mapper-bindings__trigger {
-  flex: 0 1 auto;
-  min-width: 4rem;
-  font-family: var(--font-mono);
-  color: var(--color-foreground);
-}
-
-.mapper-bindings__select {
-  flex: 1 1 8rem;
-}
-
-.mapper-bindings__cancel {
-  margin-top: var(--spacing-2);
+  font-family: var(--lui-font);
+  font-weight: 900;
+  font-size: var(--lui-text-medium);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
 }
 </style>

@@ -34,6 +34,11 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
   const liveActions = ref<string[]>([])
   const recentEvents = ref<LiveEvent[]>([])
   const lastDevice = ref('')
+  const activeDevice = ref<ControlDevice>('keyboard')
+
+  const setActiveDevice = (device: ControlDevice) => {
+    activeDevice.value = device
+  }
 
   const bindTrigger = (device: ControlDevice, trigger: string, action: string) => {
     mapping.value = assignBinding(mapping.value, device, trigger, action)
@@ -109,6 +114,8 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
     liveActions,
     recentEvents,
     lastDevice,
+    activeDevice,
+    setActiveDevice,
     bindTrigger,
     clearTrigger,
     resetToDefaults,

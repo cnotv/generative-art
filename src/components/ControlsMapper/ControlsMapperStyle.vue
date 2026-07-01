@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { CONTROL_SKINS } from '@webgamekit/controls'
-import { Button } from '@/components/ui/button'
+import { LobbyUIRow, LobbyUIOptionToggle } from '@/components/LobbyUI'
 import TouchControl from '@/components/TouchControl.vue'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import { useGamepadStick } from './useGamepadStick'
@@ -9,6 +9,8 @@ import { useGamepadStick } from './useGamepadStick'
 const store = useControlsMapperStore()
 
 const { position: stickPosition } = useGamepadStick()
+
+const skinOptions = CONTROL_SKINS.map((skin) => ({ value: skin.id, label: skin.label }))
 
 const fauxPadMapping = computed(() => store.mapping['faux-pad'] ?? {})
 
@@ -24,18 +26,13 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
 
 <template>
   <div class="mapper-style">
-    <div class="mapper-style__skins">
-      <Button
-        v-for="skin in CONTROL_SKINS"
-        :key="skin.id"
-        :variant="store.selectedSkin === skin.id ? 'default' : 'outline'"
-        size="sm"
-        :title="`Use the ${skin.label} skin`"
-        @click="store.selectSkin(skin.id)"
-      >
-        {{ skin.label }}
-      </Button>
-    </div>
+    <LobbyUIRow label="Skin">
+      <LobbyUIOptionToggle
+        :model-value="store.selectedSkin"
+        :options="skinOptions"
+        @update:model-value="store.selectSkin"
+      />
+    </LobbyUIRow>
 
     <div class="mapper-style__preview">
       <div class="mapper-style__stage">
@@ -60,8 +57,9 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
         />
       </div>
     </div>
+
     <p class="mapper-style__hint">
-      Drag the pad, move a gamepad stick, or tap the button to preview and test it.
+      Drag the pad, move a gamepad stick, or tap the button to test it.
     </p>
   </div>
 </template>
@@ -71,12 +69,6 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
-}
-
-.mapper-style__skins {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
 }
 
 .mapper-style__preview {
@@ -96,7 +88,9 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
 .mapper-style__hint {
   margin: 0;
   text-align: center;
-  font-size: var(--font-size-base);
-  color: var(--color-muted-foreground);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 </style>

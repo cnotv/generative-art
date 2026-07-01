@@ -4,41 +4,34 @@ import ControlsMapper from '@/components/ControlsMapper/ControlsMapper.vue'
 
 <template>
   <main class="controls-mapper-view">
-    <header class="controls-mapper-view__header">
-      <h1 class="controls-mapper-view__title">Controls Mapper</h1>
-      <p class="controls-mapper-view__subtitle">
-        Remap keyboard, gamepad and faux-pad controls, style the on-screen widget, save presets, and
-        test them live.
-      </p>
-    </header>
-    <ControlsMapper />
+    <div class="controls-mapper-view__backdrop" aria-hidden="true" />
+    <div class="controls-mapper-view__stage">
+      <ControlsMapper />
+    </div>
   </main>
 </template>
 
 <style scoped>
 .controls-mapper-view {
+  position: relative;
   height: 100dvh;
   overflow-y: auto;
-  padding: calc(var(--nav-height) + var(--spacing-4)) var(--spacing-4) var(--spacing-4);
+  padding: calc(var(--nav-height) + var(--spacing-4)) var(--spacing-4) var(--spacing-6);
+  box-sizing: border-box;
+}
+
+.controls-mapper-view__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(160deg, #3a2c6e 0%, #5b3f8f 45%, #7d4fa0 100%);
+}
+
+.controls-mapper-view__stage {
+  position: relative;
+  z-index: 1;
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  color: var(--color-foreground);
-}
-
-.controls-mapper-view__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.controls-mapper-view__title {
-  margin: 0;
-  font-size: var(--font-size-xl);
-}
-
-.controls-mapper-view__subtitle {
-  margin: 0;
-  color: var(--color-muted-foreground);
+  justify-content: center;
 }
 </style>

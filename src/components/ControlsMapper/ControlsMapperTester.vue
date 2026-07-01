@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LobbyUIRow } from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 
 const store = useControlsMapperStore()
@@ -8,8 +9,7 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
 
 <template>
   <div class="mapper-tester">
-    <div class="mapper-tester__active">
-      <span class="mapper-tester__label">Active</span>
+    <LobbyUIRow label="Active">
       <div class="mapper-tester__chips">
         <span v-for="action in store.liveActions" :key="action" class="mapper-tester__chip">
           {{ action }}
@@ -18,14 +18,13 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
           Press keys, gamepad buttons, or drag the pad…
         </span>
       </div>
-    </div>
+    </LobbyUIRow>
 
     <ul class="mapper-tester__log">
       <li
         v-for="(event, index) in store.recentEvents"
         :key="`${event.timestamp}-${index}`"
         class="mapper-tester__event"
-        :class="`mapper-tester__event--${event.type}`"
       >
         <span class="mapper-tester__event-type">{{ event.type }}</span>
         <span class="mapper-tester__event-action">{{ event.action }}</span>
@@ -42,38 +41,32 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
-}
-
-.mapper-tester__active {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.mapper-tester__label {
-  font-size: var(--font-size-base);
-  color: var(--color-muted-foreground);
+  font-family: var(--lui-font);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .mapper-tester__chips {
   display: flex;
   gap: var(--spacing-2);
   flex-wrap: wrap;
-  min-height: 2rem;
   align-items: center;
+  min-height: 2rem;
+  justify-content: flex-end;
 }
 
 .mapper-tester__chip {
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-full);
-  background-color: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-size: var(--font-size-base);
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 2px solid var(--lui-stroke);
+  box-shadow: var(--lui-border-shadow);
+  border-radius: var(--radius-xl, 1.25rem);
+  font-size: var(--lui-text-small);
+  text-transform: uppercase;
 }
 
 .mapper-tester__idle {
-  color: var(--color-muted-foreground);
-  font-size: var(--font-size-base);
+  font-size: var(--lui-text-small);
+  opacity: 0.7;
 }
 
 .mapper-tester__log {
@@ -83,24 +76,19 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
-  max-height: 12rem;
+  max-height: 10rem;
   overflow-y: auto;
 }
 
 .mapper-tester__event {
   display: grid;
-  grid-template-columns: 4rem 1fr auto;
+  grid-template-columns: 5rem 1fr auto;
   gap: var(--spacing-2);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  font-size: var(--lui-text-small);
 }
 
 .mapper-tester__event-type {
   text-transform: uppercase;
-  color: var(--color-muted-foreground);
-}
-
-.mapper-tester__event--action .mapper-tester__event-type {
-  color: var(--color-primary);
+  opacity: 0.7;
 }
 </style>

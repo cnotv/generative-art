@@ -29,6 +29,7 @@ const emit = defineEmits<{
 <style scoped>
 .lui-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-2);
 }
 
