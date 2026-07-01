@@ -7,14 +7,12 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  rotateTowards,
-  getRotation,
+  updatePlayerFacing,
   createTimelineManager,
   createPopUpBounce,
   createSlideInFromSides,
   sortOrder,
-  calculateSequentialDelays,
-  DEFAULT_ROTATION_STEP_DEGREES
+  calculateSequentialDelays
 } from '@webgamekit/animation'
 import { createGame, type GameState } from '@webgamekit/game'
 import { createControls, isMobile } from '@webgamekit/controls'
@@ -209,7 +207,7 @@ const registerGameTimeline = (
     name: 'Walk',
     category: 'user-input',
     action: () => {
-      const targetRotation = getRotation(currentActions, true)
+      const targetRotation = updatePlayerFacing(player, currentActions, MODEL_FACING_OFFSET)
       const isMoving = targetRotation !== null
       const actionName = isMoving ? 'Esqueleto|walking' : 'Esqueleto|idle'
       logControllerForward(movement.debug, currentActions, targetRotation)
@@ -218,12 +216,10 @@ const registerGameTimeline = (
         player,
         delta: getDelta() * 2,
         speed: 20,
-        backward: true,
         distance,
         targetRotation: targetRotation ?? undefined
       }
       if (isMoving) {
-        rotateTowards(player, targetRotation, DEFAULT_ROTATION_STEP_DEGREES, MODEL_FACING_OFFSET)
         controllerForward(obstacles, groundBodies, animationData, movement)
         if (!orbitReference)
           orbitReference = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3]

@@ -7,8 +7,7 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  rotateTowards,
-  getRotation,
+  updatePlayerFacing,
   createTimelineManager,
   playActionTimeline
 } from '@webgamekit/animation'
@@ -21,6 +20,10 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import grassTextureImg from '@/assets/images/textures/grass.jpg'
 import { getActionName } from './MixamoPlayground.helpers'
 import { useDebugSceneStore } from '@/stores/debugScene'
+
+// Degrees added to the player's visual rotation to correct a model whose front
+// and back are inverted. 0 = no correction; set to 180 for a flipped model.
+const MODEL_FACING_OFFSET = 0
 
 const playerSettings = {
   model: {
@@ -251,7 +254,7 @@ const init = async (): Promise<void> => {
             }
           }
 
-          const targetRotation = getRotation(currentActions)
+          const targetRotation = updatePlayerFacing(player, currentActions, MODEL_FACING_OFFSET)
           const isMoving = targetRotation !== null
           const animationData: AnimationData = getActionData(
             player,
@@ -262,10 +265,6 @@ const init = async (): Promise<void> => {
 
           if (isMoving) {
             animationData.targetRotation = targetRotation
-            // Only rotate if allowed
-            if (player.userData.allowRotation || !player.userData.performing) {
-              rotateTowards(player, targetRotation)
-            }
 
             // Only move if allowed
             if (player.userData.allowMovement || !player.userData.performing) {

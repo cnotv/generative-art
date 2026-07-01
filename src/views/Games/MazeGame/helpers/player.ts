@@ -3,10 +3,8 @@ import * as THREE from 'three'
 import { getModel, moveController, type ComplexModel } from '@webgamekit/threejs'
 import {
   updateAnimation,
-  rotateTowards,
-  getRotation,
+  updatePlayerFacing,
   getMovementDirection,
-  DEFAULT_ROTATION_STEP_DEGREES,
   type AnimationData
 } from '@webgamekit/animation'
 import {
@@ -33,7 +31,7 @@ export const updatePlayerMovement = (
   speed: number = PLAYER_SPEED,
   filterPredicate?: (collider: object) => boolean
 ): void => {
-  const targetRotation = getRotation(currentActions, false)
+  const targetRotation = updatePlayerFacing(player, currentActions, PLAYER_MODEL_FACING_OFFSET)
   const isMoving = targetRotation !== null
   const delta = getDelta()
 
@@ -46,7 +44,6 @@ export const updatePlayerMovement = (
   }
 
   if (isMoving) {
-    rotateTowards(player, targetRotation, DEFAULT_ROTATION_STEP_DEGREES, PLAYER_MODEL_FACING_OFFSET)
     const { direction } = getMovementDirection(player, 1, false, targetRotation)
     moveController(
       player,

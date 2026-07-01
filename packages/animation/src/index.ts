@@ -1128,6 +1128,32 @@ const getRotation = (
   return key ? (map[key] ?? null) : null
 }
 
+/**
+ * Resolve the target heading from directional input and smoothly turn the model
+ * to face it. Movement should be applied toward the returned heading (forward, via
+ * getMovementDirection's headingDegrees) so movement direction and model facing stay
+ * consistent across games. Per-model front/back inversion is corrected with modelOffset.
+ * @param player The player model to face toward the input direction
+ * @param currentActions Record of active control actions
+ * @param modelOffset Degrees added to the visual facing for a front/back-inverted model
+ * @param stepDegrees Maximum degrees to rotate this step
+ * @param mirrored Whether to use the mirrored directional map
+ * @returns Target heading in degrees, or null when there is no directional input
+ */
+const updatePlayerFacing = (
+  player: ComplexModel,
+  currentActions: Record<string, unknown>,
+  modelOffset: number = 0,
+  stepDegrees: number = DEFAULT_ROTATION_STEP_DEGREES,
+  mirrored: boolean = false
+): number | null => {
+  const targetRotation = getRotation(currentActions, mirrored)
+  if (targetRotation !== null) {
+    rotateTowards(player, targetRotation, stepDegrees, modelOffset)
+  }
+  return targetRotation
+}
+
 const bodyJump = (
   model: ComplexModel,
   bodies: ComplexModel[],
@@ -1178,6 +1204,7 @@ export {
   rotateTowards,
   DEFAULT_ROTATION_STEP_DEGREES,
   getRotation,
+  updatePlayerFacing,
   bodyJump,
   checkGroundAtPosition,
   getMovementDirection,

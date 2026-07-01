@@ -12,6 +12,7 @@ import {
   rotateTowards,
   DEFAULT_ROTATION_STEP_DEGREES,
   getMovementDirection,
+  updatePlayerFacing,
   createTimelineManager,
   type AnimationData
 } from './index'
@@ -803,6 +804,47 @@ describe('animation', () => {
       const aligned = rotateTowards(model, 90)
       expect(aligned).toBe(false)
       expect(model.rotation.y).toBe(0)
+    })
+  })
+
+  describe('updatePlayerFacing', () => {
+    const createFacingModel = () => {
+      const mockMesh = new THREE.Group()
+      mockMesh.rotation.set(0, 0, 0)
+      return Object.assign(mockMesh, { userData: {} }) as unknown as ComplexModel
+    }
+
+    it('returns the target heading and faces the model toward it', () => {
+      const model = createFacingModel()
+      const heading = updatePlayerFacing(model, { 'move-right': true })
+      expect(heading).toBe(90)
+      // 90° is within a single 25° step from 0? No — capped, so it turns toward it.
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('returns null and leaves rotation untouched when there is no input', () => {
+      const model = createFacingModel()
+      const heading = updatePlayerFacing(model, {})
+      expect(heading).toBeNull()
+      expect(model.rotation.y).toBe(0)
+    })
+
+    it('applies the model facing offset to the visual rotation', () => {
+      const model = createFacingModel()
+      updatePlayerFacing(model, { 'move-up': true }, 180)
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('uses the mirrored map when requested', () => {
+      const model = createFacingModel()
+      const heading = updatePlayerFacing(
+        model,
+        { 'move-left': true },
+        0,
+        DEFAULT_ROTATION_STEP_DEGREES,
+        true
+      )
+      expect(heading).toBe(90)
     })
   })
 
