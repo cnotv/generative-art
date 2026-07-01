@@ -13,7 +13,7 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  setRotation,
+  rotateTowards,
   getRotation,
   createTimelineManager,
   playActionTimeline
@@ -383,10 +383,11 @@ const init = async (): Promise<void> => {
 
           if (isMoving) {
             if (localPlayer.userData.allowRotation || !localPlayer.userData.performing) {
-              setRotation(localPlayer, targetRotation)
+              rotateTowards(localPlayer, targetRotation)
             }
             if (localPlayer.userData.allowMovement || !localPlayer.userData.performing) {
-              localPlayer.getWorldDirection(movementDirection)
+              const headingRadians = THREE.MathUtils.degToRad(targetRotation)
+              movementDirection.set(Math.sin(headingRadians), 0, Math.cos(headingRadians))
               localPlayer.position.x += movementDirection.x * MOVEMENT_SPEED
               localPlayer.position.z += movementDirection.z * MOVEMENT_SPEED
               localPlayer.position.y = PLAYER_Y_OFFSET

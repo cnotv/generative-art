@@ -7,8 +7,7 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  setRotation,
-  getRotation,
+  updatePlayerFacing,
   createTimelineManager,
   playActionTimeline
 } from '@webgamekit/animation'
@@ -251,7 +250,7 @@ const init = async (): Promise<void> => {
             }
           }
 
-          const targetRotation = getRotation(currentActions)
+          const targetRotation = updatePlayerFacing(player, currentActions)
           const isMoving = targetRotation !== null
           const animationData: AnimationData = getActionData(
             player,
@@ -261,10 +260,7 @@ const init = async (): Promise<void> => {
           )
 
           if (isMoving) {
-            // Only rotate if allowed
-            if (player.userData.allowRotation || !player.userData.performing) {
-              setRotation(player, targetRotation)
-            }
+            animationData.targetRotation = targetRotation
 
             // Only move if allowed
             if (player.userData.allowMovement || !player.userData.performing) {

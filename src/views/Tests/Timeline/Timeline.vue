@@ -17,7 +17,7 @@ import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   bindAnimatedElements,
   createTimelineManager,
-  setRotation,
+  rotateTowards,
   type Timeline,
   type CoordinateTuple
 } from '@webgamekit/animation'
@@ -225,7 +225,7 @@ const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): 
   const dx = targetX - model.position.x
   const dz = targetZ - model.position.z
   const distanceXZ = Math.hypot(dx, dz)
-  setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(dx, -dz)))
+  rotateTowards(model, THREE.MathUtils.radToDeg(Math.atan2(dx, -dz)))
 
   const blocked = stepFollowerHorizontal(model, dx, dz, distanceXZ, entry.config.speed * delta)
   const dy = targetY - model.position.y
@@ -292,7 +292,7 @@ const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): v
   const previousProgress = state.progress
   state.progress = Math.min(1, state.progress + (speed * delta) / segmentLength(a, b, type))
   if (type !== 'jump')
-    setRotation(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
+    rotateTowards(model, THREE.MathUtils.radToDeg(Math.atan2(b[0] - a[0], -(b[2] - a[2]))))
   // A walk must not cross a wall (e.g. after the path is dragged into one): hold
   // position and progress while a brick blocks the way. Jumps arc over, so skip.
   if (type === 'walk' && wallBlocksWalk(model, a, b, state.progress)) {

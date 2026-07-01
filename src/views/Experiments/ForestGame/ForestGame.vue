@@ -7,8 +7,7 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  setRotation,
-  getRotation,
+  updatePlayerFacing,
   createTimelineManager,
   createPopUpBounce,
   createSlideInFromSides,
@@ -207,7 +206,7 @@ const registerGameTimeline = (
     name: 'Walk',
     category: 'user-input',
     action: () => {
-      const targetRotation = getRotation(currentActions, true)
+      const targetRotation = updatePlayerFacing(player, currentActions)
       const isMoving = targetRotation !== null
       const actionName = isMoving ? 'Esqueleto|walking' : 'Esqueleto|idle'
       logControllerForward(movement.debug, currentActions, targetRotation)
@@ -216,11 +215,10 @@ const registerGameTimeline = (
         player,
         delta: getDelta() * 2,
         speed: 20,
-        backward: true,
-        distance
+        distance,
+        targetRotation: targetRotation ?? undefined
       }
       if (isMoving) {
-        setRotation(player, targetRotation)
         controllerForward(obstacles, groundBodies, animationData, movement)
         if (!orbitReference)
           orbitReference = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3]

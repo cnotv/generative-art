@@ -46,6 +46,9 @@ export const playerSettings = {
   model: {
     position: [0, -1, 0] as CoordinateTuple,
     rotation: [0, 0, 0] as CoordinateTuple,
+    // The mushroom is authored to turn the mirror-image way, so face it along the
+    // mirrored (left/right-swapped) heading. Movement direction is unaffected.
+    mirroredFacing: true,
     scale: [1, 1, 1] as CoordinateTuple,
     restitution: -10,
     boundary: 0.5,

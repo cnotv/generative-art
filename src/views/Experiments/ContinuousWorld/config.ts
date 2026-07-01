@@ -74,6 +74,8 @@ export const playerSettings = {
     path: 'stickboy_maze.glb',
     position: [0, 0, 0] as CoordinateTuple,
     rotation: [0, Math.PI, 0] as CoordinateTuple,
+    // This view travels along -Z, so face the model 180 to match its movement.
+    facingOffset: 180,
     scale: [PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE] as CoordinateTuple,
     groundOffset: 0.5,
     restitution: -10,

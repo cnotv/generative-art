@@ -253,6 +253,7 @@ interface AnimationData {
   speed?: number
   backward?: boolean // For adjusting model direction
   distance?: number // Length of action movement
+  targetRotation?: number // Heading in degrees to move toward; overrides the model's current facing
 }
 
 interface PlayActionOptions {
@@ -617,16 +618,23 @@ interface MovementDirectionResult {
  * @param model The model to get direction from
  * @param distance Movement distance
  * @param backward Whether to move backward
+ * @param headingDegrees Optional target heading in degrees; when provided, movement follows this direction (about the Y axis) instead of the model's current facing, so the model heads straight to the target while its visual rotation catches up
  * @returns Direction vector and positions
  */
 const getMovementDirection = (
   model: ComplexModel,
   distance: number,
-  backward: boolean = false
+  backward: boolean = false,
+  headingDegrees?: number
 ): MovementDirectionResult => {
   const oldPosition = model.position.clone()
   const direction = new THREE.Vector3()
-  model.getWorldDirection(direction)
+  if (headingDegrees === undefined) {
+    model.getWorldDirection(direction)
+  } else {
+    const radians = THREE.MathUtils.degToRad(headingDegrees)
+    direction.set(Math.sin(radians), 0, Math.cos(radians))
+  }
 
   if (backward) {
     direction.negate()
@@ -959,12 +967,23 @@ const controllerForward = (
 ): void => {
   const options = resolveControllerOptions(rawOptions)
   const { debug } = options
-  const { actionName, player: model, backward = false, distance = 0 } = animationData
+  const {
+    actionName,
+    player: model,
+    backward = false,
+    distance = 0,
+    targetRotation
+  } = animationData
 
   if (model.userData.performing && model.userData.allowMovement === false) return
 
   const { actions, mixer } = model.userData
-  const { direction, oldPosition, newPosition } = getMovementDirection(model, distance, backward)
+  const { direction, oldPosition, newPosition } = getMovementDirection(
+    model,
+    distance,
+    backward,
+    targetRotation
+  )
 
   const { canMove, finalPosition } = resolveForwardMovement({
     oldPosition,
@@ -1022,6 +1041,40 @@ const setRotation = (model: ComplexModel, degrees: number, modelOffset: number =
   return true
 }
 
+/** Default maximum rotation applied per step, in degrees, for 8-axis player turning */
+const DEFAULT_ROTATION_STEP_DEGREES = 25
+
+/**
+ * Smoothly rotate a model toward a target Y rotation, capping the change per step.
+ *
+ * Interpolates along the shortest angular path so the model turns the natural way
+ * (e.g. 350°→10° rotates +20°, not -340°). This drives only the visual turn; pair it
+ * with a target-driven movement direction (see getMovementDirection's headingDegrees)
+ * so the model heads straight to the target while its rotation visually catches up.
+ * @param model The model to rotate
+ * @param degrees Target rotation in degrees
+ * @param stepDegrees Maximum degrees to rotate this step (default 25)
+ * @param modelOffset Offset in degrees to correct for models facing wrong direction
+ * @returns true if the model is now facing the target within this step, false if still turning or blocked
+ */
+const rotateTowards = (
+  model: ComplexModel,
+  degrees: number,
+  stepDegrees: number = DEFAULT_ROTATION_STEP_DEGREES,
+  modelOffset: number = 0
+): boolean => {
+  if (model.userData.performing && model.userData.allowRotation === false) {
+    return false
+  }
+  const target = THREE.MathUtils.degToRad(degrees + modelOffset)
+  const current = model.rotation.y
+  const difference = Math.atan2(Math.sin(target - current), Math.cos(target - current))
+  const maxStep = THREE.MathUtils.degToRad(Math.abs(stepDegrees))
+  const aligned = Math.abs(difference) <= maxStep
+  model.rotation.y = current + (aligned ? difference : Math.sign(difference) * maxStep)
+  return aligned
+}
+
 /** Rotation mapping for directional input combinations */
 const ROTATION_MAP: Record<string, number> = {
   up: 0,
@@ -1075,6 +1128,32 @@ const getRotation = (
   return key ? (map[key] ?? null) : null
 }
 
+/**
+ * Resolve the movement heading from directional input and smoothly turn the model
+ * to face it. The returned heading drives forward movement (via getMovementDirection's
+ * headingDegrees). The model's visual facing is corrected per model, declared in its
+ * load options and read from userData: `facingOffset` degrees for a front/back-inverted
+ * model, and `mirroredFacing` to turn along the mirrored (left/right-swapped) heading.
+ * @param player The player model to face toward the input direction
+ * @param currentActions Record of active control actions
+ * @param stepDegrees Maximum degrees to rotate this step
+ * @returns Movement heading in degrees, or null when there is no directional input
+ */
+const updatePlayerFacing = (
+  player: ComplexModel,
+  currentActions: Record<string, unknown>,
+  stepDegrees: number = DEFAULT_ROTATION_STEP_DEGREES
+): number | null => {
+  const movementHeading = getRotation(currentActions, false)
+  if (movementHeading !== null) {
+    const facingHeading = player.userData.mirroredFacing
+      ? (getRotation(currentActions, true) ?? movementHeading)
+      : movementHeading
+    rotateTowards(player, facingHeading, stepDegrees, player.userData.facingOffset ?? 0)
+  }
+  return movementHeading
+}
+
 const bodyJump = (
   model: ComplexModel,
   bodies: ComplexModel[],
@@ -1122,7 +1201,10 @@ export {
   controllerJump,
   controllerTurn,
   setRotation,
+  rotateTowards,
+  DEFAULT_ROTATION_STEP_DEGREES,
   getRotation,
+  updatePlayerFacing,
   bodyJump,
   checkGroundAtPosition,
   getMovementDirection,

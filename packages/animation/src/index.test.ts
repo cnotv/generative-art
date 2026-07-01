@@ -9,6 +9,10 @@ import {
   checkGroundAtPosition,
   getRotation,
   setRotation,
+  rotateTowards,
+  DEFAULT_ROTATION_STEP_DEGREES,
+  getMovementDirection,
+  updatePlayerFacing,
   createTimelineManager,
   type AnimationData
 } from './index'
@@ -748,6 +752,147 @@ describe('animation', () => {
       // Test 45 degrees (diagonal)
       setRotation(mockModel, 45)
       expect(mockModel.rotation.y).toBeCloseTo(Math.PI / 4, 5)
+    })
+  })
+
+  describe('rotateTowards', () => {
+    const createRotatingModel = (startDegrees = 0) => {
+      const mockMesh = new THREE.Group()
+      mockMesh.rotation.set(0, THREE.MathUtils.degToRad(startDegrees), 0)
+      return Object.assign(mockMesh, { userData: {} }) as unknown as ComplexModel
+    }
+
+    it('exposes 25 as the default step', () => {
+      expect(DEFAULT_ROTATION_STEP_DEGREES).toBe(25)
+    })
+
+    it.each([
+      [0, 90, 25, 25, false, 'caps a far turn to the step size'],
+      [0, 10, 25, 10, true, 'snaps to target and reports aligned when within step'],
+      [90, 90, 25, 90, true, 'stays put and reports aligned when already facing target'],
+      [0, 200, 25, -25, false, 'turns the short way (negative) for targets past 180°'],
+      [350, 10, 25, 370, true, 'wraps forward across 0° via the shortest path'],
+      [10, 350, 25, -10, true, 'wraps backward across 0° via the shortest path'],
+      [0, 45, 25, 25, false, 'resolves a 45° grid turn in two steps'],
+      [0, 100, 100, 100, true, 'reaches a far target in one step when step is large']
+    ])(
+      'from %d° toward %d° step %d° → %d° (aligned=%s): %s',
+      (start, target, step, expectedDegrees, expectedAligned) => {
+        const model = createRotatingModel(start)
+        const aligned = rotateTowards(model, target, step)
+        expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(expectedDegrees), 5)
+        expect(aligned).toBe(expectedAligned)
+      }
+    )
+
+    it('applies modelOffset to the target', () => {
+      const model = createRotatingModel(0)
+      rotateTowards(model, 0, 25, 90)
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('uses the 25° default step when none is provided', () => {
+      const model = createRotatingModel(0)
+      rotateTowards(model, 90)
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('is blocked when performing and allowRotation=false', () => {
+      const model = createRotatingModel(0)
+      model.userData.performing = true
+      model.userData.allowRotation = false
+      const aligned = rotateTowards(model, 90)
+      expect(aligned).toBe(false)
+      expect(model.rotation.y).toBe(0)
+    })
+  })
+
+  describe('updatePlayerFacing', () => {
+    const createFacingModel = () => {
+      const mockMesh = new THREE.Group()
+      mockMesh.rotation.set(0, 0, 0)
+      return Object.assign(mockMesh, { userData: {} }) as unknown as ComplexModel
+    }
+
+    it('returns the target heading and faces the model toward it', () => {
+      const model = createFacingModel()
+      const heading = updatePlayerFacing(model, { 'move-right': true })
+      expect(heading).toBe(90)
+      // 90° is within a single 25° step from 0? No — capped, so it turns toward it.
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('returns null and leaves rotation untouched when there is no input', () => {
+      const model = createFacingModel()
+      const heading = updatePlayerFacing(model, {})
+      expect(heading).toBeNull()
+      expect(model.rotation.y).toBe(0)
+    })
+
+    it('applies the model facingOffset from userData to the visual rotation', () => {
+      const model = createFacingModel()
+      model.userData.facingOffset = 180
+      updatePlayerFacing(model, { 'move-up': true })
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+
+    it('keeps the movement heading but faces the mirrored heading when mirroredFacing is set', () => {
+      const model = createFacingModel()
+      model.userData.mirroredFacing = true
+      const heading = updatePlayerFacing(model, { 'move-left': true })
+      // Movement heading stays non-mirrored (left = 270)
+      expect(heading).toBe(270)
+      // Facing uses the mirrored map (left = 90), turned toward within one step
+      expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
+    })
+  })
+
+  describe('getMovementDirection', () => {
+    const createModelAt = (rotationDegrees = 0) => {
+      const mockMesh = new THREE.Group()
+      mockMesh.position.set(0, 0, 0)
+      mockMesh.rotation.set(0, THREE.MathUtils.degToRad(rotationDegrees), 0)
+      return Object.assign(mockMesh, { userData: {} }) as unknown as ComplexModel
+    }
+
+    it.each([
+      [0, 0, 1],
+      [90, 1, 0],
+      [180, 0, -1],
+      [270, -1, 0]
+    ])('heading %d° yields direction (%d, _, %d)', (heading, expectedX, expectedZ) => {
+      const model = createModelAt(0)
+      const { direction } = getMovementDirection(model, 1, false, heading)
+      expect(direction.x).toBeCloseTo(expectedX, 5)
+      expect(direction.z).toBeCloseTo(expectedZ, 5)
+    })
+
+    it('follows the target heading regardless of the model’s current facing', () => {
+      const facingUp = createModelAt(0)
+      const { direction } = getMovementDirection(facingUp, 1, false, 90)
+      expect(direction.x).toBeCloseTo(1, 5)
+      expect(direction.z).toBeCloseTo(0, 5)
+    })
+
+    it('matches getWorldDirection when heading equals the model rotation', () => {
+      const model = createModelAt(90)
+      const worldDirection = new THREE.Vector3()
+      model.getWorldDirection(worldDirection)
+      const { direction } = getMovementDirection(model, 1, false, 90)
+      expect(direction.x).toBeCloseTo(worldDirection.x, 5)
+      expect(direction.z).toBeCloseTo(worldDirection.z, 5)
+    })
+
+    it('negates the heading direction when backward is true', () => {
+      const model = createModelAt(0)
+      const { direction } = getMovementDirection(model, 1, true, 0)
+      expect(direction.z).toBeCloseTo(-1, 5)
+    })
+
+    it('falls back to the model facing when no heading is given', () => {
+      const model = createModelAt(180)
+      const { direction } = getMovementDirection(model, 1, false)
+      expect(direction.z).toBeCloseTo(-1, 5)
     })
   })
 
