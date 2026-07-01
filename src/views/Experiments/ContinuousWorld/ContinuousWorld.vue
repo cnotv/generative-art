@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRaw, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { cameraFollowPlayer, getModel } from '@webgamekit/threejs'
-import { getRotation, createTimelineManager, updateAnimation } from '@webgamekit/animation'
+import { cameraFollowPlayer, getModel, type ComplexModel } from '@webgamekit/threejs'
+import {
+  getRotation,
+  createTimelineManager,
+  updateAnimation,
+  rotateTowards,
+  DEFAULT_ROTATION_STEP_DEGREES
+} from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import { useSceneViewStore } from '@/stores/sceneView'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -21,6 +27,7 @@ import { setNestedValueImmutable } from '@/utils/nestedObjects'
 import {
   setupConfig,
   playerSettings,
+  MODEL_FACING_OFFSET,
   controlBindings,
   generatorConfig,
   noiseConfig,
@@ -212,14 +219,16 @@ const HALF_CIRCLE_DEGREES = 180
 const DEGREES_TO_RADIANS = Math.PI / HALF_CIRCLE_DEGREES
 const TERRAIN_RAYCAST_ORIGIN_Y = 200
 
-const applyRotation = (mesh: THREE.Object3D, degrees: number) => {
-  mesh.rotation.y = degrees * DEGREES_TO_RADIANS
+let lastPlayerHeadingDegrees = playerSettings.model.rotation[1] / DEGREES_TO_RADIANS
+
+const applyRotation = (mesh: ComplexModel, degrees: number) => {
+  rotateTowards(mesh, degrees, DEFAULT_ROTATION_STEP_DEGREES, MODEL_FACING_OFFSET)
 }
 
-const moveForward = (mesh: THREE.Object3D, distance: number) => {
-  const direction = new THREE.Vector3(0, 0, -1)
-  direction.applyQuaternion(mesh.quaternion)
-  mesh.position.addScaledVector(direction, distance)
+const moveForward = (mesh: THREE.Object3D, distance: number, headingDegrees: number) => {
+  const radians = headingDegrees * DEGREES_TO_RADIANS
+  mesh.position.x += -Math.sin(radians) * distance
+  mesh.position.z += -Math.cos(radians) * distance
 }
 
 const snapToTerrain = (
@@ -305,7 +314,10 @@ const applyPlayerMove = (
   isMoving: boolean
 ): void => {
   if (!playerMeshReference || !getDeltaReference) return
-  if (targetRotation !== null) applyRotation(playerMeshReference, targetRotation)
+  if (targetRotation !== null) {
+    applyRotation(playerMeshReference, targetRotation)
+    lastPlayerHeadingDegrees = targetRotation
+  }
   updateAnimation({
     actionName: isMoving ? 'walk' : 'idle',
     player: playerMeshReference,
@@ -314,7 +326,7 @@ const applyPlayerMove = (
       ((reactiveConfig.value.movementSpeed as number | undefined) ?? playerSettings.game.distance) *
       10
   })
-  if (isMoving) moveForward(playerMeshReference, moveSpeed)
+  if (isMoving) moveForward(playerMeshReference, moveSpeed, lastPlayerHeadingDegrees)
   applyTerrainSnap()
   cameraFrameCounter++
   const followFrequency =

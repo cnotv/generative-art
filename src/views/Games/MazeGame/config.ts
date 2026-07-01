@@ -47,6 +47,9 @@ export const HELPER_COLOR_ELEVATOR = 0x0088ff
 export const PLAYER_SPEED = 10
 export const PLAYER_DISTANCE = 0.5
 export const PLAYER_MODEL = 'stickboy_maze.glb'
+// Degrees added to the player's visual rotation to correct a model whose front
+// and back are inverted. 0 = no correction; set to 180 for a flipped model.
+export const PLAYER_MODEL_FACING_OFFSET = 0
 const PLAYER_Y = -1.15
 const MAZE_HALF = ISLAND_SIZE / 2
 export const MAZE_ENTRANCE_OFFSET = MAZE_HALF - MAZE_CELL_SIZE / 2

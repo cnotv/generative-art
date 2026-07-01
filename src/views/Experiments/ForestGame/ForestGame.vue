@@ -7,13 +7,14 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  setRotation,
+  rotateTowards,
   getRotation,
   createTimelineManager,
   createPopUpBounce,
   createSlideInFromSides,
   sortOrder,
-  calculateSequentialDelays
+  calculateSequentialDelays,
+  DEFAULT_ROTATION_STEP_DEGREES
 } from '@webgamekit/animation'
 import { createGame, type GameState } from '@webgamekit/game'
 import { createControls, isMobile } from '@webgamekit/controls'
@@ -30,7 +31,8 @@ import {
   assets,
   illustrationAreas,
   illustrationAreaGroupConfigs,
-  configControls
+  configControls,
+  MODEL_FACING_OFFSET
 } from './config'
 
 const route = useRoute()
@@ -217,10 +219,11 @@ const registerGameTimeline = (
         delta: getDelta() * 2,
         speed: 20,
         backward: true,
-        distance
+        distance,
+        targetRotation: targetRotation ?? undefined
       }
       if (isMoving) {
-        setRotation(player, targetRotation)
+        rotateTowards(player, targetRotation, DEFAULT_ROTATION_STEP_DEGREES, MODEL_FACING_OFFSET)
         controllerForward(obstacles, groundBodies, animationData, movement)
         if (!orbitReference)
           orbitReference = toRaw(store.orbitReference) as Parameters<typeof cameraFollowPlayer>[3]

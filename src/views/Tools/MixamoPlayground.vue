@@ -7,7 +7,7 @@ import {
   type CoordinateTuple,
   type AnimationData,
   updateAnimation,
-  setRotation,
+  rotateTowards,
   getRotation,
   createTimelineManager,
   playActionTimeline
@@ -261,9 +261,10 @@ const init = async (): Promise<void> => {
           )
 
           if (isMoving) {
+            animationData.targetRotation = targetRotation
             // Only rotate if allowed
             if (player.userData.allowRotation || !player.userData.performing) {
-              setRotation(player, targetRotation)
+              rotateTowards(player, targetRotation)
             }
 
             // Only move if allowed

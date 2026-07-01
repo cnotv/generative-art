@@ -3,12 +3,19 @@ import * as THREE from 'three'
 import { getModel, moveController, type ComplexModel } from '@webgamekit/threejs'
 import {
   updateAnimation,
-  setRotation,
+  rotateTowards,
   getRotation,
   getMovementDirection,
+  DEFAULT_ROTATION_STEP_DEGREES,
   type AnimationData
 } from '@webgamekit/animation'
-import { PLAYER_MODEL, playerModelOptions, PLAYER_SPEED, PLAYER_DISTANCE } from '../config'
+import {
+  PLAYER_MODEL,
+  playerModelOptions,
+  PLAYER_SPEED,
+  PLAYER_DISTANCE,
+  PLAYER_MODEL_FACING_OFFSET
+} from '../config'
 
 export const createPlayer = async (
   scene: THREE.Scene,
@@ -39,8 +46,8 @@ export const updatePlayerMovement = (
   }
 
   if (isMoving) {
-    setRotation(player, targetRotation)
-    const { direction } = getMovementDirection(player, 1, false)
+    rotateTowards(player, targetRotation, DEFAULT_ROTATION_STEP_DEGREES, PLAYER_MODEL_FACING_OFFSET)
+    const { direction } = getMovementDirection(player, 1, false, targetRotation)
     moveController(
       player,
       {

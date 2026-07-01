@@ -42,6 +42,10 @@ import illustrationBush12Img from '@/assets/images/illustrations/Bush1-2.webp'
 
 // import grassTextureImg from "@/assets/images/illustrations/ground.webp";
 
+// Degrees added to the player's visual rotation to correct a model whose front
+// and back are inverted. 0 = no correction; set to 180 for a flipped model.
+export const MODEL_FACING_OFFSET = 0
+
 export const playerSettings = {
   model: {
     position: [0, -1, 0] as CoordinateTuple,
@@ -131,8 +135,8 @@ export const controlBindings = {
       ' ': 'jump',
       a: 'move-left',
       d: 'move-right',
-      w: 'move-down',
-      s: 'move-up',
+      w: 'move-up',
+      s: 'move-down',
       p: 'print-log'
     },
     gamepad: {
@@ -140,18 +144,18 @@ export const controlBindings = {
       cross: 'jump',
       'dpad-left': 'move-left',
       'dpad-right': 'move-right',
-      'dpad-down': 'move-up',
-      'dpad-up': 'move-down',
+      'dpad-down': 'move-down',
+      'dpad-up': 'move-up',
       'axis0-left': 'move-left',
       'axis0-right': 'move-right',
-      'axis1-up': 'move-down',
-      'axis1-down': 'move-up'
+      'axis1-up': 'move-up',
+      'axis1-down': 'move-down'
     },
     'faux-pad': {
       left: 'move-left',
       right: 'move-right',
-      up: 'move-down',
-      down: 'move-up',
+      up: 'move-up',
+      down: 'move-down',
       click: 'jump'
     }
   },
