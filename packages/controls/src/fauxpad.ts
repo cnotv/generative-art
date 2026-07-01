@@ -83,6 +83,52 @@ function activateDirections(state: DirectionState, directions: Set<string>) {
   })
 }
 
+interface DragCallbacks {
+  start: (x: number, y: number) => void
+  move: (x: number, y: number) => void
+  end: () => void
+}
+
+/**
+ * Wire touch and mouse dragging on the inside element to the drag callbacks.
+ * Mouse move/up are bound on window so a drag keeps tracking outside the pad.
+ *
+ * @param {HTMLElement} inside The draggable knob element
+ * @param {DragCallbacks} callbacks Start/move/end handlers
+ * @returns {() => void} A function that removes every listener
+ */
+function attachDragListeners(inside: HTMLElement, callbacks: DragCallbacks): () => void {
+  const onTouchStart = (event: TouchEvent) => {
+    event.preventDefault()
+    callbacks.start(event.touches[0].clientX, event.touches[0].clientY)
+  }
+  const onTouchMove = (event: TouchEvent) => {
+    event.preventDefault()
+    callbacks.move(event.touches[0].clientX, event.touches[0].clientY)
+  }
+  const onMouseDown = (event: MouseEvent) => {
+    event.preventDefault()
+    callbacks.start(event.clientX, event.clientY)
+  }
+  const onMouseMove = (event: MouseEvent) => callbacks.move(event.clientX, event.clientY)
+
+  inside.addEventListener('touchstart', onTouchStart as EventListener)
+  inside.addEventListener('touchmove', onTouchMove as EventListener)
+  inside.addEventListener('touchend', callbacks.end)
+  inside.addEventListener('mousedown', onMouseDown as EventListener)
+  window.addEventListener('mousemove', onMouseMove as EventListener)
+  window.addEventListener('mouseup', callbacks.end)
+
+  return () => {
+    inside.removeEventListener('touchstart', onTouchStart as EventListener)
+    inside.removeEventListener('touchmove', onTouchMove as EventListener)
+    inside.removeEventListener('touchend', callbacks.end)
+    inside.removeEventListener('mousedown', onMouseDown as EventListener)
+    window.removeEventListener('mousemove', onMouseMove as EventListener)
+    window.removeEventListener('mouseup', callbacks.end)
+  }
+}
+
 /**
  * Create a virtual faux-pad controller that interprets touch/mouse input into directional actions
  *
@@ -164,17 +210,15 @@ export function createFauxPadController(
     isActive = false
   }
 
-  const onTouchStart = (event: TouchEvent) => {
-    event.preventDefault()
-    initialPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY }
+  const startDrag = (x: number, y: number) => {
+    initialPosition = { x, y }
     isActive = true
   }
 
-  const onTouchMove = (event: TouchEvent) => {
+  const moveDrag = (x: number, y: number) => {
     if (!isActive) return
-    event.preventDefault()
-    const rawX = event.touches[0].clientX - initialPosition.x
-    const rawY = event.touches[0].clientY - initialPosition.y
+    const rawX = x - initialPosition.x
+    const rawY = y - initialPosition.y
     const distance = Math.hypot(rawX, rawY)
     const scale = distance > threshold.x ? threshold.x / distance : 1
     currentPosition = { x: rawX * scale, y: rawY * scale }
@@ -184,9 +228,11 @@ export function createFauxPadController(
     updateDirections()
   }
 
-  const onTouchEnd = () => {
-    reset()
+  const endDrag = () => {
+    if (isActive) reset()
   }
+
+  let detachDrag: (() => void) | null = null
 
   function bind(edgeElement: HTMLElement, insideElement: HTMLElement) {
     insideElement_ = insideElement
@@ -194,15 +240,16 @@ export function createFauxPadController(
       x: edgeElement.offsetWidth / 2 - insideElement.offsetWidth / 2,
       y: edgeElement.offsetHeight / 2 - insideElement.offsetHeight / 2
     }
-    insideElement.addEventListener('touchstart', onTouchStart as EventListener)
-    insideElement.addEventListener('touchmove', onTouchMove as EventListener)
-    insideElement.addEventListener('touchend', onTouchEnd)
+    detachDrag = attachDragListeners(insideElement, {
+      start: startDrag,
+      move: moveDrag,
+      end: endDrag
+    })
   }
 
-  function unbind(_edgeElement: HTMLElement, insideElement: HTMLElement) {
-    insideElement.removeEventListener('touchstart', onTouchStart as EventListener)
-    insideElement.removeEventListener('touchmove', onTouchMove as EventListener)
-    insideElement.removeEventListener('touchend', onTouchEnd)
+  function unbind(_edgeElement: HTMLElement, _insideElement: HTMLElement) {
+    detachDrag?.()
+    detachDrag = null
     insideElement_ = null
   }
 

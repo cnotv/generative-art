@@ -17,9 +17,10 @@ export function useGamepadStick(deadzone: number = DEFAULT_DEADZONE) {
 
   const poll = () => {
     const pad = navigator.getGamepads?.().find((entry) => entry)
-    position.value = {
-      x: applyDeadzone(pad?.axes[0] ?? 0),
-      y: applyDeadzone(pad?.axes[1] ?? 0)
+    const x = applyDeadzone(pad?.axes[0] ?? 0)
+    const y = applyDeadzone(pad?.axes[1] ?? 0)
+    if (x !== position.value.x || y !== position.value.y) {
+      position.value = { x, y }
     }
     frame = requestAnimationFrame(poll)
   }
