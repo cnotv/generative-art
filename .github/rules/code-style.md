@@ -174,6 +174,7 @@
   - `documentation/docs/packages/` — Package API documentation
   - `documentation/docs/architecture/` — Project architecture docs
   - `documentation/docs/guides/` — How-to guides and tutorials
+  - `documentation/docs/journey/` — Problem-solving write-ups: the theory, research findings, and non-obvious decisions behind a feature
 - **Run docs locally**: `cd documentation && pnpm start`
 - **Adding new docs**: Create `.md` files in the appropriate `docs/` subfolder with frontmatter:
 
@@ -185,6 +186,14 @@
   # Your Title Here
   ```
 
+- **Record theory and research findings in the journey**: Whenever you solve a
+  non-trivial problem using theory, a mathematical technique, or findings from
+  research or experiments, write it up in `documentation/docs/journey/`. Always
+  capture the _why_, the underlying theory, and what the research/experiments
+  revealed — not just the final code. Journey docs favour abstract prose, tables,
+  and Mermaid diagrams over code snippets; include only the minimal formula or
+  snippet needed to make the theory concrete. Do this as part of the same change
+  that solved the problem, not later.
 - **Keep tutorials in sync with the code**: When you change a file that a tutorial
   documents (its APIs, options, file paths, or worked example), update that tutorial
   in the same change so it never goes stale. Each tutorial lists the source files it
