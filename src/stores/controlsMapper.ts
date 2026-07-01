@@ -42,8 +42,9 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
     mapping.value = removeBinding(mapping.value, device, trigger)
   }
 
-  const resetMapping = () => {
+  const resetToDefaults = () => {
     mapping.value = createDefaultMapping()
+    selectedSkin.value = getDefaultSkinId()
   }
 
   const selectSkin = (skin: ControlSkinId) => {
@@ -107,7 +108,7 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
     recentEvents,
     bindTrigger,
     clearTrigger,
-    resetMapping,
+    resetToDefaults,
     selectSkin,
     savePreset,
     applyPreset,

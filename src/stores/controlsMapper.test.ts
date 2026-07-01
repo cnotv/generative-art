@@ -48,8 +48,7 @@ describe('useControlsMapperStore', () => {
     store.bindTrigger('keyboard', 'ArrowUp', 'jump')
     store.savePreset('My layout')
 
-    store.resetMapping()
-    store.selectSkin('default')
+    store.resetToDefaults()
     store.applyPreset('My layout')
 
     expect(store.mapping.keyboard?.ArrowUp).toBe('jump')
@@ -78,6 +77,18 @@ describe('useControlsMapperStore', () => {
   it('importPreset throws on invalid JSON', () => {
     const store = useControlsMapperStore()
     expect(() => store.importPreset('{ bad')).toThrow()
+  })
+
+  it('resetToDefaults restores the default mapping and skin', () => {
+    const store = useControlsMapperStore()
+    store.selectSkin('neon')
+    store.bindTrigger('keyboard', 'z', 'jump')
+
+    store.resetToDefaults()
+
+    expect(store.selectedSkin).toBe('default')
+    expect(store.mapping.keyboard?.z).toBeUndefined()
+    expect(Object.values(store.mapping.keyboard ?? {})).toContain('move-forward')
   })
 
   it('records and clears live actions', () => {

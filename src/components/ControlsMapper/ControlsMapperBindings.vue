@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import type { ControlDevice } from '@webgamekit/controls'
-import { MAPPER_ACTIONS, FAUX_PAD_DIRECTIONS } from './config'
+import { MAPPER_ACTIONS, MAPPER_DEVICES, FAUX_PAD_DIRECTIONS } from './config'
 import { useBindingCapture } from './useBindingCapture'
 
 const store = useControlsMapperStore()
 const { listeningDevice, capture, cancel } = useBindingCapture()
 
 const captureDevices: ControlDevice[] = ['keyboard', 'gamepad']
+const activeDevice = ref<ControlDevice>('keyboard')
 
 const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : trigger)
 
@@ -26,6 +28,10 @@ const listen = async (device: ControlDevice, actionId: string) => {
   } catch {
     // capture cancelled — nothing to bind
   }
+}
+
+const clearAction = (device: ControlDevice, actionId: string) => {
+  triggersForAction(device, actionId).forEach((trigger) => store.clearTrigger(device, trigger))
 }
 
 const actionOptions = [
@@ -47,9 +53,14 @@ const isListening = computed(() => listeningDevice.value !== null)
 </script>
 
 <template>
-  <div class="mapper-bindings">
-    <section v-for="device in captureDevices" :key="device" class="mapper-bindings__device">
-      <h3 class="mapper-bindings__heading">{{ device }}</h3>
+  <Tabs v-model="activeDevice" class="mapper-bindings">
+    <TabsList>
+      <TabsTrigger v-for="device in MAPPER_DEVICES" :key="device.id" :value="device.id">
+        {{ device.label }}
+      </TabsTrigger>
+    </TabsList>
+
+    <TabsContent v-for="device in captureDevices" :key="device" :value="device">
       <ul class="mapper-bindings__list">
         <li v-for="action in MAPPER_ACTIONS" :key="action.id" class="mapper-bindings__row">
           <span class="mapper-bindings__action">{{ action.label }}</span>
@@ -69,18 +80,15 @@ const isListening = computed(() => listeningDevice.value !== null)
             variant="ghost"
             size="sm"
             title="Clear all bindings for this action"
-            @click="
-              triggersForAction(device, action.id).forEach((t) => store.clearTrigger(device, t))
-            "
+            @click="clearAction(device, action.id)"
           >
             Clear
           </Button>
         </li>
       </ul>
-    </section>
+    </TabsContent>
 
-    <section class="mapper-bindings__device">
-      <h3 class="mapper-bindings__heading">Faux-pad</h3>
+    <TabsContent value="faux-pad">
       <ul class="mapper-bindings__list">
         <li v-for="direction in FAUX_PAD_DIRECTIONS" :key="direction" class="mapper-bindings__row">
           <span class="mapper-bindings__action">{{ direction }}</span>
@@ -92,7 +100,7 @@ const isListening = computed(() => listeningDevice.value !== null)
           />
         </li>
       </ul>
-    </section>
+    </TabsContent>
 
     <Button
       v-if="isListening"
@@ -104,21 +112,12 @@ const isListening = computed(() => listeningDevice.value !== null)
     >
       Cancel
     </Button>
-  </div>
+  </Tabs>
 </template>
 
 <style scoped>
 .mapper-bindings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.mapper-bindings__heading {
-  margin: 0 0 var(--spacing-2);
-  font-size: var(--font-size-sm);
-  text-transform: capitalize;
-  color: var(--color-muted-foreground);
+  gap: var(--spacing-3);
 }
 
 .mapper-bindings__list {
@@ -144,5 +143,9 @@ const isListening = computed(() => listeningDevice.value !== null)
 
 .mapper-bindings__select {
   min-width: 10rem;
+}
+
+.mapper-bindings__cancel {
+  margin-top: var(--spacing-2);
 }
 </style>

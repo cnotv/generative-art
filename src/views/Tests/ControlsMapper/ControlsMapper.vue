@@ -17,6 +17,8 @@ import ControlsMapper from '@/components/ControlsMapper/ControlsMapper.vue'
 
 <style scoped>
 .controls-mapper-view {
+  height: 100dvh;
+  overflow-y: auto;
   padding: calc(var(--nav-height) + var(--spacing-4)) var(--spacing-4) var(--spacing-4);
   display: flex;
   flex-direction: column;

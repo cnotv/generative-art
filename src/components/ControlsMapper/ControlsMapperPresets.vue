@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog } from '@/components/ui/dialog'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 
 const store = useControlsMapperStore()
@@ -10,6 +11,8 @@ const presetName = ref('')
 const importText = ref('')
 const exportText = ref('')
 const importError = ref('')
+const exportOpen = ref(false)
+const importOpen = ref(false)
 
 const save = () => {
   const name = presetName.value.trim()
@@ -18,8 +21,15 @@ const save = () => {
   presetName.value = ''
 }
 
-const exportCurrent = () => {
+const openExport = () => {
   exportText.value = store.exportCurrent(presetName.value.trim() || 'preset')
+  exportOpen.value = true
+}
+
+const openImport = () => {
+  importText.value = ''
+  importError.value = ''
+  importOpen.value = true
 }
 
 const importPreset = () => {
@@ -27,6 +37,7 @@ const importPreset = () => {
   try {
     store.importPreset(importText.value)
     importText.value = ''
+    importOpen.value = false
   } catch {
     importError.value = 'Invalid preset JSON'
   }
@@ -39,14 +50,6 @@ const importPreset = () => {
       <Input v-model="presetName" placeholder="Preset name" class="mapper-presets__name" />
       <Button size="sm" title="Save the current mapping and skin as a preset" @click="save">
         Save
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        title="Reset to the default mapping"
-        @click="store.resetMapping()"
-      >
-        Reset
       </Button>
     </div>
 
@@ -77,29 +80,35 @@ const importPreset = () => {
         variant="outline"
         size="sm"
         title="Export the current mapping as JSON"
-        @click="exportCurrent"
+        @click="openExport"
       >
-        Export JSON
+        Export
       </Button>
+      <Button variant="outline" size="sm" title="Import a mapping from JSON" @click="openImport">
+        Import
+      </Button>
+    </div>
+
+    <Dialog v-model:open="exportOpen" title="Export mapping">
       <textarea
         v-model="exportText"
         class="mapper-presets__json"
         readonly
         placeholder="Exported JSON appears here"
       ></textarea>
-    </div>
+    </Dialog>
 
-    <div class="mapper-presets__io">
+    <Dialog v-model:open="importOpen" title="Import mapping">
       <textarea
         v-model="importText"
         class="mapper-presets__json"
         placeholder="Paste preset JSON to import"
       ></textarea>
-      <Button variant="outline" size="sm" title="Import a mapping from JSON" @click="importPreset">
-        Import JSON
-      </Button>
       <p v-if="importError" class="mapper-presets__error">{{ importError }}</p>
-    </div>
+      <Button variant="default" size="sm" title="Import a mapping from JSON" @click="importPreset">
+        Import
+      </Button>
+    </Dialog>
   </div>
 </template>
 
@@ -138,13 +147,12 @@ const importPreset = () => {
 
 .mapper-presets__io {
   display: flex;
-  flex-direction: column;
   gap: var(--spacing-2);
 }
 
 .mapper-presets__json {
   width: 100%;
-  min-height: 4rem;
+  min-height: 8rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-input);
   background-color: var(--color-background);
