@@ -34,18 +34,20 @@ const clearAction = (device: ControlDevice, actionId: string) => {
   triggersForAction(device, actionId).forEach((trigger) => store.clearTrigger(device, trigger))
 }
 
+const NONE_OPTION = 'none'
+
 const actionOptions = [
-  { value: '', label: 'None' },
+  { value: NONE_OPTION, label: 'None' },
   ...MAPPER_ACTIONS.map((action) => ({ value: action.id, label: action.label }))
 ]
 
-const fauxPadAction = (direction: string) => store.mapping['faux-pad']?.[direction] ?? ''
+const fauxPadAction = (direction: string) => store.mapping['faux-pad']?.[direction] ?? NONE_OPTION
 
 const setFauxPad = (direction: string, action: string) => {
-  if (action) {
-    store.bindTrigger('faux-pad', direction, action)
-  } else {
+  if (action === NONE_OPTION) {
     store.clearTrigger('faux-pad', direction)
+  } else {
+    store.bindTrigger('faux-pad', direction, action)
   }
 }
 
