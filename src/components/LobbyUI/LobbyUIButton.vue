@@ -2,17 +2,18 @@
 withDefaults(
   defineProps<{
     variant?: 'cta' | 'primary' | 'ghost'
+    size?: 'sm' | 'md' | 'lg'
     disabled?: boolean
     autofocus?: boolean
   }>(),
-  { variant: 'primary', disabled: false, autofocus: false }
+  { variant: 'primary', size: 'md', disabled: false, autofocus: false }
 )
 </script>
 
 <template>
   <button
     class="lui-btn"
-    :class="`lui-btn--${variant}`"
+    :class="[`lui-btn--${variant}`, `lui-btn--${size}`]"
     type="button"
     :disabled="disabled"
     :autofocus="autofocus"
@@ -23,8 +24,12 @@ withDefaults(
 
 <style scoped>
 .lui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
   padding: var(--spacing-2) var(--spacing-4);
-  border: 3px solid transparent;
+  border: none;
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -38,21 +43,26 @@ withDefaults(
 }
 
 .lui-btn--cta {
-  border-color: var(--lui-stroke);
-  box-shadow: var(--lui-border-shadow);
   font-size: var(--lui-text-important);
   padding: var(--spacing-2) var(--spacing-5, 1.5rem);
 }
 
 .lui-btn--primary {
-  border-color: var(--lui-stroke);
-  box-shadow: var(--lui-border-shadow);
   font-size: var(--lui-text-medium);
 }
 
 .lui-btn--ghost {
-  border-color: transparent;
   font-size: var(--lui-text-medium);
+}
+
+.lui-btn--sm {
+  font-size: var(--lui-text-small);
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.lui-btn--lg {
+  font-size: var(--lui-text-important);
+  padding: var(--spacing-2) var(--spacing-5, 1.5rem);
 }
 
 .lui-btn:disabled {
@@ -60,15 +70,10 @@ withDefaults(
   cursor: not-allowed;
 }
 
-.lui-btn:hover:not(:disabled) {
-  color: var(--lui-focus-color);
-  border-color: var(--lui-focus-color);
-}
-
+.lui-btn:hover:not(:disabled),
 .lui-btn:focus,
 .lui-btn:focus-visible {
   outline: none;
-  border-color: var(--lui-focus-color);
   color: var(--lui-focus-color);
 }
 </style>

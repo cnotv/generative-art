@@ -23,6 +23,8 @@ const setTab = (value: string) => {
   activeTab.value = value as 'bindings' | 'test'
 }
 
+const saveCurrent = () => store.savePreset(new Date().toLocaleString())
+
 const { focusedHint, inputSource, focusFirst } = useMenuFocus(panelReference)
 
 const HINT_GAP_PX = 12
@@ -80,6 +82,7 @@ onUnmounted(() => {
     </template>
 
     <div class="controls-mapper__footer" data-lui-row>
+      <LobbyUIButton variant="primary" size="lg" @click="saveCurrent">Save</LobbyUIButton>
       <LobbyUIButton variant="ghost" @click="store.resetToDefaults()">Reset</LobbyUIButton>
     </div>
 

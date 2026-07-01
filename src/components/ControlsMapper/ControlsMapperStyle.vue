@@ -28,6 +28,7 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
   <div class="mapper-style">
     <LobbyUIRow label="Skin">
       <LobbyUIOptionToggle
+        size="sm"
         :model-value="store.selectedSkin"
         :options="skinOptions"
         @update:model-value="store.selectSkin"

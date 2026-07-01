@@ -1,5 +1,17 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import ControlsMapper from '@/components/ControlsMapper/ControlsMapper.vue'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
+
+const FONT_KEY = 'controls-mapper-font'
+
+onMounted(() => {
+  loadGoogleFont('https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap', FONT_KEY)
+})
+
+onUnmounted(() => {
+  removeGoogleFont(FONT_KEY)
+})
 </script>
 
 <template>

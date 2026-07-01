@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, type Component } from 'vue'
+import { Ear, X, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
   LobbyUIRow,
   LobbyUIButton,
@@ -17,7 +18,17 @@ const { listeningDevice, capture, cancel } = useBindingCapture()
 
 const captureDevices: ControlDevice[] = ['keyboard', 'gamepad']
 
-const deviceOptions = MAPPER_DEVICES.map((device) => ({ value: device.id, label: device.label }))
+const DEVICE_ICONS: Record<string, Component> = {
+  keyboard: Keyboard,
+  gamepad: Gamepad2,
+  'faux-pad': Joystick
+}
+
+const deviceOptions = MAPPER_DEVICES.map((device) => ({
+  value: device.id,
+  label: device.label,
+  icon: DEVICE_ICONS[device.id]
+}))
 
 const activeDevice = computed(() => store.activeDevice)
 const setDevice = (device: string) => store.setActiveDevice(device as ControlDevice)
@@ -85,6 +96,7 @@ const isListening = computed(() => listeningDevice.value !== null)
       <LobbyUIOptionToggle
         :model-value="activeDevice"
         :options="deviceOptions"
+        hide-label-on-mobile
         @update:model-value="setDevice"
       />
     </div>
@@ -95,14 +107,21 @@ const isListening = computed(() => listeningDevice.value !== null)
           {{ triggersForAction(activeDevice, action.id).map(formatTrigger).join(', ') || '—' }}
         </span>
         <LobbyUIButton
-          variant="primary"
+          variant="ghost"
+          size="sm"
           :disabled="isListening"
+          :title="`Listen for a ${activeDevice} input to bind to ${action.label}`"
           @click="listen(activeDevice, action.id)"
         >
-          {{ listeningDevice === activeDevice ? 'Press…' : 'Listen' }}
+          <Ear class="mapper-bindings__icon" />
         </LobbyUIButton>
-        <LobbyUIButton variant="ghost" @click="clearAction(activeDevice, action.id)">
-          Clear
+        <LobbyUIButton
+          variant="primary"
+          size="sm"
+          :title="`Clear ${action.label}`"
+          @click="clearAction(activeDevice, action.id)"
+        >
+          <X class="mapper-bindings__icon" />
         </LobbyUIButton>
       </LobbyUIRow>
     </template>
@@ -133,5 +152,10 @@ const isListening = computed(() => listeningDevice.value !== null)
   color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
+}
+
+.mapper-bindings__icon {
+  width: 1.3em;
+  height: 1.3em;
 }
 </style>

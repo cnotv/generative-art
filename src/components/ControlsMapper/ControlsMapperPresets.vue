@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Upload, Download, X } from 'lucide-vue-next'
 import { LobbyUIRow, LobbyUIButton } from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 
@@ -11,8 +12,6 @@ const error = ref('')
 const dateName = (): string => new Date().toLocaleString()
 
 const fileStamp = (): string => new Date().toISOString().replace(/[.:]/g, '-')
-
-const saveCurrent = () => store.savePreset(dateName())
 
 const downloadConfig = () => {
   const json = store.exportCurrent(dateName())
@@ -40,16 +39,41 @@ const importConfig = async (event: Event) => {
 
 <template>
   <div class="mapper-presets">
-    <div class="mapper-presets__actions" data-lui-row>
-      <LobbyUIButton variant="primary" @click="saveCurrent">Save</LobbyUIButton>
-      <LobbyUIButton variant="ghost" @click="fileInput?.click()">Import</LobbyUIButton>
-      <LobbyUIButton variant="ghost" @click="downloadConfig">Download</LobbyUIButton>
+    <div class="mapper-presets__list" data-lui-row>
+      <LobbyUIButton variant="ghost" title="Import a config file" @click="fileInput?.click()">
+        <Upload class="mapper-presets__icon" />
+        Import
+      </LobbyUIButton>
+      <LobbyUIButton variant="ghost" title="Download the current config" @click="downloadConfig">
+        <Download class="mapper-presets__icon" />
+        Download
+      </LobbyUIButton>
     </div>
 
-    <LobbyUIRow v-for="preset in store.presets" :key="preset.name" :label="preset.name">
-      <LobbyUIButton variant="primary" @click="store.applyPreset(preset.name)">Load</LobbyUIButton>
-      <LobbyUIButton variant="ghost" @click="store.deletePreset(preset.name)">Delete</LobbyUIButton>
-    </LobbyUIRow>
+    <div
+      v-for="preset in store.presets"
+      :key="preset.name"
+      class="mapper-presets__saved"
+      data-lui-row
+    >
+      <LobbyUIButton
+        variant="ghost"
+        size="sm"
+        class="mapper-presets__load"
+        :title="`Load ${preset.name}`"
+        @click="store.applyPreset(preset.name)"
+      >
+        {{ preset.name }}
+      </LobbyUIButton>
+      <LobbyUIButton
+        variant="primary"
+        size="sm"
+        :title="`Delete ${preset.name}`"
+        @click="store.deletePreset(preset.name)"
+      >
+        <X class="mapper-presets__icon" />
+      </LobbyUIButton>
+    </div>
 
     <p v-if="error" class="mapper-presets__error">{{ error }}</p>
 
@@ -67,13 +91,31 @@ const importConfig = async (event: Event) => {
 .mapper-presets {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
 }
 
-.mapper-presets__actions {
+.mapper-presets__list {
   display: flex;
-  gap: var(--spacing-2);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.mapper-presets__saved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.mapper-presets__load {
+  min-width: 0;
+  text-align: left;
+}
+
+.mapper-presets__icon {
+  width: 1.2em;
+  height: 1.2em;
 }
 
 .mapper-presets__error {
