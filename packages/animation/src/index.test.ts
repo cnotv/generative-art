@@ -829,9 +829,10 @@ describe('animation', () => {
       expect(model.rotation.y).toBe(0)
     })
 
-    it('applies the model facing offset to the visual rotation', () => {
+    it('applies the model facingOffset from userData to the visual rotation', () => {
       const model = createFacingModel()
-      updatePlayerFacing(model, { 'move-up': true }, 180)
+      model.userData.facingOffset = 180
+      updatePlayerFacing(model, { 'move-up': true })
       expect(model.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(25), 5)
     })
 
@@ -840,7 +841,6 @@ describe('animation', () => {
       const heading = updatePlayerFacing(
         model,
         { 'move-left': true },
-        0,
         DEFAULT_ROTATION_STEP_DEGREES,
         true
       )

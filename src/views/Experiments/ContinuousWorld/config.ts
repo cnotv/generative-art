@@ -19,10 +19,6 @@ export const TREES_PER_CHUNK = 2
 export const MOVEMENT_SPEED_SCALE = 1 / 8
 export const GRASS_DENSITY_MULTIPLIER = 200
 export const PLAYER_MODEL_SCALE = 4
-// Degrees added to the player's visual rotation to correct a model whose front
-// and back are inverted. The shared stickboy model's front is +Z, but this view
-// travels along -Z, so it needs a 180 flip to face its movement direction.
-export const MODEL_FACING_OFFSET = 180
 
 export const noiseConfig: NoiseConfig = {
   seed: 50,
@@ -78,6 +74,8 @@ export const playerSettings = {
     path: 'stickboy_maze.glb',
     position: [0, 0, 0] as CoordinateTuple,
     rotation: [0, Math.PI, 0] as CoordinateTuple,
+    // This view travels along -Z, so face the model 180 to match its movement.
+    facingOffset: 180,
     scale: [PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE, PLAYER_MODEL_SCALE] as CoordinateTuple,
     groundOffset: 0.5,
     restitution: -10,

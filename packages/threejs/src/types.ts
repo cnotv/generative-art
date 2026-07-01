@@ -63,6 +63,8 @@ export interface ModelOptions extends CommonOptions {
   envMapIntensity?: number
   animations?: string[]
   materialColors?: number[]
+  /** Degrees to add to the model's facing so a front/back-inverted model faces its travel direction (e.g. 180) */
+  facingOffset?: number
   onSpawn?: () => boolean
   onProgress?: OnProgress
 }

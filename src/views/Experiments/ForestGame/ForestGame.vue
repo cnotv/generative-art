@@ -29,8 +29,7 @@ import {
   assets,
   illustrationAreas,
   illustrationAreaGroupConfigs,
-  configControls,
-  MODEL_FACING_OFFSET
+  configControls
 } from './config'
 
 const route = useRoute()
@@ -207,7 +206,7 @@ const registerGameTimeline = (
     name: 'Walk',
     category: 'user-input',
     action: () => {
-      const targetRotation = updatePlayerFacing(player, currentActions, MODEL_FACING_OFFSET)
+      const targetRotation = updatePlayerFacing(player, currentActions)
       const isMoving = targetRotation !== null
       const actionName = isMoving ? 'Esqueleto|walking' : 'Esqueleto|idle'
       logControllerForward(movement.debug, currentActions, targetRotation)

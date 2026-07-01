@@ -7,13 +7,7 @@ import {
   getMovementDirection,
   type AnimationData
 } from '@webgamekit/animation'
-import {
-  PLAYER_MODEL,
-  playerModelOptions,
-  PLAYER_SPEED,
-  PLAYER_DISTANCE,
-  PLAYER_MODEL_FACING_OFFSET
-} from '../config'
+import { PLAYER_MODEL, playerModelOptions, PLAYER_SPEED, PLAYER_DISTANCE } from '../config'
 
 export const createPlayer = async (
   scene: THREE.Scene,
@@ -31,7 +25,7 @@ export const updatePlayerMovement = (
   speed: number = PLAYER_SPEED,
   filterPredicate?: (collider: object) => boolean
 ): void => {
-  const targetRotation = updatePlayerFacing(player, currentActions, PLAYER_MODEL_FACING_OFFSET)
+  const targetRotation = updatePlayerFacing(player, currentActions)
   const isMoving = targetRotation !== null
   const delta = getDelta()
 

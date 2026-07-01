@@ -21,10 +21,6 @@ import grassTextureImg from '@/assets/images/textures/grass.jpg'
 import { getActionName } from './MixamoPlayground.helpers'
 import { useDebugSceneStore } from '@/stores/debugScene'
 
-// Degrees added to the player's visual rotation to correct a model whose front
-// and back are inverted. 0 = no correction; set to 180 for a flipped model.
-const MODEL_FACING_OFFSET = 0
-
 const playerSettings = {
   model: {
     position: [0, -1, 0] as CoordinateTuple,
@@ -254,7 +250,7 @@ const init = async (): Promise<void> => {
             }
           }
 
-          const targetRotation = updatePlayerFacing(player, currentActions, MODEL_FACING_OFFSET)
+          const targetRotation = updatePlayerFacing(player, currentActions)
           const isMoving = targetRotation !== null
           const animationData: AnimationData = getActionData(
             player,

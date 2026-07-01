@@ -408,6 +408,7 @@ export const getModel = async (
       characterController,
       hasGravity,
       gravityScale,
+      facingOffset: options.facingOffset,
       onSpawn
     }
   })

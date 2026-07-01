@@ -27,7 +27,6 @@ import { setNestedValueImmutable } from '@/utils/nestedObjects'
 import {
   setupConfig,
   playerSettings,
-  MODEL_FACING_OFFSET,
   controlBindings,
   generatorConfig,
   noiseConfig,
@@ -140,6 +139,7 @@ const initializeWorld = async (scene: THREE.Scene, world: Parameters<typeof getM
     position: playerSettings.model.position,
     rotation: playerSettings.model.rotation,
     scale: playerSettings.model.scale,
+    facingOffset: playerSettings.model.facingOffset,
     castShadow: true
   })
 
@@ -222,7 +222,7 @@ const TERRAIN_RAYCAST_ORIGIN_Y = 200
 let lastPlayerHeadingDegrees = playerSettings.model.rotation[1] / DEGREES_TO_RADIANS
 
 const applyRotation = (mesh: ComplexModel, degrees: number) => {
-  rotateTowards(mesh, degrees, DEFAULT_ROTATION_STEP_DEGREES, MODEL_FACING_OFFSET)
+  rotateTowards(mesh, degrees, DEFAULT_ROTATION_STEP_DEGREES, mesh.userData.facingOffset ?? 0)
 }
 
 const moveForward = (mesh: THREE.Object3D, distance: number, headingDegrees: number) => {

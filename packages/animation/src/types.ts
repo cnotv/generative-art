@@ -45,6 +45,8 @@ export interface ComplexModel extends Model {
     gravityScale?: number
     actions: Record<string, THREE.AnimationAction | undefined>
     mixer?: THREE.AnimationMixer
+    /** Degrees added to the model's facing to correct a front/back-inverted model */
+    facingOffset?: number
   }
 }
 

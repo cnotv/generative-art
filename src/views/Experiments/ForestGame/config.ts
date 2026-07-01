@@ -42,14 +42,12 @@ import illustrationBush12Img from '@/assets/images/illustrations/Bush1-2.webp'
 
 // import grassTextureImg from "@/assets/images/illustrations/ground.webp";
 
-// Degrees added to the player's visual rotation to correct a model whose front
-// and back are inverted. 0 = no correction; set to 180 for a flipped model.
-export const MODEL_FACING_OFFSET = 0
-
 export const playerSettings = {
   model: {
     position: [0, -1, 0] as CoordinateTuple,
     rotation: [0, 0, 0] as CoordinateTuple,
+    // The mushroom model's front is on -Z, so face it 180 to match its travel direction.
+    facingOffset: 180,
     scale: [1, 1, 1] as CoordinateTuple,
     restitution: -10,
     boundary: 0.5,
