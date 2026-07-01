@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch, ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras } from '@webgamekit/controls'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import ControlsMapperBindings from './ControlsMapperBindings.vue'
 import ControlsMapperStyle from './ControlsMapperStyle.vue'
@@ -10,6 +11,8 @@ import ControlsMapperPresets from './ControlsMapperPresets.vue'
 import ControlsMapperTester from './ControlsMapperTester.vue'
 
 const store = useControlsMapperStore()
+
+const activeTab = ref<'bindings' | 'test'>('bindings')
 
 let controls: ControlsExtras | null = null
 
@@ -36,74 +39,49 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="controls-mapper">
-    <div class="controls-mapper__toolbar">
-      <Button
-        variant="outline"
-        size="sm"
-        title="Reset the mapping and skin to their defaults"
-        @click="store.resetToDefaults()"
-      >
-        Reset to defaults
-      </Button>
-    </div>
+  <Tabs v-model="activeTab" class="controls-mapper">
+    <TabsList>
+      <TabsTrigger value="bindings">Bindings</TabsTrigger>
+      <TabsTrigger value="test">Test</TabsTrigger>
+    </TabsList>
 
-    <div class="controls-mapper__grid">
-      <section class="controls-mapper__card">
-        <h2 class="controls-mapper__title">Bindings</h2>
-        <ControlsMapperBindings />
-      </section>
-
-      <section class="controls-mapper__card">
-        <h2 class="controls-mapper__title">Style</h2>
-        <ControlsMapperStyle />
-      </section>
-
-      <section class="controls-mapper__card">
-        <h2 class="controls-mapper__title">Presets</h2>
+    <TabsContent value="bindings" class="controls-mapper__panel">
+      <div class="controls-mapper__toolbar">
         <ControlsMapperPresets />
-      </section>
+        <Button
+          variant="outline"
+          title="Reset the mapping and skin to their defaults"
+          @click="store.resetToDefaults()"
+        >
+          Reset
+        </Button>
+      </div>
+      <ControlsMapperBindings />
+    </TabsContent>
 
-      <section class="controls-mapper__card">
-        <h2 class="controls-mapper__title">Test</h2>
-        <ControlsMapperTester />
-      </section>
-    </div>
-  </div>
+    <TabsContent value="test" class="controls-mapper__panel">
+      <ControlsMapperStyle />
+      <ControlsMapperTester />
+    </TabsContent>
+  </Tabs>
 </template>
 
 <style scoped>
 .controls-mapper {
+  width: 100%;
+  font-size: var(--font-size-md);
+}
+
+.controls-mapper__panel {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  width: 100%;
 }
 
 .controls-mapper__toolbar {
   display: flex;
-  justify-content: flex-end;
-}
-
-.controls-mapper__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: var(--spacing-4);
-  align-items: start;
-}
-
-.controls-mapper__card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background-color: var(--color-background);
-}
-
-.controls-mapper__title {
-  margin: 0;
-  font-size: var(--font-size-lg);
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
 }
 </style>

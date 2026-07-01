@@ -126,7 +126,7 @@ const importConfig = async (event: Event) => {
   border: 1px solid var(--color-border);
   background-color: var(--color-background);
   color: var(--color-foreground);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   cursor: pointer;
 }
 
@@ -157,7 +157,7 @@ const importConfig = async (event: Event) => {
   gap: var(--spacing-2);
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   cursor: pointer;
   outline: none;
 }
@@ -186,7 +186,7 @@ const importConfig = async (event: Event) => {
 
 .mapper-presets__label {
   padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   color: var(--color-muted-foreground);
 }
 
@@ -214,7 +214,7 @@ const importConfig = async (event: Event) => {
 .mapper-presets__error {
   margin: 0;
   color: var(--color-destructive);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 .mapper-presets__file {

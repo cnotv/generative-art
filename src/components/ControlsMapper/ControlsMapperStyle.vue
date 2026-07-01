@@ -90,7 +90,7 @@ const previewAction = (action: string) => store.recordAction(action, 'preview', 
 .mapper-style__hint {
   margin: 0;
   text-align: center;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--color-muted-foreground);
 }
 </style>

@@ -51,7 +51,7 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
 }
 
 .mapper-tester__label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--color-muted-foreground);
 }
 
@@ -68,12 +68,12 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
   border-radius: var(--radius-full);
   background-color: var(--color-primary);
   color: var(--color-primary-foreground);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 .mapper-tester__idle {
   color: var(--color-muted-foreground);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 .mapper-tester__log {
@@ -92,7 +92,7 @@ const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : 
   grid-template-columns: 4rem 1fr auto;
   gap: var(--spacing-2);
   font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 .mapper-tester__event-type {

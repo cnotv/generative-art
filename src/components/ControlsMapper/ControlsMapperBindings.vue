@@ -69,7 +69,6 @@ const isListening = computed(() => listeningDevice.value !== null)
           </span>
           <Button
             variant="outline"
-            size="sm"
             :disabled="isListening"
             :title="`Listen for a ${device} input to bind to ${action.label}`"
             @click="listen(device, action.id)"
@@ -78,7 +77,6 @@ const isListening = computed(() => listeningDevice.value !== null)
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             title="Clear all bindings for this action"
             @click="clearAction(device, action.id)"
           >
@@ -105,7 +103,6 @@ const isListening = computed(() => listeningDevice.value !== null)
     <Button
       v-if="isListening"
       variant="secondary"
-      size="sm"
       title="Cancel listening"
       class="mapper-bindings__cancel"
       @click="cancel"
@@ -130,19 +127,25 @@ const isListening = computed(() => listeningDevice.value !== null)
 }
 
 .mapper-bindings__row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-2);
 }
 
+.mapper-bindings__action {
+  flex: 1 1 8rem;
+}
+
 .mapper-bindings__trigger {
+  flex: 0 1 auto;
+  min-width: 4rem;
   font-family: var(--font-mono);
   color: var(--color-foreground);
 }
 
 .mapper-bindings__select {
-  min-width: 10rem;
+  flex: 1 1 8rem;
 }
 
 .mapper-bindings__cancel {
