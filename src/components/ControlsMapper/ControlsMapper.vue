@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, watch, ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras } from '@webgamekit/controls'
+import { RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
@@ -39,31 +40,34 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Tabs v-model="activeTab" class="controls-mapper">
-    <TabsList>
-      <TabsTrigger value="bindings">Bindings</TabsTrigger>
-      <TabsTrigger value="test">Test</TabsTrigger>
-    </TabsList>
+  <div class="controls-mapper">
+    <Tabs v-model="activeTab" class="controls-mapper__tabs">
+      <TabsList>
+        <TabsTrigger value="bindings">Bindings</TabsTrigger>
+        <TabsTrigger value="test">Test</TabsTrigger>
+      </TabsList>
 
-    <TabsContent value="bindings" class="controls-mapper__panel">
-      <div class="controls-mapper__toolbar">
-        <ControlsMapperPresets />
-        <Button
-          variant="outline"
-          title="Reset the mapping and skin to their defaults"
-          @click="store.resetToDefaults()"
-        >
-          Reset
-        </Button>
-      </div>
-      <ControlsMapperBindings />
-    </TabsContent>
+      <TabsContent value="bindings" class="controls-mapper__panel">
+        <div class="controls-mapper__toolbar">
+          <ControlsMapperPresets />
+          <Button
+            variant="outline"
+            title="Reset the mapping and skin to their defaults"
+            @click="store.resetToDefaults()"
+          >
+            <RotateCcw class="controls-mapper__reset-icon" />
+            Reset
+          </Button>
+        </div>
+        <ControlsMapperBindings />
+      </TabsContent>
 
-    <TabsContent value="test" class="controls-mapper__panel">
-      <ControlsMapperStyle />
-      <ControlsMapperTester />
-    </TabsContent>
-  </Tabs>
+      <TabsContent value="test" class="controls-mapper__panel">
+        <ControlsMapperStyle />
+        <ControlsMapperTester />
+      </TabsContent>
+    </Tabs>
+  </div>
 </template>
 
 <style scoped>
@@ -76,6 +80,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  overflow: visible;
+}
+
+.controls-mapper__reset-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: var(--spacing-1);
 }
 
 .controls-mapper__toolbar {

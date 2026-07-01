@@ -55,68 +55,79 @@ const isListening = computed(() => listeningDevice.value !== null)
 </script>
 
 <template>
-  <Tabs v-model="activeDevice" class="mapper-bindings">
-    <TabsList>
-      <TabsTrigger v-for="device in MAPPER_DEVICES" :key="device.id" :value="device.id">
-        {{ device.label }}
-      </TabsTrigger>
-    </TabsList>
+  <div class="mapper-bindings">
+    <Tabs v-model="activeDevice" class="mapper-bindings__tabs">
+      <TabsList>
+        <TabsTrigger v-for="device in MAPPER_DEVICES" :key="device.id" :value="device.id">
+          {{ device.label }}
+        </TabsTrigger>
+      </TabsList>
 
-    <TabsContent v-for="device in captureDevices" :key="device" :value="device">
-      <ul class="mapper-bindings__list">
-        <li v-for="action in MAPPER_ACTIONS" :key="action.id" class="mapper-bindings__row">
-          <span class="mapper-bindings__action">{{ action.label }}</span>
-          <span class="mapper-bindings__trigger">
-            {{ triggersForAction(device, action.id).map(formatTrigger).join(', ') || '—' }}
-          </span>
-          <Button
-            variant="outline"
-            :disabled="isListening"
-            :title="`Listen for a ${device} input to bind to ${action.label}`"
-            @click="listen(device, action.id)"
+      <TabsContent
+        v-for="device in captureDevices"
+        :key="device"
+        :value="device"
+        class="mapper-bindings__panel"
+      >
+        <ul class="mapper-bindings__list">
+          <li v-for="action in MAPPER_ACTIONS" :key="action.id" class="mapper-bindings__row">
+            <span class="mapper-bindings__action">{{ action.label }}</span>
+            <span class="mapper-bindings__trigger">
+              {{ triggersForAction(device, action.id).map(formatTrigger).join(', ') || '—' }}
+            </span>
+            <Button
+              variant="outline"
+              :disabled="isListening"
+              :title="`Listen for a ${device} input to bind to ${action.label}`"
+              @click="listen(device, action.id)"
+            >
+              {{ listeningDevice === device ? 'Press…' : 'Listen' }}
+            </Button>
+            <Button
+              variant="ghost"
+              title="Clear all bindings for this action"
+              @click="clearAction(device, action.id)"
+            >
+              Clear
+            </Button>
+          </li>
+        </ul>
+      </TabsContent>
+
+      <TabsContent value="faux-pad" class="mapper-bindings__panel">
+        <ul class="mapper-bindings__list">
+          <li
+            v-for="direction in FAUX_PAD_DIRECTIONS"
+            :key="direction"
+            class="mapper-bindings__row"
           >
-            {{ listeningDevice === device ? 'Press…' : 'Listen' }}
-          </Button>
-          <Button
-            variant="ghost"
-            title="Clear all bindings for this action"
-            @click="clearAction(device, action.id)"
-          >
-            Clear
-          </Button>
-        </li>
-      </ul>
-    </TabsContent>
+            <span class="mapper-bindings__action">{{ direction }}</span>
+            <Select
+              class="mapper-bindings__select"
+              :model-value="fauxPadAction(direction)"
+              :options="actionOptions"
+              @update:model-value="setFauxPad(direction, $event)"
+            />
+          </li>
+        </ul>
+      </TabsContent>
 
-    <TabsContent value="faux-pad">
-      <ul class="mapper-bindings__list">
-        <li v-for="direction in FAUX_PAD_DIRECTIONS" :key="direction" class="mapper-bindings__row">
-          <span class="mapper-bindings__action">{{ direction }}</span>
-          <Select
-            class="mapper-bindings__select"
-            :model-value="fauxPadAction(direction)"
-            :options="actionOptions"
-            @update:model-value="setFauxPad(direction, $event)"
-          />
-        </li>
-      </ul>
-    </TabsContent>
-
-    <Button
-      v-if="isListening"
-      variant="secondary"
-      title="Cancel listening"
-      class="mapper-bindings__cancel"
-      @click="cancel"
-    >
-      Cancel
-    </Button>
-  </Tabs>
+      <Button
+        v-if="isListening"
+        variant="secondary"
+        title="Cancel listening"
+        class="mapper-bindings__cancel"
+        @click="cancel"
+      >
+        Cancel
+      </Button>
+    </Tabs>
+  </div>
 </template>
 
 <style scoped>
-.mapper-bindings {
-  gap: var(--spacing-3);
+.mapper-bindings__panel {
+  overflow: visible;
 }
 
 .mapper-bindings__list {
