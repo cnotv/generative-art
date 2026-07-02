@@ -49,7 +49,7 @@ const emit = defineEmits<{
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
-  padding-block: calc(var(--spacing-1) + 0.06em) calc(var(--spacing-1) - 0.06em);
+  padding-block: calc(var(--spacing-1) - 0.06em) calc(var(--spacing-1) + 0.06em);
   padding-inline: var(--spacing-3);
   border: 2px solid transparent;
   border-radius: var(--radius-xl, 1.25rem);
