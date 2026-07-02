@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Upload, Download, X } from 'lucide-vue-next'
-import { LobbyUIRow, LobbyUIButton } from '@/components/LobbyUI'
+import { LobbyUIRow, LobbyUIButton, LobbyUIIconButton } from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 
 const store = useControlsMapperStore()
@@ -65,14 +65,14 @@ const importConfig = async (event: Event) => {
       >
         {{ preset.name }}
       </LobbyUIButton>
-      <LobbyUIButton
-        variant="primary"
+      <LobbyUIIconButton
+        variant="ghost"
         size="sm"
         :title="`Delete ${preset.name}`"
         @click="store.deletePreset(preset.name)"
       >
         <X class="mapper-presets__icon" />
-      </LobbyUIButton>
+      </LobbyUIIconButton>
     </div>
 
     <p v-if="error" class="mapper-presets__error">{{ error }}</p>

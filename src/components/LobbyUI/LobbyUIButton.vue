@@ -28,13 +28,13 @@ withDefaults(
   align-items: center;
   justify-content: center;
   gap: var(--spacing-1);
-  padding: var(--spacing-2) var(--spacing-4);
+  padding-block: calc(var(--spacing-2) + 0.06em) calc(var(--spacing-2) - 0.06em);
+  padding-inline: var(--spacing-4);
   border: 3px solid transparent;
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
   font-weight: 900;
-  line-height: 1;
   text-shadow: var(--lui-text-shadow);
   cursor: pointer;
   text-transform: uppercase;
@@ -45,7 +45,7 @@ withDefaults(
 
 .lui-btn--cta {
   font-size: var(--lui-text-important);
-  padding: var(--spacing-2) var(--spacing-5, 1.5rem);
+  padding-inline: var(--spacing-5, 1.5rem);
 }
 
 .lui-btn--primary {
@@ -58,12 +58,13 @@ withDefaults(
 
 .lui-btn--sm {
   font-size: var(--lui-text-small);
-  padding: var(--spacing-1) var(--spacing-2);
+  padding-block: calc(var(--spacing-1) + 0.06em) calc(var(--spacing-1) - 0.06em);
+  padding-inline: var(--spacing-2);
 }
 
 .lui-btn--lg {
   font-size: var(--lui-text-important);
-  padding: var(--spacing-2) var(--spacing-5, 1.5rem);
+  padding-inline: var(--spacing-5, 1.5rem);
 }
 
 .lui-btn:disabled {

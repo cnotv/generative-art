@@ -1,80 +1,91 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import LobbyUIIconButton from './LobbyUIIconButton.vue'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 
-defineProps<{ field: LobbyConfigField }>()
+const props = defineProps<{ field: LobbyConfigField }>()
 
 const emit = defineEmits<{
   change: [key: string, value: string | number]
 }>()
 
-const onChange = (field: LobbyConfigField, event: Event): void => {
-  const raw = (event.target as HTMLInputElement | HTMLSelectElement).value
-  emit('change', field.key, field.type === 'number' ? Number(raw) : raw)
+const selectIndex = computed((): number => {
+  if (props.field.type !== 'select') return -1
+  return props.field.options.findIndex((option) => option.value === props.field.value)
+})
+
+const displayValue = computed((): string => {
+  if (props.field.type === 'number') return String(props.field.value)
+  return props.field.options[selectIndex.value]?.label ?? ''
+})
+
+const previousDisabled = computed((): boolean =>
+  props.field.type === 'number' ? props.field.value <= props.field.min : selectIndex.value <= 0
+)
+
+const nextDisabled = computed((): boolean =>
+  props.field.type === 'number'
+    ? props.field.value >= props.field.max
+    : selectIndex.value >= props.field.options.length - 1
+)
+
+const step = (delta: number): void => {
+  if (props.field.type === 'number') {
+    const next = Math.min(Math.max(props.field.value + delta, props.field.min), props.field.max)
+    if (next !== props.field.value) emit('change', props.field.key, next)
+    return
+  }
+  const index = Math.min(Math.max(selectIndex.value + delta, 0), props.field.options.length - 1)
+  emit('change', props.field.key, props.field.options[index].value)
 }
 </script>
 
 <template>
-  <select
-    v-if="field.type === 'select'"
-    class="lui-field__control"
-    :value="field.value"
-    @change="onChange(field, $event)"
-  >
-    <option
-      v-for="opt in field.options"
-      :key="opt.value"
-      :value="opt.value"
-      :selected="opt.value === field.value"
+  <div class="lui-field">
+    <LobbyUIIconButton
+      size="sm"
+      :disabled="previousDisabled"
+      :title="`Previous ${field.label}`"
+      @click="step(-1)"
     >
-      {{ opt.label }}
-    </option>
-  </select>
-  <input
-    v-else
-    class="lui-field__control lui-field__control--number"
-    type="number"
-    :value="field.value"
-    :min="field.min"
-    :max="field.max"
-    @input="onChange(field, $event)"
-  />
+      <ChevronLeft class="lui-field__arrow" />
+    </LobbyUIIconButton>
+
+    <span class="lui-field__value">{{ displayValue }}</span>
+
+    <LobbyUIIconButton
+      size="sm"
+      :disabled="nextDisabled"
+      :title="`Next ${field.label}`"
+      @click="step(1)"
+    >
+      <ChevronRight class="lui-field__arrow" />
+    </LobbyUIIconButton>
+  </div>
 </template>
 
 <style scoped>
-.lui-field__control {
-  padding: var(--spacing-1) 0;
-  border: none;
-  border-bottom: 2px solid var(--lui-stroke-faint);
-  background: transparent;
-  color: var(--lui-text-color);
+.lui-field {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.lui-field__arrow {
+  width: 1.1em;
+  height: 1.1em;
+  filter: drop-shadow(2px 2px 0 #000);
+}
+
+.lui-field__value {
+  min-width: 6rem;
+  text-align: center;
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
+  color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
-  outline: none;
-  appearance: none;
-  text-align: right;
-  transition: border-color 0.15s ease;
-}
-
-.lui-field__control--number {
-  width: 4rem;
-}
-
-.lui-field__control:hover {
-  border-bottom-color: var(--lui-stroke);
-}
-
-.lui-field__control:focus,
-.lui-field__control:focus-visible {
-  outline: none;
-  color: var(--lui-focus-color);
-  border-bottom-color: var(--lui-focus-color);
-}
-
-.lui-field__control option {
-  color: #000;
-  background: #fff;
-  text-shadow: none;
+  text-transform: uppercase;
 }
 </style>

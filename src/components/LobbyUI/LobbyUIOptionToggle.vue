@@ -49,7 +49,8 @@ const emit = defineEmits<{
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
-  padding: var(--spacing-1) var(--spacing-3);
+  padding-block: calc(var(--spacing-1) + 0.06em) calc(var(--spacing-1) - 0.06em);
+  padding-inline: var(--spacing-3);
   border: 2px solid transparent;
   border-radius: var(--radius-xl, 1.25rem);
   background: transparent;
@@ -57,7 +58,6 @@ const emit = defineEmits<{
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
-  line-height: 1;
   text-shadow: var(--lui-text-shadow);
   cursor: pointer;
   text-transform: uppercase;
@@ -68,7 +68,7 @@ const emit = defineEmits<{
 
 .lui-toggle--sm .lui-toggle__btn {
   font-size: var(--lui-text-small);
-  padding: var(--spacing-1) var(--spacing-2);
+  padding-inline: var(--spacing-2);
 }
 
 .lui-toggle__icon {
