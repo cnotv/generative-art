@@ -29,7 +29,7 @@ withDefaults(
   justify-content: center;
   gap: var(--spacing-1);
   padding: var(--spacing-2) var(--spacing-4);
-  border: none;
+  border: 3px solid transparent;
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -70,10 +70,14 @@ withDefaults(
   cursor: not-allowed;
 }
 
-.lui-btn:hover:not(:disabled),
+.lui-btn:hover:not(:disabled) {
+  color: var(--lui-focus-color);
+}
+
 .lui-btn:focus,
 .lui-btn:focus-visible {
   outline: none;
   color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
 }
 </style>

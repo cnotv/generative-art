@@ -50,7 +50,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1) var(--spacing-3);
-  border: none;
+  border: 2px solid transparent;
   border-radius: var(--radius-xl, 1.25rem);
   background: transparent;
   color: var(--lui-text-color);
@@ -82,11 +82,16 @@ const emit = defineEmits<{
   opacity: 1;
 }
 
-.lui-toggle__btn:hover,
+.lui-toggle__btn:hover {
+  color: var(--lui-focus-color);
+  opacity: 1;
+}
+
 .lui-toggle__btn:focus,
 .lui-toggle__btn:focus-visible {
   outline: none;
   color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
   opacity: 1;
 }
 
