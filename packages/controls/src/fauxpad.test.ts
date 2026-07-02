@@ -276,6 +276,65 @@ describe('createFauxPadController', () => {
       expect(onActionMock).not.toHaveBeenCalled()
     })
 
+    describe('mouse interaction', () => {
+      const createMouseEvent = (type: string, clientX: number, clientY: number): MouseEvent =>
+        new MouseEvent(type, { clientX, clientY, bubbles: true, cancelable: true })
+
+      it('should become active on mousedown', () => {
+        const edgeElement = createMockElement(100, 100)
+        const insideElement = createMockElement(50, 50)
+
+        const controller = createFauxPadController(mappingReference, handlers)
+        controller.bind(edgeElement, insideElement)
+
+        insideElement.dispatchEvent(createMouseEvent('mousedown', 50, 50))
+
+        expect(controller.isActive()).toBe(true)
+      })
+
+      it('should trigger RIGHT action when dragging right with the mouse', () => {
+        const edgeElement = createMockElement(100, 100)
+        const insideElement = createMockElement(50, 50)
+
+        const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 })
+        controller.bind(edgeElement, insideElement)
+
+        insideElement.dispatchEvent(createMouseEvent('mousedown', 50, 50))
+        window.dispatchEvent(createMouseEvent('mousemove', 100, 50))
+
+        expect(onActionMock).toHaveBeenCalledWith('move-right', 'right', 'faux-pad')
+      })
+
+      it('should release actions on mouseup', () => {
+        const edgeElement = createMockElement(100, 100)
+        const insideElement = createMockElement(50, 50)
+
+        const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 })
+        controller.bind(edgeElement, insideElement)
+
+        insideElement.dispatchEvent(createMouseEvent('mousedown', 50, 50))
+        window.dispatchEvent(createMouseEvent('mousemove', 100, 50))
+        window.dispatchEvent(createMouseEvent('mouseup', 100, 50))
+
+        expect(onReleaseMock).toHaveBeenCalled()
+        expect(controller.isActive()).toBe(false)
+      })
+
+      it('should stop tracking mouse movement after unbind', () => {
+        const edgeElement = createMockElement(100, 100)
+        const insideElement = createMockElement(50, 50)
+
+        const controller = createFauxPadController(mappingReference, handlers, { deadzone: 0.1 })
+        controller.bind(edgeElement, insideElement)
+        controller.unbind(edgeElement, insideElement)
+
+        insideElement.dispatchEvent(createMouseEvent('mousedown', 50, 50))
+        window.dispatchEvent(createMouseEvent('mousemove', 100, 50))
+
+        expect(onActionMock).not.toHaveBeenCalled()
+      })
+    })
+
     describe('8-way direction detection', () => {
       it.each([
         // [label, moveToX, moveToY, expectedDirections]

@@ -12,6 +12,9 @@
 
   --touch-color-background-light: rgb(255, 255, 255, 0.3);
   --touch-color-background-dark: rgb(0, 0, 0, 0.3);
+  --touch-skin-neon-color: rgb(0, 229, 255, 0.85);
+  --touch-skin-neon-glow: rgb(0, 229, 255, 0.55);
+  --touch-skin-minimal-color: rgb(0, 0, 0, 0.3);
 }
 
 a {

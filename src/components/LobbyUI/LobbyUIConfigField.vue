@@ -1,50 +1,71 @@
 <script setup lang="ts">
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 
-defineProps<{ field: LobbyConfigField }>()
+const props = defineProps<{ field: LobbyConfigField }>()
 
 const emit = defineEmits<{
   change: [key: string, value: string | number]
 }>()
 
-const onChange = (field: LobbyConfigField, event: Event): void => {
+const onChange = (event: Event): void => {
   const raw = (event.target as HTMLInputElement | HTMLSelectElement).value
-  emit('change', field.key, field.type === 'number' ? Number(raw) : raw)
+  emit('change', props.field.key, props.field.type === 'number' ? Number(raw) : raw)
 }
 </script>
 
 <template>
-  <select
-    v-if="field.type === 'select'"
-    class="lui-field__control"
-    :value="field.value"
-    @change="onChange(field, $event)"
-  >
-    <option
-      v-for="opt in field.options"
-      :key="opt.value"
-      :value="opt.value"
-      :selected="opt.value === field.value"
+  <div class="lui-field">
+    <ChevronLeft class="lui-field__arrow" aria-hidden="true" />
+
+    <select
+      v-if="field.type === 'select'"
+      class="lui-field__control"
+      :value="field.value"
+      @change="onChange"
     >
-      {{ opt.label }}
-    </option>
-  </select>
-  <input
-    v-else
-    class="lui-field__control lui-field__control--number"
-    type="number"
-    :value="field.value"
-    :min="field.min"
-    :max="field.max"
-    @input="onChange(field, $event)"
-  />
+      <option
+        v-for="opt in field.options"
+        :key="opt.value"
+        :value="opt.value"
+        :selected="opt.value === field.value"
+      >
+        {{ opt.label }}
+      </option>
+    </select>
+    <input
+      v-else
+      class="lui-field__control lui-field__control--number"
+      type="number"
+      :value="field.value"
+      :min="field.min"
+      :max="field.max"
+      @input="onChange"
+    />
+
+    <ChevronRight class="lui-field__arrow" aria-hidden="true" />
+  </div>
 </template>
 
 <style scoped>
+.lui-field {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.lui-field__arrow {
+  width: 1.1em;
+  height: 1.1em;
+  pointer-events: none;
+  opacity: 0.7;
+  filter: drop-shadow(2px 2px 0 #000);
+}
+
 .lui-field__control {
-  padding: var(--spacing-1) 0;
-  border: none;
-  border-bottom: 2px solid var(--lui-stroke-faint);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -53,23 +74,19 @@ const onChange = (field: LobbyConfigField, event: Event): void => {
   text-shadow: var(--lui-text-shadow);
   outline: none;
   appearance: none;
-  text-align: right;
-  transition: border-color 0.15s ease;
+  text-align: center;
+  cursor: pointer;
 }
 
 .lui-field__control--number {
   width: 4rem;
 }
 
-.lui-field__control:hover {
-  border-bottom-color: var(--lui-stroke);
-}
-
 .lui-field__control:focus,
 .lui-field__control:focus-visible {
   outline: none;
   color: var(--lui-focus-color);
-  border-bottom-color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
 }
 
 .lui-field__control option {
