@@ -25,6 +25,7 @@ interface FocusState {
   col: Ref<number>
   hint: Ref<FocusHint | null>
   editing: Ref<HTMLElement | null>
+  original: Ref<string | null>
 }
 
 const isTextInput = (element: Element | null): boolean =>
@@ -36,18 +37,34 @@ const isNumberInput = (element: Element | null): element is HTMLInputElement =>
 const isSelect = (element: Element | null): element is HTMLSelectElement =>
   element instanceof HTMLSelectElement
 
+// While editing, the value only changes visually; it is applied on confirm so
+// other state is not disturbed until the choice is committed.
 const bumpNumberInput = (input: HTMLInputElement, direction: 1 | -1): void => {
   if (direction === 1) input.stepUp()
   else input.stepDown()
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-  input.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 const cycleSelect = (select: HTMLSelectElement, direction: 1 | -1): void => {
   const next = Math.max(0, Math.min(select.options.length - 1, select.selectedIndex + direction))
   if (next === select.selectedIndex) return
   select.value = select.options[next].value
-  select.dispatchEvent(new Event('change', { bubbles: true }))
+}
+
+const commitEdit = (element: HTMLInputElement | HTMLSelectElement): void => {
+  element.dispatchEvent(new Event('input', { bubbles: true }))
+  element.dispatchEvent(new Event('change', { bubbles: true }))
+}
+
+const revertEdit = (state: FocusState): void => {
+  const element = state.editing.value
+  if (
+    (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) &&
+    state.original.value !== null
+  ) {
+    element.value = state.original.value
+  }
+  state.editing.value = null
+  state.original.value = null
 }
 
 const describeControl = (element: HTMLElement, editing: boolean): string => {
@@ -140,9 +157,11 @@ const handleEditable = (
   if (action === 'activate') {
     if (state.editing.value !== element) {
       state.editing.value = element
+      state.original.value = element.value
       updateHint(state, element)
     } else {
-      state.editing.value = null
+      commitEdit(element)
+      state.original.value = null
       moveRow(state, 1, rowCount)
     }
     return true
@@ -178,7 +197,10 @@ const runMenuAction = (state: FocusState, action: MenuAction, isPaused: () => bo
       if (!isTextInput(active) && active instanceof HTMLElement) active.click()
     },
     decrease: () => undefined,
-    cancel: () => (active as HTMLElement | null)?.blur?.()
+    cancel: () => {
+      if (state.editing.value) revertEdit(state)
+      else (active as HTMLElement | null)?.blur?.()
+    }
   }
   handlers[action]()
 }
@@ -201,7 +223,8 @@ export function useMenuFocus(
     row: ref(0),
     col: ref(0),
     hint: ref<FocusHint | null>(null),
-    editing: ref<HTMLElement | null>(null)
+    editing: ref<HTMLElement | null>(null),
+    original: ref<string | null>(null)
   }
   const inputSource = ref<MenuFocusSource | null>(null)
 
@@ -209,6 +232,7 @@ export function useMenuFocus(
     inputSource.value = 'mouse'
   }
   const clearHint = (): void => {
+    if (state.editing.value) revertEdit(state)
     state.hint.value = null
     state.editing.value = null
   }

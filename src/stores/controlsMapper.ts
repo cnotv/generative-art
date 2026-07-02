@@ -94,6 +94,7 @@ export const useControlsMapperStore = defineStore('controlsMapper', () => {
   }
 
   const recordAction = (action: string, trigger: string, device: string) => {
+    if (capturing.value) return
     lastDevice.value = device
     if (!liveActions.value.includes(action)) {
       liveActions.value = [...liveActions.value, action]
