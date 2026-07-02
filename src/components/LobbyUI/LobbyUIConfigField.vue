@@ -63,8 +63,9 @@ const onChange = (event: Event): void => {
 }
 
 .lui-field__control {
-  padding: var(--spacing-1) 0;
-  border: none;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -85,6 +86,7 @@ const onChange = (event: Event): void => {
 .lui-field__control:focus-visible {
   outline: none;
   color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
 }
 
 .lui-field__control option {

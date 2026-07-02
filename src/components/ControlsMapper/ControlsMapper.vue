@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, watch, ref, nextTick } from 'vue'
 import '@/assets/styles/lobby-ui.scss'
 import { createControls } from '@webgamekit/controls'
 import type { ControlsExtras } from '@webgamekit/controls'
-import { LobbyUIOptionToggle, LobbyUIButton } from '@/components/LobbyUI'
+import { LobbyUIOptionToggle, LobbyUIButton, LobbyUIFocusHint } from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import { useMenuFocus } from '@/composables/useMenuFocus'
 import ControlsMapperBindings from './ControlsMapperBindings.vue'
@@ -28,8 +28,6 @@ const setTab = (value: string) => {
 const saveCurrent = () => store.savePreset(new Date().toLocaleString())
 
 const { focusedHint, inputSource, focusFirst } = useMenuFocus(panelReference, () => store.capturing)
-
-const HINT_GAP_PX = 12
 
 let controls: ControlsExtras | null = null
 
@@ -86,18 +84,7 @@ onUnmounted(() => {
       <ControlsMapperPresets />
     </template>
 
-    <div
-      v-if="focusedHint && inputSource === 'gamepad'"
-      class="controls-mapper__hint"
-      aria-hidden="true"
-      :style="{
-        top: `${focusedHint.rect.top + focusedHint.rect.height / 2}px`,
-        left: `${focusedHint.rect.left + focusedHint.rect.width + HINT_GAP_PX}px`
-      }"
-    >
-      <span class="controls-mapper__hint-glyph">✕</span>
-      {{ focusedHint.label }}
-    </div>
+    <LobbyUIFocusHint :hint="focusedHint" :visible="inputSource === 'gamepad'" />
   </section>
 </template>
 
@@ -141,28 +128,5 @@ onUnmounted(() => {
 .controls-mapper__tabs {
   display: flex;
   gap: var(--spacing-2);
-}
-
-.controls-mapper__hint {
-  position: fixed;
-  z-index: var(--z-tooltip, 300);
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-small);
-  line-height: 1;
-  color: #000;
-  background: var(--lui-focus-color);
-  padding-inline: 0.7em;
-  padding-block: 0.4em;
-  border-radius: 999px;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-}
-
-.controls-mapper__hint-glyph {
-  font-weight: 900;
 }
 </style>
