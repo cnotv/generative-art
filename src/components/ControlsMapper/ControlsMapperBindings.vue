@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
-import { Pencil, Undo2, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
+import { computed, ref, type Component } from 'vue'
+import { X, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
   LobbyUIButton,
   LobbyUIIconButton,
@@ -33,6 +33,8 @@ const deviceOptions = MAPPER_DEVICES.map((device) => ({
 const activeDevice = computed(() => store.activeDevice)
 const setDevice = (device: string) => store.setActiveDevice(device as ControlDevice)
 
+const listeningActionId = ref<string | null>(null)
+
 const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : trigger)
 
 const triggersForAction = (device: ControlDevice, actionId: string): string[] =>
@@ -40,16 +42,22 @@ const triggersForAction = (device: ControlDevice, actionId: string): string[] =>
     .filter(([, action]) => action === actionId)
     .map(([trigger]) => trigger)
 
+const displayTrigger = (device: ControlDevice, actionId: string): string =>
+  triggersForAction(device, actionId).map(formatTrigger).join(', ') || '—'
+
 const listen = async (device: ControlDevice, actionId: string) => {
+  listeningActionId.value = actionId
   try {
     const trigger = await capture(device)
     store.bindTrigger(device, trigger, actionId)
   } catch {
     // capture cancelled — nothing to bind
+  } finally {
+    if (listeningActionId.value === actionId) listeningActionId.value = null
   }
 }
 
-const clearAction = (device: ControlDevice, actionId: string) => {
+const resetAction = (device: ControlDevice, actionId: string) => {
   triggersForAction(device, actionId).forEach((trigger) => store.clearTrigger(device, trigger))
 }
 
@@ -94,23 +102,21 @@ const isListening = computed(() => listeningDevice.value !== null)
         data-lui-row
       >
         <span class="mapper-bindings__label">{{ action.label }}</span>
-        <span class="mapper-bindings__trigger">
-          {{ triggersForAction(activeDevice, action.id).map(formatTrigger).join(', ') || '—' }}
-        </span>
-        <LobbyUIIconButton
-          variant="ghost"
-          :disabled="isListening"
-          :title="`Listen for a ${activeDevice} input to bind to ${action.label}`"
+        <button
+          class="mapper-bindings__value"
+          :class="{ 'mapper-bindings__value--listening': listeningActionId === action.id }"
+          type="button"
+          :title="`Change ${action.label}, then press an input to set it`"
           @click="listen(activeDevice, action.id)"
         >
-          <Pencil class="mapper-bindings__icon" />
-        </LobbyUIIconButton>
+          {{ listeningActionId === action.id ? 'Press…' : displayTrigger(activeDevice, action.id) }}
+        </button>
         <LobbyUIIconButton
           variant="ghost"
-          :title="`Clear ${action.label}`"
-          @click="clearAction(activeDevice, action.id)"
+          :title="`Reset ${action.label}`"
+          @click="resetAction(activeDevice, action.id)"
         >
-          <Undo2 class="mapper-bindings__icon" />
+          <X class="mapper-bindings__icon" />
         </LobbyUIIconButton>
       </div>
     </div>
@@ -146,7 +152,7 @@ const isListening = computed(() => listeningDevice.value !== null)
 
 .mapper-bindings__grid {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--spacing-2) var(--spacing-3);
 }
@@ -168,13 +174,33 @@ const isListening = computed(() => listeningDevice.value !== null)
   text-transform: uppercase;
 }
 
-.mapper-bindings__trigger {
+.mapper-bindings__value {
+  justify-self: start;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
   color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
   text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mapper-bindings__value:hover,
+.mapper-bindings__value:focus,
+.mapper-bindings__value:focus-visible {
+  outline: none;
+  color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
+}
+
+.mapper-bindings__value--listening {
+  color: var(--lui-focus-color);
+  border-color: var(--lui-focus-color);
 }
 
 .mapper-bindings__icon {
