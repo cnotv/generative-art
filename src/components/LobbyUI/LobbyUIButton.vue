@@ -34,6 +34,7 @@ withDefaults(
   color: var(--lui-text-color);
   font-family: var(--lui-font);
   font-weight: 900;
+  line-height: 1;
   text-shadow: var(--lui-text-shadow);
   cursor: pointer;
   text-transform: uppercase;

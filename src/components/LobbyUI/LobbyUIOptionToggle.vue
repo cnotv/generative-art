@@ -57,6 +57,7 @@ const emit = defineEmits<{
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
+  line-height: 1;
   text-shadow: var(--lui-text-shadow);
   cursor: pointer;
   text-transform: uppercase;
