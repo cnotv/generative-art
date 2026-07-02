@@ -78,6 +78,7 @@ const emit = defineEmits<{
 
 .lui-toggle__btn--active {
   background: rgb(255 255 255 / 0.22);
+  color: var(--lui-focus-color);
   opacity: 1;
 }
 
