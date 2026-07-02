@@ -2,6 +2,21 @@ import { ref } from 'vue'
 import { DEFAULT_BUTTON_MAP } from '@webgamekit/controls'
 import type { ControlDevice } from '@webgamekit/controls'
 
+const AXIS_THRESHOLD = 0.6
+
+const buttonName = (index: number): string => DEFAULT_BUTTON_MAP[index] ?? `button-${index}`
+
+const axisName = (index: number, value: number): string => {
+  const dir = index % 2 === 0 ? (value < 0 ? 'left' : 'right') : value < 0 ? 'up' : 'down'
+  return `axis${index}-${dir}`
+}
+
+const pressedButtons = (pad: Gamepad | undefined): number[] =>
+  pad ? pad.buttons.flatMap((button, index) => (button.pressed ? [index] : [])) : []
+
+const deflectedAxes = (pad: Gamepad | undefined): number[] =>
+  pad ? pad.axes.flatMap((value, index) => (Math.abs(value) > AXIS_THRESHOLD ? [index] : [])) : []
+
 /**
  * Capture the next physical input for a device so it can be assigned to an
  * action. Keyboard resolves with the pressed key; gamepad polls until a button
@@ -37,22 +52,40 @@ export function useBindingCapture() {
   const captureGamepad = (): Promise<string> =>
     new Promise((resolve, reject) => {
       let frame = 0
-      // Buttons already held when capture starts (e.g. the button used to
-      // activate "Listen"). They are ignored until released so only a fresh
-      // press is captured.
-      let ignored: number[] | null = null
+      // Inputs already active when capture starts (e.g. the button that
+      // activated "Listen", or a stick already deflected) are ignored until
+      // they return to rest, so only a fresh input is captured.
+      let ignoredButtons: number[] | null = null
+      let ignoredAxes: number[] | null = null
+      // A freshly pressed button is bound on release so the confirm button can
+      // be assigned without immediately re-triggering navigation.
+      let pendingButton: number | null = null
+
       const poll = () => {
-        const pad = navigator.getGamepads?.().find((entry) => entry)
-        const pressed = pad
-          ? pad.buttons.map((button, index) => (button.pressed ? index : -1)).filter((i) => i >= 0)
-          : []
-        if (ignored === null) ignored = pressed
-        const fresh = pressed.find((index) => !ignored!.includes(index))
-        if (fresh !== undefined) {
-          resolve(DEFAULT_BUTTON_MAP[fresh] ?? `button-${fresh}`)
-          return
+        const pad = navigator.getGamepads?.().find((entry) => entry) ?? undefined
+        const buttons = pressedButtons(pad)
+        const axes = deflectedAxes(pad)
+        if (ignoredButtons === null) ignoredButtons = buttons
+        if (ignoredAxes === null) ignoredAxes = axes
+
+        if (pendingButton !== null) {
+          if (!buttons.includes(pendingButton)) {
+            resolve(buttonName(pendingButton))
+            return
+          }
+        } else {
+          const freshButton = buttons.find((index) => !ignoredButtons!.includes(index))
+          const freshAxis = axes.find((index) => !ignoredAxes!.includes(index))
+          if (freshButton !== undefined) {
+            pendingButton = freshButton
+          } else if (freshAxis !== undefined && pad) {
+            resolve(axisName(freshAxis, pad.axes[freshAxis]))
+            return
+          } else {
+            ignoredButtons = ignoredButtons.filter((index) => buttons.includes(index))
+            ignoredAxes = ignoredAxes.filter((index) => axes.includes(index))
+          }
         }
-        ignored = ignored.filter((index) => pressed.includes(index))
         frame = requestAnimationFrame(poll)
       }
       frame = requestAnimationFrame(poll)
