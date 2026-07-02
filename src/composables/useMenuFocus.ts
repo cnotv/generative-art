@@ -107,6 +107,30 @@ const moveCol = (state: FocusState, delta: number, row: HTMLElement | undefined)
   applyFocus(state)
 }
 
+const editNumber = (input: HTMLInputElement, action: MenuAction): boolean => {
+  if (action === 'up' || action === 'right') {
+    bumpNumberInput(input, 1)
+    return true
+  }
+  if (action === 'down' || action === 'left') {
+    bumpNumberInput(input, -1)
+    return true
+  }
+  return false
+}
+
+const editSelect = (select: HTMLSelectElement, action: MenuAction): boolean => {
+  if (action === 'up' || action === 'left') {
+    cycleSelect(select, -1)
+    return true
+  }
+  if (action === 'down' || action === 'right') {
+    cycleSelect(select, 1)
+    return true
+  }
+  return false
+}
+
 const handleEditable = (
   state: FocusState,
   element: HTMLInputElement | HTMLSelectElement,
@@ -123,12 +147,8 @@ const handleEditable = (
     }
     return true
   }
-  if ((action === 'up' || action === 'down') && state.editing.value === element) {
-    if (isNumberInput(element)) bumpNumberInput(element, action === 'up' ? 1 : -1)
-    else cycleSelect(element, action === 'down' ? 1 : -1)
-    return true
-  }
-  return false
+  if (state.editing.value !== element) return false
+  return isNumberInput(element) ? editNumber(element, action) : editSelect(element, action)
 }
 
 const handleControlAction = (
@@ -143,7 +163,8 @@ const handleControlAction = (
   return false
 }
 
-const runMenuAction = (state: FocusState, action: MenuAction): void => {
+const runMenuAction = (state: FocusState, action: MenuAction, isPaused: () => boolean): void => {
+  if (isPaused()) return
   const active = document.activeElement
   const rows = queryRows(state.panel.value)
   if (!rows.length || handleControlAction(state, active, action, rows.length)) return
@@ -168,9 +189,13 @@ const runMenuAction = (state: FocusState, action: MenuAction): void => {
  * clicks buttons and edits number/select inputs, cancel blurs.
  *
  * @param {Ref<HTMLElement | null>} panel The panel element containing the rows
+ * @param {() => boolean} [isPaused] When it returns true, navigation is ignored (e.g. while capturing a key binding)
  * @returns {{ focusedHint: Ref<FocusHint | null>, inputSource: Ref<MenuFocusSource | null>, focusFirst: () => void }} Focus state and control
  */
-export function useMenuFocus(panel: Ref<HTMLElement | null>) {
+export function useMenuFocus(
+  panel: Ref<HTMLElement | null>,
+  isPaused: () => boolean = () => false
+) {
   const state: FocusState = {
     panel,
     row: ref(0),
@@ -183,25 +208,33 @@ export function useMenuFocus(panel: Ref<HTMLElement | null>) {
   const onMouseActivity = (): void => {
     inputSource.value = 'mouse'
   }
-  const onBlur = (): void => {
+  const clearHint = (): void => {
     state.hint.value = null
     state.editing.value = null
+  }
+  // Hide the hint whenever focus leaves the panel (e.g. cancelling with the
+  // joypad blurs the option), not only when the whole window loses focus.
+  const onFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget
+    if (!(next instanceof HTMLElement) || !panel.value?.contains(next)) clearHint()
   }
 
   onMounted(() => {
     window.addEventListener('mousedown', onMouseActivity)
     window.addEventListener('mousemove', onMouseActivity, { passive: true })
-    window.addEventListener('blur', onBlur)
+    window.addEventListener('blur', clearHint)
+    window.addEventListener('focusout', onFocusOut)
   })
   onUnmounted(() => {
     window.removeEventListener('mousedown', onMouseActivity)
     window.removeEventListener('mousemove', onMouseActivity)
-    window.removeEventListener('blur', onBlur)
+    window.removeEventListener('blur', clearHint)
+    window.removeEventListener('focusout', onFocusOut)
   })
 
   useMenuNavigation((action, source) => {
     inputSource.value = source
-    runMenuAction(state, action)
+    runMenuAction(state, action, isPaused)
   })
 
   const focusFirst = (): void => {

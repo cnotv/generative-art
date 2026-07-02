@@ -27,7 +27,7 @@ const setTab = (value: string) => {
 
 const saveCurrent = () => store.savePreset(new Date().toLocaleString())
 
-const { focusedHint, inputSource, focusFirst } = useMenuFocus(panelReference)
+const { focusedHint, inputSource, focusFirst } = useMenuFocus(panelReference, () => store.capturing)
 
 const HINT_GAP_PX = 12
 

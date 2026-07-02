@@ -47,12 +47,14 @@ const displayTrigger = (device: ControlDevice, actionId: string): string =>
 
 const listen = async (device: ControlDevice, actionId: string) => {
   listeningActionId.value = actionId
+  store.setCapturing(true)
   try {
     const trigger = await capture(device)
     store.bindTrigger(device, trigger, actionId)
   } catch {
     // capture cancelled — nothing to bind
   } finally {
+    store.setCapturing(false)
     if (listeningActionId.value === actionId) listeningActionId.value = null
   }
 }
@@ -63,21 +65,34 @@ const resetAction = (device: ControlDevice, actionId: string) => {
 
 const NONE_OPTION = 'none'
 
-const fauxPadField = (direction: string): LobbyConfigField => ({
+const FAUX_DIRECTION_OPTIONS = [
+  { value: NONE_OPTION, label: 'None' },
+  ...FAUX_PAD_DIRECTIONS.map((direction) => ({ value: direction, label: direction }))
+]
+
+const fauxDirectionForAction = (actionId: string): string => {
+  const entry = Object.entries(store.mapping['faux-pad'] ?? {}).find(
+    ([, action]) => action === actionId
+  )
+  return entry ? entry[0] : NONE_OPTION
+}
+
+const fauxPadField = (actionId: string, label: string): LobbyConfigField => ({
   type: 'select',
-  key: direction,
-  label: direction,
-  value: store.mapping['faux-pad']?.[direction] ?? NONE_OPTION,
-  options: [
-    { value: NONE_OPTION, label: 'None' },
-    ...MAPPER_ACTIONS.map((action) => ({ value: action.id, label: action.label }))
-  ]
+  key: actionId,
+  label,
+  value: fauxDirectionForAction(actionId),
+  options: FAUX_DIRECTION_OPTIONS
 })
 
-const setFauxPad = (direction: string, value: string | number) => {
-  const action = String(value)
-  if (action === NONE_OPTION) store.clearTrigger('faux-pad', direction)
-  else store.bindTrigger('faux-pad', direction, action)
+const setFauxPad = (actionId: string, value: string | number) => {
+  const direction = String(value)
+  if (direction === NONE_OPTION) {
+    const current = fauxDirectionForAction(actionId)
+    if (current !== NONE_OPTION) store.clearTrigger('faux-pad', current)
+  } else {
+    store.bindTrigger('faux-pad', direction, actionId)
+  }
 }
 
 const isListening = computed(() => listeningDevice.value !== null)
@@ -123,13 +138,13 @@ const isListening = computed(() => listeningDevice.value !== null)
 
     <div v-else class="mapper-bindings__grid mapper-bindings__grid--faux">
       <div
-        v-for="direction in FAUX_PAD_DIRECTIONS"
-        :key="direction"
+        v-for="action in MAPPER_ACTIONS"
+        :key="action.id"
         class="mapper-bindings__row"
         data-lui-row
       >
-        <span class="mapper-bindings__label">{{ direction }}</span>
-        <LobbyUIConfigField :field="fauxPadField(direction)" @change="setFauxPad" />
+        <span class="mapper-bindings__label">{{ action.label }}</span>
+        <LobbyUIConfigField :field="fauxPadField(action.id, action.label)" @change="setFauxPad" />
       </div>
     </div>
 
