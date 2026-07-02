@@ -116,6 +116,8 @@ const importConfig = async (event: Event) => {
 .mapper-presets__icon {
   width: 1.2em;
   height: 1.2em;
+  transform: translateY(0.12em);
+  filter: drop-shadow(2px 2px 0 #000);
 }
 
 .mapper-presets__error {

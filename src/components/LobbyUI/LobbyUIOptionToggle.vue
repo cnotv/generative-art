@@ -73,6 +73,7 @@ const emit = defineEmits<{
 .lui-toggle__icon {
   width: 1.2em;
   height: 1.2em;
+  filter: drop-shadow(2px 2px 0 #000);
 }
 
 .lui-toggle__btn--active {

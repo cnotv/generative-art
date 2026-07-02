@@ -123,6 +123,7 @@ onUnmounted(() => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
 }
 
 .controls-mapper__title {

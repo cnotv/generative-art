@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, type Component } from 'vue'
-import { Waves, X, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
+import { Pencil, Undo2, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
   LobbyUIRow,
   LobbyUIButton,
@@ -113,7 +113,7 @@ const isListening = computed(() => listeningDevice.value !== null)
           :title="`Listen for a ${activeDevice} input to bind to ${action.label}`"
           @click="listen(activeDevice, action.id)"
         >
-          <Waves class="mapper-bindings__icon" />
+          <Pencil class="mapper-bindings__icon" />
         </LobbyUIButton>
         <LobbyUIButton
           variant="primary"
@@ -121,7 +121,7 @@ const isListening = computed(() => listeningDevice.value !== null)
           :title="`Clear ${action.label}`"
           @click="clearAction(activeDevice, action.id)"
         >
-          <X class="mapper-bindings__icon" />
+          <Undo2 class="mapper-bindings__icon" />
         </LobbyUIButton>
       </LobbyUIRow>
     </template>
@@ -145,7 +145,12 @@ const isListening = computed(() => listeningDevice.value !== null)
   gap: var(--spacing-3);
 }
 
+.mapper-bindings__tabs {
+  margin-bottom: var(--spacing-6);
+}
+
 .mapper-bindings__trigger {
+  margin-right: auto;
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
@@ -157,5 +162,7 @@ const isListening = computed(() => listeningDevice.value !== null)
 .mapper-bindings__icon {
   width: 1.3em;
   height: 1.3em;
+  transform: translateY(0.12em);
+  filter: drop-shadow(2px 2px 0 #000);
 }
 </style>
