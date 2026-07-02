@@ -39,11 +39,6 @@ watch(
   { deep: true }
 )
 
-watch(activeTab, async () => {
-  await nextTick()
-  focusFirst()
-})
-
 onMounted(async () => {
   controls = createControls({
     mapping: store.mapping,

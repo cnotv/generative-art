@@ -64,12 +64,21 @@ const resetAction = (device: ControlDevice, actionId: string) => {
 }
 
 const NONE_OPTION = 'none'
+const BUTTON_OPTION = 'button'
+const DIRECTIONAL_ACTIONS = ['move-forward', 'move-back', 'move-left', 'move-right']
+const isDirectional = (actionId: string): boolean => DIRECTIONAL_ACTIONS.includes(actionId)
 
-const FAUX_DIRECTION_OPTIONS = [
+const DIRECTION_OPTIONS = [
   { value: NONE_OPTION, label: 'None' },
   ...FAUX_PAD_DIRECTIONS.map((direction) => ({ value: direction, label: direction }))
 ]
+const BUTTON_OPTIONS = [
+  { value: NONE_OPTION, label: 'None' },
+  { value: BUTTON_OPTION, label: 'Button' }
+]
 
+// The faux-pad key bound to a movement action is its direction; a non-directional
+// action (e.g. jump) is bound to a same-named on-screen button instead.
 const fauxDirectionForAction = (actionId: string): string => {
   const entry = Object.entries(store.mapping['faux-pad'] ?? {}).find(
     ([, action]) => action === actionId
@@ -77,21 +86,32 @@ const fauxDirectionForAction = (actionId: string): string => {
   return entry ? entry[0] : NONE_OPTION
 }
 
-const fauxPadField = (actionId: string, label: string): LobbyConfigField => ({
+const fauxPadValue = ({ id }: { id: string }): string => {
+  if (isDirectional(id)) return fauxDirectionForAction(id)
+  return store.mapping['faux-pad']?.[id] ? BUTTON_OPTION : NONE_OPTION
+}
+
+const fauxPadField = (action: { id: string; label: string }): LobbyConfigField => ({
   type: 'select',
-  key: actionId,
-  label,
-  value: fauxDirectionForAction(actionId),
-  options: FAUX_DIRECTION_OPTIONS
+  key: action.id,
+  label: action.label,
+  value: fauxPadValue(action),
+  options: isDirectional(action.id) ? DIRECTION_OPTIONS : BUTTON_OPTIONS
 })
 
 const setFauxPad = (actionId: string, value: string | number) => {
-  const direction = String(value)
-  if (direction === NONE_OPTION) {
-    const current = fauxDirectionForAction(actionId)
-    if (current !== NONE_OPTION) store.clearTrigger('faux-pad', current)
+  const choice = String(value)
+  if (isDirectional(actionId)) {
+    if (choice === NONE_OPTION) {
+      const current = fauxDirectionForAction(actionId)
+      if (current !== NONE_OPTION) store.clearTrigger('faux-pad', current)
+    } else {
+      store.bindTrigger('faux-pad', choice, actionId)
+    }
+  } else if (choice === NONE_OPTION) {
+    store.clearTrigger('faux-pad', actionId)
   } else {
-    store.bindTrigger('faux-pad', direction, actionId)
+    store.bindTrigger('faux-pad', actionId, actionId)
   }
 }
 
@@ -144,7 +164,7 @@ const isListening = computed(() => listeningDevice.value !== null)
         data-lui-row
       >
         <span class="mapper-bindings__label">{{ action.label }}</span>
-        <LobbyUIConfigField :field="fauxPadField(action.id, action.label)" @change="setFauxPad" />
+        <LobbyUIConfigField :field="fauxPadField(action)" @change="setFauxPad" />
       </div>
     </div>
 
