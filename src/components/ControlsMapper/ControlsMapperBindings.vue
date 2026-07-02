@@ -2,7 +2,6 @@
 import { computed, watch, type Component } from 'vue'
 import { Pencil, Undo2, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
-  LobbyUIRow,
   LobbyUIButton,
   LobbyUIIconButton,
   LobbyUIOptionToggle,
@@ -102,8 +101,14 @@ const isListening = computed(() => listeningDevice.value !== null)
       />
     </div>
 
-    <template v-if="activeDevice !== 'faux-pad'">
-      <LobbyUIRow v-for="action in MAPPER_ACTIONS" :key="action.id" :label="action.label">
+    <div v-if="activeDevice !== 'faux-pad'" class="mapper-bindings__grid">
+      <div
+        v-for="action in MAPPER_ACTIONS"
+        :key="action.id"
+        class="mapper-bindings__row"
+        data-lui-row
+      >
+        <span class="mapper-bindings__label">{{ action.label }}</span>
         <span class="mapper-bindings__trigger">
           {{ triggersForAction(activeDevice, action.id).map(formatTrigger).join(', ') || '—' }}
         </span>
@@ -122,14 +127,20 @@ const isListening = computed(() => listeningDevice.value !== null)
         >
           <Undo2 class="mapper-bindings__icon" />
         </LobbyUIIconButton>
-      </LobbyUIRow>
-    </template>
+      </div>
+    </div>
 
-    <template v-else>
-      <LobbyUIRow v-for="direction in FAUX_PAD_DIRECTIONS" :key="direction" :label="direction">
+    <div v-else class="mapper-bindings__grid mapper-bindings__grid--faux">
+      <div
+        v-for="direction in FAUX_PAD_DIRECTIONS"
+        :key="direction"
+        class="mapper-bindings__row"
+        data-lui-row
+      >
+        <span class="mapper-bindings__label">{{ direction }}</span>
         <LobbyUIConfigField :field="fauxPadField(direction)" @change="setFauxPad" />
-      </LobbyUIRow>
-    </template>
+      </div>
+    </div>
 
     <div v-if="isListening" class="mapper-bindings__cancel" data-lui-row>
       <LobbyUIButton variant="ghost" @click="cancel">Cancel</LobbyUIButton>
@@ -148,8 +159,31 @@ const isListening = computed(() => listeningDevice.value !== null)
   margin-bottom: var(--spacing-6);
 }
 
+.mapper-bindings__grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3);
+}
+
+.mapper-bindings__grid--faux {
+  grid-template-columns: auto 1fr;
+}
+
+.mapper-bindings__row {
+  display: contents;
+}
+
+.mapper-bindings__label {
+  font-family: var(--lui-font);
+  font-weight: 900;
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+}
+
 .mapper-bindings__trigger {
-  margin-right: auto;
   font-family: var(--lui-font);
   font-weight: 900;
   font-size: var(--lui-text-medium);
