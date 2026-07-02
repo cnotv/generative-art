@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, type Component } from 'vue'
+import { computed, type Component } from 'vue'
 import { Pencil, Undo2, Keyboard, Gamepad2, Joystick } from 'lucide-vue-next'
 import {
   LobbyUIButton,
@@ -32,21 +32,6 @@ const deviceOptions = MAPPER_DEVICES.map((device) => ({
 
 const activeDevice = computed(() => store.activeDevice)
 const setDevice = (device: string) => store.setActiveDevice(device as ControlDevice)
-
-const toDeviceTab = (device: string): ControlDevice | null => {
-  if (device === 'keyboard') return 'keyboard'
-  if (device.startsWith('gamepad')) return 'gamepad'
-  if (device === 'faux-pad') return 'faux-pad'
-  return null
-}
-
-watch(
-  () => store.lastDevice,
-  (device) => {
-    const tab = toDeviceTab(device)
-    if (tab) store.setActiveDevice(tab)
-  }
-)
 
 const formatTrigger = (trigger: string): string => (trigger === ' ' ? 'Space' : trigger)
 

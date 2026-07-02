@@ -37,13 +37,22 @@ export function useBindingCapture() {
   const captureGamepad = (): Promise<string> =>
     new Promise((resolve, reject) => {
       let frame = 0
+      // Buttons already held when capture starts (e.g. the button used to
+      // activate "Listen"). They are ignored until released so only a fresh
+      // press is captured.
+      let ignored: number[] | null = null
       const poll = () => {
         const pad = navigator.getGamepads?.().find((entry) => entry)
-        const pressedIndex = pad?.buttons.findIndex((button) => button.pressed) ?? -1
-        if (pressedIndex >= 0) {
-          resolve(DEFAULT_BUTTON_MAP[pressedIndex] ?? `button-${pressedIndex}`)
+        const pressed = pad
+          ? pad.buttons.map((button, index) => (button.pressed ? index : -1)).filter((i) => i >= 0)
+          : []
+        if (ignored === null) ignored = pressed
+        const fresh = pressed.find((index) => !ignored!.includes(index))
+        if (fresh !== undefined) {
+          resolve(DEFAULT_BUTTON_MAP[fresh] ?? `button-${fresh}`)
           return
         }
+        ignored = ignored.filter((index) => pressed.includes(index))
         frame = requestAnimationFrame(poll)
       }
       frame = requestAnimationFrame(poll)
