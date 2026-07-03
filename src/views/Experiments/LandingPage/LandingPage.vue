@@ -43,8 +43,8 @@ const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 0.1
-const DIR_LIGHT_INTENSITY = 0.2
+const AMBIENT_INTENSITY = 0.2
+const DIR_LIGHT_INTENSITY = 0.3
 const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
@@ -847,5 +847,32 @@ onUnmounted(() => {
   font-size: var(--font-size-2xs);
   letter-spacing: 0.35em;
   color: rgb(255, 255, 255, 0.08);
+}
+
+/* On narrow screens the side flyers overlap the centered logo, so lay them out
+   horizontally under the tagline instead of vertically along the edges. */
+@media (width <= 640px) {
+  .landing-page__flyer--tagline {
+    bottom: var(--spacing-12);
+  }
+
+  .landing-page__flyer--left,
+  .landing-page__flyer--right {
+    top: auto;
+    bottom: var(--spacing-8);
+    transform: none;
+  }
+
+  .landing-page__flyer--left {
+    left: auto;
+    right: 50%;
+    margin-right: var(--spacing-2);
+  }
+
+  .landing-page__flyer--right {
+    right: auto;
+    left: 50%;
+    margin-left: var(--spacing-2);
+  }
 }
 </style>
