@@ -419,10 +419,9 @@ onMounted(async () => {
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-5, 1.5rem) var(--spacing-6, 2rem);
-  border: 3px solid var(--lui-stroke);
+  border: 3px solid transparent;
   border-radius: 1.25rem;
   background: transparent;
-  box-shadow: var(--lui-border-shadow);
   cursor: pointer;
   transition: transform 0.1s ease;
   min-width: 9rem;
