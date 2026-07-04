@@ -108,3 +108,30 @@ describe('useControlsMapperStore', () => {
     expect(store.lastDevice).toBe('gamepad')
   })
 })
+
+describe('useControlsMapperStore per-game isolation', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('keeps mappings isolated between game ids', () => {
+    const a = useControlsMapperStore('game-a')
+    const b = useControlsMapperStore('game-b')
+    a.bindTrigger('keyboard', 'z', 'jump')
+    expect(a.mapping.keyboard?.z).toBe('jump')
+    expect(b.mapping.keyboard?.z).toBeUndefined()
+  })
+
+  it('starts from the provided default mapping when nothing is stored', () => {
+    const store = useControlsMapperStore('game-c', { keyboard: { p: 'pause' } })
+    expect(store.mapping.keyboard?.p).toBe('pause')
+  })
+
+  it('restores a persisted mapping for the same game id', () => {
+    useControlsMapperStore('game-d').bindTrigger('keyboard', 'q', 'jump')
+    setActivePinia(createPinia())
+    const reloaded = useControlsMapperStore('game-d')
+    expect(reloaded.mapping.keyboard?.q).toBe('jump')
+  })
+})

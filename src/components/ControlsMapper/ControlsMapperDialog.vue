@@ -8,11 +8,17 @@ import ControlsMapperBindings from './ControlsMapperBindings.vue'
 import ControlsMapperStyle from './ControlsMapperStyle.vue'
 import ControlsMapperPresets from './ControlsMapperPresets.vue'
 import type { MapperActionConfig } from './config'
+import type { ControlMapping } from '@webgamekit/controls'
 
-const props = defineProps<{ gameId: string; actions: MapperActionConfig[]; title?: string }>()
+const props = defineProps<{
+  gameId: string
+  actions: MapperActionConfig[]
+  defaultMapping?: ControlMapping
+  title?: string
+}>()
 const emit = defineEmits<{ close: [] }>()
 
-const store = useControlsMapperStore(props.gameId)
+const store = useControlsMapperStore(props.gameId, props.defaultMapping)
 const panelReference = ref<HTMLElement | null>(null)
 
 type Tab = 'bindings' | 'style' | 'presets'

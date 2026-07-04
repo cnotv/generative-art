@@ -1,14 +1,26 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import {
   LobbyUIWizard,
   LobbyUIRow,
   LobbyUIOptionToggle,
-  LobbyUIImageGrid
+  LobbyUIImageGrid,
+  LobbyUIButton
 } from '@/components/LobbyUI'
+import ControlsMapperDialog from '@/components/ControlsMapper/ControlsMapperDialog.vue'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, TRACK_SELECT_FIELD, MARBLE_OPTIONS } from './config'
+import {
+  MATCHMAKER_ROOM,
+  TRACK_SELECT_FIELD,
+  MARBLE_OPTIONS,
+  CONTROLS_GAME_ID,
+  CONTROLS_ACTIONS,
+  KEYBOARD_MAPPING
+} from './config'
 import type { GameMode } from './types'
+
+const controlsOpen = ref(false)
 
 const props = defineProps<{
   playerName: string
@@ -75,6 +87,21 @@ const MODE_OPTIONS = [
           @update:model-value="emit('marble-change', $event)"
         />
       </LobbyUIRow>
+
+      <LobbyUIRow label="Controls">
+        <LobbyUIButton variant="ghost" @click="controlsOpen = true">Configure</LobbyUIButton>
+      </LobbyUIRow>
     </template>
   </LobbyUIWizard>
+
+  <Teleport to="body">
+    <ControlsMapperDialog
+      v-if="controlsOpen"
+      :game-id="CONTROLS_GAME_ID"
+      :actions="CONTROLS_ACTIONS"
+      :default-mapping="KEYBOARD_MAPPING"
+      title="Marble Controls"
+      @close="controlsOpen = false"
+    />
+  </Teleport>
 </template>
