@@ -3,6 +3,8 @@ import type { ControlDevice } from '@webgamekit/controls'
 export interface MapperActionConfig {
   id: string
   label: string
+  // Directional actions bind to a faux-pad direction; others bind to a button.
+  directional?: boolean
 }
 
 export interface MapperDeviceConfig {
@@ -11,10 +13,10 @@ export interface MapperDeviceConfig {
 }
 
 export const MAPPER_ACTIONS: MapperActionConfig[] = [
-  { id: 'move-forward', label: 'Move forward' },
-  { id: 'move-back', label: 'Move back' },
-  { id: 'move-left', label: 'Move left' },
-  { id: 'move-right', label: 'Move right' },
+  { id: 'move-forward', label: 'Move forward', directional: true },
+  { id: 'move-back', label: 'Move back', directional: true },
+  { id: 'move-left', label: 'Move left', directional: true },
+  { id: 'move-right', label: 'Move right', directional: true },
   { id: 'jump', label: 'Jump' }
 ]
 

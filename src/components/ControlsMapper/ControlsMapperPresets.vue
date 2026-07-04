@@ -4,7 +4,9 @@ import { Upload, Download, X } from 'lucide-vue-next'
 import { LobbyUIRow, LobbyUIButton, LobbyUIIconButton } from '@/components/LobbyUI'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 
-const store = useControlsMapperStore()
+const props = defineProps<{ gameId?: string }>()
+
+const store = useControlsMapperStore(props.gameId)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const error = ref('')
