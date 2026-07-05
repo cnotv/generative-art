@@ -5,7 +5,10 @@ import { useGameLobby } from '@/composables/useGameLobby'
 import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
 import { useGamepadHint } from '@/composables/useGamepadHint'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
+import { useControlsMapperStore } from '@/stores/controlsMapper'
 import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
+import type { ControlsMapperGameConfig } from '@/components/ControlsMapper/types'
+import ControlsMapperConfig from '@/components/ControlsMapper/ControlsMapperConfig.vue'
 import '@/assets/styles/lobby-ui.scss'
 import LobbyUIRow from './LobbyUIRow.vue'
 import LobbyUINameInput from './LobbyUINameInput.vue'
@@ -14,6 +17,7 @@ import LobbyUIPrivateToggle from './LobbyUIPrivateToggle.vue'
 import LobbyUIPlayerList from './LobbyUIPlayerList.vue'
 import LobbyUIButton from './LobbyUIButton.vue'
 import LobbyUIConfigField from './LobbyUIConfigField.vue'
+import LobbyUIOptionToggle from './LobbyUIOptionToggle.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -24,11 +28,26 @@ const props = withDefaults(
     roomId: string
     matchmakerRoom: string
     configFields: LobbyConfigField[]
+    controls?: ControlsMapperGameConfig
     showResults?: boolean
     canStart?: boolean
   }>(),
   { canStart: true }
 )
+
+const mapperStore = props.controls
+  ? useControlsMapperStore(props.controls.gameId, props.controls.defaultMapping)
+  : null
+
+type WizardTab = 'generic' | 'controls'
+const wizardTab = ref<WizardTab>('generic')
+const WIZARD_TAB_OPTIONS = [
+  { value: 'generic', label: 'Generic' },
+  { value: 'controls', label: 'Controls' }
+]
+const setWizardTab = (value: string) => {
+  wizardTab.value = value as WizardTab
+}
 
 const emit = defineEmits<{
   'update:playerName': [value: string]
@@ -233,11 +252,14 @@ const handleRowNav = (action: MenuAction, rows: HTMLElement[], active: Element |
   handlers[action]?.()
 }
 
+// Ignore wizard navigation while a controls-binding capture is listening for input.
+const isWizardInputBlocked = (): boolean => !readyForInput.value || mapperStore?.capturing === true
+
 const handleWizardAction = (
   action: MenuAction,
   source: Parameters<typeof onInputSource>[0]
 ): void => {
-  if (!readyForInput.value) return
+  if (isWizardInputBlocked()) return
   onInputSource(source)
   const rows = queryRows()
   if (!rows.length) return
@@ -275,76 +297,93 @@ useMenuNavigation(handleWizardAction)
 
   <section ref="wizardRoot" class="lui-wizard">
     <div v-if="!showResults" class="lui-wizard__body">
-      <h2 class="lui-wizard__title">Profile</h2>
-
-      <LobbyUIRow label="Name">
-        <LobbyUINameInput
-          :model-value="playerName"
-          :maxlength="20"
-          placeholder="Your name"
-          @update:model-value="emit('update:playerName', $event)"
-          @change="emit('nameChange')"
-          @blur="emit('nameChange')"
+      <div v-if="controls" class="lui-wizard__tabs" data-lui-row>
+        <LobbyUIOptionToggle
+          :model-value="wizardTab"
+          :options="WIZARD_TAB_OPTIONS"
+          @update:model-value="setWizardTab"
         />
-      </LobbyUIRow>
+      </div>
 
-      <LobbyUIRow label="Color">
-        <LobbyUIColorSwatches
-          :model-value="playerColor"
-          :colors="PLAYER_COLORS"
-          @update:model-value="emit('update:playerColor', $event)"
-        />
-      </LobbyUIRow>
+      <ControlsMapperConfig
+        v-if="controls && wizardTab === 'controls'"
+        :game-id="controls.gameId"
+        :actions="controls.actions"
+        :default-mapping="controls.defaultMapping"
+      />
 
-      <slot name="profile-extra" />
+      <template v-else>
+        <h2 class="lui-wizard__title">Profile</h2>
 
-      <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label">
-        <LobbyUIConfigField
-          :field="field"
-          @change="(key, value) => emit('configChange', key, value)"
-        />
-      </LobbyUIRow>
+        <LobbyUIRow label="Name">
+          <LobbyUINameInput
+            :model-value="playerName"
+            :maxlength="20"
+            placeholder="Your name"
+            @update:model-value="emit('update:playerName', $event)"
+            @change="emit('nameChange')"
+            @blur="emit('nameChange')"
+          />
+        </LobbyUIRow>
 
-      <LobbyUIRow label="Private">
-        <LobbyUIPrivateToggle v-model="isPrivate" />
-      </LobbyUIRow>
+        <LobbyUIRow label="Color">
+          <LobbyUIColorSwatches
+            :model-value="playerColor"
+            :colors="PLAYER_COLORS"
+            @update:model-value="emit('update:playerColor', $event)"
+          />
+        </LobbyUIRow>
 
-      <template v-if="!fromLobby && !isPrivate">
-        <div v-if="isSearching" class="lui-wizard__searching">
-          Looking for players
-          <span class="lui-wizard__dots" aria-hidden="true"
-            ><span>.</span><span>.</span><span>.</span></span
-          >
-        </div>
-        <ul v-if="pendingRequests.length" class="lui-wizard__requests">
-          <li
-            v-for="entry in pendingRequests"
-            :key="entry.request.requestId"
-            class="lui-wizard__request"
-          >
-            <span class="lui-wizard__request-name">
-              {{ displayName(entry.fromPeerId) }} wants to play
-            </span>
-            <div class="lui-wizard__request-actions">
-              <LobbyUIButton @click="handleAccept(entry)">Join</LobbyUIButton>
-              <LobbyUIButton variant="ghost" @click="ignoreRequest(entry)">Ignore</LobbyUIButton>
-            </div>
-          </li>
-        </ul>
+        <slot name="profile-extra" />
+
+        <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label">
+          <LobbyUIConfigField
+            :field="field"
+            @change="(key, value) => emit('configChange', key, value)"
+          />
+        </LobbyUIRow>
+
+        <LobbyUIRow label="Private">
+          <LobbyUIPrivateToggle v-model="isPrivate" />
+        </LobbyUIRow>
+
+        <template v-if="!fromLobby && !isPrivate">
+          <div v-if="isSearching" class="lui-wizard__searching">
+            Looking for players
+            <span class="lui-wizard__dots" aria-hidden="true"
+              ><span>.</span><span>.</span><span>.</span></span
+            >
+          </div>
+          <ul v-if="pendingRequests.length" class="lui-wizard__requests">
+            <li
+              v-for="entry in pendingRequests"
+              :key="entry.request.requestId"
+              class="lui-wizard__request"
+            >
+              <span class="lui-wizard__request-name">
+                {{ displayName(entry.fromPeerId) }} wants to play
+              </span>
+              <div class="lui-wizard__request-actions">
+                <LobbyUIButton @click="handleAccept(entry)">Join</LobbyUIButton>
+                <LobbyUIButton variant="ghost" @click="ignoreRequest(entry)">Ignore</LobbyUIButton>
+              </div>
+            </li>
+          </ul>
+        </template>
+
+        <LobbyUIRow v-if="playerList.length > 1" label="Players">
+          <LobbyUIPlayerList :players="playerList" :is-host="isHost" />
+        </LobbyUIRow>
+
+        <LobbyUIButton
+          v-if="!isHost && playerList.length > 1"
+          variant="ghost"
+          class="lui-wizard__leave"
+          @click="emit('leaveRoom')"
+        >
+          Leave room
+        </LobbyUIButton>
       </template>
-
-      <LobbyUIRow v-if="playerList.length > 1" label="Players">
-        <LobbyUIPlayerList :players="playerList" :is-host="isHost" />
-      </LobbyUIRow>
-
-      <LobbyUIButton
-        v-if="!isHost && playerList.length > 1"
-        variant="ghost"
-        class="lui-wizard__leave"
-        @click="emit('leaveRoom')"
-      >
-        Leave room
-      </LobbyUIButton>
 
       <div class="lui-wizard__nav" data-lui-row>
         <LobbyUIButton
@@ -389,6 +428,11 @@ useMenuNavigation(handleWizardAction)
   margin: 0 auto;
   padding: var(--spacing-4);
   box-sizing: border-box;
+}
+
+.lui-wizard__tabs {
+  display: flex;
+  gap: var(--spacing-2);
 }
 
 .lui-wizard__title {

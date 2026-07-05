@@ -5,7 +5,7 @@ import '@/assets/styles/lobby-ui.scss'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import type { MgPlayer } from '@/stores/minigolf'
 import { MATCHMAKER_ROOM } from './constants'
-import { HOLES } from './config'
+import { HOLES, CONTROLS_CONFIG } from './config'
 import { holeToSvgPaths } from './helpers/holePreview'
 
 const SVG_SIZE = 64
@@ -59,6 +59,7 @@ const toggleHole = (index: number): void => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="configFields"
+    :controls="CONTROLS_CONFIG"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"

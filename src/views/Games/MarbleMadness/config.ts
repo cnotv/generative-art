@@ -1,5 +1,8 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
-import type { MapperActionConfig } from '@/components/ControlsMapper/config'
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
 
 export const MATCHMAKER_ROOM = 'marble-madness-matchmaker'
 
@@ -461,4 +464,10 @@ export const KEYBOARD_MAPPING = {
     'dpad-left': 'left',
     'dpad-right': 'right'
   }
+}
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: KEYBOARD_MAPPING
 }

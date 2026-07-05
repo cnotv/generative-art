@@ -11,7 +11,7 @@ import { useControlsMapperStore } from '@/stores/controlsMapper'
 import type { ControlDevice } from '@webgamekit/controls'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import { MAPPER_ACTIONS, MAPPER_DEVICES, FAUX_PAD_DIRECTIONS } from './config'
-import type { MapperActionConfig } from './config'
+import type { MapperActionConfig } from './types'
 import { useBindingCapture } from './useBindingCapture'
 
 const props = withDefaults(defineProps<{ gameId?: string; actions?: MapperActionConfig[] }>(), {

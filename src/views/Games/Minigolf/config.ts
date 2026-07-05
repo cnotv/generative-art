@@ -1,4 +1,8 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
 
 export const BALL_RADIUS = 0.35
 export const BALL_COLOR = 0xffffff
@@ -49,6 +53,20 @@ export const GAMEPAD_MAPPING = {
     // Bottom face button charges power on hold, fires on release
     cross: 'fire'
   }
+}
+
+export const CONTROLS_GAME_ID = 'minigolf'
+
+export const CONTROLS_ACTIONS: MapperActionConfig[] = [
+  { id: 'aim-left', label: 'Aim left', directional: true },
+  { id: 'aim-right', label: 'Aim right', directional: true },
+  { id: 'fire', label: 'Fire' }
+]
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: GAMEPAD_MAPPING
 }
 
 export interface HoleConfig {

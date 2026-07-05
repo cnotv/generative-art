@@ -8,7 +8,7 @@ import {
   moveDynamic,
   type ComplexModel
 } from '@webgamekit/threejs'
-import { createControls } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import {
@@ -40,6 +40,7 @@ import {
   CAMERA_BACK,
   FALL_THRESHOLD_Y,
   KEYBOARD_MAPPING,
+  CONTROLS_GAME_ID,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
@@ -760,7 +761,7 @@ const initRushScene = async (
     (c) => c instanceof THREE.DirectionalLight
   ) as THREE.DirectionalLight | null
 
-  state.controls = createControls({ mapping: KEYBOARD_MAPPING })
+  state.controls = createControls({ mapping: loadMapping(CONTROLS_GAME_ID) ?? KEYBOARD_MAPPING })
   reactives.currentActions.value = state.controls.currentActions as unknown as ControlsCurrents
 
   const initial = spawnChunkParts(scene, world, [

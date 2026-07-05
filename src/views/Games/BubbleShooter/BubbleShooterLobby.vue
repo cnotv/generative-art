@@ -4,7 +4,7 @@ import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, type BsColorCount, type BsSpeed } from './config'
+import { MATCHMAKER_ROOM, CONTROLS_CONFIG, type BsColorCount, type BsSpeed } from './config'
 
 const props = defineProps<{
   playerName: string
@@ -67,6 +67,7 @@ const handleConfig = (key: string, value: string | number): void => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="configFields"
+    :controls="CONTROLS_CONFIG"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"

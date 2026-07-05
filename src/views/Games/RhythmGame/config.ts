@@ -1,4 +1,9 @@
 import { midiNoteToFreq } from '@webgamekit/audio'
+import type { ControlMapping } from '@webgamekit/controls'
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
 
 export const LANES = 4
 export const HIT_WINDOW_PERFECT_MS = 50
@@ -16,6 +21,40 @@ export const MATCHMAKER_ROOM = 'rhythm-game-matchmaker'
 export const LANE_COLORS = ['#00e5ff', '#ff4081', '#ffd740', '#69ff47'] as const
 export const LANE_KEYS = ['D', 'F', 'J', 'K'] as const
 export const LANE_DIRECTIONS = ['left', 'down', 'up', 'right'] as const
+
+export const CONTROLS_GAME_ID = 'rhythm-game'
+
+export const CONTROLS_ACTIONS: MapperActionConfig[] = LANE_KEYS.map((key, index) => ({
+  id: `lane-${index}`,
+  label: `Lane ${index + 1} (${key})`,
+  directional: true
+}))
+
+export const CONTROLS_DEFAULT_MAPPING: ControlMapping = {
+  keyboard: Object.fromEntries([
+    ...LANE_KEYS.map((key, index) => [key.toLowerCase(), `lane-${index}`]),
+    ...LANE_KEYS.map((key, index) => [key.toUpperCase(), `lane-${index}`]),
+    ['ArrowLeft', 'lane-0'],
+    ['ArrowDown', 'lane-1'],
+    ['ArrowUp', 'lane-2'],
+    ['ArrowRight', 'lane-3']
+  ]),
+  'faux-pad': Object.fromEntries(
+    LANE_DIRECTIONS.map((direction, index) => [direction, `lane-${index}`])
+  ),
+  gamepad: {
+    'dpad-left': 'lane-0',
+    'dpad-down': 'lane-1',
+    'dpad-up': 'lane-2',
+    'dpad-right': 'lane-3'
+  }
+}
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: CONTROLS_DEFAULT_MAPPING
+}
 
 export const LANE_MIDI_NOTES = [60, 64, 67, 72] as const
 export const LANE_FREQS = LANE_MIDI_NOTES.map(midiNoteToFreq) as [number, number, number, number]
