@@ -39,10 +39,10 @@ const mapperStore = props.controls
   ? useControlsMapperStore(props.controls.gameId, props.controls.defaultMapping)
   : null
 
-type WizardTab = 'generic' | 'controls'
-const wizardTab = ref<WizardTab>('generic')
+type WizardTab = 'game' | 'controls'
+const wizardTab = ref<WizardTab>('game')
 const WIZARD_TAB_OPTIONS = [
-  { value: 'generic', label: 'Generic' },
+  { value: 'game', label: 'Game' },
   { value: 'controls', label: 'Controls' }
 ]
 const setWizardTab = (value: string) => {
@@ -313,8 +313,6 @@ useMenuNavigation(handleWizardAction)
       />
 
       <template v-else>
-        <h2 class="lui-wizard__title">Profile</h2>
-
         <LobbyUIRow label="Name">
           <LobbyUINameInput
             :model-value="playerName"
@@ -414,7 +412,9 @@ useMenuNavigation(handleWizardAction)
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-width: min(360px, 100%);
+
+  /* Fixed width so the wizard does not resize when switching tabs. */
+  width: min(36rem, 100%);
   max-width: 100%;
 }
 
@@ -433,19 +433,6 @@ useMenuNavigation(handleWizardAction)
 .lui-wizard__tabs {
   display: flex;
   gap: var(--spacing-2);
-}
-
-.lui-wizard__title {
-  margin: 0;
-  font-family: var(--lui-font);
-  font-weight: 900;
-  font-size: var(--lui-text-important);
-  color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-align: left;
-  line-height: 1;
 }
 
 .lui-wizard__searching,
