@@ -2,7 +2,7 @@ import { ref, watch, type Ref, type ComputedRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
-import { createControls } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsCurrents } from '@webgamekit/controls'
 import { activeRendererReference } from '@webgamekit/threejs'
 import type { OnProgress } from '@webgamekit/threejs'
@@ -34,6 +34,7 @@ import {
   WALL_HEIGHT,
   WALL_THICKNESS,
   GAMEPAD_MAPPING,
+  CONTROLS_GAME_ID,
   GAMEPAD_AIM_SPEED,
   GAMEPAD_CHARGE_SPEED,
   GAMEPAD_AIM_PREVIEW_POWER,
@@ -562,7 +563,7 @@ export const useMinigolfGame = (
     })
     const stepGamepadAim = createGamepadAimStepper(aim, aimDots, () => ballState, state)
     gamepadControls = createControls({
-      mapping: GAMEPAD_MAPPING,
+      mapping: loadMapping(CONTROLS_GAME_ID) ?? GAMEPAD_MAPPING,
       keyboard: false,
       touch: false,
       mouse: false

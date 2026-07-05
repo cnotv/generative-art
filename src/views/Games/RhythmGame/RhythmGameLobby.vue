@@ -4,7 +4,7 @@ import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import RhythmGameSummary from './RhythmGameSummary.vue'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM } from './config'
+import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from './config'
 import type { RgPlayer } from '@/stores/rhythmGame'
 import {
   midiStorageList,
@@ -135,6 +135,7 @@ const handleDelete = async (): Promise<void> => {
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="[]"
+    :controls="CONTROLS_CONFIG"
     :show-results="showResults"
     :can-start="true"
     @update:player-name="emit('update:playerName', $event)"

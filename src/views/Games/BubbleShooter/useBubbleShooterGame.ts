@@ -1,7 +1,7 @@
 import { ref, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { createSound } from '@webgamekit/audio'
-import { createControls } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import type { Timeline } from '@webgamekit/animation'
@@ -21,6 +21,7 @@ import {
   HEX_ROW_HEIGHT,
   COLOR_HEX,
   GAMEPAD_MAPPING,
+  CONTROLS_GAME_ID,
   GAME_OVER_DELAY_MS,
   WATER_RISE_DURATION_MS,
   MATCH_POINTS_PER_BUBBLE,
@@ -1084,7 +1085,7 @@ export const useBubbleShooterGame = (deps: GameDeps) => {
     handles.unbindInput = bindInputEvents(ctx)
     handles.gamepadInitTimeoutId = setTimeout(() => {
       handles.controls = createControls({
-        mapping: GAMEPAD_MAPPING,
+        mapping: loadMapping(CONTROLS_GAME_ID) ?? GAMEPAD_MAPPING,
         keyboard: false,
         touch: false,
         mouse: false

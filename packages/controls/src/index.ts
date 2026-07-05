@@ -28,5 +28,7 @@ export {
   parsePreset,
   savePresets,
   loadPresets,
+  saveMapping,
+  loadMapping,
   PRESETS_STORAGE_KEY
 } from './presets'

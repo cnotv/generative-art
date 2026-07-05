@@ -1,14 +1,8 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
-import {
-  p2pIsSupported,
-  p2pLobbyJoin,
-  type LobbyHandle,
-  type MatchRequest
-} from '@webgamekit/multiplayer-p2p'
+import { p2pIsSupported, p2pLobbyJoin, type LobbyHandle } from '@webgamekit/multiplayer-p2p'
+import type { LobbyPendingRequest } from '@/types/lobbyWizard'
 
 const PEER_ID_DISPLAY_LENGTH = 8
-
-type PendingRequest = { request: MatchRequest; fromPeerId: string }
 
 type UseGameLobbyOptions = {
   matchmakerRoom: string
@@ -28,7 +22,7 @@ export const useGameLobby = ({
   onMatchAccepted
 }: UseGameLobbyOptions & { onMatchAccepted?: () => void }) => {
   const lobbyHandle = ref<LobbyHandle | null>(null) as Ref<LobbyHandle | null>
-  const pendingRequests = ref<PendingRequest[]>([])
+  const pendingRequests = ref<LobbyPendingRequest[]>([])
   const peerNames = ref<Record<string, string>>({})
   const isSearching = computed(() => lobbyHandle.value !== null)
 
@@ -70,7 +64,7 @@ export const useGameLobby = ({
     lobbyHandle.value = handle
   }
 
-  const acceptRequest = (entry: PendingRequest): string => {
+  const acceptRequest = (entry: LobbyPendingRequest): string => {
     if (!lobbyHandle.value) return ''
     lobbyHandle.value.acceptRequest(entry.request, entry.fromPeerId)
     const gameRoomId = entry.request.gameRoomId
@@ -78,7 +72,7 @@ export const useGameLobby = ({
     return gameRoomId
   }
 
-  const ignoreRequest = (entry: PendingRequest): void => {
+  const ignoreRequest = (entry: LobbyPendingRequest): void => {
     if (!lobbyHandle.value) return
     lobbyHandle.value.ignoreRequest(entry.request, entry.fromPeerId)
     pendingRequests.value = pendingRequests.value.filter(

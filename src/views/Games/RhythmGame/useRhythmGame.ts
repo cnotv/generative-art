@@ -1,5 +1,5 @@
 import { ref, onUnmounted, type Ref } from 'vue'
-import { createControls } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
 import { createNoteScheduler } from '@webgamekit/audio'
 import {
   LANES,
@@ -9,8 +9,9 @@ import {
   NOTE_RADIUS,
   LANE_COLORS,
   LANE_KEYS,
-  LANE_DIRECTIONS,
   LANE_FREQS,
+  CONTROLS_GAME_ID,
+  CONTROLS_DEFAULT_MAPPING,
   INSTRUMENT_PRESETS,
   type RgLane,
   type RhythmNote,
@@ -83,23 +84,7 @@ const buildControlsMapping = (
   onPress: (lane: RgLane) => void,
   onRelease: (lane: number) => void
 ) => ({
-  mapping: {
-    keyboard: Object.fromEntries([
-      ...LANE_KEYS.map((k, i) => [k.toLowerCase(), `lane-${i}`]),
-      ...LANE_KEYS.map((k, i) => [k.toUpperCase(), `lane-${i}`]),
-      ['ArrowLeft', 'lane-0'],
-      ['ArrowDown', 'lane-1'],
-      ['ArrowUp', 'lane-2'],
-      ['ArrowRight', 'lane-3']
-    ]),
-    'faux-pad': Object.fromEntries(LANE_DIRECTIONS.map((dir, i) => [dir, `lane-${i}`])),
-    gamepad: {
-      'dpad-left': 'lane-0',
-      'dpad-down': 'lane-1',
-      'dpad-up': 'lane-2',
-      'dpad-right': 'lane-3'
-    }
-  },
+  mapping: loadMapping(CONTROLS_GAME_ID) ?? CONTROLS_DEFAULT_MAPPING,
   onAction: (action: string) => {
     if (!action.startsWith('lane-')) return
     const lane = parseInt(action.split('-')[1]) as RgLane

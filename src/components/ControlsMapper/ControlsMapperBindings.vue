@@ -11,9 +11,15 @@ import { useControlsMapperStore } from '@/stores/controlsMapper'
 import type { ControlDevice } from '@webgamekit/controls'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 import { MAPPER_ACTIONS, MAPPER_DEVICES, FAUX_PAD_DIRECTIONS } from './config'
+import type { MapperActionConfig } from './types'
 import { useBindingCapture } from './useBindingCapture'
 
-const store = useControlsMapperStore()
+const props = withDefaults(defineProps<{ gameId?: string; actions?: MapperActionConfig[] }>(), {
+  actions: () => MAPPER_ACTIONS
+})
+
+const store = useControlsMapperStore(props.gameId)
+const actions = computed(() => props.actions)
 const { listeningDevice, capture, cancel } = useBindingCapture()
 
 const captureDevices: ControlDevice[] = ['keyboard', 'gamepad']
@@ -65,8 +71,8 @@ const resetAction = (device: ControlDevice, actionId: string) => {
 
 const NONE_OPTION = 'none'
 const BUTTON_OPTION = 'button'
-const DIRECTIONAL_ACTIONS = ['move-forward', 'move-back', 'move-left', 'move-right']
-const isDirectional = (actionId: string): boolean => DIRECTIONAL_ACTIONS.includes(actionId)
+const isDirectional = (actionId: string): boolean =>
+  props.actions.find((action) => action.id === actionId)?.directional ?? false
 
 const DIRECTION_OPTIONS = [
   { value: NONE_OPTION, label: 'None' },
@@ -130,12 +136,7 @@ const isListening = computed(() => listeningDevice.value !== null)
     </div>
 
     <div v-if="activeDevice !== 'faux-pad'" class="mapper-bindings__grid">
-      <div
-        v-for="action in MAPPER_ACTIONS"
-        :key="action.id"
-        class="mapper-bindings__row"
-        data-lui-row
-      >
+      <div v-for="action in actions" :key="action.id" class="mapper-bindings__row" data-lui-row>
         <span class="mapper-bindings__label">{{ action.label }}</span>
         <button
           class="mapper-bindings__value"
@@ -157,12 +158,7 @@ const isListening = computed(() => listeningDevice.value !== null)
     </div>
 
     <div v-else class="mapper-bindings__grid mapper-bindings__grid--faux">
-      <div
-        v-for="action in MAPPER_ACTIONS"
-        :key="action.id"
-        class="mapper-bindings__row"
-        data-lui-row
-      >
+      <div v-for="action in actions" :key="action.id" class="mapper-bindings__row" data-lui-row>
         <span class="mapper-bindings__label">{{ action.label }}</span>
         <LobbyUIConfigField :field="fauxPadField(action)" @change="setFauxPad" />
       </div>

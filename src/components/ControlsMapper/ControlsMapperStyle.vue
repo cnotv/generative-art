@@ -6,7 +6,9 @@ import TouchControl from '@/components/TouchControl.vue'
 import { useControlsMapperStore } from '@/stores/controlsMapper'
 import { useGamepadStick } from './useGamepadStick'
 
-const store = useControlsMapperStore()
+const props = defineProps<{ gameId?: string }>()
+
+const store = useControlsMapperStore(props.gameId)
 
 const { position: stickPosition } = useGamepadStick()
 

@@ -1,4 +1,6 @@
 export { default as LobbyUIWizard } from './LobbyUIWizard.vue'
+export { default as LobbyUIWizardForm } from './LobbyUIWizardForm.vue'
+export { default as LobbyUIWizardMatchmaking } from './LobbyUIWizardMatchmaking.vue'
 export { default as LobbyUIRow } from './LobbyUIRow.vue'
 export { default as LobbyUINameInput } from './LobbyUINameInput.vue'
 export { default as LobbyUIColorSwatches } from './LobbyUIColorSwatches.vue'

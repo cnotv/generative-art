@@ -1,3 +1,5 @@
+import type { MatchRequest } from '@webgamekit/multiplayer-p2p'
+
 export type LobbyConfigSelectOption = { value: string | number; label: string }
 
 export type LobbyConfigField =
@@ -18,3 +20,5 @@ export type LobbyConfigField =
     }
 
 export type LobbyPlayer = { id: string; name: string; color: string }
+
+export type LobbyPendingRequest = { request: MatchRequest; fromPeerId: string }

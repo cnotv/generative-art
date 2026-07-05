@@ -1,4 +1,8 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
 
 export const MATCHMAKER_ROOM = 'marble-madness-matchmaker'
 
@@ -428,6 +432,15 @@ export const RUSH_PLATFORM_CYCLE_MS = 2800
 export const RUSH_OBSTACLE_CYCLE_MS = 1600
 export const RUSH_PICKUP_CYCLE_MS = 2000
 
+export const CONTROLS_GAME_ID = 'marble-madness'
+
+export const CONTROLS_ACTIONS: MapperActionConfig[] = [
+  { id: 'forward', label: 'Forward', directional: true },
+  { id: 'backward', label: 'Backward', directional: true },
+  { id: 'left', label: 'Left', directional: true },
+  { id: 'right', label: 'Right', directional: true }
+]
+
 export const KEYBOARD_MAPPING = {
   keyboard: {
     w: 'forward',
@@ -451,4 +464,10 @@ export const KEYBOARD_MAPPING = {
     'dpad-left': 'left',
     'dpad-right': 'right'
   }
+}
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: KEYBOARD_MAPPING
 }

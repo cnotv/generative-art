@@ -1,3 +1,8 @@
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
+
 export const MATCHMAKER_ROOM = 'bubble-shooter-matchmaker'
 export const GRID_ROWS = 14
 export const GRID_COLS = 9
@@ -48,6 +53,20 @@ export const GAMEPAD_MAPPING = {
     'dpad-right': 'aim-right',
     cross: 'fire'
   }
+}
+
+export const CONTROLS_GAME_ID = 'bubble-shooter'
+
+export const CONTROLS_ACTIONS: MapperActionConfig[] = [
+  { id: 'aim-left', label: 'Aim left', directional: true },
+  { id: 'aim-right', label: 'Aim right', directional: true },
+  { id: 'fire', label: 'Fire' }
+]
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: GAMEPAD_MAPPING
 }
 
 export const GAMEPAD_AIM_SPEED_MIN = 0.4

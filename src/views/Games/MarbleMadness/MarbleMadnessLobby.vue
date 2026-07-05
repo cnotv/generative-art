@@ -7,7 +7,7 @@ import {
 } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, TRACK_SELECT_FIELD, MARBLE_OPTIONS } from './config'
+import { MATCHMAKER_ROOM, TRACK_SELECT_FIELD, MARBLE_OPTIONS, CONTROLS_CONFIG } from './config'
 import type { GameMode } from './types'
 
 const props = defineProps<{
@@ -50,6 +50,7 @@ const MODE_OPTIONS = [
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
     :config-fields="mode === 'race' ? [TRACK_SELECT_FIELD] : []"
+    :controls="CONTROLS_CONFIG"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"

@@ -45,24 +45,61 @@ export function parsePreset(json: string): ControlPreset {
   return toPreset(JSON.parse(json))
 }
 
+const storageKeyFor = (key?: string): string =>
+  key ? `${PRESETS_STORAGE_KEY}:${key}` : PRESETS_STORAGE_KEY
+
+const mappingKeyFor = (key: string): string => `${PRESETS_STORAGE_KEY}:mapping:${key}`
+
 /**
- * Persist a list of presets to localStorage.
+ * Persist the active mapping for a key (e.g. a game id) to localStorage.
  *
- * @param {ControlPreset[]} presets Presets to store
+ * @param {string} key Namespace key
+ * @param {ControlMapping} mapping The active mapping to store
  * @returns {void}
  */
-export function savePresets(presets: ControlPreset[]): void {
-  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets))
+export function saveMapping(key: string, mapping: ControlMapping): void {
+  localStorage.setItem(mappingKeyFor(key), JSON.stringify(mapping))
+}
+
+/**
+ * Load the active mapping stored for a key. Returns null when nothing is stored
+ * or the stored value is not a valid mapping.
+ *
+ * @param {string} key Namespace key used when saving
+ * @returns {ControlMapping | null} The stored mapping, or null
+ */
+export function loadMapping(key: string): ControlMapping | null {
+  const raw = localStorage.getItem(mappingKeyFor(key))
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return isMapping(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Persist a list of presets to localStorage. Pass a key (e.g. a game id) to
+ * store them in an isolated namespace.
+ *
+ * @param {ControlPreset[]} presets Presets to store
+ * @param {string} [key] Namespace key
+ * @returns {void}
+ */
+export function savePresets(presets: ControlPreset[], key?: string): void {
+  localStorage.setItem(storageKeyFor(key), JSON.stringify(presets))
 }
 
 /**
  * Load stored presets from localStorage. Returns an empty list when nothing is
  * stored or the stored value is corrupt.
  *
+ * @param {string} [key] Namespace key used when saving
  * @returns {ControlPreset[]} The stored presets, or an empty list
  */
-export function loadPresets(): ControlPreset[] {
-  const raw = localStorage.getItem(PRESETS_STORAGE_KEY)
+export function loadPresets(key?: string): ControlPreset[] {
+  const raw = localStorage.getItem(storageKeyFor(key))
   if (!raw) return []
   try {
     const parsed: unknown = JSON.parse(raw)

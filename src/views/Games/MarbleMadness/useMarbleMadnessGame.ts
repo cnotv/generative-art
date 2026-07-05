@@ -18,7 +18,7 @@ import {
   createTimerAction,
   createFallCheckAction
 } from '@/utils/gameTimelineActions'
-import { createControls } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -38,6 +38,7 @@ import {
   POS_BROADCAST_MS,
   OBSTACLE_COLOR,
   KEYBOARD_MAPPING,
+  CONTROLS_GAME_ID,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
@@ -361,7 +362,9 @@ export const useMarbleMadnessGame = (deps: GameDeps) => {
     state.elapsed.value = 0
     state.penaltyCount.value = 0
     state.posAccumulator = 0
-    state.controls = createControls({ mapping: KEYBOARD_MAPPING })
+    state.controls = createControls({
+      mapping: loadMapping(CONTROLS_GAME_ID) ?? KEYBOARD_MAPPING
+    })
     currentActionsReference.value = state.controls.currentActions as unknown as Record<
       string,
       unknown
