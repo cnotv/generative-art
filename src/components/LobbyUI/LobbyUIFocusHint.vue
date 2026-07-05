@@ -1,15 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { FocusHint } from '@/composables/useMenuFocus'
+import type { HintPart, HintState } from '@/composables/useGamepadHint'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
-    hint: FocusHint | null
+    hint: FocusHint | NonNullable<HintState> | null
     visible?: boolean
     glyph?: string
     gap?: number
   }>(),
   { visible: true, glyph: '✕', gap: 12 }
 )
+
+const parts = computed((): HintPart[] => {
+  if (!props.hint) return []
+  if ('parts' in props.hint) return props.hint.parts
+  return [{ glyph: props.glyph, label: props.hint.label }]
+})
 </script>
 
 <template>
@@ -22,8 +30,10 @@ withDefaults(
       left: `${hint.rect.left + hint.rect.width + gap}px`
     }"
   >
-    <span class="lui-hint__glyph">{{ glyph }}</span>
-    {{ hint.label }}
+    <span v-for="part in parts" :key="part.glyph" class="lui-hint__part">
+      <span class="lui-hint__glyph">{{ part.glyph }}</span>
+      {{ part.label }}
+    </span>
   </div>
 </template>
 
@@ -42,6 +52,12 @@ withDefaults(
   padding-block: 0.4em;
   border-radius: 999px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9em;
+}
+
+.lui-hint__part {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
