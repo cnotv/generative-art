@@ -1,0 +1,31 @@
+export const LANE_WIDTH = 8
+export const DECK_THICKNESS = 1
+export const WALL_HEIGHT = 1
+export const WALL_THICKNESS = 0.5
+
+export const START_LENGTH = 12
+export const FINISH_LENGTH = 16
+export const STRAIGHT_SHORT_LENGTH = 12
+export const STRAIGHT_LONG_LENGTH = 24
+export const CURVE_RADIUS = 10
+export const RAMP_LENGTH = 20
+export const RAMP_ANGLE = 0.25
+export const FUNNEL_DROP_HEIGHT = 8
+export const FUNNEL_EXIT_LENGTH = 14
+export const LOOP_EXIT_LENGTH = 22
+export const GAP_JUMP_LENGTH = 26
+export const GAP_JUMP_DROP = 1
+export const BOOST_PAD_LENGTH = 10
+export const BUMPER_FIELD_LENGTH = 16
+
+export const COLOR_START = 0x4caf50
+export const COLOR_FINISH = 0xffd700
+export const COLOR_STRAIGHT = 0x9e9e9e
+export const COLOR_CURVE = 0x1565c0
+export const COLOR_BANKED = 0x0097a7
+export const COLOR_RAMP = 0xef6c00
+export const COLOR_FUNNEL = 0x7b1fa2
+export const COLOR_LOOP = 0x00897b
+export const COLOR_GAP_JUMP = 0x5d4037
+export const COLOR_BOOST = 0xffc107
+export const COLOR_BUMPER = 0xd32f2f
