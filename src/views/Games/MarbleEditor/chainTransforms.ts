@@ -1,19 +1,27 @@
+import type { CoordinateTuple } from '@webgamekit/animation'
 import type { PlacedPiece, PieceTransform } from './types'
 import { PIECE_CATALOG } from './pieceCatalog'
 
 const ORIGIN_TRANSFORM: PieceTransform = { position: [0, 0, 0], yaw: 0 }
 
+export const applyPieceTransform = (
+  transform: PieceTransform,
+  localOffset: CoordinateTuple
+): CoordinateTuple => {
+  const [offsetX, offsetY, offsetZ] = localOffset
+  const cos = Math.cos(transform.yaw)
+  const sin = Math.sin(transform.yaw)
+  return [
+    transform.position[0] + offsetX * cos + offsetZ * sin,
+    transform.position[1] + offsetY,
+    transform.position[2] - offsetX * sin + offsetZ * cos
+  ]
+}
+
 const advanceCursor = (cursor: PieceTransform, piece: PlacedPiece): PieceTransform => {
   const { exitOffset, exitYawDelta } = PIECE_CATALOG[piece.type]
-  const [offsetX, offsetY, offsetZ] = exitOffset
-  const cos = Math.cos(cursor.yaw)
-  const sin = Math.sin(cursor.yaw)
   return {
-    position: [
-      cursor.position[0] + offsetX * cos + offsetZ * sin,
-      cursor.position[1] + offsetY,
-      cursor.position[2] - offsetX * sin + offsetZ * cos
-    ],
+    position: applyPieceTransform(cursor, exitOffset),
     yaw: cursor.yaw + exitYawDelta
   }
 }

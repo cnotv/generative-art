@@ -18,6 +18,39 @@ export const GAP_JUMP_DROP = 1
 export const BOOST_PAD_LENGTH = 10
 export const BUMPER_FIELD_LENGTH = 16
 
+export const CURVE_SEGMENTS = 6
+export const CURVE_CHORD_OVERLAP = 1.15
+export const BANK_ANGLE = 0.3
+
+export const FUNNEL_TONGUE_LENGTH = 2
+export const FUNNEL_RIM_RADIUS = 6
+export const FUNNEL_BOWL_DEPTH = 4
+export const FUNNEL_HOLE_RADIUS = 1.6
+
+export const LOOP_RADIUS = 3.5
+export const LOOP_BOTTOM_Z = -11
+export const LOOP_SEGMENTS = 20
+export const LOOP_GAP_ANGLE = 0.3
+export const LOOP_X_SHIFT = 5
+export const LOOP_LANE_WIDTH = 4
+
+export const GAP_RAMP_LENGTH = 8
+export const GAP_RAMP_ANGLE = 0.15
+export const GAP_LANDING_START = -14
+
+export const BOOST_PAD_INSET = 1
+export const BUMPER_SIZE_XZ = 1.2
+export const BUMPER_HEIGHT = 1.4
+export const BUMPER_RESTITUTION = 0.8
+
+export const DECK_FRICTION = 0.9
+export const DECK_RESTITUTION = 0.2
+
+export const FINISH_CHECK_RADIUS = 5
+export const SPAWN_HEIGHT = 1.5
+export const SPAWN_Z_INSET = -2
+export const SPAWN_LANE_MARGIN = 1.2
+
 export const COLOR_START = 0x4caf50
 export const COLOR_FINISH = 0xffd700
 export const COLOR_STRAIGHT = 0x9e9e9e

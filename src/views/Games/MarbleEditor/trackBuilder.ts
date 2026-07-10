@@ -1,0 +1,77 @@
+import * as THREE from 'three'
+import type RAPIER from '@dimforge/rapier3d-compat'
+import { disposeObject } from '@webgamekit/threejs'
+import type { CoordinateTuple } from '@webgamekit/animation'
+import { computeChainTransforms, applyPieceTransform } from './chainTransforms'
+import { buildPieceModels } from './pieceGeometry'
+import type { MarbleMap, PieceTransform, BuiltTrack, BoostZone } from './types'
+import {
+  LANE_WIDTH,
+  SPAWN_HEIGHT,
+  SPAWN_Z_INSET,
+  SPAWN_LANE_MARGIN,
+  FINISH_LENGTH,
+  FINISH_CHECK_RADIUS,
+  BOOST_PAD_LENGTH
+} from './config'
+
+const ORIGIN: PieceTransform = { position: [0, 0, 0], yaw: 0 }
+
+export const computeSpawnPositions = (
+  startTransform: PieceTransform | null,
+  count: number
+): CoordinateTuple[] => {
+  const transform = startTransform ?? ORIGIN
+  const usableWidth = LANE_WIDTH - 2 * SPAWN_LANE_MARGIN
+  return Array.from({ length: count }, (_, index) => {
+    const fraction = count === 1 ? 0.5 : index / (count - 1)
+    const localX = -usableWidth / 2 + fraction * usableWidth
+    return applyPieceTransform(transform, [localX, SPAWN_HEIGHT, SPAWN_Z_INSET])
+  })
+}
+
+export const finishZoneCenter = (finishTransform: PieceTransform): CoordinateTuple =>
+  applyPieceTransform(finishTransform, [0, 0, -FINISH_LENGTH / 2])
+
+export const isInFinishZone = (
+  position: { x: number; z: number },
+  finishTransform: PieceTransform | null
+): boolean => {
+  if (!finishTransform) return false
+  const [centerX, , centerZ] = finishZoneCenter(finishTransform)
+  return Math.hypot(position.x - centerX, position.z - centerZ) < FINISH_CHECK_RADIUS
+}
+
+const boostZoneFromTransform = (transform: PieceTransform): BoostZone => ({
+  position: applyPieceTransform(transform, [0, 0, -BOOST_PAD_LENGTH / 2]),
+  yaw: transform.yaw,
+  length: BOOST_PAD_LENGTH,
+  width: LANE_WIDTH
+})
+
+export const buildTrack = (scene: THREE.Scene, world: RAPIER.World, map: MarbleMap): BuiltTrack => {
+  const transforms = computeChainTransforms(map.pieces)
+  const models = map.pieces.flatMap((piece, index) =>
+    buildPieceModels(scene, world, piece, transforms[index])
+  )
+  const startIndex = map.pieces.findIndex((piece) => piece.type === 'start')
+  const finishIndex = map.pieces.findIndex((piece) => piece.type === 'finish')
+  const boostZones = map.pieces.flatMap((piece, index) =>
+    piece.type === 'boost-pad' ? [boostZoneFromTransform(transforms[index])] : []
+  )
+  const dispose = (): void => {
+    models.forEach((model) => {
+      scene.remove(model)
+      disposeObject(model)
+      if (model.userData.body) world.removeRigidBody(model.userData.body)
+    })
+  }
+  return {
+    models,
+    transforms,
+    startTransform: startIndex >= 0 ? transforms[startIndex] : null,
+    finishTransform: finishIndex >= 0 ? transforms[finishIndex] : null,
+    boostZones,
+    dispose
+  }
+}

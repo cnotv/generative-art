@@ -1,4 +1,4 @@
-import type { CoordinateTuple } from '@webgamekit/animation'
+import type { CoordinateTuple, ComplexModel } from '@webgamekit/animation'
 
 export type TrackPieceType =
   | 'start'
@@ -41,4 +41,20 @@ export type PieceSpec = {
   defaultColor: number
   exitOffset: CoordinateTuple
   exitYawDelta: number
+}
+
+export type BoostZone = {
+  position: CoordinateTuple
+  yaw: number
+  length: number
+  width: number
+}
+
+export type BuiltTrack = {
+  models: ComplexModel[]
+  transforms: PieceTransform[]
+  startTransform: PieceTransform | null
+  finishTransform: PieceTransform | null
+  boostZones: BoostZone[]
+  dispose: () => void
 }
