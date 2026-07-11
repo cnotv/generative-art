@@ -51,6 +51,16 @@ export const SPAWN_HEIGHT = 1.5
 export const SPAWN_Z_INSET = -2
 export const SPAWN_LANE_MARGIN = 1.2
 
+export const SKY_COLOR = 0xb0d8f0
+export const FOG_DENSITY = 0.0015
+export const EDITOR_CAMERA_POSITION: [number, number, number] = [26, 28, 34]
+export const EDITOR_ORBIT_TARGET: [number, number, number] = [0, 0, -30]
+export const SELECTION_EMISSIVE = 0x445544
+
+export const LIGHT_AMBIENT_INTENSITY = 1.2
+export const LIGHT_DIRECTIONAL_INTENSITY = 2.5
+export const LIGHT_DIRECTIONAL_POSITION: [number, number, number] = [10, 20, 10]
+
 export const COLOR_START = 0x4caf50
 export const COLOR_FINISH = 0xffd700
 export const COLOR_STRAIGHT = 0x9e9e9e

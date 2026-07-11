@@ -3,6 +3,7 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import { getCube, getTrimesh } from '@webgamekit/threejs'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
 import type { PlacedPiece, PieceTransform, TrackPieceType } from './types'
+import { PIECE_CATALOG } from './pieceCatalog'
 import {
   LANE_WIDTH,
   DECK_THICKNESS,
@@ -331,6 +332,51 @@ const buildLatheModel = (
   material.side = THREE.DoubleSide
   model.userData.pieceId = piece.id
   return model
+}
+
+const GHOST_OPACITY = 0.45
+
+const makeGhostMaterial = (color: number): THREE.MeshStandardMaterial =>
+  new THREE.MeshStandardMaterial({
+    color,
+    transparent: true,
+    opacity: GHOST_OPACITY,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  })
+
+export const buildPieceGhost = (
+  scene: THREE.Scene,
+  type: TrackPieceType,
+  transform: PieceTransform
+): THREE.Group => {
+  const parts = PIECE_PARTS_BUILDERS[type]()
+  const worldQuaternion = yawQuaternion(transform.yaw)
+  const worldTranslation = vec(...transform.position)
+  const group = new THREE.Group()
+  const defaultColor = PIECE_CATALOG[type].defaultColor
+  parts.boxes
+    .map((spec) => transformSpec(spec, worldQuaternion, worldTranslation))
+    .forEach((spec) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(...spec.size),
+        makeGhostMaterial(spec.color ?? defaultColor)
+      )
+      mesh.position.copy(spec.center)
+      mesh.quaternion.copy(spec.quaternion)
+      group.add(mesh)
+    })
+  parts.lathes.forEach((spec) => {
+    const mesh = new THREE.Mesh(
+      new THREE.LatheGeometry(spec.profile, 32),
+      makeGhostMaterial(defaultColor)
+    )
+    mesh.position.copy(spec.center.clone().applyQuaternion(worldQuaternion).add(worldTranslation))
+    mesh.quaternion.copy(worldQuaternion)
+    group.add(mesh)
+  })
+  scene.add(group)
+  return group
 }
 
 export const buildPieceModels = (
