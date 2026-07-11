@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { buildTrack, computeSpawnPositions, isInFinishZone, finishZoneCenter } from './trackBuilder'
+import {
+  buildTrack,
+  computeSpawnPositions,
+  isInFinishZone,
+  finishZoneCenter,
+  isOnBoostZone,
+  nearestCheckpointIndex
+} from './trackBuilder'
 import { LANE_WIDTH, SPAWN_HEIGHT, FINISH_LENGTH, FINISH_CHECK_RADIUS } from './config'
+import type { CoordinateTuple } from '@webgamekit/animation'
 import type { MarbleMap, PlacedPiece, TrackPieceType, PieceTransform } from './types'
 
 const makeMap = (types: TrackPieceType[]): MarbleMap => ({
@@ -64,6 +72,51 @@ describe('isInFinishZone', () => {
 
   it('returns false without a finish transform', () => {
     expect(isInFinishZone({ x: 0, z: 0 }, null)).toBe(false)
+  })
+})
+
+describe('isOnBoostZone', () => {
+  const zone = { position: [0, 0, -5] as CoordinateTuple, yaw: 0, length: 10, width: 8 }
+
+  it.each([
+    [{ x: 0, y: 0.8, z: -5 }, true],
+    [{ x: 3.5, y: 0.8, z: -1 }, true],
+    [{ x: 4.5, y: 0.8, z: -5 }, false],
+    [{ x: 0, y: 0.8, z: -11 }, false],
+    [{ x: 0, y: 4, z: -5 }, false]
+  ])('detects %o as %s', (position, expected) => {
+    expect(isOnBoostZone(position, zone)).toBe(expected)
+  })
+
+  it('respects the zone yaw', () => {
+    const rotated = {
+      position: [0, 0, 0] as CoordinateTuple,
+      yaw: Math.PI / 2,
+      length: 10,
+      width: 8
+    }
+    expect(isOnBoostZone({ x: -4, y: 0.8, z: 0 }, rotated)).toBe(true)
+    expect(isOnBoostZone({ x: 0, y: 0.8, z: -5 }, rotated)).toBe(false)
+  })
+})
+
+describe('nearestCheckpointIndex', () => {
+  const transforms: PieceTransform[] = [
+    { position: [0, 0, 0], yaw: 0 },
+    { position: [0, 0, -20], yaw: 0 },
+    { position: [0, 0, -40], yaw: 0 }
+  ]
+
+  it('advances to the closest reached piece', () => {
+    expect(nearestCheckpointIndex({ x: 0, z: -21 }, transforms, 0)).toBe(1)
+  })
+
+  it('never goes backwards', () => {
+    expect(nearestCheckpointIndex({ x: 0, z: -1 }, transforms, 2)).toBe(2)
+  })
+
+  it('ignores pieces beyond the checkpoint radius', () => {
+    expect(nearestCheckpointIndex({ x: 0, z: -55 }, transforms, 0)).toBe(0)
   })
 })
 

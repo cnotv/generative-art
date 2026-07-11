@@ -27,12 +27,15 @@ export const FUNNEL_RIM_RADIUS = 6
 export const FUNNEL_BOWL_DEPTH = 4
 export const FUNNEL_HOLE_RADIUS = 1.6
 
-export const LOOP_RADIUS = 3.5
+export const LOOP_RADIUS = 3
 export const LOOP_BOTTOM_Z = -11
-export const LOOP_SEGMENTS = 20
-export const LOOP_GAP_ANGLE = 0.3
+export const LOOP_SEGMENTS = 26
+export const LOOP_GAP_ANGLE = 0.25
 export const LOOP_X_SHIFT = 5
 export const LOOP_LANE_WIDTH = 4
+export const LOOP_RING_SINK = 0.2
+export const LOOP_RING_FRICTION = 0.2
+export const LOOP_CHORD_OVERLAP = 1.03
 
 export const GAP_RAMP_LENGTH = 8
 export const GAP_RAMP_ANGLE = 0.15
@@ -50,6 +53,14 @@ export const FINISH_CHECK_RADIUS = 5
 export const SPAWN_HEIGHT = 1.5
 export const SPAWN_Z_INSET = -2
 export const SPAWN_LANE_MARGIN = 1.2
+
+export const CONTROLS_GAME_ID = 'marble-editor'
+export const CHECKPOINT_RADIUS = 9
+export const BOOST_ZONE_MAX_HEIGHT = 3
+export const BOOST_MAX_SPEED = 30
+export const BOOST_IMPULSE = 3
+export const FALL_MARGIN = 15
+export const TIME_PENALTY_FALL = 5
 
 export const SKY_COLOR = 0xb0d8f0
 export const FOG_DENSITY = 0.0015

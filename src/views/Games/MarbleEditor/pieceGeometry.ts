@@ -31,6 +31,9 @@ import {
   LOOP_GAP_ANGLE,
   LOOP_X_SHIFT,
   LOOP_LANE_WIDTH,
+  LOOP_RING_SINK,
+  LOOP_RING_FRICTION,
+  LOOP_CHORD_OVERLAP,
   LOOP_EXIT_LENGTH,
   GAP_RAMP_LENGTH,
   GAP_RAMP_ANGLE,
@@ -183,7 +186,7 @@ const LOOP_EXIT_START_Z = -9.5
 const LOOP_EXIT_WIDTH = 5
 
 const loopEntrySpecs = (): BoxSpec[] => {
-  const entryLength = -LOOP_BOTTOM_Z
+  const entryLength = -LOOP_BOTTOM_Z + 1
   return [
     transformSpec(laneDeckSpec(entryLength), IDENTITY_QUATERNION, vec(0, 0, -entryLength / 2)),
     transformSpec(laneWallSpec(-1, entryLength), IDENTITY_QUATERNION, vec(0, 0, -entryLength / 2)),
@@ -205,15 +208,19 @@ const loopEntrySpecs = (): BoxSpec[] => {
 const loopRingSpecs = (): BoxSpec[] => {
   const span = 2 * Math.PI - 2 * LOOP_GAP_ANGLE
   const delta = span / LOOP_SEGMENTS
-  const chord = 2 * LOOP_RADIUS * Math.sin(delta / 2) * CURVE_CHORD_OVERLAP
+  const chord = 2 * LOOP_RADIUS * Math.sin(delta / 2) * LOOP_CHORD_OVERLAP
   return Array.from({ length: LOOP_SEGMENTS }, (_, index) => index).flatMap((index) => {
     const phi = LOOP_GAP_ANGLE + (index + 0.5) * delta
     const midpoint = vec(
       LOOP_X_SHIFT * (phi / (2 * Math.PI)),
-      LOOP_RADIUS - LOOP_RADIUS * Math.cos(phi),
+      LOOP_RADIUS - LOOP_RADIUS * Math.cos(phi) - LOOP_RING_SINK,
       LOOP_BOTTOM_Z - LOOP_RADIUS * Math.sin(phi)
     )
-    return transformSpecs(laneSegmentSpecs(chord, LOOP_LANE_WIDTH), pitchQuaternion(phi), midpoint)
+    return transformSpecs(
+      laneSegmentSpecs(chord, LOOP_LANE_WIDTH),
+      pitchQuaternion(phi),
+      midpoint
+    ).map((spec) => ({ ...spec, friction: LOOP_RING_FRICTION }))
   })
 }
 

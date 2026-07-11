@@ -12,7 +12,9 @@ import {
   SPAWN_LANE_MARGIN,
   FINISH_LENGTH,
   FINISH_CHECK_RADIUS,
-  BOOST_PAD_LENGTH
+  BOOST_PAD_LENGTH,
+  BOOST_ZONE_MAX_HEIGHT,
+  CHECKPOINT_RADIUS
 } from './config'
 
 const ORIGIN: PieceTransform = { position: [0, 0, 0], yaw: 0 }
@@ -41,6 +43,35 @@ export const isInFinishZone = (
   const [centerX, , centerZ] = finishZoneCenter(finishTransform)
   return Math.hypot(position.x - centerX, position.z - centerZ) < FINISH_CHECK_RADIUS
 }
+
+export const isOnBoostZone = (
+  position: { x: number; y: number; z: number },
+  zone: BoostZone
+): boolean => {
+  const deltaX = position.x - zone.position[0]
+  const deltaZ = position.z - zone.position[2]
+  const cos = Math.cos(zone.yaw)
+  const sin = Math.sin(zone.yaw)
+  const localX = deltaX * cos - deltaZ * sin
+  const localZ = deltaX * sin + deltaZ * cos
+  const withinHeight =
+    position.y >= zone.position[1] && position.y <= zone.position[1] + BOOST_ZONE_MAX_HEIGHT
+  return Math.abs(localX) <= zone.width / 2 && Math.abs(localZ) <= zone.length / 2 && withinHeight
+}
+
+export const nearestCheckpointIndex = (
+  position: { x: number; z: number },
+  transforms: PieceTransform[],
+  currentIndex: number
+): number =>
+  transforms.reduce((best, transform, index) => {
+    if (index <= best) return best
+    const distance = Math.hypot(
+      position.x - transform.position[0],
+      position.z - transform.position[2]
+    )
+    return distance < CHECKPOINT_RADIUS ? index : best
+  }, currentIndex)
 
 const boostZoneFromTransform = (transform: PieceTransform): BoostZone => ({
   position: applyPieceTransform(transform, [0, 0, -BOOST_PAD_LENGTH / 2]),
