@@ -58,6 +58,11 @@ export const SPAWN_Z_INSET = -2
 export const SPAWN_LANE_MARGIN = 1.2
 
 export const CONTROLS_GAME_ID = 'marble-editor'
+
+export const FIRST_PERSON_HEIGHT = 1.4
+export const FIRST_PERSON_LOOK_AHEAD = 8
+export const FIRST_PERSON_DIRECTION_LERP = 0.12
+export const FIRST_PERSON_MIN_SPEED = 1
 export const CHECKPOINT_RADIUS = 9
 export const BOOST_ZONE_MAX_HEIGHT = 3
 export const BOOST_MAX_SPEED = 30

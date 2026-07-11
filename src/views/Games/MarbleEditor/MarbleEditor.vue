@@ -4,6 +4,13 @@ import { useMarbleEditor } from './useMarbleEditor'
 import { useMarbleRace } from './useMarbleRace'
 import EditorPalette from './EditorPalette.vue'
 import { DEFAULT_MARBLE } from '../MarbleMadness/config'
+import type { CameraMode } from './types'
+
+const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
+  { value: 'third', label: 'Third', tooltip: 'Follow the marble from behind (press C to cycle)' },
+  { value: 'first', label: 'First', tooltip: 'View from the marble (press C to cycle)' },
+  { value: 'free', label: 'Free', tooltip: 'Free orbit camera (press C to cycle)' }
+]
 
 const editorCanvas = ref<HTMLCanvasElement | null>(null)
 const raceCanvas = ref<HTMLCanvasElement | null>(null)
@@ -80,6 +87,20 @@ onMounted(() => {
         <span v-if="race.penaltyCount.value > 0" class="marble-editor__penalties">
           Falls: {{ race.penaltyCount.value }}
         </span>
+        <div class="marble-editor__camera-group" role="group" aria-label="Camera mode">
+          <button
+            v-for="mode in CAMERA_MODES"
+            :key="mode.value"
+            class="marble-editor__hud-button"
+            :class="{
+              'marble-editor__hud-button--active': race.cameraMode.value === mode.value
+            }"
+            :title="mode.tooltip"
+            @click="race.setCameraMode(mode.value)"
+          >
+            {{ mode.label }}
+          </button>
+        </div>
         <button
           class="marble-editor__hud-button"
           title="Return to the track editor"
@@ -173,6 +194,16 @@ onMounted(() => {
 
 .marble-editor__hud-button:hover {
   background: var(--color-accent);
+}
+
+.marble-editor__hud-button--active {
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+}
+
+.marble-editor__camera-group {
+  display: flex;
+  gap: var(--spacing-1);
 }
 
 .marble-editor__overlay {

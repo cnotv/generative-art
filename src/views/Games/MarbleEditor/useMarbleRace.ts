@@ -7,12 +7,12 @@ import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
 import {
-  createCameraFollowAction,
   createDirectionalLightFollowAction,
   createPhysicsSyncAction,
   createTimerAction,
   createFallCheckAction
 } from '@/utils/gameTimelineActions'
+import { applyRaceCamera, createSmoothedDirection } from './raceCameras'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import {
   buildTrack,
@@ -22,7 +22,7 @@ import {
   nearestCheckpointIndex
 } from './trackBuilder'
 import { applyPieceTransform } from './chainTransforms'
-import type { MarbleMap, BuiltTrack } from './types'
+import type { MarbleMap, BuiltTrack, CameraMode } from './types'
 import {
   SKY_COLOR,
   FOG_DENSITY,
@@ -74,6 +74,8 @@ type RaceState = {
   checkpointIndex: number
   fallThresholdY: number
   directionalLight: THREE.DirectionalLight | null
+  smoothedDirection: THREE.Vector3
+  cameraActionHeld: boolean
 }
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
@@ -81,22 +83,37 @@ const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
 const VERTICAL_INPUT_REDIRECT_VY = 1
 const VERTICAL_INPUT_REDIRECT_SPEED = 4
 
+const RACE_KEYBOARD_MAPPING = {
+  keyboard: { ...KEYBOARD_MAPPING.keyboard, c: 'camera' },
+  gamepad: { ...KEYBOARD_MAPPING.gamepad }
+}
+
 const computeImpulse = (
   currentActions: ControlsCurrents,
-  velocity: { x: number; y: number; z: number }
+  velocity: { x: number; y: number; z: number },
+  forward: { x: number; z: number }
 ): { x: number; y: number; z: number } => {
-  const x =
-    ('left' in currentActions ? -MOVE_FORCE : 0) + ('right' in currentActions ? MOVE_FORCE : 0)
-  const z =
-    ('forward' in currentActions ? -MOVE_FORCE : 0) +
-    ('backward' in currentActions ? MOVE_FORCE : 0)
+  const lateral = ('left' in currentActions ? -1 : 0) + ('right' in currentActions ? 1 : 0)
+  const longitudinal =
+    ('forward' in currentActions ? 1 : 0) + ('backward' in currentActions ? -1 : 0)
+  const x = MOVE_FORCE * (longitudinal * forward.x - lateral * forward.z)
+  const z = MOVE_FORCE * (longitudinal * forward.z + lateral * forward.x)
   const speed = Math.hypot(velocity.x, velocity.y, velocity.z)
   const isClimbing =
     Math.abs(velocity.y) > VERTICAL_INPUT_REDIRECT_VY && speed > VERTICAL_INPUT_REDIRECT_SPEED
-  if (z < 0 && isClimbing) {
-    if (speed >= MAX_LINEAR_SPEED) return { x, y: 0, z: 0 }
+  if (longitudinal > 0 && isClimbing) {
+    if (speed >= MAX_LINEAR_SPEED)
+      return {
+        x: x - longitudinal * forward.x * MOVE_FORCE,
+        y: 0,
+        z: z - longitudinal * forward.z * MOVE_FORCE
+      }
     const scale = MOVE_FORCE / speed
-    return { x: x + velocity.x * scale, y: velocity.y * scale, z: velocity.z * scale }
+    return {
+      x: x - longitudinal * forward.x * MOVE_FORCE + velocity.x * scale,
+      y: velocity.y * scale,
+      z: z - longitudinal * forward.z * MOVE_FORCE + velocity.z * scale
+    }
   }
   return { x, y: 0, z }
 }
@@ -163,6 +180,7 @@ type TimelineWiring = {
   finished: Ref<boolean>
   elapsed: Ref<number>
   penaltyCount: Ref<number>
+  cameraMode: Ref<CameraMode>
   applyInputAndBoost: () => void
   updateCheckpointAndFinish: () => void
 }
@@ -184,14 +202,20 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
       LIGHT_DIRECTIONAL_POSITION
     )
   )
-  timeline.addAction(
-    createCameraFollowAction(
-      camera,
-      () => state.marble,
-      CAMERA_OFFSET,
-      () => orbit
-    )
-  )
+  timeline.addAction({
+    name: 'race-camera',
+    category: 'camera',
+    start: 0,
+    action: () =>
+      applyRaceCamera({
+        mode: wiring.cameraMode.value,
+        camera,
+        marble: state.marble,
+        orbit,
+        offset: CAMERA_OFFSET,
+        smoothedDirection: state.smoothedDirection
+      })
+  })
   timeline.addAction(
     createFallCheckAction(
       () => state.marble,
@@ -222,6 +246,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   const finished = ref(false)
   const elapsed = ref(0)
   const penaltyCount = ref(0)
+  const cameraMode = ref<CameraMode>('third')
 
   const state: RaceState = {
     marble: null,
@@ -229,17 +254,43 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     builtTrack: null,
     checkpointIndex: 0,
     fallThresholdY: -FALL_MARGIN,
-    directionalLight: null
+    directionalLight: null,
+    smoothedDirection: createSmoothedDirection(),
+    cameraActionHeld: false
   }
   let cleanupTools: (() => void) | null = null
 
+  const setCameraMode = (mode: CameraMode): void => {
+    cameraMode.value = mode
+  }
+
+  const cycleCameraMode = (): void => {
+    const order: CameraMode[] = ['third', 'first', 'free']
+    const nextIndex = (order.indexOf(cameraMode.value) + 1) % order.length
+    setCameraMode(order[nextIndex])
+  }
+
+  const handleCameraAction = (): void => {
+    if (!state.controls) return
+    const held = 'camera' in state.controls.currentActions
+    if (held && !state.cameraActionHeld) cycleCameraMode()
+    state.cameraActionHeld = held
+  }
+
+  const inputForward = (): { x: number; z: number } =>
+    cameraMode.value === 'first'
+      ? { x: state.smoothedDirection.x, z: state.smoothedDirection.z }
+      : { x: 0, z: -1 }
+
   const applyInputAndBoost = (): void => {
-    if (!state.marble || finished.value || !state.controls) return
+    if (!state.marble || !state.controls) return
+    handleCameraAction()
+    if (finished.value) return
     const body = state.marble.userData.body
     const position = body.translation()
     const onBoost =
       state.builtTrack?.boostZones.some((zone) => isOnBoostZone(position, zone)) ?? false
-    const impulse = computeImpulse(state.controls.currentActions, body.linvel())
+    const impulse = computeImpulse(state.controls.currentActions, body.linvel(), inputForward())
     if (onBoost) {
       const velocity = body.linvel()
       const speed = Math.hypot(velocity.x, velocity.z)
@@ -271,8 +322,10 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     elapsed.value = 0
     penaltyCount.value = 0
     state.checkpointIndex = 0
+    state.smoothedDirection.set(0, 0, -1)
+    state.cameraActionHeld = false
     state.controls = createControls({
-      mapping: loadMapping(CONTROLS_GAME_ID) ?? KEYBOARD_MAPPING
+      mapping: loadMapping(CONTROLS_GAME_ID) ?? RACE_KEYBOARD_MAPPING
     })
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
@@ -305,6 +358,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
             finished,
             elapsed,
             penaltyCount,
+            cameraMode,
             applyInputAndBoost,
             updateCheckpointAndFinish
           })
@@ -332,6 +386,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     finished,
     elapsed,
     penaltyCount,
+    cameraMode,
+    setCameraMode,
     init,
     destroy
   }

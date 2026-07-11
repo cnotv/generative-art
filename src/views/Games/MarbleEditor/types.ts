@@ -43,6 +43,8 @@ export type PieceSpec = {
   exitYawDelta: number
 }
 
+export type CameraMode = 'first' | 'third' | 'free'
+
 export type BoostZone = {
   position: CoordinateTuple
   yaw: number
