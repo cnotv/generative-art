@@ -31,6 +31,7 @@ import {
   LOOP_GAP_ANGLE,
   LOOP_X_SHIFT,
   LOOP_LANE_WIDTH,
+  LOOP_WALL_HEIGHT,
   LOOP_RING_SINK,
   LOOP_RING_FRICTION,
   LOOP_CHORD_OVERLAP,
@@ -114,16 +115,25 @@ const WALL_FULL_HEIGHT = WALL_HEIGHT + DECK_THICKNESS
 const laneDeckSpec = (length: number, width: number = LANE_WIDTH): BoxSpec =>
   box([width, DECK_THICKNESS, length], vec(0, -DECK_THICKNESS / 2, 0))
 
-const laneWallSpec = (side: number, length: number, width: number = LANE_WIDTH): BoxSpec =>
+const laneWallSpec = (
+  side: number,
+  length: number,
+  width: number = LANE_WIDTH,
+  wallHeight: number = WALL_HEIGHT
+): BoxSpec =>
   box(
-    [WALL_THICKNESS, WALL_FULL_HEIGHT, length],
-    vec((side * (width + WALL_THICKNESS)) / 2, WALL_CENTER_Y, 0)
+    [WALL_THICKNESS, wallHeight + DECK_THICKNESS, length],
+    vec((side * (width + WALL_THICKNESS)) / 2, (wallHeight - DECK_THICKNESS) / 2, 0)
   )
 
-const laneSegmentSpecs = (length: number, width: number = LANE_WIDTH): BoxSpec[] => [
+const laneSegmentSpecs = (
+  length: number,
+  width: number = LANE_WIDTH,
+  wallHeight: number = WALL_HEIGHT
+): BoxSpec[] => [
   laneDeckSpec(length, width),
-  laneWallSpec(-1, length, width),
-  laneWallSpec(1, length, width)
+  laneWallSpec(-1, length, width, wallHeight),
+  laneWallSpec(1, length, width, wallHeight)
 ]
 
 const straightSpecs = (length: number): BoxSpec[] =>
@@ -205,6 +215,16 @@ const loopEntrySpecs = (): BoxSpec[] => {
   ]
 }
 
+const HALF_PI = Math.PI / 2
+
+// The lateral shift starts only past the loop top's approach: the ascending
+// quarter stays perfectly straight so the climb never grinds against wall edges.
+const loopRingXShift = (phi: number): number => {
+  const endPhi = 2 * Math.PI - LOOP_GAP_ANGLE
+  if (phi <= HALF_PI) return 0
+  return (LOOP_X_SHIFT * (phi - HALF_PI)) / (endPhi - HALF_PI)
+}
+
 const loopRingSpecs = (): BoxSpec[] => {
   const span = 2 * Math.PI - 2 * LOOP_GAP_ANGLE
   const delta = span / LOOP_SEGMENTS
@@ -212,12 +232,12 @@ const loopRingSpecs = (): BoxSpec[] => {
   return Array.from({ length: LOOP_SEGMENTS }, (_, index) => index).flatMap((index) => {
     const phi = LOOP_GAP_ANGLE + (index + 0.5) * delta
     const midpoint = vec(
-      LOOP_X_SHIFT * (phi / (2 * Math.PI)),
+      loopRingXShift(phi),
       LOOP_RADIUS - LOOP_RADIUS * Math.cos(phi) - LOOP_RING_SINK,
       LOOP_BOTTOM_Z - LOOP_RADIUS * Math.sin(phi)
     )
     return transformSpecs(
-      laneSegmentSpecs(chord, LOOP_LANE_WIDTH),
+      laneSegmentSpecs(chord, LOOP_LANE_WIDTH, LOOP_WALL_HEIGHT),
       pitchQuaternion(phi),
       midpoint
     ).map((spec) => ({ ...spec, friction: LOOP_RING_FRICTION }))

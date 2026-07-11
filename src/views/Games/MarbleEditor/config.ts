@@ -1,7 +1,9 @@
 export const LANE_WIDTH = 8
 export const DECK_THICKNESS = 1
-export const WALL_HEIGHT = 1
+export const WALL_HEIGHT = 1.8
 export const WALL_THICKNESS = 0.5
+
+export const MARBLE_WEIGHT = 7
 
 export const START_LENGTH = 12
 export const FINISH_LENGTH = 16
@@ -18,8 +20,8 @@ export const GAP_JUMP_DROP = 1
 export const BOOST_PAD_LENGTH = 10
 export const BUMPER_FIELD_LENGTH = 16
 
-export const CURVE_SEGMENTS = 6
-export const CURVE_CHORD_OVERLAP = 1.15
+export const CURVE_SEGMENTS = 12
+export const CURVE_CHORD_OVERLAP = 1.06
 export const BANK_ANGLE = 0.3
 
 export const FUNNEL_TONGUE_LENGTH = 2
@@ -32,7 +34,8 @@ export const LOOP_BOTTOM_Z = -11
 export const LOOP_SEGMENTS = 26
 export const LOOP_GAP_ANGLE = 0.25
 export const LOOP_X_SHIFT = 5
-export const LOOP_LANE_WIDTH = 4
+export const LOOP_LANE_WIDTH = 6
+export const LOOP_WALL_HEIGHT = 0.8
 export const LOOP_RING_SINK = 0.2
 export const LOOP_RING_FRICTION = 0.2
 export const LOOP_CHORD_OVERLAP = 1.03
