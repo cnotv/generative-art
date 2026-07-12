@@ -59,6 +59,8 @@ export const SPAWN_LANE_MARGIN = 1.2
 
 export const CONTROLS_GAME_ID = 'marble-editor'
 
+export const COUNTDOWN_MS = 3000
+
 export const FIRST_PERSON_HEIGHT = 1.4
 export const FIRST_PERSON_LOOK_AHEAD = 8
 export const FIRST_PERSON_DIRECTION_LERP = 0.12

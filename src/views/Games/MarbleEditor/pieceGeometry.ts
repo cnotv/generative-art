@@ -193,7 +193,8 @@ const funnelLatheSpec = (): LatheSpec => ({
 const LOOP_GUIDE_LENGTH = Math.hypot(4, (LANE_WIDTH - LOOP_LANE_WIDTH) / 2)
 const LOOP_GUIDE_YAW = Math.atan2((LANE_WIDTH - LOOP_LANE_WIDTH) / 2, 4)
 const LOOP_EXIT_START_Z = -9.5
-const LOOP_EXIT_WIDTH = 5
+const LOOP_EXIT_WIDTH = 6
+const LOOP_EXIT_WALL_FRACTION = 0.65
 
 const loopEntrySpecs = (): BoxSpec[] => {
   const entryLength = -LOOP_BOTTOM_Z + 1
@@ -244,13 +245,22 @@ const loopRingSpecs = (): BoxSpec[] => {
   })
 }
 
+// The walls stop before the junction with the next piece: the diagonal meets
+// the following lane at an angle, and full-length walls would form a wedge
+// pocket that traps the marble.
 const loopExitSpecs = (): BoxSpec[] => {
   const startPoint = vec(LOOP_X_SHIFT, 0, LOOP_EXIT_START_Z)
   const endPoint = vec(0, 0, -LOOP_EXIT_LENGTH)
   const length = startPoint.distanceTo(endPoint)
   const yaw = Math.atan2(LOOP_X_SHIFT, LOOP_EXIT_LENGTH + LOOP_EXIT_START_Z)
   const midpoint = startPoint.clone().add(endPoint).multiplyScalar(0.5)
-  return transformSpecs(laneSegmentSpecs(length, LOOP_EXIT_WIDTH), yawQuaternion(yaw), midpoint)
+  const orientation = yawQuaternion(yaw)
+  const wallLength = length * LOOP_EXIT_WALL_FRACTION
+  const walls = [-1, 1].map((side) => {
+    const spec = laneWallSpec(side, wallLength, LOOP_EXIT_WIDTH)
+    return { ...spec, center: spec.center.clone().setZ((length - wallLength) / 2) }
+  })
+  return transformSpecs([laneDeckSpec(length, LOOP_EXIT_WIDTH), ...walls], orientation, midpoint)
 }
 
 const gapJumpSpecs = (): BoxSpec[] => {

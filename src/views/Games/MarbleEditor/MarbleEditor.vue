@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { useMarbleEditor } from './useMarbleEditor'
 import { useMarbleRace } from './useMarbleRace'
 import EditorPalette from './EditorPalette.vue'
+import MarbleEditorSummary from './MarbleEditorSummary.vue'
 import { DEFAULT_MARBLE } from '../MarbleMadness/config'
 import type { CameraMode } from './types'
 
@@ -12,19 +15,34 @@ const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
   { value: 'free', label: 'Free', tooltip: 'Free orbit camera (press C to cycle)' }
 ]
 
+const LOCAL_PLAYER_ID = 'local'
+
 const editorCanvas = ref<HTMLCanvasElement | null>(null)
 const raceCanvas = ref<HTMLCanvasElement | null>(null)
 const phase = ref<'edit' | 'race'>('edit')
 
+const store = useMarbleEditorStore()
+const { playerList, raceStartTime } = storeToRefs(store)
+
 const editor = useMarbleEditor({ canvas: editorCanvas })
 
 const marbleTexture = ref<string | undefined>(DEFAULT_MARBLE.url)
+const localPlayerName = ref('You')
+const localPlayerColor = ref('#2e7d32')
+const showSummary = ref(false)
 
 const race = useMarbleRace({
   canvas: raceCanvas,
   map: editor.currentMap,
   marbleTexture,
-  onFinish: () => {}
+  raceStartTime,
+  localPlayerName,
+  localPlayerColor,
+  onFinish: (time) => {
+    store.setFinishTime(LOCAL_PLAYER_ID, time)
+    store.winnerId = store.winnerId ?? LOCAL_PLAYER_ID
+    showSummary.value = true
+  }
 })
 
 const formattedTime = computed(() => {
@@ -34,15 +52,31 @@ const formattedTime = computed(() => {
   return `${minutes}:${seconds}`
 })
 
+const prepareRaceRoster = (): void => {
+  store.upsertPlayer({
+    id: LOCAL_PLAYER_ID,
+    name: localPlayerName.value,
+    color: localPlayerColor.value,
+    marble: DEFAULT_MARBLE.id,
+    finishTime: null
+  })
+  store.clearFinishTimes()
+  store.winnerId = null
+  store.raceStartTime = Date.now()
+  showSummary.value = false
+}
+
 const startRace = async (): Promise<void> => {
   editor.destroy()
   phase.value = 'race'
+  prepareRaceRoster()
   await nextTick()
   await race.init()
 }
 
 const backToEditor = async (): Promise<void> => {
   race.destroy()
+  showSummary.value = false
   phase.value = 'edit'
   await nextTick()
   await editor.init()
@@ -50,6 +84,7 @@ const backToEditor = async (): Promise<void> => {
 
 const restartRace = async (): Promise<void> => {
   race.destroy()
+  prepareRaceRoster()
   await nextTick()
   await race.init()
 }
@@ -109,26 +144,17 @@ onMounted(() => {
           Back to editor
         </button>
       </div>
-      <div v-if="race.finished.value" class="marble-editor__overlay">
-        <h2 class="marble-editor__overlay-title">Finished</h2>
-        <p class="marble-editor__overlay-time">{{ formattedTime }}</p>
-        <div class="marble-editor__overlay-actions">
-          <button
-            class="marble-editor__hud-button"
-            title="Race the track again"
-            @click="restartRace"
-          >
-            Race again
-          </button>
-          <button
-            class="marble-editor__hud-button"
-            title="Return to the track editor"
-            @click="backToEditor"
-          >
-            Back to editor
-          </button>
-        </div>
+      <div v-if="race.countdown.value > 0" class="marble-editor__countdown">
+        {{ race.countdown.value }}
       </div>
+      <MarbleEditorSummary
+        v-if="showSummary"
+        :player-list="playerList"
+        :local-peer-id="LOCAL_PLAYER_ID"
+        :can-restart="true"
+        @restart="restartRace"
+        @back="backToEditor"
+      />
     </template>
   </div>
 </template>
@@ -206,36 +232,14 @@ onMounted(() => {
   gap: var(--spacing-1);
 }
 
-.marble-editor__overlay {
+.marble-editor__countdown {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  align-items: center;
-  padding: var(--spacing-6);
-  color: var(--color-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  transform: translate(-50%, -50%);
-}
-
-.marble-editor__overlay-title {
-  margin: 0;
   font-size: var(--font-size-xl);
-}
-
-.marble-editor__overlay-time {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-variant-numeric: tabular-nums;
-}
-
-.marble-editor__overlay-actions {
-  display: flex;
-  gap: var(--spacing-2);
+  font-weight: 700;
+  color: var(--color-foreground);
+  text-shadow: 0 0 12px var(--color-background);
+  transform: translate(-50%, -50%) scale(3);
 }
 </style>

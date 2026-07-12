@@ -13,6 +13,9 @@ import {
   createFallCheckAction
 } from '@/utils/gameTimelineActions'
 import { applyRaceCamera, createSmoothedDirection } from './raceCameras'
+import { createGhostRegistry, placeGhost, removeGhost, clearGhosts } from './raceGhosts'
+import type { GhostPlacement } from './raceGhosts'
+import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './nameLabels'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import {
   buildTrack,
@@ -22,7 +25,7 @@ import {
   nearestCheckpointIndex
 } from './trackBuilder'
 import { applyPieceTransform } from './chainTransforms'
-import type { MarbleMap, BuiltTrack, CameraMode } from './types'
+import type { MarbleMap, BuiltTrack, CameraMode, BallPosPayload } from './types'
 import {
   SKY_COLOR,
   FOG_DENSITY,
@@ -34,6 +37,7 @@ import {
   FALL_MARGIN,
   TIME_PENALTY_FALL,
   MARBLE_WEIGHT,
+  COUNTDOWN_MS,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION
@@ -49,6 +53,7 @@ import {
   CAMERA_HEIGHT,
   CAMERA_BACK,
   KEYBOARD_MAPPING,
+  POS_BROADCAST_MS,
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
@@ -65,6 +70,12 @@ export type UseMarbleRaceDeps = {
   map: Ref<MarbleMap>
   marbleTexture: Ref<string | undefined>
   onFinish: (elapsedSeconds: number) => void
+  raceStartTime?: Ref<number | null>
+  onPositionUpdate?: (pos: BallPosPayload) => void
+  localPlayerName?: Ref<string>
+  localPlayerColor?: Ref<string>
+  spawnGateCount?: Ref<number>
+  spawnGateIndex?: Ref<number>
 }
 
 type RaceState = {
@@ -76,6 +87,9 @@ type RaceState = {
   directionalLight: THREE.DirectionalLight | null
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
+  localLabel: THREE.Sprite | null
+  scene: THREE.Scene | null
+  posAccumulator: number
 }
 
 const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
@@ -180,9 +194,13 @@ type TimelineWiring = {
   finished: Ref<boolean>
   elapsed: Ref<number>
   penaltyCount: Ref<number>
+  countdown: Ref<number>
   cameraMode: Ref<CameraMode>
   applyInputAndBoost: () => void
   updateCheckpointAndFinish: () => void
+  updateCountdown: () => void
+  broadcastPosition: (getDelta: () => number) => void
+  updateLocalLabel: () => void
 }
 
 const buildRaceTimeline = (wiring: TimelineWiring) => {
@@ -233,7 +251,27 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
     start: 0,
     action: wiring.updateCheckpointAndFinish
   })
-  timeline.addAction(createTimerAction(elapsed, () => finished.value, getDelta))
+  timeline.addAction({
+    name: 'countdown',
+    category: 'game',
+    start: 0,
+    action: wiring.updateCountdown
+  })
+  timeline.addAction({
+    name: 'name-labels',
+    category: 'ui',
+    start: 0,
+    action: wiring.updateLocalLabel
+  })
+  timeline.addAction({
+    name: 'pos-broadcast',
+    category: 'network',
+    start: 0,
+    action: () => wiring.broadcastPosition(getDelta)
+  })
+  timeline.addAction(
+    createTimerAction(elapsed, () => finished.value || wiring.countdown.value > 0, getDelta)
+  )
   return timeline
 }
 
@@ -242,31 +280,55 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
  * spawns the player marble, applies controls, tracks checkpoints, falls,
  * boost pads and finish detection.
  */
-export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
-  const finished = ref(false)
-  const elapsed = ref(0)
-  const penaltyCount = ref(0)
-  const cameraMode = ref<CameraMode>('third')
+type RaceReferences = {
+  finished: Ref<boolean>
+  elapsed: Ref<number>
+  penaltyCount: Ref<number>
+  countdown: Ref<number>
+  cameraMode: Ref<CameraMode>
+}
 
-  const state: RaceState = {
-    marble: null,
-    controls: null,
-    builtTrack: null,
-    checkpointIndex: 0,
-    fallThresholdY: -FALL_MARGIN,
-    directionalLight: null,
-    smoothedDirection: createSmoothedDirection(),
-    cameraActionHeld: false
+const createRaceActions = (
+  deps: UseMarbleRaceDeps,
+  state: RaceState,
+  refs: RaceReferences,
+  getLocalStartTime: () => number
+) => {
+  const updateCountdown = (): void => {
+    const startTime = deps.raceStartTime?.value ?? getLocalStartTime()
+    refs.countdown.value = Math.max(0, Math.ceil((startTime + COUNTDOWN_MS - Date.now()) / 1000))
   }
-  let cleanupTools: (() => void) | null = null
+
+  const broadcastPosition = (getDelta: () => number): void => {
+    if (!deps.onPositionUpdate || !state.marble) return
+    state.posAccumulator += getDelta() * 1000
+    if (state.posAccumulator < POS_BROADCAST_MS) return
+    state.posAccumulator = 0
+    const pos = state.marble.userData.body.translation()
+    const rot = state.marble.userData.body.rotation()
+    deps.onPositionUpdate({
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+      rx: rot.x,
+      ry: rot.y,
+      rz: rot.z,
+      rw: rot.w
+    })
+  }
+
+  const updateLocalLabel = (): void => {
+    if (!state.localLabel || !state.marble) return
+    updateNameLabelPosition(state.localLabel, state.marble.position)
+  }
 
   const setCameraMode = (mode: CameraMode): void => {
-    cameraMode.value = mode
+    refs.cameraMode.value = mode
   }
 
   const cycleCameraMode = (): void => {
     const order: CameraMode[] = ['third', 'first', 'free']
-    const nextIndex = (order.indexOf(cameraMode.value) + 1) % order.length
+    const nextIndex = (order.indexOf(refs.cameraMode.value) + 1) % order.length
     setCameraMode(order[nextIndex])
   }
 
@@ -278,14 +340,14 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   }
 
   const inputForward = (): { x: number; z: number } =>
-    cameraMode.value === 'first'
+    refs.cameraMode.value === 'first'
       ? { x: state.smoothedDirection.x, z: state.smoothedDirection.z }
       : { x: 0, z: -1 }
 
   const applyInputAndBoost = (): void => {
     if (!state.marble || !state.controls) return
     handleCameraAction()
-    if (finished.value) return
+    if (refs.finished.value || refs.countdown.value > 0) return
     const body = state.marble.userData.body
     const position = body.translation()
     const onBoost =
@@ -303,7 +365,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   }
 
   const updateCheckpointAndFinish = (): void => {
-    if (!state.marble || !state.builtTrack || finished.value) return
+    if (!state.marble || !state.builtTrack || refs.finished.value) return
     const position = state.marble.position
     state.checkpointIndex = nearestCheckpointIndex(
       position,
@@ -311,44 +373,121 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
       state.checkpointIndex
     )
     if (isInFinishZone(position, state.builtTrack.finishTransform)) {
-      finished.value = true
-      deps.onFinish(elapsed.value)
+      refs.finished.value = true
+      deps.onFinish(refs.elapsed.value)
     }
   }
 
-  const init = async (): Promise<void> => {
-    if (!deps.canvas.value) return
+  return {
+    updateCountdown,
+    broadcastPosition,
+    updateLocalLabel,
+    setCameraMode,
+    applyInputAndBoost,
+    updateCheckpointAndFinish
+  }
+}
+
+type RaceSceneParameters = {
+  tools: GetToolsResult
+  orbit: OrbitControls | null
+  deps: UseMarbleRaceDeps
+  state: RaceState
+  ghostRegistry: ReturnType<typeof createGhostRegistry>
+}
+
+const buildRaceScene = ({
+  tools,
+  orbit,
+  deps,
+  state,
+  ghostRegistry
+}: RaceSceneParameters): void => {
+  if (!tools.world) return
+  const scene = tools.scene
+  scene.fog = new THREE.FogExp2(SKY_COLOR, FOG_DENSITY)
+  scene.background = new THREE.Color(SKY_COLOR)
+  state.directionalLight =
+    (scene.children.find(
+      (child) => child instanceof THREE.DirectionalLight
+    ) as THREE.DirectionalLight) ?? null
+  setupCloudArea(scene, tools.world, () => {})
+  state.scene = scene
+  ghostRegistry.scene = scene
+  state.builtTrack = buildTrack(scene, tools.world, deps.map.value)
+  state.fallThresholdY = computeFallThreshold(state.builtTrack)
+  const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
+  const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
+  const spawn = computeSpawnPositions(state.builtTrack.startTransform, gateCount)[gateIndex]
+  state.marble = spawnMarble(scene, tools.world, spawn, deps.marbleTexture.value)
+  if (deps.localPlayerName?.value) {
+    state.localLabel = createNameLabel(
+      scene,
+      deps.localPlayerName.value,
+      deps.localPlayerColor?.value ?? '#ffffff'
+    )
+  }
+  addEdgeLinesToScene(scene)
+  registerCameraProperties({ camera: tools.camera, orbit })
+}
+
+/**
+ * Race mode composable built on the actions factory above: initializes the
+ * scene, drives the timeline, and exposes ghost-marble updates for remote
+ * players plus reactive countdown, timing and camera state.
+ */
+export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
+  const finished = ref(false)
+  const elapsed = ref(0)
+  const penaltyCount = ref(0)
+  const countdown = ref(0)
+  const cameraMode = ref<CameraMode>('third')
+
+  const state: RaceState = {
+    marble: null,
+    controls: null,
+    builtTrack: null,
+    checkpointIndex: 0,
+    fallThresholdY: -FALL_MARGIN,
+    directionalLight: null,
+    smoothedDirection: createSmoothedDirection(),
+    cameraActionHeld: false,
+    localLabel: null,
+    scene: null,
+    posAccumulator: 0
+  }
+  const ghostRegistry = createGhostRegistry()
+  let cleanupTools: (() => void) | null = null
+  let localStartTime = 0
+
+  const refs: RaceReferences = { finished, elapsed, penaltyCount, countdown, cameraMode }
+  const actions = createRaceActions(deps, state, refs, () => localStartTime)
+
+  const resetRunState = (): void => {
     finished.value = false
     elapsed.value = 0
     penaltyCount.value = 0
     state.checkpointIndex = 0
     state.smoothedDirection.set(0, 0, -1)
     state.cameraActionHeld = false
+    state.posAccumulator = 0
+    localStartTime = Date.now()
+    actions.updateCountdown()
+  }
+
+  const init = async (): Promise<void> => {
+    if (!deps.canvas.value) return
+    resetRunState()
     state.controls = createControls({
       mapping: loadMapping(CONTROLS_GAME_ID) ?? RACE_KEYBOARD_MAPPING
     })
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
     state.builtTrack = null
-    const spawnPreview = computeSpawnPositions(null, 1)[0]
     await tools.setup({
-      config: buildRaceSetupConfig(spawnPreview),
+      config: buildRaceSetupConfig(computeSpawnPositions(null, 1)[0]),
       defineSetup: ({ orbit }) => {
-        if (!tools.world) return
-        const scene = tools.scene
-        scene.fog = new THREE.FogExp2(SKY_COLOR, FOG_DENSITY)
-        scene.background = new THREE.Color(SKY_COLOR)
-        state.directionalLight =
-          (scene.children.find(
-            (child) => child instanceof THREE.DirectionalLight
-          ) as THREE.DirectionalLight) ?? null
-        setupCloudArea(scene, tools.world, () => {})
-        state.builtTrack = buildTrack(scene, tools.world, deps.map.value)
-        state.fallThresholdY = computeFallThreshold(state.builtTrack)
-        const spawn = computeSpawnPositions(state.builtTrack.startTransform, 1)[0]
-        state.marble = spawnMarble(scene, tools.world, spawn, deps.marbleTexture.value)
-        addEdgeLinesToScene(scene)
-        registerCameraProperties({ camera: tools.camera, orbit })
+        buildRaceScene({ tools, orbit, deps, state, ghostRegistry })
         tools.animate({
           timeline: buildRaceTimeline({
             camera: tools.camera,
@@ -358,9 +497,13 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
             finished,
             elapsed,
             penaltyCount,
+            countdown,
             cameraMode,
-            applyInputAndBoost,
-            updateCheckpointAndFinish
+            applyInputAndBoost: actions.applyInputAndBoost,
+            updateCheckpointAndFinish: actions.updateCheckpointAndFinish,
+            updateCountdown: actions.updateCountdown,
+            broadcastPosition: actions.broadcastPosition,
+            updateLocalLabel: actions.updateLocalLabel
           })
         })
       }
@@ -370,6 +513,10 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   const destroy = (): void => {
     state.controls?.destroyControls()
     state.controls = null
+    if (state.localLabel && state.scene) disposeNameLabel(state.scene, state.localLabel)
+    state.localLabel = null
+    clearGhosts(ghostRegistry)
+    state.scene = null
     state.marble = null
     state.builtTrack = null
     state.directionalLight = null
@@ -380,14 +527,22 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     }
   }
 
+  const updateGhostPosition = (placement: GhostPlacement): void =>
+    placeGhost(ghostRegistry, placement)
+
+  const removeGhostMarble = (peerId: string): void => removeGhost(ghostRegistry, peerId)
+
   onUnmounted(destroy)
 
   return {
     finished,
     elapsed,
     penaltyCount,
+    countdown,
     cameraMode,
-    setCameraMode,
+    setCameraMode: actions.setCameraMode,
+    updateGhostPosition,
+    removeGhost: removeGhostMarble,
     init,
     destroy
   }

@@ -45,6 +45,26 @@ export type PieceSpec = {
 
 export type CameraMode = 'first' | 'third' | 'free'
 
+export type MePlayer = {
+  id: string
+  name: string
+  color: string
+  marble: string
+  finishTime: number | null
+}
+
+export type MePhase = 'lobby' | 'edit' | 'race' | 'summary'
+
+export type BallPosPayload = {
+  x: number
+  y: number
+  z: number
+  rx: number
+  ry: number
+  rz: number
+  rw: number
+}
+
 export type BoostZone = {
   position: CoordinateTuple
   yaw: number
