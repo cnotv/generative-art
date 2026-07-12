@@ -1,3 +1,8 @@
+import type {
+  MapperActionConfig,
+  ControlsMapperGameConfig
+} from '@/components/ControlsMapper/types'
+
 export const LANE_WIDTH = 8
 export const DECK_THICKNESS = 1
 export const WALL_HEIGHT = 1.8
@@ -58,6 +63,45 @@ export const SPAWN_Z_INSET = -2
 export const SPAWN_LANE_MARGIN = 1.2
 
 export const CONTROLS_GAME_ID = 'marble-editor'
+export const MATCHMAKER_ROOM = 'marble-editor-matchmaker'
+
+export const CONTROLS_ACTIONS: MapperActionConfig[] = [
+  { id: 'forward', label: 'Forward', directional: true },
+  { id: 'backward', label: 'Backward', directional: true },
+  { id: 'left', label: 'Left', directional: true },
+  { id: 'right', label: 'Right', directional: true },
+  { id: 'camera', label: 'Camera mode' }
+]
+
+export const KEYBOARD_MAPPING = {
+  keyboard: {
+    w: 'forward',
+    ArrowUp: 'forward',
+    s: 'backward',
+    ArrowDown: 'backward',
+    a: 'left',
+    ArrowLeft: 'left',
+    d: 'right',
+    ArrowRight: 'right',
+    c: 'camera'
+  },
+  gamepad: {
+    'axis1-up': 'forward',
+    'axis1-down': 'backward',
+    'axis0-left': 'left',
+    'axis0-right': 'right',
+    'dpad-up': 'forward',
+    'dpad-down': 'backward',
+    'dpad-left': 'left',
+    'dpad-right': 'right'
+  }
+}
+
+export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
+  gameId: CONTROLS_GAME_ID,
+  actions: CONTROLS_ACTIONS,
+  defaultMapping: KEYBOARD_MAPPING
+}
 
 export const COUNTDOWN_MS = 3000
 

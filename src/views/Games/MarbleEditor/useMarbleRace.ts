@@ -38,6 +38,7 @@ import {
   TIME_PENALTY_FALL,
   MARBLE_WEIGHT,
   COUNTDOWN_MS,
+  KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION
@@ -52,7 +53,6 @@ import {
   MAX_LINEAR_SPEED,
   CAMERA_HEIGHT,
   CAMERA_BACK,
-  KEYBOARD_MAPPING,
   POS_BROADCAST_MS,
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
@@ -96,11 +96,6 @@ const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
 
 const VERTICAL_INPUT_REDIRECT_VY = 1
 const VERTICAL_INPUT_REDIRECT_SPEED = 4
-
-const RACE_KEYBOARD_MAPPING = {
-  keyboard: { ...KEYBOARD_MAPPING.keyboard, c: 'camera' },
-  gamepad: { ...KEYBOARD_MAPPING.gamepad }
-}
 
 const computeImpulse = (
   currentActions: ControlsCurrents,
@@ -479,7 +474,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     if (!deps.canvas.value) return
     resetRunState()
     state.controls = createControls({
-      mapping: loadMapping(CONTROLS_GAME_ID) ?? RACE_KEYBOARD_MAPPING
+      mapping: loadMapping(CONTROLS_GAME_ID) ?? KEYBOARD_MAPPING
     })
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup

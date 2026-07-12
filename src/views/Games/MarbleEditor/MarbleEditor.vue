@@ -1,13 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import * as THREE from 'three'
 import { storeToRefs } from 'pinia'
 import { useMarbleEditorStore } from '@/stores/marbleEditor'
+import { useRoomId } from '@/composables/useRoomId'
+import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
+import {
+  loadProfile,
+  randomPick,
+  NAME_ADJECTIVES,
+  NAME_ANIMALS,
+  PLAYER_COLORS
+} from '@/utils/playerProfile'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
+import GameHeader from '@/components/GameHeader.vue'
+import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
 import { useMarbleEditor } from './useMarbleEditor'
 import { useMarbleRace } from './useMarbleRace'
+import { useMarbleEditorSession } from './useMarbleEditorSession'
 import EditorPalette from './EditorPalette.vue'
+import MarbleEditorLobby from './MarbleEditorLobby.vue'
 import MarbleEditorSummary from './MarbleEditorSummary.vue'
-import { DEFAULT_MARBLE } from '../MarbleMadness/config'
-import type { CameraMode } from './types'
+import { SAMPLE_MAPS } from './sampleMaps'
+import { MARBLE_OPTIONS, DEFAULT_MARBLE } from '../MarbleMadness/config'
+import type { CameraMode, MePhase } from './types'
 
 const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
   { value: 'third', label: 'Third', tooltip: 'Follow the marble from behind (press C to cycle)' },
@@ -15,33 +32,81 @@ const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
   { value: 'free', label: 'Free', tooltip: 'Free orbit camera (press C to cycle)' }
 ]
 
-const LOCAL_PLAYER_ID = 'local'
+const store = useMarbleEditorStore()
+const { phase, playerList, messages, hostId, raceStartTime } = storeToRefs(store)
+
+const storedProfile = loadProfile()
+const playerName = ref(
+  storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
+)
+const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
+const playerMarble = ref(DEFAULT_MARBLE.id)
+const startMode = ref<Extract<MePhase, 'edit' | 'race'>>('edit')
+
+const { roomId, resolvedRoomId } = useRoomId()
 
 const editorCanvas = ref<HTMLCanvasElement | null>(null)
 const raceCanvas = ref<HTMLCanvasElement | null>(null)
-const phase = ref<'edit' | 'race'>('edit')
 
-const store = useMarbleEditorStore()
-const { playerList, raceStartTime } = storeToRefs(store)
+const marbleUrlById = (id: string): string | undefined =>
+  MARBLE_OPTIONS.find((option) => option.id === id)?.url
 
-const editor = useMarbleEditor({ canvas: editorCanvas })
+const marbleUrl = computed(() => marbleUrlById(playerMarble.value) ?? DEFAULT_MARBLE.url)
 
-const marbleTexture = ref<string | undefined>(DEFAULT_MARBLE.url)
-const localPlayerName = ref('You')
-const localPlayerColor = ref('#2e7d32')
-const showSummary = ref(false)
+const editor = useMarbleEditor({
+  canvas: editorCanvas,
+  onMapChange: (map) => session.broadcastMap({ map })
+})
+
+const session = useMarbleEditorSession(
+  {
+    name: playerName.value,
+    color: playerColor.value,
+    marble: playerMarble.value,
+    roomId: resolvedRoomId
+  },
+  {
+    onMapReceived: (map) => editor.setMapFromRemote(map),
+    getCurrentMap: () => editor.currentMap.value,
+    onBallPos: (peerId, pos) => {
+      const player = store.players[peerId]
+      if (!player) return
+      race.updateGhostPosition({
+        peerId,
+        colorHex: new THREE.Color(player.color).getHex(),
+        pos,
+        texture: marbleUrlById(player.marble),
+        name: player.name,
+        nameColor: player.color
+      })
+    }
+  }
+)
+const { isHost, localPeerId } = session
+
+const localId = (): string => localPeerId.value || 'solo'
+
+const sortedPeerIds = computed(() => Object.keys(store.players).sort())
+const spawnGateCount = computed(() => Math.max(1, sortedPeerIds.value.length))
+const spawnGateIndex = computed(() => Math.max(0, sortedPeerIds.value.indexOf(localId())))
 
 const race = useMarbleRace({
   canvas: raceCanvas,
   map: editor.currentMap,
-  marbleTexture,
+  marbleTexture: marbleUrl,
   raceStartTime,
-  localPlayerName,
-  localPlayerColor,
+  localPlayerName: playerName,
+  localPlayerColor: playerColor,
+  spawnGateCount,
+  spawnGateIndex,
+  onPositionUpdate: (pos) => {
+    if (!store.solo) session.broadcastBallPos(pos)
+  },
   onFinish: (time) => {
-    store.setFinishTime(LOCAL_PLAYER_ID, time)
-    store.winnerId = store.winnerId ?? LOCAL_PLAYER_ID
-    showSummary.value = true
+    store.setFinishTime(localId(), time)
+    if (!store.winnerId) store.winnerId = localId()
+    if (!store.solo) session.broadcastFinish(time)
+    store.phase = 'summary'
   }
 })
 
@@ -52,138 +117,281 @@ const formattedTime = computed(() => {
   return `${minutes}:${seconds}`
 })
 
-const prepareRaceRoster = (): void => {
+const mapOptions = computed(() => {
+  const all = [...SAMPLE_MAPS, ...editor.savedMaps.value]
+  return all.map((map, index) => ({ value: index, label: map.name }))
+})
+const selectedMapIndex = ref(0)
+
+const handleConfigChange = (key: string, value: string | number): void => {
+  if (key !== 'mapIndex') return
+  selectedMapIndex.value = Number(value)
+  const all = [...SAMPLE_MAPS, ...editor.savedMaps.value]
+  const map = all[selectedMapIndex.value]
+  if (map) editor.loadMap(map)
+}
+
+const upsertLocalPlayer = (): void => {
   store.upsertPlayer({
-    id: LOCAL_PLAYER_ID,
-    name: localPlayerName.value,
-    color: localPlayerColor.value,
-    marble: DEFAULT_MARBLE.id,
+    id: localId(),
+    name: playerName.value,
+    color: playerColor.value,
+    marble: playerMarble.value,
     finishTime: null
   })
-  store.clearFinishTimes()
-  store.winnerId = null
-  store.raceStartTime = Date.now()
-  showSummary.value = false
 }
 
-const startRace = async (): Promise<void> => {
-  editor.destroy()
-  phase.value = 'race'
-  prepareRaceRoster()
-  await nextTick()
-  await race.init()
+const handleStartGame = (): void => {
+  store.solo = playerList.value.length <= 1
+  upsertLocalPlayer()
+  if (startMode.value === 'edit') {
+    session.returnToEdit()
+  } else {
+    session.startRace()
+  }
 }
 
-const backToEditor = async (): Promise<void> => {
-  race.destroy()
-  showSummary.value = false
-  phase.value = 'edit'
-  await nextTick()
-  await editor.init()
+const startRaceFromEditor = (): void => {
+  store.solo = playerList.value.length <= 1
+  upsertLocalPlayer()
+  session.startRace()
 }
 
-const restartRace = async (): Promise<void> => {
-  race.destroy()
-  prepareRaceRoster()
-  await nextTick()
-  await race.init()
+const {
+  handleNameChange,
+  handleColorChange,
+  handleMatchFound,
+  handleLeaveRoom: leaveRoom
+} = useMultiplayerLobbyHandlers(playerName, playerColor, roomId, session)
+
+const handleMarbleChange = (marbleId: string): void => {
+  playerMarble.value = marbleId
+  session.updateProfile(playerName.value, playerColor.value, marbleId)
 }
+
+const layoutReference = ref<{ requestLeave: () => void } | null>(null)
+
+const handleLeaveRoom = (): void => {
+  store.solo = false
+  leaveRoom()
+}
+
+const requestLeave = (): void => {
+  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
+}
+
+const canRestart = computed(() => store.solo || isHost.value)
+
+const handleRestart = (): void => {
+  session.restartRace()
+}
+
+const handleBackToEditor = (): void => {
+  session.returnToEdit()
+}
+
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+
+watch(showSidebar, (open) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+watch(messages, () => {
+  if (showSidebar.value) lastReadCount.value = messages.value.length
+})
+
+const sidebarPlayers = computed((): MultiplayerPlayer[] =>
+  playerList.value.map((player) => ({
+    id: player.id,
+    name: player.name,
+    color: player.color,
+    score: player.finishTime !== null ? Math.floor(player.finishTime) : 0,
+    isHost: player.id === hostId.value
+  }))
+)
+
+watch(phase, async (newPhase, oldPhase) => {
+  if (newPhase === 'edit') {
+    race.destroy()
+    await nextTick()
+    await editor.init()
+    return
+  }
+  if (newPhase === 'race') {
+    editor.destroy()
+    if (oldPhase === 'race' || oldPhase === 'summary') race.destroy()
+    await nextTick()
+    await race.init()
+    return
+  }
+  if (newPhase === 'lobby') {
+    editor.destroy()
+    race.destroy()
+  }
+})
 
 onMounted(() => {
-  editor.init()
+  store.reset()
+  session.init()
 })
 </script>
 
 <template>
-  <div class="marble-editor">
-    <template v-if="phase === 'edit'">
-      <canvas ref="editorCanvas" class="marble-editor__canvas"></canvas>
-      <EditorPalette
-        class="marble-editor__palette"
-        :selected-piece="editor.selectedPiece.value"
-        :saved-maps="editor.savedMaps.value"
-        :map-name="editor.currentMap.value.name"
-        @add="editor.addPiece"
-        @preview="editor.previewPiece"
-        @recolor="editor.recolorSelectedPiece"
-        @delete-piece="editor.removeSelectedPiece"
-        @save-as="editor.saveMapAsName"
-        @load-map="editor.loadMap"
-        @delete-map="editor.deleteMapByName"
-        @new-map="editor.startNewMap"
-        @play="startRace"
+  <LobbyLayout
+    ref="layoutReference"
+    class="me"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :sidebar-visible="!store.solo"
+    :main-placement="phase !== 'lobby' ? 'fill' : 'center'"
+    @leave-room="handleLeaveRoom"
+  >
+    <template #header>
+      <GameHeader />
+    </template>
+
+    <template #rules>
+      <ul>
+        <li>Build a track by snapping pieces together: ramps, curves, funnels, loops and jumps</li>
+        <li>Click a placed piece to select it, recolor it or remove it</li>
+        <li>Everyone in the room edits the same track live</li>
+        <li>
+          Press Play to race: roll with <strong>WASD</strong> or arrow keys, first to the gold
+          finish wins
+        </li>
+        <li>Press <strong>C</strong> to switch first person, third person and free cameras</li>
+      </ul>
+    </template>
+
+    <MarbleEditorLobby
+      v-if="phase === 'lobby'"
+      :player-name="playerName"
+      :player-color="playerColor"
+      :player-marble="playerMarble"
+      :is-host="isHost"
+      :player-list="playerList"
+      :room-id="roomId"
+      :start-mode="startMode"
+      :map-options="mapOptions"
+      :selected-map-index="selectedMapIndex"
+      @update:player-name="playerName = $event"
+      @update:player-color="handleColorChange"
+      @name-change="handleNameChange"
+      @start-game="handleStartGame"
+      @match-found="handleMatchFound"
+      @leave-room="handleLeaveRoom"
+      @config-change="handleConfigChange"
+      @marble-change="handleMarbleChange"
+      @mode-change="startMode = $event"
+    />
+
+    <div v-else class="me__play-area">
+      <template v-if="phase === 'edit'">
+        <canvas ref="editorCanvas" class="me__canvas"></canvas>
+        <EditorPalette
+          class="me__palette"
+          :selected-piece="editor.selectedPiece.value"
+          :saved-maps="editor.savedMaps.value"
+          :map-name="editor.currentMap.value.name"
+          @add="editor.addPiece"
+          @preview="editor.previewPiece"
+          @recolor="editor.recolorSelectedPiece"
+          @delete-piece="editor.removeSelectedPiece"
+          @save-as="editor.saveMapAsName"
+          @load-map="editor.loadMap"
+          @delete-map="editor.deleteMapByName"
+          @new-map="editor.startNewMap"
+          @play="startRaceFromEditor"
+        />
+      </template>
+
+      <template v-else>
+        <canvas ref="raceCanvas" class="me__canvas"></canvas>
+        <div class="me__hud">
+          <span class="me__timer">{{ formattedTime }}</span>
+          <span v-if="race.penaltyCount.value > 0" class="me__penalties">
+            Falls: {{ race.penaltyCount.value }}
+          </span>
+          <div class="me__camera-group" role="group" aria-label="Camera mode">
+            <button
+              v-for="mode in CAMERA_MODES"
+              :key="mode.value"
+              class="me__hud-button"
+              :class="{ 'me__hud-button--active': race.cameraMode.value === mode.value }"
+              :title="mode.tooltip"
+              @click="race.setCameraMode(mode.value)"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
+          <button
+            v-if="canRestart"
+            class="me__hud-button"
+            title="Return to the track editor"
+            @click="handleBackToEditor"
+          >
+            Back to editor
+          </button>
+          <button class="me__hud-button" title="Leave the room" @click="requestLeave">Leave</button>
+        </div>
+        <div v-if="race.countdown.value > 0" class="me__countdown">
+          {{ race.countdown.value }}
+        </div>
+        <MarbleEditorSummary
+          v-if="phase === 'summary'"
+          :player-list="playerList"
+          :local-peer-id="localId()"
+          :can-restart="canRestart"
+          @restart="handleRestart"
+          @back="handleBackToEditor"
+        />
+      </template>
+    </div>
+
+    <template v-if="!store.solo" #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat($event)"
       />
     </template>
 
-    <template v-else>
-      <canvas ref="raceCanvas" class="marble-editor__canvas"></canvas>
-      <div class="marble-editor__hud">
-        <span class="marble-editor__timer">{{ formattedTime }}</span>
-        <span v-if="race.penaltyCount.value > 0" class="marble-editor__penalties">
-          Falls: {{ race.penaltyCount.value }}
-        </span>
-        <div class="marble-editor__camera-group" role="group" aria-label="Camera mode">
-          <button
-            v-for="mode in CAMERA_MODES"
-            :key="mode.value"
-            class="marble-editor__hud-button"
-            :class="{
-              'marble-editor__hud-button--active': race.cameraMode.value === mode.value
-            }"
-            :title="mode.tooltip"
-            @click="race.setCameraMode(mode.value)"
-          >
-            {{ mode.label }}
-          </button>
-        </div>
-        <button
-          class="marble-editor__hud-button"
-          title="Return to the track editor"
-          @click="backToEditor"
-        >
-          Back to editor
-        </button>
-      </div>
-      <div v-if="race.countdown.value > 0" class="marble-editor__countdown">
-        {{ race.countdown.value }}
-      </div>
-      <MarbleEditorSummary
-        v-if="showSummary"
-        :player-list="playerList"
-        :local-peer-id="LOCAL_PLAYER_ID"
-        :can-restart="true"
-        @restart="restartRace"
-        @back="backToEditor"
-      />
+    <template v-if="!store.solo" #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
     </template>
-  </div>
+  </LobbyLayout>
 </template>
 
 <style scoped>
-.marble-editor {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  padding-top: var(--nav-height);
-  overflow: hidden;
+.me {
+  background: var(--lb-bg);
 }
 
-.marble-editor__canvas {
+.me__play-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.me__canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.marble-editor__palette {
+.me__palette {
   position: absolute;
-  top: calc(var(--nav-height) + var(--spacing-4));
+  top: var(--spacing-4);
   left: var(--spacing-4);
-  max-height: calc(100vh - var(--nav-height) - 2 * var(--spacing-4));
+  max-height: calc(100% - 2 * var(--spacing-4));
 }
 
-.marble-editor__hud {
+.me__hud {
   position: absolute;
-  top: calc(var(--nav-height) + var(--spacing-4));
+  top: var(--spacing-4);
   left: 50%;
   display: flex;
   gap: var(--spacing-4);
@@ -197,18 +405,18 @@ onMounted(() => {
   transform: translateX(-50%);
 }
 
-.marble-editor__timer {
+.me__timer {
   font-size: var(--font-size-lg);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 
-.marble-editor__penalties {
+.me__penalties {
   font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
 }
 
-.marble-editor__hud-button {
+.me__hud-button {
   padding: var(--spacing-1) var(--spacing-2);
   font-size: var(--font-size-sm);
   color: var(--color-foreground);
@@ -218,21 +426,21 @@ onMounted(() => {
   border-radius: var(--radius-md);
 }
 
-.marble-editor__hud-button:hover {
+.me__hud-button:hover {
   background: var(--color-accent);
 }
 
-.marble-editor__hud-button--active {
+.me__hud-button--active {
   color: var(--color-primary-foreground);
   background: var(--color-primary);
 }
 
-.marble-editor__camera-group {
+.me__camera-group {
   display: flex;
   gap: var(--spacing-1);
 }
 
-.marble-editor__countdown {
+.me__countdown {
   position: absolute;
   top: 40%;
   left: 50%;

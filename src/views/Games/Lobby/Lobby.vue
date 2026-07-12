@@ -24,6 +24,7 @@ import { useMinigolfStore } from '@/stores/minigolf'
 import { useBubbleShooterStore } from '@/stores/bubbleShooter'
 import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
+import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import { useLobbyStore } from '@/stores/lobby'
@@ -43,7 +44,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     Minigolf: useMinigolfStore(),
     BubbleShooter: useBubbleShooterStore(),
     RhythmGame: useRhythmGameStore(),
-    MarbleMadness: useMarbleMadnessStore()
+    MarbleMadness: useMarbleMadnessStore(),
+    MarbleEditor: useMarbleEditorStore()
   }
 
 const stored = loadProfile()

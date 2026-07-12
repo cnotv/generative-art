@@ -65,6 +65,43 @@ export type BallPosPayload = {
   rw: number
 }
 
+export type MeAvatarPayload = {
+  name: string
+  color: string
+  marble: string
+}
+
+export type MeMapPayload = {
+  map: MarbleMap
+}
+
+export type MeStartPayload = {
+  timestamp: number
+  map: MarbleMap
+}
+
+export type MeFinishPayload = {
+  playerId: string
+  time: number
+}
+
+export type MeRestartPayload = {
+  timestamp: number
+}
+
+export type UseMarbleEditorSessionOptions = {
+  name: string
+  color: string
+  marble: string
+  roomId: string
+}
+
+export type MeSessionCallbacks = {
+  onMapReceived: (map: MarbleMap) => void
+  onBallPos: (peerId: string, pos: BallPosPayload) => void
+  getCurrentMap: () => MarbleMap
+}
+
 export type BoostZone = {
   position: CoordinateTuple
   yaw: number
