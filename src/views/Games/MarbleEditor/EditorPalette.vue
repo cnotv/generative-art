@@ -8,6 +8,8 @@ const props = defineProps<{
   selectedPiece: PlacedPiece | null
   savedMaps: MarbleMap[]
   mapName: string
+  canUndo: boolean
+  canRedo: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +21,8 @@ const emit = defineEmits<{
   loadMap: [map: MarbleMap]
   deleteMap: [name: string]
   newMap: []
+  undo: []
+  redo: []
   play: []
 }>()
 
@@ -45,13 +49,31 @@ const handleSave = (): void => {
   <aside class="editor-palette">
     <header class="editor-palette__header">
       <h2 class="editor-palette__title">{{ mapName }}</h2>
-      <button
-        class="editor-palette__button editor-palette__button--cta"
-        title="Race the current track"
-        @click="emit('play')"
-      >
-        Play
-      </button>
+      <div class="editor-palette__row">
+        <button
+          class="editor-palette__button"
+          title="Undo the last edit"
+          :disabled="!canUndo"
+          @click="emit('undo')"
+        >
+          Undo
+        </button>
+        <button
+          class="editor-palette__button"
+          title="Redo the undone edit"
+          :disabled="!canRedo"
+          @click="emit('redo')"
+        >
+          Redo
+        </button>
+        <button
+          class="editor-palette__button editor-palette__button--cta"
+          title="Race the current track"
+          @click="emit('play')"
+        >
+          Play
+        </button>
+      </div>
     </header>
 
     <section class="editor-palette__section">
@@ -236,6 +258,11 @@ const handleSave = (): void => {
 
 .editor-palette__button:hover {
   background: var(--color-accent);
+}
+
+.editor-palette__button:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 
 .editor-palette__button--cta {

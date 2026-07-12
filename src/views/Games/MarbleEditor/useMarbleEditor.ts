@@ -17,7 +17,7 @@ import {
   deleteSavedMap
 } from './mapStorage'
 import { SAMPLE_MAPS } from './sampleMaps'
-import type { MarbleMap, BuiltTrack, TrackPieceType } from './types'
+import type { MarbleMap, BuiltTrack, TrackPieceType, PieceTransform } from './types'
 import {
   SKY_COLOR,
   FOG_DENSITY,
@@ -48,6 +48,46 @@ type EditorSceneState = {
 export type UseMarbleEditorDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   onMapChange?: (map: MarbleMap) => void
+}
+
+const HISTORY_LIMIT = 50
+
+type MapHistory = {
+  record: (current: MarbleMap) => void
+  undo: (current: MarbleMap) => MarbleMap | null
+  redo: (current: MarbleMap) => MarbleMap | null
+}
+
+const createMapHistory = (canUndo: Ref<boolean>, canRedo: Ref<boolean>): MapHistory => {
+  let past: MarbleMap[] = []
+  let future: MarbleMap[] = []
+  const sync = (): void => {
+    canUndo.value = past.length > 0
+    canRedo.value = future.length > 0
+  }
+  return {
+    record: (current) => {
+      past = [...past.slice(-(HISTORY_LIMIT - 1)), current]
+      future = []
+      sync()
+    },
+    undo: (current) => {
+      const previous = past[past.length - 1] ?? null
+      if (!previous) return null
+      past = past.slice(0, -1)
+      future = [current, ...future]
+      sync()
+      return previous
+    },
+    redo: (current) => {
+      const [next, ...rest] = future
+      if (!next) return null
+      past = [...past, current]
+      future = rest
+      sync()
+      return next
+    }
+  }
 }
 
 const setModelEmissive = (model: ComplexModel, emissive: number): void => {
@@ -122,6 +162,43 @@ const destroyEditorScene = (state: EditorSceneState): void => {
   }
 }
 
+const createPiecePicker = (
+  canvas: Ref<HTMLCanvasElement | null>,
+  state: EditorSceneState,
+  onPick: (pieceId: string) => void
+) =>
+  useSceneElementPicker({
+    canvas,
+    getCamera: () => state.camera,
+    getObjects: () => state.builtTrack?.models ?? [],
+    matchObject: (object) =>
+      typeof object.userData.pieceId === 'string' ? object.userData.pieceId : null,
+    isEnabled: () => state.context !== null,
+    onPick
+  })
+
+const applyHighlight = (state: EditorSceneState, selectedPieceId: string | null): void => {
+  state.builtTrack?.models.forEach((model) => {
+    const isSelected = selectedPieceId !== null && model.userData.pieceId === selectedPieceId
+    setModelEmissive(model, isSelected ? SELECTION_EMISSIVE : 0x000000)
+  })
+}
+
+const insertionIndexFor = (map: MarbleMap, selectedPieceId: string | null): number => {
+  const selectedIndex = map.pieces.findIndex((piece) => piece.id === selectedPieceId)
+  if (selectedIndex >= 0) return selectedIndex + 1
+  const finishIndex = map.pieces.findIndex((piece) => piece.type === 'finish')
+  return finishIndex >= 0 ? finishIndex : map.pieces.length
+}
+
+const previewTransformFor = (map: MarbleMap, selectedPieceId: string | null): PieceTransform => {
+  const transforms = computeChainTransforms(map.pieces)
+  return (
+    transforms[insertionIndexFor(map, selectedPieceId)] ??
+    transforms[transforms.length - 1] ?? { position: [0, 0, 0], yaw: 0 }
+  )
+}
+
 /**
  * Editor state and scene lifecycle for the marble track editor: holds the
  * current map, applies edit operations, rebuilds the 3D track on change,
@@ -131,6 +208,9 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const currentMap = ref<MarbleMap>(loadCurrentMap() ?? SAMPLE_MAPS[0])
   const selectedPieceId = ref<string | null>(null)
   const savedMaps = ref<MarbleMap[]>(listSavedMaps())
+  const canUndo = ref(false)
+  const canRedo = ref(false)
+  const history = createMapHistory(canUndo, canRedo)
 
   const selectedPiece = computed(
     () => currentMap.value.pieces.find((piece) => piece.id === selectedPieceId.value) ?? null
@@ -144,43 +224,44 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     cleanupTools: null
   }
 
-  const applySelectionHighlight = (): void => {
-    state.builtTrack?.models.forEach((model) => {
-      const isSelected =
-        selectedPieceId.value !== null && model.userData.pieceId === selectedPieceId.value
-      setModelEmissive(model, isSelected ? SELECTION_EMISSIVE : 0x000000)
-    })
-  }
-
   const rebuildTrack = (): void => {
     if (!state.context) return
     disposeGhost(state)
     state.builtTrack?.dispose()
     state.builtTrack = buildTrack(state.context.scene, state.context.world, currentMap.value)
-    applySelectionHighlight()
+    applyHighlight(state, selectedPieceId.value)
   }
 
-  const commitMap = (map: MarbleMap, notify = true): void => {
+  const commitMap = (map: MarbleMap, notify = true, record = true): void => {
+    if (record) history.record(currentMap.value)
     currentMap.value = map
     saveCurrentMap(map)
     rebuildTrack()
     if (notify) deps.onMapChange?.(map)
   }
 
-  const insertionIndex = (): number => {
-    const pieces = currentMap.value.pieces
-    const selectedIndex = pieces.findIndex((piece) => piece.id === selectedPieceId.value)
-    if (selectedIndex >= 0) return selectedIndex + 1
-    const finishIndex = pieces.findIndex((piece) => piece.type === 'finish')
-    return finishIndex >= 0 ? finishIndex : pieces.length
+  const applyHistoryStep = (map: MarbleMap | null): void => {
+    if (!map) return
+    selectedPieceId.value = null
+    commitMap(map, true, false)
   }
 
+  const undo = (): void => applyHistoryStep(history.undo(currentMap.value))
+  const redo = (): void => applyHistoryStep(history.redo(currentMap.value))
+
   const addPiece = (type: TrackPieceType): void => {
+    const previousIds = new Set(currentMap.value.pieces.map((piece) => piece.id))
     const next =
       selectedPieceId.value !== null
-        ? insertPiece(currentMap.value, insertionIndex(), type)
+        ? insertPiece(
+            currentMap.value,
+            insertionIndexFor(currentMap.value, selectedPieceId.value),
+            type
+          )
         : appendPiece(currentMap.value, type)
     commitMap(next)
+    const added = next.pieces.find((piece) => !previousIds.has(piece.id))
+    if (added) selectPiece(added.id)
   }
 
   const removeSelectedPiece = (): void => {
@@ -197,15 +278,13 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
 
   const selectPiece = (pieceId: string | null): void => {
     selectedPieceId.value = pieceId
-    applySelectionHighlight()
+    applyHighlight(state, pieceId)
   }
 
   const previewPiece = (type: TrackPieceType | null): void => {
     disposeGhost(state)
     if (!type || !state.context) return
-    const transforms = computeChainTransforms(currentMap.value.pieces)
-    const transform = transforms[insertionIndex()] ??
-      transforms[transforms.length - 1] ?? { position: [0, 0, 0], yaw: 0 }
+    const transform = previewTransformFor(currentMap.value, selectedPieceId.value)
     state.ghostGroup = buildPieceGhost(state.context.scene, type, transform)
   }
 
@@ -217,7 +296,7 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const setMapFromRemote = (map: MarbleMap): void => {
     if (map.updatedAt <= currentMap.value.updatedAt) return
     selectedPieceId.value = null
-    commitMap(map, false)
+    commitMap(map, false, false)
   }
 
   const startNewMap = (): void => loadMap(createEmptyMap('New track'))
@@ -231,15 +310,9 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     savedMaps.value = deleteSavedMap(name)
   }
 
-  const picker = useSceneElementPicker({
-    canvas: deps.canvas,
-    getCamera: () => state.camera,
-    getObjects: () => state.builtTrack?.models ?? [],
-    matchObject: (object) =>
-      typeof object.userData.pieceId === 'string' ? object.userData.pieceId : null,
-    isEnabled: () => state.context !== null,
-    onPick: (pieceId) => selectPiece(selectedPieceId.value === pieceId ? null : pieceId)
-  })
+  const picker = createPiecePicker(deps.canvas, state, (pieceId) =>
+    selectPiece(selectedPieceId.value === pieceId ? null : pieceId)
+  )
 
   const init = async (): Promise<void> => {
     if (!deps.canvas.value) return
@@ -259,6 +332,10 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     selectedPiece,
     selectedPieceId,
     savedMaps,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
     addPiece,
     removeSelectedPiece,
     recolorSelectedPiece,

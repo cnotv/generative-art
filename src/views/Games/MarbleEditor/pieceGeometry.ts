@@ -17,8 +17,10 @@ import {
   CURVE_SEGMENTS,
   CURVE_CHORD_OVERLAP,
   BANK_ANGLE,
+  BANK_BLEND_ANGLE,
   RAMP_LENGTH,
   RAMP_ANGLE,
+  RAMP_LIP_LENGTH,
   FUNNEL_TONGUE_LENGTH,
   FUNNEL_RIM_RADIUS,
   FUNNEL_BOWL_DEPTH,
@@ -77,7 +79,6 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0)
 const X_AXIS = new THREE.Vector3(1, 0, 0)
 const Z_AXIS = new THREE.Vector3(0, 0, 1)
 const IDENTITY_QUATERNION = new THREE.Quaternion()
-const ZERO_VECTOR = new THREE.Vector3()
 
 const vec = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z)
 const yawQuaternion = (yaw: number): THREE.Quaternion =>
@@ -142,8 +143,30 @@ const straightSpecs = (length: number): BoxSpec[] =>
 const crossWallSpec = (z: number, width: number = LANE_WIDTH): BoxSpec =>
   box([width + 2 * WALL_THICKNESS, WALL_FULL_HEIGHT, WALL_THICKNESS], vec(0, WALL_CENTER_Y, z))
 
-const rampSpecs = (direction: 1 | -1): BoxSpec[] =>
-  transformSpecs(straightSpecs(RAMP_LENGTH), pitchQuaternion(direction * RAMP_ANGLE), ZERO_VECTOR)
+// Flat lips at both ends make the sloped section meet neighbouring pieces
+// with perfectly level junctions.
+const rampSpecs = (direction: 1 | -1): BoxSpec[] => {
+  const rise = direction * RAMP_LENGTH * Math.sin(RAMP_ANGLE)
+  const run = RAMP_LENGTH * Math.cos(RAMP_ANGLE)
+  return [
+    ...straightSpecs(RAMP_LIP_LENGTH),
+    ...transformSpecs(
+      straightSpecs(RAMP_LENGTH),
+      pitchQuaternion(direction * RAMP_ANGLE),
+      vec(0, 0, -RAMP_LIP_LENGTH)
+    ),
+    ...transformSpecs(
+      straightSpecs(RAMP_LIP_LENGTH),
+      IDENTITY_QUATERNION,
+      vec(0, rise, -(RAMP_LIP_LENGTH + run))
+    )
+  ]
+}
+
+// The roll eases in and out across the arc so banked curves start and end
+// perfectly level against neighbouring pieces.
+const bankEnvelope = (phi: number): number =>
+  Math.max(0, Math.min(1, phi / BANK_BLEND_ANGLE, (Math.PI / 2 - phi) / BANK_BLEND_ANGLE))
 
 const arcSegmentSpecs = (side: 1 | -1, roll: number): BoxSpec[] => {
   const delta = Math.PI / 2 / CURVE_SEGMENTS
@@ -155,7 +178,9 @@ const arcSegmentSpecs = (side: 1 | -1, roll: number): BoxSpec[] => {
       0,
       -CURVE_RADIUS * Math.sin(phi)
     )
-    const orientation = yawQuaternion(side * phi).multiply(rollQuaternion(side * roll))
+    const orientation = yawQuaternion(side * phi).multiply(
+      rollQuaternion(side * roll * bankEnvelope(phi))
+    )
     return transformSpecs(laneSegmentSpecs(chord), orientation, midpoint)
   })
 }
@@ -192,9 +217,7 @@ const funnelLatheSpec = (): LatheSpec => ({
 
 const LOOP_GUIDE_LENGTH = Math.hypot(4, (LANE_WIDTH - LOOP_LANE_WIDTH) / 2)
 const LOOP_GUIDE_YAW = Math.atan2((LANE_WIDTH - LOOP_LANE_WIDTH) / 2, 4)
-const LOOP_EXIT_START_Z = -9.5
-const LOOP_EXIT_WIDTH = 6
-const LOOP_EXIT_WALL_FRACTION = 0.65
+const LOOP_EXIT_START_Z = -8
 
 const loopEntrySpecs = (): BoxSpec[] => {
   const entryLength = -LOOP_BOTTOM_Z + 1
@@ -248,26 +271,24 @@ const loopRingSpecs = (): BoxSpec[] => {
 // The walls stop before the junction with the next piece: the diagonal meets
 // the following lane at an angle, and full-length walls would form a wedge
 // pocket that traps the marble.
+// The ring lands onto a full-width straight exit lane displaced exactly one
+// lane width to the left of the entry, running parallel to it.
 const loopExitSpecs = (): BoxSpec[] => {
-  const startPoint = vec(LOOP_X_SHIFT, 0, LOOP_EXIT_START_Z)
-  const endPoint = vec(0, 0, -LOOP_EXIT_LENGTH)
-  const length = startPoint.distanceTo(endPoint)
-  const yaw = Math.atan2(LOOP_X_SHIFT, LOOP_EXIT_LENGTH + LOOP_EXIT_START_Z)
-  const midpoint = startPoint.clone().add(endPoint).multiplyScalar(0.5)
-  const orientation = yawQuaternion(yaw)
-  const wallLength = length * LOOP_EXIT_WALL_FRACTION
-  const walls = [-1, 1].map((side) => {
-    const spec = laneWallSpec(side, wallLength, LOOP_EXIT_WIDTH)
-    return { ...spec, center: spec.center.clone().setZ((length - wallLength) / 2) }
-  })
-  return transformSpecs([laneDeckSpec(length, LOOP_EXIT_WIDTH), ...walls], orientation, midpoint)
+  const length = LOOP_EXIT_LENGTH + LOOP_EXIT_START_Z
+  const center = vec(LOOP_X_SHIFT, 0, LOOP_EXIT_START_Z - length / 2)
+  return transformSpecs(laneSegmentSpecs(length), IDENTITY_QUATERNION, center)
 }
 
 const gapJumpSpecs = (): BoxSpec[] => {
   const landingLength = -GAP_JUMP_LENGTH - GAP_LANDING_START
   const landingCenter = vec(0, -GAP_JUMP_DROP, GAP_LANDING_START + landingLength / 2)
   return [
-    ...transformSpecs(straightSpecs(GAP_RAMP_LENGTH), pitchQuaternion(GAP_RAMP_ANGLE), ZERO_VECTOR),
+    ...straightSpecs(RAMP_LIP_LENGTH),
+    ...transformSpecs(
+      straightSpecs(GAP_RAMP_LENGTH),
+      pitchQuaternion(GAP_RAMP_ANGLE),
+      vec(0, 0, -RAMP_LIP_LENGTH)
+    ),
     ...transformSpecs(laneSegmentSpecs(-landingLength), IDENTITY_QUATERNION, landingCenter)
   ]
 }

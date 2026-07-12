@@ -6,6 +6,7 @@ import {
   CURVE_RADIUS,
   RAMP_LENGTH,
   RAMP_ANGLE,
+  RAMP_LIP_LENGTH,
   FUNNEL_DROP_HEIGHT
 } from './config'
 import type { PlacedPiece, TrackPieceType } from './types'
@@ -86,7 +87,9 @@ describe('computeChainTransforms', () => {
   it('raises the chain after a ramp-up', () => {
     const transforms = computeChainTransforms(makePieces(['ramp-up', 'straight-short']))
     expect(transforms[1].position[1]).toBeCloseTo(RAMP_LENGTH * Math.sin(RAMP_ANGLE))
-    expect(transforms[1].position[2]).toBeCloseTo(-RAMP_LENGTH * Math.cos(RAMP_ANGLE))
+    expect(transforms[1].position[2]).toBeCloseTo(
+      -(RAMP_LENGTH * Math.cos(RAMP_ANGLE) + 2 * RAMP_LIP_LENGTH)
+    )
   })
 
   it('lowers the chain after a funnel drop', () => {

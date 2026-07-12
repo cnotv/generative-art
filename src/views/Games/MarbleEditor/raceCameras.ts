@@ -19,7 +19,8 @@ export const updateFirstPersonCamera = (
   camera: THREE.Camera,
   marble: THREE.Object3D,
   velocity: { x: number; y: number; z: number },
-  smoothedDirection: THREE.Vector3
+  smoothedDirection: THREE.Vector3,
+  orbit: OrbitControls | null
 ): void => {
   const speed = Math.hypot(velocity.x, velocity.z)
   if (speed > FIRST_PERSON_MIN_SPEED) {
@@ -30,6 +31,9 @@ export const updateFirstPersonCamera = (
   scratchLookTarget
     .copy(camera.position)
     .addScaledVector(smoothedDirection, FIRST_PERSON_LOOK_AHEAD)
+  // The render loop calls orbit.update() every frame, which re-points the
+  // camera at orbit.target — so the look direction must go through the target.
+  if (orbit) orbit.target.copy(scratchLookTarget)
   camera.lookAt(scratchLookTarget)
 }
 
@@ -57,5 +61,11 @@ export const applyRaceCamera = (options: RaceCameraOptions): void => {
     cameraFollowPlayer(camera, marble, options.offset, orbit)
     return
   }
-  updateFirstPersonCamera(camera, marble, marble.userData.body.linvel(), options.smoothedDirection)
+  updateFirstPersonCamera(
+    camera,
+    marble,
+    marble.userData.body.linvel(),
+    options.smoothedDirection,
+    orbit
+  )
 }

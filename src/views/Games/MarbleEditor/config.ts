@@ -28,17 +28,19 @@ export const BUMPER_FIELD_LENGTH = 16
 export const CURVE_SEGMENTS = 12
 export const CURVE_CHORD_OVERLAP = 1.06
 export const BANK_ANGLE = 0.3
+export const BANK_BLEND_ANGLE = 0.35
+export const RAMP_LIP_LENGTH = 1.5
 
 export const FUNNEL_TONGUE_LENGTH = 2
 export const FUNNEL_RIM_RADIUS = 6
 export const FUNNEL_BOWL_DEPTH = 4
 export const FUNNEL_HOLE_RADIUS = 1.6
 
-export const LOOP_RADIUS = 3
+export const LOOP_RADIUS = 4
 export const LOOP_BOTTOM_Z = -11
 export const LOOP_SEGMENTS = 26
 export const LOOP_GAP_ANGLE = 0.25
-export const LOOP_X_SHIFT = 5
+export const LOOP_X_SHIFT = -LANE_WIDTH
 export const LOOP_LANE_WIDTH = 6
 export const LOOP_WALL_HEIGHT = 0.8
 export const LOOP_RING_SINK = 0.2

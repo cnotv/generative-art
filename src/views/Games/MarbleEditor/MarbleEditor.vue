@@ -294,6 +294,8 @@ onMounted(() => {
           :selected-piece="editor.selectedPiece.value"
           :saved-maps="editor.savedMaps.value"
           :map-name="editor.currentMap.value.name"
+          :can-undo="editor.canUndo.value"
+          :can-redo="editor.canRedo.value"
           @add="editor.addPiece"
           @preview="editor.previewPiece"
           @recolor="editor.recolorSelectedPiece"
@@ -302,6 +304,8 @@ onMounted(() => {
           @load-map="editor.loadMap"
           @delete-map="editor.deleteMapByName"
           @new-map="editor.startNewMap"
+          @undo="editor.undo"
+          @redo="editor.redo"
           @play="startRaceFromEditor"
         />
       </template>

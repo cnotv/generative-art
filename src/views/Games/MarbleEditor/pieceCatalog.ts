@@ -1,5 +1,6 @@
 import type { PieceSpec, TrackPieceType } from './types'
 import {
+  LANE_WIDTH,
   START_LENGTH,
   FINISH_LENGTH,
   STRAIGHT_SHORT_LENGTH,
@@ -7,6 +8,7 @@ import {
   CURVE_RADIUS,
   RAMP_LENGTH,
   RAMP_ANGLE,
+  RAMP_LIP_LENGTH,
   FUNNEL_DROP_HEIGHT,
   FUNNEL_EXIT_LENGTH,
   LOOP_EXIT_LENGTH,
@@ -28,7 +30,7 @@ import {
 } from './config'
 
 const RAMP_RISE = RAMP_LENGTH * Math.sin(RAMP_ANGLE)
-const RAMP_RUN = RAMP_LENGTH * Math.cos(RAMP_ANGLE)
+const RAMP_RUN = RAMP_LENGTH * Math.cos(RAMP_ANGLE) + 2 * RAMP_LIP_LENGTH
 
 export const PIECE_CATALOG: Record<TrackPieceType, PieceSpec> = {
   start: {
@@ -112,7 +114,7 @@ export const PIECE_CATALOG: Record<TrackPieceType, PieceSpec> = {
     type: 'loop',
     label: 'Loop',
     defaultColor: COLOR_LOOP,
-    exitOffset: [0, 0, -LOOP_EXIT_LENGTH],
+    exitOffset: [-LANE_WIDTH, 0, -LOOP_EXIT_LENGTH],
     exitYawDelta: 0
   },
   'gap-jump': {
