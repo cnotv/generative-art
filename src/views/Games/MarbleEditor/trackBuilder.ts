@@ -7,11 +7,13 @@ import { buildPieceModels } from './pieceGeometry'
 import type { MarbleMap, PieceTransform, BuiltTrack, BoostZone } from './types'
 import {
   LANE_WIDTH,
+  DECK_THICKNESS,
   SPAWN_HEIGHT,
   SPAWN_Z_INSET,
   SPAWN_LANE_MARGIN,
   FINISH_LENGTH,
   FINISH_CHECK_RADIUS,
+  FINISH_CHECK_HEIGHT,
   BOOST_PAD_LENGTH,
   BOOST_ZONE_MAX_HEIGHT,
   CHECKPOINT_RADIUS
@@ -36,12 +38,16 @@ export const finishZoneCenter = (finishTransform: PieceTransform): CoordinateTup
   applyPieceTransform(finishTransform, [0, 0, -FINISH_LENGTH / 2])
 
 export const isInFinishZone = (
-  position: { x: number; z: number },
+  position: { x: number; y: number; z: number },
   finishTransform: PieceTransform | null
 ): boolean => {
   if (!finishTransform) return false
-  const [centerX, , centerZ] = finishZoneCenter(finishTransform)
-  return Math.hypot(position.x - centerX, position.z - centerZ) < FINISH_CHECK_RADIUS
+  const [centerX, centerY, centerZ] = finishZoneCenter(finishTransform)
+  const withinHeight =
+    position.y > centerY - DECK_THICKNESS && position.y < centerY + FINISH_CHECK_HEIGHT
+  return (
+    withinHeight && Math.hypot(position.x - centerX, position.z - centerZ) < FINISH_CHECK_RADIUS
+  )
 }
 
 export const isOnBoostZone = (

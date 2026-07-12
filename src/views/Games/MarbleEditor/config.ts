@@ -58,8 +58,11 @@ export const BUMPER_RESTITUTION = 0.8
 
 export const DECK_FRICTION = 0.9
 export const DECK_RESTITUTION = 0.2
+export const WALL_FRICTION = 0.05
+export const WALL_DECK_OVERLAP = 0.25
 
 export const FINISH_CHECK_RADIUS = 5
+export const FINISH_CHECK_HEIGHT = 3
 export const SPAWN_HEIGHT = 1.5
 export const SPAWN_Z_INSET = -2
 export const SPAWN_LANE_MARGIN = 1.2
@@ -72,7 +75,7 @@ export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'backward', label: 'Backward', directional: true },
   { id: 'left', label: 'Left', directional: true },
   { id: 'right', label: 'Right', directional: true },
-  { id: 'camera', label: 'Camera mode' }
+  { id: 'camera', label: 'Camera' }
 ]
 
 export const KEYBOARD_MAPPING = {

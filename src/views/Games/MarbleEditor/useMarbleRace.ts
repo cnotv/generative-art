@@ -12,7 +12,7 @@ import {
   createTimerAction,
   createFallCheckAction
 } from '@/utils/gameTimelineActions'
-import { applyRaceCamera, createSmoothedDirection } from './raceCameras'
+import { applyRaceCamera, createSmoothedDirection, updateSmoothedDirection } from './raceCameras'
 import { createGhostRegistry, placeGhost, removeGhost, clearGhosts } from './raceGhosts'
 import type { GhostPlacement } from './raceGhosts'
 import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './nameLabels'
@@ -92,8 +92,6 @@ type RaceState = {
   posAccumulator: number
 }
 
-const CAMERA_OFFSET: CoordinateTuple = [0, CAMERA_HEIGHT, CAMERA_BACK]
-
 const VERTICAL_INPUT_REDIRECT_VY = 1
 const VERTICAL_INPUT_REDIRECT_SPEED = 4
 
@@ -134,6 +132,7 @@ const respawnAtCheckpoint = (state: RaceState): void => {
   state.marble.userData.body.setTranslation({ x, y, z }, true)
   state.marble.userData.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
   state.marble.userData.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
+  state.smoothedDirection.set(-Math.sin(transform.yaw), 0, -Math.cos(transform.yaw))
 }
 
 const computeFallThreshold = (builtTrack: BuiltTrack): number =>
@@ -160,6 +159,7 @@ const spawnMarble = (
   }) as unknown as ComplexModel
   marble.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
   marble.userData.body.setAngularDamping(MARBLE_ANGULAR_DAMPING)
+  marble.userData.body.enableCcd(true)
   attachBallStroke(marble as unknown as THREE.Mesh)
   return marble
 }
@@ -225,7 +225,6 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
         camera,
         marble: state.marble,
         orbit,
-        offset: CAMERA_OFFSET,
         smoothedDirection: state.smoothedDirection
       })
   })
@@ -334,10 +333,10 @@ const createRaceActions = (
     state.cameraActionHeld = held
   }
 
-  const inputForward = (): { x: number; z: number } =>
-    refs.cameraMode.value === 'first'
-      ? { x: state.smoothedDirection.x, z: state.smoothedDirection.z }
-      : { x: 0, z: -1 }
+  const inputForward = (): { x: number; z: number } => ({
+    x: state.smoothedDirection.x,
+    z: state.smoothedDirection.z
+  })
 
   const applyInputAndBoost = (): void => {
     if (!state.marble || !state.controls) return
@@ -345,6 +344,7 @@ const createRaceActions = (
     if (refs.finished.value || refs.countdown.value > 0) return
     const body = state.marble.userData.body
     const position = body.translation()
+    updateSmoothedDirection(state.smoothedDirection, body.linvel())
     const onBoost =
       state.builtTrack?.boostZones.some((zone) => isOnBoostZone(position, zone)) ?? false
     const impulse = computeImpulse(state.controls.currentActions, body.linvel(), inputForward())

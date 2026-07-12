@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as THREE from 'three'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { storeToRefs } from 'pinia'
 import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { useRoomId } from '@/composables/useRoomId'
@@ -35,13 +36,38 @@ const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
 const store = useMarbleEditorStore()
 const { phase, playerList, messages, hostId, raceStartTime } = storeToRefs(store)
 
+const CONFIG_STORAGE_KEY = 'marble-editor-lobby-config'
+
+type StoredLobbyConfig = {
+  marble?: string
+  mapName?: string
+  startMode?: string
+}
+
+const loadLobbyConfig = (): StoredLobbyConfig => {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) ?? '{}')
+    return typeof parsed === 'object' && parsed !== null ? (parsed as StoredLobbyConfig) : {}
+  } catch {
+    return {}
+  }
+}
+
+const storedLobbyConfig = loadLobbyConfig()
+
 const storedProfile = loadProfile()
 const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
-const playerMarble = ref(DEFAULT_MARBLE.id)
-const startMode = ref<Extract<MePhase, 'edit' | 'race'>>('edit')
+const playerMarble = ref(
+  MARBLE_OPTIONS.some((option) => option.id === storedLobbyConfig.marble)
+    ? (storedLobbyConfig.marble as string)
+    : DEFAULT_MARBLE.id
+)
+const startMode = ref<Extract<MePhase, 'edit' | 'race'>>(
+  storedLobbyConfig.startMode === 'race' ? 'race' : 'edit'
+)
 
 const { roomId, resolvedRoomId } = useRoomId()
 
@@ -117,18 +143,37 @@ const formattedTime = computed(() => {
   return `${minutes}:${seconds}`
 })
 
-const mapOptions = computed(() => {
-  const all = [...SAMPLE_MAPS, ...editor.savedMaps.value]
-  return all.map((map, index) => ({ value: index, label: map.name }))
-})
-const selectedMapIndex = ref(0)
+const allMaps = computed(() => [...SAMPLE_MAPS, ...editor.savedMaps.value])
+
+const mapOptions = computed(() =>
+  allMaps.value.map((map, index) => ({ value: index, label: map.name }))
+)
+
+const storedMapIndex = allMaps.value.findIndex((map) => map.name === storedLobbyConfig.mapName)
+const selectedMapIndex = ref(Math.max(0, storedMapIndex))
+
+const persistLobbyConfig = (): void => {
+  localStorage.setItem(
+    CONFIG_STORAGE_KEY,
+    JSON.stringify({
+      marble: playerMarble.value,
+      startMode: startMode.value,
+      mapName: allMaps.value[selectedMapIndex.value]?.name
+    })
+  )
+}
 
 const handleConfigChange = (key: string, value: string | number): void => {
   if (key !== 'mapIndex') return
   selectedMapIndex.value = Number(value)
-  const all = [...SAMPLE_MAPS, ...editor.savedMaps.value]
-  const map = all[selectedMapIndex.value]
+  const map = allMaps.value[selectedMapIndex.value]
   if (map) editor.loadMap(map)
+  persistLobbyConfig()
+}
+
+const handleStartModeChange = (mode: Extract<MePhase, 'edit' | 'race'>): void => {
+  startMode.value = mode
+  persistLobbyConfig()
 }
 
 const upsertLocalPlayer = (): void => {
@@ -167,6 +212,7 @@ const {
 const handleMarbleChange = (marbleId: string): void => {
   playerMarble.value = marbleId
   session.updateProfile(playerName.value, playerColor.value, marbleId)
+  persistLobbyConfig()
 }
 
 const layoutReference = ref<{ requestLeave: () => void } | null>(null)
@@ -231,9 +277,19 @@ watch(phase, async (newPhase, oldPhase) => {
   }
 })
 
+const ME_FONT_KEY = 'me-font'
+
 onMounted(() => {
   store.reset()
   session.init()
+  loadGoogleFont(
+    'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',
+    ME_FONT_KEY
+  )
+})
+
+onUnmounted(() => {
+  removeGoogleFont(ME_FONT_KEY)
 })
 </script>
 
@@ -283,7 +339,7 @@ onMounted(() => {
       @leave-room="handleLeaveRoom"
       @config-change="handleConfigChange"
       @marble-change="handleMarbleChange"
-      @mode-change="startMode = $event"
+      @mode-change="handleStartModeChange"
     />
 
     <div v-else class="me__play-area">

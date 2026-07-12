@@ -14,8 +14,6 @@ import {
   STRAIGHT_SHORT_LENGTH,
   STRAIGHT_LONG_LENGTH,
   CURVE_RADIUS,
-  CURVE_SEGMENTS,
-  CURVE_CHORD_OVERLAP,
   BANK_ANGLE,
   BANK_BLEND_ANGLE,
   RAMP_LENGTH,
@@ -51,6 +49,8 @@ import {
   BUMPER_RESTITUTION,
   DECK_FRICTION,
   DECK_RESTITUTION,
+  WALL_FRICTION,
+  WALL_DECK_OVERLAP,
   COLOR_BOOST,
   COLOR_BUMPER
 } from './config'
@@ -64,15 +64,16 @@ type BoxSpec = {
   restitution?: number
 }
 
-type LatheSpec = {
-  profile: THREE.Vector2[]
+type TrimeshSpec = {
+  geometry: THREE.BufferGeometry
   center: THREE.Vector3
   friction: number
+  restitution?: number
 }
 
 type PieceParts = {
   boxes: BoxSpec[]
-  lathes: LatheSpec[]
+  trimeshes: TrimeshSpec[]
 }
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
@@ -113,9 +114,17 @@ const transformSpecs = (
 const WALL_CENTER_Y = (WALL_HEIGHT - DECK_THICKNESS) / 2
 const WALL_FULL_HEIGHT = WALL_HEIGHT + DECK_THICKNESS
 
-const laneDeckSpec = (length: number, width: number = LANE_WIDTH): BoxSpec =>
-  box([width, DECK_THICKNESS, length], vec(0, -DECK_THICKNESS / 2, 0))
+// Lane boxes are slightly longer than their nominal span so neighbouring
+// segments and pieces overlap: flush box seams leave hairline cracks that
+// wedge a fast marble.
+const JOINT_OVERLAP = 0.3
 
+const laneDeckSpec = (length: number, width: number = LANE_WIDTH): BoxSpec =>
+  box([width, DECK_THICKNESS, length + JOINT_OVERLAP], vec(0, -DECK_THICKNESS / 2, 0))
+
+// Walls are near-frictionless rails (a grinding marble keeps its speed) and
+// overlap the deck edge so the two boxes share volume: a flush box-to-box
+// seam leaves a hairline crack the physics solver can wedge the marble into.
 const laneWallSpec = (
   side: number,
   length: number,
@@ -123,8 +132,13 @@ const laneWallSpec = (
   wallHeight: number = WALL_HEIGHT
 ): BoxSpec =>
   box(
-    [WALL_THICKNESS, wallHeight + DECK_THICKNESS, length],
-    vec((side * (width + WALL_THICKNESS)) / 2, (wallHeight - DECK_THICKNESS) / 2, 0)
+    [WALL_THICKNESS + WALL_DECK_OVERLAP, wallHeight + DECK_THICKNESS, length + JOINT_OVERLAP],
+    vec(
+      side * ((width + WALL_THICKNESS - WALL_DECK_OVERLAP) / 2),
+      (wallHeight - DECK_THICKNESS) / 2,
+      0
+    ),
+    { friction: WALL_FRICTION }
   )
 
 const laneSegmentSpecs = (
@@ -141,7 +155,9 @@ const straightSpecs = (length: number): BoxSpec[] =>
   transformSpecs(laneSegmentSpecs(length), IDENTITY_QUATERNION, vec(0, 0, -length / 2))
 
 const crossWallSpec = (z: number, width: number = LANE_WIDTH): BoxSpec =>
-  box([width + 2 * WALL_THICKNESS, WALL_FULL_HEIGHT, WALL_THICKNESS], vec(0, WALL_CENTER_Y, z))
+  box([width + 2 * WALL_THICKNESS, WALL_FULL_HEIGHT, WALL_THICKNESS], vec(0, WALL_CENTER_Y, z), {
+    friction: WALL_FRICTION
+  })
 
 // Flat lips at both ends make the sloped section meet neighbouring pieces
 // with perfectly level junctions.
@@ -168,22 +184,72 @@ const rampSpecs = (direction: 1 | -1): BoxSpec[] => {
 const bankEnvelope = (phi: number): number =>
   Math.max(0, Math.min(1, phi / BANK_BLEND_ANGLE, (Math.PI / 2 - phi) / BANK_BLEND_ANGLE))
 
-const arcSegmentSpecs = (side: 1 | -1, roll: number): BoxSpec[] => {
-  const delta = Math.PI / 2 / CURVE_SEGMENTS
-  const chord = 2 * CURVE_RADIUS * Math.sin(delta / 2) * CURVE_CHORD_OVERLAP
-  return Array.from({ length: CURVE_SEGMENTS }, (_, index) => index).flatMap((index) => {
-    const phi = (index + 0.5) * delta
-    const midpoint = vec(
-      side * (CURVE_RADIUS * Math.cos(phi) - CURVE_RADIUS),
-      0,
-      -CURVE_RADIUS * Math.sin(phi)
-    )
-    const orientation = yawQuaternion(side * phi).multiply(
-      rollQuaternion(side * roll * bankEnvelope(phi))
-    )
-    return transformSpecs(laneSegmentSpecs(chord), orientation, midpoint)
+// Closed outline of the lane profile (deck plus both walls), swept along the
+// arc to produce a single smooth solid instead of segmented boxes.
+const LANE_CROSS_SECTION: [number, number][] = [
+  [-(LANE_WIDTH / 2 + WALL_THICKNESS), -DECK_THICKNESS],
+  [-(LANE_WIDTH / 2 + WALL_THICKNESS), WALL_HEIGHT],
+  [-LANE_WIDTH / 2, WALL_HEIGHT],
+  [-LANE_WIDTH / 2, 0],
+  [LANE_WIDTH / 2, 0],
+  [LANE_WIDTH / 2, WALL_HEIGHT],
+  [LANE_WIDTH / 2 + WALL_THICKNESS, WALL_HEIGHT],
+  [LANE_WIDTH / 2 + WALL_THICKNESS, -DECK_THICKNESS]
+]
+
+const ARC_SWEEP_STATIONS = 33
+
+const arcStationPositions = (side: 1 | -1, roll: number, stationIndex: number): number[] => {
+  const phi = (stationIndex / (ARC_SWEEP_STATIONS - 1)) * (Math.PI / 2)
+  const centerX = side * (CURVE_RADIUS * Math.cos(phi) - CURVE_RADIUS)
+  const centerZ = -CURVE_RADIUS * Math.sin(phi)
+  const orientation = yawQuaternion(side * phi).multiply(
+    rollQuaternion(side * roll * bankEnvelope(phi))
+  )
+  return LANE_CROSS_SECTION.flatMap(([x, y]) => {
+    const point = vec(x, y, 0).applyQuaternion(orientation)
+    return [centerX + point.x, point.y, centerZ + point.z]
   })
 }
+
+const arcSweepIndices = (): number[] => {
+  const pointCount = LANE_CROSS_SECTION.length
+  const sideQuads = Array.from({ length: ARC_SWEEP_STATIONS - 1 }, (_, station) =>
+    LANE_CROSS_SECTION.flatMap((_, pointIndex) => {
+      const nextPoint = (pointIndex + 1) % pointCount
+      const a = station * pointCount + pointIndex
+      const b = station * pointCount + nextPoint
+      const c = (station + 1) * pointCount + pointIndex
+      const d = (station + 1) * pointCount + nextPoint
+      return [a, c, b, b, c, d]
+    })
+  ).flat()
+  const capTriangles = THREE.ShapeUtils.triangulateShape(
+    LANE_CROSS_SECTION.map(([x, y]) => new THREE.Vector2(x, y)),
+    []
+  )
+  const endBase = (ARC_SWEEP_STATIONS - 1) * pointCount
+  const caps = capTriangles.flatMap(([a, b, c]) => [a, b, c, endBase + a, endBase + c, endBase + b])
+  return [...sideQuads, ...caps]
+}
+
+const buildArcSweepGeometry = (side: 1 | -1, roll: number): THREE.BufferGeometry => {
+  const positions = Array.from({ length: ARC_SWEEP_STATIONS }, (_, station) =>
+    arcStationPositions(side, roll, station)
+  ).flat()
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setIndex(arcSweepIndices())
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+const arcTrimeshSpec = (side: 1 | -1, roll: number): TrimeshSpec => ({
+  geometry: buildArcSweepGeometry(side, roll),
+  center: new THREE.Vector3(0, 0, 0),
+  friction: DECK_FRICTION,
+  restitution: DECK_RESTITUTION
+})
 
 const funnelBoxSpecs = (): PieceParts['boxes'] => {
   const bowlCenterZ = -(FUNNEL_TONGUE_LENGTH + FUNNEL_RIM_RADIUS)
@@ -201,18 +267,24 @@ const funnelBoxSpecs = (): PieceParts['boxes'] => {
   ]
 }
 
-const funnelLatheSpec = (): LatheSpec => ({
-  profile: [
-    [FUNNEL_HOLE_RADIUS, -FUNNEL_BOWL_DEPTH],
-    [FUNNEL_HOLE_RADIUS + 0.6, -FUNNEL_BOWL_DEPTH + 0.7],
-    [FUNNEL_HOLE_RADIUS + 1.6, -FUNNEL_BOWL_DEPTH + 1.7],
-    [FUNNEL_HOLE_RADIUS + 2.9, -FUNNEL_BOWL_DEPTH + 2.8],
-    [FUNNEL_RIM_RADIUS - 0.6, -0.4],
-    [FUNNEL_RIM_RADIUS, 0],
-    [FUNNEL_RIM_RADIUS + 0.5, 0.4]
-  ].map(([radius, height]) => new THREE.Vector2(radius, height)),
+const FUNNEL_PROFILE: [number, number][] = [
+  [FUNNEL_HOLE_RADIUS, -FUNNEL_BOWL_DEPTH],
+  [FUNNEL_HOLE_RADIUS + 0.6, -FUNNEL_BOWL_DEPTH + 0.7],
+  [FUNNEL_HOLE_RADIUS + 1.6, -FUNNEL_BOWL_DEPTH + 1.7],
+  [FUNNEL_HOLE_RADIUS + 2.9, -FUNNEL_BOWL_DEPTH + 2.8],
+  [FUNNEL_RIM_RADIUS - 0.6, -0.4],
+  [FUNNEL_RIM_RADIUS, 0],
+  [FUNNEL_RIM_RADIUS + 0.5, 0.4]
+]
+
+const funnelTrimeshSpec = (): TrimeshSpec => ({
+  geometry: new THREE.LatheGeometry(
+    FUNNEL_PROFILE.map(([radius, height]) => new THREE.Vector2(radius, height)),
+    32
+  ),
   center: vec(0, 0, -(FUNNEL_TONGUE_LENGTH + FUNNEL_RIM_RADIUS)),
-  friction: 0.4
+  friction: 0.4,
+  restitution: 0.1
 })
 
 const LOOP_GUIDE_LENGTH = Math.hypot(4, (LANE_WIDTH - LOOP_LANE_WIDTH) / 2)
@@ -231,7 +303,9 @@ const loopEntrySpecs = (): BoxSpec[] => {
     ),
     ...[-1, 1].map((side) =>
       transformSpec(
-        box([WALL_THICKNESS, WALL_FULL_HEIGHT, LOOP_GUIDE_LENGTH], vec(0, WALL_CENTER_Y, 0)),
+        box([WALL_THICKNESS, WALL_FULL_HEIGHT, LOOP_GUIDE_LENGTH], vec(0, WALL_CENTER_Y, 0), {
+          friction: WALL_FRICTION
+        }),
         yawQuaternion(side * LOOP_GUIDE_YAW),
         vec(side * ((LANE_WIDTH + LOOP_LANE_WIDTH) / 4), 0, LOOP_BOTTOM_Z + 2)
       )
@@ -316,7 +390,7 @@ const bumperFieldSpecs = (): BoxSpec[] => [
   )
 ]
 
-const boxesOnly = (boxes: BoxSpec[]): PieceParts => ({ boxes, lathes: [] })
+const boxesOnly = (boxes: BoxSpec[]): PieceParts => ({ boxes, trimeshes: [] })
 
 const PIECE_PARTS_BUILDERS: Record<TrackPieceType, () => PieceParts> = {
   start: () => boxesOnly([...straightSpecs(START_LENGTH), crossWallSpec(WALL_THICKNESS / 2)]),
@@ -327,13 +401,13 @@ const PIECE_PARTS_BUILDERS: Record<TrackPieceType, () => PieceParts> = {
     ]),
   'straight-short': () => boxesOnly(straightSpecs(STRAIGHT_SHORT_LENGTH)),
   'straight-long': () => boxesOnly(straightSpecs(STRAIGHT_LONG_LENGTH)),
-  'curve-left': () => boxesOnly(arcSegmentSpecs(1, 0)),
-  'curve-right': () => boxesOnly(arcSegmentSpecs(-1, 0)),
-  'banked-left': () => boxesOnly(arcSegmentSpecs(1, BANK_ANGLE)),
-  'banked-right': () => boxesOnly(arcSegmentSpecs(-1, BANK_ANGLE)),
+  'curve-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, 0)] }),
+  'curve-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, 0)] }),
+  'banked-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, BANK_ANGLE)] }),
+  'banked-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, BANK_ANGLE)] }),
   'ramp-up': () => boxesOnly(rampSpecs(1)),
   'ramp-down': () => boxesOnly(rampSpecs(-1)),
-  funnel: () => ({ boxes: funnelBoxSpecs(), lathes: [funnelLatheSpec()] }),
+  funnel: () => ({ boxes: funnelBoxSpecs(), trimeshes: [funnelTrimeshSpec()] }),
   loop: () => boxesOnly([...loopEntrySpecs(), ...loopRingSpecs(), ...loopExitSpecs()]),
   'gap-jump': () => boxesOnly(gapJumpSpecs()),
   'boost-pad': () => boxesOnly(boostPadSpecs()),
@@ -366,25 +440,24 @@ const buildBoxModel = (
   return model
 }
 
-const buildLatheModel = (
+const buildTrimeshModel = (
   scene: THREE.Scene,
   world: RAPIER.World,
   piece: PlacedPiece,
-  spec: LatheSpec,
+  spec: TrimeshSpec,
   transform: PieceTransform
 ): ComplexModel => {
-  const geometry = new THREE.LatheGeometry(spec.profile, 32)
   const worldCenter = spec.center
     .clone()
     .applyQuaternion(yawQuaternion(transform.yaw))
     .add(vec(...transform.position))
-  const model = getTrimesh(scene, world, geometry, {
+  const model = getTrimesh(scene, world, spec.geometry, {
     name: `piece-${piece.id}`,
     position: [worldCenter.x, worldCenter.y, worldCenter.z],
     rotation: [0, transform.yaw, 0],
     color: piece.color,
     friction: spec.friction,
-    restitution: 0.1
+    restitution: spec.restitution ?? 0.1
   })
   const material = model.material as THREE.Material
   material.side = THREE.DoubleSide
@@ -424,11 +497,8 @@ export const buildPieceGhost = (
       mesh.quaternion.copy(spec.quaternion)
       group.add(mesh)
     })
-  parts.lathes.forEach((spec) => {
-    const mesh = new THREE.Mesh(
-      new THREE.LatheGeometry(spec.profile, 32),
-      makeGhostMaterial(defaultColor)
-    )
+  parts.trimeshes.forEach((spec) => {
+    const mesh = new THREE.Mesh(spec.geometry, makeGhostMaterial(defaultColor))
     mesh.position.copy(spec.center.clone().applyQuaternion(worldQuaternion).add(worldTranslation))
     mesh.quaternion.copy(worldQuaternion)
     group.add(mesh)
@@ -449,8 +519,8 @@ export const buildPieceModels = (
   const boxModels = parts.boxes.map((spec) =>
     buildBoxModel(scene, world, piece, transformSpec(spec, worldQuaternion, worldTranslation))
   )
-  const latheModels = parts.lathes.map((spec) =>
-    buildLatheModel(scene, world, piece, spec, transform)
+  const trimeshModels = parts.trimeshes.map((spec) =>
+    buildTrimeshModel(scene, world, piece, spec, transform)
   )
-  return [...boxModels, ...latheModels]
+  return [...boxModels, ...trimeshModels]
 }

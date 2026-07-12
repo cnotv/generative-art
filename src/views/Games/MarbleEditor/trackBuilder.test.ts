@@ -57,21 +57,30 @@ describe('computeSpawnPositions', () => {
 describe('isInFinishZone', () => {
   const finishTransform: PieceTransform = { position: [0, 0, -100], yaw: 0 }
 
-  it('detects a position at the finish zone center', () => {
+  it('detects a marble rolling over the finish deck', () => {
     const [centerX, , centerZ] = finishZoneCenter(finishTransform)
     expect(centerZ).toBeCloseTo(-100 - FINISH_LENGTH / 2)
-    expect(isInFinishZone({ x: centerX, z: centerZ }, finishTransform)).toBe(true)
+    expect(isInFinishZone({ x: centerX, y: 0.8, z: centerZ }, finishTransform)).toBe(true)
   })
 
   it('rejects a position outside the check radius', () => {
     const [centerX, , centerZ] = finishZoneCenter(finishTransform)
     expect(
-      isInFinishZone({ x: centerX + FINISH_CHECK_RADIUS + 1, z: centerZ }, finishTransform)
+      isInFinishZone({ x: centerX + FINISH_CHECK_RADIUS + 1, y: 0.8, z: centerZ }, finishTransform)
     ).toBe(false)
   })
 
+  it.each([
+    [10, false],
+    [-6, false],
+    [1.5, true]
+  ])('a marble at height %s above the finish resolves to %s', (height, expected) => {
+    const [centerX, , centerZ] = finishZoneCenter(finishTransform)
+    expect(isInFinishZone({ x: centerX, y: height, z: centerZ }, finishTransform)).toBe(expected)
+  })
+
   it('returns false without a finish transform', () => {
-    expect(isInFinishZone({ x: 0, z: 0 }, null)).toBe(false)
+    expect(isInFinishZone({ x: 0, y: 0, z: 0 }, null)).toBe(false)
   })
 })
 
