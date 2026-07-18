@@ -19,6 +19,8 @@ import GameHeader from '@/components/GameHeader.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
 import { LobbyUIButton, LobbyUIKeyPill, LobbyUIFocusHint } from '@/components/LobbyUI'
+import { isMobile } from '@webgamekit/controls'
+import TouchControl from '@/components/TouchControl.vue'
 import { useMenuFocus } from '@/composables/useMenuFocus'
 import { EDITOR_MENU_MAPPING } from './config'
 import { useMarbleEditor } from './useMarbleEditor'
@@ -37,6 +39,8 @@ const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
   first: 'First',
   free: 'Free'
 }
+
+const isMobileDevice = isMobile()
 
 const store = useMarbleEditorStore()
 const { phase, playerList, messages, hostId, raceStartTime } = storeToRefs(store)
@@ -429,6 +433,14 @@ onUnmounted(() => {
             Back to editor
           </LobbyUIButton>
         </div>
+        <TouchControl
+          v-if="isMobileDevice && race.currentActions.value"
+          class="me__fauxpad"
+          :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
+          :options="{ deadzone: 0.15, enableEightWay: true }"
+          :current-actions="race.currentActions.value"
+          :on-action="() => {}"
+        />
         <div v-if="race.countdown.value > 0" class="me__countdown">
           {{ race.countdown.value }}
         </div>
@@ -530,6 +542,13 @@ onUnmounted(() => {
   font-size: var(--lui-text-small);
   color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
+}
+
+.me__fauxpad {
+  position: absolute;
+  bottom: var(--spacing-6);
+  left: var(--spacing-6);
+  z-index: var(--z-dropdown);
 }
 
 .me__countdown {

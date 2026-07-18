@@ -452,6 +452,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   const penaltyCount = ref(0)
   const countdown = ref(0)
   const cameraMode = ref<CameraMode>('third')
+  const currentActions = ref<ControlsCurrents | null>(null)
 
   const state: RaceState = {
     marble: null,
@@ -496,6 +497,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
         if (action === 'back') deps.onBack?.()
       }
     })
+    currentActions.value = state.controls.currentActions
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
     state.builtTrack = null
@@ -528,6 +530,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   const destroy = (): void => {
     state.controls?.destroyControls()
     state.controls = null
+    currentActions.value = null
     if (state.localLabel && state.scene) disposeNameLabel(state.scene, state.localLabel)
     state.localLabel = null
     clearGhosts(ghostRegistry)
@@ -556,6 +559,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     penaltyCount,
     countdown,
     cameraMode,
+    currentActions,
     setCameraMode: actions.setCameraMode,
     cycleCameraMode: actions.cycleCameraMode,
     updateGhostPosition,
