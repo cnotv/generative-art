@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LobbyUIButton } from '@/components/LobbyUI'
+import { LobbyUIButton, LobbyUIConfirm } from '@/components/LobbyUI'
 import { useMenuNavigation } from '@/composables/useMenuNavigation'
 import '@/assets/styles/lobby-ui.scss'
 
 const props = defineProps<{
   roomId?: string
+  phase?: string
 }>()
 
 const emit = defineEmits<{
@@ -16,15 +17,27 @@ const emit = defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const fromLobby = computed(() => !!route.query.game)
+const confirmOpen = ref(false)
 
 // Embedded in the Lobby view: clearing the query returns to it. Standalone
 // route: navigate to the Lobby view, so every game always has a way back.
-const handleBack = (): void => {
+const navigateBack = (): void => {
+  confirmOpen.value = false
   if (fromLobby.value) {
     router.replace({ query: {} })
     return
   }
   router.push('/games/Lobby')
+}
+
+// Mid-game (any phase but the lobby wizard) leaving is destructive, so the
+// button asks first; from the wizard it navigates straight away.
+const handleBack = (): void => {
+  if (props.phase && props.phase !== 'lobby') {
+    confirmOpen.value = true
+    return
+  }
+  navigateBack()
 }
 
 useMenuNavigation((action) => {
@@ -44,6 +57,14 @@ useMenuNavigation((action) => {
       <code class="game-header__room-id">{{ roomId.slice(0, 8) }}</code>
       <LobbyUIButton variant="primary" @click="emit('copyLink')">Copy link</LobbyUIButton>
     </div>
+    <LobbyUIConfirm
+      v-if="confirmOpen"
+      message="Leave the game?"
+      confirm-label="Leave"
+      cancel-label="Stay"
+      @confirm="navigateBack"
+      @cancel="confirmOpen = false"
+    />
   </header>
 </template>
 
