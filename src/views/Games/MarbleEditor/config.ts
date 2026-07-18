@@ -81,9 +81,15 @@ export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'left', label: 'Left', directional: true },
   { id: 'right', label: 'Right', directional: true },
   { id: 'camera', label: 'Camera' },
-  { id: 'back', label: 'Back to editor' },
+  { id: 'back', label: 'Back to setup' },
   { id: 'undo', label: 'Undo' },
-  { id: 'redo', label: 'Redo' }
+  { id: 'redo', label: 'Redo' },
+  { id: 'save', label: 'Save track' },
+  { id: 'new-track', label: 'New track' },
+  { id: 'select-previous', label: 'Select previous piece' },
+  { id: 'select-next', label: 'Select next piece' },
+  { id: 'play', label: 'Race the track' },
+  { id: 'camera-pan', label: 'Camera pan (hold)' }
 ]
 
 export const KEYBOARD_MAPPING = {
@@ -116,11 +122,42 @@ export const KEYBOARD_MAPPING = {
   }
 }
 
+// The mapper stores one flat mapping for the whole game; race bindings win
+// key conflicts and each phase picks out the actions it owns.
+export const COMBINED_DEFAULT_MAPPING = {
+  keyboard: {
+    z: 'undo',
+    y: 'redo',
+    n: 'new-track',
+    ...KEYBOARD_MAPPING.keyboard
+  },
+  gamepad: {
+    square: 'save',
+    l2: 'camera-pan',
+    ...KEYBOARD_MAPPING.gamepad
+  }
+}
+
 export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
   gameId: CONTROLS_GAME_ID,
   actions: CONTROLS_ACTIONS,
-  defaultMapping: KEYBOARD_MAPPING
+  defaultMapping: COMBINED_DEFAULT_MAPPING
 }
+
+export const EDITOR_ACTION_IDS = new Set([
+  'undo',
+  'redo',
+  'save',
+  'new-track',
+  'select-previous',
+  'select-next',
+  'play',
+  'camera-pan',
+  'camera-left',
+  'camera-right',
+  'camera-up',
+  'camera-down'
+])
 
 // Edit-phase pad scheme: right stick orbits the camera, the d-pad cycles the
 // selected track piece, Options starts the race. The left stick and face

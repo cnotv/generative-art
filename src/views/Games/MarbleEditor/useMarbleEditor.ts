@@ -2,8 +2,8 @@ import { ref, computed, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
 import { storeToRefs } from 'pinia'
 import { getTools } from '@webgamekit/threejs'
-import { createControls } from '@webgamekit/controls'
-import type { ControlsExtras } from '@webgamekit/controls'
+import { createControls, loadMapping } from '@webgamekit/controls'
+import type { ControlsExtras, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { reportInputSource } from '@/composables/useInputDevice'
@@ -42,6 +42,8 @@ import {
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
   EDITOR_MAPPING,
+  EDITOR_ACTION_IDS,
+  CONTROLS_GAME_ID,
   EDITOR_CAMERA_ROTATE_SPEED,
   EDITOR_CAMERA_PAN_SPEED,
   EDITOR_CAMERA_POLAR_MIN,
@@ -88,9 +90,23 @@ type EditorActionHandlers = {
   newTrack: () => void
 }
 
+// Stored remaps apply only for the actions the edit phase owns, so a race
+// binding on the same key can coexist in the shared stored mapping.
+const editorMapping = (): ControlMapping => {
+  const stored = loadMapping(CONTROLS_GAME_ID)
+  const pickEditorBindings = (bindings?: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(
+      Object.entries(bindings ?? {}).filter(([, action]) => EDITOR_ACTION_IDS.has(action))
+    )
+  return {
+    keyboard: { ...EDITOR_MAPPING.keyboard, ...pickEditorBindings(stored?.keyboard) },
+    gamepad: { ...EDITOR_MAPPING.gamepad, ...pickEditorBindings(stored?.gamepad) }
+  }
+}
+
 const createEditorControls = (handlers: EditorActionHandlers): ControlsExtras =>
   createControls({
-    mapping: EDITOR_MAPPING,
+    mapping: editorMapping(),
     onAction: (action, _trigger, rawSource) => {
       reportInputSource(String(rawSource ?? 'keyboard'))
       if (isTypingInField()) return

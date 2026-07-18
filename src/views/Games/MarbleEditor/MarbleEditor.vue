@@ -142,7 +142,7 @@ const race = useMarbleRace({
   map: editor.currentMap,
   marbleTexture: marbleUrl,
   onBack: () => {
-    if (canRestart.value) handleBackToEditor()
+    store.phase = 'lobby'
   },
   raceStartTime,
   localPlayerName: playerName,
