@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { Trash2 } from 'lucide-vue-next'
+import { LobbyUIButton, LobbyUIIconButton } from '@/components/LobbyUI'
 import { PIECE_CATALOG, PLACEABLE_PIECE_TYPES } from './pieceCatalog'
-import { SAMPLE_MAPS } from './sampleMaps'
-import type { MarbleMap, PlacedPiece, TrackPieceType } from './types'
+import PiecePreviewIcon from './PiecePreviewIcon.vue'
+import type { PlacedPiece, TrackPieceType } from './types'
 
 const props = defineProps<{
   selectedPiece: PlacedPiece | null
-  savedMaps: MarbleMap[]
-  mapName: string
-  canUndo: boolean
-  canRedo: boolean
 }>()
 
 const emit = defineEmits<{
@@ -17,16 +15,7 @@ const emit = defineEmits<{
   preview: [type: TrackPieceType | null]
   recolor: [color: number]
   deletePiece: []
-  saveAs: [name: string]
-  loadMap: [map: MarbleMap]
-  deleteMap: [name: string]
-  newMap: []
-  undo: []
-  redo: []
-  play: []
 }>()
-
-const saveName = ref('')
 
 const selectedColorHex = computed(() =>
   props.selectedPiece ? `#${props.selectedPiece.color.toString(16).padStart(6, '0')}` : '#ffffff'
@@ -36,76 +25,34 @@ const handleColorInput = (event: Event): void => {
   const value = (event.target as HTMLInputElement).value
   emit('recolor', parseInt(value.replace('#', ''), 16))
 }
-
-const handleSave = (): void => {
-  const name = saveName.value.trim() || props.mapName
-  if (!name) return
-  emit('saveAs', name)
-  saveName.value = ''
-}
 </script>
 
 <template>
   <aside class="editor-palette">
-    <header class="editor-palette__header">
-      <h2 class="editor-palette__title">{{ mapName }}</h2>
-      <div class="editor-palette__row">
-        <button
-          class="editor-palette__button"
-          title="Undo the last edit"
-          :disabled="!canUndo"
-          @click="emit('undo')"
-        >
-          Undo
-        </button>
-        <button
-          class="editor-palette__button"
-          title="Redo the undone edit"
-          :disabled="!canRedo"
-          @click="emit('redo')"
-        >
-          Redo
-        </button>
-        <button
-          class="editor-palette__button editor-palette__button--cta"
-          title="Race the current track"
-          @click="emit('play')"
-        >
-          Play
-        </button>
-      </div>
-    </header>
-
     <section class="editor-palette__section">
       <h3 class="editor-palette__section-title">Pieces</h3>
-      <p class="editor-palette__hint">
-        {{
-          selectedPiece
-            ? `Inserting after the selected ${PIECE_CATALOG[selectedPiece.type].label}`
-            : 'Adding at the end of the track'
-        }}
-      </p>
-      <div class="editor-palette__grid">
-        <button
+      <div class="editor-palette__grid" data-lui-row>
+        <LobbyUIButton
           v-for="type in PLACEABLE_PIECE_TYPES"
           :key="type"
-          class="editor-palette__button"
+          stacked
+          variant="ghost"
           :title="`Add a ${PIECE_CATALOG[type].label} piece`"
           @click="emit('add', type)"
           @mouseenter="emit('preview', type)"
           @mouseleave="emit('preview', null)"
         >
+          <PiecePreviewIcon :type="type" />
           {{ PIECE_CATALOG[type].label }}
-        </button>
+        </LobbyUIButton>
       </div>
     </section>
 
     <section v-if="selectedPiece" class="editor-palette__section">
       <h3 class="editor-palette__section-title">
-        Selected: {{ PIECE_CATALOG[selectedPiece.type].label }}
+        {{ PIECE_CATALOG[selectedPiece.type].label }}
       </h3>
-      <div class="editor-palette__row">
-        <label class="editor-palette__label" for="piece-color">Color</label>
+      <div class="editor-palette__row" data-lui-row>
         <input
           id="piece-color"
           class="editor-palette__color"
@@ -114,68 +61,14 @@ const handleSave = (): void => {
           title="Change the color of the selected piece"
           @input="handleColorInput"
         />
-        <button
-          class="editor-palette__button editor-palette__button--danger"
+        <LobbyUIIconButton
+          size="sm"
           title="Remove the selected piece from the track"
           @click="emit('deletePiece')"
         >
-          Remove
-        </button>
+          <Trash2 class="editor-palette__icon" aria-hidden="true" />
+        </LobbyUIIconButton>
       </div>
-    </section>
-
-    <section class="editor-palette__section">
-      <h3 class="editor-palette__section-title">Maps</h3>
-      <div class="editor-palette__row">
-        <input
-          v-model="saveName"
-          class="editor-palette__input"
-          type="text"
-          placeholder="Map name"
-          title="Name for the saved map"
-          @keyup.enter="handleSave"
-        />
-        <button class="editor-palette__button" title="Save the current map" @click="handleSave">
-          Save
-        </button>
-      </div>
-      <button
-        class="editor-palette__button"
-        title="Start a new empty track"
-        @click="emit('newMap')"
-      >
-        New track
-      </button>
-      <ul v-if="savedMaps.length" class="editor-palette__list">
-        <li v-for="map in savedMaps" :key="map.name" class="editor-palette__list-item">
-          <button
-            class="editor-palette__button editor-palette__button--link"
-            :title="`Load the saved map ${map.name}`"
-            @click="emit('loadMap', map)"
-          >
-            {{ map.name }}
-          </button>
-          <button
-            class="editor-palette__button editor-palette__button--danger"
-            :title="`Delete the saved map ${map.name}`"
-            @click="emit('deleteMap', map.name)"
-          >
-            Delete
-          </button>
-        </li>
-      </ul>
-      <h4 class="editor-palette__section-subtitle">Samples</h4>
-      <ul class="editor-palette__list">
-        <li v-for="map in SAMPLE_MAPS" :key="map.name" class="editor-palette__list-item">
-          <button
-            class="editor-palette__button editor-palette__button--link"
-            :title="`Load the sample map ${map.name}`"
-            @click="emit('loadMap', map)"
-          >
-            {{ map.name }}
-          </button>
-        </li>
-      </ul>
     </section>
   </aside>
 </template>
@@ -185,30 +78,10 @@ const handleSave = (): void => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  width: 16rem;
+  width: 17rem;
   max-height: 100%;
-  padding: var(--spacing-4);
+  padding: var(--spacing-2);
   overflow-y: auto;
-  color: var(--color-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.editor-palette__header {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-  justify-content: space-between;
-}
-
-.editor-palette__title {
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--font-size-lg);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .editor-palette__section {
@@ -219,78 +92,24 @@ const handleSave = (): void => {
 
 .editor-palette__section-title {
   margin: 0;
-  font-size: var(--font-size-md);
-}
-
-.editor-palette__section-subtitle {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
-}
-
-.editor-palette__hint {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .editor-palette__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-1);
 }
 
 .editor-palette__row {
   display: flex;
-  gap: var(--spacing-1);
+  gap: var(--spacing-2);
   align-items: center;
-}
-
-.editor-palette__button {
-  padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-foreground);
-  cursor: pointer;
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.editor-palette__button:hover {
-  background: var(--color-accent);
-}
-
-.editor-palette__button:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
-
-.editor-palette__button--cta {
-  color: var(--color-primary-foreground);
-  background: var(--color-primary);
-}
-
-.editor-palette__button--danger {
-  color: var(--color-destructive-foreground);
-  background: var(--color-destructive);
-}
-
-.editor-palette__button--link {
-  flex: 1;
-  text-align: left;
-  background: transparent;
-  border: none;
-}
-
-.editor-palette__input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
 }
 
 .editor-palette__color {
@@ -299,22 +118,13 @@ const handleSave = (): void => {
   padding: 0;
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--lui-button-border-color);
+  border-radius: var(--lui-radius-sketch-small);
 }
 
-.editor-palette__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.editor-palette__list-item {
-  display: flex;
-  gap: var(--spacing-1);
-  align-items: center;
+.editor-palette__icon {
+  width: 1.1em;
+  height: 1.1em;
+  filter: drop-shadow(2px 2px 0 #000);
 }
 </style>

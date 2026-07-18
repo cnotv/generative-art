@@ -17,8 +17,14 @@ const route = useRoute()
 const router = useRouter()
 const fromLobby = computed(() => !!route.query.game)
 
+// Embedded in the Lobby view: clearing the query returns to it. Standalone
+// route: navigate to the Lobby view, so every game always has a way back.
 const handleBack = (): void => {
-  router.replace({ query: {} })
+  if (fromLobby.value) {
+    router.replace({ query: {} })
+    return
+  }
+  router.push('/games/Lobby')
 }
 
 useMenuNavigation((action) => {
@@ -29,7 +35,9 @@ useMenuNavigation((action) => {
 <template>
   <header class="game-header">
     <div class="game-header__left">
-      <LobbyUIButton v-if="fromLobby" variant="ghost" @click="handleBack"> ← Lobby </LobbyUIButton>
+      <LobbyUIButton variant="ghost" title="Return to the lobby" @click="handleBack">
+        ← Lobby
+      </LobbyUIButton>
     </div>
     <div v-if="!fromLobby && roomId" class="game-header__room">
       <span class="game-header__room-label">Room:</span>
