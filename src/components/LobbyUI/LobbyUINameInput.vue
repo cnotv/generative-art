@@ -34,8 +34,11 @@ const onInput = (event: Event): void => {
   width: 100%;
   padding: var(--spacing-1) 0;
   border: none;
-  border-bottom: 2px solid var(--lui-stroke-faint);
-  background: transparent;
+  background-image: var(--lui-squiggle-faint);
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: var(--lui-squiggle-size);
+  background-color: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
   font-weight: 900;
@@ -43,7 +46,6 @@ const onInput = (event: Event): void => {
   text-shadow: var(--lui-text-shadow);
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
   caret-color: var(--lui-stroke);
 }
 
@@ -54,14 +56,14 @@ const onInput = (event: Event): void => {
 }
 
 .lui-name-input:hover {
-  border-bottom-color: var(--lui-stroke);
+  background-image: var(--lui-squiggle);
 }
 
 .lui-name-input:focus,
 .lui-name-input:focus-visible {
   outline: none;
   color: var(--lui-focus-color);
-  border-bottom-color: var(--lui-focus-color);
+  background-image: var(--lui-squiggle-focus);
   caret-color: var(--lui-focus-color);
 }
 </style>

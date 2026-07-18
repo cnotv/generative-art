@@ -34,6 +34,22 @@
   // selected marble's name beneath the marble grid).
   --lui-text-tiny: clamp(0.85rem, 1.3vw, 1rem);
 
+  // Micro: dense captions inside compact controls — piece-tile labels and
+  // key-pill letters — where even tiny would overflow the control.
+  --lui-text-micro: clamp(0.7rem, 1vw, 0.8rem);
+
+  // Hand-drawn stroke language matching the Darumadrop lettering: uneven
+  // per-corner radii make straight borders wobble, and the squiggle images
+  // replace flat underlines/dividers. Pair squiggles with
+  // `background: ... repeat-x bottom` and `background-size: --lui-squiggle-size`.
+  --lui-radius-sketch: 1.4rem 1rem 1.5rem 0.9rem / 1rem 1.5rem 0.9rem 1.4rem;
+  --lui-radius-sketch-small: 0.6em 0.45em 0.7em 0.4em / 0.5em 0.65em 0.4em 0.6em;
+  --lui-radius-sketch-round: 48% 52% 46% 54% / 54% 46% 52% 48%;
+  --lui-squiggle-size: 18px 5px;
+  --lui-squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='5' viewBox='0 0 18 5'%3E%3Cpath d='M0 2.5 Q4.5 0.8 9 2.5 T18 2.5' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  --lui-squiggle-faint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='5' viewBox='0 0 18 5'%3E%3Cpath d='M0 2.5 Q4.5 0.8 9 2.5 T18 2.5' fill='none' stroke='%23fff' stroke-opacity='0.5' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  --lui-squiggle-focus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='5' viewBox='0 0 18 5'%3E%3Cpath d='M0 2.5 Q4.5 0.8 9 2.5 T18 2.5' fill='none' stroke='%23ffd700' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+
   // Width of the label column in the row layout — keeps controls aligned.
   --lui-label-column: 8rem;
 
@@ -51,10 +67,46 @@
   --lui-text-color-inverted: #fff;
   --lui-bg-inverted: #000;
 
+  // Neutral grey chip for key pills: readable over any scene without the
+  // weight of the black inverted chip.
+  --lui-bg-key: rgb(110 110 110 / 0.85);
+
+  // Modal confirm backdrop: the scene stays visible but recedes behind a blur
+  // and a light tint, so the dialog text reads over any busy background.
+  --lui-backdrop-tint: rgb(0 0 0 / 0.25);
+  --lui-backdrop-blur: 6px;
+
   // Dedicated button tokens — kept separate from the generic text/stroke
   // tokens so button styling can be tuned without affecting plain text.
   --lui-button-text-color: var(--lui-text-color);
   --lui-button-border-color: var(--lui-stroke-faint);
+}
+
+// Dialog entrance: fade + rise, shared by every LobbyUI overlay dialog
+// (summary, game-over). Apply `.lui-slide-in` to each dialog section; the
+// `--2` / `--3` steps stagger secondary content (list, actions) behind the title.
+@keyframes lui-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lui-slide-in {
+  animation: lui-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.lui-slide-in--2 {
+  animation-delay: 0.08s;
+}
+
+.lui-slide-in--3 {
+  animation-delay: 0.16s;
 }
 
 // Modifier: apply to any element (LobbyUI or plain) to flip into the inverted

@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 import { useMenuNavigation, type MenuAction, type MenuSource } from './useMenuNavigation'
+import { useHintRefreshTriggers, toHintRect, hintRectsEqual } from './useHintRefreshTriggers'
 
 const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'password', 'search', 'tel', 'url'])
 const FOCUSABLE_SELECTOR =
@@ -24,6 +25,7 @@ interface FocusState {
   row: Ref<number>
   col: Ref<number>
   hint: Ref<FocusHint | null>
+  anchor: Ref<HTMLElement | null>
   editing: Ref<HTMLElement | null>
   original: Ref<string | null>
 }
@@ -86,15 +88,30 @@ const queryFocusables = (row: HTMLElement): HTMLElement[] => [
 ]
 
 const updateHint = (state: FocusState, element: HTMLElement | null): void => {
+  state.anchor.value = element
   if (!element) {
     state.hint.value = null
     return
   }
-  const rect = element.getBoundingClientRect()
   state.hint.value = {
-    rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+    rect: toHintRect(element.getBoundingClientRect()),
     label: describeControl(element, state.editing.value === element)
   }
+}
+
+// The hint chip is position: fixed, so its captured rect goes stale whenever
+// layout shifts under it (images loading, rows wrapping, scrolling).
+const refreshHintRect = (state: FocusState): void => {
+  const anchor = state.anchor.value
+  const hint = state.hint.value
+  if (!anchor || !hint) return
+  if (!anchor.isConnected) {
+    updateHint(state, null)
+    return
+  }
+  const rect = toHintRect(anchor.getBoundingClientRect())
+  if (hintRectsEqual(rect, hint.rect)) return
+  state.hint.value = { ...hint, rect }
 }
 
 const applyFocus = (state: FocusState): void => {
@@ -212,21 +229,28 @@ const runMenuAction = (state: FocusState, action: MenuAction, isPaused: () => bo
  *
  * @param {Ref<HTMLElement | null>} panel The panel element containing the rows
  * @param {() => boolean} [isPaused] When it returns true, navigation is ignored (e.g. while capturing a key binding)
+ * @param {Parameters<typeof useMenuNavigation>[1]} [mapping] Optional input mapping override passed to useMenuNavigation
+ * @param {Parameters<typeof useMenuNavigation>[2]} [options] Options forwarded to useMenuNavigation (e.g. `modal: true` for dialogs)
  * @returns {{ focusedHint: Ref<FocusHint | null>, inputSource: Ref<MenuFocusSource | null>, focusFirst: () => void }} Focus state and control
  */
 export function useMenuFocus(
   panel: Ref<HTMLElement | null>,
-  isPaused: () => boolean = () => false
+  isPaused: () => boolean = () => false,
+  mapping?: Parameters<typeof useMenuNavigation>[1],
+  options?: Parameters<typeof useMenuNavigation>[2]
 ) {
   const state: FocusState = {
     panel,
     row: ref(0),
     col: ref(0),
     hint: ref<FocusHint | null>(null),
+    anchor: ref<HTMLElement | null>(null),
     editing: ref<HTMLElement | null>(null),
     original: ref<string | null>(null)
   }
   const inputSource = ref<MenuFocusSource | null>(null)
+
+  useHintRefreshTriggers(() => refreshHintRect(state))
 
   const onMouseActivity = (): void => {
     inputSource.value = 'mouse'
@@ -234,6 +258,7 @@ export function useMenuFocus(
   const clearHint = (): void => {
     if (state.editing.value) revertEdit(state)
     state.hint.value = null
+    state.anchor.value = null
     state.editing.value = null
   }
   // Hide the hint whenever focus leaves the panel (e.g. cancelling with the
@@ -256,10 +281,14 @@ export function useMenuFocus(
     window.removeEventListener('focusout', onFocusOut)
   })
 
-  useMenuNavigation((action, source) => {
-    inputSource.value = source
-    runMenuAction(state, action, isPaused)
-  })
+  useMenuNavigation(
+    (action, source) => {
+      inputSource.value = source
+      runMenuAction(state, action, isPaused)
+    },
+    mapping,
+    options
+  )
 
   const focusFirst = (): void => {
     state.row.value = 0

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useMenuNavigation } from '@/composables/useMenuNavigation'
+import { useDialogFocusTrap } from '@/composables/useDialogFocusTrap'
 import LobbyUIButton from './LobbyUIButton.vue'
+import LobbyUIFocusHint from './LobbyUIFocusHint.vue'
 
 const props = defineProps<{
   message: string
@@ -15,21 +17,26 @@ const emit = defineEmits<{
 }>()
 
 const confirmReference = ref<InstanceType<typeof LobbyUIButton> | null>(null)
+const dialogReference = ref<HTMLElement | null>(null)
+const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
 
 onMounted(() => {
   const element = confirmReference.value?.$el as HTMLElement | undefined
   element?.focus?.()
 })
 
-useMenuNavigation((action) => {
-  if (action === 'cancel') emit('cancel')
-  if (action === 'activate') emit('confirm')
-})
+useMenuNavigation(
+  (action) => {
+    if (action === 'cancel') emit('cancel')
+  },
+  undefined,
+  { modal: true }
+)
 </script>
 
 <template>
   <div class="lui-confirm__backdrop" @click.self="emit('cancel')">
-    <div class="lui-confirm" role="dialog" aria-modal="true">
+    <div ref="dialogReference" class="lui-confirm lui-slide-in" role="dialog" aria-modal="true">
       <p class="lui-confirm__message">{{ message }}</p>
       <div class="lui-confirm__actions" data-lui-row>
         <LobbyUIButton ref="confirmReference" variant="primary" @click="emit('confirm')">
@@ -40,6 +47,7 @@ useMenuNavigation((action) => {
         </LobbyUIButton>
       </div>
     </div>
+    <LobbyUIFocusHint :hint="focusedHint" :visible="inputSource === 'gamepad'" />
   </div>
 </template>
 
@@ -51,18 +59,14 @@ useMenuNavigation((action) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 0.6);
+  background: var(--lui-backdrop-tint);
+  backdrop-filter: blur(var(--lui-backdrop-blur));
 }
 
 .lui-confirm {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  padding: var(--spacing-5, 1.5rem);
-  background: rgb(0 0 0 / 0.9);
-  border: 3px solid var(--lui-stroke);
-  border-radius: 1.25rem;
-  box-shadow: var(--lui-border-shadow);
   max-width: 22rem;
   width: 90%;
   text-align: center;

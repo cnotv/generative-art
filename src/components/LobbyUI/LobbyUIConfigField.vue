@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { ChevronUp, ChevronDown } from 'lucide-vue-next'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
 
-const props = defineProps<{ field: LobbyConfigField }>()
+const props = withDefaults(defineProps<{ field: LobbyConfigField; size?: 'sm' | 'md' }>(), {
+  size: 'md'
+})
 
 const emit = defineEmits<{
   change: [key: string, value: string | number]
@@ -12,12 +15,30 @@ const onChange = (event: Event): void => {
   const raw = (event.target as HTMLInputElement | HTMLSelectElement).value
   emit('change', props.field.key, props.field.type === 'number' ? Number(raw) : raw)
 }
+
+const selectedIndex = computed(() =>
+  props.field.type === 'select'
+    ? props.field.options.findIndex((option) => option.value === props.field.value)
+    : -1
+)
+
+const canGoPrevious = computed(() => {
+  if (props.field.type === 'select') return selectedIndex.value > 0
+  return props.field.min === undefined || Number(props.field.value) > props.field.min
+})
+
+const canGoNext = computed(() => {
+  if (props.field.type === 'select') {
+    return selectedIndex.value < props.field.options.length - 1
+  }
+  return props.field.max === undefined || Number(props.field.value) < props.field.max
+})
+
+const showArrows = computed(() => canGoPrevious.value || canGoNext.value)
 </script>
 
 <template>
-  <div class="lui-field">
-    <ChevronLeft class="lui-field__arrow" aria-hidden="true" />
-
+  <div class="lui-field" :class="`lui-field--${size}`">
     <select
       v-if="field.type === 'select'"
       class="lui-field__control"
@@ -43,7 +64,10 @@ const onChange = (event: Event): void => {
       @input="onChange"
     />
 
-    <ChevronRight class="lui-field__arrow" aria-hidden="true" />
+    <span v-if="showArrows" class="lui-field__arrows" aria-hidden="true">
+      <ChevronUp v-if="canGoPrevious" class="lui-field__arrow" />
+      <ChevronDown v-if="canGoNext" class="lui-field__arrow" />
+    </span>
   </div>
 </template>
 
@@ -54,6 +78,13 @@ const onChange = (event: Event): void => {
   gap: var(--spacing-1);
 }
 
+.lui-field__arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .lui-field__arrow {
   width: 1.1em;
   height: 1.1em;
@@ -62,10 +93,13 @@ const onChange = (event: Event): void => {
   filter: drop-shadow(2px 2px 0 #000);
 }
 
+/* Mirrors .lui-btn: same border weight, sketchy radius and type treatment so a
+   field sitting next to buttons reads as part of the same control family. */
 .lui-field__control {
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 2px solid transparent;
-  border-radius: var(--radius-md);
+  padding-block: calc(var(--spacing-2) + 0.06em) calc(var(--spacing-2) - 0.06em);
+  padding-inline: var(--spacing-4);
+  border: 3px solid transparent;
+  border-radius: var(--lui-radius-sketch);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
@@ -76,6 +110,12 @@ const onChange = (event: Event): void => {
   appearance: none;
   text-align: center;
   cursor: pointer;
+}
+
+.lui-field--sm .lui-field__control {
+  padding-block: calc(var(--spacing-1) + 0.06em) calc(var(--spacing-1) - 0.06em);
+  padding-inline: var(--spacing-2);
+  font-size: var(--lui-text-small);
 }
 
 .lui-field__control--number {

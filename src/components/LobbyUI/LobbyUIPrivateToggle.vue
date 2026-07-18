@@ -43,6 +43,7 @@ const handleChange = (event: Event): void => {
   width: 1.5rem;
   height: 1.5rem;
   border: 2px solid var(--lui-stroke);
+  border-radius: var(--lui-radius-sketch-small);
   box-shadow: var(--lui-border-shadow);
   background: transparent;
   flex-shrink: 0;
