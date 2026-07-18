@@ -11,7 +11,8 @@ import {
   LobbyUIPlayerList,
   LobbyUIButton,
   LobbyUIConfigField,
-  LobbyUIKeyPill
+  LobbyUIKeyPill,
+  LobbyUIConfirm
 } from '@/components/LobbyUI'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import { MARBLE_OPTIONS } from '@/views/Games/MarbleMadness/config'
@@ -396,6 +397,16 @@ const leaveRoom = (): void => {
 }
 
 const isMarbleAvailable = (_id: string): boolean => true
+
+// Dialog demo: while open, the trap must mute the showcase's own navigation
+// (arrows/stick no longer move the panel focus) and keep input in the dialog.
+const dialogOpen = ref(false)
+const dialogOutcome = ref('—')
+
+const closeDialog = (outcome: string): void => {
+  dialogOutcome.value = outcome
+  dialogOpen.value = false
+}
 </script>
 
 <template>
@@ -471,6 +482,20 @@ const isMarbleAvailable = (_id: string): boolean => true
           </div>
         </LobbyUIRow>
 
+        <LobbyUIRow label="Dialog">
+          <div class="lui-showcase__pills">
+            <LobbyUIButton
+              variant="ghost"
+              size="sm"
+              title="Open the confirm dialog demo"
+              @click="dialogOpen = true"
+            >
+              Open dialog
+            </LobbyUIButton>
+            <span class="lui-showcase__value">{{ dialogOutcome }}</span>
+          </div>
+        </LobbyUIRow>
+
         <LobbyUIRow label="Players">
           <LobbyUIPlayerList :players="players" :is-host="true" />
         </LobbyUIRow>
@@ -503,6 +528,15 @@ const isMarbleAvailable = (_id: string): boolean => true
         </div>
       </section>
     </main>
+
+    <LobbyUIConfirm
+      v-if="dialogOpen"
+      message="Leave the showcase?"
+      confirm-label="Leave"
+      cancel-label="Stay"
+      @confirm="closeDialog('confirmed')"
+      @cancel="closeDialog('cancelled')"
+    />
 
     <div
       v-if="focusedHint && inputSource === 'gamepad'"
