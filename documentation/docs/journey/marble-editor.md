@@ -63,6 +63,15 @@ Relatedly, walls are near-frictionless while decks keep high friction: a
 marble grinding along a wall must keep its speed, and slick rails also weaken
 edge-catch events at wall-to-wall junctions.
 
+The bumper field later reproduced both halves of this lesson in miniature.
+Its bumpers originally sat exactly flush on the deck (the same hairline seam
+at their base) and were placed so the passage between bumper edge and wall
+measured exactly one marble diameter — a zero-clearance corridor where the
+solver pinches the ball from both sides. Bumpers now sink into the deck like
+walls do, and a unit test asserts every bumper-to-wall passage clears the
+marble diameter by a margin, turning the clearance rule from tribal knowledge
+into a checked invariant.
+
 ## Loops are a budget, not a shape
 
 A vertical loop only works if the marble arrives with enough energy, and the
@@ -112,3 +121,76 @@ the sweep so the piece still meets its flat neighbours perfectly level. The
 funnel is the same idea as a lathe instead of a sweep. Box colliders remain
 for straight pieces and the loop ring, where robustness matters more than
 silhouette.
+
+## Trimesh winding becomes physics the moment normals matter
+
+A plain Rapier trimesh collides on both sides of every triangle, so the
+winding order of the swept geometry never mattered — until the
+`FIX_INTERNAL_EDGES` flag was added to stop marbles bumping over the sweep's
+internal triangle boundaries. That flag corrects contact normals by blending
+them with the adjacent triangles' _face_ normals, and face normals come
+entirely from winding. The swept profile turned out to be wound inside-out
+(deck faces pointing down, walls pointing away from the lane), and the lathe
+funnel was inverted too. Nothing had ever revealed this: physics was two-sided
+and the render material was `DoubleSide`, so both systems silently forgave the
+inversion. Curves and banked pieces — exactly the swept trimeshes — broke the
+instant the flag made orientation meaningful.
+
+The lesson: an orientation bug can lie dormant in a mesh for as long as every
+consumer is double-sided, and any single-sided consumer added later will be
+blamed for it. Orientation is now pinned by unit tests instead of eyes: the
+closed sweep must have positive signed volume (divergence theorem over its
+triangles), every deck-top triangle must face up, and the entry cap must face
+the neighbouring piece. The funnel lathe is flipped explicitly, since Three's
+lathe winds toward the outside of the solid of revolution while the marble
+rolls on its inside.
+
+## Adding a new track piece is a physics contract
+
+Every difficulty we hit while adding pieces traces back to the same
+misunderstanding: a piece is not just a shape. It is a three-part contract,
+and breaking any part breaks pieces that are nowhere near the new one.
+
+| Contract part       | What it promises                                                                    | What happens when broken                                     |
+| ------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Catalog exit socket | The piece's declared exit offset and yaw match where its geometry actually ends     | Every downstream piece shifts; junction gaps appear far away |
+| Junction overlap    | Geometry extends past its nominal span and shares volume with its neighbours        | Hairline seams wedge or launch a fast marble                 |
+| Physics conventions | Deck friction high, walls slick, restitution near zero, trimesh faces wound outward | Marbles grind to a stop, bounce wildly, or fall through      |
+
+The subtler lessons, in the order they cost us time: box colliders are the
+default and trimeshes the exception (only for genuinely curved surfaces),
+because boxes are unbreakable while trimeshes carry winding and internal-edge
+obligations. Passage widths are part of collision design — any corridor a
+marble can enter must clear its diameter with margin, or the solver pinches
+it (the bumper field shipped with an exactly-diameter gap). And free
+parameters like gravity scale are not free: friction scales with gravity, so
+a "heavier" marble becomes an immovable one before it becomes a faster one.
+
+The acceptance gate that makes new pieces safe to add is the headless
+simulation test: a scripted marble is steered down a gauntlet containing
+every descending piece and must reach the finish zone within a simulated
+timeout. A new piece joins that gauntlet, and any contract violation shows up
+as a `fell-through` or `timeout` verdict before a human ever plays the track.
+
+## A bedroom around the track
+
+The editor and race scenes floated in fog-tinted sky, which made track scale
+unreadable — nothing anchored the eye. The scenes now sit inside a giant
+children's bedroom, recasting the track as a toy marble run on the floor.
+
+The room cannot be a fixed backdrop because tracks grow arbitrarily in every
+axis while editing. Instead the room is derived data: piece transforms fold
+into an axis-aligned bounding box (padded for geometry that hangs off piece
+origins), the box maps to a room layout — floor just below the lowest piece,
+walls padded outward, ceiling above the highest — and the layout deterministically
+places toys along a wall-inset perimeter walk. Each stage is a pure function,
+so sizing and placement are unit-tested without a scene, and the editor only
+rebuilds the room when an edit actually changes the layout.
+
+Two rendering choices carry the effect. Walls and ceiling are single-sided
+planes facing inward: from outside the room they are backface-culled, so a
+freely orbiting editor camera always sees into the room instead of staring at
+a wall — the classic dollhouse trick, with no camera logic at all. And the
+floor is purely visual, sitting below the track with no collider, so the
+existing fall-detection and penalty-respawn behaviour is untouched by the
+scenery.
