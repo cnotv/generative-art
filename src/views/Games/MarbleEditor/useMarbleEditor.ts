@@ -1,7 +1,12 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
+import { storeToRefs } from 'pinia'
 import { getTools } from '@webgamekit/threejs'
+import { createControls } from '@webgamekit/controls'
+import type { ControlsExtras } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
+import { useMarbleEditorStore } from '@/stores/marbleEditor'
+import { reportInputSource } from '@/composables/useInputDevice'
 import type { ComplexModel } from '@webgamekit/animation'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
@@ -17,16 +22,30 @@ import {
   deleteSavedMap
 } from './mapStorage'
 import { SAMPLE_MAPS } from './sampleMaps'
-import type { MarbleMap, BuiltTrack, TrackPieceType, PieceTransform } from './types'
+import { computeTrackBounds, computeRoomLayout, roomLayoutsEqual } from './bedroomLayout'
+import { buildBedroom, applyBedroomAtmosphere } from './bedroomEnvironment'
+import type {
+  MarbleMap,
+  BuiltTrack,
+  TrackPieceType,
+  PieceTransform,
+  BedroomEnvironment
+} from './types'
 import {
-  SKY_COLOR,
-  FOG_DENSITY,
   EDITOR_CAMERA_POSITION,
   EDITOR_ORBIT_TARGET,
   SELECTION_EMISSIVE,
+  SELECTION_PULSE_MIN,
+  SELECTION_PULSE_MAX,
+  SELECTION_PULSE_SPEED,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
-  LIGHT_DIRECTIONAL_POSITION
+  LIGHT_DIRECTIONAL_POSITION,
+  EDITOR_MAPPING,
+  EDITOR_CAMERA_ROTATE_SPEED,
+  EDITOR_CAMERA_PAN_SPEED,
+  EDITOR_CAMERA_POLAR_MIN,
+  EDITOR_CAMERA_POLAR_MAX
 } from './config'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
@@ -40,14 +59,137 @@ type EditorSceneContext = {
 type EditorSceneState = {
   context: EditorSceneContext | null
   camera: THREE.Camera | null
+  orbit: OrbitControls | null
   builtTrack: BuiltTrack | null
   ghostGroup: THREE.Group | null
+  bedroom: BedroomEnvironment | null
+  controls: ControlsExtras | null
+  pulseTime: number
   cleanupTools: (() => void) | null
+}
+
+// Typing in the save-name input must not trigger the Z/Y edit shortcuts.
+const isTypingInField = (): boolean => {
+  const active = document.activeElement
+  return (
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement ||
+    active instanceof HTMLSelectElement
+  )
+}
+
+type EditorActionHandlers = {
+  undo: () => void
+  redo: () => void
+  selectPrevious: () => void
+  selectNext: () => void
+  play: () => void
+  save: () => void
+  newTrack: () => void
+}
+
+const createEditorControls = (handlers: EditorActionHandlers): ControlsExtras =>
+  createControls({
+    mapping: EDITOR_MAPPING,
+    onAction: (action, _trigger, rawSource) => {
+      reportInputSource(String(rawSource ?? 'keyboard'))
+      if (isTypingInField()) return
+      const actionHandlers: Record<string, () => void> = {
+        undo: handlers.undo,
+        redo: handlers.redo,
+        'select-previous': handlers.selectPrevious,
+        'select-next': handlers.selectNext,
+        play: handlers.play,
+        save: handlers.save,
+        'new-track': handlers.newTrack
+      }
+      actionHandlers[action]?.()
+    }
+  })
+
+const CAMERA_ORBIT_OFFSET = new THREE.Vector3()
+const CAMERA_ORBIT_SPHERICAL = new THREE.Spherical()
+const CAMERA_PAN_FORWARD = new THREE.Vector3()
+const CAMERA_PAN_RIGHT = new THREE.Vector3()
+const CAMERA_UP = new THREE.Vector3(0, 1, 0)
+
+const heldDirection = (
+  actions: Record<string, unknown>,
+  positive: string,
+  negative: string
+): number => (positive in actions ? 1 : 0) - (negative in actions ? 1 : 0)
+
+const rotateOrbit = (state: EditorSceneState, azimuth: number, polar: number): void => {
+  if (!state.orbit || !state.camera) return
+  CAMERA_ORBIT_OFFSET.copy(state.camera.position).sub(state.orbit.target)
+  CAMERA_ORBIT_SPHERICAL.setFromVector3(CAMERA_ORBIT_OFFSET)
+  CAMERA_ORBIT_SPHERICAL.theta += azimuth
+  CAMERA_ORBIT_SPHERICAL.phi = Math.min(
+    EDITOR_CAMERA_POLAR_MAX,
+    Math.max(EDITOR_CAMERA_POLAR_MIN, CAMERA_ORBIT_SPHERICAL.phi - polar)
+  )
+  CAMERA_ORBIT_OFFSET.setFromSpherical(CAMERA_ORBIT_SPHERICAL)
+  state.camera.position.copy(state.orbit.target).add(CAMERA_ORBIT_OFFSET)
+  state.orbit.update()
+}
+
+// Ground-plane pan: target and camera glide together along the camera's
+// forward/right axes projected onto the floor.
+const panOrbit = (state: EditorSceneState, strafe: number, advance: number): void => {
+  if (!state.orbit || !state.camera) return
+  state.camera.getWorldDirection(CAMERA_PAN_FORWARD)
+  CAMERA_PAN_FORWARD.y = 0
+  if (CAMERA_PAN_FORWARD.lengthSq() < 1e-6) return
+  CAMERA_PAN_FORWARD.normalize()
+  CAMERA_PAN_RIGHT.crossVectors(CAMERA_PAN_FORWARD, CAMERA_UP)
+  CAMERA_PAN_FORWARD.multiplyScalar(advance)
+  CAMERA_PAN_RIGHT.multiplyScalar(strafe)
+  state.orbit.target.add(CAMERA_PAN_FORWARD).add(CAMERA_PAN_RIGHT)
+  state.camera.position.add(CAMERA_PAN_FORWARD).add(CAMERA_PAN_RIGHT)
+  state.orbit.update()
+}
+
+// Right stick alone rotates around the orbit target; holding L2 turns the
+// same stick into a ground-plane pan.
+const rotateEditorCamera = (state: EditorSceneState, deltaSeconds: number): void => {
+  if (!state.controls) return
+  const actions = state.controls.currentActions
+  const horizontal = heldDirection(actions, 'camera-left', 'camera-right')
+  const vertical = heldDirection(actions, 'camera-up', 'camera-down')
+  if (horizontal === 0 && vertical === 0) return
+  if ('camera-pan' in actions) {
+    const step = EDITOR_CAMERA_PAN_SPEED * deltaSeconds
+    panOrbit(state, -horizontal * step, vertical * step)
+    return
+  }
+  const step = EDITOR_CAMERA_ROTATE_SPEED * deltaSeconds
+  rotateOrbit(state, horizontal * step, vertical * step)
+}
+
+// The selected piece breathes: its emissive intensity pulses so the current
+// track part reads clearly at any camera distance.
+const pulseSelection = (
+  state: EditorSceneState,
+  selectedPieceId: string | null,
+  deltaSeconds: number
+): void => {
+  state.pulseTime += deltaSeconds
+  const wave = 0.5 + 0.5 * Math.sin(state.pulseTime * SELECTION_PULSE_SPEED)
+  const intensity = SELECTION_PULSE_MIN + (SELECTION_PULSE_MAX - SELECTION_PULSE_MIN) * wave
+  state.builtTrack?.models.forEach((model) => {
+    const material = (model as unknown as THREE.Mesh).material as THREE.MeshPhysicalMaterial
+    if (!material?.emissive) return
+    material.emissiveIntensity =
+      selectedPieceId !== null && model.userData.pieceId === selectedPieceId ? intensity : 1
+  })
 }
 
 export type UseMarbleEditorDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   onMapChange?: (map: MarbleMap) => void
+  onPlay?: () => void
+  onSave?: () => void
+  onNewTrack?: () => void
 }
 
 const HISTORY_LIMIT = 50
@@ -122,18 +264,26 @@ const EDITOR_SETUP_CONFIG = {
 }
 
 const applyEditorAtmosphere = (scene: THREE.Scene, orbit: OrbitControls | null): void => {
-  scene.fog = new THREE.FogExp2(SKY_COLOR, FOG_DENSITY)
-  scene.background = new THREE.Color(SKY_COLOR)
+  applyBedroomAtmosphere(scene)
   if (orbit) {
     orbit.target.set(...EDITOR_ORBIT_TARGET)
     orbit.update()
   }
 }
 
+const syncBedroom = (state: EditorSceneState): void => {
+  if (!state.context || !state.builtTrack) return
+  const layout = computeRoomLayout(computeTrackBounds(state.builtTrack.transforms))
+  if (state.bedroom && roomLayoutsEqual(state.bedroom.layout, layout)) return
+  state.bedroom?.dispose()
+  state.bedroom = buildBedroom(state.context.scene, layout)
+}
+
 const initEditorScene = async (
   state: EditorSceneState,
   canvas: HTMLCanvasElement,
-  onSceneReady: () => void
+  onSceneReady: () => void,
+  getSelectedPieceId: () => string | null
 ): Promise<void> => {
   const tools = await getTools({ canvas })
   state.cleanupTools = tools.cleanup
@@ -143,19 +293,37 @@ const initEditorScene = async (
       if (!tools.world) return
       state.context = { scene: tools.scene, world: tools.world }
       state.camera = tools.camera
+      state.orbit = orbit
       applyEditorAtmosphere(tools.scene, orbit)
       onSceneReady()
-      tools.animate({ timeline: createTimelineManager() })
+      const timeline = createTimelineManager()
+      timeline.addAction({
+        name: 'editor-camera-orbit',
+        category: 'camera',
+        start: 0,
+        action: () => rotateEditorCamera(state, tools.getDelta())
+      })
+      timeline.addAction({
+        name: 'selection-pulse',
+        category: 'ui',
+        start: 0,
+        action: () => pulseSelection(state, getSelectedPieceId(), tools.getDelta())
+      })
+      tools.animate({ timeline })
     }
   })
 }
 
 const destroyEditorScene = (state: EditorSceneState): void => {
   disposeGhost(state)
+  state.bedroom?.dispose()
+  state.bedroom = null
   state.builtTrack?.dispose()
   state.builtTrack = null
   state.context = null
   state.camera = null
+  state.orbit = null
+  state.pulseTime = 0
   if (state.cleanupTools) {
     state.cleanupTools()
     state.cleanupTools = null
@@ -199,6 +367,84 @@ const previewTransformFor = (map: MarbleMap, selectedPieceId: string | null): Pi
   )
 }
 
+const nextSelectedPieceId = (
+  pieces: MarbleMap['pieces'],
+  selectedId: string | null,
+  direction: 1 | -1
+): string | null => {
+  if (!pieces.length) return null
+  const currentIndex = pieces.findIndex((piece) => piece.id === selectedId)
+  const fallbackIndex = direction === 1 ? 0 : pieces.length - 1
+  const nextIndex =
+    currentIndex === -1 ? fallbackIndex : (currentIndex + direction + pieces.length) % pieces.length
+  return pieces[nextIndex].id
+}
+
+const addPieceToMap = (
+  map: MarbleMap,
+  selectedId: string | null,
+  type: TrackPieceType
+): { next: MarbleMap; addedId: string | null } => {
+  const previousIds = new Set(map.pieces.map((piece) => piece.id))
+  const next =
+    selectedId !== null
+      ? insertPiece(map, insertionIndexFor(map, selectedId), type)
+      : appendPiece(map, type)
+  return { next, addedId: next.pieces.find((piece) => !previousIds.has(piece.id))?.id ?? null }
+}
+
+const createHistoryActions = (
+  history: MapHistory,
+  currentMap: Ref<MarbleMap>,
+  selectedPieceId: Ref<string | null>,
+  commitMap: (map: MarbleMap, notify?: boolean, record?: boolean) => void
+): { undo: () => void; redo: () => void } => {
+  const applyStep = (map: MarbleMap | null): void => {
+    if (!map) return
+    selectedPieceId.value = null
+    commitMap(map, true, false)
+  }
+  return {
+    undo: () => applyStep(history.undo(currentMap.value)),
+    redo: () => applyStep(history.redo(currentMap.value))
+  }
+}
+
+type MapCommitDeps = {
+  state: EditorSceneState
+  currentMap: Ref<MarbleMap>
+  selectedPieceId: Ref<string | null>
+  history: MapHistory
+  onMapChange?: (map: MarbleMap) => void
+}
+
+const createMapCommitter = ({
+  state,
+  currentMap,
+  selectedPieceId,
+  history,
+  onMapChange
+}: MapCommitDeps) => {
+  const rebuildTrack = (): void => {
+    if (!state.context) return
+    disposeGhost(state)
+    state.builtTrack?.dispose()
+    state.builtTrack = buildTrack(state.context.scene, state.context.world, currentMap.value)
+    applyHighlight(state, selectedPieceId.value)
+    syncBedroom(state)
+  }
+
+  const commitMap = (map: MarbleMap, notify = true, record = true): void => {
+    if (record) history.record(currentMap.value)
+    currentMap.value = map
+    saveCurrentMap(map)
+    rebuildTrack()
+    if (notify) onMapChange?.(map)
+  }
+
+  return { rebuildTrack, commitMap }
+}
+
 /**
  * Editor state and scene lifecycle for the marble track editor: holds the
  * current map, applies edit operations, rebuilds the 3D track on change,
@@ -206,7 +452,7 @@ const previewTransformFor = (map: MarbleMap, selectedPieceId: string | null): Pi
  */
 export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const currentMap = ref<MarbleMap>(loadCurrentMap() ?? SAMPLE_MAPS[0])
-  const selectedPieceId = ref<string | null>(null)
+  const { selectedPieceId } = storeToRefs(useMarbleEditorStore())
   const savedMaps = ref<MarbleMap[]>(listSavedMaps())
   const canUndo = ref(false)
   const canRedo = ref(false)
@@ -219,49 +465,29 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const state: EditorSceneState = {
     context: null,
     camera: null,
+    orbit: null,
     builtTrack: null,
     ghostGroup: null,
+    bedroom: null,
+    controls: null,
+    pulseTime: 0,
     cleanupTools: null
   }
 
-  const rebuildTrack = (): void => {
-    if (!state.context) return
-    disposeGhost(state)
-    state.builtTrack?.dispose()
-    state.builtTrack = buildTrack(state.context.scene, state.context.world, currentMap.value)
-    applyHighlight(state, selectedPieceId.value)
-  }
+  const { rebuildTrack, commitMap } = createMapCommitter({
+    state,
+    currentMap,
+    selectedPieceId,
+    history,
+    onMapChange: deps.onMapChange
+  })
 
-  const commitMap = (map: MarbleMap, notify = true, record = true): void => {
-    if (record) history.record(currentMap.value)
-    currentMap.value = map
-    saveCurrentMap(map)
-    rebuildTrack()
-    if (notify) deps.onMapChange?.(map)
-  }
-
-  const applyHistoryStep = (map: MarbleMap | null): void => {
-    if (!map) return
-    selectedPieceId.value = null
-    commitMap(map, true, false)
-  }
-
-  const undo = (): void => applyHistoryStep(history.undo(currentMap.value))
-  const redo = (): void => applyHistoryStep(history.redo(currentMap.value))
+  const { undo, redo } = createHistoryActions(history, currentMap, selectedPieceId, commitMap)
 
   const addPiece = (type: TrackPieceType): void => {
-    const previousIds = new Set(currentMap.value.pieces.map((piece) => piece.id))
-    const next =
-      selectedPieceId.value !== null
-        ? insertPiece(
-            currentMap.value,
-            insertionIndexFor(currentMap.value, selectedPieceId.value),
-            type
-          )
-        : appendPiece(currentMap.value, type)
+    const { next, addedId } = addPieceToMap(currentMap.value, selectedPieceId.value, type)
     commitMap(next)
-    const added = next.pieces.find((piece) => !previousIds.has(piece.id))
-    if (added) selectPiece(added.id)
+    if (addedId) selectPiece(addedId)
   }
 
   const removeSelectedPiece = (): void => {
@@ -288,9 +514,11 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     state.ghostGroup = buildPieceGhost(state.context.scene, type, transform)
   }
 
+  const selectStartPiece = (): void => selectPiece(currentMap.value.pieces[0]?.id ?? null)
+
   const loadMap = (map: MarbleMap, notify = true): void => {
-    selectedPieceId.value = null
     commitMap({ ...map, updatedAt: Date.now() }, notify)
+    selectStartPiece()
   }
 
   const setMapFromRemote = (map: MarbleMap): void => {
@@ -299,7 +527,7 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     commitMap(map, false, false)
   }
 
-  const startNewMap = (): void => loadMap(createEmptyMap('New track'))
+  const startNewMap = (name: string): void => loadMap(createEmptyMap(name.trim() || 'New track'))
 
   const saveMapAsName = (name: string): void => {
     savedMaps.value = saveMapAs(currentMap.value, name)
@@ -314,13 +542,30 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     selectPiece(selectedPieceId.value === pieceId ? null : pieceId)
   )
 
+  const cycleSelection = (direction: 1 | -1): void => {
+    const nextId = nextSelectedPieceId(currentMap.value.pieces, selectedPieceId.value, direction)
+    if (nextId) selectPiece(nextId)
+  }
+
   const init = async (): Promise<void> => {
     if (!deps.canvas.value) return
-    await initEditorScene(state, deps.canvas.value, rebuildTrack)
+    state.controls = createEditorControls({
+      undo,
+      redo,
+      selectPrevious: () => cycleSelection(-1),
+      selectNext: () => cycleSelection(1),
+      play: () => deps.onPlay?.(),
+      save: () => deps.onSave?.(),
+      newTrack: () => deps.onNewTrack?.()
+    })
+    await initEditorScene(state, deps.canvas.value, rebuildTrack, () => selectedPieceId.value)
+    selectStartPiece()
     picker.mount()
   }
 
   const destroy = (): void => {
+    state.controls?.destroyControls()
+    state.controls = null
     picker.unmount()
     destroyEditorScene(state)
   }

@@ -10,6 +10,7 @@ export const useMarbleEditorStore = defineStore('marbleEditor', () => {
   const winnerId = ref<string | null>(null)
   const solo = ref(false)
   const raceStartTime = ref<number | null>(null)
+  const selectedPieceId = ref<string | null>(null)
 
   const playerList = computed(() =>
     Object.values(players.value).sort((a, b) => {
@@ -56,6 +57,7 @@ export const useMarbleEditorStore = defineStore('marbleEditor', () => {
     winnerId.value = null
     solo.value = false
     raceStartTime.value = null
+    selectedPieceId.value = null
   }
 
   return {
@@ -65,6 +67,7 @@ export const useMarbleEditorStore = defineStore('marbleEditor', () => {
     winnerId,
     solo,
     raceStartTime,
+    selectedPieceId,
     playerList,
     hostId,
     upsertPlayer,

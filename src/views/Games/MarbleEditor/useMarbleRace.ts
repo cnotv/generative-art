@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools, getBall, moveDynamic } from '@webgamekit/threejs'
 import { createControls, loadMapping } from '@webgamekit/controls'
-import type { ControlsExtras, ControlsCurrents } from '@webgamekit/controls'
+import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
 import {
@@ -17,6 +17,7 @@ import { createGhostRegistry, placeGhost, removeGhost, clearGhosts } from './rac
 import type { GhostPlacement } from './raceGhosts'
 import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './nameLabels'
 import { registerCameraProperties } from '@/utils/cameraProperties'
+import { reportInputSource } from '@/composables/useInputDevice'
 import {
   buildTrack,
   computeSpawnPositions,
@@ -25,10 +26,10 @@ import {
   nearestCheckpointIndex
 } from './trackBuilder'
 import { applyPieceTransform } from './chainTransforms'
-import type { MarbleMap, BuiltTrack, CameraMode, BallPosPayload } from './types'
+import { computeTrackBounds, computeRoomLayout } from './bedroomLayout'
+import { buildBedroom, applyBedroomAtmosphere } from './bedroomEnvironment'
+import type { MarbleMap, BuiltTrack, CameraMode, BallPosPayload, BedroomEnvironment } from './types'
 import {
-  SKY_COLOR,
-  FOG_DENSITY,
   SPAWN_HEIGHT,
   SPAWN_Z_INSET,
   CONTROLS_GAME_ID,
@@ -37,6 +38,7 @@ import {
   FALL_MARGIN,
   TIME_PENALTY_FALL,
   MARBLE_WEIGHT,
+  MARBLE_RESTITUTION,
   COUNTDOWN_MS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
@@ -45,7 +47,6 @@ import {
 } from './config'
 import {
   MARBLE_RADIUS,
-  MARBLE_RESTITUTION,
   MARBLE_FRICTION,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
@@ -59,7 +60,6 @@ import {
   LIGHT_SHADOW_CAMERA
 } from '../MarbleMadness/config'
 import { attachBallStroke, addEdgeLinesToScene } from '../MarbleMadness/marbleVisuals'
-import { setupCloudArea, teardownCloudArea } from '../MarbleMadness/marbleEnvironment'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>
@@ -70,6 +70,7 @@ export type UseMarbleRaceDeps = {
   map: Ref<MarbleMap>
   marbleTexture: Ref<string | undefined>
   onFinish: (elapsedSeconds: number) => void
+  onBack?: () => void
   raceStartTime?: Ref<number | null>
   onPositionUpdate?: (pos: BallPosPayload) => void
   localPlayerName?: Ref<string>
@@ -89,6 +90,7 @@ type RaceState = {
   cameraActionHeld: boolean
   localLabel: THREE.Sprite | null
   scene: THREE.Scene | null
+  bedroom: BedroomEnvironment | null
   posAccumulator: number
 }
 
@@ -133,6 +135,16 @@ const respawnAtCheckpoint = (state: RaceState): void => {
   state.marble.userData.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
   state.marble.userData.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
   state.smoothedDirection.set(-Math.sin(transform.yaw), 0, -Math.cos(transform.yaw))
+}
+
+// Stored custom mappings predate newly added default bindings (camera, back),
+// so defaults are merged underneath: a remap wins, but new actions never vanish.
+const raceMapping = (): ControlMapping => {
+  const stored = loadMapping(CONTROLS_GAME_ID)
+  return {
+    keyboard: { ...KEYBOARD_MAPPING.keyboard, ...stored?.keyboard },
+    gamepad: { ...KEYBOARD_MAPPING.gamepad, ...stored?.gamepad }
+  }
 }
 
 const computeFallThreshold = (builtTrack: BuiltTrack): number =>
@@ -378,6 +390,7 @@ const createRaceActions = (
     broadcastPosition,
     updateLocalLabel,
     setCameraMode,
+    cycleCameraMode,
     applyInputAndBoost,
     updateCheckpointAndFinish
   }
@@ -400,16 +413,18 @@ const buildRaceScene = ({
 }: RaceSceneParameters): void => {
   if (!tools.world) return
   const scene = tools.scene
-  scene.fog = new THREE.FogExp2(SKY_COLOR, FOG_DENSITY)
-  scene.background = new THREE.Color(SKY_COLOR)
+  applyBedroomAtmosphere(scene)
   state.directionalLight =
     (scene.children.find(
       (child) => child instanceof THREE.DirectionalLight
     ) as THREE.DirectionalLight) ?? null
-  setupCloudArea(scene, tools.world, () => {})
   state.scene = scene
   ghostRegistry.scene = scene
   state.builtTrack = buildTrack(scene, tools.world, deps.map.value)
+  state.bedroom = buildBedroom(
+    scene,
+    computeRoomLayout(computeTrackBounds(state.builtTrack.transforms))
+  )
   state.fallThresholdY = computeFallThreshold(state.builtTrack)
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
@@ -449,6 +464,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     cameraActionHeld: false,
     localLabel: null,
     scene: null,
+    bedroom: null,
     posAccumulator: 0
   }
   const ghostRegistry = createGhostRegistry()
@@ -474,7 +490,11 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     if (!deps.canvas.value) return
     resetRunState()
     state.controls = createControls({
-      mapping: loadMapping(CONTROLS_GAME_ID) ?? KEYBOARD_MAPPING
+      mapping: raceMapping(),
+      onAction: (action, _trigger, rawSource) => {
+        reportInputSource(String(rawSource ?? 'keyboard'))
+        if (action === 'back') deps.onBack?.()
+      }
     })
     const tools = await getTools({ canvas: deps.canvas.value })
     cleanupTools = tools.cleanup
@@ -515,7 +535,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     state.marble = null
     state.builtTrack = null
     state.directionalLight = null
-    teardownCloudArea()
+    state.bedroom?.dispose()
+    state.bedroom = null
     if (cleanupTools) {
       cleanupTools()
       cleanupTools = null
@@ -536,6 +557,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     countdown,
     cameraMode,
     setCameraMode: actions.setCameraMode,
+    cycleCameraMode: actions.cycleCameraMode,
     updateGhostPosition,
     removeGhost: removeGhostMarble,
     init,
