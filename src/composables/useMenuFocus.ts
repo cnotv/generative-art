@@ -199,7 +199,12 @@ const handleControlAction = (
   return false
 }
 
-const runMenuAction = (state: FocusState, action: MenuAction, isPaused: () => boolean): void => {
+const runMenuAction = (
+  state: FocusState,
+  action: MenuAction,
+  isPaused: () => boolean,
+  source: MenuSource
+): void => {
   if (isPaused()) return
   const active = document.activeElement
   const rows = queryRows(state.panel.value)
@@ -211,7 +216,12 @@ const runMenuAction = (state: FocusState, action: MenuAction, isPaused: () => bo
     left: () => moveCol(state, -1, rows[state.row.value]),
     right: () => moveCol(state, 1, rows[state.row.value]),
     activate: () => {
-      if (!isTextInput(active) && active instanceof HTMLElement) active.click()
+      if (isTextInput(active)) return
+      // The browser's own Enter default action already clicks a focused
+      // button; a synthetic click would activate it twice (and the second
+      // native click can land on whatever gets autofocused next).
+      if (source === 'keyboard' && active instanceof HTMLButtonElement) return
+      if (active instanceof HTMLElement) active.click()
     },
     decrease: () => undefined,
     cancel: () => {
@@ -284,7 +294,7 @@ export function useMenuFocus(
   useMenuNavigation(
     (action, source) => {
       inputSource.value = source
-      runMenuAction(state, action, isPaused)
+      runMenuAction(state, action, isPaused, source)
     },
     mapping,
     options

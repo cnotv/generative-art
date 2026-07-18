@@ -348,7 +348,7 @@ const funnelTrimeshSpec = (): TrimeshSpec => ({
   geometry: buildFunnelGeometry(),
   center: vec(0, 0, -(FUNNEL_TONGUE_LENGTH + FUNNEL_RIM_RADIUS)),
   friction: 0.4,
-  restitution: 0.01
+  restitution: 0.002
 })
 
 const LOOP_GUIDE_LENGTH = Math.hypot(4, (LANE_WIDTH - LOOP_LANE_WIDTH) / 2)
@@ -528,7 +528,7 @@ const buildTrimeshModel = (
     rotation: [0, transform.yaw, 0],
     color: piece.color,
     friction: spec.friction,
-    restitution: spec.restitution ?? 0.01
+    restitution: spec.restitution ?? 0.002
   })
   const material = model.material as THREE.Material
   material.side = THREE.DoubleSide

@@ -153,8 +153,9 @@ const moveCol = (delta: number, row: HTMLElement | undefined): void => {
   applyFocus()
 }
 
-const activate = (active: Element | null): void => {
+const activate = (active: Element | null, source: MenuSource): void => {
   if (isTextInput(active)) return
+  if (source === 'keyboard' && active instanceof HTMLButtonElement) return
   if (active instanceof HTMLElement) active.click()
 }
 
@@ -261,7 +262,7 @@ const handleMenu = (action: MenuAction, source: MenuSource): void => {
     down: () => moveRow(1, rows.length),
     left: () => moveCol(-1, rows[focusRow.value]),
     right: () => moveCol(1, rows[focusRow.value]),
-    activate: () => activate(active),
+    activate: () => activate(active, source),
     decrease: () => undefined,
     cancel: () => (active as HTMLElement | null)?.blur?.()
   }

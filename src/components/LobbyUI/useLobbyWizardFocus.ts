@@ -1,5 +1,9 @@
 import { ref, type Ref } from 'vue'
-import { useMenuNavigation, type MenuAction } from '@/composables/useMenuNavigation'
+import {
+  useMenuNavigation,
+  type MenuAction,
+  type MenuSource
+} from '@/composables/useMenuNavigation'
 import { useGamepadHint } from '@/composables/useGamepadHint'
 
 const FOCUSABLE_SELECTOR =
@@ -114,7 +118,8 @@ const handleRowNav = (
   state: WizardFocusState,
   action: MenuAction,
   rows: HTMLElement[],
-  active: Element | null
+  active: Element | null,
+  source: MenuSource
 ): void => {
   const handlers: Partial<Record<MenuAction, () => void>> = {
     up: () => {
@@ -141,14 +146,18 @@ const handleRowNav = (
       applyFocus(state)
     },
     activate: () => {
-      if (active instanceof HTMLElement && !isTextInput(active)) active.click()
+      if (!(active instanceof HTMLElement) || isTextInput(active)) return
+      // Native Enter already clicks a focused button; a synthetic click would
+      // double-activate (the second native click hits the next autofocus).
+      if (source === 'keyboard' && active instanceof HTMLButtonElement) return
+      active.click()
     },
     cancel: () => (active as HTMLElement | null)?.blur?.()
   }
   handlers[action]?.()
 }
 
-const runWizardAction = (state: WizardFocusState, action: MenuAction): void => {
+const runWizardAction = (state: WizardFocusState, action: MenuAction, source: MenuSource): void => {
   const rows = queryRows(state.root.value)
   if (!rows.length) return
   const active = document.activeElement
@@ -159,7 +168,7 @@ const runWizardAction = (state: WizardFocusState, action: MenuAction): void => {
     handleCyclableControl(state, active, action, rows.length)
   )
     return
-  handleRowNav(state, action, rows, active)
+  handleRowNav(state, action, rows, active, source)
 }
 
 /**
@@ -187,7 +196,7 @@ export const useLobbyWizardFocus = (root: Ref<HTMLElement | null>, isBlocked: ()
   useMenuNavigation((action, source) => {
     if (isBlocked()) return
     onInputSource(source)
-    runWizardAction(state, action)
+    runWizardAction(state, action, source)
   })
 
   return { focusedHint, inputSource, jumpToAutofocus: () => jumpToAutofocus(state) }

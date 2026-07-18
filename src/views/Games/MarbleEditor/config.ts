@@ -8,7 +8,8 @@ export const DECK_THICKNESS = 1
 export const WALL_HEIGHT = 1.8
 export const WALL_THICKNESS = 0.5
 
-export const MARBLE_WEIGHT = 7
+export const MARBLE_WEIGHT = 14
+export const MARBLE_MOVE_FORCE = 20
 
 export const START_LENGTH = 12
 export const FINISH_LENGTH = 16
@@ -60,8 +61,8 @@ export const BUMPER_SPACING_Z = 4
 export const BUMPER_CLEARANCE_MARGIN = 0.3
 
 export const DECK_FRICTION = 0.9
-export const DECK_RESTITUTION = 0.02
-export const MARBLE_RESTITUTION = 0.01
+export const DECK_RESTITUTION = 0.004
+export const MARBLE_RESTITUTION = 0.002
 export const WALL_FRICTION = 0.05
 export const WALL_DECK_OVERLAP = 0.25
 

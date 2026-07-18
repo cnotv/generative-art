@@ -39,6 +39,7 @@ import {
   TIME_PENALTY_FALL,
   MARBLE_WEIGHT,
   MARBLE_RESTITUTION,
+  MARBLE_MOVE_FORCE,
   COUNTDOWN_MS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
@@ -50,7 +51,6 @@ import {
   MARBLE_FRICTION,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
-  MOVE_FORCE,
   MAX_LINEAR_SPEED,
   CAMERA_HEIGHT,
   CAMERA_BACK,
@@ -105,23 +105,23 @@ const computeImpulse = (
   const lateral = ('left' in currentActions ? -1 : 0) + ('right' in currentActions ? 1 : 0)
   const longitudinal =
     ('forward' in currentActions ? 1 : 0) + ('backward' in currentActions ? -1 : 0)
-  const x = MOVE_FORCE * (longitudinal * forward.x - lateral * forward.z)
-  const z = MOVE_FORCE * (longitudinal * forward.z + lateral * forward.x)
+  const x = MARBLE_MOVE_FORCE * (longitudinal * forward.x - lateral * forward.z)
+  const z = MARBLE_MOVE_FORCE * (longitudinal * forward.z + lateral * forward.x)
   const speed = Math.hypot(velocity.x, velocity.y, velocity.z)
   const isClimbing =
     Math.abs(velocity.y) > VERTICAL_INPUT_REDIRECT_VY && speed > VERTICAL_INPUT_REDIRECT_SPEED
   if (longitudinal > 0 && isClimbing) {
     if (speed >= MAX_LINEAR_SPEED)
       return {
-        x: x - longitudinal * forward.x * MOVE_FORCE,
+        x: x - longitudinal * forward.x * MARBLE_MOVE_FORCE,
         y: 0,
-        z: z - longitudinal * forward.z * MOVE_FORCE
+        z: z - longitudinal * forward.z * MARBLE_MOVE_FORCE
       }
-    const scale = MOVE_FORCE / speed
+    const scale = MARBLE_MOVE_FORCE / speed
     return {
-      x: x - longitudinal * forward.x * MOVE_FORCE + velocity.x * scale,
+      x: x - longitudinal * forward.x * MARBLE_MOVE_FORCE + velocity.x * scale,
       y: velocity.y * scale,
-      z: z - longitudinal * forward.z * MOVE_FORCE + velocity.z * scale
+      z: z - longitudinal * forward.z * MARBLE_MOVE_FORCE + velocity.z * scale
     }
   }
   return { x, y: 0, z }

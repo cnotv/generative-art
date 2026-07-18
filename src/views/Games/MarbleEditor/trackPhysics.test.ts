@@ -11,13 +11,12 @@ import {
   nearestCheckpointIndex
 } from './trackBuilder'
 import type { PieceTransform } from './types'
-import { MARBLE_WEIGHT, MARBLE_RESTITUTION, FALL_MARGIN } from './config'
+import { MARBLE_WEIGHT, MARBLE_RESTITUTION, MARBLE_MOVE_FORCE, FALL_MARGIN } from './config'
 import {
   MARBLE_RADIUS,
   MARBLE_FRICTION,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
-  MOVE_FORCE,
   MAX_LINEAR_SPEED
 } from '../MarbleMadness/config'
 import type { MarbleMap, TrackPieceType } from './types'
@@ -96,7 +95,11 @@ const applySteeringInput = (
   const distance = Math.hypot(deltaX, deltaZ) || 1
   moveDynamic(
     marble,
-    { x: (deltaX / distance) * MOVE_FORCE, y: 0, z: (deltaZ / distance) * MOVE_FORCE },
+    {
+      x: (deltaX / distance) * MARBLE_MOVE_FORCE,
+      y: 0,
+      z: (deltaZ / distance) * MARBLE_MOVE_FORCE
+    },
     MAX_LINEAR_SPEED
   )
 }
