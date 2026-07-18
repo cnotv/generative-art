@@ -10,7 +10,8 @@ import {
   LobbyUIPrivateToggle,
   LobbyUIPlayerList,
   LobbyUIButton,
-  LobbyUIConfigField
+  LobbyUIConfigField,
+  LobbyUIKeyPill
 } from '@/components/LobbyUI'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import { MARBLE_OPTIONS } from '@/views/Games/MarbleMadness/config'
@@ -459,6 +460,17 @@ const isMarbleAvailable = (_id: string): boolean => true
           <LobbyUIPrivateToggle v-model="isPrivate" />
         </LobbyUIRow>
 
+        <LobbyUIRow label="Keys">
+          <div class="lui-showcase__pills">
+            <LobbyUIKeyPill :keyboard="['Z']" :gamepad="['L1']" />
+            <LobbyUIKeyPill :keyboard="['Y']" :gamepad="['R1']" />
+            <LobbyUIButton variant="ghost" size="sm" title="Cycle the camera (example)">
+              Camera
+              <LobbyUIKeyPill :keyboard="['C']" :gamepad="['△']" />
+            </LobbyUIButton>
+          </div>
+        </LobbyUIRow>
+
         <LobbyUIRow label="Players">
           <LobbyUIPlayerList :players="players" :is-host="true" />
         </LobbyUIRow>
@@ -671,6 +683,12 @@ const isMarbleAvailable = (_id: string): boolean => true
 
 .lui-showcase__nav--split {
   justify-content: space-between;
+}
+
+.lui-showcase__pills {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
 }
 
 @media (width <= 720px) {

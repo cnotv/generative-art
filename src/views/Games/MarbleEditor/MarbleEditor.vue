@@ -13,25 +13,30 @@ import {
   NAME_ANIMALS,
   PLAYER_COLORS
 } from '@/utils/playerProfile'
+import '@/assets/styles/lobby-ui.scss'
 import LobbyLayout from '@/layout/LobbyLayout.vue'
 import GameHeader from '@/components/GameHeader.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
+import { LobbyUIButton, LobbyUIKeyPill, LobbyUIFocusHint } from '@/components/LobbyUI'
+import { useMenuFocus } from '@/composables/useMenuFocus'
+import { EDITOR_MENU_MAPPING } from './config'
 import { useMarbleEditor } from './useMarbleEditor'
 import { useMarbleRace } from './useMarbleRace'
 import { useMarbleEditorSession } from './useMarbleEditorSession'
 import EditorPalette from './EditorPalette.vue'
+import EditorToolbar from './EditorToolbar.vue'
 import MarbleEditorLobby from './MarbleEditorLobby.vue'
 import MarbleEditorSummary from './MarbleEditorSummary.vue'
 import { SAMPLE_MAPS } from './sampleMaps'
 import { MARBLE_OPTIONS, DEFAULT_MARBLE } from '../MarbleMadness/config'
 import type { CameraMode, MePhase } from './types'
 
-const CAMERA_MODES: { value: CameraMode; label: string; tooltip: string }[] = [
-  { value: 'third', label: 'Third', tooltip: 'Follow the marble from behind (press C to cycle)' },
-  { value: 'first', label: 'First', tooltip: 'View from the marble (press C to cycle)' },
-  { value: 'free', label: 'Free', tooltip: 'Free orbit camera (press C to cycle)' }
-]
+const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
+  third: 'Third',
+  first: 'First',
+  free: 'Free'
+}
 
 const store = useMarbleEditorStore()
 const { phase, playerList, messages, hostId, raceStartTime } = storeToRefs(store)
@@ -81,8 +86,20 @@ const marbleUrl = computed(() => marbleUrlById(playerMarble.value) ?? DEFAULT_MA
 
 const editor = useMarbleEditor({
   canvas: editorCanvas,
-  onMapChange: (map) => session.broadcastMap({ map })
+  onMapChange: (map) => session.broadcastMap({ map }),
+  onPlay: () => startRaceFromEditor(),
+  onSave: () => editor.saveMapAsName(editor.currentMap.value.name),
+  onNewTrack: () => {
+    namingNewTrack.value = true
+  }
 })
+
+const editOverlayReference = ref<HTMLElement | null>(null)
+const { focusedHint, inputSource } = useMenuFocus(
+  editOverlayReference,
+  () => phase.value !== 'edit',
+  EDITOR_MENU_MAPPING
+)
 
 const session = useMarbleEditorSession(
   {
@@ -120,6 +137,9 @@ const race = useMarbleRace({
   canvas: raceCanvas,
   map: editor.currentMap,
   marbleTexture: marbleUrl,
+  onBack: () => {
+    if (canRestart.value) handleBackToEditor()
+  },
   raceStartTime,
   localPlayerName: playerName,
   localPlayerColor: playerColor,
@@ -215,18 +235,22 @@ const handleMarbleChange = (marbleId: string): void => {
   persistLobbyConfig()
 }
 
-const layoutReference = ref<{ requestLeave: () => void } | null>(null)
-
 const handleLeaveRoom = (): void => {
   store.solo = false
+  store.phase = 'lobby'
   leaveRoom()
 }
 
-const requestLeave = (): void => {
-  layoutReference.value?.requestLeave() ?? handleLeaveRoom()
-}
-
 const canRestart = computed(() => store.solo || isHost.value)
+
+const cameraLabel = computed(() => CAMERA_MODE_LABELS[race.cameraMode.value])
+
+const namingNewTrack = ref(false)
+
+const handleCreateTrack = (name: string): void => {
+  editor.startNewMap(name)
+  namingNewTrack.value = false
+}
 
 const handleRestart = (): void => {
   session.restartRace()
@@ -295,7 +319,6 @@ onUnmounted(() => {
 
 <template>
   <LobbyLayout
-    ref="layoutReference"
     class="me"
     :phase="phase"
     :show-sidebar="showSidebar"
@@ -317,6 +340,10 @@ onUnmounted(() => {
           finish wins
         </li>
         <li>Press <strong>C</strong> to switch first person, third person and free cameras</li>
+        <li>
+          Undo and redo edits with <strong>Z</strong>/<strong>Y</strong> or
+          <strong>L1</strong>/<strong>R1</strong> on a gamepad
+        </li>
       </ul>
     </template>
 
@@ -345,25 +372,35 @@ onUnmounted(() => {
     <div v-else class="me__play-area">
       <template v-if="phase === 'edit'">
         <canvas ref="editorCanvas" class="me__canvas"></canvas>
-        <EditorPalette
-          class="me__palette"
-          :selected-piece="editor.selectedPiece.value"
-          :saved-maps="editor.savedMaps.value"
-          :map-name="editor.currentMap.value.name"
-          :can-undo="editor.canUndo.value"
-          :can-redo="editor.canRedo.value"
-          @add="editor.addPiece"
-          @preview="editor.previewPiece"
-          @recolor="editor.recolorSelectedPiece"
-          @delete-piece="editor.removeSelectedPiece"
-          @save-as="editor.saveMapAsName"
-          @load-map="editor.loadMap"
-          @delete-map="editor.deleteMapByName"
-          @new-map="editor.startNewMap"
-          @undo="editor.undo"
-          @redo="editor.redo"
-          @play="startRaceFromEditor"
-        />
+        <div ref="editOverlayReference" class="me__edit-overlay">
+          <EditorToolbar
+            class="me__topbar"
+            data-lui-row
+            :can-undo="editor.canUndo.value"
+            :can-redo="editor.canRedo.value"
+            :saved-maps="editor.savedMaps.value"
+            :map-name="editor.currentMap.value.name"
+            :naming="namingNewTrack"
+            @undo="editor.undo"
+            @redo="editor.redo"
+            @new-map="namingNewTrack = true"
+            @play="startRaceFromEditor"
+            @save-as="editor.saveMapAsName"
+            @load-map="editor.loadMap"
+            @delete-map="editor.deleteMapByName"
+            @create-track="handleCreateTrack"
+            @cancel-naming="namingNewTrack = false"
+          />
+          <EditorPalette
+            class="me__sidebar"
+            :selected-piece="editor.selectedPiece.value"
+            @add="editor.addPiece"
+            @preview="editor.previewPiece"
+            @recolor="editor.recolorSelectedPiece"
+            @delete-piece="editor.removeSelectedPiece"
+          />
+        </div>
+        <LobbyUIFocusHint :hint="focusedHint" :visible="inputSource === 'gamepad'" />
       </template>
 
       <template v-else>
@@ -373,27 +410,24 @@ onUnmounted(() => {
           <span v-if="race.penaltyCount.value > 0" class="me__penalties">
             Falls: {{ race.penaltyCount.value }}
           </span>
-          <div class="me__camera-group" role="group" aria-label="Camera mode">
-            <button
-              v-for="mode in CAMERA_MODES"
-              :key="mode.value"
-              class="me__hud-button"
-              :class="{ 'me__hud-button--active': race.cameraMode.value === mode.value }"
-              :title="mode.tooltip"
-              @click="race.setCameraMode(mode.value)"
-            >
-              {{ mode.label }}
-            </button>
-          </div>
-          <button
+          <LobbyUIButton
+            size="sm"
+            variant="ghost"
+            :title="`Camera: ${cameraLabel} — click or press C to cycle`"
+            @click="race.cycleCameraMode"
+          >
+            Cam: {{ cameraLabel }}
+            <LobbyUIKeyPill :keyboard="['C']" :gamepad="['△']" />
+          </LobbyUIButton>
+          <LobbyUIButton
             v-if="canRestart"
-            class="me__hud-button"
+            size="sm"
+            variant="ghost"
             title="Return to the track editor"
             @click="handleBackToEditor"
           >
             Back to editor
-          </button>
-          <button class="me__hud-button" title="Leave the room" @click="requestLeave">Leave</button>
+          </LobbyUIButton>
         </div>
         <div v-if="race.countdown.value > 0" class="me__countdown">
           {{ race.countdown.value }}
@@ -442,72 +476,71 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.me__palette {
+/* Named overlay regions: the top bar row and the sidebar column are grid
+   areas, so they can never overlap each other or drift over one another. */
+.me__edit-overlay {
   position: absolute;
-  top: var(--spacing-4);
-  left: var(--spacing-4);
-  max-height: calc(100% - 2 * var(--spacing-4));
+  inset: 0;
+  z-index: var(--z-dropdown);
+  display: grid;
+  grid-template-areas:
+    'topbar topbar'
+    'sidebar scene';
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  pointer-events: none;
+}
+
+.me__topbar {
+  grid-area: topbar;
+  justify-self: center;
+  pointer-events: auto;
+}
+
+.me__sidebar {
+  grid-area: sidebar;
+  min-height: 0;
+  pointer-events: auto;
 }
 
 .me__hud {
   position: absolute;
   top: var(--spacing-4);
   left: 50%;
+  z-index: var(--z-dropdown);
   display: flex;
   gap: var(--spacing-4);
   align-items: center;
-  padding: var(--spacing-2) var(--spacing-4);
-  color: var(--color-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
   transform: translateX(-50%);
 }
 
 .me__timer {
-  font-size: var(--font-size-lg);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-medium);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 900;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .me__penalties {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
-}
-
-.me__hud-button {
-  padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-foreground);
-  cursor: pointer;
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.me__hud-button:hover {
-  background: var(--color-accent);
-}
-
-.me__hud-button--active {
-  color: var(--color-primary-foreground);
-  background: var(--color-primary);
-}
-
-.me__camera-group {
-  display: flex;
-  gap: var(--spacing-1);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-small);
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
 .me__countdown {
   position: absolute;
   top: 40%;
   left: 50%;
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-foreground);
-  text-shadow: 0 0 12px var(--color-background);
-  transform: translate(-50%, -50%) scale(3);
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-important);
+  font-weight: 900;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+  transform: translate(-50%, -50%) scale(2);
 }
 </style>
