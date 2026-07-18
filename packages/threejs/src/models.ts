@@ -788,7 +788,13 @@ export const getTrimesh = (
   rigidBody.setRotation(quaternion, true)
 
   const { vertices, indices } = getTrimeshVertexData(geometry)
-  const colliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
+  // FIX_INTERNAL_EDGES smooths contact normals across triangle boundaries so
+  // rolling bodies do not bump or catch on the mesh's internal edges.
+  const colliderDesc = RAPIER.ColliderDesc.trimesh(
+    vertices,
+    indices,
+    RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES
+  )
     .setFriction(friction)
     .setRestitution(restitution)
   const collider = world.createCollider(colliderDesc, rigidBody)

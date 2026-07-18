@@ -47,6 +47,8 @@ import {
   BUMPER_SIZE_XZ,
   BUMPER_HEIGHT,
   BUMPER_RESTITUTION,
+  BUMPER_LATERAL_OFFSET,
+  BUMPER_SPACING_Z,
   DECK_FRICTION,
   DECK_RESTITUTION,
   WALL_FRICTION,
@@ -197,49 +199,90 @@ const LANE_CROSS_SECTION: [number, number][] = [
   [LANE_WIDTH / 2 + WALL_THICKNESS, -DECK_THICKNESS]
 ]
 
-const ARC_SWEEP_STATIONS = 33
+const ARC_SWEEP_STATIONS = 49
 
-const arcStationPositions = (side: 1 | -1, roll: number, stationIndex: number): number[] => {
-  const phi = (stationIndex / (ARC_SWEEP_STATIONS - 1)) * (Math.PI / 2)
-  const centerX = side * (CURVE_RADIUS * Math.cos(phi) - CURVE_RADIUS)
-  const centerZ = -CURVE_RADIUS * Math.sin(phi)
-  const orientation = yawQuaternion(side * phi).multiply(
-    rollQuaternion(side * roll * bankEnvelope(phi))
-  )
-  return LANE_CROSS_SECTION.flatMap(([x, y]) => {
-    const point = vec(x, y, 0).applyQuaternion(orientation)
-    return [centerX + point.x, point.y, centerZ + point.z]
-  })
+type SweepStation = {
+  origin: THREE.Vector3
+  orientation: THREE.Quaternion
 }
 
-const arcSweepIndices = (): number[] => {
-  const pointCount = LANE_CROSS_SECTION.length
-  const sideQuads = Array.from({ length: ARC_SWEEP_STATIONS - 1 }, (_, station) =>
-    LANE_CROSS_SECTION.flatMap((_, pointIndex) => {
-      const nextPoint = (pointIndex + 1) % pointCount
-      const a = station * pointCount + pointIndex
-      const b = station * pointCount + nextPoint
-      const c = (station + 1) * pointCount + pointIndex
-      const d = (station + 1) * pointCount + nextPoint
-      return [a, c, b, b, c, d]
+// Arc stations plus a short straight extension at both ends: the extensions
+// overlap the neighbouring pieces so the junctions never leave a flush seam,
+// mirroring the box pieces' JOINT_OVERLAP.
+const arcSweepStations = (side: 1 | -1, roll: number): SweepStation[] => {
+  const arc = Array.from({ length: ARC_SWEEP_STATIONS }, (_, index) => {
+    const phi = (index / (ARC_SWEEP_STATIONS - 1)) * (Math.PI / 2)
+    return {
+      origin: vec(
+        side * (CURVE_RADIUS * Math.cos(phi) - CURVE_RADIUS),
+        0,
+        -CURVE_RADIUS * Math.sin(phi)
+      ),
+      orientation: yawQuaternion(side * phi).multiply(
+        rollQuaternion(side * roll * bankEnvelope(phi))
+      )
+    }
+  })
+  const last = arc[arc.length - 1]
+  const entry: SweepStation = {
+    origin: vec(0, 0, JOINT_OVERLAP / 2),
+    orientation: new THREE.Quaternion()
+  }
+  const exit: SweepStation = {
+    origin: last.origin.clone().add(vec(-side * (JOINT_OVERLAP / 2), 0, 0)),
+    orientation: last.orientation.clone()
+  }
+  return [entry, ...arc, exit]
+}
+
+// Each cross-section edge gets its own vertex pair per station: profile
+// corners stay hard while the sweep direction shades smoothly.
+const sweepPositions = (stations: SweepStation[]): number[] =>
+  stations.flatMap((station) =>
+    LANE_CROSS_SECTION.flatMap((current, pointIndex) => {
+      const nextPoint = LANE_CROSS_SECTION[(pointIndex + 1) % LANE_CROSS_SECTION.length]
+      return [current, nextPoint].flatMap(([x, y]) => {
+        const point = vec(x, y, 0).applyQuaternion(station.orientation).add(station.origin)
+        return [point.x, point.y, point.z]
+      })
     })
+  )
+
+// Winding matters: Rapier's FIX_INTERNAL_EDGES corrects contact normals using
+// the triangles' face normals, so every face must point outward (deck up).
+const sweepIndices = (stationCount: number): number[] => {
+  const edgeCount = LANE_CROSS_SECTION.length
+  const perStation = edgeCount * 2
+  const sideQuads = Array.from({ length: stationCount - 1 }, (_, station) =>
+    Array.from({ length: edgeCount }, (_, edge) => {
+      const a = station * perStation + edge * 2
+      const b = a + 1
+      const c = (station + 1) * perStation + edge * 2
+      const d = c + 1
+      return [a, b, c, b, d, c]
+    }).flat()
   ).flat()
   const capTriangles = THREE.ShapeUtils.triangulateShape(
     LANE_CROSS_SECTION.map(([x, y]) => new THREE.Vector2(x, y)),
     []
   )
-  const endBase = (ARC_SWEEP_STATIONS - 1) * pointCount
-  const caps = capTriangles.flatMap(([a, b, c]) => [a, b, c, endBase + a, endBase + c, endBase + b])
+  const endBase = (stationCount - 1) * perStation
+  const caps = capTriangles.flatMap(([a, b, c]) => [
+    a * 2,
+    b * 2,
+    c * 2,
+    endBase + a * 2,
+    endBase + c * 2,
+    endBase + b * 2
+  ])
   return [...sideQuads, ...caps]
 }
 
-const buildArcSweepGeometry = (side: 1 | -1, roll: number): THREE.BufferGeometry => {
-  const positions = Array.from({ length: ARC_SWEEP_STATIONS }, (_, station) =>
-    arcStationPositions(side, roll, station)
-  ).flat()
+export const buildArcSweepGeometry = (side: 1 | -1, roll: number): THREE.BufferGeometry => {
+  const stations = arcSweepStations(side, roll)
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geometry.setIndex(arcSweepIndices())
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(sweepPositions(stations), 3))
+  geometry.setIndex(sweepIndices(stations.length))
   geometry.computeVertexNormals()
   return geometry
 }
@@ -277,14 +320,35 @@ const FUNNEL_PROFILE: [number, number][] = [
   [FUNNEL_RIM_RADIUS + 0.5, 0.4]
 ]
 
+// THREE.LatheGeometry winds its faces toward the outside of the solid of
+// revolution; the marble rolls on the bowl's inside, so the winding must be
+// reversed for Rapier's FIX_INTERNAL_EDGES normal correction to point up.
+const reverseGeometryWinding = (geometry: THREE.BufferGeometry): THREE.BufferGeometry => {
+  const index = geometry.getIndex()
+  if (!index) return geometry
+  const flipped = Array.from({ length: index.count / 3 }, (_, triangle) => [
+    index.getX(triangle * 3),
+    index.getX(triangle * 3 + 2),
+    index.getX(triangle * 3 + 1)
+  ]).flat()
+  geometry.setIndex(flipped)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+export const buildFunnelGeometry = (): THREE.BufferGeometry =>
+  reverseGeometryWinding(
+    new THREE.LatheGeometry(
+      FUNNEL_PROFILE.map(([radius, height]) => new THREE.Vector2(radius, height)),
+      32
+    )
+  )
+
 const funnelTrimeshSpec = (): TrimeshSpec => ({
-  geometry: new THREE.LatheGeometry(
-    FUNNEL_PROFILE.map(([radius, height]) => new THREE.Vector2(radius, height)),
-    32
-  ),
+  geometry: buildFunnelGeometry(),
   center: vec(0, 0, -(FUNNEL_TONGUE_LENGTH + FUNNEL_RIM_RADIUS)),
   friction: 0.4,
-  restitution: 0.1
+  restitution: 0.01
 })
 
 const LOOP_GUIDE_LENGTH = Math.hypot(4, (LANE_WIDTH - LOOP_LANE_WIDTH) / 2)
@@ -376,17 +440,24 @@ const boostPadSpecs = (): BoxSpec[] => [
   )
 ]
 
+// Bumpers keep more than a marble diameter of clearance to the walls (an
+// exact-diameter gap pinches the marble against both) and sink into the deck
+// like the walls do, so the base seam cannot wedge a fast marble.
 const bumperFieldSpecs = (): BoxSpec[] => [
   ...straightSpecs(BUMPER_FIELD_LENGTH),
-  ...[
-    [1.8, -4],
-    [-1.8, -8],
-    [1.8, -12]
-  ].map(([x, z]) =>
-    box([BUMPER_SIZE_XZ, BUMPER_HEIGHT, BUMPER_SIZE_XZ], vec(x, BUMPER_HEIGHT / 2, z), {
-      color: COLOR_BUMPER,
-      restitution: BUMPER_RESTITUTION
-    })
+  ...[1, -1, 1].map((side, index) =>
+    box(
+      [BUMPER_SIZE_XZ, BUMPER_HEIGHT + WALL_DECK_OVERLAP, BUMPER_SIZE_XZ],
+      vec(
+        side * BUMPER_LATERAL_OFFSET,
+        (BUMPER_HEIGHT - WALL_DECK_OVERLAP) / 2,
+        -(index + 1) * BUMPER_SPACING_Z
+      ),
+      {
+        color: COLOR_BUMPER,
+        restitution: BUMPER_RESTITUTION
+      }
+    )
   )
 ]
 
@@ -457,7 +528,7 @@ const buildTrimeshModel = (
     rotation: [0, transform.yaw, 0],
     color: piece.color,
     friction: spec.friction,
-    restitution: spec.restitution ?? 0.1
+    restitution: spec.restitution ?? 0.01
   })
   const material = model.material as THREE.Material
   material.side = THREE.DoubleSide

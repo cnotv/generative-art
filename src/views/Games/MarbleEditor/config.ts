@@ -55,9 +55,13 @@ export const BOOST_PAD_INSET = 1
 export const BUMPER_SIZE_XZ = 1.2
 export const BUMPER_HEIGHT = 1.4
 export const BUMPER_RESTITUTION = 0.8
+export const BUMPER_LATERAL_OFFSET = 1.4
+export const BUMPER_SPACING_Z = 4
+export const BUMPER_CLEARANCE_MARGIN = 0.3
 
 export const DECK_FRICTION = 0.9
-export const DECK_RESTITUTION = 0.2
+export const DECK_RESTITUTION = 0.02
+export const MARBLE_RESTITUTION = 0.01
 export const WALL_FRICTION = 0.05
 export const WALL_DECK_OVERLAP = 0.25
 
@@ -75,7 +79,10 @@ export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'backward', label: 'Backward', directional: true },
   { id: 'left', label: 'Left', directional: true },
   { id: 'right', label: 'Right', directional: true },
-  { id: 'camera', label: 'Camera' }
+  { id: 'camera', label: 'Camera' },
+  { id: 'back', label: 'Back to editor' },
+  { id: 'undo', label: 'Undo' },
+  { id: 'redo', label: 'Redo' }
 ]
 
 export const KEYBOARD_MAPPING = {
@@ -88,7 +95,9 @@ export const KEYBOARD_MAPPING = {
     ArrowLeft: 'left',
     d: 'right',
     ArrowRight: 'right',
-    c: 'camera'
+    c: 'camera',
+    z: 'undo',
+    y: 'redo'
   },
   gamepad: {
     'axis1-up': 'forward',
@@ -98,7 +107,11 @@ export const KEYBOARD_MAPPING = {
     'dpad-up': 'forward',
     'dpad-down': 'backward',
     'dpad-left': 'left',
-    'dpad-right': 'right'
+    'dpad-right': 'right',
+    triangle: 'camera',
+    options: 'back',
+    l1: 'undo',
+    r1: 'redo'
   }
 }
 
@@ -107,6 +120,62 @@ export const CONTROLS_CONFIG: ControlsMapperGameConfig = {
   actions: CONTROLS_ACTIONS,
   defaultMapping: KEYBOARD_MAPPING
 }
+
+// Edit-phase pad scheme: right stick orbits the camera, the d-pad cycles the
+// selected track piece, Options starts the race. The left stick and face
+// buttons belong to EDITOR_MENU_MAPPING (UI focus) instead.
+export const EDITOR_MAPPING = {
+  keyboard: {
+    z: 'undo',
+    y: 'redo',
+    s: 'save',
+    n: 'new-track'
+  },
+  gamepad: {
+    l1: 'undo',
+    r1: 'redo',
+    square: 'save',
+    triangle: 'new-track',
+    'dpad-left': 'select-previous',
+    'dpad-up': 'select-previous',
+    'dpad-right': 'select-next',
+    'dpad-down': 'select-next',
+    options: 'play',
+    l2: 'camera-pan',
+    'axis2-left': 'camera-left',
+    'axis2-right': 'camera-right',
+    'axis3-up': 'camera-up',
+    'axis3-down': 'camera-down'
+  }
+}
+
+export const EDITOR_MENU_MAPPING = {
+  keyboard: {
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    Enter: 'activate',
+    Escape: 'cancel'
+  },
+  gamepad: {
+    'axis0-left': 'left',
+    'axis0-right': 'right',
+    'axis1-up': 'up',
+    'axis1-down': 'down',
+    cross: 'activate',
+    circle: 'cancel'
+  }
+}
+
+export const EDITOR_CAMERA_ROTATE_SPEED = 1.6
+export const EDITOR_CAMERA_PAN_SPEED = 40
+export const EDITOR_CAMERA_POLAR_MIN = 0.15
+export const EDITOR_CAMERA_POLAR_MAX = 1.45
+
+export const SELECTION_PULSE_MIN = 0.7
+export const SELECTION_PULSE_MAX = 1.4
+export const SELECTION_PULSE_SPEED = 2
 
 export const COUNTDOWN_MS = 3000
 
@@ -122,10 +191,9 @@ export const FALL_MARGIN = 15
 export const TIME_PENALTY_FALL = 5
 
 export const SKY_COLOR = 0xb0d8f0
-export const FOG_DENSITY = 0.0015
 export const EDITOR_CAMERA_POSITION: [number, number, number] = [26, 28, 34]
 export const EDITOR_ORBIT_TARGET: [number, number, number] = [0, 0, -30]
-export const SELECTION_EMISSIVE = 0x445544
+export const SELECTION_EMISSIVE = 0x3fae5a
 
 export const LIGHT_AMBIENT_INTENSITY = 1.2
 export const LIGHT_DIRECTIONAL_INTENSITY = 2.5

@@ -163,10 +163,42 @@ describe('createGamepadController polling', () => {
 
     const gamepad = makeGamepad({ index: 3 })
     setGamepads([null, null, null, gamepad])
+    vi.advanceTimersByTime(40)
     gamepad.buttons[0].pressed = true
     vi.advanceTimersByTime(40)
 
     expect(onAction).toHaveBeenCalledWith('jump', 'cross', 'gamepad')
+    controller.unbind()
+  })
+
+  it('does not fire onAction for a button already held when polling starts', () => {
+    const gamepad = makeGamepad()
+    gamepad.buttons[0].pressed = true
+    setGamepads([gamepad])
+    const controller = createGamepadController(mapping, handlers, ['cross'], 0.5)
+
+    controller.bind()
+    vi.advanceTimersByTime(100)
+    expect(onAction).not.toHaveBeenCalled()
+
+    gamepad.buttons[0].pressed = false
+    vi.advanceTimersByTime(40)
+    expect(onRelease).toHaveBeenCalledWith('jump', 'cross', 'gamepad')
+
+    gamepad.buttons[0].pressed = true
+    vi.advanceTimersByTime(40)
+    expect(onAction).toHaveBeenCalledWith('jump', 'cross', 'gamepad')
+    controller.unbind()
+  })
+
+  it('does not fire onAction for a stick already deflected when polling starts', () => {
+    const gamepad = makeGamepad({ axes: [1, 0, 0, 0] })
+    setGamepads([gamepad])
+    const controller = createGamepadController(mapping, handlers, ['cross'], 0.5)
+
+    controller.bind()
+    vi.advanceTimersByTime(100)
+    expect(onAction).not.toHaveBeenCalled()
     controller.unbind()
   })
 })

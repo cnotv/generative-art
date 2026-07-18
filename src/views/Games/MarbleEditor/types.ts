@@ -1,3 +1,4 @@
+import type { Group } from 'three'
 import type { CoordinateTuple, ComplexModel } from '@webgamekit/animation'
 
 export type TrackPieceType =
@@ -115,5 +116,50 @@ export type BuiltTrack = {
   startTransform: PieceTransform | null
   finishTransform: PieceTransform | null
   boostZones: BoostZone[]
+  dispose: () => void
+}
+
+export type TrackBounds = {
+  min: CoordinateTuple
+  max: CoordinateTuple
+}
+
+export type RoomLayout = {
+  centerX: number
+  centerZ: number
+  width: number
+  depth: number
+  floorY: number
+  wallHeight: number
+}
+
+export type ToyKind =
+  | 'teddy-bear'
+  | 'letter-block'
+  | 'beach-ball'
+  | 'book-stack'
+  | 'crayon'
+  | 'toy-train'
+
+export type ToySpot = {
+  kind: ToyKind
+  fraction: number
+  inset: number
+  scale: number
+  rotationY: number
+  variant: number
+}
+
+export type ToyPlacement = {
+  kind: ToyKind
+  position: CoordinateTuple
+  rotationY: number
+  scale: number
+  variant: number
+}
+
+export type BedroomEnvironment = {
+  layout: RoomLayout
+  group: Group
   dispose: () => void
 }
