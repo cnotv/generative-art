@@ -18,6 +18,7 @@ import type { GhostPlacement } from './raceGhosts'
 import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './nameLabels'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { reportInputSource } from '@/composables/useInputDevice'
+import { isMenuModalActive } from '@/composables/useMenuNavigation'
 import {
   buildTrack,
   computeSpawnPositions,
@@ -59,7 +60,6 @@ import {
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
 } from '../MarbleMadness/config'
-import { attachBallStroke, addEdgeLinesToScene } from '../MarbleMadness/marbleVisuals'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>
@@ -71,6 +71,8 @@ export type UseMarbleRaceDeps = {
   marbleTexture: Ref<string | undefined>
   onFinish: (elapsedSeconds: number) => void
   onBack?: () => void
+  onEditor?: () => void
+  onExit?: () => void
   raceStartTime?: Ref<number | null>
   onPositionUpdate?: (pos: BallPosPayload) => void
   localPlayerName?: Ref<string>
@@ -172,7 +174,6 @@ const spawnMarble = (
   marble.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
   marble.userData.body.setAngularDamping(MARBLE_ANGULAR_DAMPING)
   marble.userData.body.enableCcd(true)
-  attachBallStroke(marble as unknown as THREE.Mesh)
   return marble
 }
 
@@ -437,7 +438,6 @@ const buildRaceScene = ({
       deps.localPlayerColor?.value ?? '#ffffff'
     )
   }
-  addEdgeLinesToScene(scene)
   registerCameraProperties({ camera: tools.camera, orbit })
 }
 
@@ -494,7 +494,13 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
       mapping: raceMapping(),
       onAction: (action, _trigger, rawSource) => {
         reportInputSource(String(rawSource ?? 'keyboard'))
-        if (action === 'back') deps.onBack?.()
+        if (isMenuModalActive()) return
+        const oneShots: Record<string, (() => void) | undefined> = {
+          back: deps.onBack,
+          editor: deps.onEditor,
+          exit: deps.onExit
+        }
+        oneShots[action]?.()
       }
     })
     currentActions.value = state.controls.currentActions

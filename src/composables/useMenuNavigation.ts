@@ -98,6 +98,16 @@ const modalReleasedAt = ref(0)
 const isModalScopeActive = (): boolean =>
   modalScopeDepth.value > 0 || Date.now() - modalReleasedAt.value < MODAL_RELEASE_GRACE_MS
 
+/**
+ * Whether a modal dialog currently owns input (including the short release
+ * grace). Game controls that bypass useMenuNavigation must check this before
+ * firing one-shot actions, so pad presses inside a dialog do not leak into
+ * gameplay handlers.
+ *
+ * @returns True while a modal navigation scope is active
+ */
+export const isMenuModalActive = (): boolean => isModalScopeActive()
+
 export type MenuNavigationOptions = {
   modal?: boolean
 }

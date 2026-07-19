@@ -18,7 +18,12 @@ import LobbyLayout from '@/layout/LobbyLayout.vue'
 import GameHeader from '@/components/GameHeader.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
-import { LobbyUIButton, LobbyUIKeyPill, LobbyUIFocusHint } from '@/components/LobbyUI'
+import {
+  LobbyUIButton,
+  LobbyUIKeyPill,
+  LobbyUIFocusHint,
+  LobbyUIConfirm
+} from '@/components/LobbyUI'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { useMenuFocus } from '@/composables/useMenuFocus'
@@ -144,6 +149,8 @@ const race = useMarbleRace({
   onBack: () => {
     store.phase = 'lobby'
   },
+  onEditor: () => requestBackToEditor(),
+  onExit: () => requestExitGame(),
   raceStartTime,
   localPlayerName: playerName,
   localPlayerColor: playerColor,
@@ -262,6 +269,31 @@ const handleRestart = (): void => {
 
 const handleBackToEditor = (): void => {
   session.returnToEdit()
+}
+
+type RaceConfirm = { message: string; confirmLabel: string; onConfirm: () => void }
+const raceConfirm = ref<RaceConfirm | null>(null)
+
+const requestBackToEditor = (): void => {
+  raceConfirm.value = {
+    message: 'Back to the editor?',
+    confirmLabel: 'Editor',
+    onConfirm: handleBackToEditor
+  }
+}
+
+const requestExitGame = (): void => {
+  raceConfirm.value = {
+    message: 'Exit the game?',
+    confirmLabel: 'Exit',
+    onConfirm: handleLeaveRoom
+  }
+}
+
+const confirmRaceDialog = (): void => {
+  const pending = raceConfirm.value
+  raceConfirm.value = null
+  pending?.onConfirm()
 }
 
 const showSidebar = ref(false)
@@ -428,9 +460,13 @@ onUnmounted(() => {
             size="sm"
             variant="ghost"
             title="Return to the track editor"
-            @click="handleBackToEditor"
+            @click="requestBackToEditor"
           >
-            Back to editor
+            Editor
+          </LobbyUIButton>
+          <LobbyUIButton size="sm" variant="ghost" title="Exit the game" @click="requestExitGame">
+            Exit
+            <LobbyUIKeyPill :gamepad="['□']" />
           </LobbyUIButton>
         </div>
         <TouchControl
@@ -451,6 +487,14 @@ onUnmounted(() => {
           :can-restart="canRestart"
           @restart="handleRestart"
           @back="handleBackToEditor"
+        />
+        <LobbyUIConfirm
+          v-if="raceConfirm"
+          :message="raceConfirm.message"
+          :confirm-label="raceConfirm.confirmLabel"
+          cancel-label="Stay"
+          @confirm="confirmRaceDialog"
+          @cancel="raceConfirm = null"
         />
       </template>
     </div>
