@@ -53,6 +53,7 @@ import {
   DECK_RESTITUTION,
   WALL_FRICTION,
   WALL_DECK_OVERLAP,
+  TRACK_CONTACT_SKIN,
   COLOR_BOOST,
   COLOR_BUMPER
 } from './config'
@@ -116,10 +117,12 @@ const transformSpecs = (
 const WALL_CENTER_Y = (WALL_HEIGHT - DECK_THICKNESS) / 2
 const WALL_FULL_HEIGHT = WALL_HEIGHT + DECK_THICKNESS
 
-// Lane boxes are slightly longer than their nominal span so neighbouring
-// segments and pieces overlap: flush box seams leave hairline cracks that
-// wedge a fast marble.
-const JOINT_OVERLAP = 0.3
+// Pieces butt up exactly at their nominal span: no geometric overlap between
+// neighbours, so junctions read as clean seams. Marbles do not wedge in the
+// hairline crack because every track collider carries a contact skin
+// (TRACK_CONTACT_SKIN) that virtually bridges the seam — see buildBoxModel /
+// buildTrimeshModel.
+const JOINT_OVERLAP = 0
 
 const laneDeckSpec = (length: number, width: number = LANE_WIDTH): BoxSpec =>
   box([width, DECK_THICKNESS, length + JOINT_OVERLAP], vec(0, -DECK_THICKNESS / 2, 0))
@@ -206,9 +209,10 @@ type SweepStation = {
   orientation: THREE.Quaternion
 }
 
-// Arc stations plus a short straight extension at both ends: the extensions
-// overlap the neighbouring pieces so the junctions never leave a flush seam,
-// mirroring the box pieces' JOINT_OVERLAP.
+// Arc stations, optionally with a short straight extension at both ends when
+// JOINT_OVERLAP is non-zero. With flush junctions (overlap 0) the extensions
+// would coincide with the first/last arc stations and produce degenerate
+// zero-area quads, so they are omitted and the sweep butts up exactly.
 const arcSweepStations = (side: 1 | -1, roll: number): SweepStation[] => {
   const arc = Array.from({ length: ARC_SWEEP_STATIONS }, (_, index) => {
     const phi = (index / (ARC_SWEEP_STATIONS - 1)) * (Math.PI / 2)
@@ -223,6 +227,7 @@ const arcSweepStations = (side: 1 | -1, roll: number): SweepStation[] => {
       )
     }
   })
+  if (JOINT_OVERLAP === 0) return arc
   const last = arc[arc.length - 1]
   const entry: SweepStation = {
     origin: vec(0, 0, JOINT_OVERLAP / 2),
@@ -498,7 +503,8 @@ const buildBoxModel = (
     type: 'fixed',
     color: spec.color ?? piece.color,
     friction: spec.friction ?? DECK_FRICTION,
-    restitution: spec.restitution ?? DECK_RESTITUTION
+    restitution: spec.restitution ?? DECK_RESTITUTION,
+    contactSkin: TRACK_CONTACT_SKIN
   })
   model.position.copy(spec.center)
   model.quaternion.copy(spec.quaternion)
@@ -528,7 +534,8 @@ const buildTrimeshModel = (
     rotation: [0, transform.yaw, 0],
     color: piece.color,
     friction: spec.friction,
-    restitution: spec.restitution ?? 0.002
+    restitution: spec.restitution ?? 0.002,
+    contactSkin: TRACK_CONTACT_SKIN
   })
   const material = model.material as THREE.Material
   material.side = THREE.DoubleSide

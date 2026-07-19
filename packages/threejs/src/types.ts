@@ -8,6 +8,7 @@ export type Vec3 = { x: number; y: number; z: number }
 
 export interface CommonOptions {
   boundary?: number
+  contactSkin?: number
   damping?: number
   angular?: number
   density?: number

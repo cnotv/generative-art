@@ -769,6 +769,7 @@ export const getTrimesh = (
     rotation = [0, 0, 0] as CoordinateTuple,
     friction = 0,
     restitution = 0,
+    contactSkin = 0,
     castShadow = true,
     receiveShadow = true
   } = options
@@ -797,6 +798,7 @@ export const getTrimesh = (
   )
     .setFriction(friction)
     .setRestitution(restitution)
+    .setContactSkin(contactSkin)
   const collider = world.createCollider(colliderDesc, rigidBody)
 
   const initialValues = { size: 1, rotation, position, color: options.color }

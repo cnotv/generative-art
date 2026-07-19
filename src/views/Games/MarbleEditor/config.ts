@@ -66,6 +66,14 @@ export const MARBLE_RESTITUTION = 0.002
 export const WALL_FRICTION = 0.05
 export const WALL_DECK_OVERLAP = 0.25
 
+// Defence-in-depth for flush piece junctions. The real fix for the edge
+// artifact is removing the geometric overlap (pieces used to double up their
+// colliders at each seam, which jitters contacts); pieces now butt up exactly.
+// This small virtual margin additionally bridges any hairline crack a fast
+// marble could catch on in real time. Tiny relative to MARBLE_RADIUS (0.8) so
+// the float is imperceptible.
+export const TRACK_CONTACT_SKIN = 0.03
+
 export const FINISH_CHECK_RADIUS = 5
 export const FINISH_CHECK_HEIGHT = 3
 export const SPAWN_HEIGHT = 1.5
@@ -82,6 +90,8 @@ export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'right', label: 'Right', directional: true },
   { id: 'camera', label: 'Camera' },
   { id: 'back', label: 'Back to setup' },
+  { id: 'editor', label: 'Back to editor' },
+  { id: 'exit', label: 'Exit game' },
   { id: 'undo', label: 'Undo' },
   { id: 'redo', label: 'Redo' },
   { id: 'save', label: 'Save track' },
@@ -116,6 +126,7 @@ export const KEYBOARD_MAPPING = {
     'dpad-left': 'left',
     'dpad-right': 'right',
     triangle: 'camera',
+    square: 'exit',
     options: 'back',
     l1: 'undo',
     r1: 'redo'

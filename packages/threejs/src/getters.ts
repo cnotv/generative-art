@@ -315,6 +315,7 @@ type ColliderOptions = {
   shape: PhysicOptions['shape']
   size: PhysicOptions['size']
   boundary: number
+  contactSkin: number
   restitution: number
   friction: number
   mass: number
@@ -326,8 +327,9 @@ const buildCollider = (
   rigidBody: RAPIER.RigidBody,
   options: ColliderOptions
 ): RAPIER.Collider => {
-  const { shape, size, boundary, restitution, friction, mass, density } = options
+  const { shape, size, boundary, contactSkin, restitution, friction, mass, density } = options
   const colliderDesc = buildColliderShape(shape, size, boundary)
+    .setContactSkin(contactSkin)
     .setRestitution(restitution)
     .setFriction(friction)
     .setMass(mass)
@@ -390,6 +392,7 @@ const resolvePhysicBodyOptions = (options: PhysicOptions) => ({
 const resolvePhysicColliderOptions = (options: PhysicOptions) => ({
   size: options.size ?? ([1, 1, 1] as NonNullable<PhysicOptions['size']>),
   boundary: options.boundary ?? 0.5,
+  contactSkin: options.contactSkin ?? 0,
   restitution: options.restitution ?? 1,
   friction: options.friction ?? 0,
   mass: options.mass ?? 1,
@@ -408,6 +411,7 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
     position,
     size,
     boundary,
+    contactSkin,
     restitution,
     friction,
     damping,
@@ -435,6 +439,7 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
     shape,
     size,
     boundary,
+    contactSkin,
     restitution,
     friction,
     mass,
