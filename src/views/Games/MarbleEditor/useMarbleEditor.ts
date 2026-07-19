@@ -328,6 +328,37 @@ const initEditorScene = async (
   })
 }
 
+type MapFileDeps = {
+  currentMap: Ref<MarbleMap>
+  savedMaps: Ref<MarbleMap[]>
+  selectedPieceId: Ref<string | null>
+  commitMap: (map: MarbleMap, notify?: boolean, record?: boolean) => void
+  selectStartPiece: () => void
+}
+
+const createMapFileActions = (deps: MapFileDeps) => {
+  const loadMap = (map: MarbleMap, notify = true): void => {
+    deps.commitMap({ ...map, updatedAt: Date.now() }, notify)
+    deps.selectStartPiece()
+  }
+  return {
+    loadMap,
+    setMapFromRemote: (map: MarbleMap): void => {
+      if (map.updatedAt <= deps.currentMap.value.updatedAt) return
+      deps.selectedPieceId.value = null
+      deps.commitMap(map, false, false)
+    },
+    startNewMap: (name: string): void => loadMap(createEmptyMap(name.trim() || 'New track')),
+    saveMapAsName: (name: string): void => {
+      deps.savedMaps.value = saveMapAs(deps.currentMap.value, name)
+      deps.currentMap.value = { ...deps.currentMap.value, name }
+    },
+    deleteMapByName: (name: string): void => {
+      deps.savedMaps.value = deleteSavedMap(name)
+    }
+  }
+}
+
 const destroyEditorScene = (state: EditorSceneState): void => {
   disposeGhost(state)
   state.bedroom?.dispose()
@@ -530,27 +561,14 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
 
   const selectStartPiece = (): void => selectPiece(currentMap.value.pieces[0]?.id ?? null)
 
-  const loadMap = (map: MarbleMap, notify = true): void => {
-    commitMap({ ...map, updatedAt: Date.now() }, notify)
-    selectStartPiece()
-  }
-
-  const setMapFromRemote = (map: MarbleMap): void => {
-    if (map.updatedAt <= currentMap.value.updatedAt) return
-    selectedPieceId.value = null
-    commitMap(map, false, false)
-  }
-
-  const startNewMap = (name: string): void => loadMap(createEmptyMap(name.trim() || 'New track'))
-
-  const saveMapAsName = (name: string): void => {
-    savedMaps.value = saveMapAs(currentMap.value, name)
-    currentMap.value = { ...currentMap.value, name }
-  }
-
-  const deleteMapByName = (name: string): void => {
-    savedMaps.value = deleteSavedMap(name)
-  }
+  const { loadMap, setMapFromRemote, startNewMap, saveMapAsName, deleteMapByName } =
+    createMapFileActions({
+      currentMap,
+      savedMaps,
+      selectedPieceId,
+      commitMap,
+      selectStartPiece
+    })
 
   const picker = createPiecePicker(deps.canvas, state, (pieceId) =>
     selectPiece(selectedPieceId.value === pieceId ? null : pieceId)
@@ -561,18 +579,26 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     if (nextId) selectPiece(nextId)
   }
 
-  const init = async (): Promise<void> => {
+  // Backdrop mode renders the current map read-only (no controls, no picker,
+  // no selection) so the lobby can show the track blurred behind the wizard.
+  const init = async (options: { backdrop?: boolean } = {}): Promise<void> => {
     if (!deps.canvas.value) return
-    state.controls = createEditorControls({
-      undo,
-      redo,
-      selectPrevious: () => cycleSelection(-1),
-      selectNext: () => cycleSelection(1),
-      play: () => deps.onPlay?.(),
-      save: () => deps.onSave?.(),
-      newTrack: () => deps.onNewTrack?.()
-    })
+    if (!options.backdrop) {
+      state.controls = createEditorControls({
+        undo,
+        redo,
+        selectPrevious: () => cycleSelection(-1),
+        selectNext: () => cycleSelection(1),
+        play: () => deps.onPlay?.(),
+        save: () => deps.onSave?.(),
+        newTrack: () => deps.onNewTrack?.()
+      })
+    }
     await initEditorScene(state, deps.canvas.value, rebuildTrack, () => selectedPieceId.value)
+    if (options.backdrop) {
+      selectPiece(null)
+      return
+    }
     selectStartPiece()
     picker.mount()
   }

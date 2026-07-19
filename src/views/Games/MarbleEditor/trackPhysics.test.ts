@@ -11,10 +11,15 @@ import {
   nearestCheckpointIndex
 } from './trackBuilder'
 import type { PieceTransform } from './types'
-import { MARBLE_WEIGHT, MARBLE_RESTITUTION, MARBLE_MOVE_FORCE, FALL_MARGIN } from './config'
+import {
+  MARBLE_WEIGHT,
+  MARBLE_RESTITUTION,
+  MARBLE_FRICTION,
+  MARBLE_MOVE_FORCE,
+  FALL_MARGIN
+} from './config'
 import {
   MARBLE_RADIUS,
-  MARBLE_FRICTION,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
   MAX_LINEAR_SPEED

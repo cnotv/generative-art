@@ -10,6 +10,9 @@ export const WALL_THICKNESS = 0.5
 
 export const MARBLE_WEIGHT = 14
 export const MARBLE_MOVE_FORCE = 20
+// Very low marble friction so it slides freely through banks and along walls
+// instead of catching. Much lower than MarbleMadness (2.5).
+export const MARBLE_FRICTION = 0.15
 
 export const START_LENGTH = 12
 export const FINISH_LENGTH = 16

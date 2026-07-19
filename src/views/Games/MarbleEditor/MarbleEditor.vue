@@ -320,6 +320,7 @@ const sidebarPlayers = computed((): MultiplayerPlayer[] =>
 watch(phase, async (newPhase, oldPhase) => {
   if (newPhase === 'edit') {
     race.destroy()
+    editor.destroy()
     await nextTick()
     await editor.init()
     return
@@ -332,20 +333,24 @@ watch(phase, async (newPhase, oldPhase) => {
     return
   }
   if (newPhase === 'lobby') {
-    editor.destroy()
     race.destroy()
+    editor.destroy()
+    await nextTick()
+    await editor.init({ backdrop: true })
   }
 })
 
 const ME_FONT_KEY = 'me-font'
 
-onMounted(() => {
+onMounted(async () => {
   store.reset()
   session.init()
   loadGoogleFont(
     'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',
     ME_FONT_KEY
   )
+  await nextTick()
+  if (phase.value === 'lobby') await editor.init({ backdrop: true })
 })
 
 onUnmounted(() => {
@@ -383,27 +388,30 @@ onUnmounted(() => {
       </ul>
     </template>
 
-    <MarbleEditorLobby
-      v-if="phase === 'lobby'"
-      :player-name="playerName"
-      :player-color="playerColor"
-      :player-marble="playerMarble"
-      :is-host="isHost"
-      :player-list="playerList"
-      :room-id="roomId"
-      :start-mode="startMode"
-      :map-options="mapOptions"
-      :selected-map-index="selectedMapIndex"
-      @update:player-name="playerName = $event"
-      @update:player-color="handleColorChange"
-      @name-change="handleNameChange"
-      @start-game="handleStartGame"
-      @match-found="handleMatchFound"
-      @leave-room="handleLeaveRoom"
-      @config-change="handleConfigChange"
-      @marble-change="handleMarbleChange"
-      @mode-change="handleStartModeChange"
-    />
+    <template v-if="phase === 'lobby'">
+      <canvas ref="editorCanvas" class="me__lobby-backdrop" aria-hidden="true"></canvas>
+      <MarbleEditorLobby
+        class="me__lobby-fg"
+        :player-name="playerName"
+        :player-color="playerColor"
+        :player-marble="playerMarble"
+        :is-host="isHost"
+        :player-list="playerList"
+        :room-id="roomId"
+        :start-mode="startMode"
+        :map-options="mapOptions"
+        :selected-map-index="selectedMapIndex"
+        @update:player-name="playerName = $event"
+        @update:player-color="handleColorChange"
+        @name-change="handleNameChange"
+        @start-game="handleStartGame"
+        @match-found="handleMatchFound"
+        @leave-room="handleLeaveRoom"
+        @config-change="handleConfigChange"
+        @marble-change="handleMarbleChange"
+        @mode-change="handleStartModeChange"
+      />
+    </template>
 
     <div v-else class="me__play-area">
       <template v-if="phase === 'edit'">
@@ -518,6 +526,24 @@ onUnmounted(() => {
 <style scoped>
 .me {
   background: var(--lb-bg);
+}
+
+/* The current map rendered as a blurred, non-interactive backdrop behind the
+   lobby wizard, matching the dialog's blur treatment. */
+.me__lobby-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: blur(var(--lui-backdrop-blur));
+  pointer-events: none;
+}
+
+.me__lobby-fg {
+  position: relative;
+  z-index: 1;
 }
 
 .me__play-area {
