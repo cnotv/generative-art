@@ -43,7 +43,7 @@ flowchart LR
     List -->|stack| History["Undo / redo"]
 ```
 
-## Junctions must overlap, never touch
+## Junctions: from overlap to flush seams
 
 The single most persistent physics bug: a marble at full speed would stop dead
 against lane walls, its center sitting exactly on the plane where two colliders
@@ -71,6 +71,32 @@ solver pinches the ball from both sides. Bumpers now sink into the deck like
 walls do, and a unit test asserts every bumper-to-wall passage clears the
 marble diameter by a margin, turning the clearance rule from tribal knowledge
 into a checked invariant.
+
+### Overlap was the wrong cure — the disease was doubled colliders
+
+The longitudinal piece-to-piece overlap eventually caused a worse problem than
+it solved. Extending every lane box past its nominal span meant two fixed
+colliders shared the same volume at each junction, and the swept-curve pieces
+added straight stubs that poked into their neighbours. A marble crossing that
+doubled zone is resolved against two overlapping surfaces at once, and their
+competing contact normals make the ride jitter and catch — visible as pieces
+poking through each other, felt as the colliders "breaking" at every edge.
+
+The fix inverts the earlier rule: pieces now butt up **exactly**, no
+longitudinal overlap at all (`JOINT_OVERLAP = 0`, and the arc sweep drops its
+end stubs). The hairline-seam wedge that overlap originally guarded against is
+handled instead by a small **contact skin** on every track collider — a
+virtual margin (Rapier's `setContactSkin`) that keeps the marble a hair above
+the surface, so a flush seam presents a continuous virtual floor with no
+geometric overlap. The deck-versus-wall lateral overlap _within_ a piece
+stays; only the junction overlap _between pieces_ is gone.
+
+A fixed-step headless simulation cannot reproduce the real-time contact jitter
+(it needs variable framerate and uncapped speed), so the tests guard what they
+can: a downhill gauntlet of every descending piece must reach the finish, and
+a gently-driven marble must cross a chain of flush straights without stalling.
+The contact skin itself remains defence-in-depth, validated in play rather
+than in a unit test.
 
 ## Loops are a budget, not a shape
 
