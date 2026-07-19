@@ -226,6 +226,10 @@ export const SELECTION_PULSE_MIN = 0.7
 export const SELECTION_PULSE_MAX = 1.4
 export const SELECTION_PULSE_SPEED = 2
 
+// Opacity of a track piece that sits between the race camera and the marble,
+// so the marble is never fully hidden behind the track.
+export const OCCLUSION_OPACITY = 0.5
+
 export const COUNTDOWN_MS = 3000
 
 export const FIRST_PERSON_HEIGHT = 1.4

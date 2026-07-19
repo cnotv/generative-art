@@ -19,6 +19,7 @@ import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './na
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { reportInputSource } from '@/composables/useInputDevice'
 import { isMenuModalActive } from '@/composables/useMenuNavigation'
+import { createOcclusionFader } from './occlusionFade'
 import {
   buildTrack,
   computeSpawnPositions,
@@ -93,6 +94,7 @@ type RaceState = {
   localLabel: THREE.Sprite | null
   scene: THREE.Scene | null
   bedroom: BedroomEnvironment | null
+  occlusionFader: ReturnType<typeof createOcclusionFader> | null
   posAccumulator: number
 }
 
@@ -265,6 +267,12 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
     action: wiring.updateCountdown
   })
   timeline.addAction({
+    name: 'occlusion-fade',
+    category: 'ui',
+    start: 0,
+    action: () => state.occlusionFader?.update(camera, state.marble, state.builtTrack?.models ?? [])
+  })
+  timeline.addAction({
     name: 'name-labels',
     category: 'ui',
     start: 0,
@@ -431,6 +439,7 @@ const buildRaceScene = ({
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
   const spawn = computeSpawnPositions(state.builtTrack.startTransform, gateCount)[gateIndex]
   state.marble = spawnMarble(scene, tools.world, spawn, deps.marbleTexture.value)
+  state.occlusionFader = createOcclusionFader()
   if (deps.localPlayerName?.value) {
     state.localLabel = createNameLabel(
       scene,
@@ -466,6 +475,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     localLabel: null,
     scene: null,
     bedroom: null,
+    occlusionFader: null,
     posAccumulator: 0
   }
   const ghostRegistry = createGhostRegistry()
@@ -540,6 +550,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     if (state.localLabel && state.scene) disposeNameLabel(state.scene, state.localLabel)
     state.localLabel = null
     clearGhosts(ghostRegistry)
+    state.occlusionFader?.dispose()
+    state.occlusionFader = null
     state.scene = null
     state.marble = null
     state.builtTrack = null
