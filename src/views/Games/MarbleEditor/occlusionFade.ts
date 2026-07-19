@@ -58,7 +58,7 @@ export const createOcclusionFader = () => {
   const collectOccluders = (
     camera: THREE.Camera,
     marble: ComplexModel,
-    models: ComplexModel[]
+    models: THREE.Mesh[]
   ): Set<THREE.Material> => {
     camera.getWorldPosition(cameraPosition)
     ;(marble as unknown as THREE.Object3D).getWorldPosition(marblePosition)
@@ -81,7 +81,7 @@ export const createOcclusionFader = () => {
   const update = (
     camera: THREE.Camera | null,
     marble: ComplexModel | null,
-    models: ComplexModel[]
+    models: THREE.Mesh[]
   ): void => {
     if (!camera || !marble) {
       saved.forEach((_, material) => restore(material))

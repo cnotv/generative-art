@@ -7,7 +7,6 @@ import type { ControlsExtras, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { reportInputSource } from '@/composables/useInputDevice'
-import type { ComplexModel } from '@webgamekit/animation'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
 import { buildTrack } from './trackBuilder'
@@ -193,7 +192,7 @@ const pulseSelection = (
   const wave = 0.5 + 0.5 * Math.sin(state.pulseTime * SELECTION_PULSE_SPEED)
   const intensity = SELECTION_PULSE_MIN + (SELECTION_PULSE_MAX - SELECTION_PULSE_MIN) * wave
   state.builtTrack?.models.forEach((model) => {
-    const material = (model as unknown as THREE.Mesh).material as THREE.MeshPhysicalMaterial
+    const material = model.material as THREE.MeshStandardMaterial
     if (!material?.emissive) return
     material.emissiveIntensity =
       selectedPieceId !== null && model.userData.pieceId === selectedPieceId ? intensity : 1
@@ -248,9 +247,8 @@ const createMapHistory = (canUndo: Ref<boolean>, canRedo: Ref<boolean>): MapHist
   }
 }
 
-const setModelEmissive = (model: ComplexModel, emissive: number): void => {
-  const mesh = model as unknown as THREE.Mesh
-  const material = mesh.material as THREE.MeshPhysicalMaterial
+const setModelEmissive = (mesh: THREE.Mesh, emissive: number): void => {
+  const material = mesh.material as THREE.MeshStandardMaterial
   if (material?.emissive) material.emissive.setHex(emissive)
 }
 

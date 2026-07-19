@@ -3,7 +3,8 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import { disposeObject } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 import { computeChainTransforms, applyPieceTransform } from './chainTransforms'
-import { buildPieceModels } from './pieceGeometry'
+import { buildPieceModels, collectPieceColliderSpecs } from './pieceGeometry'
+import { buildMergedTrackColliders } from './trackColliders'
 import type { MarbleMap, PieceTransform, BuiltTrack, BoostZone } from './types'
 import {
   LANE_WIDTH,
@@ -89,8 +90,12 @@ const boostZoneFromTransform = (transform: PieceTransform): BoostZone => ({
 export const buildTrack = (scene: THREE.Scene, world: RAPIER.World, map: MarbleMap): BuiltTrack => {
   const transforms = computeChainTransforms(map.pieces)
   const models = map.pieces.flatMap((piece, index) =>
-    buildPieceModels(scene, world, piece, transforms[index])
+    buildPieceModels(scene, piece, transforms[index])
   )
+  const colliderSpecs = map.pieces.flatMap((piece, index) =>
+    collectPieceColliderSpecs(piece, transforms[index])
+  )
+  const colliders = buildMergedTrackColliders(world, colliderSpecs)
   const startIndex = map.pieces.findIndex((piece) => piece.type === 'start')
   const finishIndex = map.pieces.findIndex((piece) => piece.type === 'finish')
   const boostZones = map.pieces.flatMap((piece, index) =>
@@ -100,8 +105,8 @@ export const buildTrack = (scene: THREE.Scene, world: RAPIER.World, map: MarbleM
     models.forEach((model) => {
       scene.remove(model)
       disposeObject(model)
-      if (model.userData.body) world.removeRigidBody(model.userData.body)
     })
+    colliders.dispose()
   }
   return {
     models,

@@ -1,8 +1,6 @@
 import * as THREE from 'three'
-import type RAPIER from '@dimforge/rapier3d-compat'
-import { getCube, getTrimesh } from '@webgamekit/threejs'
-import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import type { PlacedPiece, PieceTransform, TrackPieceType } from './types'
+import type { CoordinateTuple } from '@webgamekit/animation'
+import type { PlacedPiece, PieceTransform, TrackPieceType, TrackColliderSpec } from './types'
 import { PIECE_CATALOG } from './pieceCatalog'
 import {
   LANE_WIDTH,
@@ -53,7 +51,6 @@ import {
   DECK_RESTITUTION,
   WALL_FRICTION,
   WALL_DECK_OVERLAP,
-  TRACK_CONTACT_SKIN,
   COLOR_BOOST,
   COLOR_BUMPER
 } from './config'
@@ -65,6 +62,8 @@ type BoxSpec = {
   color?: number
   friction?: number
   restitution?: number
+  // Decorative box (e.g. a boost-pad marker) that has no physics collider.
+  visualOnly?: boolean
 }
 
 type TrimeshSpec = {
@@ -441,7 +440,7 @@ const boostPadSpecs = (): BoxSpec[] => [
   box(
     [LANE_WIDTH - 2 * BOOST_PAD_INSET, 0.1, BOOST_PAD_LENGTH - 2],
     vec(0, 0.05, -BOOST_PAD_LENGTH / 2),
-    { color: COLOR_BOOST }
+    { color: COLOR_BOOST, visualOnly: true }
   )
 ]
 
@@ -490,57 +489,115 @@ const PIECE_PARTS_BUILDERS: Record<TrackPieceType, () => PieceParts> = {
   'bumper-field': () => boxesOnly(bumperFieldSpecs())
 }
 
-const buildBoxModel = (
-  scene: THREE.Scene,
-  world: RAPIER.World,
-  piece: PlacedPiece,
-  spec: BoxSpec
-): ComplexModel => {
-  const model = getCube(scene, world, {
-    name: `piece-${piece.id}`,
-    size: spec.size,
-    position: [0, 0, 0],
-    type: 'fixed',
-    color: spec.color ?? piece.color,
-    friction: spec.friction ?? DECK_FRICTION,
-    restitution: spec.restitution ?? DECK_RESTITUTION,
-    contactSkin: TRACK_CONTACT_SKIN
-  })
-  model.position.copy(spec.center)
-  model.quaternion.copy(spec.quaternion)
-  model.userData.body.setTranslation({ x: spec.center.x, y: spec.center.y, z: spec.center.z }, true)
-  model.userData.body.setRotation(
-    { x: spec.quaternion.x, y: spec.quaternion.y, z: spec.quaternion.z, w: spec.quaternion.w },
-    true
+const ONE_SCALE = new THREE.Vector3(1, 1, 1)
+
+const trimeshWorldQuaternion = (transform: PieceTransform): THREE.Quaternion =>
+  yawQuaternion(transform.yaw)
+
+const trimeshWorldCenter = (spec: TrimeshSpec, transform: PieceTransform): THREE.Vector3 =>
+  spec.center
+    .clone()
+    .applyQuaternion(trimeshWorldQuaternion(transform))
+    .add(vec(...transform.position))
+
+// Visual meshes carry no physics body; collision is a small set of merged
+// trimesh colliders built separately (see collectPieceColliderSpecs and
+// buildMergedTrackColliders), so piece-to-piece seams disappear.
+const buildBoxVisual = (scene: THREE.Scene, piece: PlacedPiece, spec: BoxSpec): THREE.Mesh => {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(...spec.size),
+    new THREE.MeshStandardMaterial({ color: spec.color ?? piece.color })
   )
-  model.userData.pieceId = piece.id
-  return model
+  mesh.name = `piece-${piece.id}`
+  mesh.position.copy(spec.center)
+  mesh.quaternion.copy(spec.quaternion)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  mesh.userData.pieceId = piece.id
+  scene.add(mesh)
+  return mesh
 }
 
-const buildTrimeshModel = (
+const buildTrimeshVisual = (
   scene: THREE.Scene,
-  world: RAPIER.World,
   piece: PlacedPiece,
   spec: TrimeshSpec,
   transform: PieceTransform
-): ComplexModel => {
-  const worldCenter = spec.center
-    .clone()
-    .applyQuaternion(yawQuaternion(transform.yaw))
-    .add(vec(...transform.position))
-  const model = getTrimesh(scene, world, spec.geometry, {
-    name: `piece-${piece.id}`,
-    position: [worldCenter.x, worldCenter.y, worldCenter.z],
-    rotation: [0, transform.yaw, 0],
-    color: piece.color,
-    friction: spec.friction,
-    restitution: spec.restitution ?? 0.002,
-    contactSkin: TRACK_CONTACT_SKIN
-  })
-  const material = model.material as THREE.Material
-  material.side = THREE.DoubleSide
-  model.userData.pieceId = piece.id
-  return model
+): THREE.Mesh => {
+  const mesh = new THREE.Mesh(
+    spec.geometry,
+    new THREE.MeshStandardMaterial({ color: piece.color, side: THREE.DoubleSide })
+  )
+  mesh.name = `piece-${piece.id}`
+  mesh.position.copy(trimeshWorldCenter(spec, transform))
+  mesh.quaternion.copy(trimeshWorldQuaternion(transform))
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  mesh.userData.pieceId = piece.id
+  scene.add(mesh)
+  return mesh
+}
+
+const geometryWorldTriangles = (
+  geometry: THREE.BufferGeometry,
+  matrix: THREE.Matrix4
+): number[] => {
+  const world = geometry.clone().applyMatrix4(matrix)
+  const soup = world.index ? world.toNonIndexed() : world
+  const positions = [...(soup.getAttribute('position').array as Float32Array)]
+  if (soup !== world) soup.dispose()
+  world.dispose()
+  return positions
+}
+
+const boxColliderSpec = (spec: BoxSpec): TrackColliderSpec => {
+  const geometry = new THREE.BoxGeometry(...spec.size)
+  const triangles = geometryWorldTriangles(
+    geometry,
+    new THREE.Matrix4().compose(spec.center, spec.quaternion, ONE_SCALE)
+  )
+  geometry.dispose()
+  return {
+    triangles,
+    friction: spec.friction ?? DECK_FRICTION,
+    restitution: spec.restitution ?? DECK_RESTITUTION
+  }
+}
+
+const trimeshColliderSpec = (spec: TrimeshSpec, transform: PieceTransform): TrackColliderSpec => ({
+  triangles: geometryWorldTriangles(
+    spec.geometry,
+    new THREE.Matrix4().compose(
+      trimeshWorldCenter(spec, transform),
+      trimeshWorldQuaternion(transform),
+      ONE_SCALE
+    )
+  ),
+  friction: spec.friction,
+  restitution: spec.restitution ?? DECK_RESTITUTION
+})
+
+/**
+ * World-space collision triangles for a piece, grouped later by friction and
+ * restitution into merged colliders. Decorative (`visualOnly`) boxes are
+ * excluded.
+ *
+ * @param piece The placed piece
+ * @param transform The piece's world transform
+ * @returns One collider spec per collidable box and trimesh part
+ */
+export const collectPieceColliderSpecs = (
+  piece: PlacedPiece,
+  transform: PieceTransform
+): TrackColliderSpec[] => {
+  const parts = PIECE_PARTS_BUILDERS[piece.type]()
+  const worldQuaternion = yawQuaternion(transform.yaw)
+  const worldTranslation = vec(...transform.position)
+  const boxSpecs = parts.boxes
+    .filter((spec) => !spec.visualOnly)
+    .map((spec) => boxColliderSpec(transformSpec(spec, worldQuaternion, worldTranslation)))
+  const trimeshSpecs = parts.trimeshes.map((spec) => trimeshColliderSpec(spec, transform))
+  return [...boxSpecs, ...trimeshSpecs]
 }
 
 const GHOST_OPACITY = 0.45
@@ -585,20 +642,29 @@ export const buildPieceGhost = (
   return group
 }
 
+/**
+ * Visual meshes for a piece (one per box and trimesh part), coloured and
+ * tagged with the piece id for selection and highlighting. Physics is handled
+ * separately by the merged track colliders.
+ *
+ * @param scene The scene to add the meshes to
+ * @param piece The placed piece
+ * @param transform The piece's world transform
+ * @returns The piece's visual meshes
+ */
 export const buildPieceModels = (
   scene: THREE.Scene,
-  world: RAPIER.World,
   piece: PlacedPiece,
   transform: PieceTransform
-): ComplexModel[] => {
+): THREE.Mesh[] => {
   const parts = PIECE_PARTS_BUILDERS[piece.type]()
   const worldQuaternion = yawQuaternion(transform.yaw)
   const worldTranslation = vec(...transform.position)
-  const boxModels = parts.boxes.map((spec) =>
-    buildBoxModel(scene, world, piece, transformSpec(spec, worldQuaternion, worldTranslation))
+  const boxMeshes = parts.boxes.map((spec) =>
+    buildBoxVisual(scene, piece, transformSpec(spec, worldQuaternion, worldTranslation))
   )
-  const trimeshModels = parts.trimeshes.map((spec) =>
-    buildTrimeshModel(scene, world, piece, spec, transform)
+  const trimeshMeshes = parts.trimeshes.map((spec) =>
+    buildTrimeshVisual(scene, piece, spec, transform)
   )
-  return [...boxModels, ...trimeshModels]
+  return [...boxMeshes, ...trimeshMeshes]
 }

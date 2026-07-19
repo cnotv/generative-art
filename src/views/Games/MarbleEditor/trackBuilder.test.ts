@@ -139,7 +139,7 @@ describe('buildTrack', () => {
     world = new RAPIER.World({ x: 0, y: -9.81, z: 0 })
   })
 
-  it('builds models and bodies for every piece type', () => {
+  it('builds visual models and merged colliders for every piece type', () => {
     const map = makeMap([
       'start',
       'straight-short',
@@ -156,11 +156,23 @@ describe('buildTrack', () => {
     const track = buildTrack(scene, world, map)
 
     expect(track.models.length).toBeGreaterThan(0)
-    expect(world.bodies.len()).toBe(track.models.length)
+    // Physics is merged into a few surface-class colliders, far fewer than the
+    // per-part visual meshes: no per-piece bodies, so no piece-to-piece seams.
+    expect(world.bodies.len()).toBeGreaterThan(0)
+    expect(world.bodies.len()).toBeLessThan(track.models.length)
     expect(track.startTransform).not.toBeNull()
     expect(track.finishTransform).not.toBeNull()
     expect(track.boostZones).toHaveLength(1)
     expect(track.transforms).toHaveLength(map.pieces.length)
+  })
+
+  it('merges same-surface straight decks into a single collider body', () => {
+    const track = buildTrack(scene, world, makeMap(['start', 'straight-long', 'finish']))
+    // Start + straight + finish decks and their walls collapse to two surface
+    // classes (grippy deck, slick wall) plus the start/finish cross walls -
+    // a small, bounded number, never one body per piece part.
+    expect(world.bodies.len()).toBeLessThanOrEqual(3)
+    track.dispose()
   })
 
   it('tags every model with its piece id', () => {

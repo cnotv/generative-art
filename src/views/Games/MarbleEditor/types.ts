@@ -1,5 +1,5 @@
-import type { Group } from 'three'
-import type { CoordinateTuple, ComplexModel } from '@webgamekit/animation'
+import type { Group, Mesh } from 'three'
+import type { CoordinateTuple } from '@webgamekit/animation'
 
 export type TrackPieceType =
   | 'start'
@@ -110,8 +110,14 @@ export type BoostZone = {
   width: number
 }
 
+export type TrackColliderSpec = {
+  triangles: number[]
+  friction: number
+  restitution: number
+}
+
 export type BuiltTrack = {
-  models: ComplexModel[]
+  models: Mesh[]
   transforms: PieceTransform[]
   startTransform: PieceTransform | null
   finishTransform: PieceTransform | null
