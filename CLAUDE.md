@@ -28,6 +28,8 @@ STEP 5  implement
 
 **Never open a pull request unless the user explicitly asks for one.**
 
+**Every PR description must carry a running report of what was added.** Beyond the Summary / Key Changes / Test Plan, keep an "Added on top of the initial plan" section that lists — in plain language — everything built or changed after the original issue scope, so the work can be analysed later. Update this section whenever new commits add scope; do not let the PR body drift behind the branch. Each entry should say what was added and why, grouped by area.
+
 ## Commit messages — never reference the issue number
 
 **Commit messages must never contain an issue reference** (`#123`, `issue 123`, `Closes #123`, `(#123)`, etc.). The issue number belongs **only** in the PR title, so it shows up on merge. Write commit subjects as `<type>: <summary>` with no issue token anywhere in the subject or body. This is absolute — do not add it "for traceability."
