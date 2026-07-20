@@ -12,7 +12,7 @@ export const MARBLE_WEIGHT = 14
 export const MARBLE_MOVE_FORCE = 20
 // Editor-local top rolling speed, higher than MarbleMadness (20) so the ball
 // rolls faster.
-export const MARBLE_MAX_SPEED = 32
+export const MARBLE_MAX_SPEED = 28
 // Left/right turning rotates the marble's momentum and heading instead of
 // pushing it sideways — radians of turn applied per frame while held.
 export const MARBLE_TURN_RATE = 0.03
