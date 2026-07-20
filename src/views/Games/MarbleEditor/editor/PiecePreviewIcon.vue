@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TrackPieceType } from './types'
+import type { TrackPieceType } from '../types'
 
 defineProps<{ type: TrackPieceType }>()
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import type { ComplexModel } from '@webgamekit/animation'
-import { OCCLUSION_OPACITY } from './config'
+import { OCCLUSION_OPACITY } from '../config'
 
 type SavedMaterialState = {
   transparent: boolean

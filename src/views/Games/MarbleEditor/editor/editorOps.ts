@@ -1,5 +1,5 @@
-import type { MarbleMap, PlacedPiece, TrackPieceType } from './types'
-import { PIECE_CATALOG } from './pieceCatalog'
+import type { MarbleMap, PlacedPiece, TrackPieceType } from '../types'
+import { PIECE_CATALOG } from '../pieceCatalog'
 
 const makePiece = (type: TrackPieceType): PlacedPiece => ({
   id: crypto.randomUUID(),

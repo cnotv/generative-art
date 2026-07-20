@@ -8,8 +8,8 @@ Every piece in the marble editor's palette shows a small schematic glyph so
 players recognize a piece by shape instead of reading its label. This guide
 explains how those glyphs are authored and how to add one for a new piece.
 
-> **Source files**: `src/views/Games/MarbleEditor/PiecePreviewIcon.vue`
-> (glyph paths and rendering), `src/views/Games/MarbleEditor/EditorPalette.vue`
+> **Source files**: `src/views/Games/MarbleEditor/editor/PiecePreviewIcon.vue`
+> (glyph paths and rendering), `src/views/Games/MarbleEditor/editor/EditorPalette.vue`
 > (where the tiles consume the icon). Update this guide when either changes.
 
 ## The canvas and stroke contract

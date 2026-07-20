@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 import { getBall } from '@webgamekit/threejs'
 import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './nameLabels'
-import type { BallPosPayload } from './types'
-import { MARBLE_RADIUS } from '../MarbleMadness/config'
+import type { BallPosPayload } from '../types'
+import { MARBLE_RADIUS } from '../../MarbleMadness/config'
 
 type GhostEntry = {
   mesh: THREE.Mesh

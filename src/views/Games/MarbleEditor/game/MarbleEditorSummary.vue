@@ -2,7 +2,7 @@
 import { onMounted, ref, type ComponentPublicInstance } from 'vue'
 import { LobbyUIButton, LobbyUIFocusHint } from '@/components/LobbyUI'
 import { useDialogFocusTrap } from '@/composables/useDialogFocusTrap'
-import type { MePlayer } from './types'
+import type { MePlayer } from '../types'
 
 const props = defineProps<{
   playerList: MePlayer[]

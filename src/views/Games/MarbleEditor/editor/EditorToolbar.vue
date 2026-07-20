@@ -8,8 +8,8 @@ import {
   LobbyUIKeyPill
 } from '@/components/LobbyUI'
 import type { LobbyConfigField } from '@/types/lobbyWizard'
-import { SAMPLE_MAPS } from './sampleMaps'
-import type { MarbleMap } from './types'
+import { SAMPLE_MAPS } from '../sampleMaps'
+import type { MarbleMap } from '../types'
 
 const props = defineProps<{
   canUndo: boolean

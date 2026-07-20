@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createEmptyMap, appendPiece, insertPiece, removePiece, recolorPiece } from './editorOps'
-import { PIECE_CATALOG } from './pieceCatalog'
-import type { MarbleMap } from './types'
+import { PIECE_CATALOG } from '../pieceCatalog'
+import type { MarbleMap } from '../types'
 
 const pieceTypes = (map: MarbleMap): string[] => map.pieces.map((piece) => piece.type)
 

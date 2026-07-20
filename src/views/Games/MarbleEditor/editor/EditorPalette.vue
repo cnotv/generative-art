@@ -2,9 +2,9 @@
 import { computed } from 'vue'
 import { Trash2 } from 'lucide-vue-next'
 import { LobbyUIButton, LobbyUIIconButton } from '@/components/LobbyUI'
-import { PIECE_CATALOG, PLACEABLE_PIECE_TYPES } from './pieceCatalog'
-import PiecePreviewIcon from './PiecePreviewIcon.vue'
-import type { PlacedPiece, TrackPieceType } from './types'
+import { PIECE_CATALOG, PLACEABLE_PIECE_TYPES } from '../pieceCatalog'
+import PiecePreviewIcon from '../PiecePreviewIcon.vue'
+import type { PlacedPiece, TrackPieceType } from '../types'
 
 const props = defineProps<{
   selectedPiece: PlacedPiece | null

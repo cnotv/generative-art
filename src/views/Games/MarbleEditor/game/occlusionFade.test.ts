@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import * as THREE from 'three'
 import type { ComplexModel } from '@webgamekit/animation'
 import { createOcclusionFader } from './occlusionFade'
-import { OCCLUSION_OPACITY } from './config'
+import { OCCLUSION_OPACITY } from '../config'
 
 const asModel = (mesh: THREE.Mesh): ComplexModel => mesh as unknown as ComplexModel
 

@@ -9,9 +9,9 @@ import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { reportInputSource } from '@/composables/useInputDevice'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { useSceneElementPicker } from '@/composables/useSceneElementPicker'
-import { buildTrack } from './trackBuilder'
-import { buildPieceGhost } from './pieceGeometry'
-import { computeChainTransforms } from './chainTransforms'
+import { buildTrack } from '../trackBuilder'
+import { buildPieceGhost } from '../pieceGeometry'
+import { computeChainTransforms } from '../chainTransforms'
 import { appendPiece, insertPiece, removePiece, recolorPiece, createEmptyMap } from './editorOps'
 import {
   saveCurrentMap,
@@ -19,17 +19,17 @@ import {
   listSavedMaps,
   saveMapAs,
   deleteSavedMap
-} from './mapStorage'
-import { SAMPLE_MAPS } from './sampleMaps'
-import { computeTrackBounds, computeRoomLayout, roomLayoutsEqual } from './bedroomLayout'
-import { buildBedroom, applyBedroomAtmosphere } from './bedroomEnvironment'
+} from '../mapStorage'
+import { SAMPLE_MAPS } from '../sampleMaps'
+import { computeTrackBounds, computeRoomLayout, roomLayoutsEqual } from '../bedroomLayout'
+import { buildBedroom, applyBedroomAtmosphere } from '../bedroomEnvironment'
 import type {
   MarbleMap,
   BuiltTrack,
   TrackPieceType,
   PieceTransform,
   BedroomEnvironment
-} from './types'
+} from '../types'
 import {
   EDITOR_CAMERA_POSITION,
   EDITOR_ORBIT_TARGET,
@@ -50,7 +50,7 @@ import {
   EDITOR_FOCUS_DISTANCE,
   EDITOR_FOCUS_LERP,
   EDITOR_FOCUS_EPSILON
-} from './config'
+} from '../config'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>

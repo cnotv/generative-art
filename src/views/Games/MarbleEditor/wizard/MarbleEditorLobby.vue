@@ -8,9 +8,9 @@ import {
 } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from './config'
-import { MARBLE_OPTIONS } from '../MarbleMadness/config'
-import type { MePhase } from './types'
+import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from '../config'
+import { MARBLE_OPTIONS } from '../../MarbleMadness/config'
+import type { MePhase } from '../types'
 
 const props = defineProps<{
   playerName: string

@@ -1,14 +1,14 @@
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import type { ComplexModel } from '@webgamekit/animation'
-import type { CameraMode } from './types'
+import type { CameraMode } from '../types'
 import {
   FIRST_PERSON_HEIGHT,
   FIRST_PERSON_LOOK_AHEAD,
   FIRST_PERSON_DIRECTION_LERP,
   FIRST_PERSON_MIN_SPEED
-} from './config'
-import { CAMERA_HEIGHT, CAMERA_BACK, CAMERA_LERP } from '../MarbleMadness/config'
+} from '../config'
+import { CAMERA_HEIGHT, CAMERA_BACK, CAMERA_LERP } from '../../MarbleMadness/config'
 
 const scratchDirection = new THREE.Vector3()
 const scratchLookTarget = new THREE.Vector3()

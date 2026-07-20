@@ -26,11 +26,17 @@ import {
   isInFinishZone,
   isOnBoostZone,
   nearestCheckpointIndex
-} from './trackBuilder'
-import { applyPieceTransform } from './chainTransforms'
-import { computeTrackBounds, computeRoomLayout } from './bedroomLayout'
-import { buildBedroom, applyBedroomAtmosphere } from './bedroomEnvironment'
-import type { MarbleMap, BuiltTrack, CameraMode, BallPosPayload, BedroomEnvironment } from './types'
+} from '../trackBuilder'
+import { applyPieceTransform } from '../chainTransforms'
+import { computeTrackBounds, computeRoomLayout } from '../bedroomLayout'
+import { buildBedroom, applyBedroomAtmosphere } from '../bedroomEnvironment'
+import type {
+  MarbleMap,
+  BuiltTrack,
+  CameraMode,
+  BallPosPayload,
+  BedroomEnvironment
+} from '../types'
 import {
   SPAWN_HEIGHT,
   SPAWN_Z_INSET,
@@ -50,7 +56,7 @@ import {
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION
-} from './config'
+} from '../config'
 import {
   MARBLE_RADIUS,
   MARBLE_LINEAR_DAMPING,
@@ -61,7 +67,7 @@ import {
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
-} from '../MarbleMadness/config'
+} from '../../MarbleMadness/config'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>
