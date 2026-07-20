@@ -43,6 +43,7 @@ import {
   MARBLE_RESTITUTION,
   MARBLE_FRICTION,
   MARBLE_MOVE_FORCE,
+  MARBLE_MAX_SPEED,
   COUNTDOWN_MS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
@@ -53,7 +54,6 @@ import {
   MARBLE_RADIUS,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
-  MAX_LINEAR_SPEED,
   CAMERA_HEIGHT,
   CAMERA_BACK,
   POS_BROADCAST_MS,
@@ -115,7 +115,7 @@ const computeImpulse = (
   const isClimbing =
     Math.abs(velocity.y) > VERTICAL_INPUT_REDIRECT_VY && speed > VERTICAL_INPUT_REDIRECT_SPEED
   if (longitudinal > 0 && isClimbing) {
-    if (speed >= MAX_LINEAR_SPEED)
+    if (speed >= MARBLE_MAX_SPEED)
       return {
         x: x - longitudinal * forward.x * MARBLE_MOVE_FORCE,
         y: 0,
@@ -376,7 +376,7 @@ const createRaceActions = (
       body.applyImpulse({ x: velocity.x * scale, y: 0, z: velocity.z * scale }, true)
     }
     if (impulse.x !== 0 || impulse.z !== 0) {
-      moveDynamic(state.marble, impulse, onBoost ? BOOST_MAX_SPEED : MAX_LINEAR_SPEED)
+      moveDynamic(state.marble, impulse, onBoost ? BOOST_MAX_SPEED : MARBLE_MAX_SPEED)
     }
   }
 
