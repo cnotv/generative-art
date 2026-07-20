@@ -44,6 +44,7 @@ import {
   MARBLE_FRICTION,
   MARBLE_MOVE_FORCE,
   MARBLE_MAX_SPEED,
+  MARBLE_LATERAL_STEER,
   COUNTDOWN_MS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
@@ -106,7 +107,9 @@ const computeImpulse = (
   velocity: { x: number; y: number; z: number },
   forward: { x: number; z: number }
 ): { x: number; y: number; z: number } => {
-  const lateral = ('left' in currentActions ? -1 : 0) + ('right' in currentActions ? 1 : 0)
+  const lateral =
+    (('left' in currentActions ? -1 : 0) + ('right' in currentActions ? 1 : 0)) *
+    MARBLE_LATERAL_STEER
   const longitudinal =
     ('forward' in currentActions ? 1 : 0) + ('backward' in currentActions ? -1 : 0)
   const x = MARBLE_MOVE_FORCE * (longitudinal * forward.x - lateral * forward.z)

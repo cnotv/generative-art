@@ -13,6 +13,9 @@ export const MARBLE_MOVE_FORCE = 20
 // Editor-local top rolling speed, higher than MarbleMadness (20) so the ball
 // rolls faster.
 export const MARBLE_MAX_SPEED = 32
+// Left/right steering is weaker than forward drive so the ball turns gently
+// (30% of the forward force).
+export const MARBLE_LATERAL_STEER = 0.3
 // Very low marble friction so it slides freely through banks and along walls
 // instead of catching. Much lower than MarbleMadness (2.5).
 export const MARBLE_FRICTION = 0.15
