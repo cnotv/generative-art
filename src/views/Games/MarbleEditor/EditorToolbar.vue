@@ -102,14 +102,16 @@ watch(
         Save
         <LobbyUIKeyPill :keyboard="['S']" :gamepad="['□']" />
       </LobbyUIButton>
-      <LobbyUIIconButton
-        v-if="isSavedTrack"
-        size="sm"
-        :title="`Delete the saved track ${mapName}`"
-        @click="emit('deleteMap', mapName)"
-      >
-        <Trash2 class="editor-toolbar__icon" aria-hidden="true" />
-      </LobbyUIIconButton>
+      <div v-if="isSavedTrack" class="editor-toolbar__action">
+        <LobbyUIIconButton
+          size="sm"
+          :title="`Delete the saved track ${mapName} (Delete / Circle)`"
+          @click="emit('deleteMap', mapName)"
+        >
+          <Trash2 class="editor-toolbar__icon" aria-hidden="true" />
+        </LobbyUIIconButton>
+        <LobbyUIKeyPill :keyboard="['Del']" :gamepad="['○']" />
+      </div>
     </template>
     <LobbyUIButton
       size="sm"

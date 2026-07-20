@@ -99,6 +99,7 @@ export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'redo', label: 'Redo' },
   { id: 'save', label: 'Save track' },
   { id: 'new-track', label: 'New track' },
+  { id: 'delete-track', label: 'Delete track' },
   { id: 'select-previous', label: 'Select previous piece' },
   { id: 'select-next', label: 'Select next piece' },
   { id: 'play', label: 'Race the track' },
@@ -163,6 +164,7 @@ export const EDITOR_ACTION_IDS = new Set([
   'redo',
   'save',
   'new-track',
+  'delete-track',
   'select-previous',
   'select-next',
   'play',
@@ -181,13 +183,16 @@ export const EDITOR_MAPPING = {
     z: 'undo',
     y: 'redo',
     s: 'save',
-    n: 'new-track'
+    n: 'new-track',
+    Delete: 'delete-track',
+    Backspace: 'delete-track'
   },
   gamepad: {
     l1: 'undo',
     r1: 'redo',
     square: 'save',
     triangle: 'new-track',
+    circle: 'delete-track',
     'dpad-left': 'select-previous',
     'dpad-up': 'select-previous',
     'dpad-right': 'select-next',

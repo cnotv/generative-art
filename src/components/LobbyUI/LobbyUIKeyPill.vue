@@ -42,8 +42,10 @@ const visibleKeys = computed(() =>
   line-height: 1;
   color: var(--lui-text-color-inverted);
   text-transform: uppercase;
+  text-shadow: none;
   background: var(--lui-bg-key);
   border: none;
   border-radius: var(--lui-radius-sketch-small, 0.5em);
+  box-shadow: none;
 }
 </style>

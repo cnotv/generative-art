@@ -87,6 +87,7 @@ type EditorActionHandlers = {
   play: () => void
   save: () => void
   newTrack: () => void
+  deleteTrack: () => void
 }
 
 // Stored remaps apply only for the actions the edit phase owns, so a race
@@ -116,7 +117,8 @@ const createEditorControls = (handlers: EditorActionHandlers): ControlsExtras =>
         'select-next': handlers.selectNext,
         play: handlers.play,
         save: handlers.save,
-        'new-track': handlers.newTrack
+        'new-track': handlers.newTrack,
+        'delete-track': handlers.deleteTrack
       }
       actionHandlers[action]?.()
     }
@@ -161,6 +163,19 @@ const panOrbit = (state: EditorSceneState, strafe: number, advance: number): voi
   CAMERA_PAN_RIGHT.multiplyScalar(strafe)
   state.orbit.target.add(CAMERA_PAN_FORWARD).add(CAMERA_PAN_RIGHT)
   state.camera.position.add(CAMERA_PAN_FORWARD).add(CAMERA_PAN_RIGHT)
+  state.orbit.update()
+}
+
+const CAMERA_FOCUS_DELTA = new THREE.Vector3()
+
+// Recentres the orbit on a piece by moving the target to it and shifting the
+// camera by the same delta, so the selected piece is framed while the user's
+// current angle and zoom are preserved.
+const focusCameraOnPiece = (state: EditorSceneState, transform: PieceTransform): void => {
+  if (!state.orbit || !state.camera) return
+  CAMERA_FOCUS_DELTA.set(...transform.position).sub(state.orbit.target)
+  state.orbit.target.add(CAMERA_FOCUS_DELTA)
+  state.camera.position.add(CAMERA_FOCUS_DELTA)
   state.orbit.update()
 }
 
@@ -550,6 +565,10 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const selectPiece = (pieceId: string | null): void => {
     selectedPieceId.value = pieceId
     applyHighlight(state, pieceId)
+    if (pieceId === null || !state.builtTrack) return
+    const index = currentMap.value.pieces.findIndex((piece) => piece.id === pieceId)
+    const transform = state.builtTrack.transforms[index]
+    if (transform) focusCameraOnPiece(state, transform)
   }
 
   const previewPiece = (type: TrackPieceType | null): void => {
@@ -569,6 +588,11 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
       commitMap,
       selectStartPiece
     })
+
+  const deleteCurrentTrack = (): void => {
+    const name = currentMap.value.name
+    if (savedMaps.value.some((map) => map.name === name)) deleteMapByName(name)
+  }
 
   const picker = createPiecePicker(deps.canvas, state, (pieceId) =>
     selectPiece(selectedPieceId.value === pieceId ? null : pieceId)
@@ -591,7 +615,8 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
         selectNext: () => cycleSelection(1),
         play: () => deps.onPlay?.(),
         save: () => deps.onSave?.(),
-        newTrack: () => deps.onNewTrack?.()
+        newTrack: () => deps.onNewTrack?.(),
+        deleteTrack: deleteCurrentTrack
       })
     }
     await initEditorScene(state, deps.canvas.value, rebuildTrack, () => selectedPieceId.value)
