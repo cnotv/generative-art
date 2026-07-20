@@ -229,6 +229,11 @@ export const EDITOR_CAMERA_ROTATE_SPEED = 1.6
 export const EDITOR_CAMERA_PAN_SPEED = 40
 export const EDITOR_CAMERA_POLAR_MIN = 0.15
 export const EDITOR_CAMERA_POLAR_MAX = 1.45
+// Distance the camera settles at when focusing a selected piece: pulled back
+// so the piece and its neighbours stay in view (a gentle, less-zoomed frame).
+export const EDITOR_FOCUS_DISTANCE = 55
+export const EDITOR_FOCUS_LERP = 0.16
+export const EDITOR_FOCUS_EPSILON = 0.08
 
 export const SELECTION_PULSE_MIN = 0.7
 export const SELECTION_PULSE_MAX = 1.4

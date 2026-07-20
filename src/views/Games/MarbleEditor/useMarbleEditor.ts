@@ -46,7 +46,10 @@ import {
   EDITOR_CAMERA_ROTATE_SPEED,
   EDITOR_CAMERA_PAN_SPEED,
   EDITOR_CAMERA_POLAR_MIN,
-  EDITOR_CAMERA_POLAR_MAX
+  EDITOR_CAMERA_POLAR_MAX,
+  EDITOR_FOCUS_DISTANCE,
+  EDITOR_FOCUS_LERP,
+  EDITOR_FOCUS_EPSILON
 } from './config'
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
@@ -66,6 +69,8 @@ type EditorSceneState = {
   bedroom: BedroomEnvironment | null
   controls: ControlsExtras | null
   pulseTime: number
+  cameraFocusTarget: THREE.Vector3 | null
+  cameraFocusPosition: THREE.Vector3 | null
   cleanupTools: (() => void) | null
 }
 
@@ -166,17 +171,36 @@ const panOrbit = (state: EditorSceneState, strafe: number, advance: number): voi
   state.orbit.update()
 }
 
-const CAMERA_FOCUS_DELTA = new THREE.Vector3()
+const CAMERA_FOCUS_DIRECTION = new THREE.Vector3()
 
-// Recentres the orbit on a piece by moving the target to it and shifting the
-// camera by the same delta, so the selected piece is framed while the user's
-// current angle and zoom are preserved.
+// Sets an animated goal that frames a selected piece: the orbit target moves to
+// the piece and the camera settles at a fixed pulled-back distance along the
+// current view direction (a gentle, less-zoomed frame). The move is eased each
+// frame by updateCameraFocus; manual camera input cancels it.
 const focusCameraOnPiece = (state: EditorSceneState, transform: PieceTransform): void => {
   if (!state.orbit || !state.camera) return
-  CAMERA_FOCUS_DELTA.set(...transform.position).sub(state.orbit.target)
-  state.orbit.target.add(CAMERA_FOCUS_DELTA)
-  state.camera.position.add(CAMERA_FOCUS_DELTA)
+  CAMERA_FOCUS_DIRECTION.copy(state.camera.position).sub(state.orbit.target)
+  if (CAMERA_FOCUS_DIRECTION.lengthSq() < 1e-6) CAMERA_FOCUS_DIRECTION.set(0, 0.7, 1)
+  CAMERA_FOCUS_DIRECTION.normalize().multiplyScalar(EDITOR_FOCUS_DISTANCE)
+  state.cameraFocusTarget = new THREE.Vector3(...transform.position)
+  state.cameraFocusPosition = state.cameraFocusTarget.clone().add(CAMERA_FOCUS_DIRECTION)
+}
+
+const clearCameraFocus = (state: EditorSceneState): void => {
+  state.cameraFocusTarget = null
+  state.cameraFocusPosition = null
+}
+
+const updateCameraFocus = (state: EditorSceneState): void => {
+  if (!state.orbit || !state.camera || !state.cameraFocusTarget || !state.cameraFocusPosition)
+    return
+  state.orbit.target.lerp(state.cameraFocusTarget, EDITOR_FOCUS_LERP)
+  state.camera.position.lerp(state.cameraFocusPosition, EDITOR_FOCUS_LERP)
   state.orbit.update()
+  const settled =
+    state.orbit.target.distanceTo(state.cameraFocusTarget) < EDITOR_FOCUS_EPSILON &&
+    state.camera.position.distanceTo(state.cameraFocusPosition) < EDITOR_FOCUS_EPSILON
+  if (settled) clearCameraFocus(state)
 }
 
 // Right stick alone rotates around the orbit target; holding L2 turns the
@@ -187,6 +211,7 @@ const rotateEditorCamera = (state: EditorSceneState, deltaSeconds: number): void
   const horizontal = heldDirection(actions, 'camera-left', 'camera-right')
   const vertical = heldDirection(actions, 'camera-up', 'camera-down')
   if (horizontal === 0 && vertical === 0) return
+  clearCameraFocus(state)
   if ('camera-pan' in actions) {
     const step = EDITOR_CAMERA_PAN_SPEED * deltaSeconds
     panOrbit(state, -horizontal * step, vertical * step)
@@ -333,6 +358,12 @@ const initEditorScene = async (
         action: () => rotateEditorCamera(state, tools.getDelta())
       })
       timeline.addAction({
+        name: 'editor-camera-focus',
+        category: 'camera',
+        start: 0,
+        action: () => updateCameraFocus(state)
+      })
+      timeline.addAction({
         name: 'selection-pulse',
         category: 'ui',
         start: 0,
@@ -350,6 +381,31 @@ type MapFileDeps = {
   commitMap: (map: MarbleMap, notify?: boolean, record?: boolean) => void
   selectStartPiece: () => void
 }
+
+type PieceEditDeps = {
+  currentMap: Ref<MarbleMap>
+  selectedPieceId: Ref<string | null>
+  commitMap: (map: MarbleMap, notify?: boolean, record?: boolean) => void
+  selectPiece: (pieceId: string | null) => void
+}
+
+const createPieceEditActions = (deps: PieceEditDeps) => ({
+  addPiece: (type: TrackPieceType): void => {
+    const { next, addedId } = addPieceToMap(deps.currentMap.value, deps.selectedPieceId.value, type)
+    deps.commitMap(next)
+    if (addedId) deps.selectPiece(addedId)
+  },
+  removeSelectedPiece: (): void => {
+    if (!deps.selectedPieceId.value) return
+    const next = removePiece(deps.currentMap.value, deps.selectedPieceId.value)
+    deps.selectedPieceId.value = null
+    deps.commitMap(next)
+  },
+  recolorSelectedPiece: (color: number): void => {
+    if (!deps.selectedPieceId.value) return
+    deps.commitMap(recolorPiece(deps.currentMap.value, deps.selectedPieceId.value, color))
+  }
+})
 
 const createMapFileActions = (deps: MapFileDeps) => {
   const loadMap = (map: MarbleMap, notify = true): void => {
@@ -384,6 +440,7 @@ const destroyEditorScene = (state: EditorSceneState): void => {
   state.camera = null
   state.orbit = null
   state.pulseTime = 0
+  clearCameraFocus(state)
   if (state.cleanupTools) {
     state.cleanupTools()
     state.cleanupTools = null
@@ -531,6 +588,8 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
     bedroom: null,
     controls: null,
     pulseTime: 0,
+    cameraFocusTarget: null,
+    cameraFocusPosition: null,
     cleanupTools: null
   }
 
@@ -544,23 +603,12 @@ export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
 
   const { undo, redo } = createHistoryActions(history, currentMap, selectedPieceId, commitMap)
 
-  const addPiece = (type: TrackPieceType): void => {
-    const { next, addedId } = addPieceToMap(currentMap.value, selectedPieceId.value, type)
-    commitMap(next)
-    if (addedId) selectPiece(addedId)
-  }
-
-  const removeSelectedPiece = (): void => {
-    if (!selectedPieceId.value) return
-    const next = removePiece(currentMap.value, selectedPieceId.value)
-    selectedPieceId.value = null
-    commitMap(next)
-  }
-
-  const recolorSelectedPiece = (color: number): void => {
-    if (!selectedPieceId.value) return
-    commitMap(recolorPiece(currentMap.value, selectedPieceId.value, color))
-  }
+  const { addPiece, removeSelectedPiece, recolorSelectedPiece } = createPieceEditActions({
+    currentMap,
+    selectedPieceId,
+    commitMap,
+    selectPiece: (pieceId) => selectPiece(pieceId)
+  })
 
   const selectPiece = (pieceId: string | null): void => {
     selectedPieceId.value = pieceId
