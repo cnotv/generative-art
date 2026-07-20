@@ -55,7 +55,7 @@ onMounted(() => {
           v-if="canRestart"
           ref="playAgainReference"
           variant="cta"
-          size="sm"
+          size="lg"
           title="Race the track again"
           @click="emit('restart')"
         >
@@ -101,7 +101,7 @@ onMounted(() => {
 .me-summary__title {
   margin: 0;
   font-family: var(--lui-font);
-  font-size: var(--lui-text-medium);
+  font-size: var(--lui-text-small);
   font-weight: 900;
   line-height: 1;
   color: var(--lui-text-color);
