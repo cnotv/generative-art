@@ -17,6 +17,8 @@ const packages = [
   'chat',
   'canvas-editor'
 ]
+const allowedHosts = ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
+
 const packageAliases = Object.fromEntries(
   packages.map((package_) => [
     `@webgamekit/${package_}`,
@@ -55,6 +57,9 @@ export default defineConfig({
     exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr']
   },
   server: {
-    allowedHosts: ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
+    allowedHosts
+  },
+  preview: {
+    allowedHosts
   }
 })
