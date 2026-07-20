@@ -44,7 +44,7 @@ import {
   MARBLE_FRICTION,
   MARBLE_MOVE_FORCE,
   MARBLE_MAX_SPEED,
-  MARBLE_LATERAL_STEER,
+  MARBLE_TURN_RATE,
   COUNTDOWN_MS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
@@ -107,13 +107,10 @@ const computeImpulse = (
   velocity: { x: number; y: number; z: number },
   forward: { x: number; z: number }
 ): { x: number; y: number; z: number } => {
-  const lateral =
-    (('left' in currentActions ? -1 : 0) + ('right' in currentActions ? 1 : 0)) *
-    MARBLE_LATERAL_STEER
   const longitudinal =
     ('forward' in currentActions ? 1 : 0) + ('backward' in currentActions ? -1 : 0)
-  const x = MARBLE_MOVE_FORCE * (longitudinal * forward.x - lateral * forward.z)
-  const z = MARBLE_MOVE_FORCE * (longitudinal * forward.z + lateral * forward.x)
+  const x = MARBLE_MOVE_FORCE * longitudinal * forward.x
+  const z = MARBLE_MOVE_FORCE * longitudinal * forward.z
   const speed = Math.hypot(velocity.x, velocity.y, velocity.z)
   const isClimbing =
     Math.abs(velocity.y) > VERTICAL_INPUT_REDIRECT_VY && speed > VERTICAL_INPUT_REDIRECT_SPEED
@@ -132,6 +129,34 @@ const computeImpulse = (
     }
   }
   return { x, y: 0, z }
+}
+
+// Turning redirects the marble's momentum and heading about the vertical axis
+// (no sideways impulse): the horizontal velocity and the smoothed heading are
+// rotated together while left/right is held, so the ball curves without being
+// pushed and keeps its speed.
+const applyTurn = (state: RaceState, currentActions: ControlsCurrents): void => {
+  const turn = ('left' in currentActions ? 1 : 0) - ('right' in currentActions ? 1 : 0)
+  if (turn === 0 || !state.marble) return
+  const angle = turn * MARBLE_TURN_RATE
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const body = state.marble.userData.body
+  const velocity = body.linvel()
+  body.setLinvel(
+    {
+      x: velocity.x * cos + velocity.z * sin,
+      y: velocity.y,
+      z: -velocity.x * sin + velocity.z * cos
+    },
+    true
+  )
+  const direction = state.smoothedDirection
+  direction.set(
+    direction.x * cos + direction.z * sin,
+    direction.y,
+    -direction.x * sin + direction.z * cos
+  )
 }
 
 const respawnAtCheckpoint = (state: RaceState): void => {
@@ -369,6 +394,7 @@ const createRaceActions = (
     const body = state.marble.userData.body
     const position = body.translation()
     updateSmoothedDirection(state.smoothedDirection, body.linvel())
+    applyTurn(state, state.controls.currentActions)
     const onBoost =
       state.builtTrack?.boostZones.some((zone) => isOnBoostZone(position, zone)) ?? false
     const impulse = computeImpulse(state.controls.currentActions, body.linvel(), inputForward())

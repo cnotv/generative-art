@@ -28,6 +28,10 @@ STEP 5  implement
 
 **Never open a pull request unless the user explicitly asks for one.**
 
+## Commit messages — never reference the issue number
+
+**Commit messages must never contain an issue reference** (`#123`, `issue 123`, `Closes #123`, `(#123)`, etc.). The issue number belongs **only** in the PR title, so it shows up on merge. Write commit subjects as `<type>: <summary>` with no issue token anywhere in the subject or body. This is absolute — do not add it "for traceability."
+
 ## When the user asks a question — give an opinion
 
 When the user asks a question ("what do you think?", "is X better than Y?", "why is this happening?"), always provide a direct opinion or recommendation alongside any explanation. Do not hedge with "it depends" and stop there — state what you would do and why.
