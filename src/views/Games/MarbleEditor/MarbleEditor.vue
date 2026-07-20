@@ -389,28 +389,31 @@ onUnmounted(() => {
     </template>
 
     <template v-if="phase === 'lobby'">
-      <canvas ref="editorCanvas" class="me__lobby-backdrop" aria-hidden="true"></canvas>
-      <MarbleEditorLobby
-        class="me__lobby-fg"
-        :player-name="playerName"
-        :player-color="playerColor"
-        :player-marble="playerMarble"
-        :is-host="isHost"
-        :player-list="playerList"
-        :room-id="roomId"
-        :start-mode="startMode"
-        :map-options="mapOptions"
-        :selected-map-index="selectedMapIndex"
-        @update:player-name="playerName = $event"
-        @update:player-color="handleColorChange"
-        @name-change="handleNameChange"
-        @start-game="handleStartGame"
-        @match-found="handleMatchFound"
-        @leave-room="handleLeaveRoom"
-        @config-change="handleConfigChange"
-        @marble-change="handleMarbleChange"
-        @mode-change="handleStartModeChange"
-      />
+      <div class="me__lobby-backdrop-wrap" aria-hidden="true">
+        <canvas ref="editorCanvas" class="me__lobby-backdrop"></canvas>
+      </div>
+      <div class="me__lobby-fg">
+        <MarbleEditorLobby
+          :player-name="playerName"
+          :player-color="playerColor"
+          :player-marble="playerMarble"
+          :is-host="isHost"
+          :player-list="playerList"
+          :room-id="roomId"
+          :start-mode="startMode"
+          :map-options="mapOptions"
+          :selected-map-index="selectedMapIndex"
+          @update:player-name="playerName = $event"
+          @update:player-color="handleColorChange"
+          @name-change="handleNameChange"
+          @start-game="handleStartGame"
+          @match-found="handleMatchFound"
+          @leave-room="handleLeaveRoom"
+          @config-change="handleConfigChange"
+          @marble-change="handleMarbleChange"
+          @mode-change="handleStartModeChange"
+        />
+      </div>
     </template>
 
     <div v-else class="me__play-area">
@@ -529,21 +532,28 @@ onUnmounted(() => {
 }
 
 /* The current map rendered as a blurred, non-interactive backdrop behind the
-   lobby wizard, matching the dialog's blur treatment. */
-.me__lobby-backdrop {
+   lobby wizard, matching the dialog's blur treatment. The wrapper clips the
+   scaled-up canvas so the blur's faded edges fall outside the viewport. */
+.me__lobby-backdrop-wrap {
   position: fixed;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.me__lobby-backdrop {
   display: block;
   width: 100%;
   height: 100%;
   filter: blur(var(--lui-backdrop-blur));
-  pointer-events: none;
+  transform: scale(1.1);
 }
 
 .me__lobby-fg {
   position: relative;
   z-index: 1;
+  height: 100%;
 }
 
 .me__play-area {
