@@ -130,15 +130,21 @@ const handleSend = (): void => {
   display: flex;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  border-top: 2px solid var(--lui-stroke-faint);
+  background-image: var(--lui-squiggle-faint);
+  background-repeat: repeat-x;
+  background-position: left top;
+  background-size: var(--lui-squiggle-size);
 }
 
 .lb-chat__input {
   flex: 1;
   padding: var(--spacing-1) 0;
   border: none;
-  border-bottom: 2px solid var(--lui-stroke-faint);
-  background: transparent;
+  background-image: var(--lui-squiggle-faint);
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: var(--lui-squiggle-size);
+  background-color: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
@@ -148,13 +154,13 @@ const handleSend = (): void => {
 }
 
 .lb-chat__input:focus {
-  border-bottom-color: var(--lui-stroke);
+  background-image: var(--lui-squiggle);
 }
 
 .lb-chat__send {
   padding: var(--spacing-1) var(--spacing-3);
   border: 2px solid var(--lui-stroke-faint);
-  border-radius: 999px;
+  border-radius: var(--lui-radius-sketch);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);

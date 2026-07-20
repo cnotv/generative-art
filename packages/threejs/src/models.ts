@@ -736,3 +736,85 @@ export const getWalls = (
   scene.add(group)
   return group
 }
+
+const getTrimeshVertexData = (
+  geometry: THREE.BufferGeometry
+): { vertices: Float32Array; indices: Uint32Array } => {
+  const positionAttribute = geometry.attributes['position'] as THREE.BufferAttribute
+  const vertices = new Float32Array(positionAttribute.array)
+  const indices = geometry.index
+    ? new Uint32Array(geometry.index.array)
+    : new Uint32Array(Array.from({ length: positionAttribute.count }, (_, index) => index))
+  return { vertices, indices }
+}
+
+/**
+ * Create a mesh from an arbitrary BufferGeometry with a fixed trimesh collider,
+ * for curved surfaces (funnels, loops, arcs) that box colliders cannot represent
+ * @param scene The Three.js scene
+ * @param world The Rapier physics world
+ * @param geometry The BufferGeometry used for both rendering and collision
+ * @param options Model options including position, rotation, material, friction and restitution
+ * @returns A ComplexModel with the fixed rigid body and trimesh collider in userData
+ */
+export const getTrimesh = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  geometry: THREE.BufferGeometry,
+  options: ModelOptions = {}
+): ComplexModel => {
+  const {
+    name,
+    position = [0, 0, 0] as CoordinateTuple,
+    rotation = [0, 0, 0] as CoordinateTuple,
+    friction = 0,
+    restitution = 0,
+    contactSkin = 0,
+    castShadow = true,
+    receiveShadow = true
+  } = options
+
+  const mesh = applyModelMaterial(new THREE.Mesh(geometry), options, 'MeshStandardMaterial')
+  applyTextureToMesh(mesh, options.texture)
+  if (name) mesh.name = name
+  mesh.position.set(...position)
+  mesh.rotation.set(...rotation)
+  mesh.castShadow = castShadow
+  mesh.receiveShadow = receiveShadow
+  scene.add(mesh)
+
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(...position)
+  const rigidBody = world.createRigidBody(rigidBodyDesc)
+  const quaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation))
+  rigidBody.setRotation(quaternion, true)
+
+  const { vertices, indices } = getTrimeshVertexData(geometry)
+  // FIX_INTERNAL_EDGES smooths contact normals across triangle boundaries so
+  // rolling bodies do not bump or catch on the mesh's internal edges.
+  const colliderDesc = RAPIER.ColliderDesc.trimesh(
+    vertices,
+    indices,
+    RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES
+  )
+    .setFriction(friction)
+    .setRestitution(restitution)
+    .setContactSkin(contactSkin)
+  const collider = world.createCollider(colliderDesc, rigidBody)
+
+  const initialValues = { size: 1, rotation, position, color: options.color }
+
+  return Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues,
+      actions: {},
+      mixer: undefined,
+      helper: undefined,
+      type: 'fixed' as const,
+      characterController: undefined,
+      hasGravity: false,
+      onSpawn: undefined
+    }
+  })
+}

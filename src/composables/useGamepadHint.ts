@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { MenuSource } from './useMenuNavigation'
+import { useHintRefreshTriggers, toHintRect, hintRectsEqual } from './useHintRefreshTriggers'
 
 export type HintPart = { glyph: string; label: string }
 
@@ -28,6 +29,7 @@ const isSelectElement = (element: Element | null): element is HTMLSelectElement 
 export const useGamepadHint = (editingElement: { value: HTMLElement | null }) => {
   const focusedHint = ref<HintState>(null)
   const inputSource = ref<MenuSource | 'mouse' | null>(null)
+  const anchorElement = ref<HTMLElement | null>(null)
 
   const describeControl = (element: HTMLElement): HintPart[] => {
     const isCyclable = isNumberInput(element) || isSelectElement(element)
@@ -51,16 +53,33 @@ export const useGamepadHint = (editingElement: { value: HTMLElement | null }) =>
   }
 
   const updateFocusedHint = (element: HTMLElement | null): void => {
-    if (!element) {
+    const anchor = element ? getHintAnchor(element) : null
+    anchorElement.value = anchor
+    if (!element || !anchor) {
       focusedHint.value = null
       return
     }
-    const r = getHintAnchor(element).getBoundingClientRect()
     focusedHint.value = {
-      rect: { top: r.top, left: r.left, width: r.width, height: r.height },
+      rect: toHintRect(anchor.getBoundingClientRect()),
       parts: describeControl(element)
     }
   }
+
+  // The hint chip is position: fixed; re-anchor it when layout shifts.
+  const refreshHintRect = (): void => {
+    const anchor = anchorElement.value
+    const hint = focusedHint.value
+    if (!anchor || !hint) return
+    if (!anchor.isConnected) {
+      updateFocusedHint(null)
+      return
+    }
+    const rect = toHintRect(anchor.getBoundingClientRect())
+    if (hintRectsEqual(rect, hint.rect)) return
+    focusedHint.value = { ...hint, rect }
+  }
+
+  useHintRefreshTriggers(refreshHintRect)
 
   const onInputSource = (source: MenuSource): void => {
     inputSource.value = source
@@ -72,6 +91,7 @@ export const useGamepadHint = (editingElement: { value: HTMLElement | null }) =>
 
   const onWindowBlur = (): void => {
     focusedHint.value = null
+    anchorElement.value = null
     editingElement.value = null
   }
 

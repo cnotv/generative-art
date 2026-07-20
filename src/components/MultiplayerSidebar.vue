@@ -97,9 +97,12 @@ const emit = defineEmits<{
   gap: var(--spacing-2);
   padding: var(--spacing-1) var(--spacing-2);
   border: none;
-  border-bottom: 1px solid var(--lui-stroke-faint);
+  background-color: transparent;
+  background-image: var(--lui-squiggle-faint);
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: var(--lui-squiggle-size);
   border-radius: 0;
-  background: transparent;
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
   font-weight: 700;

@@ -10,7 +10,9 @@ import {
   LobbyUIPrivateToggle,
   LobbyUIPlayerList,
   LobbyUIButton,
-  LobbyUIConfigField
+  LobbyUIConfigField,
+  LobbyUIKeyPill,
+  LobbyUIConfirm
 } from '@/components/LobbyUI'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
 import { MARBLE_OPTIONS } from '@/views/Games/MarbleMadness/config'
@@ -151,8 +153,9 @@ const moveCol = (delta: number, row: HTMLElement | undefined): void => {
   applyFocus()
 }
 
-const activate = (active: Element | null): void => {
+const activate = (active: Element | null, source: MenuSource): void => {
   if (isTextInput(active)) return
+  if (source === 'keyboard' && active instanceof HTMLButtonElement) return
   if (active instanceof HTMLElement) active.click()
 }
 
@@ -259,7 +262,7 @@ const handleMenu = (action: MenuAction, source: MenuSource): void => {
     down: () => moveRow(1, rows.length),
     left: () => moveCol(-1, rows[focusRow.value]),
     right: () => moveCol(1, rows[focusRow.value]),
-    activate: () => activate(active),
+    activate: () => activate(active, source),
     decrease: () => undefined,
     cancel: () => (active as HTMLElement | null)?.blur?.()
   }
@@ -395,6 +398,16 @@ const leaveRoom = (): void => {
 }
 
 const isMarbleAvailable = (_id: string): boolean => true
+
+// Dialog demo: while open, the trap must mute the showcase's own navigation
+// (arrows/stick no longer move the panel focus) and keep input in the dialog.
+const dialogOpen = ref(false)
+const dialogOutcome = ref('—')
+
+const closeDialog = (outcome: string): void => {
+  dialogOutcome.value = outcome
+  dialogOpen.value = false
+}
 </script>
 
 <template>
@@ -459,6 +472,31 @@ const isMarbleAvailable = (_id: string): boolean => true
           <LobbyUIPrivateToggle v-model="isPrivate" />
         </LobbyUIRow>
 
+        <LobbyUIRow label="Keys">
+          <div class="lui-showcase__pills">
+            <LobbyUIKeyPill :keyboard="['Z']" :gamepad="['L1']" />
+            <LobbyUIKeyPill :keyboard="['Y']" :gamepad="['R1']" />
+            <LobbyUIButton variant="ghost" size="sm" title="Cycle the camera (example)">
+              Camera
+              <LobbyUIKeyPill :keyboard="['C']" :gamepad="['△']" />
+            </LobbyUIButton>
+          </div>
+        </LobbyUIRow>
+
+        <LobbyUIRow label="Dialog">
+          <div class="lui-showcase__pills">
+            <LobbyUIButton
+              variant="ghost"
+              size="sm"
+              title="Open the confirm dialog demo"
+              @click="dialogOpen = true"
+            >
+              Open dialog
+            </LobbyUIButton>
+            <span class="lui-showcase__value">{{ dialogOutcome }}</span>
+          </div>
+        </LobbyUIRow>
+
         <LobbyUIRow label="Players">
           <LobbyUIPlayerList :players="players" :is-host="true" />
         </LobbyUIRow>
@@ -491,6 +529,15 @@ const isMarbleAvailable = (_id: string): boolean => true
         </div>
       </section>
     </main>
+
+    <LobbyUIConfirm
+      v-if="dialogOpen"
+      message="Leave the showcase?"
+      confirm-label="Leave"
+      cancel-label="Stay"
+      @confirm="closeDialog('confirmed')"
+      @cancel="closeDialog('cancelled')"
+    />
 
     <div
       v-if="focusedHint && inputSource === 'gamepad'"
@@ -671,6 +718,12 @@ const isMarbleAvailable = (_id: string): boolean => true
 
 .lui-showcase__nav--split {
   justify-content: space-between;
+}
+
+.lui-showcase__pills {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
 }
 
 @media (width <= 720px) {

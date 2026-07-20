@@ -21,20 +21,24 @@ const parts = computed((): HintPart[] => {
 </script>
 
 <template>
-  <div
-    v-if="hint && visible"
-    class="lui-hint"
-    aria-hidden="true"
-    :style="{
-      top: `${hint.rect.top + hint.rect.height / 2}px`,
-      left: `${hint.rect.left + hint.rect.width + gap}px`
-    }"
-  >
-    <span v-for="part in parts" :key="part.glyph" class="lui-hint__part">
-      <span class="lui-hint__glyph">{{ part.glyph }}</span>
-      {{ part.label }}
-    </span>
-  </div>
+  <!-- Teleported to body: an ancestor with a transform/filter would otherwise
+       become the containing block for position: fixed and displace the chip. -->
+  <Teleport to="body">
+    <div
+      v-if="hint && visible"
+      class="lui-hint"
+      aria-hidden="true"
+      :style="{
+        top: `${hint.rect.top + hint.rect.height / 2}px`,
+        left: `${hint.rect.left + hint.rect.width + gap}px`
+      }"
+    >
+      <span v-for="part in parts" :key="part.glyph" class="lui-hint__part">
+        <span class="lui-hint__glyph">{{ part.glyph }}</span>
+        {{ part.label }}
+      </span>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

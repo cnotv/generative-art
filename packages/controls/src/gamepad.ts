@@ -132,11 +132,35 @@ export function createGamepadController(
   let gamepadInterval: number | null = null
   let lastButtons: boolean[] = []
   let lastAxesStates: Record<string, boolean> = {}
+  let primed = false
+
+  // Inputs already active when polling starts belong to whoever was listening
+  // before (e.g. the press that opened a dialog): record them as held without
+  // firing, so a fresh controller never reacts to a stale press.
+  function primeStates(gp: Gamepad) {
+    gp.buttons.forEach((button, i) => {
+      lastButtons[i] = button.pressed
+    })
+    gp.axes.forEach((axisValue, axisIndex) => {
+      const [negativeKey, positiveKey] =
+        axisIndex % 2 === 0
+          ? [`axis${axisIndex}-left`, `axis${axisIndex}-right`]
+          : [`axis${axisIndex}-up`, `axis${axisIndex}-down`]
+      lastAxesStates[negativeKey] = axisValue < -axisThreshold
+      lastAxesStates[positiveKey] = axisValue > axisThreshold
+    })
+  }
 
   function pollGamepad() {
     const gp = findActiveGamepad(pinnedIndex)
     if (!gp) return
     if (pinnedIndex === null) pinnedIndex = gp.index
+
+    if (!primed) {
+      primed = true
+      primeStates(gp)
+      return
+    }
 
     pollButtons(gp, mappingReference, handlers, buttonMap, lastButtons)
     pollAxes(gp, mappingReference, handlers, axisThreshold, lastAxesStates)
@@ -151,12 +175,14 @@ export function createGamepadController(
       pinnedIndex = null
       lastButtons = []
       lastAxesStates = {}
+      primed = false
     }
   }
 
   function bind(index?: number) {
     pinnedIndex = index ?? null
     lastButtons = []
+    primed = false
     window.addEventListener('gamepadconnected', onConnect)
     window.addEventListener('gamepaddisconnected', onDisconnect)
     gamepadInterval = window.setInterval(pollGamepad, 1000 / 30)
@@ -168,6 +194,7 @@ export function createGamepadController(
     pinnedIndex = null
     lastButtons = []
     lastAxesStates = {}
+    primed = false
     window.removeEventListener('gamepadconnected', onConnect)
     window.removeEventListener('gamepaddisconnected', onDisconnect)
   }

@@ -52,7 +52,7 @@ const emit = defineEmits<{
   padding-block: calc(var(--spacing-1) - 0.06em) calc(var(--spacing-1) + 0.06em);
   padding-inline: var(--spacing-3);
   border: 2px solid transparent;
-  border-radius: var(--radius-xl, 1.25rem);
+  border-radius: var(--lui-radius-sketch);
   background: transparent;
   color: var(--lui-text-color);
   font-family: var(--lui-font);

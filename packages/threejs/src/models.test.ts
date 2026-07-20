@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { getCube, getBall } from './models'
+import { getCube, getBall, getTrimesh } from './models'
 import type { CoordinateTuple } from './types'
 
 describe('getCube', () => {
@@ -288,5 +288,61 @@ describe('getBall', () => {
 
       expect(ball.userData.onSpawn).toBe(onSpawn)
     })
+  })
+})
+
+describe('getTrimesh', () => {
+  let scene: THREE.Scene
+  let world: RAPIER.World
+
+  beforeEach(async () => {
+    await RAPIER.init()
+    scene = new THREE.Scene()
+    world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 })
+  })
+
+  it('adds the mesh to the scene at the given position and rotation', () => {
+    const geometry = new THREE.PlaneGeometry(10, 10)
+    const mesh = getTrimesh(scene, world, geometry, {
+      name: 'test-trimesh',
+      position: [1, 2, 3],
+      rotation: [0, Math.PI / 2, 0]
+    })
+
+    expect(scene.children).toContain(mesh)
+    expect(mesh.name).toBe('test-trimesh')
+    expect(mesh.position.toArray()).toEqual([1, 2, 3])
+    expect(mesh.rotation.y).toBeCloseTo(Math.PI / 2)
+  })
+
+  it('creates a fixed rigid body with a trimesh collider', () => {
+    const geometry = new THREE.PlaneGeometry(10, 10)
+    const mesh = getTrimesh(scene, world, geometry, { position: [0, 5, 0] })
+
+    const body = mesh.userData.body as RAPIER.RigidBody
+    expect(body.isFixed()).toBe(true)
+    expect(body.translation().y).toBeCloseTo(5)
+    const collider = mesh.userData.collider as RAPIER.Collider
+    expect(collider.shape.type).toBe(RAPIER.ShapeType.TriMesh)
+  })
+
+  it('supports non-indexed geometry', () => {
+    const geometry = new THREE.PlaneGeometry(4, 4).toNonIndexed()
+    const mesh = getTrimesh(scene, world, geometry, {})
+
+    const collider = mesh.userData.collider as RAPIER.Collider
+    expect(collider.shape.type).toBe(RAPIER.ShapeType.TriMesh)
+  })
+
+  it('stops a falling ball on the trimesh surface', () => {
+    const geometry = new THREE.PlaneGeometry(20, 20)
+    getTrimesh(scene, world, geometry, { position: [0, 0, 0], rotation: [-Math.PI / 2, 0, 0] })
+    const ball = getBall(scene, world, { size: 1, position: [0, 4, 0], type: 'dynamic' })
+
+    Array.from({ length: 240 }).forEach(() => world.step())
+
+    const body = ball.userData.body as RAPIER.RigidBody
+    expect(body.translation().y).toBeGreaterThan(0.5)
+    expect(body.translation().y).toBeLessThan(1.5)
   })
 })

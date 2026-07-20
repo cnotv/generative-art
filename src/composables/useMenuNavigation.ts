@@ -1,6 +1,7 @@
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { createControls } from '@webgamekit/controls'
-import type { ControlsExtras } from '@webgamekit/controls'
+import type { ControlsExtras, ControlMapping } from '@webgamekit/controls'
+import { reportInputSource } from './useInputDevice'
 
 export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'activate' | 'cancel' | 'decrease'
 
@@ -82,22 +83,60 @@ export type MenuSource = 'keyboard' | 'gamepad'
 const sourceOf = (rawSource: string | undefined): MenuSource =>
   rawSource === 'gamepad' || rawSource === 'gamepad-axis' ? 'gamepad' : 'keyboard'
 
+// Depth of currently open modal dialogs. While any modal scope is active,
+// every non-modal menu handler is muted, so input reaches only the dialog.
+// Singleton by design: modality is a property of the whole page.
+const modalScopeDepth = ref(0)
+
+// Every handler polls the gamepad on its own interval, so the press that
+// closed a dialog can still be seen as a fresh edge by a background poller a
+// few milliseconds after the modal scope ends. Background handlers therefore
+// stay muted for a short grace period after the last modal closes.
+const MODAL_RELEASE_GRACE_MS = 250
+const modalReleasedAt = ref(0)
+
+const isModalScopeActive = (): boolean =>
+  modalScopeDepth.value > 0 || Date.now() - modalReleasedAt.value < MODAL_RELEASE_GRACE_MS
+
+/**
+ * Whether a modal dialog currently owns input (including the short release
+ * grace). Game controls that bypass useMenuNavigation must check this before
+ * firing one-shot actions, so pad presses inside a dialog do not leak into
+ * gameplay handlers.
+ *
+ * @returns True while a modal navigation scope is active
+ */
+export const isMenuModalActive = (): boolean => isModalScopeActive()
+
+export type MenuNavigationOptions = {
+  modal?: boolean
+}
+
 /**
  * Registers a callback for menu-style navigation events emitted by either the
  * keyboard arrow cluster or a connected gamepad's d-pad / left stick / A / B.
  * Filters out unmapped inputs so the handler only ever sees known MenuActions.
  * @param handler Called with the semantic action and its originating input source.
+ * @param mapping Optional input mapping override; defaults to the full menu mapping (d-pad, both sticks, face buttons).
+ * @param options Set `modal: true` for dialog handlers: they keep receiving input and mute every non-modal handler while mounted.
  * @returns Object with `destroy()` for manual teardown; the composable also cleans up on unmount.
  */
-export function useMenuNavigation(handler: (action: MenuAction, source: MenuSource) => void): {
+export function useMenuNavigation(
+  handler: (action: MenuAction, source: MenuSource) => void,
+  mapping: ControlMapping = MENU_MAPPING,
+  options: MenuNavigationOptions = {}
+): {
   destroy: () => void
 } {
   let controls: ControlsExtras | null = null
 
   const setup = (): void => {
+    if (options.modal) modalScopeDepth.value += 1
     controls = createControls({
-      mapping: MENU_MAPPING,
+      mapping,
       onAction: (action, _key, rawSource) => {
+        reportInputSource(String(rawSource ?? 'keyboard'))
+        if (!options.modal && isModalScopeActive()) return
         if (MENU_ACTIONS.has(action as MenuAction)) {
           handler(action as MenuAction, sourceOf(rawSource as string | undefined))
         }
@@ -108,6 +147,10 @@ export function useMenuNavigation(handler: (action: MenuAction, source: MenuSour
   }
 
   const destroy = (): void => {
+    if (options.modal) {
+      modalScopeDepth.value = Math.max(0, modalScopeDepth.value - 1)
+      if (modalScopeDepth.value === 0) modalReleasedAt.value = Date.now()
+    }
     controls?.destroyControls()
     controls = null
     window.removeEventListener('keydown', preventScrollKeys)

@@ -29,7 +29,7 @@ withDefaults(
   height: 2.2em;
   padding: 0;
   border: 3px solid transparent;
-  border-radius: 50%;
+  border-radius: var(--lui-radius-sketch-round);
   background: transparent;
   color: var(--lui-text-color);
   cursor: pointer;
