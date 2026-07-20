@@ -16,13 +16,13 @@ import {
   MARBLE_RESTITUTION,
   MARBLE_FRICTION,
   MARBLE_MOVE_FORCE,
+  MARBLE_MAX_SPEED,
   FALL_MARGIN
 } from './config'
 import {
   MARBLE_RADIUS,
   MARBLE_LINEAR_DAMPING,
-  MARBLE_ANGULAR_DAMPING,
-  MAX_LINEAR_SPEED
+  MARBLE_ANGULAR_DAMPING
 } from '../MarbleMadness/config'
 import type { MarbleMap, TrackPieceType } from './types'
 
@@ -134,7 +134,7 @@ const applySteeringInput = (
   moveDynamic(
     marble,
     { x: (deltaX / distance) * moveForce, y: 0, z: (deltaZ / distance) * moveForce },
-    MAX_LINEAR_SPEED
+    MARBLE_MAX_SPEED
   )
 }
 
@@ -196,6 +196,25 @@ describe('downhill track physics', () => {
 
   it('rolls the marble through every downhill piece to the finish', () => {
     expect(simulate(scene, world, DOWNHILL_MAP).outcome).toBe('finished')
+  })
+
+  it('rolls a curve-heavy track at full speed without falling through', () => {
+    const types: TrackPieceType[] = [
+      'start',
+      'straight-long',
+      'curve-left',
+      'curve-left',
+      'curve-right',
+      'curve-right',
+      'finish'
+    ]
+    const map: MarbleMap = {
+      version: 1,
+      name: 'curves',
+      updatedAt: 0,
+      pieces: types.map((type, i) => ({ id: `${type}-${i}`, type, color: 0x808080 }))
+    }
+    expect(simulate(scene, world, map).outcome).toBe('finished')
   })
 
   it('rolls the marble across flush piece junctions without stalling', () => {
