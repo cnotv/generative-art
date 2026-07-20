@@ -364,6 +364,7 @@ type ResolvedPhysicOptions = Required<
     | 'position'
     | 'size'
     | 'boundary'
+    | 'contactSkin'
     | 'restitution'
     | 'friction'
     | 'damping'
