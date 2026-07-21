@@ -124,17 +124,18 @@ const hasAppearanceOptions = (options: ModelOptions): boolean =>
   APPEARANCE_OPTION_KEYS.some((key) => options[key] !== undefined)
 
 const mutateMaterialInPlace = (material: THREE.Material, options: ModelOptions): void => {
-  const typed = material as THREE.Material & Record<string, unknown> & { color?: THREE.Color }
-  if (options.color !== undefined && typed.color instanceof THREE.Color)
-    typed.color.set(options.color)
+  const colored = material as THREE.Material & { color?: THREE.Color }
+  if (options.color !== undefined && colored.color instanceof THREE.Color)
+    colored.color.set(options.color)
   if (options.opacity !== undefined || options.transparent !== undefined) {
     const isTransparent = options.transparent ?? (options.opacity ?? 1) < 1
     material.transparent = isTransparent
     if (options.opacity !== undefined) material.opacity = options.opacity
     if (options.depthWrite === undefined) material.depthWrite = !isTransparent
   }
+  const record = material as unknown as Record<string, unknown>
   MUTABLE_MATERIAL_PROPS.forEach((key) => {
-    if (options[key] !== undefined && key in typed) typed[key] = options[key]
+    if (options[key] !== undefined && key in material) record[key] = options[key]
   })
   material.needsUpdate = true
 }
