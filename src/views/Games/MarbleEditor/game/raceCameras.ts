@@ -6,7 +6,9 @@ import {
   FIRST_PERSON_HEIGHT,
   FIRST_PERSON_LOOK_AHEAD,
   FIRST_PERSON_DIRECTION_LERP,
-  FIRST_PERSON_MIN_SPEED
+  FIRST_PERSON_MIN_SPEED,
+  FREE_CAM_HEIGHT,
+  FREE_CAM_BACK
 } from '../config'
 import { CAMERA_HEIGHT, CAMERA_BACK, CAMERA_LERP } from '../../MarbleMadness/config'
 
@@ -71,15 +73,25 @@ export type RaceCameraOptions = {
   marble: ComplexModel | null
   orbit: OrbitControls | null
   smoothedDirection: THREE.Vector3
+  justEnteredFree?: boolean
 }
 
 export const applyRaceCamera = (options: RaceCameraOptions): void => {
-  const { mode, camera, marble, orbit, smoothedDirection } = options
+  const { mode, camera, marble, orbit, smoothedDirection, justEnteredFree } = options
   if (!marble) return
   if (mode === 'free') {
     if (orbit) {
       orbit.enabled = true
       orbit.target.copy(marble.position)
+    }
+    // On entry, drop the camera high and far back so the whole track is framed;
+    // the orbit controls preserve that offset and let the player zoom in.
+    if (justEnteredFree) {
+      camera.position.set(
+        marble.position.x - smoothedDirection.x * FREE_CAM_BACK,
+        marble.position.y + FREE_CAM_HEIGHT,
+        marble.position.z - smoothedDirection.z * FREE_CAM_BACK
+      )
     }
     return
   }

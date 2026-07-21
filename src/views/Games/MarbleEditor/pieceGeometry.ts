@@ -12,8 +12,9 @@ import {
   STRAIGHT_SHORT_LENGTH,
   STRAIGHT_LONG_LENGTH,
   CURVE_RADIUS,
-  BANK_ANGLE,
-  BANK_BLEND_ANGLE,
+  CURVE_DROP,
+  CURVE_FRICTION,
+  BANK_WALL_HEIGHT,
   RAMP_LENGTH,
   RAMP_ANGLE,
   RAMP_LIP_LENGTH,
@@ -80,7 +81,6 @@ type PieceParts = {
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
 const X_AXIS = new THREE.Vector3(1, 0, 0)
-const Z_AXIS = new THREE.Vector3(0, 0, 1)
 const IDENTITY_QUATERNION = new THREE.Quaternion()
 
 const vec = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z)
@@ -88,8 +88,6 @@ const yawQuaternion = (yaw: number): THREE.Quaternion =>
   new THREE.Quaternion().setFromAxisAngle(Y_AXIS, yaw)
 const pitchQuaternion = (pitch: number): THREE.Quaternion =>
   new THREE.Quaternion().setFromAxisAngle(X_AXIS, pitch)
-const rollQuaternion = (roll: number): THREE.Quaternion =>
-  new THREE.Quaternion().setFromAxisAngle(Z_AXIS, roll)
 
 const box = (
   size: CoordinateTuple,
@@ -183,23 +181,32 @@ const rampSpecs = (direction: 1 | -1): BoxSpec[] => {
   ]
 }
 
-// The roll eases in and out across the arc so banked curves start and end
-// perfectly level against neighbouring pieces.
-const bankEnvelope = (phi: number): number =>
-  Math.max(0, Math.min(1, phi / BANK_BLEND_ANGLE, (Math.PI / 2 - phi) / BANK_BLEND_ANGLE))
-
 // Closed outline of the lane profile (deck plus both walls), swept along the
-// arc to produce a single smooth solid instead of segmented boxes.
-const LANE_CROSS_SECTION: [number, number][] = [
+// arc to produce a single smooth solid instead of segmented boxes. The wall
+// tops are parameterised so a banked curve can raise its outer wall.
+const laneCrossSection = (
+  leftWallHeight: number = WALL_HEIGHT,
+  rightWallHeight: number = WALL_HEIGHT
+): [number, number][] => [
   [-(LANE_WIDTH / 2 + WALL_THICKNESS), -DECK_THICKNESS],
-  [-(LANE_WIDTH / 2 + WALL_THICKNESS), WALL_HEIGHT],
-  [-LANE_WIDTH / 2, WALL_HEIGHT],
+  [-(LANE_WIDTH / 2 + WALL_THICKNESS), leftWallHeight],
+  [-LANE_WIDTH / 2, leftWallHeight],
   [-LANE_WIDTH / 2, 0],
   [LANE_WIDTH / 2, 0],
-  [LANE_WIDTH / 2, WALL_HEIGHT],
-  [LANE_WIDTH / 2 + WALL_THICKNESS, WALL_HEIGHT],
+  [LANE_WIDTH / 2, rightWallHeight],
+  [LANE_WIDTH / 2 + WALL_THICKNESS, rightWallHeight],
   [LANE_WIDTH / 2 + WALL_THICKNESS, -DECK_THICKNESS]
 ]
+
+const LANE_CROSS_SECTION: [number, number][] = laneCrossSection()
+
+// A left turn (side 1) curves toward -x so its outer edge is +x (the right
+// wall); a right turn mirrors it. The outer wall is raised to hold a fast
+// marble in the arc.
+export const bankedCrossSection = (side: 1 | -1): [number, number][] =>
+  side === 1
+    ? laneCrossSection(WALL_HEIGHT, BANK_WALL_HEIGHT)
+    : laneCrossSection(BANK_WALL_HEIGHT, WALL_HEIGHT)
 
 const ARC_SWEEP_STATIONS = 49
 
@@ -212,18 +219,16 @@ type SweepStation = {
 // JOINT_OVERLAP is non-zero. With flush junctions (overlap 0) the extensions
 // would coincide with the first/last arc stations and produce degenerate
 // zero-area quads, so they are omitted and the sweep butts up exactly.
-const arcSweepStations = (side: 1 | -1, roll: number): SweepStation[] => {
+const arcSweepStations = (side: 1 | -1): SweepStation[] => {
   const arc = Array.from({ length: ARC_SWEEP_STATIONS }, (_, index) => {
     const phi = (index / (ARC_SWEEP_STATIONS - 1)) * (Math.PI / 2)
     return {
       origin: vec(
         side * (CURVE_RADIUS * Math.cos(phi) - CURVE_RADIUS),
-        0,
+        -CURVE_DROP * (phi / (Math.PI / 2)),
         -CURVE_RADIUS * Math.sin(phi)
       ),
-      orientation: yawQuaternion(side * phi).multiply(
-        rollQuaternion(side * roll * bankEnvelope(phi))
-      )
+      orientation: yawQuaternion(side * phi)
     }
   })
   if (JOINT_OVERLAP === 0) return arc
@@ -241,10 +246,10 @@ const arcSweepStations = (side: 1 | -1, roll: number): SweepStation[] => {
 
 // Each cross-section edge gets its own vertex pair per station: profile
 // corners stay hard while the sweep direction shades smoothly.
-const sweepPositions = (stations: SweepStation[]): number[] =>
+const sweepPositions = (stations: SweepStation[], crossSection: [number, number][]): number[] =>
   stations.flatMap((station) =>
-    LANE_CROSS_SECTION.flatMap((current, pointIndex) => {
-      const nextPoint = LANE_CROSS_SECTION[(pointIndex + 1) % LANE_CROSS_SECTION.length]
+    crossSection.flatMap((current, pointIndex) => {
+      const nextPoint = crossSection[(pointIndex + 1) % crossSection.length]
       return [current, nextPoint].flatMap(([x, y]) => {
         const point = vec(x, y, 0).applyQuaternion(station.orientation).add(station.origin)
         return [point.x, point.y, point.z]
@@ -254,8 +259,8 @@ const sweepPositions = (stations: SweepStation[]): number[] =>
 
 // Winding matters: Rapier's FIX_INTERNAL_EDGES corrects contact normals using
 // the triangles' face normals, so every face must point outward (deck up).
-const sweepIndices = (stationCount: number): number[] => {
-  const edgeCount = LANE_CROSS_SECTION.length
+const sweepIndices = (stationCount: number, crossSection: [number, number][]): number[] => {
+  const edgeCount = crossSection.length
   const perStation = edgeCount * 2
   const sideQuads = Array.from({ length: stationCount - 1 }, (_, station) =>
     Array.from({ length: edgeCount }, (_, edge) => {
@@ -267,7 +272,7 @@ const sweepIndices = (stationCount: number): number[] => {
     }).flat()
   ).flat()
   const capTriangles = THREE.ShapeUtils.triangulateShape(
-    LANE_CROSS_SECTION.map(([x, y]) => new THREE.Vector2(x, y)),
+    crossSection.map(([x, y]) => new THREE.Vector2(x, y)),
     []
   )
   const endBase = (stationCount - 1) * perStation
@@ -282,19 +287,28 @@ const sweepIndices = (stationCount: number): number[] => {
   return [...sideQuads, ...caps]
 }
 
-export const buildArcSweepGeometry = (side: 1 | -1, roll: number): THREE.BufferGeometry => {
-  const stations = arcSweepStations(side, roll)
+export const buildArcSweepGeometry = (
+  side: 1 | -1,
+  crossSection: [number, number][] = LANE_CROSS_SECTION
+): THREE.BufferGeometry => {
+  const stations = arcSweepStations(side)
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(sweepPositions(stations), 3))
-  geometry.setIndex(sweepIndices(stations.length))
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(sweepPositions(stations, crossSection), 3)
+  )
+  geometry.setIndex(sweepIndices(stations.length, crossSection))
   geometry.computeVertexNormals()
   return geometry
 }
 
-const arcTrimeshSpec = (side: 1 | -1, roll: number): TrimeshSpec => ({
-  geometry: buildArcSweepGeometry(side, roll),
+const arcTrimeshSpec = (
+  side: 1 | -1,
+  crossSection: [number, number][] = LANE_CROSS_SECTION
+): TrimeshSpec => ({
+  geometry: buildArcSweepGeometry(side, crossSection),
   center: new THREE.Vector3(0, 0, 0),
-  friction: DECK_FRICTION,
+  friction: CURVE_FRICTION,
   restitution: DECK_RESTITUTION
 })
 
@@ -476,10 +490,10 @@ const PIECE_PARTS_BUILDERS: Record<TrackPieceType, () => PieceParts> = {
     ]),
   'straight-short': () => boxesOnly(straightSpecs(STRAIGHT_SHORT_LENGTH)),
   'straight-long': () => boxesOnly(straightSpecs(STRAIGHT_LONG_LENGTH)),
-  'curve-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, 0)] }),
-  'curve-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, 0)] }),
-  'banked-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, BANK_ANGLE)] }),
-  'banked-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, BANK_ANGLE)] }),
+  'curve-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1)] }),
+  'curve-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1)] }),
+  'banked-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, bankedCrossSection(1))] }),
+  'banked-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, bankedCrossSection(-1))] }),
   'ramp-up': () => boxesOnly(rampSpecs(1)),
   'ramp-down': () => boxesOnly(rampSpecs(-1)),
   funnel: () => ({ boxes: funnelBoxSpecs(), trimeshes: [funnelTrimeshSpec()] }),

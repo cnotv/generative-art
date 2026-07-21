@@ -18,7 +18,9 @@ import {
   RUG_COLORS,
   RUG_RADIUS_FRACTION,
   RUG_RING_STEP,
-  RUG_Y_STEP,
+  RUG_LIFT,
+  RUG_SEGMENTS,
+  RUG_DEPTH_OFFSET,
   WINDOW_WIDTH_FRACTION,
   WINDOW_HEIGHT_FRACTION,
   WINDOW_SILL_FRACTION,
@@ -272,16 +274,32 @@ const buildFloor = (layout: RoomLayout): THREE.Mesh => {
   return floor
 }
 
+// Concentric rings are non-overlapping annuli (the innermost a full disc) so no
+// two rug surfaces are coplanar; a single lift plus a polygon depth-offset lifts
+// the whole rug clear of the giant floor plane without z-fighting it.
 const buildRug = (layout: RoomLayout): THREE.Group => {
   const group = new THREE.Group()
   const baseRadius = Math.min(layout.width, layout.depth) * RUG_RADIUS_FRACTION
+  const ringCount = RUG_COLORS.length
   RUG_COLORS.forEach((color, ring) => {
+    const outerRadius = baseRadius * (1 - ring * RUG_RING_STEP)
+    const innerRadius = ring === ringCount - 1 ? 0 : baseRadius * (1 - (ring + 1) * RUG_RING_STEP)
+    const geometry =
+      innerRadius === 0
+        ? new THREE.CircleGeometry(outerRadius, RUG_SEGMENTS)
+        : new THREE.RingGeometry(innerRadius, outerRadius, RUG_SEGMENTS)
     const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(baseRadius * (1 - ring * RUG_RING_STEP), 48),
-      new THREE.MeshStandardMaterial({ color, roughness: 1 })
+      geometry,
+      new THREE.MeshStandardMaterial({
+        color,
+        roughness: 1,
+        polygonOffset: true,
+        polygonOffsetFactor: -RUG_DEPTH_OFFSET,
+        polygonOffsetUnits: -RUG_DEPTH_OFFSET
+      })
     )
     disc.rotation.x = -Math.PI / 2
-    disc.position.set(layout.centerX, layout.floorY + 0.05 + ring * RUG_Y_STEP, layout.centerZ)
+    disc.position.set(layout.centerX, layout.floorY + RUG_LIFT, layout.centerZ)
     disc.receiveShadow = true
     group.add(disc)
   })

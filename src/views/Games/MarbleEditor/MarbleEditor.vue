@@ -24,6 +24,8 @@ import {
   LobbyUIFocusHint,
   LobbyUIConfirm
 } from '@/components/LobbyUI'
+import { useRoute } from 'vue-router'
+import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { useMenuFocus } from '@/composables/useMenuFocus'
@@ -256,6 +258,25 @@ const canRestart = computed(() => store.solo || isHost.value)
 
 const cameraLabel = computed(() => CAMERA_MODE_LABELS[race.cameraMode.value])
 
+// Test-ball spawner lives in the app Config panel (top-right): a count slider
+// plus an "Add balls" action that drops that many uncontrolled marbles.
+const route = useRoute()
+const testConfig = createReactiveConfig({ testBalls: { count: 10, randomTextures: false } })
+const testConfigSchema = {
+  testBalls: {
+    count: { min: 1, max: 50, step: 1, label: 'Count' },
+    randomTextures: { checkbox: false, label: 'Random textures' },
+    add: { callback: 'addBalls', label: 'Add balls' }
+  }
+}
+const testConfigCallbacks = {
+  addBalls: () =>
+    race.spawnTestMarbles(
+      Number(testConfig.value.testBalls.count),
+      Boolean(testConfig.value.testBalls.randomTextures)
+    )
+}
+
 const namingNewTrack = ref(false)
 
 const handleCreateTrack = (name: string): void => {
@@ -349,12 +370,20 @@ onMounted(async () => {
     'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap',
     ME_FONT_KEY
   )
+  registerViewConfig(
+    route.name as string,
+    testConfig,
+    testConfigSchema,
+    undefined,
+    testConfigCallbacks
+  )
   await nextTick()
   if (phase.value === 'lobby') await editor.init({ backdrop: true })
 })
 
 onUnmounted(() => {
   removeGoogleFont(ME_FONT_KEY)
+  unregisterViewConfig(route.name as string)
 })
 </script>
 
@@ -474,10 +503,11 @@ onUnmounted(() => {
             @click="requestBackToEditor"
           >
             Editor
+            <LobbyUIKeyPill :keyboard="['E']" :gamepad="['□']" />
           </LobbyUIButton>
           <LobbyUIButton size="sm" variant="ghost" title="Exit the game" @click="requestExitGame">
             Exit
-            <LobbyUIKeyPill :gamepad="['□']" />
+            <LobbyUIKeyPill :keyboard="['Esc']" :gamepad="['○']" />
           </LobbyUIButton>
         </div>
         <TouchControl

@@ -28,7 +28,11 @@ export const CEILING_COLOR = 0xfdf8f0
 export const RUG_COLORS = [0xf28c6b, 0xf7b267, 0xfcd5a5]
 export const RUG_RADIUS_FRACTION = 0.32
 export const RUG_RING_STEP = 0.3
-export const RUG_Y_STEP = 0.06
+// The rug rings are non-overlapping annuli lifted just above the floor; the
+// depth-offset keeps them from z-fighting the giant floor plane at distance.
+export const RUG_LIFT = 0.06
+export const RUG_SEGMENTS = 64
+export const RUG_DEPTH_OFFSET = 2
 
 export const WINDOW_WIDTH_FRACTION = 0.28
 export const WINDOW_HEIGHT_FRACTION = 0.4

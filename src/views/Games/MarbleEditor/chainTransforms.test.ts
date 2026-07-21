@@ -4,6 +4,7 @@ import { PIECE_CATALOG } from './pieceCatalog'
 import {
   STRAIGHT_SHORT_LENGTH,
   CURVE_RADIUS,
+  CURVE_DROP,
   RAMP_LENGTH,
   RAMP_ANGLE,
   RAMP_LIP_LENGTH,
@@ -73,13 +74,13 @@ describe('computeChainTransforms', () => {
     expect(transforms[2].yaw).toBeCloseTo(Math.PI / 2)
   })
 
-  it('closes a full circle after four curve-lefts', () => {
+  it('spirals a full turn after four curve-lefts, closing in x/z and dropping in y', () => {
     const transforms = computeChainTransforms(
       makePieces(['curve-left', 'curve-left', 'curve-left', 'curve-left', 'straight-short'])
     )
     const closing = transforms[4]
     expect(closing.position[0]).toBeCloseTo(0)
-    expect(closing.position[1]).toBeCloseTo(0)
+    expect(closing.position[1]).toBeCloseTo(-4 * CURVE_DROP)
     expect(closing.position[2]).toBeCloseTo(0)
     expect(closing.yaw).toBeCloseTo(2 * Math.PI)
   })
