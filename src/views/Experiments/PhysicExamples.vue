@@ -5,16 +5,16 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { video } from '@/utils/video'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
-import { getLights, getEnvironment, getGround, getModel, removeElements } from '@webgamekit/threejs'
+import { getLights, getEnvironment, getGround, removeElements } from '@webgamekit/threejs'
 import {
   bindAnimatedElements,
   resetAnimation,
   animateTimeline,
   createTimelineManager
 } from '@webgamekit/animation'
-import { getBall, getWalls } from '@webgamekit/threejs'
+import { getWalls } from '@webgamekit/threejs'
+import { PHYSIC_BALLS, spawnPhysicBall } from '@/utils/physicBalls'
 import { times } from '@/utils/lodash'
-import bowlingTexture from '@/assets/images/textures/bowling.png'
 import type { CoordinateTuple } from '@/types/three'
 
 const statsElement = ref(null)
@@ -66,75 +66,11 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     registerSceneElements(camera, scene.children)
 
     let experiments = [] as any[]
-    const balls = [
-      async (position) =>
-        getBall(scene, world, {
-          position,
-          size: 4,
-          weight: 120,
-          restitution: 0.75,
-          metalness: 0.3,
-          reflectivity: 0.2,
-          roughness: 0.8,
-          transmission: 0.5,
-          color: 0xff3333
-        }), // Rubber
-      async (position) =>
-        await getModel(scene, world, 'balloon.glb', {
-          position,
-          rotation: [-0.5, 0, 1],
-          scale: [70, 70, 70],
-          size: 10,
-          damping: 0.8,
-          restitution: -0.5,
-          weight: 5,
-          color: Math.floor(Math.random() * 16777215),
-          opacity: 0.9
-        }), // Balloon
-      // async (position) => await getModel(scene, world, 'bowling.glb', { position, scale: [2,2,2], size: 2, weight: 50, restitution: -0.3}), // Bowling
-      async (position) =>
-        getBall(scene, world, {
-          position,
-          size: 15,
-          weight: 50,
-          restitution: -0.3,
-          texture: bowlingTexture,
-          color: 0xffffff,
-          friction: 10
-        }), // Bowling
-      async (position) =>
-        await getModel(scene, world, 'paper_low.glb', {
-          position,
-          rotation: [Math.random() * 100, Math.random() * 100, Math.random() * 100],
-          scale: [5, 5, 5],
-          size: 3,
-          friction: 100,
-          angular: 10,
-          damping: 0.2,
-          restitution: -0.5,
-          weight: 8
-        }), // Paper
-      async (position) =>
-        await getModel(scene, world, 'tennis.glb', {
-          position,
-          scale: [6, 6, 6],
-          size: 6,
-          weight: 50,
-          friction: 5,
-          angular: 1,
-          restitution: 0.6
-        }), // Tennis
-      async (position) =>
-        getBall(scene, world, {
-          position,
-          size: 3,
-          weight: 40,
-          restitution: 0.8,
-          damping: 0.1,
-          color: 0xffffff,
-          roughness: 0.9
-        }) // Ping Pong
-    ]
+    // Rubber, Balloon, Bowling, Paper, Tennis, Ping Pong — shared with the marble
+    // editor spawner, at their original arena sizes (no editor-scale overrides).
+    const balls = PHYSIC_BALLS.map(
+      (preset) => (position: CoordinateTuple) => spawnPhysicBall(scene, world, preset, position)
+    )
     const addBall = async (position: CoordinateTuple, pick: number, list = balls) => {
       experiments.push(await list[pick](position))
     }

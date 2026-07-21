@@ -36,8 +36,17 @@ import type {
   CameraMode,
   BallPosPayload,
   BedroomEnvironment,
-  BoostZone
+  BoostZone,
+  MarblePhysics,
+  SpawnTestBallsOptions
 } from '../types'
+import {
+  spawnPhysicBall,
+  findPresetByLabel,
+  pickBallType,
+  MARBLE_BALL_LABEL,
+  BALL_TYPE_LABELS
+} from '@/utils/physicBalls'
 import {
   SPAWN_HEIGHT,
   SPAWN_Z_INSET,
@@ -46,13 +55,11 @@ import {
   BOOST_IMPULSE,
   FALL_MARGIN,
   TIME_PENALTY_FALL,
-  MARBLE_WEIGHT,
-  MARBLE_RESTITUTION,
-  MARBLE_FRICTION,
   MARBLE_MOVE_FORCE,
   MARBLE_MAX_SPEED,
   MARBLE_TURN_RATE,
   COUNTDOWN_MS,
+  CAMERA_TRANSITION_SECONDS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
@@ -60,9 +67,6 @@ import {
 } from '../config'
 import {
   MARBLE_OPTIONS,
-  MARBLE_RADIUS,
-  MARBLE_LINEAR_DAMPING,
-  MARBLE_ANGULAR_DAMPING,
   CAMERA_HEIGHT,
   CAMERA_BACK,
   POS_BROADCAST_MS,
@@ -81,6 +85,7 @@ export type UseMarbleRaceDeps = {
   canvas: Ref<HTMLCanvasElement | null>
   map: Ref<MarbleMap>
   marbleTexture: Ref<string | undefined>
+  marblePhysics: Ref<MarblePhysics>
   onFinish: (elapsedSeconds: number) => void
   onBack?: () => void
   onEditor?: () => void
@@ -105,6 +110,8 @@ type RaceState = {
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
   prevCameraMode: CameraMode
+  cameraTransitionElapsed: number
+  cameraTransitionStart: THREE.Vector3
   localLabel: THREE.Sprite | null
   scene: THREE.Scene | null
   bedroom: BedroomEnvironment | null
@@ -112,34 +119,63 @@ type RaceState = {
   posAccumulator: number
 }
 
-// Test helper: drops `count` uncontrolled marbles onto the start, staggered in
-// a grid so they don't spawn on top of each other, to observe the track's
-// physics without steering. They roll under gravity only and are torn down with
-// the scene.
+// Test helper: drops `count` uncontrolled balls onto the start, staggered in a
+// grid so they don't spawn on top of each other, to observe the track's physics
+// without steering. Each ball is either the marble (with the panel's tunable
+// physics) or one of the physic presets shrunk to marble scale. They roll under
+// gravity only and are torn down with the scene.
 const randomTestTexture = (): string | undefined =>
   TEST_TEXTURE_POOL.length === 0
     ? undefined
     : TEST_TEXTURE_POOL[Math.floor(Math.random() * TEST_TEXTURE_POOL.length)]
 
-const spawnTestMarblesInto = (
+const spawnTestBall = async (
   state: RaceState,
   deps: UseMarbleRaceDeps,
-  count: number,
-  randomTexture: boolean
-): void => {
+  position: CoordinateTuple,
+  label: string,
+  randomTextures: boolean
+): Promise<void> => {
+  const { scene, world } = state
+  if (!scene || !world) return
+  if (label === MARBLE_BALL_LABEL) {
+    const texture = randomTextures ? randomTestTexture() : deps.marbleTexture.value
+    state.testMarbles.push(spawnMarble(scene, world, position, texture, deps.marblePhysics.value))
+    return
+  }
+  const preset = findPresetByLabel(label)
+  if (!preset) return
+  const ball = await spawnPhysicBall(scene, world, preset, position, { editor: true })
+  // Small, bouncy balls (ping pong, paper) tunnel through the thin track
+  // colliders between steps without continuous collision detection.
+  ball.userData.body.enableCcd(true)
+  state.testMarbles.push(ball)
+}
+
+const spawnTestBallsInto = async (
+  state: RaceState,
+  deps: UseMarbleRaceDeps,
+  options: SpawnTestBallsOptions
+): Promise<void> => {
   const { scene, world, builtTrack } = state
   if (!scene || !world || !builtTrack) return
   const start = builtTrack.startTransform ?? { position: [0, 0, 0] as CoordinateTuple, yaw: 0 }
-  const clamped = Math.max(1, Math.min(Math.floor(count), MAX_TEST_MARBLES))
-  Array.from({ length: clamped }).forEach((_, index) => {
-    const column = index % TEST_MARBLE_COLUMNS
-    const row = Math.floor(index / TEST_MARBLE_COLUMNS)
-    const localX = (column - (TEST_MARBLE_COLUMNS - 1) / 2) * TEST_MARBLE_SPACING
-    const localZ = SPAWN_Z_INSET + row * TEST_MARBLE_SPACING
-    const position = applyPieceTransform(start, [localX, SPAWN_HEIGHT + MARBLE_RADIUS, localZ])
-    const texture = randomTexture ? randomTestTexture() : deps.marbleTexture.value
-    state.testMarbles.push(spawnMarble(scene, world, position, texture))
-  })
+  const clamped = Math.max(1, Math.min(Math.floor(options.count), MAX_TEST_MARBLES))
+  await Promise.all(
+    Array.from({ length: clamped }).map((_unused, index) => {
+      const perLayer = TEST_MARBLE_COLUMNS * TEST_MARBLE_COLUMNS
+      const layer = Math.floor(index / perLayer)
+      const inLayer = index % perLayer
+      const offset = (TEST_MARBLE_COLUMNS - 1) / 2
+      const localX = ((inLayer % TEST_MARBLE_COLUMNS) - offset) * TEST_MARBLE_SPACING
+      const localZ =
+        SPAWN_Z_INSET + (Math.floor(inLayer / TEST_MARBLE_COLUMNS) - offset) * TEST_MARBLE_SPACING
+      const localY = SPAWN_HEIGHT + TEST_MARBLE_CLEARANCE + layer * TEST_MARBLE_VERTICAL_SPACING
+      const position = applyPieceTransform(start, [localX, localY, localZ])
+      const label = pickBallType(BALL_TYPE_LABELS, options.ballType, options.randomType)
+      return spawnTestBall(state, deps, position, label, options.randomTextures)
+    })
+  )
 }
 
 type BoostableBody = {
@@ -182,8 +218,13 @@ const VERTICAL_INPUT_REDIRECT_VY = 1
 const VERTICAL_INPUT_REDIRECT_SPEED = 4
 
 const MAX_TEST_MARBLES = 50
-const TEST_MARBLE_COLUMNS = 4
-const TEST_MARBLE_SPACING = MARBLE_RADIUS * 2.4
+// Balls spawn as a tight 2x2 footprint on the start lane and stack upward in
+// layers, so they rain down onto the start instead of spreading wide and
+// falling off the sides.
+const TEST_MARBLE_COLUMNS = 2
+const TEST_MARBLE_SPACING = 1.6
+const TEST_MARBLE_VERTICAL_SPACING = 3
+const TEST_MARBLE_CLEARANCE = 1.5
 
 const computeImpulse = (
   currentActions: ControlsCurrents,
@@ -270,22 +311,23 @@ const spawnMarble = (
   scene: THREE.Scene,
   world: WorldReference,
   position: CoordinateTuple,
-  texture: string | undefined
+  texture: string | undefined,
+  physics: MarblePhysics
 ): ComplexModel => {
   const marble = getBall(scene, world, {
-    size: MARBLE_RADIUS,
+    size: physics.size,
     position,
-    restitution: MARBLE_RESTITUTION,
-    friction: MARBLE_FRICTION,
-    weight: MARBLE_WEIGHT,
+    restitution: physics.restitution,
+    friction: physics.friction,
+    weight: physics.weight,
     texture,
     roughness: 0.08,
     metalness: 0.2,
     segments: 48,
     type: 'dynamic'
   }) as unknown as ComplexModel
-  marble.userData.body.setLinearDamping(MARBLE_LINEAR_DAMPING)
-  marble.userData.body.setAngularDamping(MARBLE_ANGULAR_DAMPING)
+  marble.userData.body.setLinearDamping(physics.linearDamping)
+  marble.userData.body.setAngularDamping(physics.angularDamping)
   marble.userData.body.enableCcd(true)
   return marble
 }
@@ -353,13 +395,23 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
     start: 0,
     action: () => {
       const mode = wiring.cameraMode.value
+      // A mode switch captures the camera's current position and eases from it
+      // over CAMERA_TRANSITION_SECONDS; a time-based alpha always completes so
+      // free-cam reliably hands back to orbit even while the marble is moving.
+      if (mode !== state.prevCameraMode) {
+        state.cameraTransitionElapsed = 0
+        state.cameraTransitionStart.copy(camera.position)
+      } else {
+        state.cameraTransitionElapsed += getDelta()
+      }
       applyRaceCamera({
         mode,
         camera,
         marble: state.marble,
         orbit,
         smoothedDirection: state.smoothedDirection,
-        justEnteredFree: mode === 'free' && state.prevCameraMode !== 'free'
+        transitionStart: state.cameraTransitionStart,
+        transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS)
       })
       state.prevCameraMode = mode
     }
@@ -553,7 +605,13 @@ const buildRaceScene = ({
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
   const spawn = computeSpawnPositions(state.builtTrack.startTransform, gateCount)[gateIndex]
-  state.marble = spawnMarble(scene, tools.world, spawn, deps.marbleTexture.value)
+  state.marble = spawnMarble(
+    scene,
+    tools.world,
+    spawn,
+    deps.marbleTexture.value,
+    deps.marblePhysics.value
+  )
   state.occlusionFader = createOcclusionFader()
   if (deps.localPlayerName?.value) {
     state.localLabel = createNameLabel(
@@ -590,6 +648,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     smoothedDirection: createSmoothedDirection(),
     cameraActionHeld: false,
     prevCameraMode: 'third',
+    cameraTransitionElapsed: 0,
+    cameraTransitionStart: new THREE.Vector3(),
     localLabel: null,
     scene: null,
     bedroom: null,
@@ -611,6 +671,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     state.smoothedDirection.set(0, 0, -1)
     state.cameraActionHeld = false
     state.prevCameraMode = 'third'
+    state.cameraTransitionElapsed = 0
     state.posAccumulator = 0
     state.testMarbles = []
     localStartTime = Date.now()
@@ -686,8 +747,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     }
   }
 
-  const spawnTestMarbles = (count: number, randomTexture: boolean): void =>
-    spawnTestMarblesInto(state, deps, count, randomTexture)
+  const spawnTestBalls = (options: SpawnTestBallsOptions): Promise<void> =>
+    spawnTestBallsInto(state, deps, options)
 
   const updateGhostPosition = (placement: GhostPlacement): void =>
     placeGhost(ghostRegistry, placement)
@@ -705,7 +766,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     currentActions,
     setCameraMode: actions.setCameraMode,
     cycleCameraMode: actions.cycleCameraMode,
-    spawnTestMarbles,
+    spawnTestBalls,
     updateGhostPosition,
     removeGhost: removeGhostMarble,
     init,

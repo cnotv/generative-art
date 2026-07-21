@@ -271,6 +271,9 @@ export const FIRST_PERSON_MIN_SPEED = 1
 // is in view; the orbit controls then let them zoom and pan from there.
 export const FREE_CAM_HEIGHT = 70
 export const FREE_CAM_BACK = 70
+// Seconds a camera-mode switch eases in over, so first-person and free glide to
+// their new framing instead of snapping.
+export const CAMERA_TRANSITION_SECONDS = 0.5
 export const CHECKPOINT_RADIUS = 9
 export const BOOST_ZONE_MAX_HEIGHT = 3
 export const BOOST_MAX_SPEED = 48

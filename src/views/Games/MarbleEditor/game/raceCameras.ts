@@ -35,13 +35,35 @@ export const updateSmoothedDirection = (
   smoothedDirection.lerp(scratchDirection, FIRST_PERSON_DIRECTION_LERP).normalize()
 }
 
-export const updateFirstPersonCamera = (
-  camera: THREE.Camera,
-  marble: THREE.Object3D,
-  smoothedDirection: THREE.Vector3,
+// easeOutCubic: a mode switch glides in fast then settles, landing exactly on
+// the goal at alpha 1 (no residual snap). Clamped so callers can pass a raw
+// elapsed/duration ratio.
+export const easeTransition = (alpha: number): number => {
+  const clamped = Math.min(1, Math.max(0, alpha))
+  return 1 - (1 - clamped) ** 3
+}
+
+export type RaceCameraOptions = {
+  mode: CameraMode
+  camera: THREE.Camera
+  marble: ComplexModel | null
   orbit: OrbitControls | null
-): void => {
-  camera.position.set(marble.position.x, marble.position.y + FIRST_PERSON_HEIGHT, marble.position.z)
+  smoothedDirection: THREE.Vector3
+  transitionStart: THREE.Vector3
+  transitionAlpha: number
+}
+
+export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
+  const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
+  if (!marble) return
+  scratchCameraGoal.set(
+    marble.position.x,
+    marble.position.y + FIRST_PERSON_HEIGHT,
+    marble.position.z
+  )
+  // At alpha 1 this lands exactly on the marble head (no follow lag); below 1 it
+  // eases in from where the previous mode left the camera.
+  camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
   scratchLookTarget
     .copy(camera.position)
     .addScaledVector(smoothedDirection, FIRST_PERSON_LOOK_AHEAD)
@@ -51,12 +73,9 @@ export const updateFirstPersonCamera = (
   camera.lookAt(scratchLookTarget)
 }
 
-export const updateThirdPersonCamera = (
-  camera: THREE.Camera,
-  marble: THREE.Object3D,
-  smoothedDirection: THREE.Vector3,
-  orbit: OrbitControls | null
-): void => {
+export const updateThirdPersonCamera = (options: RaceCameraOptions): void => {
+  const { camera, marble, smoothedDirection, orbit } = options
+  if (!marble) return
   scratchCameraGoal.set(
     marble.position.x - smoothedDirection.x * CAMERA_BACK,
     marble.position.y + CAMERA_HEIGHT,
@@ -67,38 +86,43 @@ export const updateThirdPersonCamera = (
   camera.lookAt(marble.position)
 }
 
-export type RaceCameraOptions = {
-  mode: CameraMode
-  camera: THREE.Camera
-  marble: ComplexModel | null
-  orbit: OrbitControls | null
-  smoothedDirection: THREE.Vector3
-  justEnteredFree?: boolean
-}
-
-export const applyRaceCamera = (options: RaceCameraOptions): void => {
-  const { mode, camera, marble, orbit, smoothedDirection, justEnteredFree } = options
+// Free-cam entry frames the whole track (high and far back), then eases in and
+// hands control to orbit at alpha 1. Orbit is held disabled during the glide so
+// orbit.update() does not fight the lerp; once settled, the player owns it.
+export const updateFreeCamera = (options: RaceCameraOptions): void => {
+  const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
   if (!marble) return
-  if (mode === 'free') {
+  if (transitionAlpha >= 1) {
     if (orbit) {
       orbit.enabled = true
       orbit.target.copy(marble.position)
     }
-    // On entry, drop the camera high and far back so the whole track is framed;
-    // the orbit controls preserve that offset and let the player zoom in.
-    if (justEnteredFree) {
-      camera.position.set(
-        marble.position.x - smoothedDirection.x * FREE_CAM_BACK,
-        marble.position.y + FREE_CAM_HEIGHT,
-        marble.position.z - smoothedDirection.z * FREE_CAM_BACK
-      )
-    }
+    return
+  }
+  if (orbit) {
+    orbit.enabled = false
+    orbit.target.copy(marble.position)
+  }
+  scratchCameraGoal.set(
+    marble.position.x - smoothedDirection.x * FREE_CAM_BACK,
+    marble.position.y + FREE_CAM_HEIGHT,
+    marble.position.z - smoothedDirection.z * FREE_CAM_BACK
+  )
+  camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
+  camera.lookAt(marble.position)
+}
+
+export const applyRaceCamera = (options: RaceCameraOptions): void => {
+  const { mode, marble, orbit } = options
+  if (!marble) return
+  if (mode === 'free') {
+    updateFreeCamera(options)
     return
   }
   if (orbit) orbit.enabled = false
   if (mode === 'third') {
-    updateThirdPersonCamera(camera, marble, smoothedDirection, orbit)
+    updateThirdPersonCamera(options)
     return
   }
-  updateFirstPersonCamera(camera, marble, smoothedDirection, orbit)
+  updateFirstPersonCamera(options)
 }
