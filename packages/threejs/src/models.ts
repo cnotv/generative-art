@@ -94,6 +94,60 @@ const createMeshMaterial = (
   return null
 }
 
+// Appearance props that can be written straight onto an existing material,
+// letting getModel recolor or fade a loaded model without swapping (and losing)
+// its authored material — mirrors the props buildBaseMaterialProperties sets.
+const MUTABLE_MATERIAL_PROPS = [
+  'wireframe',
+  'depthWrite',
+  'alphaTest',
+  'reflectivity',
+  'roughness',
+  'metalness',
+  'transmission',
+  'clearcoat',
+  'clearcoatRoughness',
+  'ior',
+  'thickness',
+  'envMapIntensity',
+  'displacementScale'
+] as const
+
+const APPEARANCE_OPTION_KEYS = [
+  'color',
+  'opacity',
+  'transparent',
+  ...MUTABLE_MATERIAL_PROPS
+] as const
+
+const hasAppearanceOptions = (options: ModelOptions): boolean =>
+  APPEARANCE_OPTION_KEYS.some((key) => options[key] !== undefined)
+
+const mutateMaterialInPlace = (material: THREE.Material, options: ModelOptions): void => {
+  const colored = material as THREE.Material & { color?: THREE.Color }
+  if (options.color !== undefined && colored.color instanceof THREE.Color)
+    colored.color.set(options.color)
+  if (options.opacity !== undefined || options.transparent !== undefined) {
+    const isTransparent = options.transparent ?? (options.opacity ?? 1) < 1
+    material.transparent = isTransparent
+    if (options.opacity !== undefined) material.opacity = options.opacity
+    if (options.depthWrite === undefined) material.depthWrite = !isTransparent
+  }
+  const record = material as unknown as Record<string, unknown>
+  MUTABLE_MATERIAL_PROPS.forEach((key) => {
+    if (options[key] !== undefined && key in material) record[key] = options[key]
+  })
+  material.needsUpdate = true
+}
+
+const mutateMaterialAppearance = (
+  material: THREE.Material | THREE.Material[],
+  options: ModelOptions
+): void => {
+  const materials = Array.isArray(material) ? material : [material]
+  materials.forEach((mat) => mutateMaterialInPlace(mat, options))
+}
+
 /**
  * Apply material to a mesh based on model options
  * @param mesh The mesh to apply material to
@@ -110,6 +164,8 @@ export const applyMaterial = (mesh: THREE.Mesh, options: ModelOptions) => {
     const base = buildBaseMaterialProperties(options, oldMaterial)
     const newMaterial = createMeshMaterial(material, base, options)
     if (newMaterial) mesh.material = newMaterial
+  } else if (hasAppearanceOptions(options)) {
+    mutateMaterialAppearance(mesh.material, options)
   }
   return mesh
 }

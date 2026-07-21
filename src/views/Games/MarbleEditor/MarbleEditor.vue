@@ -29,7 +29,8 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { useMenuFocus } from '@/composables/useMenuFocus'
-import { EDITOR_MENU_MAPPING } from './config'
+import { BALL_TYPE_LABELS, MARBLE_BALL_LABEL } from '@/utils/physicBalls'
+import { EDITOR_MENU_MAPPING, MARBLE_WEIGHT, MARBLE_RESTITUTION, MARBLE_FRICTION } from './config'
 import { useMarbleEditor } from './editor/useMarbleEditor'
 import { useMarbleRace } from './game/useMarbleRace'
 import { useMarbleEditorSession } from './useMarbleEditorSession'
@@ -38,8 +39,14 @@ import EditorToolbar from './editor/EditorToolbar.vue'
 import MarbleEditorLobby from './wizard/MarbleEditorLobby.vue'
 import MarbleEditorSummary from './game/MarbleEditorSummary.vue'
 import { SAMPLE_MAPS } from './sampleMaps'
-import { MARBLE_OPTIONS, DEFAULT_MARBLE } from '../MarbleMadness/config'
-import type { CameraMode, MePhase } from './types'
+import {
+  MARBLE_OPTIONS,
+  DEFAULT_MARBLE,
+  MARBLE_RADIUS,
+  MARBLE_LINEAR_DAMPING,
+  MARBLE_ANGULAR_DAMPING
+} from '../MarbleMadness/config'
+import type { CameraMode, MePhase, MarblePhysics } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
   third: 'Third',
@@ -144,10 +151,40 @@ const sortedPeerIds = computed(() => Object.keys(store.players).sort())
 const spawnGateCount = computed(() => Math.max(1, sortedPeerIds.value.length))
 const spawnGateIndex = computed(() => Math.max(0, sortedPeerIds.value.indexOf(localId())))
 
+// Test-ball spawner + tunable marble physics live in the app Config panel
+// (top-right). The marble physics are shared by the player marble (applied on
+// the next race) and the spawned default-marble balls (applied immediately).
+const testConfig = createReactiveConfig({
+  testBalls: {
+    count: 10,
+    ballType: MARBLE_BALL_LABEL,
+    randomType: false,
+    randomTextures: false
+  },
+  marblePhysics: {
+    weight: MARBLE_WEIGHT,
+    restitution: MARBLE_RESTITUTION,
+    friction: MARBLE_FRICTION,
+    linearDamping: MARBLE_LINEAR_DAMPING,
+    angularDamping: MARBLE_ANGULAR_DAMPING,
+    size: MARBLE_RADIUS
+  }
+})
+
+const marblePhysics = computed<MarblePhysics>(() => ({
+  weight: Number(testConfig.value.marblePhysics.weight),
+  restitution: Number(testConfig.value.marblePhysics.restitution),
+  friction: Number(testConfig.value.marblePhysics.friction),
+  linearDamping: Number(testConfig.value.marblePhysics.linearDamping),
+  angularDamping: Number(testConfig.value.marblePhysics.angularDamping),
+  size: Number(testConfig.value.marblePhysics.size)
+}))
+
 const race = useMarbleRace({
   canvas: raceCanvas,
   map: editor.currentMap,
   marbleTexture: marbleUrl,
+  marblePhysics,
   onBack: () => {
     store.phase = 'lobby'
   },
@@ -258,23 +295,33 @@ const canRestart = computed(() => store.solo || isHost.value)
 
 const cameraLabel = computed(() => CAMERA_MODE_LABELS[race.cameraMode.value])
 
-// Test-ball spawner lives in the app Config panel (top-right): a count slider
-// plus an "Add balls" action that drops that many uncontrolled marbles.
 const route = useRoute()
-const testConfig = createReactiveConfig({ testBalls: { count: 10, randomTextures: false } })
 const testConfigSchema = {
   testBalls: {
     count: { min: 1, max: 50, step: 1, label: 'Count' },
+    ballType: { options: BALL_TYPE_LABELS, label: 'Ball type' },
+    randomType: { checkbox: false, label: 'Random type' },
     randomTextures: { checkbox: false, label: 'Random textures' },
     add: { callback: 'addBalls', label: 'Add balls' }
+  },
+  marblePhysics: {
+    weight: { min: 1, max: 200, step: 1, label: 'Weight', sectionStart: true },
+    restitution: { min: 0, max: 1, step: 0.01, label: 'Restitution' },
+    friction: { min: 0, max: 5, step: 0.05, label: 'Friction' },
+    linearDamping: { min: 0, max: 2, step: 0.05, label: 'Linear damping' },
+    angularDamping: { min: 0, max: 2, step: 0.05, label: 'Angular damping' },
+    size: { min: 0.3, max: 3, step: 0.1, label: 'Size' }
   }
 }
 const testConfigCallbacks = {
-  addBalls: () =>
-    race.spawnTestMarbles(
-      Number(testConfig.value.testBalls.count),
-      Boolean(testConfig.value.testBalls.randomTextures)
-    )
+  addBalls: (): void => {
+    void race.spawnTestBalls({
+      count: Number(testConfig.value.testBalls.count),
+      ballType: String(testConfig.value.testBalls.ballType),
+      randomType: Boolean(testConfig.value.testBalls.randomType),
+      randomTextures: Boolean(testConfig.value.testBalls.randomTextures)
+    })
+  }
 }
 
 const namingNewTrack = ref(false)

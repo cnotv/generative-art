@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { getCube, getBall, getTrimesh } from './models'
+import { getCube, getBall, getTrimesh, applyMaterial } from './models'
 import type { CoordinateTuple } from './types'
 
 describe('getCube', () => {
@@ -344,5 +344,106 @@ describe('getTrimesh', () => {
     const body = ball.userData.body as RAPIER.RigidBody
     expect(body.translation().y).toBeGreaterThan(0.5)
     expect(body.translation().y).toBeLessThan(1.5)
+  })
+})
+
+describe('applyMaterial', () => {
+  const meshWith = (material: THREE.Material | THREE.Material[]): THREE.Mesh =>
+    new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), material)
+
+  describe('mutate in place (no material option)', () => {
+    it('updates color on the existing material without replacing it', () => {
+      const original = new THREE.MeshStandardMaterial({ color: 0x111111 })
+      original.map = new THREE.Texture()
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { color: 0xff0000 })
+
+      expect(mesh.material).toBe(original)
+      expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000)
+      expect((mesh.material as THREE.MeshStandardMaterial).map).toBe(original.map)
+    })
+
+    it('makes the material transparent when opacity is below one', () => {
+      const original = new THREE.MeshStandardMaterial()
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { opacity: 0.9 })
+
+      expect(mesh.material).toBe(original)
+      expect(original.transparent).toBe(true)
+      expect(original.opacity).toBeCloseTo(0.9)
+      expect(original.depthWrite).toBe(false)
+    })
+
+    it('honors an explicit transparent flag even at full opacity', () => {
+      const original = new THREE.MeshStandardMaterial()
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { transparent: true })
+
+      expect(original.transparent).toBe(true)
+    })
+
+    it('applies physical props only when the material supports them', () => {
+      const standard = new THREE.MeshStandardMaterial()
+      applyMaterial(meshWith(standard), { roughness: 0.2, metalness: 0.7 })
+      expect(standard.roughness).toBeCloseTo(0.2)
+      expect(standard.metalness).toBeCloseTo(0.7)
+
+      const basic = new THREE.MeshBasicMaterial()
+      expect(() => applyMaterial(meshWith(basic), { roughness: 0.2 })).not.toThrow()
+      expect('roughness' in basic).toBe(false)
+    })
+
+    it('changes only the props that were passed', () => {
+      const original = new THREE.MeshStandardMaterial({ opacity: 0.5, transparent: true })
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { color: 0x00ff00 })
+
+      expect(original.opacity).toBeCloseTo(0.5)
+      expect(original.transparent).toBe(true)
+      expect(original.color.getHex()).toBe(0x00ff00)
+    })
+
+    it('mutates every sub-material of a multi-material mesh', () => {
+      const a = new THREE.MeshStandardMaterial()
+      const b = new THREE.MeshStandardMaterial()
+      const mesh = meshWith([a, b])
+
+      applyMaterial(mesh, { opacity: 0.4 })
+
+      expect(a.transparent).toBe(true)
+      expect(a.opacity).toBeCloseTo(0.4)
+      expect(b.transparent).toBe(true)
+      expect(b.opacity).toBeCloseTo(0.4)
+    })
+
+    it('leaves the material untouched when no appearance options are given', () => {
+      const original = new THREE.MeshStandardMaterial({ color: 0x123456, opacity: 1 })
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { position: [1, 2, 3] })
+
+      expect(mesh.material).toBe(original)
+      expect(original.color.getHex()).toBe(0x123456)
+      expect(original.transparent).toBe(false)
+      expect(original.opacity).toBe(1)
+    })
+  })
+
+  describe('swap (material option provided)', () => {
+    it('replaces the material with a new instance built from options', () => {
+      const original = new THREE.MeshStandardMaterial()
+      const mesh = meshWith(original)
+
+      applyMaterial(mesh, { material: 'MeshPhysicalMaterial', color: 0x0000ff, opacity: 0.5 })
+
+      expect(mesh.material).not.toBe(original)
+      expect(mesh.material).toBeInstanceOf(THREE.MeshPhysicalMaterial)
+      expect((mesh.material as THREE.MeshPhysicalMaterial).transparent).toBe(true)
+      expect((mesh.material as THREE.MeshPhysicalMaterial).color.getHex()).toBe(0x0000ff)
+    })
   })
 })

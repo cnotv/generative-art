@@ -46,6 +46,22 @@ export type PieceSpec = {
 
 export type CameraMode = 'first' | 'third' | 'free'
 
+export type MarblePhysics = {
+  weight: number
+  restitution: number
+  friction: number
+  linearDamping: number
+  angularDamping: number
+  size: number
+}
+
+export type SpawnTestBallsOptions = {
+  count: number
+  ballType: string
+  randomType: boolean
+  randomTextures: boolean
+}
+
 export type MePlayer = {
   id: string
   name: string
