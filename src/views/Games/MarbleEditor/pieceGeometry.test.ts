@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { buildArcSweepGeometry, buildFunnelGeometry } from './pieceGeometry'
+import { buildArcSweepGeometry, bankedCrossSection, buildFunnelGeometry } from './pieceGeometry'
 import {
-  BANK_ANGLE,
   LANE_WIDTH,
   BUMPER_LATERAL_OFFSET,
   BUMPER_SIZE_XZ,
@@ -36,48 +35,73 @@ const signedVolume = (geometry: THREE.BufferGeometry): number =>
     0
   )
 
-const ARC_CASES: { label: string; side: 1 | -1; roll: number }[] = [
-  { label: 'curve-left', side: 1, roll: 0 },
-  { label: 'curve-right', side: -1, roll: 0 },
-  { label: 'banked-left', side: 1, roll: BANK_ANGLE },
-  { label: 'banked-right', side: -1, roll: BANK_ANGLE }
+const ARC_CASES: { label: string; side: 1 | -1; crossSection?: [number, number][] }[] = [
+  { label: 'curve-left', side: 1 },
+  { label: 'curve-right', side: -1 },
+  { label: 'banked-left', side: 1, crossSection: bankedCrossSection(1) },
+  { label: 'banked-right', side: -1, crossSection: bankedCrossSection(-1) }
 ]
 
 describe('buildArcSweepGeometry orientation', () => {
   it.each(ARC_CASES)(
     '$label winds triangles outward so the closed sweep has positive volume',
-    ({ side, roll }) => {
-      const geometry = buildArcSweepGeometry(side, roll)
+    ({ side, crossSection }) => {
+      const geometry = buildArcSweepGeometry(side, crossSection)
       expect(signedVolume(geometry)).toBeGreaterThan(0)
     }
   )
 
-  it.each(ARC_CASES.filter(({ roll }) => roll === 0))(
-    '$label faces every deck-top triangle upward',
-    ({ side, roll }) => {
-      const geometry = buildArcSweepGeometry(side, roll)
-      const deckTriangles = geometryTriangles(geometry).filter((triangle) =>
-        triangle.every((vertex) => Math.abs(vertex.y) < 1e-4)
+  it.each(ARC_CASES)(
+    '$label winds its deck-top surface to face upward',
+    ({ side, crossSection }) => {
+      const geometry = buildArcSweepGeometry(side, crossSection)
+      const averageY = (triangles: Triangle[]): number =>
+        triangles.reduce((sum, [a, b, c]) => sum + (a.y + b.y + c.y) / 3, 0) / triangles.length
+      // The descending helix tilts the deck, so select the near-horizontal
+      // surfaces (deck top and deck bottom) by their normal instead of by height.
+      const horizontal = geometryTriangles(geometry).filter((triangle) => {
+        const normal = triangleNormal(triangle)
+        const length = normal.length()
+        return length > 0 && Math.abs(normal.y) / length > 0.9
+      })
+      const upFacing = horizontal.filter((triangle) => triangleNormal(triangle).y > 0)
+      const downFacing = horizontal.filter((triangle) => triangleNormal(triangle).y < 0)
+      expect(upFacing.length).toBeGreaterThan(0)
+      expect(downFacing.length).toBeGreaterThan(0)
+      // Correct outward winding: the up-facing surface is the deck the marble
+      // rolls on, and it sits above the down-facing underside.
+      expect(averageY(upFacing)).toBeGreaterThan(averageY(downFacing))
+    }
+  )
+
+  it.each(ARC_CASES)(
+    '$label faces the entry cap toward the previous piece',
+    ({ side, crossSection }) => {
+      const geometry = buildArcSweepGeometry(side, crossSection)
+      const entryZ = Math.max(
+        ...geometryTriangles(geometry).flatMap((triangle) => triangle.map((vertex) => vertex.z))
       )
-      expect(deckTriangles.length).toBeGreaterThan(0)
-      deckTriangles.forEach((triangle) => {
-        expect(triangleNormal(triangle).y).toBeGreaterThan(0)
+      const entryCapTriangles = geometryTriangles(geometry).filter((triangle) =>
+        triangle.every((vertex) => Math.abs(vertex.z - entryZ) < 1e-4)
+      )
+      expect(entryCapTriangles.length).toBeGreaterThan(0)
+      entryCapTriangles.forEach((triangle) => {
+        expect(triangleNormal(triangle).z).toBeGreaterThan(0)
       })
     }
   )
 
-  it.each(ARC_CASES)('$label faces the entry cap toward the previous piece', ({ side, roll }) => {
-    const geometry = buildArcSweepGeometry(side, roll)
-    const entryZ = Math.max(
-      ...geometryTriangles(geometry).flatMap((triangle) => triangle.map((vertex) => vertex.z))
-    )
-    const entryCapTriangles = geometryTriangles(geometry).filter((triangle) =>
-      triangle.every((vertex) => Math.abs(vertex.z - entryZ) < 1e-4)
-    )
-    expect(entryCapTriangles.length).toBeGreaterThan(0)
-    entryCapTriangles.forEach((triangle) => {
-      expect(triangleNormal(triangle).z).toBeGreaterThan(0)
-    })
+  it.each([
+    { label: 'banked-left', side: 1 as const },
+    { label: 'banked-right', side: -1 as const }
+  ])('$label raises its outer wall above a plain curve to hold the marble', ({ side }) => {
+    const maxVertexY = (geometry: THREE.BufferGeometry): number =>
+      Math.max(
+        ...geometryTriangles(geometry).flatMap((triangle) => triangle.map((vertex) => vertex.y))
+      )
+    const curveTop = maxVertexY(buildArcSweepGeometry(side))
+    const bankedTop = maxVertexY(buildArcSweepGeometry(side, bankedCrossSection(side)))
+    expect(bankedTop).toBeGreaterThan(curveTop)
   })
 })
 

@@ -1,6 +1,7 @@
 import type { PieceSpec, TrackPieceType } from './types'
 import {
   LANE_WIDTH,
+  CURVE_DROP,
   START_LENGTH,
   FINISH_LENGTH,
   STRAIGHT_SHORT_LENGTH,
@@ -65,28 +66,28 @@ export const PIECE_CATALOG: Record<TrackPieceType, PieceSpec> = {
     type: 'curve-left',
     label: 'Curve left',
     defaultColor: COLOR_CURVE,
-    exitOffset: [-CURVE_RADIUS, 0, -CURVE_RADIUS],
+    exitOffset: [-CURVE_RADIUS, -CURVE_DROP, -CURVE_RADIUS],
     exitYawDelta: Math.PI / 2
   },
   'curve-right': {
     type: 'curve-right',
     label: 'Curve right',
     defaultColor: COLOR_CURVE,
-    exitOffset: [CURVE_RADIUS, 0, -CURVE_RADIUS],
+    exitOffset: [CURVE_RADIUS, -CURVE_DROP, -CURVE_RADIUS],
     exitYawDelta: -Math.PI / 2
   },
   'banked-left': {
     type: 'banked-left',
     label: 'Banked left',
     defaultColor: COLOR_BANKED,
-    exitOffset: [-CURVE_RADIUS, 0, -CURVE_RADIUS],
+    exitOffset: [-CURVE_RADIUS, -CURVE_DROP, -CURVE_RADIUS],
     exitYawDelta: Math.PI / 2
   },
   'banked-right': {
     type: 'banked-right',
     label: 'Banked right',
     defaultColor: COLOR_BANKED,
-    exitOffset: [CURVE_RADIUS, 0, -CURVE_RADIUS],
+    exitOffset: [CURVE_RADIUS, -CURVE_DROP, -CURVE_RADIUS],
     exitYawDelta: -Math.PI / 2
   },
   'ramp-up': {

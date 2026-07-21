@@ -25,6 +25,9 @@ export const FINISH_LENGTH = 16
 export const STRAIGHT_SHORT_LENGTH = 12
 export const STRAIGHT_LONG_LENGTH = 24
 export const CURVE_RADIUS = 10
+// Curves and banked curves descend across the arc (a helix) so the marble keeps
+// losing height through every turn instead of stalling on a flat 180.
+export const CURVE_DROP = 4
 export const RAMP_LENGTH = 20
 export const RAMP_ANGLE = 0.25
 export const FUNNEL_DROP_HEIGHT = 8
@@ -37,8 +40,10 @@ export const BUMPER_FIELD_LENGTH = 16
 
 export const CURVE_SEGMENTS = 12
 export const CURVE_CHORD_OVERLAP = 1.06
-export const BANK_ANGLE = 0.3
-export const BANK_BLEND_ANGLE = 0.35
+// Banked curves are the flat curve deck with a taller wall on the turn's outer
+// edge: it contains a fast marble through the arc instead of a rolled surface
+// launching it off the track.
+export const BANK_WALL_HEIGHT = 3.6
 export const RAMP_LIP_LENGTH = 1.5
 
 export const FUNNEL_TONGUE_LENGTH = 2
@@ -70,6 +75,10 @@ export const BUMPER_SPACING_Z = 4
 export const BUMPER_CLEARANCE_MARGIN = 0.3
 
 export const DECK_FRICTION = 0.9
+// The swept curve is one solid (deck and walls share a friction), so it uses a
+// lower value than the flat deck: a marble leaning on the outer wall through a
+// turn would grind and snag at the higher deck friction.
+export const CURVE_FRICTION = 0.3
 export const DECK_RESTITUTION = 0.004
 export const MARBLE_RESTITUTION = 0.002
 export const WALL_FRICTION = 0.05
@@ -123,6 +132,8 @@ export const KEYBOARD_MAPPING = {
     d: 'right',
     ArrowRight: 'right',
     c: 'camera',
+    e: 'editor',
+    Escape: 'exit',
     z: 'undo',
     y: 'redo'
   },
@@ -136,7 +147,8 @@ export const KEYBOARD_MAPPING = {
     'dpad-left': 'left',
     'dpad-right': 'right',
     triangle: 'camera',
-    square: 'exit',
+    square: 'editor',
+    circle: 'exit',
     options: 'back',
     l1: 'undo',
     r1: 'redo'
@@ -255,10 +267,14 @@ export const FIRST_PERSON_HEIGHT = 1.4
 export const FIRST_PERSON_LOOK_AHEAD = 8
 export const FIRST_PERSON_DIRECTION_LERP = 0.12
 export const FIRST_PERSON_MIN_SPEED = 1
+// Free camera drops the player in high and far back on entry so the whole track
+// is in view; the orbit controls then let them zoom and pan from there.
+export const FREE_CAM_HEIGHT = 70
+export const FREE_CAM_BACK = 70
 export const CHECKPOINT_RADIUS = 9
 export const BOOST_ZONE_MAX_HEIGHT = 3
-export const BOOST_MAX_SPEED = 30
-export const BOOST_IMPULSE = 3
+export const BOOST_MAX_SPEED = 48
+export const BOOST_IMPULSE = 14
 export const FALL_MARGIN = 15
 export const TIME_PENALTY_FALL = 5
 

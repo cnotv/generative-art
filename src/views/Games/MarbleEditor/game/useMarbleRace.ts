@@ -35,7 +35,8 @@ import type {
   BuiltTrack,
   CameraMode,
   BallPosPayload,
-  BedroomEnvironment
+  BedroomEnvironment,
+  BoostZone
 } from '../types'
 import {
   SPAWN_HEIGHT,
@@ -58,6 +59,7 @@ import {
   LIGHT_DIRECTIONAL_POSITION
 } from '../config'
 import {
+  MARBLE_OPTIONS,
   MARBLE_RADIUS,
   MARBLE_LINEAR_DAMPING,
   MARBLE_ANGULAR_DAMPING,
@@ -68,6 +70,8 @@ import {
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
 } from '../../MarbleMadness/config'
+
+const TEST_TEXTURE_POOL = MARBLE_OPTIONS.map((option) => option.url)
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T
 type GetToolsResult = UnwrapPromise<ReturnType<typeof getTools>>
@@ -91,6 +95,8 @@ export type UseMarbleRaceDeps = {
 
 type RaceState = {
   marble: ComplexModel | null
+  testMarbles: ComplexModel[]
+  world: WorldReference | null
   controls: ControlsExtras | null
   builtTrack: BuiltTrack | null
   checkpointIndex: number
@@ -98,6 +104,7 @@ type RaceState = {
   directionalLight: THREE.DirectionalLight | null
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
+  prevCameraMode: CameraMode
   localLabel: THREE.Sprite | null
   scene: THREE.Scene | null
   bedroom: BedroomEnvironment | null
@@ -105,8 +112,78 @@ type RaceState = {
   posAccumulator: number
 }
 
+// Test helper: drops `count` uncontrolled marbles onto the start, staggered in
+// a grid so they don't spawn on top of each other, to observe the track's
+// physics without steering. They roll under gravity only and are torn down with
+// the scene.
+const randomTestTexture = (): string | undefined =>
+  TEST_TEXTURE_POOL.length === 0
+    ? undefined
+    : TEST_TEXTURE_POOL[Math.floor(Math.random() * TEST_TEXTURE_POOL.length)]
+
+const spawnTestMarblesInto = (
+  state: RaceState,
+  deps: UseMarbleRaceDeps,
+  count: number,
+  randomTexture: boolean
+): void => {
+  const { scene, world, builtTrack } = state
+  if (!scene || !world || !builtTrack) return
+  const start = builtTrack.startTransform ?? { position: [0, 0, 0] as CoordinateTuple, yaw: 0 }
+  const clamped = Math.max(1, Math.min(Math.floor(count), MAX_TEST_MARBLES))
+  Array.from({ length: clamped }).forEach((_, index) => {
+    const column = index % TEST_MARBLE_COLUMNS
+    const row = Math.floor(index / TEST_MARBLE_COLUMNS)
+    const localX = (column - (TEST_MARBLE_COLUMNS - 1) / 2) * TEST_MARBLE_SPACING
+    const localZ = SPAWN_Z_INSET + row * TEST_MARBLE_SPACING
+    const position = applyPieceTransform(start, [localX, SPAWN_HEIGHT + MARBLE_RADIUS, localZ])
+    const texture = randomTexture ? randomTestTexture() : deps.marbleTexture.value
+    state.testMarbles.push(spawnMarble(scene, world, position, texture))
+  })
+}
+
+type BoostableBody = {
+  translation: () => { x: number; y: number; z: number }
+  linvel: () => { x: number; y: number; z: number }
+  applyImpulse: (impulse: { x: number; y: number; z: number }, wake: boolean) => void
+}
+
+// Boost pads redirect the body along its own heading up to BOOST_MAX_SPEED.
+// Shared by the player marble and the uncontrolled test marbles so a boost pad
+// flings every ball, not just the driven one.
+const applyBoostImpulse = (body: BoostableBody, boostZones: BoostZone[]): boolean => {
+  const onBoost = boostZones.some((zone) => isOnBoostZone(body.translation(), zone))
+  if (!onBoost) return false
+  const velocity = body.linvel()
+  const speed = Math.hypot(velocity.x, velocity.z)
+  if (speed > 0 && speed < BOOST_MAX_SPEED) {
+    const scale = BOOST_IMPULSE / speed
+    body.applyImpulse({ x: velocity.x * scale, y: 0, z: velocity.z * scale }, true)
+  }
+  return onBoost
+}
+
+// Drives the uncontrolled test marbles each frame: applies boost pads (they get
+// no player input) and copies each Rapier body transform onto its mesh,
+// mirroring createPhysicsSyncAction for the single player marble.
+const updateTestMarbles = (state: RaceState): void => {
+  const boostZones = state.builtTrack?.boostZones ?? []
+  state.testMarbles.forEach((marble) => {
+    const body = marble.userData.body
+    applyBoostImpulse(body, boostZones)
+    const pos = body.translation()
+    marble.position.set(pos.x, pos.y, pos.z)
+    const rot = body.rotation()
+    marble.quaternion.set(rot.x, rot.y, rot.z, rot.w)
+  })
+}
+
 const VERTICAL_INPUT_REDIRECT_VY = 1
 const VERTICAL_INPUT_REDIRECT_SPEED = 4
+
+const MAX_TEST_MARBLES = 50
+const TEST_MARBLE_COLUMNS = 4
+const TEST_MARBLE_SPACING = MARBLE_RADIUS * 2.4
 
 const computeImpulse = (
   currentActions: ControlsCurrents,
@@ -257,6 +334,12 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
     action: wiring.applyInputAndBoost
   })
   timeline.addAction(createPhysicsSyncAction(() => state.marble))
+  timeline.addAction({
+    name: 'test-marbles-update',
+    category: 'physics',
+    start: 0,
+    action: () => updateTestMarbles(state)
+  })
   timeline.addAction(
     createDirectionalLightFollowAction(
       () => state.directionalLight,
@@ -268,14 +351,18 @@ const buildRaceTimeline = (wiring: TimelineWiring) => {
     name: 'race-camera',
     category: 'camera',
     start: 0,
-    action: () =>
+    action: () => {
+      const mode = wiring.cameraMode.value
       applyRaceCamera({
-        mode: wiring.cameraMode.value,
+        mode,
         camera,
         marble: state.marble,
         orbit,
-        smoothedDirection: state.smoothedDirection
+        smoothedDirection: state.smoothedDirection,
+        justEnteredFree: mode === 'free' && state.prevCameraMode !== 'free'
       })
+      state.prevCameraMode = mode
+    }
   })
   timeline.addAction(
     createFallCheckAction(
@@ -398,18 +485,10 @@ const createRaceActions = (
     handleCameraAction()
     if (refs.finished.value || refs.countdown.value > 0) return
     const body = state.marble.userData.body
-    const position = body.translation()
     updateSmoothedDirection(state.smoothedDirection, body.linvel())
     applyTurn(state, state.controls.currentActions)
-    const onBoost =
-      state.builtTrack?.boostZones.some((zone) => isOnBoostZone(position, zone)) ?? false
+    const onBoost = applyBoostImpulse(body, state.builtTrack?.boostZones ?? [])
     const impulse = computeImpulse(state.controls.currentActions, body.linvel(), inputForward())
-    if (onBoost) {
-      const velocity = body.linvel()
-      const speed = Math.hypot(velocity.x, velocity.z)
-      const scale = speed > 0 ? BOOST_IMPULSE / speed : 0
-      body.applyImpulse({ x: velocity.x * scale, y: 0, z: velocity.z * scale }, true)
-    }
     if (impulse.x !== 0 || impulse.z !== 0) {
       moveDynamic(state.marble, impulse, onBoost ? BOOST_MAX_SPEED : MARBLE_MAX_SPEED)
     }
@@ -457,6 +536,7 @@ const buildRaceScene = ({
 }: RaceSceneParameters): void => {
   if (!tools.world) return
   const scene = tools.scene
+  state.world = tools.world
   applyBedroomAtmosphere(scene)
   state.directionalLight =
     (scene.children.find(
@@ -500,6 +580,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
 
   const state: RaceState = {
     marble: null,
+    testMarbles: [],
+    world: null,
     controls: null,
     builtTrack: null,
     checkpointIndex: 0,
@@ -507,6 +589,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     directionalLight: null,
     smoothedDirection: createSmoothedDirection(),
     cameraActionHeld: false,
+    prevCameraMode: 'third',
     localLabel: null,
     scene: null,
     bedroom: null,
@@ -527,7 +610,9 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     state.checkpointIndex = 0
     state.smoothedDirection.set(0, 0, -1)
     state.cameraActionHeld = false
+    state.prevCameraMode = 'third'
     state.posAccumulator = 0
+    state.testMarbles = []
     localStartTime = Date.now()
     actions.updateCountdown()
   }
@@ -589,6 +674,8 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     state.occlusionFader = null
     state.scene = null
     state.marble = null
+    state.testMarbles = []
+    state.world = null
     state.builtTrack = null
     state.directionalLight = null
     state.bedroom?.dispose()
@@ -598,6 +685,9 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
       cleanupTools = null
     }
   }
+
+  const spawnTestMarbles = (count: number, randomTexture: boolean): void =>
+    spawnTestMarblesInto(state, deps, count, randomTexture)
 
   const updateGhostPosition = (placement: GhostPlacement): void =>
     placeGhost(ghostRegistry, placement)
@@ -615,6 +705,7 @@ export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
     currentActions,
     setCameraMode: actions.setCameraMode,
     cycleCameraMode: actions.cycleCameraMode,
+    spawnTestMarbles,
     updateGhostPosition,
     removeGhost: removeGhostMarble,
     init,
