@@ -161,26 +161,6 @@ const crossWallSpec = (z: number, width: number = LANE_WIDTH): BoxSpec =>
     friction: WALL_FRICTION
   })
 
-// Flat lips at both ends make the sloped section meet neighbouring pieces
-// with perfectly level junctions.
-const rampSpecs = (direction: 1 | -1): BoxSpec[] => {
-  const rise = direction * RAMP_LENGTH * Math.sin(RAMP_ANGLE)
-  const run = RAMP_LENGTH * Math.cos(RAMP_ANGLE)
-  return [
-    ...straightSpecs(RAMP_LIP_LENGTH),
-    ...transformSpecs(
-      straightSpecs(RAMP_LENGTH),
-      pitchQuaternion(direction * RAMP_ANGLE),
-      vec(0, 0, -RAMP_LIP_LENGTH)
-    ),
-    ...transformSpecs(
-      straightSpecs(RAMP_LIP_LENGTH),
-      IDENTITY_QUATERNION,
-      vec(0, rise, -(RAMP_LIP_LENGTH + run))
-    )
-  ]
-}
-
 // Closed outline of the lane profile (deck plus both walls), swept along the
 // arc to produce a single smooth solid instead of segmented boxes. The wall
 // tops are parameterised so a banked curve can raise its outer wall.
@@ -287,11 +267,10 @@ const sweepIndices = (stationCount: number, crossSection: [number, number][]): n
   return [...sideQuads, ...caps]
 }
 
-export const buildArcSweepGeometry = (
-  side: 1 | -1,
+const buildSweepGeometry = (
+  stations: SweepStation[],
   crossSection: [number, number][] = LANE_CROSS_SECTION
 ): THREE.BufferGeometry => {
-  const stations = arcSweepStations(side)
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute(
     'position',
@@ -302,6 +281,11 @@ export const buildArcSweepGeometry = (
   return geometry
 }
 
+export const buildArcSweepGeometry = (
+  side: 1 | -1,
+  crossSection: [number, number][] = LANE_CROSS_SECTION
+): THREE.BufferGeometry => buildSweepGeometry(arcSweepStations(side), crossSection)
+
 const arcTrimeshSpec = (
   side: 1 | -1,
   crossSection: [number, number][] = LANE_CROSS_SECTION
@@ -309,6 +293,35 @@ const arcTrimeshSpec = (
   geometry: buildArcSweepGeometry(side, crossSection),
   center: new THREE.Vector3(0, 0, 0),
   friction: CURVE_FRICTION,
+  restitution: DECK_RESTITUTION
+})
+
+// A ramp swept as one continuous solid instead of three butted boxes: a flat
+// lip, the sloped run, and a flat lip. The two bends use a miter (half-pitch)
+// cross-section so the sweep stays non-degenerate while the deck itself keeps
+// the full slope. Both ends stay flat, so the ramp welds to neighbouring decks,
+// and being one mesh there is no lip-to-slope seam for a marble to catch on.
+// Exit matches the box ramp exactly (rise = L·sinθ, run = L·cosθ + 2 lips), so
+// piece chaining is unchanged.
+const rampSweepStations = (direction: 1 | -1): SweepStation[] => {
+  const rise = direction * RAMP_LENGTH * Math.sin(RAMP_ANGLE)
+  const run = RAMP_LENGTH * Math.cos(RAMP_ANGLE)
+  const miter = pitchQuaternion((direction * RAMP_ANGLE) / 2)
+  return [
+    { origin: vec(0, 0, 0), orientation: IDENTITY_QUATERNION },
+    { origin: vec(0, 0, -RAMP_LIP_LENGTH), orientation: miter },
+    { origin: vec(0, rise, -(RAMP_LIP_LENGTH + run)), orientation: miter },
+    {
+      origin: vec(0, rise, -(RAMP_LIP_LENGTH + run + RAMP_LIP_LENGTH)),
+      orientation: IDENTITY_QUATERNION
+    }
+  ]
+}
+
+const rampTrimeshSpec = (direction: 1 | -1): TrimeshSpec => ({
+  geometry: buildSweepGeometry(rampSweepStations(direction)),
+  center: new THREE.Vector3(0, 0, 0),
+  friction: DECK_FRICTION,
   restitution: DECK_RESTITUTION
 })
 
@@ -494,8 +507,8 @@ const PIECE_PARTS_BUILDERS: Record<TrackPieceType, () => PieceParts> = {
   'curve-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1)] }),
   'banked-left': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(1, bankedCrossSection(1))] }),
   'banked-right': () => ({ boxes: [], trimeshes: [arcTrimeshSpec(-1, bankedCrossSection(-1))] }),
-  'ramp-up': () => boxesOnly(rampSpecs(1)),
-  'ramp-down': () => boxesOnly(rampSpecs(-1)),
+  'ramp-up': () => ({ boxes: [], trimeshes: [rampTrimeshSpec(1)] }),
+  'ramp-down': () => ({ boxes: [], trimeshes: [rampTrimeshSpec(-1)] }),
   funnel: () => ({ boxes: funnelBoxSpecs(), trimeshes: [funnelTrimeshSpec()] }),
   loop: () => boxesOnly([...loopEntrySpecs(), ...loopRingSpecs(), ...loopExitSpecs()]),
   'gap-jump': () => boxesOnly(gapJumpSpecs()),
