@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Undo2, Redo2, Plus, Trash2, Save, Play } from 'lucide-vue-next'
+import { Undo2, Redo2, Plus, Trash2, Play } from 'lucide-vue-next'
 import {
   LobbyUIButton,
   LobbyUIIconButton,
@@ -26,7 +26,6 @@ const emit = defineEmits<{
   play: []
   loadMap: [map: MarbleMap]
   deleteMap: [name: string]
-  saveAs: [name: string]
   createTrack: [name: string]
   cancelNaming: []
 }>()
@@ -92,16 +91,6 @@ watch(
     </template>
     <template v-else>
       <LobbyUIConfigField :field="trackField" size="sm" @change="handleTrackChange" />
-      <LobbyUIButton
-        size="sm"
-        variant="ghost"
-        title="Save the current track (S / Square)"
-        @click="emit('saveAs', mapName)"
-      >
-        <Save class="editor-toolbar__icon" aria-hidden="true" />
-        Save
-        <LobbyUIKeyPill :keyboard="['S']" :gamepad="['□']" />
-      </LobbyUIButton>
       <div v-if="isSavedTrack" class="editor-toolbar__action">
         <LobbyUIIconButton
           size="sm"
@@ -110,7 +99,7 @@ watch(
         >
           <Trash2 class="editor-toolbar__icon" aria-hidden="true" />
         </LobbyUIIconButton>
-        <LobbyUIKeyPill :keyboard="['Del']" :gamepad="['○']" />
+        <LobbyUIKeyPill class="editor-toolbar__key" :keyboard="['Del']" :gamepad="['○']" />
       </div>
     </template>
     <LobbyUIButton
@@ -120,8 +109,8 @@ watch(
       @click="emit('newMap')"
     >
       <Plus class="editor-toolbar__icon" aria-hidden="true" />
-      New
-      <LobbyUIKeyPill :keyboard="['N']" :gamepad="['△']" />
+      <span class="editor-toolbar__label">New</span>
+      <LobbyUIKeyPill class="editor-toolbar__key" :keyboard="['N']" :gamepad="['△']" />
     </LobbyUIButton>
     <div class="editor-toolbar__action">
       <LobbyUIIconButton
@@ -131,7 +120,7 @@ watch(
       >
         <Undo2 class="editor-toolbar__icon" aria-hidden="true" />
       </LobbyUIIconButton>
-      <LobbyUIKeyPill :keyboard="['Z']" :gamepad="['L1']" />
+      <LobbyUIKeyPill class="editor-toolbar__key" :keyboard="['Z']" :gamepad="['L1']" />
     </div>
     <div class="editor-toolbar__action">
       <LobbyUIIconButton
@@ -141,7 +130,7 @@ watch(
       >
         <Redo2 class="editor-toolbar__icon" aria-hidden="true" />
       </LobbyUIIconButton>
-      <LobbyUIKeyPill :keyboard="['Y']" :gamepad="['R1']" />
+      <LobbyUIKeyPill class="editor-toolbar__key" :keyboard="['Y']" :gamepad="['R1']" />
     </div>
     <LobbyUIButton
       variant="cta"
@@ -150,8 +139,8 @@ watch(
       @click="emit('play')"
     >
       <Play class="editor-toolbar__icon" aria-hidden="true" />
-      Play
-      <LobbyUIKeyPill :gamepad="['Opt']" />
+      <span class="editor-toolbar__label">Play</span>
+      <LobbyUIKeyPill class="editor-toolbar__key" :gamepad="['Opt']" />
     </LobbyUIButton>
   </div>
 </template>
@@ -174,6 +163,15 @@ watch(
   width: 1.3em;
   height: 1.3em;
   filter: drop-shadow(2px 2px 0 #000);
+}
+
+/* Phones have no keyboard and little width: collapse the labelled buttons to
+   their icon and drop the key pills. Tablets and up (> 720px) keep both. */
+@media (width <= 720px) {
+  .editor-toolbar__label,
+  .editor-toolbar__key {
+    display: none;
+  }
 }
 
 .editor-toolbar__input {
