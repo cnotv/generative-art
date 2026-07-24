@@ -677,15 +677,16 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
-/* On phones the palette drops to a full-width strip below the scene so the piece
-   list can scroll horizontally instead of eating a sidebar column. */
+/* On phones the palette becomes a full-width strip at the top (below the
+   toolbar, above the scene) so the piece list can scroll horizontally instead of
+   eating a sidebar column. */
 @media (width <= 720px) {
   .me__edit-overlay {
     grid-template-areas:
       'topbar'
-      'scene'
-      'sidebar';
-    grid-template-rows: auto minmax(0, 1fr) auto;
+      'sidebar'
+      'scene';
+    grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
   }
 }
