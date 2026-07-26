@@ -190,6 +190,75 @@ describe('placeScatterInstances', () => {
     })
   })
 
+  // A large Z spread used to be clamped back into the chunk, which pinned
+  // almost every instance to an edge and drew them as hard rows across the
+  // track at every chunk boundary.
+  it('never stacks instances onto a chunk boundary', () => {
+    const instances = placeScatterInstances({
+      path,
+      config: { ...baseConfig, frequency: 120, variation: [0, 0, 50] },
+      placement: 'sides',
+      fromDistance: 0,
+      toDistance: 96,
+      seed: 3,
+      textureCount: 1
+    })
+
+    const onEdge = instances.filter(
+      (instance) => instance.distance < 0.01 || instance.distance > 95.99
+    )
+
+    expect(instances.length).toBeGreaterThan(50)
+    expect(onEdge.length).toBeLessThanOrEqual(1)
+  })
+
+  it('spreads instances evenly along the stretch however large the spread is', () => {
+    const instances = placeScatterInstances({
+      path,
+      config: { ...baseConfig, frequency: 120, variation: [0, 0, 500] },
+      placement: 'sides',
+      fromDistance: 0,
+      toDistance: 96,
+      seed: 4,
+      textureCount: 1
+    })
+
+    // Every tenth of the stretch should hold a comparable share.
+    const buckets = Array.from(
+      { length: 10 },
+      (_, tenth) =>
+        instances.filter(
+          (instance) => instance.distance >= tenth * 9.6 && instance.distance < (tenth + 1) * 9.6
+        ).length
+    )
+
+    expect(Math.min(...buckets)).toBeGreaterThan(0)
+    expect(Math.max(...buckets) - Math.min(...buckets)).toBeLessThanOrEqual(3)
+  })
+
+  it('keeps a small spread meaningful rather than saturating it away', () => {
+    const tight = placeScatterInstances({
+      path,
+      config: { ...baseConfig, frequency: 4, variation: [0, 0, 0] },
+      placement: 'sides',
+      fromDistance: 0,
+      toDistance: 200,
+      seed: 5,
+      textureCount: 1
+    })
+    const loose = placeScatterInstances({
+      path,
+      config: { ...baseConfig, frequency: 4, variation: [0, 0, 10] },
+      placement: 'sides',
+      fromDistance: 0,
+      toDistance: 200,
+      seed: 5,
+      textureCount: 1
+    })
+
+    expect(loose.map((i) => i.distance)).not.toEqual(tight.map((i) => i.distance))
+  })
+
   it('never places a side instance on the deck', () => {
     place().forEach((instance) => {
       const sample = path.sampleAt(instance.distance)

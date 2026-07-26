@@ -76,12 +76,12 @@ export type ScatterPlacementOptions = {
 /**
  * Places one area's billboards over a stretch of track.
  *
- * Instances are stratified along the stretch and then jittered, so they read as
- * scattered without clumping, and the jitter is clamped to the stretch so a
- * chunk never spills geometry into its neighbour and pops in twice. Every
- * instance faces back along the local heading, which is where the chase camera
- * always is, so the flat illustrations read as upright props with no per-frame
- * billboard work.
+ * Instances are stratified along the stretch and then jittered within their own
+ * slot, so they read as scattered without clumping and no instance can leave
+ * the stretch — a chunk never spills geometry into its neighbour and pops in
+ * twice. Every instance faces back along the local heading, which is where the
+ * chase camera always is, so the flat illustrations read as upright props with
+ * no per-frame billboard work.
  *
  * @param options - Path, area config, stretch bounds, seed and texture count
  * @returns The instances to build, in stable seeded order
@@ -100,12 +100,14 @@ export const placeScatterInstances = (options: ScatterPlacementOptions): Scatter
   return Array.from({ length: count }, (_, index) => {
     const base = index * VALUES_PER_INSTANCE
     const stratified = fromDistance + (index + HALF) * stride
-    // Jitter along the track is clamped back into the stretch, so a chunk never
-    // places geometry its neighbour will also place.
-    const distance = Math.min(
-      toDistance,
-      Math.max(fromDistance, applyVariation(stratified + offsetZ, varyZ, samples[base]))
-    )
+    // Jitter stays inside the instance's own slot rather than being clamped
+    // back into the stretch afterwards. Clamping looked equivalent but was not:
+    // once the spread exceeds the spacing between instances — which it does by
+    // two orders of magnitude at a high frequency — nearly every instance
+    // overshoots the stretch and is pinned to its edge, stacking them into hard
+    // rows across the track at every chunk boundary.
+    const jitter = Math.min(varyZ, stride * HALF)
+    const distance = applyVariation(stratified + offsetZ, jitter, samples[base])
 
     const sample = path.sampleAt(distance)
     const banded = lateralOffset(placement, config, samples[base + 1], samples[base + 2])
