@@ -142,19 +142,24 @@ export const ROCK_ANGULAR_DAMPING = 0.25
 // the countdown, so a drop would only be a lurch the moment it is released.
 export const ROCK_SPAWN_HEIGHT = ROCK_RADIUS + 0.05
 // High enough for the displacement map to have vertices to push around.
-export const ROCK_SEGMENTS = 96
+export const ROCK_SEGMENTS = 192
 // Must stay a whole number. The sphere's u wraps from 1 back to 0 around the
 // ball, so a fractional repeat samples different texels either side of that
 // seam — the displacement map then pushes the two edges apart and the rock
 // appears cracked. 1 is therefore the most zoomed-in the grain can go.
 export const ROCK_TEXTURE_REPEAT = 1
-export const ROCK_DISPLACEMENT_SCALE = 0.035
+export const ROCK_DISPLACEMENT_SCALE = 0.11
 // The scanned rock is very dark. The ambient-occlusion bite is eased off and a
 // small emissive lift raises the whole surface, so it reads as light stone
 // against the green ground instead of a black ball.
-export const ROCK_AO_INTENSITY = 0.3
-export const ROCK_EMISSIVE = 0x9a948b
-export const ROCK_EMISSIVE_INTENSITY = 0.62
+// Ambient occlusion darkens indirect light only; at full strength it doubles up
+// with the albedo and the rock reads as a black ball.
+export const ROCK_AO_INTENSITY = 0.4
+// Emissive light is unlit and uniform, so every bit of it washes out the very
+// shading that makes a normal map read as stone. Lightening the rock this way
+// flattened it; brightness belongs to the material colour and the lights.
+export const ROCK_EMISSIVE_INTENSITY = 0
+export const ROCK_NORMAL_SCALE = 1.6
 // Half-width of the start line players are spread across, so several rocks can
 // share the track without spawning inside each other.
 export const SPAWN_GATE_SPREAD = 4

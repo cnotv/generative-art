@@ -80,12 +80,11 @@ import {
   MAX_LATERAL_SPEED,
   ROCK_ANGULAR_DAMPING,
   ROCK_FRICTION,
+  ROCK_NORMAL_SCALE,
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_AO_INTENSITY,
   ROCK_DISPLACEMENT_SCALE,
-  ROCK_EMISSIVE,
-  ROCK_EMISSIVE_INTENSITY,
   ROCK_RESTITUTION,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
@@ -203,8 +202,7 @@ const applyRockMaterial = (rock: ComplexModel): THREE.Texture[] => {
   material.displacementScale = ROCK_DISPLACEMENT_SCALE
   material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
   material.aoMapIntensity = ROCK_AO_INTENSITY
-  material.emissive = new THREE.Color(ROCK_EMISSIVE)
-  material.emissiveIntensity = ROCK_EMISSIVE_INTENSITY
+  material.normalScale.set(ROCK_NORMAL_SCALE, ROCK_NORMAL_SCALE)
   material.roughness = 1
   material.metalness = 0
   material.needsUpdate = true

@@ -162,6 +162,68 @@ edges apart into a visible crack around the ball. There the fix is arithmetic
 rather than topological — the repeat must be a whole number, which also means
 the coarsest usable grain is fixed at one repeat and cannot be zoomed further.
 
+## Trap four: a junction between two colliders is not an internal edge
+
+The track is bounded by walls that are physical but never drawn, so the ground
+reads as an open field while the rock cannot leave it. Built as their own
+colliders meeting the deck, they produced two symptoms that looked unrelated:
+the rock sometimes caught at the track edge and stopped dead, and sometimes fell
+straight out of the world there.
+
+Both are the same cause. Rapier's FIX_INTERNAL_EDGES corrects contact normals
+across a mesh's own internal edges, which is what stops a ball snagging on the
+seams inside a swept surface. It knows nothing about the junction between two
+separate colliders. A ball arriving at that concave corner is therefore handed
+whichever normal the two meshes happen to produce — sometimes one that stops it,
+sometimes one that pushes it through the floor.
+
+Chasing the symptoms produced two plausible-looking fixes that were really
+mitigations: making the walls frictionless, so the constant forward push could
+not pin the ball against something it could grip, and standing them off the deck
+edge so it met a flat face rather than the corner. Both reduced the frequency.
+Neither could remove it, because the junction was still there.
+
+The actual fix is to sweep the deck and both walls as **one closed profile**, so
+the corner becomes an internal edge Rapier can correct and the junction stops
+existing. This is what the marble editor's lane cross-section had been doing all
+along. Contact skin — a small virtual margin on the collider — still helps
+bridge hairline cracks between chunks, but it is a supplement, not the fix.
+
+The general lesson: when two symptoms appear at the same place and one of them
+is "sometimes it passes through solid geometry", suspect the boundary between
+colliders rather than the surfaces either side of it.
+
+## Trap five: stratified jitter that is clamped stops being stratified
+
+Grass and flowers drew as hard lines running straight across the track, one at
+every chunk boundary.
+
+Instances are stratified along a chunk — an even spacing, then a random offset —
+because pure randomness clumps. The offset was applied as an absolute distance
+and then clamped back into the chunk, so that no chunk could place geometry its
+neighbour would also place.
+
+That clamp is only harmless while the offset is smaller than the spacing between
+instances. It was not. At a frequency of 120 per hundred units the spacing is
+0.83 units, against a spread of 50 — sixty times larger. Around **99 per cent**
+of instances overshot the chunk and were pinned to an edge, where they stacked
+into a line.
+
+| Frequency | Spacing between instances | Spread | Pinned to an edge |
+| --------- | ------------------------- | ------ | ----------------- |
+| 26        | 3.84                      | 50     | ~96%              |
+| 70        | 1.43                      | 50     | ~99%              |
+| 120       | 0.83                      | 50     | ~99%              |
+
+Keeping the offset inside each instance's own slot removes both problems at
+once: nothing needs clamping, so nothing can pile up, and nothing can leave the
+chunk. A spread larger than the slot simply saturates — which is the correct
+behaviour, since beyond that width the layout is already uniformly random.
+
+The lesson is that clamping a distribution back into range is not a neutral
+operation. It moves everything it touches to exactly one of two values, and mass
+that would have spread out lands in a line instead.
+
 ## Chunking as the unit of everything
 
 Ground, physics colliders and every illustration area share one lifecycle:
@@ -192,6 +254,28 @@ scattered without the clumping pure randomness produces. The jitter is clamped
 back inside the chunk — otherwise neighbouring chunks would both place geometry
 in the overlap and the same tree would appear twice, then vanish twice.
 
+## What the maps can and cannot carry
+
+The rock's surface came from a scanned PBR set, and getting it to read as stone
+rather than a painted ball was mostly about not defeating the maps:
+
+| Setting                            | Effect                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| Emissive lift                      | Unlit and uniform, so it washes out the very shading the normal map exists to create |
+| Ambient light                      | Directionless, so it lights every normal identically and flattens relief             |
+| Ambient occlusion at full strength | Multiplies with an already dark albedo and the rock reads as black                   |
+| Displacement scale                 | Below a few per cent of the radius it changes nothing in the silhouette              |
+
+The first is worth dwelling on, because it was self-inflicted. The rock looked
+too dark, so it was lightened with emissive — which is exactly the channel that
+cannot be shaded. Brightness belongs to the material colour and to the lights;
+reaching for emissive trades away the detail the maps were added for.
+
+There is also a ceiling that no setting reaches: on screen the rock covers a few
+dozen pixels. A 1K map and a finely subdivided sphere are far beyond what that
+can resolve, so a close-up render will always look more detailed than the game
+does at running distance.
+
 One last detail worth recording: displacement mapping needs vertices to
 displace. A ground slab described by a four-point outline has none across its
 width, so a displacement map on it is a silent no-op that looks like a flat
@@ -199,20 +283,3 @@ decal. The countryside is subdivided across its width specifically so the map
 has something to move. The path itself is a flat colour rather than a texture,
 so it needs neither the subdivision nor the map — bump mapping, which works per
 pixel, would need no such help either.
-
-## Keeping the rock on the path
-
-The track is bounded by walls that are physical but never drawn, so the ground
-reads as an open field while the rock cannot leave it. Two details stop them
-becoming a trap rather than a boundary.
-
-A wall that begins exactly at deck level leaves a concave corner where the two
-surfaces meet, and a rolling ball catches in it and stops dead — with a constant
-forward push behind it, it simply wedges there. Starting the wall below the deck
-surface, and standing it off the edge by a little, gives the rock a flat face to
-meet instead of the corner itself. The walls are also frictionless: anything the
-ball can grip becomes something the forward push can pin it against.
-
-Underneath that sits the same flush-seam problem the marble editor met: every
-track collider carries a small contact skin, a virtual margin that bridges the
-hairline crack between adjacent surfaces so a fast ball cannot catch on it.
