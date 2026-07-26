@@ -161,26 +161,6 @@ const crossWallSpec = (z: number, width: number = LANE_WIDTH): BoxSpec =>
     friction: WALL_FRICTION
   })
 
-// Flat lips at both ends make the sloped section meet neighbouring pieces
-// with perfectly level junctions.
-const rampSpecs = (direction: 1 | -1): BoxSpec[] => {
-  const rise = direction * RAMP_LENGTH * Math.sin(RAMP_ANGLE)
-  const run = RAMP_LENGTH * Math.cos(RAMP_ANGLE)
-  return [
-    ...straightSpecs(RAMP_LIP_LENGTH),
-    ...transformSpecs(
-      straightSpecs(RAMP_LENGTH),
-      pitchQuaternion(direction * RAMP_ANGLE),
-      vec(0, 0, -RAMP_LIP_LENGTH)
-    ),
-    ...transformSpecs(
-      straightSpecs(RAMP_LIP_LENGTH),
-      IDENTITY_QUATERNION,
-      vec(0, rise, -(RAMP_LIP_LENGTH + run))
-    )
-  ]
-}
-
 // Closed outline of the lane profile (deck plus both walls), swept along the
 // arc to produce a single smooth solid instead of segmented boxes. The wall
 // tops are parameterised so a banked curve can raise its outer wall.
@@ -287,11 +267,10 @@ const sweepIndices = (stationCount: number, crossSection: [number, number][]): n
   return [...sideQuads, ...caps]
 }
 
-export const buildArcSweepGeometry = (
-  side: 1 | -1,
+const buildSweepGeometry = (
+  stations: SweepStation[],
   crossSection: [number, number][] = LANE_CROSS_SECTION
 ): THREE.BufferGeometry => {
-  const stations = arcSweepStations(side)
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute(
     'position',
@@ -302,6 +281,11 @@ export const buildArcSweepGeometry = (
   return geometry
 }
 
+export const buildArcSweepGeometry = (
+  side: 1 | -1,
+  crossSection: [number, number][] = LANE_CROSS_SECTION
+): THREE.BufferGeometry => buildSweepGeometry(arcSweepStations(side), crossSection)
+
 const arcTrimeshSpec = (
   side: 1 | -1,
   crossSection: [number, number][] = LANE_CROSS_SECTION
@@ -311,6 +295,13 @@ const arcTrimeshSpec = (
   friction: CURVE_FRICTION,
   restitution: DECK_RESTITUTION
 })
+
+// A ramp is a single long straight lane pitched up or down — no lips, no bends,
+// so the deck is one flat inclined plane. Pitched about the entry (z=0), its top
+// edge stays at the deck surface there and welds to the neighbouring flat deck;
+// the exit is rise = L·sinθ, run = L·cosθ.
+const rampSpecs = (direction: 1 | -1): BoxSpec[] =>
+  transformSpecs(straightSpecs(RAMP_LENGTH), pitchQuaternion(direction * RAMP_ANGLE), vec(0, 0, 0))
 
 const funnelBoxSpecs = (): PieceParts['boxes'] => {
   const bowlCenterZ = -(FUNNEL_TONGUE_LENGTH + FUNNEL_RIM_RADIUS)

@@ -25,6 +25,7 @@ import {
   LobbyUIConfirm
 } from '@/components/LobbyUI'
 import { useRoute } from 'vue-router'
+import { Video, SquarePen, LogOut } from 'lucide-vue-next'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
@@ -508,7 +509,6 @@ onUnmounted(() => {
             @redo="editor.redo"
             @new-map="namingNewTrack = true"
             @play="startRaceFromEditor"
-            @save-as="editor.saveMapAsName"
             @load-map="editor.loadMap"
             @delete-map="editor.deleteMapByName"
             @create-track="handleCreateTrack"
@@ -539,8 +539,9 @@ onUnmounted(() => {
             :title="`Camera: ${cameraLabel} — click or press C to cycle`"
             @click="race.cycleCameraMode"
           >
-            Cam: {{ cameraLabel }}
-            <LobbyUIKeyPill :keyboard="['C']" :gamepad="['△']" />
+            <Video class="me__hud-icon" aria-hidden="true" />
+            <span class="me__hud-label me__cam-label">Cam: {{ cameraLabel }}</span>
+            <LobbyUIKeyPill class="me__hud-key" :keyboard="['C']" :gamepad="['△']" />
           </LobbyUIButton>
           <LobbyUIButton
             v-if="canRestart"
@@ -549,12 +550,14 @@ onUnmounted(() => {
             title="Return to the track editor"
             @click="requestBackToEditor"
           >
-            Editor
-            <LobbyUIKeyPill :keyboard="['E']" :gamepad="['□']" />
+            <SquarePen class="me__hud-icon" aria-hidden="true" />
+            <span class="me__hud-label">Editor</span>
+            <LobbyUIKeyPill class="me__hud-key" :keyboard="['E']" :gamepad="['□']" />
           </LobbyUIButton>
           <LobbyUIButton size="sm" variant="ghost" title="Exit the game" @click="requestExitGame">
-            Exit
-            <LobbyUIKeyPill :keyboard="['Esc']" :gamepad="['○']" />
+            <LogOut class="me__hud-icon" aria-hidden="true" />
+            <span class="me__hud-label">Exit</span>
+            <LobbyUIKeyPill class="me__hud-key" :keyboard="['Esc']" :gamepad="['○']" />
           </LobbyUIButton>
         </div>
         <TouchControl
@@ -674,15 +677,56 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
+/* On phones the palette becomes a full-width strip at the top (below the
+   toolbar, above the scene) so the piece list can scroll horizontally instead of
+   eating a sidebar column. */
+@media (width <= 720px) {
+  .me__edit-overlay {
+    grid-template-areas:
+      'topbar'
+      'sidebar'
+      'scene';
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .me__hud {
   position: absolute;
   top: var(--spacing-4);
   left: 50%;
   z-index: var(--z-dropdown);
   display: flex;
+  flex-wrap: nowrap;
   gap: var(--spacing-4);
   align-items: center;
+  white-space: nowrap;
   transform: translateX(-50%);
+}
+
+/* Labels never break mid-word (e.g. "Cam: Third" stays on one line). */
+.me__hud-label {
+  white-space: nowrap;
+}
+
+/* Icons back the text buttons; shown only on phone where labels/keys are hidden. */
+.me__hud-icon {
+  display: none;
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* Phones have no keyboard and little width: collapse the HUD buttons to their
+   icon only. Tablets and up (> 720px) keep the full labels and key pills. */
+@media (width <= 720px) {
+  .me__hud-icon {
+    display: inline-flex;
+  }
+
+  .me__hud-label,
+  .me__hud-key {
+    display: none;
+  }
 }
 
 .me__timer {

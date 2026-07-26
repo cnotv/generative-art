@@ -127,4 +127,24 @@ const handleColorInput = (event: Event): void => {
   height: 1.1em;
   filter: drop-shadow(2px 2px 0 #000);
 }
+
+/* On phones the palette is a full-width bottom strip: the piece list scrolls
+   horizontally as a single row instead of a fixed multi-column grid. */
+@media (width <= 720px) {
+  .editor-palette {
+    width: 100%;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .editor-palette__grid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .editor-palette__grid > * {
+    flex: 0 0 auto;
+  }
+}
 </style>
