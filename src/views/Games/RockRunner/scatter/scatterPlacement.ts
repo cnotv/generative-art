@@ -127,6 +127,7 @@ export const placeScatterInstances = (options: ScatterPlacementOptions): Scatter
 
     return {
       distance,
+      lateral,
       position,
       yaw: applyVariation(sample.yaw, config.rotationVariation, samples[base + 3]),
       width,

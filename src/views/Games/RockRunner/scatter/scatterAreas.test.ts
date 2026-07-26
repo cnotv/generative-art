@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import { createScatterAreaManager, scatterChunkSpan, groupInstancesByTexture } from './scatterAreas'
+import { createLateralFogUniforms } from '../lateralFog'
 import { createTrackPath } from '../trackPath'
 import { SCATTER_AREAS } from './illustrations'
 import type { ScatterAreaConfig, ScatterAreaDefinition, ScatterInstance } from '../types'
@@ -37,6 +38,7 @@ const config: ScatterAreaConfig = {
 
 const instance = (textureIndex: number): ScatterInstance => ({
   distance: 0,
+  lateral: 0,
   position: new THREE.Vector3(),
   yaw: 0,
   width: 1,
@@ -51,6 +53,7 @@ const createManager = (overrides: Partial<ScatterAreaConfig> = {}) => {
     scene,
     path,
     definition: treeDefinition,
+    lateralFog: createLateralFogUniforms(0xffffff, 20, 40),
     getConfig: () => ({ ...config, ...overrides }),
     getTextures: () => treeDefinition.textures
   })
@@ -109,6 +112,23 @@ describe('createScatterAreaManager', () => {
     const meshes = scatterMeshes(scene)
     expect(meshes).toHaveLength(EXPECTED_CHUNKS)
     expect(meshes.every((mesh) => mesh.count > 1)).toBe(true)
+  })
+
+  // Each mesh needs its own geometry: the per-instance offsets live on it, so a
+  // shared plane would have every chunk overwrite the last one's.
+  it('bakes each billboard own distance from the centreline', () => {
+    const { manager, scene } = createManager()
+
+    manager.ensureAhead(0)
+
+    const meshes = scatterMeshes(scene)
+    meshes.forEach((mesh) => {
+      const offsets = mesh.geometry.getAttribute('lateralOffset')
+      expect(offsets).toBeDefined()
+      expect(offsets.count).toBe(mesh.count)
+    })
+    const geometries = new Set(meshes.map((mesh) => mesh.geometry))
+    expect(geometries.size).toBe(meshes.length)
   })
 
   it('gives the billboards no physics body at all', () => {

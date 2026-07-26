@@ -2,9 +2,17 @@ import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
+import { applyLateralFog, sweepLateralOffsets } from './lateralFog'
 import type { CrossSection, SweepStation } from '@/types/sweptGeometry'
 import groundTextureUrl from '@/assets/images/illustrations/ground.webp'
-import type { TrackPath, TrackChunk, TrackChunkManager, TrackDimensions, WallConfig } from './types'
+import type {
+  LateralFogUniforms,
+  TrackPath,
+  TrackChunk,
+  TrackChunkManager,
+  TrackDimensions,
+  WallConfig
+} from './types'
 import {
   CHUNK_LENGTH,
   CHUNK_STATIONS,
@@ -231,6 +239,10 @@ const buildTerrainMeshes = (
         2
       )
     )
+    swept.setAttribute(
+      'lateralOffset',
+      new THREE.Float32BufferAttribute(sweepLateralOffsets(stations.length, crossSection), 1)
+    )
     // Welded before displacement: the sweep gives every profile edge its own
     // vertex pair, so coincident vertices carry different normals. Displacement
     // moves each along its own normal, prising the pairs apart into hairline
@@ -332,6 +344,7 @@ export type TrackChunkManagerOptions = {
   world: RAPIER.World
   path: TrackPath
   wall: WallConfig
+  lateralFog: LateralFogUniforms
   width?: number
   terrainWidth?: number
 }
@@ -358,6 +371,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     roughness: 1,
     color: TERRAIN_TINT
   })
+  applyLateralFog(terrainMaterial, options.lateralFog)
   const context: ChunkBuildContext = {
     scene: options.scene,
     world: options.world,

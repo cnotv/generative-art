@@ -194,13 +194,17 @@ export const LIGHT_AMBIENT_INTENSITY = 1.6
 export const LIGHT_DIRECTIONAL_INTENSITY = 2.2
 export const LIGHT_DIRECTIONAL_POSITION: CoordinateTuple = [60, 120, 60]
 
-export const SKY_COLOR = 0xcfe8f6
+export const SKY_COLOR = 0x638638
 // The terrain strip ends at TERRAIN_HALF_WIDTH and the streamed chunks end at
 // the lookahead, so the fog is tuned to swallow both edges before they can be
 // seen: it matches the sky exactly and closes in well inside TRACK_LOOKAHEAD.
 export const FOG_COLOR = SKY_COLOR
-export const FOG_NEAR = 60
-export const FOG_FAR = 340
+export const FOG_NEAR = 35
+export const FOG_FAR = 130
+// Sideways fade. The world is a narrow strip, so its long edges sit only tens
+// of units away and camera-distance fog can never reach them.
+export const FOG_SIDE_NEAR = 8
+export const FOG_SIDE_FAR = 43
 
 export const GROUND_TEXTURE_REPEAT_ALONG = 0.08
 export const GROUND_TEXTURE_REPEAT_ACROSS = 1.5

@@ -38,6 +38,7 @@ import { createScatterAreaManager } from '../scatter/scatterAreas'
 import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
+import { createLateralFogUniforms } from '../lateralFog'
 import {
   advanceDistance,
   forwardImpulseMagnitude,
@@ -49,6 +50,7 @@ import {
 } from './rockMotion'
 import type {
   CameraMode,
+  LateralFogUniforms,
   RockPosPayload,
   ScatterAreaManager,
   TrackChunkManager,
@@ -64,6 +66,8 @@ import {
   FOG_COLOR,
   FOG_FAR,
   FOG_NEAR,
+  FOG_SIDE_FAR,
+  FOG_SIDE_NEAR,
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT,
   FORWARD_IMPULSE,
@@ -137,6 +141,7 @@ type RunState = {
   cameraTransitionElapsed: number
   cameraTransitionStart: THREE.Vector3
   posAccumulator: number
+  lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
 }
@@ -512,11 +517,14 @@ const buildRunWorld = ({
   state.path = path
 
   const scatterPanel = createScatterPanel()
+  const lateralFog = createLateralFogUniforms(FOG_COLOR, FOG_SIDE_NEAR, FOG_SIDE_FAR)
+  state.lateralFog = lateralFog
   const track = createTrackChunkManager({
     scene,
     world: tools.world,
     path,
-    wall: { height: WALL_HEIGHT, thickness: WALL_THICKNESS }
+    wall: { height: WALL_HEIGHT, thickness: WALL_THICKNESS },
+    lateralFog
   })
   state.track = track
   state.scatter = SCATTER_AREAS.map((definition) =>
@@ -524,6 +532,7 @@ const buildRunWorld = ({
       scene,
       path,
       definition,
+      lateralFog,
       getConfig: () => scatterPanel.areaConfig(definition.name),
       getTextures: () => scatterPanel.areaTextures(definition.name)
     })
@@ -538,7 +547,12 @@ const buildRunWorld = ({
   )
   registerCameraProperties({ camera: tools.camera, orbit })
   state.disposePanels = [
-    registerTrackElements({ manager: track, getDistance: () => state.distance, scene }),
+    registerTrackElements({
+      manager: track,
+      getDistance: () => state.distance,
+      scene,
+      lateralFog
+    }),
     scatterPanel.teardown
   ]
   scatterPanel.register(state.scatter, () => state.distance)
@@ -569,6 +583,7 @@ const createRunState = (): RunState => ({
   cameraTransitionElapsed: 0,
   cameraTransitionStart: new THREE.Vector3(),
   posAccumulator: 0,
+  lateralFog: null,
   rockTextures: [],
   disposePanels: []
 })

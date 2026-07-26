@@ -1,12 +1,20 @@
 import { reactive } from 'vue'
 import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import type { FogConfig, TrackChunkManager, TrackDimensions, WallConfig } from './types'
+import type {
+  FogConfig,
+  LateralFogUniforms,
+  TrackChunkManager,
+  TrackDimensions,
+  WallConfig
+} from './types'
 import {
   FOG_COLOR,
   FOG_ELEMENT_NAME,
   FOG_FAR,
   FOG_NEAR,
+  FOG_SIDE_FAR,
+  FOG_SIDE_NEAR,
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
   TRACK_ELEMENT_NAME,
@@ -40,14 +48,20 @@ export const RR_TRACK_CONTROLS = {
 // band where the faded world meets the backdrop.
 export const RR_FOG_CONTROLS = {
   color: { label: 'Colour', color: true },
-  near: { min: 0, max: 600, step: 5, label: 'Starts at' },
-  far: { min: 20, max: 2000, step: 10, label: 'Fully faded at' }
+  near: { min: 0, max: 600, step: 5, label: 'Ahead: starts at' },
+  far: { min: 20, max: 2000, step: 10, label: 'Ahead: fully faded at' },
+  // Three's fog is measured from the camera, so it only ever hides what is
+  // ahead. These two fade by distance from the track centreline instead, which
+  // is the only way to soften the strip's long side edges.
+  sideNear: { min: 0, max: 300, step: 1, label: 'Sides: starts at', sectionStart: true },
+  sideFar: { min: 1, max: 400, step: 1, label: 'Sides: fully faded at' }
 }
 
 export type TrackPanelOptions = {
   manager: TrackChunkManager
   getDistance: () => number
   scene: THREE.Scene
+  lateralFog: LateralFogUniforms
 }
 
 /**
@@ -100,12 +114,21 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
     }
   )
 
-  const fog = reactive<FogConfig>({ color: FOG_COLOR, near: FOG_NEAR, far: FOG_FAR })
+  const fog = reactive<FogConfig>({
+    color: FOG_COLOR,
+    near: FOG_NEAR,
+    far: FOG_FAR,
+    sideNear: FOG_SIDE_NEAR,
+    sideFar: FOG_SIDE_FAR
+  })
 
   const applyFog = (): void => {
     const scene = options.scene
     scene.fog = new THREE.Fog(fog.color, fog.near, Math.max(fog.near + 1, fog.far))
     if (scene.background instanceof THREE.Color) scene.background.setHex(fog.color)
+    options.lateralFog.lateralFogColor.value.setHex(fog.color)
+    options.lateralFog.lateralFogNear.value = fog.sideNear
+    options.lateralFog.lateralFogFar.value = Math.max(fog.sideNear + 1, fog.sideFar)
   }
 
   debugSceneStore.addSceneElement(

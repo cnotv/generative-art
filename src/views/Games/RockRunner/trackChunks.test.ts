@@ -11,6 +11,7 @@ import {
   createTrackChunkManager
 } from './trackChunks'
 import { createTrackPath } from './trackPath'
+import { createLateralFogUniforms } from './lateralFog'
 import {
   CHUNK_STATIONS,
   CHUNK_LENGTH,
@@ -263,7 +264,13 @@ describe('createTrackChunkManager', () => {
     const scene = new THREE.Scene()
     const { world, removeRigidBody, createCollider } = createWorldStub()
     const path = createTrackPath(2024)
-    const manager = createTrackChunkManager({ scene, world, path, wall: WALL })
+    const manager = createTrackChunkManager({
+      scene,
+      world,
+      path,
+      wall: WALL,
+      lateralFog: createLateralFogUniforms(0xffffff, 20, 40)
+    })
     return { scene, world, manager, removeRigidBody, createCollider }
   }
 
@@ -417,6 +424,17 @@ describe('createTrackChunkManager', () => {
     const terrain = scene.children.find((child) => child.name === 'terrain-right') as THREE.Mesh
     terrain.geometry.computeBoundingBox()
     expect(terrain.geometry.boundingBox!.max.x).toBeGreaterThan(40)
+  })
+
+  it('bakes the distance from the centreline onto the terrain for the side fog', () => {
+    const { manager, scene } = createManager()
+
+    manager.ensureAhead(0)
+
+    const terrain = scene.children.find((child) => child.name === 'terrain-left') as THREE.Mesh
+    const offsets = terrain.geometry.getAttribute('lateralOffset')
+    expect(offsets).toBeDefined()
+    expect(offsets.count).toBe(terrain.geometry.getAttribute('position').count)
   })
 
   it('reports the ground height from the path', () => {

@@ -31,11 +31,20 @@ export type TrackDimensions = {
   terrainWidth: number
 }
 
+/** Uniforms shared by every material that fades sideways into the fog. */
+export type LateralFogUniforms = {
+  lateralFogColor: { value: THREE.Color }
+  lateralFogNear: { value: number }
+  lateralFogFar: { value: number }
+}
+
 /** Distance-fade settings for the scene, shared with the sky colour. */
 export type FogConfig = {
   color: number
   near: number
   far: number
+  sideNear: number
+  sideFar: number
 }
 
 /** Height and thickness of the invisible containment walls flanking the deck. */
@@ -93,6 +102,8 @@ export type ScatterAreaDefinition = {
 /** A single billboard the scatter maths decided to place. */
 export type ScatterInstance = {
   distance: number
+  /** Signed offset from the track centreline, used by the lateral fog. */
+  lateral: number
   position: THREE.Vector3
   yaw: number
   width: number

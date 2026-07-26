@@ -1,6 +1,8 @@
 import * as THREE from 'three'
+import { applyLateralFog } from '../lateralFog'
 import { placeScatterInstances } from './scatterPlacement'
 import type {
+  LateralFogUniforms,
   ScatterAreaConfig,
   ScatterAreaDefinition,
   ScatterAreaManager,
@@ -80,6 +82,7 @@ export type ScatterAreaManagerOptions = {
   scene: THREE.Scene
   path: TrackPath
   definition: ScatterAreaDefinition
+  lateralFog: LateralFogUniforms
   getConfig: () => ScatterAreaConfig
   getTextures: () => ScatterTexture[]
 }
@@ -120,6 +123,7 @@ export const createScatterAreaManager = (
       roughness: 1,
       opacity: getConfig().opacity
     })
+    applyLateralFog(material, options.lateralFog)
     materials.set(url, material)
     return material
   }
@@ -129,7 +133,13 @@ export const createScatterAreaManager = (
     return [...groupInstancesByTexture(instances).entries()].flatMap(([textureIndex, bucket]) => {
       const source = available[textureIndex]
       if (!source) return []
-      const mesh = new THREE.InstancedMesh(PLANE_GEOMETRY, materialFor(source.url), bucket.length)
+      // Cloned, not shared: each mesh carries its own per-instance lateral
+      // offsets, which would otherwise overwrite every other chunk's.
+      const mesh = new THREE.InstancedMesh(
+        PLANE_GEOMETRY.clone(),
+        materialFor(source.url),
+        bucket.length
+      )
       bucket.forEach((instance, index) => {
         scratchQuaternion.setFromAxisAngle(Y_AXIS, instance.yaw)
         scratchScale.set(instance.width, instance.height, 1)
@@ -137,6 +147,15 @@ export const createScatterAreaManager = (
         mesh.setMatrixAt(index, scratchMatrix)
       })
       mesh.instanceMatrix.needsUpdate = true
+      // Per-instance so a billboard fades by where it stands, not by where its
+      // chunk happens to be.
+      mesh.geometry.setAttribute(
+        'lateralOffset',
+        new THREE.InstancedBufferAttribute(
+          Float32Array.from(bucket, (entry) => Math.abs(entry.lateral)),
+          1
+        )
+      )
       mesh.name = `scatter-${definition.name}`
       mesh.visible = !hidden
       mesh.castShadow = false
@@ -167,6 +186,7 @@ export const createScatterAreaManager = (
   const disposeChunk = (chunk: ScatterChunk): void =>
     chunk.meshes.forEach((mesh) => {
       scene.remove(mesh)
+      mesh.geometry.dispose()
       mesh.dispose()
     })
 

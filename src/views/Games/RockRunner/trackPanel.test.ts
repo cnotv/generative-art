@@ -5,7 +5,14 @@ import {
   RR_FOG_CONTROLS,
   MAX_TERRAIN_WIDTH
 } from './trackPanel'
-import { FOG_FAR, FOG_NEAR, MIN_TURN_RADIUS, TERRAIN_WIDTH, TRACK_WIDTH } from './config'
+import {
+  FOG_FAR,
+  FOG_NEAR,
+  FOG_SIDE_FAR,
+  MIN_TURN_RADIUS,
+  TERRAIN_WIDTH,
+  TRACK_WIDTH
+} from './config'
 
 describe('MAX_TERRAIN_WIDTH', () => {
   // A swept ribbon folds through itself once its half-width passes the path's
@@ -55,8 +62,19 @@ describe('RR_WALL_CONTROLS', () => {
 })
 
 describe('RR_FOG_CONTROLS', () => {
-  it('exposes colour and both distances', () => {
-    expect(Object.keys(RR_FOG_CONTROLS)).toEqual(['color', 'near', 'far'])
+  it('exposes colour plus an ahead and a sideways fade', () => {
+    expect(Object.keys(RR_FOG_CONTROLS)).toEqual(['color', 'near', 'far', 'sideNear', 'sideFar'])
+  })
+
+  // The strip's long edges sit tens of units away, far inside any camera
+  // distance fog, so the sideways fade has to close in much sooner.
+  it('fades the sides in closer than it fades the distance', () => {
+    expect(FOG_SIDE_FAR).toBeLessThan(FOG_FAR)
+    expect(RR_FOG_CONTROLS.sideFar.max).toBeLessThan(RR_FOG_CONTROLS.far.max)
+  })
+
+  it('never lets the sideways fade finish at zero distance', () => {
+    expect(RR_FOG_CONTROLS.sideFar.min).toBeGreaterThan(0)
   })
 
   it('offers a colour picker rather than a slider for the colour', () => {
