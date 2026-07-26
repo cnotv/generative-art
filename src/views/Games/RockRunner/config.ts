@@ -73,6 +73,9 @@ export const STATION_SPACING = 4
 export const TRACK_WIDTH = 16
 export const TRACK_HALF_WIDTH = TRACK_WIDTH / 2
 export const DECK_THICKNESS = 1.2
+// The path is a flat pastel brown rather than the ground art, so it reads as a
+// worn trail cutting through the textured countryside.
+export const DECK_COLOR = 0xdcc7a4
 export const DECK_FRICTION = 1.4
 export const DECK_RESTITUTION = 0.05
 
@@ -137,16 +140,18 @@ export const ROCK_ANGULAR_DAMPING = 0.25
 export const ROCK_SPAWN_HEIGHT = 3
 // High enough for the displacement map to have vertices to push around.
 export const ROCK_SEGMENTS = 96
-// Below 1 the stone pattern is scaled up, so the grain reads at the size the
-// rock actually appears on screen rather than as fine noise.
-export const ROCK_TEXTURE_REPEAT = 0.7
-export const ROCK_DISPLACEMENT_SCALE = 0.07
+// Must stay a whole number. The sphere's u wraps from 1 back to 0 around the
+// ball, so a fractional repeat samples different texels either side of that
+// seam — the displacement map then pushes the two edges apart and the rock
+// appears cracked. 1 is therefore the most zoomed-in the grain can go.
+export const ROCK_TEXTURE_REPEAT = 1
+export const ROCK_DISPLACEMENT_SCALE = 0.035
 // The scanned rock is very dark. The ambient-occlusion bite is eased off and a
 // small emissive lift raises the whole surface, so it reads as light stone
 // against the green ground instead of a black ball.
 export const ROCK_AO_INTENSITY = 0.3
-export const ROCK_EMISSIVE = 0x6b6660
-export const ROCK_EMISSIVE_INTENSITY = 0.55
+export const ROCK_EMISSIVE = 0x9a948b
+export const ROCK_EMISSIVE_INTENSITY = 0.62
 // Half-width of the start line players are spread across, so several rocks can
 // share the track without spawning inside each other.
 export const SPAWN_GATE_SPREAD = 4
@@ -195,9 +200,10 @@ export const GROUND_TEXTURE_REPEAT_ACROSS = 1.5
 // clumps read as raised turf instead of a flat decal. The deck is tessellated
 // only along its length, so displacement stays subtle enough not to break the
 // trimesh collider it is paired with.
-// How finely the ground surfaces are subdivided across their width. Without
-// this the displacement map has no vertices to move.
-export const DECK_SEGMENTS_ACROSS = 12
+// How finely the terrain is subdivided across its width. Without this the
+// displacement map has no vertices to move. The deck needs none: it is a flat
+// colour, so it stays at the minimum outline.
+export const DECK_SEGMENTS_ACROSS = 1
 export const TERRAIN_SEGMENTS_ACROSS = 20
 export const GROUND_DISPLACEMENT_SCALE = 0.55
 export const GROUND_DISPLACEMENT_BIAS = -0.25

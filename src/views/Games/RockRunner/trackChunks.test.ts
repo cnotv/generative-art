@@ -83,12 +83,12 @@ describe('slabCrossSection', () => {
 })
 
 describe('deckCrossSection', () => {
-  // The displacement map needs vertices to move; a four-point outline leaves it
-  // a no-op and the ground reads as a flat decal.
-  it('subdivides the deck surface so the displacement map has vertices', () => {
+  // The deck is a flat colour with no displacement, so it needs no extra
+  // vertices across its width.
+  it('stays at the minimum outline', () => {
     const topPoints = deckCrossSection(16, 1.2).filter(([, y]) => y === 0)
 
-    expect(topPoints.length).toBeGreaterThan(2)
+    expect(topPoints).toHaveLength(2)
   })
 
   it.each([

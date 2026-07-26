@@ -108,6 +108,35 @@ describe('lateralOffset', () => {
     expect(Math.max(...offsets)).toBeLessThanOrEqual(TRACK_HALF_WIDTH)
   })
 
+  // Ground cover has to cross the deck edge, otherwise the grass stops dead in
+  // a line where the track meets the countryside.
+  it('lets an everywhere area span the deck edge', () => {
+    const config = { ...baseConfig, distanceMin: 0, distanceMax: 26 }
+    const offsets = Array.from({ length: 50 }, (_, index) =>
+      Math.abs(lateralOffset('everywhere', config, 0.9, index / 50))
+    )
+
+    expect(Math.min(...offsets)).toBeLessThan(TRACK_HALF_WIDTH)
+    expect(Math.max(...offsets)).toBeGreaterThan(TRACK_HALF_WIDTH)
+  })
+
+  it('honours an everywhere band exactly, with no deck clamping either way', () => {
+    const config = { ...baseConfig, distanceMin: 4, distanceMax: 20 }
+    const offsets = Array.from({ length: 50 }, (_, index) =>
+      Math.abs(lateralOffset('everywhere', config, 0.9, index / 50))
+    )
+
+    expect(Math.min(...offsets)).toBeGreaterThanOrEqual(4)
+    expect(Math.max(...offsets)).toBeLessThanOrEqual(20)
+  })
+
+  it('mirrors everywhere areas onto both banks', () => {
+    const config = { ...baseConfig, distanceMin: 0, distanceMax: 26 }
+
+    expect(lateralOffset('everywhere', config, 0.1, 0.5)).toBeLessThan(0)
+    expect(lateralOffset('everywhere', config, 0.9, 0.5)).toBeGreaterThan(0)
+  })
+
   it('tolerates a reversed band', () => {
     const offset = Math.abs(
       lateralOffset('sides', { ...baseConfig, distanceMin: 60, distanceMax: 12 }, 0.9, 0.5)

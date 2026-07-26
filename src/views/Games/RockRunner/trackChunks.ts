@@ -7,6 +7,7 @@ import type { TrackPath, TrackChunk, TrackChunkManager, WallConfig } from './typ
 import {
   CHUNK_LENGTH,
   CHUNK_STATIONS,
+  DECK_COLOR,
   DECK_FRICTION,
   DECK_SEGMENTS_ACROSS,
   DECK_RESTITUTION,
@@ -215,17 +216,10 @@ const buildTerrainMeshes = (
     return mesh
   })
 
-const buildDeckMesh = (
-  context: ChunkBuildContext,
-  stations: SweepStation[],
-  stationIndices: number[]
-): THREE.Mesh => {
+const buildDeckMesh = (context: ChunkBuildContext, stations: SweepStation[]): THREE.Mesh => {
   const crossSection = deckCrossSection(context.width, DECK_THICKNESS)
+  // No UVs: the deck is a flat colour, so there is nothing to sample.
   const geometry = buildSweepGeometry(stations, crossSection)
-  geometry.setAttribute(
-    'uv',
-    new THREE.Float32BufferAttribute(sweepGroundUvs(stationIndices, crossSection, context.width), 2)
-  )
   const mesh = new THREE.Mesh(geometry, context.material)
   mesh.name = 'track-ground'
   mesh.receiveShadow = true
@@ -277,7 +271,7 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
     (_, offset) => fromIndex + offset
   )
   const stations = context.path.stationsBetween(fromIndex, toIndex)
-  const mesh = buildDeckMesh(context, stations, stationIndices)
+  const mesh = buildDeckMesh(context, stations)
   const terrainMeshes = buildTerrainMeshes(context, stations, stationIndices)
   const wallMeshes = buildWallMeshes(context, stations)
 
@@ -322,15 +316,7 @@ export type TrackChunkManagerOptions = {
  */
 export const createTrackChunkManager = (options: TrackChunkManagerOptions): TrackChunkManager => {
   const groundTexture = createGroundTexture()
-  const material = new THREE.MeshStandardMaterial({
-    map: groundTexture,
-    displacementMap: groundTexture,
-    displacementScale: GROUND_DISPLACEMENT_SCALE,
-    displacementBias: GROUND_DISPLACEMENT_BIAS,
-    bumpMap: groundTexture,
-    bumpScale: GROUND_BUMP_SCALE,
-    roughness: 1
-  })
+  const material = new THREE.MeshStandardMaterial({ color: DECK_COLOR, roughness: 1 })
   // The surrounding countryside is the same ground, shaded down a little so the
   // drivable deck still reads as a path through it.
   const terrainMaterial = new THREE.MeshStandardMaterial({

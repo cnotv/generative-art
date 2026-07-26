@@ -36,7 +36,8 @@ export const applyVariation = (base: number, variation: number, sample: number):
  *
  * Side areas mirror onto both banks and always clear the deck, so a tree never
  * grows through the ground the rock is rolling on. On-track areas stay inside
- * the deck. Background areas sit far out on either side.
+ * the deck. Areas placed everywhere run the band exactly as given, crossing the
+ * deck edge so ground cover reads as continuous. Background areas sit far out.
  *
  * @param placement - Which band the area scatters into
  * @param config - The area's tunable distance band
@@ -57,6 +58,7 @@ export const lateralOffset = (
     const limit = Math.min(high, TRACK_HALF_WIDTH)
     return side * (Math.min(low, limit) + bandSample * Math.max(0, limit - Math.min(low, limit)))
   }
+  if (placement === 'everywhere') return side * (low + bandSample * (high - low))
   const clearance = Math.max(low, TRACK_HALF_WIDTH)
   return side * (clearance + bandSample * Math.max(0, high - clearance))
 }

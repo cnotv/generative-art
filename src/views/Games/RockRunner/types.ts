@@ -51,8 +51,11 @@ export type TrackChunkManager = {
   teardown: () => void
 }
 
-/** Which side of the track an area scatters onto. */
-export type ScatterPlacement = 'sides' | 'track' | 'background'
+/**
+ * Where an area scatters relative to the track: beside it, on its surface,
+ * across both, or far out on the horizon.
+ */
+export type ScatterPlacement = 'sides' | 'track' | 'everywhere' | 'background'
 
 /** One illustration family dressed onto the world through a texture area. */
 export type ScatterAreaDefinition = {
