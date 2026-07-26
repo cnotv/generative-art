@@ -27,7 +27,6 @@ import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
 import { CONFIG_STORAGE_KEY } from './config'
-import { MARBLE_OPTIONS, DEFAULT_MARBLE } from '../MarbleMadness/config'
 import type { CameraMode } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
@@ -44,7 +43,6 @@ const store = useRockRunnerStore()
 const { phase, playerList, messages, hostId, runStartTime, trackSeed } = storeToRefs(store)
 
 type StoredLobbyConfig = {
-  rock?: string
   trackSeed?: number
 }
 
@@ -64,25 +62,16 @@ const playerName = ref(
   storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
-const playerRock = ref(
-  MARBLE_OPTIONS.some((option) => option.id === storedLobbyConfig.rock)
-    ? (storedLobbyConfig.rock as string)
-    : DEFAULT_MARBLE.id
-)
 const selectedSeed = ref(storedLobbyConfig.trackSeed ?? Math.floor(Math.random() * MAX_SEED) + 1)
 
 const { roomId, resolvedRoomId } = useRoomId()
 
 const runCanvas = ref<HTMLCanvasElement | null>(null)
 
-const rockUrlById = (id: string): string | undefined =>
-  MARBLE_OPTIONS.find((option) => option.id === id)?.url
-
 const session = useRockRunnerSession(
   {
     name: playerName.value,
     color: playerColor.value,
-    rock: playerRock.value,
     roomId: resolvedRoomId
   },
   {
@@ -96,7 +85,6 @@ const session = useRockRunnerSession(
         peerId,
         colorHex: new THREE.Color(player.color).getHex(),
         pos,
-        texture: rockUrlById(player.rock),
         name: player.name,
         nameColor: player.color
       })
@@ -136,10 +124,7 @@ const formattedTime = computed(() => {
 })
 
 const persistLobbyConfig = (): void => {
-  localStorage.setItem(
-    CONFIG_STORAGE_KEY,
-    JSON.stringify({ rock: playerRock.value, trackSeed: selectedSeed.value })
-  )
+  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify({ trackSeed: selectedSeed.value }))
 }
 
 const handleConfigChange = (key: string, value: string | number): void => {
@@ -153,7 +138,6 @@ const upsertLocalPlayer = (): void => {
     id: localId(),
     name: playerName.value,
     color: playerColor.value,
-    rock: playerRock.value,
     distance: 0
   })
 }
@@ -170,12 +154,6 @@ const {
   handleMatchFound,
   handleLeaveRoom: leaveRoom
 } = useMultiplayerLobbyHandlers(playerName, playerColor, roomId, session)
-
-const handleRockChange = (rockId: string): void => {
-  playerRock.value = rockId
-  session.updateProfile(playerName.value, playerColor.value, rockId)
-  persistLobbyConfig()
-}
 
 const handleLeaveRoom = (): void => {
   store.solo = false
@@ -289,7 +267,6 @@ onUnmounted(() => {
       <RockRunnerLobby
         :player-name="playerName"
         :player-color="playerColor"
-        :player-rock="playerRock"
         :is-host="isHost"
         :player-list="playerList"
         :room-id="roomId"
@@ -301,7 +278,6 @@ onUnmounted(() => {
         @match-found="handleMatchFound"
         @leave-room="handleLeaveRoom"
         @config-change="handleConfigChange"
-        @rock-change="handleRockChange"
       />
     </template>
 

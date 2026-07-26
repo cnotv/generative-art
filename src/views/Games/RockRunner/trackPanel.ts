@@ -1,7 +1,12 @@
 import { reactive } from 'vue'
+import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import type { TrackChunkManager, TrackDimensions, WallConfig } from './types'
+import type { FogConfig, TrackChunkManager, TrackDimensions, WallConfig } from './types'
 import {
+  FOG_COLOR,
+  FOG_ELEMENT_NAME,
+  FOG_FAR,
+  FOG_NEAR,
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
   TRACK_ELEMENT_NAME,
@@ -31,9 +36,18 @@ export const RR_TRACK_CONTROLS = {
   }
 }
 
+// Fog and sky share one colour: any difference between them shows up as a hard
+// band where the faded world meets the backdrop.
+export const RR_FOG_CONTROLS = {
+  color: { label: 'Colour', color: true },
+  near: { min: 0, max: 600, step: 5, label: 'Starts at' },
+  far: { min: 20, max: 2000, step: 10, label: 'Fully faded at' }
+}
+
 export type TrackPanelOptions = {
   manager: TrackChunkManager
   getDistance: () => number
+  scene: THREE.Scene
 }
 
 /**
@@ -86,9 +100,32 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
     }
   )
 
+  const fog = reactive<FogConfig>({ color: FOG_COLOR, near: FOG_NEAR, far: FOG_FAR })
+
+  const applyFog = (): void => {
+    const scene = options.scene
+    scene.fog = new THREE.Fog(fog.color, fog.near, Math.max(fog.near + 1, fog.far))
+    if (scene.background instanceof THREE.Color) scene.background.setHex(fog.color)
+  }
+
+  debugSceneStore.addSceneElement(
+    { name: FOG_ELEMENT_NAME, type: 'Fog', label: 'Fog', hidden: false },
+    {
+      title: 'Fog',
+      type: 'Fog',
+      schema: RR_FOG_CONTROLS,
+      getValue: (path: string) => fog[path as keyof FogConfig],
+      updateValue: (path: string, value: unknown) => {
+        fog[path as keyof FogConfig] = value as number
+        applyFog()
+      }
+    }
+  )
+
   return () => {
     debugSceneStore.removeSceneElement(WALL_ELEMENT_NAME)
     debugSceneStore.removeSceneElement(TRACK_ELEMENT_NAME)
+    debugSceneStore.removeSceneElement(FOG_ELEMENT_NAME)
   }
 }
 

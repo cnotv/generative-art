@@ -31,6 +31,13 @@ export type TrackDimensions = {
   terrainWidth: number
 }
 
+/** Distance-fade settings for the scene, shared with the sky colour. */
+export type FogConfig = {
+  color: number
+  near: number
+  far: number
+}
+
 /** Height and thickness of the invisible containment walls flanking the deck. */
 export type WallConfig = {
   height: number
@@ -148,7 +155,6 @@ export type RrPlayer = {
   id: string
   name: string
   color: string
-  rock: string
   distance: number
 }
 
@@ -166,7 +172,6 @@ export type RockPosPayload = {
 export type RrAvatarPayload = {
   name: string
   color: string
-  rock: string
 }
 
 export type RrStartPayload = {
@@ -182,7 +187,6 @@ export type RrDistancePayload = {
 export type UseRockRunnerSessionOptions = {
   name: string
   color: string
-  rock: string
   roomId: string
 }
 

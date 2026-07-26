@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { LobbyUIWizard, LobbyUIRow, LobbyUIImageGrid } from '@/components/LobbyUI'
+import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from '../config'
-import { MARBLE_OPTIONS } from '../../MarbleMadness/config'
 
 const props = defineProps<{
   playerName: string
   playerColor: string
-  playerRock: string
   isHost: boolean
   playerList: LobbyPlayer[]
   roomId: string
@@ -24,7 +22,6 @@ const emit = defineEmits<{
   matchFound: [roomId: string]
   leaveRoom: []
   'config-change': [key: string, value: string | number]
-  'rock-change': [rockId: string]
 }>()
 
 const configFields = computed((): LobbyConfigField[] => [
@@ -57,14 +54,5 @@ const configFields = computed((): LobbyConfigField[] => [
     @leave-room="emit('leaveRoom')"
     @config-change="(key, value) => emit('config-change', key, value)"
   >
-    <template #profile-extra>
-      <LobbyUIRow label="Rock">
-        <LobbyUIImageGrid
-          :model-value="playerRock"
-          :items="MARBLE_OPTIONS"
-          @update:model-value="emit('rock-change', $event)"
-        />
-      </LobbyUIRow>
-    </template>
   </LobbyUIWizard>
 </template>

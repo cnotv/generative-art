@@ -96,6 +96,7 @@ export const TRACK_CONTACT_SKIN = 0.04
 export const WALL_INSET = -0.2
 export const WALL_ELEMENT_NAME = 'edge-walls'
 export const TRACK_ELEMENT_NAME = 'track'
+export const FOG_ELEMENT_NAME = 'fog'
 
 // The countryside flanking the deck. Purely visual and collider-free: it gives
 // the scatter something to stand on instead of floating over the sky.

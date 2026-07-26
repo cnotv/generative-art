@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { RR_TRACK_CONTROLS, RR_WALL_CONTROLS, MAX_TERRAIN_WIDTH } from './trackPanel'
-import { MIN_TURN_RADIUS, TERRAIN_WIDTH, TRACK_WIDTH } from './config'
+import {
+  RR_TRACK_CONTROLS,
+  RR_WALL_CONTROLS,
+  RR_FOG_CONTROLS,
+  MAX_TERRAIN_WIDTH
+} from './trackPanel'
+import { FOG_FAR, FOG_NEAR, MIN_TURN_RADIUS, TERRAIN_WIDTH, TRACK_WIDTH } from './config'
 
 describe('MAX_TERRAIN_WIDTH', () => {
   // A swept ribbon folds through itself once its half-width passes the path's
@@ -46,5 +51,25 @@ describe('RR_WALL_CONTROLS', () => {
 
   it('never allows a zero-thickness wall', () => {
     expect(RR_WALL_CONTROLS.thickness.min).toBeGreaterThan(0)
+  })
+})
+
+describe('RR_FOG_CONTROLS', () => {
+  it('exposes colour and both distances', () => {
+    expect(Object.keys(RR_FOG_CONTROLS)).toEqual(['color', 'near', 'far'])
+  })
+
+  it('offers a colour picker rather than a slider for the colour', () => {
+    expect(RR_FOG_CONTROLS.color.color).toBe(true)
+  })
+
+  it('reaches past the defaults in both directions, so fog can be opened up or closed in', () => {
+    expect(RR_FOG_CONTROLS.near.max).toBeGreaterThan(FOG_NEAR)
+    expect(RR_FOG_CONTROLS.far.max).toBeGreaterThan(FOG_FAR)
+    expect(RR_FOG_CONTROLS.near.min).toBeLessThan(FOG_NEAR)
+  })
+
+  it('never lets the fade finish at zero distance', () => {
+    expect(RR_FOG_CONTROLS.far.min).toBeGreaterThan(0)
   })
 })

@@ -538,7 +538,7 @@ const buildRunWorld = ({
   )
   registerCameraProperties({ camera: tools.camera, orbit })
   state.disposePanels = [
-    registerTrackElements({ manager: track, getDistance: () => state.distance }),
+    registerTrackElements({ manager: track, getDistance: () => state.distance, scene }),
     scatterPanel.teardown
   ]
   scatterPanel.register(state.scatter, () => state.distance)

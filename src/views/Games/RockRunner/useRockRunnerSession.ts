@@ -41,8 +41,7 @@ type SessionContext = {
 
 const avatarPayload = (options: UseRockRunnerSessionOptions): RrAvatarPayload => ({
   name: options.name,
-  color: options.color,
-  rock: options.rock
+  color: options.color
 })
 
 const announceSelf = (context: SessionContext, joined: P2PSession): void => {
@@ -50,7 +49,6 @@ const announceSelf = (context: SessionContext, joined: P2PSession): void => {
     id: joined.peerId,
     name: context.options.name,
     color: context.options.color,
-    rock: context.options.rock,
     distance: 0
   })
   p2pSendData(joined, AVATAR_CHANNEL, avatarPayload(context.options))
@@ -87,7 +85,6 @@ const bindPeerEvents = (context: SessionContext, joined: P2PSession): void => {
       id: peerId,
       name: payload.name,
       color: payload.color,
-      rock: payload.rock,
       distance: existing?.distance ?? 0
     })
   })
@@ -174,16 +171,14 @@ export const useRockRunnerSession = (
     p2pSendData(session.value, CHAT_CHANNEL, message)
   }
 
-  const updateProfile = (name: string, color: string, rock?: string): void => {
+  const updateProfile = (name: string, color: string): void => {
     options.name = name
     options.color = color
-    if (rock !== undefined) options.rock = rock
     const existing = store.players[localPeerId.value]
     store.upsertPlayer({
       id: localPeerId.value,
       name,
       color,
-      rock: options.rock,
       distance: existing?.distance ?? 0
     })
     if (session.value) p2pSendData(session.value, AVATAR_CHANNEL, avatarPayload(options))
