@@ -78,6 +78,26 @@ const randomInRange = (
 }
 
 /**
+ * Draw a deterministic sequence of values in [0, 1) from a seed.
+ *
+ * Callers that need several independent variations per instance (lateral
+ * offset, jitter, rotation, scale, texture pick) draw one long sequence and
+ * slice it, so the whole layout stays reproducible from the seed alone.
+ *
+ * @param seed - Seed seeding the mulberry32 state
+ * @param count - How many values to draw
+ * @returns `count` values in [0, 1)
+ */
+export const seededRandomValues = (seed: number, count: number): number[] =>
+  Array.from({ length: count }).reduce<{ generator: SeededRandom; values: number[] }>(
+    (accumulator) => {
+      const [generator, value] = nextRandom(accumulator.generator)
+      return { generator, values: [...accumulator.values, value] }
+    },
+    { generator: { state: seed }, values: [] }
+  ).values
+
+/**
  * Calculate area bounds from center and size
  */
 const calculateBoundsFromCenterAndSize = (

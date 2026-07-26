@@ -356,8 +356,12 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 </template>
 
 <style scoped>
+/* No `overflow-x: hidden` here: when one axis is hidden the other computes to
+   `auto`, which turned this into a vertical scroll container and clipped the
+   last control of every group. `min-width: 0` keeps wide rows from stretching
+   the panel without creating a scroll context. */
 .config-controls {
-  overflow-x: hidden;
+  min-width: 0;
   padding-bottom: 0.25rem;
 }
 

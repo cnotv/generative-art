@@ -16,15 +16,20 @@ export type GhostRegistry = {
 
 export const createGhostRegistry = (): GhostRegistry => ({ entries: new Map(), scene: null })
 
-const makeGhostMesh = (scene: THREE.Scene, colorHex: number, texture?: string): THREE.Mesh =>
-  getBall(scene, undefined, {
-    size: MARBLE_RADIUS,
-    color: colorHex,
-    texture,
+const makeGhostMesh = (scene: THREE.Scene, placement: GhostPlacement): THREE.Mesh => {
+  const mesh = getBall(scene, undefined, {
+    size: placement.size ?? MARBLE_RADIUS,
+    color: placement.colorHex,
+    texture: placement.texture,
     transparent: true,
     opacity: 0.85,
-    segments: 24
+    segments: placement.segments ?? 24
   })
+  // Lets a game dress its ghosts like its own player without this module
+  // needing to know anything about the material involved.
+  placement.decorate?.(mesh)
+  return mesh
+}
 
 export type GhostPlacement = {
   peerId: string
@@ -33,14 +38,17 @@ export type GhostPlacement = {
   texture?: string
   name?: string
   nameColor?: string
+  size?: number
+  segments?: number
+  decorate?: (mesh: THREE.Mesh) => void
 }
 
 export const placeGhost = (registry: GhostRegistry, placement: GhostPlacement): void => {
   if (!registry.scene) return
-  const { peerId, colorHex, pos, texture, name, nameColor } = placement
+  const { peerId, pos, name, nameColor } = placement
   const existing = registry.entries.get(peerId)
   const entry: GhostEntry = existing ?? {
-    mesh: makeGhostMesh(registry.scene, colorHex, texture),
+    mesh: makeGhostMesh(registry.scene, placement),
     label: name ? createNameLabel(registry.scene, name, nameColor ?? '#ffffff') : null
   }
   if (!existing) registry.entries.set(peerId, entry)

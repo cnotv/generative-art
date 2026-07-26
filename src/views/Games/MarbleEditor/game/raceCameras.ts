@@ -51,22 +51,36 @@ export type RaceCameraOptions = {
   smoothedDirection: THREE.Vector3
   transitionStart: THREE.Vector3
   transitionAlpha: number
+  /**
+   * Eye height above the ball's centre. Should clear the ball's own radius,
+   * or the camera sits inside the mesh. Defaults to the marble's tuning.
+   */
+  firstPersonHeight?: number
+  /**
+   * How far ahead of the ball's centre the eye sits. Large enough and the ball
+   * falls entirely behind the camera, so the player never sees their own body.
+   */
+  firstPersonForward?: number
+  firstPersonLookAhead?: number
+  freeCamHeight?: number
+  freeCamBack?: number
 }
 
 export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
   if (!marble) return
+  const forward = options.firstPersonForward ?? 0
   scratchCameraGoal.set(
-    marble.position.x,
-    marble.position.y + FIRST_PERSON_HEIGHT,
-    marble.position.z
+    marble.position.x + smoothedDirection.x * forward,
+    marble.position.y + (options.firstPersonHeight ?? FIRST_PERSON_HEIGHT),
+    marble.position.z + smoothedDirection.z * forward
   )
   // At alpha 1 this lands exactly on the marble head (no follow lag); below 1 it
   // eases in from where the previous mode left the camera.
   camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
   scratchLookTarget
     .copy(camera.position)
-    .addScaledVector(smoothedDirection, FIRST_PERSON_LOOK_AHEAD)
+    .addScaledVector(smoothedDirection, options.firstPersonLookAhead ?? FIRST_PERSON_LOOK_AHEAD)
   // The render loop calls orbit.update() every frame, which re-points the
   // camera at orbit.target — so the look direction must go through the target.
   if (orbit) orbit.target.copy(scratchLookTarget)
@@ -103,10 +117,11 @@ export const updateFreeCamera = (options: RaceCameraOptions): void => {
     orbit.enabled = false
     orbit.target.copy(marble.position)
   }
+  const back = options.freeCamBack ?? FREE_CAM_BACK
   scratchCameraGoal.set(
-    marble.position.x - smoothedDirection.x * FREE_CAM_BACK,
-    marble.position.y + FREE_CAM_HEIGHT,
-    marble.position.z - smoothedDirection.z * FREE_CAM_BACK
+    marble.position.x - smoothedDirection.x * back,
+    marble.position.y + (options.freeCamHeight ?? FREE_CAM_HEIGHT),
+    marble.position.z - smoothedDirection.z * back
   )
   camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
   camera.lookAt(marble.position)

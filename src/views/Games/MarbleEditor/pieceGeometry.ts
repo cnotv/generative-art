@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import type { CoordinateTuple } from '@webgamekit/animation'
+import type { SweepStation } from '@/types/sweptGeometry'
+import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
 import type { PlacedPiece, PieceTransform, TrackPieceType, TrackColliderSpec } from './types'
 import { PIECE_CATALOG } from './pieceCatalog'
 import {
@@ -190,11 +192,6 @@ export const bankedCrossSection = (side: 1 | -1): [number, number][] =>
 
 const ARC_SWEEP_STATIONS = 49
 
-type SweepStation = {
-  origin: THREE.Vector3
-  orientation: THREE.Quaternion
-}
-
 // Arc stations, optionally with a short straight extension at both ends when
 // JOINT_OVERLAP is non-zero. With flush junctions (overlap 0) the extensions
 // would coincide with the first/last arc stations and produce degenerate
@@ -222,63 +219,6 @@ const arcSweepStations = (side: 1 | -1): SweepStation[] => {
     orientation: last.orientation.clone()
   }
   return [entry, ...arc, exit]
-}
-
-// Each cross-section edge gets its own vertex pair per station: profile
-// corners stay hard while the sweep direction shades smoothly.
-const sweepPositions = (stations: SweepStation[], crossSection: [number, number][]): number[] =>
-  stations.flatMap((station) =>
-    crossSection.flatMap((current, pointIndex) => {
-      const nextPoint = crossSection[(pointIndex + 1) % crossSection.length]
-      return [current, nextPoint].flatMap(([x, y]) => {
-        const point = vec(x, y, 0).applyQuaternion(station.orientation).add(station.origin)
-        return [point.x, point.y, point.z]
-      })
-    })
-  )
-
-// Winding matters: Rapier's FIX_INTERNAL_EDGES corrects contact normals using
-// the triangles' face normals, so every face must point outward (deck up).
-const sweepIndices = (stationCount: number, crossSection: [number, number][]): number[] => {
-  const edgeCount = crossSection.length
-  const perStation = edgeCount * 2
-  const sideQuads = Array.from({ length: stationCount - 1 }, (_, station) =>
-    Array.from({ length: edgeCount }, (_, edge) => {
-      const a = station * perStation + edge * 2
-      const b = a + 1
-      const c = (station + 1) * perStation + edge * 2
-      const d = c + 1
-      return [a, b, c, b, d, c]
-    }).flat()
-  ).flat()
-  const capTriangles = THREE.ShapeUtils.triangulateShape(
-    crossSection.map(([x, y]) => new THREE.Vector2(x, y)),
-    []
-  )
-  const endBase = (stationCount - 1) * perStation
-  const caps = capTriangles.flatMap(([a, b, c]) => [
-    a * 2,
-    b * 2,
-    c * 2,
-    endBase + a * 2,
-    endBase + c * 2,
-    endBase + b * 2
-  ])
-  return [...sideQuads, ...caps]
-}
-
-const buildSweepGeometry = (
-  stations: SweepStation[],
-  crossSection: [number, number][] = LANE_CROSS_SECTION
-): THREE.BufferGeometry => {
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute(
-    'position',
-    new THREE.Float32BufferAttribute(sweepPositions(stations, crossSection), 3)
-  )
-  geometry.setIndex(sweepIndices(stations.length, crossSection))
-  geometry.computeVertexNormals()
-  return geometry
 }
 
 export const buildArcSweepGeometry = (
@@ -541,18 +481,6 @@ const buildTrimeshVisual = (
   mesh.userData.pieceId = piece.id
   scene.add(mesh)
   return mesh
-}
-
-const geometryWorldTriangles = (
-  geometry: THREE.BufferGeometry,
-  matrix: THREE.Matrix4
-): number[] => {
-  const world = geometry.clone().applyMatrix4(matrix)
-  const soup = world.index ? world.toNonIndexed() : world
-  const positions = [...(soup.getAttribute('position').array as Float32Array)]
-  if (soup !== world) soup.dispose()
-  world.dispose()
-  return positions
 }
 
 const boxColliderSpec = (spec: BoxSpec): TrackColliderSpec => {
