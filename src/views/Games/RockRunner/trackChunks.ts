@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
 import type { CrossSection, SweepStation } from '@/types/sweptGeometry'
 import groundTextureUrl from '@/assets/images/illustrations/ground.webp'
@@ -143,6 +144,24 @@ export const sweepGroundUvs = (
     })
   })
 
+/**
+ * Merges coincident vertices and recomputes normals, so a displaced surface
+ * cannot split along its own internal seams.
+ *
+ * @param geometry - Swept geometry to weld in place of the original
+ * @returns The welded geometry; the source is disposed
+ */
+export const weldForDisplacement = (geometry: THREE.BufferGeometry): THREE.BufferGeometry => {
+  // mergeVertices compares every attribute, and the sweep has already given
+  // coincident vertices differing normals — so the normals must go before the
+  // merge, then be recomputed from the welded topology.
+  geometry.deleteAttribute('normal')
+  const welded = mergeVertices(geometry)
+  welded.computeVertexNormals()
+  if (welded !== geometry) geometry.dispose()
+  return welded
+}
+
 const createGroundTexture = (): THREE.Texture => {
   const texture = new THREE.TextureLoader().load(groundTextureUrl)
   texture.wrapS = THREE.RepeatWrapping
@@ -196,9 +215,11 @@ const buildTerrainMeshes = (
   stationIndices: number[]
 ): THREE.Mesh[] =>
   apronCrossSections(context.width, context.terrainWidth).map((crossSection, index) => {
-    const geometry = buildSweepGeometry(stations, crossSection)
+    const swept = buildSweepGeometry(stations, crossSection)
     const stripWidth = Math.max(1, (context.terrainWidth - context.width) / 2)
-    geometry.setAttribute(
+    // UVs must be assigned before welding: they are emitted in the sweep's own
+    // vertex order, which welding collapses.
+    swept.setAttribute(
       'uv',
       new THREE.Float32BufferAttribute(
         sweepGroundUvs(
@@ -210,6 +231,12 @@ const buildTerrainMeshes = (
         2
       )
     )
+    // Welded before displacement: the sweep gives every profile edge its own
+    // vertex pair, so coincident vertices carry different normals. Displacement
+    // moves each along its own normal, prising the pairs apart into hairline
+    // cracks you can see the sky through. Welding shares one normal per point,
+    // so both sides of a seam move together.
+    const geometry = weldForDisplacement(swept)
     const mesh = new THREE.Mesh(geometry, context.terrainMaterial)
     mesh.name = `terrain-${index === 0 ? 'left' : 'right'}`
     mesh.receiveShadow = true

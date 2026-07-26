@@ -9,8 +9,14 @@ describe('MAX_TERRAIN_WIDTH', () => {
     expect(MAX_TERRAIN_WIDTH / 2).toBeLessThan(MIN_TURN_RADIUS)
   })
 
-  it('still allows widening well past the default', () => {
-    expect(MAX_TERRAIN_WIDTH).toBeGreaterThan(TERRAIN_WIDTH)
+  it('is the ceiling the default ground already sits at', () => {
+    expect(TERRAIN_WIDTH).toBeLessThanOrEqual(MAX_TERRAIN_WIDTH)
+  })
+
+  // Anything wider needs the countryside rebuilt as world-space tiles rather
+  // than a ribbon swept along the path, so this number cannot simply be raised.
+  it('leaves no headroom above the fold limit', () => {
+    expect(MAX_TERRAIN_WIDTH + 2).toBeGreaterThanOrEqual(Math.floor(MIN_TURN_RADIUS * 2))
   })
 })
 

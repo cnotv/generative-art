@@ -104,7 +104,10 @@ export const TRACK_ELEMENT_NAME = 'track'
 // overlaps the deck and the two surfaces cannot z-fight. Its half-width must
 // stay under MIN_TURN_RADIUS or the swept strip folds through itself on the
 // inside of a bend.
-export const TERRAIN_WIDTH = 76
+// The widest a ribbon swept along this path can go without folding through
+// itself; see MIN_TURN_RADIUS. Raising it means changing how the countryside is
+// built, not just this number.
+export const TERRAIN_WIDTH = 92
 export const TERRAIN_HALF_WIDTH = TERRAIN_WIDTH / 2
 export const TERRAIN_THICKNESS = 2
 export const TERRAIN_DROP = 0.25
@@ -178,7 +181,10 @@ export const JUMP_COOLDOWN_SECONDS = 0.25
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000
 
-export const FIRST_PERSON_HEIGHT = 1.2
+// The eye sits just above the crown of the rock rather than at a fixed offset:
+// anything below the radius puts the camera inside the mesh.
+export const FIRST_PERSON_EYE_CLEARANCE = 0.15
+export const FIRST_PERSON_HEIGHT = ROCK_RADIUS + FIRST_PERSON_EYE_CLEARANCE
 export const FIRST_PERSON_LOOK_AHEAD = 20
 export const FREE_CAM_HEIGHT = 40
 export const FREE_CAM_BACK = 50

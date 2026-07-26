@@ -51,6 +51,14 @@ export type RaceCameraOptions = {
   smoothedDirection: THREE.Vector3
   transitionStart: THREE.Vector3
   transitionAlpha: number
+  /**
+   * Eye height above the ball's centre. Should clear the ball's own radius,
+   * or the camera sits inside the mesh. Defaults to the marble's tuning.
+   */
+  firstPersonHeight?: number
+  firstPersonLookAhead?: number
+  freeCamHeight?: number
+  freeCamBack?: number
 }
 
 export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
@@ -58,7 +66,7 @@ export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   if (!marble) return
   scratchCameraGoal.set(
     marble.position.x,
-    marble.position.y + FIRST_PERSON_HEIGHT,
+    marble.position.y + (options.firstPersonHeight ?? FIRST_PERSON_HEIGHT),
     marble.position.z
   )
   // At alpha 1 this lands exactly on the marble head (no follow lag); below 1 it
@@ -66,7 +74,7 @@ export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
   scratchLookTarget
     .copy(camera.position)
-    .addScaledVector(smoothedDirection, FIRST_PERSON_LOOK_AHEAD)
+    .addScaledVector(smoothedDirection, options.firstPersonLookAhead ?? FIRST_PERSON_LOOK_AHEAD)
   // The render loop calls orbit.update() every frame, which re-points the
   // camera at orbit.target — so the look direction must go through the target.
   if (orbit) orbit.target.copy(scratchLookTarget)
@@ -103,10 +111,11 @@ export const updateFreeCamera = (options: RaceCameraOptions): void => {
     orbit.enabled = false
     orbit.target.copy(marble.position)
   }
+  const back = options.freeCamBack ?? FREE_CAM_BACK
   scratchCameraGoal.set(
-    marble.position.x - smoothedDirection.x * FREE_CAM_BACK,
-    marble.position.y + FREE_CAM_HEIGHT,
-    marble.position.z - smoothedDirection.z * FREE_CAM_BACK
+    marble.position.x - smoothedDirection.x * back,
+    marble.position.y + (options.freeCamHeight ?? FREE_CAM_HEIGHT),
+    marble.position.z - smoothedDirection.z * back
   )
   camera.position.lerpVectors(transitionStart, scratchCameraGoal, easeTransition(transitionAlpha))
   camera.lookAt(marble.position)

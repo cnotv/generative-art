@@ -59,9 +59,13 @@ import {
   COUNTDOWN_MS,
   CAMERA_TRANSITION_SECONDS,
   DISTANCE_BROADCAST_MS,
+  FIRST_PERSON_HEIGHT,
+  FIRST_PERSON_LOOK_AHEAD,
   FOG_COLOR,
   FOG_FAR,
   FOG_NEAR,
+  FREE_CAM_BACK,
+  FREE_CAM_HEIGHT,
   FORWARD_IMPULSE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
@@ -445,7 +449,11 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
         orbit,
         smoothedDirection: state.smoothedDirection,
         transitionStart: state.cameraTransitionStart,
-        transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS)
+        transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS),
+        firstPersonHeight: FIRST_PERSON_HEIGHT,
+        firstPersonLookAhead: FIRST_PERSON_LOOK_AHEAD,
+        freeCamHeight: FREE_CAM_HEIGHT,
+        freeCamBack: FREE_CAM_BACK
       })
       state.prevCameraMode = mode
     }
