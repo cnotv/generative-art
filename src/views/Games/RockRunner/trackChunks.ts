@@ -37,9 +37,7 @@ import {
   TRACK_LOOKAHEAD,
   TRACK_CONTACT_SKIN,
   TRACK_WIDTH,
-  WALL_FRICTION,
-  WALL_INSET,
-  WALL_RESTITUTION
+  WALL_INSET
 } from './config'
 
 const IDENTITY_MATRIX = new THREE.Matrix4()
@@ -88,9 +86,44 @@ export const deckCrossSection = (width: number, thickness: number): CrossSection
   slabCrossSection(width, thickness, 0, DECK_SEGMENTS_ACROSS)
 
 /**
- * Outlines for the two containment walls, one per track edge. They sit just
- * outside the deck so the rock is stopped before its contact patch leaves the
- * ground it is rolling on.
+ * The whole collidable profile as one closed outline: the deck with a
+ * containment wall rising at each edge.
+ *
+ * Deck and walls have to be a single swept mesh, not two that meet. Rapier's
+ * FIX_INTERNAL_EDGES corrects contact normals across a mesh's own internal
+ * edges but knows nothing of the junction between two separate colliders, so a
+ * ball reaching that concave corner either catches on it and stops dead or is
+ * handed a bad normal and punted through. Sweeping one profile removes the
+ * junction entirely.
+ *
+ * @param width - Deck width
+ * @param wall - Wall height and thickness
+ * @param thickness - How deep the deck slab sits below its surface
+ * @returns One closed outline covering deck and both walls
+ */
+export const deckWithWallsCrossSection = (
+  width: number,
+  wall: WallConfig,
+  thickness: number
+): CrossSection => {
+  const inner = width / 2 + WALL_INSET
+  const outer = inner + wall.thickness
+  return [
+    [-outer, -thickness],
+    [-outer, wall.height],
+    [-inner, wall.height],
+    [-inner, 0],
+    [inner, 0],
+    [inner, wall.height],
+    [outer, wall.height],
+    [outer, -thickness]
+  ]
+}
+
+/**
+ * Outlines for the two containment walls, one per track edge. These are the
+ * visual-only meshes the elements panel can reveal; collision comes from
+ * deckWithWallsCrossSection instead.
  *
  * @param width - Deck width the walls flank
  * @param wall - Wall height and thickness
@@ -315,11 +348,15 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
   const terrainMeshes = buildTerrainMeshes(context, stations, stationIndices)
   const wallMeshes = buildWallMeshes(context, stations)
 
-  const body = context.world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
-  addTrimeshCollider(context.world, body, mesh.geometry, DECK_FRICTION, DECK_RESTITUTION)
-  wallMeshes.forEach((wallMesh) =>
-    addTrimeshCollider(context.world, body, wallMesh.geometry, WALL_FRICTION, WALL_RESTITUTION)
+  // One collider for deck and walls together, so their junction is an internal
+  // edge Rapier can correct rather than a seam between two meshes.
+  const colliderGeometry = buildSweepGeometry(
+    stations,
+    deckWithWallsCrossSection(context.width, context.wall, DECK_THICKNESS)
   )
+  const body = context.world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
+  addTrimeshCollider(context.world, body, colliderGeometry, DECK_FRICTION, DECK_RESTITUTION)
+  colliderGeometry.dispose()
 
   return {
     startDistance: fromIndex * STATION_SPACING,

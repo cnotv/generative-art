@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
 import {
   deckCrossSection,
+  deckWithWallsCrossSection,
   slabCrossSection,
   apronCrossSections,
   wallCrossSections,
@@ -175,6 +176,39 @@ describe('terrain width against path curvature', () => {
   })
 })
 
+describe('deckWithWallsCrossSection', () => {
+  it('is one closed outline spanning both walls and the deck between them', () => {
+    const section = deckWithWallsCrossSection(16, WALL, 1.2)
+    const inner = 8 + WALL_INSET
+
+    expect(Math.min(...section.map(([x]) => x))).toBeCloseTo(-inner - WALL.thickness)
+    expect(Math.max(...section.map(([x]) => x))).toBeCloseTo(inner + WALL.thickness)
+  })
+
+  it('keeps the deck surface flat between the two walls', () => {
+    const section = deckWithWallsCrossSection(16, WALL, 1.2)
+    const deckPoints = section.filter(([, y]) => y === 0)
+
+    expect(deckPoints).toHaveLength(2)
+    expect(deckPoints[0][0]).toBeCloseTo(-(8 + WALL_INSET))
+    expect(deckPoints[1][0]).toBeCloseTo(8 + WALL_INSET)
+  })
+
+  it('rises to the wall height at both edges and drops to the slab underneath', () => {
+    const section = deckWithWallsCrossSection(16, WALL, 1.2)
+
+    expect(Math.max(...section.map(([, y]) => y))).toBe(WALL.height)
+    expect(Math.min(...section.map(([, y]) => y))).toBeCloseTo(-1.2)
+  })
+
+  it('leaves a drivable span many times the rock own size', () => {
+    const section = deckWithWallsCrossSection(TRACK_WIDTH, WALL, 1.2)
+    const drivable = section.filter(([, y]) => y === 0)
+
+    expect(drivable[1][0] - drivable[0][0]).toBeGreaterThan(ROCK_RADIUS * 8)
+  })
+})
+
 describe('wallCrossSections', () => {
   it('places one wall along each deck edge, thickness outward', () => {
     const [left, right] = wallCrossSections(16, WALL)
@@ -283,12 +317,15 @@ describe('createTrackChunkManager', () => {
     expect(decks).toHaveLength(EXPECTED_CHUNKS)
   })
 
-  it('adds a deck collider and two wall colliders per chunk', () => {
+  // Deck and walls are one swept collider, not three that meet: Rapier only
+  // corrects contact normals across a mesh's own internal edges, so a junction
+  // between separate colliders is where a ball catches or is punted through.
+  it('gives each chunk a single collider covering deck and walls together', () => {
     const { manager, createCollider } = createManager()
 
     manager.ensureAhead(0)
 
-    expect(createCollider).toHaveBeenCalledTimes(EXPECTED_CHUNKS * 3)
+    expect(createCollider).toHaveBeenCalledTimes(EXPECTED_CHUNKS)
   })
 
   it('does not respawn chunks that already cover the lookahead', () => {
