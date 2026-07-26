@@ -1,7 +1,7 @@
 import treeUrl from '@/assets/images/illustrations/Tree1-1.webp'
 import bushUrl from '@/assets/images/illustrations/Bush1-1.webp'
-import flowerUrl from '@/assets/images/illustrations/Bush1-2.webp'
-import grassUrl from '@/assets/images/illustrations/flowers1.webp'
+import flowerUrl from '@/assets/images/illustrations/flowers1.webp'
+import grassUrl from '@/assets/images/illustrations/Grass1-1.webp'
 import rockUrl from '@/assets/images/illustrations/Rock.webp'
 import mountainUrl from '@/assets/images/illustrations/Mountain1-1.webp'
 import type { ScatterAreaDefinition } from '../types'
@@ -19,10 +19,6 @@ const texture = (filename: string, url: string) => ({
  * Every area starts from a single variant and carries its own texture list, so
  * the Textures panel can add the other numbered variants (Tree1-2, Tree2-1 and
  * friends) to any area without touching this catalog.
- *
- * The illustration set has no grass-only or flower-only art. `flowers1` is a
- * grass clump with flower heads, so it is the Grass area's texture, and the
- * Flower area falls back to the green plant until a flower illustration exists.
  */
 export const SCATTER_AREAS: ScatterAreaDefinition[] = [
   {
@@ -67,7 +63,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
   {
     name: 'flower',
     label: 'Flower',
-    textures: [texture('Bush1-2.webp', flowerUrl)],
+    textures: [texture('flowers1.webp', flowerUrl)],
     placement: 'sides',
     frequency: 40,
     distanceMin: 9,
@@ -80,13 +76,13 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
   {
     name: 'grass',
     label: 'Grass',
-    textures: [texture('flowers1.webp', grassUrl)],
+    textures: [texture('Grass1-1.webp', grassUrl)],
     placement: 'track',
     frequency: 22,
     distanceMin: 0,
     distanceMax: 7,
     heightOffset: -0.2,
-    baseSize: [1.8, 1.5, 1],
+    baseSize: [3.6, 1, 1],
     variation: [0, 0, 50],
     seed: 8500
   },
