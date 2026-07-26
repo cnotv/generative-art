@@ -6,11 +6,11 @@ import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import rockColorUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Color.jpg'
-import rockNormalUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_NormalGL.jpg'
-import rockRoughnessUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Roughness.jpg'
-import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_AmbientOcclusion.jpg'
-import rockDisplacementUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Displacement.jpg'
+import rockColorUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Color.webp'
+import rockNormalUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_NormalGL.webp'
+import rockRoughnessUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Roughness.webp'
+import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_AmbientOcclusion.webp'
+import rockDisplacementUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Displacement.webp'
 import {
   createDirectionalLightFollowAction,
   createPhysicsSyncAction,
@@ -141,6 +141,7 @@ type RunState = {
   cameraTransitionElapsed: number
   cameraTransitionStart: THREE.Vector3
   posAccumulator: number
+  released: boolean
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -156,6 +157,7 @@ type RunReferences = {
 // Impulses are recomputed every frame, so the vector they are written into is
 // allocated once here rather than inside the loop.
 const scratchImpulse = { x: 0, y: 0, z: 0 }
+const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 
 const CAMERA_ORDER: CameraMode[] = ['third', 'first', 'free']
 
@@ -334,9 +336,35 @@ const createRunActions = (
     body.applyImpulse(scratchImpulse, true)
   }
 
+  // The rock is pinned until the countdown clears. Killing its velocity alone
+  // would still let gravity build speed up each frame and slide it down the
+  // slope it spawned on, so gravity is switched off for the wait and restored
+  // exactly once when the run begins.
+  const holdAtStart = (): void => {
+    if (!state.rock) return
+    const body = state.rock.userData.body
+    if (state.released) {
+      body.setGravityScale(0, true)
+      state.released = false
+    }
+    body.setLinvel(ZERO_VELOCITY, true)
+    body.setAngvel(ZERO_VELOCITY, true)
+  }
+
+  const release = (): void => {
+    if (state.released || !state.rock) return
+    state.rock.userData.body.setGravityScale(1, true)
+    state.released = true
+  }
+
   const applyInput = (getDelta: () => number): void => {
     handleCameraAction()
-    if (refs.countdown.value > 0 || !state.rock) return
+    if (!state.rock) return
+    if (refs.countdown.value > 0) {
+      holdAtStart()
+      return
+    }
+    release()
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
     applyDrive()
@@ -583,6 +611,7 @@ const createRunState = (): RunState => ({
   cameraTransitionElapsed: 0,
   cameraTransitionStart: new THREE.Vector3(),
   posAccumulator: 0,
+  released: true,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []
@@ -623,6 +652,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.prevCameraMode = 'third'
     state.cameraTransitionElapsed = 0
     state.posAccumulator = 0
+    state.released = true
     localStartTime = Date.now()
     actions.updateCountdown()
   }

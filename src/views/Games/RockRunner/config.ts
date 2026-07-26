@@ -133,12 +133,14 @@ export const BACKGROUND_DISPOSE_BEHIND = BACKGROUND_BEHIND
 export const SCATTER_ALPHA_TEST = 0.35
 
 export const ROCK_RADIUS = 1.1
-export const ROCK_WEIGHT = 9
+export const ROCK_WEIGHT = 24
 export const ROCK_RESTITUTION = 0.05
 export const ROCK_FRICTION = 2.2
 export const ROCK_LINEAR_DAMPING = 0.35
 export const ROCK_ANGULAR_DAMPING = 0.25
-export const ROCK_SPAWN_HEIGHT = 3
+// Rests on the deck rather than dropping onto it: the rock is held still for
+// the countdown, so a drop would only be a lurch the moment it is released.
+export const ROCK_SPAWN_HEIGHT = ROCK_RADIUS + 0.05
 // High enough for the displacement map to have vertices to push around.
 export const ROCK_SEGMENTS = 96
 // Must stay a whole number. The sphere's u wraps from 1 back to 0 around the
@@ -159,17 +161,20 @@ export const SPAWN_GATE_SPREAD = 4
 
 // Auto-forward: the rock is pushed along the path tangent every frame and its
 // speed cap climbs with distance, so the run gets faster the longer it lasts.
-export const FORWARD_IMPULSE = 5.5
+// Impulses are momentum, so they scale with the mass above. They are raised by
+// slightly less than the weight was, which is what makes the rock read as
+// heavier: it still drives, but takes longer to get going and to change line.
+export const FORWARD_IMPULSE = 13
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
 
-export const STEER_IMPULSE = 4.5
+export const STEER_IMPULSE = 10
 // Lateral speed is capped separately so steering stays responsive at any
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-export const JUMP_IMPULSE = 13
+export const JUMP_IMPULSE = 32
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
