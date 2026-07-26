@@ -80,7 +80,17 @@ export const DECK_RESTITUTION = 0.05
 // them, so the ground reads as an open field while the rock cannot leave it.
 export const WALL_HEIGHT = 3
 export const WALL_THICKNESS = 1
-export const WALL_FRICTION = 0.1
+// Frictionless: the rock is pushed forward every frame, so a wall it can grip
+// turns into a wedge that pins it against the edge. It has to slide instead.
+export const WALL_FRICTION = 0
+export const WALL_RESTITUTION = 0.1
+// A small virtual margin on every track collider, bridging the hairline seam
+// where the deck meets a wall. Without it a rolling ball catches on that
+// concave junction and stops dead. Tiny next to ROCK_RADIUS.
+export const TRACK_CONTACT_SKIN = 0.04
+// The wall stands off the deck edge by a little more than the rock's radius, so
+// the rock meets a flat face rather than the deck/wall corner itself.
+export const WALL_INSET = -0.2
 export const WALL_ELEMENT_NAME = 'edge-walls'
 
 // The countryside flanking the deck. Purely visual and collider-free: it gives

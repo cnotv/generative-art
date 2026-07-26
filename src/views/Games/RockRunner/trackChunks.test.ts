@@ -19,10 +19,12 @@ import {
   MIN_TURN_RADIUS,
   STATION_SPACING,
   TERRAIN_DROP,
+  ROCK_RADIUS,
   TERRAIN_HALF_WIDTH,
   TRACK_LOOKAHEAD,
   TRACK_DISPOSE_BEHIND,
-  TRACK_WIDTH
+  TRACK_WIDTH,
+  WALL_INSET
 } from './config'
 
 const WALL = { height: 3, thickness: 1 }
@@ -173,28 +175,44 @@ describe('terrain width against path curvature', () => {
 })
 
 describe('wallCrossSections', () => {
-  it('places one wall just outside each deck edge', () => {
+  it('places one wall along each deck edge, thickness outward', () => {
     const [left, right] = wallCrossSections(16, WALL)
+    const inner = 8 + WALL_INSET
 
-    expect(Math.min(...left.map(([x]) => x))).toBeCloseTo(-9)
-    expect(Math.max(...left.map(([x]) => x))).toBeCloseTo(-8)
-    expect(Math.min(...right.map(([x]) => x))).toBeCloseTo(8)
-    expect(Math.max(...right.map(([x]) => x))).toBeCloseTo(9)
+    expect(Math.max(...left.map(([x]) => x))).toBeCloseTo(-inner)
+    expect(Math.min(...left.map(([x]) => x))).toBeCloseTo(-inner - WALL.thickness)
+    expect(Math.min(...right.map(([x]) => x))).toBeCloseTo(inner)
+    expect(Math.max(...right.map(([x]) => x))).toBeCloseTo(inner + WALL.thickness)
   })
 
-  it('rises from the deck surface to the wall height', () => {
+  // A wall starting exactly at deck level leaves a concave corner the rolling
+  // rock catches in and stops dead against. Starting below the deck surface
+  // gives it a flat face to slide along instead.
+  it('starts below the deck surface so no concave corner is left at the seam', () => {
     const [left] = wallCrossSections(16, WALL)
-    const ys = left.map(([, y]) => y)
 
-    expect(Math.min(...ys)).toBe(0)
-    expect(Math.max(...ys)).toBe(WALL.height)
+    expect(Math.min(...left.map(([, y]) => y))).toBeLessThan(0)
   })
 
-  it('never overlaps the drivable deck', () => {
-    const [left, right] = wallCrossSections(TRACK_WIDTH, WALL)
+  it('rises to the full wall height', () => {
+    const [left] = wallCrossSections(16, WALL)
 
-    expect(Math.max(...left.map(([x]) => x))).toBeLessThanOrEqual(-TRACK_WIDTH / 2)
-    expect(Math.min(...right.map(([x]) => x))).toBeGreaterThanOrEqual(TRACK_WIDTH / 2)
+    expect(Math.max(...left.map(([, y]) => y))).toBe(WALL.height)
+  })
+
+  it('intrudes onto the deck by far less than the rock could notice', () => {
+    const [, right] = wallCrossSections(TRACK_WIDTH, WALL)
+    const intrusion = TRACK_WIDTH / 2 - Math.min(...right.map(([x]) => x))
+
+    expect(intrusion).toBeGreaterThanOrEqual(0)
+    expect(intrusion).toBeLessThan(ROCK_RADIUS)
+  })
+
+  it('leaves the rock a drivable width many times its own size', () => {
+    const [, right] = wallCrossSections(TRACK_WIDTH, WALL)
+    const drivable = Math.min(...right.map(([x]) => x)) * 2
+
+    expect(drivable).toBeGreaterThan(ROCK_RADIUS * 8)
   })
 })
 

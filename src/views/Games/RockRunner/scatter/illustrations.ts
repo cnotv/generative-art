@@ -4,7 +4,6 @@ import flowerUrl from '@/assets/images/illustrations/Bush1-2.webp'
 import grassUrl from '@/assets/images/illustrations/flowers1.webp'
 import rockUrl from '@/assets/images/illustrations/Rock.webp'
 import mountainUrl from '@/assets/images/illustrations/Mountain1-1.webp'
-import cloudUrl from '@/assets/images/illustrations/cloud1.webp'
 import type { ScatterAreaDefinition } from '../types'
 
 const texture = (filename: string, url: string) => ({
@@ -29,7 +28,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
   {
     name: 'background',
     label: 'Background',
-    textures: [texture('Mountain1-1.webp', mountainUrl), texture('cloud1.webp', cloudUrl)],
+    textures: [texture('Mountain1-1.webp', mountainUrl)],
     placement: 'background',
     frequency: 6,
     distanceMin: 260,

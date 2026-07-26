@@ -25,11 +25,19 @@ import {
   TRACK_BEHIND,
   TRACK_DISPOSE_BEHIND,
   TRACK_LOOKAHEAD,
+  TRACK_CONTACT_SKIN,
   TRACK_WIDTH,
-  WALL_FRICTION
+  WALL_FRICTION,
+  WALL_INSET,
+  WALL_RESTITUTION
 } from './config'
 
 const IDENTITY_MATRIX = new THREE.Matrix4()
+
+// The walls start below the deck surface so their face runs past the seam: a
+// wall that begins exactly at deck level leaves a concave corner for the rock
+// to catch in.
+const WALL_BASE = -DECK_THICKNESS
 
 /**
  * Closed outline of a ground slab: a flat surface of `width` sitting on a base
@@ -79,20 +87,20 @@ export const deckCrossSection = (width: number, thickness: number): CrossSection
  * @returns The left and right wall outlines, in that order
  */
 export const wallCrossSections = (width: number, wall: WallConfig): CrossSection[] => {
-  const inner = width / 2
+  const inner = width / 2 + WALL_INSET
   const outer = inner + wall.thickness
   return [
     [
-      [-outer, 0],
+      [-outer, WALL_BASE],
       [-outer, wall.height],
       [-inner, wall.height],
-      [-inner, 0]
+      [-inner, WALL_BASE]
     ],
     [
-      [inner, 0],
+      [inner, WALL_BASE],
       [inner, wall.height],
       [outer, wall.height],
-      [outer, 0]
+      [outer, WALL_BASE]
     ]
   ]
 }
@@ -256,7 +264,8 @@ const addTrimeshCollider = (
   world.createCollider(
     RAPIER.ColliderDesc.trimesh(vertices, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES)
       .setFriction(friction)
-      .setRestitution(restitution),
+      .setRestitution(restitution)
+      .setContactSkin(TRACK_CONTACT_SKIN),
     body
   )
 }
@@ -275,7 +284,7 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
   const body = context.world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
   addTrimeshCollider(context.world, body, mesh.geometry, DECK_FRICTION, DECK_RESTITUTION)
   wallMeshes.forEach((wallMesh) =>
-    addTrimeshCollider(context.world, body, wallMesh.geometry, WALL_FRICTION, 0)
+    addTrimeshCollider(context.world, body, wallMesh.geometry, WALL_FRICTION, WALL_RESTITUTION)
   )
 
   return {

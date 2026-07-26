@@ -227,11 +227,13 @@ export const createScatterPanel = (): ScatterPanelState => {
           title: definition.label,
           type: 'TextureArea',
           schema: RR_SCATTER_CONTROLS,
-          getValue: (path: string) => getNestedValue(toRaw(configs)[definition.name], path),
+          // Read and write through the reactive proxy, never through toRaw: a
+          // raw read is not tracked, so the panel would keep showing the old
+          // number while the scene rebuilt with the new one.
+          getValue: (path: string) => getNestedValue(configs[definition.name], path),
           updateValue: (path: string, value: unknown) => {
-            const raw = toRaw(configs)
-            raw[definition.name] = setNestedValueImmutable(
-              raw[definition.name],
+            configs[definition.name] = setNestedValueImmutable(
+              configs[definition.name],
               path,
               value
             ) as ScatterAreaPanelConfig
