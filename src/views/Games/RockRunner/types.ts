@@ -69,6 +69,10 @@ export type ScatterAreaDefinition = {
   heightOffset: number
   baseSize: [number, number, number]
   variation: [number, number, number]
+  /** Fraction of the base size, defaulting to SCATTER_SIZE_VARIATION. */
+  sizeVariation?: number
+  /** Degrees off the local heading, defaulting to SCATTER_ROTATION_VARIATION. */
+  rotationVariation?: number
   seed: number
 }
 

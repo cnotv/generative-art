@@ -114,8 +114,9 @@ export const buildScatterPanelConfig = (
       y: definition.baseSize[1],
       z: definition.baseSize[2]
     },
-    sizeVariation: SCATTER_SIZE_VARIATION,
-    rotationVariation: SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN
+    sizeVariation: definition.sizeVariation ?? SCATTER_SIZE_VARIATION,
+    rotationVariation:
+      definition.rotationVariation ?? SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN
   },
   scatter: {
     frequency: definition.frequency,

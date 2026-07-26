@@ -1,4 +1,5 @@
 import treeUrl from '@/assets/images/illustrations/Tree1-1.webp'
+import treeTwoUrl from '@/assets/images/illustrations/Tree1-2.webp'
 import bushUrl from '@/assets/images/illustrations/Bush1-1.webp'
 import flowerUrl from '@/assets/images/illustrations/flowers1.webp'
 import grassUrl from '@/assets/images/illustrations/Grass1-1.webp'
@@ -40,12 +41,31 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     textures: [texture('Tree1-1.webp', treeUrl)],
     placement: 'sides',
     frequency: 26,
-    distanceMin: 11,
+    distanceMin: 14,
     distanceMax: 28,
     heightOffset: -1,
-    baseSize: [14, 22, 1],
+    baseSize: [47.8, 53.4, 1],
     variation: [0, 0, 50],
+    sizeVariation: 0.18,
+    rotationVariation: 10.5,
     seed: 8200
+  },
+  {
+    name: 'tree-2',
+    label: 'Tree 2',
+    textures: [texture('Tree1-2.webp', treeTwoUrl)],
+    placement: 'sides',
+    frequency: 26,
+    distanceMin: 14,
+    distanceMax: 28,
+    heightOffset: -1,
+    // 70% of Tree, so the two variants read as different specimens of the same
+    // species rather than as one tree repeated.
+    baseSize: [33.46, 37.38, 1],
+    variation: [0, 0, 50],
+    sizeVariation: 0.18,
+    rotationVariation: 10.5,
+    seed: 8250
   },
   {
     name: 'bush',
