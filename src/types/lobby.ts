@@ -6,7 +6,8 @@ export const GAME_TYPES = [
   'BubbleShooter',
   'RhythmGame',
   'MarbleMadness',
-  'MarbleEditor'
+  'MarbleEditor',
+  'RockRunner'
 ] as const
 
 export type GameType = (typeof GAME_TYPES)[number]

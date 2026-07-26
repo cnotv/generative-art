@@ -65,10 +65,12 @@ const emit = defineEmits<{
   background-color: var(--color-primary);
 }
 
+/* Sized close to the 0.5rem track so the thumb no longer bulges past it and
+   out of the panel rows the sliders sit in. */
 .slider__thumb {
   display: block;
-  height: 1.25rem;
-  width: 1.25rem;
+  height: 0.875rem;
+  width: 0.875rem;
   border-radius: var(--radius-full);
   border: 2px solid var(--color-primary);
   background-color: var(--color-background);
