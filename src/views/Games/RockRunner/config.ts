@@ -143,6 +143,9 @@ export const ROCK_ANGULAR_DAMPING = 0.25
 export const ROCK_SPAWN_HEIGHT = ROCK_RADIUS + 0.05
 // High enough for the displacement map to have vertices to push around.
 export const ROCK_SEGMENTS = 192
+// Ghosts are never displaced, so they need only enough segments to read as
+// round at the distance other players are seen from.
+export const GHOST_SEGMENTS = 48
 // Must stay a whole number. The sphere's u wraps from 1 back to 0 around the
 // ball, so a fractional repeat samples different texels either side of that
 // seam — the displacement map then pushes the two edges apart and the rock

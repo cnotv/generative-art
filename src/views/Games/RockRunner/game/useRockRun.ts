@@ -87,6 +87,7 @@ import {
   ROCK_AO_INTENSITY,
   ROCK_DISPLACEMENT_SCALE,
   ROCK_RESTITUTION,
+  GHOST_SEGMENTS,
   ROCK_TINT,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
@@ -143,6 +144,7 @@ type RunState = {
   cameraTransitionStart: THREE.Vector3
   posAccumulator: number
   released: boolean
+  rockMaps: RockMaps | null
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -192,31 +194,48 @@ const loadRockMaps = () => {
   }
 }
 
-const applyRockMaterial = (rock: ComplexModel): THREE.Texture[] => {
-  const mesh = rock as unknown as THREE.Mesh
+type RockMaps = ReturnType<typeof loadRockMaps>
+
+/**
+ * Dresses a ball as stone. Every rock in the scene shares one set of maps, so a
+ * room full of players costs the same five textures as one.
+ *
+ * @param mesh - Ball to dress, its material mutated in place
+ * @param maps - The shared texture set
+ * @param tint - Multiplied over the albedo; the player's colour for a ghost
+ * @param displaced - Whether to displace geometry, which only the local rock has
+ *   the segment count to carry
+ */
+const applyRockMaterial = (
+  mesh: THREE.Mesh,
+  maps: RockMaps,
+  tint: number,
+  displaced: boolean
+): void => {
   const material = mesh.material as THREE.MeshStandardMaterial
-  const maps = loadRockMaps()
   material.map = maps.map
   material.normalMap = maps.normalMap
   material.roughnessMap = maps.roughnessMap
   material.aoMap = maps.aoMap
-  material.displacementMap = maps.displacementMap
-  material.displacementScale = ROCK_DISPLACEMENT_SCALE
-  material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
+  if (displaced) {
+    material.displacementMap = maps.displacementMap
+    material.displacementScale = ROCK_DISPLACEMENT_SCALE
+    material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
+  }
   material.aoMapIntensity = ROCK_AO_INTENSITY
   material.normalScale.set(ROCK_NORMAL_SCALE, ROCK_NORMAL_SCALE)
-  material.color.setHex(ROCK_TINT)
+  material.color.setHex(tint)
   material.roughness = 1
   material.metalness = 0
   material.needsUpdate = true
-  return Object.values(maps)
 }
 
 const spawnRock = (
   scene: THREE.Scene,
   world: WorldReference,
-  position: CoordinateTuple
-): { rock: ComplexModel; textures: THREE.Texture[] } => {
+  position: CoordinateTuple,
+  maps: RockMaps
+): ComplexModel => {
   const rock = getBall(scene, world, {
     name: 'player-rock',
     size: ROCK_RADIUS,
@@ -232,7 +251,8 @@ const spawnRock = (
   rock.userData.body.setLinearDamping(ROCK_LINEAR_DAMPING)
   rock.userData.body.setAngularDamping(ROCK_ANGULAR_DAMPING)
   rock.userData.body.enableCcd(true)
-  return { rock, textures: applyRockMaterial(rock) }
+  applyRockMaterial(rock as unknown as THREE.Mesh, maps, ROCK_TINT, true)
+  return rock
 }
 
 const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
@@ -589,9 +609,10 @@ const buildRunWorld = ({
 
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
-  const spawned = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex))
-  state.rock = spawned.rock
-  state.rockTextures = spawned.textures
+  const maps = loadRockMaps()
+  state.rockMaps = maps
+  state.rockTextures = Object.values(maps)
+  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), maps)
   pumpWorld()
 }
 
@@ -614,6 +635,7 @@ const createRunState = (): RunState => ({
   cameraTransitionStart: new THREE.Vector3(),
   posAccumulator: 0,
   released: true,
+  rockMaps: null,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []
@@ -709,6 +731,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.path = null
     state.rockTextures.forEach((texture) => texture.dispose())
     state.rockTextures = []
+    state.rockMaps = null
     state.rock = null
     state.world = null
     state.scene = null
@@ -729,7 +752,18 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     currentActions,
     setCameraMode: actions.setCameraMode,
     cycleCameraMode: actions.cycleCameraMode,
-    updateGhostPosition: (placement: GhostPlacement) => placeGhost(ghostRegistry, placement),
+    // Other players' rocks match the local one in size and material, tinted by
+    // their own colour. They skip displacement: at a ghost's segment count
+    // there is nothing for it to move.
+    updateGhostPosition: (placement: GhostPlacement) =>
+      placeGhost(ghostRegistry, {
+        ...placement,
+        size: ROCK_RADIUS,
+        segments: GHOST_SEGMENTS,
+        decorate: (mesh) => {
+          if (state.rockMaps) applyRockMaterial(mesh, state.rockMaps, placement.colorHex, false)
+        }
+      }),
     removeGhost: (peerId: string) => removeGhost(ghostRegistry, peerId),
     init,
     destroy
