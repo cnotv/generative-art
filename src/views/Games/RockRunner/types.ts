@@ -158,6 +158,35 @@ export type ScatterAreaConfig = {
   opacity: number
 }
 
+/** One pooled debris chip thrown up behind the rock. */
+export type DebrisParticle = {
+  position: THREE.Vector3
+  velocity: THREE.Vector3
+  life: number
+  maxLife: number
+  size: number
+  angle: number
+  spin: number
+  colorIndex: number
+}
+
+export type DebrisEmitOptions = {
+  origin: THREE.Vector3
+  forward: THREE.Vector3
+  right: THREE.Vector3
+  /** Three values in [0, 1) driving spread, size, spin and colour. */
+  samples: [number, number, number]
+}
+
+/** A pooled trail of debris drawn as two instanced meshes, fill and stroke. */
+export type DebrisField = {
+  emit: (options: DebrisEmitOptions) => void
+  update: (delta: number) => void
+  shouldEmit: (delta: number, interval: number) => boolean
+  liveCount: () => number
+  teardown: () => void
+}
+
 export type CameraMode = 'first' | 'third' | 'free'
 
 export type RrPhase = 'lobby' | 'run' | 'summary'

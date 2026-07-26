@@ -197,11 +197,47 @@ export const STEER_IMPULSE = 26
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-export const JUMP_IMPULSE = 95
+// An impulse is momentum, so it has to grow with the mass: at 95 against a mass
+// of 72 the rock launched at 1.3 m/s and rose nine centimetres, which reads as
+// the jump doing nothing at all. This clears roughly the rock's own height.
+export const JUMP_IMPULSE = 540
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
 export const JUMP_COOLDOWN_SECONDS = 0.25
+
+// Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
+// oldest-first rather than allocated and collected every frame.
+export const DEBRIS_COUNT = 220
+export const DEBRIS_LIFETIME = 1.1
+export const DEBRIS_SIZE = 0.14
+// The stroke is an inverted hull: the same shape, grown slightly and drawn
+// back-faces-only, so it reads as an outline around every chip.
+export const DEBRIS_STROKE_SCALE = 1.5
+export const DEBRIS_STROKE_COLOR = 0x1c1712
+// The two colours chips are tinted with: the path they are scuffed from, and
+// the rock itself. Not ROCK_TINT — that is the multiplier applied to a dark
+// albedo, so on its own it is a pale peach that vanishes against the path.
+export const DEBRIS_GROUND_COLOR = 0xc9ae83
+export const DEBRIS_ROCK_COLOR = 0x5f4634
+export const DEBRIS_GRAVITY = -22
+export const DEBRIS_EMIT_INTERVAL = 0.02
+// Chips released together each tick.
+export const DEBRIS_PER_BURST = 4
+// Below this the rock is barely moving and kicking up dust would look wrong.
+export const DEBRIS_MIN_SPEED = 1.2
+export const DEBRIS_BACK_SPEED = 5.5
+export const DEBRIS_UP_SPEED = 6
+export const DEBRIS_SPREAD = 6
+export const DEBRIS_SPIN = 9
+// Where chips appear along the rock's own axis, as a fraction of its radius.
+// Positive is ahead of centre: at speed the rock outruns anything spawned
+// behind it and the trail falls out of frame before it is seen, so chips start
+// just forward of the contact patch and are immediately left behind.
+export const DEBRIS_TRAIL_OFFSET = 0.7
+// The rock leaves the deck briefly over every crest. Judging contact on the
+// path height alone made the trail flicker, so the probe is given room.
+export const DEBRIS_GROUND_TOLERANCE = 1.2
 
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000

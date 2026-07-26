@@ -39,6 +39,7 @@ import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
+import { createDebrisField } from './debris'
 import {
   advanceDistance,
   forwardImpulseMagnitude,
@@ -51,6 +52,7 @@ import {
 } from './rockMotion'
 import type {
   CameraMode,
+  DebrisField,
   LateralFogUniforms,
   RockPosPayload,
   ScatterAreaManager,
@@ -60,6 +62,13 @@ import type {
 import {
   CONTROLS_GAME_ID,
   COUNTDOWN_MS,
+  DEBRIS_EMIT_INTERVAL,
+  DEBRIS_GROUND_COLOR,
+  DEBRIS_GROUND_TOLERANCE,
+  DEBRIS_MIN_SPEED,
+  DEBRIS_PER_BURST,
+  DEBRIS_ROCK_COLOR,
+  DEBRIS_TRAIL_OFFSET,
   CAMERA_TRANSITION_SECONDS,
   DISTANCE_BROADCAST_MS,
   FIRST_PERSON_FORWARD,
@@ -73,6 +82,7 @@ import {
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT,
   FORWARD_IMPULSE,
+  GROUND_PROBE_DISTANCE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
   KEYBOARD_MAPPING,
@@ -146,6 +156,7 @@ type RunState = {
   posAccumulator: number
   released: boolean
   rockMaps: RockMaps | null
+  debris: DebrisField | null
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -162,6 +173,7 @@ type RunReferences = {
 // allocated once here rather than inside the loop.
 const scratchImpulse = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
+const scratchOrigin = new THREE.Vector3()
 
 const CAMERA_ORDER: CameraMode[] = ['third', 'first', 'free']
 
@@ -318,6 +330,37 @@ const createStartGate = (state: RunState) => ({
   }
 })
 
+// Chips appear just forward of the contact patch and are immediately left
+// behind, so they read as scuffed off the ground rather than falling out of the
+// ball. Kept out of the actions factory to hold that factory under its line
+// limit.
+const createDebrisEmitter =
+  (state: RunState) =>
+  (delta: number): void => {
+    if (!state.rock || !state.path || !state.debris) return
+    const body = state.rock.userData.body
+    const position = body.translation()
+    const sample = state.path.sampleAt(state.distance)
+    if (position.y - sample.position.y > GROUND_PROBE_DISTANCE + DEBRIS_GROUND_TOLERANCE) return
+    if (Math.hypot(body.linvel().x, body.linvel().z) < DEBRIS_MIN_SPEED) return
+    if (!state.debris.shouldEmit(delta, DEBRIS_EMIT_INTERVAL)) return
+    scratchOrigin.set(
+      position.x + sample.forward.x * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET,
+      sample.position.y,
+      position.z + sample.forward.z * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET
+    )
+    // A burst rather than a single chip: at speed the rock outruns its own trail,
+    // so one per tick leaves the ground looking untouched.
+    Array.from({ length: DEBRIS_PER_BURST }).forEach(() =>
+      state.debris?.emit({
+        origin: scratchOrigin,
+        forward: sample.forward,
+        right: sample.right,
+        samples: [Math.random(), Math.random(), Math.random()]
+      })
+    )
+  }
+
 const createRunActions = (
   deps: UseRockRunDeps,
   state: RunState,
@@ -325,6 +368,7 @@ const createRunActions = (
   getLocalStartTime: () => number
 ) => {
   const startGate = createStartGate(state)
+  const emitDebris = createDebrisEmitter(state)
 
   const setCameraMode = (mode: CameraMode): void => {
     refs.cameraMode.value = mode
@@ -395,6 +439,7 @@ const createRunActions = (
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
     applyDrive(getDelta())
+    emitDebris(getDelta())
   }
 
   const updateDistance = (): void => {
@@ -446,6 +491,7 @@ const createRunActions = (
     applyInput,
     updateDistance,
     pumpWorld,
+    updateDebris: (delta: number) => state.debris?.update(delta),
     updateCountdown,
     broadcastPosition
   }
@@ -482,6 +528,12 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
     category: 'game',
     start: 0,
     action: actions.pumpWorld
+  })
+  timeline.addAction({
+    name: 'debris',
+    category: 'physics',
+    start: 0,
+    action: () => actions.updateDebris(getDelta())
   })
   timeline.addAction(
     createDirectionalLightFollowAction(
@@ -615,6 +667,7 @@ const buildRunWorld = ({
 
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
+  state.debris = createDebrisField(scene, [DEBRIS_GROUND_COLOR, DEBRIS_ROCK_COLOR])
   const maps = loadRockMaps()
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)
@@ -642,6 +695,7 @@ const createRunState = (): RunState => ({
   posAccumulator: 0,
   released: true,
   rockMaps: null,
+  debris: null,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []
@@ -735,6 +789,8 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.track?.teardown()
     state.track = null
     state.path = null
+    state.debris?.teardown()
+    state.debris = null
     state.rockTextures.forEach((texture) => texture.dispose())
     state.rockTextures = []
     state.rockMaps = null
