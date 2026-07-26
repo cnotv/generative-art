@@ -3,7 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat'
 import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
 import type { CrossSection, SweepStation } from '@/types/sweptGeometry'
 import groundTextureUrl from '@/assets/images/illustrations/ground.webp'
-import type { TrackPath, TrackChunk, TrackChunkManager, WallConfig } from './types'
+import type { TrackPath, TrackChunk, TrackChunkManager, TrackDimensions, WallConfig } from './types'
 import {
   CHUNK_LENGTH,
   CHUNK_STATIONS,
@@ -159,6 +159,7 @@ type ChunkBuildContext = {
   terrainMaterial: THREE.Material
   wall: WallConfig
   width: number
+  terrainWidth: number
 }
 
 /**
@@ -194,16 +195,16 @@ const buildTerrainMeshes = (
   stations: SweepStation[],
   stationIndices: number[]
 ): THREE.Mesh[] =>
-  apronCrossSections(context.width, TERRAIN_WIDTH).map((crossSection, index) => {
+  apronCrossSections(context.width, context.terrainWidth).map((crossSection, index) => {
     const geometry = buildSweepGeometry(stations, crossSection)
-    const stripWidth = (TERRAIN_WIDTH - context.width) / 2
+    const stripWidth = Math.max(1, (context.terrainWidth - context.width) / 2)
     geometry.setAttribute(
       'uv',
       new THREE.Float32BufferAttribute(
         sweepGroundUvs(
           stationIndices,
           crossSection,
-          TERRAIN_WIDTH,
+          context.terrainWidth,
           (stripWidth / context.width) * GROUND_TEXTURE_REPEAT_ACROSS
         ),
         2
@@ -305,6 +306,7 @@ export type TrackChunkManagerOptions = {
   path: TrackPath
   wall: WallConfig
   width?: number
+  terrainWidth?: number
 }
 
 /**
@@ -336,7 +338,8 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     material,
     terrainMaterial,
     wall: { ...options.wall },
-    width: options.width ?? TRACK_WIDTH
+    width: options.width ?? TRACK_WIDTH,
+    terrainWidth: options.terrainWidth ?? TERRAIN_WIDTH
   }
 
   let chunks: TrackChunk[] = []
@@ -385,6 +388,12 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     rebuild(distance)
   }
 
+  const setDimensions = (dimensions: TrackDimensions, distance: number): void => {
+    context.width = dimensions.trackWidth
+    context.terrainWidth = dimensions.terrainWidth
+    rebuild(distance)
+  }
+
   const setWallsVisible = (visible: boolean): void => {
     wallsVisible = visible
     chunks.forEach((chunk) =>
@@ -399,6 +408,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     prune,
     rebuild,
     setWall,
+    setDimensions,
     setWallsVisible,
     groundHeightAt: (distance: number) => options.path.sampleAt(distance).position.y,
     teardown: () => {

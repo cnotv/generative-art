@@ -40,9 +40,9 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     label: 'Tree',
     textures: [texture('Tree1-1.webp', treeUrl)],
     placement: 'sides',
-    frequency: 26,
+    frequency: 100,
     distanceMin: 14,
-    distanceMax: 28,
+    distanceMax: 270,
     heightOffset: -1,
     baseSize: [47.8, 53.4, 1],
     variation: [0, 0, 50],
@@ -55,9 +55,9 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     label: 'Tree 2',
     textures: [texture('Tree1-2.webp', treeTwoUrl)],
     placement: 'sides',
-    frequency: 26,
+    frequency: 100,
     distanceMin: 14,
-    distanceMax: 28,
+    distanceMax: 270,
     heightOffset: -1,
     // 70% of Tree, so the two variants read as different specimens of the same
     // species rather than as one tree repeated.

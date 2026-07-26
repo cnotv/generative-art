@@ -392,6 +392,33 @@ describe('createTrackChunkManager', () => {
     expect(scene.children.filter((child) => child.name === 'track-ground').length).toBe(before)
   })
 
+  it('rebuilds at the new widths when the track dimensions change', () => {
+    const { manager, scene, removeRigidBody } = createManager()
+    manager.ensureAhead(0)
+    const before = scene.children.find((child) => child.name === 'track-ground') as THREE.Mesh
+    before.geometry.computeBoundingBox()
+    const beforeWidth = before.geometry.boundingBox!.max.x - before.geometry.boundingBox!.min.x
+
+    manager.setDimensions({ trackWidth: 30, terrainWidth: 80 }, 0)
+
+    const after = scene.children.find((child) => child.name === 'track-ground') as THREE.Mesh
+    after.geometry.computeBoundingBox()
+    const afterWidth = after.geometry.boundingBox!.max.x - after.geometry.boundingBox!.min.x
+    expect(afterWidth).toBeGreaterThan(beforeWidth)
+    expect(removeRigidBody).toHaveBeenCalled()
+  })
+
+  it('widens the side ground independently of the path', () => {
+    const { manager, scene } = createManager()
+    manager.ensureAhead(0)
+
+    manager.setDimensions({ trackWidth: TRACK_WIDTH, terrainWidth: 90 }, 0)
+
+    const terrain = scene.children.find((child) => child.name === 'terrain-right') as THREE.Mesh
+    terrain.geometry.computeBoundingBox()
+    expect(terrain.geometry.boundingBox!.max.x).toBeGreaterThan(40)
+  })
+
   it('reports the ground height from the path', () => {
     const { manager } = createManager()
     const path = createTrackPath(2024)

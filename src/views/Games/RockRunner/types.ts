@@ -25,6 +25,12 @@ export type TrackPath = {
   indexAt: (distance: number) => number
 }
 
+/** Width of the drivable deck and of the countryside strip flanking it. */
+export type TrackDimensions = {
+  trackWidth: number
+  terrainWidth: number
+}
+
 /** Height and thickness of the invisible containment walls flanking the deck. */
 export type WallConfig = {
   height: number
@@ -46,6 +52,7 @@ export type TrackChunkManager = {
   prune: (distance: number) => void
   rebuild: (distance: number) => void
   setWall: (wall: WallConfig, distance: number) => void
+  setDimensions: (dimensions: TrackDimensions, distance: number) => void
   setWallsVisible: (visible: boolean) => void
   groundHeightAt: (distance: number) => number
   teardown: () => void
