@@ -6,11 +6,11 @@ import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import rockColorUrl from '@/assets/images/textures/rock2/Rock016_1K-JPG_Color.webp'
-import rockNormalUrl from '@/assets/images/textures/rock2/Rock016_1K-JPG_NormalGL.webp'
-import rockRoughnessUrl from '@/assets/images/textures/rock2/Rock016_1K-JPG_Roughness.webp'
-import rockAmbientOcclusionUrl from '@/assets/images/textures/rock2/Rock016_1K-JPG_AmbientOcclusion.webp'
-import rockDisplacementUrl from '@/assets/images/textures/rock2/Rock016_1K-JPG_Displacement.webp'
+import rockColorUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Color.webp'
+import rockNormalUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_NormalGL.webp'
+import rockRoughnessUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Roughness.webp'
+import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_AmbientOcclusion.webp'
+import rockDisplacementUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Displacement.webp'
 import {
   createDirectionalLightFollowAction,
   createPhysicsSyncAction,
