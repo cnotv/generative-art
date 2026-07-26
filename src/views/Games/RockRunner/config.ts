@@ -135,6 +135,18 @@ export const ROCK_FRICTION = 2.2
 export const ROCK_LINEAR_DAMPING = 0.35
 export const ROCK_ANGULAR_DAMPING = 0.25
 export const ROCK_SPAWN_HEIGHT = 3
+// High enough for the displacement map to have vertices to push around.
+export const ROCK_SEGMENTS = 96
+// Below 1 the stone pattern is scaled up, so the grain reads at the size the
+// rock actually appears on screen rather than as fine noise.
+export const ROCK_TEXTURE_REPEAT = 0.7
+export const ROCK_DISPLACEMENT_SCALE = 0.07
+// The scanned rock is very dark. The ambient-occlusion bite is eased off and a
+// small emissive lift raises the whole surface, so it reads as light stone
+// against the green ground instead of a black ball.
+export const ROCK_AO_INTENSITY = 0.3
+export const ROCK_EMISSIVE = 0x6b6660
+export const ROCK_EMISSIVE_INTENSITY = 0.55
 // Half-width of the start line players are spread across, so several rocks can
 // share the track without spawning inside each other.
 export const SPAWN_GATE_SPREAD = 4

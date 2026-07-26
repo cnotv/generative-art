@@ -6,7 +6,11 @@ import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import rockTextureUrl from '@/assets/images/textures/moon.jpg'
+import rockColorUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Color.jpg'
+import rockNormalUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_NormalGL.jpg'
+import rockRoughnessUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Roughness.jpg'
+import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_AmbientOcclusion.jpg'
+import rockDisplacementUrl from '@/assets/images/textures/rock/Rock034_1K-JPG_Displacement.jpg'
 import {
   createDirectionalLightFollowAction,
   createPhysicsSyncAction,
@@ -70,8 +74,14 @@ import {
   ROCK_FRICTION,
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
+  ROCK_AO_INTENSITY,
+  ROCK_DISPLACEMENT_SCALE,
+  ROCK_EMISSIVE,
+  ROCK_EMISSIVE_INTENSITY,
   ROCK_RESTITUTION,
+  ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
+  ROCK_TEXTURE_REPEAT,
   ROCK_WEIGHT,
   SKY_COLOR,
   SPAWN_GATE_SPREAD,
@@ -123,6 +133,7 @@ type RunState = {
   cameraTransitionElapsed: number
   cameraTransitionStart: THREE.Vector3
   posAccumulator: number
+  rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
 }
 
@@ -147,11 +158,53 @@ const runMapping = (): ControlMapping => {
   }
 }
 
+// The rock uses the full PBR set rather than a colour map alone: the normal and
+// roughness maps are what make a sphere read as stone rather than as a painted
+// ball, and the displacement map needs the high segment count below to show.
+const loadRockMaps = () => {
+  const loader = new THREE.TextureLoader()
+  const wrap = (url: string, isColor: boolean): THREE.Texture => {
+    const texture = loader.load(url)
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    texture.repeat.set(ROCK_TEXTURE_REPEAT, ROCK_TEXTURE_REPEAT)
+    if (isColor) texture.colorSpace = THREE.SRGBColorSpace
+    return texture
+  }
+  return {
+    map: wrap(rockColorUrl, true),
+    normalMap: wrap(rockNormalUrl, false),
+    roughnessMap: wrap(rockRoughnessUrl, false),
+    aoMap: wrap(rockAmbientOcclusionUrl, false),
+    displacementMap: wrap(rockDisplacementUrl, false)
+  }
+}
+
+const applyRockMaterial = (rock: ComplexModel): THREE.Texture[] => {
+  const mesh = rock as unknown as THREE.Mesh
+  const material = mesh.material as THREE.MeshStandardMaterial
+  const maps = loadRockMaps()
+  material.map = maps.map
+  material.normalMap = maps.normalMap
+  material.roughnessMap = maps.roughnessMap
+  material.aoMap = maps.aoMap
+  material.displacementMap = maps.displacementMap
+  material.displacementScale = ROCK_DISPLACEMENT_SCALE
+  material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
+  material.aoMapIntensity = ROCK_AO_INTENSITY
+  material.emissive = new THREE.Color(ROCK_EMISSIVE)
+  material.emissiveIntensity = ROCK_EMISSIVE_INTENSITY
+  material.roughness = 1
+  material.metalness = 0
+  material.needsUpdate = true
+  return Object.values(maps)
+}
+
 const spawnRock = (
   scene: THREE.Scene,
   world: WorldReference,
   position: CoordinateTuple
-): ComplexModel => {
+): { rock: ComplexModel; textures: THREE.Texture[] } => {
   const rock = getBall(scene, world, {
     name: 'player-rock',
     size: ROCK_RADIUS,
@@ -159,16 +212,15 @@ const spawnRock = (
     restitution: ROCK_RESTITUTION,
     friction: ROCK_FRICTION,
     weight: ROCK_WEIGHT,
-    texture: rockTextureUrl,
     roughness: 1,
     metalness: 0,
-    segments: 40,
+    segments: ROCK_SEGMENTS,
     type: 'dynamic'
   }) as unknown as ComplexModel
   rock.userData.body.setLinearDamping(ROCK_LINEAR_DAMPING)
   rock.userData.body.setAngularDamping(ROCK_ANGULAR_DAMPING)
   rock.userData.body.enableCcd(true)
-  return rock
+  return { rock, textures: applyRockMaterial(rock) }
 }
 
 const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
@@ -485,7 +537,9 @@ const buildRunWorld = ({
 
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
-  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex))
+  const spawned = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex))
+  state.rock = spawned.rock
+  state.rockTextures = spawned.textures
   pumpWorld()
 }
 
@@ -507,6 +561,7 @@ const createRunState = (): RunState => ({
   cameraTransitionElapsed: 0,
   cameraTransitionStart: new THREE.Vector3(),
   posAccumulator: 0,
+  rockTextures: [],
   disposePanels: []
 })
 
@@ -597,6 +652,8 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.track?.teardown()
     state.track = null
     state.path = null
+    state.rockTextures.forEach((texture) => texture.dispose())
+    state.rockTextures = []
     state.rock = null
     state.world = null
     state.scene = null
