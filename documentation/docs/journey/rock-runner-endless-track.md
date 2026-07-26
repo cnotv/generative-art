@@ -1,8 +1,16 @@
 ---
-sidebar_position: 12
+sidebar_position: 110
 ---
 
 # Streaming an endless track from a seed
+
+:::note Source files
+
+`src/views/Games/RockRunner/trackPath.ts`, `trackChunks.ts`,
+`scatter/scatterPlacement.ts`, `scatter/scatterAreas.ts`, `config.ts`, and the
+shared sweep primitives in `src/utils/sweptGeometry.ts`.
+
+:::
 
 Rock Runner generates its world as the player moves through it: ground, physics
 and thousands of illustration billboards appear ahead of the rock and are thrown
@@ -89,10 +97,17 @@ curve terms, since the heading's derivative peaks when every term peaks at once:
 max |dyaw/ds| = Σ Aₖ · 2π / λₖ        r_min = 1 / max |dyaw/ds|
 ```
 
-So terrain width and path curviness are a single coupled decision. The
-resolution was to relax the curve amplitudes until the radius comfortably
-exceeded the terrain half-width, and to encode the relationship as a test, so a
-later retune of the curves cannot silently reintroduce the fold.
+So terrain width and path curviness are a single coupled decision, and the
+resolution was to relax the curve amplitudes until the radius cleared the
+terrain half-width. The margin is deliberately thin: the ground is set to the
+widest value the curves allow, which leaves only a unit or two of slack. That
+makes it fragile to a later retune, so the relationship is asserted in a test
+rather than left as a comment.
+
+It also puts a hard ceiling on how open the world can look. Widening the ground
+much further is not a matter of raising a number — it needs the countryside
+rebuilt as world-space tiles over a two-dimensional height field, so that the
+ground stops following the path at all and curvature stops mattering.
 
 A second, smaller lesson sits alongside it: the drivable deck and the
 surrounding countryside are built as _separate_ strips that meet edge to edge
@@ -117,6 +132,35 @@ The general rule this leaves behind: a streamed world must be generated around
 the player, not ahead of them. The keep-alive window behind is not only an
 aesthetic choice about glancing over your shoulder — it is a correctness
 requirement wherever the player can start or move backwards.
+
+## Trap three: displacement splits a mesh along its own seams
+
+Fine white cracks appeared across the countryside, wide enough to see the sky
+through. They were not gaps in the geometry as authored — they were opened by
+the displacement map.
+
+The sweep deliberately gives every cross-section edge its own pair of vertices,
+so that profile corners stay hard instead of shading round. That leaves pairs of
+vertices sitting at identical positions but belonging to different faces, and
+therefore carrying different normals. Displacement moves each vertex along
+_its own_ normal. Where the two normals disagree, the pair separates and a
+crack opens.
+
+The fix is to weld coincident vertices and recompute normals, so both sides of a
+seam share one normal and move together. Two ordering constraints make this
+fiddlier than it sounds:
+
+| Constraint                   | Why                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Weld after assigning UVs     | UVs are generated in the sweep's own vertex order, which welding collapses                     |
+| Strip normals before welding | The merge compares every attribute, and the differing normals are exactly what stops the merge |
+
+The same failure has a second form on the player's rock. A sphere's `u`
+coordinate wraps from 1 back to 0, so a fractional texture repeat samples
+different texels either side of that seam; displacement then pushes the two
+edges apart into a visible crack around the ball. There the fix is arithmetic
+rather than topological — the repeat must be a whole number, which also means
+the coarsest usable grain is fixed at one repeat and cannot be zoomed further.
 
 ## Chunking as the unit of everything
 
@@ -151,5 +195,24 @@ in the overlap and the same tree would appear twice, then vanish twice.
 One last detail worth recording: displacement mapping needs vertices to
 displace. A ground slab described by a four-point outline has none across its
 width, so a displacement map on it is a silent no-op that looks like a flat
-decal. The surfaces are subdivided across their width specifically so the map
-has something to move; bump mapping, which works per pixel, needs no such help.
+decal. The countryside is subdivided across its width specifically so the map
+has something to move. The path itself is a flat colour rather than a texture,
+so it needs neither the subdivision nor the map — bump mapping, which works per
+pixel, would need no such help either.
+
+## Keeping the rock on the path
+
+The track is bounded by walls that are physical but never drawn, so the ground
+reads as an open field while the rock cannot leave it. Two details stop them
+becoming a trap rather than a boundary.
+
+A wall that begins exactly at deck level leaves a concave corner where the two
+surfaces meet, and a rolling ball catches in it and stops dead — with a constant
+forward push behind it, it simply wedges there. Starting the wall below the deck
+surface, and standing it off the edge by a little, gives the rock a flat face to
+meet instead of the corner itself. The walls are also frictionless: anything the
+ball can grip becomes something the forward push can pin it against.
+
+Underneath that sits the same flush-seam problem the marble editor met: every
+track collider carries a small contact skin, a virtual margin that bridges the
+hairline crack between adjacent surfaces so a fast ball cannot catch on it.

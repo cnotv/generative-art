@@ -115,7 +115,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     distanceMin: 9,
     distanceMax: 26,
     heightOffset: -0.15,
-    baseSize: [2.4, 2, 1],
+    baseSize: [6.5, 2, 1],
     variation: [0, 0, 50],
     seed: 8600
   }
