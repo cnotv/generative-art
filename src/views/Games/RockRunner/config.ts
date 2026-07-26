@@ -197,10 +197,13 @@ export const JUMP_COOLDOWN_SECONDS = 0.25
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000
 
-// The eye sits just above the crown of the rock rather than at a fixed offset:
-// anything below the radius puts the camera inside the mesh.
+// The eye rides at the rock's leading edge rather than on its crown. Perched on
+// top, a ball this size fills the bottom of the frame with its own body; pushed
+// forward past its own radius, the whole sphere falls behind the camera and is
+// never drawn. The small height keeps it clear of the deck on a crest.
 export const FIRST_PERSON_EYE_CLEARANCE = 0.15
-export const FIRST_PERSON_HEIGHT = ROCK_RADIUS + FIRST_PERSON_EYE_CLEARANCE
+export const FIRST_PERSON_FORWARD = ROCK_RADIUS + 0.6
+export const FIRST_PERSON_HEIGHT = ROCK_RADIUS * 0.5
 export const FIRST_PERSON_LOOK_AHEAD = 20
 export const FREE_CAM_HEIGHT = 40
 export const FREE_CAM_BACK = 50

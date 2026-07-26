@@ -56,6 +56,11 @@ export type RaceCameraOptions = {
    * or the camera sits inside the mesh. Defaults to the marble's tuning.
    */
   firstPersonHeight?: number
+  /**
+   * How far ahead of the ball's centre the eye sits. Large enough and the ball
+   * falls entirely behind the camera, so the player never sees their own body.
+   */
+  firstPersonForward?: number
   firstPersonLookAhead?: number
   freeCamHeight?: number
   freeCamBack?: number
@@ -64,10 +69,11 @@ export type RaceCameraOptions = {
 export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
   if (!marble) return
+  const forward = options.firstPersonForward ?? 0
   scratchCameraGoal.set(
-    marble.position.x,
+    marble.position.x + smoothedDirection.x * forward,
     marble.position.y + (options.firstPersonHeight ?? FIRST_PERSON_HEIGHT),
-    marble.position.z
+    marble.position.z + smoothedDirection.z * forward
   )
   // At alpha 1 this lands exactly on the marble head (no follow lag); below 1 it
   // eases in from where the previous mode left the camera.

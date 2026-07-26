@@ -61,6 +61,7 @@ import {
   COUNTDOWN_MS,
   CAMERA_TRANSITION_SECONDS,
   DISTANCE_BROADCAST_MS,
+  FIRST_PERSON_FORWARD,
   FIRST_PERSON_HEIGHT,
   FIRST_PERSON_LOOK_AHEAD,
   FOG_COLOR,
@@ -484,6 +485,7 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
         transitionStart: state.cameraTransitionStart,
         transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS),
         firstPersonHeight: FIRST_PERSON_HEIGHT,
+        firstPersonForward: FIRST_PERSON_FORWARD,
         firstPersonLookAhead: FIRST_PERSON_LOOK_AHEAD,
         freeCamHeight: FREE_CAM_HEIGHT,
         freeCamBack: FREE_CAM_BACK
