@@ -11,6 +11,11 @@ import {
 // jump would stack onto the first.
 const RISING_VELOCITY = 0.5
 
+// Impulses are tuned as though every frame lasted this long; a long frame after
+// a stall is clamped so the rock cannot be catapulted by it.
+const REFERENCE_FPS = 60
+const MAX_FRAME_SECONDS = 1 / 20
+
 type Vec2Like = { x: number; z: number }
 type Vec3Like = { x: number; y: number; z: number }
 
@@ -85,6 +90,22 @@ export const speedAlong = (velocity: Vec3Like, direction: Vec2Like): number =>
  */
 export const isGrounded = (rockY: number, groundY: number, velocityY: number): boolean =>
   rockY - groundY <= GROUND_PROBE_DISTANCE && velocityY <= RISING_VELOCITY
+
+/**
+ * Scales a per-frame impulse so acceleration does not depend on frame rate.
+ *
+ * An impulse applied once per frame is momentum per frame, not per second: the
+ * same tuning accelerates twice as hard at 120fps as at 60, and crawls on a
+ * machine that drops frames. Scaling by the frame's own duration against a
+ * reference rate keeps the tuned numbers meaningful and the handling identical
+ * everywhere.
+ *
+ * @param magnitude - Impulse tuned for the reference frame rate
+ * @param delta - Seconds the frame covered
+ * @returns The impulse to actually apply this frame
+ */
+export const frameScaledImpulse = (magnitude: number, delta: number): number =>
+  magnitude * Math.min(delta, MAX_FRAME_SECONDS) * REFERENCE_FPS
 
 /**
  * Impulse that pushes the rock forward without exceeding the current cap.

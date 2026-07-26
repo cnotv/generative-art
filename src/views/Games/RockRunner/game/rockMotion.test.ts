@@ -6,6 +6,7 @@ import {
   speedAlong,
   isGrounded,
   forwardImpulseMagnitude,
+  frameScaledImpulse,
   steerImpulseMagnitude
 } from './rockMotion'
 import { createTrackPath } from '../trackPath'
@@ -164,5 +165,36 @@ describe('steerImpulseMagnitude', () => {
   it('still allows steering back from the cap', () => {
     expect(steerImpulseMagnitude(-1, 12, 12, 4)).toBe(-4)
     expect(steerImpulseMagnitude(1, -12, 12, 4)).toBe(4)
+  })
+})
+
+describe('frameScaledImpulse', () => {
+  // An impulse applied once per frame is momentum per frame, not per second:
+  // without this the rock accelerates twice as hard at 120fps as at 60.
+  it('leaves a reference-rate frame untouched', () => {
+    expect(frameScaledImpulse(60, 1 / 60)).toBeCloseTo(60)
+  })
+
+  it('halves the impulse when frames come twice as often', () => {
+    expect(frameScaledImpulse(60, 1 / 120)).toBeCloseTo(30)
+  })
+
+  it('doubles it when frames come half as often, so the second matches', () => {
+    expect(frameScaledImpulse(60, 1 / 30)).toBeCloseTo(120)
+  })
+
+  it('delivers the same momentum per second at any frame rate', () => {
+    const perSecond = (fps: number) => frameScaledImpulse(60, 1 / fps) * fps
+
+    expect(perSecond(120)).toBeCloseTo(perSecond(60))
+    expect(perSecond(30)).toBeCloseTo(perSecond(60))
+  })
+
+  it('clamps a long frame so a stall cannot catapult the rock', () => {
+    expect(frameScaledImpulse(60, 5)).toBe(frameScaledImpulse(60, 1 / 20))
+  })
+
+  it('never returns a negative impulse for a zero frame', () => {
+    expect(frameScaledImpulse(60, 0)).toBe(0)
   })
 })

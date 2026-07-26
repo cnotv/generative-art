@@ -42,6 +42,7 @@ import { createLateralFogUniforms } from '../lateralFog'
 import {
   advanceDistance,
   forwardImpulseMagnitude,
+  frameScaledImpulse,
   isGrounded,
   speedAlong,
   speedCapAt,
@@ -295,12 +296,36 @@ export const spawnPosition = (
   ]
 }
 
+// The rock is pinned until the countdown clears. Killing its velocity alone
+// would still let gravity build speed up each frame and slide it down the slope
+// it spawned on, so gravity is switched off for the wait and restored exactly
+// once when the run begins.
+const createStartGate = (state: RunState) => ({
+  hold: (): void => {
+    if (!state.rock) return
+    const body = state.rock.userData.body
+    if (state.released) {
+      body.setGravityScale(0, true)
+      state.released = false
+    }
+    body.setLinvel(ZERO_VELOCITY, true)
+    body.setAngvel(ZERO_VELOCITY, true)
+  },
+  release: (): void => {
+    if (state.released || !state.rock) return
+    state.rock.userData.body.setGravityScale(1, true)
+    state.released = true
+  }
+})
+
 const createRunActions = (
   deps: UseRockRunDeps,
   state: RunState,
   refs: RunReferences,
   getLocalStartTime: () => number
 ) => {
+  const startGate = createStartGate(state)
+
   const setCameraMode = (mode: CameraMode): void => {
     refs.cameraMode.value = mode
   }
@@ -334,7 +359,7 @@ const createRunActions = (
     state.jumpCooldown = JUMP_COOLDOWN_SECONDS
   }
 
-  const applyDrive = (): void => {
+  const applyDrive = (delta: number): void => {
     if (!state.rock || !state.controls || !state.path) return
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
@@ -351,44 +376,25 @@ const createRunActions = (
       STEER_IMPULSE
     )
     if (forwardMagnitude === 0 && lateralMagnitude === 0) return
-    scratchImpulse.x = sample.forward.x * forwardMagnitude + sample.right.x * lateralMagnitude
+    const forward = frameScaledImpulse(forwardMagnitude, delta)
+    const lateral = frameScaledImpulse(lateralMagnitude, delta)
+    scratchImpulse.x = sample.forward.x * forward + sample.right.x * lateral
     scratchImpulse.y = 0
-    scratchImpulse.z = sample.forward.z * forwardMagnitude + sample.right.z * lateralMagnitude
+    scratchImpulse.z = sample.forward.z * forward + sample.right.z * lateral
     body.applyImpulse(scratchImpulse, true)
-  }
-
-  // The rock is pinned until the countdown clears. Killing its velocity alone
-  // would still let gravity build speed up each frame and slide it down the
-  // slope it spawned on, so gravity is switched off for the wait and restored
-  // exactly once when the run begins.
-  const holdAtStart = (): void => {
-    if (!state.rock) return
-    const body = state.rock.userData.body
-    if (state.released) {
-      body.setGravityScale(0, true)
-      state.released = false
-    }
-    body.setLinvel(ZERO_VELOCITY, true)
-    body.setAngvel(ZERO_VELOCITY, true)
-  }
-
-  const release = (): void => {
-    if (state.released || !state.rock) return
-    state.rock.userData.body.setGravityScale(1, true)
-    state.released = true
   }
 
   const applyInput = (getDelta: () => number): void => {
     handleCameraAction()
     if (!state.rock) return
     if (refs.countdown.value > 0) {
-      holdAtStart()
+      startGate.hold()
       return
     }
-    release()
+    startGate.release()
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
-    applyDrive()
+    applyDrive(getDelta())
   }
 
   const updateDistance = (): void => {

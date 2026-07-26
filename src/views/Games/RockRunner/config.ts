@@ -134,10 +134,16 @@ export const SCATTER_ALPHA_TEST = 0.35
 
 export const ROCK_RADIUS = 2.2
 export const ROCK_WEIGHT = 72
-export const ROCK_RESTITUTION = 0.05
-export const ROCK_FRICTION = 2.2
+// Taken from the marble editor's bowling ball, which is the heaviest-feeling
+// preset there. Its weight does not come from mass: it comes from gripping
+// hard enough to roll rather than skid, and from a negative restitution that
+// absorbs an impact instead of returning any of it.
+export const ROCK_RESTITUTION = -0.3
+export const ROCK_FRICTION = 10
 export const ROCK_LINEAR_DAMPING = 0.35
-export const ROCK_ANGULAR_DAMPING = 0.25
+// A gripping ball puts much of the drive into spin. Damping that spin is
+// damping the drive, so it is kept low.
+export const ROCK_ANGULAR_DAMPING = 0.05
 // Rests on the deck rather than dropping onto it: the rock is held still for
 // the countdown, so a drop would only be a lurch the moment it is released.
 export const ROCK_SPAWN_HEIGHT = ROCK_RADIUS + 0.05
@@ -181,17 +187,17 @@ export const SPAWN_GATE_SPREAD = 4
 // Impulses are momentum, so they scale with the mass above. They are raised by
 // slightly less than the weight was, which is what makes the rock read as
 // heavier: it still drives, but takes longer to get going and to change line.
-export const FORWARD_IMPULSE = 32
+export const FORWARD_IMPULSE = 34
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
 
-export const STEER_IMPULSE = 24
+export const STEER_IMPULSE = 26
 // Lateral speed is capped separately so steering stays responsive at any
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-export const JUMP_IMPULSE = 85
+export const JUMP_IMPULSE = 95
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
