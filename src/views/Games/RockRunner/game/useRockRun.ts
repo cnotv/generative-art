@@ -86,6 +86,7 @@ import {
   ROCK_AO_INTENSITY,
   ROCK_DISPLACEMENT_SCALE,
   ROCK_RESTITUTION,
+  ROCK_TINT,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
   ROCK_TEXTURE_REPEAT,
@@ -203,6 +204,7 @@ const applyRockMaterial = (rock: ComplexModel): THREE.Texture[] => {
   material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
   material.aoMapIntensity = ROCK_AO_INTENSITY
   material.normalScale.set(ROCK_NORMAL_SCALE, ROCK_NORMAL_SCALE)
+  material.color.setHex(ROCK_TINT)
   material.roughness = 1
   material.metalness = 0
   material.needsUpdate = true

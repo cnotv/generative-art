@@ -81,7 +81,7 @@ export const DECK_RESTITUTION = 0.05
 
 // Invisible containment walls. They are physical only: the runner never sees
 // them, so the ground reads as an open field while the rock cannot leave it.
-export const WALL_HEIGHT = 3
+export const WALL_HEIGHT = 15
 export const WALL_THICKNESS = 1
 // A small virtual margin on every track collider, bridging the hairline seam
 // where the deck meets a wall. Without it a rolling ball catches on that
@@ -132,8 +132,8 @@ export const BACKGROUND_DISPOSE_BEHIND = BACKGROUND_BEHIND
 
 export const SCATTER_ALPHA_TEST = 0.35
 
-export const ROCK_RADIUS = 1.1
-export const ROCK_WEIGHT = 24
+export const ROCK_RADIUS = 2.2
+export const ROCK_WEIGHT = 72
 export const ROCK_RESTITUTION = 0.05
 export const ROCK_FRICTION = 2.2
 export const ROCK_LINEAR_DAMPING = 0.35
@@ -148,18 +148,27 @@ export const ROCK_SEGMENTS = 192
 // seam — the displacement map then pushes the two edges apart and the rock
 // appears cracked. 1 is therefore the most zoomed-in the grain can go.
 export const ROCK_TEXTURE_REPEAT = 1
-export const ROCK_DISPLACEMENT_SCALE = 0.11
+// Kept low on purpose. A UV sphere's vertices all converge at its poles, and
+// displacement samples a different texel for each of them, prising them apart
+// into a visible star. The normal map carries the fine relief instead, since it
+// shades per pixel and cannot tear geometry.
+export const ROCK_DISPLACEMENT_SCALE = 0.06
 // The scanned rock is very dark. The ambient-occlusion bite is eased off and a
 // small emissive lift raises the whole surface, so it reads as light stone
 // against the green ground instead of a black ball.
 // Ambient occlusion darkens indirect light only; at full strength it doubles up
 // with the albedo and the rock reads as a black ball.
-export const ROCK_AO_INTENSITY = 0.4
+export const ROCK_AO_INTENSITY = 0.28
 // Emissive light is unlit and uniform, so every bit of it washes out the very
 // shading that makes a normal map read as stone. Lightening the rock this way
 // flattened it; brightness belongs to the material colour and the lights.
 export const ROCK_EMISSIVE_INTENSITY = 0
 export const ROCK_NORMAL_SCALE = 1.6
+// The material colour multiplies the albedo, so it can only ever subtract. Red
+// is left at full and the other channels pulled down: that shifts the grey
+// stone warm without the flat wash an emissive tint would give. The ambient
+// occlusion is eased to pay back the brightness the tint costs.
+export const ROCK_TINT = 0xffd2a8
 // Half-width of the start line players are spread across, so several rocks can
 // share the track without spawning inside each other.
 export const SPAWN_GATE_SPREAD = 4
@@ -169,17 +178,17 @@ export const SPAWN_GATE_SPREAD = 4
 // Impulses are momentum, so they scale with the mass above. They are raised by
 // slightly less than the weight was, which is what makes the rock read as
 // heavier: it still drives, but takes longer to get going and to change line.
-export const FORWARD_IMPULSE = 13
+export const FORWARD_IMPULSE = 32
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
 
-export const STEER_IMPULSE = 10
+export const STEER_IMPULSE = 24
 // Lateral speed is capped separately so steering stays responsive at any
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-export const JUMP_IMPULSE = 32
+export const JUMP_IMPULSE = 85
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35

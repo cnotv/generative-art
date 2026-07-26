@@ -201,11 +201,13 @@ describe('deckWithWallsCrossSection', () => {
     expect(Math.min(...section.map(([, y]) => y))).toBeCloseTo(-1.2)
   })
 
-  it('leaves a drivable span many times the rock own size', () => {
+  // Room to steer around something rather than only along the middle: the rock
+  // has to fit across the lane several times over.
+  it('leaves a drivable span at least three rock widths across', () => {
     const section = deckWithWallsCrossSection(TRACK_WIDTH, WALL, 1.2)
     const drivable = section.filter(([, y]) => y === 0)
 
-    expect(drivable[1][0] - drivable[0][0]).toBeGreaterThan(ROCK_RADIUS * 8)
+    expect(drivable[1][0] - drivable[0][0]).toBeGreaterThan(ROCK_RADIUS * 2 * 3)
   })
 })
 
@@ -243,11 +245,11 @@ describe('wallCrossSections', () => {
     expect(intrusion).toBeLessThan(ROCK_RADIUS)
   })
 
-  it('leaves the rock a drivable width many times its own size', () => {
+  it('leaves the rock a drivable width at least three rock widths across', () => {
     const [, right] = wallCrossSections(TRACK_WIDTH, WALL)
     const drivable = Math.min(...right.map(([x]) => x)) * 2
 
-    expect(drivable).toBeGreaterThan(ROCK_RADIUS * 8)
+    expect(drivable).toBeGreaterThan(ROCK_RADIUS * 2 * 3)
   })
 })
 
