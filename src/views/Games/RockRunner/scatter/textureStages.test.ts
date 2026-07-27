@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { stageIndexAt, texturesAt, stageColorAt } from './textureStages'
 import { SCATTER_AREAS } from './illustrations'
-import { FOG_STAGE_COLORS, SCATTER_STAGE_LENGTH, TERRAIN_STAGE_TINTS } from '../config'
+import {
+  FOG_STAGE_COLORS,
+  SCATTER_STAGE_COUNT,
+  SCATTER_STAGE_LENGTH,
+  TERRAIN_STAGE_TINTS
+} from '../config'
 import type { ScatterAreaDefinition, ScatterTexture } from '../types'
 
 const area = (name: string): ScatterAreaDefinition =>
@@ -64,9 +69,9 @@ describe('texturesAt', () => {
   it('holds the bush on its second illustration, having only two', () => {
     const bush = area('bush')
 
-    expect(texturesAt(bush, 0, [])[0].filename).toBe('Bush1-1.webp')
-    expect(texturesAt(bush, SCATTER_STAGE_LENGTH, [])[0].filename).toBe('Bush1-2.webp')
-    expect(texturesAt(bush, SCATTER_STAGE_LENGTH * 9, [])[0].filename).toBe('Bush1-2.webp')
+    expect(texturesAt(bush, 0, [])[0].filename).toBe('Bush1-2.webp')
+    expect(texturesAt(bush, SCATTER_STAGE_LENGTH, [])[0].filename).toBe('Bush1-1.webp')
+    expect(texturesAt(bush, SCATTER_STAGE_LENGTH * 9, [])[0].filename).toBe('Bush1-1.webp')
   })
 
   it('never returns an empty set for a staged area', () => {
@@ -123,6 +128,20 @@ describe('stageColorAt', () => {
 
   it('holds a single-colour palette', () => {
     expect(stageColorAt(SCATTER_STAGE_LENGTH * 3, [TAN])).toBe(TAN)
+  })
+})
+
+describe('SCATTER_STAGE_COUNT', () => {
+  // The run's own counter drives the rebuild, so it has to reach every stage
+  // any area defines or the last ones would never appear.
+  it('covers the longest sequence any area defines', () => {
+    const longest = Math.max(...SCATTER_AREAS.map((area) => area.textureStages?.length ?? 0))
+
+    expect(SCATTER_STAGE_COUNT).toBeGreaterThanOrEqual(longest)
+  })
+
+  it('matches the number of fog stages', () => {
+    expect(SCATTER_STAGE_COUNT).toBe(FOG_STAGE_COLORS.length)
   })
 })
 

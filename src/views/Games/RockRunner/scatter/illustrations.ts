@@ -87,8 +87,8 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
   {
     name: 'bush',
     label: 'Bush',
-    textures: [texture('Bush1-1.webp', bushUrl)],
-    textureStages: [[texture('Bush1-1.webp', bushUrl)], [texture('Bush1-2.webp', bushLateUrl)]],
+    textures: [texture('Bush1-2.webp', bushLateUrl)],
+    textureStages: [[texture('Bush1-2.webp', bushLateUrl)], [texture('Bush1-1.webp', bushUrl)]],
     placement: 'sides',
     frequency: 34,
     distanceMin: 10,

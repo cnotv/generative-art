@@ -40,7 +40,7 @@ import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
 import { createDebrisField } from './debris'
-import { stageColorAt } from '../scatter/textureStages'
+import { stageColorAt, stageIndexAt } from '../scatter/textureStages'
 import {
   advanceDistance,
   debrisBurstSize,
@@ -107,6 +107,7 @@ import {
   ROCK_SPAWN_HEIGHT,
   ROCK_TEXTURE_REPEAT,
   ROCK_WEIGHT,
+  SCATTER_STAGE_COUNT,
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
@@ -162,6 +163,7 @@ type RunState = {
   rockMaps: RockMaps | null
   debris: DebrisField | null
   applyFogColor: ((color: number) => void) | null
+  stageIndex: number
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -374,6 +376,30 @@ const createDebrisEmitter =
     )
   }
 
+// The fog, the side ground and the scenery all walk the same milestones, so the
+// wood changes as a whole rather than one layer shifting inside another.
+const createStageDriver = (state: RunState) => {
+  const updateColors = (): void => {
+    state.applyFogColor?.(stageColorAt(state.distance, FOG_STAGE_COLORS))
+    state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
+  }
+
+  // Crossing a milestone turns the whole visible wood over at once. Without
+  // this only chunks built after the crossing would carry the new
+  // illustrations, leaving the old ones standing all around the player.
+  const updateScenery = (): void => {
+    const stage = stageIndexAt(state.distance, SCATTER_STAGE_COUNT)
+    if (stage === state.stageIndex) return
+    state.stageIndex = stage
+    state.scatter.forEach((area) => area.rebuild(state.distance))
+  }
+
+  return (): void => {
+    updateColors()
+    updateScenery()
+  }
+}
+
 const createRunActions = (
   deps: UseRockRunDeps,
   state: RunState,
@@ -382,6 +408,7 @@ const createRunActions = (
 ) => {
   const startGate = createStartGate(state)
   const emitDebris = createDebrisEmitter(state)
+  const advanceStage = createStageDriver(state)
 
   const setCameraMode = (mode: CameraMode): void => {
     refs.cameraMode.value = mode
@@ -467,13 +494,8 @@ const createRunActions = (
 
   // The fog walks the same stages as the scenery, so the wood changes character
   // as a whole rather than the trees swapping inside an unchanged haze.
-  const updateStageColor = (): void => {
-    state.applyFogColor?.(stageColorAt(state.distance, FOG_STAGE_COLORS))
-    state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
-  }
-
   const pumpWorld = (): void => {
-    updateStageColor()
+    advanceStage()
     state.track?.ensureAhead(state.distance)
     state.track?.prune(state.distance)
     state.scatter.forEach((area) => {
@@ -663,7 +685,7 @@ const buildRunWorld = ({
       definition,
       lateralFog,
       getConfig: () => scatterPanel.areaConfig(definition.name),
-      getTextures: (distance: number) => scatterPanel.areaTextures(definition.name, distance)
+      getTextures: () => scatterPanel.areaTextures(definition.name, state.distance)
     })
   )
 
@@ -721,6 +743,7 @@ const createRunState = (): RunState => ({
   rockMaps: null,
   debris: null,
   applyFogColor: null,
+  stageIndex: 0,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []
@@ -762,6 +785,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.cameraTransitionElapsed = 0
     state.posAccumulator = 0
     state.released = true
+    state.stageIndex = 0
     localStartTime = Date.now()
     actions.updateCountdown()
   }

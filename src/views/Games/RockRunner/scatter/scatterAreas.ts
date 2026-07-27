@@ -84,7 +84,7 @@ export type ScatterAreaManagerOptions = {
   definition: ScatterAreaDefinition
   lateralFog: LateralFogUniforms
   getConfig: () => ScatterAreaConfig
-  getTextures: (distance: number) => ScatterTexture[]
+  getTextures: () => ScatterTexture[]
 }
 
 /**
@@ -187,9 +187,12 @@ export const createScatterAreaManager = (
   const spawnChunk = (startDistance: number): void => {
     const endDistance = startDistance + span.chunkLength
     const chunkIndex = Math.round(startDistance / span.chunkLength)
-    // Resolved from where the chunk sits, not where the rock is, so scenery
-    // changes ahead of the player rather than behind them.
-    const available = getTextures(startDistance)
+    // Resolved from where the rock is, not from where this chunk sits. The
+    // lookahead is longer than a stage, so keying off the chunk left two or
+    // three stages alive at once and the tree types appeared to alternate as
+    // the player moved. The areas are rebuilt when the stage changes instead,
+    // so the whole visible wood turns over together.
+    const available = getTextures()
     const instances = placeScatterInstances({
       path,
       config: getConfig(),

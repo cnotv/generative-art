@@ -81,7 +81,7 @@ export const DECK_RESTITUTION = 0.05
 
 // Invisible containment walls. They are physical only: the runner never sees
 // them, so the ground reads as an open field while the rock cannot leave it.
-export const WALL_HEIGHT = 15
+export const WALL_HEIGHT = 20
 export const WALL_THICKNESS = 1
 // A small virtual margin on every track collider, bridging the hairline seam
 // where the deck meets a wall. Without it a rolling ball catches on that
@@ -145,6 +145,9 @@ export const SCATTER_ALPHA_TEST = 0.35
 // How far the rock runs before the scenery moves to its next set of
 // illustrations, so the wood slowly changes character over a long run.
 export const SCATTER_STAGE_LENGTH = 500
+// The longest sequence any area defines, which is what the run's stage counter
+// walks through.
+export const SCATTER_STAGE_COUNT = 3
 
 export const ROCK_RADIUS = 2.2
 export const ROCK_WEIGHT = 72

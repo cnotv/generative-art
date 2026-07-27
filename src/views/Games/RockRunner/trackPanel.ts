@@ -25,7 +25,7 @@ import {
 } from './config'
 
 export const RR_WALL_CONTROLS = {
-  height: { min: 0.5, max: 20, step: 0.5, label: 'Height' },
+  height: { min: 0.5, max: 60, step: 0.5, label: 'Height' },
   thickness: { min: 0.2, max: 6, step: 0.2, label: 'Thickness' }
 }
 
