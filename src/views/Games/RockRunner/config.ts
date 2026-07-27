@@ -112,6 +112,13 @@ export const TERRAIN_TINT = 0xbcd79a
 
 export const CHUNK_STATIONS = 12
 export const CHUNK_LENGTH = CHUNK_STATIONS * STATION_SPACING
+// Colliders reach a station past their chunk so consecutive ones overlap.
+// Chunks are separate colliders, and Rapier only smooths contact normals across
+// a mesh's own internal edges — where two butt together their end caps meet as
+// an unsmoothed junction that a rolling ball catches on. Overlapping buries
+// each cap inside its neighbour's solid, so the ball never reaches one. The
+// visual meshes still butt exactly, or their surfaces would z-fight.
+export const COLLIDER_OVERLAP_STATIONS = 1
 
 // The world starts behind the origin, not at it. The rock spawns at distance
 // zero, so without ground behind it half the ball overhangs the leading edge

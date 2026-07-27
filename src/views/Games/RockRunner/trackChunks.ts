@@ -16,6 +16,7 @@ import type {
 import {
   CHUNK_LENGTH,
   CHUNK_STATIONS,
+  COLLIDER_OVERLAP_STATIONS,
   DECK_COLOR,
   DECK_FRICTION,
   DECK_SEGMENTS_ACROSS,
@@ -344,6 +345,12 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
     (_, offset) => fromIndex + offset
   )
   const stations = context.path.stationsBetween(fromIndex, toIndex)
+  // Reaches a station further than the visible chunk so neighbouring colliders
+  // overlap and neither end cap is ever exposed to the rock.
+  const colliderStations = context.path.stationsBetween(
+    fromIndex - COLLIDER_OVERLAP_STATIONS,
+    toIndex + COLLIDER_OVERLAP_STATIONS
+  )
   const mesh = buildDeckMesh(context, stations)
   const terrainMeshes = buildTerrainMeshes(context, stations, stationIndices)
   const wallMeshes = buildWallMeshes(context, stations)
@@ -351,7 +358,7 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
   // One collider for deck and walls together, so their junction is an internal
   // edge Rapier can correct rather than a seam between two meshes.
   const colliderGeometry = buildSweepGeometry(
-    stations,
+    colliderStations,
     deckWithWallsCrossSection(context.width, context.wall, DECK_THICKNESS)
   )
   const body = context.world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
