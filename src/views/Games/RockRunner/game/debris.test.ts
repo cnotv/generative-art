@@ -36,15 +36,17 @@ describe('advanceParticle', () => {
   })
 
   it('carries a particle along its velocity', () => {
-    const chip = particle({ velocity: new THREE.Vector3(4, 0, 0) })
+    const chip = particle({ velocity: new THREE.Vector3(4, 0, 0), life: 5, maxLife: 5 })
 
     advanceParticle(chip, 0.25)
 
     expect(chip.position.x).toBeCloseTo(1)
   })
 
+  // Life is set explicitly so the case does not break when the configured
+  // lifetime is retuned shorter than the step.
   it('spins a particle at its own rate', () => {
-    const chip = particle({ spin: 2 })
+    const chip = particle({ spin: 2, life: 5, maxLife: 5 })
 
     advanceParticle(chip, 0.5)
 

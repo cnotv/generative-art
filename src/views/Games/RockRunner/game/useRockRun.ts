@@ -67,7 +67,6 @@ import {
   DEBRIS_GROUND_TOLERANCE,
   DEBRIS_MIN_SPEED,
   DEBRIS_PER_BURST,
-  DEBRIS_ROCK_COLOR,
   DEBRIS_TRAIL_OFFSET,
   CAMERA_TRANSITION_SECONDS,
   DISTANCE_BROADCAST_MS,
@@ -667,7 +666,7 @@ const buildRunWorld = ({
 
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
-  state.debris = createDebrisField(scene, [DEBRIS_GROUND_COLOR, DEBRIS_ROCK_COLOR])
+  state.debris = createDebrisField(scene, [DEBRIS_GROUND_COLOR])
   const maps = loadRockMaps()
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)

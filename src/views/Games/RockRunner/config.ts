@@ -209,24 +209,27 @@ export const JUMP_COOLDOWN_SECONDS = 0.25
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
 // oldest-first rather than allocated and collected every frame.
 export const DEBRIS_COUNT = 220
-export const DEBRIS_LIFETIME = 1.1
-export const DEBRIS_SIZE = 0.14
+// Short: the chips are a scuff at the rock's heels, not a smoke trail behind
+// it. A longer life leaves a line stretching back down the whole path.
+export const DEBRIS_LIFETIME = 0.4
+// Around a tenth is the floor: smaller than this a chip is under two pixels at
+// the distance the chase camera sits, and the trail simply stops resolving.
+export const DEBRIS_SIZE = 0.11
 // The stroke is an inverted hull: the same shape, grown slightly and drawn
 // back-faces-only, so it reads as an outline around every chip.
 export const DEBRIS_STROKE_SCALE = 1.5
 export const DEBRIS_STROKE_COLOR = 0x1c1712
-// The two colours chips are tinted with: the path they are scuffed from, and
-// the rock itself. Not ROCK_TINT — that is the multiplier applied to a dark
-// albedo, so on its own it is a pale peach that vanishes against the path.
+// Chips are ground kicked up by the rock, so they take the path's own colour.
+// Pitched a shade darker than the deck itself: an exact match against the
+// surface they sit on would leave them readable only by their outline.
 export const DEBRIS_GROUND_COLOR = 0xc9ae83
-export const DEBRIS_ROCK_COLOR = 0x5f4634
 export const DEBRIS_GRAVITY = -22
 export const DEBRIS_EMIT_INTERVAL = 0.02
 // Chips released together each tick.
 export const DEBRIS_PER_BURST = 4
 // Below this the rock is barely moving and kicking up dust would look wrong.
 export const DEBRIS_MIN_SPEED = 1.2
-export const DEBRIS_BACK_SPEED = 5.5
+export const DEBRIS_BACK_SPEED = 4
 export const DEBRIS_UP_SPEED = 6
 export const DEBRIS_SPREAD = 6
 export const DEBRIS_SPIN = 9
