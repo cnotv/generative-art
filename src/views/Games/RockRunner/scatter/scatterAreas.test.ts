@@ -89,6 +89,30 @@ describe('groupInstancesByTexture', () => {
 })
 
 describe('createScatterAreaManager', () => {
+  // Ground built ahead already carries the illustrations for the stretch it
+  // belongs to, so nothing standing is swapped out from under the player.
+  it('stages each chunk from its own distance rather than the rock position', () => {
+    const scene = new THREE.Scene()
+    const asked: number[] = []
+    const manager = createScatterAreaManager({
+      scene,
+      path: createTrackPath(11),
+      definition: treeDefinition,
+      lateralFog: createLateralFogUniforms(0xffffff, 20, 40),
+      getConfig: () => config,
+      getTextures: (distance) => {
+        asked.push(distance)
+        return treeDefinition.textures
+      }
+    })
+
+    manager.ensureAhead(0)
+
+    expect(asked.length).toBeGreaterThan(1)
+    expect(new Set(asked).size).toBe(asked.length)
+    expect(Math.max(...asked)).toBeGreaterThan(Math.min(...asked))
+  })
+
   it('builds one instanced mesh per texture per chunk, not one mesh per billboard', () => {
     const { manager, scene } = createManager()
 

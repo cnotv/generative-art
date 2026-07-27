@@ -141,9 +141,6 @@ export const SCATTER_ALPHA_TEST = 0.35
 // How far the rock runs before the scenery moves to its next set of
 // illustrations, so the wood slowly changes character over a long run.
 export const SCATTER_STAGE_LENGTH = 500
-// The longest sequence any area defines, which is what the run's stage counter
-// walks through.
-export const SCATTER_STAGE_COUNT = 3
 
 export const ROCK_RADIUS = 2.2
 export const ROCK_WEIGHT = 72

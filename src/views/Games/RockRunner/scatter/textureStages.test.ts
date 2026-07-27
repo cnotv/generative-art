@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { stageIndexAt, texturesAt, stageColorAt } from './textureStages'
 import { SCATTER_AREAS } from './illustrations'
-import {
-  FOG_STAGE_COLORS,
-  SCATTER_STAGE_COUNT,
-  SCATTER_STAGE_LENGTH,
-  TERRAIN_STAGE_TINTS
-} from '../config'
+import { FOG_STAGE_COLORS, SCATTER_STAGE_LENGTH, TERRAIN_STAGE_TINTS } from '../config'
 import type { ScatterAreaDefinition, ScatterTexture } from '../types'
 
 const area = (name: string): ScatterAreaDefinition =>
@@ -85,13 +80,15 @@ describe('texturesAt', () => {
     expect(at(3)).toBe('Bush1-2.webp')
   })
 
-  it('gives every staged area the same number of stages, so they turn together', () => {
+  // Areas are staged into each chunk as it is built, so any area with a
+  // different count would reach its milestones out of step with the rest.
+  it('gives every staged area the same number of stages, matching the fog', () => {
     const counts = SCATTER_AREAS.filter((entry) => entry.textureStages).map(
       (entry) => entry.textureStages!.length
     )
 
     expect(new Set(counts).size).toBe(1)
-    expect(counts[0]).toBe(SCATTER_STAGE_COUNT)
+    expect(counts[0]).toBe(FOG_STAGE_COLORS.length)
   })
 
   it('never returns an empty set for a staged area', () => {
@@ -157,20 +154,6 @@ describe('stageColorAt', () => {
   it('holds a single-colour palette', () => {
     expect(stageColorAt(SCATTER_STAGE_LENGTH * 3, [TAN])).toBe(TAN)
     expect(stageColorAt(SCATTER_STAGE_LENGTH * 3.5, [TAN])).toBe(TAN)
-  })
-})
-
-describe('SCATTER_STAGE_COUNT', () => {
-  // The run's own counter drives the rebuild, so it has to reach every stage
-  // any area defines or the last ones would never appear.
-  it('covers the longest sequence any area defines', () => {
-    const longest = Math.max(...SCATTER_AREAS.map((area) => area.textureStages?.length ?? 0))
-
-    expect(SCATTER_STAGE_COUNT).toBeGreaterThanOrEqual(longest)
-  })
-
-  it('matches the number of fog stages', () => {
-    expect(SCATTER_STAGE_COUNT).toBe(FOG_STAGE_COLORS.length)
   })
 })
 

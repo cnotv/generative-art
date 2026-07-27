@@ -69,7 +69,7 @@ export type ScatterAreaManagerOptions = {
   definition: ScatterAreaDefinition
   lateralFog: LateralFogUniforms
   getConfig: () => ScatterAreaConfig
-  getTextures: () => ScatterTexture[]
+  getTextures: (distance: number) => ScatterTexture[]
 }
 
 /**
@@ -172,12 +172,12 @@ export const createScatterAreaManager = (
   const spawnChunk = (startDistance: number): void => {
     const endDistance = startDistance + span.chunkLength
     const chunkIndex = Math.round(startDistance / span.chunkLength)
-    // Resolved from where the rock is, not from where this chunk sits. The
-    // lookahead is longer than a stage, so keying off the chunk left two or
-    // three stages alive at once and the tree types appeared to alternate as
-    // the player moved. The areas are rebuilt when the stage changes instead,
-    // so the whole visible wood turns over together.
-    const available = getTextures()
+    // Resolved from where this chunk sits, so ground built ahead already
+    // carries the illustrations for the stretch it belongs to. Nothing standing
+    // is ever swapped out from under the player: the change arrives as they
+    // drive into it, and the fog closes well short of the boundary so the
+    // handover is never in view.
+    const available = getTextures(startDistance)
     const instances = placeScatterInstances({
       path,
       config: getConfig(),
