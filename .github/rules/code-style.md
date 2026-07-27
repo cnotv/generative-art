@@ -159,6 +159,7 @@
 - **Vue-only logic → composable**: Any logic that is exclusively Vue reactive (refs, watchers, router, lifecycle hooks) and shared across games belongs in `src/composables/`. Framework-agnostic game logic belongs in `@webgamekit/*` packages.
 - **Header with "← Lobby" navigation**: Every game view must include a header component that navigates back to the Lobby. Follow the pattern established by `PictionaryHeader.vue` and `BubbleShooterHeader.vue` — a dedicated `<GameName>Header.vue` component that emits `leave-room`.
 - **Game-specific session composable**: Each game's P2P session logic must live in its own `use<GameName>Session.ts` composable co-located with the view. Use `useBubbleShooterSession` or `useMinigolfSession` as the reference pattern.
+- **Rules live in their own file**: The `#rules` slot content must be a dedicated `<GameName>Rules.vue` component next to the game's lobby (e.g. `wizard/RockRunnerRules.vue`), never markup inlined in the game view. The view is already the largest file in a game and its template should read as layout, not copy. A separate file also keeps the rules editable without touching game logic, and reviewable on their own. See `RockRunnerRules.vue` for the reference: a template-only SFC with no script block.
 
 ## Dependencies
 

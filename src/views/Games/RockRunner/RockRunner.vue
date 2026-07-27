@@ -25,6 +25,7 @@ import TouchControl from '@/components/TouchControl.vue'
 import { useRockRun } from './game/useRockRun'
 import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
+import RockRunnerRules from './wizard/RockRunnerRules.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
 import { CONFIG_STORAGE_KEY } from './config'
 import type { CameraMode } from './types'
@@ -253,14 +254,7 @@ onUnmounted(() => {
     </template>
 
     <template #rules>
-      <ul>
-        <li>The rock rolls forward on its own and speeds up the further you get</li>
-        <li>Steer with <strong>A</strong>/<strong>D</strong> or the arrow keys</li>
-        <li>Jump with <strong>Space</strong> to clear the bumps in the ground</li>
-        <li>Trees, bushes and flowers are scenery only, so roll straight through them</li>
-        <li>Everyone in the room runs the same track, generated from the seed</li>
-        <li>Press <strong>C</strong> to switch third person, first person and free cameras</li>
-      </ul>
+      <RockRunnerRules />
     </template>
 
     <template v-if="phase === 'lobby'">
