@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   advanceDistance,
+  debrisBurstSize,
   speedCapAt,
   steerDirection,
   speedAlong,
@@ -196,5 +197,36 @@ describe('frameScaledImpulse', () => {
 
   it('never returns a negative impulse for a zero frame', () => {
     expect(frameScaledImpulse(60, 0)).toBe(0)
+  })
+})
+
+describe('debrisBurstSize', () => {
+  it('throws the full spray at the speed cap', () => {
+    expect(debrisBurstSize(20, 20, 8, 1)).toBe(8)
+  })
+
+  it('throws the floor while barely moving', () => {
+    expect(debrisBurstSize(0, 20, 8, 1)).toBe(1)
+  })
+
+  it('scales in between', () => {
+    expect(debrisBurstSize(10, 20, 8, 1)).toBe(4)
+  })
+
+  // The cap ramps over a run, so a fixed speed throws less as the cap rises.
+  it('is judged against the cap rather than an absolute speed', () => {
+    expect(debrisBurstSize(20, 40, 8, 1)).toBeLessThan(debrisBurstSize(20, 20, 8, 1))
+  })
+
+  it('never exceeds the full spray above the cap', () => {
+    expect(debrisBurstSize(500, 20, 8, 1)).toBe(8)
+  })
+
+  it('never drops below the floor', () => {
+    expect(debrisBurstSize(-5, 20, 8, 2)).toBe(2)
+  })
+
+  it('survives a zero cap', () => {
+    expect(debrisBurstSize(10, 0, 8, 1)).toBe(1)
   })
 })

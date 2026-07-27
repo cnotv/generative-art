@@ -92,6 +92,29 @@ export const isGrounded = (rockY: number, groundY: number, velocityY: number): b
   rockY - groundY <= GROUND_PROBE_DISTANCE && velocityY <= RISING_VELOCITY
 
 /**
+ * How many chips to throw at a given speed.
+ *
+ * Scaled against the speed cap rather than a fixed figure, so the spray still
+ * grows over a run as the cap itself ramps up.
+ *
+ * @param speed - The rock's horizontal speed
+ * @param cap - The current speed cap
+ * @param maxBurst - Chips thrown at the cap
+ * @param minBurst - Chips thrown while barely moving
+ * @returns A whole number of chips
+ */
+export const debrisBurstSize = (
+  speed: number,
+  cap: number,
+  maxBurst: number,
+  minBurst: number
+): number => {
+  if (cap <= 0) return minBurst
+  const fraction = Math.min(1, Math.max(0, speed) / cap)
+  return Math.max(minBurst, Math.round(maxBurst * fraction))
+}
+
+/**
  * Scales a per-frame impulse so acceleration does not depend on frame rate.
  *
  * An impulse applied once per frame is momentum per frame, not per second: the

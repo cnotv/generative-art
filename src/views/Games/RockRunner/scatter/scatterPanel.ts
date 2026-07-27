@@ -4,6 +4,7 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 import { SCATTER_AREAS, SCATTER_ROTATION_VARIATION, SCATTER_SIZE_VARIATION } from './illustrations'
+import { texturesAt } from './textureStages'
 import type {
   ScatterAreaConfig,
   ScatterAreaDefinition,
@@ -155,7 +156,7 @@ export const toScatterAreaConfig = (panelConfig: ScatterAreaPanelConfig): Scatte
 export type ScatterPanelState = {
   configs: Record<string, ScatterAreaPanelConfig>
   areaConfig: (name: string) => ScatterAreaConfig
-  areaTextures: (name: string) => ScatterTexture[]
+  areaTextures: (name: string, distance: number) => ScatterTexture[]
   register: (managers: ScatterAreaManager[], getDistance: () => number) => void
   teardown: () => void
 }
@@ -184,10 +185,12 @@ export const createScatterPanel = (): ScatterPanelState => {
 
   const areaConfig = (name: string): ScatterAreaConfig => toScatterAreaConfig(toRaw(configs)[name])
 
-  const areaTextures = (name: string): ScatterTexture[] =>
-    textureStore.groups.find((group) => group.id === name)?.textures ??
-    SCATTER_AREAS.find((definition) => definition.name === name)?.textures ??
-    []
+  const areaTextures = (name: string, distance: number): ScatterTexture[] => {
+    const definition = SCATTER_AREAS.find((area) => area.name === name)
+    const live = textureStore.groups.find((group) => group.id === name)?.textures
+    if (!definition) return live ?? []
+    return texturesAt(definition, distance, live ?? definition.textures)
+  }
 
   const register = (managers: ScatterAreaManager[], getDistance: () => number): void => {
     const managerByName = new Map(managers.map((manager) => [manager.name, manager]))

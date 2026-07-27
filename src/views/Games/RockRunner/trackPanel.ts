@@ -62,6 +62,8 @@ export type TrackPanelOptions = {
   getDistance: () => number
   scene: THREE.Scene
   lateralFog: LateralFogUniforms
+  /** Receives a setter the run loop calls as the staged palette advances. */
+  onStageColor?: (apply: (color: number) => void) => void
 }
 
 /**
@@ -122,6 +124,10 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
     sideFar: FOG_SIDE_FAR
   })
 
+  // Editing the colour by hand takes it off the staged palette: touching a
+  // control should hand control over, not have the next milestone undo it.
+  let colorIsManual = false
+
   const applyFog = (): void => {
     const scene = options.scene
     scene.fog = new THREE.Fog(fog.color, fog.near, Math.max(fog.near + 1, fog.far))
@@ -139,11 +145,18 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
       schema: RR_FOG_CONTROLS,
       getValue: (path: string) => fog[path as keyof FogConfig],
       updateValue: (path: string, value: unknown) => {
+        if (path === 'color') colorIsManual = true
         fog[path as keyof FogConfig] = value as number
         applyFog()
       }
     }
   )
+
+  options.onStageColor?.((color: number) => {
+    if (colorIsManual || fog.color === color) return
+    fog.color = color
+    applyFog()
+  })
 
   return () => {
     debugSceneStore.removeSceneElement(WALL_ELEMENT_NAME)

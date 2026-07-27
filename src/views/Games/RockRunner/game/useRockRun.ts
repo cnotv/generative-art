@@ -40,8 +40,10 @@ import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
 import { createDebrisField } from './debris'
+import { stageColorAt } from '../scatter/textureStages'
 import {
   advanceDistance,
+  debrisBurstSize,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   isGrounded,
@@ -65,6 +67,7 @@ import {
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
+  DEBRIS_MIN_BURST,
   DEBRIS_MIN_SPEED,
   DEBRIS_PER_BURST,
   DEBRIS_TRAIL_OFFSET,
@@ -75,6 +78,7 @@ import {
   FIRST_PERSON_LOOK_AHEAD,
   FOG_COLOR,
   FOG_FAR,
+  FOG_STAGE_COLORS,
   FOG_NEAR,
   FOG_SIDE_FAR,
   FOG_SIDE_NEAR,
@@ -156,6 +160,7 @@ type RunState = {
   released: boolean
   rockMaps: RockMaps | null
   debris: DebrisField | null
+  applyFogColor: ((color: number) => void) | null
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -341,16 +346,24 @@ const createDebrisEmitter =
     const position = body.translation()
     const sample = state.path.sampleAt(state.distance)
     if (position.y - sample.position.y > GROUND_PROBE_DISTANCE + DEBRIS_GROUND_TOLERANCE) return
-    if (Math.hypot(body.linvel().x, body.linvel().z) < DEBRIS_MIN_SPEED) return
+    const speed = Math.hypot(body.linvel().x, body.linvel().z)
+    if (speed < DEBRIS_MIN_SPEED) return
     if (!state.debris.shouldEmit(delta, DEBRIS_EMIT_INTERVAL)) return
     scratchOrigin.set(
       position.x + sample.forward.x * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET,
       sample.position.y,
       position.z + sample.forward.z * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET
     )
-    // A burst rather than a single chip: at speed the rock outruns its own trail,
-    // so one per tick leaves the ground looking untouched.
-    Array.from({ length: DEBRIS_PER_BURST }).forEach(() =>
+    // A burst rather than a single chip: at speed the rock outruns its own
+    // trail, so one per tick leaves the ground looking untouched. The spray
+    // grows with how fast it is going.
+    const burst = debrisBurstSize(
+      speed,
+      speedCapAt(state.distance),
+      DEBRIS_PER_BURST,
+      DEBRIS_MIN_BURST
+    )
+    Array.from({ length: burst }).forEach(() =>
       state.debris?.emit({
         origin: scratchOrigin,
         forward: sample.forward,
@@ -451,7 +464,13 @@ const createRunActions = (
     refs.distance.value = state.distance
   }
 
+  // The fog walks the same stages as the scenery, so the wood changes character
+  // as a whole rather than the trees swapping inside an unchanged haze.
+  const updateStageColor = (): void =>
+    state.applyFogColor?.(stageColorAt(state.distance, FOG_STAGE_COLORS))
+
   const pumpWorld = (): void => {
+    updateStageColor()
     state.track?.ensureAhead(state.distance)
     state.track?.prune(state.distance)
     state.scatter.forEach((area) => {
@@ -641,7 +660,7 @@ const buildRunWorld = ({
       definition,
       lateralFog,
       getConfig: () => scatterPanel.areaConfig(definition.name),
-      getTextures: () => scatterPanel.areaTextures(definition.name)
+      getTextures: (distance: number) => scatterPanel.areaTextures(definition.name, distance)
     })
   )
 
@@ -658,7 +677,10 @@ const buildRunWorld = ({
       manager: track,
       getDistance: () => state.distance,
       scene,
-      lateralFog
+      lateralFog,
+      onStageColor: (apply) => {
+        state.applyFogColor = apply
+      }
     }),
     scatterPanel.teardown
   ]
@@ -695,6 +717,7 @@ const createRunState = (): RunState => ({
   released: true,
   rockMaps: null,
   debris: null,
+  applyFogColor: null,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []

@@ -84,7 +84,7 @@ export type ScatterAreaManagerOptions = {
   definition: ScatterAreaDefinition
   lateralFog: LateralFogUniforms
   getConfig: () => ScatterAreaConfig
-  getTextures: () => ScatterTexture[]
+  getTextures: (distance: number) => ScatterTexture[]
 }
 
 /**
@@ -99,37 +99,53 @@ export type ScatterAreaManagerOptions = {
  * @param options - Scene, path, area definition and live config accessors
  * @returns Handles to pump, prune, rebuild and tear down the area
  */
+// Materials are cached per texture and shared across every chunk of an area, so
+// a long run never rebuilds one.
+const createMaterialCache = (uniforms: LateralFogUniforms, opacityOf: () => number) => {
+  const materials = new Map<string, THREE.MeshStandardMaterial>()
+  const textures = new Map<string, THREE.Texture>()
+  return {
+    materials,
+    for: (url: string): THREE.MeshStandardMaterial => {
+      const existing = materials.get(url)
+      if (existing) return existing
+      const texture = new THREE.TextureLoader().load(url)
+      texture.colorSpace = THREE.SRGBColorSpace
+      textures.set(url, texture)
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: SCATTER_ALPHA_TEST,
+        side: THREE.DoubleSide,
+        roughness: 1,
+        opacity: opacityOf()
+      })
+      applyLateralFog(material, uniforms)
+      materials.set(url, material)
+      return material
+    },
+    dispose: () => {
+      materials.forEach((material) => material.dispose())
+      textures.forEach((texture) => texture.dispose())
+      materials.clear()
+      textures.clear()
+    }
+  }
+}
+
 export const createScatterAreaManager = (
   options: ScatterAreaManagerOptions
 ): ScatterAreaManager => {
   const { scene, path, definition, getConfig, getTextures } = options
   const span = scatterChunkSpan(definition)
-  const materials = new Map<string, THREE.MeshStandardMaterial>()
-  const textures = new Map<string, THREE.Texture>()
+  const cache = createMaterialCache(options.lateralFog, () => getConfig().opacity)
   let chunks: ScatterChunk[] = []
   let hidden = false
 
-  const materialFor = (url: string): THREE.MeshStandardMaterial => {
-    const existing = materials.get(url)
-    if (existing) return existing
-    const texture = new THREE.TextureLoader().load(url)
-    texture.colorSpace = THREE.SRGBColorSpace
-    textures.set(url, texture)
-    const material = new THREE.MeshStandardMaterial({
-      map: texture,
-      transparent: true,
-      alphaTest: SCATTER_ALPHA_TEST,
-      side: THREE.DoubleSide,
-      roughness: 1,
-      opacity: getConfig().opacity
-    })
-    applyLateralFog(material, options.lateralFog)
-    materials.set(url, material)
-    return material
-  }
-
-  const buildChunkMeshes = (instances: ScatterInstance[]): THREE.InstancedMesh[] => {
-    const available = getTextures()
+  const buildChunkMeshes = (
+    instances: ScatterInstance[],
+    available: ScatterTexture[]
+  ): THREE.InstancedMesh[] => {
     return [...groupInstancesByTexture(instances).entries()].flatMap(([textureIndex, bucket]) => {
       const source = available[textureIndex]
       if (!source) return []
@@ -137,7 +153,7 @@ export const createScatterAreaManager = (
       // offsets, which would otherwise overwrite every other chunk's.
       const mesh = new THREE.InstancedMesh(
         PLANE_GEOMETRY.clone(),
-        materialFor(source.url),
+        cache.for(source.url),
         bucket.length
       )
       bucket.forEach((instance, index) => {
@@ -171,6 +187,9 @@ export const createScatterAreaManager = (
   const spawnChunk = (startDistance: number): void => {
     const endDistance = startDistance + span.chunkLength
     const chunkIndex = Math.round(startDistance / span.chunkLength)
+    // Resolved from where the chunk sits, not where the rock is, so scenery
+    // changes ahead of the player rather than behind them.
+    const available = getTextures(startDistance)
     const instances = placeScatterInstances({
       path,
       config: getConfig(),
@@ -178,9 +197,12 @@ export const createScatterAreaManager = (
       fromDistance: startDistance,
       toDistance: endDistance,
       seed: getConfig().seed + chunkIndex,
-      textureCount: getTextures().length
+      textureCount: available.length
     })
-    chunks = [...chunks, { startDistance, endDistance, meshes: buildChunkMeshes(instances) }]
+    chunks = [
+      ...chunks,
+      { startDistance, endDistance, meshes: buildChunkMeshes(instances, available) }
+    ]
   }
 
   const disposeChunk = (chunk: ScatterChunk): void =>
@@ -212,7 +234,7 @@ export const createScatterAreaManager = (
 
   const rebuild = (distance: number): void => {
     disposeAll()
-    materials.forEach((material) => {
+    cache.materials.forEach((material) => {
       material.opacity = getConfig().opacity
     })
     ensureAhead(distance)
@@ -242,10 +264,7 @@ export const createScatterAreaManager = (
     instanceCount,
     teardown: () => {
       disposeAll()
-      materials.forEach((material) => material.dispose())
-      textures.forEach((texture) => texture.dispose())
-      materials.clear()
-      textures.clear()
+      cache.dispose()
     }
   }
 }

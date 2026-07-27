@@ -138,6 +138,9 @@ export const BACKGROUND_LOOKAHEAD = 1800
 export const BACKGROUND_DISPOSE_BEHIND = BACKGROUND_BEHIND
 
 export const SCATTER_ALPHA_TEST = 0.35
+// How far the rock runs before the scenery moves to its next set of
+// illustrations, so the wood slowly changes character over a long run.
+export const SCATTER_STAGE_LENGTH = 500
 
 export const ROCK_RADIUS = 2.2
 export const ROCK_WEIGHT = 72
@@ -232,8 +235,11 @@ export const DEBRIS_STROKE_COLOR = 0x1c1712
 export const DEBRIS_GROUND_COLOR = 0xc9ae83
 export const DEBRIS_GRAVITY = -22
 export const DEBRIS_EMIT_INTERVAL = 0.02
-// Chips released together each tick.
-export const DEBRIS_PER_BURST = 4
+// Chips released together each tick, scaled by how fast the rock is going: a
+// rock barely rolling flicks up almost nothing, one at full speed throws a
+// proper spray. The floor keeps a trail alive at walking pace.
+export const DEBRIS_PER_BURST = 7
+export const DEBRIS_MIN_BURST = 1
 // Below this the rock is barely moving and kicking up dust would look wrong.
 export const DEBRIS_MIN_SPEED = 1.2
 export const DEBRIS_BACK_SPEED = 4
@@ -274,6 +280,11 @@ export const SKY_COLOR = 0x638638
 export const FOG_COLOR = SKY_COLOR
 export const FOG_NEAR = 35
 export const FOG_FAR = 130
+// The fog walks the same stages as the scenery, so the whole wood changes
+// character together rather than the trees swapping inside an unchanged haze.
+// It blends between them, landing exactly on each colour at its own milestone.
+export const FOG_STAGE_COLORS = [SKY_COLOR, 0xb08a55, 0xb0534e]
+
 // Sideways fade. The world is a narrow strip, so its long edges sit only tens
 // of units away and camera-distance fog can never reach them.
 export const FOG_SIDE_NEAR = 8

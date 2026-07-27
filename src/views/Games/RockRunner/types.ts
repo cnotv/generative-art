@@ -92,6 +92,12 @@ export type ScatterAreaDefinition = {
   heightOffset: number
   baseSize: [number, number, number]
   variation: [number, number, number]
+  /**
+   * Illustrations to draw from as the run goes on, one entry per stage of
+   * SCATTER_STAGE_LENGTH. The last is held once the rock is past it. Areas
+   * without stages keep `textures` throughout.
+   */
+  textureStages?: ScatterTexture[][]
   /** Fraction of the base size, defaulting to SCATTER_SIZE_VARIATION. */
   sizeVariation?: number
   /** Degrees off the local heading, defaulting to SCATTER_ROTATION_VARIATION. */

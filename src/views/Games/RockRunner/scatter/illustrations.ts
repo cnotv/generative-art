@@ -1,5 +1,12 @@
 import treeUrl from '@/assets/images/illustrations/Tree1-1.webp'
 import treeTwoUrl from '@/assets/images/illustrations/Tree1-2.webp'
+// Later stages. The files keep their names because ForestGame imports the same
+// set; the staging lives here rather than in the filenames.
+import treeMidUrl from '@/assets/images/illustrations/Tree1-6.webp'
+import treeLateUrl from '@/assets/images/illustrations/Tree1-8.webp'
+import treeTwoMidUrl from '@/assets/images/illustrations/Tree1-4.webp'
+import treeTwoLateUrl from '@/assets/images/illustrations/Tree1-7.webp'
+import bushLateUrl from '@/assets/images/illustrations/Bush1-2.webp'
 import bushUrl from '@/assets/images/illustrations/Bush1-1.webp'
 import flowerUrl from '@/assets/images/illustrations/flowers1.webp'
 import grassUrl from '@/assets/images/illustrations/Grass1-1.webp'
@@ -39,6 +46,11 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     name: 'tree',
     label: 'Tree',
     textures: [texture('Tree1-1.webp', treeUrl)],
+    textureStages: [
+      [texture('Tree1-1.webp', treeUrl)],
+      [texture('Tree1-6.webp', treeMidUrl)],
+      [texture('Tree1-8.webp', treeLateUrl)]
+    ],
     placement: 'sides',
     frequency: 100,
     distanceMin: 14,
@@ -54,6 +66,11 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     name: 'tree-2',
     label: 'Tree 2',
     textures: [texture('Tree1-2.webp', treeTwoUrl)],
+    textureStages: [
+      [texture('Tree1-2.webp', treeTwoUrl)],
+      [texture('Tree1-4.webp', treeTwoMidUrl)],
+      [texture('Tree1-7.webp', treeTwoLateUrl)]
+    ],
     placement: 'sides',
     frequency: 100,
     distanceMin: 14,
@@ -71,6 +88,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     name: 'bush',
     label: 'Bush',
     textures: [texture('Bush1-1.webp', bushUrl)],
+    textureStages: [[texture('Bush1-1.webp', bushUrl)], [texture('Bush1-2.webp', bushLateUrl)]],
     placement: 'sides',
     frequency: 34,
     distanceMin: 10,
