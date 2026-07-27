@@ -183,6 +183,8 @@ export type DebrisEmitOptions = {
   right: THREE.Vector3
   /** Three values in [0, 1) driving spread, size, spin and colour. */
   samples: [number, number, number]
+  /** Seconds the chip lives, which is what sets how far the trail reaches back. */
+  lifetime: number
 }
 
 /** A pooled trail of debris drawn as two instanced meshes, fill and stroke. */

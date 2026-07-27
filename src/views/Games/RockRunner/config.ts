@@ -222,6 +222,8 @@ export const DEBRIS_COUNT = 220
 // Short: the chips are a scuff at the rock's heels, not a smoke trail behind
 // it. A longer life leaves a line stretching back down the whole path.
 export const DEBRIS_LIFETIME = 0.4
+/** Seconds a chip lives when the rock is barely moving, so the trail shortens with speed. */
+export const DEBRIS_MIN_LIFETIME = 0.14
 // Around a tenth is the floor: smaller than this a chip is under two pixels at
 // the distance the chase camera sits, and the trail simply stops resolving.
 export const DEBRIS_SIZE = 0.11

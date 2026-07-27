@@ -156,7 +156,8 @@ describe('createDebrisField', () => {
       origin: new THREE.Vector3(),
       forward: FORWARD,
       right: RIGHT,
-      samples: [0.5, 0.5, 0.5]
+      samples: [0.5, 0.5, 0.5],
+      lifetime: DEBRIS_LIFETIME
     })
 
     expect(field.liveCount()).toBe(1)
@@ -168,7 +169,8 @@ describe('createDebrisField', () => {
       origin: new THREE.Vector3(),
       forward: FORWARD,
       right: RIGHT,
-      samples: [0.5, 0.5, 0.5]
+      samples: [0.5, 0.5, 0.5],
+      lifetime: DEBRIS_LIFETIME
     })
 
     field.update(DEBRIS_LIFETIME + 0.1)
@@ -185,7 +187,8 @@ describe('createDebrisField', () => {
         origin: new THREE.Vector3(),
         forward: FORWARD,
         right: RIGHT,
-        samples: [0.5, 0.5, 0.5]
+        samples: [0.5, 0.5, 0.5],
+        lifetime: DEBRIS_LIFETIME
       })
     )
 
@@ -208,5 +211,39 @@ describe('createDebrisField', () => {
     field.teardown()
 
     expect(scene.children).toHaveLength(0)
+  })
+})
+
+describe('emitted lifetime', () => {
+  it('lets a shorter lifetime kill the chip sooner, shortening the trail', () => {
+    const scene = new THREE.Scene()
+    const field = createDebrisField(scene, [0xffffff])
+
+    field.emit({
+      origin: new THREE.Vector3(),
+      forward: FORWARD,
+      right: RIGHT,
+      samples: [0.5, 0.5, 0.5],
+      lifetime: 0.1
+    })
+    field.update(0.15)
+
+    expect(field.liveCount()).toBe(0)
+  })
+
+  it('keeps a chip alive over the same span when the lifetime is long', () => {
+    const scene = new THREE.Scene()
+    const field = createDebrisField(scene, [0xffffff])
+
+    field.emit({
+      origin: new THREE.Vector3(),
+      forward: FORWARD,
+      right: RIGHT,
+      samples: [0.5, 0.5, 0.5],
+      lifetime: 0.4
+    })
+    field.update(0.15)
+
+    expect(field.liveCount()).toBe(1)
   })
 })

@@ -120,6 +120,32 @@ export const debrisBurstSize = (
 }
 
 /**
+ * How long a chip lives, and so how far back the trail reaches.
+ *
+ * A trail is only as long as its chips survive, so tying life to speed makes
+ * the rock leave a short scuff when it is crawling and a long plume when it is
+ * flying. The ramp is linear rather than squared like the burst count: the
+ * count wants to sit at zero until the rock is really moving, whereas a trail
+ * that collapses to nothing at half speed reads as the effect breaking.
+ *
+ * @param speed - Current ground speed
+ * @param cap - Speed at which the trail reaches its full length
+ * @param maxLifetime - Seconds a chip lives at the cap
+ * @param minLifetime - Seconds a chip lives at a standstill
+ * @returns Seconds the chip should live
+ */
+export const debrisLifetime = (
+  speed: number,
+  cap: number,
+  maxLifetime: number,
+  minLifetime: number
+): number => {
+  if (cap <= 0) return minLifetime
+  const fraction = Math.min(1, Math.max(0, speed) / cap)
+  return minLifetime + (maxLifetime - minLifetime) * fraction
+}
+
+/**
  * Scales a per-frame impulse so acceleration does not depend on frame rate.
  *
  * An impulse applied once per frame is momentum per frame, not per second: the

@@ -133,8 +133,8 @@ export const createDebrisField = (scene: THREE.Scene, colors: number[]): DebrisF
     cursor = (cursor + 1) % particles.length
     particle.position.copy(options.origin)
     particle.velocity.copy(debrisVelocity(options.forward, options.right, options.samples))
-    particle.life = DEBRIS_LIFETIME
-    particle.maxLife = DEBRIS_LIFETIME
+    particle.life = options.lifetime
+    particle.maxLife = options.lifetime
     particle.size = DEBRIS_SIZE * (HALF + options.samples[0])
     particle.angle = options.samples[1] * Math.PI * 2
     particle.spin = (options.samples[2] - HALF) * 2 * DEBRIS_SPIN

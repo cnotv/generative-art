@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   advanceDistance,
   debrisBurstSize,
+  debrisLifetime,
   speedCapAt,
   steerDirection,
   speedAlong,
@@ -243,5 +244,38 @@ describe('debrisBurstSize', () => {
 
   it('survives a zero cap', () => {
     expect(debrisBurstSize(10, 0, 8, 1)).toBe(1)
+  })
+})
+
+describe('debrisLifetime', () => {
+  it('lives the full lifetime at the speed cap', () => {
+    expect(debrisLifetime(20, 20, 0.4, 0.14)).toBeCloseTo(0.4)
+  })
+
+  it('falls to the floor at a standstill', () => {
+    expect(debrisLifetime(0, 20, 0.4, 0.14)).toBeCloseTo(0.14)
+  })
+
+  // Linear rather than squared like the burst count: a trail that collapsed to
+  // nothing by half speed read as the effect breaking rather than as slowing.
+  it('sits halfway at half the cap', () => {
+    expect(debrisLifetime(10, 20, 0.4, 0.14)).toBeCloseTo(0.27)
+  })
+
+  it.each([
+    [-5, 0.14],
+    [40, 0.4]
+  ])('clamps speed %s to lifetime %s', (speed, expected) => {
+    expect(debrisLifetime(speed, 20, 0.4, 0.14)).toBeCloseTo(expected)
+  })
+
+  it('returns the floor when there is no cap to ramp against', () => {
+    expect(debrisLifetime(12, 0, 0.4, 0.14)).toBeCloseTo(0.14)
+  })
+
+  it('shortens the trail monotonically as the rock slows', () => {
+    const lifetimes = [20, 15, 10, 5, 0].map((speed) => debrisLifetime(speed, 20, 0.4, 0.14))
+
+    expect(lifetimes).toEqual([...lifetimes].sort((a, b) => b - a))
   })
 })

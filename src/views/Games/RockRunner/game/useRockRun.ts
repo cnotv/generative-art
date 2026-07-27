@@ -44,6 +44,7 @@ import { stageColorAt } from '../scatter/textureStages'
 import {
   advanceDistance,
   debrisBurstSize,
+  debrisLifetime,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   isGrounded,
@@ -67,7 +68,9 @@ import {
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
+  DEBRIS_LIFETIME,
   DEBRIS_MIN_BURST,
+  DEBRIS_MIN_LIFETIME,
   DEBRIS_MIN_SPEED,
   DEBRIS_PER_BURST,
   DEBRIS_TRAIL_OFFSET,
@@ -358,18 +361,16 @@ const createDebrisEmitter =
     // A burst rather than a single chip: at speed the rock outruns its own
     // trail, so one per tick leaves the ground looking untouched. The spray
     // grows with how fast it is going.
-    const burst = debrisBurstSize(
-      speed,
-      speedCapAt(state.distance),
-      DEBRIS_PER_BURST,
-      DEBRIS_MIN_BURST
-    )
+    const cap = speedCapAt(state.distance)
+    const burst = debrisBurstSize(speed, cap, DEBRIS_PER_BURST, DEBRIS_MIN_BURST)
+    const lifetime = debrisLifetime(speed, cap, DEBRIS_LIFETIME, DEBRIS_MIN_LIFETIME)
     Array.from({ length: burst }).forEach(() =>
       state.debris?.emit({
         origin: scratchOrigin,
         forward: sample.forward,
         right: sample.right,
-        samples: [Math.random(), Math.random(), Math.random()]
+        samples: [Math.random(), Math.random(), Math.random()],
+        lifetime
       })
     )
   }
