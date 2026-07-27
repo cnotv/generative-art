@@ -97,6 +97,11 @@ export const isGrounded = (rockY: number, groundY: number, velocityY: number): b
  * Scaled against the speed cap rather than a fixed figure, so the spray still
  * grows over a run as the cap itself ramps up.
  *
+ * The response is squared. Scaled linearly, even a rock barely moving still
+ * rounded up to a chip on every tick — and the tick is fast, so "the smallest
+ * possible spray" was still fifty chips a second. Squaring holds it at nothing
+ * until the rock is genuinely moving, then ramps hard.
+ *
  * @param speed - The rock's horizontal speed
  * @param cap - The current speed cap
  * @param maxBurst - Chips thrown at the cap
@@ -111,7 +116,7 @@ export const debrisBurstSize = (
 ): number => {
   if (cap <= 0) return minBurst
   const fraction = Math.min(1, Math.max(0, speed) / cap)
-  return Math.max(minBurst, Math.round(maxBurst * fraction))
+  return Math.max(minBurst, Math.round(maxBurst * fraction * fraction))
 }
 
 /**

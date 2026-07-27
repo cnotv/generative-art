@@ -11,7 +11,6 @@ import bushUrl from '@/assets/images/illustrations/Bush1-1.webp'
 import flowerUrl from '@/assets/images/illustrations/flowers1.webp'
 import grassUrl from '@/assets/images/illustrations/Grass1-1.webp'
 import rockUrl from '@/assets/images/illustrations/Rock.webp'
-import mountainUrl from '@/assets/images/illustrations/Mountain1-1.webp'
 import type { ScatterAreaDefinition } from '../types'
 
 const texture = (filename: string, url: string) => ({
@@ -29,19 +28,6 @@ const texture = (filename: string, url: string) => ({
  * friends) to any area without touching this catalog.
  */
 export const SCATTER_AREAS: ScatterAreaDefinition[] = [
-  {
-    name: 'background',
-    label: 'Background',
-    textures: [texture('Mountain1-1.webp', mountainUrl)],
-    placement: 'background',
-    frequency: 6,
-    distanceMin: 260,
-    distanceMax: 620,
-    heightOffset: 30,
-    baseSize: [340, 190, 1],
-    variation: [0, 40, 400],
-    seed: 8100
-  },
   {
     name: 'tree',
     label: 'Tree',

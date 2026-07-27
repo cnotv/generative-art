@@ -12,10 +12,6 @@ import type {
   TrackPath
 } from '../types'
 import {
-  BACKGROUND_BEHIND,
-  BACKGROUND_CHUNK_LENGTH,
-  BACKGROUND_DISPOSE_BEHIND,
-  BACKGROUND_LOOKAHEAD,
   SCATTER_ALPHA_TEST,
   SCATTER_BEHIND,
   SCATTER_CHUNK_LENGTH,
@@ -41,26 +37,15 @@ type ChunkSpan = {
 
 /**
  * How far ahead an area generates and how far behind it keeps its billboards.
- * The background reaches much further because its props are large and distant,
- * so a short window would visibly pop on the horizon.
  *
- * @param definition - The area being spanned
- * @returns The area's lookahead, keep-alive and chunk length
+ * @returns The lookahead, keep-alive, chunk length and reach behind
  */
-export const scatterChunkSpan = (definition: ScatterAreaDefinition): ChunkSpan =>
-  definition.placement === 'background'
-    ? {
-        lookahead: BACKGROUND_LOOKAHEAD,
-        disposeBehind: BACKGROUND_DISPOSE_BEHIND,
-        chunkLength: BACKGROUND_CHUNK_LENGTH,
-        behind: BACKGROUND_BEHIND
-      }
-    : {
-        lookahead: SCATTER_LOOKAHEAD,
-        disposeBehind: SCATTER_DISPOSE_BEHIND,
-        chunkLength: SCATTER_CHUNK_LENGTH,
-        behind: SCATTER_BEHIND
-      }
+export const scatterChunkSpan = (): ChunkSpan => ({
+  lookahead: SCATTER_LOOKAHEAD,
+  disposeBehind: SCATTER_DISPOSE_BEHIND,
+  chunkLength: SCATTER_CHUNK_LENGTH,
+  behind: SCATTER_BEHIND
+})
 
 /**
  * Groups a chunk's instances by the texture they drew, so each texture becomes
@@ -137,7 +122,7 @@ export const createScatterAreaManager = (
   options: ScatterAreaManagerOptions
 ): ScatterAreaManager => {
   const { scene, path, definition, getConfig, getTextures } = options
-  const span = scatterChunkSpan(definition)
+  const span = scatterChunkSpan()
   const cache = createMaterialCache(options.lateralFog, () => getConfig().opacity)
   let chunks: ScatterChunk[] = []
   let hidden = false

@@ -136,10 +136,6 @@ export const SCATTER_CHUNK_LENGTH = CHUNK_LENGTH * 2
 export const SCATTER_BEHIND = SCATTER_CHUNK_LENGTH * 3
 export const SCATTER_LOOKAHEAD = 700
 export const SCATTER_DISPOSE_BEHIND = SCATTER_BEHIND
-export const BACKGROUND_CHUNK_LENGTH = CHUNK_LENGTH * 8
-export const BACKGROUND_BEHIND = BACKGROUND_CHUNK_LENGTH * 2
-export const BACKGROUND_LOOKAHEAD = 1800
-export const BACKGROUND_DISPOSE_BEHIND = BACKGROUND_BEHIND
 
 export const SCATTER_ALPHA_TEST = 0.35
 // How far the rock runs before the scenery moves to its next set of
@@ -204,7 +200,7 @@ export const SPAWN_GATE_SPREAD = 4
 // Impulses are momentum, so they scale with the mass above. They are raised by
 // slightly less than the weight was, which is what makes the rock read as
 // heavier: it still drives, but takes longer to get going and to change line.
-export const FORWARD_IMPULSE = 34
+export const FORWARD_IMPULSE = 11
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
@@ -215,9 +211,9 @@ export const STEER_IMPULSE = 26
 export const MAX_LATERAL_SPEED = 12
 
 // An impulse is momentum, so it has to grow with the mass. This launches the
-// rock at 30 m/s for an apex around 46m — three times the containment walls, so
-// a jump taken near an edge can carry it clean over them.
-export const JUMP_IMPULSE = 2160
+// rock at 10 m/s for an apex around 5m, comfortably inside the containment
+// walls.
+export const JUMP_IMPULSE = 720
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
@@ -246,7 +242,8 @@ export const DEBRIS_EMIT_INTERVAL = 0.02
 // rock barely rolling flicks up almost nothing, one at full speed throws a
 // proper spray. The floor keeps a trail alive at walking pace.
 export const DEBRIS_PER_BURST = 7
-export const DEBRIS_MIN_BURST = 1
+// Zero on purpose: a rock that is barely rolling should kick up nothing at all.
+export const DEBRIS_MIN_BURST = 0
 // Below this the rock is barely moving and kicking up dust would look wrong.
 export const DEBRIS_MIN_SPEED = 1.2
 export const DEBRIS_BACK_SPEED = 4

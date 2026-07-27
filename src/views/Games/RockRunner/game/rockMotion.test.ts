@@ -209,8 +209,23 @@ describe('debrisBurstSize', () => {
     expect(debrisBurstSize(0, 20, 8, 1)).toBe(1)
   })
 
-  it('scales in between', () => {
-    expect(debrisBurstSize(10, 20, 8, 1)).toBe(4)
+  // Squared, not linear: scaled linearly a rock barely moving still rounded up
+  // to a chip every tick, and the tick is fast enough that "the smallest spray"
+  // was fifty chips a second.
+  it('holds at nothing until the rock is genuinely moving', () => {
+    expect(debrisBurstSize(4, 20, 8, 0)).toBe(0)
+  })
+
+  it('ramps hard once past that', () => {
+    expect(debrisBurstSize(10, 20, 8, 0)).toBe(2)
+    expect(debrisBurstSize(15, 20, 8, 0)).toBe(5)
+  })
+
+  it('rises faster near the cap than far from it', () => {
+    const low = debrisBurstSize(10, 20, 8, 0) - debrisBurstSize(5, 20, 8, 0)
+    const high = debrisBurstSize(20, 20, 8, 0) - debrisBurstSize(15, 20, 8, 0)
+
+    expect(high).toBeGreaterThan(low)
   })
 
   // The cap ramps over a run, so a fixed speed throws less as the cap rises.

@@ -76,10 +76,10 @@ export type TrackChunkManager = {
 }
 
 /**
- * Where an area scatters relative to the track: beside it, on its surface,
- * across both, or far out on the horizon.
+ * Where an area scatters relative to the track: beside it, on its surface, or
+ * across both.
  */
-export type ScatterPlacement = 'sides' | 'track' | 'everywhere' | 'background'
+export type ScatterPlacement = 'sides' | 'track' | 'everywhere'
 
 /** One illustration family dressed onto the world through a texture area. */
 export type ScatterAreaDefinition = {
