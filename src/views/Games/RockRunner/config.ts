@@ -211,10 +211,10 @@ export const STEER_IMPULSE = 26
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-// An impulse is momentum, so it has to grow with the mass: at 95 against a mass
-// of 72 the rock launched at 1.3 m/s and rose nine centimetres, which reads as
-// the jump doing nothing at all. This clears roughly the rock's own height.
-export const JUMP_IMPULSE = 540
+// An impulse is momentum, so it has to grow with the mass. This launches the
+// rock at 30 m/s for an apex around 46m — three times the containment walls, so
+// a jump taken near an edge can carry it clean over them.
+export const JUMP_IMPULSE = 2160
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
