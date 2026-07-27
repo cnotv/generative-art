@@ -479,6 +479,13 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     rebuild(distance)
   }
 
+  // One shared material across every live chunk, so the whole countryside
+  // shifts together rather than a stage boundary drawing a line across it.
+  const setTerrainTint = (color: number): void => {
+    if (terrainMaterial.color.getHex() === color) return
+    terrainMaterial.color.setHex(color)
+  }
+
   const setWallsVisible = (visible: boolean): void => {
     wallsVisible = visible
     chunks.forEach((chunk) =>
@@ -494,6 +501,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     rebuild,
     setWall,
     setDimensions,
+    setTerrainTint,
     setWallsVisible,
     groundHeightAt: (distance: number) => options.path.sampleAt(distance).position.y,
     teardown: () => {

@@ -513,6 +513,31 @@ describe('createTrackChunkManager', () => {
     })
   })
 
+  it('tints every live chunk of side ground at once', () => {
+    const { manager, scene } = createManager()
+    manager.ensureAhead(0)
+
+    manager.setTerrainTint(0xd39a92)
+
+    const strips = scene.children.filter((child) =>
+      child.name.startsWith('terrain-')
+    ) as THREE.Mesh[]
+    expect(strips.length).toBeGreaterThan(1)
+    strips.forEach((strip) =>
+      expect((strip.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xd39a92)
+    )
+  })
+
+  it('tints chunks spawned after the change too', () => {
+    const { manager, scene } = createManager()
+    manager.setTerrainTint(0xd9c096)
+
+    manager.ensureAhead(0)
+
+    const strip = scene.children.find((child) => child.name === 'terrain-left') as THREE.Mesh
+    expect((strip.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xd9c096)
+  })
+
   it('reports the ground height from the path', () => {
     const { manager } = createManager()
     const path = createTrackPath(2024)

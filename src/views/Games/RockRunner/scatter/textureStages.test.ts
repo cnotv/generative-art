@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { stageIndexAt, texturesAt, stageColorAt } from './textureStages'
 import { SCATTER_AREAS } from './illustrations'
-import { SCATTER_STAGE_LENGTH } from '../config'
+import { FOG_STAGE_COLORS, SCATTER_STAGE_LENGTH, TERRAIN_STAGE_TINTS } from '../config'
 import type { ScatterAreaDefinition, ScatterTexture } from '../types'
 
 const area = (name: string): ScatterAreaDefinition =>
@@ -123,5 +123,30 @@ describe('stageColorAt', () => {
 
   it('holds a single-colour palette', () => {
     expect(stageColorAt(SCATTER_STAGE_LENGTH * 3, [TAN])).toBe(TAN)
+  })
+})
+
+describe('terrain stage tints', () => {
+  // The terrain tint multiplies a ground texture, so the fog colours used as
+  // they are would darken the countryside to mud.
+  it('are lighter than the fog colours they follow', () => {
+    const brightness = (color: number) =>
+      ((color >> 16) & 0xff) + ((color >> 8) & 0xff) + (color & 0xff)
+
+    TERRAIN_STAGE_TINTS.forEach((tint, stage) =>
+      expect(brightness(tint)).toBeGreaterThan(brightness(FOG_STAGE_COLORS[stage]))
+    )
+  })
+
+  it('define a tint for every fog stage', () => {
+    expect(TERRAIN_STAGE_TINTS).toHaveLength(FOG_STAGE_COLORS.length)
+  })
+
+  it('walk the stages alongside the fog', () => {
+    const at = (stage: number) => stageColorAt(stage * SCATTER_STAGE_LENGTH, TERRAIN_STAGE_TINTS)
+
+    expect(at(0)).toBe(TERRAIN_STAGE_TINTS[0])
+    expect(at(1)).toBe(TERRAIN_STAGE_TINTS[1])
+    expect(at(2)).toBe(TERRAIN_STAGE_TINTS[2])
   })
 })

@@ -109,6 +109,10 @@ export const TERRAIN_HALF_WIDTH = TERRAIN_WIDTH / 2
 export const TERRAIN_THICKNESS = 2
 export const TERRAIN_DROP = 0.25
 export const TERRAIN_TINT = 0xbcd79a
+// The side ground walks the same stages as the fog and the trees. These are the
+// stage colours lightened: the terrain tint multiplies a ground texture, so
+// using the fog colours as they are would darken the countryside to mud.
+export const TERRAIN_STAGE_TINTS = [TERRAIN_TINT, 0xd9c096, 0xd39a92]
 
 export const CHUNK_STATIONS = 12
 export const CHUNK_LENGTH = CHUNK_STATIONS * STATION_SPACING

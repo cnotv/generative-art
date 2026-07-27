@@ -108,6 +108,7 @@ import {
   ROCK_TEXTURE_REPEAT,
   ROCK_WEIGHT,
   SKY_COLOR,
+  TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
   STEER_IMPULSE,
   WALL_ELEMENT_NAME,
@@ -466,8 +467,10 @@ const createRunActions = (
 
   // The fog walks the same stages as the scenery, so the wood changes character
   // as a whole rather than the trees swapping inside an unchanged haze.
-  const updateStageColor = (): void =>
+  const updateStageColor = (): void => {
     state.applyFogColor?.(stageColorAt(state.distance, FOG_STAGE_COLORS))
+    state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
+  }
 
   const pumpWorld = (): void => {
     updateStageColor()

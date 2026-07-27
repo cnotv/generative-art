@@ -69,6 +69,7 @@ export type TrackChunkManager = {
   rebuild: (distance: number) => void
   setWall: (wall: WallConfig, distance: number) => void
   setDimensions: (dimensions: TrackDimensions, distance: number) => void
+  setTerrainTint: (color: number) => void
   setWallsVisible: (visible: boolean) => void
   groundHeightAt: (distance: number) => number
   teardown: () => void
