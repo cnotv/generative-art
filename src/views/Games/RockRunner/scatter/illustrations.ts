@@ -74,7 +74,14 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     name: 'bush',
     label: 'Bush',
     textures: [texture('Bush1-2.webp', bushLateUrl)],
-    textureStages: [[texture('Bush1-2.webp', bushLateUrl)], [texture('Bush1-1.webp', bushUrl)]],
+    // Only two illustrations across three stages, so one is held for a stage.
+    // It is the second that repeats, which leaves the wrap back to the first a
+    // real change rather than a boundary where nothing happens.
+    textureStages: [
+      [texture('Bush1-2.webp', bushLateUrl)],
+      [texture('Bush1-1.webp', bushUrl)],
+      [texture('Bush1-1.webp', bushUrl)]
+    ],
     placement: 'sides',
     frequency: 34,
     distanceMin: 10,

@@ -29,8 +29,15 @@ describe('stageIndexAt', () => {
     expect(stageIndexAt(distance, 3)).toBe(expected)
   })
 
-  it('holds at the last stage once past it', () => {
-    expect(stageIndexAt(SCATTER_STAGE_LENGTH * 50, 3)).toBe(2)
+  // The sequence loops, so a long run keeps changing character rather than
+  // settling into one look for the rest of it.
+  it('wraps back to the first stage past the last', () => {
+    expect(stageIndexAt(SCATTER_STAGE_LENGTH * 3, 3)).toBe(0)
+    expect(stageIndexAt(SCATTER_STAGE_LENGTH * 4, 3)).toBe(1)
+  })
+
+  it('keeps looping however far the run goes', () => {
+    expect(stageIndexAt(SCATTER_STAGE_LENGTH * 50, 3)).toBe(50 % 3)
   })
 
   it('treats the track behind the origin as the first stage', () => {
@@ -66,12 +73,25 @@ describe('texturesAt', () => {
     expect(names).toEqual(['Tree1-2.webp', 'Tree1-4.webp', 'Tree1-7.webp'])
   })
 
-  it('holds the bush on its second illustration, having only two', () => {
+  // Two illustrations across three stages, so one is held for a stage. The
+  // repeat is the second, leaving the wrap back to the first a real change.
+  it('repeats the bush second illustration to fill its third stage', () => {
     const bush = area('bush')
+    const at = (stage: number) => texturesAt(bush, stage * SCATTER_STAGE_LENGTH, [])[0].filename
 
-    expect(texturesAt(bush, 0, [])[0].filename).toBe('Bush1-2.webp')
-    expect(texturesAt(bush, SCATTER_STAGE_LENGTH, [])[0].filename).toBe('Bush1-1.webp')
-    expect(texturesAt(bush, SCATTER_STAGE_LENGTH * 9, [])[0].filename).toBe('Bush1-1.webp')
+    expect(at(0)).toBe('Bush1-2.webp')
+    expect(at(1)).toBe('Bush1-1.webp')
+    expect(at(2)).toBe('Bush1-1.webp')
+    expect(at(3)).toBe('Bush1-2.webp')
+  })
+
+  it('gives every staged area the same number of stages, so they turn together', () => {
+    const counts = SCATTER_AREAS.filter((entry) => entry.textureStages).map(
+      (entry) => entry.textureStages!.length
+    )
+
+    expect(new Set(counts).size).toBe(1)
+    expect(counts[0]).toBe(SCATTER_STAGE_COUNT)
   })
 
   it('never returns an empty set for a staged area', () => {
@@ -114,8 +134,16 @@ describe('stageColorAt', () => {
     expect(red(SCATTER_STAGE_LENGTH * 0.75)).toBeGreaterThan(red(SCATTER_STAGE_LENGTH * 0.25))
   })
 
-  it('holds the last colour once past the final stage', () => {
-    expect(stageColorAt(SCATTER_STAGE_LENGTH * 40, palette)).toBe(RED)
+  it('wraps the palette back to the first colour past the last', () => {
+    expect(stageColorAt(SCATTER_STAGE_LENGTH * 3, palette)).toBe(GREEN)
+    expect(stageColorAt(SCATTER_STAGE_LENGTH * 4, palette)).toBe(TAN)
+  })
+
+  it('blends from the last colour back toward the first', () => {
+    const blended = stageColorAt(SCATTER_STAGE_LENGTH * 2.5, palette)
+
+    expect(blended).not.toBe(RED)
+    expect(blended).not.toBe(GREEN)
   })
 
   it('treats the track behind the origin as the first colour', () => {
@@ -128,6 +156,7 @@ describe('stageColorAt', () => {
 
   it('holds a single-colour palette', () => {
     expect(stageColorAt(SCATTER_STAGE_LENGTH * 3, [TAN])).toBe(TAN)
+    expect(stageColorAt(SCATTER_STAGE_LENGTH * 3.5, [TAN])).toBe(TAN)
   })
 })
 
@@ -167,5 +196,6 @@ describe('terrain stage tints', () => {
     expect(at(0)).toBe(TERRAIN_STAGE_TINTS[0])
     expect(at(1)).toBe(TERRAIN_STAGE_TINTS[1])
     expect(at(2)).toBe(TERRAIN_STAGE_TINTS[2])
+    expect(at(3)).toBe(TERRAIN_STAGE_TINTS[0])
   })
 })

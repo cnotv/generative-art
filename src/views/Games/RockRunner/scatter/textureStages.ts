@@ -8,19 +8,17 @@ const GREEN_SHIFT = 8
 /**
  * Which stage of the run a distance falls in.
  *
- * Stages are read from the distance a chunk sits at rather than from where the
- * rock currently is. A chunk is built well before it is reached, so keying off
- * the rock would freeze whatever stage happened to be current at build time and
- * the world would change behind the player instead of ahead of them.
+ * The sequence loops: past the last stage it returns to the first, so a long
+ * run keeps changing character instead of settling into one look forever.
  *
  * @param distance - Distance along the track
  * @param stageCount - How many stages the area defines
- * @returns The stage index, held at the last one once past it
+ * @returns The stage index, wrapping back to the first past the last
  */
 export const stageIndexAt = (distance: number, stageCount: number): number => {
   if (stageCount <= 0) return 0
   const raw = Math.floor(Math.max(0, distance) / SCATTER_STAGE_LENGTH)
-  return Math.min(stageCount - 1, raw)
+  return raw % stageCount
 }
 
 /**
@@ -51,16 +49,19 @@ export const texturesAt = (
  * around it changing in one frame reads as a glitch. Each colour is still hit
  * exactly at its own milestone, so a stage boundary looks deliberate.
  *
+ * The palette loops with the stages, blending from the last colour back to the
+ * first rather than settling on the last for the rest of the run.
+ *
  * @param distance - Distance along the track
  * @param colors - One colour per stage
- * @returns The blended colour, held at the last one once past it
+ * @returns The blended colour, wrapping back to the first past the last
  */
 export const stageColorAt = (distance: number, colors: number[]): number => {
   if (colors.length === 0) return 0
   const position = Math.max(0, distance) / SCATTER_STAGE_LENGTH
-  const index = Math.min(colors.length - 1, Math.floor(position))
-  const next = Math.min(colors.length - 1, index + 1)
-  const blend = index === next ? 0 : position - index
+  const index = Math.floor(position) % colors.length
+  const next = (index + 1) % colors.length
+  const blend = colors.length === 1 ? 0 : position - Math.floor(position)
   const channel = (shift: number): number => {
     const from = (colors[index] >> shift) & CHANNEL_MASK
     const to = (colors[next] >> shift) & CHANNEL_MASK
