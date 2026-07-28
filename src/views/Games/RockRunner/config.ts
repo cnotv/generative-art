@@ -143,7 +143,15 @@ export const SCATTER_ALPHA_TEST = 0.35
 export const SCATTER_STAGE_LENGTH = 500
 
 export const ROCK_RADIUS = 2.2
-export const ROCK_WEIGHT = 72
+// Rapier has one world gravity, so a body's own weight is expressed as a
+// multiplier on it. The shared package calls this option `weight`, which is
+// what it simulates, but it scales acceleration and not mass: the rock falls
+// four times as hard without becoming harder to push around.
+//
+// Four rather than something heavier because gravity and the jump pull against
+// each other. Airtime is set by the fall, so at 12x a jump is over in 0.4s and
+// at 72x it is a 0.15-unit twitch nobody can see.
+export const ROCK_GRAVITY_SCALE = 4
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
@@ -207,10 +215,10 @@ export const STEER_IMPULSE = 26
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-// An impulse is momentum, so it has to grow with the mass. This launches the
-// rock at 10 m/s for an apex around 5m, comfortably inside the containment
-// walls.
-export const JUMP_IMPULSE = 720
+// An impulse is momentum, so it is divided by the rock's mass, which comes from
+// its volume and is around 45 rather than any figure written here. Measured
+// against the solver, this clears about 2.5 units with 0.7s of airtime.
+export const JUMP_IMPULSE = 650
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35

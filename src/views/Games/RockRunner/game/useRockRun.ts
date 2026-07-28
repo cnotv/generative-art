@@ -109,7 +109,7 @@ import {
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
   ROCK_TEXTURE_REPEAT,
-  ROCK_WEIGHT,
+  ROCK_GRAVITY_SCALE,
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
@@ -263,7 +263,7 @@ const spawnRock = (
     position,
     restitution: ROCK_RESTITUTION,
     friction: ROCK_FRICTION,
-    weight: ROCK_WEIGHT,
+    weight: ROCK_GRAVITY_SCALE,
     roughness: 1,
     metalness: 0,
     segments: ROCK_SEGMENTS,
@@ -320,7 +320,13 @@ export const spawnPosition = (
 // would still let gravity build speed up each frame and slide it down the slope
 // it spawned on, so gravity is switched off for the wait and restored exactly
 // once when the run begins.
-const createStartGate = (state: RunState) => ({
+/**
+ * Holds the rock still through the countdown and releases it into the run.
+ *
+ * @param state - The run's mutable state, holding the rock
+ * @returns The gate's hold and release handlers
+ */
+export const createStartGate = (state: RunState) => ({
   hold: (): void => {
     if (!state.rock) return
     const body = state.rock.userData.body
@@ -333,7 +339,10 @@ const createStartGate = (state: RunState) => ({
   },
   release: (): void => {
     if (state.released || !state.rock) return
-    state.rock.userData.body.setGravityScale(1, true)
+    // Restores the rock's own gravity, not 1: it spawns configured to fall
+    // several times harder than the world, and resetting to the world's own
+    // scale here quietly threw that away for the entire run.
+    state.rock.userData.body.setGravityScale(ROCK_GRAVITY_SCALE, true)
     state.released = true
   }
 })
