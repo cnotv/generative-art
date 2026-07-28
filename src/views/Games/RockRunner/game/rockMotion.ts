@@ -1,11 +1,5 @@
 import type { ControlsCurrents } from '@webgamekit/controls'
 import type { TrackPath } from '../types'
-import {
-  BASE_MAX_SPEED,
-  GROUND_PROBE_DISTANCE,
-  MAX_SPEED_CEILING,
-  SPEED_RAMP_DISTANCE
-} from '../config'
 
 // Above this rate of climb the rock is already leaving the ground, so a second
 // jump would stack onto the first.
@@ -52,9 +46,13 @@ export const advanceDistance = (
  * @param distance - Distance travelled so far
  * @returns The maximum forward speed allowed
  */
-export const speedCapAt = (distance: number): number =>
-  BASE_MAX_SPEED +
-  (MAX_SPEED_CEILING - BASE_MAX_SPEED) * Math.min(1, Math.max(0, distance) / SPEED_RAMP_DISTANCE)
+export const speedCapAt = (
+  distance: number,
+  baseSpeed: number,
+  ceiling: number,
+  rampDistance: number
+): number =>
+  baseSpeed + (ceiling - baseSpeed) * Math.min(1, Math.max(0, distance) / Math.max(1, rampDistance))
 
 /**
  * Which way the player is steering.
@@ -88,8 +86,12 @@ export const speedAlong = (velocity: Vec3Like, direction: Vec2Like): number =>
  * @param velocityY - The rock's vertical speed
  * @returns True when the rock is close enough to the deck and not already rising
  */
-export const isGrounded = (rockY: number, groundY: number, velocityY: number): boolean =>
-  rockY - groundY <= GROUND_PROBE_DISTANCE && velocityY <= RISING_VELOCITY
+export const isGrounded = (
+  rockY: number,
+  groundY: number,
+  velocityY: number,
+  probeDistance: number
+): boolean => rockY - groundY <= probeDistance && velocityY <= RISING_VELOCITY
 
 /**
  * How many chips to throw at a given speed.

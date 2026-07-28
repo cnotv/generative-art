@@ -177,6 +177,25 @@ export type DebrisParticle = {
   colorIndex: number
 }
 
+/** Every tunable the rock is driven and simulated with, editable from the panel. */
+export type RockConfig = {
+  forwardImpulse: number
+  baseMaxSpeed: number
+  maxSpeedCeiling: number
+  speedRampDistance: number
+  steerImpulse: number
+  maxLateralSpeed: number
+  jumpImpulse: number
+  jumpCooldown: number
+  radius: number
+  gravityScale: number
+  friction: number
+  restitution: number
+  linearDamping: number
+  angularDamping: number
+  tint: number
+}
+
 export type DebrisEmitOptions = {
   origin: THREE.Vector3
   forward: THREE.Vector3

@@ -37,6 +37,7 @@ import { createTrackChunkManager } from '../trackChunks'
 import { createScatterAreaManager } from '../scatter/scatterAreas'
 import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
+import { registerRockElements } from '../rockPanel'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
 import { createDebrisField } from './debris'
@@ -57,6 +58,7 @@ import type {
   CameraMode,
   DebrisField,
   LateralFogUniforms,
+  RockConfig,
   RockPosPayload,
   ScatterAreaManager,
   TrackChunkManager,
@@ -87,15 +89,11 @@ import {
   FOG_SIDE_NEAR,
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT,
-  FORWARD_IMPULSE,
-  GROUND_PROBE_DISTANCE,
-  JUMP_COOLDOWN_SECONDS,
-  JUMP_IMPULSE,
+  GROUND_PROBE_SLACK,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
-  MAX_LATERAL_SPEED,
   ROCK_ANGULAR_DAMPING,
   ROCK_FRICTION,
   ROCK_NORMAL_SCALE,
@@ -113,7 +111,6 @@ import {
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
-  STEER_IMPULSE,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
   WALL_THICKNESS
@@ -144,6 +141,7 @@ export type UseRockRunDeps = {
 }
 
 type RunState = {
+  rockConfig: RockConfig | null
   rock: ComplexModel | null
   world: WorldReference | null
   scene: THREE.Scene | null
@@ -347,6 +345,13 @@ export const createStartGate = (state: RunState) => ({
   }
 })
 
+// The rock rests one radius above the deck, so the probe has to follow the
+// radius rather than a figure fixed at the size it happened to spawn at.
+const groundProbeFor = (radius: number): number => radius + GROUND_PROBE_SLACK
+
+const speedCapFor = (rock: RockConfig, distance: number): number =>
+  speedCapAt(distance, rock.baseMaxSpeed, rock.maxSpeedCeiling, rock.speedRampDistance)
+
 // Chips appear just forward of the contact patch and are immediately left
 // behind, so they read as scuffed off the ground rather than falling out of the
 // ball. Kept out of the actions factory to hold that factory under its line
@@ -358,7 +363,10 @@ const createDebrisEmitter =
     const body = state.rock.userData.body
     const position = body.translation()
     const sample = state.path.sampleAt(state.distance)
-    if (position.y - sample.position.y > GROUND_PROBE_DISTANCE + DEBRIS_GROUND_TOLERANCE) return
+    const rock = state.rockConfig
+    if (!rock) return
+    if (position.y - sample.position.y > groundProbeFor(rock.radius) + DEBRIS_GROUND_TOLERANCE)
+      return
     const speed = Math.hypot(body.linvel().x, body.linvel().z)
     if (speed < DEBRIS_MIN_SPEED) return
     if (!state.debris.shouldEmit(delta, DEBRIS_EMIT_INTERVAL)) return
@@ -370,7 +378,7 @@ const createDebrisEmitter =
     // A burst rather than a single chip: at speed the rock outruns its own
     // trail, so one per tick leaves the ground looking untouched. The spray
     // grows with how fast it is going.
-    const cap = speedCapAt(state.distance)
+    const cap = speedCapFor(rock, state.distance)
     const burst = debrisBurstSize(speed, cap, DEBRIS_PER_BURST, DEBRIS_MIN_BURST)
     const lifetime = debrisLifetime(speed, cap, DEBRIS_LIFETIME, DEBRIS_MIN_LIFETIME)
     Array.from({ length: burst }).forEach(() =>
@@ -419,7 +427,7 @@ const createRunActions = (
   }
 
   const applyJump = (delta: number): void => {
-    if (!state.rock || !state.controls || !state.path) return
+    if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     state.jumpCooldown = Math.max(0, state.jumpCooldown - delta)
     const held = 'jump' in state.controls.currentActions
     const pressed = held && !state.jumpActionHeld
@@ -427,29 +435,32 @@ const createRunActions = (
     if (!pressed || state.jumpCooldown > 0) return
     const body = state.rock.userData.body
     const groundY = state.path.sampleAt(state.distance).position.y
-    if (!isGrounded(body.translation().y, groundY, body.linvel().y)) return
+    const rock = state.rockConfig
+    if (!isGrounded(body.translation().y, groundY, body.linvel().y, groundProbeFor(rock.radius)))
+      return
     scratchImpulse.x = 0
-    scratchImpulse.y = JUMP_IMPULSE
+    scratchImpulse.y = rock.jumpImpulse
     scratchImpulse.z = 0
     body.applyImpulse(scratchImpulse, true)
-    state.jumpCooldown = JUMP_COOLDOWN_SECONDS
+    state.jumpCooldown = rock.jumpCooldown
   }
 
   const applyDrive = (delta: number): void => {
-    if (!state.rock || !state.controls || !state.path) return
+    if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
     const velocity = body.linvel()
+    const rock = state.rockConfig
     const forwardMagnitude = forwardImpulseMagnitude(
       speedAlong(velocity, sample.forward),
-      speedCapAt(state.distance),
-      FORWARD_IMPULSE
+      speedCapFor(rock, state.distance),
+      rock.forwardImpulse
     )
     const lateralMagnitude = steerImpulseMagnitude(
       steerDirection(state.controls.currentActions),
       speedAlong(velocity, sample.right),
-      MAX_LATERAL_SPEED,
-      STEER_IMPULSE
+      rock.maxLateralSpeed,
+      rock.steerImpulse
     )
     if (forwardMagnitude === 0 && lateralMagnitude === 0) return
     const forward = frameScaledImpulse(forwardMagnitude, delta)
@@ -689,6 +700,10 @@ const buildRunWorld = ({
     })
   )
   registerCameraProperties({ camera: tools.camera, orbit })
+  // Registered after setSceneElements, which replaces the list wholesale and
+  // would otherwise drop anything added before it.
+  const rockPanel = registerRockElements({ getRock: () => state.rock ?? undefined })
+  state.rockConfig = rockPanel.config
   state.disposePanels = [
     registerTrackElements({
       manager: track,
@@ -699,7 +714,8 @@ const buildRunWorld = ({
         state.applyFogColor = apply
       }
     }),
-    scatterPanel.teardown
+    scatterPanel.teardown,
+    rockPanel.teardown
   ]
   scatterPanel.register(state.scatter, () => state.distance)
 
@@ -710,10 +726,14 @@ const buildRunWorld = ({
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)
   state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), maps)
+  // The rock is built from the constants, so anything already edited in the
+  // panel has to be pushed onto it before the countdown starts.
+  rockPanel.apply()
   pumpWorld()
 }
 
 const createRunState = (): RunState => ({
+  rockConfig: null,
   rock: null,
   world: null,
   scene: null,

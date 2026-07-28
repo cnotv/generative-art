@@ -16,11 +16,12 @@ import {
   BASE_MAX_SPEED,
   MAX_SPEED_CEILING,
   SPEED_RAMP_DISTANCE,
-  GROUND_PROBE_DISTANCE,
+  GROUND_PROBE_SLACK,
   ROCK_RADIUS
 } from '../config'
 
 const path = createTrackPath(77)
+const PROBE = ROCK_RADIUS + GROUND_PROBE_SLACK
 
 describe('advanceDistance', () => {
   it('stays put when the rock sits on the station', () => {
@@ -78,11 +79,15 @@ describe('speedCapAt', () => {
     [SPEED_RAMP_DISTANCE * 10, MAX_SPEED_CEILING],
     [SPEED_RAMP_DISTANCE / 2, (BASE_MAX_SPEED + MAX_SPEED_CEILING) / 2]
   ])('at %f the cap is %f', (distance, expected) => {
-    expect(speedCapAt(distance)).toBeCloseTo(expected)
+    expect(
+      speedCapAt(distance, BASE_MAX_SPEED, MAX_SPEED_CEILING, SPEED_RAMP_DISTANCE)
+    ).toBeCloseTo(expected)
   })
 
   it('never dips below the starting cap', () => {
-    expect(speedCapAt(-500)).toBe(BASE_MAX_SPEED)
+    expect(speedCapAt(-500, BASE_MAX_SPEED, MAX_SPEED_CEILING, SPEED_RAMP_DISTANCE)).toBe(
+      BASE_MAX_SPEED
+    )
   })
 })
 
@@ -114,23 +119,23 @@ describe('speedAlong', () => {
 
 describe('isGrounded', () => {
   it('is grounded when resting on the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 0)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, 0, PROBE)).toBe(true)
   })
 
   it('is not grounded once clear of the probe distance', () => {
-    expect(isGrounded(GROUND_PROBE_DISTANCE + 0.1, 0, 0)).toBe(false)
+    expect(isGrounded(PROBE + 0.1, 0, 0, PROBE)).toBe(false)
   })
 
   it('is not grounded while rising, so jumps cannot stack', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 5)).toBe(false)
+    expect(isGrounded(ROCK_RADIUS, 0, 5, PROBE)).toBe(false)
   })
 
   it('is grounded while falling onto the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, -4)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, -4, PROBE)).toBe(true)
   })
 
   it('follows the deck uphill', () => {
-    expect(isGrounded(40 + ROCK_RADIUS, 40, 0)).toBe(true)
+    expect(isGrounded(40 + ROCK_RADIUS, 40, 0, PROBE)).toBe(true)
   })
 })
 
@@ -277,5 +282,24 @@ describe('debrisLifetime', () => {
     const lifetimes = [20, 15, 10, 5, 0].map((speed) => debrisLifetime(speed, 20, 0.4, 0.14))
 
     expect(lifetimes).toEqual([...lifetimes].sort((a, b) => b - a))
+  })
+})
+
+describe('panel-driven motion limits', () => {
+  // The panel edits these live, so the ramp has to be read from whatever it
+  // currently holds rather than from the figures the run started with.
+  it('ramps between whatever start and ceiling it is handed', () => {
+    expect(speedCapAt(0, 10, 30, 1000)).toBeCloseTo(10)
+    expect(speedCapAt(500, 10, 30, 1000)).toBeCloseTo(20)
+    expect(speedCapAt(1000, 10, 30, 1000)).toBeCloseTo(30)
+  })
+
+  it('survives a ramp distance dragged to zero rather than dividing by it', () => {
+    expect(Number.isFinite(speedCapAt(100, 10, 30, 0))).toBe(true)
+  })
+
+  it('grounds against the probe it is given, so a resized rock still lands', () => {
+    expect(isGrounded(6, 0, 0, 6.5)).toBe(true)
+    expect(isGrounded(6, 0, 0, 2.5)).toBe(false)
   })
 })

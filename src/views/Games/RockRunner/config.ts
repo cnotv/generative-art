@@ -93,6 +93,7 @@ export const WALL_INSET = -0.2
 export const WALL_ELEMENT_NAME = 'edge-walls'
 export const TRACK_ELEMENT_NAME = 'track'
 export const FOG_ELEMENT_NAME = 'fog'
+export const ROCK_ELEMENT_NAME = 'player-rock'
 
 // The countryside flanking the deck. Purely visual and collider-free: it gives
 // the scatter something to stand on instead of floating over the sky.
@@ -221,7 +222,7 @@ export const MAX_LATERAL_SPEED = 12
 export const JUMP_IMPULSE = 650
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
-export const GROUND_PROBE_DISTANCE = ROCK_RADIUS + 0.35
+export const GROUND_PROBE_SLACK = 0.35
 export const JUMP_COOLDOWN_SECONDS = 0.25
 
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
