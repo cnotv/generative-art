@@ -72,6 +72,8 @@ export type TrackChunkManager = {
   setTerrainTint: (color: number) => void
   setWallsVisible: (visible: boolean) => void
   groundHeightAt: (distance: number) => number
+  /** The deck width currently built, which the panel can change mid-run. */
+  deckWidth: () => number
   teardown: () => void
 }
 

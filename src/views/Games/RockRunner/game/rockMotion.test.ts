@@ -9,7 +9,9 @@ import {
   isGrounded,
   forwardImpulseMagnitude,
   frameScaledImpulse,
-  steerImpulseMagnitude
+  steerImpulseMagnitude,
+  wallStandoff,
+  lateralOffset
 } from './rockMotion'
 import { createTrackPath } from '../trackPath'
 import {
@@ -17,6 +19,7 @@ import {
   MAX_SPEED_CEILING,
   SPEED_RAMP_DISTANCE,
   GROUND_PROBE_SLACK,
+  WALL_INSET,
   ROCK_RADIUS
 } from '../config'
 
@@ -152,7 +155,9 @@ describe('forwardImpulseMagnitude', () => {
 
 describe('steerImpulseMagnitude', () => {
   it('applies nothing without input', () => {
-    expect(steerImpulseMagnitude(0, 0, 12, 4)).toBe(0)
+    expect(
+      steerImpulseMagnitude(0, 4, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
   })
 
   it.each([
@@ -161,17 +166,47 @@ describe('steerImpulseMagnitude', () => {
     [1, 11.9, 4],
     [-1, -11.9, -4]
   ])('steer %i at lateral speed %f applies %f', (steer, lateral, expected) => {
-    expect(steerImpulseMagnitude(steer, lateral, 12, 4)).toBe(expected)
+    expect(
+      steerImpulseMagnitude(steer, 4, {
+        lateralSpeed: lateral,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(expected)
   })
 
   it('stops pushing once the lateral cap is reached', () => {
-    expect(steerImpulseMagnitude(1, 12, 12, 4)).toBe(0)
-    expect(steerImpulseMagnitude(-1, -12, 12, 4)).toBe(0)
+    expect(
+      steerImpulseMagnitude(1, 4, { lateralSpeed: 12, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
+    expect(
+      steerImpulseMagnitude(-1, 4, {
+        lateralSpeed: -12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(0)
   })
 
   it('still allows steering back from the cap', () => {
-    expect(steerImpulseMagnitude(-1, 12, 12, 4)).toBe(-4)
-    expect(steerImpulseMagnitude(1, -12, 12, 4)).toBe(4)
+    expect(
+      steerImpulseMagnitude(-1, 4, {
+        lateralSpeed: 12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(-4)
+    expect(
+      steerImpulseMagnitude(1, 4, {
+        lateralSpeed: -12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(4)
   })
 })
 
@@ -301,5 +336,85 @@ describe('panel-driven motion limits', () => {
   it('grounds against the probe it is given, so a resized rock still lands', () => {
     expect(isGrounded(6, 0, 0, 6.5)).toBe(true)
     expect(isGrounded(6, 0, 0, 2.5)).toBe(false)
+  })
+})
+
+describe('wallStandoff', () => {
+  it('stops the rock a full radius short of the wall face', () => {
+    expect(wallStandoff(16, 2.2)).toBeCloseTo(16 / 2 + WALL_INSET - 2.2)
+  })
+
+  it('never goes negative on a deck narrower than the rock', () => {
+    expect(wallStandoff(2, 8)).toBe(0)
+  })
+
+  it('follows the deck width, which the panel can widen mid-run', () => {
+    expect(wallStandoff(40, 2.2)).toBeGreaterThan(wallStandoff(16, 2.2))
+  })
+})
+
+describe('lateralOffset', () => {
+  const right = { x: 1, z: 0 }
+
+  it.each([
+    [5, 3, 2],
+    [1, 3, -2],
+    [3, 3, 0]
+  ])('reads %s against a centre of %s as %s', (x, originX, expected) => {
+    expect(lateralOffset({ x, z: 0 }, { x: originX, z: 0 }, right)).toBeCloseTo(expected)
+  })
+})
+
+describe('steering into a wall', () => {
+  const standoff = wallStandoff(16, ROCK_RADIUS)
+
+  // A rock pinned to a wall never gains lateral speed, so the speed cap alone
+  // let the game press into it at full force for as long as the key was held.
+  // That force against the rock's grip is what stalled it at the track edge.
+  it('stops pushing once the rock is already against the wall', () => {
+    expect(
+      steerImpulseMagnitude(1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff,
+        standoff: standoff
+      })
+    ).toBe(0)
+  })
+
+  it('still steers while there is track left to cross', () => {
+    expect(
+      steerImpulseMagnitude(1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff - 1,
+        standoff: standoff
+      })
+    ).toBe(26)
+  })
+
+  it('lets the rock steer back off the wall it is against', () => {
+    expect(
+      steerImpulseMagnitude(-1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff,
+        standoff: standoff
+      })
+    ).toBe(-26)
+  })
+
+  it.each([
+    [1, 'right'],
+    [-1, 'left']
+  ])('blocks the %s wall as well as the other', (steer) => {
+    expect(
+      steerImpulseMagnitude(steer, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: steer * standoff,
+        standoff: standoff
+      })
+    ).toBe(0)
   })
 })

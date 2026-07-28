@@ -52,7 +52,9 @@ import {
   speedAlong,
   speedCapAt,
   steerDirection,
-  steerImpulseMagnitude
+  steerImpulseMagnitude,
+  wallStandoff,
+  lateralOffset
 } from './rockMotion'
 import type {
   CameraMode,
@@ -111,6 +113,7 @@ import {
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
+  TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
   WALL_THICKNESS
@@ -400,33 +403,9 @@ const createStageDriver = (state: RunState) => (): void => {
   state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
 }
 
-const createRunActions = (
-  deps: UseRockRunDeps,
-  state: RunState,
-  refs: RunReferences,
-  getLocalStartTime: () => number
-) => {
-  const startGate = createStartGate(state)
-  const emitDebris = createDebrisEmitter(state)
-  const advanceStage = createStageDriver(state)
-
-  const setCameraMode = (mode: CameraMode): void => {
-    refs.cameraMode.value = mode
-  }
-
-  const cycleCameraMode = (): void =>
-    setCameraMode(
-      CAMERA_ORDER[(CAMERA_ORDER.indexOf(refs.cameraMode.value) + 1) % CAMERA_ORDER.length]
-    )
-
-  const handleCameraAction = (): void => {
-    if (!state.controls) return
-    const held = 'camera' in state.controls.currentActions
-    if (held && !state.cameraActionHeld) cycleCameraMode()
-    state.cameraActionHeld = held
-  }
-
-  const applyJump = (delta: number): void => {
+const createJumpAction =
+  (state: RunState) =>
+  (delta: number): void => {
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     state.jumpCooldown = Math.max(0, state.jumpCooldown - delta)
     const held = 'jump' in state.controls.currentActions
@@ -445,7 +424,9 @@ const createRunActions = (
     state.jumpCooldown = rock.jumpCooldown
   }
 
-  const applyDrive = (delta: number): void => {
+const createDriveAction =
+  (state: RunState) =>
+  (delta: number): void => {
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
@@ -456,11 +437,20 @@ const createRunActions = (
       speedCapFor(rock, state.distance),
       rock.forwardImpulse
     )
+    // Steering is capped by lateral speed, and a rock held against a wall never
+    // gains any, so the cap never engaged and the game pressed into the wall at
+    // full force for as long as the key was held. That normal force against the
+    // rock's grip is what brought it to a halt at the track edge, so steering
+    // stops at the wall itself rather than only at a speed.
     const lateralMagnitude = steerImpulseMagnitude(
       steerDirection(state.controls.currentActions),
-      speedAlong(velocity, sample.right),
-      rock.maxLateralSpeed,
-      rock.steerImpulse
+      rock.steerImpulse,
+      {
+        lateralSpeed: speedAlong(velocity, sample.right),
+        speedCap: rock.maxLateralSpeed,
+        offset: lateralOffset(body.translation(), sample.position, sample.right),
+        standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
+      }
     )
     if (forwardMagnitude === 0 && lateralMagnitude === 0) return
     const forward = frameScaledImpulse(forwardMagnitude, delta)
@@ -469,6 +459,34 @@ const createRunActions = (
     scratchImpulse.y = 0
     scratchImpulse.z = sample.forward.z * forward + sample.right.z * lateral
     body.applyImpulse(scratchImpulse, true)
+  }
+
+const createRunActions = (
+  deps: UseRockRunDeps,
+  state: RunState,
+  refs: RunReferences,
+  getLocalStartTime: () => number
+) => {
+  const startGate = createStartGate(state)
+  const emitDebris = createDebrisEmitter(state)
+  const applyJump = createJumpAction(state)
+  const applyDrive = createDriveAction(state)
+  const advanceStage = createStageDriver(state)
+
+  const setCameraMode = (mode: CameraMode): void => {
+    refs.cameraMode.value = mode
+  }
+
+  const cycleCameraMode = (): void =>
+    setCameraMode(
+      CAMERA_ORDER[(CAMERA_ORDER.indexOf(refs.cameraMode.value) + 1) % CAMERA_ORDER.length]
+    )
+
+  const handleCameraAction = (): void => {
+    if (!state.controls) return
+    const held = 'camera' in state.controls.currentActions
+    if (held && !state.cameraActionHeld) cycleCameraMode()
+    state.cameraActionHeld = held
   }
 
   const applyInput = (getDelta: () => number): void => {

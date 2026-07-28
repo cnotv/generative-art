@@ -501,6 +501,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     rebuild,
     setWall,
     setDimensions,
+    deckWidth: () => context.width,
     setTerrainTint,
     setWallsVisible,
     groundHeightAt: (distance: number) => options.path.sampleAt(distance).position.y,

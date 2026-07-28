@@ -1,5 +1,6 @@
 import type { ControlsCurrents } from '@webgamekit/controls'
 import type { TrackPath } from '../types'
+import { WALL_INSET } from '../config'
 
 // Above this rate of climb the rock is already leaving the ground, so a second
 // jump would stack onto the first.
@@ -177,23 +178,55 @@ export const forwardImpulseMagnitude = (
   impulse: number
 ): number => (forwardSpeed >= cap ? 0 : impulse)
 
+/** What stops the rock steering further: its own speed, and the wall beside it. */
+export type SteerLimits = {
+  lateralSpeed: number
+  speedCap: number
+  offset: number
+  standoff: number
+}
+
 /**
- * Impulse that steers the rock sideways without exceeding the lateral cap.
+ * Impulse that steers the rock sideways without exceeding the lateral cap or
+ * driving it into a wall.
  *
  * @param steer - Steering direction from steerDirection
- * @param lateralSpeed - The rock's speed along the path's right vector
- * @param cap - The lateral speed cap
- * @param impulse - The impulse magnitude when under the cap
+ * @param impulse - The impulse magnitude when under both limits
+ * @param limits - The speed and position the steering has to stop at
  * @returns The signed magnitude to apply along the right vector
  */
 export const steerImpulseMagnitude = (
   steer: number,
-  lateralSpeed: number,
-  cap: number,
-  impulse: number
+  impulse: number,
+  limits: SteerLimits
 ): number => {
   if (steer === 0) return 0
-  if (steer > 0 && lateralSpeed >= cap) return 0
-  if (steer < 0 && lateralSpeed <= -cap) return 0
+  const { lateralSpeed, speedCap, offset, standoff } = limits
+  if (steer > 0 && (lateralSpeed >= speedCap || offset >= standoff)) return 0
+  if (steer < 0 && (lateralSpeed <= -speedCap || offset <= -standoff)) return 0
   return steer * impulse
 }
+
+/**
+ * How far off the centreline the rock can sit before it is touching a wall.
+ *
+ * @param deckWidth - Width of the deck the walls flank
+ * @param radius - The rock's radius
+ * @returns The offset at which the rock is already against the wall
+ */
+export const wallStandoff = (deckWidth: number, radius: number): number =>
+  Math.max(0, deckWidth / 2 + WALL_INSET - radius)
+
+/**
+ * The rock's offset from the centreline, positive towards the path's right.
+ *
+ * @param position - The rock's world position
+ * @param origin - The centreline point it is measured against
+ * @param right - The path's right vector there
+ * @returns Signed distance from the centreline
+ */
+export const lateralOffset = (
+  position: { x: number; z: number },
+  origin: { x: number; z: number },
+  right: { x: number; z: number }
+): number => (position.x - origin.x) * right.x + (position.z - origin.z) * right.z
