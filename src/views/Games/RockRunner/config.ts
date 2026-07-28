@@ -228,11 +228,12 @@ export const JUMP_COOLDOWN_SECONDS = 0.25
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
 // oldest-first rather than allocated and collected every frame.
 export const DEBRIS_COUNT = 220
-// Short: the chips are a scuff at the rock's heels, not a smoke trail behind
-// it. A longer life leaves a line stretching back down the whole path.
-export const DEBRIS_LIFETIME = 0.2
+// Three tenths of a second: the chips are a scuff at the rock's heels, not a
+// smoke trail behind it. Landed between the four tenths this ran at and the two
+// it was cut to, which read as too clipped.
+export const DEBRIS_LIFETIME = 0.3
 /** Seconds a chip lives when the rock is barely moving, so the trail shortens with speed. */
-export const DEBRIS_MIN_LIFETIME = 0.07
+export const DEBRIS_MIN_LIFETIME = 0.105
 // Around a tenth is the floor: smaller than this a chip is under two pixels at
 // the distance the chase camera sits, and the trail simply stops resolving.
 export const DEBRIS_SIZE = 0.11
