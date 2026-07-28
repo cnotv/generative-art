@@ -146,13 +146,13 @@ export const SCATTER_STAGE_LENGTH = 500
 export const ROCK_RADIUS = 2.2
 // Rapier has one world gravity, so a body's own weight is expressed as a
 // multiplier on it. The shared package calls this option `weight`, which is
-// what it simulates, but it scales acceleration and not mass: the rock falls
-// four times as hard without becoming harder to push around.
+// what it simulates, but it scales acceleration and not mass.
 //
-// Four rather than something heavier because gravity and the jump pull against
-// each other. Airtime is set by the fall, so at 12x a jump is over in 0.4s and
-// at 72x it is a 0.15-unit twitch nobody can see.
-export const ROCK_GRAVITY_SCALE = 4
+// One means the rock falls at the world's own gravity. Heavier reads as more
+// solid but costs the jump, since airtime is set entirely by the fall: at 4x a
+// hop clears 2.5 units and lasts 0.7s against 8.1 units and 2.6s here. The
+// panel's Gravity slider is the place to try other values.
+export const ROCK_GRAVITY_SCALE = 1
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that

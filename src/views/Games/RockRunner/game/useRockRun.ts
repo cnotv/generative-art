@@ -340,10 +340,14 @@ export const createStartGate = (state: RunState) => ({
   },
   release: (): void => {
     if (state.released || !state.rock) return
-    // Restores the rock's own gravity, not 1: it spawns configured to fall
-    // several times harder than the world, and resetting to the world's own
-    // scale here quietly threw that away for the entire run.
-    state.rock.userData.body.setGravityScale(ROCK_GRAVITY_SCALE, true)
+    // Restores the rock's own gravity rather than the world's. Resetting to 1
+    // here looked like undoing what the countdown switched off and was not: it
+    // threw the setting away for the entire run. The panel is preferred over
+    // the constant so a gravity edited during the countdown survives it.
+    state.rock.userData.body.setGravityScale(
+      state.rockConfig?.gravityScale ?? ROCK_GRAVITY_SCALE,
+      true
+    )
     state.released = true
   }
 })

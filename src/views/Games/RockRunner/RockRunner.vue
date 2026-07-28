@@ -372,6 +372,10 @@ onUnmounted(() => {
 }
 
 .rr__hud-label {
+  /* THIRD, FIRST and FREE are not the same width, so the row shifted on every
+     camera change for the same reason the counters did. */
+  min-width: 10ch;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -394,20 +398,29 @@ onUnmounted(() => {
   }
 }
 
+/* Both counters reserve the width of their longest reading rather than growing
+   into it. Tabular figures already keep the digits themselves equal, but the
+   HUD is centred, so gaining a digit widened the row and slid everything in it
+   sideways. Right-aligned, so the unit and the seconds stay put and only the
+   leading digits extend into the reserved space. */
 .rr__distance {
+  min-width: 7ch;
   font-family: var(--lui-font);
   font-size: var(--lui-text-medium);
   font-variant-numeric: tabular-nums;
   font-weight: 900;
   color: var(--lui-text-color);
+  text-align: right;
   text-shadow: var(--lui-text-shadow);
 }
 
 .rr__timer {
+  min-width: 7ch;
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
   font-variant-numeric: tabular-nums;
   color: var(--lui-text-color);
+  text-align: right;
   text-shadow: var(--lui-text-shadow);
 }
 
