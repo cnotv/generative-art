@@ -49,6 +49,7 @@ import {
   forwardImpulseMagnitude,
   frameScaledImpulse,
   isGrounded,
+  gravityScaleFor,
   speedAlong,
   speedCapAt,
   steerDirection,
@@ -465,6 +466,30 @@ const createDriveAction =
     body.applyImpulse(scratchImpulse, true)
   }
 
+// Splitting rise from fall is the only way to make the drop snappy without
+// flattening the jump, since one gravity otherwise governs both halves of the
+// arc. Set every frame rather than on the way past the apex: the rock can be
+// knocked out of a climb at any point, and a one-shot switch would miss it.
+const applyFallGravity = (state: RunState): void => {
+  if (!state.rock || !state.path || !state.rockConfig) return
+  const body = state.rock.userData.body
+  const grounded = isGrounded(
+    body.translation().y,
+    state.path.sampleAt(state.distance).position.y,
+    body.linvel().y,
+    groundProbeFor(state.rockConfig.radius)
+  )
+  body.setGravityScale(
+    gravityScaleFor(
+      body.linvel().y,
+      grounded,
+      state.rockConfig.gravityScale,
+      state.rockConfig.fallGravityScale
+    ),
+    false
+  )
+}
+
 const createRunActions = (
   deps: UseRockRunDeps,
   state: RunState,
@@ -501,6 +526,7 @@ const createRunActions = (
       return
     }
     startGate.release()
+    applyFallGravity(state)
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
     applyDrive(getDelta())

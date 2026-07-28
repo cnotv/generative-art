@@ -95,6 +95,30 @@ export const isGrounded = (
 ): boolean => rockY - groundY <= probeDistance && velocityY <= RISING_VELOCITY
 
 /**
+ * The gravity a rock should be under this frame.
+ *
+ * Rise and fall are otherwise governed by one number, so a snappier drop costs
+ * jump height. The heavier pull is applied only while airborne and already
+ * descending, which leaves the climb alone.
+ *
+ * Grounded is excluded deliberately, and not as an optimisation: a resting rock
+ * has a slightly negative vertical velocity, and pressing it into the deck at
+ * tens of times gravity would drive its own grip hard enough to stop it dead.
+ *
+ * @param velocityY - The rock's vertical speed
+ * @param grounded - Whether it is resting on the deck
+ * @param riseScale - Gravity while climbing or grounded
+ * @param fallScale - Gravity while falling
+ * @returns The gravity scale to set this frame
+ */
+export const gravityScaleFor = (
+  velocityY: number,
+  grounded: boolean,
+  riseScale: number,
+  fallScale: number
+): number => (!grounded && velocityY < 0 ? fallScale : riseScale)
+
+/**
  * How many chips to throw at a given speed.
  *
  * Scaled against the speed cap rather than a fixed figure, so the spray still

@@ -7,6 +7,7 @@ import {
   steerDirection,
   speedAlong,
   isGrounded,
+  gravityScaleFor,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   steerImpulseMagnitude,
@@ -416,5 +417,30 @@ describe('steering into a wall', () => {
         standoff: standoff
       })
     ).toBe(0)
+  })
+})
+
+describe('gravityScaleFor', () => {
+  it('uses the rising gravity on the way up', () => {
+    expect(gravityScaleFor(12, false, 1, 60)).toBe(1)
+  })
+
+  it('switches to the falling gravity past the apex', () => {
+    expect(gravityScaleFor(-1, false, 1, 60)).toBe(60)
+  })
+
+  // A resting rock reads as very slightly descending. Pressing it into the deck
+  // at tens of times gravity would drive its own grip hard enough to stall it,
+  // which is the same failure the wall standoff exists to prevent.
+  it.each([-0.01, -5, 0, 3])('never applies the falling gravity while grounded (vy %s)', (vy) => {
+    expect(gravityScaleFor(vy, true, 1, 60)).toBe(1)
+  })
+
+  it('holds the rising gravity exactly at the apex, where velocity is zero', () => {
+    expect(gravityScaleFor(0, false, 1, 60)).toBe(1)
+  })
+
+  it('is a no-op when both gravities match, so the split can be turned off', () => {
+    expect(gravityScaleFor(-9, false, 4, 4)).toBe(4)
   })
 })

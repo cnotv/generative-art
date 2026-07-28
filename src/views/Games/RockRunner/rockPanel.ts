@@ -12,6 +12,7 @@ import {
   ROCK_ANGULAR_DAMPING,
   ROCK_ELEMENT_NAME,
   ROCK_FRICTION,
+  ROCK_FALL_GRAVITY_SCALE,
   ROCK_GRAVITY_SCALE,
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
@@ -42,6 +43,9 @@ export const RR_ROCK_CONTROLS = {
   // Gravity is a multiplier on the world's, not an acceleration: Rapier has one
   // world gravity and a body's weight is expressed against it.
   gravityScale: { min: 0.1, max: 40, step: 0.1, label: 'Gravity' },
+  // Reaches far higher than the rising figure because it only governs the drop.
+  // Stops short of where the rock starts sinking into the deck on landing.
+  fallGravityScale: { min: 0.1, max: 120, step: 1, label: 'Fall gravity' },
   friction: { min: 0, max: 40, step: 0.5, label: 'Grip' },
   restitution: { min: -1, max: 1, step: 0.05, label: 'Bounce' },
   linearDamping: { min: 0, max: 5, step: 0.05, label: 'Rolling drag' },
@@ -114,6 +118,7 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     jumpCooldown: JUMP_COOLDOWN_SECONDS,
     radius: ROCK_RADIUS,
     gravityScale: ROCK_GRAVITY_SCALE,
+    fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,
     linearDamping: ROCK_LINEAR_DAMPING,

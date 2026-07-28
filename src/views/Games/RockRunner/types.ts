@@ -191,6 +191,7 @@ export type RockConfig = {
   jumpCooldown: number
   radius: number
   gravityScale: number
+  fallGravityScale: number
   friction: number
   restitution: number
   linearDamping: number

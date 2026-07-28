@@ -153,6 +153,16 @@ export const ROCK_RADIUS = 2.2
 // hop clears 2.5 units and lasts 0.7s against 8.1 units and 2.6s here. The
 // panel's Gravity slider is the place to try other values.
 export const ROCK_GRAVITY_SCALE = 1
+// Gravity while falling, applied only once airborne and past the apex. Rise and
+// fall are otherwise governed by the same number, so making the drop snappy by
+// raising gravity flattens the jump in the same proportion. Splitting the two
+// keeps the arc and tightens only the descent: sixty drops the fall from 1.38s
+// to 0.15s with the apex untouched.
+//
+// Not higher. The rock covers its own radius in a step or two at these speeds,
+// and past about a hundred it lands hard enough to sink into the deck: a third
+// of a unit at 100, and two full units at 150.
+export const ROCK_FALL_GRAVITY_SCALE = 60
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
