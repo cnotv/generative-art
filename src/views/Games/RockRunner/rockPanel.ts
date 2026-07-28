@@ -17,6 +17,7 @@ import {
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_RESTITUTION,
+  ROCK_TERMINAL_FALL_SPEED,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
@@ -46,6 +47,10 @@ export const RR_ROCK_CONTROLS = {
   // Reaches far higher than the rising figure because it only governs the drop.
   // Stops short of where the rock starts sinking into the deck on landing.
   fallGravityScale: { min: 0.1, max: 120, step: 1, label: 'Fall gravity' },
+  // Bounds the impact, not the feel: the descent reaches this within a few
+  // frames either way, but past it the rock covers its own radius per step and
+  // the solver lets it sink into the deck.
+  terminalFallSpeed: { min: 5, max: 200, step: 1, label: 'Max fall speed' },
   friction: { min: 0, max: 40, step: 0.5, label: 'Grip' },
   restitution: { min: -1, max: 1, step: 0.05, label: 'Bounce' },
   linearDamping: { min: 0, max: 5, step: 0.05, label: 'Rolling drag' },
@@ -119,6 +124,7 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     radius: ROCK_RADIUS,
     gravityScale: ROCK_GRAVITY_SCALE,
     fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
+    terminalFallSpeed: ROCK_TERMINAL_FALL_SPEED,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,
     linearDamping: ROCK_LINEAR_DAMPING,

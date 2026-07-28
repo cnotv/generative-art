@@ -49,7 +49,11 @@ import {
   forwardImpulseMagnitude,
   frameScaledImpulse,
   isGrounded,
+  isResting,
   gravityScaleFor,
+  advanceJumpGate,
+  jumpReady,
+  cappedFallSpeed,
   speedAlong,
   speedCapAt,
   steerDirection,
@@ -61,6 +65,7 @@ import type {
   CameraMode,
   DebrisField,
   LateralFogUniforms,
+  JumpGate,
   RockConfig,
   RockPosPayload,
   ScatterAreaManager,
@@ -93,6 +98,10 @@ import {
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT,
   GROUND_PROBE_SLACK,
+  JUMP_BUFFER_SECONDS,
+  JUMP_COYOTE_SECONDS,
+  JUMP_RISING_TOLERANCE,
+  RESTING_SLACK,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
@@ -158,7 +167,7 @@ type RunState = {
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
   jumpActionHeld: boolean
-  jumpCooldown: number
+  jumpGate: JumpGate
   prevCameraMode: CameraMode
   cameraTransitionElapsed: number
   cameraTransitionStart: THREE.Vector3
@@ -181,6 +190,7 @@ type RunReferences = {
 
 // Impulses are recomputed every frame, so the vector they are written into is
 // allocated once here rather than inside the loop.
+const scratchVelocity = { x: 0, y: 0, z: 0 }
 const scratchImpulse = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 const scratchOrigin = new THREE.Vector3()
@@ -373,8 +383,7 @@ const createDebrisEmitter =
     const sample = state.path.sampleAt(state.distance)
     const rock = state.rockConfig
     if (!rock) return
-    if (position.y - sample.position.y > groundProbeFor(rock.radius) + DEBRIS_GROUND_TOLERANCE)
-      return
+    if (!isResting(position.y, sample.position.y, rock.radius, DEBRIS_GROUND_TOLERANCE)) return
     const speed = Math.hypot(body.linvel().x, body.linvel().z)
     if (speed < DEBRIS_MIN_SPEED) return
     if (!state.debris.shouldEmit(delta, DEBRIS_EMIT_INTERVAL)) return
@@ -412,21 +421,30 @@ const createJumpAction =
   (state: RunState) =>
   (delta: number): void => {
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
-    state.jumpCooldown = Math.max(0, state.jumpCooldown - delta)
+    const body = state.rock.userData.body
+    const rock = state.rockConfig
     const held = 'jump' in state.controls.currentActions
     const pressed = held && !state.jumpActionHeld
     state.jumpActionHeld = held
-    if (!pressed || state.jumpCooldown > 0) return
-    const body = state.rock.userData.body
-    const groundY = state.path.sampleAt(state.distance).position.y
-    const rock = state.rockConfig
-    if (!isGrounded(body.translation().y, groundY, body.linvel().y, groundProbeFor(rock.radius)))
-      return
+    state.jumpGate = advanceJumpGate(state.jumpGate, delta, {
+      pressed,
+      grounded: isGrounded(
+        body.translation().y,
+        state.path.sampleAt(state.distance).position.y,
+        body.linvel().y,
+        groundProbeFor(rock.radius),
+        JUMP_RISING_TOLERANCE
+      ),
+      bufferSeconds: JUMP_BUFFER_SECONDS,
+      coyoteSeconds: JUMP_COYOTE_SECONDS
+    })
+    if (!jumpReady(state.jumpGate)) return
     scratchImpulse.x = 0
     scratchImpulse.y = rock.jumpImpulse
     scratchImpulse.z = 0
     body.applyImpulse(scratchImpulse, true)
-    state.jumpCooldown = rock.jumpCooldown
+    // Both graces are spent, or the same press would keep firing on the way up.
+    state.jumpGate = { buffer: 0, coyote: 0, cooldown: rock.jumpCooldown }
   }
 
 const createDriveAction =
@@ -473,21 +491,32 @@ const createDriveAction =
 const applyFallGravity = (state: RunState): void => {
   if (!state.rock || !state.path || !state.rockConfig) return
   const body = state.rock.userData.body
-  const grounded = isGrounded(
+  const velocity = body.linvel()
+  // The tight test, not the jump's: sharing the generous probe left the heavy
+  // pull switched off for the first couple of units of every descent, which is
+  // most of a short drop.
+  const resting = isResting(
     body.translation().y,
     state.path.sampleAt(state.distance).position.y,
-    body.linvel().y,
-    groundProbeFor(state.rockConfig.radius)
+    state.rockConfig.radius,
+    RESTING_SLACK
   )
   body.setGravityScale(
     gravityScaleFor(
-      body.linvel().y,
-      grounded,
+      velocity.y,
+      resting,
       state.rockConfig.gravityScale,
       state.rockConfig.fallGravityScale
     ),
     false
   )
+  const capped = cappedFallSpeed(velocity.y, state.rockConfig.terminalFallSpeed)
+  if (capped !== velocity.y) {
+    scratchVelocity.x = velocity.x
+    scratchVelocity.y = capped
+    scratchVelocity.z = velocity.z
+    body.setLinvel(scratchVelocity, false)
+  }
 }
 
 const createRunActions = (
@@ -794,7 +823,7 @@ const createRunState = (): RunState => ({
   smoothedDirection: createSmoothedDirection(),
   cameraActionHeld: false,
   jumpActionHeld: false,
-  jumpCooldown: 0,
+  jumpGate: { buffer: 0, coyote: 0, cooldown: 0 },
   prevCameraMode: 'third',
   cameraTransitionElapsed: 0,
   cameraTransitionStart: new THREE.Vector3(),

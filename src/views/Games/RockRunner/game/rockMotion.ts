@@ -1,10 +1,6 @@
 import type { ControlsCurrents } from '@webgamekit/controls'
-import type { TrackPath } from '../types'
+import type { JumpGate, TrackPath } from '../types'
 import { WALL_INSET } from '../config'
-
-// Above this rate of climb the rock is already leaving the ground, so a second
-// jump would stack onto the first.
-const RISING_VELOCITY = 0.5
 
 // Impulses are tuned as though every frame lasted this long; a long frame after
 // a stall is clamped so the rock cannot be catapulted by it.
@@ -91,8 +87,25 @@ export const isGrounded = (
   rockY: number,
   groundY: number,
   velocityY: number,
-  probeDistance: number
-): boolean => rockY - groundY <= probeDistance && velocityY <= RISING_VELOCITY
+  probeDistance: number,
+  risingTolerance: number
+): boolean => rockY - groundY <= probeDistance && velocityY <= risingTolerance
+
+/**
+ * Whether the rock is actually resting on the deck.
+ *
+ * Deliberately a much tighter test than `isGrounded`. That one is generous so a
+ * jump lands when a player expects it to; this one decides where the falling
+ * gravity stops applying, so it has to mean resting rather than merely close.
+ *
+ * @param rockY - The rock's centre height
+ * @param groundY - The deck surface height beneath it
+ * @param radius - The rock's radius, which is its resting height above the deck
+ * @param slack - How far above resting still counts as touching
+ * @returns True only while the rock is sitting on the ground
+ */
+export const isResting = (rockY: number, groundY: number, radius: number, slack: number): boolean =>
+  rockY - groundY <= radius + slack
 
 /**
  * The gravity a rock should be under this frame.
@@ -117,6 +130,55 @@ export const gravityScaleFor = (
   riseScale: number,
   fallScale: number
 ): number => (!grounded && velocityY < 0 ? fallScale : riseScale)
+
+/**
+ * Advances the jump timers by one frame.
+ *
+ * Two graces make a press land when a player expects it to rather than only on
+ * the exact frames the rock is touching down. A press is remembered for a short
+ * while, so pressing slightly early fires on landing instead of being swallowed;
+ * and the rock still counts as grounded for a moment after leaving the deck,
+ * which matters here because cresting a hill lifts it off for a few frames at a
+ * time and a strict check reads that as being airborne.
+ *
+ * @param gate - The timers as they stand
+ * @param delta - Seconds elapsed
+ * @param input - This frame's press, ground contact, and the two grace windows
+ * @returns The advanced timers
+ */
+export const advanceJumpGate = (
+  gate: JumpGate,
+  delta: number,
+  input: { pressed: boolean; grounded: boolean; bufferSeconds: number; coyoteSeconds: number }
+): JumpGate => ({
+  buffer: input.pressed ? input.bufferSeconds : Math.max(0, gate.buffer - delta),
+  coyote: input.grounded ? input.coyoteSeconds : Math.max(0, gate.coyote - delta),
+  cooldown: Math.max(0, gate.cooldown - delta)
+})
+
+/**
+ * Whether a jump should fire this frame.
+ *
+ * @param gate - The advanced timers
+ * @returns True when a remembered press meets ground the rock still has
+ */
+export const jumpReady = (gate: JumpGate): boolean =>
+  gate.buffer > 0 && gate.coyote > 0 && gate.cooldown <= 0
+
+/**
+ * Caps how fast the rock may fall.
+ *
+ * The falling gravity reaches speeds worth more than the rock's own radius in a
+ * single step, which the solver cannot resolve cleanly: it sinks into the deck
+ * before being pushed back out. Bounding the descent keeps the drop snappy while
+ * leaving the impact something the contact can absorb.
+ *
+ * @param velocityY - The rock's vertical speed
+ * @param terminal - The fastest descent allowed, as a positive number
+ * @returns The vertical speed to apply, unchanged while rising
+ */
+export const cappedFallSpeed = (velocityY: number, terminal: number): number =>
+  Math.max(velocityY, -Math.abs(terminal))
 
 /**
  * How many chips to throw at a given speed.

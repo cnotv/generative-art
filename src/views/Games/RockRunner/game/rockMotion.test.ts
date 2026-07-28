@@ -8,6 +8,10 @@ import {
   speedAlong,
   isGrounded,
   gravityScaleFor,
+  isResting,
+  advanceJumpGate,
+  jumpReady,
+  cappedFallSpeed,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   steerImpulseMagnitude,
@@ -20,6 +24,8 @@ import {
   MAX_SPEED_CEILING,
   SPEED_RAMP_DISTANCE,
   GROUND_PROBE_SLACK,
+  JUMP_RISING_TOLERANCE,
+  RESTING_SLACK,
   WALL_INSET,
   ROCK_RADIUS
 } from '../config'
@@ -123,23 +129,23 @@ describe('speedAlong', () => {
 
 describe('isGrounded', () => {
   it('is grounded when resting on the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 0, PROBE)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 
   it('is not grounded once clear of the probe distance', () => {
-    expect(isGrounded(PROBE + 0.1, 0, 0, PROBE)).toBe(false)
+    expect(isGrounded(PROBE + 0.1, 0, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(false)
   })
 
   it('is not grounded while rising, so jumps cannot stack', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 5, PROBE)).toBe(false)
+    expect(isGrounded(ROCK_RADIUS, 0, 5, PROBE, JUMP_RISING_TOLERANCE)).toBe(false)
   })
 
   it('is grounded while falling onto the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, -4, PROBE)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, -4, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 
   it('follows the deck uphill', () => {
-    expect(isGrounded(40 + ROCK_RADIUS, 40, 0, PROBE)).toBe(true)
+    expect(isGrounded(40 + ROCK_RADIUS, 40, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 })
 
@@ -335,8 +341,8 @@ describe('panel-driven motion limits', () => {
   })
 
   it('grounds against the probe it is given, so a resized rock still lands', () => {
-    expect(isGrounded(6, 0, 0, 6.5)).toBe(true)
-    expect(isGrounded(6, 0, 0, 2.5)).toBe(false)
+    expect(isGrounded(6, 0, 0, 6.5, JUMP_RISING_TOLERANCE)).toBe(true)
+    expect(isGrounded(6, 0, 0, 2.5, JUMP_RISING_TOLERANCE)).toBe(false)
   })
 })
 
@@ -442,5 +448,143 @@ describe('gravityScaleFor', () => {
 
   it('is a no-op when both gravities match, so the split can be turned off', () => {
     expect(gravityScaleFor(-9, false, 4, 4)).toBe(4)
+  })
+})
+
+describe('the jump gate', () => {
+  const idle = { buffer: 0, coyote: 0, cooldown: 0 }
+  const input = (over: Partial<Parameters<typeof advanceJumpGate>[2]> = {}) => ({
+    pressed: false,
+    grounded: false,
+    bufferSeconds: 0.15,
+    coyoteSeconds: 0.12,
+    ...over
+  })
+
+  it('fires immediately when pressed while grounded', () => {
+    const gate = advanceJumpGate(idle, 1 / 60, input({ pressed: true, grounded: true }))
+
+    expect(jumpReady(gate)).toBe(true)
+  })
+
+  it('does nothing on a press with no ground anywhere near', () => {
+    const gate = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+
+    expect(jumpReady(gate)).toBe(false)
+  })
+
+  // Cresting a hill lifts the rock off the deck for a few frames, and a strict
+  // ground check reads that as airborne and refuses the jump.
+  it('still jumps just after leaving the ground', () => {
+    const airborne = advanceJumpGate(idle, 1 / 60, input({ grounded: true }))
+    const later = advanceJumpGate(airborne, 0.05, input({ pressed: true }))
+
+    expect(jumpReady(later)).toBe(true)
+  })
+
+  it('stops jumping once the coyote window has run out', () => {
+    const airborne = advanceJumpGate(idle, 1 / 60, input({ grounded: true }))
+    const later = advanceJumpGate(airborne, 0.2, input({ pressed: true }))
+
+    expect(jumpReady(later)).toBe(false)
+  })
+
+  // Pressing a little early while still falling should land the jump, not be
+  // silently dropped on the floor.
+  it('remembers a press made just before touching down', () => {
+    const early = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+    const landed = advanceJumpGate(early, 0.05, input({ grounded: true }))
+
+    expect(jumpReady(landed)).toBe(true)
+  })
+
+  it('forgets a press made far too early', () => {
+    const early = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+    const landed = advanceJumpGate(early, 0.5, input({ grounded: true }))
+
+    expect(jumpReady(landed)).toBe(false)
+  })
+
+  it('holds off while the cooldown is still running', () => {
+    const cooling = { buffer: 0.1, coyote: 0.1, cooldown: 0.2 }
+
+    expect(jumpReady(advanceJumpGate(cooling, 1 / 60, input({ grounded: true })))).toBe(false)
+  })
+
+  it('does not re-fire from a held key, which only counts as pressed once', () => {
+    const fired = { buffer: 0, coyote: 0, cooldown: 0.25 }
+    const held = advanceJumpGate(fired, 1 / 60, input({ grounded: true }))
+
+    expect(jumpReady(held)).toBe(false)
+  })
+})
+
+describe('cappedFallSpeed', () => {
+  it.each([
+    [-141, 45, -45],
+    [-20, 45, -20],
+    [12, 45, 12],
+    [0, 45, 0]
+  ])('caps %s at %s as %s', (velocity, terminal, expected) => {
+    expect(cappedFallSpeed(velocity, terminal)).toBe(expected)
+  })
+
+  it('never slows a rising rock, whatever sign the cap is given as', () => {
+    expect(cappedFallSpeed(30, -45)).toBe(30)
+  })
+})
+
+describe('isResting', () => {
+  // The generous jump probe and this tight one answer different questions. The
+  // jump wants to fire when a player expects it to; this decides where the
+  // falling gravity stops, so it has to mean actually touching the deck.
+  it('is far stricter than the probe the jump uses', () => {
+    expect(RESTING_SLACK).toBeLessThan(GROUND_PROBE_SLACK)
+  })
+
+  it.each([
+    [ROCK_RADIUS, true],
+    [ROCK_RADIUS + RESTING_SLACK, true],
+    [ROCK_RADIUS + RESTING_SLACK + 0.01, false],
+    [ROCK_RADIUS + 1, false]
+  ])('reads a centre %s above the deck as resting: %s', (height, expected) => {
+    expect(isResting(height, 0, ROCK_RADIUS, RESTING_SLACK)).toBe(expected)
+  })
+
+  it('follows the deck uphill rather than assuming a flat world', () => {
+    expect(isResting(40 + ROCK_RADIUS, 40, ROCK_RADIUS, RESTING_SLACK)).toBe(true)
+  })
+
+  it('tracks the rock radius, so a resized rock still registers', () => {
+    expect(isResting(6, 0, 6, RESTING_SLACK)).toBe(true)
+  })
+
+  // A rock lifted clear of the deck is falling, however slowly, and the heavy
+  // gravity is exactly what should be pulling it back down.
+  it('ignores velocity entirely, unlike the jump check', () => {
+    expect(isResting(ROCK_RADIUS, 0, ROCK_RADIUS, RESTING_SLACK)).toBe(true)
+  })
+})
+
+describe('the jump probe against the terrain', () => {
+  // Measured along the real track the rock clears its resting height on about
+  // half of all frames purely from rolling over the undulations, and is thrown
+  // upward constantly, so both halves of the check have to be generous.
+  it('allows a jump while the terrain has thrown the rock upward', () => {
+    expect(
+      isGrounded(ROCK_RADIUS, 0, 3, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(true)
+  })
+
+  it('allows a jump from a rock riding well above its resting height', () => {
+    expect(
+      isGrounded(ROCK_RADIUS + 1.5, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(true)
+  })
+
+  it('still refuses one from genuinely high up', () => {
+    expect(
+      isGrounded(ROCK_RADIUS + 6, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(false)
   })
 })

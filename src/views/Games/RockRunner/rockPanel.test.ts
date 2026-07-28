@@ -14,6 +14,7 @@ import {
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_RESTITUTION,
+  ROCK_TERMINAL_FALL_SPEED,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
 } from './config'
@@ -34,6 +35,7 @@ const defaults: Record<string, number> = {
   radius: ROCK_RADIUS,
   gravityScale: ROCK_GRAVITY_SCALE,
   fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
+  terminalFallSpeed: ROCK_TERMINAL_FALL_SPEED,
   friction: ROCK_FRICTION,
   restitution: ROCK_RESTITUTION,
   linearDamping: ROCK_LINEAR_DAMPING,
@@ -94,7 +96,8 @@ describe('RR_ROCK_CONTROLS', () => {
     'maxLateralSpeed',
     'radius',
     'gravityScale',
-    'fallGravityScale'
+    'fallGravityScale',
+    'terminalFallSpeed'
   ])('keeps %s above zero', (name) => {
     expect(controls[name].min).toBeGreaterThan(0)
   })

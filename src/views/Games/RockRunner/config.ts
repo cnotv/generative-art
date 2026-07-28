@@ -227,13 +227,45 @@ export const STEER_IMPULSE = 26
 export const MAX_LATERAL_SPEED = 12
 
 // An impulse is momentum, so it is divided by the rock's mass, which comes from
-// its volume and is around 45 rather than any figure written here. Measured
-// against the solver, this clears about 2.5 units with 0.7s of airtime.
-export const JUMP_IMPULSE = 650
+// its volume and is around 45 rather than any figure written here. Apex does not
+// scale with the square of this, because linear damping bleeds off the climb:
+// measured against the solver, this clears 16.3 units against 8.1 at 650.
+export const JUMP_IMPULSE = 975
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
-export const GROUND_PROBE_SLACK = 0.35
+// How far above its resting height the rock may sit and still be allowed to
+// jump. Generous on purpose: measured along the real track the rock clears its
+// resting height on roughly half of all frames just from rolling over the
+// undulations, and a tight probe read that as airborne and refused the jump.
+export const GROUND_PROBE_SLACK = 2
+// The rock is thrown off its resting height by the terrain constantly, so the
+// jump cannot insist on it descending either.
+export const JUMP_RISING_TOLERANCE = 4
+// A far tighter test than the jump's, and deliberately so. This one decides
+// where the falling gravity stops applying, so it has to mean "actually resting
+// on the deck" rather than "close enough to jump from": using the jump's probe
+// left the heavy pull switched off for the first two units of every descent.
+//
+// It cannot simply be dropped either. Pressing a resting body into the deck at
+// sixty times gravity makes the solver eject it: measured along the real track,
+// applying the falling gravity while grounded flung the rock sixty units into
+// the air.
+export const RESTING_SLACK = 0.15
 export const JUMP_COOLDOWN_SECONDS = 0.25
+// A press still counts this long after rolling off an edge or over a crest.
+// Without it the rock refuses to jump exactly when a player expects it to, since
+// cresting a hill lifts it off the deck for a few frames at a time.
+export const JUMP_COYOTE_SECONDS = 0.12
+// A press this far ahead of landing is remembered and fires on touchdown, so
+// pressing slightly early is not silently swallowed.
+export const JUMP_BUFFER_SECONDS = 0.15
+// Bounds how hard the rock can hit the deck. The falling gravity accelerates it
+// to 141 units a second from a full-height jump, which is more than its own
+// radius in a single step: the solver lets it through and it sinks nearly two
+// units into the ground before being pushed back out. Clamping the descent
+// costs about a tenth of a second of a two-second arc and takes the sink from
+// 1.87 units to 0.28.
+export const ROCK_TERMINAL_FALL_SPEED = 45
 
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
 // oldest-first rather than allocated and collected every frame.

@@ -179,6 +179,15 @@ export type DebrisParticle = {
   colorIndex: number
 }
 
+/** Timers deciding whether a press becomes a jump this frame. */
+export type JumpGate = {
+  /** Seconds a press stays remembered while the rock is still airborne. */
+  buffer: number
+  /** Seconds the rock still counts as grounded after leaving the deck. */
+  coyote: number
+  cooldown: number
+}
+
 /** Every tunable the rock is driven and simulated with, editable from the panel. */
 export type RockConfig = {
   forwardImpulse: number
@@ -192,6 +201,7 @@ export type RockConfig = {
   radius: number
   gravityScale: number
   fallGravityScale: number
+  terminalFallSpeed: number
   friction: number
   restitution: number
   linearDamping: number
