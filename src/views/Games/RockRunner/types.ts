@@ -206,6 +206,16 @@ export type JumpGate = {
   cooldown: number
 }
 
+/** One look a rock can be dressed in, picked in the lobby before the run. */
+export type RockSurface = {
+  id: string
+  label: string
+  colorUrl: string
+  /** Whether the scanned relief maps describe this surface, or would emboss another stone's cracks onto it. */
+  relief: boolean
+  tint: number
+}
+
 /** Every tunable the rock is driven and simulated with, editable from the panel. */
 export type RockConfig = {
   forwardImpulse: number

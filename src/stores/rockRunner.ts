@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { DEFAULT_ROCK_SURFACE } from '@/views/Games/RockRunner/rockSurfaces'
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '@webgamekit/chat'
 import type { RrPlayer, RrPhase } from '@/views/Games/RockRunner/types'
@@ -10,6 +11,7 @@ export const useRockRunnerStore = defineStore('rockRunner', () => {
   const solo = ref(false)
   const runStartTime = ref<number | null>(null)
   const trackSeed = ref(1)
+  const rockSurface = ref(DEFAULT_ROCK_SURFACE)
 
   const playerList = computed(() =>
     Object.values(players.value).sort((a, b) => b.distance - a.distance)
@@ -54,6 +56,7 @@ export const useRockRunnerStore = defineStore('rockRunner', () => {
   }
 
   return {
+    rockSurface,
     players,
     messages,
     phase,

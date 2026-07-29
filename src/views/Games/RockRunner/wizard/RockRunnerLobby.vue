@@ -4,6 +4,7 @@ import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from '../config'
+import { rockSurfaceOptions } from '../rockSurfaces'
 
 const props = defineProps<{
   playerName: string
@@ -12,6 +13,7 @@ const props = defineProps<{
   playerList: LobbyPlayer[]
   roomId: string
   trackSeed: number
+  rockSurface: string
 }>()
 
 const emit = defineEmits<{
@@ -25,6 +27,13 @@ const emit = defineEmits<{
 }>()
 
 const configFields = computed((): LobbyConfigField[] => [
+  {
+    type: 'select',
+    key: 'rockSurface',
+    label: 'Rock',
+    value: props.rockSurface,
+    options: rockSurfaceOptions()
+  },
   {
     type: 'number',
     key: 'trackSeed',

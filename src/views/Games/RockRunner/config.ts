@@ -93,10 +93,11 @@ export const WALL_INSET = -0.2
 
 // A drawn edge along each side of the deck, so the path reads as an
 // illustration rather than as a shape the renderer happened to produce.
-// Sampled from the illustrations rather than chosen: their outlines are drawn
-// in pure black, and anything near-but-not-quite reads as a different pen
-// against them. Every stroke in the game shares it for that reason.
-export const STROKE_COLOR = 0x000000
+// Every stroke in the game shares one ink: the path's edges, the rock's
+// outline and the debris chips. A near-black warmed slightly off pure black,
+// which sits better against the sand and the illustrations than a flat black
+// does without reading as a different pen.
+export const STROKE_COLOR = 0x150f0c
 export const STROKE_WIDTH = 0.55
 // Enough to clear the deck without floating above it. The deck is flat colour
 // and the stroke sits directly on it, so anything less z-fights.
@@ -212,11 +213,11 @@ export const ROCK_MASS = 100
 // multiplier on it. The shared package calls this option `weight`, which is
 // what it simulates, but it scales acceleration and not mass.
 //
-// One means the rock falls at the world's own gravity. Heavier reads as more
-// solid but costs the jump, since airtime is set entirely by the fall: at 4x a
-// hop clears 2.5 units and lasts 0.7s against 8.1 units and 2.6s here. The
-// panel's Gravity slider is the place to try other values.
-export const ROCK_GRAVITY_SCALE = 1
+// Seven, with the jump raised to match. One gravity governs both halves of an
+// arc, so a heavier fall costs height unless the launch pays it back: together
+// these clear 11.2 units in 0.57s up and the same down, against 16.3 units and
+// a two-second descent at the world's own gravity.
+export const ROCK_GRAVITY_SCALE = 7
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
@@ -280,11 +281,10 @@ export const STEER_IMPULSE = 58
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
-// An impulse is momentum, so it is divided by the rock's mass, which comes from
-// its volume and is around 45 rather than any figure written here. Apex does not
-// scale with the square of this, because linear damping bleeds off the climb:
-// measured against the solver, this clears 16.3 units against 8.1 at 650.
-export const JUMP_IMPULSE = 2186
+// An impulse is momentum, so it is divided by the rock's mass rather than
+// producing a speed directly. Raised alongside the gravity above and measured
+// against the solver with it: the pair clear 11.2 units with 0.57s of rise.
+export const JUMP_IMPULSE = 4200
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 // How far above its resting height the rock may sit and still be allowed to

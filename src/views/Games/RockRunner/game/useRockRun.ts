@@ -6,7 +6,6 @@ import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import rockColorUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Color.webp'
 import rockNormalUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_NormalGL.webp'
 import rockRoughnessUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Roughness.webp'
 import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_AmbientOcclusion.webp'
@@ -39,6 +38,7 @@ import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerRockElements } from '../rockPanel'
 import { attachRockStroke } from '../rockStroke'
+import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../rockSurfaces'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
 import { createDebrisField } from './debris'
@@ -66,6 +66,7 @@ import type {
   LateralFogUniforms,
   JumpGate,
   RockConfig,
+  RockSurface,
   RockPosPayload,
   ScatterAreaManager,
   TrackChunkManager,
@@ -114,7 +115,6 @@ import {
   ROCK_DISPLACEMENT_SCALE,
   ROCK_RESTITUTION,
   GHOST_SEGMENTS,
-  ROCK_TINT,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
   ROCK_STROKE_WIDTH,
@@ -152,12 +152,14 @@ export type UseRockRunDeps = {
   localPlayerColor?: Ref<string>
   spawnGateCount?: Ref<number>
   spawnGateIndex?: Ref<number>
+  rockSurface?: Ref<string>
   /** Route name the config panel keys the rock's physics by. */
   routeName?: string
 }
 
 type RunState = {
   rockConfig: RockConfig | null
+  rockSurface: RockSurface | null
   rock: ComplexModel | null
   world: WorldReference | null
   scene: THREE.Scene | null
@@ -210,7 +212,7 @@ const runMapping = (): ControlMapping => {
 // The rock uses the full PBR set rather than a colour map alone: the normal and
 // roughness maps are what make a sphere read as stone rather than as a painted
 // ball, and the displacement map needs the high segment count below to show.
-const loadRockMaps = () => {
+const loadRockMaps = (surface: RockSurface) => {
   const loader = new THREE.TextureLoader()
   const wrap = (url: string, isColor: boolean): THREE.Texture => {
     const texture = loader.load(url)
@@ -220,12 +222,15 @@ const loadRockMaps = () => {
     if (isColor) texture.colorSpace = THREE.SRGBColorSpace
     return texture
   }
+  // The relief maps come from the scanned stone and describe it alone. A painted
+  // tile lit by them wears another rock's cracks, so it gets colour only.
+  const relief = surface.relief
   return {
-    map: wrap(rockColorUrl, true),
-    normalMap: wrap(rockNormalUrl, false),
-    roughnessMap: wrap(rockRoughnessUrl, false),
-    aoMap: wrap(rockAmbientOcclusionUrl, false),
-    displacementMap: wrap(rockDisplacementUrl, false)
+    map: wrap(surface.colorUrl, true),
+    normalMap: relief ? wrap(rockNormalUrl, false) : null,
+    roughnessMap: relief ? wrap(rockRoughnessUrl, false) : null,
+    aoMap: relief ? wrap(rockAmbientOcclusionUrl, false) : null,
+    displacementMap: relief ? wrap(rockDisplacementUrl, false) : null
   }
 }
 
@@ -252,8 +257,8 @@ const applyRockMaterial = (
   material.normalMap = maps.normalMap
   material.roughnessMap = maps.roughnessMap
   material.aoMap = maps.aoMap
-  if (displaced) {
-    material.displacementMap = maps.displacementMap
+  material.displacementMap = displaced ? maps.displacementMap : null
+  if (displaced && maps.displacementMap) {
     material.displacementScale = ROCK_DISPLACEMENT_SCALE
     material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
   }
@@ -269,7 +274,7 @@ const spawnRock = (
   scene: THREE.Scene,
   world: WorldReference,
   position: CoordinateTuple,
-  maps: RockMaps
+  dressing: { maps: RockMaps; tint: number; displaced: boolean }
 ): ComplexModel => {
   const rock = getBall(scene, world, {
     name: 'player-rock',
@@ -287,7 +292,7 @@ const spawnRock = (
   rock.userData.body.setLinearDamping(ROCK_LINEAR_DAMPING)
   rock.userData.body.setAngularDamping(ROCK_ANGULAR_DAMPING)
   rock.userData.body.enableCcd(true)
-  applyRockMaterial(rock as unknown as THREE.Mesh, maps, ROCK_TINT, true)
+  applyRockMaterial(rock as unknown as THREE.Mesh, dressing.maps, dressing.tint, dressing.displaced)
   attachRockStroke(rock, ROCK_STROKE_WIDTH, ROCK_STROKE_WOBBLE)
   return rock
 }
@@ -775,10 +780,16 @@ const buildRunWorld = ({
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
   state.debris = createDebrisField(scene, [DEBRIS_GROUND_COLOR])
-  const maps = loadRockMaps()
+  const surface = rockSurfaceById(deps.rockSurface?.value ?? DEFAULT_ROCK_SURFACE)
+  const maps = loadRockMaps(surface)
+  state.rockSurface = surface
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)
-  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), maps)
+  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), {
+    maps,
+    tint: surface.tint,
+    displaced: surface.relief
+  })
   // The rock is built from the constants, so anything already edited in the
   // panel has to be pushed onto it before the countdown starts.
   rockPanel.apply()
@@ -787,6 +798,7 @@ const buildRunWorld = ({
 
 const createRunState = (): RunState => ({
   rockConfig: null,
+  rockSurface: null,
   rock: null,
   world: null,
   scene: null,
