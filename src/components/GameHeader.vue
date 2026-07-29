@@ -8,10 +8,17 @@ import '@/assets/styles/lobby-ui.scss'
 const props = defineProps<{
   roomId?: string
   phase?: string
+  /**
+   * Where the back button goes from inside a running game. 'picker' leaves for
+   * the games list; 'wizard' stays put and asks the game to return to its own
+   * lobby, which is the screen a player who has just finished a run wants next.
+   */
+  backTo?: 'picker' | 'wizard'
 }>()
 
 const emit = defineEmits<{
   copyLink: []
+  backToWizard: []
 }>()
 
 const route = useRoute()
@@ -23,6 +30,12 @@ const confirmOpen = ref(false)
 // route: navigate to the Lobby view, so every game always has a way back.
 const navigateBack = (): void => {
   confirmOpen.value = false
+  // Asked to stay in the game: the view drops back to its own wizard rather
+  // than the route changing at all, so nothing is torn down and rebuilt.
+  if (props.backTo === 'wizard' && props.phase && props.phase !== 'lobby') {
+    emit('backToWizard')
+    return
+  }
   if (fromLobby.value) {
     router.replace({ query: {} })
     return
