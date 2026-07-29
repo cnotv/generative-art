@@ -84,8 +84,24 @@ onUnmounted(() => {
   }
 })
 
+const handleButtonPress = (action: string) => {
+  // Mirrors the faux-pad's currentActions mutation so held-state checks
+  // (e.g. jump buffering) see the button the same way they see the pad.
+  if (!props.currentActions) return
+  // eslint-disable-next-line vue/no-mutating-props
+  props.currentActions[action] = { trigger: action, device: 'faux-pad' }
+}
+
+const handleButtonRelease = (action: string) => {
+  if (props.currentActions && props.currentActions[action]) {
+    // eslint-disable-next-line vue/no-mutating-props
+    delete props.currentActions[action]
+  }
+}
+
 const handleButtonAction = (action: string, event: Event) => {
   event.preventDefault()
+  handleButtonRelease(action)
   props.onAction(action)
 }
 </script>
@@ -96,8 +112,12 @@ const handleButtonAction = (action: string, event: Event) => {
     v-if="isButtonMode && !isMultiButton"
     class="touch-control"
     :class="rootClasses"
+    @mousedown="handleButtonPress(singleEntry[1])"
+    @touchstart="handleButtonPress(singleEntry[1])"
     @click="handleButtonAction(singleEntry[1], $event)"
     @touchend="handleButtonAction(singleEntry[1], $event)"
+    @touchcancel="handleButtonRelease(singleEntry[1])"
+    @mouseleave="handleButtonRelease(singleEntry[1])"
   >
     <div class="touch-control__edge"></div>
     <div class="touch-control__inside touch-control__inside--label">{{ singleEntry[0] }}</div>
@@ -109,8 +129,12 @@ const handleButtonAction = (action: string, event: Event) => {
       v-for="(action, label) in mapping"
       :key="label"
       class="touch-control__button"
+      @mousedown="handleButtonPress(action)"
+      @touchstart="handleButtonPress(action)"
       @click="handleButtonAction(action, $event)"
       @touchend="handleButtonAction(action, $event)"
+      @touchcancel="handleButtonRelease(action)"
+      @mouseleave="handleButtonRelease(action)"
     >
       {{ label }}
     </button>

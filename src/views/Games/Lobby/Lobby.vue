@@ -566,11 +566,16 @@ onMounted(async () => {
 
   .lobby__picker-games {
     gap: var(--spacing-3);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .lobby__game-card {
     padding: var(--spacing-3) var(--spacing-4);
     min-width: 7rem;
+    flex: 0 0 auto;
   }
 }
 </style>

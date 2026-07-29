@@ -28,7 +28,7 @@ import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerRules from './wizard/RockRunnerRules.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
-import { CONFIG_STORAGE_KEY } from './config'
+import { CONFIG_STORAGE_KEY, KEYBOARD_MAPPING, FAUXPAD_BUTTONS } from './config'
 import { rockSurfaceById } from './elements/rockSurfaces'
 import type { CameraMode } from './types'
 
@@ -317,8 +317,16 @@ onUnmounted(() => {
       <TouchControl
         v-if="isMobileDevice && run.currentActions.value"
         class="rr__fauxpad"
-        :mapping="{ up: 'jump', down: 'jump', left: 'left', right: 'right' }"
+        :mapping="KEYBOARD_MAPPING['faux-pad']"
         :options="{ deadzone: 0.15 }"
+        :current-actions="run.currentActions.value"
+        :on-action="() => {}"
+      />
+      <TouchControl
+        v-if="isMobileDevice && run.currentActions.value"
+        class="rr__jump-btn"
+        mode="button"
+        :mapping="FAUXPAD_BUTTONS"
         :current-actions="run.currentActions.value"
         :on-action="() => {}"
       />
@@ -451,6 +459,13 @@ onUnmounted(() => {
   position: absolute;
   bottom: var(--spacing-6);
   left: var(--spacing-6);
+  z-index: var(--z-dropdown);
+}
+
+.rr__jump-btn {
+  position: absolute;
+  bottom: var(--spacing-6);
+  right: var(--spacing-6);
   z-index: var(--z-dropdown);
 }
 

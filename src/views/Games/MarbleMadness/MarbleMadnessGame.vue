@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isMobile } from '@webgamekit/controls'
 import { useMenuNavigation, type MenuSource } from '@/composables/useMenuNavigation'
 import TouchControl from '@/components/TouchControl.vue'
-import { TIME_PENALTY_FALL, RUSH_TIME_BONUS } from './config'
+import { TIME_PENALTY_FALL, RUSH_TIME_BONUS, KEYBOARD_MAPPING } from './config'
 import type { GameMode } from './types'
 
 const isMobileDevice = isMobile()
@@ -189,7 +189,7 @@ onUnmounted(() => {
     <TouchControl
       v-if="isMobileDevice && currentActions"
       class="mm-game__fauxpad"
-      :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
+      :mapping="KEYBOARD_MAPPING['faux-pad']"
       :options="{ deadzone: 0.15, enableEightWay: true }"
       :current-actions="currentActions"
       :on-action="() => {}"

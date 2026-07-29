@@ -548,12 +548,7 @@ onUnmounted(() => {
   <TouchControl
     v-if="isMobileDevice"
     style="left: 25px; bottom: 25px"
-    :mapping="{
-      left: 'move-left',
-      right: 'move-right',
-      up: 'move-up',
-      down: 'move-down'
-    }"
+    :mapping="controlBindings.mapping['faux-pad']"
     :options="{ deadzone: 0.15, enableEightWay: true }"
     :current-actions="currentActions"
     :on-action="handleAction"

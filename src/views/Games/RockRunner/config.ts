@@ -30,7 +30,18 @@ export const KEYBOARD_MAPPING = {
     button0: 'jump',
     button3: 'camera',
     button1: 'exit'
+  },
+  'faux-pad': {
+    left: 'left',
+    right: 'right'
   }
+}
+
+// Jump gets its own on-screen button rather than a faux-pad direction: it's
+// easy to miss buried in an up/down tilt, and this is the only fauxpad
+// action outside the pad's four directions.
+export const FAUXPAD_BUTTONS: Record<string, string> = {
+  Jump: 'jump'
 }
 
 export const CONTROLS_CONFIG: ControlsMapperGameConfig = {

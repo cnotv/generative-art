@@ -152,6 +152,12 @@ export const KEYBOARD_MAPPING = {
     options: 'back',
     l1: 'undo',
     r1: 'redo'
+  },
+  'faux-pad': {
+    up: 'forward',
+    down: 'backward',
+    left: 'left',
+    right: 'right'
   }
 }
 
