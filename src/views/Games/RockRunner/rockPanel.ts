@@ -35,7 +35,7 @@ import {
  * instead, which is what makes the rock read as heavy stone rather than rubber.
  */
 export const RR_ROCK_CONTROLS = {
-  forwardImpulse: { min: 0, max: 60, step: 0.5, label: 'Drive force' },
+  forwardImpulse: { min: 0, max: 200, step: 1, label: 'Drive force' },
   baseMaxSpeed: { min: 1, max: 80, step: 1, label: 'Starting top speed' },
   maxSpeedCeiling: { min: 1, max: 120, step: 1, label: 'Final top speed' },
   speedRampDistance: { min: 100, max: 20000, step: 100, label: 'Distance to reach it' },

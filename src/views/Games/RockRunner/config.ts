@@ -268,10 +268,13 @@ export const SPAWN_GATE_SPREAD = 4
 
 // Auto-forward: the rock is pushed along the path tangent every frame and its
 // speed cap climbs with distance, so the run gets faster the longer it lasts.
-// Impulses are momentum, so they scale with the mass above. They are raised by
-// slightly less than the weight was, which is what makes the rock read as
-// heavier: it still drives, but takes longer to get going and to change line.
-export const FORWARD_IMPULSE = 25
+// Impulses are momentum, so this is divided by the mass above rather than
+// producing a speed directly.
+//
+// It sets how hard the rock accelerates, not how fast it ends up: the push
+// stops at the speed cap either way, so raising it shortens the climb to that
+// cap without lifting it.
+export const FORWARD_IMPULSE = 60
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
