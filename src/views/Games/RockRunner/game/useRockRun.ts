@@ -698,6 +698,8 @@ type WorldParameters = {
   deps: UseRockRunDeps
   state: RunState
   ghostRegistry: ReturnType<typeof createGhostRegistry>
+  cameraMode: Ref<CameraMode>
+  setCameraMode: (mode: CameraMode) => void
   pumpWorld: () => void
 }
 
@@ -717,7 +719,9 @@ const buildRunWorld = ({
   deps,
   state,
   ghostRegistry,
-  pumpWorld
+  pumpWorld,
+  cameraMode,
+  setCameraMode
 }: WorldParameters): void => {
   if (!tools.world) return
   const scene = tools.scene
@@ -761,7 +765,7 @@ const buildRunWorld = ({
   registerCameraProperties({ camera: tools.camera, orbit })
   // Registered after setSceneElements, which replaces the list wholesale and
   // would otherwise drop anything added before it.
-  const cameraPanel = registerCameraElements()
+  const cameraPanel = registerCameraElements({ mode: cameraMode, setMode: setCameraMode })
   state.cameraConfig = cameraPanel.config
   const rockPanel = registerRockElements({
     routeName: deps.routeName ?? 'RockRunner',
@@ -894,7 +898,16 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     await tools.setup({
       config: buildRunSetupConfig(spawnPosition(createTrackPath(deps.seed.value), 1, 0)),
       defineSetup: ({ orbit }) => {
-        buildRunWorld({ tools, orbit, deps, state, ghostRegistry, pumpWorld: actions.pumpWorld })
+        buildRunWorld({
+          tools,
+          orbit,
+          deps,
+          state,
+          ghostRegistry,
+          pumpWorld: actions.pumpWorld,
+          cameraMode: refs.cameraMode,
+          setCameraMode: actions.setCameraMode
+        })
         tools.animate({
           timeline: buildRunTimeline({
             camera: tools.camera,

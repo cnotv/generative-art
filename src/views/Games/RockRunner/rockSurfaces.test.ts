@@ -61,6 +61,10 @@ describe('rockSurfaceById', () => {
 })
 
 describe('rockSurfaceOptions', () => {
+  it('names a default that exists in the catalogue', () => {
+    expect(ROCK_SURFACES.map((surface) => surface.id)).toContain(DEFAULT_ROCK_SURFACE)
+  })
+
   it('offers one option per surface, in catalogue order', () => {
     expect(rockSurfaceOptions().map((option) => option.value)).toEqual(
       ROCK_SURFACES.map((surface) => surface.id)

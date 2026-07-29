@@ -50,7 +50,10 @@ export const ROCK_SURFACES: RockSurface[] = [
   }
 ]
 
-export const DEFAULT_ROCK_SURFACE = ROCK_SURFACES[0].id
+export const DEFAULT_ROCK_SURFACE = 'red-stone'
+
+const defaultSurface = (): RockSurface =>
+  ROCK_SURFACES.find((surface) => surface.id === DEFAULT_ROCK_SURFACE) ?? ROCK_SURFACES[0]
 
 /**
  * Looks a surface up by id, falling back to the default.
@@ -62,7 +65,7 @@ export const DEFAULT_ROCK_SURFACE = ROCK_SURFACES[0].id
  * @returns The matching surface, or the default one
  */
 export const rockSurfaceById = (id: string): RockSurface =>
-  ROCK_SURFACES.find((surface) => surface.id === id) ?? ROCK_SURFACES[0]
+  ROCK_SURFACES.find((surface) => surface.id === id) ?? defaultSurface()
 
 /**
  * The surfaces as the lobby's select field wants them.
