@@ -144,6 +144,15 @@ export const SCATTER_ALPHA_TEST = 0.35
 export const SCATTER_STAGE_LENGTH = 500
 
 export const ROCK_RADIUS = 2.2
+// Mass in the sense of resistance to being pushed, which is the only thing mass
+// does here: a body's fall rate is independent of it, so this cannot make the
+// rock drop faster however large it gets.
+//
+// A hundred rather than more. The impulses below are scaled to match, so the
+// handling is the one already tuned, but mass is what a fixed impulse has to
+// overcome: left unscaled at 150 the rock tops out at 11.8 against a starting
+// cap of 22, so it never reaches its own speed ramp at all.
+export const ROCK_MASS = 100
 // Rapier has one world gravity, so a body's own weight is expressed as a
 // multiplier on it. The shared package calls this option `weight`, which is
 // what it simulates, but it scales acceleration and not mass.
@@ -153,16 +162,15 @@ export const ROCK_RADIUS = 2.2
 // hop clears 2.5 units and lasts 0.7s against 8.1 units and 2.6s here. The
 // panel's Gravity slider is the place to try other values.
 export const ROCK_GRAVITY_SCALE = 1
-// Gravity while falling, applied only once airborne and past the apex. Rise and
-// fall are otherwise governed by the same number, so making the drop snappy by
-// raising gravity flattens the jump in the same proportion. Splitting the two
-// keeps the arc and tightens only the descent: sixty drops the fall from 1.38s
-// to 0.15s with the apex untouched.
+// Gravity at full descent speed. Reached through a squared curve off how fast
+// the rock is already falling rather than switched on at the apex, so the arc
+// stays one continuous parabola and a resting rock — barely descending — is
+// never pressed into the deck by a pull it cannot answer.
 //
-// Not higher. The rock covers its own radius in a step or two at these speeds,
-// and past about a hundred it lands hard enough to sink into the deck: a third
-// of a unit at 100, and two full units at 150.
-export const ROCK_FALL_GRAVITY_SCALE = 60
+// The figure is large because the curve spends most of a drop well below it.
+// Measured, the fall goes from 1.38s to 0.13s while the rock still settles
+// within a quarter unit of the deck.
+export const ROCK_FALL_GRAVITY_SCALE = 900
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
@@ -216,12 +224,12 @@ export const SPAWN_GATE_SPREAD = 4
 // Impulses are momentum, so they scale with the mass above. They are raised by
 // slightly less than the weight was, which is what makes the rock read as
 // heavier: it still drives, but takes longer to get going and to change line.
-export const FORWARD_IMPULSE = 11
+export const FORWARD_IMPULSE = 25
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
 
-export const STEER_IMPULSE = 26
+export const STEER_IMPULSE = 58
 // Lateral speed is capped separately so steering stays responsive at any
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
@@ -230,7 +238,7 @@ export const MAX_LATERAL_SPEED = 12
 // its volume and is around 45 rather than any figure written here. Apex does not
 // scale with the square of this, because linear damping bleeds off the climb:
 // measured against the solver, this clears 16.3 units against 8.1 at 650.
-export const JUMP_IMPULSE = 975
+export const JUMP_IMPULSE = 2186
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 // How far above its resting height the rock may sit and still be allowed to
@@ -241,16 +249,6 @@ export const GROUND_PROBE_SLACK = 2
 // The rock is thrown off its resting height by the terrain constantly, so the
 // jump cannot insist on it descending either.
 export const JUMP_RISING_TOLERANCE = 4
-// A far tighter test than the jump's, and deliberately so. This one decides
-// where the falling gravity stops applying, so it has to mean "actually resting
-// on the deck" rather than "close enough to jump from": using the jump's probe
-// left the heavy pull switched off for the first two units of every descent.
-//
-// It cannot simply be dropped either. Pressing a resting body into the deck at
-// sixty times gravity makes the solver eject it: measured along the real track,
-// applying the falling gravity while grounded flung the rock sixty units into
-// the air.
-export const RESTING_SLACK = 0.15
 export const JUMP_COOLDOWN_SECONDS = 0.25
 // A press still counts this long after rolling off an edge or over a crest.
 // Without it the rock refuses to jump exactly when a player expects it to, since
@@ -259,13 +257,10 @@ export const JUMP_COYOTE_SECONDS = 0.12
 // A press this far ahead of landing is remembered and fires on touchdown, so
 // pressing slightly early is not silently swallowed.
 export const JUMP_BUFFER_SECONDS = 0.15
-// Bounds how hard the rock can hit the deck. The falling gravity accelerates it
-// to 141 units a second from a full-height jump, which is more than its own
-// radius in a single step: the solver lets it through and it sinks nearly two
-// units into the ground before being pushed back out. Clamping the descent
-// costs about a tenth of a second of a two-second arc and takes the sink from
-// 1.87 units to 0.28.
-export const ROCK_TERMINAL_FALL_SPEED = 45
+// Descent speed at which the falling gravity reaches full strength. Low, so the
+// curve bites early in a drop; the squaring is what keeps it from biting at the
+// apex or at rest.
+export const FALL_REFERENCE_SPEED = 12
 
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
 // oldest-first rather than allocated and collected every frame.

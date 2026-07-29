@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { RR_ROCK_CONTROLS } from './rockPanel'
 import {
   BASE_MAX_SPEED,
+  FALL_REFERENCE_SPEED,
   FORWARD_IMPULSE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
@@ -14,7 +15,7 @@ import {
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_RESTITUTION,
-  ROCK_TERMINAL_FALL_SPEED,
+  ROCK_MASS,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
 } from './config'
@@ -35,7 +36,8 @@ const defaults: Record<string, number> = {
   radius: ROCK_RADIUS,
   gravityScale: ROCK_GRAVITY_SCALE,
   fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
-  terminalFallSpeed: ROCK_TERMINAL_FALL_SPEED,
+  fallReferenceSpeed: FALL_REFERENCE_SPEED,
+  mass: ROCK_MASS,
   friction: ROCK_FRICTION,
   restitution: ROCK_RESTITUTION,
   linearDamping: ROCK_LINEAR_DAMPING,
@@ -97,7 +99,8 @@ describe('RR_ROCK_CONTROLS', () => {
     'radius',
     'gravityScale',
     'fallGravityScale',
-    'terminalFallSpeed'
+    'fallReferenceSpeed',
+    'mass'
   ])('keeps %s above zero', (name) => {
     expect(controls[name].min).toBeGreaterThan(0)
   })

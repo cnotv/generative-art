@@ -7,11 +7,10 @@ import {
   steerDirection,
   speedAlong,
   isGrounded,
-  gravityScaleFor,
+  fallGravityScale,
   isResting,
   advanceJumpGate,
   jumpReady,
-  cappedFallSpeed,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   steerImpulseMagnitude,
@@ -25,7 +24,10 @@ import {
   SPEED_RAMP_DISTANCE,
   GROUND_PROBE_SLACK,
   JUMP_RISING_TOLERANCE,
-  RESTING_SLACK,
+  DEBRIS_GROUND_TOLERANCE,
+  FALL_REFERENCE_SPEED,
+  ROCK_FALL_GRAVITY_SCALE,
+  ROCK_GRAVITY_SCALE,
   WALL_INSET,
   ROCK_RADIUS
 } from '../config'
@@ -426,31 +428,6 @@ describe('steering into a wall', () => {
   })
 })
 
-describe('gravityScaleFor', () => {
-  it('uses the rising gravity on the way up', () => {
-    expect(gravityScaleFor(12, false, 1, 60)).toBe(1)
-  })
-
-  it('switches to the falling gravity past the apex', () => {
-    expect(gravityScaleFor(-1, false, 1, 60)).toBe(60)
-  })
-
-  // A resting rock reads as very slightly descending. Pressing it into the deck
-  // at tens of times gravity would drive its own grip hard enough to stall it,
-  // which is the same failure the wall standoff exists to prevent.
-  it.each([-0.01, -5, 0, 3])('never applies the falling gravity while grounded (vy %s)', (vy) => {
-    expect(gravityScaleFor(vy, true, 1, 60)).toBe(1)
-  })
-
-  it('holds the rising gravity exactly at the apex, where velocity is zero', () => {
-    expect(gravityScaleFor(0, false, 1, 60)).toBe(1)
-  })
-
-  it('is a no-op when both gravities match, so the split can be turned off', () => {
-    expect(gravityScaleFor(-9, false, 4, 4)).toBe(4)
-  })
-})
-
 describe('the jump gate', () => {
   const idle = { buffer: 0, coyote: 0, cooldown: 0 }
   const input = (over: Partial<Parameters<typeof advanceJumpGate>[2]> = {}) => ({
@@ -519,50 +496,35 @@ describe('the jump gate', () => {
   })
 })
 
-describe('cappedFallSpeed', () => {
-  it.each([
-    [-141, 45, -45],
-    [-20, 45, -20],
-    [12, 45, 12],
-    [0, 45, 0]
-  ])('caps %s at %s as %s', (velocity, terminal, expected) => {
-    expect(cappedFallSpeed(velocity, terminal)).toBe(expected)
-  })
-
-  it('never slows a rising rock, whatever sign the cap is given as', () => {
-    expect(cappedFallSpeed(30, -45)).toBe(30)
-  })
-})
-
 describe('isResting', () => {
   // The generous jump probe and this tight one answer different questions. The
   // jump wants to fire when a player expects it to; this decides where the
   // falling gravity stops, so it has to mean actually touching the deck.
   it('is far stricter than the probe the jump uses', () => {
-    expect(RESTING_SLACK).toBeLessThan(GROUND_PROBE_SLACK)
+    expect(DEBRIS_GROUND_TOLERANCE).toBeLessThan(GROUND_PROBE_SLACK)
   })
 
   it.each([
     [ROCK_RADIUS, true],
-    [ROCK_RADIUS + RESTING_SLACK, true],
-    [ROCK_RADIUS + RESTING_SLACK + 0.01, false],
-    [ROCK_RADIUS + 1, false]
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE, true],
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE + 0.01, false],
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE * 3, false]
   ])('reads a centre %s above the deck as resting: %s', (height, expected) => {
-    expect(isResting(height, 0, ROCK_RADIUS, RESTING_SLACK)).toBe(expected)
+    expect(isResting(height, 0, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(expected)
   })
 
   it('follows the deck uphill rather than assuming a flat world', () => {
-    expect(isResting(40 + ROCK_RADIUS, 40, ROCK_RADIUS, RESTING_SLACK)).toBe(true)
+    expect(isResting(40 + ROCK_RADIUS, 40, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(true)
   })
 
   it('tracks the rock radius, so a resized rock still registers', () => {
-    expect(isResting(6, 0, 6, RESTING_SLACK)).toBe(true)
+    expect(isResting(6, 0, 6, DEBRIS_GROUND_TOLERANCE)).toBe(true)
   })
 
   // A rock lifted clear of the deck is falling, however slowly, and the heavy
   // gravity is exactly what should be pulling it back down.
   it('ignores velocity entirely, unlike the jump check', () => {
-    expect(isResting(ROCK_RADIUS, 0, ROCK_RADIUS, RESTING_SLACK)).toBe(true)
+    expect(isResting(ROCK_RADIUS, 0, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(true)
   })
 })
 
@@ -586,5 +548,55 @@ describe('the jump probe against the terrain', () => {
     expect(
       isGrounded(ROCK_RADIUS + 6, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
     ).toBe(false)
+  })
+})
+
+describe('fallGravityScale', () => {
+  const map = (velocityY: number) =>
+    fallGravityScale(velocityY, ROCK_GRAVITY_SCALE, ROCK_FALL_GRAVITY_SCALE, FALL_REFERENCE_SPEED)
+
+  // The whole point of the curve over a switch: at the top of the arc the two
+  // gravities meet, so there is no discontinuity for the solver to resolve.
+  it('is exactly the rising gravity at the apex', () => {
+    expect(map(0)).toBe(ROCK_GRAVITY_SCALE)
+  })
+
+  it('stays at the rising gravity for the whole climb', () => {
+    expect(map(5)).toBe(ROCK_GRAVITY_SCALE)
+    expect(map(40)).toBe(ROCK_GRAVITY_SCALE)
+  })
+
+  // A resting rock reads as barely descending. A switched version pressed it
+  // into the deck at full falling gravity and the solver flung it away; the
+  // curve leaves it under essentially its own weight.
+  it('barely lifts the gravity on a rock that is only creeping downward', () => {
+    expect(map(-0.05)).toBeLessThan(ROCK_GRAVITY_SCALE + 1)
+  })
+
+  it('reaches full strength at the reference speed', () => {
+    expect(map(-FALL_REFERENCE_SPEED)).toBeCloseTo(ROCK_FALL_GRAVITY_SCALE)
+  })
+
+  it('holds there rather than growing without bound', () => {
+    expect(map(-FALL_REFERENCE_SPEED * 10)).toBeCloseTo(ROCK_FALL_GRAVITY_SCALE)
+  })
+
+  // Squared, not linear: half the reference speed gives a quarter of the extra
+  // pull, which is what keeps the first part of a drop gentle.
+  it('is squared rather than linear across the ramp', () => {
+    const half = map(-FALL_REFERENCE_SPEED / 2)
+    const quarter = ROCK_GRAVITY_SCALE + (ROCK_FALL_GRAVITY_SCALE - ROCK_GRAVITY_SCALE) * 0.25
+
+    expect(half).toBeCloseTo(quarter)
+  })
+
+  it('rises monotonically as the descent quickens', () => {
+    const scales = [0, -3, -6, -9, -12].map(map)
+
+    expect(scales).toEqual([...scales].sort((a, b) => a - b))
+  })
+
+  it('falls back to the rising gravity when given no ramp to work with', () => {
+    expect(fallGravityScale(-40, 1, 900, 0)).toBe(1)
   })
 })

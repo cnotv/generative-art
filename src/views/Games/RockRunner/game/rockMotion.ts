@@ -108,28 +108,38 @@ export const isResting = (rockY: number, groundY: number, radius: number, slack:
   rockY - groundY <= radius + slack
 
 /**
- * The gravity a rock should be under this frame.
+ * The gravity a rock should be under this frame, mapped from how fast it is
+ * already falling.
  *
  * Rise and fall are otherwise governed by one number, so a snappier drop costs
- * jump height. The heavier pull is applied only while airborne and already
- * descending, which leaves the climb alone.
+ * jump height. Rather than switching between two gravities at the apex, the
+ * scale is mapped continuously off descent speed and squared, which is what
+ * makes the arc a single curve instead of two halves meeting at a kink.
  *
- * Grounded is excluded deliberately, and not as an optimisation: a resting rock
- * has a slightly negative vertical velocity, and pressing it into the deck at
- * tens of times gravity would drive its own grip hard enough to stop it dead.
+ * The mapping earns its keep three times over. At the apex the descent speed is
+ * zero, so the scale is exactly the rising one and the arc has no discontinuity
+ * to resolve. A resting rock is barely descending, so it is never pressed into
+ * the deck by a gravity it cannot answer — the failure that made a switched
+ * version fling the rock sixty units into the air. And the squared curve keeps
+ * the pull gentle over the first part of the drop and heavy only once genuinely
+ * falling, so the landing needs no separate speed clamp to stay out of the deck.
  *
  * @param velocityY - The rock's vertical speed
- * @param grounded - Whether it is resting on the deck
- * @param riseScale - Gravity while climbing or grounded
- * @param fallScale - Gravity while falling
+ * @param riseScale - Gravity while climbing, and where the curve starts
+ * @param fallScale - Gravity at the reference descent speed and beyond
+ * @param referenceSpeed - Descent speed at which the curve reaches fallScale
  * @returns The gravity scale to set this frame
  */
-export const gravityScaleFor = (
+export const fallGravityScale = (
   velocityY: number,
-  grounded: boolean,
   riseScale: number,
-  fallScale: number
-): number => (!grounded && velocityY < 0 ? fallScale : riseScale)
+  fallScale: number,
+  referenceSpeed: number
+): number => {
+  if (referenceSpeed <= 0) return riseScale
+  const descent = Math.min(1, Math.max(0, -velocityY) / referenceSpeed)
+  return riseScale + (fallScale - riseScale) * descent * descent
+}
 
 /**
  * Advances the jump timers by one frame.
@@ -164,21 +174,6 @@ export const advanceJumpGate = (
  */
 export const jumpReady = (gate: JumpGate): boolean =>
   gate.buffer > 0 && gate.coyote > 0 && gate.cooldown <= 0
-
-/**
- * Caps how fast the rock may fall.
- *
- * The falling gravity reaches speeds worth more than the rock's own radius in a
- * single step, which the solver cannot resolve cleanly: it sinks into the deck
- * before being pushed back out. Bounding the descent keeps the drop snappy while
- * leaving the impact something the contact can absorb.
- *
- * @param velocityY - The rock's vertical speed
- * @param terminal - The fastest descent allowed, as a positive number
- * @returns The vertical speed to apply, unchanged while rising
- */
-export const cappedFallSpeed = (velocityY: number, terminal: number): number =>
-  Math.max(velocityY, -Math.abs(terminal))
 
 /**
  * How many chips to throw at a given speed.

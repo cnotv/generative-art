@@ -50,10 +50,9 @@ import {
   frameScaledImpulse,
   isGrounded,
   isResting,
-  gravityScaleFor,
+  fallGravityScale,
   advanceJumpGate,
   jumpReady,
-  cappedFallSpeed,
   speedAlong,
   speedCapAt,
   steerDirection,
@@ -101,7 +100,7 @@ import {
   JUMP_BUFFER_SECONDS,
   JUMP_COYOTE_SECONDS,
   JUMP_RISING_TOLERANCE,
-  RESTING_SLACK,
+  ROCK_MASS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
@@ -190,7 +189,6 @@ type RunReferences = {
 
 // Impulses are recomputed every frame, so the vector they are written into is
 // allocated once here rather than inside the loop.
-const scratchVelocity = { x: 0, y: 0, z: 0 }
 const scratchImpulse = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 const scratchOrigin = new THREE.Vector3()
@@ -276,6 +274,7 @@ const spawnRock = (
     restitution: ROCK_RESTITUTION,
     friction: ROCK_FRICTION,
     weight: ROCK_GRAVITY_SCALE,
+    mass: ROCK_MASS,
     roughness: 1,
     metalness: 0,
     segments: ROCK_SEGMENTS,
@@ -489,34 +488,17 @@ const createDriveAction =
 // arc. Set every frame rather than on the way past the apex: the rock can be
 // knocked out of a climb at any point, and a one-shot switch would miss it.
 const applyFallGravity = (state: RunState): void => {
-  if (!state.rock || !state.path || !state.rockConfig) return
+  if (!state.rock || !state.rockConfig) return
   const body = state.rock.userData.body
-  const velocity = body.linvel()
-  // The tight test, not the jump's: sharing the generous probe left the heavy
-  // pull switched off for the first couple of units of every descent, which is
-  // most of a short drop.
-  const resting = isResting(
-    body.translation().y,
-    state.path.sampleAt(state.distance).position.y,
-    state.rockConfig.radius,
-    RESTING_SLACK
-  )
   body.setGravityScale(
-    gravityScaleFor(
-      velocity.y,
-      resting,
+    fallGravityScale(
+      body.linvel().y,
       state.rockConfig.gravityScale,
-      state.rockConfig.fallGravityScale
+      state.rockConfig.fallGravityScale,
+      state.rockConfig.fallReferenceSpeed
     ),
     false
   )
-  const capped = cappedFallSpeed(velocity.y, state.rockConfig.terminalFallSpeed)
-  if (capped !== velocity.y) {
-    scratchVelocity.x = velocity.x
-    scratchVelocity.y = capped
-    scratchVelocity.z = velocity.z
-    body.setLinvel(scratchVelocity, false)
-  }
 }
 
 const createRunActions = (

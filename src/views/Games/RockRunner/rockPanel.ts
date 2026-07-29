@@ -4,6 +4,7 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import type { RockConfig } from './types'
 import {
   BASE_MAX_SPEED,
+  FALL_REFERENCE_SPEED,
   FORWARD_IMPULSE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
@@ -17,7 +18,7 @@ import {
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_RESTITUTION,
-  ROCK_TERMINAL_FALL_SPEED,
+  ROCK_MASS,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
@@ -41,16 +42,18 @@ export const RR_ROCK_CONTROLS = {
   jumpImpulse: { min: 0, max: 6000, step: 25, label: 'Jump force' },
   jumpCooldown: { min: 0, max: 2, step: 0.05, label: 'Jump cooldown' },
   radius: { min: 0.5, max: 8, step: 0.1, label: 'Size', sectionStart: true },
+  // Resistance to being pushed, and nothing else: a body's fall rate does not
+  // depend on its mass, so raising this will never make the rock drop faster.
+  mass: { min: 1, max: 400, step: 5, label: 'Mass' },
   // Gravity is a multiplier on the world's, not an acceleration: Rapier has one
   // world gravity and a body's weight is expressed against it.
   gravityScale: { min: 0.1, max: 40, step: 0.1, label: 'Gravity' },
   // Reaches far higher than the rising figure because it only governs the drop.
   // Stops short of where the rock starts sinking into the deck on landing.
-  fallGravityScale: { min: 0.1, max: 120, step: 1, label: 'Fall gravity' },
-  // Bounds the impact, not the feel: the descent reaches this within a few
-  // frames either way, but past it the rock covers its own radius per step and
-  // the solver lets it sink into the deck.
-  terminalFallSpeed: { min: 5, max: 200, step: 1, label: 'Max fall speed' },
+  fallGravityScale: { min: 0.1, max: 2000, step: 10, label: 'Fall gravity' },
+  // Descent speed at which the falling gravity reaches full strength. Lower
+  // bites earlier in the drop; the squared curve is what keeps it off the apex.
+  fallReferenceSpeed: { min: 1, max: 80, step: 1, label: 'Fall ramp speed' },
   friction: { min: 0, max: 40, step: 0.5, label: 'Grip' },
   restitution: { min: -1, max: 1, step: 0.05, label: 'Bounce' },
   linearDamping: { min: 0, max: 5, step: 0.05, label: 'Rolling drag' },
@@ -80,6 +83,7 @@ type RockCollider = {
   setFriction: (friction: number) => void
   setRestitution: (restitution: number) => void
   setRadius?: (radius: number) => void
+  setMass?: (mass: number) => void
 }
 
 const applyBody = (body: RockBody, config: RockConfig): void => {
@@ -92,6 +96,7 @@ const applyCollider = (collider: RockCollider, config: RockConfig): void => {
   collider.setFriction(config.friction)
   collider.setRestitution(config.restitution)
   collider.setRadius?.(config.radius)
+  collider.setMass?.(config.mass)
 }
 
 const applyTint = (rock: THREE.Object3D, tint: number): void => {
@@ -124,7 +129,8 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     radius: ROCK_RADIUS,
     gravityScale: ROCK_GRAVITY_SCALE,
     fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
-    terminalFallSpeed: ROCK_TERMINAL_FALL_SPEED,
+    fallReferenceSpeed: FALL_REFERENCE_SPEED,
+    mass: ROCK_MASS,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,
     linearDamping: ROCK_LINEAR_DAMPING,
