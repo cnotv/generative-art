@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import {
+  ROCK_RENDER_ORDER,
   ROCK_STROKE_NAME,
+  ROCK_STROKE_RENDER_ORDER,
   ROCK_STROKE_SEGMENTS,
   ROCK_STROKE_WOBBLE_TERMS,
   STROKE_COLOR
@@ -108,11 +110,23 @@ export const attachRockStroke = (
   const radius = mesh.geometry?.boundingSphere?.radius ?? 1
   const hull = new THREE.Mesh(
     buildRockStrokeGeometry(radius, thickness, wobble),
-    new THREE.MeshBasicMaterial({ color: STROKE_COLOR, side: THREE.BackSide })
+    new THREE.MeshBasicMaterial({
+      color: STROKE_COLOR,
+      side: THREE.BackSide,
+      // An ink line sits on top of the picture rather than inside it. Left to
+      // depth, debris trailing the rock draws across the rim and cuts it into
+      // pieces, because a chip behind the ball is still nearer than the hull's
+      // far-side faces. The rock is drawn after the hull and does depth-test,
+      // so it still covers everything but the rim.
+      depthTest: false,
+      depthWrite: false
+    })
   )
   hull.name = ROCK_STROKE_NAME
   hull.castShadow = false
   hull.receiveShadow = false
+  hull.renderOrder = ROCK_STROKE_RENDER_ORDER
+  rock.renderOrder = ROCK_RENDER_ORDER
   rock.add(hull)
   return hull
 }

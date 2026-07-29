@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import { strokeThicknessAt, buildRockStrokeGeometry, attachRockStroke } from './rockStroke'
-import { ROCK_STROKE_NAME, ROCK_STROKE_SEGMENTS, ROCK_STROKE_WIDTH } from './config'
+import {
+  ROCK_RENDER_ORDER,
+  ROCK_STROKE_NAME,
+  ROCK_STROKE_RENDER_ORDER,
+  ROCK_STROKE_SEGMENTS,
+  ROCK_STROKE_WIDTH
+} from './config'
 
 const direction = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).normalize()
 const radiusAt = (geometry: THREE.BufferGeometry, index: number) => {
@@ -144,5 +150,46 @@ describe('attachRockStroke', () => {
     const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     expect(attachRockStroke(rock, 0.04, 1).castShadow).toBe(false)
+  })
+})
+
+describe('the outline against the debris trail', () => {
+  const wrap = () => {
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
+    return { rock, hull: attachRockStroke(rock, 0.09, 1) }
+  }
+
+  // A chip trailing behind the rock is still nearer the camera than the hull's
+  // far-side faces, so on depth alone it draws across the rim and cuts the line
+  // into pieces. The outline opts out of depth entirely instead.
+  it('does not let the scene depth decide where the rim survives', () => {
+    const { hull } = wrap()
+    const material = hull.material as THREE.Material
+
+    expect(material.depthTest).toBe(false)
+  })
+
+  it('writes no depth, so the rock behind it is unaffected', () => {
+    const { hull } = wrap()
+
+    expect((hull.material as THREE.Material).depthWrite).toBe(false)
+  })
+
+  // Order is what keeps the outline from swallowing the rock: the hull paints
+  // its whole disc, and the rock is drawn over it afterwards.
+  it('draws the rock after the outline, not before it', () => {
+    const { rock, hull } = wrap()
+
+    expect(hull.renderOrder).toBe(ROCK_STROKE_RENDER_ORDER)
+    expect(rock.renderOrder).toBe(ROCK_RENDER_ORDER)
+    expect(rock.renderOrder).toBeGreaterThan(hull.renderOrder)
+  })
+
+  // Debris is left at the default, so both of these have to clear it.
+  it('draws both after the debris, which orders at zero', () => {
+    const { rock, hull } = wrap()
+
+    expect(hull.renderOrder).toBeGreaterThan(0)
+    expect(rock.renderOrder).toBeGreaterThan(0)
   })
 })

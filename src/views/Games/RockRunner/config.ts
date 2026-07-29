@@ -129,6 +129,12 @@ export const ROCK_STROKE_WOBBLE = 0.55
 // few pixels wide, where the difference between 24 and 192 segments is nothing
 // and the triangles are all cost.
 export const ROCK_STROKE_SEGMENTS = 24
+// The outline is drawn over the scene rather than depth-sorted within it, and
+// the rock is drawn over the outline. Debris otherwise wins against the hull on
+// depth alone: a chip trailing behind the rock is nearer the camera than the
+// hull's far-side faces, so it draws across the rim and breaks the line.
+export const ROCK_STROKE_RENDER_ORDER = 1
+export const ROCK_RENDER_ORDER = 2
 // Products of sines over the direction a point sits in, which gives a smooth
 // lumpiness around the ball rather than the ring-shaped banding a single axis
 // would produce.
