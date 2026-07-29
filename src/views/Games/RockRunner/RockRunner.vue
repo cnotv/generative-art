@@ -305,7 +305,7 @@ onUnmounted(() => {
           @click="run.cycleCameraMode"
         >
           <Video class="rr__hud-icon" aria-hidden="true" />
-          <span class="rr__hud-label">Cam: {{ cameraLabel }}</span>
+          <span class="rr__hud-label rr__hud-label--camera">Cam: {{ cameraLabel }}</span>
           <LobbyUIKeyPill class="rr__hud-key" :keyboard="['C']" :gamepad="['△']" />
         </LobbyUIButton>
         <LobbyUIButton size="sm" variant="ghost" title="Exit the game" @click="requestExitGame">
@@ -390,11 +390,16 @@ onUnmounted(() => {
 }
 
 .rr__hud-label {
-  /* THIRD, FIRST and FREE are not the same width, so the row shifted on every
-     camera change for the same reason the counters did. */
+  white-space: nowrap;
+}
+
+/* Only the camera label changes width as it is read: THIRD, FIRST and FREE are
+   different lengths, so without a reserved width the row shifts on every camera
+   change. Applying that reserve to every label instead padded a four-letter
+   word out to ten characters and pushed its key pill away from it. */
+.rr__hud-label--camera {
   min-width: 10ch;
   text-align: left;
-  white-space: nowrap;
 }
 
 .rr__hud-icon {
