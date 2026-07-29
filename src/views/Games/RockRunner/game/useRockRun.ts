@@ -36,6 +36,7 @@ import { createTrackChunkManager } from '../trackChunks'
 import { createScatterAreaManager } from '../scatter/scatterAreas'
 import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
+import { DEFAULT_RUN_CAMERA, registerCameraElements } from '../cameraPanel'
 import { registerRockElements } from '../rockPanel'
 import { attachRockStroke } from '../rockStroke'
 import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../rockSurfaces'
@@ -66,6 +67,7 @@ import type {
   LateralFogUniforms,
   JumpGate,
   RockConfig,
+  RunCameraConfig,
   RockSurface,
   RockPosPayload,
   ScatterAreaManager,
@@ -75,6 +77,8 @@ import type {
 import {
   CONTROLS_GAME_ID,
   COUNTDOWN_MS,
+  CHASE_BACK,
+  CHASE_HEIGHT,
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
@@ -84,19 +88,13 @@ import {
   DEBRIS_MIN_SPEED,
   DEBRIS_PER_BURST,
   DEBRIS_TRAIL_OFFSET,
-  CAMERA_TRANSITION_SECONDS,
   DISTANCE_BROADCAST_MS,
-  FIRST_PERSON_FORWARD,
-  FIRST_PERSON_HEIGHT,
-  FIRST_PERSON_LOOK_AHEAD,
   FOG_COLOR,
   FOG_FAR,
   FOG_STAGE_COLORS,
   FOG_NEAR,
   FOG_SIDE_FAR,
   FOG_SIDE_NEAR,
-  FREE_CAM_BACK,
-  FREE_CAM_HEIGHT,
   GROUND_PROBE_SLACK,
   JUMP_BUFFER_SECONDS,
   JUMP_COYOTE_SECONDS,
@@ -131,8 +129,6 @@ import {
   WALL_THICKNESS
 } from '../config'
 import {
-  CAMERA_HEIGHT,
-  CAMERA_BACK,
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
@@ -160,6 +156,7 @@ export type UseRockRunDeps = {
 
 type RunState = {
   rockConfig: RockConfig | null
+  cameraConfig: RunCameraConfig | null
   rockSurface: RockSurface | null
   rock: ComplexModel | null
   world: WorldReference | null
@@ -300,7 +297,7 @@ const spawnRock = (
 
 const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
   camera: {
-    position: [spawn[0], spawn[1] + CAMERA_HEIGHT, spawn[2] + CAMERA_BACK] as CoordinateTuple
+    position: [spawn[0], spawn[1] + CHASE_HEIGHT, spawn[2] + CHASE_BACK] as CoordinateTuple
   },
   orbit: { disabled: true },
   ground: false as const,
@@ -656,6 +653,7 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
       } else {
         state.cameraTransitionElapsed += getDelta()
       }
+      const cameras = state.cameraConfig ?? DEFAULT_RUN_CAMERA
       applyRaceCamera({
         mode,
         camera,
@@ -663,12 +661,17 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
         orbit,
         smoothedDirection: state.smoothedDirection,
         transitionStart: state.cameraTransitionStart,
-        transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS),
-        firstPersonHeight: FIRST_PERSON_HEIGHT,
-        firstPersonForward: FIRST_PERSON_FORWARD,
-        firstPersonLookAhead: FIRST_PERSON_LOOK_AHEAD,
-        freeCamHeight: FREE_CAM_HEIGHT,
-        freeCamBack: FREE_CAM_BACK
+        transitionAlpha: Math.min(
+          1,
+          state.cameraTransitionElapsed / Math.max(0.01, cameras.transitionSeconds)
+        ),
+        thirdPersonHeight: cameras.thirdPersonHeight,
+        thirdPersonBack: cameras.thirdPersonBack,
+        firstPersonHeight: cameras.firstPersonHeight,
+        firstPersonForward: cameras.firstPersonForward,
+        firstPersonLookAhead: cameras.firstPersonLookAhead,
+        freeCamHeight: cameras.freeCamHeight,
+        freeCamBack: cameras.freeCamBack
       })
       state.prevCameraMode = mode
     }
@@ -758,6 +761,8 @@ const buildRunWorld = ({
   registerCameraProperties({ camera: tools.camera, orbit })
   // Registered after setSceneElements, which replaces the list wholesale and
   // would otherwise drop anything added before it.
+  const cameraPanel = registerCameraElements()
+  state.cameraConfig = cameraPanel.config
   const rockPanel = registerRockElements({
     routeName: deps.routeName ?? 'RockRunner',
     getRock: () => state.rock ?? undefined
@@ -774,7 +779,8 @@ const buildRunWorld = ({
       }
     }),
     scatterPanel.teardown,
-    rockPanel.teardown
+    rockPanel.teardown,
+    cameraPanel.teardown
   ]
   scatterPanel.register(state.scatter, () => state.distance)
 
@@ -799,6 +805,7 @@ const buildRunWorld = ({
 
 const createRunState = (): RunState => ({
   rockConfig: null,
+  cameraConfig: null,
   rockSurface: null,
   rock: null,
   world: null,

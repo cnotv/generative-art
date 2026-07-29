@@ -219,6 +219,18 @@ export type RockSurface = {
   tint: number
 }
 
+/** How each of the three cameras follows the rock. */
+export type RunCameraConfig = {
+  thirdPersonHeight: number
+  thirdPersonBack: number
+  firstPersonHeight: number
+  firstPersonForward: number
+  firstPersonLookAhead: number
+  freeCamHeight: number
+  freeCamBack: number
+  transitionSeconds: number
+}
+
 /** Every tunable the rock is driven and simulated with, editable from the panel. */
 export type RockConfig = {
   forwardImpulse: number

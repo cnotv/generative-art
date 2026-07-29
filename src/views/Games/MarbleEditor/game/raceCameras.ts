@@ -62,6 +62,10 @@ export type RaceCameraOptions = {
    */
   firstPersonForward?: number
   firstPersonLookAhead?: number
+  /** Chase height above the ball. Defaults to the marble's tuning. */
+  thirdPersonHeight?: number
+  /** How far behind the ball the chase camera trails. Defaults to the marble's tuning. */
+  thirdPersonBack?: number
   freeCamHeight?: number
   freeCamBack?: number
 }
@@ -90,10 +94,11 @@ export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
 export const updateThirdPersonCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit } = options
   if (!marble) return
+  const back = options.thirdPersonBack ?? CAMERA_BACK
   scratchCameraGoal.set(
-    marble.position.x - smoothedDirection.x * CAMERA_BACK,
-    marble.position.y + CAMERA_HEIGHT,
-    marble.position.z - smoothedDirection.z * CAMERA_BACK
+    marble.position.x - smoothedDirection.x * back,
+    marble.position.y + (options.thirdPersonHeight ?? CAMERA_HEIGHT),
+    marble.position.z - smoothedDirection.z * back
   )
   camera.position.lerp(scratchCameraGoal, CAMERA_LERP)
   if (orbit) orbit.target.copy(marble.position)

@@ -154,6 +154,7 @@ export const WALL_ELEMENT_NAME = 'edge-walls'
 export const TRACK_ELEMENT_NAME = 'track'
 export const FOG_ELEMENT_NAME = 'fog'
 export const ROCK_ELEMENT_NAME = 'player-rock'
+export const CAMERA_ELEMENT_NAME = 'run-camera'
 
 // The countryside flanking the deck. Purely visual and collider-free: it gives
 // the scatter something to stand on instead of floating over the sky.
@@ -359,16 +360,25 @@ export const DEBRIS_TRAIL_OFFSET = 0.7
 // path height alone made the trail flicker, so the probe is given room.
 export const DEBRIS_GROUND_TOLERANCE = 1.2
 
+// The chase camera's own offsets. Previously borrowed from the marble game,
+// which meant this game's camera was configured in another game's file and
+// would have moved with it.
+export const CHASE_HEIGHT = 14
+export const CHASE_BACK = 12
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000
 
-// The eye rides at the rock's leading edge rather than on its crown. Perched on
-// top, a ball this size fills the bottom of the frame with its own body; pushed
-// forward past its own radius, the whole sphere falls behind the camera and is
-// never drawn. The small height keeps it clear of the deck on a crest.
+// The eye rides ahead of the rock rather than on its crown. Perched on top, a
+// ball this size fills the bottom of the frame with its own body; pushed forward
+// past its own radius, the whole sphere falls behind the camera and is never
+// drawn.
 export const FIRST_PERSON_EYE_CLEARANCE = 0.15
 export const FIRST_PERSON_FORWARD = ROCK_RADIUS + 0.6
-export const FIRST_PERSON_HEIGHT = ROCK_RADIUS * 0.5
+// Measured from the rock's centre, which already sits a radius above the deck,
+// so the eye ends up at two and a half radii above the ground. Lower than this
+// and the deck fills the frame: the view is level rather than angled down, so
+// height is the only thing setting how much of the path ahead is visible.
+export const FIRST_PERSON_HEIGHT = ROCK_RADIUS * 1.5
 export const FIRST_PERSON_LOOK_AHEAD = 20
 export const FREE_CAM_HEIGHT = 40
 export const FREE_CAM_BACK = 50
