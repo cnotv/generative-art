@@ -6,7 +6,7 @@ import {
   ROCK_STROKE_SEGMENTS,
   ROCK_STROKE_WOBBLE_TERMS,
   STROKE_COLOR
-} from './config'
+} from '../config'
 
 /**
  * How far a point on the hull is pushed out beyond the rock's surface.

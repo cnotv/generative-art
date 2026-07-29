@@ -5,7 +5,7 @@ import {
   rockSurfaceById,
   rockSurfaceOptions
 } from './rockSurfaces'
-import { ROCK_TINT } from './config'
+import { ROCK_TINT } from '../config'
 
 describe('ROCK_SURFACES', () => {
   it('offers the scanned stone and the three painted tiles', () => {

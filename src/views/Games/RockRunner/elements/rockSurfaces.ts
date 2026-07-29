@@ -2,8 +2,8 @@ import scannedColorUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Color.
 import crackedEarthUrl from '@/assets/images/textures/rock/surface-cracked-earth.webp'
 import redStoneUrl from '@/assets/images/textures/rock/surface-red-stone.webp'
 import mossyStoneUrl from '@/assets/images/textures/rock/surface-mossy-stone.webp'
-import type { RockSurface } from './types'
-import { ROCK_TINT } from './config'
+import type { RockSurface } from '../types'
+import { ROCK_TINT } from '../config'
 
 /**
  * The surfaces a rock can be dressed in, chosen in the lobby before a run.

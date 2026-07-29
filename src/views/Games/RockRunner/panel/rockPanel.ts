@@ -2,8 +2,8 @@ import { reactive, ref, type Ref } from 'vue'
 import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
-import { attachRockStroke } from './rockStroke'
-import type { RockConfig } from './types'
+import { attachRockStroke } from '../elements/rockStroke'
+import type { RockConfig } from '../types'
 import {
   BASE_MAX_SPEED,
   FORWARD_IMPULSE,
@@ -25,7 +25,7 @@ import {
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
-} from './config'
+} from '../config'
 
 /**
  * The rock's tunables, grouped as they are felt rather than as they are stored:

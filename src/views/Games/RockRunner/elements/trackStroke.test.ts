@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { strokeWander, strokePhases, strokeEdges, buildStrokeGeometry } from './trackStroke'
-import { createTrackPath } from './trackPath'
+import { createTrackPath } from '../trackPath'
 import {
   STATION_SPACING,
   STROKE_LIFT,
@@ -8,7 +8,7 @@ import {
   STROKE_WIDTH,
   STROKE_WIDTH_VARIATION,
   TRACK_WIDTH
-} from './config'
+} from '../config'
 
 const phases = strokePhases(4242)
 const edge = (distance: number, side = 1) => strokeEdges(TRACK_WIDTH, side, distance, phases)

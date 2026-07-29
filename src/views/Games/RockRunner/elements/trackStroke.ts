@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { seededRandomValues } from '@webgamekit/threejs'
 import type { SweepStation } from '@/types/sweptGeometry'
-import type { StrokeShape, StrokeTerms } from './types'
+import type { StrokeShape, StrokeTerms } from '../types'
 import {
   STATION_SPACING,
   STROKE_LIFT,
@@ -9,7 +9,7 @@ import {
   STROKE_WIDTH,
   STROKE_WIDTH_TERMS,
   STROKE_WIDTH_VARIATION
-} from './config'
+} from '../config'
 
 const TWO_PI = Math.PI * 2
 const SIDES = [-1, 1] as const

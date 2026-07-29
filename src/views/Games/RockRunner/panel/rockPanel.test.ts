@@ -18,7 +18,7 @@ import {
   ROCK_MASS,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
-} from './config'
+} from '../config'
 
 type Control = { min?: number; max?: number; step?: number; label: string; color?: boolean }
 

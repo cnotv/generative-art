@@ -29,7 +29,7 @@ import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerRules from './wizard/RockRunnerRules.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
 import { CONFIG_STORAGE_KEY } from './config'
-import { rockSurfaceById } from './rockSurfaces'
+import { rockSurfaceById } from './elements/rockSurfaces'
 import type { CameraMode } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {

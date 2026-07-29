@@ -7,7 +7,7 @@ import {
   ROCK_STROKE_RENDER_ORDER,
   ROCK_STROKE_SEGMENTS,
   ROCK_STROKE_WIDTH
-} from './config'
+} from '../config'
 
 const direction = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).normalize()
 const radiusAt = (geometry: THREE.BufferGeometry, index: number) => {

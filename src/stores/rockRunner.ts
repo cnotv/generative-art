@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { DEFAULT_ROCK_SURFACE } from '@/views/Games/RockRunner/rockSurfaces'
+import { DEFAULT_ROCK_SURFACE } from '@/views/Games/RockRunner/elements/rockSurfaces'
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '@webgamekit/chat'
 import type { RrPlayer, RrPhase } from '@/views/Games/RockRunner/types'

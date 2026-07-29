@@ -4,7 +4,7 @@ import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from '../config'
-import { rockSurfaceOptions } from '../rockSurfaces'
+import { rockSurfaceOptions } from '../elements/rockSurfaces'
 
 const props = defineProps<{
   playerName: string

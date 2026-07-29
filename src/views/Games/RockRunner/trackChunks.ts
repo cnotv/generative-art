@@ -3,7 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
 import { applyLateralFog, sweepLateralOffsets } from './lateralFog'
-import { buildStrokeGeometry, strokePhases } from './trackStroke'
+import { buildStrokeGeometry, strokePhases } from './elements/trackStroke'
 import type { CrossSection, SweepStation } from '@/types/sweptGeometry'
 import groundTextureUrl from '@/assets/images/illustrations/ground.webp'
 import type {

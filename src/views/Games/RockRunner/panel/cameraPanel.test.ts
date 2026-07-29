@@ -15,7 +15,7 @@ import {
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT,
   ROCK_RADIUS
-} from './config'
+} from '../config'
 
 type Control = { min: number; max: number; step: number; label: string }
 const controls = RR_CAMERA_CONTROLS as Record<string, Control>

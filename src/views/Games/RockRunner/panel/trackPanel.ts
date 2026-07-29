@@ -7,7 +7,7 @@ import type {
   TrackChunkManager,
   TrackDimensions,
   WallConfig
-} from './types'
+} from '../types'
 import {
   FOG_COLOR,
   FOG_ELEMENT_NAME,
@@ -24,7 +24,7 @@ import {
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
   WALL_THICKNESS
-} from './config'
+} from '../config'
 
 export const RR_WALL_CONTROLS = {
   height: { min: 0.5, max: 60, step: 0.5, label: 'Height' },

@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { registerFollowCameraPanel } from '@/utils/followCameraPanel'
-import type { CameraMode, RunCameraConfig } from './types'
+import type { CameraMode, RunCameraConfig } from '../types'
 import {
   CHASE_BACK,
   CAMERA_ELEMENT_NAME,
@@ -11,7 +11,7 @@ import {
   FIRST_PERSON_LOOK_AHEAD,
   FREE_CAM_BACK,
   FREE_CAM_HEIGHT
-} from './config'
+} from '../config'
 
 /**
  * How the three cameras follow the rock, grouped by the mode each belongs to.

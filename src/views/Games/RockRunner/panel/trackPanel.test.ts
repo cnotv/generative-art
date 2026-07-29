@@ -13,7 +13,7 @@ import {
   TERRAIN_WIDTH,
   STROKE_COLOR,
   TRACK_WIDTH
-} from './config'
+} from '../config'
 
 describe('MAX_TERRAIN_WIDTH', () => {
   // A swept ribbon folds through itself once its half-width passes the path's
