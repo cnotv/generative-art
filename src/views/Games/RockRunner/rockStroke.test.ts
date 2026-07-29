@@ -187,6 +187,16 @@ describe('the outline against the debris trail', () => {
   })
 
   // Debris is left at the default, so both of these have to clear it.
+  // The scenery is transparent and draws after every opaque object, so the
+  // outline has to join that pass to sit above it — order alone cannot cross
+  // the boundary between the two lists.
+  it('joins the transparent pass, the only one drawn after the scenery', () => {
+    const { rock, hull } = wrap()
+
+    expect((hull.material as THREE.Material).transparent).toBe(true)
+    expect((rock.material as THREE.Material).transparent).toBe(true)
+  })
+
   it('draws both after the scenery, which orders at zero', () => {
     const { rock, hull } = wrap()
 
