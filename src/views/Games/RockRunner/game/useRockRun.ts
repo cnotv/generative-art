@@ -50,7 +50,6 @@ import {
   frameScaledImpulse,
   isGrounded,
   isResting,
-  fallGravityScale,
   advanceJumpGate,
   jumpReady,
   speedAlong,
@@ -487,19 +486,6 @@ const createDriveAction =
 // flattening the jump, since one gravity otherwise governs both halves of the
 // arc. Set every frame rather than on the way past the apex: the rock can be
 // knocked out of a climb at any point, and a one-shot switch would miss it.
-const applyFallGravity = (state: RunState): void => {
-  if (!state.rock || !state.rockConfig) return
-  const body = state.rock.userData.body
-  body.setGravityScale(
-    fallGravityScale(
-      body.linvel().y,
-      state.rockConfig.gravityScale,
-      state.rockConfig.fallGravityScale,
-      state.rockConfig.fallReferenceSpeed
-    ),
-    false
-  )
-}
 
 const createRunActions = (
   deps: UseRockRunDeps,
@@ -537,7 +523,6 @@ const createRunActions = (
       return
     }
     startGate.release()
-    applyFallGravity(state)
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
     applyDrive(getDelta())

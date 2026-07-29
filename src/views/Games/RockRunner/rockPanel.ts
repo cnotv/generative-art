@@ -4,7 +4,6 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import type { RockConfig } from './types'
 import {
   BASE_MAX_SPEED,
-  FALL_REFERENCE_SPEED,
   FORWARD_IMPULSE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
@@ -13,7 +12,6 @@ import {
   ROCK_ANGULAR_DAMPING,
   ROCK_ELEMENT_NAME,
   ROCK_FRICTION,
-  ROCK_FALL_GRAVITY_SCALE,
   ROCK_GRAVITY_SCALE,
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
@@ -50,10 +48,6 @@ export const RR_ROCK_CONTROLS = {
   gravityScale: { min: 0.1, max: 40, step: 0.1, label: 'Gravity' },
   // Reaches far higher than the rising figure because it only governs the drop.
   // Stops short of where the rock starts sinking into the deck on landing.
-  fallGravityScale: { min: 0.1, max: 2000, step: 10, label: 'Fall gravity' },
-  // Descent speed at which the falling gravity reaches full strength. Lower
-  // bites earlier in the drop; the squared curve is what keeps it off the apex.
-  fallReferenceSpeed: { min: 1, max: 80, step: 1, label: 'Fall ramp speed' },
   friction: { min: 0, max: 40, step: 0.5, label: 'Grip' },
   restitution: { min: -1, max: 1, step: 0.05, label: 'Bounce' },
   linearDamping: { min: 0, max: 5, step: 0.05, label: 'Rolling drag' },
@@ -128,8 +122,6 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     jumpCooldown: JUMP_COOLDOWN_SECONDS,
     radius: ROCK_RADIUS,
     gravityScale: ROCK_GRAVITY_SCALE,
-    fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
-    fallReferenceSpeed: FALL_REFERENCE_SPEED,
     mass: ROCK_MASS,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,

@@ -7,7 +7,6 @@ import {
   steerDirection,
   speedAlong,
   isGrounded,
-  fallGravityScale,
   isResting,
   advanceJumpGate,
   jumpReady,
@@ -25,9 +24,6 @@ import {
   GROUND_PROBE_SLACK,
   JUMP_RISING_TOLERANCE,
   DEBRIS_GROUND_TOLERANCE,
-  FALL_REFERENCE_SPEED,
-  ROCK_FALL_GRAVITY_SCALE,
-  ROCK_GRAVITY_SCALE,
   WALL_INSET,
   ROCK_RADIUS
 } from '../config'
@@ -548,55 +544,5 @@ describe('the jump probe against the terrain', () => {
     expect(
       isGrounded(ROCK_RADIUS + 6, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
     ).toBe(false)
-  })
-})
-
-describe('fallGravityScale', () => {
-  const map = (velocityY: number) =>
-    fallGravityScale(velocityY, ROCK_GRAVITY_SCALE, ROCK_FALL_GRAVITY_SCALE, FALL_REFERENCE_SPEED)
-
-  // The whole point of the curve over a switch: at the top of the arc the two
-  // gravities meet, so there is no discontinuity for the solver to resolve.
-  it('is exactly the rising gravity at the apex', () => {
-    expect(map(0)).toBe(ROCK_GRAVITY_SCALE)
-  })
-
-  it('stays at the rising gravity for the whole climb', () => {
-    expect(map(5)).toBe(ROCK_GRAVITY_SCALE)
-    expect(map(40)).toBe(ROCK_GRAVITY_SCALE)
-  })
-
-  // A resting rock reads as barely descending. A switched version pressed it
-  // into the deck at full falling gravity and the solver flung it away; the
-  // curve leaves it under essentially its own weight.
-  it('barely lifts the gravity on a rock that is only creeping downward', () => {
-    expect(map(-0.05)).toBeLessThan(ROCK_GRAVITY_SCALE + 1)
-  })
-
-  it('reaches full strength at the reference speed', () => {
-    expect(map(-FALL_REFERENCE_SPEED)).toBeCloseTo(ROCK_FALL_GRAVITY_SCALE)
-  })
-
-  it('holds there rather than growing without bound', () => {
-    expect(map(-FALL_REFERENCE_SPEED * 10)).toBeCloseTo(ROCK_FALL_GRAVITY_SCALE)
-  })
-
-  // Squared, not linear: half the reference speed gives a quarter of the extra
-  // pull, which is what keeps the first part of a drop gentle.
-  it('is squared rather than linear across the ramp', () => {
-    const half = map(-FALL_REFERENCE_SPEED / 2)
-    const quarter = ROCK_GRAVITY_SCALE + (ROCK_FALL_GRAVITY_SCALE - ROCK_GRAVITY_SCALE) * 0.25
-
-    expect(half).toBeCloseTo(quarter)
-  })
-
-  it('rises monotonically as the descent quickens', () => {
-    const scales = [0, -3, -6, -9, -12].map(map)
-
-    expect(scales).toEqual([...scales].sort((a, b) => a - b))
-  })
-
-  it('falls back to the rising gravity when given no ramp to work with', () => {
-    expect(fallGravityScale(-40, 1, 900, 0)).toBe(1)
   })
 })

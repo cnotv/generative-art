@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { RR_ROCK_CONTROLS } from './rockPanel'
 import {
   BASE_MAX_SPEED,
-  FALL_REFERENCE_SPEED,
   FORWARD_IMPULSE,
   JUMP_COOLDOWN_SECONDS,
   JUMP_IMPULSE,
@@ -10,7 +9,6 @@ import {
   MAX_SPEED_CEILING,
   ROCK_ANGULAR_DAMPING,
   ROCK_FRICTION,
-  ROCK_FALL_GRAVITY_SCALE,
   ROCK_GRAVITY_SCALE,
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
@@ -35,8 +33,6 @@ const defaults: Record<string, number> = {
   jumpCooldown: JUMP_COOLDOWN_SECONDS,
   radius: ROCK_RADIUS,
   gravityScale: ROCK_GRAVITY_SCALE,
-  fallGravityScale: ROCK_FALL_GRAVITY_SCALE,
-  fallReferenceSpeed: FALL_REFERENCE_SPEED,
   mass: ROCK_MASS,
   friction: ROCK_FRICTION,
   restitution: ROCK_RESTITUTION,
@@ -85,23 +81,12 @@ describe('RR_ROCK_CONTROLS', () => {
     expect(controls.tint.min).toBeUndefined()
   })
 
-  it('reaches far higher on the falling gravity than the rising one, since it only governs the drop', () => {
-    expect(controls.fallGravityScale.max).toBeGreaterThan(controls.gravityScale.max as number)
-    expect(ROCK_FALL_GRAVITY_SCALE).toBeGreaterThan(ROCK_GRAVITY_SCALE)
-  })
-
   // Sliders cannot be allowed to stop the rock dead or pin it in place, so the
   // forces bottom out at zero while the caps and the size never reach it.
-  it.each([
-    'baseMaxSpeed',
-    'maxSpeedCeiling',
-    'maxLateralSpeed',
-    'radius',
-    'gravityScale',
-    'fallGravityScale',
-    'fallReferenceSpeed',
-    'mass'
-  ])('keeps %s above zero', (name) => {
-    expect(controls[name].min).toBeGreaterThan(0)
-  })
+  it.each(['baseMaxSpeed', 'maxSpeedCeiling', 'maxLateralSpeed', 'radius', 'gravityScale', 'mass'])(
+    'keeps %s above zero',
+    (name) => {
+      expect(controls[name].min).toBeGreaterThan(0)
+    }
+  )
 })

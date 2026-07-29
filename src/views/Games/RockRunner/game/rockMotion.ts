@@ -108,40 +108,6 @@ export const isResting = (rockY: number, groundY: number, radius: number, slack:
   rockY - groundY <= radius + slack
 
 /**
- * The gravity a rock should be under this frame, mapped from how fast it is
- * already falling.
- *
- * Rise and fall are otherwise governed by one number, so a snappier drop costs
- * jump height. Rather than switching between two gravities at the apex, the
- * scale is mapped continuously off descent speed and squared, which is what
- * makes the arc a single curve instead of two halves meeting at a kink.
- *
- * The mapping earns its keep three times over. At the apex the descent speed is
- * zero, so the scale is exactly the rising one and the arc has no discontinuity
- * to resolve. A resting rock is barely descending, so it is never pressed into
- * the deck by a gravity it cannot answer — the failure that made a switched
- * version fling the rock sixty units into the air. And the squared curve keeps
- * the pull gentle over the first part of the drop and heavy only once genuinely
- * falling, so the landing needs no separate speed clamp to stay out of the deck.
- *
- * @param velocityY - The rock's vertical speed
- * @param riseScale - Gravity while climbing, and where the curve starts
- * @param fallScale - Gravity at the reference descent speed and beyond
- * @param referenceSpeed - Descent speed at which the curve reaches fallScale
- * @returns The gravity scale to set this frame
- */
-export const fallGravityScale = (
-  velocityY: number,
-  riseScale: number,
-  fallScale: number,
-  referenceSpeed: number
-): number => {
-  if (referenceSpeed <= 0) return riseScale
-  const descent = Math.min(1, Math.max(0, -velocityY) / referenceSpeed)
-  return riseScale + (fallScale - riseScale) * descent * descent
-}
-
-/**
  * Advances the jump timers by one frame.
  *
  * Two graces make a press land when a player expects it to rather than only on

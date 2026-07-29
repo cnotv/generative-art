@@ -162,15 +162,6 @@ export const ROCK_MASS = 100
 // hop clears 2.5 units and lasts 0.7s against 8.1 units and 2.6s here. The
 // panel's Gravity slider is the place to try other values.
 export const ROCK_GRAVITY_SCALE = 1
-// Gravity at full descent speed. Reached through a squared curve off how fast
-// the rock is already falling rather than switched on at the apex, so the arc
-// stays one continuous parabola and a resting rock — barely descending — is
-// never pressed into the deck by a pull it cannot answer.
-//
-// The figure is large because the curve spends most of a drop well below it.
-// Measured, the fall goes from 1.38s to 0.13s while the rock still settles
-// within a quarter unit of the deck.
-export const ROCK_FALL_GRAVITY_SCALE = 900
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
@@ -257,10 +248,6 @@ export const JUMP_COYOTE_SECONDS = 0.12
 // A press this far ahead of landing is remembered and fires on touchdown, so
 // pressing slightly early is not silently swallowed.
 export const JUMP_BUFFER_SECONDS = 0.15
-// Descent speed at which the falling gravity reaches full strength. Low, so the
-// curve bites early in a drop; the squaring is what keeps it from biting at the
-// apex or at rest.
-export const FALL_REFERENCE_SPEED = 12
 
 // Debris kicked up behind the rock. Pooled: a fixed set of particles is recycled
 // oldest-first rather than allocated and collected every frame.
