@@ -463,6 +463,12 @@ export const KEYBOARD_MAPPING = {
     'dpad-down': 'backward',
     'dpad-left': 'left',
     'dpad-right': 'right'
+  },
+  'faux-pad': {
+    up: 'forward',
+    down: 'backward',
+    left: 'left',
+    right: 'right'
   }
 }
 

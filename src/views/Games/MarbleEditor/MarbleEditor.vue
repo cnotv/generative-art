@@ -31,7 +31,13 @@ import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { useMenuFocus } from '@/composables/useMenuFocus'
 import { BALL_TYPE_LABELS, MARBLE_BALL_LABEL } from '@/utils/physicBalls'
-import { EDITOR_MENU_MAPPING, MARBLE_WEIGHT, MARBLE_RESTITUTION, MARBLE_FRICTION } from './config'
+import {
+  EDITOR_MENU_MAPPING,
+  MARBLE_WEIGHT,
+  MARBLE_RESTITUTION,
+  MARBLE_FRICTION,
+  KEYBOARD_MAPPING
+} from './config'
 import { useMarbleEditor } from './editor/useMarbleEditor'
 import { useMarbleRace } from './game/useMarbleRace'
 import { useMarbleEditorSession } from './useMarbleEditorSession'
@@ -563,7 +569,7 @@ onUnmounted(() => {
         <TouchControl
           v-if="isMobileDevice && race.currentActions.value"
           class="me__fauxpad"
-          :mapping="{ up: 'forward', down: 'backward', left: 'left', right: 'right' }"
+          :mapping="KEYBOARD_MAPPING['faux-pad']"
           :options="{ deadzone: 0.15, enableEightWay: true }"
           :current-actions="race.currentActions.value"
           :on-action="() => {}"
