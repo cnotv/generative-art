@@ -112,13 +112,20 @@ export const attachRockStroke = (
     buildRockStrokeGeometry(radius, thickness, wobble),
     new THREE.MeshBasicMaterial({
       color: STROKE_COLOR,
-      side: THREE.BackSide,
-      // An ink line sits on top of the picture rather than inside it. Left to
-      // depth, debris trailing the rock draws across the rim and cuts it into
-      // pieces, because a chip behind the ball is still nearer than the hull's
-      // far-side faces. The rock is drawn after the hull and does depth-test,
-      // so it still covers everything but the rim.
-      depthTest: false,
+      // Front faces, not back. A back-faced hull is the usual way to build one,
+      // but it puts the outline at the far side of the ball, and everything
+      // between the camera and that surface then draws across the rim: the
+      // debris trail cut it into pieces. Front faces sit just in front of the
+      // ball instead, which is where the line should be depth-wise.
+      side: THREE.FrontSide,
+      // Tested so the world can still cover it. Turning depth off fixed the
+      // debris and broke the opposite case, since the scenery is transparent
+      // and renders after every opaque object regardless of order, so the rim
+      // ended up beneath trees standing well behind the rock.
+      depthTest: true,
+      // Written by the rock alone. The hull covers the whole disc and the rock
+      // is drawn over it afterwards, which is what leaves a rim rather than a
+      // silhouette; if the hull wrote depth it would mask the rock instead.
       depthWrite: false
     })
   )

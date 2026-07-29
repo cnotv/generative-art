@@ -93,7 +93,10 @@ export const WALL_INSET = -0.2
 
 // A drawn edge along each side of the deck, so the path reads as an
 // illustration rather than as a shape the renderer happened to produce.
-export const STROKE_COLOR = 0x1c1712
+// Sampled from the illustrations rather than chosen: their outlines are drawn
+// in pure black, and anything near-but-not-quite reads as a different pen
+// against them. Every stroke in the game shares it for that reason.
+export const STROKE_COLOR = 0x000000
 export const STROKE_WIDTH = 0.55
 // Enough to clear the deck without floating above it. The deck is flat colour
 // and the stroke sits directly on it, so anything less z-fights.
@@ -316,7 +319,7 @@ export const DEBRIS_SIZE = 0.11
 // The stroke is an inverted hull: the same shape, grown slightly and drawn
 // back-faces-only, so it reads as an outline around every chip.
 export const DEBRIS_STROKE_SCALE = 1.5
-export const DEBRIS_STROKE_COLOR = 0x1c1712
+export const DEBRIS_STROKE_COLOR = STROKE_COLOR
 // Chips are ground kicked up by the rock, so they take the path's own colour.
 // Pitched a shade darker than the deck itself: an exact match against the
 // surface they sit on would leave them readable only by their outline.

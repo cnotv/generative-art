@@ -114,14 +114,15 @@ describe('attachRockStroke', () => {
     expect(rock.getObjectByName(ROCK_STROKE_NAME)).toBe(hull)
   })
 
-  // Only the back faces survive, which is what leaves a rim rather than a shell
-  // covering the rock entirely.
-  it('draws back faces only', () => {
+  // Front faces, not the back ones an inverted hull is usually built from. Back
+  // faces put the line at the far side of the ball, and everything between the
+  // camera and that surface draws across it.
+  it('draws front faces, so the line sits in front of the ball', () => {
     const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     const hull = attachRockStroke(rock, 0.04, 1)
 
-    expect((hull.material as THREE.Material).side).toBe(THREE.BackSide)
+    expect((hull.material as THREE.Material).side).toBe(THREE.FrontSide)
   })
 
   it('replaces an outline rather than stacking a second one on the rock', () => {
@@ -159,14 +160,14 @@ describe('the outline against the debris trail', () => {
     return { rock, hull: attachRockStroke(rock, 0.09, 1) }
   }
 
-  // A chip trailing behind the rock is still nearer the camera than the hull's
-  // far-side faces, so on depth alone it draws across the rim and cuts the line
-  // into pieces. The outline opts out of depth entirely instead.
-  it('does not let the scene depth decide where the rim survives', () => {
+  // The rim has to lose to what is genuinely in front of the rock and win
+  // against what is behind it, which is only possible if it takes part in depth
+  // at all. Turning depth off fixed the debris and put the line under every
+  // tree, since the scenery is transparent and draws after all opaque geometry.
+  it('still takes part in depth, so the world can cover it', () => {
     const { hull } = wrap()
-    const material = hull.material as THREE.Material
 
-    expect(material.depthTest).toBe(false)
+    expect((hull.material as THREE.Material).depthTest).toBe(true)
   })
 
   it('writes no depth, so the rock behind it is unaffected', () => {
