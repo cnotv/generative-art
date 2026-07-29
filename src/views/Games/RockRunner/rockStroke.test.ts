@@ -48,34 +48,36 @@ describe('strokeThicknessAt', () => {
 })
 
 describe('buildRockStrokeGeometry', () => {
-  it('is built in unit space so the rock can scale it', () => {
-    const geometry = buildRockStrokeGeometry(0.04, 0)
+  it('is built at the rock it wraps, not at unit size', () => {
+    const geometry = buildRockStrokeGeometry(2.2, 0.04, 0)
     const radii = Array.from({ length: geometry.getAttribute('position').count }, (_, i) =>
       radiusAt(geometry, i)
     )
 
-    expect(Math.min(...radii)).toBeCloseTo(1.04, 2)
-    expect(Math.max(...radii)).toBeCloseTo(1.04, 2)
+    expect(Math.min(...radii)).toBeCloseTo(2.2 * 1.04, 2)
+    expect(Math.max(...radii)).toBeCloseTo(2.2 * 1.04, 2)
   })
 
-  it('sits outside the rock it outlines', () => {
-    const geometry = buildRockStrokeGeometry(ROCK_STROKE_WIDTH, 1)
+  // The whole outline lives or dies on this. A hull smaller than the rock is
+  // swallowed by it and renders nothing at all, silently.
+  it.each([1, 2.2, 6.5])('clears the surface of a rock of radius %s', (radius) => {
+    const geometry = buildRockStrokeGeometry(radius, ROCK_STROKE_WIDTH, 1)
     const radii = Array.from({ length: geometry.getAttribute('position').count }, (_, i) =>
       radiusAt(geometry, i)
     )
 
-    expect(Math.min(...radii)).toBeGreaterThanOrEqual(1)
+    expect(Math.min(...radii)).toBeGreaterThanOrEqual(radius)
   })
 
   // A UV sphere stacks a whole ring of vertices at each pole and duplicates
   // every vertex down the seam. Displacing coincident vertices differently is
   // what tears a sphere open, so they have to land back on top of each other.
   it('keeps coincident vertices coincident', () => {
-    const geometry = buildRockStrokeGeometry(0.05, 2)
+    const geometry = buildRockStrokeGeometry(2.2, 0.05, 2)
     const position = geometry.getAttribute('position')
     const byKey = new Map<string, number[]>()
     Array.from({ length: position.count }).forEach((_, index) => {
-      const source = new THREE.SphereGeometry(1, ROCK_STROKE_SEGMENTS, ROCK_STROKE_SEGMENTS / 2)
+      const source = new THREE.SphereGeometry(2.2, ROCK_STROKE_SEGMENTS, ROCK_STROKE_SEGMENTS / 2)
       const original = source.getAttribute('position')
       const key = [original.getX(index), original.getY(index), original.getZ(index)]
         .map((value) => value.toFixed(4))
@@ -92,13 +94,13 @@ describe('buildRockStrokeGeometry', () => {
   })
 
   it('drops normals, which an unlit hull never reads', () => {
-    expect(buildRockStrokeGeometry(0.04, 1).getAttribute('normal')).toBeUndefined()
+    expect(buildRockStrokeGeometry(2.2, 0.04, 1).getAttribute('normal')).toBeUndefined()
   })
 })
 
 describe('attachRockStroke', () => {
   it('parents the outline to the rock so it inherits every transform', () => {
-    const rock = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8))
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     const hull = attachRockStroke(rock, 0.04, 1)
 
@@ -109,7 +111,7 @@ describe('attachRockStroke', () => {
   // Only the back faces survive, which is what leaves a rim rather than a shell
   // covering the rock entirely.
   it('draws back faces only', () => {
-    const rock = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8))
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     const hull = attachRockStroke(rock, 0.04, 1)
 
@@ -117,7 +119,7 @@ describe('attachRockStroke', () => {
   })
 
   it('replaces an outline rather than stacking a second one on the rock', () => {
-    const rock = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8))
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     attachRockStroke(rock, 0.04, 1)
     attachRockStroke(rock, 0.08, 0.5)
@@ -125,8 +127,21 @@ describe('attachRockStroke', () => {
     expect(rock.children.filter((child) => child.name === ROCK_STROKE_NAME)).toHaveLength(1)
   })
 
+  // The rock carries its size in its geometry and leaves its scale at one, so a
+  // hull built at unit size vanishes inside it. Measuring the radius off the
+  // mesh is what stops a caller getting this wrong.
+  it.each([1, 2.2, 6.5])('wraps a rock of radius %s rather than hiding inside it', (radius) => {
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(radius, 8, 8))
+
+    const hull = attachRockStroke(rock, 0.04, 1)
+    const position = hull.geometry.getAttribute('position')
+    const radii = Array.from({ length: position.count }, (_, i) => radiusAt(hull.geometry, i))
+
+    expect(Math.min(...radii)).toBeGreaterThan(radius)
+  })
+
   it('casts no shadow, being a drawing rather than a solid', () => {
-    const rock = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8))
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8))
 
     expect(attachRockStroke(rock, 0.04, 1).castShadow).toBe(false)
   })

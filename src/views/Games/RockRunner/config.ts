@@ -121,7 +121,9 @@ export const STROKE_WIDTH_VARIATION = 0.45
 // covers its inside and only the rim survives.
 export const ROCK_STROKE_NAME = 'rock-stroke'
 // Relative to the rock's own radius, so it survives the size slider unchanged.
-export const ROCK_STROKE_WIDTH = 0.035
+// Reads as ink at this weight: the rock is dark and the line is nearly black,
+// so an outline thin enough to work against pale ground disappears on it.
+export const ROCK_STROKE_WIDTH = 0.09
 export const ROCK_STROKE_WOBBLE = 0.55
 // Far below the rock's own segment count. The hull is only ever seen as a rim a
 // few pixels wide, where the difference between 24 and 192 segments is nothing

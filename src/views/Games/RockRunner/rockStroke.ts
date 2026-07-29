@@ -48,23 +48,26 @@ export const strokeThicknessAt = (
  * outline pass because it costs one extra draw call and produces a hard edge
  * rather than a soft halo.
  *
- * The radius is left at one and the mesh scaled by its parent instead, so a rock
- * resized from the panel takes its outline with it without a rebuild.
+ * Built at the rock's own radius rather than at one. The rock carries its size
+ * in its geometry and leaves its scale at one, so a unit hull parented to it
+ * sits entirely inside the ball and is never seen.
  *
- * @param thickness - Base thickness of the outline, relative to a unit rock
+ * @param radius - Radius of the rock being outlined, in its local space
+ * @param thickness - Outline thickness as a fraction of that radius
  * @param wobble - How much that thickness varies around the ball
- * @returns Geometry for the hull, in unit-rock space
+ * @returns Geometry for the hull, in the rock's own local space
  */
 export const buildRockStrokeGeometry = (
+  radius: number,
   thickness: number,
   wobble: number
 ): THREE.BufferGeometry => {
-  const geometry = new THREE.SphereGeometry(1, ROCK_STROKE_SEGMENTS, ROCK_STROKE_SEGMENTS / 2)
+  const geometry = new THREE.SphereGeometry(radius, ROCK_STROKE_SEGMENTS, ROCK_STROKE_SEGMENTS / 2)
   const position = geometry.getAttribute('position')
   const direction = new THREE.Vector3()
   Array.from({ length: position.count }).forEach((_, index) => {
     direction.fromBufferAttribute(position, index).normalize()
-    const distance = 1 + strokeThicknessAt(direction, thickness, wobble)
+    const distance = radius * (1 + strokeThicknessAt(direction, thickness, wobble))
     position.setXYZ(index, direction.x * distance, direction.y * distance, direction.z * distance)
   })
   position.needsUpdate = true
@@ -79,6 +82,10 @@ export const buildRockStrokeGeometry = (
  *
  * Parented to the rock rather than tracked alongside it, so it inherits position,
  * rotation and scale for free and is removed when the rock is.
+ *
+ * The radius is measured off the rock's own geometry rather than passed in. A
+ * hull told the wrong radius disappears inside the ball without erroring, which
+ * is exactly the kind of mistake a caller should not be able to make.
  *
  * @param rock - The rock mesh to outline
  * @param thickness - Base thickness of the outline
@@ -96,8 +103,11 @@ export const attachRockStroke = (
     existing.geometry.dispose()
     if (existing.material instanceof THREE.Material) existing.material.dispose()
   }
+  const mesh = rock as THREE.Mesh
+  mesh.geometry?.computeBoundingSphere()
+  const radius = mesh.geometry?.boundingSphere?.radius ?? 1
   const hull = new THREE.Mesh(
-    buildRockStrokeGeometry(thickness, wobble),
+    buildRockStrokeGeometry(radius, thickness, wobble),
     new THREE.MeshBasicMaterial({ color: STROKE_COLOR, side: THREE.BackSide })
   )
   hull.name = ROCK_STROKE_NAME
