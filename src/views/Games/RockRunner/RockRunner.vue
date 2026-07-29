@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as THREE from 'three'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 import { useRockRunnerStore } from '@/stores/rockRunner'
 import { useRoomId } from '@/composables/useRoomId'
 import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
@@ -25,8 +26,10 @@ import TouchControl from '@/components/TouchControl.vue'
 import { useRockRun } from './game/useRockRun'
 import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
+import RockRunnerRules from './wizard/RockRunnerRules.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
 import { CONFIG_STORAGE_KEY } from './config'
+import { rockSurfaceById } from './elements/rockSurfaces'
 import type { CameraMode } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
@@ -44,6 +47,7 @@ const { phase, playerList, messages, hostId, runStartTime, trackSeed } = storeTo
 
 type StoredLobbyConfig = {
   trackSeed?: number
+  rockSurface?: string
 }
 
 const loadLobbyConfig = (): StoredLobbyConfig => {
@@ -63,6 +67,9 @@ const playerName = ref(
 )
 const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
 const selectedSeed = ref(storedLobbyConfig.trackSeed ?? Math.floor(Math.random() * MAX_SEED) + 1)
+// Kept through a reload like the seed and the profile: the rock a player picked
+// is part of how they left the lobby, not something to re-choose every visit.
+const selectedSurface = ref(rockSurfaceById(storedLobbyConfig.rockSurface ?? '').id)
 
 const { roomId, resolvedRoomId } = useRoomId()
 
@@ -101,6 +108,8 @@ const spawnGateIndex = computed(() => Math.max(0, sortedPeerIds.value.indexOf(lo
 
 const run = useRockRun({
   canvas: runCanvas,
+  routeName: String(useRoute().name ?? 'RockRunner'),
+  rockSurface: selectedSurface,
   seed: trackSeed,
   runStartTime,
   localPlayerName: playerName,
@@ -124,10 +133,19 @@ const formattedTime = computed(() => {
 })
 
 const persistLobbyConfig = (): void => {
-  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify({ trackSeed: selectedSeed.value }))
+  localStorage.setItem(
+    CONFIG_STORAGE_KEY,
+    JSON.stringify({ trackSeed: selectedSeed.value, rockSurface: selectedSurface.value })
+  )
 }
 
 const handleConfigChange = (key: string, value: string | number): void => {
+  if (key === 'rockSurface') {
+    selectedSurface.value = rockSurfaceById(String(value)).id
+    store.rockSurface = selectedSurface.value
+    persistLobbyConfig()
+    return
+  }
   if (key !== 'trackSeed') return
   selectedSeed.value = Math.max(1, Math.min(MAX_SEED, Math.round(Number(value))))
   persistLobbyConfig()
@@ -249,22 +267,16 @@ onUnmounted(() => {
     @leave-room="handleLeaveRoom"
   >
     <template #header>
-      <GameHeader :phase="phase" />
+      <GameHeader :phase="phase" back-to="wizard" @back-to-wizard="handleBackToLobby" />
     </template>
 
     <template #rules>
-      <ul>
-        <li>The rock rolls forward on its own and speeds up the further you get</li>
-        <li>Steer with <strong>A</strong>/<strong>D</strong> or the arrow keys</li>
-        <li>Jump with <strong>Space</strong> to clear the bumps in the ground</li>
-        <li>Trees, bushes and flowers are scenery only, so roll straight through them</li>
-        <li>Everyone in the room runs the same track, generated from the seed</li>
-        <li>Press <strong>C</strong> to switch third person, first person and free cameras</li>
-      </ul>
+      <RockRunnerRules />
     </template>
 
     <template v-if="phase === 'lobby'">
       <RockRunnerLobby
+        :rock-surface="selectedSurface"
         :player-name="playerName"
         :player-color="playerColor"
         :is-host="isHost"
@@ -293,7 +305,7 @@ onUnmounted(() => {
           @click="run.cycleCameraMode"
         >
           <Video class="rr__hud-icon" aria-hidden="true" />
-          <span class="rr__hud-label">Cam: {{ cameraLabel }}</span>
+          <span class="rr__hud-label rr__hud-label--camera">Cam: {{ cameraLabel }}</span>
           <LobbyUIKeyPill class="rr__hud-key" :keyboard="['C']" :gamepad="['△']" />
         </LobbyUIButton>
         <LobbyUIButton size="sm" variant="ghost" title="Exit the game" @click="requestExitGame">
@@ -381,6 +393,15 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* Only the camera label changes width as it is read: THIRD, FIRST and FREE are
+   different lengths, so without a reserved width the row shifts on every camera
+   change. Applying that reserve to every label instead padded a four-letter
+   word out to ten characters and pushed its key pill away from it. */
+.rr__hud-label--camera {
+  min-width: 10ch;
+  text-align: left;
+}
+
 .rr__hud-icon {
   display: none;
   width: 1.1em;
@@ -400,20 +421,29 @@ onUnmounted(() => {
   }
 }
 
+/* Both counters reserve the width of their longest reading rather than growing
+   into it. Tabular figures already keep the digits themselves equal, but the
+   HUD is centred, so gaining a digit widened the row and slid everything in it
+   sideways. Right-aligned, so the unit and the seconds stay put and only the
+   leading digits extend into the reserved space. */
 .rr__distance {
+  min-width: 7ch;
   font-family: var(--lui-font);
   font-size: var(--lui-text-medium);
   font-variant-numeric: tabular-nums;
   font-weight: 900;
   color: var(--lui-text-color);
+  text-align: right;
   text-shadow: var(--lui-text-shadow);
 }
 
 .rr__timer {
+  min-width: 7ch;
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
   font-variant-numeric: tabular-nums;
   color: var(--lui-text-color);
+  text-align: right;
   text-shadow: var(--lui-text-shadow);
 }
 

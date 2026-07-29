@@ -16,6 +16,7 @@ import { createLateralFogUniforms } from './lateralFog'
 import {
   CHUNK_STATIONS,
   CHUNK_LENGTH,
+  COLLIDER_OVERLAP_STATIONS,
   TRACK_BEHIND,
   CURVE_TERMS,
   MIN_TURN_RADIUS,
@@ -474,6 +475,67 @@ describe('createTrackChunkManager', () => {
     const offsets = terrain.geometry.getAttribute('lateralOffset')
     expect(offsets).toBeDefined()
     expect(offsets.count).toBe(terrain.geometry.getAttribute('position').count)
+  })
+
+  // Chunks are separate colliders and Rapier only smooths normals inside one
+  // mesh, so butting them exactly leaves a junction the rock catches on.
+  it('reaches each collider past its chunk so neighbours overlap', () => {
+    const { manager, world } = createManager()
+    const path = createTrackPath(2024)
+
+    manager.ensureAhead(0)
+
+    const [from, to] = chunkStationRange(0)
+    const spanned = path.stationsBetween(
+      from - COLLIDER_OVERLAP_STATIONS,
+      to + COLLIDER_OVERLAP_STATIONS
+    )
+    const plain = path.stationsBetween(from, to)
+    expect(spanned.length).toBeGreaterThan(plain.length)
+    expect(world.createCollider).toHaveBeenCalled()
+  })
+
+  it('keeps the visible deck butting exactly, so surfaces cannot z-fight', () => {
+    const { manager, scene } = createManager()
+    manager.ensureAhead(0)
+
+    const decks = scene.children
+      .filter((child) => child.name === 'track-ground')
+      .map((deck) => {
+        deck.geometry.computeBoundingBox()
+        return deck.geometry.boundingBox!
+      })
+
+    // Every deck spans exactly one chunk length along the path, no more.
+    decks.forEach((box) => {
+      const span = Math.hypot(box.max.x - box.min.x, box.max.z - box.min.z)
+      expect(span).toBeLessThan(CHUNK_LENGTH + TRACK_WIDTH * 2)
+    })
+  })
+
+  it('tints every live chunk of side ground at once', () => {
+    const { manager, scene } = createManager()
+    manager.ensureAhead(0)
+
+    manager.setTerrainTint(0xd39a92)
+
+    const strips = scene.children.filter((child) =>
+      child.name.startsWith('terrain-')
+    ) as THREE.Mesh[]
+    expect(strips.length).toBeGreaterThan(1)
+    strips.forEach((strip) =>
+      expect((strip.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xd39a92)
+    )
+  })
+
+  it('tints chunks spawned after the change too', () => {
+    const { manager, scene } = createManager()
+    manager.setTerrainTint(0xd9c096)
+
+    manager.ensureAhead(0)
+
+    const strip = scene.children.find((child) => child.name === 'terrain-left') as THREE.Mesh
+    expect((strip.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xd9c096)
   })
 
   it('reports the ground height from the path', () => {

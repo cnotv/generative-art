@@ -7,7 +7,7 @@ import type {
   TrackChunkManager,
   TrackDimensions,
   WallConfig
-} from './types'
+} from '../types'
 import {
   FOG_COLOR,
   FOG_ELEMENT_NAME,
@@ -18,14 +18,16 @@ import {
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
   TRACK_ELEMENT_NAME,
+  STROKE_COLOR,
+  STROKE_WIDTH,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
   WALL_THICKNESS
-} from './config'
+} from '../config'
 
 export const RR_WALL_CONTROLS = {
-  height: { min: 0.5, max: 20, step: 0.5, label: 'Height' },
+  height: { min: 0.5, max: 60, step: 0.5, label: 'Height' },
   thickness: { min: 0.2, max: 6, step: 0.2, label: 'Thickness' }
 }
 
@@ -36,6 +38,12 @@ export const MAX_TERRAIN_WIDTH = Math.floor(MIN_TURN_RADIUS * 2) - 2
 
 export const RR_TRACK_CONTROLS = {
   trackWidth: { min: 6, max: 40, step: 1, label: 'Path width' },
+  strokeWidth: { min: 0, max: 3, step: 0.05, label: 'Edge stroke width' },
+  // How far the drawn line wanders off the deck edge, as a multiple of the
+  // wander it was authored with. Zero is a ruled line, which is the one look
+  // the stroke exists to avoid.
+  strokeWander: { min: 0, max: 4, step: 0.1, label: 'Edge stroke wobble' },
+  strokeColor: { label: 'Edge stroke colour', color: true },
   terrainWidth: {
     min: TRACK_WIDTH,
     max: MAX_TERRAIN_WIDTH,
@@ -62,6 +70,8 @@ export type TrackPanelOptions = {
   getDistance: () => number
   scene: THREE.Scene
   lateralFog: LateralFogUniforms
+  /** Receives a setter the run loop calls as the staged palette advances. */
+  onStageColor?: (apply: (color: number) => void) => void
 }
 
 /**
@@ -79,7 +89,10 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
   const wall = reactive<WallConfig>({ height: WALL_HEIGHT, thickness: WALL_THICKNESS })
   const dimensions = reactive<TrackDimensions>({
     trackWidth: TRACK_WIDTH,
-    terrainWidth: TERRAIN_WIDTH
+    terrainWidth: TERRAIN_WIDTH,
+    strokeWidth: STROKE_WIDTH,
+    strokeWander: 1,
+    strokeColor: STROKE_COLOR
   })
 
   debugSceneStore.addSceneElement(
@@ -91,6 +104,12 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
       getValue: (path: string) => dimensions[path as keyof TrackDimensions],
       updateValue: (path: string, value: unknown) => {
         dimensions[path as keyof TrackDimensions] = value as number
+        // Colour alone never needs the ground rebuilt, so it takes the cheap
+        // path and leaves the chunks standing.
+        if (path === 'strokeColor') {
+          options.manager.setStrokeColor(dimensions.strokeColor)
+          return
+        }
         // The side ground can never be narrower than the path it flanks.
         if (dimensions.terrainWidth < dimensions.trackWidth) {
           dimensions.terrainWidth = dimensions.trackWidth
@@ -122,6 +141,10 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
     sideFar: FOG_SIDE_FAR
   })
 
+  // Editing the colour by hand takes it off the staged palette: touching a
+  // control should hand control over, not have the next milestone undo it.
+  let colorIsManual = false
+
   const applyFog = (): void => {
     const scene = options.scene
     scene.fog = new THREE.Fog(fog.color, fog.near, Math.max(fog.near + 1, fog.far))
@@ -139,11 +162,18 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
       schema: RR_FOG_CONTROLS,
       getValue: (path: string) => fog[path as keyof FogConfig],
       updateValue: (path: string, value: unknown) => {
+        if (path === 'color') colorIsManual = true
         fog[path as keyof FogConfig] = value as number
         applyFog()
       }
     }
   )
+
+  options.onStageColor?.((color: number) => {
+    if (colorIsManual || fog.color === color) return
+    fog.color = color
+    applyFog()
+  })
 
   return () => {
     debugSceneStore.removeSceneElement(WALL_ELEMENT_NAME)

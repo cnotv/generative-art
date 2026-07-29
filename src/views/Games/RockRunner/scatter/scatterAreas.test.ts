@@ -6,9 +6,6 @@ import { createTrackPath } from '../trackPath'
 import { SCATTER_AREAS } from './illustrations'
 import type { ScatterAreaConfig, ScatterAreaDefinition, ScatterInstance } from '../types'
 import {
-  BACKGROUND_BEHIND,
-  BACKGROUND_CHUNK_LENGTH,
-  BACKGROUND_LOOKAHEAD,
   SCATTER_BEHIND,
   SCATTER_CHUNK_LENGTH,
   SCATTER_DISPOSE_BEHIND,
@@ -18,9 +15,6 @@ import {
 const EXPECTED_CHUNKS = Math.ceil((SCATTER_LOOKAHEAD + SCATTER_BEHIND) / SCATTER_CHUNK_LENGTH)
 
 const treeDefinition = SCATTER_AREAS.find((area) => area.name === 'tree') as ScatterAreaDefinition
-const backgroundDefinition = SCATTER_AREAS.find(
-  (area) => area.name === 'background'
-) as ScatterAreaDefinition
 
 const config: ScatterAreaConfig = {
   center: [0, 0, 0],
@@ -66,21 +60,12 @@ const scatterMeshes = (scene: THREE.Scene): THREE.InstancedMesh[] =>
   )
 
 describe('scatterChunkSpan', () => {
-  it('gives side areas the shorter window', () => {
-    const span = scatterChunkSpan(treeDefinition)
+  it('gives every area the same streaming window', () => {
+    const span = scatterChunkSpan()
 
     expect(span.lookahead).toBe(SCATTER_LOOKAHEAD)
     expect(span.chunkLength).toBe(SCATTER_CHUNK_LENGTH)
     expect(span.behind).toBe(SCATTER_BEHIND)
-  })
-
-  it('reaches much further for the background', () => {
-    const span = scatterChunkSpan(backgroundDefinition)
-
-    expect(span.lookahead).toBe(BACKGROUND_LOOKAHEAD)
-    expect(span.chunkLength).toBe(BACKGROUND_CHUNK_LENGTH)
-    expect(span.behind).toBe(BACKGROUND_BEHIND)
-    expect(span.lookahead).toBeGreaterThan(SCATTER_LOOKAHEAD)
   })
 })
 
@@ -104,6 +89,30 @@ describe('groupInstancesByTexture', () => {
 })
 
 describe('createScatterAreaManager', () => {
+  // Ground built ahead already carries the illustrations for the stretch it
+  // belongs to, so nothing standing is swapped out from under the player.
+  it('stages each chunk from its own distance rather than the rock position', () => {
+    const scene = new THREE.Scene()
+    const asked: number[] = []
+    const manager = createScatterAreaManager({
+      scene,
+      path: createTrackPath(11),
+      definition: treeDefinition,
+      lateralFog: createLateralFogUniforms(0xffffff, 20, 40),
+      getConfig: () => config,
+      getTextures: (distance) => {
+        asked.push(distance)
+        return treeDefinition.textures
+      }
+    })
+
+    manager.ensureAhead(0)
+
+    expect(asked.length).toBeGreaterThan(1)
+    expect(new Set(asked).size).toBe(asked.length)
+    expect(Math.max(...asked)).toBeGreaterThan(Math.min(...asked))
+  })
+
   it('builds one instanced mesh per texture per chunk, not one mesh per billboard', () => {
     const { manager, scene } = createManager()
 

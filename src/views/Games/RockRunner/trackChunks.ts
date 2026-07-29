@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { buildSweepGeometry, geometryWorldTriangles } from '@/utils/sweptGeometry'
 import { applyLateralFog, sweepLateralOffsets } from './lateralFog'
+import { buildStrokeGeometry, strokePhases } from './elements/trackStroke'
 import type { CrossSection, SweepStation } from '@/types/sweptGeometry'
 import groundTextureUrl from '@/assets/images/illustrations/ground.webp'
 import type {
@@ -16,6 +17,7 @@ import type {
 import {
   CHUNK_LENGTH,
   CHUNK_STATIONS,
+  COLLIDER_OVERLAP_STATIONS,
   DECK_COLOR,
   DECK_FRICTION,
   DECK_SEGMENTS_ACROSS,
@@ -27,6 +29,8 @@ import {
   GROUND_TEXTURE_REPEAT_ACROSS,
   GROUND_TEXTURE_REPEAT_ALONG,
   STATION_SPACING,
+  STROKE_COLOR,
+  STROKE_WIDTH,
   TERRAIN_DROP,
   TERRAIN_SEGMENTS_ACROSS,
   TERRAIN_THICKNESS,
@@ -217,6 +221,9 @@ type ChunkBuildContext = {
   path: TrackPath
   material: THREE.Material
   terrainMaterial: THREE.Material
+  strokeMaterial: THREE.Material
+  strokePhases: { wander: number[]; width: number[] }
+  strokeShape: { width: number; wander: number }
   wall: WallConfig
   width: number
   terrainWidth: number
@@ -344,14 +351,37 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
     (_, offset) => fromIndex + offset
   )
   const stations = context.path.stationsBetween(fromIndex, toIndex)
+  // Reaches a station further than the visible chunk so neighbouring colliders
+  // overlap and neither end cap is ever exposed to the rock.
+  const colliderStations = context.path.stationsBetween(
+    fromIndex - COLLIDER_OVERLAP_STATIONS,
+    toIndex + COLLIDER_OVERLAP_STATIONS
+  )
   const mesh = buildDeckMesh(context, stations)
   const terrainMeshes = buildTerrainMeshes(context, stations, stationIndices)
   const wallMeshes = buildWallMeshes(context, stations)
+  // Anchored to the absolute station index, not to the chunk: the wander is a
+  // function of distance along the track, so neighbouring chunks agree on where
+  // the line runs and the seam between them is invisible.
+  const strokeMesh = new THREE.Mesh(
+    buildStrokeGeometry(
+      stations,
+      fromIndex,
+      context.width,
+      context.strokePhases,
+      context.strokeShape
+    ),
+    context.strokeMaterial
+  )
+  strokeMesh.name = 'track-stroke'
+  strokeMesh.castShadow = false
+  strokeMesh.receiveShadow = false
+  context.scene.add(strokeMesh)
 
   // One collider for deck and walls together, so their junction is an internal
   // edge Rapier can correct rather than a seam between two meshes.
   const colliderGeometry = buildSweepGeometry(
-    stations,
+    colliderStations,
     deckWithWallsCrossSection(context.width, context.wall, DECK_THICKNESS)
   )
   const body = context.world.createRigidBody(RAPIER.RigidBodyDesc.fixed())
@@ -365,7 +395,7 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
     wallMeshes,
     dispose: () => {
       context.world.removeRigidBody(body)
-      ;[mesh, ...terrainMeshes, ...wallMeshes].forEach((chunkMesh) => {
+      ;[mesh, strokeMesh, ...terrainMeshes, ...wallMeshes].forEach((chunkMesh) => {
         context.scene.remove(chunkMesh)
         chunkMesh.geometry.dispose()
       })
@@ -396,6 +426,12 @@ export type TrackChunkManagerOptions = {
 export const createTrackChunkManager = (options: TrackChunkManagerOptions): TrackChunkManager => {
   const groundTexture = createGroundTexture()
   const material = new THREE.MeshStandardMaterial({ color: DECK_COLOR, roughness: 1 })
+  // Unlit: an ink line that takes the scene's shading stops reading as ink and
+  // starts reading as a dark strip of ground.
+  const strokeMaterial = applyLateralFog(
+    new THREE.MeshBasicMaterial({ color: STROKE_COLOR }),
+    options.lateralFog
+  )
   // The surrounding countryside is the same ground, shaded down a little so the
   // drivable deck still reads as a path through it.
   const terrainMaterial = new THREE.MeshStandardMaterial({
@@ -411,6 +447,9 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
   applyLateralFog(terrainMaterial, options.lateralFog)
   const context: ChunkBuildContext = {
     scene: options.scene,
+    strokeMaterial,
+    strokePhases: strokePhases(options.path.seed),
+    strokeShape: { width: STROKE_WIDTH, wander: 1 },
     world: options.world,
     path: options.path,
     material,
@@ -469,7 +508,22 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
   const setDimensions = (dimensions: TrackDimensions, distance: number): void => {
     context.width = dimensions.trackWidth
     context.terrainWidth = dimensions.terrainWidth
+    context.strokeShape = { width: dimensions.strokeWidth, wander: dimensions.strokeWander }
     rebuild(distance)
+  }
+
+  // One shared material across every live chunk, so the whole countryside
+  // shifts together rather than a stage boundary drawing a line across it.
+  const setTerrainTint = (color: number): void => {
+    if (terrainMaterial.color.getHex() === color) return
+    terrainMaterial.color.setHex(color)
+  }
+
+  // A material change rather than a rebuild: the stroke's colour is one shared
+  // material, so every chunk already drawn picks it up without being rebuilt.
+  const setStrokeColor = (color: number): void => {
+    if (strokeMaterial.color.getHex() === color) return
+    strokeMaterial.color.setHex(color)
   }
 
   const setWallsVisible = (visible: boolean): void => {
@@ -487,11 +541,15 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     rebuild,
     setWall,
     setDimensions,
+    deckWidth: () => context.width,
+    setTerrainTint,
+    setStrokeColor,
     setWallsVisible,
     groundHeightAt: (distance: number) => options.path.sampleAt(distance).position.y,
     teardown: () => {
       disposeAll()
       material.dispose()
+      strokeMaterial.dispose()
       terrainMaterial.dispose()
       groundTexture.dispose()
     }

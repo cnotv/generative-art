@@ -29,6 +29,11 @@ export type TrackPath = {
 export type TrackDimensions = {
   trackWidth: number
   terrainWidth: number
+  /** Base thickness of the drawn edge, before its own variation. */
+  strokeWidth: number
+  /** Multiplier on how far that edge wanders; zero rules it straight. */
+  strokeWander: number
+  strokeColor: number
 }
 
 /** Uniforms shared by every material that fades sideways into the fog. */
@@ -45,6 +50,20 @@ export type FogConfig = {
   far: number
   sideNear: number
   sideFar: number
+}
+
+/** One term of a sine sum, used for the drawn edge's wander and thickness. */
+export type StrokeTerm = {
+  amplitude: number
+  wavelength: number
+}
+
+export type StrokeTerms = StrokeTerm[]
+
+/** Where one edge stroke's inner and outer sides sit at a station. */
+export type StrokeShape = {
+  inner: number
+  outer: number
 }
 
 /** Height and thickness of the invisible containment walls flanking the deck. */
@@ -69,16 +88,21 @@ export type TrackChunkManager = {
   rebuild: (distance: number) => void
   setWall: (wall: WallConfig, distance: number) => void
   setDimensions: (dimensions: TrackDimensions, distance: number) => void
+  setTerrainTint: (color: number) => void
+  /** The drawn edge's ink, changed without rebuilding the chunks that carry it. */
+  setStrokeColor: (color: number) => void
   setWallsVisible: (visible: boolean) => void
   groundHeightAt: (distance: number) => number
+  /** The deck width currently built, which the panel can change mid-run. */
+  deckWidth: () => number
   teardown: () => void
 }
 
 /**
- * Where an area scatters relative to the track: beside it, on its surface,
- * across both, or far out on the horizon.
+ * Where an area scatters relative to the track: beside it, on its surface, or
+ * across both.
  */
-export type ScatterPlacement = 'sides' | 'track' | 'everywhere' | 'background'
+export type ScatterPlacement = 'sides' | 'track' | 'everywhere'
 
 /** One illustration family dressed onto the world through a texture area. */
 export type ScatterAreaDefinition = {
@@ -92,10 +116,18 @@ export type ScatterAreaDefinition = {
   heightOffset: number
   baseSize: [number, number, number]
   variation: [number, number, number]
+  /**
+   * Illustrations to draw from as the run goes on, one entry per stage of
+   * SCATTER_STAGE_LENGTH. The last is held once the rock is past it. Areas
+   * without stages keep `textures` throughout.
+   */
+  textureStages?: ScatterTexture[][]
   /** Fraction of the base size, defaulting to SCATTER_SIZE_VARIATION. */
   sizeVariation?: number
   /** Degrees off the local heading, defaulting to SCATTER_ROTATION_VARIATION. */
   rotationVariation?: number
+  /** Whether instances may be reflected about their vertical axis. */
+  flipY?: boolean
   seed: number
 }
 
@@ -109,6 +141,8 @@ export type ScatterInstance = {
   width: number
   height: number
   textureIndex: number
+  /** Drawn reflected about its vertical axis, so a family does not all face one way. */
+  mirrored: boolean
 }
 
 /** One texture an area can draw from, matching the Textures panel's shape. */
@@ -156,6 +190,93 @@ export type ScatterAreaConfig = {
   heightOffset: number
   seed: number
   opacity: number
+  /** Whether instances may be reflected about their vertical axis. */
+  flipY: boolean
+}
+
+/** One pooled debris chip thrown up behind the rock. */
+export type DebrisParticle = {
+  position: THREE.Vector3
+  velocity: THREE.Vector3
+  life: number
+  maxLife: number
+  size: number
+  angle: number
+  spin: number
+  colorIndex: number
+}
+
+/** Timers deciding whether a press becomes a jump this frame. */
+export type JumpGate = {
+  /** Seconds a press stays remembered while the rock is still airborne. */
+  buffer: number
+  /** Seconds the rock still counts as grounded after leaving the deck. */
+  coyote: number
+  cooldown: number
+}
+
+/** One look a rock can be dressed in, picked in the lobby before the run. */
+export type RockSurface = {
+  id: string
+  label: string
+  colorUrl: string
+  /** Whether the scanned relief maps describe this surface, or would emboss another stone's cracks onto it. */
+  relief: boolean
+  tint: number
+}
+
+/** How each of the three cameras follows the rock. */
+export type RunCameraConfig = {
+  thirdPersonHeight: number
+  thirdPersonBack: number
+  firstPersonHeight: number
+  firstPersonForward: number
+  firstPersonLookAhead: number
+  freeCamHeight: number
+  freeCamBack: number
+  transitionSeconds: number
+}
+
+/** Every tunable the rock is driven and simulated with, editable from the panel. */
+export type RockConfig = {
+  forwardImpulse: number
+  baseMaxSpeed: number
+  maxSpeedCeiling: number
+  speedRampDistance: number
+  steerImpulse: number
+  maxLateralSpeed: number
+  jumpImpulse: number
+  jumpCooldown: number
+  radius: number
+  gravityScale: number
+  mass: number
+  strokeWidth: number
+  strokeWobble: number
+  strokeColor: number
+  friction: number
+  restitution: number
+  linearDamping: number
+  angularDamping: number
+  tint: number
+}
+
+export type DebrisEmitOptions = {
+  origin: THREE.Vector3
+  forward: THREE.Vector3
+  right: THREE.Vector3
+  /** Three values in [0, 1) driving spread, size, spin and colour. */
+  samples: [number, number, number]
+  /** Seconds the chip lives, which is what sets how far the trail reaches back. */
+  lifetime: number
+}
+
+/** A pooled trail of debris drawn as two instanced meshes, fill and stroke. */
+export type DebrisField = {
+  emit: (options: DebrisEmitOptions) => void
+  update: (delta: number) => void
+  shouldEmit: (delta: number, interval: number) => boolean
+  liveCount: () => number
+  teardown: () => void
 }
 
 export type CameraMode = 'first' | 'third' | 'free'

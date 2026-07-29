@@ -1,24 +1,35 @@
 import { describe, it, expect } from 'vitest'
 import {
   advanceDistance,
+  debrisBurstSize,
+  debrisLifetime,
   speedCapAt,
   steerDirection,
   speedAlong,
   isGrounded,
+  isResting,
+  advanceJumpGate,
+  jumpReady,
   forwardImpulseMagnitude,
   frameScaledImpulse,
-  steerImpulseMagnitude
+  steerImpulseMagnitude,
+  wallStandoff,
+  lateralOffset
 } from './rockMotion'
 import { createTrackPath } from '../trackPath'
 import {
   BASE_MAX_SPEED,
   MAX_SPEED_CEILING,
   SPEED_RAMP_DISTANCE,
-  GROUND_PROBE_DISTANCE,
+  GROUND_PROBE_SLACK,
+  JUMP_RISING_TOLERANCE,
+  DEBRIS_GROUND_TOLERANCE,
+  WALL_INSET,
   ROCK_RADIUS
 } from '../config'
 
 const path = createTrackPath(77)
+const PROBE = ROCK_RADIUS + GROUND_PROBE_SLACK
 
 describe('advanceDistance', () => {
   it('stays put when the rock sits on the station', () => {
@@ -76,11 +87,15 @@ describe('speedCapAt', () => {
     [SPEED_RAMP_DISTANCE * 10, MAX_SPEED_CEILING],
     [SPEED_RAMP_DISTANCE / 2, (BASE_MAX_SPEED + MAX_SPEED_CEILING) / 2]
   ])('at %f the cap is %f', (distance, expected) => {
-    expect(speedCapAt(distance)).toBeCloseTo(expected)
+    expect(
+      speedCapAt(distance, BASE_MAX_SPEED, MAX_SPEED_CEILING, SPEED_RAMP_DISTANCE)
+    ).toBeCloseTo(expected)
   })
 
   it('never dips below the starting cap', () => {
-    expect(speedCapAt(-500)).toBe(BASE_MAX_SPEED)
+    expect(speedCapAt(-500, BASE_MAX_SPEED, MAX_SPEED_CEILING, SPEED_RAMP_DISTANCE)).toBe(
+      BASE_MAX_SPEED
+    )
   })
 })
 
@@ -112,23 +127,23 @@ describe('speedAlong', () => {
 
 describe('isGrounded', () => {
   it('is grounded when resting on the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 0)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 
   it('is not grounded once clear of the probe distance', () => {
-    expect(isGrounded(GROUND_PROBE_DISTANCE + 0.1, 0, 0)).toBe(false)
+    expect(isGrounded(PROBE + 0.1, 0, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(false)
   })
 
   it('is not grounded while rising, so jumps cannot stack', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, 5)).toBe(false)
+    expect(isGrounded(ROCK_RADIUS, 0, 5, PROBE, JUMP_RISING_TOLERANCE)).toBe(false)
   })
 
   it('is grounded while falling onto the deck', () => {
-    expect(isGrounded(ROCK_RADIUS, 0, -4)).toBe(true)
+    expect(isGrounded(ROCK_RADIUS, 0, -4, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 
   it('follows the deck uphill', () => {
-    expect(isGrounded(40 + ROCK_RADIUS, 40, 0)).toBe(true)
+    expect(isGrounded(40 + ROCK_RADIUS, 40, 0, PROBE, JUMP_RISING_TOLERANCE)).toBe(true)
   })
 })
 
@@ -145,7 +160,9 @@ describe('forwardImpulseMagnitude', () => {
 
 describe('steerImpulseMagnitude', () => {
   it('applies nothing without input', () => {
-    expect(steerImpulseMagnitude(0, 0, 12, 4)).toBe(0)
+    expect(
+      steerImpulseMagnitude(0, 4, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
   })
 
   it.each([
@@ -154,17 +171,47 @@ describe('steerImpulseMagnitude', () => {
     [1, 11.9, 4],
     [-1, -11.9, -4]
   ])('steer %i at lateral speed %f applies %f', (steer, lateral, expected) => {
-    expect(steerImpulseMagnitude(steer, lateral, 12, 4)).toBe(expected)
+    expect(
+      steerImpulseMagnitude(steer, 4, {
+        lateralSpeed: lateral,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(expected)
   })
 
   it('stops pushing once the lateral cap is reached', () => {
-    expect(steerImpulseMagnitude(1, 12, 12, 4)).toBe(0)
-    expect(steerImpulseMagnitude(-1, -12, 12, 4)).toBe(0)
+    expect(
+      steerImpulseMagnitude(1, 4, { lateralSpeed: 12, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
+    expect(
+      steerImpulseMagnitude(-1, 4, {
+        lateralSpeed: -12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(0)
   })
 
   it('still allows steering back from the cap', () => {
-    expect(steerImpulseMagnitude(-1, 12, 12, 4)).toBe(-4)
-    expect(steerImpulseMagnitude(1, -12, 12, 4)).toBe(4)
+    expect(
+      steerImpulseMagnitude(-1, 4, {
+        lateralSpeed: 12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(-4)
+    expect(
+      steerImpulseMagnitude(1, 4, {
+        lateralSpeed: -12,
+        speedCap: 12,
+        offset: 0,
+        standoff: Infinity
+      })
+    ).toBe(4)
   })
 })
 
@@ -196,5 +243,306 @@ describe('frameScaledImpulse', () => {
 
   it('never returns a negative impulse for a zero frame', () => {
     expect(frameScaledImpulse(60, 0)).toBe(0)
+  })
+})
+
+describe('debrisBurstSize', () => {
+  it('throws the full spray at the speed cap', () => {
+    expect(debrisBurstSize(20, 20, 8, 1)).toBe(8)
+  })
+
+  it('throws the floor while barely moving', () => {
+    expect(debrisBurstSize(0, 20, 8, 1)).toBe(1)
+  })
+
+  // Squared, not linear: scaled linearly a rock barely moving still rounded up
+  // to a chip every tick, and the tick is fast enough that "the smallest spray"
+  // was fifty chips a second.
+  it('holds at nothing until the rock is genuinely moving', () => {
+    expect(debrisBurstSize(4, 20, 8, 0)).toBe(0)
+  })
+
+  it('ramps hard once past that', () => {
+    expect(debrisBurstSize(10, 20, 8, 0)).toBe(2)
+    expect(debrisBurstSize(15, 20, 8, 0)).toBe(5)
+  })
+
+  it('rises faster near the cap than far from it', () => {
+    const low = debrisBurstSize(10, 20, 8, 0) - debrisBurstSize(5, 20, 8, 0)
+    const high = debrisBurstSize(20, 20, 8, 0) - debrisBurstSize(15, 20, 8, 0)
+
+    expect(high).toBeGreaterThan(low)
+  })
+
+  // The cap ramps over a run, so a fixed speed throws less as the cap rises.
+  it('is judged against the cap rather than an absolute speed', () => {
+    expect(debrisBurstSize(20, 40, 8, 1)).toBeLessThan(debrisBurstSize(20, 20, 8, 1))
+  })
+
+  it('never exceeds the full spray above the cap', () => {
+    expect(debrisBurstSize(500, 20, 8, 1)).toBe(8)
+  })
+
+  it('never drops below the floor', () => {
+    expect(debrisBurstSize(-5, 20, 8, 2)).toBe(2)
+  })
+
+  it('survives a zero cap', () => {
+    expect(debrisBurstSize(10, 0, 8, 1)).toBe(1)
+  })
+})
+
+describe('debrisLifetime', () => {
+  it('lives the full lifetime at the speed cap', () => {
+    expect(debrisLifetime(20, 20, 0.4, 0.14)).toBeCloseTo(0.4)
+  })
+
+  it('falls to the floor at a standstill', () => {
+    expect(debrisLifetime(0, 20, 0.4, 0.14)).toBeCloseTo(0.14)
+  })
+
+  // Linear rather than squared like the burst count: a trail that collapsed to
+  // nothing by half speed read as the effect breaking rather than as slowing.
+  it('sits halfway at half the cap', () => {
+    expect(debrisLifetime(10, 20, 0.4, 0.14)).toBeCloseTo(0.27)
+  })
+
+  it.each([
+    [-5, 0.14],
+    [40, 0.4]
+  ])('clamps speed %s to lifetime %s', (speed, expected) => {
+    expect(debrisLifetime(speed, 20, 0.4, 0.14)).toBeCloseTo(expected)
+  })
+
+  it('returns the floor when there is no cap to ramp against', () => {
+    expect(debrisLifetime(12, 0, 0.4, 0.14)).toBeCloseTo(0.14)
+  })
+
+  it('shortens the trail monotonically as the rock slows', () => {
+    const lifetimes = [20, 15, 10, 5, 0].map((speed) => debrisLifetime(speed, 20, 0.4, 0.14))
+
+    expect(lifetimes).toEqual([...lifetimes].sort((a, b) => b - a))
+  })
+})
+
+describe('panel-driven motion limits', () => {
+  // The panel edits these live, so the ramp has to be read from whatever it
+  // currently holds rather than from the figures the run started with.
+  it('ramps between whatever start and ceiling it is handed', () => {
+    expect(speedCapAt(0, 10, 30, 1000)).toBeCloseTo(10)
+    expect(speedCapAt(500, 10, 30, 1000)).toBeCloseTo(20)
+    expect(speedCapAt(1000, 10, 30, 1000)).toBeCloseTo(30)
+  })
+
+  it('survives a ramp distance dragged to zero rather than dividing by it', () => {
+    expect(Number.isFinite(speedCapAt(100, 10, 30, 0))).toBe(true)
+  })
+
+  it('grounds against the probe it is given, so a resized rock still lands', () => {
+    expect(isGrounded(6, 0, 0, 6.5, JUMP_RISING_TOLERANCE)).toBe(true)
+    expect(isGrounded(6, 0, 0, 2.5, JUMP_RISING_TOLERANCE)).toBe(false)
+  })
+})
+
+describe('wallStandoff', () => {
+  it('stops the rock a full radius short of the wall face', () => {
+    expect(wallStandoff(16, 2.2)).toBeCloseTo(16 / 2 + WALL_INSET - 2.2)
+  })
+
+  it('never goes negative on a deck narrower than the rock', () => {
+    expect(wallStandoff(2, 8)).toBe(0)
+  })
+
+  it('follows the deck width, which the panel can widen mid-run', () => {
+    expect(wallStandoff(40, 2.2)).toBeGreaterThan(wallStandoff(16, 2.2))
+  })
+})
+
+describe('lateralOffset', () => {
+  const right = { x: 1, z: 0 }
+
+  it.each([
+    [5, 3, 2],
+    [1, 3, -2],
+    [3, 3, 0]
+  ])('reads %s against a centre of %s as %s', (x, originX, expected) => {
+    expect(lateralOffset({ x, z: 0 }, { x: originX, z: 0 }, right)).toBeCloseTo(expected)
+  })
+})
+
+describe('steering into a wall', () => {
+  const standoff = wallStandoff(16, ROCK_RADIUS)
+
+  // A rock pinned to a wall never gains lateral speed, so the speed cap alone
+  // let the game press into it at full force for as long as the key was held.
+  // That force against the rock's grip is what stalled it at the track edge.
+  it('stops pushing once the rock is already against the wall', () => {
+    expect(
+      steerImpulseMagnitude(1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff,
+        standoff: standoff
+      })
+    ).toBe(0)
+  })
+
+  it('still steers while there is track left to cross', () => {
+    expect(
+      steerImpulseMagnitude(1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff - 1,
+        standoff: standoff
+      })
+    ).toBe(26)
+  })
+
+  it('lets the rock steer back off the wall it is against', () => {
+    expect(
+      steerImpulseMagnitude(-1, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: standoff,
+        standoff: standoff
+      })
+    ).toBe(-26)
+  })
+
+  it.each([
+    [1, 'right'],
+    [-1, 'left']
+  ])('blocks the %s wall as well as the other', (steer) => {
+    expect(
+      steerImpulseMagnitude(steer, 26, {
+        lateralSpeed: 0,
+        speedCap: 12,
+        offset: steer * standoff,
+        standoff: standoff
+      })
+    ).toBe(0)
+  })
+})
+
+describe('the jump gate', () => {
+  const idle = { buffer: 0, coyote: 0, cooldown: 0 }
+  const input = (over: Partial<Parameters<typeof advanceJumpGate>[2]> = {}) => ({
+    pressed: false,
+    grounded: false,
+    bufferSeconds: 0.15,
+    coyoteSeconds: 0.12,
+    ...over
+  })
+
+  it('fires immediately when pressed while grounded', () => {
+    const gate = advanceJumpGate(idle, 1 / 60, input({ pressed: true, grounded: true }))
+
+    expect(jumpReady(gate)).toBe(true)
+  })
+
+  it('does nothing on a press with no ground anywhere near', () => {
+    const gate = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+
+    expect(jumpReady(gate)).toBe(false)
+  })
+
+  // Cresting a hill lifts the rock off the deck for a few frames, and a strict
+  // ground check reads that as airborne and refuses the jump.
+  it('still jumps just after leaving the ground', () => {
+    const airborne = advanceJumpGate(idle, 1 / 60, input({ grounded: true }))
+    const later = advanceJumpGate(airborne, 0.05, input({ pressed: true }))
+
+    expect(jumpReady(later)).toBe(true)
+  })
+
+  it('stops jumping once the coyote window has run out', () => {
+    const airborne = advanceJumpGate(idle, 1 / 60, input({ grounded: true }))
+    const later = advanceJumpGate(airborne, 0.2, input({ pressed: true }))
+
+    expect(jumpReady(later)).toBe(false)
+  })
+
+  // Pressing a little early while still falling should land the jump, not be
+  // silently dropped on the floor.
+  it('remembers a press made just before touching down', () => {
+    const early = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+    const landed = advanceJumpGate(early, 0.05, input({ grounded: true }))
+
+    expect(jumpReady(landed)).toBe(true)
+  })
+
+  it('forgets a press made far too early', () => {
+    const early = advanceJumpGate(idle, 1 / 60, input({ pressed: true }))
+    const landed = advanceJumpGate(early, 0.5, input({ grounded: true }))
+
+    expect(jumpReady(landed)).toBe(false)
+  })
+
+  it('holds off while the cooldown is still running', () => {
+    const cooling = { buffer: 0.1, coyote: 0.1, cooldown: 0.2 }
+
+    expect(jumpReady(advanceJumpGate(cooling, 1 / 60, input({ grounded: true })))).toBe(false)
+  })
+
+  it('does not re-fire from a held key, which only counts as pressed once', () => {
+    const fired = { buffer: 0, coyote: 0, cooldown: 0.25 }
+    const held = advanceJumpGate(fired, 1 / 60, input({ grounded: true }))
+
+    expect(jumpReady(held)).toBe(false)
+  })
+})
+
+describe('isResting', () => {
+  // The generous jump probe and this tight one answer different questions. The
+  // jump wants to fire when a player expects it to; this decides where the
+  // falling gravity stops, so it has to mean actually touching the deck.
+  it('is far stricter than the probe the jump uses', () => {
+    expect(DEBRIS_GROUND_TOLERANCE).toBeLessThan(GROUND_PROBE_SLACK)
+  })
+
+  it.each([
+    [ROCK_RADIUS, true],
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE, true],
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE + 0.01, false],
+    [ROCK_RADIUS + DEBRIS_GROUND_TOLERANCE * 3, false]
+  ])('reads a centre %s above the deck as resting: %s', (height, expected) => {
+    expect(isResting(height, 0, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(expected)
+  })
+
+  it('follows the deck uphill rather than assuming a flat world', () => {
+    expect(isResting(40 + ROCK_RADIUS, 40, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(true)
+  })
+
+  it('tracks the rock radius, so a resized rock still registers', () => {
+    expect(isResting(6, 0, 6, DEBRIS_GROUND_TOLERANCE)).toBe(true)
+  })
+
+  // A rock lifted clear of the deck is falling, however slowly, and the heavy
+  // gravity is exactly what should be pulling it back down.
+  it('ignores velocity entirely, unlike the jump check', () => {
+    expect(isResting(ROCK_RADIUS, 0, ROCK_RADIUS, DEBRIS_GROUND_TOLERANCE)).toBe(true)
+  })
+})
+
+describe('the jump probe against the terrain', () => {
+  // Measured along the real track the rock clears its resting height on about
+  // half of all frames purely from rolling over the undulations, and is thrown
+  // upward constantly, so both halves of the check have to be generous.
+  it('allows a jump while the terrain has thrown the rock upward', () => {
+    expect(
+      isGrounded(ROCK_RADIUS, 0, 3, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(true)
+  })
+
+  it('allows a jump from a rock riding well above its resting height', () => {
+    expect(
+      isGrounded(ROCK_RADIUS + 1.5, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(true)
+  })
+
+  it('still refuses one from genuinely high up', () => {
+    expect(
+      isGrounded(ROCK_RADIUS + 6, 0, 0, ROCK_RADIUS + GROUND_PROBE_SLACK, JUMP_RISING_TOLERANCE)
+    ).toBe(false)
   })
 })

@@ -259,3 +259,24 @@ export interface AreaConfig {
   sizeVariation?: CoordinateTuple
   rotationVariation?: CoordinateTuple
 }
+
+/** Which of the three following cameras is active. */
+export type FollowCameraMode = 'third' | 'first' | 'free'
+
+/** Offsets for all three following cameras, plus how long a mode change takes. */
+export type FollowCameraConfig = {
+  thirdPersonHeight: number
+  thirdPersonBack: number
+  firstPersonHeight: number
+  firstPersonForward: number
+  firstPersonLookAhead: number
+  freeCamHeight: number
+  freeCamBack: number
+  transitionSeconds: number
+}
+
+/** Where a following camera should sit and what it should look at. */
+export type FollowCameraPlacement = {
+  position: THREE.Vector3
+  lookAt: THREE.Vector3
+}

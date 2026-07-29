@@ -4,6 +4,8 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 import { SCATTER_AREAS, SCATTER_ROTATION_VARIATION, SCATTER_SIZE_VARIATION } from './illustrations'
+import { MAX_SCATTER_DISTANCE } from '../config'
+import { texturesAt } from './textureStages'
 import type {
   ScatterAreaConfig,
   ScatterAreaDefinition,
@@ -26,6 +28,7 @@ export type ScatterAreaPanelConfig = {
     baseSize: { x: number; y: number; z: number }
     sizeVariation: number
     rotationVariation: number
+    flipY: boolean
   }
   scatter: {
     frequency: number
@@ -50,8 +53,20 @@ export type ScatterAreaPanelConfig = {
 export const RR_SCATTER_CONTROLS = {
   scatter: {
     frequency: { min: 0, max: 120, step: 1, label: 'Frequency (per 100m)' },
-    distanceMin: { min: 0, max: 600, step: 1, label: 'Distance from track (near)' },
-    distanceMax: { min: 0, max: 800, step: 1, label: 'Distance from track (far)' },
+    // Capped at the fold limit: a slider reaching past it only produces a band
+    // the inside of every bend turns inside out.
+    distanceMin: {
+      min: 0,
+      max: MAX_SCATTER_DISTANCE,
+      step: 1,
+      label: 'Distance from track (near)'
+    },
+    distanceMax: {
+      min: 0,
+      max: MAX_SCATTER_DISTANCE,
+      step: 1,
+      label: 'Distance from track (far)'
+    },
     heightOffset: { min: -20, max: 200, step: 0.5, label: 'Height above ground' }
   },
   textures: {
@@ -64,7 +79,11 @@ export const RR_SCATTER_CONTROLS = {
       sectionStart: true
     },
     sizeVariation: { min: 0, max: 1, step: 0.01, label: 'Size variation' },
-    rotationVariation: { min: 0, max: 45, step: 0.5, label: 'Rotation variation (deg)' }
+    rotationVariation: { min: 0, max: 45, step: 0.5, label: 'Rotation variation (deg)' },
+    // Reflects a share of the instances about their vertical axis. Mirroring
+    // every one would only give the same wood reversed; the variety comes from
+    // the two facings standing next to each other.
+    flipY: { label: 'Mirror some horizontally' }
   },
   area: {
     center: {
@@ -116,7 +135,8 @@ export const buildScatterPanelConfig = (
     },
     sizeVariation: definition.sizeVariation ?? SCATTER_SIZE_VARIATION,
     rotationVariation:
-      definition.rotationVariation ?? SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN
+      definition.rotationVariation ?? SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN,
+    flipY: definition.flipY ?? false
   },
   scatter: {
     frequency: definition.frequency,
@@ -144,6 +164,7 @@ export const toScatterAreaConfig = (panelConfig: ScatterAreaPanelConfig): Scatte
   ],
   sizeVariation: panelConfig.textures.sizeVariation,
   rotationVariation: panelConfig.textures.rotationVariation / DEGREES_PER_RADIAN,
+  flipY: panelConfig.textures.flipY,
   frequency: panelConfig.scatter.frequency,
   distanceMin: panelConfig.scatter.distanceMin,
   distanceMax: panelConfig.scatter.distanceMax,
@@ -155,7 +176,7 @@ export const toScatterAreaConfig = (panelConfig: ScatterAreaPanelConfig): Scatte
 export type ScatterPanelState = {
   configs: Record<string, ScatterAreaPanelConfig>
   areaConfig: (name: string) => ScatterAreaConfig
-  areaTextures: (name: string) => ScatterTexture[]
+  areaTextures: (name: string, distance: number) => ScatterTexture[]
   register: (managers: ScatterAreaManager[], getDistance: () => number) => void
   teardown: () => void
 }
@@ -184,10 +205,12 @@ export const createScatterPanel = (): ScatterPanelState => {
 
   const areaConfig = (name: string): ScatterAreaConfig => toScatterAreaConfig(toRaw(configs)[name])
 
-  const areaTextures = (name: string): ScatterTexture[] =>
-    textureStore.groups.find((group) => group.id === name)?.textures ??
-    SCATTER_AREAS.find((definition) => definition.name === name)?.textures ??
-    []
+  const areaTextures = (name: string, distance: number): ScatterTexture[] => {
+    const definition = SCATTER_AREAS.find((area) => area.name === name)
+    const live = textureStore.groups.find((group) => group.id === name)?.textures
+    if (!definition) return live ?? []
+    return texturesAt(definition, distance, live ?? definition.textures)
+  }
 
   const register = (managers: ScatterAreaManager[], getDistance: () => number): void => {
     const managerByName = new Map(managers.map((manager) => [manager.name, manager]))

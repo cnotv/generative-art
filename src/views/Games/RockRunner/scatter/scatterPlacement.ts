@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 import { seededRandomValues } from '@webgamekit/threejs'
 import type { ScatterAreaConfig, ScatterInstance, ScatterPlacement, TrackPath } from '../types'
-import { TRACK_HALF_WIDTH } from '../config'
+import { MAX_SCATTER_DISTANCE, TRACK_HALF_WIDTH } from '../config'
 
 /** Frequency is expressed per this many units of track, so the number reads as a percentage. */
 export const SCATTER_FREQUENCY_UNIT = 100
 
-const VALUES_PER_INSTANCE = 8
+const VALUES_PER_INSTANCE = 9
 const HALF = 0.5
 
 /**
@@ -52,8 +52,10 @@ export const lateralOffset = (
   bandSample: number
 ): number => {
   const side = sideSample < HALF ? -1 : 1
-  const low = Math.min(config.distanceMin, config.distanceMax)
-  const high = Math.max(config.distanceMin, config.distanceMax)
+  // Clamped rather than trusted. Past the path's tightest turn radius the inside
+  // of a bend folds through the centreline, so the two sides stop matching.
+  const low = Math.min(config.distanceMin, config.distanceMax, MAX_SCATTER_DISTANCE)
+  const high = Math.min(Math.max(config.distanceMin, config.distanceMax), MAX_SCATTER_DISTANCE)
   if (placement === 'track') {
     const limit = Math.min(high, TRACK_HALF_WIDTH)
     return side * (Math.min(low, limit) + bandSample * Math.max(0, limit - Math.min(low, limit)))
@@ -134,7 +136,11 @@ export const placeScatterInstances = (options: ScatterPlacementOptions): Scatter
       yaw: applyVariation(sample.yaw, config.rotationVariation, samples[base + 3]),
       width,
       height,
-      textureIndex: Math.min(textureCount - 1, Math.floor(samples[base + 5] * textureCount))
+      textureIndex: Math.min(textureCount - 1, Math.floor(samples[base + 5] * textureCount)),
+      // Half of them face the other way when the area allows it. Mirroring every
+      // instance would only produce the same wood reversed; the variety comes
+      // from the two facings standing side by side.
+      mirrored: (config.flipY ?? false) && samples[base + 8] < HALF
     }
   })
 }

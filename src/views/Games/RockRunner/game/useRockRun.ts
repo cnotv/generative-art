@@ -6,7 +6,6 @@ import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
-import rockColorUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Color.webp'
 import rockNormalUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_NormalGL.webp'
 import rockRoughnessUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Roughness.webp'
 import rockAmbientOcclusionUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_AmbientOcclusion.webp'
@@ -37,21 +36,39 @@ import { createTrackChunkManager } from '../trackChunks'
 import { createScatterAreaManager } from '../scatter/scatterAreas'
 import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
-import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
+import { DEFAULT_RUN_CAMERA, registerCameraElements } from '../panel/cameraPanel'
+import { registerRockElements } from '../panel/rockPanel'
+import { attachRockStroke } from '../elements/rockStroke'
+import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../elements/rockSurfaces'
+import { registerTrackElements, createElementVisibilityHandlers } from '../panel/trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
+import { createDebrisField } from './debris'
+import { stageColorAt } from '../scatter/textureStages'
 import {
   advanceDistance,
+  debrisBurstSize,
+  debrisLifetime,
   forwardImpulseMagnitude,
   frameScaledImpulse,
   isGrounded,
+  isResting,
+  advanceJumpGate,
+  jumpReady,
   speedAlong,
   speedCapAt,
   steerDirection,
-  steerImpulseMagnitude
+  steerImpulseMagnitude,
+  wallStandoff,
+  lateralOffset
 } from './rockMotion'
 import type {
   CameraMode,
+  DebrisField,
   LateralFogUniforms,
+  JumpGate,
+  RockConfig,
+  RunCameraConfig,
+  RockSurface,
   RockPosPayload,
   ScatterAreaManager,
   TrackChunkManager,
@@ -60,26 +77,33 @@ import type {
 import {
   CONTROLS_GAME_ID,
   COUNTDOWN_MS,
-  CAMERA_TRANSITION_SECONDS,
+  CHASE_BACK,
+  CHASE_HEIGHT,
+  DEBRIS_EMIT_INTERVAL,
+  DEBRIS_GROUND_COLOR,
+  DEBRIS_GROUND_TOLERANCE,
+  DEBRIS_LIFETIME,
+  DEBRIS_MIN_BURST,
+  DEBRIS_MIN_LIFETIME,
+  DEBRIS_MIN_SPEED,
+  DEBRIS_PER_BURST,
+  DEBRIS_TRAIL_OFFSET,
   DISTANCE_BROADCAST_MS,
-  FIRST_PERSON_FORWARD,
-  FIRST_PERSON_HEIGHT,
-  FIRST_PERSON_LOOK_AHEAD,
   FOG_COLOR,
   FOG_FAR,
+  FOG_STAGE_COLORS,
   FOG_NEAR,
   FOG_SIDE_FAR,
   FOG_SIDE_NEAR,
-  FREE_CAM_BACK,
-  FREE_CAM_HEIGHT,
-  FORWARD_IMPULSE,
-  JUMP_COOLDOWN_SECONDS,
-  JUMP_IMPULSE,
+  GROUND_PROBE_SLACK,
+  JUMP_BUFFER_SECONDS,
+  JUMP_COYOTE_SECONDS,
+  JUMP_RISING_TOLERANCE,
+  ROCK_MASS,
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
   LIGHT_DIRECTIONAL_POSITION,
-  MAX_LATERAL_SPEED,
   ROCK_ANGULAR_DAMPING,
   ROCK_FRICTION,
   ROCK_NORMAL_SCALE,
@@ -89,21 +113,22 @@ import {
   ROCK_DISPLACEMENT_SCALE,
   ROCK_RESTITUTION,
   GHOST_SEGMENTS,
-  ROCK_TINT,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
+  ROCK_STROKE_WIDTH,
+  ROCK_STROKE_WOBBLE,
   ROCK_TEXTURE_REPEAT,
-  ROCK_WEIGHT,
+  ROCK_GRAVITY_SCALE,
   SKY_COLOR,
+  TERRAIN_STAGE_TINTS,
+  ROCK_STROKE_COLOR,
   SPAWN_GATE_SPREAD,
-  STEER_IMPULSE,
+  TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
   WALL_THICKNESS
 } from '../config'
 import {
-  CAMERA_HEIGHT,
-  CAMERA_BACK,
   LIGHT_SHADOW_RADIUS,
   LIGHT_SHADOW_BIAS,
   LIGHT_SHADOW_CAMERA
@@ -124,9 +149,15 @@ export type UseRockRunDeps = {
   localPlayerColor?: Ref<string>
   spawnGateCount?: Ref<number>
   spawnGateIndex?: Ref<number>
+  rockSurface?: Ref<string>
+  /** Route name the config panel keys the rock's physics by. */
+  routeName?: string
 }
 
 type RunState = {
+  rockConfig: RockConfig | null
+  cameraConfig: RunCameraConfig | null
+  rockSurface: RockSurface | null
   rock: ComplexModel | null
   world: WorldReference | null
   scene: THREE.Scene | null
@@ -139,13 +170,15 @@ type RunState = {
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
   jumpActionHeld: boolean
-  jumpCooldown: number
+  jumpGate: JumpGate
   prevCameraMode: CameraMode
   cameraTransitionElapsed: number
   cameraTransitionStart: THREE.Vector3
   posAccumulator: number
   released: boolean
   rockMaps: RockMaps | null
+  debris: DebrisField | null
+  applyFogColor: ((color: number) => void) | null
   lateralFog: LateralFogUniforms | null
   rockTextures: THREE.Texture[]
   disposePanels: (() => void)[]
@@ -162,6 +195,7 @@ type RunReferences = {
 // allocated once here rather than inside the loop.
 const scratchImpulse = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
+const scratchOrigin = new THREE.Vector3()
 
 const CAMERA_ORDER: CameraMode[] = ['third', 'first', 'free']
 
@@ -176,7 +210,7 @@ const runMapping = (): ControlMapping => {
 // The rock uses the full PBR set rather than a colour map alone: the normal and
 // roughness maps are what make a sphere read as stone rather than as a painted
 // ball, and the displacement map needs the high segment count below to show.
-const loadRockMaps = () => {
+const loadRockMaps = (surface: RockSurface) => {
   const loader = new THREE.TextureLoader()
   const wrap = (url: string, isColor: boolean): THREE.Texture => {
     const texture = loader.load(url)
@@ -186,12 +220,15 @@ const loadRockMaps = () => {
     if (isColor) texture.colorSpace = THREE.SRGBColorSpace
     return texture
   }
+  // The relief maps come from the scanned stone and describe it alone. A painted
+  // tile lit by them wears another rock's cracks, so it gets colour only.
+  const relief = surface.relief
   return {
-    map: wrap(rockColorUrl, true),
-    normalMap: wrap(rockNormalUrl, false),
-    roughnessMap: wrap(rockRoughnessUrl, false),
-    aoMap: wrap(rockAmbientOcclusionUrl, false),
-    displacementMap: wrap(rockDisplacementUrl, false)
+    map: wrap(surface.colorUrl, true),
+    normalMap: relief ? wrap(rockNormalUrl, false) : null,
+    roughnessMap: relief ? wrap(rockRoughnessUrl, false) : null,
+    aoMap: relief ? wrap(rockAmbientOcclusionUrl, false) : null,
+    displacementMap: relief ? wrap(rockDisplacementUrl, false) : null
   }
 }
 
@@ -218,8 +255,8 @@ const applyRockMaterial = (
   material.normalMap = maps.normalMap
   material.roughnessMap = maps.roughnessMap
   material.aoMap = maps.aoMap
-  if (displaced) {
-    material.displacementMap = maps.displacementMap
+  material.displacementMap = displaced ? maps.displacementMap : null
+  if (displaced && maps.displacementMap) {
     material.displacementScale = ROCK_DISPLACEMENT_SCALE
     material.displacementBias = -ROCK_DISPLACEMENT_SCALE / 2
   }
@@ -235,7 +272,7 @@ const spawnRock = (
   scene: THREE.Scene,
   world: WorldReference,
   position: CoordinateTuple,
-  maps: RockMaps
+  dressing: { maps: RockMaps; tint: number; displaced: boolean }
 ): ComplexModel => {
   const rock = getBall(scene, world, {
     name: 'player-rock',
@@ -243,7 +280,8 @@ const spawnRock = (
     position,
     restitution: ROCK_RESTITUTION,
     friction: ROCK_FRICTION,
-    weight: ROCK_WEIGHT,
+    weight: ROCK_GRAVITY_SCALE,
+    mass: ROCK_MASS,
     roughness: 1,
     metalness: 0,
     segments: ROCK_SEGMENTS,
@@ -252,13 +290,14 @@ const spawnRock = (
   rock.userData.body.setLinearDamping(ROCK_LINEAR_DAMPING)
   rock.userData.body.setAngularDamping(ROCK_ANGULAR_DAMPING)
   rock.userData.body.enableCcd(true)
-  applyRockMaterial(rock as unknown as THREE.Mesh, maps, ROCK_TINT, true)
+  applyRockMaterial(rock as unknown as THREE.Mesh, dressing.maps, dressing.tint, dressing.displaced)
+  attachRockStroke(rock, ROCK_STROKE_WIDTH, ROCK_STROKE_WOBBLE)
   return rock
 }
 
 const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
   camera: {
-    position: [spawn[0], spawn[1] + CAMERA_HEIGHT, spawn[2] + CAMERA_BACK] as CoordinateTuple
+    position: [spawn[0], spawn[1] + CHASE_HEIGHT, spawn[2] + CHASE_BACK] as CoordinateTuple
   },
   orbit: { disabled: true },
   ground: false as const,
@@ -300,7 +339,13 @@ export const spawnPosition = (
 // would still let gravity build speed up each frame and slide it down the slope
 // it spawned on, so gravity is switched off for the wait and restored exactly
 // once when the run begins.
-const createStartGate = (state: RunState) => ({
+/**
+ * Holds the rock still through the countdown and releases it into the run.
+ *
+ * @param state - The run's mutable state, holding the rock
+ * @returns The gate's hold and release handlers
+ */
+export const createStartGate = (state: RunState) => ({
   hold: (): void => {
     if (!state.rock) return
     const body = state.rock.userData.body
@@ -313,10 +358,143 @@ const createStartGate = (state: RunState) => ({
   },
   release: (): void => {
     if (state.released || !state.rock) return
-    state.rock.userData.body.setGravityScale(1, true)
+    // Restores the rock's own gravity rather than the world's. Resetting to 1
+    // here looked like undoing what the countdown switched off and was not: it
+    // threw the setting away for the entire run. The panel is preferred over
+    // the constant so a gravity edited during the countdown survives it.
+    state.rock.userData.body.setGravityScale(
+      state.rockConfig?.gravityScale ?? ROCK_GRAVITY_SCALE,
+      true
+    )
     state.released = true
   }
 })
+
+// The rock rests one radius above the deck, so the probe has to follow the
+// radius rather than a figure fixed at the size it happened to spawn at.
+const groundProbeFor = (radius: number): number => radius + GROUND_PROBE_SLACK
+
+const speedCapFor = (rock: RockConfig, distance: number): number =>
+  speedCapAt(distance, rock.baseMaxSpeed, rock.maxSpeedCeiling, rock.speedRampDistance)
+
+// Chips appear just forward of the contact patch and are immediately left
+// behind, so they read as scuffed off the ground rather than falling out of the
+// ball. Kept out of the actions factory to hold that factory under its line
+// limit.
+const createDebrisEmitter =
+  (state: RunState) =>
+  (delta: number): void => {
+    if (!state.rock || !state.path || !state.debris) return
+    const body = state.rock.userData.body
+    const position = body.translation()
+    const sample = state.path.sampleAt(state.distance)
+    const rock = state.rockConfig
+    if (!rock) return
+    if (!isResting(position.y, sample.position.y, rock.radius, DEBRIS_GROUND_TOLERANCE)) return
+    const speed = Math.hypot(body.linvel().x, body.linvel().z)
+    if (speed < DEBRIS_MIN_SPEED) return
+    if (!state.debris.shouldEmit(delta, DEBRIS_EMIT_INTERVAL)) return
+    scratchOrigin.set(
+      position.x + sample.forward.x * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET,
+      sample.position.y,
+      position.z + sample.forward.z * ROCK_RADIUS * DEBRIS_TRAIL_OFFSET
+    )
+    // A burst rather than a single chip: at speed the rock outruns its own
+    // trail, so one per tick leaves the ground looking untouched. The spray
+    // grows with how fast it is going.
+    const cap = speedCapFor(rock, state.distance)
+    const burst = debrisBurstSize(speed, cap, DEBRIS_PER_BURST, DEBRIS_MIN_BURST)
+    const lifetime = debrisLifetime(speed, cap, DEBRIS_LIFETIME, DEBRIS_MIN_LIFETIME)
+    Array.from({ length: burst }).forEach(() =>
+      state.debris?.emit({
+        origin: scratchOrigin,
+        forward: sample.forward,
+        right: sample.right,
+        samples: [Math.random(), Math.random(), Math.random()],
+        lifetime
+      })
+    )
+  }
+
+// The fog and the side ground follow the rock rather than any one chunk: they
+// are a single colour over the whole scene, so they blend as it advances. The
+// scenery instead comes staged into each chunk as it is built.
+const createStageDriver = (state: RunState) => (): void => {
+  state.applyFogColor?.(stageColorAt(state.distance, FOG_STAGE_COLORS))
+  state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
+}
+
+const createJumpAction =
+  (state: RunState) =>
+  (delta: number): void => {
+    if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
+    const body = state.rock.userData.body
+    const rock = state.rockConfig
+    const held = 'jump' in state.controls.currentActions
+    const pressed = held && !state.jumpActionHeld
+    state.jumpActionHeld = held
+    state.jumpGate = advanceJumpGate(state.jumpGate, delta, {
+      pressed,
+      grounded: isGrounded(
+        body.translation().y,
+        state.path.sampleAt(state.distance).position.y,
+        body.linvel().y,
+        groundProbeFor(rock.radius),
+        JUMP_RISING_TOLERANCE
+      ),
+      bufferSeconds: JUMP_BUFFER_SECONDS,
+      coyoteSeconds: JUMP_COYOTE_SECONDS
+    })
+    if (!jumpReady(state.jumpGate)) return
+    scratchImpulse.x = 0
+    scratchImpulse.y = rock.jumpImpulse
+    scratchImpulse.z = 0
+    body.applyImpulse(scratchImpulse, true)
+    // Both graces are spent, or the same press would keep firing on the way up.
+    state.jumpGate = { buffer: 0, coyote: 0, cooldown: rock.jumpCooldown }
+  }
+
+const createDriveAction =
+  (state: RunState) =>
+  (delta: number): void => {
+    if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
+    const sample = state.path.sampleAt(state.distance)
+    const body = state.rock.userData.body
+    const velocity = body.linvel()
+    const rock = state.rockConfig
+    const forwardMagnitude = forwardImpulseMagnitude(
+      speedAlong(velocity, sample.forward),
+      speedCapFor(rock, state.distance),
+      rock.forwardImpulse
+    )
+    // Steering is capped by lateral speed, and a rock held against a wall never
+    // gains any, so the cap never engaged and the game pressed into the wall at
+    // full force for as long as the key was held. That normal force against the
+    // rock's grip is what brought it to a halt at the track edge, so steering
+    // stops at the wall itself rather than only at a speed.
+    const lateralMagnitude = steerImpulseMagnitude(
+      steerDirection(state.controls.currentActions),
+      rock.steerImpulse,
+      {
+        lateralSpeed: speedAlong(velocity, sample.right),
+        speedCap: rock.maxLateralSpeed,
+        offset: lateralOffset(body.translation(), sample.position, sample.right),
+        standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
+      }
+    )
+    if (forwardMagnitude === 0 && lateralMagnitude === 0) return
+    const forward = frameScaledImpulse(forwardMagnitude, delta)
+    const lateral = frameScaledImpulse(lateralMagnitude, delta)
+    scratchImpulse.x = sample.forward.x * forward + sample.right.x * lateral
+    scratchImpulse.y = 0
+    scratchImpulse.z = sample.forward.z * forward + sample.right.z * lateral
+    body.applyImpulse(scratchImpulse, true)
+  }
+
+// Splitting rise from fall is the only way to make the drop snappy without
+// flattening the jump, since one gravity otherwise governs both halves of the
+// arc. Set every frame rather than on the way past the apex: the rock can be
+// knocked out of a climb at any point, and a one-shot switch would miss it.
 
 const createRunActions = (
   deps: UseRockRunDeps,
@@ -325,6 +503,10 @@ const createRunActions = (
   getLocalStartTime: () => number
 ) => {
   const startGate = createStartGate(state)
+  const emitDebris = createDebrisEmitter(state)
+  const applyJump = createJumpAction(state)
+  const applyDrive = createDriveAction(state)
+  const advanceStage = createStageDriver(state)
 
   const setCameraMode = (mode: CameraMode): void => {
     refs.cameraMode.value = mode
@@ -342,48 +524,6 @@ const createRunActions = (
     state.cameraActionHeld = held
   }
 
-  const applyJump = (delta: number): void => {
-    if (!state.rock || !state.controls || !state.path) return
-    state.jumpCooldown = Math.max(0, state.jumpCooldown - delta)
-    const held = 'jump' in state.controls.currentActions
-    const pressed = held && !state.jumpActionHeld
-    state.jumpActionHeld = held
-    if (!pressed || state.jumpCooldown > 0) return
-    const body = state.rock.userData.body
-    const groundY = state.path.sampleAt(state.distance).position.y
-    if (!isGrounded(body.translation().y, groundY, body.linvel().y)) return
-    scratchImpulse.x = 0
-    scratchImpulse.y = JUMP_IMPULSE
-    scratchImpulse.z = 0
-    body.applyImpulse(scratchImpulse, true)
-    state.jumpCooldown = JUMP_COOLDOWN_SECONDS
-  }
-
-  const applyDrive = (delta: number): void => {
-    if (!state.rock || !state.controls || !state.path) return
-    const sample = state.path.sampleAt(state.distance)
-    const body = state.rock.userData.body
-    const velocity = body.linvel()
-    const forwardMagnitude = forwardImpulseMagnitude(
-      speedAlong(velocity, sample.forward),
-      speedCapAt(state.distance),
-      FORWARD_IMPULSE
-    )
-    const lateralMagnitude = steerImpulseMagnitude(
-      steerDirection(state.controls.currentActions),
-      speedAlong(velocity, sample.right),
-      MAX_LATERAL_SPEED,
-      STEER_IMPULSE
-    )
-    if (forwardMagnitude === 0 && lateralMagnitude === 0) return
-    const forward = frameScaledImpulse(forwardMagnitude, delta)
-    const lateral = frameScaledImpulse(lateralMagnitude, delta)
-    scratchImpulse.x = sample.forward.x * forward + sample.right.x * lateral
-    scratchImpulse.y = 0
-    scratchImpulse.z = sample.forward.z * forward + sample.right.z * lateral
-    body.applyImpulse(scratchImpulse, true)
-  }
-
   const applyInput = (getDelta: () => number): void => {
     handleCameraAction()
     if (!state.rock) return
@@ -395,6 +535,7 @@ const createRunActions = (
     updateSmoothedDirection(state.smoothedDirection, state.rock.userData.body.linvel())
     applyJump(getDelta())
     applyDrive(getDelta())
+    emitDebris(getDelta())
   }
 
   const updateDistance = (): void => {
@@ -407,7 +548,10 @@ const createRunActions = (
     refs.distance.value = state.distance
   }
 
+  // The fog walks the same stages as the scenery, so the wood changes character
+  // as a whole rather than the trees swapping inside an unchanged haze.
   const pumpWorld = (): void => {
+    advanceStage()
     state.track?.ensureAhead(state.distance)
     state.track?.prune(state.distance)
     state.scatter.forEach((area) => {
@@ -446,6 +590,7 @@ const createRunActions = (
     applyInput,
     updateDistance,
     pumpWorld,
+    updateDebris: (delta: number) => state.debris?.update(delta),
     updateCountdown,
     broadcastPosition
   }
@@ -483,6 +628,12 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
     start: 0,
     action: actions.pumpWorld
   })
+  timeline.addAction({
+    name: 'debris',
+    category: 'physics',
+    start: 0,
+    action: () => actions.updateDebris(getDelta())
+  })
   timeline.addAction(
     createDirectionalLightFollowAction(
       () => state.directionalLight,
@@ -502,6 +653,7 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
       } else {
         state.cameraTransitionElapsed += getDelta()
       }
+      const cameras = state.cameraConfig ?? DEFAULT_RUN_CAMERA
       applyRaceCamera({
         mode,
         camera,
@@ -509,12 +661,17 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
         orbit,
         smoothedDirection: state.smoothedDirection,
         transitionStart: state.cameraTransitionStart,
-        transitionAlpha: Math.min(1, state.cameraTransitionElapsed / CAMERA_TRANSITION_SECONDS),
-        firstPersonHeight: FIRST_PERSON_HEIGHT,
-        firstPersonForward: FIRST_PERSON_FORWARD,
-        firstPersonLookAhead: FIRST_PERSON_LOOK_AHEAD,
-        freeCamHeight: FREE_CAM_HEIGHT,
-        freeCamBack: FREE_CAM_BACK
+        transitionAlpha: Math.min(
+          1,
+          state.cameraTransitionElapsed / Math.max(0.01, cameras.transitionSeconds)
+        ),
+        thirdPersonHeight: cameras.thirdPersonHeight,
+        thirdPersonBack: cameras.thirdPersonBack,
+        firstPersonHeight: cameras.firstPersonHeight,
+        firstPersonForward: cameras.firstPersonForward,
+        firstPersonLookAhead: cameras.firstPersonLookAhead,
+        freeCamHeight: cameras.freeCamHeight,
+        freeCamBack: cameras.freeCamBack
       })
       state.prevCameraMode = mode
     }
@@ -541,6 +698,8 @@ type WorldParameters = {
   deps: UseRockRunDeps
   state: RunState
   ghostRegistry: ReturnType<typeof createGhostRegistry>
+  cameraMode: Ref<CameraMode>
+  setCameraMode: (mode: CameraMode) => void
   pumpWorld: () => void
 }
 
@@ -560,7 +719,9 @@ const buildRunWorld = ({
   deps,
   state,
   ghostRegistry,
-  pumpWorld
+  pumpWorld,
+  cameraMode,
+  setCameraMode
 }: WorldParameters): void => {
   if (!tools.world) return
   const scene = tools.scene
@@ -590,7 +751,7 @@ const buildRunWorld = ({
       definition,
       lateralFog,
       getConfig: () => scatterPanel.areaConfig(definition.name),
-      getTextures: () => scatterPanel.areaTextures(definition.name)
+      getTextures: (distance: number) => scatterPanel.areaTextures(definition.name, distance)
     })
   )
 
@@ -602,27 +763,54 @@ const buildRunWorld = ({
     })
   )
   registerCameraProperties({ camera: tools.camera, orbit })
+  // Registered after setSceneElements, which replaces the list wholesale and
+  // would otherwise drop anything added before it.
+  const cameraPanel = registerCameraElements({ mode: cameraMode, setMode: setCameraMode })
+  state.cameraConfig = cameraPanel.config
+  const rockPanel = registerRockElements({
+    routeName: deps.routeName ?? 'RockRunner',
+    getRock: () => state.rock ?? undefined
+  })
+  state.rockConfig = rockPanel.config
   state.disposePanels = [
     registerTrackElements({
       manager: track,
       getDistance: () => state.distance,
       scene,
-      lateralFog
+      lateralFog,
+      onStageColor: (apply) => {
+        state.applyFogColor = apply
+      }
     }),
-    scatterPanel.teardown
+    scatterPanel.teardown,
+    rockPanel.teardown,
+    cameraPanel.teardown
   ]
   scatterPanel.register(state.scatter, () => state.distance)
 
   const gateCount = Math.max(1, deps.spawnGateCount?.value ?? 1)
   const gateIndex = Math.min(gateCount - 1, Math.max(0, deps.spawnGateIndex?.value ?? 0))
-  const maps = loadRockMaps()
+  state.debris = createDebrisField(scene, [DEBRIS_GROUND_COLOR])
+  const surface = rockSurfaceById(deps.rockSurface?.value ?? DEFAULT_ROCK_SURFACE)
+  const maps = loadRockMaps(surface)
+  state.rockSurface = surface
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)
-  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), maps)
+  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), {
+    maps,
+    tint: surface.tint,
+    displaced: surface.relief
+  })
+  // The rock is built from the constants, so anything already edited in the
+  // panel has to be pushed onto it before the countdown starts.
+  rockPanel.apply()
   pumpWorld()
 }
 
 const createRunState = (): RunState => ({
+  rockConfig: null,
+  cameraConfig: null,
+  rockSurface: null,
   rock: null,
   world: null,
   scene: null,
@@ -635,13 +823,15 @@ const createRunState = (): RunState => ({
   smoothedDirection: createSmoothedDirection(),
   cameraActionHeld: false,
   jumpActionHeld: false,
-  jumpCooldown: 0,
+  jumpGate: { buffer: 0, coyote: 0, cooldown: 0 },
   prevCameraMode: 'third',
   cameraTransitionElapsed: 0,
   cameraTransitionStart: new THREE.Vector3(),
   posAccumulator: 0,
   released: true,
   rockMaps: null,
+  debris: null,
+  applyFogColor: null,
   lateralFog: null,
   rockTextures: [],
   disposePanels: []
@@ -708,7 +898,16 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     await tools.setup({
       config: buildRunSetupConfig(spawnPosition(createTrackPath(deps.seed.value), 1, 0)),
       defineSetup: ({ orbit }) => {
-        buildRunWorld({ tools, orbit, deps, state, ghostRegistry, pumpWorld: actions.pumpWorld })
+        buildRunWorld({
+          tools,
+          orbit,
+          deps,
+          state,
+          ghostRegistry,
+          pumpWorld: actions.pumpWorld,
+          cameraMode: refs.cameraMode,
+          setCameraMode: actions.setCameraMode
+        })
         tools.animate({
           timeline: buildRunTimeline({
             camera: tools.camera,
@@ -735,6 +934,8 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.track?.teardown()
     state.track = null
     state.path = null
+    state.debris?.teardown()
+    state.debris = null
     state.rockTextures.forEach((texture) => texture.dispose())
     state.rockTextures = []
     state.rockMaps = null
@@ -768,6 +969,14 @@ export const useRockRun = (deps: UseRockRunDeps) => {
         segments: GHOST_SEGMENTS,
         decorate: (mesh) => {
           if (state.rockMaps) applyRockMaterial(mesh, state.rockMaps, placement.colorHex, false)
+          // Every rock on the track is drawn the same way, or the local one
+          // reads as the only one that belongs to the illustration.
+          attachRockStroke(
+            mesh,
+            state.rockConfig?.strokeWidth ?? ROCK_STROKE_WIDTH,
+            state.rockConfig?.strokeWobble ?? ROCK_STROKE_WOBBLE,
+            state.rockConfig?.strokeColor ?? ROCK_STROKE_COLOR
+          )
         }
       }),
     removeGhost: (peerId: string) => removeGhost(ghostRegistry, peerId),

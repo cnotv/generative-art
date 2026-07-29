@@ -24,13 +24,21 @@ const visibleKeys = computed(() =>
 
 <style scoped>
 .lui-key-pill {
+  /* A pill is a fixed badge, not a layout participant. Dropped into a flex row
+     it would otherwise be stretched by the row's alignment and squeezed by its
+     distribution, so it opts out of both: never grows, never shrinks, sizes to
+     its own content and stays vertically centred whatever the parent asks for. */
+  flex: 0 0 auto;
+  align-self: center;
   display: inline-flex;
   gap: 0.25em;
   align-items: center;
+  white-space: nowrap;
   pointer-events: none;
 }
 
 .lui-key-pill__key {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;

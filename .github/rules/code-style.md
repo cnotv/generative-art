@@ -140,6 +140,9 @@
 - **No `.clone()` in the animation loop**: `.clone()` allocates a new object. Use `.copy()` on a pre-allocated instance instead.
 - **Dispose resources**: Call `.dispose()` on geometries, materials, textures, and render targets when removing objects from the scene. Undisposed GPU resources leak VRAM.
 - **Object pooling for projectiles/particles**: When many short-lived objects are created and destroyed each frame, use an object pool — allocate a fixed array upfront and recycle instances rather than creating and garbage-collecting them.
+- **Budget for the phone, not the laptop**: Any view that renders a 3D scene must be costed on mobile, where fill rate and texture memory bind long before triangle count does. Cap the renderer's pixel ratio at 2 — a phone at `devicePixelRatio` 3 renders nine times the fragments. Size textures against what the object actually covers on screen, remembering that a 1024×1024 texture is 4MB in VRAM whatever its file size, so a five-map PBR set is 20MB for one object. Drop displacement maps first when cutting, since they cost both a fetch and the subdivided geometry that exists only to be moved by them. See [Making a 3D scene run on a phone](../../documentation/docs/guides/mobile-performance.md).
+- **Tier quality by value, never by branch**: When a scene needs to be lighter on mobile, vary the constants it is built from — a second set of values in the view's `config.ts`, resolved once at startup from `isMobile()` in `@webgamekit/controls`. Never fork the render loop or the scene setup into desktop and mobile paths: two paths means two sets of bugs and one of them is never looked at. Everything downstream must read the resolved value and know nothing about which tier produced it.
+- **Measure before cutting**: Take triangle, draw-call and texture-memory numbers from the Debug panel before deciding what to remove, and work streamed content out arithmetically — the streaming window usually holds far more than one frame shows. The expensive thing is rarely the thing that looks expensive.
 
 ## Multiplayer UI
 
@@ -159,6 +162,7 @@
 - **Vue-only logic → composable**: Any logic that is exclusively Vue reactive (refs, watchers, router, lifecycle hooks) and shared across games belongs in `src/composables/`. Framework-agnostic game logic belongs in `@webgamekit/*` packages.
 - **Header with "← Lobby" navigation**: Every game view must include a header component that navigates back to the Lobby. Follow the pattern established by `PictionaryHeader.vue` and `BubbleShooterHeader.vue` — a dedicated `<GameName>Header.vue` component that emits `leave-room`.
 - **Game-specific session composable**: Each game's P2P session logic must live in its own `use<GameName>Session.ts` composable co-located with the view. Use `useBubbleShooterSession` or `useMinigolfSession` as the reference pattern.
+- **Rules live in their own file**: The `#rules` slot content must be a dedicated `<GameName>Rules.vue` component next to the game's lobby (e.g. `wizard/RockRunnerRules.vue`), never markup inlined in the game view. The view is already the largest file in a game and its template should read as layout, not copy. A separate file also keeps the rules editable without touching game logic, and reviewable on their own. See `RockRunnerRules.vue` for the reference: a template-only SFC with no script block.
 
 ## Dependencies
 

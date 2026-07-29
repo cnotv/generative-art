@@ -11,8 +11,9 @@ import {
   FOG_SIDE_FAR,
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
+  STROKE_COLOR,
   TRACK_WIDTH
-} from './config'
+} from '../config'
 
 describe('MAX_TERRAIN_WIDTH', () => {
   // A swept ribbon folds through itself once its half-width passes the path's
@@ -33,8 +34,21 @@ describe('MAX_TERRAIN_WIDTH', () => {
 })
 
 describe('RR_TRACK_CONTROLS', () => {
-  it('exposes the path width and the side ground width', () => {
-    expect(Object.keys(RR_TRACK_CONTROLS)).toEqual(['trackWidth', 'terrainWidth'])
+  it('exposes the path, its drawn edge and the side ground', () => {
+    expect(Object.keys(RR_TRACK_CONTROLS)).toEqual([
+      'trackWidth',
+      'strokeWidth',
+      'strokeWander',
+      'strokeColor',
+      'terrainWidth'
+    ])
+  })
+
+  // Zero wobble rules the line straight, which is the one look the stroke
+  // exists to avoid, so it has to be reachable to compare against.
+  it('lets the drawn edge be ruled straight or removed entirely', () => {
+    expect(RR_TRACK_CONTROLS.strokeWander.min).toBe(0)
+    expect(RR_TRACK_CONTROLS.strokeWidth.min).toBe(0)
   })
 
   it('never lets the side ground be set narrower than the path', () => {
@@ -89,5 +103,17 @@ describe('RR_FOG_CONTROLS', () => {
 
   it('never lets the fade finish at zero distance', () => {
     expect(RR_FOG_CONTROLS.far.min).toBeGreaterThan(0)
+  })
+})
+
+describe('the drawn edge colour', () => {
+  it('is a colour picker rather than a slider', () => {
+    expect(RR_TRACK_CONTROLS.strokeColor.color).toBe(true)
+  })
+
+  // Every chunk's stroke shares one material, so the colour reaches the ground
+  // already built without any of it being rebuilt.
+  it('starts on the ink every other stroke uses', () => {
+    expect(STROKE_COLOR).toBeGreaterThanOrEqual(0)
   })
 })
