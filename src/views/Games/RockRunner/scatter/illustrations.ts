@@ -46,6 +46,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     variation: [0, 0, 50],
     sizeVariation: 0.18,
     rotationVariation: 10.5,
+    flipY: true,
     seed: 8200
   },
   {
@@ -68,6 +69,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     variation: [0, 0, 50],
     sizeVariation: 0.18,
     rotationVariation: 10.5,
+    flipY: true,
     seed: 8250
   },
   {
@@ -89,6 +91,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     heightOffset: -0.4,
     baseSize: [5, 4, 1],
     variation: [0, 0, 50],
+    flipY: true,
     seed: 8300
   },
   {
@@ -102,6 +105,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     heightOffset: -0.3,
     baseSize: [3, 2.6, 1],
     variation: [0, 0, 50],
+    flipY: true,
     seed: 8400
   },
   {
@@ -115,6 +119,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     heightOffset: -0.2,
     baseSize: [3.6, 1, 1],
     variation: [0, 0, 50],
+    flipY: true,
     seed: 8500
   },
   {
@@ -128,6 +133,7 @@ export const SCATTER_AREAS: ScatterAreaDefinition[] = [
     heightOffset: -0.15,
     baseSize: [6.5, 2, 1],
     variation: [0, 0, 50],
+    flipY: true,
     seed: 8600
   }
 ]

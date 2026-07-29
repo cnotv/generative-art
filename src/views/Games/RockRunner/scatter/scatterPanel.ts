@@ -28,6 +28,7 @@ export type ScatterAreaPanelConfig = {
     baseSize: { x: number; y: number; z: number }
     sizeVariation: number
     rotationVariation: number
+    flipY: boolean
   }
   scatter: {
     frequency: number
@@ -78,7 +79,11 @@ export const RR_SCATTER_CONTROLS = {
       sectionStart: true
     },
     sizeVariation: { min: 0, max: 1, step: 0.01, label: 'Size variation' },
-    rotationVariation: { min: 0, max: 45, step: 0.5, label: 'Rotation variation (deg)' }
+    rotationVariation: { min: 0, max: 45, step: 0.5, label: 'Rotation variation (deg)' },
+    // Reflects a share of the instances about their vertical axis. Mirroring
+    // every one would only give the same wood reversed; the variety comes from
+    // the two facings standing next to each other.
+    flipY: { label: 'Mirror some horizontally' }
   },
   area: {
     center: {
@@ -130,7 +135,8 @@ export const buildScatterPanelConfig = (
     },
     sizeVariation: definition.sizeVariation ?? SCATTER_SIZE_VARIATION,
     rotationVariation:
-      definition.rotationVariation ?? SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN
+      definition.rotationVariation ?? SCATTER_ROTATION_VARIATION * DEGREES_PER_RADIAN,
+    flipY: definition.flipY ?? false
   },
   scatter: {
     frequency: definition.frequency,
@@ -158,6 +164,7 @@ export const toScatterAreaConfig = (panelConfig: ScatterAreaPanelConfig): Scatte
   ],
   sizeVariation: panelConfig.textures.sizeVariation,
   rotationVariation: panelConfig.textures.rotationVariation / DEGREES_PER_RADIAN,
+  flipY: panelConfig.textures.flipY,
   frequency: panelConfig.scatter.frequency,
   distanceMin: panelConfig.scatter.distanceMin,
   distanceMax: panelConfig.scatter.distanceMax,

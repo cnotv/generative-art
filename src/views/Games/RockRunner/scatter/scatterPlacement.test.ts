@@ -7,6 +7,8 @@ import {
   SCATTER_FREQUENCY_UNIT
 } from './scatterPlacement'
 import { MAX_SCATTER_DISTANCE, MIN_TURN_RADIUS } from '../config'
+import { SCATTER_AREAS } from './illustrations'
+import { buildScatterPanelConfig, toScatterAreaConfig } from './scatterPanel'
 import { createTrackPath } from '../trackPath'
 import { TRACK_HALF_WIDTH } from '../config'
 import type { ScatterAreaConfig } from '../types'
@@ -443,5 +445,43 @@ describe("the scatter band against the path's curvature", () => {
     )
 
     expect(left.map((value) => -value)).toEqual(right)
+  })
+})
+
+describe('mirroring', () => {
+  const area = (flipY: boolean) => ({
+    ...SCATTER_AREAS[0],
+    placement: 'sides' as const,
+    frequency: 200,
+    flipY
+  })
+  const place = (flipY: boolean) =>
+    placeScatterInstances({
+      path: createTrackPath(5),
+      definition: area(flipY),
+      config: { ...toScatterAreaConfig(buildScatterPanelConfig(area(flipY))), flipY },
+      fromDistance: 0,
+      toDistance: 600,
+      textureCount: 1
+    })
+
+  it('leaves every instance facing one way when the area does not allow it', () => {
+    expect(place(false).every((instance) => !instance.mirrored)).toBe(true)
+  })
+
+  // Mirroring all of them would only give the same wood reversed; the variety
+  // is in the two facings standing next to each other.
+  it('mirrors roughly half of them when it does', () => {
+    const instances = place(true)
+    const share = instances.filter((instance) => instance.mirrored).length / instances.length
+
+    expect(share).toBeGreaterThan(0.3)
+    expect(share).toBeLessThan(0.7)
+  })
+
+  it('decides it from the seed, so every peer draws the same wood', () => {
+    expect(place(true).map((instance) => instance.mirrored)).toEqual(
+      place(true).map((instance) => instance.mirrored)
+    )
   })
 })

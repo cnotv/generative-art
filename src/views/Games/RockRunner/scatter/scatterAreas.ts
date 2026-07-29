@@ -143,7 +143,7 @@ export const createScatterAreaManager = (
       )
       bucket.forEach((instance, index) => {
         scratchQuaternion.setFromAxisAngle(Y_AXIS, instance.yaw)
-        scratchScale.set(instance.width, instance.height, 1)
+        scratchScale.set(instance.mirrored ? -instance.width : instance.width, instance.height, 1)
         scratchMatrix.compose(instance.position, scratchQuaternion, scratchScale)
         mesh.setMatrixAt(index, scratchMatrix)
       })

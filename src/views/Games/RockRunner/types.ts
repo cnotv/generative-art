@@ -126,6 +126,8 @@ export type ScatterAreaDefinition = {
   sizeVariation?: number
   /** Degrees off the local heading, defaulting to SCATTER_ROTATION_VARIATION. */
   rotationVariation?: number
+  /** Whether instances may be reflected about their vertical axis. */
+  flipY?: boolean
   seed: number
 }
 
@@ -139,6 +141,8 @@ export type ScatterInstance = {
   width: number
   height: number
   textureIndex: number
+  /** Drawn reflected about its vertical axis, so a family does not all face one way. */
+  mirrored: boolean
 }
 
 /** One texture an area can draw from, matching the Textures panel's shape. */
@@ -186,6 +190,8 @@ export type ScatterAreaConfig = {
   heightOffset: number
   seed: number
   opacity: number
+  /** Whether instances may be reflected about their vertical axis. */
+  flipY: boolean
 }
 
 /** One pooled debris chip thrown up behind the rock. */
