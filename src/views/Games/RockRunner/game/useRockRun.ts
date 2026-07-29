@@ -38,6 +38,7 @@ import { createScatterAreaManager } from '../scatter/scatterAreas'
 import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { registerRockElements } from '../rockPanel'
+import { attachRockStroke } from '../rockStroke'
 import { registerTrackElements, createElementVisibilityHandlers } from '../trackPanel'
 import { createLateralFogUniforms } from '../lateralFog'
 import { createDebrisField } from './debris'
@@ -116,6 +117,8 @@ import {
   ROCK_TINT,
   ROCK_SEGMENTS,
   ROCK_SPAWN_HEIGHT,
+  ROCK_STROKE_WIDTH,
+  ROCK_STROKE_WOBBLE,
   ROCK_TEXTURE_REPEAT,
   ROCK_GRAVITY_SCALE,
   SKY_COLOR,
@@ -283,6 +286,7 @@ const spawnRock = (
   rock.userData.body.setAngularDamping(ROCK_ANGULAR_DAMPING)
   rock.userData.body.enableCcd(true)
   applyRockMaterial(rock as unknown as THREE.Mesh, maps, ROCK_TINT, true)
+  attachRockStroke(rock, ROCK_STROKE_WIDTH, ROCK_STROKE_WOBBLE)
   return rock
 }
 
@@ -927,6 +931,13 @@ export const useRockRun = (deps: UseRockRunDeps) => {
         segments: GHOST_SEGMENTS,
         decorate: (mesh) => {
           if (state.rockMaps) applyRockMaterial(mesh, state.rockMaps, placement.colorHex, false)
+          // Every rock on the track is drawn the same way, or the local one
+          // reads as the only one that belongs to the illustration.
+          attachRockStroke(
+            mesh,
+            state.rockConfig?.strokeWidth ?? ROCK_STROKE_WIDTH,
+            state.rockConfig?.strokeWobble ?? ROCK_STROKE_WOBBLE
+          )
         }
       }),
     removeGhost: (peerId: string) => removeGhost(ghostRegistry, peerId),

@@ -13,6 +13,8 @@ import {
   ROCK_LINEAR_DAMPING,
   ROCK_RADIUS,
   ROCK_RESTITUTION,
+  ROCK_STROKE_WIDTH,
+  ROCK_STROKE_WOBBLE,
   ROCK_MASS,
   SPEED_RAMP_DISTANCE,
   STEER_IMPULSE
@@ -34,6 +36,8 @@ const defaults: Record<string, number> = {
   radius: ROCK_RADIUS,
   gravityScale: ROCK_GRAVITY_SCALE,
   mass: ROCK_MASS,
+  strokeWidth: ROCK_STROKE_WIDTH,
+  strokeWobble: ROCK_STROKE_WOBBLE,
   friction: ROCK_FRICTION,
   restitution: ROCK_RESTITUTION,
   linearDamping: ROCK_LINEAR_DAMPING,

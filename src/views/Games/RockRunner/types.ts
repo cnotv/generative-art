@@ -219,6 +219,8 @@ export type RockConfig = {
   radius: number
   gravityScale: number
   mass: number
+  strokeWidth: number
+  strokeWobble: number
   friction: number
   restitution: number
   linearDamping: number
