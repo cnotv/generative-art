@@ -33,8 +33,20 @@ describe('MAX_TERRAIN_WIDTH', () => {
 })
 
 describe('RR_TRACK_CONTROLS', () => {
-  it('exposes the path width and the side ground width', () => {
-    expect(Object.keys(RR_TRACK_CONTROLS)).toEqual(['trackWidth', 'terrainWidth'])
+  it('exposes the path, its drawn edge and the side ground', () => {
+    expect(Object.keys(RR_TRACK_CONTROLS)).toEqual([
+      'trackWidth',
+      'strokeWidth',
+      'strokeWander',
+      'terrainWidth'
+    ])
+  })
+
+  // Zero wobble rules the line straight, which is the one look the stroke
+  // exists to avoid, so it has to be reachable to compare against.
+  it('lets the drawn edge be ruled straight or removed entirely', () => {
+    expect(RR_TRACK_CONTROLS.strokeWander.min).toBe(0)
+    expect(RR_TRACK_CONTROLS.strokeWidth.min).toBe(0)
   })
 
   it('never lets the side ground be set narrower than the path', () => {

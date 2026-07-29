@@ -18,6 +18,7 @@ import {
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
   TRACK_ELEMENT_NAME,
+  STROKE_WIDTH,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
@@ -36,6 +37,11 @@ export const MAX_TERRAIN_WIDTH = Math.floor(MIN_TURN_RADIUS * 2) - 2
 
 export const RR_TRACK_CONTROLS = {
   trackWidth: { min: 6, max: 40, step: 1, label: 'Path width' },
+  strokeWidth: { min: 0, max: 3, step: 0.05, label: 'Edge stroke width' },
+  // How far the drawn line wanders off the deck edge, as a multiple of the
+  // wander it was authored with. Zero is a ruled line, which is the one look
+  // the stroke exists to avoid.
+  strokeWander: { min: 0, max: 4, step: 0.1, label: 'Edge stroke wobble' },
   terrainWidth: {
     min: TRACK_WIDTH,
     max: MAX_TERRAIN_WIDTH,
@@ -81,7 +87,9 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
   const wall = reactive<WallConfig>({ height: WALL_HEIGHT, thickness: WALL_THICKNESS })
   const dimensions = reactive<TrackDimensions>({
     trackWidth: TRACK_WIDTH,
-    terrainWidth: TERRAIN_WIDTH
+    terrainWidth: TERRAIN_WIDTH,
+    strokeWidth: STROKE_WIDTH,
+    strokeWander: 1
   })
 
   debugSceneStore.addSceneElement(

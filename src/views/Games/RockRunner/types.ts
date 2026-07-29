@@ -29,6 +29,10 @@ export type TrackPath = {
 export type TrackDimensions = {
   trackWidth: number
   terrainWidth: number
+  /** Base thickness of the drawn edge, before its own variation. */
+  strokeWidth: number
+  /** Multiplier on how far that edge wanders; zero rules it straight. */
+  strokeWander: number
 }
 
 /** Uniforms shared by every material that fades sideways into the fog. */
@@ -45,6 +49,20 @@ export type FogConfig = {
   far: number
   sideNear: number
   sideFar: number
+}
+
+/** One term of a sine sum, used for the drawn edge's wander and thickness. */
+export type StrokeTerm = {
+  amplitude: number
+  wavelength: number
+}
+
+export type StrokeTerms = StrokeTerm[]
+
+/** Where one edge stroke's inner and outer sides sit at a station. */
+export type StrokeShape = {
+  inner: number
+  outer: number
 }
 
 /** Height and thickness of the invisible containment walls flanking the deck. */

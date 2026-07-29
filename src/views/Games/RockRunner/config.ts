@@ -90,6 +90,31 @@ export const TRACK_CONTACT_SKIN = 0.04
 // The wall stands off the deck edge by a little more than the rock's radius, so
 // the rock meets a flat face rather than the deck/wall corner itself.
 export const WALL_INSET = -0.2
+
+// A drawn edge along each side of the deck, so the path reads as an
+// illustration rather than as a shape the renderer happened to produce.
+export const STROKE_COLOR = 0x1c1712
+export const STROKE_WIDTH = 0.55
+// Enough to clear the deck without floating above it. The deck is flat colour
+// and the stroke sits directly on it, so anything less z-fights.
+export const STROKE_LIFT = 0.03
+// How far the line wanders from the deck edge. Long wavelengths against short
+// ones: one gives the slow drift of a hand not quite following a straight line,
+// the other the small tremor within it. Neither alone reads as drawn — pure
+// drift looks like a bent track, pure tremor like noise.
+export const STROKE_WANDER_TERMS = [
+  { amplitude: 0.42, wavelength: 37 },
+  { amplitude: 0.18, wavelength: 11.3 },
+  { amplitude: 0.07, wavelength: 3.7 }
+]
+// The thickness wanders too. A band of constant width reads as an inlay however
+// much it snakes, because a drawn line is uneven where the hand pressed harder.
+export const STROKE_WIDTH_TERMS = [
+  { amplitude: 0.6, wavelength: 19 },
+  { amplitude: 0.4, wavelength: 5.9 }
+]
+// Fraction of the base width the variation can add or remove.
+export const STROKE_WIDTH_VARIATION = 0.45
 export const WALL_ELEMENT_NAME = 'edge-walls'
 export const TRACK_ELEMENT_NAME = 'track'
 export const FOG_ELEMENT_NAME = 'fog'
