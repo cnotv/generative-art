@@ -19,8 +19,8 @@ import {
   ROCK_RADIUS,
   ROCK_RESTITUTION,
   ROCK_STROKE_WIDTH,
+  ROCK_STROKE_COLOR,
   ROCK_STROKE_WOBBLE,
-  STROKE_COLOR,
   ROCK_MASS,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
@@ -42,7 +42,7 @@ export const RR_ROCK_CONTROLS = {
   speedRampDistance: { min: 100, max: 20000, step: 100, label: 'Distance to reach it' },
   steerImpulse: { min: 0, max: 120, step: 1, label: 'Steering force', sectionStart: true },
   maxLateralSpeed: { min: 1, max: 60, step: 1, label: 'Steering top speed' },
-  jumpImpulse: { min: 0, max: 6000, step: 25, label: 'Jump force' },
+  jumpImpulse: { min: 0, max: 15000, step: 50, label: 'Jump force' },
   jumpCooldown: { min: 0, max: 2, step: 0.05, label: 'Jump cooldown' },
   radius: { min: 0.5, max: 8, step: 0.1, label: 'Size', sectionStart: true },
   // Resistance to being pushed, and nothing else: a body's fall rate does not
@@ -159,7 +159,7 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     tint: ROCK_TINT,
     strokeWidth: ROCK_STROKE_WIDTH,
     strokeWobble: ROCK_STROKE_WOBBLE,
-    strokeColor: STROKE_COLOR
+    strokeColor: ROCK_STROKE_COLOR
   })
 
   const apply = (): void => {

@@ -128,6 +128,10 @@ export const ROCK_STROKE_NAME = 'rock-stroke'
 // Reads as ink at this weight: the rock is dark and the line is nearly black,
 // so an outline thin enough to work against pale ground disappears on it.
 export const ROCK_STROKE_WIDTH = 0.09
+// The rock's own ink, a shade off the one the path is drawn in. The two sit on
+// very different backgrounds — pale sand against dark stone — so matching them
+// exactly is not the same as making them read alike.
+export const ROCK_STROKE_COLOR = 0x10100a
 export const ROCK_STROKE_WOBBLE = 0.55
 // Far below the rock's own segment count. The hull is only ever seen as a rim a
 // few pixels wide, where the difference between 24 and 192 segments is nothing
@@ -213,11 +217,11 @@ export const ROCK_MASS = 100
 // multiplier on it. The shared package calls this option `weight`, which is
 // what it simulates, but it scales acceleration and not mass.
 //
-// Seven, with the jump raised to match. One gravity governs both halves of an
+// Twenty, with the jump raised to match. One gravity governs both halves of an
 // arc, so a heavier fall costs height unless the launch pays it back: together
-// these clear 11.2 units in 0.57s up and the same down, against 16.3 units and
-// a two-second descent at the world's own gravity.
-export const ROCK_GRAVITY_SCALE = 7
+// these clear 8.5 units in 0.3s up and 0.28s down, a far sharper hop than the
+// 11.2 units and 0.57s each way they replace.
+export const ROCK_GRAVITY_SCALE = 20
 // Taken from the marble editor's bowling ball, which is the heaviest-feeling
 // preset there. Its weight does not come from mass: it comes from gripping
 // hard enough to roll rather than skid, and from a negative restitution that
@@ -273,21 +277,22 @@ export const SPAWN_GATE_SPREAD = 4
 //
 // It sets how hard the rock accelerates, not how fast it ends up: the push
 // stops at the speed cap either way, so raising it shortens the climb to that
-// cap without lifting it.
-export const FORWARD_IMPULSE = 60
+// cap without lifting it. Measured, the cap is reached in 0.4s against 0.93s at
+// the figure before.
+export const FORWARD_IMPULSE = 130
 export const BASE_MAX_SPEED = 22
 export const MAX_SPEED_CEILING = 46
 export const SPEED_RAMP_DISTANCE = 4000
 
-export const STEER_IMPULSE = 58
+export const STEER_IMPULSE = 75
 // Lateral speed is capped separately so steering stays responsive at any
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
 // An impulse is momentum, so it is divided by the rock's mass rather than
 // producing a speed directly. Raised alongside the gravity above and measured
-// against the solver with it: the pair clear 11.2 units with 0.57s of rise.
-export const JUMP_IMPULSE = 4200
+// against the solver with it: the pair clear 8.5 units in 0.3s of rise.
+export const JUMP_IMPULSE = 6000
 // The rock rests with its centre one radius above the deck; a little slack on
 // top of that keeps jumping responsive while rolling over the hills.
 // How far above its resting height the rock may sit and still be allowed to

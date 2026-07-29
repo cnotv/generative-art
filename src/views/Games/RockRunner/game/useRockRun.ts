@@ -123,8 +123,8 @@ import {
   ROCK_GRAVITY_SCALE,
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
+  ROCK_STROKE_COLOR,
   SPAWN_GATE_SPREAD,
-  STROKE_COLOR,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
@@ -955,7 +955,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
             mesh,
             state.rockConfig?.strokeWidth ?? ROCK_STROKE_WIDTH,
             state.rockConfig?.strokeWobble ?? ROCK_STROKE_WOBBLE,
-            state.rockConfig?.strokeColor ?? STROKE_COLOR
+            state.rockConfig?.strokeColor ?? ROCK_STROKE_COLOR
           )
         }
       }),
