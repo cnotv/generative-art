@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as THREE from 'three'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 import { useRockRunnerStore } from '@/stores/rockRunner'
 import { useRoomId } from '@/composables/useRoomId'
 import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
@@ -102,6 +103,7 @@ const spawnGateIndex = computed(() => Math.max(0, sortedPeerIds.value.indexOf(lo
 
 const run = useRockRun({
   canvas: runCanvas,
+  routeName: String(useRoute().name ?? 'RockRunner'),
   seed: trackSeed,
   runStartTime,
   localPlayerName: playerName,

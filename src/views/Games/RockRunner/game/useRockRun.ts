@@ -152,6 +152,8 @@ export type UseRockRunDeps = {
   localPlayerColor?: Ref<string>
   spawnGateCount?: Ref<number>
   spawnGateIndex?: Ref<number>
+  /** Route name the config panel keys the rock's physics by. */
+  routeName?: string
 }
 
 type RunState = {
@@ -750,7 +752,10 @@ const buildRunWorld = ({
   registerCameraProperties({ camera: tools.camera, orbit })
   // Registered after setSceneElements, which replaces the list wholesale and
   // would otherwise drop anything added before it.
-  const rockPanel = registerRockElements({ getRock: () => state.rock ?? undefined })
+  const rockPanel = registerRockElements({
+    routeName: deps.routeName ?? 'RockRunner',
+    getRock: () => state.rock ?? undefined
+  })
   state.rockConfig = rockPanel.config
   state.disposePanels = [
     registerTrackElements({

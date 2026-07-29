@@ -1,6 +1,7 @@
-import { reactive } from 'vue'
+import { reactive, ref, type Ref } from 'vue'
 import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
+import { registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { attachRockStroke } from './rockStroke'
 import type { RockConfig } from './types'
 import {
@@ -62,7 +63,26 @@ export const RR_ROCK_CONTROLS = {
   strokeWobble: { min: 0, max: 2, step: 0.05, label: 'Outline wobble' }
 }
 
+/**
+ * The body's own settings, as opposed to what drives it.
+ *
+ * Registered twice over: as part of the rock's row in the elements panel, and
+ * on its own in the config panel, where the values worth reaching for mid-run
+ * are. Both edit one object, so neither can drift from the other.
+ */
+export const RR_ROCK_PHYSICS_CONTROLS = {
+  radius: RR_ROCK_CONTROLS.radius,
+  mass: RR_ROCK_CONTROLS.mass,
+  gravityScale: RR_ROCK_CONTROLS.gravityScale,
+  friction: RR_ROCK_CONTROLS.friction,
+  restitution: RR_ROCK_CONTROLS.restitution,
+  linearDamping: RR_ROCK_CONTROLS.linearDamping,
+  angularDamping: RR_ROCK_CONTROLS.angularDamping
+}
+
 export type RockPanelOptions = {
+  /** Route the config panel keys its entry by. */
+  routeName: string
   /** The live rock, absent until it spawns and replaced on every restart. */
   getRock: () => THREE.Object3D | undefined
 }
@@ -169,9 +189,21 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     }
   )
 
+  // Handed the same reactive object the elements panel edits, not a copy of it,
+  // so the two rows cannot disagree and a change from either reaches the body.
+  registerViewConfig(
+    options.routeName,
+    ref(config) as Ref<Record<string, unknown>>,
+    RR_ROCK_PHYSICS_CONTROLS,
+    apply
+  )
+
   return {
     config,
     apply,
-    teardown: () => debugSceneStore.removeSceneElement(ROCK_ELEMENT_NAME)
+    teardown: () => {
+      unregisterViewConfig(options.routeName)
+      debugSceneStore.removeSceneElement(ROCK_ELEMENT_NAME)
+    }
   }
 }
