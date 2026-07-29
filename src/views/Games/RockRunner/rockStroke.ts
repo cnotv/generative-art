@@ -120,9 +120,6 @@ export const attachRockStroke = (
       // debris trail cut it into pieces. Front faces sit just in front of the
       // ball instead, which is where the line should be depth-wise.
       side: THREE.FrontSide,
-      // Ordered against the path's ink and the scenery, which is only possible
-      // from inside the transparent pass.
-      transparent: true,
       // Tested so the world can still cover it. Turning depth off fixed the
       // debris and broke the opposite case, since the scenery is transparent
       // and renders after every opaque object regardless of order, so the rim
@@ -139,9 +136,6 @@ export const attachRockStroke = (
   hull.receiveShadow = false
   hull.renderOrder = ROCK_STROKE_RENDER_ORDER
   rock.renderOrder = ROCK_RENDER_ORDER
-  // The rock is drawn last of the four, so neither ink line crosses it.
-  const rockMaterial = mesh.material
-  if (rockMaterial instanceof THREE.Material) rockMaterial.transparent = true
   rock.add(hull)
   return hull
 }

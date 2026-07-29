@@ -31,7 +31,6 @@ import {
   STATION_SPACING,
   STROKE_COLOR,
   STROKE_WIDTH,
-  TRACK_STROKE_RENDER_ORDER,
   TERRAIN_DROP,
   TERRAIN_SEGMENTS_ACROSS,
   TERRAIN_THICKNESS,
@@ -375,7 +374,6 @@ const buildChunk = (context: ChunkBuildContext, chunkIndex: number): TrackChunk 
     context.strokeMaterial
   )
   strokeMesh.name = 'track-stroke'
-  strokeMesh.renderOrder = TRACK_STROKE_RENDER_ORDER
   strokeMesh.castShadow = false
   strokeMesh.receiveShadow = false
   context.scene.add(strokeMesh)
@@ -430,17 +428,8 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
   const material = new THREE.MeshStandardMaterial({ color: DECK_COLOR, roughness: 1 })
   // Unlit: an ink line that takes the scene's shading stops reading as ink and
   // starts reading as a dark strip of ground.
-  // Transparent not because it is see-through but because that is the only list
-  // drawn after the scenery. Depth is off for the same reason the rock's
-  // outline turns it off: grass standing on the path is genuinely nearer than a
-  // line lying on it, so depth alone cuts the line into pieces.
   const strokeMaterial = applyLateralFog(
-    new THREE.MeshBasicMaterial({
-      color: STROKE_COLOR,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false
-    }),
+    new THREE.MeshBasicMaterial({ color: STROKE_COLOR }),
     options.lateralFog
   )
   // The surrounding countryside is the same ground, shaded down a little so the
