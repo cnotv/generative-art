@@ -6,6 +6,7 @@ import {
   placeScatterInstances,
   SCATTER_FREQUENCY_UNIT
 } from './scatterPlacement'
+import { MAX_SCATTER_DISTANCE, MIN_TURN_RADIUS } from '../config'
 import { createTrackPath } from '../trackPath'
 import { TRACK_HALF_WIDTH } from '../config'
 import type { ScatterAreaConfig } from '../types'
@@ -398,5 +399,49 @@ describe('placeScatterInstances', () => {
 
   it('returns nothing at zero frequency', () => {
     expect(place({ frequency: 0 })).toEqual([])
+  })
+})
+
+describe("the scatter band against the path's curvature", () => {
+  const config = {
+    center: [0, 0, 0],
+    variation: [0, 0, 0],
+    baseSize: [1, 1, 1],
+    sizeVariation: 0,
+    rotationVariation: 0,
+    frequency: 100,
+    distanceMin: 10,
+    distanceMax: 400,
+    heightOffset: 0,
+    seed: 1,
+    opacity: 1
+  } as unknown as Parameters<typeof lateralOffset>[1]
+
+  // A band at distance d from a centreline of radius R covers arc length in
+  // proportion to R - d inside the bend and R + d outside. At d approaching R
+  // the inside collapses and then folds through the centre of curvature, which
+  // is what leaves one side of a bend crowded and close and the other sparse.
+  it('never reaches past the tightest turn the path can make', () => {
+    const offsets = Array.from({ length: 200 }, (_, i) =>
+      Math.abs(lateralOffset('sides', config, i / 200, ((i * 7) % 100) / 100))
+    )
+
+    expect(Math.max(...offsets)).toBeLessThanOrEqual(MAX_SCATTER_DISTANCE)
+    expect(MAX_SCATTER_DISTANCE).toBeLessThan(MIN_TURN_RADIUS)
+  })
+
+  it('clamps a band asked for far past the limit rather than ignoring it', () => {
+    expect(Math.abs(lateralOffset('sides', config, 0.9, 1))).toBeCloseTo(MAX_SCATTER_DISTANCE)
+  })
+
+  // The two sides are mirror images, so any difference a player sees between
+  // them comes from the curve rather than from the placement.
+  it('places the two sides at matching distances', () => {
+    const left = Array.from({ length: 300 }, (_, i) => lateralOffset('sides', config, 0.1, i / 300))
+    const right = Array.from({ length: 300 }, (_, i) =>
+      lateralOffset('sides', config, 0.9, i / 300)
+    )
+
+    expect(left.map((value) => -value)).toEqual(right)
   })
 })

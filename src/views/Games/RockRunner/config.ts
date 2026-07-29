@@ -59,6 +59,15 @@ export const MAX_YAW_RATE = CURVE_TERMS.reduce(
   0
 )
 export const MIN_TURN_RADIUS = 1 / MAX_YAW_RATE
+// The furthest from the centreline anything may be scattered.
+//
+// A band at distance d from a centreline turning with radius R covers arc
+// length in proportion to R - d on the inside of the bend and R + d on the
+// outside. At d approaching R the inside collapses to nothing and then folds
+// through the centre of curvature, which is what makes one side of a bend look
+// crowded and close while the other looks sparse and far. The margin is the
+// same one the side ground already keeps for the same reason.
+export const MAX_SCATTER_DISTANCE = MIN_TURN_RADIUS - 2
 
 export const HILL_TERMS: PathTerm[] = [
   { amplitude: 9, wavelength: 340 },
@@ -137,12 +146,17 @@ export const ROCK_STROKE_WOBBLE = 0.55
 // few pixels wide, where the difference between 24 and 192 segments is nothing
 // and the triangles are all cost.
 export const ROCK_STROKE_SEGMENTS = 24
-// The outline is drawn over the scene rather than depth-sorted within it, and
-// the rock is drawn over the outline. Debris otherwise wins against the hull on
-// depth alone: a chip trailing behind the rock is nearer the camera than the
-// hull's far-side faces, so it draws across the rim and breaks the line.
-export const ROCK_STROKE_RENDER_ORDER = 1
-export const ROCK_RENDER_ORDER = 2
+// The rock and its outline are ordered by hand, because the renderer's own
+// order cannot express what is wanted. The scenery is transparent, and
+// transparent geometry draws after every opaque object whatever its render
+// order, so an opaque outline always loses to grass standing in front of it.
+//
+// Joining the transparent pass brings the three under one order: scenery
+// first, then the outline over it, then the rock over both. The path's edge
+// stays opaque and depth-sorted, so grass still crosses it — that trade was
+// worth taking for a line spanning the screen, and not for a ball.
+export const ROCK_STROKE_RENDER_ORDER = 2
+export const ROCK_RENDER_ORDER = 3
 // Products of sines over the direction a point sits in, which gives a smooth
 // lumpiness around the ball rather than the ring-shaped banding a single axis
 // would produce.

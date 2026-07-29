@@ -4,6 +4,7 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 import { SCATTER_AREAS, SCATTER_ROTATION_VARIATION, SCATTER_SIZE_VARIATION } from './illustrations'
+import { MAX_SCATTER_DISTANCE } from '../config'
 import { texturesAt } from './textureStages'
 import type {
   ScatterAreaConfig,
@@ -51,8 +52,20 @@ export type ScatterAreaPanelConfig = {
 export const RR_SCATTER_CONTROLS = {
   scatter: {
     frequency: { min: 0, max: 120, step: 1, label: 'Frequency (per 100m)' },
-    distanceMin: { min: 0, max: 600, step: 1, label: 'Distance from track (near)' },
-    distanceMax: { min: 0, max: 800, step: 1, label: 'Distance from track (far)' },
+    // Capped at the fold limit: a slider reaching past it only produces a band
+    // the inside of every bend turns inside out.
+    distanceMin: {
+      min: 0,
+      max: MAX_SCATTER_DISTANCE,
+      step: 1,
+      label: 'Distance from track (near)'
+    },
+    distanceMax: {
+      min: 0,
+      max: MAX_SCATTER_DISTANCE,
+      step: 1,
+      label: 'Distance from track (far)'
+    },
     heightOffset: { min: -20, max: 200, step: 0.5, label: 'Height above ground' }
   },
   textures: {
