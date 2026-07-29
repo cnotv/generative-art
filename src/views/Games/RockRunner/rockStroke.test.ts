@@ -187,7 +187,7 @@ describe('the outline against the debris trail', () => {
   })
 
   // Debris is left at the default, so both of these have to clear it.
-  it('draws both after the debris, which orders at zero', () => {
+  it('draws both after the scenery, which orders at zero', () => {
     const { rock, hull } = wrap()
 
     expect(hull.renderOrder).toBeGreaterThan(0)

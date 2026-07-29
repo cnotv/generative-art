@@ -137,12 +137,18 @@ export const ROCK_STROKE_WOBBLE = 0.55
 // few pixels wide, where the difference between 24 and 192 segments is nothing
 // and the triangles are all cost.
 export const ROCK_STROKE_SEGMENTS = 24
-// The outline is drawn over the scene rather than depth-sorted within it, and
-// the rock is drawn over the outline. Debris otherwise wins against the hull on
-// depth alone: a chip trailing behind the rock is nearer the camera than the
-// hull's far-side faces, so it draws across the rim and breaks the line.
-export const ROCK_STROKE_RENDER_ORDER = 1
-export const ROCK_RENDER_ORDER = 2
+// Everything drawn in ink is ordered by hand, because the renderer's own order
+// cannot express it. The scatter is transparent, and transparent geometry is
+// drawn after every opaque object whatever its render order, so an opaque ink
+// line always lost to grass standing on top of it.
+//
+// Putting the ink in the transparent pass as well brings it under one order
+// with the scenery: the scatter first, then the path's edge, then the rock's
+// outline, then the rock itself over both.
+export const SCATTER_RENDER_ORDER = 0
+export const TRACK_STROKE_RENDER_ORDER = 1
+export const ROCK_STROKE_RENDER_ORDER = 2
+export const ROCK_RENDER_ORDER = 3
 // Products of sines over the direction a point sits in, which gives a smooth
 // lumpiness around the ball rather than the ring-shaped banding a single axis
 // would produce.
