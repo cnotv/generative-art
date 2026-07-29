@@ -1,6 +1,5 @@
-import { reactive, watch, type Ref } from 'vue'
-import { useDebugSceneStore } from '@/stores/debugScene'
-import { useElementPropertiesStore } from '@/stores/elementProperties'
+import type { Ref } from 'vue'
+import { registerFollowCameraPanel } from '@/utils/followCameraPanel'
 import type { CameraMode, RunCameraConfig } from './types'
 import {
   CHASE_BACK,
@@ -116,48 +115,11 @@ export type CameraPanel = {
  *
  * @returns The shared config the run loop reads, and a teardown
  */
-export const registerCameraElements = (options: CameraPanelOptions): CameraPanel => {
-  const debugSceneStore = useDebugSceneStore()
-  const config = reactive<RunCameraConfig>({ ...DEFAULT_RUN_CAMERA })
-
-  const properties = (mode: CameraMode) => ({
-    title: 'Run camera',
-    type: 'Rig',
-    schema: cameraSchemaFor(mode),
-    getValue: (path: string) =>
-      path === 'mode' ? options.mode.value : config[path as keyof RunCameraConfig],
-    updateValue: (path: string, value: unknown) => {
-      // Selecting a tab switches the camera as well as the controls: a player
-      // tuning a mode wants to be looking through it.
-      if (path === 'mode') {
-        options.setMode(value as CameraMode)
-        return
-      }
-      config[path as keyof RunCameraConfig] = value as number
-    }
+export const registerCameraElements = (options: CameraPanelOptions): CameraPanel =>
+  registerFollowCameraPanel({
+    name: CAMERA_ELEMENT_NAME,
+    label: 'Run camera',
+    mode: options.mode,
+    setMode: options.setMode,
+    defaults: DEFAULT_RUN_CAMERA
   })
-
-  // The type deliberately avoids the word Camera. The elements panel routes
-  // any type containing it to the shared camera component, which renders lens
-  // and projection instead of whatever schema the element carries — so a row
-  // typed "Camera" here would show the wrong controls entirely. The label is
-  // free to say what it is.
-  debugSceneStore.addSceneElement(
-    { name: CAMERA_ELEMENT_NAME, type: 'Rig', label: 'Run camera', hidden: false },
-    properties(options.mode.value)
-  )
-
-  // Re-registered rather than filtered in the panel, and watched rather than
-  // set on click, so cycling the camera with the keyboard moves the tabs too.
-  const stop = watch(options.mode, (mode) => {
-    useElementPropertiesStore().registerElementProperties(CAMERA_ELEMENT_NAME, properties(mode))
-  })
-
-  return {
-    config,
-    teardown: () => {
-      stop()
-      debugSceneStore.removeSceneElement(CAMERA_ELEMENT_NAME)
-    }
-  }
-}
