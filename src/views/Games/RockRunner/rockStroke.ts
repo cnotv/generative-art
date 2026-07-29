@@ -92,12 +92,14 @@ export const buildRockStrokeGeometry = (
  * @param rock - The rock mesh to outline
  * @param thickness - Base thickness of the outline
  * @param wobble - How much that thickness varies around the ball
+ * @param color - Ink the outline is drawn in
  * @returns The hull mesh now parented to the rock
  */
 export const attachRockStroke = (
   rock: THREE.Object3D,
   thickness: number,
-  wobble: number
+  wobble: number,
+  color: number = STROKE_COLOR
 ): THREE.Mesh => {
   const existing = rock.getObjectByName(ROCK_STROKE_NAME)
   if (existing instanceof THREE.Mesh) {
@@ -111,7 +113,7 @@ export const attachRockStroke = (
   const hull = new THREE.Mesh(
     buildRockStrokeGeometry(radius, thickness, wobble),
     new THREE.MeshBasicMaterial({
-      color: STROKE_COLOR,
+      color,
       // Front faces, not back. A back-faced hull is the usual way to build one,
       // but it puts the outline at the far side of the ball, and everything
       // between the camera and that surface then draws across the rim: the

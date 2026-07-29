@@ -33,6 +33,7 @@ export type TrackDimensions = {
   strokeWidth: number
   /** Multiplier on how far that edge wanders; zero rules it straight. */
   strokeWander: number
+  strokeColor: number
 }
 
 /** Uniforms shared by every material that fades sideways into the fog. */
@@ -88,6 +89,8 @@ export type TrackChunkManager = {
   setWall: (wall: WallConfig, distance: number) => void
   setDimensions: (dimensions: TrackDimensions, distance: number) => void
   setTerrainTint: (color: number) => void
+  /** The drawn edge's ink, changed without rebuilding the chunks that carry it. */
+  setStrokeColor: (color: number) => void
   setWallsVisible: (visible: boolean) => void
   groundHeightAt: (distance: number) => number
   /** The deck width currently built, which the panel can change mid-run. */
@@ -231,6 +234,7 @@ export type RockConfig = {
   mass: number
   strokeWidth: number
   strokeWobble: number
+  strokeColor: number
   friction: number
   restitution: number
   linearDamping: number

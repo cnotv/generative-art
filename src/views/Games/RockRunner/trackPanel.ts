@@ -18,6 +18,7 @@ import {
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
   TRACK_ELEMENT_NAME,
+  STROKE_COLOR,
   STROKE_WIDTH,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
@@ -42,6 +43,7 @@ export const RR_TRACK_CONTROLS = {
   // wander it was authored with. Zero is a ruled line, which is the one look
   // the stroke exists to avoid.
   strokeWander: { min: 0, max: 4, step: 0.1, label: 'Edge stroke wobble' },
+  strokeColor: { label: 'Edge stroke colour', color: true },
   terrainWidth: {
     min: TRACK_WIDTH,
     max: MAX_TERRAIN_WIDTH,
@@ -89,7 +91,8 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
     trackWidth: TRACK_WIDTH,
     terrainWidth: TERRAIN_WIDTH,
     strokeWidth: STROKE_WIDTH,
-    strokeWander: 1
+    strokeWander: 1,
+    strokeColor: STROKE_COLOR
   })
 
   debugSceneStore.addSceneElement(
@@ -101,6 +104,12 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
       getValue: (path: string) => dimensions[path as keyof TrackDimensions],
       updateValue: (path: string, value: unknown) => {
         dimensions[path as keyof TrackDimensions] = value as number
+        // Colour alone never needs the ground rebuilt, so it takes the cheap
+        // path and leaves the chunks standing.
+        if (path === 'strokeColor') {
+          options.manager.setStrokeColor(dimensions.strokeColor)
+          return
+        }
         // The side ground can never be narrower than the path it flanks.
         if (dimensions.terrainWidth < dimensions.trackWidth) {
           dimensions.terrainWidth = dimensions.trackWidth

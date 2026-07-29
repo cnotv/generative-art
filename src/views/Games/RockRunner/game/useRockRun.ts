@@ -124,6 +124,7 @@ import {
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   SPAWN_GATE_SPREAD,
+  STROKE_COLOR,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
   WALL_HEIGHT,
@@ -953,7 +954,8 @@ export const useRockRun = (deps: UseRockRunDeps) => {
           attachRockStroke(
             mesh,
             state.rockConfig?.strokeWidth ?? ROCK_STROKE_WIDTH,
-            state.rockConfig?.strokeWobble ?? ROCK_STROKE_WOBBLE
+            state.rockConfig?.strokeWobble ?? ROCK_STROKE_WOBBLE,
+            state.rockConfig?.strokeColor ?? STROKE_COLOR
           )
         }
       }),

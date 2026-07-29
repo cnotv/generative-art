@@ -80,9 +80,9 @@ describe('RR_ROCK_CONTROLS', () => {
     expect(ROCK_RESTITUTION).toBeLessThan(0)
   })
 
-  it('drives the tint from a colour picker rather than a slider', () => {
-    expect(controls.tint.color).toBe(true)
-    expect(controls.tint.min).toBeUndefined()
+  it.each(['tint', 'strokeColor'])('drives %s from a colour picker, not a slider', (name) => {
+    expect(controls[name].color).toBe(true)
+    expect(controls[name].min).toBeUndefined()
   })
 
   // Sliders cannot be allowed to stop the rock dead or pin it in place, so the

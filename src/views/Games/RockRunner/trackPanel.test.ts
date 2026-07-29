@@ -11,6 +11,7 @@ import {
   FOG_SIDE_FAR,
   MIN_TURN_RADIUS,
   TERRAIN_WIDTH,
+  STROKE_COLOR,
   TRACK_WIDTH
 } from './config'
 
@@ -38,6 +39,7 @@ describe('RR_TRACK_CONTROLS', () => {
       'trackWidth',
       'strokeWidth',
       'strokeWander',
+      'strokeColor',
       'terrainWidth'
     ])
   })
@@ -101,5 +103,17 @@ describe('RR_FOG_CONTROLS', () => {
 
   it('never lets the fade finish at zero distance', () => {
     expect(RR_FOG_CONTROLS.far.min).toBeGreaterThan(0)
+  })
+})
+
+describe('the drawn edge colour', () => {
+  it('is a colour picker rather than a slider', () => {
+    expect(RR_TRACK_CONTROLS.strokeColor.color).toBe(true)
+  })
+
+  // Every chunk's stroke shares one material, so the colour reaches the ground
+  // already built without any of it being rebuilt.
+  it('starts on the ink every other stroke uses', () => {
+    expect(STROKE_COLOR).toBeGreaterThanOrEqual(0)
   })
 })

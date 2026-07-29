@@ -519,6 +519,13 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     terrainMaterial.color.setHex(color)
   }
 
+  // A material change rather than a rebuild: the stroke's colour is one shared
+  // material, so every chunk already drawn picks it up without being rebuilt.
+  const setStrokeColor = (color: number): void => {
+    if (strokeMaterial.color.getHex() === color) return
+    strokeMaterial.color.setHex(color)
+  }
+
   const setWallsVisible = (visible: boolean): void => {
     wallsVisible = visible
     chunks.forEach((chunk) =>
@@ -536,6 +543,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     setDimensions,
     deckWidth: () => context.width,
     setTerrainTint,
+    setStrokeColor,
     setWallsVisible,
     groundHeightAt: (distance: number) => options.path.sampleAt(distance).position.y,
     teardown: () => {

@@ -20,6 +20,7 @@ import {
   ROCK_RESTITUTION,
   ROCK_STROKE_WIDTH,
   ROCK_STROKE_WOBBLE,
+  STROKE_COLOR,
   ROCK_MASS,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
@@ -60,7 +61,8 @@ export const RR_ROCK_CONTROLS = {
   // Relative to the rock's radius, so resizing the rock keeps its outline in
   // proportion. Zero removes the line rather than drawing a hairline.
   strokeWidth: { min: 0, max: 0.3, step: 0.005, label: 'Outline width' },
-  strokeWobble: { min: 0, max: 2, step: 0.05, label: 'Outline wobble' }
+  strokeWobble: { min: 0, max: 2, step: 0.05, label: 'Outline wobble' },
+  strokeColor: { label: 'Outline colour', color: true }
 }
 
 /**
@@ -156,7 +158,8 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     angularDamping: ROCK_ANGULAR_DAMPING,
     tint: ROCK_TINT,
     strokeWidth: ROCK_STROKE_WIDTH,
-    strokeWobble: ROCK_STROKE_WOBBLE
+    strokeWobble: ROCK_STROKE_WOBBLE,
+    strokeColor: STROKE_COLOR
   })
 
   const apply = (): void => {
@@ -167,7 +170,7 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     if (collider) applyCollider(collider, config)
     rock.scale.setScalar(config.radius / ROCK_RADIUS)
     applyTint(rock, config.tint)
-    attachRockStroke(rock, config.strokeWidth, config.strokeWobble)
+    attachRockStroke(rock, config.strokeWidth, config.strokeWobble, config.strokeColor)
   }
 
   debugSceneStore.addSceneElement(
