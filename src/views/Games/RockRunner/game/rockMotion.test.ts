@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   advanceDistance,
+  autopilotLateralVelocity,
+  clampLateralMagnitude,
   debrisBurstSize,
   debrisLifetime,
   speedCapAt,
@@ -12,6 +14,7 @@ import {
   jumpReady,
   forwardImpulseMagnitude,
   frameScaledImpulse,
+  lateralPushAllowed,
   steerImpulseMagnitude,
   wallStandoff,
   lateralOffset
@@ -212,6 +215,64 @@ describe('steerImpulseMagnitude', () => {
         standoff: Infinity
       })
     ).toBe(4)
+  })
+})
+
+describe('lateralPushAllowed', () => {
+  it.each([
+    [1, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity }, true],
+    [1, { lateralSpeed: 12, speedCap: 12, offset: 0, standoff: Infinity }, false],
+    [1, { lateralSpeed: 0, speedCap: 12, offset: 5, standoff: 5 }, false],
+    [-1, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity }, true],
+    [-1, { lateralSpeed: -12, speedCap: 12, offset: 0, standoff: Infinity }, false],
+    [-1, { lateralSpeed: 0, speedCap: 12, offset: -5, standoff: 5 }, false],
+    [0, { lateralSpeed: 100, speedCap: 12, offset: 100, standoff: 5 }, true]
+  ])('direction %i under %o is allowed: %s', (direction, limits, expected) => {
+    expect(lateralPushAllowed(direction, limits)).toBe(expected)
+  })
+})
+
+describe('clampLateralMagnitude', () => {
+  it('passes a magnitude through when the push is allowed', () => {
+    expect(
+      clampLateralMagnitude(4, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(4)
+  })
+
+  it('zeroes a magnitude already at the wall in that direction', () => {
+    expect(
+      clampLateralMagnitude(4, { lateralSpeed: 0, speedCap: 12, offset: 5, standoff: 5 })
+    ).toBe(0)
+  })
+
+  it('zeroes a magnitude already at the speed cap in that direction', () => {
+    expect(
+      clampLateralMagnitude(-4, { lateralSpeed: -12, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
+  })
+
+  it('leaves zero as zero', () => {
+    expect(
+      clampLateralMagnitude(0, { lateralSpeed: 0, speedCap: 12, offset: 0, standoff: Infinity })
+    ).toBe(0)
+  })
+})
+
+describe('autopilotLateralVelocity', () => {
+  it.each([
+    [4, 2, 20, -8],
+    [-4, 2, 20, 8],
+    [0, 2, 20, 0]
+  ])('offset %f at gain %f commands %f', (offset, gain, max, expected) => {
+    expect(autopilotLateralVelocity(offset, gain, max)).toBeCloseTo(expected)
+  })
+
+  it('clamps to the maximum centering speed on a large offset', () => {
+    expect(autopilotLateralVelocity(1000, 2, 20)).toBe(-20)
+  })
+
+  it('clamps to the negative maximum on a large negative offset', () => {
+    expect(autopilotLateralVelocity(-1000, 2, 20)).toBe(20)
   })
 })
 
