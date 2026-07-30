@@ -258,6 +258,7 @@ export type RockConfig = {
   linearDamping: number
   angularDamping: number
   tint: number
+  autopilot: boolean
 }
 
 export type DebrisEmitOptions = {

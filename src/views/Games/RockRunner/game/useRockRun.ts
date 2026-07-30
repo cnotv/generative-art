@@ -46,6 +46,7 @@ import { createDebrisField } from './debris'
 import { stageColorAt } from '../scatter/textureStages'
 import {
   advanceDistance,
+  autopilotLateralVelocity,
   debrisBurstSize,
   debrisLifetime,
   forwardImpulseMagnitude,
@@ -75,6 +76,8 @@ import type {
   TrackPath
 } from '../types'
 import {
+  AUTOPILOT_GAIN,
+  AUTOPILOT_MAX_SPEED,
   CONTROLS_GAME_ID,
   COUNTDOWN_MS,
   CHASE_BACK,
@@ -194,6 +197,7 @@ type RunReferences = {
 // Impulses are recomputed every frame, so the vector they are written into is
 // allocated once here rather than inside the loop.
 const scratchImpulse = { x: 0, y: 0, z: 0 }
+const scratchVelocity = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 const scratchOrigin = new THREE.Vector3()
 
@@ -460,8 +464,27 @@ const createDriveAction =
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
-    const velocity = body.linvel()
     const rock = state.rockConfig
+    // The self-driving assist is a velocity servo rather than an impulse: it
+    // directly commands the lateral component of the body's own velocity
+    // toward the centreline every frame, leaving the forward and vertical
+    // components untouched, so it holds the rock to the middle continuously
+    // instead of nudging it with a force that has to fight momentum.
+    if (rock.autopilot) {
+      const currentVelocity = body.linvel()
+      const forwardComponent = speedAlong(currentVelocity, sample.forward)
+      const offset = lateralOffset(body.translation(), sample.position, sample.right)
+      const centeringVelocity = autopilotLateralVelocity(
+        offset,
+        AUTOPILOT_GAIN,
+        AUTOPILOT_MAX_SPEED
+      )
+      scratchVelocity.x = sample.forward.x * forwardComponent + sample.right.x * centeringVelocity
+      scratchVelocity.y = currentVelocity.y
+      scratchVelocity.z = sample.forward.z * forwardComponent + sample.right.z * centeringVelocity
+      body.setLinvel(scratchVelocity, true)
+    }
+    const velocity = body.linvel()
     const forwardMagnitude = forwardImpulseMagnitude(
       speedAlong(velocity, sample.forward),
       speedCapFor(rock, state.distance),

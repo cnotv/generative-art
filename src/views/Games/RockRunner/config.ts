@@ -315,6 +315,12 @@ export const STEER_IMPULSE = 75
 // forward speed without letting the rock slide across the whole track at once.
 export const MAX_LATERAL_SPEED = 12
 
+// Self driving: how strongly the rock's offset from the centreline converts
+// into a commanded centering velocity, and the fastest it will ever servo
+// back toward the middle.
+export const AUTOPILOT_GAIN = 1.5
+export const AUTOPILOT_MAX_SPEED = 10
+
 // An impulse is momentum, so it is divided by the rock's mass rather than
 // producing a speed directly. Raised alongside the gravity above and measured
 // against the solver with it: the pair clear 8.5 units in 0.3s of rise.

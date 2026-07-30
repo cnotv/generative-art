@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RR_ROCK_CONTROLS } from './rockPanel'
+import { RR_ROCK_CONTROLS, RR_ROCK_PHYSICS_CONTROLS } from './rockPanel'
 import {
   BASE_MAX_SPEED,
   FORWARD_IMPULSE,
@@ -93,4 +93,11 @@ describe('RR_ROCK_CONTROLS', () => {
       expect(controls[name].min).toBeGreaterThan(0)
     }
   )
+})
+
+describe('self-driving assist', () => {
+  it('exposes the toggle in both the elements panel and the config panel schema, sharing one definition', () => {
+    expect(RR_ROCK_CONTROLS.autopilot).toEqual({ boolean: true, label: 'Self driving' })
+    expect(RR_ROCK_PHYSICS_CONTROLS.autopilot).toBe(RR_ROCK_CONTROLS.autopilot)
+  })
 })
