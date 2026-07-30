@@ -36,7 +36,7 @@ import {
  * instead, which is what makes the rock read as heavy stone rather than rubber.
  */
 export const RR_ROCK_CONTROLS = {
-  forwardImpulse: { min: 0, max: 200, step: 1, label: 'Drive force' },
+  forwardImpulse: { min: 0, max: 1000, step: 1, label: 'Drive force' },
   baseMaxSpeed: { min: 1, max: 80, step: 1, label: 'Starting top speed' },
   maxSpeedCeiling: { min: 1, max: 120, step: 1, label: 'Final top speed' },
   speedRampDistance: { min: 100, max: 20000, step: 100, label: 'Distance to reach it' },
@@ -50,7 +50,7 @@ export const RR_ROCK_CONTROLS = {
   mass: { min: 1, max: 400, step: 5, label: 'Mass' },
   // Gravity is a multiplier on the world's, not an acceleration: Rapier has one
   // world gravity and a body's weight is expressed against it.
-  gravityScale: { min: 0.1, max: 40, step: 0.1, label: 'Gravity' },
+  gravityScale: { min: 0.1, max: 100, step: 0.1, label: 'Gravity' },
   // Reaches far higher than the rising figure because it only governs the drop.
   // Stops short of where the rock starts sinking into the deck on landing.
   friction: { min: 0, max: 40, step: 0.5, label: 'Grip' },
@@ -62,7 +62,8 @@ export const RR_ROCK_CONTROLS = {
   // proportion. Zero removes the line rather than drawing a hairline.
   strokeWidth: { min: 0, max: 0.3, step: 0.005, label: 'Outline width' },
   strokeWobble: { min: 0, max: 2, step: 0.05, label: 'Outline wobble' },
-  strokeColor: { label: 'Outline colour', color: true }
+  strokeColor: { label: 'Outline colour', color: true },
+  autopilot: { boolean: true, label: 'Self driving' }
 }
 
 /**
@@ -79,7 +80,8 @@ export const RR_ROCK_PHYSICS_CONTROLS = {
   friction: RR_ROCK_CONTROLS.friction,
   restitution: RR_ROCK_CONTROLS.restitution,
   linearDamping: RR_ROCK_CONTROLS.linearDamping,
-  angularDamping: RR_ROCK_CONTROLS.angularDamping
+  angularDamping: RR_ROCK_CONTROLS.angularDamping,
+  autopilot: RR_ROCK_CONTROLS.autopilot
 }
 
 export type RockPanelOptions = {
@@ -159,7 +161,8 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     tint: ROCK_TINT,
     strokeWidth: ROCK_STROKE_WIDTH,
     strokeWobble: ROCK_STROKE_WOBBLE,
-    strokeColor: ROCK_STROKE_COLOR
+    strokeColor: ROCK_STROKE_COLOR,
+    autopilot: false
   })
 
   const apply = (): void => {
