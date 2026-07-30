@@ -475,13 +475,26 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
     chunks = [...chunks, chunk]
   }
 
+  const coversLookahead = (distance: number): boolean =>
+    (chunks[chunks.length - 1]?.endDistance ?? -TRACK_BEHIND) >= distance + TRACK_LOOKAHEAD
+
   // Recursive rather than a loop: one chunk per call until the lookahead is
-  // covered, matching how the cloud chunk manager pumps itself.
+  // covered, matching how the cloud chunk manager pumps itself. Used for a
+  // deliberate one-off rebuild (a slider changed); the per-frame path below
+  // builds at most one chunk instead, so a device that has fallen behind never
+  // pays for several trimesh colliders in the same frame.
   const ensureAhead = (distance: number): void => {
-    if ((chunks[chunks.length - 1]?.endDistance ?? -TRACK_BEHIND) >= distance + TRACK_LOOKAHEAD)
-      return
+    if (coversLookahead(distance)) return
     spawnNext()
     ensureAhead(distance)
+  }
+
+  // One chunk at most, however far behind the lookahead is. Called every
+  // frame, so falling behind costs a few thinner-than-ideal frames of lookahead
+  // rather than one frame paying for all of them at once.
+  const pump = (distance: number): void => {
+    if (coversLookahead(distance)) return
+    spawnNext()
   }
 
   const prune = (distance: number): void => {
@@ -537,6 +550,7 @@ export const createTrackChunkManager = (options: TrackChunkManagerOptions): Trac
 
   return {
     ensureAhead,
+    pump,
     prune,
     rebuild,
     setWall,
