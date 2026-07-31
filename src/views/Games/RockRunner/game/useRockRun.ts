@@ -465,6 +465,11 @@ const createDriveAction =
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
     const rock = state.rockConfig
+    const steer = steerDirection(state.controls.currentActions)
+    // Self driving is a hands-off default, not an assist the player has to
+    // fight: the first steering press hands control back rather than adding
+    // to it, so it only ever turns off on its own, never back on.
+    if (rock.autopilot && steer !== 0) rock.autopilot = false
     // The self-driving assist is a velocity servo rather than an impulse: it
     // directly commands the lateral component of the body's own velocity
     // toward the centreline every frame, leaving the forward and vertical
@@ -495,16 +500,12 @@ const createDriveAction =
     // full force for as long as the key was held. That normal force against the
     // rock's grip is what brought it to a halt at the track edge, so steering
     // stops at the wall itself rather than only at a speed.
-    const lateralMagnitude = steerImpulseMagnitude(
-      steerDirection(state.controls.currentActions),
-      rock.steerImpulse,
-      {
-        lateralSpeed: speedAlong(velocity, sample.right),
-        speedCap: rock.maxLateralSpeed,
-        offset: lateralOffset(body.translation(), sample.position, sample.right),
-        standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
-      }
-    )
+    const lateralMagnitude = steerImpulseMagnitude(steer, rock.steerImpulse, {
+      lateralSpeed: speedAlong(velocity, sample.right),
+      speedCap: rock.maxLateralSpeed,
+      offset: lateralOffset(body.translation(), sample.position, sample.right),
+      standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
+    })
     if (forwardMagnitude === 0 && lateralMagnitude === 0) return
     const forward = frameScaledImpulse(forwardMagnitude, delta)
     const lateral = frameScaledImpulse(lateralMagnitude, delta)

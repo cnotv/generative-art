@@ -11,8 +11,8 @@ height are each a sum of sine terms evaluated against the distance travelled,
 so the curve shape is a pure function of the seed (see
 [Rock Runner's endless track](./rock-runner-endless-track.md)). Sharp bends
 are common, and a player who steers a beat late clips the outer wall. "Self
-driving" is a Config-panel toggle that continuously tries to hold the rock to
-the middle of the track, without taking control away from the player.
+driving" is a Config-panel toggle, on by default, that continuously tries to
+hold the rock to the middle of the track until the player takes over.
 
 ## Velocity, not impulse
 
@@ -31,7 +31,7 @@ flowchart LR
     A[Rock's current offset from centreline] --> B[autopilotLateralVelocity]
     B --> C["Clamped target lateral velocity, opposing the offset"]
     C --> D["body.setLinvel: forward + vertical kept, lateral replaced"]
-    D --> E[Player's own steering impulse applies on top]
+    E[Player presses left/right] -->|turns autopilot off| D
 ```
 
 Each frame, while the toggle is on, the rock's current velocity is
@@ -46,15 +46,24 @@ rather than building up over several frames, and a jump or a wall bounce
 still behaves exactly as it would without the assist, since only the lateral
 axis is touched.
 
-## Blending with the player
+## Handing control back, not fighting for it
 
-The centering command runs first each frame, then the player's own
-steering impulse is applied on top exactly as it always was — so holding
-left or right still moves the rock further than the assist alone would,
-rather than fighting a competing correction. The rock is a normal dynamic
-physics body throughout: collisions, restitution and jumping are unaffected,
-since the assist only ever overwrites the lateral component of velocity, one
-axis out of three.
+An earlier version ran the centering command every frame and let the
+player's own steering impulse apply on top of it, so the two blended
+continuously. In practice that meant the assist was always at least a
+little bit active, second-guessing a player who was already steering
+exactly where they wanted to go — a hands-off default should get out of
+the way the moment the player takes the wheel, not keep contributing
+alongside them.
+
+`autopilot` now turns itself off the instant `steerDirection` reads
+anything but zero — the very first frame the player presses left or right.
+It's a one-way latch: once handed back, control stays with the player until
+they re-enable the toggle from the Config panel themselves, it doesn't
+reactivate the moment the player lets go of the key. The rock is a normal
+dynamic physics body throughout either way: collisions, restitution and
+jumping are unaffected, since the assist only ever overwrites the lateral
+component of velocity, one axis out of three.
 
 ## Where it lives
 
@@ -62,7 +71,7 @@ Rock Runner's tunables already follow one pattern: a single reactive
 `RockConfig` object is read directly by the run loop every frame, and
 registered into both the elements panel and the Config panel from the same
 field schema. The toggle is one more field on that object —
-`autopilot: boolean`, defaulting off — following the boolean-field
+`autopilot: boolean`, defaulting **on** — following the boolean-field
 convention already used by Maze Game's own auto-mode toggle. The correction
 gain and maximum centering speed are tuned constants, not exposed controls:
 this is one on/off option, not a tuning surface.
@@ -75,6 +84,7 @@ and clamping to the maximum centering speed), plus the small
 `lateralPushAllowed` / `clampLateralMagnitude` helpers pulled out of the
 player's own `steerImpulseMagnitude` along the way, with the existing suite
 serving as a regression check that player-only steering is unchanged. In the
-browser: toggle Self driving on mid-run from the Config panel and watch the
-rock hold to the middle through a run of curves with no input, then confirm
-manual steering still moves it further without fighting the assist.
+browser: confirm the Config panel's checkbox starts checked; watch the rock
+hold to the middle through a run of curves with no input; tap left or right
+and confirm the checkbox unchecks itself the instant the key is pressed and
+the rock stays under manual control from then on.
