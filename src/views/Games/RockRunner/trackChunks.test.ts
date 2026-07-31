@@ -352,6 +352,37 @@ describe('createTrackChunkManager', () => {
     expect(after).toBeGreaterThan(before)
   })
 
+  // A single pump only ever builds one chunk, so a frame that has fallen
+  // behind (a slow device, a big hitch) never has to pay for several trimesh
+  // colliders at once — it catches up one chunk per subsequent call instead.
+  it('pump builds at most one chunk per call, however far behind it is', () => {
+    const { manager, scene } = createManager()
+
+    manager.pump(0)
+
+    const decks = scene.children.filter((child) => child.name === 'track-ground')
+    expect(decks).toHaveLength(1)
+  })
+
+  it('pump reaches full lookahead coverage after enough calls', () => {
+    const { manager, scene } = createManager()
+
+    Array.from({ length: EXPECTED_CHUNKS }).forEach(() => manager.pump(0))
+
+    const decks = scene.children.filter((child) => child.name === 'track-ground')
+    expect(decks).toHaveLength(EXPECTED_CHUNKS)
+  })
+
+  it('pump does nothing once the lookahead is already covered', () => {
+    const { manager, scene } = createManager()
+    Array.from({ length: EXPECTED_CHUNKS }).forEach(() => manager.pump(0))
+    const afterFull = scene.children.length
+
+    manager.pump(0)
+
+    expect(scene.children.length).toBe(afterFull)
+  })
+
   it('disposes chunks that fall behind the keep-alive window', () => {
     const { manager, scene, removeRigidBody } = createManager()
     manager.ensureAhead(0)

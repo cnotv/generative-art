@@ -70,6 +70,14 @@ export type ScatterAreaManagerOptions = {
   lateralFog: LateralFogUniforms
   getConfig: () => ScatterAreaConfig
   getTextures: (distance: number) => ScatterTexture[]
+  /**
+   * Offsets this area's chunk grid. Every area shares the same chunk length,
+   * so left at zero they would all fall due for a new chunk on the same
+   * distance — several new InstancedMeshes (and any first-use shader
+   * compiles) landing in one frame. A different offset per area spreads that
+   * same total work across more frames instead.
+   */
+  chunkPhase?: number
 }
 
 /**
@@ -123,6 +131,7 @@ export const createScatterAreaManager = (
 ): ScatterAreaManager => {
   const { scene, path, definition, getConfig, getTextures } = options
   const span = scatterChunkSpan()
+  const phase = options.chunkPhase ?? 0
   const cache = createMaterialCache(options.lateralFog, () => getConfig().opacity)
   let chunks: ScatterChunk[] = []
   let hidden = false
@@ -200,13 +209,22 @@ export const createScatterAreaManager = (
       mesh.dispose()
     })
 
-  // Recursive rather than a loop: one chunk per call until the lookahead is
-  // covered, matching how the track chunk manager pumps itself.
+  const chunkTail = (): number => chunks[chunks.length - 1]?.endDistance ?? phase - span.behind
+  const needsChunk = (distance: number): boolean => chunkTail() < distance + span.lookahead
+
+  // Recursive: fills the whole lookahead in one call. Used only for a
+  // deliberate rebuild; pump below builds one chunk per frame instead, so a
+  // slow device never pays for several areas' meshes in the same frame.
   const ensureAhead = (distance: number): void => {
-    const tail = chunks[chunks.length - 1]?.endDistance ?? -span.behind
-    if (tail >= distance + span.lookahead) return
-    spawnChunk(tail)
+    if (!needsChunk(distance)) return
+    spawnChunk(chunkTail())
     ensureAhead(distance)
+  }
+
+  // Called every frame: at most one chunk, so falling behind costs a few
+  // thin frames of lookahead rather than one frame building them all.
+  const pump = (distance: number): void => {
+    if (needsChunk(distance)) spawnChunk(chunkTail())
   }
 
   const prune = (distance: number): void => {
@@ -246,6 +264,7 @@ export const createScatterAreaManager = (
   return {
     name: definition.name,
     ensureAhead,
+    pump,
     prune,
     rebuild,
     setHidden,

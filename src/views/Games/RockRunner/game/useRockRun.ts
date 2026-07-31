@@ -125,6 +125,7 @@ import {
   SKY_COLOR,
   TERRAIN_STAGE_TINTS,
   ROCK_STROKE_COLOR,
+  SCATTER_CHUNK_LENGTH,
   SPAWN_GATE_SPREAD,
   TRACK_WIDTH,
   WALL_ELEMENT_NAME,
@@ -576,10 +577,14 @@ const createRunActions = (
   // as a whole rather than the trees swapping inside an unchanged haze.
   const pumpWorld = (): void => {
     advanceStage()
-    state.track?.ensureAhead(state.distance)
+    // pump, not ensureAhead: at most one chunk per manager per frame, so a
+    // device that has fallen behind never has to build several trimesh
+    // colliders and InstancedMeshes in the same frame — it catches up over a
+    // few frames instead of spiking one.
+    state.track?.pump(state.distance)
     state.track?.prune(state.distance)
     state.scatter.forEach((area) => {
-      area.ensureAhead(state.distance)
+      area.pump(state.distance)
       area.prune(state.distance)
     })
   }
@@ -768,14 +773,18 @@ const buildRunWorld = ({
     lateralFog
   })
   state.track = track
-  state.scatter = SCATTER_AREAS.map((definition) =>
+  state.scatter = SCATTER_AREAS.map((definition, index) =>
     createScatterAreaManager({
       scene,
       path,
       definition,
       lateralFog,
       getConfig: () => scatterPanel.areaConfig(definition.name),
-      getTextures: (distance: number) => scatterPanel.areaTextures(definition.name, distance)
+      getTextures: (distance: number) => scatterPanel.areaTextures(definition.name, distance),
+      // Every area shares one chunk length, so left unstaggered they would all
+      // fall due for a new chunk on the same frame. Spread evenly across one
+      // chunk's length, so their rebuilds land on different frames instead.
+      chunkPhase: (index * SCATTER_CHUNK_LENGTH) / SCATTER_AREAS.length
     })
   )
 

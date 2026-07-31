@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
 import { createScatterAreaManager, scatterChunkSpan, groupInstancesByTexture } from './scatterAreas'
 import { createLateralFogUniforms } from '../lateralFog'
@@ -164,6 +164,49 @@ describe('createScatterAreaManager', () => {
     manager.ensureAhead(SCATTER_CHUNK_LENGTH * 5)
 
     expect(scatterMeshes(scene).length).toBeGreaterThan(before)
+  })
+
+  // A single pump only ever builds one chunk, so a device that has fallen
+  // behind never has to build several areas' worth of InstancedMeshes (and
+  // possibly compile new shaders) in the same frame — it catches up one
+  // chunk per subsequent call instead.
+  it('pump builds at most one chunk per call, so it lags a full ensureAhead', () => {
+    const { manager, scene } = createManager()
+    const { manager: fullManager, scene: fullScene } = createManager()
+
+    manager.pump(0)
+    fullManager.ensureAhead(0)
+
+    expect(scatterMeshes(scene).length).toBeLessThan(scatterMeshes(fullScene).length)
+  })
+
+  it('pump reaches the same coverage as ensureAhead after enough calls', () => {
+    const { manager, scene } = createManager()
+    const { manager: fullManager, scene: fullScene } = createManager()
+
+    Array.from({ length: EXPECTED_CHUNKS }).forEach(() => manager.pump(0))
+    fullManager.ensureAhead(0)
+
+    expect(scatterMeshes(scene).length).toBe(scatterMeshes(fullScene).length)
+  })
+
+  it('offsets its chunk boundaries by chunkPhase, so areas do not all rebuild on the same frame', () => {
+    const scene = new THREE.Scene()
+    const path = createTrackPath(11)
+    const getTextures = vi.fn(() => treeDefinition.textures)
+    const manager = createScatterAreaManager({
+      scene,
+      path,
+      definition: treeDefinition,
+      lateralFog: createLateralFogUniforms(0xffffff, 20, 40),
+      getConfig: () => config,
+      getTextures,
+      chunkPhase: 12
+    })
+
+    manager.pump(0)
+
+    expect(getTextures).toHaveBeenCalledWith(12 - SCATTER_BEHIND)
   })
 
   it('disposes chunks left behind', () => {

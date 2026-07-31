@@ -84,6 +84,8 @@ export type TrackChunk = {
 /** Spawns ground ahead of the rock and disposes it behind. */
 export type TrackChunkManager = {
   ensureAhead: (distance: number) => void
+  /** Builds at most one chunk, so a frame is never blocked catching up on several at once. */
+  pump: (distance: number) => void
   prune: (distance: number) => void
   rebuild: (distance: number) => void
   setWall: (wall: WallConfig, distance: number) => void
@@ -164,6 +166,8 @@ export type ScatterChunk = {
 export type ScatterAreaManager = {
   name: string
   ensureAhead: (distance: number) => void
+  /** Builds at most one chunk, so a frame is never blocked catching up on several at once. */
+  pump: (distance: number) => void
   prune: (distance: number) => void
   rebuild: (distance: number) => void
   setHidden: (hidden: boolean) => void
