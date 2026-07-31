@@ -234,6 +234,31 @@ export type SteerLimits = {
 }
 
 /**
+ * Whether a lateral push in the given direction is still open: not already
+ * at the lateral speed cap, and not already pinned against the wall.
+ *
+ * @param direction - Positive for a rightward push, negative for leftward, zero for neither
+ * @param limits - The speed and position the steering has to stop at
+ * @returns Whether that direction is still open
+ */
+export const lateralPushAllowed = (direction: number, limits: SteerLimits): boolean => {
+  const { lateralSpeed, speedCap, offset, standoff } = limits
+  if (direction > 0) return lateralSpeed < speedCap && offset < standoff
+  if (direction < 0) return lateralSpeed > -speedCap && offset > -standoff
+  return true
+}
+
+/**
+ * A lateral magnitude, zeroed once its direction is no longer open.
+ *
+ * @param magnitude - The signed lateral magnitude to gate
+ * @param limits - The speed and position the steering has to stop at
+ * @returns The magnitude unchanged, or zero if that direction is no longer open
+ */
+export const clampLateralMagnitude = (magnitude: number, limits: SteerLimits): number =>
+  magnitude !== 0 && lateralPushAllowed(magnitude, limits) ? magnitude : 0
+
+/**
  * Impulse that steers the rock sideways without exceeding the lateral cap or
  * driving it into a wall.
  *
@@ -246,13 +271,7 @@ export const steerImpulseMagnitude = (
   steer: number,
   impulse: number,
   limits: SteerLimits
-): number => {
-  if (steer === 0) return 0
-  const { lateralSpeed, speedCap, offset, standoff } = limits
-  if (steer > 0 && (lateralSpeed >= speedCap || offset >= standoff)) return 0
-  if (steer < 0 && (lateralSpeed <= -speedCap || offset <= -standoff)) return 0
-  return steer * impulse
-}
+): number => clampLateralMagnitude(steer * impulse, limits)
 
 /**
  * How far off the centreline the rock can sit before it is touching a wall.
@@ -277,3 +296,18 @@ export const lateralOffset = (
   origin: { x: number; z: number },
   right: { x: number; z: number }
 ): number => (position.x - origin.x) * right.x + (position.z - origin.z) * right.z
+
+/**
+ * The lateral velocity the self-driving assist commands: proportional to how
+ * far off the centreline the rock currently sits, opposing the offset, and
+ * clamped to a maximum centering speed. A direct velocity command rather than
+ * an impulse, so the rock is steered like a servo pulling back to the middle
+ * instead of being nudged by an accumulating force.
+ *
+ * @param offset - Offset from the centreline, positive towards the path's right
+ * @param gain - How strongly offset converts to a velocity command
+ * @param maxSpeed - The largest centering speed allowed, in either direction
+ * @returns The signed lateral velocity to command, opposing the offset
+ */
+export const autopilotLateralVelocity = (offset: number, gain: number, maxSpeed: number): number =>
+  Math.max(-maxSpeed, Math.min(maxSpeed, -offset * gain))

@@ -46,6 +46,7 @@ import { createDebrisField } from './debris'
 import { stageColorAt } from '../scatter/textureStages'
 import {
   advanceDistance,
+  autopilotLateralVelocity,
   debrisBurstSize,
   debrisLifetime,
   forwardImpulseMagnitude,
@@ -75,6 +76,8 @@ import type {
   TrackPath
 } from '../types'
 import {
+  AUTOPILOT_GAIN,
+  AUTOPILOT_MAX_SPEED,
   CONTROLS_GAME_ID,
   COUNTDOWN_MS,
   CHASE_BACK,
@@ -195,6 +198,7 @@ type RunReferences = {
 // Impulses are recomputed every frame, so the vector they are written into is
 // allocated once here rather than inside the loop.
 const scratchImpulse = { x: 0, y: 0, z: 0 }
+const scratchVelocity = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 const scratchOrigin = new THREE.Vector3()
 
@@ -461,8 +465,32 @@ const createDriveAction =
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
-    const velocity = body.linvel()
     const rock = state.rockConfig
+    const steer = steerDirection(state.controls.currentActions)
+    // Self driving is a hands-off default, not an assist the player has to
+    // fight: the first steering press hands control back rather than adding
+    // to it, so it only ever turns off on its own, never back on.
+    if (rock.autopilot && steer !== 0) rock.autopilot = false
+    // The self-driving assist is a velocity servo rather than an impulse: it
+    // directly commands the lateral component of the body's own velocity
+    // toward the centreline every frame, leaving the forward and vertical
+    // components untouched, so it holds the rock to the middle continuously
+    // instead of nudging it with a force that has to fight momentum.
+    if (rock.autopilot) {
+      const currentVelocity = body.linvel()
+      const forwardComponent = speedAlong(currentVelocity, sample.forward)
+      const offset = lateralOffset(body.translation(), sample.position, sample.right)
+      const centeringVelocity = autopilotLateralVelocity(
+        offset,
+        AUTOPILOT_GAIN,
+        AUTOPILOT_MAX_SPEED
+      )
+      scratchVelocity.x = sample.forward.x * forwardComponent + sample.right.x * centeringVelocity
+      scratchVelocity.y = currentVelocity.y
+      scratchVelocity.z = sample.forward.z * forwardComponent + sample.right.z * centeringVelocity
+      body.setLinvel(scratchVelocity, true)
+    }
+    const velocity = body.linvel()
     const forwardMagnitude = forwardImpulseMagnitude(
       speedAlong(velocity, sample.forward),
       speedCapFor(rock, state.distance),
@@ -473,16 +501,12 @@ const createDriveAction =
     // full force for as long as the key was held. That normal force against the
     // rock's grip is what brought it to a halt at the track edge, so steering
     // stops at the wall itself rather than only at a speed.
-    const lateralMagnitude = steerImpulseMagnitude(
-      steerDirection(state.controls.currentActions),
-      rock.steerImpulse,
-      {
-        lateralSpeed: speedAlong(velocity, sample.right),
-        speedCap: rock.maxLateralSpeed,
-        offset: lateralOffset(body.translation(), sample.position, sample.right),
-        standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
-      }
-    )
+    const lateralMagnitude = steerImpulseMagnitude(steer, rock.steerImpulse, {
+      lateralSpeed: speedAlong(velocity, sample.right),
+      speedCap: rock.maxLateralSpeed,
+      offset: lateralOffset(body.translation(), sample.position, sample.right),
+      standoff: wallStandoff(state.track?.deckWidth() ?? TRACK_WIDTH, rock.radius)
+    })
     if (forwardMagnitude === 0 && lateralMagnitude === 0) return
     const forward = frameScaledImpulse(forwardMagnitude, delta)
     const lateral = frameScaledImpulse(lateralMagnitude, delta)
