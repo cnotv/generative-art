@@ -452,9 +452,21 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
   return { rigidBody, collider, characterController }
 }
 
+/**
+ * A phone's device pixel ratio (often 3-4) renders 9-16x the fragments of a
+ * ratio of 1, and fill rate is usually what a phone runs out of first.
+ * Capping it at 2 is close to invisible on a small screen and is the
+ * cheapest, largest win available for mobile frame time.
+ * @param devicePixelRatio - The display's actual device pixel ratio
+ * @param maxPixelRatio - The highest ratio the renderer is allowed to use
+ * @returns The pixel ratio to render at
+ */
+export const getPixelRatio = (devicePixelRatio: number, maxPixelRatio = 2): number =>
+  Math.min(devicePixelRatio, maxPixelRatio)
+
 export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(getPixelRatio(window.devicePixelRatio))
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(0xaaaaff)
   renderer.shadowMap.enabled = true
