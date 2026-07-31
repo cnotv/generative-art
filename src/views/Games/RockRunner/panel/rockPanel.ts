@@ -162,7 +162,7 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     strokeWidth: ROCK_STROKE_WIDTH,
     strokeWobble: ROCK_STROKE_WOBBLE,
     strokeColor: ROCK_STROKE_COLOR,
-    autopilot: false
+    autopilot: true
   })
 
   const apply = (): void => {
