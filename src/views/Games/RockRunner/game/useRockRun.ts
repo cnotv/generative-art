@@ -1,10 +1,10 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { getTools, getBall } from '@webgamekit/threejs'
+import { getTools, getBall, getModel } from '@webgamekit/threejs'
 import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
-import { createTimelineManager } from '@webgamekit/animation'
+import { createTimelineManager, updateAnimation } from '@webgamekit/animation'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/animation'
 import rockNormalUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_NormalGL.webp'
 import rockRoughnessUrl from '@/assets/images/textures/rock/Rock016_1K-JPG_Roughness.webp'
@@ -64,6 +64,7 @@ import {
 } from './rockMotion'
 import type {
   CameraMode,
+  CharacterType,
   DebrisField,
   LateralFogUniforms,
   JumpGate,
@@ -82,6 +83,10 @@ import {
   COUNTDOWN_MS,
   CHASE_BACK,
   CHASE_HEIGHT,
+  DEFAULT_CHARACTER_TYPE,
+  STICKMAN_GROUND_OFFSET,
+  STICKMAN_MODEL_PATH,
+  STICKMAN_SCALE,
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
@@ -154,6 +159,7 @@ export type UseRockRunDeps = {
   spawnGateCount?: Ref<number>
   spawnGateIndex?: Ref<number>
   rockSurface?: Ref<string>
+  characterType?: Ref<CharacterType>
   /** Route name the config panel keys the rock's physics by. */
   routeName?: string
 }
@@ -163,6 +169,8 @@ type RunState = {
   cameraConfig: RunCameraConfig | null
   rockSurface: RockSurface | null
   rock: ComplexModel | null
+  /** A stickman riding the rock's invisible sphere, when that look is chosen. */
+  stickman: ComplexModel | null
   world: WorldReference | null
   scene: THREE.Scene | null
   controls: ControlsExtras | null
@@ -201,6 +209,7 @@ const scratchImpulse = { x: 0, y: 0, z: 0 }
 const scratchVelocity = { x: 0, y: 0, z: 0 }
 const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 const scratchOrigin = new THREE.Vector3()
+const STICKMAN_UP_AXIS = new THREE.Vector3(0, 1, 0)
 
 const CAMERA_ORDER: CameraMode[] = ['third', 'first', 'free']
 
@@ -466,6 +475,17 @@ const createDriveAction =
     const sample = state.path.sampleAt(state.distance)
     const body = state.rock.userData.body
     const rock = state.rockConfig
+    // The stickman rides the rock's own invisible sphere: same position, but
+    // yawed to face the track's forward direction instead of inheriting the
+    // sphere's full roll, and animated by a continuous run cycle rather than
+    // moved by any physics of its own.
+    if (state.stickman) {
+      const position = body.translation()
+      state.stickman.position.set(position.x, position.y + STICKMAN_GROUND_OFFSET, position.z)
+      const yaw = Math.atan2(-sample.forward.x, -sample.forward.z)
+      state.stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
+      updateAnimation({ actionName: 'walk', player: state.stickman, delta })
+    }
     const steer = steerDirection(state.controls.currentActions)
     // Self driving is a hands-off default, not an assist the player has to
     // fight: the first steering press hands control back rather than adding
@@ -742,7 +762,7 @@ const applyRunAtmosphere = (scene: THREE.Scene): THREE.DirectionalLight | null =
   )
 }
 
-const buildRunWorld = ({
+const buildRunWorld = async ({
   tools,
   orbit,
   deps,
@@ -751,7 +771,7 @@ const buildRunWorld = ({
   pumpWorld,
   cameraMode,
   setCameraMode
-}: WorldParameters): void => {
+}: WorldParameters): Promise<void> => {
   if (!tools.world) return
   const scene = tools.scene
   state.scene = scene
@@ -829,11 +849,25 @@ const buildRunWorld = ({
   state.rockSurface = surface
   state.rockMaps = maps
   state.rockTextures = Object.values(maps)
-  state.rock = spawnRock(scene, tools.world, spawnPosition(path, gateCount, gateIndex), {
+  const startPosition = spawnPosition(path, gateCount, gateIndex)
+  state.rock = spawnRock(scene, tools.world, startPosition, {
     maps,
     tint: surface.tint,
     displaced: surface.relief
   })
+  // Cosmetic swap only: the stickman has no physics of its own, it rides the
+  // rock's own invisible sphere every frame (createDriveAction), so every
+  // existing steering/jump/autopilot system keeps working untouched.
+  if ((deps.characterType?.value ?? DEFAULT_CHARACTER_TYPE) === 'stickman') {
+    state.rock.visible = false
+    state.stickman = await getModel(scene, tools.world, STICKMAN_MODEL_PATH, {
+      position: startPosition,
+      scale: [STICKMAN_SCALE, STICKMAN_SCALE, STICKMAN_SCALE],
+      type: 'kinematicPositionBased',
+      hasGravity: false,
+      castShadow: true
+    })
+  }
   // The rock is built from the constants, so anything already edited in the
   // panel has to be pushed onto it before the countdown starts.
   rockPanel.apply()
@@ -845,6 +879,7 @@ const createRunState = (): RunState => ({
   cameraConfig: null,
   rockSurface: null,
   rock: null,
+  stickman: null,
   world: null,
   scene: null,
   controls: null,
@@ -930,8 +965,8 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     cleanupTools = tools.cleanup
     await tools.setup({
       config: buildRunSetupConfig(spawnPosition(createTrackPath(deps.seed.value), 1, 0)),
-      defineSetup: ({ orbit }) => {
-        buildRunWorld({
+      defineSetup: async ({ orbit }) => {
+        await buildRunWorld({
           tools,
           orbit,
           deps,
@@ -973,6 +1008,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.rockTextures = []
     state.rockMaps = null
     state.rock = null
+    state.stickman = null
     state.world = null
     state.scene = null
     state.directionalLight = null

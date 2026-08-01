@@ -28,9 +28,15 @@ import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerRules from './wizard/RockRunnerRules.vue'
 import RockRunnerSummary from './game/RockRunnerSummary.vue'
-import { CONFIG_STORAGE_KEY, KEYBOARD_MAPPING, FAUXPAD_BUTTONS } from './config'
+import {
+  CONFIG_STORAGE_KEY,
+  KEYBOARD_MAPPING,
+  FAUXPAD_BUTTONS,
+  CHARACTER_TYPES,
+  DEFAULT_CHARACTER_TYPE
+} from './config'
 import { rockSurfaceById } from './elements/rockSurfaces'
-import type { CameraMode } from './types'
+import type { CameraMode, CharacterType } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
   third: 'Third',
@@ -48,7 +54,11 @@ const { phase, playerList, messages, hostId, runStartTime, trackSeed } = storeTo
 type StoredLobbyConfig = {
   trackSeed?: number
   rockSurface?: string
+  characterType?: string
 }
+
+const isCharacterType = (value: string): value is CharacterType =>
+  CHARACTER_TYPES.some((option) => option.value === value)
 
 const loadLobbyConfig = (): StoredLobbyConfig => {
   try {
@@ -70,6 +80,11 @@ const selectedSeed = ref(storedLobbyConfig.trackSeed ?? Math.floor(Math.random()
 // Kept through a reload like the seed and the profile: the rock a player picked
 // is part of how they left the lobby, not something to re-choose every visit.
 const selectedSurface = ref(rockSurfaceById(storedLobbyConfig.rockSurface ?? '').id)
+const selectedCharacterType = ref<CharacterType>(
+  isCharacterType(storedLobbyConfig.characterType ?? '')
+    ? (storedLobbyConfig.characterType as CharacterType)
+    : DEFAULT_CHARACTER_TYPE
+)
 
 const { roomId, resolvedRoomId } = useRoomId()
 
@@ -110,6 +125,7 @@ const run = useRockRun({
   canvas: runCanvas,
   routeName: String(useRoute().name ?? 'RockRunner'),
   rockSurface: selectedSurface,
+  characterType: selectedCharacterType,
   seed: trackSeed,
   runStartTime,
   localPlayerName: playerName,
@@ -135,7 +151,11 @@ const formattedTime = computed(() => {
 const persistLobbyConfig = (): void => {
   localStorage.setItem(
     CONFIG_STORAGE_KEY,
-    JSON.stringify({ trackSeed: selectedSeed.value, rockSurface: selectedSurface.value })
+    JSON.stringify({
+      trackSeed: selectedSeed.value,
+      rockSurface: selectedSurface.value,
+      characterType: selectedCharacterType.value
+    })
   )
 }
 
@@ -143,6 +163,12 @@ const handleConfigChange = (key: string, value: string | number): void => {
   if (key === 'rockSurface') {
     selectedSurface.value = rockSurfaceById(String(value)).id
     store.rockSurface = selectedSurface.value
+    persistLobbyConfig()
+    return
+  }
+  if (key === 'characterType') {
+    const next = String(value)
+    selectedCharacterType.value = isCharacterType(next) ? next : DEFAULT_CHARACTER_TYPE
     persistLobbyConfig()
     return
   }
@@ -277,6 +303,7 @@ onUnmounted(() => {
     <template v-if="phase === 'lobby'">
       <RockRunnerLobby
         :rock-surface="selectedSurface"
+        :character-type="selectedCharacterType"
         :player-name="playerName"
         :player-color="playerColor"
         :is-host="isHost"

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from '../config'
+import { MATCHMAKER_ROOM, CONTROLS_CONFIG, CHARACTER_TYPES } from '../config'
 import { rockSurfaceOptions } from '../elements/rockSurfaces'
 
 const props = defineProps<{
@@ -14,6 +14,7 @@ const props = defineProps<{
   roomId: string
   trackSeed: number
   rockSurface: string
+  characterType: string
 }>()
 
 const emit = defineEmits<{
@@ -27,6 +28,13 @@ const emit = defineEmits<{
 }>()
 
 const configFields = computed((): LobbyConfigField[] => [
+  {
+    type: 'select',
+    key: 'characterType',
+    label: 'Character',
+    value: props.characterType,
+    options: CHARACTER_TYPES
+  },
   {
     type: 'select',
     key: 'rockSurface',

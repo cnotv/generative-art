@@ -229,6 +229,9 @@ export type RockSurface = {
   tint: number
 }
 
+/** Which body the player drives: the rolling rock, or a stickman riding it. */
+export type CharacterType = 'rock' | 'stickman'
+
 /** How each of the three cameras follows the rock. */
 export type RunCameraConfig = {
   thirdPersonHeight: number

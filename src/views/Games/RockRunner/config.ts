@@ -1,6 +1,6 @@
 import type { MapperActionConfig, ControlsMapperGameConfig } from '@/types/lobbyWizard'
 import type { CoordinateTuple } from '@webgamekit/animation'
-import type { PathTerm } from './types'
+import type { CharacterType, PathTerm } from './types'
 
 export const CONTROLS_GAME_ID = 'rock-runner'
 
@@ -230,6 +230,20 @@ export const SCATTER_ALPHA_TEST = 0.35
 export const SCATTER_STAGE_LENGTH = 500
 
 export const ROCK_RADIUS = 2.2
+
+// A stickman rides the same invisible rolling sphere rather than getting its
+// own physics: cosmetic swap only, so every existing steering/jump/autopilot
+// system keeps working on the sphere collider underneath, untouched.
+export const CHARACTER_TYPES: { value: CharacterType; label: string }[] = [
+  { value: 'rock', label: 'Rock' },
+  { value: 'stickman', label: 'Stickman' }
+]
+export const DEFAULT_CHARACTER_TYPE: CharacterType = 'rock'
+export const STICKMAN_MODEL_PATH = 'stickboy_maze.glb'
+export const STICKMAN_SCALE = 2.2
+// The sphere's centre sits one radius above the deck; the stickman's feet
+// need to land there instead of at the centre.
+export const STICKMAN_GROUND_OFFSET = -ROCK_RADIUS
 // Mass in the sense of resistance to being pushed, which is the only thing mass
 // does here: a body's fall rate is independent of it, so this cannot make the
 // rock drop faster however large it gets.
