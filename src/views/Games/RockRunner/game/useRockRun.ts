@@ -38,6 +38,7 @@ import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { DEFAULT_RUN_CAMERA, registerCameraElements } from '../panel/cameraPanel'
 import { registerRockElements } from '../panel/rockPanel'
+import { registerStickmanElements } from '../panel/stickmanPanel'
 import { attachRockStroke } from '../elements/rockStroke'
 import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../elements/rockSurfaces'
 import { registerTrackElements, createElementVisibilityHandlers } from '../panel/trackPanel'
@@ -73,6 +74,7 @@ import type {
   RockSurface,
   RockPosPayload,
   ScatterAreaManager,
+  StickmanConfig,
   TrackChunkManager,
   TrackPath
 } from '../types'
@@ -84,9 +86,7 @@ import {
   CHASE_BACK,
   CHASE_HEIGHT,
   DEFAULT_CHARACTER_TYPE,
-  STICKMAN_GROUND_OFFSET,
   STICKMAN_MODEL_PATH,
-  STICKMAN_SCALE,
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
@@ -171,6 +171,7 @@ type RunState = {
   rock: ComplexModel | null
   /** A stickman riding the rock's invisible sphere, when that look is chosen. */
   stickman: ComplexModel | null
+  stickmanConfig: StickmanConfig | null
   world: WorldReference | null
   scene: THREE.Scene | null
   controls: ControlsExtras | null
@@ -479,9 +480,11 @@ const createDriveAction =
     // yawed to face the track's forward direction instead of inheriting the
     // sphere's full roll, and animated by a continuous run cycle rather than
     // moved by any physics of its own.
-    if (state.stickman) {
+    if (state.stickman && state.stickmanConfig) {
+      const stickmanConfig = state.stickmanConfig
+      state.stickman.scale.setScalar(stickmanConfig.scale)
       const position = body.translation()
-      state.stickman.position.set(position.x, position.y + STICKMAN_GROUND_OFFSET, position.z)
+      state.stickman.position.set(position.x, position.y + stickmanConfig.groundOffset, position.z)
       const yaw = Math.atan2(-sample.forward.x, -sample.forward.z)
       state.stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
       updateAnimation({ actionName: 'walk', player: state.stickman, delta })
@@ -860,9 +863,12 @@ const buildRunWorld = async ({
   // existing steering/jump/autopilot system keeps working untouched.
   if ((deps.characterType?.value ?? DEFAULT_CHARACTER_TYPE) === 'stickman') {
     state.rock.visible = false
+    const stickmanPanel = registerStickmanElements()
+    state.stickmanConfig = stickmanPanel.config
+    state.disposePanels.push(stickmanPanel.teardown)
     state.stickman = await getModel(scene, tools.world, STICKMAN_MODEL_PATH, {
       position: startPosition,
-      scale: [STICKMAN_SCALE, STICKMAN_SCALE, STICKMAN_SCALE],
+      scale: [stickmanPanel.config.scale, stickmanPanel.config.scale, stickmanPanel.config.scale],
       type: 'kinematicPositionBased',
       hasGravity: false,
       castShadow: true
@@ -880,6 +886,7 @@ const createRunState = (): RunState => ({
   rockSurface: null,
   rock: null,
   stickman: null,
+  stickmanConfig: null,
   world: null,
   scene: null,
   controls: null,
@@ -1009,6 +1016,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.rockMaps = null
     state.rock = null
     state.stickman = null
+    state.stickmanConfig = null
     state.world = null
     state.scene = null
     state.directionalLight = null

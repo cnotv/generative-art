@@ -240,7 +240,11 @@ export const CHARACTER_TYPES: { value: CharacterType; label: string }[] = [
 ]
 export const DEFAULT_CHARACTER_TYPE: CharacterType = 'rock'
 export const STICKMAN_MODEL_PATH = 'stickboy_maze.glb'
-export const STICKMAN_SCALE = 2.2
+export const STICKMAN_ELEMENT_NAME = 'player-stickman'
+// Sized well past the rig's own scale so it reads clearly against the rock's
+// track width rather than looking lost on it; tune live from the elements
+// panel rather than trusting this figure exactly.
+export const STICKMAN_SCALE = 4.5
 // The sphere's centre sits one radius above the deck; the stickman's feet
 // need to land there instead of at the centre.
 export const STICKMAN_GROUND_OFFSET = -ROCK_RADIUS

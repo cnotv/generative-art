@@ -268,6 +268,12 @@ export type RockConfig = {
   autopilot: boolean
 }
 
+/** Cosmetic tunables for the stickman look, editable from the elements panel. */
+export type StickmanConfig = {
+  scale: number
+  groundOffset: number
+}
+
 export type DebrisEmitOptions = {
   origin: THREE.Vector3
   forward: THREE.Vector3
