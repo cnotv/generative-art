@@ -232,8 +232,12 @@ export const SCATTER_STAGE_LENGTH = 500
 export const ROCK_RADIUS = 2.2
 
 // A stickman rides the same invisible rolling sphere rather than getting its
-// own physics: cosmetic swap only, so every existing steering/jump/autopilot
-// system keeps working on the sphere collider underneath, untouched.
+// own collider: cosmetic swap only, so every existing steering/jump/autopilot
+// system keeps working on the sphere underneath, untouched. What does change
+// by character is how that shared sphere is tuned — a running figure reads
+// wrong pushed and gravity-pulled as hard as a boulder — so a handful of the
+// sphere's own physics figures are overridden per character below rather than
+// duplicating the whole preset.
 export const CHARACTER_TYPES: { value: CharacterType; label: string }[] = [
   { value: 'rock', label: 'Rock' },
   { value: 'stickman', label: 'Stickman' }
@@ -245,6 +249,15 @@ export const STICKMAN_ELEMENT_NAME = 'player-stickman'
 // track width rather than looking lost on it; tune live from the elements
 // panel rather than trusting this figure exactly.
 export const STICKMAN_SCALE = 4.5
+// Gentler than the rock's own figures across the board: lighter drive so it
+// doesn't look shoved, lower speeds that read as a run rather than a roll,
+// and a floatier jump to match the lower gravity. Tuned live in the elements
+// panel, not derived from the rock's own numbers.
+export const STICKMAN_FORWARD_IMPULSE = 30
+export const STICKMAN_BASE_MAX_SPEED = 10
+export const STICKMAN_MAX_SPEED_CEILING = 30
+export const STICKMAN_JUMP_IMPULSE = 2350
+export const STICKMAN_GRAVITY_SCALE = 5
 // The sphere's centre sits one radius above the deck; the stickman's feet
 // need to land there instead of at the centre.
 export const STICKMAN_GROUND_OFFSET = -ROCK_RADIUS

@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { attachRockStroke } from '../elements/rockStroke'
-import type { RockConfig } from '../types'
+import type { CharacterType, RockConfig } from '../types'
 import {
   BASE_MAX_SPEED,
   FORWARD_IMPULSE,
@@ -24,8 +24,40 @@ import {
   ROCK_MASS,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
-  STEER_IMPULSE
+  STEER_IMPULSE,
+  STICKMAN_BASE_MAX_SPEED,
+  STICKMAN_FORWARD_IMPULSE,
+  STICKMAN_GRAVITY_SCALE,
+  STICKMAN_JUMP_IMPULSE,
+  STICKMAN_MAX_SPEED_CEILING
 } from '../config'
+
+/**
+ * The handful of the shared sphere's own physics figures that read wrong
+ * unchanged across characters — a running figure pushed and gravity-pulled
+ * as hard as a boulder looks like it's being flung, not running.
+ */
+const characterPhysicsPreset = (
+  characterType: CharacterType
+): Pick<
+  RockConfig,
+  'forwardImpulse' | 'baseMaxSpeed' | 'maxSpeedCeiling' | 'jumpImpulse' | 'gravityScale'
+> =>
+  characterType === 'stickman'
+    ? {
+        forwardImpulse: STICKMAN_FORWARD_IMPULSE,
+        baseMaxSpeed: STICKMAN_BASE_MAX_SPEED,
+        maxSpeedCeiling: STICKMAN_MAX_SPEED_CEILING,
+        jumpImpulse: STICKMAN_JUMP_IMPULSE,
+        gravityScale: STICKMAN_GRAVITY_SCALE
+      }
+    : {
+        forwardImpulse: FORWARD_IMPULSE,
+        baseMaxSpeed: BASE_MAX_SPEED,
+        maxSpeedCeiling: MAX_SPEED_CEILING,
+        jumpImpulse: JUMP_IMPULSE,
+        gravityScale: ROCK_GRAVITY_SCALE
+      }
 
 /**
  * The rock's tunables, grouped as they are felt rather than as they are stored:
@@ -89,6 +121,8 @@ export type RockPanelOptions = {
   routeName: string
   /** The live rock, absent until it spawns and replaced on every restart. */
   getRock: () => THREE.Object3D | undefined
+  /** Which character is riding the sphere, which picks its physics preset. */
+  characterType: CharacterType
 }
 
 export type RockPanel = {
@@ -142,17 +176,18 @@ const applyTint = (rock: THREE.Object3D, tint: number): void => {
  */
 export const registerRockElements = (options: RockPanelOptions): RockPanel => {
   const debugSceneStore = useDebugSceneStore()
+  const preset = characterPhysicsPreset(options.characterType)
   const config = reactive<RockConfig>({
-    forwardImpulse: FORWARD_IMPULSE,
-    baseMaxSpeed: BASE_MAX_SPEED,
-    maxSpeedCeiling: MAX_SPEED_CEILING,
+    forwardImpulse: preset.forwardImpulse,
+    baseMaxSpeed: preset.baseMaxSpeed,
+    maxSpeedCeiling: preset.maxSpeedCeiling,
     speedRampDistance: SPEED_RAMP_DISTANCE,
     steerImpulse: STEER_IMPULSE,
     maxLateralSpeed: MAX_LATERAL_SPEED,
-    jumpImpulse: JUMP_IMPULSE,
+    jumpImpulse: preset.jumpImpulse,
     jumpCooldown: JUMP_COOLDOWN_SECONDS,
     radius: ROCK_RADIUS,
-    gravityScale: ROCK_GRAVITY_SCALE,
+    gravityScale: preset.gravityScale,
     mass: ROCK_MASS,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,

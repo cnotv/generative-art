@@ -821,11 +821,13 @@ const buildRunWorld = async ({
   registerCameraProperties({ camera: tools.camera, orbit })
   // Registered after setSceneElements, which replaces the list wholesale and
   // would otherwise drop anything added before it.
+  const characterType = deps.characterType?.value ?? DEFAULT_CHARACTER_TYPE
   const cameraPanel = registerCameraElements({ mode: cameraMode, setMode: setCameraMode })
   state.cameraConfig = cameraPanel.config
   const rockPanel = registerRockElements({
     routeName: deps.routeName ?? 'RockRunner',
-    getRock: () => state.rock ?? undefined
+    getRock: () => state.rock ?? undefined,
+    characterType
   })
   state.rockConfig = rockPanel.config
   state.disposePanels = [
@@ -861,7 +863,7 @@ const buildRunWorld = async ({
   // Cosmetic swap only: the stickman has no physics of its own, it rides the
   // rock's own invisible sphere every frame (createDriveAction), so every
   // existing steering/jump/autopilot system keeps working untouched.
-  if ((deps.characterType?.value ?? DEFAULT_CHARACTER_TYPE) === 'stickman') {
+  if (characterType === 'stickman') {
     state.rock.visible = false
     const stickmanPanel = registerStickmanElements()
     state.stickmanConfig = stickmanPanel.config
