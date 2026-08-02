@@ -478,8 +478,9 @@ const createDriveAction =
     const rock = state.rockConfig
     // The stickman rides the rock's own invisible sphere: same position, but
     // yawed to face the track's forward direction instead of inheriting the
-    // sphere's full roll, and animated by a continuous run cycle rather than
-    // moved by any physics of its own.
+    // sphere's full roll, and animated by a run cycle whose playback rate
+    // tracks the sphere's own forward speed rather than a constant pace, so
+    // standing still holds the pose and topping out looks like a sprint.
     if (state.stickman && state.stickmanConfig) {
       const stickmanConfig = state.stickmanConfig
       state.stickman.scale.setScalar(stickmanConfig.scale)
@@ -487,7 +488,13 @@ const createDriveAction =
       state.stickman.position.set(position.x, position.y + stickmanConfig.groundOffset, position.z)
       const yaw = Math.atan2(-sample.forward.x, -sample.forward.z)
       state.stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
-      updateAnimation({ actionName: 'walk', player: state.stickman, delta })
+      const forwardSpeed = Math.max(0, speedAlong(body.linvel(), sample.forward))
+      updateAnimation({
+        actionName: 'walk',
+        player: state.stickman,
+        delta,
+        speed: forwardSpeed
+      })
     }
     const steer = steerDirection(state.controls.currentActions)
     // Self driving is a hands-off default, not an assist the player has to
