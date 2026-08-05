@@ -268,10 +268,28 @@ export type RockConfig = {
   autopilot: boolean
 }
 
+/** The rig's named limbs, each independently nudgeable from the panel. */
+export type StickmanPartName = 'head' | 'torso' | 'armLeft' | 'armRight' | 'legs'
+
+/** A part's offset from its rest transform: nudged position, plus a size multiplier. */
+export type StickmanPartOffset = {
+  x: number
+  y: number
+  z: number
+  scale: number
+}
+
 /** Cosmetic tunables for the stickman look, editable from the elements panel. */
 export type StickmanConfig = {
   scale: number
   groundOffset: number
+  opacity: number
+  /** Id of the picked catalogue skin; resolves onto texture when changed. */
+  skin: string
+  /** URL actually applied — a catalogue skin's texture, or an uploaded one. */
+  texture: string
+  /** Per-limb position and size nudges, applied on top of the rig's own rest pose. */
+  parts: Record<StickmanPartName, StickmanPartOffset>
 }
 
 export type DebrisEmitOptions = {

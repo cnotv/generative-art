@@ -36,6 +36,7 @@ import {
   DEFAULT_CHARACTER_TYPE
 } from './config'
 import { rockSurfaceById } from './elements/rockSurfaces'
+import { DEFAULT_STICKMAN_SKIN, stickmanSkinById } from './elements/stickmanSkins'
 import type { CameraMode, CharacterType } from './types'
 
 const CAMERA_MODE_LABELS: Record<CameraMode, string> = {
@@ -55,6 +56,7 @@ type StoredLobbyConfig = {
   trackSeed?: number
   rockSurface?: string
   characterType?: string
+  stickmanSkin?: string
 }
 
 const isCharacterType = (value: string): value is CharacterType =>
@@ -85,6 +87,7 @@ const selectedCharacterType = ref<CharacterType>(
     ? (storedLobbyConfig.characterType as CharacterType)
     : DEFAULT_CHARACTER_TYPE
 )
+const selectedStickmanSkin = ref(stickmanSkinById(storedLobbyConfig.stickmanSkin ?? '').id)
 
 const { roomId, resolvedRoomId } = useRoomId()
 
@@ -126,6 +129,7 @@ const run = useRockRun({
   routeName: String(useRoute().name ?? 'RockRunner'),
   rockSurface: selectedSurface,
   characterType: selectedCharacterType,
+  stickmanSkin: selectedStickmanSkin,
   seed: trackSeed,
   runStartTime,
   localPlayerName: playerName,
@@ -154,7 +158,8 @@ const persistLobbyConfig = (): void => {
     JSON.stringify({
       trackSeed: selectedSeed.value,
       rockSurface: selectedSurface.value,
-      characterType: selectedCharacterType.value
+      characterType: selectedCharacterType.value,
+      stickmanSkin: selectedStickmanSkin.value
     })
   )
 }
@@ -169,6 +174,11 @@ const handleConfigChange = (key: string, value: string | number): void => {
   if (key === 'characterType') {
     const next = String(value)
     selectedCharacterType.value = isCharacterType(next) ? next : DEFAULT_CHARACTER_TYPE
+    persistLobbyConfig()
+    return
+  }
+  if (key === 'stickmanSkin') {
+    selectedStickmanSkin.value = stickmanSkinById(String(value)).id
     persistLobbyConfig()
     return
   }
@@ -304,6 +314,7 @@ onUnmounted(() => {
       <RockRunnerLobby
         :rock-surface="selectedSurface"
         :character-type="selectedCharacterType"
+        :stickman-skin="selectedStickmanSkin"
         :player-name="playerName"
         :player-color="playerColor"
         :is-host="isHost"

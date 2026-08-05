@@ -323,7 +323,14 @@ const applyModelMaterial = (
 const getCubeSizeArray = (size: number | CoordinateTuple): CoordinateTuple =>
   typeof size === 'number' ? [size, size, size] : size
 
-const applyTextureToMesh = (
+/**
+ * Load a texture onto a mesh's existing material, in place.
+ * @param mesh The mesh whose material's map is set
+ * @param texture URL of the texture to load, skipped when undefined
+ * @param options When `displacementScale` is positive, the same texture is also set as the displacement map
+ * @returns Nothing; the mesh's material is mutated in place
+ */
+export const applyTextureToMesh = (
   mesh: THREE.Mesh,
   texture: string | undefined,
   options: ModelOptions = {}

@@ -1,7 +1,14 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { getTools, getBall, getModel } from '@webgamekit/threejs'
+import {
+  getTools,
+  getBall,
+  getModel,
+  applyMaterial,
+  applyTextureToMesh,
+  remapUVsToWorldProjection
+} from '@webgamekit/threejs'
 import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager, updateAnimation } from '@webgamekit/animation'
@@ -38,7 +45,7 @@ import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { DEFAULT_RUN_CAMERA, registerCameraElements } from '../panel/cameraPanel'
 import { registerRockElements } from '../panel/rockPanel'
-import { registerStickmanElements } from '../panel/stickmanPanel'
+import { createStickmanConfig, STICKMAN_PART_NAMES } from '../panel/stickmanPanel'
 import { attachRockStroke } from '../elements/rockStroke'
 import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../elements/rockSurfaces'
 import { registerTrackElements, createElementVisibilityHandlers } from '../panel/trackPanel'
@@ -75,6 +82,8 @@ import type {
   RockPosPayload,
   ScatterAreaManager,
   StickmanConfig,
+  StickmanPartName,
+  StickmanPartOffset,
   TrackChunkManager,
   TrackPath
 } from '../types'
@@ -86,7 +95,9 @@ import {
   CHASE_BACK,
   CHASE_HEIGHT,
   DEFAULT_CHARACTER_TYPE,
+  STICKMAN_GROUND_OFFSET,
   STICKMAN_MODEL_PATH,
+  STICKMAN_TEXTURE_ALPHA_TEST,
   DEBRIS_EMIT_INTERVAL,
   DEBRIS_GROUND_COLOR,
   DEBRIS_GROUND_TOLERANCE,
@@ -160,6 +171,8 @@ export type UseRockRunDeps = {
   spawnGateIndex?: Ref<number>
   rockSurface?: Ref<string>
   characterType?: Ref<CharacterType>
+  /** Id of the skin picked in the lobby, before the stickman ever spawns. */
+  stickmanSkin?: Ref<string>
   /** Route name the config panel keys the rock's physics by. */
   routeName?: string
 }
@@ -172,6 +185,12 @@ type RunState = {
   /** A stickman riding the rock's invisible sphere, when that look is chosen. */
   stickman: ComplexModel | null
   stickmanConfig: StickmanConfig | null
+  /** How far the rig's own origin sits above its feet, in the model's local units, measured once at load. */
+  stickmanFeetOffset: number | null
+  /** What was last pushed onto the rig's materials, seeded at spawn so cosmetics show before the drive loop ever runs. */
+  stickmanCosmetics: StickmanCosmeticsState | null
+  /** Each limb's own nodes and rest transform, measured once at spawn so the panel's nudges have a fixed baseline to offset from. */
+  stickmanParts: StickmanPartRig | null
   world: WorldReference | null
   scene: THREE.Scene | null
   controls: ControlsExtras | null
@@ -310,9 +329,192 @@ const spawnRock = (
   return rock
 }
 
+/** One limb node's rest transform, measured once so a panel nudge has a fixed baseline to offset from. */
+type StickmanPartNode = {
+  node: THREE.Object3D
+  restPosition: THREE.Vector3
+  restScale: THREE.Vector3
+}
+
+type StickmanPartRig = Record<StickmanPartName, StickmanPartNode[]>
+
+/**
+ * Matches each visual limb to its actual node(s) in the rig.
+ *
+ * The rig's own node names don't all match their visual role: the true
+ * legs are named "leftLeg" and "rightLeg", but the head is the two meshes
+ * hanging directly off the root with no named group of their own, matched
+ * here by mesh name instead. Read once at spawn and never again, so a
+ * panel nudge has a stable rest transform to offset from rather than
+ * compounding onto whatever the previous frame already applied.
+ */
+const buildStickmanPartRig = (stickman: THREE.Object3D): StickmanPartRig => {
+  const nodesFor = (names: string[]): StickmanPartNode[] =>
+    names
+      .map((name) => stickman.getObjectByName(name))
+      .filter((node): node is THREE.Object3D => !!node)
+      .map((node) => ({
+        node,
+        restPosition: node.position.clone(),
+        restScale: node.scale.clone()
+      }))
+
+  return {
+    head: nodesFor(['mesh_3', 'mesh_3_1', 'mesh_3_2']),
+    torso: nodesFor(['torso']),
+    armLeft: nodesFor(['leftArm']),
+    armRight: nodesFor(['rightArm']),
+    legs: nodesFor(['leftLeg', 'rightLeg'])
+  }
+}
+
+/** Pushes the panel's per-limb nudge onto each node, relative to its own measured rest transform. */
+const applyStickmanPartOffsets = (
+  rig: StickmanPartRig,
+  parts: Record<StickmanPartName, StickmanPartOffset>
+): void => {
+  STICKMAN_PART_NAMES.forEach((name) => {
+    const offset = parts[name]
+    rig[name].forEach(({ node, restPosition, restScale }) => {
+      node.position.set(
+        restPosition.x + offset.x,
+        restPosition.y + offset.y,
+        restPosition.z + offset.z
+      )
+      node.scale.set(
+        restScale.x * offset.scale,
+        restScale.y * offset.scale,
+        restScale.z * offset.scale
+      )
+    })
+  })
+}
+
+type StickmanSpawn = {
+  stickman: ComplexModel
+  feetOffset: number
+  cosmetics: StickmanCosmeticsState
+  partRig: StickmanPartRig
+}
+
+/**
+ * Spawns the stickman riding the rock's own invisible sphere at its
+ * grounded, dressed, running-ready state — position, texture and opacity
+ * all set before the countdown's first frame, since the drive loop that
+ * would otherwise apply them stays idle for as long as the countdown runs.
+ */
+type StickmanSpawnOptions = {
+  scene: THREE.Scene
+  world: WorldReference
+  path: TrackPath
+  startPosition: CoordinateTuple
+  config: StickmanConfig
+  rockRadius: number
+}
+
+const spawnStickman = async ({
+  scene,
+  world,
+  path,
+  startPosition,
+  config,
+  rockRadius
+}: StickmanSpawnOptions): Promise<StickmanSpawn> => {
+  // The rig's own size follows the shared Size (radius) the rock itself
+  // reads, the same way the rock's own mesh already scales with it, so
+  // resizing the player from either panel moves whichever body is visible.
+  const spawnScale = config.scale * (rockRadius / ROCK_RADIUS)
+  const stickman = await getModel(scene, world, STICKMAN_MODEL_PATH, {
+    position: startPosition,
+    scale: [spawnScale, spawnScale, spawnScale],
+    type: 'kinematicPositionBased',
+    hasGravity: false,
+    castShadow: true
+  })
+  // getModel always builds a real collider for a kinematic body, but this
+  // rig is a pure cosmetic swap with no physics of its own — its position
+  // is written straight onto the Three.js mesh every frame, never onto the
+  // Rapier body, so that collider would sit stuck at the spawn point
+  // forever. Left solid, it's an invisible wall the rock's own sphere runs
+  // into once the track curves back near it. A sensor still exists, but
+  // produces no collision response, so it can't obstruct anything.
+  stickman.userData.collider.setSensor(true)
+  // The rig's own limbs are simple rigid meshes parented to named nodes
+  // (torso, leftArm, rightArm, leftLeg, rightLeg), not skin-bound — so
+  // nudging a limb node's rest position moves it rigidly and sticks through
+  // the walk cycle, which only animates rotation on top of it. Tucked in by
+  // default, the arms and shoulders read clearer held further from the
+  // torso, which also gives a texture more room to tell the arm and torso
+  // apart instead of the two silhouettes touching. Read from Parts > Arm
+  // Left/Right > X now, not a fixed constant — what the panel shows for
+  // those fields is the actual spread applied, not a hidden extra on top
+  // of it.
+  const leftArmNode = stickman.getObjectByName('leftArm')
+  const rightArmNode = stickman.getObjectByName('rightArm')
+  // The round shoulder caps (mesh_1, mesh_2) are parented to the torso, not
+  // the arm they sit against — so spreading the arm away from the torso
+  // left its shoulder behind, opening a gap between the two. Re-parenting
+  // them onto the arm they belong to, preserving their current world
+  // transform, means they travel with it from here on: through the spread
+  // below and through the walk cycle's own swing.
+  const leftShoulder = stickman.getObjectByName('mesh_1')
+  const rightShoulder = stickman.getObjectByName('mesh_2')
+  if (leftArmNode && leftShoulder) leftArmNode.attach(leftShoulder)
+  if (rightArmNode && rightShoulder) rightArmNode.attach(rightShoulder)
+  // The rig's own rest pose holds each arm at an 11.25° outward lean on its
+  // local Z (a relaxed stance, not a bug in the model) — straightened here,
+  // before the texture projection below reads these positions, so the flat
+  // texture's straight-up-and-down arm regions actually line up with it.
+  if (leftArmNode) leftArmNode.rotation.z = 0
+  if (rightArmNode) rightArmNode.rotation.z = 0
+  // Rest is the rig's own unmodified pose — the spread above lives in the
+  // panel's own default for Arm Left/Right X, applied below like any other
+  // part nudge, not baked in ahead of it.
+  const partRig = buildStickmanPartRig(stickman)
+  applyStickmanPartOffsets(partRig, config.parts)
+  // The rig is a dozen separate mesh parts, each with its own UVs already
+  // spanning the full [0,0]-[1,1] — an uploaded texture applied straight
+  // onto that squeezes the whole image onto every part independently,
+  // which is what turns a simple line drawing into a near-solid blob.
+  // Remapped once here to one shared world-space projection instead, so a
+  // texture reads as one picture wrapped around the rig.
+  remapUVsToWorldProjection(stickman)
+  // The rig's own origin isn't at its feet, so a station-height placement
+  // has to compensate by however far above them it actually sits. Measured
+  // once here, in the rig's own local units so it stays correct at any
+  // scale, rather than guessed as a fixed offset that only happened to
+  // look right at one size.
+  const spawnBox = new THREE.Box3().setFromObject(stickman)
+  const feetOffset = (spawnBox.min.y - startPosition[1]) / spawnScale
+  // The same standoff createDriveAction applies every running frame, done
+  // once here too: the countdown holds the drive loop idle, so without
+  // this the rig sits at the rock's raw spawn height — sphere-centre, not
+  // feet-on-deck — for as long as the countdown runs.
+  stickman.position.y =
+    startPosition[1] + STICKMAN_GROUND_OFFSET - feetOffset * spawnScale + config.groundOffset
+  // Same yaw createDriveAction applies every running frame, done once here
+  // too: left at the rig's own default facing otherwise, which has nothing
+  // to do with the track's own heading at the start line.
+  const startForward = path.sampleAt(0).forward
+  const yaw = Math.atan2(-startForward.x, -startForward.z)
+  stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
+  const cosmetics: StickmanCosmeticsState = {
+    appliedTo: null,
+    appliedOpacity: null,
+    appliedTexture: null
+  }
+  applyStickmanCosmetics(stickman, config, cosmetics)
+  return { stickman, feetOffset, cosmetics, partRig }
+}
+
 const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
   camera: {
-    position: [spawn[0], spawn[1] + CHASE_HEIGHT, spawn[2] + CHASE_BACK] as CoordinateTuple
+    position: [spawn[0], spawn[1] + CHASE_HEIGHT, spawn[2] + CHASE_BACK] as CoordinateTuple,
+    // Without this the camera defaults to looking at the origin, not the
+    // spawn point — a wide, badly framed shot for however long it takes
+    // updateThirdPersonCamera's lerp to catch up once the run's own timeline
+    // starts driving the camera every frame.
+    lookAt: spawn
   },
   orbit: { disabled: true },
   ground: false as const,
@@ -399,7 +601,9 @@ const speedCapFor = (rock: RockConfig, distance: number): number =>
 const createDebrisEmitter =
   (state: RunState) =>
   (delta: number): void => {
-    if (!state.rock || !state.path || !state.debris) return
+    // A dust trail reads as a rock kicking up grit as it rolls; a running
+    // stickman's feet don't touch anything that would throw debris like that.
+    if (!state.rock || !state.path || !state.debris || state.stickman) return
     const body = state.rock.userData.body
     const position = body.translation()
     const sample = state.path.sampleAt(state.distance)
@@ -469,6 +673,88 @@ const createJumpAction =
     state.jumpGate = { buffer: 0, coyote: 0, cooldown: rock.jumpCooldown }
   }
 
+/** What was last pushed onto the rig's materials, so a stable config is never redone. */
+type StickmanCosmeticsState = {
+  appliedTo: THREE.Object3D | null
+  appliedOpacity: number | null
+  appliedTexture: string | null
+}
+
+/**
+ * Pushes opacity and texture onto the rig's materials, but only the parts
+ * that actually changed since the last frame.
+ *
+ * Opacity is a cheap write but still forces a material recompile check, and
+ * a texture load is not cheap at all, so both are skipped once applied,
+ * until the config changes or a restart swaps in a fresh rig instance that
+ * has never had them applied.
+ */
+const applyStickmanCosmetics = (
+  stickman: THREE.Object3D,
+  config: StickmanConfig,
+  tracked: StickmanCosmeticsState
+): void => {
+  const respawned = stickman !== tracked.appliedTo
+  if (respawned || config.opacity !== tracked.appliedOpacity) {
+    tracked.appliedOpacity = config.opacity
+    stickman.traverse((child) => {
+      const mesh = child as THREE.Mesh
+      if (mesh.isMesh) applyMaterial(mesh, { opacity: config.opacity })
+    })
+  }
+  if (respawned || config.texture !== tracked.appliedTexture) {
+    tracked.appliedTexture = config.texture
+    if (config.texture) {
+      stickman.traverse((child) => {
+        const mesh = child as THREE.Mesh
+        if (!mesh.isMesh) return
+        applyTextureToMesh(mesh, config.texture)
+        // depthWrite defaults to false whenever transparent is set, correct
+        // for smooth alpha blending but wrong here: an alpha-tested cutout
+        // renders each pixel fully opaque or fully discarded, no blending
+        // ambiguity, so it should write depth like any opaque material.
+        // Left at the default, the rig stopped occluding the track's own
+        // scatter decoration (grass sprites drawing over it instead of
+        // behind it) once it picked up a transparent material at all.
+        applyMaterial(mesh, {
+          transparent: true,
+          alphaTest: STICKMAN_TEXTURE_ALPHA_TEST,
+          depthWrite: true
+        })
+      })
+    }
+  }
+  tracked.appliedTo = stickman
+}
+
+/** The stickman's own pieces, bundled once non-null rather than re-checked line by line. */
+type ActiveStickman = {
+  stickman: ComplexModel
+  config: StickmanConfig
+  feetOffset: number
+  cosmetics: StickmanCosmeticsState
+  partRig: StickmanPartRig
+}
+
+const getActiveStickman = (state: RunState): ActiveStickman | null => {
+  if (
+    !state.stickman ||
+    !state.stickmanConfig ||
+    state.stickmanFeetOffset === null ||
+    !state.stickmanCosmetics ||
+    !state.stickmanParts
+  ) {
+    return null
+  }
+  return {
+    stickman: state.stickman,
+    config: state.stickmanConfig,
+    feetOffset: state.stickmanFeetOffset,
+    cosmetics: state.stickmanCosmetics,
+    partRig: state.stickmanParts
+  }
+}
+
 const createDriveAction =
   (state: RunState) =>
   (delta: number): void => {
@@ -481,17 +767,32 @@ const createDriveAction =
     // sphere's full roll, and animated by a run cycle whose playback rate
     // tracks the sphere's own forward speed rather than a constant pace, so
     // standing still holds the pose and topping out looks like a sprint.
-    if (state.stickman && state.stickmanConfig) {
-      const stickmanConfig = state.stickmanConfig
-      state.stickman.scale.setScalar(stickmanConfig.scale)
+    // Cosmetics themselves are seeded at spawn (spawnStickman), not here —
+    // this whole action is idle for as long as the countdown holds the drive
+    // loop, and a texture that only appeared once the run started would pop
+    // in right as the rock takes off.
+    const active = getActiveStickman(state)
+    if (active) {
+      applyStickmanCosmetics(active.stickman, active.config, active.cosmetics)
+      applyStickmanPartOffsets(active.partRig, active.config.parts)
+      // The player's own Size (radius) scales the rig the same way it scales
+      // the rock's own mesh; the stickman panel's Size is a multiplier on top
+      // of that shared figure, not a separate one.
+      const effectiveScale = active.config.scale * (rock.radius / ROCK_RADIUS)
+      active.stickman.scale.setScalar(effectiveScale)
       const position = body.translation()
-      state.stickman.position.set(position.x, position.y + stickmanConfig.groundOffset, position.z)
+      // Standoff to where the sphere rests on the deck, minus however far
+      // above its own feet the rig's origin sits at this scale, plus whatever
+      // small manual nudge the panel's Ground offset asks for on top.
+      const feetOffset =
+        STICKMAN_GROUND_OFFSET - active.feetOffset * effectiveScale + active.config.groundOffset
+      active.stickman.position.set(position.x, position.y + feetOffset, position.z)
       const yaw = Math.atan2(-sample.forward.x, -sample.forward.z)
-      state.stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
+      active.stickman.quaternion.setFromAxisAngle(STICKMAN_UP_AXIS, yaw)
       const forwardSpeed = Math.max(0, speedAlong(body.linvel(), sample.forward))
       updateAnimation({
         actionName: 'walk',
-        player: state.stickman,
+        player: active.stickman,
         delta,
         speed: forwardSpeed
       })
@@ -772,6 +1073,11 @@ const applyRunAtmosphere = (scene: THREE.Scene): THREE.DirectionalLight | null =
   )
 }
 
+const buildStickmanConfig = (
+  characterType: CharacterType,
+  skin: string | undefined
+): StickmanConfig | null => (characterType === 'stickman' ? createStickmanConfig(skin) : null)
+
 const buildRunWorld = async ({
   tools,
   orbit,
@@ -831,10 +1137,16 @@ const buildRunWorld = async ({
   const characterType = deps.characterType?.value ?? DEFAULT_CHARACTER_TYPE
   const cameraPanel = registerCameraElements({ mode: cameraMode, setMode: setCameraMode })
   state.cameraConfig = cameraPanel.config
+  // Built ahead of the rock's own panel so it can fold this in as a nested
+  // group on the same "Player" entry, rather than the two competing for the
+  // one config-panel slot a route gets.
+  const stickmanConfig = buildStickmanConfig(characterType, deps.stickmanSkin?.value)
+  state.stickmanConfig = stickmanConfig
   const rockPanel = registerRockElements({
     routeName: deps.routeName ?? 'RockRunner',
     getRock: () => state.rock ?? undefined,
-    characterType
+    characterType,
+    stickmanConfig
   })
   state.rockConfig = rockPanel.config
   state.disposePanels = [
@@ -870,18 +1182,20 @@ const buildRunWorld = async ({
   // Cosmetic swap only: the stickman has no physics of its own, it rides the
   // rock's own invisible sphere every frame (createDriveAction), so every
   // existing steering/jump/autopilot system keeps working untouched.
-  if (characterType === 'stickman') {
+  if (stickmanConfig) {
     state.rock.visible = false
-    const stickmanPanel = registerStickmanElements()
-    state.stickmanConfig = stickmanPanel.config
-    state.disposePanels.push(stickmanPanel.teardown)
-    state.stickman = await getModel(scene, tools.world, STICKMAN_MODEL_PATH, {
-      position: startPosition,
-      scale: [stickmanPanel.config.scale, stickmanPanel.config.scale, stickmanPanel.config.scale],
-      type: 'kinematicPositionBased',
-      hasGravity: false,
-      castShadow: true
+    const spawned = await spawnStickman({
+      scene,
+      world: tools.world,
+      path,
+      startPosition,
+      config: stickmanConfig,
+      rockRadius: state.rockConfig?.radius ?? ROCK_RADIUS
     })
+    state.stickman = spawned.stickman
+    state.stickmanFeetOffset = spawned.feetOffset
+    state.stickmanCosmetics = spawned.cosmetics
+    state.stickmanParts = spawned.partRig
   }
   // The rock is built from the constants, so anything already edited in the
   // panel has to be pushed onto it before the countdown starts.
@@ -896,6 +1210,9 @@ const createRunState = (): RunState => ({
   rock: null,
   stickman: null,
   stickmanConfig: null,
+  stickmanFeetOffset: null,
+  stickmanCosmetics: null,
+  stickmanParts: null,
   world: null,
   scene: null,
   controls: null,
@@ -957,8 +1274,6 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.cameraTransitionElapsed = 0
     state.posAccumulator = 0
     state.released = true
-    localStartTime = Date.now()
-    actions.updateCountdown()
   }
 
   const init = async (): Promise<void> => {
@@ -992,6 +1307,13 @@ export const useRockRun = (deps: UseRockRunDeps) => {
           cameraMode: refs.cameraMode,
           setCameraMode: actions.setCameraMode
         })
+        // Started here, not in resetRunState: nothing redraws the countdown
+        // until the render loop below starts ticking, so starting the clock
+        // any earlier — during the async setup, loading the stickman's GLB
+        // in particular — leaves the count frozen on its first value for
+        // however long that takes.
+        localStartTime = Date.now()
+        actions.updateCountdown()
         tools.animate({
           timeline: buildRunTimeline({
             camera: tools.camera,
@@ -1026,6 +1348,9 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.rock = null
     state.stickman = null
     state.stickmanConfig = null
+    state.stickmanFeetOffset = null
+    state.stickmanCosmetics = null
+    state.stickmanParts = null
     state.world = null
     state.scene = null
     state.directionalLight = null

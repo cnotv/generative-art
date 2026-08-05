@@ -243,19 +243,32 @@ export const CHARACTER_TYPES: { value: CharacterType; label: string }[] = [
   { value: 'stickman', label: 'Stickman' }
 ]
 export const DEFAULT_CHARACTER_TYPE: CharacterType = 'rock'
-export const STICKMAN_MODEL_PATH = 'stickboy_maze.glb'
-export const STICKMAN_ELEMENT_NAME = 'player-stickman'
+// The maze variant is a rounded 3D rig, no good fit for a flat drawing
+// projected onto it. This one is the flatter, near-planar body the
+// MultiplayerP2P experiment's own UV projection was built and tuned for.
+export const STICKMAN_MODEL_PATH = 'stickboy.glb'
 // Sized well past the rig's own scale so it reads clearly against the rock's
 // track width rather than looking lost on it; tune live from the elements
 // panel rather than trusting this figure exactly.
-export const STICKMAN_SCALE = 4.5
+export const STICKMAN_SCALE = 3.5
+// These sprite-style character textures carry real transparency around the
+// drawn line art; without alpha-testing at this cutoff, the "empty" areas
+// render as whatever flat colour was baked in under them.
+export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
+// In the rig's own local units, pushing each arm node further from the
+// torso along its rest X position. Tucked-in by default, which reads as
+// cramped and leaves a texture no room to tell the arm's silhouette apart
+// from the torso's own. Kept small — the torso's own rounded shoulder
+// corner isn't part of the arm mesh and doesn't stretch to follow it, so
+// spreading too far reopens the gap between the two instead of closing it.
+export const STICKMAN_ARM_SPREAD = 0.08
 // Gentler than the rock's own figures across the board: lighter drive so it
 // doesn't look shoved, lower speeds that read as a run rather than a roll,
 // and a floatier jump to match the lower gravity. Tuned live in the elements
 // panel, not derived from the rock's own numbers.
 export const STICKMAN_FORWARD_IMPULSE = 30
-export const STICKMAN_BASE_MAX_SPEED = 10
-export const STICKMAN_MAX_SPEED_CEILING = 30
+export const STICKMAN_BASE_MAX_SPEED = 16
+export const STICKMAN_MAX_SPEED_CEILING = 16
 export const STICKMAN_JUMP_IMPULSE = 2350
 export const STICKMAN_GRAVITY_SCALE = 5
 // The sphere's centre sits one radius above the deck; the stickman's feet
@@ -442,8 +455,8 @@ export const FIRST_PERSON_FORWARD = ROCK_RADIUS + 0.6
 // height is the only thing setting how much of the path ahead is visible.
 export const FIRST_PERSON_HEIGHT = ROCK_RADIUS * 1.5
 export const FIRST_PERSON_LOOK_AHEAD = 20
-export const FREE_CAM_HEIGHT = 40
-export const FREE_CAM_BACK = 50
+export const FREE_CAM_HEIGHT = 17
+export const FREE_CAM_BACK = 18
 
 export const LIGHT_AMBIENT_INTENSITY = 1.6
 export const LIGHT_DIRECTIONAL_INTENSITY = 2.2

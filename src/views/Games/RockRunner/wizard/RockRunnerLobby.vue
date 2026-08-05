@@ -5,6 +5,7 @@ import '@/assets/styles/lobby-ui.scss'
 import type { LobbyPlayer, LobbyConfigField } from '@/types/lobbyWizard'
 import { MATCHMAKER_ROOM, CONTROLS_CONFIG, CHARACTER_TYPES } from '../config'
 import { rockSurfaceOptions } from '../elements/rockSurfaces'
+import { stickmanSkinOptions } from '../elements/stickmanSkins'
 
 const props = defineProps<{
   playerName: string
@@ -15,6 +16,7 @@ const props = defineProps<{
   trackSeed: number
   rockSurface: string
   characterType: string
+  stickmanSkin: string
 }>()
 
 const emit = defineEmits<{
@@ -35,13 +37,28 @@ const configFields = computed((): LobbyConfigField[] => [
     value: props.characterType,
     options: CHARACTER_TYPES
   },
-  {
-    type: 'select',
-    key: 'rockSurface',
-    label: 'Rock',
-    value: props.rockSurface,
-    options: rockSurfaceOptions()
-  },
+  // One "Skin" field, but which one depends on who's riding the sphere:
+  // the rock's own surface, or the stickman's catalogue texture. Never both
+  // at once — a surface pick means nothing once the rock itself is hidden.
+  ...(props.characterType === 'stickman'
+    ? [
+        {
+          type: 'select' as const,
+          key: 'stickmanSkin',
+          label: 'Skin',
+          value: props.stickmanSkin,
+          options: stickmanSkinOptions()
+        }
+      ]
+    : [
+        {
+          type: 'select' as const,
+          key: 'rockSurface',
+          label: 'Skin',
+          value: props.rockSurface,
+          options: rockSurfaceOptions()
+        }
+      ]),
   {
     type: 'number',
     key: 'trackSeed',

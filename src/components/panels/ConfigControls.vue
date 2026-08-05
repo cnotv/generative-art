@@ -141,7 +141,7 @@ const isButtonSelector = (schema: ControlSchema): boolean => schema.component ==
 
 const isCallback = (schema: ControlSchema): boolean => schema.callback !== undefined
 
-const asButtonOptions = (options: string[] | ControlOption[]): ControlOption[] =>
+const normalizeOptions = (options: string[] | ControlOption[]): ControlOption[] =>
   options.map((opt) => (typeof opt === 'string' ? { value: opt, label: opt } : opt))
 
 const handleButtonSelectorUpdate = (path: string, value: string) => {
@@ -188,7 +188,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         </label>
         <ButtonSelector
           :model-value="String(getValue(control.path) || '')"
-          :options="asButtonOptions(control.schema.options)"
+          :options="normalizeOptions(control.schema.options)"
           :direction="control.schema.direction"
           @update:model-value="handleButtonSelectorUpdate(control.path, $event)"
         />
@@ -200,7 +200,7 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         </label>
         <Select
           :model-value="String(getValue(control.path) || '')"
-          :options="(control.schema.options as string[]).map((opt) => ({ value: opt, label: opt }))"
+          :options="normalizeOptions(control.schema.options)"
           @update:model-value="handleSelectUpdate(control.path, $event)"
           class="h-7 text-xs"
         />
@@ -265,12 +265,20 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
       <template v-else-if="control.schema.file !== undefined">
         <label class="text-xs font-medium config-controls__file-label">
           {{ control.schema.label ?? formatLabel(control.key) }}
-          <input
-            type="file"
-            :accept="control.schema.file"
-            class="config-controls__file-input"
-            @change="handleFileUpdate(control.path, $event)"
-          />
+          <div class="config-controls__file-row">
+            <img
+              v-if="getValue(control.path)"
+              :src="getValue(control.path)"
+              class="config-controls__file-preview"
+              alt="Texture preview"
+            />
+            <input
+              type="file"
+              :accept="control.schema.file"
+              class="config-controls__file-input"
+              @change="handleFileUpdate(control.path, $event)"
+            />
+          </div>
         </label>
       </template>
 
@@ -425,6 +433,21 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
   flex-direction: column;
   gap: var(--spacing-1, 0.25rem);
   cursor: pointer;
+}
+
+.config-controls__file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1, 0.25rem);
+}
+
+.config-controls__file-preview {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
 }
 
 .config-controls__file-input {
