@@ -250,9 +250,7 @@ onMounted(() => {
           <button class="glw__btn glw__btn--ghost" type="button" @click="handleLeaveRoom">
             ← Leave
           </button>
-          <button class="glw__start-btn" type="button" @click="handlePlayAgain">
-            Play Again
-          </button>
+          <button class="glw__start-btn" type="button" @click="handlePlayAgain">Play Again</button>
         </div>
       </div>
     </GameCard>

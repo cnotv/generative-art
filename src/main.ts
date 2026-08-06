@@ -10,6 +10,7 @@ import router from './router'
 import * as Sentry from '@sentry/vue'
 import posthog from 'posthog-js'
 import { useUmami } from '@/utils/umami'
+import { registerPosthogErrorHandler } from '@/utils/posthogErrorHandler'
 
 const { loadUmami } = useUmami()
 
@@ -31,9 +32,7 @@ if (posthogEnabled) {
     }
   })
 } else if (import.meta.env.DEV) {
-  const missingVariable = posthogProjectToken
-    ? 'VITE_POSTHOG_HOST'
-    : 'VITE_POSTHOG_PROJECT_TOKEN'
+  const missingVariable = posthogProjectToken ? 'VITE_POSTHOG_HOST' : 'VITE_POSTHOG_PROJECT_TOKEN'
   throw new Error(
     `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`
   )
@@ -52,12 +51,6 @@ loadUmami({
 app.use(createPinia())
 app.use(router)
 
-const sentryErrorHandler = app.config.errorHandler
-app.config.errorHandler = (error, instance, info) => {
-  if (posthogEnabled) {
-    posthog.captureException(error)
-  }
-  sentryErrorHandler?.(error, instance, info)
-}
+registerPosthogErrorHandler(app, posthogEnabled)
 
 app.mount('#app')

@@ -181,15 +181,14 @@ const downloadAll = (): void => {
     file_count: downloadableEntries.length,
     output_format: format.value
   })
-  downloadableEntries
-    .forEach((entry) => {
-      const anchor = document.createElement('a')
-      anchor.href = entry.downloadUrl!
-      anchor.download = downloadName(entry)
-      document.body.appendChild(anchor)
-      anchor.click()
-      document.body.removeChild(anchor)
-    })
+  downloadableEntries.forEach((entry) => {
+    const anchor = document.createElement('a')
+    anchor.href = entry.downloadUrl!
+    anchor.download = downloadName(entry)
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  })
 }
 
 const removeEntry = (id: string): void => {
