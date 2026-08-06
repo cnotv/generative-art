@@ -1,10 +1,5 @@
 # Generative Art - WebGameKit Project
 
-<!-- Rules are defined in .github/rules/ and loaded via .vscode/settings.json -->
-<!-- @include: rules/code-style.md -->
-<!-- @include: rules/testing.md -->
-<!-- @include: rules/security.md -->
-
 ## Quick Rules
 
 1. **TDD - Test-Driven Development**: ALWAYS write unit tests FIRST before implementing any feature. Present test specifications to user for confirmation before writing implementation code.
