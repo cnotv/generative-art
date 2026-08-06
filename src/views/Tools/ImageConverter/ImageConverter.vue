@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onUnmounted } from 'vue'
+import posthog from 'posthog-js'
 import ConverterWorker from './imageConverter.worker?worker'
 import DropZone from './DropZone.vue'
 import {
@@ -143,11 +144,25 @@ const addFiles = async (fileList: FileList): Promise<void> => {
   hasScrolledToResults.value = false
   const entries = await Promise.all([...fileList].map(readFile))
   files.value = [...files.value, ...entries]
+  posthog.capture('image_conversion_started', {
+    file_count: entries.length,
+    output_format: format.value,
+    max_width: maxWidth.value,
+    max_height: maxHeight.value,
+    scale_percent: scalePct.value
+  })
   entries.forEach(processEntry)
 }
 
 const reconvertAll = (): void => {
   hasScrolledToResults.value = false
+  posthog.capture('image_conversion_restarted', {
+    file_count: files.value.length,
+    output_format: format.value,
+    max_width: maxWidth.value,
+    max_height: maxHeight.value,
+    scale_percent: scalePct.value
+  })
   files.value.forEach((entry) => {
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
     entry.downloadUrl = undefined
@@ -159,8 +174,14 @@ const reconvertAll = (): void => {
 }
 
 const downloadAll = (): void => {
-  files.value
-    .filter((entry) => entry.status === 'done' && entry.downloadUrl)
+  const downloadableEntries = files.value.filter(
+    (entry) => entry.status === 'done' && entry.downloadUrl
+  )
+  posthog.capture('converted_images_downloaded', {
+    file_count: downloadableEntries.length,
+    output_format: format.value
+  })
+  downloadableEntries
     .forEach((entry) => {
       const anchor = document.createElement('a')
       anchor.href = entry.downloadUrl!

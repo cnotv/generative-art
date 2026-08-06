@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { Check } from 'lucide-vue-next'
+import posthog from 'posthog-js'
 import GameCard from '@/components/GameCard.vue'
 import { useGameLobby } from '@/composables/useGameLobby'
 import { PLAYER_COLORS } from '@/utils/playerProfile'
@@ -56,10 +57,18 @@ const {
 
 const handleAccept = (entry: Parameters<typeof acceptRequest>[0]): void => {
   const gameRoomId = acceptRequest(entry)
-  if (gameRoomId) emit('matchFound', gameRoomId)
+  if (gameRoomId) {
+    posthog.capture('match_request_accepted', { game: props.matchmakerRoom })
+    emit('matchFound', gameRoomId)
+  }
 }
 
 const handleStartGame = (): void => {
+  posthog.capture('multiplayer_game_started', {
+    game: props.matchmakerRoom,
+    player_count: props.playerList.length,
+    is_private: isPrivate.value
+  })
   emit('startGame')
 }
 
@@ -84,7 +93,13 @@ watch(
 )
 
 const handleLeaveRoom = (): void => {
+  posthog.capture('multiplayer_room_left', { game: props.matchmakerRoom })
   emit('leaveRoom')
+}
+
+const handlePlayAgain = (): void => {
+  posthog.capture('multiplayer_game_restarted', { game: props.matchmakerRoom })
+  emit('playAgain')
 }
 
 onMounted(() => {
@@ -235,7 +250,7 @@ onMounted(() => {
           <button class="glw__btn glw__btn--ghost" type="button" @click="handleLeaveRoom">
             ← Leave
           </button>
-          <button class="glw__start-btn" type="button" @click="emit('playAgain')">
+          <button class="glw__start-btn" type="button" @click="handlePlayAgain">
             Play Again
           </button>
         </div>
