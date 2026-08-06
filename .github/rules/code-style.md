@@ -63,9 +63,8 @@
   - Define both light and dark theme colors
   - Use semantic naming (e.g., `--color-background`, `--color-primary`)
   - Include spacing, border-radius, typography, shadows, and z-index scales
-- **Panels**: Shared panel/sheet/dialog styles in `src/assets/styles/panels.scss`
-  - Import `_variables.scss` at the top
-  - Only include layout and structural styles shared across panels
+- **Game UI**: Shared in-game typography and text-shadow tokens in `src/assets/styles/game-ui.scss`
+- **Lobby UI**: The `--lui-*` token set in `src/assets/styles/lobby-ui.scss`
 - **Vendor**: Third-party library overrides in `src/assets/styles/vendor.scss`
   - Radix UI, Tailwind, and other external library customizations
   - Keep vendor-specific selectors isolated from application styles
@@ -192,7 +191,7 @@
   - `documentation/docs/architecture/` — Project architecture docs
   - `documentation/docs/guides/` — How-to guides and tutorials
   - `documentation/docs/journey/` — Problem-solving write-ups: the theory, research findings, and non-obvious decisions behind a feature
-- **Run docs locally**: `cd documentation && pnpm start`
+- **Run docs locally**: `pnpm docs:dev` (installs with `--ignore-workspace` first — `documentation/` sits outside the pnpm workspace)
 - **Adding new docs**: Create `.md` files in the appropriate `docs/` subfolder with frontmatter:
 
   ```markdown

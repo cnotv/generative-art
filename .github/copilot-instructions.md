@@ -2,7 +2,7 @@
 
 ## Quick Rules
 
-1. **TDD - Test-Driven Development**: ALWAYS write unit tests FIRST before implementing any feature. Present test specifications to user for confirmation before writing implementation code.
+1. **TDD - Test-Driven Development**: When working from a GitHub issue, write unit tests FIRST and present the specifications for confirmation before writing implementation code. Exploratory prototypes are exempt from tests-first, but tests are required before their PR is opened.
 2. **Document before coding**: Add implementation plan as comment to GitHub issue before writing code
 3. **Ask questions**: When multiple approaches exist, ask which to use
 4. **Use debugger**: Prefer `debugger` statements over `console.log()`
@@ -53,21 +53,8 @@ gh api \
 
 ### Before Implementation
 
-1. **Sync with main branch**: ALWAYS fetch and rebase main before creating a new branch
-   - Command: `git checkout main && git fetch origin main && git pull origin main`
-   - This prevents lockfile churn and merge conflicts
-2. **Create feature branch**: ALWAYS create a new branch before starting work on an issue
-   - Use format: `<type>/<issue-number>-<description>`
-   - Examples: `feat/4-animation-clip-blocking`, `fix/12-collision-bug`
-   - Branch from `main` (or current base branch)
-   - Command: `git checkout -b feat/9-issue-description`
-3. **Document plan in issue**: Before writing any code, add a comment to the GitHub issue describing:
-   - What you plan to implement
-   - Files to be modified/created
-   - Key design decisions
-   - Any questions or uncertainties
-4. **Ask questions first**: If requirements are unclear or multiple approaches exist, ask in the issue before coding
-5. **Wait for approval**: For non-trivial changes, wait for confirmation before implementing
+See the `start-issue` procedure in `.claude/skills/start-issue/`. Always sync main with
+`git fetch origin main && git rebase origin/main` — never `git pull`, which merges.
 
 ### During Implementation
 
@@ -98,40 +85,14 @@ gh api \
    - **Journey doc** (`documentation/docs/journey/`): Create or update one when the PR fixes a non-obvious bug, works around a framework/library quirk, or makes a hard-won design decision. Every new game gets its own `<game-name>.md` file. Use prose and Mermaid diagrams — no code snippets. A PR without a journey doc (when one is warranted) must not be opened.
    - **Package API doc** (`documentation/docs/packages/`): Create or update one when a `@webgamekit/*` package gains new exported functions, changes its public API, or deprecates something. The doc must list the updated exports with their purpose and basic usage. A PR that changes a package's public API without updating its doc must not be opened.
 
-4. **Commit messages — no redundant issue reference**: The feature branch name already encodes the issue number (e.g. `feat/185-attach-paths`), so never repeat that same issue number in commit subjects — it adds nothing. Write `feat: …` / `fix: …` / `docs: …`, not `feat(#185): …`. Only reference an issue in a commit if it is a _different_ issue than the one the current branch is for. (The PR body still carries `Closes #<issue-number>`.)
-5. **Rebase before PR**: ALWAYS rebase onto main before creating a pull request
-   - Command: `git fetch origin main && git rebase origin/main`
-   - Resolve any conflicts, then force push: `git push --force-with-lease`
-   - CI will fail if branch is behind main
-6. **Update PR after pushing**: After pushing commits, ALWAYS update the PR description using `gh pr edit` to reflect the latest changes
-7. **Comprehensive PR descriptions**: Include summary, key changes, test plan, and documentation. PR descriptions should be self-contained and explain all work done
-8. **Monitor CI after PR**: After creating or updating a PR, monitor CI checks with `gh pr checks <number> --watch` until all checks complete. If any check fails, inspect the logs with `gh run view <run-id> --log-failed`, identify the root cause, fix it, commit, and push. Repeat until all checks pass.
+4. **Commit messages — never reference the issue number**: The branch name already encodes it and the PR body carries `Closes #<issue-number>`, so a commit subject never repeats it. Write `feat: …` / `fix: …` / `docs: …`, never `feat(#185): …`. There is no exception. The `commit-msg` hook enforces this.
 
-### PR Description Format
+### Pull requests
 
-```markdown
-Closes #<issue-number>
-
-## Summary
-
-- Brief bullet points of what was implemented
-
-## Key Changes
-
-- File-by-file or module-by-module breakdown of changes
-
-## Faced Difficulties and Learned Lessons
-
-- **Title**: description. Lesson: takeaway. _(omit section if nothing notable)_
-
-## Test Plan
-
-- [ ] Checklist of testing performed
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
-
-**ALWAYS include `Closes #<issue-number>` at the top of every PR body** to automatically link and close the related issue on merge.
+**Never open a pull request unless explicitly asked.** Once a PR has been requested, follow
+the `open-pr` procedure in `.claude/skills/open-pr/`: rebase onto main, force-push with
+`--force-with-lease`, use the body format in `.github/pull_request_template.md`, keep the
+description current after every push, and watch CI to green.
 
 ### Journey Documentation
 
@@ -166,13 +127,6 @@ Write one when any of the following is true:
 - A constraint is invisible in the codebase (e.g. must always call `setup()` to get `done: true`)
 - The same mistake is plausible for anyone touching this area in the future
 
-#### After merging a PR, update `documentation/docs/journey/overview.md`
-
-- Add any **new architectural pattern** introduced by the PR to the Key Patterns section
-- Add any **key technical lesson** to the relevant domain group in Technical Complexities
-- Add any **new planned items** (from newly opened issues) to the Planned Investigations table
-- Update the **Timeline gantt** if a new issue is closed or a new significant issue is opened
-
 ### Issue Comment Format
 
 ```markdown
@@ -205,14 +159,14 @@ Use format: `<type>/<issue-number>-<description>`
 **File structure**: Create `src/views/{Group}/{SceneName}/{SceneName}.vue` (or `index.vue`)
 
 - Router auto-discovers views matching pattern `{Dir}/{Name}/{Name}.vue`
-- Example: `src/views/Games/ForestGame/ForestGame.vue`
+- Example: `src/views/Games/GoombaRunner/GoombaRunner.vue`
 
 **SEO meta — MANDATORY**: Add an entry to `src/config/viewsMeta.json` for every new view.
-The router generates the route name by inserting spaces before capital letters (e.g. `ForestGame` → `"Forest Game"`). Use that exact string as the key:
+The router generates the route name by inserting spaces before capital letters (e.g. `GoombaRunner` → `"Goomba Runner"`). Use that exact string as the key:
 
 ```json
 {
-  "Forest Game": {
+  "Goomba Runner": {
     "description": "One sentence describing what the view does or shows."
   }
 }
@@ -421,7 +375,7 @@ Keep scene configs in separate `config.ts` files:
 - Game settings (speeds, distances)
 - Asset paths
 
-Example: [ForestGame/config.ts](../src/views/Games/ForestGame/config.ts)
+Example: [GoombaRunner/config.ts](../src/views/Games/GoombaRunner/config.ts)
 
 ## Build & Development
 
