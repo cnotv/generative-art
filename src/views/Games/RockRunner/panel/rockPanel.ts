@@ -3,7 +3,8 @@ import * as THREE from 'three'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { attachRockStroke } from '../elements/rockStroke'
-import type { RockConfig } from '../types'
+import { RR_STICKMAN_CONTROLS } from './stickmanPanel'
+import type { CharacterType, RockConfig, StickmanConfig } from '../types'
 import {
   BASE_MAX_SPEED,
   FORWARD_IMPULSE,
@@ -24,8 +25,40 @@ import {
   ROCK_MASS,
   ROCK_TINT,
   SPEED_RAMP_DISTANCE,
-  STEER_IMPULSE
+  STEER_IMPULSE,
+  STICKMAN_BASE_MAX_SPEED,
+  STICKMAN_FORWARD_IMPULSE,
+  STICKMAN_GRAVITY_SCALE,
+  STICKMAN_JUMP_IMPULSE,
+  STICKMAN_MAX_SPEED_CEILING
 } from '../config'
+
+/**
+ * The handful of the shared sphere's own physics figures that read wrong
+ * unchanged across characters — a running figure pushed and gravity-pulled
+ * as hard as a boulder looks like it's being flung, not running.
+ */
+const characterPhysicsPreset = (
+  characterType: CharacterType
+): Pick<
+  RockConfig,
+  'forwardImpulse' | 'baseMaxSpeed' | 'maxSpeedCeiling' | 'jumpImpulse' | 'gravityScale'
+> =>
+  characterType === 'stickman'
+    ? {
+        forwardImpulse: STICKMAN_FORWARD_IMPULSE,
+        baseMaxSpeed: STICKMAN_BASE_MAX_SPEED,
+        maxSpeedCeiling: STICKMAN_MAX_SPEED_CEILING,
+        jumpImpulse: STICKMAN_JUMP_IMPULSE,
+        gravityScale: STICKMAN_GRAVITY_SCALE
+      }
+    : {
+        forwardImpulse: FORWARD_IMPULSE,
+        baseMaxSpeed: BASE_MAX_SPEED,
+        maxSpeedCeiling: MAX_SPEED_CEILING,
+        jumpImpulse: JUMP_IMPULSE,
+        gravityScale: ROCK_GRAVITY_SCALE
+      }
 
 /**
  * The rock's tunables, grouped as they are felt rather than as they are stored:
@@ -89,6 +122,16 @@ export type RockPanelOptions = {
   routeName: string
   /** The live rock, absent until it spawns and replaced on every restart. */
   getRock: () => THREE.Object3D | undefined
+  /** Which character is riding the sphere, which picks its physics preset. */
+  characterType: CharacterType
+  /**
+   * The stickman's own cosmetic config, present only when it is the one
+   * riding the sphere. Folded into the rock's own panel entry as a nested
+   * "Stickman" group rather than a row of its own — one player wearing two
+   * different looks, not two separate things to tune — and left out of both
+   * the elements and config panels entirely for a plain rock run.
+   */
+  stickmanConfig: StickmanConfig | null
 }
 
 export type RockPanel = {
@@ -129,6 +172,29 @@ const applyTint = (rock: THREE.Object3D, tint: number): void => {
   if (material instanceof THREE.MeshStandardMaterial) material.color.setHex(tint)
 }
 
+// The stickman's own fields nest arbitrarily deep now (parts.head.x), so a
+// single-level property lookup no longer reaches them — this walks the
+// remainder of the path, same as the config panel's own generic traversal
+// already does for its half of the merged schema.
+const getStickmanValue = (stickmanConfig: StickmanConfig, remainder: string): unknown =>
+  remainder
+    .split('.')
+    .reduce<unknown>((object, key) => (object as Record<string, unknown>)?.[key], stickmanConfig)
+
+const setStickmanValue = (
+  stickmanConfig: StickmanConfig,
+  remainder: string,
+  value: unknown
+): void => {
+  const keys = remainder.split('.')
+  const target = keys
+    .slice(0, -1)
+    .reduce<
+      Record<string, unknown>
+    >((object, key) => object[key] as Record<string, unknown>, stickmanConfig as unknown as Record<string, unknown>)
+  target[keys[keys.length - 1]] = value
+}
+
 /**
  * Registers the rock in the elements panel with every tunable it is driven by.
  *
@@ -142,17 +208,18 @@ const applyTint = (rock: THREE.Object3D, tint: number): void => {
  */
 export const registerRockElements = (options: RockPanelOptions): RockPanel => {
   const debugSceneStore = useDebugSceneStore()
+  const preset = characterPhysicsPreset(options.characterType)
   const config = reactive<RockConfig>({
-    forwardImpulse: FORWARD_IMPULSE,
-    baseMaxSpeed: BASE_MAX_SPEED,
-    maxSpeedCeiling: MAX_SPEED_CEILING,
+    forwardImpulse: preset.forwardImpulse,
+    baseMaxSpeed: preset.baseMaxSpeed,
+    maxSpeedCeiling: preset.maxSpeedCeiling,
     speedRampDistance: SPEED_RAMP_DISTANCE,
     steerImpulse: STEER_IMPULSE,
     maxLateralSpeed: MAX_LATERAL_SPEED,
-    jumpImpulse: JUMP_IMPULSE,
+    jumpImpulse: preset.jumpImpulse,
     jumpCooldown: JUMP_COOLDOWN_SECONDS,
     radius: ROCK_RADIUS,
-    gravityScale: ROCK_GRAVITY_SCALE,
+    gravityScale: preset.gravityScale,
     mass: ROCK_MASS,
     friction: ROCK_FRICTION,
     restitution: ROCK_RESTITUTION,
@@ -176,14 +243,28 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     attachRockStroke(rock, config.strokeWidth, config.strokeWobble, config.strokeColor)
   }
 
+  const stickmanConfig = options.stickmanConfig
+  const stickmanPath = 'stickman.'
+
   debugSceneStore.addSceneElement(
-    { name: ROCK_ELEMENT_NAME, type: 'Mesh', label: 'Player rock', hidden: false },
+    { name: ROCK_ELEMENT_NAME, type: 'Mesh', label: 'Player', hidden: false },
     {
-      title: 'Player rock',
+      title: 'Player',
       type: 'Mesh',
-      schema: RR_ROCK_CONTROLS,
-      getValue: (path: string) => config[path as keyof RockConfig],
+      schema: stickmanConfig
+        ? { ...RR_ROCK_CONTROLS, stickman: RR_STICKMAN_CONTROLS }
+        : RR_ROCK_CONTROLS,
+      getValue: (path: string) => {
+        if (stickmanConfig && path.startsWith(stickmanPath)) {
+          return getStickmanValue(stickmanConfig, path.slice(stickmanPath.length))
+        }
+        return config[path as keyof RockConfig]
+      },
       updateValue: (path: string, value: unknown) => {
+        if (stickmanConfig && path.startsWith(stickmanPath)) {
+          setStickmanValue(stickmanConfig, path.slice(stickmanPath.length), value)
+          return
+        }
         config[path as keyof RockConfig] = value as number
         // The ramp runs from the starting speed to the final one, so a ceiling
         // dragged below the floor would have the rock slow down as it went.
@@ -195,12 +276,23 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
     }
   )
 
+  // The config panel is one schema per route, so the stickman's cosmetic
+  // fields are attached onto the rock's own config object as a nested
+  // "stickman" group rather than getting a registration of their own.
+  // Runtime-only: RockConfig's own type stays untouched for every other
+  // place that reads it.
+  if (stickmanConfig) {
+    ;(config as RockConfig & { stickman?: StickmanConfig }).stickman = stickmanConfig
+  }
+
   // Handed the same reactive object the elements panel edits, not a copy of it,
   // so the two rows cannot disagree and a change from either reaches the body.
   registerViewConfig(
     options.routeName,
     ref(config) as Ref<Record<string, unknown>>,
-    RR_ROCK_PHYSICS_CONTROLS,
+    stickmanConfig
+      ? { ...RR_ROCK_PHYSICS_CONTROLS, stickman: RR_STICKMAN_CONTROLS }
+      : RR_ROCK_PHYSICS_CONTROLS,
     apply
   )
 

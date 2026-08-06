@@ -24,6 +24,21 @@ STEP 5  implement
 
 **This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
 
+## When the user asks to try or prototype something
+
+This is the opposite order from the linked-issue workflow above, and applies when the user asks to try, prototype, or experiment with an idea that has **no linked issue yet** (e.g. "add an option to try X", "let's try Y"):
+
+```sh
+STEP 1  build the PoC directly on a branch off main
+        # skip writing a design doc or issue first — go straight to a working prototype
+STEP 2  validate it together (run it, look at it, iterate on corrections)
+STEP 3  once it's in good shape, write the GitHub issue documenting what was built and why
+STEP 4  refine based on feedback
+STEP 5  open the PR (only if explicitly asked, per the Pull requests rule below)
+```
+
+Do not gate this flow behind a design doc, spec review, or issue-first process — those add friction to exploratory work this repo's owner wants to see running before it's written up. This does not override the linked-issue workflow above: if the user's message contains an actual issue URL, follow that sequence instead.
+
 ## Pull requests
 
 **Never open a pull request unless the user explicitly asks for one.**
