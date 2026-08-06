@@ -15,8 +15,7 @@ column, bumping a coin block, and walking back down.
 
 :::note Source files
 This tutorial tracks these files — if you change any of them, update this guide
-in the same change (see the "Keep tutorials in sync" rule in
-`.github/rules/code-style.md`):
+in the same change (see the `sync-docs` procedure in `.claude/skills/sync-docs/`):
 
 - `packages/animation/src/TimelineManager.ts` — `createTimelineManager`
 - `packages/animation/src/types.ts` — the `Timeline` action shape (incl. `segments`)

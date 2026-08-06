@@ -76,6 +76,21 @@ For non-trivial work, wait for confirmation before implementing.
 Tests first: write the specifications, present them for confirmation, then write the
 implementation that satisfies them.
 
+## Breaking a large issue into subtasks
+
+Use GitHub's native sub-issue relationship, not just a checklist in the body. Create each
+subtask as a standalone issue first, then attach it:
+
+```sh
+gh api --method POST \
+  repos/cnotv/generative-art/issues/<parent-number>/sub_issues \
+  -f sub_issue_id=<child-number>
+```
+
+The parent body may still carry a `- [ ] #N — description` checklist for quick scanning, but
+the relationship has to exist through the API for GitHub to track progress natively and
+close out the parent's progress bar as subtasks land.
+
 ## Definition of done
 
 `git branch --show-current` reports `<type>/<number>-<slug>`, the branch is based on an
