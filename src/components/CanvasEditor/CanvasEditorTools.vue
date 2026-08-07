@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { DrawingToolbar } from '@/components/DrawingToolbar'
 import type { DrawingTool as CanvasDrawingTool } from '@/components/DrawingToolbar'
 import { Undo2, Redo2, Trash2, Download } from 'lucide-vue-next'
+import { downloadDataUrl } from '@/utils/downloadDataUrl'
 import type { DrawingTool } from '@webgamekit/canvas-editor'
 import type { CanvasEditorToolButton } from './types'
 
@@ -53,11 +54,7 @@ const toolbarTools = computed(() =>
 const download = (): void => {
   const snapshot = props.getSnapshot()
   const dataUrl = (JSON.parse(snapshot) as { front: string }).front
-  if (!dataUrl) return
-  const link = document.createElement('a')
-  link.href = dataUrl
-  link.download = `${props.slotName}.png`
-  link.click()
+  downloadDataUrl(dataUrl, `${props.slotName}.png`)
 }
 </script>
 

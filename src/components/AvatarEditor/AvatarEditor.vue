@@ -9,6 +9,7 @@ import lakeUrl from '@/assets/images/backgrounds/lake.webp'
 import drawTemplateUrl from '@/assets/images/characters/stickman_draw_template.png'
 import { buildMaterial } from '@/utils/materialBuilder'
 import { floodFill, cssColorToRgba } from '@/utils/canvasFloodFill'
+import { downloadDataUrl } from '@/utils/downloadDataUrl'
 import { applyStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
 import type { StickmanPartRig } from '@/types/stickmanRig'
 import type { AvatarEditorConfig } from '@/types/avatarEditor'
@@ -40,7 +41,7 @@ import {
   AVATAR_WALK_SPEED,
   AVATAR_MATERIAL_TYPE,
   AVATAR_MAP_STRENGTHS,
-  AVATAR_ALPHA_TEST,
+  AVATAR_EXPORT_PREFIX,
   STORAGE_PREFIX,
   TEXTURE_SLOTS,
   TEXTURE_SLOT_LABELS,
@@ -67,7 +68,11 @@ const animationClock = new THREE.Clock()
 const isWalking = ref(false)
 
 const textures: Record<string, THREE.CanvasTexture> = {}
+/** What the brush actually writes to, and the only thing ever saved or exported. */
 const offscreenCanvases: Record<string, HTMLCanvasElement> = {}
+/** What the material samples: the painted map, with the guide drawn over it. */
+const displayCanvases: Record<string, HTMLCanvasElement> = {}
+let guideImage: HTMLImageElement | null = null
 
 const activeSlot = ref<TextureSlotKey>('diffuse')
 const activeTool = ref<DrawingTool>('brush')
@@ -75,11 +80,12 @@ const brushColor = ref(TEXTURE_SLOT_DEFAULT_COLOR.diffuse)
 const brushSize = ref(AVATAR_BRUSH_SIZE_DEFAULT)
 
 const previewUrls = reactive<Partial<Record<TextureSlotKey, string>>>({})
+// Thumbnails show the finished texture rather than the bare paint layer, which
+// is transparent wherever nothing has been drawn and would read as empty.
 const updatePreviews = (): void => {
   TEXTURE_SLOTS.forEach((slot) => {
-    const offscreen = offscreenCanvases[slot]
-    if (!offscreen) return
-    previewUrls[slot] = offscreen.toDataURL()
+    if (!offscreenCanvases[slot]) return
+    previewUrls[slot] = composeExportCanvas(slot).toDataURL()
   })
 }
 
@@ -121,41 +127,78 @@ const applyDataUrlToCanvas = (offscreen: HTMLCanvasElement, dataUrl: string): Pr
     image.src = dataUrl
   })
 
-const fillSlotCanvas = async (
-  slot: TextureSlotKey,
-  offscreen: HTMLCanvasElement
-): Promise<void> => {
+/** Empties a slot's paint layer back to bare transparency. */
+const clearPaintLayer = (offscreen: HTMLCanvasElement): void => {
   const context = offscreen.getContext('2d')!
   context.globalCompositeOperation = 'source-over'
   context.clearRect(0, 0, offscreen.width, offscreen.height)
-  context.fillStyle = TEXTURE_SLOT_BASE_COLOR[slot]
-  context.fillRect(0, 0, offscreen.width, offscreen.height)
-  // The template is the rig's own body laid out in the same front/back
-  // projection the painting raycast reads, so its outline lands exactly where
-  // the limbs are — without it there is nothing on the canvas to aim at.
-  if (slot === 'diffuse') await applyDataUrlToCanvas(offscreen, drawTemplateUrl)
 }
 
-const createSlotCanvas = async (slot: TextureSlotKey): Promise<HTMLCanvasElement> => {
-  const offscreen = document.createElement('canvas')
-  offscreen.width = AVATAR_CANVAS_SIZE
-  offscreen.height = AVATAR_CANVAS_SIZE
-  await fillSlotCanvas(slot, offscreen)
-  return offscreen
+const createBlankCanvas = (): HTMLCanvasElement => {
+  const blank = document.createElement('canvas')
+  blank.width = AVATAR_CANVAS_SIZE
+  blank.height = AVATAR_CANVAS_SIZE
+  return blank
 }
+
+/**
+ * Stacks a slot into the canvas the material samples: the map's flat base, the
+ * body template while the guide is on, then the paint layer over both.
+ *
+ * Order is the whole point. The guide has to sit under the paint or it covers
+ * the very strokes it exists to help place, and it has to sit over the base or
+ * an opaque map would bury it. That only works because the paint layer is
+ * genuinely transparent where nothing has been drawn, which is also what lets
+ * the eraser expose the guide again rather than punch through to nothing.
+ */
+const refreshDisplay = (slot: TextureSlotKey): void => {
+  const display = displayCanvases[slot]
+  const painted = offscreenCanvases[slot]
+  if (!display || !painted) return
+  const context = display.getContext('2d')!
+  context.globalCompositeOperation = 'source-over'
+  context.clearRect(0, 0, display.width, display.height)
+  context.fillStyle = TEXTURE_SLOT_BASE_COLOR[slot]
+  context.fillRect(0, 0, display.width, display.height)
+  if (slot === 'diffuse' && props.config.showGuide && guideImage) {
+    context.drawImage(guideImage, 0, 0, display.width, display.height)
+  }
+  context.drawImage(painted, 0, 0)
+  textures[slot].needsUpdate = true
+}
+
+/** The slot as a finished texture: its base with the paint on top, never the guide. */
+const composeExportCanvas = (slot: TextureSlotKey): HTMLCanvasElement => {
+  const exported = createBlankCanvas()
+  const context = exported.getContext('2d')!
+  context.fillStyle = TEXTURE_SLOT_BASE_COLOR[slot]
+  context.fillRect(0, 0, exported.width, exported.height)
+  context.drawImage(offscreenCanvases[slot], 0, 0)
+  return exported
+}
+
+const loadGuideImage = (): Promise<HTMLImageElement> =>
+  new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.src = drawTemplateUrl
+  })
 
 const initTextures = async (): Promise<void> => {
+  guideImage = await loadGuideImage()
   await Promise.all(
     TEXTURE_SLOTS.map(async (slot) => {
-      const offscreen = await createSlotCanvas(slot)
+      const painted = createBlankCanvas()
       const saved = storageLoadLocal(storageKey(slot))
-      if (saved?.dataUrl) await applyDataUrlToCanvas(offscreen, saved.dataUrl)
-      offscreenCanvases[slot] = offscreen
-      const texture = new THREE.CanvasTexture(offscreen)
+      if (saved?.dataUrl) await applyDataUrlToCanvas(painted, saved.dataUrl)
+      offscreenCanvases[slot] = painted
+      displayCanvases[slot] = createBlankCanvas()
+      const texture = new THREE.CanvasTexture(displayCanvases[slot])
       if (slot === 'diffuse') texture.colorSpace = THREE.SRGBColorSpace
       textures[slot] = texture
     })
   )
+  TEXTURE_SLOTS.forEach(refreshDisplay)
 }
 
 /**
@@ -199,14 +242,28 @@ const buildAvatarMaterial = (): THREE.Material => {
     DEFAULT_CONFIG,
     { textures: textures as Record<string, THREE.Texture>, envMap }
   )
-  // The rig's own meshes are drawn from both sides once a limb is scaled
-  // past its neighbours, and the template's transparent margin has to cut
-  // out rather than blend, or the rig reads as a solid slab.
+  // The rig's own meshes are drawn from both sides once a limb is scaled past
+  // its neighbours. Blending stays on at every opacity: the eraser punches
+  // genuinely transparent holes in the colour map, and an opaque material
+  // would fill them back in.
   material.side = THREE.DoubleSide
   material.transparent = true
-  material.alphaTest = AVATAR_ALPHA_TEST
+  // Defaults off once a material is transparent, which is right for smooth
+  // blending and wrong here — a faded rig should still occlude its own far
+  // side rather than let it show through in the wrong order.
+  material.depthWrite = true
   applyStrengths(material)
+  applyOpacity(material)
   return material
+}
+
+/**
+ * Fades the rig without touching what is painted on it, which is the point:
+ * a ghosted body still shows its colour map, where hiding it outright shows
+ * nothing at all.
+ */
+const applyOpacity = (material: THREE.Material): void => {
+  material.opacity = props.config.opacity
 }
 
 /** Pushes one freshly built material onto every mesh in the rig, disposing what it replaces. */
@@ -222,6 +279,13 @@ const rebuildMaterial = (): void => {
   })
 }
 
+const applyOpacityToRig = (): void => {
+  avatar?.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (mesh.isMesh) applyOpacity(mesh.material as THREE.Material)
+  })
+}
+
 const pushHistory = (slot: TextureSlotKey, dataUrl: string): void => {
   const history = paintHistory[slot]
   history.stack = history.stack.slice(0, history.index + 1)
@@ -232,7 +296,7 @@ const pushHistory = (slot: TextureSlotKey, dataUrl: string): void => {
 
 const applySnapshot = (slot: TextureSlotKey, dataUrl: string): void => {
   applyDataUrlToCanvas(offscreenCanvases[slot], dataUrl).then(() => {
-    textures[slot].needsUpdate = true
+    refreshDisplay(slot)
     storageSaveLocal(storageKey(slot), dataUrl)
     updatePreviews()
   })
@@ -286,25 +350,43 @@ const paintStroke = (fromUv: THREE.Vector2 | null, toUv: THREE.Vector2): void =>
     context.globalCompositeOperation = 'source-over'
   }
 
-  textures[slot].needsUpdate = true
+  refreshDisplay(slot)
   didPaint = true
 }
 
-const resetSlot = async (slot: TextureSlotKey): Promise<void> => {
+const resetSlot = (slot: TextureSlotKey): void => {
   const offscreen = offscreenCanvases[slot]
   if (!offscreen) return
-  await fillSlotCanvas(slot, offscreen)
-  textures[slot].needsUpdate = true
+  clearPaintLayer(offscreen)
+  refreshDisplay(slot)
   const dataUrl = offscreen.toDataURL()
   storageSaveLocal(storageKey(slot), dataUrl)
   pushHistory(slot, dataUrl)
   updatePreviews()
 }
 
-const resetTexture = (): Promise<void> => resetSlot(activeSlot.value)
+const resetTexture = (): void => resetSlot(activeSlot.value)
 
-const resetAll = async (): Promise<void> => {
-  await Promise.all(TEXTURE_SLOTS.map(resetSlot))
+const resetAll = (): void => TEXTURE_SLOTS.forEach(resetSlot)
+
+/**
+ * Wipes every paint layer and forgets the undo stacks with it, so a discard
+ * cannot be walked back one stroke at a time.
+ */
+const discardPaintedTextures = (): void => {
+  TEXTURE_SLOTS.forEach((slot) => {
+    paintHistory[slot].stack = []
+    paintHistory[slot].index = -1
+    resetSlot(slot)
+  })
+}
+
+/** Saves the slot as a usable texture: base plus paint, with no guide over it. */
+const saveTexturePng = (): void => {
+  const slot = activeSlot.value
+  if (!offscreenCanvases[slot]) return
+  const exported = composeExportCanvas(slot)
+  downloadDataUrl(exported.toDataURL('image/png'), `${AVATAR_EXPORT_PREFIX}-${slot}.png`)
 }
 
 const handleTextureLoad = (event: Event): void => {
@@ -317,7 +399,7 @@ const handleTextureLoad = (event: Event): void => {
   const objectUrl = URL.createObjectURL(file)
   applyDataUrlToCanvas(offscreen, objectUrl).then(() => {
     URL.revokeObjectURL(objectUrl)
-    textures[slot].needsUpdate = true
+    refreshDisplay(slot)
     const dataUrl = offscreen.toDataURL()
     storageSaveLocal(storageKey(slot), dataUrl)
     pushHistory(slot, dataUrl)
@@ -514,7 +596,6 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
       avatar = model
       partRig = prepareStickmanRig(model, props.config.parts)
       attachWalkCycle(model, gltf.animations)
-      model.visible = props.config.visible
       scene.add(model)
       frameAvatar(model)
       rebuildMaterial()
@@ -539,14 +620,14 @@ watch(
   { deep: true }
 )
 
+watch(() => props.config.opacity, applyOpacityToRig)
+
 watch(
-  () => props.config.visible,
-  (visible) => {
-    if (avatar) avatar.visible = visible
-  }
+  () => props.config.showGuide,
+  () => refreshDisplay('diffuse')
 )
 
-defineExpose({ toggleWalk })
+defineExpose({ toggleWalk, discardPaintedTextures })
 
 onMounted(async () => {
   if (canvas.value) await init(canvas.value)
@@ -633,6 +714,10 @@ onBeforeUnmount(() => {
         </button>
         <button class="avatar-editor-toolbar__reset-btn" @click="resetAll">Reset all</button>
       </div>
+
+      <button class="avatar-editor-toolbar__reset-btn" @click="saveTexturePng">
+        Save texture as PNG
+      </button>
 
       <label class="avatar-editor-toolbar__load-label">
         Load image

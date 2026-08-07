@@ -42,8 +42,8 @@ export const AVATAR_MAP_STRENGTHS = {
   envMapIntensity: 1
 }
 
-/** Alpha below this is cut away, so the template's margin reads as empty, not as a slab. */
-export const AVATAR_ALPHA_TEST = 0.5
+/** Filename stem for a texture saved out of the painter. */
+export const AVATAR_EXPORT_PREFIX = 'avatar'
 
 export const STORAGE_PREFIX = 'avatar-editor'
 
@@ -74,8 +74,10 @@ export const TEXTURE_SLOT_LABELS: Record<TextureSlotKey, string> = {
  * rough, unoccluded, undisplaced, unlit. The rig then looks exactly like its
  * untextured self until something is actually painted, rather than arriving
  * pre-dented by a procedural pattern that has nothing to do with an avatar.
- * Diffuse is the exception — it starts as the draw template, so there is a
- * body outline to paint inside of.
+ *
+ * The body template is deliberately absent: it is a guide drawn over the map
+ * at display time, never into it, so it can be turned off and never lands in
+ * an exported texture.
  */
 export const TEXTURE_SLOT_BASE_COLOR: Record<TextureSlotKey, string> = {
   diffuse: '#ffffff',
