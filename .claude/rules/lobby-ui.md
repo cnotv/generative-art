@@ -1,5 +1,7 @@
 ---
-applyTo: 'src/components/LobbyUI/**,src/views/Games/**'
+paths:
+  - 'src/components/LobbyUI/**'
+  - 'src/views/Games/**'
 ---
 
 # LobbyUI and game views

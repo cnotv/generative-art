@@ -32,18 +32,13 @@ const isCheckablePath = (candidate: string): boolean => {
 }
 
 const collectInstructionFiles = (): string[] => {
-  const roots = [
-    'AGENTS.md',
-    'CLAUDE.md',
-    '.github/copilot-instructions.md',
-    'src/views/CLAUDE.md',
-    'src/components/LobbyUI/CLAUDE.md',
-    'packages/CLAUDE.md'
-  ].filter((relative) => existsSync(join(REPO_ROOT, relative)))
+  const roots = ['AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md'].filter((relative) =>
+    existsSync(join(REPO_ROOT, relative))
+  )
 
-  const instructionsDirectory = join(REPO_ROOT, '.github/instructions')
+  const instructionsDirectory = join(REPO_ROOT, '.claude/rules')
   const instructions = existsSync(instructionsDirectory)
-    ? readdirSync(instructionsDirectory).map((name) => join('.github/instructions', name))
+    ? readdirSync(instructionsDirectory).map((name) => join('.claude/rules', name))
     : []
 
   const skillsDirectory = join(REPO_ROOT, '.claude/skills')

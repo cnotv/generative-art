@@ -24,7 +24,7 @@ Closes #
 
 <!-- Review the work for anything worth generalising, and route it:
      - a mistake a machine could have caught  -> a lint rule, git hook, or test
-     - a constraint that will bite anyone working in this area -> the matching .github/instructions file
+     - a constraint that will bite anyone working in this area -> the matching .claude/rules file
      - a procedure now done for the second time -> a new skill in .claude/skills/
      - hard-won context explaining why -> a journey doc
      "Nothing generalizable" is a valid and common answer — state it explicitly. -->

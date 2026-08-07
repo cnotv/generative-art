@@ -1,5 +1,8 @@
 ---
-applyTo: 'src/components/**,src/views/**,src/assets/styles/**'
+paths:
+  - 'src/components/**'
+  - 'src/views/**'
+  - 'src/assets/styles/**'
 ---
 
 # Vue components and styles

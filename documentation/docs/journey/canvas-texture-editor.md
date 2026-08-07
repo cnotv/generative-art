@@ -98,7 +98,7 @@ All views must apply `padding-top: var(--nav-height)` (or equivalent) to prevent
 }
 ```
 
-This was codified as a rule in `.github/instructions/vue-components.instructions.md`.
+This was codified as a rule in `.claude/rules/vue-components.md`.
 
 ## Testing approach
 

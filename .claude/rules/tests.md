@@ -1,5 +1,6 @@
 ---
-applyTo: '**/*.test.ts'
+paths:
+  - '**/*.test.ts'
 ---
 
 # Tests

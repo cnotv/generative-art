@@ -1,5 +1,6 @@
 ---
-applyTo: 'packages/**'
+paths:
+  - 'packages/**'
 ---
 
 # @webgamekit packages

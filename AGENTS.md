@@ -5,7 +5,7 @@ in `packages/@webgamekit/*`, and a Vue 3 playground that uses it in `src/`. Arch
 `documentation/docs/architecture/monorepo.md`.
 
 This file holds the rules that apply to every change. Rules that apply to one area load from
-`.github/instructions/`, and procedures load from `.claude/skills/` — both indexed at the
+`.claude/rules/`, and procedures load from `.claude/skills/` — both indexed at the
 bottom.
 
 ## How work starts
@@ -13,7 +13,7 @@ bottom.
 Two entry paths, chosen by whether an issue exists yet.
 
 - **A linked issue** — the message contains a `github.com/.../issues/N` URL. Read the issue,
-  sync main, branch, and post the implementation plan as an issue comment *before* writing
+  sync main, branch, and post the implementation plan as an issue comment _before_ writing
   any code. Tests come first. Run the `start-issue` procedure; it is not optional and its
   steps are not reorderable.
 - **A prototype** — "let's try X", "add an option for Y", with no issue yet. Build the
@@ -97,16 +97,17 @@ These are the steps that are easy to omit and impossible to notice missing. Run 
 
 ## Scoped rules
 
-Read these when working in the matching area. Tools with glob support load them automatically.
+Each file in `.claude/rules/` declares a `paths:` glob and loads only when a matching file is
+touched. Read one directly if you are working in its area without opening a matching file.
 
-| File in `.github/instructions/`  | Read when touching                                                           |
-| -------------------------------- | ---------------------------------------------------------------------------- |
-| `vue-components.instructions.md` | anything in `src/components/` or `src/views/`, or a stylesheet               |
-| `lobby-ui.instructions.md`       | the LobbyUI kit, a game overlay or dialog, or anything in `src/views/Games/` |
-| `threejs-views.instructions.md`  | a 3D view, scene, animation loop or the threejs package                      |
-| `packages.instructions.md`       | anything in `packages/`                                                      |
-| `tests.instructions.md`          | any `*.test.ts`                                                              |
-| `docs.instructions.md`           | anything in `documentation/`                                                 |
+| File in `.claude/rules/` | Covers                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `vue-components.md`      | anything in `src/components/` or `src/views/`, or a stylesheet               |
+| `lobby-ui.md`            | the LobbyUI kit, a game overlay or dialog, or anything in `src/views/Games/` |
+| `threejs-views.md`       | a 3D view, scene, animation loop, or the threejs package                     |
+| `packages.md`            | anything in `packages/`                                                      |
+| `tests.md`               | any `*.test.ts`                                                              |
+| `docs.md`                | anything in `documentation/`                                                 |
 
 ## Procedures
 

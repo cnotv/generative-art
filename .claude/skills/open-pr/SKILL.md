@@ -35,13 +35,13 @@ meantime, instead of destroying their work.
 Before the PR is marked ready, look back over the work and ask what should outlive it.
 Route each item by how it would be enforced:
 
-| What came up                                            | Where it belongs                          |
-| ------------------------------------------------------- | ----------------------------------------- |
-| A mistake a machine could have caught                   | a lint rule, a git hook, or a test        |
-| A constraint that will bite anyone working in this area | the matching `.github/instructions/` file |
-| A procedure now performed for the second time           | a new skill in `.claude/skills/`          |
-| Hard-won context explaining why                         | a journey doc                             |
-| Nothing generalizable                                   | say so explicitly                         |
+| What came up                                            | Where it belongs                   |
+| ------------------------------------------------------- | ---------------------------------- |
+| A mistake a machine could have caught                   | a lint rule, a git hook, or a test |
+| A constraint that will bite anyone working in this area | the matching `.claude/rules/` file |
+| A procedure now performed for the second time           | a new skill in `.claude/skills/`   |
+| Hard-won context explaining why                         | a journey doc                      |
+| Nothing generalizable                                   | say so explicitly                  |
 
 "Nothing generalizable" is a valid and common answer. Writing it down is what stops the
 section from becoming a place to invent rules nobody needed.

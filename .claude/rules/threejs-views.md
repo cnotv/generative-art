@@ -1,5 +1,8 @@
 ---
-applyTo: 'src/views/**,packages/threejs/**,packages/animation/**'
+paths:
+  - 'src/views/**'
+  - 'packages/threejs/**'
+  - 'packages/animation/**'
 ---
 
 # 3D views and scenes

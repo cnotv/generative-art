@@ -10,8 +10,8 @@ obvious home rather than landing in whichever file was open at the time.
 
 :::note Source files
 This page tracks `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
-`.github/instructions/`, `.claude/skills/` and `.vscode/settings.json`. If you change any of
-them, update this page in the same change.
+`.claude/rules/`, `.claude/skills/` and `.vscode/settings.json`. If you change any of them,
+update this page in the same change.
 :::
 
 ## The file tree
@@ -27,6 +27,14 @@ generative-art/
 ├── .claude/
 │   ├── settings.json                  Shared tool permissions, committed.
 │   ├── settings.local.json            Personal permissions, gitignored.
+│   ├── rules/                         Tier 2 — area rules, each declaring a paths: glob so
+│   │   │                              it loads only when a matching file is touched.
+│   │   ├── vue-components.md          src/components/**, src/views/**, src/assets/styles/**
+│   │   ├── lobby-ui.md                src/components/LobbyUI/**, src/views/Games/**
+│   │   ├── threejs-views.md           src/views/**, packages/threejs/**, packages/animation/**
+│   │   ├── packages.md                packages/**
+│   │   ├── tests.md                   **/*.test.ts
+│   │   └── docs.md                    documentation/**
 │   └── skills/                        Tier 3 — procedures. Read natively by both Claude
 │       │                              Code and Copilot.
 │       ├── start-issue/SKILL.md       Read the issue, sync main, branch, post the plan.
@@ -39,27 +47,14 @@ generative-art/
 │
 ├── .github/
 │   ├── copilot-instructions.md        Points at AGENTS.md. Copilot-specific wiring only.
-│   ├── pull_request_template.md       The single source for the PR body format.
-│   └── instructions/                  Tier 2 — area rules, auto-discovered, each scoped
-│       │                              by an applyTo glob.
-│       ├── vue-components.instructions.md    src/components/**, src/views/**
-│       ├── lobby-ui.instructions.md          src/components/LobbyUI/**, src/views/Games/**
-│       ├── threejs-views.instructions.md     src/views/**, packages/threejs/**
-│       ├── packages.instructions.md          packages/**
-│       ├── tests.instructions.md             **/*.test.ts
-│       └── docs.instructions.md              documentation/**
+│   └── pull_request_template.md       The single source for the PR body format.
 │
 ├── .husky/
 │   └── commit-msg                     Tier 0 — enforces the commit convention.
 │
-├── src/
-│   ├── views/CLAUDE.md                Nested pointer, imports threejs-views + vue-components
-│   ├── components/LobbyUI/CLAUDE.md   Nested pointer, imports lobby-ui + vue-components
-│   └── tests/                         Tier 0 — repo-wide contract tests.
-│       ├── instructionLinks.test.ts   Every path an instruction file names resolves.
-│       └── vitePackages.test.ts       Every package with source is in vite.config.ts.
-│
-├── packages/CLAUDE.md                 Nested pointer, imports packages.instructions.md
+├── src/tests/                         Tier 0 — repo-wide contract tests.
+│   ├── instructionLinks.test.ts       Every path an instruction file names resolves.
+│   └── vitePackages.test.ts           Every package with source is in vite.config.ts.
 │
 └── documentation/docs/                Explanations, linked from the tier that needs them.
 ```
@@ -92,7 +87,7 @@ flowchart TD
     D -->|Yes| E[Tier 1: AGENTS.md]
     D -->|No| F{Is it a procedure with steps<br/>and a definition of done?}
     F -->|Yes| G[Tier 3: a skill in .claude/skills/]
-    F -->|No| H[Tier 2: .github/instructions/]
+    F -->|No| H[Tier 2: .claude/rules/]
     C --> I[Leaves the prompt entirely]
 ```
 
@@ -116,10 +111,15 @@ that needs to be in front of an agent on every request.
 Aider and Gemini CLI. In VS Code it needs `chat.useAgentsMdFile`, which this repo sets in
 `.vscode/settings.json` along with `chat.useNestedAgentsMdFiles` and `chat.useAgentSkills`.
 
-Tier 2 reaches Copilot through `applyTo` globs, which load a file only when a matching file
-is being edited — automatic, with no configuration. Claude has no glob-triggered loading, so
-the nested `CLAUDE.md` files provide the same scoping by importing the matching instructions
-file when work happens in that directory. One source, two trigger mechanisms.
+Tier 2 lives in `.claude/rules/`, which both tools discover: Claude Code loads a rule when
+its `paths:` glob matches a file being read, and Copilot lists the same directory among its
+instruction locations. That is why the rules are there rather than in `.github/instructions/`,
+which only Copilot reads — the same reasoning that puts skills in `.claude/skills/`. One
+directory, native scoping in both tools, and no pointer files bridging between them.
+
+The one caveat is that `paths:`-scoped rules are not re-injected after `/compact`; they
+reload the next time a matching file is touched. Anything that must hold for every request
+regardless belongs in Tier 1, not here.
 
 Tier 3 works because skills are selected by description. Only each skill's name and
 description are loaded at startup; the body is read when the request matches. The description
