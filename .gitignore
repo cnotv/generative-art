@@ -28,8 +28,8 @@ coverage
 
 *.tsbuildinfo
 
-# Claude Code local settings
-.claude/settings.json
+# Claude Code personal settings (shared config lives in .claude/settings.json)
+.claude/settings.local.json
 
 
 .env
