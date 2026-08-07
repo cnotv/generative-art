@@ -1,9 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { join, resolve, dirname } from 'node:path'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+
+/**
+ * Personal, per-machine files are gitignored on purpose, so they are absent from a clean
+ * checkout while still being the correct thing for an instruction file to point at.
+ * Naming one is documentation, not a broken link.
+ * @param candidate Repo-relative path that was not found on disk.
+ * @returns True when git deliberately ignores the path.
+ */
+const isIntentionallyIgnored = (candidate: string): boolean =>
+  spawnSync('git', ['check-ignore', '--quiet', candidate], { cwd: REPO_ROOT }).status === 0
 
 const FENCED_BLOCK = /```[\S\s]*?```/g
 const BACKTICKED = /`([^\n`]+)`/g
@@ -62,9 +73,9 @@ describe('agent instruction files', () => {
   })
 
   it.each(files)('%s references only paths that exist', (relativeFile) => {
-    const missing = referencedPaths(relativeFile).filter(
-      (candidate) => !existsSync(join(REPO_ROOT, candidate))
-    )
+    const missing = referencedPaths(relativeFile)
+      .filter((candidate) => !existsSync(join(REPO_ROOT, candidate)))
+      .filter((candidate) => !isIntentionallyIgnored(candidate))
     expect(missing).toEqual([])
   })
 
