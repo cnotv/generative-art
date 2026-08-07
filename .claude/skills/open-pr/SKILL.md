@@ -91,9 +91,11 @@ gh issue edit <number> --body-file <file>   # the issue, when its description is
 A description that lags behind its commits is worse than no description, because it is read
 as current. This applies to the issue as much as the PR: if the work changed the shape of
 what was proposed — a different file layout, a different mechanism, a dropped deliverable —
-the issue body is now misinformation for anyone who reads it later. Edit the body, and add a
-comment explaining what changed and why, so the decision is recoverable and not just the
-outcome.
+the issue body is now misinformation for anyone who reads it later.
+
+Edit the body itself rather than appending a comment about it. Both the issue and the PR
+should read as one clean, current description; a changelog of how the description evolved
+belongs in the revision history, which GitHub keeps for you.
 
 Do this as part of the push, not as a final tidy-up. The moment you postpone it is the moment
 it stops happening.

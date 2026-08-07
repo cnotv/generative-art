@@ -89,9 +89,13 @@ plan:
 
 If the change invalidates the original description rather than adding to it — a different
 file tree, a different approach, a renamed artifact — edit the issue body with
-`gh issue edit <number>` so it describes the current state, and leave a comment saying what
-changed and why. Anyone reading the issue later should not have to reconstruct the outcome
-from a thread of corrections.
+`gh issue edit <number>` so it describes the current state.
+
+**Edit the body; do not narrate the edit.** An issue that defines something should read as
+one clean, current description, not a description followed by a changelog of how it got
+there. The revision history is already in GitHub if anyone needs it. Comments are for
+findings, questions and decisions that are not yet in the body — never for announcing that
+the body changed.
 
 ## Breaking a large issue into subtasks
 
