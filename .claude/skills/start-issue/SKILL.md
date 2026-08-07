@@ -76,6 +76,23 @@ For non-trivial work, wait for confirmation before implementing.
 Tests first: write the specifications, present them for confirmation, then write the
 implementation that satisfies them.
 
+## Keep the issue current while you work
+
+The issue is the record of what was decided, not just what was proposed. Post a comment when
+any of these happens, rather than letting the issue describe a plan that is no longer the
+plan:
+
+- a discovery or architectural insight that changes how the work is being done
+- a departure from the plan you posted, with the reason
+- a question that blocks progress, or the answer once you have it
+- scope arriving or being dropped
+
+If the change invalidates the original description rather than adding to it — a different
+file tree, a different approach, a renamed artifact — edit the issue body with
+`gh issue edit <number>` so it describes the current state, and leave a comment saying what
+changed and why. Anyone reading the issue later should not have to reconstruct the outcome
+from a thread of corrections.
+
 ## Breaking a large issue into subtasks
 
 Use GitHub's native sub-issue relationship, not just a checklist in the body. Create each

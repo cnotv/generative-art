@@ -93,6 +93,9 @@ These are the steps that are easy to omit and impossible to notice missing. Run 
 - [ ] Changed package API is reflected in `documentation/docs/packages/`
 - [ ] Any guide that tracks a file you changed has been re-read and fixed
 - [ ] A journey doc exists if the work produced a non-obvious finding
+- [ ] The linked issue and any open PR still describe the work accurately, edited rather than
+      left to be inferred from a thread of comments
+- [ ] Every artifact the plan named exists, not just the ones that were forced by a deletion
 - [ ] `pnpm lint`, `pnpm lint:css` and `pnpm test:unit` pass, and you saw them pass
 
 ## Scoped rules

@@ -79,13 +79,27 @@ gh run view <run-id> --log-failed
 Fix the cause, commit, push, and repeat until every check passes. Never bypass hooks with
 `--no-verify` — if a hook fails, the hook is usually right.
 
-## 5. Keep it current
+## 5. Keep the PR and the issue current
 
-After every subsequent push, update the description with `gh pr edit` so it still describes
-the branch. A PR body that lags behind its commits is worse than no body.
+After every subsequent push, update **both**:
+
+```sh
+gh pr edit <number> --body-file <file>      # the PR body
+gh issue edit <number> --body-file <file>   # the issue, when its description is now wrong
+```
+
+A description that lags behind its commits is worse than no description, because it is read
+as current. This applies to the issue as much as the PR: if the work changed the shape of
+what was proposed — a different file layout, a different mechanism, a dropped deliverable —
+the issue body is now misinformation for anyone who reads it later. Edit the body, and add a
+comment explaining what changed and why, so the decision is recoverable and not just the
+outcome.
+
+Do this as part of the push, not as a final tidy-up. The moment you postpone it is the moment
+it stops happening.
 
 ## Definition of done
 
-Every CI check is green, the description matches what is actually on the branch, and the
-abstraction review section is filled in — including when the answer is that nothing
-generalizes.
+Every CI check is green, the PR description matches what is actually on the branch, the
+linked issue still describes the work accurately, and the abstraction review section is
+filled in — including when the answer is that nothing generalizes.
