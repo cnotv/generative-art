@@ -130,7 +130,7 @@
   "Tools Test": {
     "description": "Internal tooling test page for development utilities."
   },
-  "Texture Painter": {
-    "description": "Paint custom textures on a 3D sphere and preview them live across different material types."
+  "Avatar Editor": {
+    "description": "Customise the stickman avatar: resize each limb and paint its texture maps live on the model."
   }
 }
