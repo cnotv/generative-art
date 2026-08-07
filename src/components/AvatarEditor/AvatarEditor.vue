@@ -2,6 +2,8 @@
 import * as THREE from 'three'
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { getTools, loadGLTF, textureLoader } from '@webgamekit/threejs'
+import { updateAnimation } from '@webgamekit/animation'
+import type { ComplexModel } from '@webgamekit/animation'
 import { storageSaveLocal, storageLoadLocal } from '@webgamekit/canvas-editor'
 import lakeUrl from '@/assets/images/backgrounds/lake.webp'
 import drawTemplateUrl from '@/assets/images/characters/stickman_draw_template.png'
@@ -14,6 +16,7 @@ import { DrawingToolbar } from '@/components/DrawingToolbar'
 import type { DrawingTool } from '@/components/DrawingToolbar'
 import {
   MATERIAL_FEATURES,
+  DEFAULT_CONFIG,
   getEnabledMaps,
   LIGHT_INTENSITY,
   AMBIENT_LIGHT_INTENSITY,
@@ -33,6 +36,11 @@ import {
   AVATAR_DRAG_SENSITIVITY,
   AVATAR_BRUSH_SIZE_DEFAULT,
   AVATAR_HISTORY_LIMIT,
+  AVATAR_WALK_ACTION,
+  AVATAR_WALK_SPEED,
+  AVATAR_MATERIAL_TYPE,
+  AVATAR_MAP_STRENGTHS,
+  AVATAR_ALPHA_TEST,
   STORAGE_PREFIX,
   TEXTURE_SLOTS,
   TEXTURE_SLOT_LABELS,
@@ -54,6 +62,9 @@ let orthoCamera: THREE.OrthographicCamera | null = null
 let rendererReference: THREE.WebGLRenderer | null = null
 let canvasElement: HTMLCanvasElement | null = null
 let frameHalfHeight = 1
+
+const animationClock = new THREE.Clock()
+const isWalking = ref(false)
 
 const textures: Record<string, THREE.CanvasTexture> = {}
 const offscreenCanvases: Record<string, HTMLCanvasElement> = {}
@@ -169,24 +180,23 @@ const createEnvironmentMap = async (renderer: THREE.WebGLRenderer): Promise<void
 }
 
 const applyStrengths = (material: THREE.Material): void => {
-  const strengths = props.config.strengths
   const standard = material as THREE.MeshStandardMaterial
   if (standard.normalMap && standard.normalScale)
-    standard.normalScale.set(strengths.normalScale, strengths.normalScale)
-  if (standard.aoMap) standard.aoMapIntensity = strengths.aoIntensity
+    standard.normalScale.set(AVATAR_MAP_STRENGTHS.normalScale, AVATAR_MAP_STRENGTHS.normalScale)
+  if (standard.aoMap) standard.aoMapIntensity = AVATAR_MAP_STRENGTHS.aoIntensity
   if ('displacementMap' in standard && standard.displacementMap)
     (standard as unknown as { displacementScale: number }).displacementScale =
-      strengths.displacementScale
-  if (standard.emissiveMap) standard.emissiveIntensity = strengths.emissiveIntensity
-  if (standard.envMap) standard.envMapIntensity = strengths.envMapIntensity
+      AVATAR_MAP_STRENGTHS.displacementScale
+  if (standard.emissiveMap) standard.emissiveIntensity = AVATAR_MAP_STRENGTHS.emissiveIntensity
+  if (standard.envMap) standard.envMapIntensity = AVATAR_MAP_STRENGTHS.envMapIntensity
 }
 
 const buildAvatarMaterial = (): THREE.Material => {
   const material = buildMaterial(
-    props.config.materialType,
-    MATERIAL_FEATURES[props.config.materialType],
-    getEnabledMaps(props.config.materials),
-    props.config.materials,
+    AVATAR_MATERIAL_TYPE,
+    MATERIAL_FEATURES[AVATAR_MATERIAL_TYPE],
+    getEnabledMaps(DEFAULT_CONFIG),
+    DEFAULT_CONFIG,
     { textures: textures as Record<string, THREE.Texture>, envMap }
   )
   // The rig's own meshes are drawn from both sides once a limb is scaled
@@ -194,7 +204,7 @@ const buildAvatarMaterial = (): THREE.Material => {
   // out rather than blend, or the rig reads as a solid slab.
   material.side = THREE.DoubleSide
   material.transparent = true
-  material.alphaTest = 0.5
+  material.alphaTest = AVATAR_ALPHA_TEST
   applyStrengths(material)
   return material
 }
@@ -422,6 +432,43 @@ const frameAvatar = (model: THREE.Object3D): void => {
   applyFrustum()
 }
 
+/**
+ * Wires the rig's own clips onto a mixer the shared animation helper can drive.
+ *
+ * Built here rather than through `getAnimationsModel`, which turns the model a
+ * half-turn on its way past — right for a character running away down a track,
+ * wrong for one being painted from the front.
+ */
+const attachWalkCycle = (model: THREE.Object3D, clips: THREE.AnimationClip[]): void => {
+  const mixer = new THREE.AnimationMixer(model)
+  model.userData.mixer = mixer
+  model.userData.actions = Object.fromEntries(
+    clips.map((clip) => [clip.name, mixer.clipAction(clip)])
+  )
+}
+
+const advanceWalkCycle = (): void => {
+  // Read every frame, walking or not, so resuming after a pause arrives as one
+  // ordinary frame rather than as the whole pause in a single step.
+  const delta = animationClock.getDelta()
+  if (!isWalking.value || !avatar) return
+  updateAnimation({
+    actionName: AVATAR_WALK_ACTION,
+    player: avatar as ComplexModel,
+    delta,
+    speed: AVATAR_WALK_SPEED
+  })
+  // The clip animates limb rotation, while the panel's nudges are position and
+  // scale on the very same nodes — reasserted here rather than trusted to
+  // survive whatever the mixer wrote this frame.
+  if (partRig) applyStickmanPartOffsets(partRig, props.config.parts)
+}
+
+/** Stopping freezes the rig mid-stride, which is a pose worth painting against. */
+const toggleWalk = (): void => {
+  isWalking.value = !isWalking.value
+}
+
 const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
   canvasElement = canvasReference
   await initTextures()
@@ -462,16 +509,19 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
     },
     defineSetup: async () => {
       // Loaded without physics: nothing here simulates, the rig only ever
-      // stands still and turns under the pointer.
-      const { model } = await loadGLTF(AVATAR_MODEL_PATH, { castShadow: true })
+      // stands still, walks on the spot, and turns under the pointer.
+      const { model, gltf } = await loadGLTF(AVATAR_MODEL_PATH, { castShadow: true })
       avatar = model
       partRig = prepareStickmanRig(model, props.config.parts)
+      attachWalkCycle(model, gltf.animations)
+      model.visible = props.config.visible
       scene.add(model)
       frameAvatar(model)
       rebuildMaterial()
 
       const renderLoop = (): void => {
         requestAnimationFrame(renderLoop)
+        advanceWalkCycle()
         if (orthoCamera) renderer.render(scene, orthoCamera)
       }
       renderLoop()
@@ -489,7 +539,14 @@ watch(
   { deep: true }
 )
 
-defineExpose({ rebuildMaterial })
+watch(
+  () => props.config.visible,
+  (visible) => {
+    if (avatar) avatar.visible = visible
+  }
+)
+
+defineExpose({ toggleWalk })
 
 onMounted(async () => {
   if (canvas.value) await init(canvas.value)

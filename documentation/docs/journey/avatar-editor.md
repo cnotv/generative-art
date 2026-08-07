@@ -88,6 +88,26 @@ scale. Measuring the model's own bounds after it loads, centring it, and sizing
 the view to that measurement keeps the framing correct regardless of what the
 model turns out to measure.
 
+## A walk cycle that turns the model around
+
+The rig ships its own clips, and the shared helper that binds them to a mixer
+does one more thing on the way past: it turns the model a half-turn. That is
+correct for the context it grew up in, where a character runs away from the
+camera down a track, and exactly wrong for one being painted from the front —
+binding the animation would have quietly shown the rig's back.
+
+Building the clip map directly avoids the turn while still handing off to the
+shared playback helper for the part that carries real logic: fading between
+actions and advancing the mixer. The lesson is narrower than "avoid the
+helper" — it is that a helper doing setup plus an unrelated orientation fix is
+two jobs, and only one of them travels.
+
+Stopping the cycle freezes the rig wherever the stride reached rather than
+snapping back to rest, which turns the button into a way to pose the model as
+much as a way to preview it. The panel's own limb nudges are reasserted after
+each animated frame, because the clip drives rotation on exactly the nodes
+whose position and scale the panel owns.
+
 ## A teleport target that does not exist yet
 
 The editor renders its painting toolbar into the config panel, which is

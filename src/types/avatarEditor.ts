@@ -1,26 +1,15 @@
-import type { MaterialTypeName, MaterialsListConfig } from '@/views/Tests/MaterialsList/types'
 import type { StickmanPartName, StickmanPartOffset } from '@/types/stickmanRig'
 
-/** How strongly each map is felt, independent of what is painted into it. */
-export type AvatarMapStrengths = {
-  normalScale: number
-  aoIntensity: number
-  displacementScale: number
-  emissiveIntensity: number
-  envMapIntensity: number
-}
-
 /**
- * Everything the avatar editor's config panel drives: which material the rig
- * wears, how strongly its painted maps read, and where each limb sits.
+ * Everything the avatar editor's config panel drives: whether the rig is shown
+ * at all, and where each limb sits.
  *
- * The painted textures themselves are not here — they live on their own
- * offscreen canvases, persisted separately, since a data URL per slot has no
- * business round-tripping through a panel control.
+ * The material is fixed rather than configurable — this view is for authoring a
+ * character, not for comparing material types — and the painted textures live
+ * on their own offscreen canvases, persisted separately, since a data URL per
+ * slot has no business round-tripping through a panel control.
  */
 export type AvatarEditorConfig = {
-  materialType: MaterialTypeName
-  strengths: AvatarMapStrengths
-  materials: MaterialsListConfig
+  visible: boolean
   parts: Record<StickmanPartName, StickmanPartOffset>
 }
