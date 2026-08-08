@@ -1,14 +1,7 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import {
-  getTools,
-  getBall,
-  getModel,
-  applyMaterial,
-  applyTextureToMesh,
-  remapUVsToWorldProjection
-} from '@webgamekit/threejs'
+import { getTools, getBall, getModel, applyMaterial, applyTextureToMesh } from '@webgamekit/threejs'
 import { createControls, loadMapping } from '@webgamekit/controls'
 import type { ControlsExtras, ControlsCurrents, ControlMapping } from '@webgamekit/controls'
 import { createTimelineManager, updateAnimation } from '@webgamekit/animation'
@@ -45,7 +38,9 @@ import { createScatterPanel } from '../scatter/scatterPanel'
 import { SCATTER_AREAS } from '../scatter/illustrations'
 import { DEFAULT_RUN_CAMERA, registerCameraElements } from '../panel/cameraPanel'
 import { registerRockElements } from '../panel/rockPanel'
-import { createStickmanConfig, STICKMAN_PART_NAMES } from '../panel/stickmanPanel'
+import { createStickmanConfig } from '../panel/stickmanPanel'
+import { applyStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
+import type { StickmanPartRig } from '@/types/stickmanRig'
 import { attachRockStroke } from '../elements/rockStroke'
 import { DEFAULT_ROCK_SURFACE, rockSurfaceById } from '../elements/rockSurfaces'
 import { registerTrackElements, createElementVisibilityHandlers } from '../panel/trackPanel'
@@ -82,8 +77,6 @@ import type {
   RockPosPayload,
   ScatterAreaManager,
   StickmanConfig,
-  StickmanPartName,
-  StickmanPartOffset,
   TrackChunkManager,
   TrackPath
 } from '../types'
@@ -329,67 +322,6 @@ const spawnRock = (
   return rock
 }
 
-/** One limb node's rest transform, measured once so a panel nudge has a fixed baseline to offset from. */
-type StickmanPartNode = {
-  node: THREE.Object3D
-  restPosition: THREE.Vector3
-  restScale: THREE.Vector3
-}
-
-type StickmanPartRig = Record<StickmanPartName, StickmanPartNode[]>
-
-/**
- * Matches each visual limb to its actual node(s) in the rig.
- *
- * The rig's own node names don't all match their visual role: the true
- * legs are named "leftLeg" and "rightLeg", but the head is the two meshes
- * hanging directly off the root with no named group of their own, matched
- * here by mesh name instead. Read once at spawn and never again, so a
- * panel nudge has a stable rest transform to offset from rather than
- * compounding onto whatever the previous frame already applied.
- */
-const buildStickmanPartRig = (stickman: THREE.Object3D): StickmanPartRig => {
-  const nodesFor = (names: string[]): StickmanPartNode[] =>
-    names
-      .map((name) => stickman.getObjectByName(name))
-      .filter((node): node is THREE.Object3D => !!node)
-      .map((node) => ({
-        node,
-        restPosition: node.position.clone(),
-        restScale: node.scale.clone()
-      }))
-
-  return {
-    head: nodesFor(['mesh_3', 'mesh_3_1', 'mesh_3_2']),
-    torso: nodesFor(['torso']),
-    armLeft: nodesFor(['leftArm']),
-    armRight: nodesFor(['rightArm']),
-    legs: nodesFor(['leftLeg', 'rightLeg'])
-  }
-}
-
-/** Pushes the panel's per-limb nudge onto each node, relative to its own measured rest transform. */
-const applyStickmanPartOffsets = (
-  rig: StickmanPartRig,
-  parts: Record<StickmanPartName, StickmanPartOffset>
-): void => {
-  STICKMAN_PART_NAMES.forEach((name) => {
-    const offset = parts[name]
-    rig[name].forEach(({ node, restPosition, restScale }) => {
-      node.position.set(
-        restPosition.x + offset.x,
-        restPosition.y + offset.y,
-        restPosition.z + offset.z
-      )
-      node.scale.set(
-        restScale.x * offset.scale,
-        restScale.y * offset.scale,
-        restScale.z * offset.scale
-      )
-    })
-  })
-}
-
 type StickmanSpawn = {
   stickman: ComplexModel
   feetOffset: number
@@ -439,46 +371,7 @@ const spawnStickman = async ({
   // into once the track curves back near it. A sensor still exists, but
   // produces no collision response, so it can't obstruct anything.
   stickman.userData.collider.setSensor(true)
-  // The rig's own limbs are simple rigid meshes parented to named nodes
-  // (torso, leftArm, rightArm, leftLeg, rightLeg), not skin-bound — so
-  // nudging a limb node's rest position moves it rigidly and sticks through
-  // the walk cycle, which only animates rotation on top of it. Tucked in by
-  // default, the arms and shoulders read clearer held further from the
-  // torso, which also gives a texture more room to tell the arm and torso
-  // apart instead of the two silhouettes touching. Read from Parts > Arm
-  // Left/Right > X now, not a fixed constant — what the panel shows for
-  // those fields is the actual spread applied, not a hidden extra on top
-  // of it.
-  const leftArmNode = stickman.getObjectByName('leftArm')
-  const rightArmNode = stickman.getObjectByName('rightArm')
-  // The round shoulder caps (mesh_1, mesh_2) are parented to the torso, not
-  // the arm they sit against — so spreading the arm away from the torso
-  // left its shoulder behind, opening a gap between the two. Re-parenting
-  // them onto the arm they belong to, preserving their current world
-  // transform, means they travel with it from here on: through the spread
-  // below and through the walk cycle's own swing.
-  const leftShoulder = stickman.getObjectByName('mesh_1')
-  const rightShoulder = stickman.getObjectByName('mesh_2')
-  if (leftArmNode && leftShoulder) leftArmNode.attach(leftShoulder)
-  if (rightArmNode && rightShoulder) rightArmNode.attach(rightShoulder)
-  // The rig's own rest pose holds each arm at an 11.25° outward lean on its
-  // local Z (a relaxed stance, not a bug in the model) — straightened here,
-  // before the texture projection below reads these positions, so the flat
-  // texture's straight-up-and-down arm regions actually line up with it.
-  if (leftArmNode) leftArmNode.rotation.z = 0
-  if (rightArmNode) rightArmNode.rotation.z = 0
-  // Rest is the rig's own unmodified pose — the spread above lives in the
-  // panel's own default for Arm Left/Right X, applied below like any other
-  // part nudge, not baked in ahead of it.
-  const partRig = buildStickmanPartRig(stickman)
-  applyStickmanPartOffsets(partRig, config.parts)
-  // The rig is a dozen separate mesh parts, each with its own UVs already
-  // spanning the full [0,0]-[1,1] — an uploaded texture applied straight
-  // onto that squeezes the whole image onto every part independently,
-  // which is what turns a simple line drawing into a near-solid blob.
-  // Remapped once here to one shared world-space projection instead, so a
-  // texture reads as one picture wrapped around the rig.
-  remapUVsToWorldProjection(stickman)
+  const partRig = prepareStickmanRig(stickman, config.parts)
   // The rig's own origin isn't at its feet, so a station-height placement
   // has to compensate by however far above them it actually sits. Measured
   // once here, in the rig's own local units so it stays correct at any

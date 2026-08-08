@@ -255,13 +255,6 @@ export const STICKMAN_SCALE = 3.5
 // drawn line art; without alpha-testing at this cutoff, the "empty" areas
 // render as whatever flat colour was baked in under them.
 export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
-// In the rig's own local units, pushing each arm node further from the
-// torso along its rest X position. Tucked-in by default, which reads as
-// cramped and leaves a texture no room to tell the arm's silhouette apart
-// from the torso's own. Kept small — the torso's own rounded shoulder
-// corner isn't part of the arm mesh and doesn't stretch to follow it, so
-// spreading too far reopens the gap between the two instead of closing it.
-export const STICKMAN_ARM_SPREAD = 0.08
 // Gentler than the rock's own figures across the board: lighter drive so it
 // doesn't look shoved, lower speeds that read as a run rather than a roll,
 // and a floatier jump to match the lower gravity. Tuned live in the elements

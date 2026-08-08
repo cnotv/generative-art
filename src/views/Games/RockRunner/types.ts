@@ -1,5 +1,6 @@
 import type * as THREE from 'three'
 import type { SweepStation } from '@/types/sweptGeometry'
+import type { StickmanPartName, StickmanPartOffset } from '@/types/stickmanRig'
 
 /** One term of the sine sum that shapes the track's heading or height. */
 export type PathTerm = {
@@ -266,17 +267,6 @@ export type RockConfig = {
   angularDamping: number
   tint: number
   autopilot: boolean
-}
-
-/** The rig's named limbs, each independently nudgeable from the panel. */
-export type StickmanPartName = 'head' | 'torso' | 'armLeft' | 'armRight' | 'legs'
-
-/** A part's offset from its rest transform: nudged position, plus a size multiplier. */
-export type StickmanPartOffset = {
-  x: number
-  y: number
-  z: number
-  scale: number
 }
 
 /** Cosmetic tunables for the stickman look, editable from the elements panel. */
