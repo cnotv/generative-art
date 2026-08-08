@@ -21,11 +21,11 @@ const defaultConfig = (): AvatarEditorConfig => ({
 
 const reactiveConfig = createReactiveConfig<AvatarEditorConfig>(defaultConfig())
 
-// Limb nudges live here while the painted maps live in the editor, so putting
-// them both back is the only thing that genuinely spans the two.
+// Limb nudges live here while the drawing lives in the editor, so putting them
+// both back is the only thing that genuinely spans the two.
 const discardChanges = (): void => {
   reactiveConfig.value = defaultConfig()
-  editor.value?.discardPaintedTextures()
+  editor.value?.discardPaintedTexture()
 }
 
 // Opened during setup rather than on mount: the editor teleports its painting

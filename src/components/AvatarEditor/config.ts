@@ -1,6 +1,13 @@
 export const AVATAR_MODEL_PATH = 'stickboy.glb'
 
-export const AVATAR_CANVAS_SIZE = 512
+/**
+ * The texture is two panels side by side, front then back, each square so the
+ * body keeps its proportions rather than being squeezed into half a square.
+ */
+export const AVATAR_PANEL_SIZE = 512
+export const AVATAR_PANEL_COUNT = 2
+export const AVATAR_CANVAS_WIDTH = AVATAR_PANEL_SIZE * AVATAR_PANEL_COUNT
+export const AVATAR_CANVAS_HEIGHT = AVATAR_PANEL_SIZE
 
 /**
  * Padding around the rig when the camera frames it, as a fraction of its
@@ -22,86 +29,44 @@ export const AVATAR_WALK_ACTION = 'walk'
 /** Playback rate for the walk cycle, in the units updateAnimation scales by. */
 export const AVATAR_WALK_SPEED = 10
 
-/**
- * The material is fixed rather than exposed: this view authors one character,
- * so the only thing worth varying is what is painted into the maps, not which
- * material type is showing them. Standard covers every map the painter offers.
- */
-export const AVATAR_MATERIAL_TYPE = 'MeshStandardMaterial' as const
-
-/**
- * Displacement stays at zero: the rig is a handful of low-poly limbs, so a
- * displacement map has almost no vertices to push and mostly just tears the
- * silhouette. The slot is still paintable, it simply has nothing to move here.
- */
-export const AVATAR_MAP_STRENGTHS = {
-  normalScale: 1,
-  aoIntensity: 1,
-  displacementScale: 0,
-  emissiveIntensity: 1,
-  envMapIntensity: 1
-}
-
 /** Filename stem for a texture saved out of the painter. */
-export const AVATAR_EXPORT_PREFIX = 'avatar'
-
-export const STORAGE_PREFIX = 'avatar-editor'
-
-export type TextureSlotKey = 'diffuse' | 'normal' | 'roughness' | 'ao' | 'displacement' | 'emissive'
-
-export const TEXTURE_SLOTS: TextureSlotKey[] = [
-  'diffuse',
-  'normal',
-  'roughness',
-  'ao',
-  'displacement',
-  'emissive'
-]
-
-export const TEXTURE_SLOT_LABELS: Record<TextureSlotKey, string> = {
-  diffuse: 'Diffuse',
-  normal: 'Normal',
-  roughness: 'Roughness',
-  ao: 'Ambient Occlusion',
-  displacement: 'Displacement',
-  emissive: 'Emissive'
-}
+export const AVATAR_EXPORT_PREFIX = 'avatar-texture'
 
 /**
- * The flat value each map starts at, painted over the whole canvas.
- *
- * Every one is the map's own no-op: a normal pointing straight out, fully
- * rough, unoccluded, undisplaced, unlit. The rig then looks exactly like its
- * untextured self until something is actually painted, rather than arriving
- * pre-dented by a procedural pattern that has nothing to do with an avatar.
- *
- * The body template is deliberately absent: it is a guide drawn over the map
- * at display time, never into it, so it can be turned off and never lands in
- * an exported texture.
+ * A flat drawing wants a flat surface: fully rough and non-metallic, so the
+ * reflection probe reads as soft ambient light rather than as shine competing
+ * with what was drawn.
  */
-export const TEXTURE_SLOT_BASE_COLOR: Record<TextureSlotKey, string> = {
-  diffuse: '#ffffff',
-  normal: '#8080ff',
-  roughness: '#ffffff',
-  ao: '#ffffff',
-  displacement: '#000000',
-  emissive: '#000000'
-}
+export const AVATAR_ROUGHNESS = 0.9
+export const AVATAR_METALNESS = 0
+export const AVATAR_ENV_MAP_INTENSITY = 0.4
 
-export const TEXTURE_SLOT_PALETTE: Record<TextureSlotKey, string[]> = {
-  diffuse: ['#e8b48c', '#3b6ea5', '#c0392b', '#2d3436', '#f5f5f5', '#7f5a3a'],
-  normal: ['#8080ff', '#404080', '#c0c0ff'],
-  roughness: ['#ffffff', '#888888', '#000000'],
-  ao: ['#ffffff', '#888888', '#000000'],
-  displacement: ['#000000', '#888888', '#ffffff'],
-  emissive: ['#ff6600', '#00ccff', '#000000']
-}
+/**
+ * Alpha at or below this is discarded outright rather than blended, so a body
+ * faded to nothing stops writing depth and hiding the strokes behind it. Set
+ * just above nothing, so every partial fade still blends normally.
+ */
+export const AVATAR_ALPHA_CUTOFF = 0.01
 
-export const TEXTURE_SLOT_DEFAULT_COLOR: Record<TextureSlotKey, string> = {
-  diffuse: '#e8b48c',
-  normal: '#8080ff',
-  roughness: '#888888',
-  ao: '#888888',
-  displacement: '#888888',
-  emissive: '#ff6600'
-}
+/** Marks the seam between the front and back panels on the guide. */
+export const AVATAR_PANEL_DIVIDER_COLOR = 'rgba(0, 0, 0, 0.35)'
+
+/**
+ * Carries the sheet layout, because a saved drawing is only meaningful against
+ * the one it was painted on — a single-panel texture restored onto the
+ * two-panel sheet would be stretched across both halves rather than rejected.
+ */
+export const STORAGE_KEY = 'avatar-editor-split'
+
+/**
+ * The flat colour the sheet starts as, under anything drawn on it.
+ *
+ * The body template is deliberately not part of it: the guide is drawn over
+ * the map at display time, never into it, so it can be turned off and never
+ * lands in an exported texture.
+ */
+export const TEXTURE_BASE_COLOR = '#ffffff'
+
+export const TEXTURE_PALETTE = ['#e8b48c', '#3b6ea5', '#c0392b', '#2d3436', '#f5f5f5', '#7f5a3a']
+
+export const TEXTURE_DEFAULT_COLOR = TEXTURE_PALETTE[0]

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { remapUVsToWorldProjection } from '@webgamekit/threejs'
+import type { UvProjectionLayout } from '@webgamekit/threejs'
 import type {
   StickmanPartName,
   StickmanPartNode,
@@ -30,13 +31,20 @@ export const STICKMAN_ARM_SPREAD = 0.08
 
 /** One part's nudge: an offset from its own rest position, plus a size multiplier. */
 export const STICKMAN_PART_OFFSET_CONTROLS = {
-  x: { min: -1, max: 1, step: 0.01, label: 'X' },
-  y: { min: -1, max: 1, step: 0.01, label: 'Y' },
-  z: { min: -1, max: 1, step: 0.01, label: 'Z' },
+  position: {
+    label: 'Position',
+    component: 'CoordinateInput' as const,
+    min: -1,
+    max: 1,
+    step: 0.01
+  },
   scale: { min: 0.2, max: 3, step: 0.05, label: 'Size' }
 }
 
-const defaultPartOffset = (): StickmanPartOffset => ({ x: 0, y: 0, z: 0, scale: 1 })
+const defaultPartOffset = (): StickmanPartOffset => ({
+  position: { x: 0, y: 0, z: 0 },
+  scale: 1
+})
 
 /**
  * The part nudges every stickman starts from.
@@ -50,8 +58,8 @@ const defaultPartOffset = (): StickmanPartOffset => ({ x: 0, y: 0, z: 0, scale: 
 export const createStickmanPartOffsets = (): Record<StickmanPartName, StickmanPartOffset> => ({
   head: defaultPartOffset(),
   torso: defaultPartOffset(),
-  armLeft: { ...defaultPartOffset(), x: -STICKMAN_ARM_SPREAD },
-  armRight: { ...defaultPartOffset(), x: STICKMAN_ARM_SPREAD },
+  armLeft: { ...defaultPartOffset(), position: { x: -STICKMAN_ARM_SPREAD, y: 0, z: 0 } },
+  armRight: { ...defaultPartOffset(), position: { x: STICKMAN_ARM_SPREAD, y: 0, z: 0 } },
   legs: defaultPartOffset()
 })
 
@@ -101,9 +109,9 @@ export const applyStickmanPartOffsets = (
     const offset = parts[name]
     rig[name].forEach(({ node, restPosition, restScale }) => {
       node.position.set(
-        restPosition.x + offset.x,
-        restPosition.y + offset.y,
-        restPosition.z + offset.z
+        restPosition.x + offset.position.x,
+        restPosition.y + offset.position.y,
+        restPosition.z + offset.position.z
       )
       node.scale.set(
         restScale.x * offset.scale,
@@ -112,6 +120,32 @@ export const applyStickmanPartOffsets = (
       )
     })
   })
+}
+
+/**
+ * Reparents a shoulder cap onto the arm it belongs to and seats it in the
+ * socket, so the two travel together from here on.
+ *
+ * The rig authors the caps as torso children at z 0 while both arm sockets sit
+ * 0.02 forward, so a reparent that preserves world transform faithfully
+ * preserves that gap — the cap reads as floating just behind its arm from any
+ * angle but dead ahead. Zeroing its offset lands it on the arm's own origin,
+ * which is the socket, and also means later rotation of the arm turns the cap
+ * about its own centre rather than swinging it around a lever arm.
+ *
+ * Rotation is left as the reparent computed it: the caps carry a quarter turn
+ * that orients the disc, and identity would flatten them the wrong way.
+ * @param arm - The arm node to seat onto, when the rig has one
+ * @param shoulder - The cap to reseat, when the rig has one
+ * @returns Nothing; the shoulder is reparented and moved in place
+ */
+const seatShoulderOnArm = (
+  arm: THREE.Object3D | undefined,
+  shoulder: THREE.Object3D | undefined
+): void => {
+  if (!arm || !shoulder) return
+  arm.attach(shoulder)
+  shoulder.position.set(0, 0, 0)
 }
 
 /**
@@ -124,24 +158,23 @@ export const applyStickmanPartOffsets = (
  * through any walk cycle animating rotation on top of it.
  * @param stickman - A freshly loaded rig, mutated in place
  * @param parts - Offsets to seed the rig with
+ * @param layout - Whether the rig's two faces share one texture or take half each
  * @returns The measured part rig, for later nudges
  */
 export const prepareStickmanRig = (
   stickman: THREE.Object3D,
-  parts: Record<StickmanPartName, StickmanPartOffset>
+  parts: Record<StickmanPartName, StickmanPartOffset>,
+  layout: UvProjectionLayout = 'wrapped'
 ): StickmanPartRig => {
   const leftArmNode = stickman.getObjectByName('leftArm')
   const rightArmNode = stickman.getObjectByName('rightArm')
   // The round shoulder caps (mesh_1, mesh_2) are parented to the torso, not
-  // the arm they sit against — so spreading the arm away from the torso
-  // left its shoulder behind, opening a gap between the two. Re-parenting
-  // them onto the arm they belong to, preserving their current world
-  // transform, means they travel with it from here on: through the spread
-  // below and through any walk cycle's own swing.
+  // the arm they sit against — so spreading the arm away from the torso left
+  // its shoulder behind, opening a gap between the two.
   const leftShoulder = stickman.getObjectByName('mesh_1')
   const rightShoulder = stickman.getObjectByName('mesh_2')
-  if (leftArmNode && leftShoulder) leftArmNode.attach(leftShoulder)
-  if (rightArmNode && rightShoulder) rightArmNode.attach(rightShoulder)
+  seatShoulderOnArm(leftArmNode, leftShoulder)
+  seatShoulderOnArm(rightArmNode, rightShoulder)
   // The rig's own rest pose holds each arm at an 11.25 degree outward lean on
   // its local Z (a relaxed stance, not a bug in the model) — straightened
   // here, before the texture projection below reads these positions, so a
@@ -157,6 +190,6 @@ export const prepareStickmanRig = (
   // turns a simple line drawing into a near-solid blob. Remapped once here
   // to one shared world-space projection instead, so a texture reads as one
   // picture wrapped around the rig.
-  remapUVsToWorldProjection(stickman)
+  remapUVsToWorldProjection(stickman, layout)
   return partRig
 }

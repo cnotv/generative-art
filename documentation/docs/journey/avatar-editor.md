@@ -69,6 +69,50 @@ than a blank sheet. Because the layout is fixed by the rig's own proportions,
 an outline drawn in that layout lands exactly on the limbs it describes, which
 turns a blank canvas into something with landmarks to aim at.
 
+## Giving the two faces a half each
+
+The projection was built to fold one image around the rig like paper: one face
+samples the sheet mirrored against the other, so whichever side is being looked
+at reads the right way round. Turning the rig through half a turn produced a
+pixel-identical view, which is the technique working exactly as designed.
+
+It is also the wrong thing for an editor. Both faces share every texel, so a
+mark painted on the chest appears on the back as well, and no amount of care
+lets a character have a face on one side and a backpack on the other. The
+projection gained a second layout: rather than sending both faces to the same
+coordinates, each is landed on its own half of the sheet, keeping the mirroring
+within that half so each side still reads correctly from its own viewpoint.
+
+```mermaid
+flowchart LR
+    subgraph wrapped["wrapped"]
+        WF[near face] --> WS[whole sheet]
+        WB[far face] --> WS
+    end
+    subgraph split["split"]
+        SF[near face] --> SL[left panel]
+        SB[far face] --> SR[right panel]
+    end
+```
+
+The two layouts are mutually unintelligible: a texture painted for one is
+nonsense on the other. That is why the choice is a parameter with the original
+as default rather than a change of behaviour — the running game's three skins
+are authored as single sheets, and switching them over would mean redrawing
+each as two panels. The consequence to keep in mind is that the editor and the
+game currently disagree, so a texture authored here does not yet drop into the
+game unchanged.
+
+The sheet became two squares side by side rather than one square split down the
+middle, so each face keeps the full resolution and proportions it had before
+instead of being squeezed into half the width. That change is what surfaced a
+bug hiding in the painting code: canvas coordinates were derived by scaling both
+axes by the canvas _width_, which is indistinguishable from correct for as long
+as the canvas stays square. On a sheet twice as wide as it is tall, every stroke
+landed at twice the depth it was aimed at — a brush aimed at the chest painting
+the shin. Worth remembering as a class of bug rather than an incident: a square
+default hides every place where one dimension was used to mean both.
+
 ## Two rendering assumptions that do not survive an orthographic camera
 
 A flat, straight-on view is the right camera for painting a front-and-back

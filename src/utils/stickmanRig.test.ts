@@ -31,14 +31,14 @@ const createRigModel = (): THREE.Object3D => {
 describe('createStickmanPartOffsets', () => {
   it('starts every limb un-nudged and full size', () => {
     const parts = createStickmanPartOffsets()
-    expect(parts.torso).toEqual({ x: 0, y: 0, z: 0, scale: 1 })
+    expect(parts.torso).toEqual({ position: { x: 0, y: 0, z: 0 }, scale: 1 })
     expect(parts.head.scale).toBe(1)
   })
 
   it('spreads the arms apart so a texture can tell them from the torso', () => {
     const parts = createStickmanPartOffsets()
-    expect(parts.armLeft.x).toBe(-STICKMAN_ARM_SPREAD)
-    expect(parts.armRight.x).toBe(STICKMAN_ARM_SPREAD)
+    expect(parts.armLeft.position.x).toBe(-STICKMAN_ARM_SPREAD)
+    expect(parts.armRight.position.x).toBe(STICKMAN_ARM_SPREAD)
   })
 
   it('hands out a fresh set each call, so one rig cannot nudge another', () => {
@@ -76,7 +76,7 @@ describe('applyStickmanPartOffsets', () => {
   it('offsets position from rest and multiplies scale by it', () => {
     const rig = buildStickmanPartRig(createRigModel())
     const parts = createStickmanPartOffsets()
-    parts.head = { x: 0.5, y: -0.25, z: 1, scale: 3 }
+    parts.head = { position: { x: 0.5, y: -0.25, z: 1 }, scale: 3 }
     applyStickmanPartOffsets(rig, parts)
 
     const head = rig.head[0].node
@@ -87,7 +87,7 @@ describe('applyStickmanPartOffsets', () => {
   it('offsets from the measured rest pose, so repeats never compound', () => {
     const rig = buildStickmanPartRig(createRigModel())
     const parts = createStickmanPartOffsets()
-    parts.torso = { x: 0.2, y: 0, z: 0, scale: 2 }
+    parts.torso = { position: { x: 0.2, y: 0, z: 0 }, scale: 2 }
 
     applyStickmanPartOffsets(rig, parts)
     applyStickmanPartOffsets(rig, parts)
@@ -100,7 +100,7 @@ describe('applyStickmanPartOffsets', () => {
   it('moves every node of a multi-node limb together', () => {
     const rig = buildStickmanPartRig(createRigModel())
     const parts = createStickmanPartOffsets()
-    parts.legs = { x: 0, y: -1, z: 0, scale: 1 }
+    parts.legs = { position: { x: 0, y: -1, z: 0 }, scale: 1 }
     applyStickmanPartOffsets(rig, parts)
 
     expect(rig.legs.map(({ node }) => node.position.y)).toEqual([-1, -1])

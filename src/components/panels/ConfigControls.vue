@@ -154,7 +154,10 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 </script>
 
 <template>
-  <div class="config-controls flex flex-col gap-2">
+  <!-- Nested groups drop the gap: their own controls already carry spacing, and
+       stacking both leaves a part's fields further from each other than from
+       the next part's. -->
+  <div class="config-controls flex flex-col" :class="{ 'gap-2': !nested }">
     <!-- Direct controls at this level -->
     <div
       v-for="control in groups.controls"
