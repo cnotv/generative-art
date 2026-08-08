@@ -6,9 +6,9 @@ sidebar_position: 119
 
 ## Goal
 
-Give the stickman rig a single place to be dressed and reshaped: paint every one
-of its material maps directly on the model, and nudge each limb's position and
-size, without leaving the view or editing the model file.
+Give the stickman rig a single place to be dressed and reshaped: draw on it
+directly, front and back, and nudge each limb's position and size, without
+leaving the view or editing the model file.
 
 Two pieces of behaviour already existed, in places that could not see each
 other. Texture painting lived in a sphere-based material playground, where the
@@ -146,11 +146,40 @@ actions and advancing the mixer. The lesson is narrower than "avoid the
 helper" — it is that a helper doing setup plus an unrelated orientation fix is
 two jobs, and only one of them travels.
 
-Stopping the cycle freezes the rig wherever the stride reached rather than
-snapping back to rest, which turns the button into a way to pose the model as
-much as a way to preview it. The panel's own limb nudges are reasserted after
+Stopping the cycle returns the rig to the pose the model file authored, which
+has to be captured before any clip has written over it and restored for the
+whole rig rather than only the limbs the panel names — a clip writes to
+whatever nodes it likes. The root is deliberately left out of that capture: it
+carries what the view owns rather than the model, the camera's framing and
+however far the pointer has turned the figure, and restoring it too yanked the
+rig back to front and centre every time the walk stopped. The panel's own limb
+nudges are re-applied rather than restored from the capture, or stopping would
+silently undo any slider moved while it was running. They are reasserted after
 each animated frame, because the clip drives rotation on exactly the nodes
 whose position and scale the panel owns.
+
+## A seam that only showed from an angle
+
+The shoulder caps sat slightly behind the arms they belong to, visible from
+every viewpoint except dead ahead — which is exactly the viewpoint the editor
+opens on, and why it survived being looked at for so long.
+
+Reparenting a cap onto its arm preserves world transform, which is normally the
+right thing and is why the caps travel with a spread arm at all. It also
+faithfully preserves any discrepancy that was already there. Reading the model
+file's own node table rather than guessing showed one: both caps are authored as
+children of the torso at depth zero, while both arm sockets sit a fraction
+forward of that. The reparent kept the gap perfectly.
+
+Seating each cap on its arm's own origin — which is the socket — closes it, and
+has a second benefit: a child at the origin does not swing when its parent
+rotates, so the cap now turns about its own centre through the walk cycle
+instead of orbiting a lever arm.
+
+The general lesson is about measurement. The fix took one look at the authored
+transforms and was obvious from them; it would have taken a long time to reason
+out from the rendered result, where a two-centimetre offset on a stylised rig
+reads as "something looks slightly off".
 
 ## A teleport target that does not exist yet
 
