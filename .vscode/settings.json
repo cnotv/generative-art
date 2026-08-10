@@ -22,10 +22,7 @@
     "webgametoolkit"
   ],
   "vue3snippets.enable-compile-vue-file-on-did-save-code": true,
-  "github.copilot.chat.codeGeneration.instructionFiles": [
-    ".github/copilot-instructions.md",
-    ".github/rules/code-style.md",
-    ".github/rules/testing.md",
-    ".github/rules/security.md"
-  ]
+  "chat.useAgentsMdFile": true,
+  "chat.useNestedAgentsMdFiles": true,
+  "chat.useAgentSkills": true
 }

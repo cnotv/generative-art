@@ -1,83 +1,17 @@
 # Claude Code Instructions
 
-**Never add rules to this file unless explicitly instructed.**
-**Only add strictly Claude Code content to these instructions.**
+**Never add rules to this file unless explicitly instructed.** Rules belong in `AGENTS.md`,
+in `.claude/rules/`, or in a skill — not here. This file carries only Claude-specific
+wiring.
 
-For project architecture, GitHub workflow, and development patterns, read `.github/copilot-instructions.md`.
+@AGENTS.md
 
-## When the user links a GitHub issue
+## Claude-specific notes
 
-When the user's message contains a `github.com/.*/issues/\d+` URL, execute these steps **in order** before writing a single line of code or documentation:
-
-```sh
-STEP 1  gh issue view <number>          -- read the issue
-STEP 2  git checkout main
-        git fetch origin main
-        git rebase origin/main          -- sync local main
-STEP 3  git checkout -b <type>/<number>-<slug>
-        # type = feat | fix | docs | chore
-        # slug = 2-3 word kebab-case summary of the issue title
-STEP 4  gh issue comment <number> --body "..."
-        # post implementation plan: files, approach, key references, verification
-STEP 5  implement
-```
-
-**This sequence is non-negotiable.** Do not skip or reorder any step. Do not commit to the current branch. Do not reuse an existing feature branch. Create a fresh branch from main every time.
-
-## When the user asks to try or prototype something
-
-This is the opposite order from the linked-issue workflow above, and applies when the user asks to try, prototype, or experiment with an idea that has **no linked issue yet** (e.g. "add an option to try X", "let's try Y"):
-
-```sh
-STEP 1  build the PoC directly on a branch off main
-        # skip writing a design doc or issue first — go straight to a working prototype
-STEP 2  validate it together (run it, look at it, iterate on corrections)
-STEP 3  once it's in good shape, write the GitHub issue documenting what was built and why
-STEP 4  refine based on feedback
-STEP 5  open the PR (only if explicitly asked, per the Pull requests rule below)
-```
-
-Do not gate this flow behind a design doc, spec review, or issue-first process — those add friction to exploratory work this repo's owner wants to see running before it's written up. This does not override the linked-issue workflow above: if the user's message contains an actual issue URL, follow that sequence instead.
-
-## Pull requests
-
-**Never open a pull request unless the user explicitly asks for one.**
-
-**Every PR description must carry a running report of what was added.** Beyond the Summary / Key Changes / Test Plan, keep an "Added on top of the initial plan" section that lists — in plain language — everything built or changed after the original issue scope, so the work can be analysed later. Update this section whenever new commits add scope; do not let the PR body drift behind the branch. Each entry should say what was added and why, grouped by area.
-
-## Commit messages — never reference the issue number
-
-**Commit messages must never contain an issue reference** (`#123`, `issue 123`, `Closes #123`, `(#123)`, etc.). The issue number belongs **only** in the PR title, so it shows up on merge. Write commit subjects as `<type>: <summary>` with no issue token anywhere in the subject or body. This is absolute — do not add it "for traceability."
-
-## When the user asks a question — give an opinion
-
-When the user asks a question ("what do you think?", "is X better than Y?", "why is this happening?"), always provide a direct opinion or recommendation alongside any explanation. Do not hedge with "it depends" and stop there — state what you would do and why.
-
-## When information is insufficient — ask first
-
-Before implementing any task where the intent, scope, or expected behavior is unclear, **ask the user for clarification**. Do not assume or guess. This applies especially to:
-
-- Bug reports with no reproduction steps or error messages
-- Feature requests with ambiguous acceptance criteria
-- Issues that could be solved in multiple ways with different trade-offs
-
-Ask a single focused question covering all missing details. Do not start implementation until you have enough information to proceed confidently.
-
-## HTML markup discipline
-
-**Never add wrapper elements that serve no purpose.** Before writing any `<div>`, `<section>`, or other container, ask: does this element add layout, semantics, or behaviour that the parent cannot already provide? If not, remove it.
-
-Specific rules:
-
-- Do not wrap a single child component in a `<section>` or `<div>` just to apply `display: flex; align-items: center` — if the parent slot already handles centering (e.g. `LobbyLayout` with `mainPlacement="center"`), the wrapper is redundant.
-- Do not add `grid-area` on a component's root element when the parent grid already assigns `grid-area: main` to the slot's direct child.
-- Lobby components (`*Lobby.vue`) must render `GameLobbyWizard` as the root element, with no enclosing `<section>` or `<div>`.
-- If you find yourself adding a wrapper only to transfer styles that the parent layout already provides, delete the wrapper and rely on the layout instead.
-
-## ESLint configuration
-
-**Never modify `eslint.config.js` unless the user explicitly asks.** This includes adding overrides, disabling rules for new directories, or adjusting thresholds. Fix lint violations by refactoring the code to comply with existing rules — not by loosening them.
-
-@.github/rules/code-style.md
-@.github/rules/testing.md
-@.github/rules/security.md
+- Scoped rules live in `.claude/rules/`, each declaring a `paths:` glob so it loads only when
+  a matching file is read. They are not re-injected after `/compact` — they reload the next
+  time a matching file is touched, so anything that must always hold belongs in `AGENTS.md`.
+- Procedures live in `.claude/skills/` and are selected automatically from the request.
+  Invoke one by name to run it explicitly.
+- Shared tool permissions are in `.claude/settings.json` and travel with the repo; personal
+  ones go in `.claude/settings.local.json`, which is gitignored.
