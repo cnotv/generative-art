@@ -27,7 +27,7 @@ export const STICKMAN_PART_NAMES: StickmanPartName[] = [
  * and doesn't stretch to follow it, so spreading too far reopens the gap
  * between the two instead of closing it.
  */
-export const STICKMAN_ARM_SPREAD = 0.08
+export const STICKMAN_ARM_SPREAD = 0.06
 
 /** One part's nudge: an offset from its own rest position, plus a size multiplier. */
 export const STICKMAN_PART_OFFSET_CONTROLS = {
