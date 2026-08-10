@@ -259,9 +259,13 @@ export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
 // doesn't look shoved, lower speeds that read as a run rather than a roll,
 // and a floatier jump to match the lower gravity. Tuned live in the elements
 // panel, not derived from the rock's own numbers.
-export const STICKMAN_FORWARD_IMPULSE = 30
-export const STICKMAN_BASE_MAX_SPEED = 16
-export const STICKMAN_MAX_SPEED_CEILING = 16
+//
+// Base and ceiling are deliberately the same: a figure on foot holds one
+// running pace, so there is no ramp for the speed-ramp distance to spend
+// itself over, however far the run goes.
+export const STICKMAN_FORWARD_IMPULSE = 70
+export const STICKMAN_BASE_MAX_SPEED = 20
+export const STICKMAN_MAX_SPEED_CEILING = 20
 export const STICKMAN_JUMP_IMPULSE = 2350
 export const STICKMAN_GRAVITY_SCALE = 5
 // The sphere's centre sits one radius above the deck; the stickman's feet
