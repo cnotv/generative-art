@@ -435,7 +435,7 @@ export const DEBRIS_GROUND_TOLERANCE = 1.2
 // The chase camera's own offsets. Previously borrowed from the marble game,
 // which meant this game's camera was configured in another game's file and
 // would have moved with it.
-export const CHASE_HEIGHT = 14
+export const CHASE_HEIGHT = 10
 export const CHASE_BACK = 12
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000
