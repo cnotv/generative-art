@@ -195,12 +195,24 @@ const createBlankCanvas = (): HTMLCanvasElement => {
  * halves; the line is there because the halves are otherwise indistinguishable
  * on a flat sheet, and painting across the seam by accident is easy.
  */
+/**
+ * Lays one square body image into each panel.
+ *
+ * A texture for this rig is authored as a single square sheet — that is the
+ * shape the game's own skins and the drawing template come in. The editor's
+ * sheet is two of those side by side, so an image belongs in each half at panel
+ * size rather than stretched across the pair, which would double its width and
+ * leave nothing lining up with the body.
+ */
+const drawIntoPanels = (context: CanvasRenderingContext2D, image: CanvasImageSource): void => {
+  Array.from({ length: AVATAR_PANEL_COUNT }, (_, panel) =>
+    context.drawImage(image, panel * AVATAR_PANEL_SIZE, 0, AVATAR_PANEL_SIZE, AVATAR_PANEL_SIZE)
+  )
+}
+
 const drawGuidePanels = (context: CanvasRenderingContext2D): void => {
   if (!guideImage) return
-  const template = guideImage
-  Array.from({ length: AVATAR_PANEL_COUNT }, (_, panel) =>
-    context.drawImage(template, panel * AVATAR_PANEL_SIZE, 0, AVATAR_PANEL_SIZE, AVATAR_PANEL_SIZE)
-  )
+  drawIntoPanels(context, guideImage)
   context.strokeStyle = AVATAR_PANEL_DIVIDER_COLOR
   context.lineWidth = 2
   context.beginPath()
@@ -401,16 +413,27 @@ const saveTexturePng = (): void => {
   downloadDataUrl(composeExportCanvas().toDataURL('image/png'), `${AVATAR_EXPORT_PREFIX}.png`)
 }
 
+/**
+ * Loads a square body texture — a game skin, or a sheet saved out of here —
+ * into both panels, so it lands on the rig the same way it does in the game.
+ */
 const handleTextureLoad = (event: Event): void => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file || !paintCanvas) return
+  const target = paintCanvas
+  if (!file || !target) return
   const objectUrl = URL.createObjectURL(file)
-  applyDataUrlToCanvas(paintCanvas, objectUrl).then(() => {
+  const image = new Image()
+  image.onload = () => {
+    const context = target.getContext('2d')!
+    context.globalCompositeOperation = 'source-over'
+    context.clearRect(0, 0, target.width, target.height)
+    drawIntoPanels(context, image)
     URL.revokeObjectURL(objectUrl)
     refreshDisplay()
     commitPaint()
-  })
+  }
+  image.src = objectUrl
   input.value = ''
 }
 
