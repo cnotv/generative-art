@@ -1,28 +1,31 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { getTools, loadGLTF, textureLoader } from '@webgamekit/threejs'
+import { getTools, loadGLTF } from '@webgamekit/threejs'
 import { updateAnimation } from '@webgamekit/animation'
 import type { ComplexModel } from '@webgamekit/animation'
 import { storageSaveLocal, storageLoadLocal } from '@webgamekit/canvas-editor'
-import lakeUrl from '@/assets/images/backgrounds/lake.webp'
 import drawTemplateUrl from '@/assets/images/characters/stickman_draw_template.png'
 import { floodFill, cssColorToRgba } from '@/utils/canvasFloodFill'
 import { downloadDataUrl } from '@/utils/downloadDataUrl'
-import { applyStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
-import type { StickmanPartRig } from '@/types/stickmanRig'
-import type { AvatarEditorConfig } from '@/types/avatarEditor'
+import {
+  applyStickmanPartOffsets,
+  prepareStickmanRig,
+  createStickmanPartOffsets,
+  STICKMAN_PART_NAMES
+} from '@/utils/stickmanRig'
+import type { StickmanPartName, StickmanPartRig } from '@/types/stickmanRig'
 import { DrawingToolbar } from '@/components/DrawingToolbar'
 import type { DrawingTool } from '@/components/DrawingToolbar'
 import {
-  LIGHT_INTENSITY,
-  AMBIENT_LIGHT_INTENSITY,
-  HEMISPHERE_SKY,
-  HEMISPHERE_GROUND,
-  LIGHT_ORBIT_RADIUS,
-  LIGHT_Z_POSITION,
-  SCENE_BG_COLOR
-} from '@/views/Tests/MaterialsList/materialsListConfig'
+  LobbyUIRow,
+  LobbyUIConfigField,
+  LobbyUIOptionToggle,
+  LobbyUIColorSwatches,
+  LobbyUIButton
+} from '@/components/LobbyUI'
+import type { LobbyConfigField } from '@/types/lobbyWizard'
+import '@/assets/styles/lobby-ui.scss'
 import {
   AVATAR_MODEL_PATH,
   AVATAR_CANVAS_WIDTH,
@@ -40,9 +43,7 @@ import {
   AVATAR_WALK_SPEED,
   AVATAR_EXPORT_PREFIX,
   AVATAR_ALPHA_CUTOFF,
-  AVATAR_ROUGHNESS,
-  AVATAR_METALNESS,
-  AVATAR_ENV_MAP_INTENSITY,
+  AVATAR_BACKGROUND_COLOR,
   AVATAR_PANEL_DIVIDER_COLOR,
   STORAGE_KEY,
   TEXTURE_BASE_COLOR,
@@ -50,14 +51,88 @@ import {
   TEXTURE_DEFAULT_COLOR
 } from './config'
 
-const props = defineProps<{ config: AvatarEditorConfig }>()
-
 const canvas = ref<HTMLCanvasElement | null>(null)
+const loadInput = ref<HTMLInputElement | null>(null)
+
+const GUIDE_OPTIONS = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' }
+]
+
+/**
+ * Every control lives in the editor's own panel rather than the app's config
+ * panel: they are all about the figure being drawn, and splitting them across
+ * two surfaces meant reaching past the model to change how the model looks.
+ * The config panel keeps the global scene settings, which belong to no view.
+ */
+const opacity = ref(1)
+const showGuide = ref(true)
+const parts = ref(createStickmanPartOffsets())
+const activePart = ref<StickmanPartName>('head')
+
+const PART_LABELS: Record<StickmanPartName, string> = {
+  head: 'Head',
+  torso: 'Torso',
+  armLeft: 'Arm L',
+  armRight: 'Arm R',
+  legs: 'Legs'
+}
+
+const partOptions = STICKMAN_PART_NAMES.map((name) => ({ value: name, label: PART_LABELS[name] }))
+
+const opacityField = computed<LobbyConfigField>(() => ({
+  type: 'number',
+  key: 'opacity',
+  label: 'Opacity',
+  value: opacity.value,
+  min: 0,
+  max: 1,
+  step: 0.05
+}))
+
+// One limb at a time, picked by the toggle above them: five limbs times four
+// figures is twenty fields, which buries everything else in the panel.
+const partFields = computed<LobbyConfigField[]>(() => {
+  const offset = parts.value[activePart.value]
+  const axis = (key: 'x' | 'y' | 'z'): LobbyConfigField => ({
+    type: 'number',
+    key,
+    label: key.toUpperCase(),
+    value: offset.position[key],
+    min: -1,
+    max: 1,
+    step: 0.01
+  })
+  return [
+    axis('x'),
+    axis('y'),
+    axis('z'),
+    {
+      type: 'number',
+      key: 'scale',
+      label: 'Size',
+      value: offset.scale,
+      min: 0.2,
+      max: 3,
+      step: 0.05
+    }
+  ]
+})
+
+const updatePartField = (key: string, value: string | number): void => {
+  const offset = parts.value[activePart.value]
+  const next = Number(value)
+  parts.value = {
+    ...parts.value,
+    [activePart.value]:
+      key === 'scale'
+        ? { ...offset, scale: next }
+        : { ...offset, position: { ...offset.position, [key]: next } }
+  }
+}
 
 let avatar: THREE.Object3D | null = null
 let partRig: StickmanPartRig | null = null
-let envMap: THREE.Texture | null = null
-let probeTexture: THREE.Texture | null = null
 let orthoCamera: THREE.OrthographicCamera | null = null
 let rendererReference: THREE.WebGLRenderer | null = null
 let canvasElement: HTMLCanvasElement | null = null
@@ -154,10 +229,10 @@ const refreshDisplay = (): void => {
   const context = displayCanvas.getContext('2d')!
   context.globalCompositeOperation = 'source-over'
   context.clearRect(0, 0, displayCanvas.width, displayCanvas.height)
-  context.globalAlpha = props.config.opacity
+  context.globalAlpha = opacity.value
   context.fillStyle = TEXTURE_BASE_COLOR
   context.fillRect(0, 0, displayCanvas.width, displayCanvas.height)
-  if (props.config.showGuide) drawGuidePanels(context)
+  if (showGuide.value) drawGuidePanels(context)
   context.globalAlpha = 1
   context.drawImage(paintCanvas, 0, 0)
   colorTexture.needsUpdate = true
@@ -192,33 +267,15 @@ const initTexture = async (): Promise<void> => {
 }
 
 /**
- * Builds the reflection probe the material samples.
- *
- * The source image is only ever a probe here, never the backdrop: three.js
- * projects an equirectangular background through the camera, and under an
- * orthographic one that lands as a misplaced patch rather than a surrounding
- * scene. A flat colour sits behind the rig instead, which is also the more
- * honest backdrop for judging a texture against.
+ * Unlit on purpose. Every shaded material — Standard, Phong, Lambert — mixes
+ * light into the surface, so the same drawing comes out darker on a limb facing
+ * away and brighter on one facing the lamp, and the colour picked in the
+ * palette is never the colour on the model. Basic samples the map and nothing
+ * else, so the figure shows exactly what was drawn.
  */
-const createEnvironmentMap = async (renderer: THREE.WebGLRenderer): Promise<void> => {
-  const probe = await textureLoader.loadAsync(lakeUrl)
-  probe.mapping = THREE.EquirectangularReflectionMapping
-  probe.colorSpace = THREE.SRGBColorSpace
-  probeTexture = probe
-
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  pmrem.compileEquirectangularShader()
-  envMap = pmrem.fromEquirectangular(probe).texture
-  pmrem.dispose()
-}
-
 const buildAvatarMaterial = (): THREE.Material =>
-  new THREE.MeshStandardMaterial({
+  new THREE.MeshBasicMaterial({
     map: colorTexture,
-    envMap,
-    envMapIntensity: AVATAR_ENV_MAP_INTENSITY,
-    roughness: AVATAR_ROUGHNESS,
-    metalness: AVATAR_METALNESS,
     // The rig's meshes are seen from both sides once a limb is scaled past its
     // neighbours, and the map carries real transparency wherever the body has
     // been faded out or rubbed away, so blending stays on.
@@ -326,12 +383,16 @@ const clearPaint = (): void => {
 }
 
 /**
- * Wipes the drawing and forgets the undo stack with it, so a discard cannot be
+ * Puts the whole editor back to how it opens: the drawing, the limbs, and the
+ * panel's own settings. The undo stack goes with it, so a discard cannot be
  * walked back one stroke at a time.
  */
-const discardPaintedTexture = (): void => {
+const resetAll = (): void => {
   paintHistory.value = { stack: [], index: -1 }
   clearPaint()
+  parts.value = createStickmanPartOffsets()
+  opacity.value = 1
+  showGuide.value = true
 }
 
 /** Saves the sheet as a usable texture: base plus paint, with no guide over it. */
@@ -480,7 +541,7 @@ const advanceWalkCycle = (): void => {
   // The clip animates limb rotation, while the panel's nudges are position and
   // scale on the very same nodes — reasserted here rather than trusted to
   // survive whatever the mixer wrote this frame.
-  if (partRig) applyStickmanPartOffsets(partRig, props.config.parts)
+  if (partRig) applyStickmanPartOffsets(partRig, parts.value)
 }
 
 const collectNodes = (node: THREE.Object3D): THREE.Object3D[] => [
@@ -520,7 +581,7 @@ const restoreRestPose = (): void => {
     node.position.copy(position)
     node.scale.copy(scale)
   })
-  if (partRig) applyStickmanPartOffsets(partRig, props.config.parts)
+  if (partRig) applyStickmanPartOffsets(partRig, parts.value)
 }
 
 /** Stopping returns the rig to its rest pose rather than leaving it mid-stride. */
@@ -540,7 +601,6 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
 
   const { setup, renderer, scene } = await getTools({ canvas: canvasReference, resize: false })
   rendererReference = renderer
-  await createEnvironmentMap(renderer)
 
   orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, AVATAR_ORTHO_NEAR, AVATAR_ORTHO_FAR)
   orthoCamera.position.set(0, 0, AVATAR_ORTHO_DISTANCE)
@@ -553,19 +613,7 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
   await setup({
     config: {
       orbit: false,
-      ground: false,
-      lights: {
-        ambient: { intensity: AMBIENT_LIGHT_INTENSITY },
-        directional: {
-          intensity: LIGHT_INTENSITY,
-          position: [LIGHT_ORBIT_RADIUS, LIGHT_ORBIT_RADIUS, LIGHT_Z_POSITION] as [
-            number,
-            number,
-            number
-          ]
-        },
-        hemisphere: { colors: [HEMISPHERE_SKY, HEMISPHERE_GROUND] }
-      }
+      ground: false
     },
     defineSetup: async () => {
       // Loaded without physics: nothing here simulates, the rig only ever
@@ -574,7 +622,7 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
       avatar = model
       // Split so the two faces get a half of the sheet each, rather than
       // sharing one image that makes a mark on the front show on the back.
-      partRig = prepareStickmanRig(model, props.config.parts, 'split')
+      partRig = prepareStickmanRig(model, parts.value, 'split')
       captureRestPose(model)
       attachWalkCycle(model, gltf.animations)
       scene.add(model)
@@ -590,20 +638,22 @@ const init = async (canvasReference: HTMLCanvasElement): Promise<void> => {
     }
   })
 
-  scene.background = new THREE.Color(SCENE_BG_COLOR)
+  scene.background = new THREE.Color(AVATAR_BACKGROUND_COLOR)
+  // The renderer sizes itself to the window, which is not what the canvas
+  // actually gets once the controls take their column beside it — left alone,
+  // the rig renders centred on the window and so drifts under the panel.
+  handleResize()
 }
 
 watch(
-  () => props.config.parts,
-  (parts) => {
-    if (partRig) applyStickmanPartOffsets(partRig, parts)
+  parts,
+  (current) => {
+    if (partRig) applyStickmanPartOffsets(partRig, current)
   },
   { deep: true }
 )
 
-watch([() => props.config.opacity, () => props.config.showGuide], refreshDisplay)
-
-defineExpose({ toggleWalk, discardPaintedTexture })
+watch([opacity, showGuide], refreshDisplay)
 
 onMounted(async () => {
   if (canvas.value) await init(canvas.value)
@@ -618,8 +668,6 @@ onBeforeUnmount(() => {
     canvasElement.removeEventListener('mousemove', handleMouseMove)
   }
   colorTexture?.dispose()
-  if (envMap) envMap.dispose()
-  if (probeTexture) probeTexture.dispose()
   avatar = null
   partRig = null
   canvasElement = null
@@ -627,147 +675,168 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="avatar-editor">
+  <!-- The controls are LobbyUI, which fixes its text white for a scene backdrop
+       rather than following the host theme, so the whole surface carries the
+       scene's own colour instead of only the part the canvas covers. -->
+  <div class="avatar-editor" :style="{ background: AVATAR_BACKGROUND_COLOR }">
     <canvas ref="canvas"></canvas>
-  </div>
 
-  <Teleport defer to="#config-panel-extra">
-    <div class="avatar-editor-toolbar">
-      <p class="avatar-editor-toolbar__label">Texture</p>
+    <aside class="avatar-editor__panel">
+      <section class="avatar-editor__section">
+        <LobbyUIRow label="Opacity">
+          <LobbyUIConfigField
+            :field="opacityField"
+            size="sm"
+            @change="(_key, value) => (opacity = Number(value))"
+          />
+        </LobbyUIRow>
+        <LobbyUIRow label="Guide">
+          <LobbyUIOptionToggle
+            :model-value="showGuide ? 'on' : 'off'"
+            :options="GUIDE_OPTIONS"
+            size="sm"
+            @update:model-value="showGuide = $event === 'on'"
+          />
+        </LobbyUIRow>
+        <LobbyUIRow label="Walk">
+          <LobbyUIButton variant="ghost" size="sm" @click="toggleWalk">
+            {{ isWalking ? 'Stop' : 'Play' }}
+          </LobbyUIButton>
+        </LobbyUIRow>
+      </section>
 
-      <div class="avatar-editor-toolbar__palette">
-        <button
-          v-for="color in TEXTURE_PALETTE"
-          :key="color"
-          class="avatar-editor-toolbar__swatch"
-          :class="{ 'avatar-editor-toolbar__swatch--active': brushColor === color }"
-          :style="{ background: color }"
-          :title="color"
-          @click="brushColor = color"
+      <section class="avatar-editor__section">
+        <h2 class="avatar-editor__heading">Parts</h2>
+        <LobbyUIOptionToggle v-model="activePart" :options="partOptions" size="sm" />
+        <LobbyUIRow v-for="field in partFields" :key="field.key" :label="field.label">
+          <LobbyUIConfigField :field="field" size="sm" @change="updatePartField" />
+        </LobbyUIRow>
+      </section>
+
+      <section class="avatar-editor__section">
+        <h2 class="avatar-editor__heading">Drawing</h2>
+        <LobbyUIColorSwatches v-model="brushColor" :colors="TEXTURE_PALETTE" />
+        <DrawingToolbar
+          :tool="activeTool"
+          :color="brushColor"
+          :size="brushSize"
+          :can-undo="canUndo"
+          :can-redo="canRedo"
+          :visible-tools="['brush', 'eraser', 'fill', 'rotate', 'color', 'size', 'undo', 'redo']"
+          @update:tool="activeTool = $event"
+          @update:color="brushColor = $event"
+          @update:size="brushSize = $event"
+          @undo="undoPaint"
+          @redo="redoPaint"
         />
-      </div>
-
-      <DrawingToolbar
-        :tool="activeTool"
-        :color="brushColor"
-        :size="brushSize"
-        :can-undo="canUndo"
-        :can-redo="canRedo"
-        :visible-tools="['brush', 'eraser', 'fill', 'rotate', 'color', 'size', 'undo', 'redo']"
-        @update:tool="activeTool = $event"
-        @update:color="brushColor = $event"
-        @update:size="brushSize = $event"
-        @undo="undoPaint"
-        @redo="redoPaint"
-      />
-
-      <button class="avatar-editor-toolbar__button" @click="clearPaint">Clear drawing</button>
-      <button class="avatar-editor-toolbar__button" @click="saveTexturePng">
-        Save texture as PNG
-      </button>
-
-      <label class="avatar-editor-toolbar__load-label">
-        Load image
+        <div class="avatar-editor__actions">
+          <LobbyUIButton variant="ghost" size="sm" @click="clearPaint">Clear</LobbyUIButton>
+          <LobbyUIButton variant="ghost" size="sm" @click="saveTexturePng">Save PNG</LobbyUIButton>
+          <LobbyUIButton variant="ghost" size="sm" @click="loadInput?.click()">Load</LobbyUIButton>
+          <LobbyUIButton variant="ghost" size="sm" @click="resetAll">Reset</LobbyUIButton>
+        </div>
         <input
+          ref="loadInput"
           type="file"
           accept="image/*"
-          class="avatar-editor-toolbar__load-input"
+          class="avatar-editor__file"
           @change="handleTextureLoad"
         />
-      </label>
-    </div>
-  </Teleport>
+      </section>
+    </aside>
+  </div>
 </template>
 
 <style scoped>
+/* Controls and figure share the row rather than the controls floating over it:
+   laid out side by side they cannot overlap at any width, and the camera
+   centres the rig inside whatever space is left, so the pair reads as centred
+   with a gap down the middle. */
 .avatar-editor {
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
   width: 100%;
   height: 100vh;
 }
 
+/* App.vue positions every canvas absolutely so a scene can fill the viewport.
+   Here it has to share the row with the controls, and an absolute canvas is out
+   of flex flow entirely — the panel would sit on top of it however wide the
+   column is. */
+
+/* Held to a width rather than given the rest of the row: the camera frames the
+   rig against the canvas height, so extra width only pads it out with empty
+   space and pushes the controls away from the figure they describe. Bounded
+   here, the pair sits centred with a gap between the two. */
 canvas {
   display: block;
-  width: 100%;
+  position: relative;
+  inset: auto;
+  flex: 0 1 34rem;
+  min-width: 0;
   height: 100vh;
 }
 
-.avatar-editor-toolbar {
+.avatar-editor__panel {
+  /* Controls read before the figure they describe; the canvas stays first in
+     the markup so the scene is what a reader meets first. */
+  order: -1;
+  flex: 0 0 17rem;
+  max-height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+
+  --lui-label-column: 3.5rem;
+}
+
+.avatar-editor__section {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  padding-top: var(--spacing-3);
-  border-top: 1px solid var(--color-border);
 }
 
-.avatar-editor-toolbar__label {
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  color: var(--color-foreground);
+.avatar-editor__heading {
   margin: 0;
+  font-family: var(--lui-font);
+  font-weight: 900;
+  font-size: var(--lui-text-small);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
 }
 
-.avatar-editor-toolbar__palette {
+.avatar-editor__actions {
   display: flex;
-  gap: var(--spacing-1);
   flex-wrap: wrap;
-}
-
-.avatar-editor-toolbar__swatch {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: var(--radius-sm);
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.avatar-editor-toolbar__swatch--active {
-  border-color: var(--color-foreground);
-}
-
-.avatar-editor-toolbar__swatch:hover {
-  opacity: 0.85;
-}
-
-.avatar-editor-toolbar__button {
-  padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-xs);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-secondary);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
-}
-
-.avatar-editor-toolbar__button:hover {
-  color: var(--color-foreground);
-  background: var(--color-muted);
-}
-
-.avatar-editor-toolbar__load-label {
-  display: flex;
-  flex-direction: column;
   gap: var(--spacing-1);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  color: var(--color-foreground);
-  cursor: pointer;
 }
 
-.avatar-editor-toolbar__load-input {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
+.avatar-editor__file {
+  display: none;
 }
 
-.avatar-editor-toolbar__load-input::file-selector-button {
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-secondary);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
+/* No room for two columns on a narrow screen, so they stack instead. */
+@media (width <= 768px) {
+  .avatar-editor {
+    flex-direction: column;
+    height: auto;
+    gap: var(--spacing-2);
+  }
+
+  canvas {
+    width: 100%;
+    height: 60vh;
+  }
+
+  .avatar-editor__panel {
+    flex: 0 0 auto;
+    width: 100%;
+  }
 }
 </style>

@@ -5,7 +5,8 @@ import {
   STICKMAN_PART_NAMES,
   applyStickmanPartOffsets,
   buildStickmanPartRig,
-  createStickmanPartOffsets
+  createStickmanPartOffsets,
+  prepareStickmanRig
 } from './stickmanRig'
 
 const namedNode = (name: string, position = [0, 0, 0], scale = [1, 1, 1]): THREE.Object3D => {
@@ -104,5 +105,86 @@ describe('applyStickmanPartOffsets', () => {
     applyStickmanPartOffsets(rig, parts)
 
     expect(rig.legs.map(({ node }) => node.position.y)).toEqual([-1, -1])
+  })
+})
+
+/** A mesh carrying the attributes the UV remap needs to run over it. */
+const paintableMesh = (name: string): THREE.Mesh => {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 1, 0], 3))
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 1], 2))
+  const mesh = new THREE.Mesh(geometry)
+  mesh.name = name
+  return mesh
+}
+
+/**
+ * Mirrors the shipped rig where it matters: the shoulder caps hang off the
+ * torso rather than the arms, and each arm already closes its far end with a
+ * quarter-turned cap of its own.
+ */
+const createArmedRig = (): THREE.Object3D => {
+  const root = new THREE.Object3D()
+  const torso = paintableMesh('torso')
+  const quarterTurn = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    Math.PI / 2
+  )
+
+  const buildArm = (name: string, shoulderName: string, side: number): void => {
+    const arm = paintableMesh(name)
+    arm.position.set(side * 0.24, 0.64, 0.02)
+    const handCap = paintableMesh(`${name}Hand`)
+    handCap.position.set(0, -0.3, 0)
+    handCap.quaternion.copy(quarterTurn)
+    arm.add(paintableMesh(`${name}Body`), handCap)
+
+    const shoulder = paintableMesh(shoulderName)
+    shoulder.position.set(side * 0.24, 0.08, 0)
+    shoulder.quaternion.copy(quarterTurn)
+    torso.add(shoulder)
+    root.add(arm)
+  }
+
+  buildArm('leftArm', 'mesh_1', -1)
+  buildArm('rightArm', 'mesh_2', 1)
+  root.add(torso, paintableMesh('mesh_3'), paintableMesh('leftLeg'), paintableMesh('rightLeg'))
+  return root
+}
+
+describe('prepareStickmanRig shoulder seating', () => {
+  it('moves each shoulder cap onto the arm it belongs to', () => {
+    const rig = createArmedRig()
+    prepareStickmanRig(rig, createStickmanPartOffsets())
+
+    expect(rig.getObjectByName('mesh_1')?.parent?.name).toBe('leftArm')
+    expect(rig.getObjectByName('mesh_2')?.parent?.name).toBe('rightArm')
+  })
+
+  it('seats the cap on the socket rather than keeping the rig own depth gap', () => {
+    const rig = createArmedRig()
+    prepareStickmanRig(rig, createStickmanPartOffsets())
+
+    // The rig authors the cap at z 0 and the arm socket at z 0.02, so a
+    // world-preserving reparent would leave the cap 0.02 behind its arm.
+    expect(rig.getObjectByName('mesh_1')?.position.toArray()).toEqual([0, 0, 0])
+    expect(rig.getObjectByName('mesh_2')?.position.toArray()).toEqual([0, 0, 0])
+  })
+
+  it('gives the shoulder the same shape as the hand, so both ends of an arm match', () => {
+    const rig = createArmedRig()
+    prepareStickmanRig(rig, createStickmanPartOffsets())
+
+    const shoulder = rig.getObjectByName('mesh_1') as THREE.Mesh
+    const hand = rig.getObjectByName('leftArmHand') as THREE.Mesh
+    expect(shoulder.geometry).toBe(hand.geometry)
+    expect(shoulder.quaternion.toArray()).toEqual(hand.quaternion.toArray())
+  })
+
+  it('leaves a rig with no shoulder caps alone rather than failing', () => {
+    const rig = createArmedRig()
+    rig.getObjectByName('mesh_1')?.removeFromParent()
+    expect(() => prepareStickmanRig(rig, createStickmanPartOffsets())).not.toThrow()
   })
 })

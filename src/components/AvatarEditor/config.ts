@@ -33,13 +33,11 @@ export const AVATAR_WALK_SPEED = 10
 export const AVATAR_EXPORT_PREFIX = 'avatar-texture'
 
 /**
- * A flat drawing wants a flat surface: fully rough and non-metallic, so the
- * reflection probe reads as soft ambient light rather than as shine competing
- * with what was drawn.
+ * Backs both the 3D scene and the page around it, from one value so the two
+ * cannot drift apart — the controls sit beside the canvas rather than over it,
+ * so any difference between them shows as a seam down the middle.
  */
-export const AVATAR_ROUGHNESS = 0.9
-export const AVATAR_METALNESS = 0
-export const AVATAR_ENV_MAP_INTENSITY = 0.4
+export const AVATAR_BACKGROUND_COLOR = '#ffffff'
 
 /**
  * Alpha at or below this is discarded outright rather than blended, so a body
