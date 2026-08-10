@@ -365,8 +365,19 @@ const lapsField = ref<LobbyConfigField>({
   max: 9
 })
 
+/** A number field moving in fractions rather than whole units. */
+const gravityField = ref<LobbyConfigField>({
+  type: 'number',
+  key: 'gravity',
+  label: 'Gravity',
+  value: 1,
+  min: 0,
+  max: 2,
+  step: 0.05
+})
+
 const configFields = computed<LobbyConfigField[]>(() =>
-  mode.value === 'race' ? [trackField.value, lapsField.value] : []
+  mode.value === 'race' ? [trackField.value, lapsField.value, gravityField.value] : []
 )
 
 const players = ref<LobbyPlayer[]>([
@@ -380,6 +391,8 @@ const onFieldChange = (key: string, value: string | number): void => {
     trackField.value = { ...trackField.value, value }
   } else if (key === 'laps' && lapsField.value.type === 'number') {
     lapsField.value = { ...lapsField.value, value: value as number }
+  } else if (key === 'gravity' && gravityField.value.type === 'number') {
+    gravityField.value = { ...gravityField.value, value: value as number }
   }
 }
 

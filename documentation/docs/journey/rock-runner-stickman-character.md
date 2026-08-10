@@ -299,7 +299,11 @@ than unfinished work:
   arms; the sheet does not rotate with them. The mismatch is smallest with arms
   near their rest angle, which is part of why the rest lean was straightened.
 - **Left and right swap between views.** One mirrored sheet serves both faces of
-  the rig, so an asymmetric design shows its sides reversed from the front.
+  the rig, so an asymmetric design shows its sides reversed from the front. This
+  is the projection's `wrapped` layout, which is what this game uses. A `split`
+  layout was added later for the avatar editor, giving each face its own half of
+  the sheet; a texture authored for one layout is meaningless in the other, so
+  adopting it here would mean re-authoring every skin as two panels.
 - **The ground standoff assumes the default sphere radius.** The rig's scale
   follows the live radius, but the standoff subtracts the constant default, so
   tuning Size mid-run leaves the feet off by the difference. The Ground offset

@@ -1,28 +1,16 @@
 import { reactive, watch } from 'vue'
-import type { StickmanConfig, StickmanPartName, StickmanPartOffset } from '../types'
-import { STICKMAN_SCALE, STICKMAN_ARM_SPREAD } from '../config'
+import type { StickmanConfig } from '../types'
+import { STICKMAN_SCALE } from '../config'
+import {
+  STICKMAN_PART_NAMES,
+  STICKMAN_PART_OFFSET_CONTROLS,
+  createStickmanPartOffsets
+} from '@/utils/stickmanRig'
 import {
   DEFAULT_STICKMAN_SKIN,
   stickmanSkinById,
   stickmanSkinOptions
 } from '../elements/stickmanSkins'
-
-/** Every limb the rig exposes a rest transform for, in panel order. */
-export const STICKMAN_PART_NAMES: StickmanPartName[] = [
-  'head',
-  'torso',
-  'armLeft',
-  'armRight',
-  'legs'
-]
-
-/** One part's nudge: an offset from its own rest position, plus a size multiplier. */
-const PART_OFFSET_CONTROLS = {
-  x: { min: -1, max: 1, step: 0.01, label: 'X' },
-  y: { min: -1, max: 1, step: 0.01, label: 'Y' },
-  z: { min: -1, max: 1, step: 0.01, label: 'Z' },
-  scale: { min: 0.2, max: 3, step: 0.05, label: 'Size' }
-}
 
 /**
  * The stickman's tunables. There is no physics preset here the way the rock
@@ -51,10 +39,10 @@ export const RR_STICKMAN_CONTROLS = {
   groundOffset: { min: -2, max: 2, step: 0.05, label: 'Ground offset' },
   opacity: { min: 0, max: 1, step: 0.05, label: 'Opacity', sectionStart: true },
   texture: { file: 'image/*', label: 'Texture' },
-  parts: Object.fromEntries(STICKMAN_PART_NAMES.map((name) => [name, PART_OFFSET_CONTROLS]))
+  parts: Object.fromEntries(
+    STICKMAN_PART_NAMES.map((name) => [name, STICKMAN_PART_OFFSET_CONTROLS])
+  )
 }
-
-const defaultPartOffset = (): StickmanPartOffset => ({ x: 0, y: 0, z: 0, scale: 1 })
 
 /**
  * Builds the stickman's reactive cosmetic config, read live by the run loop
@@ -79,16 +67,7 @@ export const createStickmanConfig = (
     opacity: 1,
     skin: startSkin.id,
     texture: startSkin.textureUrl,
-    parts: {
-      head: defaultPartOffset(),
-      torso: defaultPartOffset(),
-      // Tucked in at x: 0, which reads as cramped and leaves a texture no
-      // room to tell the arm's silhouette apart from the torso's own — so
-      // these start already spread, not at the rig's own bare rest pose.
-      armLeft: { ...defaultPartOffset(), x: -STICKMAN_ARM_SPREAD },
-      armRight: { ...defaultPartOffset(), x: STICKMAN_ARM_SPREAD },
-      legs: defaultPartOffset()
-    }
+    parts: createStickmanPartOffsets()
   })
   watch(
     () => config.skin,

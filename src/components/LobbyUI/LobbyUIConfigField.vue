@@ -61,6 +61,7 @@ const showArrows = computed(() => canGoPrevious.value || canGoNext.value)
       :value="field.value"
       :min="field.min"
       :max="field.max"
+      :step="field.step"
       @input="onChange"
     />
 

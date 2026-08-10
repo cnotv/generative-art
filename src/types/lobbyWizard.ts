@@ -17,6 +17,8 @@ export type LobbyConfigField =
       value: number
       min: number
       max: number
+      /** Increment the field moves by; whole numbers when left out. */
+      step?: number
     }
 
 export type LobbyPlayer = { id: string; name: string; color: string }

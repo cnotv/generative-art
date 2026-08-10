@@ -31,7 +31,7 @@ export type ControlSchema = {
 }
 
 export type ConfigControlsSchema = {
-  [key: string]: ControlSchema | ConfigControlsSchema
+  [key: string]: ControlSchema | ConfigControlsSchema | string[]
 }
 
 type OnChangeCallback = () => void

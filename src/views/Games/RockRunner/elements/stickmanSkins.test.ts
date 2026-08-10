@@ -7,8 +7,8 @@ import {
 } from './stickmanSkins'
 
 describe('STICKMAN_SKINS', () => {
-  it('offers the default drawing plus the example skins', () => {
-    expect(STICKMAN_SKINS).toHaveLength(3)
+  it('offers the default drawing, the template, and the character skins', () => {
+    expect(STICKMAN_SKINS).toHaveLength(6)
   })
 
   it.each(STICKMAN_SKINS)('gives $id a label and a texture', (skin) => {

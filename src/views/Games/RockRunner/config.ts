@@ -255,20 +255,17 @@ export const STICKMAN_SCALE = 3.5
 // drawn line art; without alpha-testing at this cutoff, the "empty" areas
 // render as whatever flat colour was baked in under them.
 export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
-// In the rig's own local units, pushing each arm node further from the
-// torso along its rest X position. Tucked-in by default, which reads as
-// cramped and leaves a texture no room to tell the arm's silhouette apart
-// from the torso's own. Kept small — the torso's own rounded shoulder
-// corner isn't part of the arm mesh and doesn't stretch to follow it, so
-// spreading too far reopens the gap between the two instead of closing it.
-export const STICKMAN_ARM_SPREAD = 0.08
 // Gentler than the rock's own figures across the board: lighter drive so it
 // doesn't look shoved, lower speeds that read as a run rather than a roll,
 // and a floatier jump to match the lower gravity. Tuned live in the elements
 // panel, not derived from the rock's own numbers.
-export const STICKMAN_FORWARD_IMPULSE = 30
-export const STICKMAN_BASE_MAX_SPEED = 16
-export const STICKMAN_MAX_SPEED_CEILING = 16
+//
+// Base and ceiling are deliberately the same: a figure on foot holds one
+// running pace, so there is no ramp for the speed-ramp distance to spend
+// itself over, however far the run goes.
+export const STICKMAN_FORWARD_IMPULSE = 70
+export const STICKMAN_BASE_MAX_SPEED = 20
+export const STICKMAN_MAX_SPEED_CEILING = 20
 export const STICKMAN_JUMP_IMPULSE = 2350
 export const STICKMAN_GRAVITY_SCALE = 5
 // The sphere's centre sits one radius above the deck; the stickman's feet
@@ -438,7 +435,7 @@ export const DEBRIS_GROUND_TOLERANCE = 1.2
 // The chase camera's own offsets. Previously borrowed from the marble game,
 // which meant this game's camera was configured in another game's file and
 // would have moved with it.
-export const CHASE_HEIGHT = 14
+export const CHASE_HEIGHT = 10
 export const CHASE_BACK = 12
 export const CAMERA_TRANSITION_SECONDS = 0.6
 export const COUNTDOWN_MS = 3000

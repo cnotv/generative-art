@@ -1,6 +1,9 @@
 import stickmanBackUrl from '@/assets/images/characters/stickman_back.webp'
 import stickmanDrawTemplateUrl from '@/assets/images/characters/stickman_draw_template.png'
-import stickmanAstronautUrl from '@/assets/images/characters/stickman_skin_astronaut.png'
+import wildBoyUrl from '@/assets/images/characters/wild-boy.webp'
+import wildGirlUrl from '@/assets/images/characters/wild-girl.webp'
+import strawManUrl from '@/assets/images/characters/bw-strawman.webp'
+import backpackKidUrl from '@/assets/images/characters/backpack-kid.webp'
 
 /** One texture the stickman can wear, picked from the elements or config panel. */
 export type StickmanSkin = {
@@ -12,7 +15,10 @@ export type StickmanSkin = {
 export const STICKMAN_SKINS: StickmanSkin[] = [
   { id: 'stickman', label: 'Stickman', textureUrl: stickmanBackUrl },
   { id: 'draw-template', label: 'Draw template', textureUrl: stickmanDrawTemplateUrl },
-  { id: 'astronaut', label: 'Astronaut', textureUrl: stickmanAstronautUrl }
+  { id: 'wild-boy', label: 'Wild boy', textureUrl: wildBoyUrl },
+  { id: 'wild-girl', label: 'Wild girl', textureUrl: wildGirlUrl },
+  { id: 'straw-man', label: 'Straw man', textureUrl: strawManUrl },
+  { id: 'backpack-kid', label: 'Backpack kid', textureUrl: backpackKidUrl }
 ]
 
 export const DEFAULT_STICKMAN_SKIN = 'stickman'

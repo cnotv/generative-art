@@ -27,7 +27,7 @@ const props = defineProps<{
 }>()
 
 const isControlSchema = (object: any): object is ControlSchema => {
-  if (typeof object !== 'object' || object === null) return false
+  if (typeof object !== 'object' || object === null || Array.isArray(object)) return false
   const keys = Object.keys(object)
   const controlKeys = [
     'min',
@@ -83,6 +83,7 @@ const groups = computed(() => {
   const controls: { key: string; path: string; schema: ControlSchema }[] = []
 
   Object.entries(props.schema).forEach(([key, value]) => {
+    if (key.startsWith('__')) return
     if (isControlSchema(value)) {
       controls.push({ key, path: getFullPath(key), schema: value })
     } else {
@@ -93,8 +94,11 @@ const groups = computed(() => {
   return { groups: result, controls }
 })
 
-// All group keys for default-open accordion
-const defaultOpenGroups = computed(() => groups.value.groups.map((g) => g.key))
+const defaultOpenGroups = computed(() => {
+  const meta = (props.schema as Record<string, unknown>)['__defaultOpenGroups']
+  if (!props.basePath && Array.isArray(meta)) return meta as string[]
+  return groups.value.groups.map((g) => g.key)
+})
 
 const handleSliderUpdate = (path: string, value: number[]) => {
   props.onUpdate(path, value[0])
@@ -150,7 +154,10 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
 </script>
 
 <template>
-  <div class="config-controls flex flex-col gap-2">
+  <!-- Nested groups drop the gap: their own controls already carry spacing, and
+       stacking both leaves a part's fields further from each other than from
+       the next part's. -->
+  <div class="config-controls flex flex-col" :class="{ 'gap-2': !nested }">
     <!-- Direct controls at this level -->
     <div
       v-for="control in groups.controls"
