@@ -172,14 +172,15 @@ describe('prepareStickmanRig shoulder seating', () => {
     expect(rig.getObjectByName('mesh_2')?.position.toArray()).toEqual([0, 0, 0])
   })
 
-  it('gives the shoulder the same shape as the hand, so both ends of an arm match', () => {
+  it('leaves the cap its own geometry, so the UV projection can own each one', () => {
     const rig = createArmedRig()
     prepareStickmanRig(rig, createStickmanPartOffsets())
 
     const shoulder = rig.getObjectByName('mesh_1') as THREE.Mesh
     const hand = rig.getObjectByName('leftArmHand') as THREE.Mesh
-    expect(shoulder.geometry).toBe(hand.geometry)
-    expect(shoulder.quaternion.toArray()).toEqual(hand.quaternion.toArray())
+    // Shared geometry means one shared UV attribute, and the projection writes
+    // per geometry — whichever mesh it reached last would speak for both.
+    expect(shoulder.geometry).not.toBe(hand.geometry)
   })
 
   it('leaves a rig with no shoulder caps alone rather than failing', () => {

@@ -158,6 +158,44 @@ silently undo any slider moved while it was running. They are reasserted after
 each animated frame, because the clip drives rotation on exactly the nodes
 whose position and scale the panel owns.
 
+## Baking the fixes into a rig of its own
+
+Two of the rig's quirks were being corrected at load time on every run: the
+shoulder caps reseated onto their arms, and the rest lean straightened. A third
+could not be fixed that way at all.
+
+The arms are authored as three separate meshes — a body and a cap at each end,
+where the shoulder cap is its own piece sized for the torso it used to hang
+from. Matching the two ends by handing the shoulder the far cap's geometry does
+make them look alike, and is wrong for a subtler reason: two meshes then share
+one UV attribute, and the projection writes UVs per geometry, so whichever mesh
+it reached last would decide the coordinates for both. The fix that actually
+holds is to stop having two meshes.
+
+Merging is not something to redo sixty times a second, or even once per load,
+so the prepared rig was exported as its own model. The recipe, for whenever it
+needs regenerating: load the original, seat each shoulder cap on its arm, zero
+the arms' rest lean, then for each arm bake every descendant mesh's transform
+into its vertices, merge them into one geometry, and hang the single result off
+the arm node. Export with `GLTFExporter`, and hand it the clips explicitly —
+it does not walk the model for animations, and a rig that has lost its walk
+cycle is not the rig you started with.
+
+```mermaid
+flowchart LR
+    O[Original rig] --> S[Seat shoulder caps]
+    S --> L[Zero the rest lean]
+    L --> M[Merge each arm to one mesh]
+    M --> E[Export with clips]
+    E --> N[Baked rig]
+    O --> G[Game: skins drawn for its layout]
+    N --> A[Editor]
+```
+
+The game keeps loading the original, because its three skins are drawn against
+that layout. The load-time corrections therefore stay in the shared preparation
+for the game's sake, and simply find nothing to do on the baked rig.
+
 ## A seam that only showed from an angle
 
 The shoulder caps sat slightly behind the arms they belong to, visible from

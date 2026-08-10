@@ -41,9 +41,6 @@ export const STICKMAN_PART_OFFSET_CONTROLS = {
   scale: { min: 0.2, max: 3, step: 0.05, label: 'Size' }
 }
 
-/** How far a quaternion's w may sit from 1 and still count as unrotated. */
-const CAP_ROTATION_EPSILON = 0.001
-
 const defaultPartOffset = (): StickmanPartOffset => ({
   position: { x: 0, y: 0, z: 0 },
   scale: 1
@@ -136,32 +133,23 @@ export const applyStickmanPartOffsets = (
  * which is the socket, and also means later rotation of the arm turns the cap
  * about its own centre rather than swinging it around a lever arm.
  *
- * Shape and orientation are both taken from the cap already closing the far end
- * of the same arm. The rig authors the two ends as different meshes — the
- * shoulder is its own piece, sized for where it used to sit against the torso —
- * which is why the limb read as a rounded hand at one end and a mismatched lump
- * at the other. Reusing the far cap's geometry makes an arm one shape with two
- * identical ends, and reading it off the rig rather than writing measurements
- * down keeps it right if the model is ever re-exported.
+ * Only the position is corrected. Giving the cap the far end's geometry as well
+ * would make the two ends match, but the two meshes would then share one UV
+ * attribute — and the projection below writes UVs per geometry, so whichever
+ * mesh it reached last would decide the coordinates for both. The rig that
+ * wants matching ends gets them by being merged into one mesh ahead of time
+ * instead, which leaves nothing here to reshape.
  * @param arm - The arm node to seat onto, when the rig has one
  * @param shoulder - The cap to reseat, when the rig has one
- * @returns Nothing; the shoulder is reparented, reshaped and moved in place
+ * @returns Nothing; the shoulder is reparented and moved in place
  */
 const seatShoulderOnArm = (
   arm: THREE.Object3D | undefined,
   shoulder: THREE.Object3D | undefined
 ): void => {
   if (!arm || !shoulder) return
-  // Read before the attach, or the shoulder itself is among the candidates.
-  const endCap = arm.children.find(
-    (child) => Math.abs(child.quaternion.w - 1) > CAP_ROTATION_EPSILON
-  ) as THREE.Mesh | undefined
   arm.attach(shoulder)
   shoulder.position.set(0, 0, 0)
-  if (!endCap) return
-  shoulder.quaternion.copy(endCap.quaternion)
-  const shoulderMesh = shoulder as THREE.Mesh
-  if (shoulderMesh.isMesh && endCap.isMesh) shoulderMesh.geometry = endCap.geometry
 }
 
 /**

@@ -1,4 +1,12 @@
-export const AVATAR_MODEL_PATH = 'stickboy.glb'
+/**
+ * A baked variant of the shipped rig rather than the rig itself: its shoulder
+ * caps are seated on their arms, its rest lean is straightened, and each arm is
+ * merged into a single mesh. One mesh per limb is the point — the pieces used
+ * to meet at a visible seam, and separate meshes each carry their own UVs,
+ * which the one shared projection would rather own outright. The game still
+ * loads the original, whose skins are drawn against its own layout.
+ */
+export const AVATAR_MODEL_PATH = 'stickboy3.glb'
 
 /**
  * The texture is two panels side by side, front then back, each square so the
@@ -37,7 +45,7 @@ export const AVATAR_EXPORT_PREFIX = 'avatar-texture'
  * cannot drift apart — the controls sit beside the canvas rather than over it,
  * so any difference between them shows as a seam down the middle.
  */
-export const AVATAR_BACKGROUND_COLOR = '#ffffff'
+export const AVATAR_BACKGROUND_COLOR = '#e6e6e6'
 
 /**
  * Alpha at or below this is discarded outright rather than blended, so a body
