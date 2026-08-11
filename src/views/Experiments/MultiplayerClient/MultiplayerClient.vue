@@ -152,13 +152,13 @@ httpServer.listen(3000)</pre
 .multiplayer-client {
   max-width: 48rem;
   margin: 0 auto;
-  padding: var(--spacing-8);
+  padding: calc(var(--nav-height) + var(--spacing-8)) var(--spacing-8) var(--spacing-8);
   font-family: inherit;
   color: var(--color-primary);
 }
 
 .multiplayer-client__title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   margin-bottom: var(--spacing-2);
 }
@@ -181,7 +181,7 @@ httpServer.listen(3000)</pre
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-primary);
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
 }
 
 .multiplayer-client__input:disabled {
@@ -193,7 +193,7 @@ httpServer.listen(3000)</pre
   padding: var(--spacing-2) var(--spacing-4);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -214,14 +214,14 @@ httpServer.listen(3000)</pre
 }
 
 .multiplayer-client__button--danger {
-  background: hsl(0 72% 51%);
-  color: hsl(0 0% 98%);
+  background: var(--color-destructive);
+  color: var(--color-destructive-foreground);
 }
 
 .multiplayer-client__error {
-  color: hsl(0 72% 51%);
+  color: var(--color-destructive);
   margin-bottom: var(--spacing-4);
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
 }
 
 .multiplayer-client__info {
@@ -235,12 +235,12 @@ httpServer.listen(3000)</pre
 }
 
 .multiplayer-client__socket-id {
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   color: var(--color-muted-foreground);
 }
 
 .multiplayer-client__players-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   margin-bottom: var(--spacing-2);
 }
@@ -260,7 +260,7 @@ httpServer.listen(3000)</pre
   padding: var(--spacing-2) var(--spacing-3);
   background: var(--color-muted);
   border-radius: var(--radius-md);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-family: monospace;
 }
 
@@ -274,17 +274,17 @@ httpServer.listen(3000)</pre
 
 .multiplayer-client__empty {
   color: var(--color-muted-foreground);
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
 }
 
 .multiplayer-client__setup {
   margin-top: var(--spacing-6);
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   color: var(--color-muted-foreground);
 }
 
 .multiplayer-client__setup-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-primary);
   margin-bottom: var(--spacing-2);
@@ -294,7 +294,7 @@ httpServer.listen(3000)</pre
   background: var(--color-muted);
   border-radius: var(--radius-md);
   padding: var(--spacing-4);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   overflow-x: auto;
   white-space: pre;
   margin-top: var(--spacing-2);

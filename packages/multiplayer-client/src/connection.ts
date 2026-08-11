@@ -1,6 +1,8 @@
 import { io } from 'socket.io-client'
 import type { MultiplayerClientConfig, MultiplayerClientSession } from './types'
 
+export const DEFAULT_THROTTLE_MS = 30
+
 /**
  * Connect to a Socket.IO multiplayer server.
  * @param url - WebSocket server URL (e.g. "http://localhost:3000")
@@ -12,9 +14,8 @@ export const multiplayerClientCreate = (
   config?: MultiplayerClientConfig
 ): MultiplayerClientSession & { _config: Required<MultiplayerClientConfig> } => {
   const socket = io(url)
-  const defaultThrottleMs = 30
   const resolvedConfig: Required<MultiplayerClientConfig> = {
-    throttleMs: config?.throttleMs ?? defaultThrottleMs
+    throttleMs: config?.throttleMs ?? DEFAULT_THROTTLE_MS
   }
 
   const destroy = () => {

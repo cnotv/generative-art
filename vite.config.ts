@@ -13,6 +13,8 @@ const packages = [
   'recording',
   'logic',
   'multiplayer-p2p',
+  'multiplayer-client',
+  'multiplayer-server',
   'dictionary',
   'chat',
   'canvas-editor'

@@ -1,12 +1,14 @@
 import type { PlayerPosition, PlayerRotation, PlayerState, MultiplayerClientSession } from './types'
+import { DEFAULT_THROTTLE_MS } from './connection'
 
 type InternalSession = MultiplayerClientSession & { _config: { throttleMs: number } }
 
-const pendingTimers = new WeakMap<MultiplayerClientSession, ReturnType<typeof setTimeout>>()
+const lastSentAt = new WeakMap<MultiplayerClientSession, number>()
 
 /**
  * Broadcast the local player's position and rotation to the server, throttled.
- * Only one emission is sent per throttle window — always the most recent values.
+ * The first call of a window emits immediately; further calls are dropped until the
+ * window elapses, so a per-frame caller keeps sending instead of starving.
  * @param session - The active multiplayer client session
  * @param position - Current player position {x, y, z}
  * @param rotation - Current player rotation {x, y, z}
@@ -17,18 +19,13 @@ export const multiplayerClientSendPosition = (
   rotation: PlayerRotation
 ): void => {
   const internal = session as InternalSession
-  const defaultThrottleMs = 30
-  const throttleMs = internal._config?.throttleMs ?? defaultThrottleMs
-  const existing = pendingTimers.get(session)
-  if (existing !== undefined) clearTimeout(existing)
+  const throttleMs = internal._config?.throttleMs ?? DEFAULT_THROTTLE_MS
+  const now = Date.now()
+  const previous = lastSentAt.get(session)
+  if (previous !== undefined && now - previous < throttleMs) return
 
-  pendingTimers.set(
-    session,
-    setTimeout(() => {
-      pendingTimers.delete(session)
-      session.socket.emit('user:updated', { position, rotation })
-    }, throttleMs)
-  )
+  lastSentAt.set(session, now)
+  session.socket.emit('user:updated', { position, rotation })
 }
 
 /**

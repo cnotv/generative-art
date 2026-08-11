@@ -91,7 +91,6 @@ describe('multiplayerClientSendPosition', () => {
     const position = { x: 1, y: 2, z: 3 }
     const rotation = { x: 0, y: 0.5, z: 0 }
     multiplayerClientSendPosition(session, position, rotation)
-    vi.advanceTimersByTime(30)
     expect(mockSocket.emit).toHaveBeenCalledWith('user:updated', { position, rotation })
   })
 
@@ -101,23 +100,42 @@ describe('multiplayerClientSendPosition', () => {
     multiplayerClientSendPosition(session, { x: 1, y: 0, z: 0 }, rotation)
     multiplayerClientSendPosition(session, { x: 2, y: 0, z: 0 }, rotation)
     multiplayerClientSendPosition(session, { x: 3, y: 0, z: 0 }, rotation)
-    vi.advanceTimersByTime(30)
     const calls = mockEmitted.filter(([e]) => e === 'user:updated')
     expect(calls.length).toBe(1)
   })
 
+  it('emits the first call of each window, not the last', () => {
+    const session = multiplayerClientCreate('http://localhost:3000')
+    const rotation = { x: 0, y: 0, z: 0 }
+    multiplayerClientSendPosition(session, { x: 1, y: 0, z: 0 }, rotation)
+    multiplayerClientSendPosition(session, { x: 2, y: 0, z: 0 }, rotation)
+    const [, payload] = mockEmitted.find(([e]) => e === 'user:updated')!
+    expect(payload).toEqual({ position: { x: 1, y: 0, z: 0 }, rotation })
+  })
+
+  it('keeps emitting for a caller that runs faster than the window', () => {
+    const session = multiplayerClientCreate('http://localhost:3000')
+    const rotation = { x: 0, y: 0, z: 0 }
+    const frameMs = 16
+    Array.from({ length: 12 }).forEach((_, frame) => {
+      multiplayerClientSendPosition(session, { x: frame, y: 0, z: 0 }, rotation)
+      vi.advanceTimersByTime(frameMs)
+    })
+    const calls = mockEmitted.filter(([e]) => e === 'user:updated')
+    expect(calls.length).toBeGreaterThan(1)
+  })
+
   it('respects custom throttleMs from config', () => {
     const session = multiplayerClientCreate('http://localhost:3000', { throttleMs: 100 })
-    const position = { x: 1, y: 0, z: 0 }
     const rotation = { x: 0, y: 0, z: 0 }
-    multiplayerClientSendPosition(session, position, rotation)
+    multiplayerClientSendPosition(session, { x: 1, y: 0, z: 0 }, rotation)
     vi.advanceTimersByTime(30)
-    expect(mockSocket.emit).not.toHaveBeenCalledWith('user:updated', expect.anything())
+    multiplayerClientSendPosition(session, { x: 2, y: 0, z: 0 }, rotation)
+    expect(mockEmitted.filter(([e]) => e === 'user:updated').length).toBe(1)
+
     vi.advanceTimersByTime(70)
-    expect(mockSocket.emit).toHaveBeenCalledWith(
-      'user:updated',
-      expect.objectContaining({ position })
-    )
+    multiplayerClientSendPosition(session, { x: 3, y: 0, z: 0 }, rotation)
+    expect(mockEmitted.filter(([e]) => e === 'user:updated').length).toBe(2)
   })
 })
 
