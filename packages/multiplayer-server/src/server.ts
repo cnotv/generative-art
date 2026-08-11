@@ -1,5 +1,13 @@
-import type { Server, Socket } from 'socket.io'
-import type { PlayerState, PlayerRotation, PlayerPosition, MultiplayerServerConfig } from './types'
+import { createServer } from 'node:http'
+import { Server } from 'socket.io'
+import type { Socket } from 'socket.io'
+import type {
+  PlayerState,
+  PlayerRotation,
+  PlayerPosition,
+  MultiplayerServerConfig,
+  MultiplayerServerHandle
+} from './types'
 
 type PositionPayload = { position: PlayerPosition; rotation: PlayerRotation; name?: string }
 type PlayerRegistry = Readonly<Record<string, PlayerState>>
@@ -54,13 +62,13 @@ const registerPlayerHandlers = (
 }
 
 /**
- * Attach multiplayer session handling to a Socket.IO server instance.
- * Manages player registry, position relay, and generic data forwarding.
+ * Attach multiplayer session handling to a Socket.IO server the caller already owns.
+ * Use this when the application has its own HTTP server; otherwise use multiplayerServerCreate.
  * @param io - A Socket.IO Server instance
  * @param config - Optional server configuration
  * @returns cleanup function that removes the connection listener
  */
-export const multiplayerServerCreate = (
+export const multiplayerServerAttach = (
   io: Server,
   config: MultiplayerServerConfig = {}
 ): { cleanup: () => void } => {
@@ -81,6 +89,30 @@ export const multiplayerServerCreate = (
     cleanup: () => {
       io.off('connection', onConnection)
       players = {}
+    }
+  }
+}
+
+/**
+ * Create a Socket.IO server together with the HTTP server it rides on, with multiplayer
+ * session handling already attached. The caller chooses the port via httpServer.listen().
+ * @param config - Optional server configuration
+ * @returns The Socket.IO server, its HTTP server, and a cleanup function
+ */
+export const multiplayerServerCreate = (
+  config: MultiplayerServerConfig = {}
+): MultiplayerServerHandle => {
+  const httpServer = createServer()
+  const server = new Server(httpServer, { cors: config.cors ?? { origin: '*' } })
+  const { cleanup } = multiplayerServerAttach(server, config)
+
+  return {
+    server,
+    httpServer,
+    cleanup: () => {
+      cleanup()
+      server.close()
+      httpServer.close()
     }
   }
 }

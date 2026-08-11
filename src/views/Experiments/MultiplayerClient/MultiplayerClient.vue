@@ -135,15 +135,15 @@ onUnmounted(() => {
       <h2 class="multiplayer-client__setup-title">Server setup</h2>
       <p>Run a Socket.IO server using <code>@webgamekit/multiplayer-server</code>:</p>
       <pre class="multiplayer-client__code">
-import { createServer } from 'node:http'
-import { Server } from 'socket.io'
 import { multiplayerServerCreate } from '@webgamekit/multiplayer-server'
 
-const httpServer = createServer()
-const io = new Server(httpServer, { cors: { origin: '*' } })
-multiplayerServerCreate(io)
+const { httpServer } = multiplayerServerCreate()
 httpServer.listen(3000)</pre
       >
+      <p>
+        Or run the published container:
+        <code>docker run -p 3000:3000 ghcr.io/cnotv/generative-art-multiplayer-server:latest</code>
+      </p>
     </section>
   </div>
 </template>

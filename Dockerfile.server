@@ -1,0 +1,20 @@
+ARG NODE_VERSION=20.18.1
+FROM node:${NODE_VERSION}-alpine
+
+WORKDIR /usr/src/app
+
+COPY . .
+
+# Only the server package and its dependencies — the frontend's toolchain (three, rapier,
+# playwright) has no place in a socket relay image.
+RUN npm install -g pnpm \
+  && pnpm install --filter @webgamekit/multiplayer-server --ignore-scripts \
+  && pnpm --filter @webgamekit/multiplayer-server build
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+USER node
+
+CMD ["pnpm", "--filter", "@webgamekit/multiplayer-server", "start"]

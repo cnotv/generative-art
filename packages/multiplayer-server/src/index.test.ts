@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { PlayerState } from './types'
-import { multiplayerServerCreate } from './index'
+import { multiplayerServerCreate, multiplayerServerAttach } from './index'
 
 // ── Mock Socket.IO ─────────────────────────────────────────────────────────
 type Handler = (...args: unknown[]) => void
@@ -33,7 +33,7 @@ const makeIo = () => {
   }
 }
 
-describe('multiplayerServerCreate', () => {
+describe('multiplayerServerAttach', () => {
   let io: ReturnType<typeof makeIo>
 
   beforeEach(() => {
@@ -42,12 +42,12 @@ describe('multiplayerServerCreate', () => {
   })
 
   it('registers a connection listener on the server', () => {
-    multiplayerServerCreate(io as never)
+    multiplayerServerAttach(io as never)
     expect(io.on).toHaveBeenCalledWith('connection', expect.any(Function))
   })
 
   it('broadcasts user:list when a player connects', () => {
-    multiplayerServerCreate(io as never)
+    multiplayerServerAttach(io as never)
     const socket = makeSocket('player-1')
     io.connect(socket)
     expect(io.emit).toHaveBeenCalledWith(
@@ -57,7 +57,7 @@ describe('multiplayerServerCreate', () => {
   })
 
   it('updates player state and re-broadcasts on user:updated', () => {
-    multiplayerServerCreate(io as never)
+    multiplayerServerAttach(io as never)
     const socket = makeSocket('player-1')
     io.connect(socket)
 
@@ -72,7 +72,7 @@ describe('multiplayerServerCreate', () => {
   })
 
   it('removes player and broadcasts on disconnect', () => {
-    multiplayerServerCreate(io as never)
+    multiplayerServerAttach(io as never)
     const socket = makeSocket('player-1')
     io.connect(socket)
     socket.trigger('disconnect')
@@ -82,7 +82,7 @@ describe('multiplayerServerCreate', () => {
   })
 
   it('tracks multiple concurrent players', () => {
-    multiplayerServerCreate(io as never)
+    multiplayerServerAttach(io as never)
     const s1 = makeSocket('p1')
     const s2 = makeSocket('p2')
     io.connect(s1)
@@ -95,7 +95,7 @@ describe('multiplayerServerCreate', () => {
 
   it('calls onConnect config and sends initial data to the new socket', () => {
     const onConnect = vi.fn(() => ({ 'coin:list': [{ id: 'c1' }] }))
-    multiplayerServerCreate(io as never, { onConnect })
+    multiplayerServerAttach(io as never, { onConnect })
     const socket = makeSocket('player-1')
     io.connect(socket)
 
@@ -104,8 +104,36 @@ describe('multiplayerServerCreate', () => {
   })
 
   it('cleanup removes the connection listener', () => {
-    const { cleanup } = multiplayerServerCreate(io as never)
+    const { cleanup } = multiplayerServerAttach(io as never)
     cleanup()
     expect(io.off).toHaveBeenCalledWith('connection', expect.any(Function))
+  })
+})
+
+describe('multiplayerServerCreate', () => {
+  it('returns a Socket.IO server and the HTTP server it rides on', () => {
+    const { server, httpServer, cleanup } = multiplayerServerCreate()
+
+    expect(server).toBeDefined()
+    expect(typeof httpServer.listen).toBe('function')
+    cleanup()
+  })
+
+  it('accepts connections once the HTTP server is listening', async () => {
+    const { httpServer, cleanup } = multiplayerServerCreate()
+
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve))
+    const address = httpServer.address()
+
+    expect(address).not.toBeNull()
+    expect(typeof address === 'object' && address?.port).toBeGreaterThan(0)
+    cleanup()
+  })
+
+  it('registers the connection handler on the server it created', () => {
+    const { server, cleanup } = multiplayerServerCreate()
+
+    expect(server.listenerCount('connection')).toBe(1)
+    cleanup()
   })
 })

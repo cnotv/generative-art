@@ -5,3 +5,12 @@ services:
       NODE_ENV: production
     ports:
       - 3000:3000
+
+  multiplayer-server:
+    image: ghcr.io/cnotv/generative-art-multiplayer-server:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - 3001:3001
+    restart: unless-stopped

@@ -17,10 +17,12 @@ strategies and neither depends on the other.
 
 ```bash
 pnpm add @webgamekit/multiplayer-client socket.io-client   # browser
-pnpm add @webgamekit/multiplayer-server socket.io          # Node.js
+pnpm add @webgamekit/multiplayer-server                    # Node.js
 ```
 
-Socket.IO is a peer dependency on both sides, so the host application pins its version.
+The server package depends on `socket.io` directly, so there is nothing else to install —
+it creates the Socket.IO server itself. On the client, `socket.io-client` stays a peer
+dependency so the host application controls the version that ends up in its bundle.
 
 ## Core concepts
 
@@ -68,15 +70,13 @@ multiplayerClientDestroy(session)
 
 ## Quick start — server
 
+`multiplayerServerCreate` builds the Socket.IO server and the HTTP server it rides on, and
+hands both back. Choosing the port is the only thing left to the caller.
+
 ```typescript
-import { createServer } from 'node:http'
-import { Server } from 'socket.io'
 import { multiplayerServerCreate } from '@webgamekit/multiplayer-server'
 
-const httpServer = createServer()
-const io = new Server(httpServer, { cors: { origin: '*' } })
-
-const { cleanup } = multiplayerServerCreate(io, {
+const { server, httpServer, cleanup } = multiplayerServerCreate({
   onConnect: (socketId) => ({ 'coin:list': currentCoins(socketId) })
 })
 
@@ -84,7 +84,39 @@ httpServer.listen(3000)
 ```
 
 `onConnect` returns a map of channel to payload that is emitted to the joining socket alone.
-It is the hook for handing a new player the world state they missed.
+It is the hook for handing a new player the world state they missed. `cors` defaults to
+`{ origin: '*' }`; pass your own to lock the server to known origins.
+
+### Attaching to a server you already own
+
+When the application already has an HTTP server — an Express or Fastify app — use
+`multiplayerServerAttach` instead and keep ownership of the lifecycle:
+
+```typescript
+import { multiplayerServerAttach } from '@webgamekit/multiplayer-server'
+
+const { cleanup } = multiplayerServerAttach(existingIo)
+```
+
+## Running the server
+
+The package ships a ready entrypoint that reads `PORT` (default `3000`) and shuts down
+cleanly on `SIGTERM`, so it can be run directly or as a container:
+
+```bash
+pnpm --filter @webgamekit/multiplayer-server build
+PORT=3000 pnpm --filter @webgamekit/multiplayer-server start
+```
+
+`Dockerfile.server` at the repo root builds an image containing only this package and its
+dependencies — the frontend toolchain is excluded. CI publishes it on every push to `main`:
+
+```bash
+docker run -p 3000:3000 ghcr.io/cnotv/generative-art-multiplayer-server:latest
+```
+
+The deployment `docker-compose.yml` runs it as the `multiplayer-server` service on port
+3001, alongside the website on 3000.
 
 ## Position throttling
 
@@ -137,11 +169,13 @@ anything. Validate a payload before trusting it if it crosses a trust boundary.
 
 ### Server
 
-| Function                               | Returns       | Description                                      |
-| -------------------------------------- | ------------- | ------------------------------------------------ |
-| `multiplayerServerCreate(io, config?)` | `{ cleanup }` | Attaches registry handling to a Socket.IO server |
+| Function                               | Returns                           | Description                                     |
+| -------------------------------------- | --------------------------------- | ----------------------------------------------- |
+| `multiplayerServerCreate(config?)`     | `{ server, httpServer, cleanup }` | Creates both servers with handling attached     |
+| `multiplayerServerAttach(io, config?)` | `{ cleanup }`                     | Attaches handling to a Socket.IO server you own |
 
-`cleanup()` removes the connection listener and empties the registry.
+`cleanup()` removes the connection listener and empties the registry; the one returned by
+`multiplayerServerCreate` also closes both servers.
 
 ## Types
 
@@ -176,6 +210,13 @@ interface MultiplayerClientSession {
 
 interface MultiplayerServerConfig {
   onConnect?: (socketId: string) => Record<string, unknown>
+  cors?: ServerOptions['cors'] // default: { origin: '*' }
+}
+
+interface MultiplayerServerHandle {
+  server: Server // the socket.io Server
+  httpServer: HttpServer // the node:http Server — call listen() on this
+  cleanup: () => void
 }
 ```
 

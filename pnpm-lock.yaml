@@ -354,13 +354,14 @@ importers:
         version: 4.0.18(@types/node@22.19.17)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@24.1.3)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)(yaml@2.8.2)
 
   packages/multiplayer-server:
+    dependencies:
+      socket.io:
+        specifier: ^4.8.0
+        version: 4.8.3
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17
-      socket.io:
-        specifier: ^4.8.0
-        version: 4.8.3
       typescript:
         specifier: ^5.0.0
         version: 5.4.5

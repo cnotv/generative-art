@@ -1,2 +1,8 @@
-export type { PlayerPosition, PlayerRotation, PlayerState, MultiplayerServerConfig } from './types'
-export { multiplayerServerCreate } from './server'
+export type {
+  PlayerPosition,
+  PlayerRotation,
+  PlayerState,
+  MultiplayerServerConfig,
+  MultiplayerServerHandle
+} from './types'
+export { multiplayerServerCreate, multiplayerServerAttach } from './server'
