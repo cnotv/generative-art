@@ -57,57 +57,24 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  build-and-push-multiplayer-server:
-    runs-on: ubuntu-latest
-    needs: run-tests
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Log in to the Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for the multiplayer server image
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-multiplayer-server
-          tags: |
-            type=raw,value=latest
-            type=sha
-
-      - name: Build and push the multiplayer server image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.server
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
   deploy:
-    needs: [build-and-push, build-and-push-multiplayer-server]
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Copy docker-compose.yml to server
+      # The multiplayer server is built on the host rather than pulled, so its build context
+      # travels with the compose file. Dockerfile.server only reads packages/multiplayer-server,
+      # so these three paths are the whole context.
+      - name: Copy compose file and multiplayer server sources to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USERNAME }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
           port: ${{ secrets.HETZNER_PORT || '22' }}
-          source: docker-compose.yml
+          source: "docker-compose.yml,Dockerfile.server,packages/multiplayer-server"
           target: ${{ secrets.HETZNER_TARGET_DIR }}
 
       - name: Deploy via SSH
@@ -124,11 +91,12 @@ jobs:
             # Log into registry on the server (if repo is private)
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull the new image
-            docker compose pull
-            
-            # Restart containers with the newly pulled image; remove orphaned containers from old service names
-            docker compose up -d --force-recreate --remove-orphans
+            # Pull the website image; the multiplayer server has no registry copy to pull
+            docker compose pull website
+
+            # Build the multiplayer server from the sources just copied up, then restart
+            # everything; --remove-orphans clears containers from old service names
+            docker compose up -d --build --force-recreate --remove-orphans
             
             # Optional: Clean up old images to save disk space
             docker image prune -f

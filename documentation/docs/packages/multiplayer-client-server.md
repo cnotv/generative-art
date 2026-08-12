@@ -109,14 +109,15 @@ PORT=3000 pnpm --filter @webgamekit/multiplayer-server start
 ```
 
 `Dockerfile.server` at the repo root builds an image containing only this package and its
-dependencies — the frontend toolchain is excluded. CI publishes it on every push to `main`:
+dependencies — the frontend toolchain is excluded, so it comes to roughly 196MB:
 
 ```bash
-docker run -p 3000:3000 ghcr.io/cnotv/generative-art-multiplayer-server:latest
+docker compose up -d --build multiplayer-server
 ```
 
-The deployment `docker-compose.yml` runs it as the `multiplayer-server` service on port
-3001, alongside the website on 3000.
+The image is built wherever it runs rather than pulled from a registry. See
+[Deploying the multiplayer server](../guides/deploying-the-multiplayer-server.md) for the
+deployment flow and configuration.
 
 ## Position throttling
 

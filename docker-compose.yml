@@ -6,8 +6,12 @@ services:
     ports:
       - 3000:3000
 
+  # Built on the host from the sources deployed alongside this file — no registry involved.
   multiplayer-server:
-    image: ghcr.io/cnotv/generative-art-multiplayer-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: generative-art-multiplayer-server:latest
     environment:
       NODE_ENV: production
       PORT: 3001

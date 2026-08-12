@@ -141,8 +141,8 @@ const { httpServer } = multiplayerServerCreate()
 httpServer.listen(3000)</pre
       >
       <p>
-        Or run the published container:
-        <code>docker run -p 3000:3000 ghcr.io/cnotv/generative-art-multiplayer-server:latest</code>
+        Or run it as a container built from this repo:
+        <code>docker compose up -d --build multiplayer-server</code>
       </p>
     </section>
   </div>
