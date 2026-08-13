@@ -232,6 +232,22 @@ importers:
         specifier: ^2.0.6
         version: 2.2.12(typescript@5.4.5)
 
+  examples/multiplayer-server:
+    dependencies:
+      '@webgamekit/multiplayer-server':
+        specifier: workspace:*
+        version: link:../../packages/multiplayer-server
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.17
+      typescript:
+        specifier: ^5.0.0
+        version: 5.4.5
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
+
   packages/animation:
     devDependencies:
       '@dimforge/rapier3d-compat':
