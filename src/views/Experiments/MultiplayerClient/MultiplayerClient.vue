@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   multiplayerClientCreate,
   multiplayerClientDestroy,
@@ -72,28 +74,16 @@ onUnmounted(() => {
     </p>
 
     <section class="multiplayer-client__connect">
-      <input
+      <Input
         v-model="serverUrl"
-        class="multiplayer-client__input"
         :disabled="status !== 'disconnected'"
         placeholder="Socket.IO server URL"
         type="text"
       />
-      <button
-        v-if="status === 'disconnected'"
-        class="multiplayer-client__button multiplayer-client__button--primary"
-        @click="connect"
-      >
-        Connect
-      </button>
-      <button
-        v-else
-        class="multiplayer-client__button multiplayer-client__button--danger"
-        :disabled="status === 'connecting'"
-        @click="disconnect"
-      >
+      <Button v-if="status === 'disconnected'" @click="connect">Connect</Button>
+      <Button v-else variant="destructive" :disabled="status === 'connecting'" @click="disconnect">
         {{ status === 'connecting' ? 'Connecting…' : 'Disconnect' }}
-      </button>
+      </Button>
     </section>
 
     <p v-if="errorMessage" class="multiplayer-client__error">{{ errorMessage }}</p>
@@ -103,12 +93,7 @@ onUnmounted(() => {
         Socket ID: <strong>{{ session?.socket.id }}</strong>
       </p>
 
-      <button
-        class="multiplayer-client__button multiplayer-client__button--secondary"
-        @click="broadcastPosition"
-      >
-        Broadcast random position
-      </button>
+      <Button variant="secondary" @click="broadcastPosition">Broadcast random position</Button>
 
       <div class="multiplayer-client__players">
         <h2 class="multiplayer-client__players-title">Connected players ({{ players.length }})</h2>
@@ -150,6 +135,11 @@ httpServer.listen(3000)</pre
 
 <style scoped>
 .multiplayer-client {
+  box-sizing: border-box;
+  min-height: 100vh;
+
+  /* body is globally overflow:hidden, so a long player list has to scroll in here. */
+  overflow-y: auto;
   max-width: 48rem;
   margin: 0 auto;
   padding: calc(var(--nav-height) + var(--spacing-8)) var(--spacing-8) var(--spacing-8);
@@ -172,50 +162,6 @@ httpServer.listen(3000)</pre
   display: flex;
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-4);
-}
-
-.multiplayer-client__input {
-  flex: 1;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-primary);
-  font-size: var(--font-size-base);
-}
-
-.multiplayer-client__input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.multiplayer-client__button {
-  padding: var(--spacing-2) var(--spacing-4);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.multiplayer-client__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.multiplayer-client__button--primary {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-}
-
-.multiplayer-client__button--secondary {
-  background: var(--color-muted);
-  color: var(--color-primary);
-}
-
-.multiplayer-client__button--danger {
-  background: var(--color-destructive);
-  color: var(--color-destructive-foreground);
 }
 
 .multiplayer-client__error {

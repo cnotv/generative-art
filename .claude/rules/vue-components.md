@@ -10,6 +10,20 @@ paths:
 ## Structure
 
 - Vue SFCs with `<script setup lang="ts">`. Never plain JavaScript.
+- **Never hand-roll a control that `src/components/ui/` already provides.** A raw `<button>`
+  or `<input>` in a view or component is a bug: use `Button` and `Input`, and likewise
+  `Select`, `Checkbox`, `Switch`, `Slider`, `Accordion`, `Tabs`, `Toggle`, `ColorPicker`,
+  `CoordinateInput`, `ButtonSelector` and `Sheet`. They carry the focus, disabled and
+  theming behaviour that a bare element does not, so a hand-written one drifts from the rest
+  of the app and has to be restyled on every token change. Check `src/components/ui/index.ts`
+  before writing markup for anything interactive.
+
+  Raw elements are acceptable only for genuinely structural or non-interactive markup
+  (`<p>`, `<ul>`, `<section>`, `<pre>`) and for a control the kit has no equivalent of — in
+  which case ask before building one, rather than inlining a one-off widget in a view. This
+  applies to app chrome; in-game and editor overlays use the LobbyUI kit instead, per the
+  LobbyUI rules.
+
 - Never add a wrapper element that adds no layout, semantics or behaviour the parent cannot
   already provide. If you are adding a `<div>` only to transfer styles the parent layout
   already handles, delete it and rely on the layout. In particular, do not wrap a single
