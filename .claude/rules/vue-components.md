@@ -7,6 +7,52 @@ paths:
 
 # Vue components and styles
 
+## Where a component lives
+
+`src/components/` is not one bucket. It holds five tiers with different rules, and
+"reuse what is in `src/components/`" means finding the right tier before writing anything.
+
+| Tier                | Holds                                                                                                                                                                                             | Reach for it when                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ui/`               | design-system primitives: `Button`, `Input`, `Select`, `Checkbox`, `Switch`, `Slider`, `Tabs`, `Toggle`, `Accordion`, `Sheet`, `ColorPicker`, `CoordinateInput`, `ButtonSelector`, `BezierPicker` | you need any interactive control in app chrome — panels, tools, editors, forms                       |
+| `LobbyUI/`          | the `LobbyUI*` overlay kit                                                                                                                                                                        | the UI sits over a game scene: HUDs, dialogs, countdowns, editor palettes                            |
+| `panels/`           | the panel system itself: `GenericPanel`, `ConfigPanel`, `ElementsPanel`, `TimelinePanel`, `PanelContainer`                                                                                        | never directly from a view — register content with `registerViewConfig` and let the panels render it |
+| `<Feature>/`        | self-contained features with co-located `use*.ts`: `AvatarEditor/`, `CanvasEditor/`, `Chat/`, `ControlsMapper/`, `DrawingToolbar/`                                                                | a view needs a whole interactive surface rather than one control                                     |
+| `*.vue` at the root | shared components used across unrelated views (below)                                                                                                                                             | the concern already exists — never make a second copy for your game                                  |
+
+### The shared root components
+
+One component per concern, shared by every view that needs it. A game-specific copy of any
+of these is a bug, not a variation — add a prop instead.
+
+| Component            | Use case                                                                       |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `GameLobbyWizard`    | the lobby / profile / settings step of any game, wrapped in `<Game>Lobby.vue`  |
+| `GameHeader`         | the header of a game view, with "← Lobby" navigation and optional room ID      |
+| `GameTabBar`         | the mobile Game/Chat toggle, with `unreadCount` wired for the badge            |
+| `GameScores`         | a score list over or beside a running game                                     |
+| `GameCard`           | a game's tile in a picker or list                                              |
+| `MultiplayerSidebar` | the player list plus chat panel, from a `MultiplayerPlayer[]`                  |
+| `TouchControl`       | on-screen touch input — a faux stick or a button, driven by a controls mapping |
+| `IconButton`         | an icon-only button in app chrome, with size and variant                       |
+| `LoadingOverlay`     | a blocking load state with stage and detail text                               |
+| `LoaderCube`         | the small inline spinner                                                       |
+| `RecordingControls`  | start/stop capture UI for a scene                                              |
+| `DebugStats`         | a list of live numeric readouts while debugging                                |
+| `ControlsLogger`     | a rolling log of input events, for verifying a mapping                         |
+| `TexturePreview`     | a thumbnail of a texture with a caption slot                                   |
+| `IconPreview`        | an icon rendered at a chosen size and colour, for pickers and showcases        |
+| `GlobalNavigation`   | the fixed app navigation bar — mounted once by the app, not by a view          |
+| `NavigationSidebar`  | the app's route sidebar — likewise app-level                                   |
+| `PanelNavigation`    | the panel switcher buttons, driven by the panels store                         |
+
+### Choosing a tier for something new
+
+Ask, in order: does a `ui/` primitive already do it; does a root component already own this
+concern; is it one feature's surface (its own `<Feature>/` folder with co-located
+composables); is it only ever used by one view (co-locate it beside that view instead).
+Only a concern that is genuinely shared by unrelated views earns a new root component.
+
 ## Structure
 
 - Vue SFCs with `<script setup lang="ts">`. Never plain JavaScript.
@@ -15,8 +61,11 @@ paths:
   `Select`, `Checkbox`, `Switch`, `Slider`, `Accordion`, `Tabs`, `Toggle`, `ColorPicker`,
   `CoordinateInput`, `ButtonSelector` and `Sheet`. They carry the focus, disabled and
   theming behaviour that a bare element does not, so a hand-written one drifts from the rest
-  of the app and has to be restyled on every token change. Check `src/components/ui/index.ts`
-  before writing markup for anything interactive.
+  of the app and has to be restyled on every token change. List `src/components/ui/` before
+  writing markup for anything interactive: the barrel is incomplete, so `index.ts` is not
+  proof a control is missing. `BezierPicker`, `Switch`, `Tabs` and `Toggle` import from their
+  own folder (`@/components/ui/switch`), and `ButtonSelector`, which has no `index.ts`,
+  imports the file directly (`@/components/ui/button-selector/ButtonSelector.vue`).
 
   Raw elements are acceptable only for genuinely structural or non-interactive markup
   (`<p>`, `<ul>`, `<section>`, `<pre>`) and for a control the kit has no equivalent of — in

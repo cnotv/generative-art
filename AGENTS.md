@@ -62,8 +62,10 @@ reuse an existing feature branch, however related it looks.
   the code. No commented-out debug notes, no "was X, now Y", no section labels.
 - **DRY and KISS.** If a pattern appears twice, extract it. Prefer the simplest thing that
   works over an abstraction you might need later.
-- **Reuse before writing.** Check `src/components/`, `src/components/ui/`, `src/utils/` and
-  `src/stores/` first. Verify a dependency is actively maintained before adding it.
+- **Reuse before writing.** Check `src/components/`, `src/utils/` and `src/stores/` first.
+  `src/components/` has five tiers — `ui/` primitives, the `LobbyUI/` overlay kit, the
+  `panels/` system, `<Feature>/` folders and shared root components — and `vue-components.md`
+  says which to reach for. Verify a dependency is actively maintained before adding it.
 - **No pointless wrappers.** Before adding a `<div>` or `<section>`, ask what layout,
   semantics or behaviour it adds that the parent cannot. If none, drop it.
 
