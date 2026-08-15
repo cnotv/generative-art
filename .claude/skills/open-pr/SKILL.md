@@ -57,11 +57,21 @@ The issue number belongs in the PR title, so it appears on merge. The body follo
 and closes the issue automatically. Do not restate the template here — it is the single
 source for the format.
 
+**Write only what the diff cannot say.** A reviewer has the code; an agent picking this up
+in six months does not have your reasoning. So the body carries decisions, constraints and
+surprises — never a tour of what changed. If a point is already explained in a doc, a rule
+or a code comment, link it in a clause rather than repeating the explanation. One line per
+point is the default; spend a paragraph only where the thing was genuinely surprising.
+
+A body long enough to skim past has failed, however accurate it is.
+
 Two sections need care:
 
-- **Added on top of the initial plan** — everything built beyond the original issue scope,
-  in plain language, grouped by area, each entry saying what was added and why. Keep it
-  current as new commits land; never let it drift behind the branch.
+- **Added on top of the initial plan** — only the **conceptual or architectural** departures
+  from what the issue described: a reshaped API, a changed mechanism, a dropped or added
+  layer, a new convention. One line each. Not a list of everything built — the diff has
+  that, and the issue already said what was asked for. If the work matched the issue in
+  shape, delete the section. Keep it current as new commits land.
 - **Rules and skills to abstract** — the output of step 2.
 
 ## 4. Watch CI

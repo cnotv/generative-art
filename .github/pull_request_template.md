@@ -12,13 +12,15 @@ Closes #
 
 ## Added on top of the initial plan
 
-<!-- Everything built or changed beyond the original issue scope, in plain language, grouped
-     by area, each saying what was added and why. Keep this current as new commits land.
-     Delete section if the work matched the issue exactly. -->
+<!-- Only conceptual or architectural departures from what the issue described: a reshaped
+     API, a changed mechanism, a dropped or added layer, a new convention. One line each,
+     briefly. Not a list of everything built — the diff has that. Keep current as commits
+     land. Delete section if the work matched the issue in shape. -->
 
 ## Faced Difficulties and Learned Lessons
 
-<!-- Anything that was unexpectedly hard, a wrong turn taken, or a pattern worth remembering. Delete section if straightforward. -->
+<!-- One line per difficulty, linking the journey doc that explains it. If it needed more
+     than a line here, it belonged in documentation/docs/journey/. Delete if straightforward. -->
 
 ## Rules and skills to abstract
 

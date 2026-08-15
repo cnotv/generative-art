@@ -34,6 +34,9 @@ reuse an existing feature branch, however related it looks.
   different trade-offs.
 - **Give an opinion.** When asked what you think, or whether X beats Y, say what you would do
   and why. Never stop at "it depends".
+- **Write it once, at the length it earns.** A one-line fix gets one line; a surprising
+  constraint gets a paragraph. Prose that repeats the diff or restates something already
+  written above is noise that hides what matters. Each kind of writing has one home, below.
 - **Never open a pull request unless explicitly asked.**
 - **Never modify `eslint.config.js`** unless explicitly asked. Fix violations by changing the
   code, not by loosening the rule.
@@ -83,6 +86,18 @@ reuse an existing feature branch, however related it looks.
 
 Documentation is Docusaurus, in `documentation/`. Never create a standalone markdown file
 elsewhere in the repo.
+
+Every explanation has one home. Write it there; everywhere else links to it.
+
+| What you have                                    | Where it goes                      |
+| ------------------------------------------------ | ---------------------------------- |
+| How to use or run something                      | `documentation/docs/guides/`       |
+| A package's API                                  | `documentation/docs/packages/`     |
+| How the pieces fit, or a structural change       | `documentation/docs/architecture/` |
+| A challenge, a wrong turn, or a research finding | `documentation/docs/journey/`      |
+| A constraint that will bite the next person here | the matching `.claude/rules/` file |
+
+A PR body links to these homes; a section growing into an explanation belongs in one.
 
 ## Definition of done
 
