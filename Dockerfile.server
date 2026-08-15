@@ -1,0 +1,32 @@
+ARG NODE_VERSION=20.18.1
+
+# The package builds on its own: its devDependencies are self-contained and it has no
+# workspace dependencies, so the image never needs the monorepo or the frontend toolchain.
+FROM node:${NODE_VERSION}-alpine AS build
+
+WORKDIR /build
+
+COPY packages/multiplayer-server/package.json ./
+RUN npm install --ignore-scripts
+
+COPY packages/multiplayer-server/tsconfig.json packages/multiplayer-server/vite.config.ts ./
+COPY packages/multiplayer-server/src ./src
+RUN npm run build
+
+FROM node:${NODE_VERSION}-alpine
+
+WORKDIR /usr/src/app
+
+# socket.io is the only runtime dependency; the build toolchain stays in the stage above.
+COPY packages/multiplayer-server/package.json ./
+RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
+
+COPY --from=build /build/dist ./dist
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+USER node
+
+CMD ["node", "dist/main.js"]

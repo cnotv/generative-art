@@ -34,6 +34,9 @@
   "Matchmaker": {
     "description": "Browse online players and negotiate a P2P session — request, accept, or ignore individual matches."
   },
+  "Multiplayer Client": {
+    "description": "Socket.IO client demo — connect to a dedicated server and watch the player registry update."
+  },
   "Multiplayer P 2 P": {
     "description": "Peer-to-peer multiplayer demo using WebRTC data channels."
   },

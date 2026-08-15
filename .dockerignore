@@ -1,5 +1,7 @@
 node_modules
+**/node_modules
 dist
+**/dist
 .git
 .github
 .env
@@ -14,4 +16,5 @@ logs
 *.swp
 *.swo
 Dockerfile
+Dockerfile.server
 docker-compose.yml
