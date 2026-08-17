@@ -16,6 +16,7 @@
     "test:ui": "vitest --ui",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:browser:ui": "vitest --config vitest.browser.config.ts --ui",
+    "verify:packages": "pnpm -r run build && node scripts/verify-packages.mjs",
     "analyze": "node scripts/analyze-assets.mjs",
     "check:assets": "node scripts/analyze-assets.mjs --check --glb-only",
     "size": "size-limit",
@@ -69,6 +70,7 @@
   },
   "devDependencies": {
     "@babel/types": "^7.23.9",
+    "@changesets/cli": "^2.31.1",
     "@dimforge/rapier3d-compat": "^0.19.3",
     "@eslint/js": "^9.39.2",
     "@lhci/cli": "^0.15.1",

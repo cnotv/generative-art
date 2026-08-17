@@ -196,7 +196,10 @@ const setupPostprocessing = async ({
     await addShaderPass({
       composer,
       Shader: PixelShader,
-      uniforms: { size: config.pixelate.size || 6.0 }
+      uniforms: {
+        size: config.pixelate.size || 6.0,
+        resolution: [window.innerWidth, window.innerHeight]
+      }
     })
   await applyBloom(composer, renderer, config)
   await applyFxaa(composer, config)

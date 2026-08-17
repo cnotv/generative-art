@@ -2,7 +2,7 @@
 export const PixelShader = {
   uniforms: {
     tDiffuse: { value: null },
-    resolution: { value: [window.innerWidth, window.innerHeight] },
+    resolution: { value: [1, 1] },
     size: { value: 6.0 }
   },
   vertexShader: `
