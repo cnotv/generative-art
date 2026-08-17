@@ -138,8 +138,8 @@ export const assetsIsCached = (url: string): boolean => cache.has(url)
  * Drop one consumer's claim on a url. The last release frees the GPU memory; loading the
  * same url afterwards reads it again.
  *
- * Release by url rather than disposing what you were handed: clones share geometry and
- * materials with the cached source, so disposing a clone frees memory still in use.
+ * This is the only thing that frees a cached asset. `disposeObject` on a copy is safe but
+ * does nothing for it, because the copy shares the cache's geometry and textures.
  * @param url The url to release
  */
 export const assetsRelease = (url: string): void => {
