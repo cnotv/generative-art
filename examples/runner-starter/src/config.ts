@@ -14,7 +14,9 @@ export const SCENE: SetupConfig = {
     ambient: { intensity: 0.7 },
     directional: { intensity: 1.2, position: [10, 30, 10], castShadow: true }
   },
-  ground: { size: [16, 1, 400], color: 0x4a4e69 },
+  // A ground's position is its top surface, not its centre. Leaving it out inherits a default
+  // that sits at y = -1, which quietly puts everything you place at y = 0 in mid-air.
+  ground: { size: [16, 1, 400], position: [0, 0, 0], color: 0x4a4e69 },
   sky: { color: 0x22223b },
   orbit: false
 }
@@ -22,7 +24,8 @@ export const SCENE: SetupConfig = {
 export const PLAYER: ModelOptions = {
   name: 'player',
   size: [1.4, 1.4, 1.4],
-  position: [0, 1, 4],
+  // getCube treats position.y as the box's bottom, so 0 rests it on the ground.
+  position: [0, 0, 4],
   color: 0xf2e9e4,
   type: 'fixed',
   castShadow: true
@@ -54,5 +57,5 @@ export const CONTROLS = {
   axisThreshold: 0.5
 }
 
-/** Height an obstacle sits at, so its box rests on the track rather than in it. */
-export const OBSTACLE_HEIGHT = 1.2
+/** getCube measures from the bottom of the box, so an obstacle rests on the track at 0. */
+export const OBSTACLE_HEIGHT = 0

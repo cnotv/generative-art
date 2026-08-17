@@ -10,7 +10,9 @@ export const SCENE: SetupConfig = {
     ambient: { intensity: 0.6 },
     directional: { intensity: 1.4, position: [20, 30, 15], castShadow: true }
   },
-  ground: { size: [80, 1, 80], color: 0x3f6d4e },
+  // A ground's position is its top surface, not its centre. Leaving it out inherits a default
+  // that sits at y = -1, which quietly puts everything you place at y = 0 in mid-air.
+  ground: { size: [80, 1, 80], position: [0, 0, 0], color: 0x3f6d4e },
   sky: { color: 0x87ceeb },
   orbit: false
 }

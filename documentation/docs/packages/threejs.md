@@ -129,7 +129,7 @@ Configure scene with camera, lights, ground, and sky.
   ground?: false | {
     size?: CoordinateTuple,
     color?: number,
-    position?: CoordinateTuple,
+    position?: CoordinateTuple,  // the TOP SURFACE, not the centre; defaults to [1, -1, 1]
     texture?: string
   },
   sky?: { color?: number },
@@ -286,6 +286,10 @@ const player = await getModel(scene, world, 'character.glb', {
 
 Create a cube with physics.
 
+**`position` is the bottom of the box, not its centre** — it defaults to `origin: { y: 0 }`, so
+`position: [0, 0, 0]` rests the cube on `y = 0`. Pair that with a ground whose `position` puts its
+top surface at the same height, or objects hang in the air.
+
 ```typescript
 import { getCube } from '@webgamekit/threejs'
 
@@ -323,6 +327,46 @@ const walls = getWalls(scene, world, wallPositions, {
   type: 'fixed'
 })
 ```
+
+## Physics Sync
+
+Rapier and Three.js keep separate transforms. `animate` steps the world, which moves the
+**bodies** — nothing moves the meshes until you copy the transform across. Skip this and every
+dynamic object simulates correctly and renders frozen, which looks like broken input.
+
+### syncMeshWithBody(mesh, verticalOffset?)
+
+```typescript
+import { syncMeshWithBody } from '@webgamekit/threejs'
+
+timeline.addAction({
+  name: 'draw the player where physics put it',
+  category: 'physics',
+  action: () => syncMeshWithBody(player)
+})
+```
+
+`verticalOffset` shifts the drawn position, for meshes whose origin is not their centre. A mesh
+with no rigid body is left alone rather than throwing, so a mixed list is safe.
+
+### syncMeshesWithBodies(meshes, verticalOffset?)
+
+The same for a list — call once per frame for everything dynamic in the scene.
+
+```typescript
+import { syncMeshesWithBodies } from '@webgamekit/threejs'
+
+timeline.addAction({
+  name: 'sync physics',
+  category: 'physics',
+  action: () => syncMeshesWithBodies([player, ...crates])
+})
+```
+
+`hasPhysicsBody(mesh)` reports whether a mesh has a body to sync from.
+
+Kinematic character controllers do not need this: `moveController` already writes the mesh
+position as it resolves the move.
 
 ## Physics Controller
 

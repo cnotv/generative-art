@@ -1,4 +1,10 @@
-import { getTools, getCube, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
+import {
+  getTools,
+  getCube,
+  cameraFollowPlayer,
+  syncMeshWithBody,
+  type ComplexModel
+} from '@webgamekit/threejs'
 import { createTimelineManager, type CoordinateTuple } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import {
@@ -51,6 +57,16 @@ timeline.addAction({
       { x: direction.x * MOVE_SPEED, y: verticalSpeed, z: direction.z * MOVE_SPEED },
       true
     )
+  }
+})
+
+timeline.addAction({
+  name: 'draw the player where physics put it',
+  category: 'physics',
+  action: () => {
+    // Stepping the world moves the body, not the mesh. Without this the player simulates
+    // perfectly and renders frozen, which reads as broken input.
+    syncMeshWithBody(player)
   }
 })
 

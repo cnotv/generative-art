@@ -256,6 +256,12 @@ export interface CameraConfig {
 
 export interface GroundConfig {
   size?: number | CoordinateTuple
+  /**
+   * Where the ground's **top surface** sits, not its centre. `getGround` has always honoured
+   * this; it was missing from the type, so callers could not raise or lower the floor and had
+   * no way to see why objects placed at y = 0 hung in the air above the default of -1.
+   */
+  position?: CoordinateTuple
   color?: number
   texture?: string
   textureRepeat?: [number, number]
