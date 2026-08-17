@@ -280,3 +280,17 @@ export type FollowCameraPlacement = {
   position: THREE.Vector3
   lookAt: THREE.Vector3
 }
+
+/** Which loader can read a given asset. */
+export type AssetParserKind = 'gltf' | 'fbx' | 'texture'
+
+/** Where the loading queue stands, reported as each item completes. */
+export type AssetProgress = {
+  url: string
+  loaded: number
+  total: number
+  fraction: number
+}
+
+/** Notified on every completed item while assets are loading. */
+export type AssetProgressListener = (progress: AssetProgress) => void

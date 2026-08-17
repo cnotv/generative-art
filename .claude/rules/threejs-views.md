@@ -67,7 +67,9 @@ The animation loop is the hot path:
   `.set()`, `.copy()` or `.multiplyScalars()`.
 - **Never `.clone()` in the loop** — `.copy()` onto a pre-allocated instance instead.
 - Dispose geometries, materials, textures and render targets when removing objects, or they
-  leak VRAM.
+  leak VRAM. `disposeObject` and `disposeScene` skip whatever the asset cache owns, so a
+  loaded model's geometry survives the view that used it — freeing that is `assetsRelease(url)`
+  in the same `onUnmounted`, and only the last holder's call actually frees it.
 - Pool short-lived objects such as projectiles and particles rather than creating and
   collecting them each frame.
 
