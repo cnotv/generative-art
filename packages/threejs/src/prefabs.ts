@@ -63,7 +63,10 @@ export const prefabDespawn = (
   scene.remove(instance)
 
   if (body) world.removeRigidBody(body)
-  if (instance.userData) instance.userData.body = undefined
+
+  // Dropped rather than blanked: a handle to a body the world no longer knows about crashes
+  // Rapier on the next use, so nothing should be able to read it back.
+  if (instance.userData) Reflect.deleteProperty(instance.userData, 'body')
 }
 
 /**
