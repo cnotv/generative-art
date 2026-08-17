@@ -1,14 +1,20 @@
-name: Publish to NPM
+name: Release
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: [main]
+
+# Two releases running at once would race on the version commit and the npm publish.
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
       id-token: write
 
     steps:
@@ -18,27 +24,34 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 9 # or your preferred version
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-          # This creates an .npmrc file that references NODE_AUTH_TOKEN
+          cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Packages
-        # -r runs recursively in all packages
-        run: pnpm -r run build
+      # The last gate before npm. Everything published here is verified as an installed
+      # tarball first, because a broken dist cannot be unpublished, only superseded.
+      - name: Verify published package output
+        run: pnpm run verify:packages
 
-      - name: Set up npm auth for pnpm
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-
-      - name: Publish to NPM
-        # -r: Recursive (publishes all packages in workspaces)
-        # --no-git-checks: Required because 'on: release' usually creates a detached HEAD state
-        # --access public: Needed if your package scope (e.g. @cnotv) is usually private
-        run: pnpm publish -r --no-git-checks --access public --provenance
+      # With pending changesets this opens or updates a version pull request. When that pull
+      # request merges there are no changesets left, so this publishes instead. Nobody edits
+      # a version by hand in either direction.
+      - name: Version or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          publish: pnpm changeset publish
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
