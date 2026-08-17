@@ -294,3 +294,33 @@ export type AssetProgress = {
 
 /** Notified on every completed item while assets are loading. */
 export type AssetProgressListener = (progress: AssetProgress) => void
+/** One waypoint on a camera path, with an optional target to keep in view while passing it. */
+export type CameraPathPoint = {
+  position: CoordinateTuple
+  lookAt?: CoordinateTuple
+}
+
+/** Where a camera travels, how long it takes, and how it accelerates. */
+export type CameraPathOptions = {
+  points: readonly CameraPathPoint[]
+  seconds: number
+  easing?: (t: number) => number
+  onComplete?: () => void
+}
+
+/** A running camera path. `update` returns false once it no longer owns the camera. */
+export type CameraPath = {
+  update: (deltaSeconds: number) => boolean
+  cancel: () => void
+}
+
+/**
+ * A game object declared once and spawned many times: which model it is, how it is built,
+ * and whatever gameplay values belong to it.
+ */
+export type Prefab = {
+  name: string
+  model: string
+  options?: ModelOptions
+  parameters?: Record<string, unknown>
+}

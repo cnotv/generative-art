@@ -1,5 +1,11 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
-import type { SetupConfig, PostProcessingConfig, AreaConfig } from '@webgamekit/threejs'
+import type {
+  SetupConfig,
+  PostProcessingConfig,
+  AreaConfig,
+  ModelOptions,
+  Prefab
+} from '@webgamekit/threejs'
 import * as THREE from 'three'
 
 import { generateAreaPositions } from '@webgamekit/threejs'
@@ -56,7 +62,7 @@ export const playerSettings = {
     castShadow: true,
     material: 'MeshLambertMaterial',
     color: 0xffffff
-  },
+  } satisfies ModelOptions,
   movement: {
     requireGround: true,
     maxGroundDistance: 5,
@@ -72,6 +78,17 @@ export const playerSettings = {
       jump: 4
     },
     maxJump: 4
+  }
+}
+
+/** The player declared as one game object: which model, how it is built, what it can do. */
+export const playerPrefab: Prefab = {
+  name: 'Player',
+  model: 'mushroom.glb',
+  options: playerSettings.model,
+  parameters: {
+    maxJump: playerSettings.game.maxJump,
+    groundHeight: playerSettings.model.position[1]
   }
 }
 

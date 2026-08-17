@@ -340,6 +340,122 @@ moveController(playerModel, direction, (collider) => {
 })
 ```
 
+## Prefabs
+
+A prefab is a game object declared once as data and spawned as often as you like. It is a
+plain object, not a builder — there is nothing to construct and nothing to register.
+
+```typescript
+import type { Prefab } from '@webgamekit/threejs'
+
+export const crate: Prefab = {
+  name: 'crate',
+  model: 'models/crate.glb',
+  options: { scale: [2, 2, 2], type: 'dynamic', castShadow: true, boundary: 0.5 },
+  parameters: { health: 40, breakable: true }
+}
+```
+
+### prefabSpawn(scene, world, prefab, overrides?)
+
+Brings the mesh, the collider and the parameters into the scene together. What comes back is
+the same `ComplexModel` `getModel` returns, so the animation loop needs no changes.
+
+```typescript
+import { prefabSpawn } from '@webgamekit/threejs'
+
+const box = await prefabSpawn(scene, world, crate, { position: [10, 0, 4] })
+
+box.userData.parameters.health // 40
+box.userData.prefab // 'crate'
+```
+
+Overrides are merged over the declared options and the prefab itself is never mutated, so the
+next spawn starts from the same declaration. Repeated spawns share one download and one parse
+through the asset cache.
+
+### prefabDespawn(scene, world, instance)
+
+Removes the mesh, the rigid body and the debug helper — the third being the one hand-written
+teardown usually forgets. Geometry and textures are deliberately left alone, because the asset
+cache still owns them.
+
+```typescript
+import { prefabDespawn } from '@webgamekit/threejs'
+
+prefabDespawn(scene, world, box)
+```
+
+Safe on an instance with no physics body, and safe to call twice.
+
+### prefabPreload(prefabs, preload)
+
+Load every model a set of prefabs needs before the scene starts, deduplicated by path.
+
+```typescript
+import { prefabPreload, assetsPreload } from '@webgamekit/threejs'
+
+await prefabPreload([crate, barrel, enemy], assetsPreload)
+```
+
+## Camera Paths
+
+For intros, replays and cutscenes: the camera travels a declared route over a fixed duration.
+Sampling is arc-length parameterised, so it holds a steady speed rather than accelerating
+through tightly spaced points.
+
+### cameraPathCreate(camera, options)
+
+```typescript
+import { cameraPathCreate } from '@webgamekit/threejs'
+import { easing } from '@webgamekit/animation'
+
+const intro = cameraPathCreate(camera, {
+  points: [
+    { position: [0, 5, 20], lookAt: [0, 0, 0] },
+    { position: [20, 8, 0], lookAt: [0, 0, 0] },
+    { position: [0, 5, -20], lookAt: [0, 0, 0] }
+  ],
+  seconds: 6,
+  easing: easing.easeOutQuad,
+  onComplete: () => startGame()
+})
+```
+
+Give every point a `lookAt` to hold focus on something while the camera moves around it; omit
+it on all of them to leave orientation alone. `onComplete` fires once, not on every frame after
+the end.
+
+Drive it from the animation loop and stop when it hands the camera back:
+
+```typescript
+animate({
+  timeline,
+  beforeTimeline: () => intro.update(getDelta())
+})
+```
+
+`update` returns `true` for the frames it owned the camera, including the one that lands on the
+final point, and `false` from then on. `intro.cancel()` gives the camera back early.
+
+### cameraPathIsActive()
+
+A path owns the camera while it runs. A follow camera should stand down for those frames rather
+than fight it for the same transform:
+
+```typescript
+import { cameraPathIsActive, followCameraPlacement } from '@webgamekit/threejs'
+
+if (!cameraPathIsActive()) {
+  const placement = followCameraPlacement(player, followConfig)
+  camera.position.copy(placement.position)
+  camera.lookAt(placement.lookAt)
+}
+```
+
+The follow camera resumes by itself once the path completes or is cancelled — there is nothing
+to restore.
+
 ## Camera Utilities
 
 ### cameraFollowPlayer(camera, player, offset, orbit?)
