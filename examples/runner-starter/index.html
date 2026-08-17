@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Runner Starter</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #22223b;
+      }
+      canvas {
+        display: block;
+      }
+      #score,
+      #hint {
+        position: fixed;
+        left: 1rem;
+        margin: 0;
+        color: #fff;
+        font: 16px system-ui, sans-serif;
+        text-shadow: 0 1px 2px #000;
+      }
+      #score {
+        top: 1rem;
+        font-size: 22px;
+      }
+      #hint {
+        bottom: 1rem;
+        font-size: 14px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <p id="score">Score 0</p>
+    <p id="hint">A / D or arrow keys to switch lane</p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

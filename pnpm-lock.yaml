@@ -257,6 +257,62 @@ importers:
         specifier: ^5.0.0
         version: 5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
 
+  examples/platformer-starter:
+    dependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: ^0.19.3
+        version: 0.19.3
+      '@webgamekit/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@webgamekit/controls':
+        specifier: workspace:*
+        version: link:../../packages/controls
+      '@webgamekit/threejs':
+        specifier: workspace:*
+        version: link:../../packages/threejs
+      three:
+        specifier: ^0.178.0
+        version: 0.178.0
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.4.5
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
+      vite-plugin-wasm:
+        specifier: ^3.3.0
+        version: 3.5.0(vite@5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1))
+
+  examples/runner-starter:
+    dependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: ^0.19.3
+        version: 0.19.3
+      '@webgamekit/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@webgamekit/controls':
+        specifier: workspace:*
+        version: link:../../packages/controls
+      '@webgamekit/threejs':
+        specifier: workspace:*
+        version: link:../../packages/threejs
+      three:
+        specifier: ^0.178.0
+        version: 0.178.0
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.4.5
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
+      vite-plugin-wasm:
+        specifier: ^3.3.0
+        version: 3.5.0(vite@5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1))
+
   packages/animation:
     devDependencies:
       '@dimforge/rapier3d-compat':
@@ -9432,6 +9488,10 @@ snapshots:
   vite-plugin-wasm@3.5.0(vite@5.4.21(@types/node@20.19.25)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)):
     dependencies:
       vite: 5.4.21(@types/node@20.19.25)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
+
+  vite-plugin-wasm@3.5.0(vite@5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)):
+    dependencies:
+      vite: 5.4.21(@types/node@22.19.17)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1)
 
   vite@5.4.21(@types/node@20.19.25)(less@4.5.1)(lightningcss@1.30.2)(sass@1.97.3)(stylus@0.62.0)(terser@5.46.1):
     dependencies:
