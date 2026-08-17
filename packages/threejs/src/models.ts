@@ -14,7 +14,9 @@ const emitProgress = (
 }
 import { getPhysic } from './getters'
 import { getOriginOffset } from './core'
-import { textureLoader, fbxLoader, gltfLoader } from './loaders'
+import { textureLoader, fbxLoader } from './loaders'
+import { assetsLoadFile } from './assets'
+import { clone as cloneSkeletonSafe } from 'three/addons/utils/SkeletonUtils.js'
 
 type BaseMaterialProperties = {
   opacity: number
@@ -507,12 +509,31 @@ export const loadAnimation = (
 }
 
 /**
- * Load an FBX model file
- * @param fileName Path to the FBX file
- * @param options Model options to apply
- * @returns The loaded model
+ * Copy a cached source into an instance the caller owns. Geometries and textures stay shared,
+ * which is the point of caching, but materials are copied because the option handling below
+ * mutates them in place and the cached source is handed to everyone else.
+ * @param source The cached model, never handed out directly
+ * @returns An instance safe to transform and restyle
  */
-export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<Model> => {
+const instantiateModelSource = (source: Model): Model => {
+  const instance = cloneSkeletonSafe(source) as Model
+  instance.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh || !mesh.material) return
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map((material) => material.clone())
+      : mesh.material.clone()
+  })
+  return instance
+}
+
+/**
+ * Apply the transform, shadow and material options a caller asked for.
+ * @param model The instance to configure
+ * @param options Model options to apply
+ * @returns The same instance, configured
+ */
+const applyLoadedModelOptions = (model: Model, options: ModelOptions): Model => {
   const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
@@ -521,29 +542,31 @@ export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<M
     receiveShadow = false
   } = options
 
-  return new Promise((resolve, reject) => {
-    fbxLoader.load(
-      `${import.meta.env.BASE_URL}${fileName}`,
-      (model) => {
-        model.position.set(...position)
-        model.scale.set(...scale)
-        model.rotation.set(...rotation)
-        model.castShadow = castShadow
-        model.receiveShadow = receiveShadow
+  model.position.set(...position)
+  model.scale.set(...scale)
+  model.rotation.set(...rotation)
+  model.castShadow = castShadow
+  model.receiveShadow = receiveShadow
 
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            applyMaterial(child as THREE.Mesh, options)
-            applyTextureToMesh(child as THREE.Mesh, options.texture)
-          }
-        })
-
-        resolve(model)
-      },
-      undefined,
-      reject
-    )
+  model.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      applyMaterial(child as THREE.Mesh, options)
+      applyTextureToMesh(child as THREE.Mesh, options.texture)
+    }
   })
+
+  return model
+}
+
+/**
+ * Load an FBX model file
+ * @param fileName Path to the FBX file
+ * @param options Model options to apply
+ * @returns The loaded model
+ */
+export const loadFBX = async (fileName: string, options: ModelOptions = {}): Promise<Model> => {
+  const source = await assetsLoadFile<Model>(`${import.meta.env.BASE_URL}${fileName}`)
+  return applyLoadedModelOptions(instantiateModelSource(source), options)
 }
 
 /**
@@ -552,42 +575,13 @@ export const loadFBX = (fileName: string, options: ModelOptions = {}): Promise<M
  * @param options Model options to apply
  * @returns The loaded model and raw GLTF data
  */
-export const loadGLTF = (
+export const loadGLTF = async (
   fileName: string,
   options: ModelOptions = {}
 ): Promise<{ model: Model; gltf: GLTF }> => {
-  const {
-    position = [0, 0, 0],
-    rotation = [0, 0, 0],
-    scale = [1, 1, 1],
-    castShadow = false,
-    receiveShadow = false
-  } = options
-
-  return new Promise((resolve, reject) => {
-    gltfLoader.load(
-      `${import.meta.env.BASE_URL}${fileName}`,
-      (gltf) => {
-        const model = gltf.scene
-        model.castShadow = castShadow
-        model.receiveShadow = receiveShadow
-        model.position.set(...position)
-        model.scale.set(...scale)
-        model.rotation.set(...rotation)
-
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            applyMaterial(child as THREE.Mesh, options)
-            applyTextureToMesh(child as THREE.Mesh, options.texture)
-          }
-        })
-
-        resolve({ model, gltf })
-      },
-      undefined,
-      reject
-    )
-  })
+  const gltf = await assetsLoadFile<GLTF>(`${import.meta.env.BASE_URL}${fileName}`)
+  const model = applyLoadedModelOptions(instantiateModelSource(gltf.scene), options)
+  return { model, gltf }
 }
 
 const attachBallPhysics = (

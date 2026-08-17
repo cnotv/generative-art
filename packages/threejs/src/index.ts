@@ -1,6 +1,7 @@
 // Re-export all modules
 export * from './dispose'
 export * from './loaders'
+export * from './assets'
 export * from './types'
 export * from './getters'
 export * from './defaults'

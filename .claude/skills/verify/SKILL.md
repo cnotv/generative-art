@@ -59,6 +59,10 @@ agent tools render images inline, so it can be inspected like any other file.
   `Config`, `Debug`, `Timeline`, `Close all panels`.
 - To reach the camera panel: click the `Elements` toggle, then the row with exact text `Camera`.
 - Views with async FBX or GLTF loads need roughly 9 seconds before the scene is ready.
+- **Restart the dev server after any git operation that rewrites files** — `stash`, `stash pop`,
+  `checkout`, `rebase`. Vite keeps serving the transform it already has, so the browser runs code
+  that is not on disk and the screenshot disproves a change that is actually correct. Comparing
+  against a baseline by stashing is exactly when this bites.
 - The console shows recurring `HTTP 400 https://gateway.umami.is/api/send`. That is external
   analytics, not an app error.
 
