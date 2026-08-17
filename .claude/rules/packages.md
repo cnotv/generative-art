@@ -33,6 +33,16 @@ backward-compatibility layers, no legacy signatures — fix the consumers instea
 change alters a package's public API, update `documentation/docs/packages/` in the same
 change; a PR that moves an API without its doc is not ready.
 
+## The package build type-checks harder than the app
+
+`pnpm type-check` runs `vue-tsc` with the app's config, which is not the config a package is
+built under. Each package has its own stricter `tsconfig.json`, and the build runs as a
+`prepare` script — so a type error there surfaces during `pnpm install` in CI and fails every
+job at once, long after lint and tests passed locally.
+
+Run `pnpm -r run build` before pushing a change to `packages/`. Assigning `undefined` to a
+non-optional field is the usual way to trip it.
+
 ## Registration
 
 A new package must be added to the `packages` array in `vite.config.ts`. Without it Vite
