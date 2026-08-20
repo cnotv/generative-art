@@ -19,7 +19,7 @@ import { createNameLabel, updateNameLabelPosition, disposeNameLabel } from './na
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { reportInputSource } from '@/composables/useInputDevice'
 import { isMenuModalActive } from '@/composables/useMenuNavigation'
-import { createOcclusionFader } from './occlusionFade'
+import { createOcclusionFader } from '@/utils/occlusionFade'
 import {
   buildTrack,
   computeSpawnPositions,
@@ -63,7 +63,8 @@ import {
   KEYBOARD_MAPPING,
   LIGHT_AMBIENT_INTENSITY,
   LIGHT_DIRECTIONAL_INTENSITY,
-  LIGHT_DIRECTIONAL_POSITION
+  LIGHT_DIRECTIONAL_POSITION,
+  OCCLUSION_OPACITY
 } from '../config'
 import {
   MARBLE_OPTIONS,
@@ -612,7 +613,7 @@ const buildRaceScene = ({
     deps.marbleTexture.value,
     deps.marblePhysics.value
   )
-  state.occlusionFader = createOcclusionFader()
+  state.occlusionFader = createOcclusionFader(OCCLUSION_OPACITY)
   if (deps.localPlayerName?.value) {
     state.localLabel = createNameLabel(
       scene,
