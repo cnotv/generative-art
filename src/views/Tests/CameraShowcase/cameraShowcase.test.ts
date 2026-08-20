@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { trackPose, isFollowCase, isPlacementCase, toCameraCase } from './cameraShowcase'
+import {
+  trackPose,
+  isFollowCase,
+  isPlacementCase,
+  toCameraCase,
+  stepCameraCase
+} from './cameraShowcase'
 import { TRACK_RADIUS, TRACK_SECONDS, TARGET_HEIGHT, CAMERA_CASES } from './config'
 
 describe('trackPose', () => {
@@ -91,5 +97,31 @@ describe('toCameraCase', () => {
     { scenario: 'a number', value: 3 }
   ])('falls back to third person for $scenario', ({ value }) => {
     expect(toCameraCase(value)).toBe('third')
+  })
+})
+
+describe('stepCameraCase', () => {
+  it('moves forward one place', () => {
+    expect(stepCameraCase('third', 1)).toBe('first')
+  })
+
+  it('moves back one place', () => {
+    expect(stepCameraCase('first', -1)).toBe('third')
+  })
+
+  it('wraps past the end rather than falling off it', () => {
+    const last = CAMERA_CASES[CAMERA_CASES.length - 1]
+
+    expect(stepCameraCase(last, 1)).toBe(CAMERA_CASES[0])
+  })
+
+  it('wraps before the start', () => {
+    expect(stepCameraCase(CAMERA_CASES[0], -1)).toBe(CAMERA_CASES[CAMERA_CASES.length - 1])
+  })
+
+  it('returns to where it started after a full cycle', () => {
+    const cycled = CAMERA_CASES.reduce((value) => stepCameraCase(value, 1), CAMERA_CASES[0])
+
+    expect(cycled).toBe(CAMERA_CASES[0])
   })
 })

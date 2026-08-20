@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRaw, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import {
@@ -16,12 +16,17 @@ import {
   type CameraPath
 } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
-import { toRaw } from 'vue'
+import { createControls } from '@webgamekit/controls'
+import { LobbyUIOptionToggle, LobbyUIKeyPill } from '@/components/LobbyUI'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
 import {
   setupConfig,
   configControls,
+  CONTROLS,
+  CASE_BY_ACTION,
+  CASE_KEYS,
+  CAMERA_CASES,
   PILLAR,
   PILLARS,
   TARGET,
@@ -29,7 +34,8 @@ import {
   INTRO_SECONDS,
   CAMERA_CASE_LABELS
 } from './config'
-import { trackPose, isFollowCase, toCameraCase } from './cameraShowcase'
+import { trackPose, isFollowCase, toCameraCase, stepCameraCase } from './cameraShowcase'
+import type { CameraCase } from './config'
 
 const route = useRoute()
 const store = useSceneViewStore()
@@ -44,7 +50,31 @@ const reactiveConfig = createReactiveConfig({
   }
 })
 
-const activeLabel = ref(CAMERA_CASE_LABELS.third)
+/** The on-screen switcher's options, sharing one source of truth with the panel. */
+const caseOptions = CAMERA_CASES.map((value) => ({
+  value,
+  label: `${CASE_KEYS[value]}  ${CAMERA_CASE_LABELS[value]}`
+}))
+
+/** Bound to the overlay toggle; writing it drives the same config the panel writes. */
+const selectedCase = computed({
+  get: () => toCameraCase(reactiveConfig.value.camera.case),
+  set: (value: CameraCase) => {
+    reactiveConfig.value.camera.case = value
+  }
+})
+
+const { destroyControls } = createControls({
+  ...CONTROLS,
+  onAction: (action: string) => {
+    if (action === 'case-next')
+      return void (selectedCase.value = stepCameraCase(selectedCase.value, 1))
+    if (action === 'case-previous')
+      return void (selectedCase.value = stepCameraCase(selectedCase.value, -1))
+    const direct = CASE_BY_ACTION[action]
+    if (direct) selectedCase.value = direct
+  }
+})
 
 // Pre-allocated: these are read every frame and the animation loop must not allocate.
 const targetPosition = new THREE.Vector3()
@@ -100,7 +130,6 @@ watch(
   () => reactiveConfig.value.camera.case,
   (value) => {
     const selected = toCameraCase(value)
-    activeLabel.value = CAMERA_CASE_LABELS[selected]
 
     if (selected !== 'path') introPath?.cancel()
     if (selected === 'path') startIntroPath()
@@ -186,6 +215,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  destroyControls()
   introPath?.cancel()
   introPath = null
   target = null
@@ -196,17 +226,21 @@ onUnmounted(() => {
 
 <template>
   <canvas ref="canvas"></canvas>
-  <p class="camera-showcase__label">{{ activeLabel }}</p>
+  <div class="camera-showcase__hud">
+    <LobbyUIOptionToggle v-model="selectedCase" :options="caseOptions" size="sm" />
+    <LobbyUIKeyPill :keyboard="['1', '6', 'Q', 'E']" :gamepad="['l1', 'r1']" />
+  </div>
 </template>
 
 <style scoped lang="scss">
-.camera-showcase__label {
+.camera-showcase__hud {
   position: fixed;
-  bottom: var(--spacing-md);
-  left: var(--spacing-md);
-  margin: 0;
-  color: var(--color-text-inverse);
-  font-size: var(--font-size-sm);
-  text-shadow: var(--shadow-text-game);
+  bottom: var(--spacing-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 </style>

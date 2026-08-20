@@ -48,3 +48,15 @@ export const isPlacementCase = (value: CameraCase): boolean =>
  */
 export const toCameraCase = (value: unknown): CameraCase =>
   CAMERA_CASES.includes(value as CameraCase) ? (value as CameraCase) : 'third'
+
+/**
+ * Step through the case list, wrapping at both ends, for the cycle keys and shoulder buttons.
+ * @param current The case in effect
+ * @param offset How many places to move, negative to go back
+ * @returns The case that many places along
+ */
+export const stepCameraCase = (current: CameraCase, offset: number): CameraCase => {
+  const index = CAMERA_CASES.indexOf(current)
+  const next = (index + offset + CAMERA_CASES.length) % CAMERA_CASES.length
+  return CAMERA_CASES[next]
+}

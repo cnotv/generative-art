@@ -75,6 +75,50 @@ export const setupConfig: SetupConfig = {
   orbit: { disabled: true }
 }
 
+/**
+ * Switching cameras is the whole point of this view, so it is bound to input as well as the
+ * panel: number keys pick a case directly, shoulder buttons cycle through them.
+ */
+export const CONTROLS = {
+  mapping: {
+    keyboard: {
+      '1': 'case-third',
+      '2': 'case-first',
+      '3': 'case-free',
+      '4': 'case-path',
+      '5': 'case-preset',
+      '6': 'case-side',
+      q: 'case-previous',
+      e: 'case-next'
+    },
+    gamepad: {
+      l1: 'case-previous',
+      r1: 'case-next',
+      cross: 'case-next'
+    }
+  }
+}
+
+/** Which case each direct-select action selects. */
+export const CASE_BY_ACTION: Record<string, CameraCase> = {
+  'case-third': 'third',
+  'case-first': 'first',
+  'case-free': 'free',
+  'case-path': 'path',
+  'case-preset': 'preset',
+  'case-side': 'side'
+}
+
+/** The keys shown in the on-screen hint, in the order the cases are listed. */
+export const CASE_KEYS: Record<CameraCase, string> = {
+  third: '1',
+  first: '2',
+  free: '3',
+  path: '4',
+  preset: '5',
+  side: '6'
+}
+
 export const configControls = {
   camera: {
     case: {
