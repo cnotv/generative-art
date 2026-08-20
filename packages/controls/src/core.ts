@@ -16,6 +16,8 @@ import { createTouchController } from './touch'
 import type { TouchController } from './touch'
 import { createMouseController } from './mouse'
 import type { MouseController } from './mouse'
+import { createMotionController } from './motion'
+import type { MotionController } from './motion'
 
 /**
  * Detect if the device is mobile
@@ -38,6 +40,22 @@ interface BoundControllers {
   gamepad: GamepadController
   touch: TouchController
   mouse: MouseController
+  motion: MotionController
+}
+
+/**
+ * Motion binds only once permission is in hand, which needs a tap, so nothing is bound here
+ * for a device that prompts. Where no prompt exists the listeners can start immediately.
+ */
+function bindMotion(
+  controller: MotionController,
+  options: ControlsOptions,
+  boundList: Array<() => void>
+) {
+  if (options.motion === false) return
+  if (!controller.isSupported()) return
+  if (!controller.needsPermission()) controller.bind()
+  boundList.push(() => controller.unbind())
 }
 
 function bindKeyboard(
@@ -92,6 +110,7 @@ function bindAllControllers(
   bindGamepad(controllers.gamepad, options, boundList)
   bindTouch(controllers.touch, options, boundList)
   bindMouse(controllers.mouse, options, boundList)
+  bindMotion(controllers.motion, options, boundList)
 }
 
 /**
@@ -161,7 +180,11 @@ export function createControls(options: ControlsOptions): ControlsExtras {
       options.axisThreshold || 0.5
     ),
     touch: createTouchController(mappingReference, handlers),
-    mouse: createMouseController(mappingReference, handlers)
+    mouse: createMouseController(mappingReference, handlers),
+    motion: createMotionController(mappingReference, handlers, {
+      threshold: options.motionThreshold,
+      maxDegrees: options.motionMaxDegrees
+    })
   }
 
   const boundList: Array<() => void> = []
@@ -210,6 +233,16 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     setMapping,
     currentActions,
     logs,
-    buttonMap
+    buttonMap,
+    motion: {
+      isSupported: controllers.motion.isSupported,
+      needsPermission: controllers.motion.needsPermission,
+      requestMotionPermission: controllers.motion.requestPermission,
+      recalibrate: controllers.motion.recalibrate,
+      getTilt: controllers.motion.getTilt,
+      getReading: controllers.motion.getReading,
+      isReceiving: controllers.motion.isReceiving,
+      getPromptCount: controllers.motion.getPromptCount
+    }
   }
 }
