@@ -128,6 +128,7 @@ touched. Read one directly if you are working in its area without opening a matc
 | `packages.md`            | anything in `packages/`                                                      |
 | `tests.md`               | any `*.test.ts`                                                              |
 | `docs.md`                | anything in `documentation/`                                                 |
+| `colour.md`              | choosing any colour — a material, a background, a token, a diagram           |
 
 ## Procedures
 
