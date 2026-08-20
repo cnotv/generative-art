@@ -58,6 +58,38 @@ descriptive `name` and `title` describing its role — `"ground"`, `"player-ball
 `"coin-block"` — never a Three.js type like `"Mesh"` or `"Group"`. Every element in the panel
 must have a non-empty property schema; elements with nothing configurable do not belong there.
 
+## Walls and tiled geometry
+
+**A wall must meet its neighbours exactly — no gap, no protrusion.** Geometry laid out on a
+grid is the usual source of both. A wall built exactly one cell long stops on the corner line
+rather than crossing it, so the corner square is covered only on the sides its two walls happen
+to reach and a quadrant is left open. That reads as a notch from above, and the ball catches on
+the step or squeezes through it.
+
+The rule that fixes it is one sentence: **every run of wall ends flush with the outer face of
+the wall it meets** — half a thickness past the joint line, no more and no less. Perpendicular
+walls then overlap inside the corner, which is invisible, because two solid boxes of the same
+material sharing a volume have no seam and nothing coplanar is drawn twice.
+
+Half a thickness, not a whole one. Overshooting is not harmless: a run that extends a full
+thickness past the joint pokes out beyond the face it should have stopped at, and the two walls
+of a corner each leave a step sticking out past the other. That is the same defect as the gap,
+mirrored, and it is what a board's outer ring gets wrong most often — a perimeter is one
+thickness longer than the board it encloses, never two.
+
+| Run                           | Length                |
+| ----------------------------- | --------------------- |
+| A wall spanning one cell      | cell + one thickness  |
+| A perimeter enclosing a board | board + one thickness |
+
+Two more traps follow from the same place. A maze or room generator usually emits its own outer
+boundary, so adding a separate perimeter on top puts two identical walls in one plane —
+coincident faces that z-fight and a doubled edge that reads as misalignment; drop one of them.
+And the same sizing governs anything tiled — floor slabs, fences, track pieces, room modules.
+
+Check a corner at high zoom rather than trusting the arithmetic. A half-thickness step is
+invisible at the zoom a whole board is framed at, and obvious the moment someone looks closely.
+
 ## Performance
 
 The animation loop is the hot path:

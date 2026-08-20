@@ -574,6 +574,37 @@ export const getMazeCellCenters = (
   )
 }
 
+/**
+ * Every open cell centre of a non-square board, for placing items that must sit inside a
+ * corridor rather than on a wall line.
+ * @param boardWidth Board extent along X
+ * @param boardDepth Board extent along Z
+ * @param cellSize Width of one maze cell
+ * @param height Y position for the returned coordinates
+ * @returns One coordinate per cell, row-major
+ */
+export const getRectangularCellCenters = (
+  boardWidth: number,
+  boardDepth: number,
+  cellSize: number,
+  height = 0
+): CoordinateTuple[] => {
+  const cols = Math.floor(boardWidth / cellSize)
+  const rows = Math.floor(boardDepth / cellSize)
+  const halfWidth = boardWidth / 2
+  const halfDepth = boardDepth / 2
+
+  return Array.from({ length: rows }).flatMap((_, row) =>
+    Array.from({ length: cols }).map(
+      (_unused, col): CoordinateTuple => [
+        -halfWidth + col * cellSize + cellSize / 2,
+        height,
+        -halfDepth + row * cellSize + cellSize / 2
+      ]
+    )
+  )
+}
+
 export interface MazeWallSegment {
   position: CoordinateTuple
   /** true = wall runs along X axis (N/S wall); false = runs along Z axis (E/W wall) */
@@ -586,14 +617,16 @@ export interface MazeWallSegment {
  */
 const mazeGridToSegments = (
   grid: MazeGrid,
-  islandSize: number,
+  boardWidth: number,
+  boardDepth: number,
   cellSize: number,
   wallY = 0
 ): MazeWallSegment[] => {
-  const half = islandSize / 2
+  const halfWidth = boardWidth / 2
+  const halfDepth = boardDepth / 2
   const cellToWorld = (row: number, col: number): [number, number] => [
-    -half + col * cellSize + cellSize / 2,
-    -half + row * cellSize + cellSize / 2
+    -halfWidth + col * cellSize + cellSize / 2,
+    -halfDepth + row * cellSize + cellSize / 2
   ]
 
   type SegmentWithKey = MazeWallSegment & { key: string }
@@ -641,10 +674,10 @@ const mazeGridToSegments = (
   const unique = new Map<string, MazeWallSegment>()
   raw.forEach(({ key, position, horizontal }) => unique.set(key, { position, horizontal }))
 
-  const entranceX = -half + cellSize / 2
-  const entranceZ = -half
-  const exitX = half - cellSize / 2
-  const exitZ = half
+  const entranceX = -halfWidth + cellSize / 2
+  const entranceZ = -halfDepth
+  const exitX = halfWidth - cellSize / 2
+  const exitZ = halfDepth
 
   return [...unique.values()].filter(({ position: pos }) => {
     const isEntrance =
@@ -655,18 +688,38 @@ const mazeGridToSegments = (
   })
 }
 
+/**
+ * Generate a maze whose grid need not be square, for boards shaped by a screen rather than by
+ * a fixed island. Column and row counts are taken from the board's own extents, so a portrait
+ * phone gets a tall maze and a landscape one a wide maze at the same cell size.
+ * @param boardWidth Board extent along X
+ * @param boardDepth Board extent along Z
+ * @param cellSize Width of one maze cell
+ * @param algorithm Which generator to run
+ * @param wallY Y position given to every wall segment
+ * @returns The grid and its deduplicated wall segments
+ */
+export const generateRectangularMazeAndSegments = (
+  boardWidth: number,
+  boardDepth: number,
+  cellSize: number,
+  algorithm: MazeAlgorithm = 'recursive-backtracker',
+  wallY = 0
+): { grid: MazeGrid; segments: MazeWallSegment[] } => {
+  const cols = Math.floor(boardWidth / cellSize)
+  const rows = Math.floor(boardDepth / cellSize)
+  if (rows <= 0 || cols <= 0) return { grid: [], segments: [] }
+  const grid = algorithmMap[algorithm](rows, cols)
+  return { grid, segments: mazeGridToSegments(grid, boardWidth, boardDepth, cellSize, wallY) }
+}
+
 export const generateMazeAndSegments = (
   islandSize: number,
   cellSize: number,
   algorithm: MazeAlgorithm = 'recursive-backtracker',
   wallY = 0
-): { grid: MazeGrid; segments: MazeWallSegment[] } => {
-  const cols = Math.floor(islandSize / cellSize)
-  const rows = cols
-  if (rows <= 0 || cols <= 0) return { grid: [], segments: [] }
-  const grid = algorithmMap[algorithm](rows, cols)
-  return { grid, segments: mazeGridToSegments(grid, islandSize, cellSize, wallY) }
-}
+): { grid: MazeGrid; segments: MazeWallSegment[] } =>
+  generateRectangularMazeAndSegments(islandSize, islandSize, cellSize, algorithm, wallY)
 
 export const generateMazeWallSegments = (
   islandSize: number,

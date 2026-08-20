@@ -79,6 +79,9 @@
   "Maze Game": {
     "description": "3D maze navigation game with procedural maze generation and pathfinding enemies."
   },
+  "Tilt Maze": {
+    "description": "Roll a ball through a maze of pits by tilting your phone — each escape levels up into a finer, deadlier maze."
+  },
   "Pictionary": {
     "description": "Multiplayer drawing and guessing game with real-time collaboration."
   },

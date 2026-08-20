@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as THREE from 'three'
 import type { ComplexModel } from '@webgamekit/animation'
-import { createOcclusionFader } from './occlusionFade'
-import { OCCLUSION_OPACITY } from '../config'
+import { createOcclusionFader, DEFAULT_OCCLUSION_OPACITY } from './occlusionFade'
+
+const OCCLUSION_OPACITY = DEFAULT_OCCLUSION_OPACITY
 
 const asModel = (mesh: THREE.Mesh): ComplexModel => mesh as unknown as ComplexModel
 
@@ -34,7 +35,7 @@ describe('createOcclusionFader', () => {
   it('fades a piece that sits between the camera and the marble', () => {
     const wall = makeWall(0)
     const material = wall.material as THREE.MeshStandardMaterial
-    fader.update(camera, asModel(marble), [asModel(wall)])
+    fader.update(camera, asModel(marble), [wall])
     expect(material.opacity).toBe(OCCLUSION_OPACITY)
     expect(material.transparent).toBe(true)
     expect(material.depthWrite).toBe(false)
@@ -45,7 +46,7 @@ describe('createOcclusionFader', () => {
     wall.position.set(50, 0, 0)
     wall.updateMatrixWorld(true)
     const material = wall.material as THREE.MeshStandardMaterial
-    fader.update(camera, asModel(marble), [asModel(wall)])
+    fader.update(camera, asModel(marble), [wall])
     expect(material.opacity).toBe(1)
     expect(material.transparent).toBe(false)
     expect(material.depthWrite).toBe(true)
@@ -54,12 +55,12 @@ describe('createOcclusionFader', () => {
   it('restores a piece once it no longer occludes the marble', () => {
     const wall = makeWall(0)
     const material = wall.material as THREE.MeshStandardMaterial
-    fader.update(camera, asModel(marble), [asModel(wall)])
+    fader.update(camera, asModel(marble), [wall])
     expect(material.opacity).toBe(OCCLUSION_OPACITY)
 
     wall.position.set(50, 0, 0)
     wall.updateMatrixWorld(true)
-    fader.update(camera, asModel(marble), [asModel(wall)])
+    fader.update(camera, asModel(marble), [wall])
     expect(material.opacity).toBe(1)
     expect(material.transparent).toBe(false)
     expect(material.depthWrite).toBe(true)
@@ -68,7 +69,7 @@ describe('createOcclusionFader', () => {
   it('restores every faded piece on dispose', () => {
     const wall = makeWall(0)
     const material = wall.material as THREE.MeshStandardMaterial
-    fader.update(camera, asModel(marble), [asModel(wall)])
+    fader.update(camera, asModel(marble), [wall])
     expect(material.opacity).toBe(OCCLUSION_OPACITY)
     fader.dispose()
     expect(material.opacity).toBe(1)
@@ -78,7 +79,7 @@ describe('createOcclusionFader', () => {
   it('does not touch pieces beyond the marble', () => {
     const behindMarble = makeWall(-30)
     const material = behindMarble.material as THREE.MeshStandardMaterial
-    fader.update(camera, asModel(marble), [asModel(behindMarble)])
+    fader.update(camera, asModel(marble), [behindMarble])
     expect(material.opacity).toBe(1)
   })
 })

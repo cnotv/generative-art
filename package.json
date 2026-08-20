@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "VITE_HTTPS=1 vite --host --port 4000",
     "host": "vite preview --host --port 3000",
     "build": "vue-tsc --noEmit && vite build && node scripts/generate-route-html.mjs",
     "preview": "vite preview",
@@ -86,6 +87,7 @@
     "@types/three": "^0.179.0",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vitest/browser": "^4.0.18",
     "@vitest/browser-playwright": "^4.0.18",

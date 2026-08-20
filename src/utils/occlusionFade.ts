@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import type { ComplexModel } from '@webgamekit/animation'
-import { OCCLUSION_OPACITY } from '../config'
+
+/** Opacity an occluding mesh drops to, faint enough to read the object behind it. */
+export const DEFAULT_OCCLUSION_OPACITY = 0.18
 
 type SavedMaterialState = {
   transparent: boolean
@@ -14,16 +16,17 @@ const materialOf = (mesh: THREE.Mesh): THREE.Material | null => {
 }
 
 /**
- * Fades any track piece that sits between the race camera and the marble, so
- * the marble is never fully hidden. Each frame it casts a ray from the camera
- * to the marble, drops occluding piece materials to a low opacity (and stops
- * them writing depth so the marble shows through), and restores materials once
- * they no longer block the view. Reuses its raycaster and vectors to avoid
+ * Fades any mesh that sits between the camera and the object being followed, so
+ * that object is never fully hidden. Each frame it casts a ray from the camera
+ * to the target, drops occluding materials to a low opacity (and stops them
+ * writing depth so the target shows through), and restores materials once they
+ * no longer block the view. Reuses its raycaster and vectors to avoid
  * per-frame allocation.
  *
+ * @param occlusionOpacity Opacity an occluding mesh fades to
  * @returns Object exposing `update` (call per frame) and `dispose` (restore all)
  */
-export const createOcclusionFader = () => {
+export const createOcclusionFader = (occlusionOpacity: number = DEFAULT_OCCLUSION_OPACITY) => {
   const raycaster = new THREE.Raycaster()
   const cameraPosition = new THREE.Vector3()
   const marblePosition = new THREE.Vector3()
@@ -39,7 +42,7 @@ export const createOcclusionFader = () => {
       depthWrite: material.depthWrite
     })
     material.transparent = true
-    standard.opacity = OCCLUSION_OPACITY
+    standard.opacity = occlusionOpacity
     material.depthWrite = false
     material.needsUpdate = true
   }
@@ -58,7 +61,7 @@ export const createOcclusionFader = () => {
   const collectOccluders = (
     camera: THREE.Camera,
     marble: ComplexModel,
-    models: THREE.Mesh[]
+    models: THREE.Object3D[]
   ): Set<THREE.Material> => {
     camera.getWorldPosition(cameraPosition)
     ;(marble as unknown as THREE.Object3D).getWorldPosition(marblePosition)
@@ -69,7 +72,7 @@ export const createOcclusionFader = () => {
     raycaster.set(cameraPosition, direction)
     raycaster.near = 0
     raycaster.far = distance
-    const hits = raycaster.intersectObjects(models as unknown as THREE.Object3D[], false)
+    const hits = raycaster.intersectObjects(models, false)
     const occluders = new Set<THREE.Material>()
     hits.forEach((hit) => {
       const material = materialOf(hit.object as THREE.Mesh)
@@ -81,7 +84,7 @@ export const createOcclusionFader = () => {
   const update = (
     camera: THREE.Camera | null,
     marble: ComplexModel | null,
-    models: THREE.Mesh[]
+    models: THREE.Object3D[]
   ): void => {
     if (!camera || !marble) {
       saved.forEach((_, material) => restore(material))
