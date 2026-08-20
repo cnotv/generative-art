@@ -2,10 +2,12 @@ import type { CoordinateTuple } from '@webgamekit/animation'
 import type { CameraPathPoint, ModelOptions, SetupConfig } from '@webgamekit/threejs'
 
 /**
- * Every camera behaviour the package offers, in one list. The first three are follow modes,
- * `path` is the cinematic traversal, and the last two are one-shot placements.
+ * The camera behaviours that have no UI of their own. Presets are deliberately absent: the
+ * Elements panel already owns them through `registerCameraHandlers`, and it does the part this
+ * view could not — switching between perspective and orthographic cameras, scaling the
+ * orthographic frustum to the current framing, and tweening between states.
  */
-export const CAMERA_CASES = ['third', 'first', 'free', 'path', 'preset', 'side'] as const
+export const CAMERA_CASES = ['third', 'first', 'free', 'path', 'side'] as const
 
 export type CameraCase = (typeof CAMERA_CASES)[number]
 
@@ -14,7 +16,6 @@ export const CAMERA_CASE_LABELS: Record<CameraCase, string> = {
   first: 'First person',
   free: 'Free chase',
   path: 'Cinematic path',
-  preset: 'Preset',
   side: 'Side'
 }
 
@@ -86,8 +87,7 @@ export const CONTROLS = {
       '2': 'case-first',
       '3': 'case-free',
       '4': 'case-path',
-      '5': 'case-preset',
-      '6': 'case-side',
+      '5': 'case-side',
       q: 'case-previous',
       e: 'case-next'
     },
@@ -105,7 +105,6 @@ export const CASE_BY_ACTION: Record<string, CameraCase> = {
   'case-first': 'first',
   'case-free': 'free',
   'case-path': 'path',
-  'case-preset': 'preset',
   'case-side': 'side'
 }
 
@@ -115,8 +114,7 @@ export const CASE_KEYS: Record<CameraCase, string> = {
   first: '2',
   free: '3',
   path: '4',
-  preset: '5',
-  side: '6'
+  side: '5'
 }
 
 export const configControls = {
@@ -125,18 +123,6 @@ export const configControls = {
       component: 'ButtonSelector',
       label: 'Camera case',
       options: CAMERA_CASES.map((value) => ({ value, label: CAMERA_CASE_LABELS[value] }))
-    },
-    preset: {
-      label: 'Preset (preset case)',
-      options: [
-        'perspective',
-        'fisheye',
-        'cinematic',
-        'orbit',
-        'orthographic',
-        'orthographic-following',
-        'top-down'
-      ]
     },
     side: {
       label: 'Side (side case)',

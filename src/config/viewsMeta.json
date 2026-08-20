@@ -144,6 +144,6 @@
     "description": "Customise the stickman avatar: resize each limb and paint its texture maps live on the model."
   },
   "Camera Showcase": {
-    "description": "Every camera behaviour in the toolkit side by side: third and first person, free chase, a cinematic path, presets and side placements."
+    "description": "Camera behaviours with no UI of their own: third and first person, free chase, a cinematic path and side placements. Presets live in the Elements panel."
   }
 }

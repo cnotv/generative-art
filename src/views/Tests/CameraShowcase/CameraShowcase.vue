@@ -4,14 +4,12 @@ import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import {
   getCube,
-  setCameraPreset,
   setCameraSide,
   tiltCamera,
   followCameraPlacement,
   cameraPathCreate,
   cameraPathIsActive,
   DEFAULT_FOLLOW_CAMERA,
-  CameraPreset,
   CameraSide,
   type CameraPath
 } from '@webgamekit/threejs'
@@ -44,7 +42,6 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const reactiveConfig = createReactiveConfig({
   camera: {
     case: 'third',
-    preset: CameraPreset.Perspective,
     side: CameraSide.CameraLeft,
     tilt: 0
   }
@@ -111,15 +108,6 @@ const applyPlacement = (): void => {
   if (!camera) return
   const selected = toCameraCase(reactiveConfig.value.camera.case)
 
-  if (selected === 'preset' && camera instanceof THREE.PerspectiveCamera) {
-    setCameraPreset(
-      camera,
-      reactiveConfig.value.camera.preset as CameraPreset,
-      window.innerWidth / window.innerHeight
-    )
-    lookTarget.copy(ORIGIN)
-  }
-
   if (selected === 'side' && camera instanceof THREE.PerspectiveCamera) {
     setCameraSide(camera, camera.position, reactiveConfig.value.camera.side as CameraSide)
     lookTarget.copy(ORIGIN)
@@ -138,7 +126,7 @@ watch(
 )
 
 watch(
-  () => [reactiveConfig.value.camera.preset, reactiveConfig.value.camera.side],
+  () => reactiveConfig.value.camera.side,
   () => applyPlacement()
 )
 
@@ -228,7 +216,7 @@ onUnmounted(() => {
   <canvas ref="canvas"></canvas>
   <div class="camera-showcase__hud">
     <LobbyUIOptionToggle v-model="selectedCase" :options="caseOptions" size="sm" />
-    <LobbyUIKeyPill :keyboard="['1', '6', 'Q', 'E']" :gamepad="['l1', 'r1']" />
+    <LobbyUIKeyPill :keyboard="['1', '5', 'Q', 'E']" :gamepad="['l1', 'r1']" />
   </div>
 </template>
 

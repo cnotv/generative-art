@@ -67,7 +67,6 @@ describe('case classification', () => {
     { value: 'first', follow: true, placement: false },
     { value: 'free', follow: true, placement: false },
     { value: 'path', follow: false, placement: false },
-    { value: 'preset', follow: false, placement: true },
     { value: 'side', follow: false, placement: true }
   ] as const)(
     'reads $value as follow=$follow placement=$placement',

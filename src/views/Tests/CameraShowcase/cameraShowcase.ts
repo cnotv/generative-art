@@ -37,8 +37,7 @@ export const isFollowCase = (value: CameraCase): value is CameraCase & FollowCam
  * @param value The selected case
  * @returns True for the one-shot placements
  */
-export const isPlacementCase = (value: CameraCase): boolean =>
-  value === 'preset' || value === 'side'
+export const isPlacementCase = (value: CameraCase): boolean => value === 'side'
 
 /**
  * Narrow an arbitrary string to a known case, so a stale panel value cannot drive the camera
