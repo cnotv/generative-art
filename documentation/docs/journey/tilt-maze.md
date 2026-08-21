@@ -114,6 +114,14 @@ The general lesson is that a correction the player cannot perceive is not free. 
 accuracy in the input and spends it on the player's model of what the input does, and the
 second cost only shows up in play.
 
+The reversal was a breaking change to a published package, and worth recording as one. What
+left `MotionControls` is `recalibrate()`, and with it the neutral pose it retook and the
+`screen.orientation` listener that retook it whenever the screen turned. Nothing replaced them,
+because there is no longer a reference to retake: readings are still rotated into the screen's
+frame as they arrive, so a rotation needs no reset. A consumer that called `recalibrate()` has
+no migration to perform beyond deleting the call and whatever control invoked it. The current
+surface is in [the controls package reference](../packages/controls.md).
+
 ## The specification is right and the hardware may still disagree
 
 The convention is unambiguous: a positive left-to-right reading means the right edge is
