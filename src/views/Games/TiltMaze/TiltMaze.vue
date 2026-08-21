@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import type { MotionReading } from '@webgamekit/controls'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
-import { LobbyUIButton, LobbyUIIconButton, LobbyUIKeyPill } from '@/components/LobbyUI'
-import { Move } from 'lucide-vue-next'
+import { LobbyUIButton, LobbyUIKeyPill } from '@/components/LobbyUI'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import '@/assets/styles/lobby-ui.scss'
 import { reportInputSource } from '@/composables/useInputDevice'
@@ -18,24 +17,18 @@ import { createFallCheckAction, createPhysicsSyncAction } from '@/utils/gameTime
 import { createOcclusionFader } from '@/utils/occlusionFade'
 import { resetBall } from './board'
 import { getCameraHeight } from './layout'
-import { buildLevel } from './levels'
+import { buildLevel, getNextLevel } from './levels'
 import { createTiltDriver } from './tiltDriver'
 import { commitRecord, loadBestLevel } from './record'
+import { lockScreenOrientation, unlockScreenOrientation } from './orientationLock'
 import { createHoleBurst } from './holeBurst'
 import type { VictoryBurst } from './holeBurst'
-import {
-  applyTiltInversion,
-  findNearestHole,
-  getKeyboardTilt,
-  getTiltGravity,
-  smoothTilt
-} from './tilt'
+import { applyTiltInversion, findNearestHole, getKeyboardTilt } from './tilt'
 import { useFullscreen } from './useFullscreen'
 import TiltMazeSensorDialog from './TiltMazeSensorDialog.vue'
 import { getSensorGuidance, getSensorPlatform } from './sensorGuidance'
 import type { ScreenTilt, TiltMazeOutcome } from './types'
 import {
-  CAMERA_AXIS_NUDGE,
   CAMERA_LEAN_PER_DEGREE,
   FALL_THRESHOLD_Y,
   GRAVITY_STRENGTH,
@@ -43,13 +36,17 @@ import {
   TRAP_COLOR,
   CONTROL_MAPPING,
   KEYBOARD_TILT_DEGREES,
+  LEVEL_ARROW_COUNT,
+  LEVEL_ARROW_DURATION_SECONDS,
+  LEVEL_ARROW_SIZE,
+  LEVEL_ARROW_STAGGER_SECONDS,
+  LEVEL_ARROW_STROKE_WIDTH,
   MAX_TILT_DEGREES,
-  RESTART_TILT_DEGREES,
-  ROUND_END_GRACE_SECONDS,
   SILENT_SENSOR_TIMEOUT_MS,
   TILT_SMOOTHING,
   configControls,
-  setupConfig
+  setupConfig,
+  toCssColor
 } from './config'
 
 const FONT_KEY = 'tilt-maze-font'
@@ -86,8 +83,25 @@ const level = ref(1)
 const bestLevel = ref(loadBestLevel())
 const isNewRecord = ref(false)
 
-/** Assigned once the scene exists; the overlay buttons drive the next round through it. */
+/** Assigned once the scene exists; a decided round drives the next one through it. */
 let startNextRound: () => void = () => undefined
+
+/**
+ * The chevrons that sweep the way the level just moved. The sweep has to travel in that
+ * direction to read as one, so the chevron the stack ends on is the one that lights last.
+ */
+const levelArrows = computed(() =>
+  Array.from({ length: LEVEL_ARROW_COUNT }, (_unused, index) => ({
+    position: index,
+    style: {
+      animationDelay: `${(outcome.value === 'won' ? LEVEL_ARROW_COUNT - 1 - index : index) * LEVEL_ARROW_STAGGER_SECONDS}s`,
+      animationDuration: `${LEVEL_ARROW_DURATION_SECONDS}s`
+    }
+  }))
+)
+const levelArrowColor = computed(() =>
+  toCssColor(outcome.value === 'won' ? GOAL_COLOR : TRAP_COLOR)
+)
 
 const { isFullscreen, isFullscreenSupported, toggleFullscreen } = useFullscreen(stage)
 
@@ -177,9 +191,17 @@ const handleStart = async (): Promise<void> => {
   watchForSilentSensor()
   motionPermission.value = await permissionAttempt
   promptCount.value = motion.getPromptCount()
+
+  // Last, so the gesture is already spent on the thing that needed it.
+  await lockScreenOrientation()
 }
 
-const handleRetry = (): void => startNextRound()
+// Android only grants the orientation lock to a fullscreen document, so entering is the moment
+// it becomes available and the attempt at start may well have been refused.
+const handleFullscreen = async (): Promise<void> => {
+  await toggleFullscreen()
+  if (isFullscreen.value) await lockScreenOrientation()
+}
 
 /**
  * The lean the player is asking for, from whichever device is actually reporting. Reads the
@@ -209,7 +231,6 @@ onMounted(async () => {
       let built = buildLevel(scene, world, level.value)
       let cameraHeight = built.cameraHeight
       let victory: VictoryBurst | null = null
-      const roundEnd = { elapsed: 0 }
       // Walls stand tall enough that a leaning camera puts them in front of the ball; fading
       // whatever blocks the line of sight keeps the ball findable instead of guessed at.
       const occlusion = createOcclusionFader()
@@ -227,16 +248,11 @@ onMounted(async () => {
        * colliding with the next level's ball from somewhere invisible.
        */
       startNextRound = (): void => {
-        // A fall ends the run. Without that the record would only ever climb, and reaching a
-        // level would cost nothing.
-        if (outcome.value === 'trapped') level.value = 1
         victory?.dispose()
         victory = null
         built.board.dispose()
         built = buildLevel(scene, world, level.value)
         cameraHeight = built.cameraHeight
-        motion.recalibrate()
-        roundEnd.elapsed = 0
         isNewRecord.value = false
         outcome.value = 'playing'
       }
@@ -258,18 +274,25 @@ onMounted(async () => {
         if (outcome.value !== 'playing') return
         const { ball, holes } = built.board
         const hole = findNearestHole(ball.position.x, ball.position.z, holes)
-        if (!hole?.isGoal) {
-          outcome.value = 'trapped'
-          isNewRecord.value = commitRecord(level.value)
-          bestLevel.value = loadBestLevel()
-          victory?.dispose()
-          victory = hole ? createHoleBurst(scene, hole.position, TRAP_COLOR, 'implode') : null
-          return
-        }
-        outcome.value = 'won'
-        level.value += 1
+        const reachedGoal = Boolean(hole?.isGoal)
+
+        outcome.value = reachedGoal ? 'won' : 'trapped'
+        level.value = getNextLevel(level.value, outcome.value)
+        // Only a level cleared counts. The run no longer ends, so the record is the highest
+        // level ever unlocked rather than the level a run happened to die on — and a trap on
+        // level one, which moves nowhere, must not read as an achievement.
+        isNewRecord.value = reachedGoal && commitRecord(level.value)
+        bestLevel.value = loadBestLevel()
+
         victory?.dispose()
-        victory = createHoleBurst(scene, hole.position, GOAL_COLOR, 'bloom')
+        victory = hole
+          ? createHoleBurst(
+              scene,
+              hole.position,
+              reachedGoal ? GOAL_COLOR : TRAP_COLOR,
+              reachedGoal ? 'bloom' : 'implode'
+            )
+          : null
       }
 
       const timelineManager = createTimelineManager()
@@ -279,16 +302,12 @@ onMounted(async () => {
       )
 
       /**
-       * A finished round ends itself. Clearing a level runs straight into the next one once the
-       * victory rings have played, and after a fall any real lean starts again — so the game
-       * flows without the player having to find a button between rounds.
+       * A finished round ends itself, either way, so the game flows without the player having
+       * to find a button between rounds. The hole burst doubles as the pause: without waiting
+       * for it the next board would appear before the player saw which hole they went down.
        */
       const advanceFinishedRound = (): void => {
-        roundEnd.elapsed += getDelta()
-        if (outcome.value === 'won' && !victory) return startNextRound()
-        if (roundEnd.elapsed < ROUND_END_GRACE_SECONDS) return
-        const wanted = readTargetTilt()
-        if (Math.hypot(wanted.tiltX, wanted.tiltZ) >= RESTART_TILT_DEGREES) startNextRound()
+        if (!victory) startNextRound()
       }
 
       animate({
@@ -320,6 +339,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   removeGoogleFont(FONT_KEY)
+  unlockScreenOrientation()
   destroyControls()
   unregisterViewConfig(route.name as string)
   store.cleanup()
@@ -328,41 +348,34 @@ onUnmounted(() => {
 
 <template>
   <div ref="stage" class="tilt-maze">
-    <!-- Double-tapping the board recalibrates: the gesture lands on the board itself, so the
-         overlay buttons above it are never mistaken for it. -->
-    <canvas ref="canvas" class="tilt-maze__canvas" @dblclick="motion.recalibrate()"></canvas>
+    <canvas ref="canvas" class="tilt-maze__canvas"></canvas>
 
     <div v-if="!hasStarted" class="tilt-maze__overlay">
       <div class="tilt-maze__backdrop"></div>
       <div class="tilt-maze__panel lui-slide-in">
         <h1 class="tilt-maze__title">Tilt Maze</h1>
         <p class="tilt-maze__hint">
-          Reach the green one
+          Hold the phone flat and reach the green one
           <LobbyUIKeyPill :keyboard="['←', '↑', '→', '↓']" :gamepad="['Stick']" />
         </p>
         <LobbyUIButton variant="cta" size="sm" autofocus @click="handleStart">Start</LobbyUIButton>
       </div>
     </div>
 
+    <!-- The level change has no panel to announce it, so it is read off the direction the
+         chevrons travel while the hole burst plays. -->
     <div v-else-if="outcome !== 'playing'" class="tilt-maze__overlay">
-      <div class="tilt-maze__panel lui-slide-in">
-        <h2 class="tilt-maze__result" :class="{ 'tilt-maze__result--won': outcome === 'won' }">
-          {{ outcome === 'won' ? 'Escaped' : 'Trapped' }}
-        </h2>
+      <div class="tilt-maze__arrows" :style="{ color: levelArrowColor }">
+        <component
+          :is="outcome === 'won' ? ChevronUp : ChevronDown"
+          v-for="arrow in levelArrows"
+          :key="arrow.position"
+          class="tilt-maze__arrow"
+          :size="LEVEL_ARROW_SIZE"
+          :stroke-width="LEVEL_ARROW_STROKE_WIDTH"
+          :style="arrow.style"
+        />
         <p v-if="isNewRecord" class="tilt-maze__record">New record</p>
-        <p class="tilt-maze__note">
-          {{
-            outcome === 'won'
-              ? `Level ${level} — a tighter maze`
-              : `You reached level ${level}. Best: ${bestLevel}`
-          }}
-        </p>
-        <p class="tilt-maze__note">
-          {{ outcome === 'won' ? 'Starting…' : 'Tilt to start a new run' }}
-        </p>
-        <LobbyUIButton variant="cta" size="sm" autofocus @click="handleRetry">
-          {{ outcome === 'won' ? 'Next level' : 'New run' }}
-        </LobbyUIButton>
       </div>
     </div>
 
@@ -371,14 +384,6 @@ onUnmounted(() => {
     </p>
 
     <div v-if="hasStarted && outcome === 'playing'" class="tilt-maze__chrome">
-      <LobbyUIIconButton
-        v-if="isTilting"
-        size="sm"
-        aria-label="Recalibrate tilt — or double-tap the board"
-        @click="motion.recalibrate()"
-      >
-        <Move :size="18" />
-      </LobbyUIIconButton>
       <LobbyUIButton variant="ghost" size="sm" @click="showDiagnostics = !showDiagnostics">
         Sensor
       </LobbyUIButton>
@@ -386,7 +391,7 @@ onUnmounted(() => {
         v-if="isFullscreenSupported"
         variant="ghost"
         size="sm"
-        @click="toggleFullscreen"
+        @click="handleFullscreen"
       >
         {{ isFullscreen ? 'Exit fullscreen' : 'Fullscreen' }}
       </LobbyUIButton>
@@ -455,9 +460,6 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
-
-  /* Without this a double-tap is swallowed by the browser's zoom gesture and never becomes a
-     dblclick, which is the only way the recalibrate tap reaches the page on a phone. */
   touch-action: manipulation;
 }
 
@@ -512,17 +514,34 @@ onUnmounted(() => {
   margin: 0;
 }
 
-.tilt-maze__result {
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-medium);
-  color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
-  text-transform: uppercase;
-  margin: 0;
+/* The stack inherits its colour from the outcome, so the chevrons and the record line read as
+   the same event as the hole burst underneath them. The kit's hard offset shadow carries them
+   over the board, which is pastel and would otherwise swallow a pastel stroke. */
+.tilt-maze__arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(var(--lui-border-shadow));
 }
 
-.tilt-maze__result--won {
-  color: var(--lui-focus-color);
+/* Each chevron holds once it has arrived rather than fading back out, so the whole stack is
+   still on screen when the next board replaces it. */
+.tilt-maze__arrow {
+  animation-name: tilt-maze-arrow-sweep;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes tilt-maze-arrow-sweep {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .tilt-maze__record {
@@ -540,14 +559,6 @@ onUnmounted(() => {
   gap: var(--spacing-2);
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
-  color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
-  margin: 0;
-}
-
-.tilt-maze__note {
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-tiny);
   color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
   margin: 0;

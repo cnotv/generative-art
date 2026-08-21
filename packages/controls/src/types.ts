@@ -77,14 +77,14 @@ export type ControlsExtras = {
 }
 
 /**
- * Device-tilt controls. Sensor access needs a real tap, so `requestMotionPermission` is called
- * from a gesture handler rather than at setup.
+ * Device-tilt controls. Lean is measured from world horizontal, so a device lying flat reads
+ * level and there is nothing to calibrate. Sensor access needs a real tap, so
+ * `requestMotionPermission` is called from a gesture handler rather than at setup.
  */
 export interface MotionControls {
   isSupported: () => boolean
   needsPermission: () => boolean
   requestMotionPermission: () => Promise<'granted' | 'denied' | 'unsupported'>
-  recalibrate: () => void
   /** Continuous lean in degrees, for games that steer by angle rather than by direction. */
   getTilt: () => MotionTilt
   /** The latest raw reading, for diagnostics. */

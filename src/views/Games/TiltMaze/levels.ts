@@ -3,7 +3,7 @@ import type RAPIER from '@dimforge/rapier3d-compat'
 import type { MazeAlgorithm } from '@/views/Games/MazeGame/helpers/maze'
 import { createTiltMazeBoard } from './board'
 import { getBoardLayout, getCameraHeight } from './layout'
-import type { BoardLayout, LevelConfig, TiltMazeBoard } from './types'
+import type { BoardLayout, LevelConfig, TiltMazeBoard, TiltMazeOutcome } from './types'
 import {
   BALL_TO_CELL_RATIO,
   BASE_SHORT_AXIS_CELLS,
@@ -54,6 +54,20 @@ export const getLevelConfig = (level: number): LevelConfig => {
     algorithm: LEVEL_ALGORITHMS[(level - 1) % LEVEL_ALGORITHMS.length] as MazeAlgorithm
   }
 }
+
+/**
+ * Where a decided round leaves the player.
+ *
+ * A trap costs a level rather than the run: losing everything to one hole punishes a slip
+ * harder than it punishes bad play, and makes only the last thirty seconds of a run matter.
+ * The floor at level one means the game never ends, so the record is the highest level
+ * reached rather than the level a run died on.
+ * @param level The level just played
+ * @param outcome How the round ended
+ * @returns The level to build next
+ */
+export const getNextLevel = (level: number, outcome: TiltMazeOutcome): number =>
+  outcome === 'won' ? level + 1 : Math.max(1, level - 1)
 
 export interface BuiltLevel {
   board: TiltMazeBoard

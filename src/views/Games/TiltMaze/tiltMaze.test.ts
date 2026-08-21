@@ -19,7 +19,7 @@ import {
   WALL_HEIGHT,
   WALL_THICKNESS
 } from './config'
-import { getLevelConfig } from './levels'
+import { getLevelConfig, getNextLevel } from './levels'
 import { isNewBest, loadBestLevel } from './record'
 import { getSecureUrl, getSensorGuidance, getSensorPlatform } from './sensorGuidance'
 import type { MazeHole, SensorPlatform, SensorState } from './types'
@@ -95,6 +95,24 @@ describe('getKeyboardTilt', () => {
 
   it('cancels opposing directions instead of preferring one', () => {
     expect(getKeyboardTilt(['tilt-left', 'tilt-right'], 16)).toEqual({ tiltX: 0, tiltZ: 0 })
+  })
+})
+
+describe('getNextLevel', () => {
+  it('climbs a level when the goal hole is reached', () => {
+    expect(getNextLevel(3, 'won')).toBe(4)
+  })
+
+  /**
+   * A trap costs ground rather than the run. Losing everything to one hole punishes a slip
+   * harder than it punishes bad play, and makes only the last thirty seconds matter.
+   */
+  it('drops a level when a trap hole is fallen into', () => {
+    expect(getNextLevel(3, 'trapped')).toBe(2)
+  })
+
+  it('cannot fall below the first level', () => {
+    expect(getNextLevel(1, 'trapped')).toBe(1)
   })
 })
 

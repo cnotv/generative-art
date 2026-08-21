@@ -238,7 +238,6 @@ export function createControls(options: ControlsOptions): ControlsExtras {
       isSupported: controllers.motion.isSupported,
       needsPermission: controllers.motion.needsPermission,
       requestMotionPermission: controllers.motion.requestPermission,
-      recalibrate: controllers.motion.recalibrate,
       getTilt: controllers.motion.getTilt,
       getReading: controllers.motion.getReading,
       isReceiving: controllers.motion.isReceiving,

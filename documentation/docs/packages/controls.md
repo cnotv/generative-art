@@ -244,15 +244,20 @@ setting was removed in iOS 13 in favour of the per-site prompt. A refusal is rem
 the site, and the only way back to the prompt is clearing that site's data under
 Settings → Apps → Safari → Advanced → Website Data.
 
-### Calibration
+### Level is level
 
-The sensor reports posture, not intent: a phone held up to be read already sits far from flat.
-Every reading is taken relative to a neutral captured when the device binds, so whatever pose
-the player is in becomes level. Without that, any usable lean limit is saturated before the
-player moves and the controls appear dead or reversed.
+Lean is measured from world horizontal. A device lying flat reads zero, and there is nothing
+to calibrate — the player finds level by putting the device down rather than by watching what
+the game does.
 
-Call `motion.recalibrate()` to retake it — posture drifts over a session. A screen rotation
-retakes it automatically, since the axes the player reads as left-to-right have changed.
+The cost is posture. A phone held up to be read already sits somewhere between forty-five and
+seventy degrees of pitch, which is past any usable lean limit, so a game using motion asks to
+be played with the device roughly face up. Take that trade deliberately: it suits a game whose
+physical analogue is held flat, such as a balance board, and suits a game steered from a
+comfortable hold much less.
+
+Readings are rotated into the screen's frame on arrival, so a rotated screen keeps
+left-to-right meaning left-to-right with nothing to reset.
 
 ### MotionControls
 
@@ -261,7 +266,6 @@ retakes it automatically, since the axes the player reads as left-to-right have 
 | `isSupported()`             | `boolean`                                         | Whether the platform defines the orientation event               |
 | `needsPermission()`         | `boolean`                                         | Whether a prompt is required (iOS)                               |
 | `requestMotionPermission()` | `Promise<'granted' \| 'denied' \| 'unsupported'>` | Ask for access, from a tap                                       |
-| `recalibrate()`             | `void`                                            | Retake the neutral pose                                          |
 | `getTilt()`                 | `MotionTilt`                                      | Continuous lean in degrees, `x` screen-right and `y` screen-down |
 | `getReading()`              | `MotionReading \| null`                           | The latest raw `beta`/`gamma`, for diagnostics                   |
 | `isReceiving()`             | `boolean`                                         | Whether any reading has arrived                                  |
