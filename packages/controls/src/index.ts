@@ -24,6 +24,7 @@ export { createControls, isMobile } from './core'
 export { createFauxPadController } from './fauxpad'
 export { createMotionController, rotateToScreenFrame } from './motion'
 export type { MotionController, MotionOptions } from './motion'
+export { lockScreenOrientation, unlockScreenOrientation } from './orientation'
 export type { FauxPadOptions as FauxPadControllerOptions } from './fauxpad'
 
 export { assignBinding, removeBinding, createDefaultMapping } from './mapping'

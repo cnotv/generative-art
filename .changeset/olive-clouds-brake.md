@@ -12,3 +12,8 @@ still rotated into the screen's frame as they arrive, so a rotated screen needs 
 
 The trade is posture: a device held up to be read sits past any usable lean limit, so a game
 using motion now asks to be played with the device roughly face up.
+
+Also adds `lockScreenOrientation()` and `unlockScreenOrientation()`, for holding a scene in the
+orientation it was laid out for. Both are best-effort and neither rejects — iOS Safari has
+never implemented the lock and Android grants it only to a fullscreen document, and the
+fallback in both cases is the layout a caller already performs on resize.

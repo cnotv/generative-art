@@ -2,7 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { createTimelineManager } from '@webgamekit/animation'
-import { createControls } from '@webgamekit/controls'
+import {
+  createControls,
+  lockScreenOrientation,
+  unlockScreenOrientation
+} from '@webgamekit/controls'
 import type { MotionReading } from '@webgamekit/controls'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
@@ -20,7 +24,6 @@ import { getCameraHeight } from './layout'
 import { buildLevel, getNextLevel } from './levels'
 import { createTiltDriver } from './tiltDriver'
 import { commitRecord, loadBestLevel } from './record'
-import { lockScreenOrientation, unlockScreenOrientation } from './orientationLock'
 import { createHoleBurst } from './holeBurst'
 import type { VictoryBurst } from './holeBurst'
 import { applyTiltInversion, findNearestHole, getKeyboardTilt } from './tilt'

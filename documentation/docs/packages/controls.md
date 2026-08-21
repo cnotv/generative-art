@@ -270,6 +270,29 @@ left-to-right meaning left-to-right with nothing to reset.
 | `getReading()`              | `MotionReading \| null`                           | The latest raw `beta`/`gamma`, for diagnostics                   |
 | `isReceiving()`             | `boolean`                                         | Whether any reading has arrived                                  |
 
+## Screen orientation
+
+A scene laid out for the screen it started on can only refit its framing when the screen turns,
+because regenerating would discard the round in progress. Not turning is the better answer, so
+the package exposes the lock alongside the devices that care about it.
+
+```typescript
+import { lockScreenOrientation, unlockScreenOrientation } from '@webgamekit/controls'
+
+await lockScreenOrientation() // holds whichever orientation is current
+await lockScreenOrientation('landscape') // or one you name
+unlockScreenOrientation() // on teardown, or the whole page stays pinned
+```
+
+Both calls are best-effort and neither ever rejects, because no caller has anything better to
+do with the failure than the layout it already performs on resize:
+
+| Platform   | Behaviour                                                                 |
+| ---------- | ------------------------------------------------------------------------- |
+| iOS Safari | Never implemented; the call resolves having done nothing                  |
+| Android    | Granted only to a fullscreen document — repeat the call after entering it |
+| Desktop    | Granted in fullscreen; meaningless outside it                             |
+
 ## Configuration
 
 ### FauxPadOptions
@@ -323,6 +346,11 @@ as `motion`; reach for this only when wiring a controller by hand.
 
 Options: `threshold` (degrees of lean counted as a press, default 8) and `maxDegrees` (largest
 lean that contributes, default 30).
+
+### lockScreenOrientation(orientation?) / unlockScreenOrientation()
+
+Hold the screen in one orientation, or release it. Defaults to whichever orientation is
+current. See [Screen orientation](#screen-orientation) for what each platform actually does.
 
 ### createFauxPadController(mappingRef, handlers, options?)
 
