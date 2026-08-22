@@ -16,8 +16,12 @@ import {
 import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import { LobbyUIOptionToggle, LobbyUIKeyPill } from '@/components/LobbyUI'
+// The kit components do not carry their own stylesheet, so a consumer that skips this gets
+// the LobbyUI markup in the app's default font instead of the playful one.
+import '@/assets/styles/lobby-ui.scss'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
+import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import {
   setupConfig,
   configControls,
@@ -34,6 +38,9 @@ import {
 } from './config'
 import { trackPose, isFollowCase, toCameraCase, stepCameraCase } from './cameraShowcase'
 import type { CameraCase } from './config'
+
+const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
+const FONT_KEY = 'camera-showcase-font'
 
 const route = useRoute()
 const store = useSceneViewStore()
@@ -131,6 +138,10 @@ watch(
 )
 
 onMounted(async () => {
+  // The stylesheet only names the font; nothing fetches it. Without this the overlay falls
+  // back to Arial Black and looks merely plain rather than broken.
+  loadGoogleFont(LOBBY_UI_FONT, FONT_KEY)
+
   if (!canvas.value) return
 
   registerViewConfig(route.name as string, reactiveConfig, configControls)
@@ -203,6 +214,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  removeGoogleFont(FONT_KEY)
   destroyControls()
   introPath?.cancel()
   introPath = null

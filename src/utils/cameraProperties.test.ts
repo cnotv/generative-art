@@ -157,6 +157,39 @@ describe('registerCameraProperties', () => {
     expect(store.activeSlot?.supportedCameraTypes).toEqual(['perspective'])
   })
 
+  it('offers both projections once a camera swap is available', async () => {
+    // Without setCamera the panel can only report the projection already in use, which is why
+    // the orthographic camera and every orthographic preset were unreachable from the UI.
+    const { registerCameraProperties } = await import('./cameraProperties')
+    const { useCameraConfigStore } = await import('@/stores/cameraConfig')
+
+    registerCameraProperties({ camera: makePerspCamera(), setCamera: () => null })
+
+    const store = useCameraConfigStore()
+    expect(store.activeSlot?.supportedCameraTypes).toEqual(['perspective', 'orthographic'])
+  })
+
+  it.each([
+    { preset: CameraPreset.FirstPerson, projection: 'perspective' },
+    { preset: CameraPreset.ThirdPerson, projection: 'perspective' },
+    { preset: CameraPreset.OrthographicFirstPerson, projection: 'orthographic' },
+    { preset: CameraPreset.OrthographicThirdPerson, projection: 'orthographic' }
+  ])('offers $preset as a $projection preset', ({ preset, projection }) => {
+    expect(cameraPresets[preset]).toBeDefined()
+    expect(cameraPresets[preset].type).toBe(projection)
+  })
+
+  it('gives the first and third person presets a matching pair in each projection', () => {
+    // The pairs exist so switching projection keeps the framing, rather than throwing the
+    // viewer somewhere unrelated.
+    expect(cameraPresets[CameraPreset.OrthographicFirstPerson].position).toEqual(
+      cameraPresets[CameraPreset.FirstPerson].position
+    )
+    expect(cameraPresets[CameraPreset.OrthographicThirdPerson].position).toEqual(
+      cameraPresets[CameraPreset.ThirdPerson].position
+    )
+  })
+
   it('orbitEnabled toggle calls setOrbitEnabled', async () => {
     const { registerCameraProperties } = await import('./cameraProperties')
     const { useElementPropertiesStore } = await import('@/stores/elementProperties')

@@ -20,6 +20,26 @@ backgrounds or borders around groups, `--lui-font` with white fills and the laye
 icon buttons with tiny key hints rather than labelled button rows. Straight borders use the
 hand-drawn tokens (`--lui-radius-sketch*`); dividers use the `--lui-squiggle*` images.
 
+- **Bring the stylesheet and the font**: any view or component rendering a `LobbyUI*` component
+  needs **both**, and neither comes for free:
+
+  ```ts
+  import '@/assets/styles/lobby-ui.scss'
+  import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
+
+  const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
+  const FONT_KEY = '<view-name>-font'
+
+  onMounted(() => loadGoogleFont(LOBBY_UI_FONT, FONT_KEY))
+  onUnmounted(() => removeGoogleFont(FONT_KEY))
+  ```
+
+  The kit components carry no stylesheet of their own, and the stylesheet only _names_
+  `Darumadrop One` — nothing fetches it. Miss either half and the overlay silently falls back to
+  `Arial Black`, which looks merely plain rather than broken, so it survives review. An empty
+  `document.fonts` while `--lui-font` reads correctly is the signature of the missing
+  `loadGoogleFont`.
+
 - **Text sizing**: every string uses one of the `--lui-text-*` presets. Never a raw `rem`,
   `px` or `clamp()` font size. If none fits, add a new token to `lobby-ui.scss` and document
   it there.

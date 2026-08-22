@@ -432,6 +432,7 @@ interface DefineSetupRunOptions {
   config: SetupConfig
   defineSetupCallback: (context: DefineSetupContext) => Promise<void> | void
   cleanup: () => void
+  setActiveCamera: (newCamera: THREE.Camera) => OrbitControls | null
 }
 
 const runSetupWithDefineSetup = async (
@@ -447,7 +448,8 @@ const runSetupWithDefineSetup = async (
     clock,
     config,
     defineSetupCallback,
-    cleanup
+    cleanup,
+    setActiveCamera
   } = runOptions
   const result = await setup({
     config,
@@ -469,7 +471,8 @@ const runSetupWithDefineSetup = async (
     scene,
     camera,
     world,
-    cleanup
+    cleanup,
+    setActiveCamera
   }
 }
 
@@ -480,6 +483,8 @@ interface SceneSetupResult {
   orbit: OrbitControls
   ground: { mesh?: THREE.Mesh } | null
   cleanup: () => void
+  /** Swaps the render camera and returns the orbit controls now bound to it. */
+  setActiveCamera: (newCamera: THREE.Camera) => OrbitControls | null
 }
 
 const resolveSceneReferencesFromResult = (
@@ -841,6 +846,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const skyMeshReference = ref<THREE.Mesh | null>(null)
   const isInitialized = ref(false)
   const playMode = ref(false)
+  const swapActiveCamera = ref<((newCamera: THREE.Camera) => OrbitControls | null) | null>(null)
   const textureAreaConfigs = ref<Record<string, Record<string, unknown>>>({})
   const textureAreaDefinitions = ref<TextureAreaDefinition[]>([])
   const areaMeshCache = ref<Record<string, THREE.Object3D[]>>({})
@@ -907,11 +913,23 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     const orbit = orbitReference.value
     if (!camera || !('fov' in camera)) return
 
+    const swap = swapActiveCamera.value
+
     registerCameraPropertiesShared({
       camera: camera as THREE.PerspectiveCamera,
       orbit,
       cameraConfig,
-      skipOrbitSync: playMode.value
+      skipOrbitSync: playMode.value,
+      // Without this the panel reports only the current projection as supported, so the
+      // orthographic camera and every orthographic preset are unreachable from the UI.
+      setCamera: swap
+        ? (newCamera: THREE.Camera) => {
+            const nextOrbit = swap(newCamera)
+            threeCamera.value = newCamera
+            orbitReference.value = nextOrbit
+            return nextOrbit
+          }
+        : undefined
     })
   }
 
@@ -1132,7 +1150,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       world,
       getDelta,
       clock,
-      cleanup: toolsCleanup
+      cleanup: toolsCleanup,
+      setActiveCamera
     } = await getTools({
       canvas,
       onProgress: options.onProgress
@@ -1149,7 +1168,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         clock,
         config,
         defineSetupCallback: options.defineSetup,
-        cleanup: toolsCleanup
+        cleanup: toolsCleanup,
+        setActiveCamera
       })
     }
 
@@ -1161,7 +1181,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       scene,
       camera,
       world,
-      cleanup: toolsCleanup
+      cleanup: toolsCleanup,
+      setActiveCamera
     }
   }
 
@@ -1176,9 +1197,11 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       scene,
       camera,
       world,
-      cleanup: toolsCleanup
+      cleanup: toolsCleanup,
+      setActiveCamera
     } = await runInit(canvas, config, resolvedOptions)
     activeToolsCleanup = toolsCleanup
+    swapActiveCamera.value = setActiveCamera
 
     resolveSceneReferencesFromResult(
       { scene, camera, world, orbit: orbit ?? ({} as OrbitControls), ground },
@@ -1267,6 +1290,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     threeScene.value = null
     threeWorld.value = null
     threeCamera.value = null
+    swapActiveCamera.value = null
     orbitReference.value = null
     groundReference.value = null
     ambientLightReference.value = null
