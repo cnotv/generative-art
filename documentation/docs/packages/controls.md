@@ -244,15 +244,20 @@ setting was removed in iOS 13 in favour of the per-site prompt. A refusal is rem
 the site, and the only way back to the prompt is clearing that site's data under
 Settings → Apps → Safari → Advanced → Website Data.
 
-### Calibration
+### Level is level
 
-The sensor reports posture, not intent: a phone held up to be read already sits far from flat.
-Every reading is taken relative to a neutral captured when the device binds, so whatever pose
-the player is in becomes level. Without that, any usable lean limit is saturated before the
-player moves and the controls appear dead or reversed.
+Lean is measured from world horizontal. A device lying flat reads zero, and there is nothing
+to calibrate — the player finds level by putting the device down rather than by watching what
+the game does.
 
-Call `motion.recalibrate()` to retake it — posture drifts over a session. A screen rotation
-retakes it automatically, since the axes the player reads as left-to-right have changed.
+The cost is posture. A phone held up to be read already sits somewhere between forty-five and
+seventy degrees of pitch, which is past any usable lean limit, so a game using motion asks to
+be played with the device roughly face up. Take that trade deliberately: it suits a game whose
+physical analogue is held flat, such as a balance board, and suits a game steered from a
+comfortable hold much less.
+
+Readings are rotated into the screen's frame on arrival, so a rotated screen keeps
+left-to-right meaning left-to-right with nothing to reset.
 
 ### MotionControls
 
@@ -261,10 +266,32 @@ retakes it automatically, since the axes the player reads as left-to-right have 
 | `isSupported()`             | `boolean`                                         | Whether the platform defines the orientation event               |
 | `needsPermission()`         | `boolean`                                         | Whether a prompt is required (iOS)                               |
 | `requestMotionPermission()` | `Promise<'granted' \| 'denied' \| 'unsupported'>` | Ask for access, from a tap                                       |
-| `recalibrate()`             | `void`                                            | Retake the neutral pose                                          |
 | `getTilt()`                 | `MotionTilt`                                      | Continuous lean in degrees, `x` screen-right and `y` screen-down |
 | `getReading()`              | `MotionReading \| null`                           | The latest raw `beta`/`gamma`, for diagnostics                   |
 | `isReceiving()`             | `boolean`                                         | Whether any reading has arrived                                  |
+
+## Screen orientation
+
+A scene laid out for the screen it started on can only refit its framing when the screen turns,
+because regenerating would discard the round in progress. Not turning is the better answer, so
+the package exposes the lock alongside the devices that care about it.
+
+```typescript
+import { lockScreenOrientation, unlockScreenOrientation } from '@webgamekit/controls'
+
+await lockScreenOrientation() // holds whichever orientation is current
+await lockScreenOrientation('landscape') // or one you name
+unlockScreenOrientation() // on teardown, or the whole page stays pinned
+```
+
+Both calls are best-effort and neither ever rejects, because no caller has anything better to
+do with the failure than the layout it already performs on resize:
+
+| Platform   | Behaviour                                                                 |
+| ---------- | ------------------------------------------------------------------------- |
+| iOS Safari | Never implemented; the call resolves having done nothing                  |
+| Android    | Granted only to a fullscreen document — repeat the call after entering it |
+| Desktop    | Granted in fullscreen; meaningless outside it                             |
 
 ## Configuration
 
@@ -319,6 +346,11 @@ as `motion`; reach for this only when wiring a controller by hand.
 
 Options: `threshold` (degrees of lean counted as a press, default 8) and `maxDegrees` (largest
 lean that contributes, default 30).
+
+### lockScreenOrientation(orientation?) / unlockScreenOrientation()
+
+Hold the screen in one orientation, or release it. Defaults to whichever orientation is
+current. See [Screen orientation](#screen-orientation) for what each platform actually does.
 
 ### createFauxPadController(mappingRef, handlers, options?)
 

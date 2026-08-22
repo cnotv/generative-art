@@ -51,14 +51,15 @@ export const HOLE_SPACING_IN_CELLS = 1.2
 /** Below this Y the ball has left the board through a hole and the round is decided. */
 export const FALL_THRESHOLD_Y = -6
 
-/**
- * A finished round ignores input for this long. The lean that just ended the round is still
- * being held, so without a grace period the next round would start instantly and the player
- * would never see which hole they went down.
- */
-export const ROUND_END_GRACE_SECONDS = 0.9
-/** Lean, in degrees, that counts as "the player is ready" and starts the next round. */
-export const RESTART_TILT_DEGREES = 12
+/** Chevrons in the stack that sweeps the way the level moved. */
+export const LEVEL_ARROW_COUNT = 3
+/** Delay between one chevron lighting and the next, so the stack reads as travel. */
+export const LEVEL_ARROW_STAGGER_SECONDS = 0.12
+/** How long one chevron takes to arrive. The whole sweep finishes inside the hole burst. */
+export const LEVEL_ARROW_DURATION_SECONDS = 0.7
+/** Chevron size and weight. Heavy enough to read over a board of pastel walls. */
+export const LEVEL_ARROW_SIZE = 72
+export const LEVEL_ARROW_STROKE_WIDTH = 3
 
 /** How long a granted sensor may stay silent before the diagnostics open themselves. */
 export const SILENT_SENSOR_TIMEOUT_MS = 2500
@@ -155,3 +156,11 @@ export const configControls = {
     leanPerDegree: { min: 0, max: 2, step: 0.05, label: 'Camera Lean' }
   }
 }
+
+/**
+ * A scene colour as CSS, so an overlay drawn in the same colour as something in the scene
+ * cannot drift away from it.
+ * @param color The colour as a Three.js hex number
+ * @returns The same colour as a CSS hex string
+ */
+export const toCssColor = (color: number): string => `#${color.toString(16).padStart(6, '0')}`

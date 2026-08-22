@@ -27,7 +27,6 @@ export interface MotionController {
   isSupported: () => boolean
   needsPermission: () => boolean
   requestPermission: () => Promise<'granted' | 'denied' | 'unsupported'>
-  recalibrate: () => void
   getTilt: () => MotionTilt
   getReading: () => MotionReading | null
   isReceiving: () => boolean
@@ -136,41 +135,28 @@ export const getDeviceGravity = (beta: number, gamma: number): GravityDirection 
 }
 
 /**
- * How far, and which way, the device has leaned away from the pose it was calibrated in.
+ * How far, and which way, the device is leaning away from level.
  *
- * Measured as the rotation between two gravity directions rather than as a difference of
- * angles. Subtracting angles quietly loses sensitivity the further the neutral sits from flat —
- * at a steep hold a left-to-right roll turns the phone about an axis nearly aligned with
- * gravity, so it barely tilts the board — and it inherits the Euler singularity as well. The
- * angle between two directions has neither problem: ten degrees of lean reads as ten degrees
- * from any starting posture.
- * @param current The latest reading
- * @param neutral The reading captured at calibration
+ * Measured as the rotation from world-down to the device's own down, rather than by reading the
+ * Euler angles off the event. Subtracting angles inherits the singularity at ninety degrees of
+ * pitch, where the roll angle flips sign and then stops responding; the angle between two
+ * directions has no such discontinuity, so ten degrees of lean reads as ten degrees from any
+ * posture, including past vertical.
+ * @param reading The latest reading
  * @returns Lean in degrees, `right` toward the device's right edge and `down` toward its bottom
  */
-export const getRelativeTilt = (
-  current: MotionReading,
-  neutral: MotionReading
-): { right: number; down: number } => {
-  const from = getDeviceGravity(neutral.beta, neutral.gamma)
-  const to = getDeviceGravity(current.beta, current.gamma)
+export const getLevelTilt = ({ beta, gamma }: MotionReading): { right: number; down: number } => {
+  const gravity = getDeviceGravity(beta, gamma)
 
-  // The axis the device turned about, with a length of sin(angle); pairing it with the dot
-  // product gives an angle that stays accurate at every magnitude, unlike acos alone.
-  const axis = {
-    x: from.y * to.z - from.z * to.y,
-    y: from.z * to.x - from.x * to.z,
-    z: from.x * to.y - from.y * to.x
-  }
-  const sine = Math.hypot(axis.x, axis.y, axis.z)
+  // The length of the component of gravity lying in the screen plane is sin(angle from level);
+  // pairing it with the out-of-plane component gives an angle accurate at every magnitude,
+  // unlike acos alone.
+  const sine = Math.hypot(gravity.x, gravity.y)
   if (sine < 1e-9) return { right: 0, down: 0 }
 
-  const cosine = from.x * to.x + from.y * to.y + from.z * to.z
-  const degreesPerUnit = (Math.atan2(sine, cosine) * RADIANS_TO_DEGREES) / sine
+  const degreesPerUnit = (Math.atan2(sine, -gravity.z) * RADIANS_TO_DEGREES) / sine
 
-  // Turning about the device's X axis pitches the board toward the screen's bottom; turning
-  // about its Y axis rolls the board toward the screen's right.
-  return { right: -axis.y * degreesPerUnit, down: -axis.x * degreesPerUnit }
+  return { right: gravity.x * degreesPerUnit, down: -gravity.y * degreesPerUnit }
 }
 
 /**
@@ -201,10 +187,10 @@ export const rotateToScreenFrame = (
 /**
  * Device orientation as a control device.
  *
- * The sensor reports posture, not intent: a phone held up to be read already sits far from
- * flat, so every reading is taken relative to a neutral captured when the device is bound or
- * recalibrated. Without that subtraction any usable lean limit is saturated before the player
- * has moved, and the controls appear dead or reversed.
+ * Lean is measured from world horizontal, so a device lying flat reports level and there is
+ * nothing to calibrate. That costs the ergonomics of a device held up to be read — such a pose
+ * already sits past any usable lean limit — and buys a zero the player can find by laying the
+ * device down, rather than one they can only locate by watching what the game does.
  *
  * Leans past a threshold are reported as ordinary pressed and released actions so motion mixes
  * with the other devices, while `getTilt` exposes the continuous value for games that steer by
@@ -224,7 +210,6 @@ export function createMotionController(
 
   const directions = createDirectionEmitter(mappingReference, handlers)
   const state = {
-    neutral: null as MotionReading | null,
     reading: null as MotionReading | null,
     tilt: { x: 0, y: 0 } as MotionTilt,
     receiving: false,
@@ -243,9 +228,8 @@ export function createMotionController(
     }
     state.reading = reading
     state.receiving = true
-    if (!state.neutral) state.neutral = reading
 
-    const lean = getRelativeTilt(reading, state.neutral)
+    const lean = getLevelTilt(reading)
     const screenTilt = rotateToScreenFrame(lean.right, lean.down, getScreenAngle())
     state.tilt = {
       x: clampToRange(screenTilt.x, maxDegrees),
@@ -253,16 +237,6 @@ export function createMotionController(
     }
     directions.update(state.tilt, threshold)
   }
-
-  const recalibrate = (): void => {
-    state.neutral = null
-    state.tilt = { x: 0, y: 0 }
-    directions.releaseAll()
-  }
-
-  // A rotated screen means the neutral was captured against axes the player no longer reads
-  // the same way, so it has to be retaken rather than carried over.
-  const handleScreenRotation = (): void => recalibrate()
 
   function isSupported(): boolean {
     return typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
@@ -275,7 +249,6 @@ export function createMotionController(
   function bind(): void {
     if (!isSupported()) return
     ORIENTATION_EVENTS.forEach((eventName) => window.addEventListener(eventName, handleOrientation))
-    window.screen?.orientation?.addEventListener('change', handleScreenRotation)
   }
 
   function unbind(): void {
@@ -283,8 +256,8 @@ export function createMotionController(
     ORIENTATION_EVENTS.forEach((eventName) =>
       window.removeEventListener(eventName, handleOrientation)
     )
-    window.screen?.orientation?.removeEventListener('change', handleScreenRotation)
-    recalibrate()
+    directions.releaseAll()
+    state.tilt = { x: 0, y: 0 }
     state.receiving = false
   }
 
@@ -294,7 +267,6 @@ export function createMotionController(
    */
   async function requestPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
     if (!isSupported()) return 'unsupported'
-    recalibrate()
 
     const request = getPermissionRequest()
     if (!request) {
@@ -314,7 +286,6 @@ export function createMotionController(
     isSupported,
     needsPermission,
     requestPermission,
-    recalibrate,
     getTilt: () => state.tilt,
     getReading: () => state.reading,
     isReceiving: () => state.receiving,

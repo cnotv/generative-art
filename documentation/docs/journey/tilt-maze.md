@@ -72,24 +72,55 @@ tilting further changes nothing because the value was already clamped. Tilting t
 only does anything once the reading crosses back inside the limit, which happens abruptly and
 in the wrong place — which is exactly what "inverted" feels like from the player's side.
 
-The correct mental model is that the sensor measures posture, and a game wants _change in_
-posture. Whatever pose the player happens to be in when play begins is the only sensible
-definition of level, so it has to be captured and subtracted. That single subtraction is the
-difference between an unplayable game and a playable one, and no amount of retuning the limit
-substitutes for it, because the problem is an offset rather than a scale.
-
-Two consequences follow. A rotation of the screen invalidates the neutral, because the axis
-the player reads as left-to-right is no longer the axis the neutral was captured against, so
-the reference has to be retaken. And the player needs a way to retake it themselves, since
-posture drifts over a session — a lean that felt level at the start slowly becomes a
-permanent pull.
+The first answer was that the sensor measures posture and a game wants _change in_ posture.
+Whatever pose the player happens to be in when play begins becomes the definition of level, is
+captured, and is subtracted from every later reading. That single subtraction is the difference
+between an unplayable game and a playable one, and no amount of retuning the limit substitutes
+for it, because the problem is an offset rather than a scale.
 
 Because this is posture handling rather than game logic, it belongs with the other input
-devices rather than in one game. Tilt now lives in the controls package alongside keyboard,
+devices rather than in one game. Tilt lives in the controls package alongside keyboard,
 gamepad and touch: leans past a threshold surface as ordinary pressed and released actions, so
 a game gains tilt support by adding a mapping and nothing else, while games that steer by angle
-read the continuous lean directly. The calibration, the screen-frame rotation and the
-permission gate are then solved once instead of per game.
+read the continuous lean directly. The screen-frame rotation and the permission gate are
+solved once instead of per game.
+
+## The calibrated zero was the one thing nobody could see
+
+Subtracting a captured pose was right about the ergonomics and wrong about the game, and it
+took playing it to notice which.
+
+A calibrated neutral is invisible. It exists only inside the controller, so the player has no
+way to find out where level is except by letting go and watching which way the ball drifts.
+That is tolerable for a minute and corrosive over a session, because posture drifts — a hold
+that felt level at the start slowly becomes a permanent pull with no visible cause and no
+obvious remedy. The remedies that follow from it compound the problem rather than solving it:
+a re-align button, a double-tap gesture, and a rule that a screen rotation silently retakes the
+reference. Every one of those is a control whose purpose cannot be explained without first
+explaining the offset it exists to correct.
+
+A physical labyrinth has none of this. It is level when you hold it level, the player knows
+that without being told, and the correction for drift is to stop drifting. Measuring from world
+horizontal reproduces exactly that: zero is a pose the player can find with their hands, and
+three controls, one gesture and one hidden rule all disappear along with the neutral.
+
+The trade is real and it is the reason the first answer looked right. A device held up to be
+read now sits past the lean limit, so the board is at full slope, and the game has to be played
+roughly face up. That is a genuine cost — it would be the wrong trade for a game steered from a
+comfortable hold. It is the right one here, because the thing being simulated is held face up
+too, and because the alternative is an input whose origin the player is never allowed to see.
+
+The general lesson is that a correction the player cannot perceive is not free. It buys
+accuracy in the input and spends it on the player's model of what the input does, and the
+second cost only shows up in play.
+
+The reversal was a breaking change to a published package, and worth recording as one. What
+left `MotionControls` is `recalibrate()`, and with it the neutral pose it retook and the
+`screen.orientation` listener that retook it whenever the screen turned. Nothing replaced them,
+because there is no longer a reference to retake: readings are still rotated into the screen's
+frame as they arrive, so a rotation needs no reset. A consumer that called `recalibrate()` has
+no migration to perform beyond deleting the call and whatever control invoked it. The current
+surface is in [the controls package reference](../packages/controls.md).
 
 ## The specification is right and the hardware may still disagree
 
@@ -170,7 +201,14 @@ Framing then has to fit both axes independently. A perspective camera constrains
 extent directly and the horizontal only through the aspect ratio, so each axis implies its own
 camera distance and the board fits only at the larger of the two. A later rotation refits the
 framing rather than regenerating the board, since regenerating would discard the run in
-progress.
+progress — which leaves a maze cut for one aspect stretched across the other.
+
+The better answer is to stop the rotation happening. Locking the screen to the orientation
+play began in costs one call, and the refit stays as the fallback, because the lock is the
+least portable thing in this whole document: iOS Safari has never implemented it, and Android
+grants it only to a fullscreen document, which the game does not enter until the player asks
+for it. Both refusals are silent by design here, since the behaviour they fall back to is the
+one that already worked.
 
 One consequence is not obvious until a long board exists: placing hazards by taking the
 candidates furthest from the spawn piles all of them at the far end. On a square board that

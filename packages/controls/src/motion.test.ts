@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   createMotionController,
   getDeviceGravity,
-  getRelativeTilt,
+  getLevelTilt,
   rotateToScreenFrame
 } from './motion'
 import type { ControlHandlers, ControlMapping } from './types'
@@ -93,70 +93,58 @@ describe('getDeviceGravity', () => {
   })
 })
 
-describe('getRelativeTilt', () => {
-  it('reads level in the pose it was calibrated in', () => {
-    expect(getRelativeTilt({ beta: 62, gamma: -4 }, { beta: 62, gamma: -4 })).toEqual({
-      right: 0,
-      down: 0
-    })
+describe('getLevelTilt', () => {
+  it('reads level when the device is lying flat', () => {
+    expect(getLevelTilt({ beta: 0, gamma: 0 })).toEqual({ right: 0, down: 0 })
   })
 
   it('reads a front-to-back lean as screen-down', () => {
-    const { right, down } = getRelativeTilt({ beta: 10, gamma: 0 }, { beta: 0, gamma: 0 })
+    const { right, down } = getLevelTilt({ beta: 10, gamma: 0 })
 
     expect(down).toBeCloseTo(10, 1)
     expect(right).toBeCloseTo(0)
   })
 
   it('reads a left-to-right lean as screen-right', () => {
-    const { right, down } = getRelativeTilt({ beta: 0, gamma: 10 }, { beta: 0, gamma: 0 })
+    const { right, down } = getLevelTilt({ beta: 0, gamma: 10 })
 
     expect(right).toBeCloseTo(10, 1)
     expect(down).toBeCloseTo(0)
   })
 
   /**
-   * The defect this replaced: subtracting angles, a lean is worth less and less the further
-   * the neutral sits from flat, until near-vertical it does almost nothing.
+   * The point of measuring from level rather than from a captured pose: the same physical
+   * posture always reports the same lean, so the player can find zero by laying the device
+   * down instead of by watching which way the ball drifts.
    */
-  it.each([0, 20, 45, 60, 75])(
-    'is worth the same ten degrees from a %i degree resting pose',
-    (neutralBeta) => {
-      const { down } = getRelativeTilt(
-        { beta: neutralBeta + 10, gamma: 0 },
-        { beta: neutralBeta, gamma: 0 }
-      )
-
-      expect(down).toBeCloseTo(10, 1)
-    }
-  )
-
-  it('still answers on the other axis at a steep hold, rather than seizing', () => {
-    const { right } = getRelativeTilt({ beta: 85, gamma: 15 }, { beta: 85, gamma: 0 })
-
-    expect(Math.abs(right)).toBeGreaterThan(0)
+  it.each([10, 20, 45, 60, 75])('reads a %i degree pitch as that many degrees', (beta) => {
+    expect(getLevelTilt({ beta, gamma: 0 }).down).toBeCloseTo(beta, 1)
   })
 
-  /**
-   * Not a defect: rolling a nearly upright phone about its own long axis is mostly a yaw, and
-   * a yaw does not tilt a board at all. The board should respond less there, and does — what it
-   * must never do is stop responding or jump, which the surrounding tests pin down.
-   */
-  it('rolls the board less from an upright hold than from a flat one', () => {
-    const flat = getRelativeTilt({ beta: 0, gamma: 15 }, { beta: 0, gamma: 0 }).right
-    const upright = getRelativeTilt({ beta: 85, gamma: 15 }, { beta: 85, gamma: 0 }).right
+  it('keeps the magnitude of a diagonal lean at the true angle from level', () => {
+    const { right, down } = getLevelTilt({ beta: 20, gamma: 20 })
 
-    expect(Math.abs(upright)).toBeLessThan(Math.abs(flat))
+    expect(Math.hypot(right, down)).toBeGreaterThan(20)
+    expect(Math.hypot(right, down)).toBeLessThan(40)
   })
 
-  it('never jumps as the lean crosses ninety degrees', () => {
-    const neutral = { beta: 60, gamma: 0 }
-    const steps = [88, 89, 90, 91, 92].map(
-      (beta) => getRelativeTilt({ beta, gamma: 10 }, neutral).down
-    )
+  it('never jumps as the pitch crosses ninety degrees', () => {
+    const steps = [88, 89, 90, 91, 92].map((beta) => getLevelTilt({ beta, gamma: 10 }).down)
     const jumps = steps.slice(1).map((value, index) => Math.abs(value - steps[index]))
 
     jumps.forEach((jump) => expect(jump).toBeLessThan(3))
+  })
+
+  /**
+   * Not a defect: rolling a nearly upright device about its own long axis is mostly a yaw, and
+   * a yaw does not tilt a board at all. What it must never do is seize or jump.
+   */
+  it('rolls the board less from an upright hold than from a flat one', () => {
+    const flat = getLevelTilt({ beta: 0, gamma: 15 }).right
+    const upright = getLevelTilt({ beta: 85, gamma: 15 }).right
+
+    expect(Math.abs(upright)).toBeLessThan(Math.abs(flat))
+    expect(Math.abs(upright)).toBeGreaterThan(0)
   })
 })
 
@@ -180,25 +168,23 @@ describe('createMotionController', () => {
   const build = (threshold = 8) =>
     createMotionController({ current: MOTION_MAPPING }, handlers, { threshold, maxDegrees: 30 })
 
-  it('treats the first reading as level, whatever posture it arrives in', () => {
+  it('reads the very first reading against level, with no calibration to wait for', () => {
     const controller = build()
     controller.bind()
 
-    sendOrientation(62, 0)
+    sendOrientation(10, 0)
 
-    expect(controller.getTilt()).toEqual({ x: 0, y: 0 })
-    expect(onAction).not.toHaveBeenCalled()
+    expect(controller.getTilt().y).toBeCloseTo(10)
     controller.unbind()
   })
 
-  it('reports a lean measured from that neutral rather than from flat', () => {
+  it('fires a direction on the first reading when the device already sits past it', () => {
     const controller = build()
     controller.bind()
 
-    sendOrientation(62, 0)
-    sendOrientation(72, 0)
+    sendOrientation(0, 20)
 
-    expect(controller.getTilt().y).toBeCloseTo(10)
+    expect(onAction).toHaveBeenCalledWith('move-right', 'tilt-right', 'motion')
     controller.unbind()
   })
 
@@ -271,29 +257,14 @@ describe('createMotionController', () => {
     controller.unbind()
   })
 
-  it('retakes the neutral on recalibrate, so a drifted posture becomes level again', () => {
+  it('releases every held direction when unbound', () => {
     const controller = build()
     controller.bind()
 
-    sendOrientation(60, 0)
-    sendOrientation(75, 0)
-    controller.recalibrate()
-    sendOrientation(75, 0)
-
-    expect(controller.getTilt()).toEqual({ x: 0, y: 0 })
-    controller.unbind()
-  })
-
-  it('releases every held direction when recalibrated', () => {
-    const controller = build()
-    controller.bind()
-
-    sendOrientation(0, 0)
     sendOrientation(0, 20)
-    controller.recalibrate()
+    controller.unbind()
 
     expect(onRelease).toHaveBeenCalledWith('move-right', 'tilt-right', 'motion')
-    controller.unbind()
   })
 
   it('swaps the axes when the screen is rotated into landscape', () => {
@@ -301,8 +272,7 @@ describe('createMotionController', () => {
     const controller = build()
     controller.bind()
 
-    sendOrientation(60, 0)
-    sendOrientation(72, 0)
+    sendOrientation(12, 0)
 
     expect(controller.getTilt().x).toBeCloseTo(12)
     expect(controller.getTilt().y).toBeCloseTo(0)
