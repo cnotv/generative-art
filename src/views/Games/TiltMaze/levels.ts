@@ -91,6 +91,7 @@ export const buildLevel = (scene: THREE.Scene, world: RAPIER.World, level: numbe
   return {
     board: createTiltMazeBoard(scene, world, layout, config),
     layout,
+    holeRadius: config.holeRadius,
     cameraHeight: getCameraHeight(layout, window.innerWidth, window.innerHeight)
   }
 }

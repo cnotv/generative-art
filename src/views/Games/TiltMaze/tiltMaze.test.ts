@@ -3,6 +3,8 @@ import type { CoordinateTuple } from '@webgamekit/animation'
 import {
   applyTiltInversion,
   findNearestHole,
+  getActiveLean,
+  getFramedCameraHeight,
   getKeyboardTilt,
   getTiltGravity,
   planMazeHoles,
@@ -16,7 +18,6 @@ import {
   HOLE_SPACING_IN_CELLS,
   MAX_CELLS_LONG_AXIS,
   MAX_SHORT_AXIS_CELLS,
-  WALL_HEIGHT,
   WALL_THICKNESS
 } from './config'
 import { getLevelConfig, getNextLevel } from './levels'
@@ -228,17 +229,40 @@ describe('getCameraHeight', () => {
     ['portrait', 390, 844],
     ['landscape', 844, 390],
     ['desktop', 1920, 1080]
-  ])('frames the whole board on %s', (_label, width, height) => {
+  ])('frames the playfield edge to edge on %s', (_label, width, height) => {
+    // The interior is what has to fit: the perimeter walls deliberately fall outside the
+    // viewport so the screen bezel reads as the frame of the maze.
     const layout = getBoardLayout(width, height, LEVEL_ONE)
     const cameraHeight = getCameraHeight(layout, width, height)
     const halfFovTangent = Math.tan(((55 / 2) * Math.PI) / 180)
 
-    // Measured at the top of the walls, which is the plane that actually has to fit.
-    const visibleDepth = 2 * (cameraHeight - WALL_HEIGHT) * halfFovTangent
+    const visibleDepth = 2 * cameraHeight * halfFovTangent
     const visibleWidth = visibleDepth * (width / height)
 
-    expect(visibleDepth).toBeGreaterThanOrEqual(layout.boardDepth)
-    expect(visibleWidth).toBeGreaterThanOrEqual(layout.boardWidth)
+    expect(visibleDepth).toBeGreaterThanOrEqual(layout.boardDepth - WALL_THICKNESS)
+    expect(visibleWidth).toBeGreaterThanOrEqual(layout.boardWidth - WALL_THICKNESS)
+  })
+
+  it.each([
+    ['portrait', 390, 844],
+    ['landscape', 844, 390],
+    ['desktop', 1920, 1080]
+  ])('holds the fit tight to the playfield on %s', (_label, width, height) => {
+    // Tight, not merely sufficient: a generous fit puts a band of background around the board
+    // and loses the illusion that the maze runs to the edges of the device.
+    const layout = getBoardLayout(width, height, LEVEL_ONE)
+    const cameraHeight = getCameraHeight(layout, width, height)
+    const halfFovTangent = Math.tan(((55 / 2) * Math.PI) / 180)
+
+    const visibleDepth = 2 * cameraHeight * halfFovTangent
+    const visibleWidth = visibleDepth * (width / height)
+    const tightestAxis = Math.min(
+      visibleDepth / (layout.boardDepth - WALL_THICKNESS),
+      visibleWidth / (layout.boardWidth - WALL_THICKNESS)
+    )
+
+    expect(tightestAxis).toBeGreaterThanOrEqual(1)
+    expect(tightestAxis).toBeLessThanOrEqual(1.1)
   })
 
   it('pulls back further for a taller board', () => {
@@ -539,5 +563,37 @@ describe('loadBestLevel', () => {
     withStorage(null, true)
 
     expect(loadBestLevel()).toBe(0)
+  })
+})
+
+describe('lean by input device', () => {
+  it.each([
+    { device: 'a live phone sensor', isSensorLive: true, expected: 0 },
+    { device: 'the keyboard', isSensorLive: false, expected: 0.6 }
+  ])('leans $expected for $device', ({ isSensorLive, expected }) => {
+    expect(getActiveLean(isSensorLive, 0.6)).toBe(expected)
+  })
+
+  it('pins the view however hard the configured lean is turned up, on a phone', () => {
+    // The phone is already leaning in the player's hands; leaning the camera too would double
+    // the motion and make the board hard to read.
+    expect(getActiveLean(true, 2)).toBe(0)
+  })
+
+  it.each([
+    { device: 'a live phone sensor', isSensorLive: true, expected: 100 },
+    { device: 'the keyboard', isSensorLive: false, expected: 120 }
+  ])('frames at $expected for $device', ({ isSensorLive, expected }) => {
+    expect(getFramedCameraHeight(isSensorLive, 100, 1.2)).toBeCloseTo(expected)
+  })
+
+  it('adds headroom exactly when it adds lean, so a lean never crops the far corner', () => {
+    const sensorLeans = getActiveLean(true, 0.6) !== 0
+    const sensorHasHeadroom = getFramedCameraHeight(true, 100, 1.2) > 100
+    const keysLean = getActiveLean(false, 0.6) !== 0
+    const keysHaveHeadroom = getFramedCameraHeight(false, 100, 1.2) > 100
+
+    expect(sensorHasHeadroom).toBe(sensorLeans)
+    expect(keysHaveHeadroom).toBe(keysLean)
   })
 })

@@ -1,10 +1,10 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { BoardLayout, LevelConfig } from './types'
 import {
+  CAMERA_EDGE_SAFETY,
   CAMERA_FOV,
-  CAMERA_MARGIN,
+  WALL_THICKNESS,
   DEGREES_TO_RADIANS,
-  WALL_HEIGHT,
   MAX_CELLS_LONG_AXIS,
   MIN_CELLS_LONG_AXIS
 } from './config'
@@ -64,9 +64,13 @@ export const getBoardLayout = (
  * the larger of the two. Taking the maximum is what stops a rotated phone from cropping the
  * board rather than shrinking it.
  *
- * The fit is measured at the top of the walls rather than at the floor: everything above the
- * ground plane projects outward from a camera looking down, so framing the floor exactly leaves
- * the wall tops cropped off the edges.
+ * The fit is measured against the **interior** of the perimeter, not the board's outer extent:
+ * the playfield then runs edge to edge and the border walls fall outside the viewport, so the
+ * screen bezel reads as the frame of the maze. Their tops overhang the edges, which is the
+ * effect rather than a defect.
+ *
+ * No headroom is added here. A leaning view needs some, but only the caller knows whether it is
+ * leaning, so it scales this by `CAMERA_LEAN_MARGIN` when it is.
  * @param layout The board being framed
  * @param viewportWidth Viewport width in pixels
  * @param viewportHeight Viewport height in pixels
@@ -80,8 +84,12 @@ export const getCameraHeight = (
   const aspect = viewportWidth / Math.max(viewportHeight, 1)
   const halfFovTangent = Math.tan((CAMERA_FOV / 2) * DEGREES_TO_RADIANS)
 
-  const heightToFitDepth = layout.boardDepth / 2 / halfFovTangent + WALL_HEIGHT
-  const heightToFitWidth = layout.boardWidth / 2 / (halfFovTangent * aspect) + WALL_HEIGHT
+  // The perimeter walls are centred on the board edge, so half a thickness of each lies inside.
+  const interiorWidth = layout.boardWidth - WALL_THICKNESS
+  const interiorDepth = layout.boardDepth - WALL_THICKNESS
 
-  return Math.max(heightToFitDepth, heightToFitWidth) * CAMERA_MARGIN
+  const heightToFitDepth = interiorDepth / 2 / halfFovTangent
+  const heightToFitWidth = interiorWidth / 2 / (halfFovTangent * aspect)
+
+  return Math.max(heightToFitDepth, heightToFitWidth) * CAMERA_EDGE_SAFETY
 }

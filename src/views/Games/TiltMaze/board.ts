@@ -16,6 +16,7 @@ import {
   FLOOR_THICKNESS,
   GOAL_COLOR,
   HOLE_MARKER_Y,
+  HOLE_MARKER_RENDER_ORDER,
   HOLE_RING_INNER_RATIO,
   HOLE_SPACING_IN_CELLS,
   TRAP_COLOR,
@@ -142,12 +143,18 @@ const createHoleMarkers = (
       holeRadius,
       HOLE_SEGMENTS
     )
+    // Lying on the floor, so the depth nudge keeps it off the slab's own surface whatever the
+    // camera does. See documentation/docs/journey/z-fighting.md.
     const material = new THREE.MeshBasicMaterial({
       color: hole.isGoal ? GOAL_COLOR : TRAP_COLOR,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
     })
     const marker = new THREE.Mesh(geometry, material)
     marker.name = hole.isGoal ? 'tilt-maze-goal' : 'tilt-maze-trap'
+    marker.renderOrder = HOLE_MARKER_RENDER_ORDER
     marker.rotation.x = -Math.PI / 2
     marker.position.set(hole.position[0], HOLE_MARKER_Y, hole.position[2])
     scene.add(marker)

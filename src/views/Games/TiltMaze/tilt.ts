@@ -146,3 +146,32 @@ export const planMazeHoles = (
 
   return [goal, ...traps]
 }
+
+/**
+ * How far the view leans, which depends on what the player is holding.
+ *
+ * A phone is already leaning in their hands, so the camera stays put and only the ball moves —
+ * moving both would double the motion. A keyboard reports an abstract request instead, so the
+ * view leans to show what the player asked for.
+ * @param isSensorLive Whether device orientation is currently reporting
+ * @param leanPerDegree World units the camera slides per degree, when it leans at all
+ * @returns The lean to apply this frame
+ */
+export const getActiveLean = (isSensorLive: boolean, leanPerDegree: number): number =>
+  isSensorLive ? 0 : leanPerDegree
+
+/**
+ * The camera height to use, adding headroom only when the view leans.
+ *
+ * The fit is edge to edge against the maze interior, which leaves nothing spare: as soon as the
+ * camera slides sideways the far corner would leave the frame.
+ * @param isSensorLive Whether device orientation is currently reporting
+ * @param fittedHeight The edge-to-edge height for this board
+ * @param leanMargin Multiplier applied while leaning
+ * @returns The height to place the camera at
+ */
+export const getFramedCameraHeight = (
+  isSensorLive: boolean,
+  fittedHeight: number,
+  leanMargin: number
+): number => (isSensorLive ? fittedHeight : fittedHeight * leanMargin)
