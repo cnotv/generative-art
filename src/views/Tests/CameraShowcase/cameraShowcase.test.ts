@@ -3,6 +3,7 @@ import {
   trackPose,
   isFollowCase,
   isPlacementCase,
+  isPassiveCase,
   toCameraCase,
   stepCameraCase
 } from './cameraShowcase'
@@ -78,7 +79,8 @@ describe('case classification', () => {
 
   it('classifies every declared case, so a new one cannot be silently ignored', () => {
     const unclassified = CAMERA_CASES.filter(
-      (value) => !isFollowCase(value) && !isPlacementCase(value) && value !== 'path'
+      (value) =>
+        !isFollowCase(value) && !isPlacementCase(value) && !isPassiveCase(value) && value !== 'path'
     )
 
     expect(unclassified).toEqual([])

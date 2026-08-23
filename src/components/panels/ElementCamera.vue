@@ -41,15 +41,38 @@ const hasExpandedSchema = computed(
   () => Object.keys(activeProperties.value?.schema ?? {}).length > 0
 )
 
-const presetLabels: Record<CameraPreset, string> = {
-  [CameraPreset.Perspective]: 'Perspective',
-  [CameraPreset.Fisheye]: 'Fisheye',
-  [CameraPreset.Cinematic]: 'Cinematic',
-  [CameraPreset.Orbit]: 'Orbit',
-  [CameraPreset.Orthographic]: 'Orthographic',
+/**
+ * Shorter names for the presets whose id does not read well as a button.
+ *
+ * Only the exceptions: the list itself is derived from `cameraPresets`, so a preset added to the
+ * package appears here without being registered a second time. A hand-written list fell four
+ * presets behind and nothing caught it — `Record<CameraPreset, string>` looks like it would, but
+ * this file's script block is not type-checked, so the guarantee was imaginary.
+ */
+const PRESET_LABEL_OVERRIDES: Partial<Record<CameraPreset, string>> = {
   [CameraPreset.OrthographicFollowing]: 'Ortho Follow',
-  [CameraPreset.TopDown]: 'Top Down'
+  [CameraPreset.TopDown]: 'Top Down',
+  [CameraPreset.OrthographicFirstPerson]: 'Ortho First',
+  [CameraPreset.OrthographicThirdPerson]: 'Ortho Third'
 }
+
+/**
+ * Turn a preset id into a button label: `first-person` reads as `First Person`.
+ * @param preset The preset id
+ * @returns A title-cased label
+ */
+const humanisePreset = (preset: string): string =>
+  preset
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+
+const presetLabels = Object.fromEntries(
+  (Object.keys(cameraPresets) as CameraPreset[]).map((preset) => [
+    preset,
+    PRESET_LABEL_OVERRIDES[preset] ?? humanisePreset(preset)
+  ])
+) as Record<CameraPreset, string>
 
 const activePresetType = computed<'perspective' | 'orthographic'>(() =>
   activeSlot.value ? cameraPresets[activeSlot.value.preset].type : 'perspective'

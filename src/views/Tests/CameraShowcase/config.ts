@@ -2,12 +2,15 @@ import type { CoordinateTuple } from '@webgamekit/animation'
 import type { CameraPathPoint, ModelOptions, SetupConfig } from '@webgamekit/threejs'
 
 /**
- * The camera behaviours that have no UI of their own. Presets are deliberately absent: the
- * Elements panel already owns them through `registerCameraHandlers`, and it does the part this
- * view could not — switching between perspective and orthographic cameras, scaling the
- * orthographic frustum to the current framing, and tweening between states.
+ * The camera behaviours that have no UI of their own, plus `panel`, which drives nothing at all.
+ *
+ * Presets are the Elements panel's job — it owns them through `registerCameraHandlers` and does
+ * the part this view could not: switching between perspective and orthographic cameras, scaling
+ * the orthographic frustum to the current framing, and tweening between states. `panel` is how
+ * the two coexist: this view writes the camera every frame, so it has to stand down for the
+ * panel to hold, exactly as a follow camera stands down for a cinematic path.
  */
-export const CAMERA_CASES = ['third', 'first', 'free', 'path', 'side'] as const
+export const CAMERA_CASES = ['third', 'first', 'free', 'path', 'side', 'panel'] as const
 
 export type CameraCase = (typeof CAMERA_CASES)[number]
 
@@ -16,7 +19,8 @@ export const CAMERA_CASE_LABELS: Record<CameraCase, string> = {
   first: 'First person',
   free: 'Free chase',
   path: 'Cinematic path',
-  side: 'Side'
+  side: 'Side',
+  panel: 'Elements panel'
 }
 
 export const TRACK_RADIUS = 26
@@ -88,6 +92,7 @@ export const CONTROLS = {
       '3': 'case-free',
       '4': 'case-path',
       '5': 'case-side',
+      '6': 'case-panel',
       q: 'case-previous',
       e: 'case-next'
     },
@@ -105,7 +110,8 @@ export const CASE_BY_ACTION: Record<string, CameraCase> = {
   'case-first': 'first',
   'case-free': 'free',
   'case-path': 'path',
-  'case-side': 'side'
+  'case-side': 'side',
+  'case-panel': 'panel'
 }
 
 /** The keys shown in the on-screen hint, in the order the cases are listed. */
@@ -114,7 +120,8 @@ export const CASE_KEYS: Record<CameraCase, string> = {
   first: '2',
   free: '3',
   path: '4',
-  side: '5'
+  side: '5',
+  panel: '6'
 }
 
 export const configControls = {

@@ -36,7 +36,13 @@ import {
   INTRO_SECONDS,
   CAMERA_CASE_LABELS
 } from './config'
-import { trackPose, isFollowCase, toCameraCase, stepCameraCase } from './cameraShowcase'
+import {
+  trackPose,
+  isFollowCase,
+  isPassiveCase,
+  toCameraCase,
+  stepCameraCase
+} from './cameraShowcase'
 import type { CameraCase } from './config'
 
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
@@ -183,8 +189,13 @@ onMounted(async () => {
           const pathOwnsCamera = introPath?.update(getDelta()) === true
           if (pathOwnsCamera) lookTarget.copy(PATH_LOOK_AT)
 
+          const selected = toCameraCase(reactiveConfig.value.camera.case)
+
+          // Hands the camera to the Elements panel: writing it here every frame would undo
+          // whatever the panel just set, preset and projection alike.
+          if (isPassiveCase(selected)) return
+
           if (!pathOwnsCamera && !cameraPathIsActive()) {
-            const selected = toCameraCase(reactiveConfig.value.camera.case)
             if (isFollowCase(selected)) {
               const placement = followCameraPlacement(
                 selected,

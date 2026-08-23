@@ -40,6 +40,17 @@ export const isFollowCase = (value: CameraCase): value is CameraCase & FollowCam
 export const isPlacementCase = (value: CameraCase): boolean => value === 'side'
 
 /**
+ * Whether this case leaves the camera alone entirely.
+ *
+ * The Elements panel writes the camera when the player uses it, and this view writes the camera
+ * every frame. Whichever writes last wins, so one of them has to stand down; `panel` is the case
+ * where this view does.
+ * @param value The selected case
+ * @returns True when nothing here should touch the camera
+ */
+export const isPassiveCase = (value: CameraCase): boolean => value === 'panel'
+
+/**
  * Narrow an arbitrary string to a known case, so a stale panel value cannot drive the camera
  * into an unhandled branch.
  * @param value The value the panel reported
