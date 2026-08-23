@@ -283,3 +283,70 @@ assert on the body's own coordinates rather than on a screenshot, and treat wall
 duration as unrelated to simulated duration. The numbers settled the question immediately
 once they were asked for — the ball had stopped at a position exactly one radius from a wall
 face, which is not what a broken simulation looks like.
+
+## Asking a device what it is, not what it is doing
+
+The title card has to say two different things. On a desk it explains the arrow keys; on a
+phone it has to say "tap", because tapping is the only way in. The obvious signal to choose
+between them is the one the game already computes every frame: whether the orientation sensor
+is currently reporting.
+
+That signal is wrong, and wrong in a way that hides itself. On iOS the sensor cannot report
+until permission is granted, and permission can only be requested from a user gesture. So the
+sensor stays silent, the card decides it must be on a desk, and it offers arrow keys to a
+device with no keyboard — while the tap that would have unlocked everything goes unmentioned.
+
+```mermaid
+flowchart LR
+    A[Sensor silent] --> B[Card reads it as a desk]
+    B --> C[Shows arrow keys, says tilt]
+    C --> D[Player never taps]
+    D --> E[Permission never requested]
+    E --> A
+```
+
+Every step is behaving exactly as designed, and the loop still closes on itself. The mistake is
+one of category: sensor activity is a _state_, and the question being asked is about _identity_.
+A phone is a phone before it has permission to prove it, and the user agent says so at load,
+long before any gesture.
+
+The general form is worth keeping. When a decision must hold from the first frame, deriving it
+from something that only becomes true later will look correct in every test where that thing
+happens to be true already — a desk, an emulator, a device that granted permission on a previous
+visit — and fail only for the first-time user on the platform that needed it most.
+
+## Covering a level change instead of cutting to it
+
+Falling into a hole ends a round and builds a new board. Doing that in view is jarring: the maze
+the player was reading is replaced by a different one between two frames.
+
+The fix is theatrical rather than technical. A disc in the outcome's colour opens from the
+centre until it covers the screen, a second disc opens inside it as the surface the verdict is
+read against, the board is swapped while nothing is visible, and the cover closes again onto the
+new maze. The player sees a deliberate beat rather than a cut.
+
+Three things about it were not obvious.
+
+**The verdict belongs inside the disc, not beside it.** Laid out as siblings, the text and the
+circle animate independently and drift apart at the edges of the motion. Nested, the disc's clip
+carries the text, so the two are one object by construction rather than by matching durations.
+
+**A cover has to actually cover.** A clipping circle sized as a percentage is measured against a
+reference the browser computes from the element's box, not against its diagonal. Anything under
+that diagonal leaves the corners of a wide screen showing, so the board flashes through at the
+moment the swap happens — the one frame the whole effect exists to hide.
+
+**Sequential waits compound.** Each stage had its own duration and each waited for the last: the
+hole burst played, then the cover ran, then the swap, then the reveal.
+
+| Stage      | Waits for               | Cost   |
+| ---------- | ----------------------- | ------ |
+| Hole burst | the round being decided | ~1.5s  |
+| Cover      | the burst finishing     | ~1.0s  |
+| Reveal     | the swap                | ~0.75s |
+
+Over three seconds, and the middle second of it was spent watching a fully-covered screen while
+a burst nobody could see finished underneath. Running the cover from the moment the round is
+decided, concurrently with the burst it hides, costs nothing and halves the wait. The lesson is
+that a sequence of animations is a sum only when each genuinely needs the last one's result;
+here the cover needed the _decision_, not the burst.
