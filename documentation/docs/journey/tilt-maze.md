@@ -325,7 +325,15 @@ centre until it covers the screen, a second disc opens inside it as the surface 
 read against, the board is swapped while nothing is visible, and the cover closes again onto the
 new maze. The player sees a deliberate beat rather than a cut.
 
-The four beats, captured from the running game:
+The whole thing, recorded from the running game — a fall, the cover, the verdict, and the next
+level arriving underneath it:
+
+<video controls loop muted playsInline width="720" src="/video/tilt-maze/level-transition.webm">
+  A ball falls into a trap, a pink disc opens across the board, a yellow disc opens inside it
+  carrying the words LEVEL DOWN, and the cover closes again onto a freshly built maze.
+</video>
+
+The same four beats as stills:
 
 |                                                                                                                             |                                                                                                                       |
 | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
