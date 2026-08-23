@@ -325,6 +325,27 @@ centre until it covers the screen, a second disc opens inside it as the surface 
 read against, the board is swapped while nothing is visible, and the cover closes again onto the
 new maze. The player sees a deliberate beat rather than a cut.
 
+The four beats, captured from the running game:
+
+|                                                                                                                             |                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| ![The board mid-round, before the ball falls](/img/tilt-maze/transition-00-playing.webp)                                    | ![The outcome disc opening from the centre in the trap colour](/img/tilt-maze/transition-01-opening.webp)             |
+| **1. Playing.** The maze the player is reading.                                                                             | **2. The outcome opens.** A disc in the round's colour — pink for a trap, green for the goal — grows from the middle. |
+| ![The screen fully covered in pastel yellow with the words LEVEL DOWN](/img/tilt-maze/transition-02-covered.webp)           | ![The cover closing again onto a freshly built maze](/img/tilt-maze/transition-04-revealing.webp)                     |
+| **3. Covered.** A second disc opens inside the first, and the verdict is read against it. The board is swapped behind this. | **4. Revealing.** The same circle runs in reverse, uncovering the next level.                                         |
+
+It is built from nothing. There is no animation library involved — no GSAP, no anime.js, no
+Three.js work at all. The cover is two absolutely positioned `div`s stacked over the canvas, each
+animated by a CSS `@keyframes` rule that grows a `clip-path: circle()` from nothing to larger
+than the screen. The second disc trails the first with `animation-delay`, the verdict's letters
+land one after another the same way, and `animation-fill-mode: both` holds each disc at full
+cover once it arrives. Vue switches between the covering and revealing phases with `v-if`; the
+reveal is the identical keyframes run in reverse.
+
+That matters for a reason beyond dependency count: the whole effect runs on the compositor,
+untouched by the frame rate of the scene beneath it. The board is still simulating physics and
+rebuilding a maze while the cover animates, and the cover does not stutter when it does.
+
 Three things about it were not obvious.
 
 **The verdict belongs inside the disc, not beside it.** Laid out as siblings, the text and the
