@@ -74,6 +74,32 @@ Two sections need care:
   shape, delete the section. Keep it current as new commits land.
 - **Rules and skills to abstract** — the output of step 2.
 
+## 3b. Show the change if it renders
+
+**A pull request that changes anything visible carries a picture of it.** A view, a transition, a
+material, a camera, a panel, a layout — a reviewer should not have to check out the branch and
+run the app to find out what it looks like.
+
+- **Stills** for a state or a comparison, **video** when the point is motion.
+- Capture from the running app, never a mock-up. The recipe — driving the app, waiting long
+  enough for a 3D scene to exist, trimming a recording — is in
+  `documentation/docs/guides/capturing-documentation-media.md`.
+- Show the **before** as well when the change alters something that already existed. "It looks
+  like this now" is half an argument; the other half is what it replaced.
+- Include the same media in the documentation, per `.claude/rules/docs.md`. The pull request is
+  read once and the docs are read for years, so the media belongs in both.
+
+Committing the media into `documentation/static/` and linking it by raw URL is what makes it show
+in the body:
+
+```markdown
+![What the reader is looking at](https://raw.githubusercontent.com/cnotv/generative-art/<sha>/documentation/static/img/<feature>/<name>.webp)
+```
+
+Pin the link to the **commit sha**, not the branch: a branch link dies when the branch is deleted
+on merge, and the pull request is the record afterwards. GitHub will not play a `.webm` linked
+this way, so link the file for a video and keep the stills inline.
+
 ## 4. Watch CI
 
 ```sh

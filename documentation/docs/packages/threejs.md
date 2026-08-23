@@ -404,6 +404,13 @@ For intros, replays and cutscenes: the camera travels a declared route over a fi
 Sampling is arc-length parameterised, so it holds a steady speed rather than accelerating
 through tightly spaced points.
 
+<video controls loop muted playsInline width="720" src="/video/camera/cinematic-path.webm">
+  The camera lifts away from a red target circling an arena of stone pillars, sweeps around the
+  whole arena while holding the centre in frame, and settles on the far side.
+</video>
+
+Every behaviour below can be compared side by side in the `/tests/CameraShowcase` view.
+
 ### cameraPathCreate(camera, options)
 
 ```typescript
@@ -455,6 +462,17 @@ if (!cameraPathIsActive()) {
 
 The follow camera resumes by itself once the path completes or is cancelled — there is nothing
 to restore.
+
+## What each camera looks like
+
+The same target, the same arena, four of the behaviours above:
+
+|                                                                                         |                                                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ![Third person: the target framed from behind and above](/img/camera/third-person.webp) | ![First person: eye level, looking down the track](/img/camera/first-person.webp) |
+| **Third person.** Behind and above the target, looking at it.                           | **First person.** At the target's eye height, looking where it is going.          |
+| ![Free chase: pulled back high over the arena](/img/camera/free-chase.webp)             | ![Side placement: the arena seen from one side](/img/camera/side.webp)            |
+| **Free chase.** Further back and higher, keeping the surroundings in view.              | **Side.** A one-shot placement rather than a follow.                              |
 
 ## Camera Utilities
 
