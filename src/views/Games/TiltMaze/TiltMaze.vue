@@ -11,7 +11,6 @@ import type { MotionReading } from '@webgamekit/controls'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { LobbyUIButton, LobbyUIKeyPill } from '@/components/LobbyUI'
-import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import '@/assets/styles/lobby-ui.scss'
 import { reportInputSource } from '@/composables/useInputDevice'
@@ -22,16 +21,26 @@ import { createOcclusionFader } from '@/utils/occlusionFade'
 import { resetBall } from './board'
 import { getCameraHeight } from './layout'
 import { buildLevel, getNextLevel } from './levels'
-import { createTiltDriver } from './tiltDriver'
+import type * as THREE from 'three'
+import type RAPIER from '@dimforge/rapier3d-compat'
+import { createTiltDriver, type TiltDriver } from './tiltDriver'
 import { commitRecord, loadBestLevel } from './record'
 import { createHoleBurst } from './holeBurst'
 import type { VictoryBurst } from './holeBurst'
-import { applyTiltInversion, findNearestHole, getKeyboardTilt } from './tilt'
+import {
+  applyTiltInversion,
+  findNearestHole,
+  getActiveLean,
+  getFramedCameraHeight,
+  getKeyboardTilt
+} from './tilt'
 import { useFullscreen } from './useFullscreen'
 import TiltMazeSensorDialog from './TiltMazeSensorDialog.vue'
+import { createBoardDecorations } from './decorations'
 import { getSensorGuidance, getSensorPlatform } from './sensorGuidance'
 import type { ScreenTilt, TiltMazeOutcome } from './types'
 import {
+  CAMERA_LEAN_MARGIN,
   CAMERA_LEAN_PER_DEGREE,
   FALL_THRESHOLD_Y,
   GRAVITY_STRENGTH,
@@ -39,11 +48,15 @@ import {
   TRAP_COLOR,
   CONTROL_MAPPING,
   KEYBOARD_TILT_DEGREES,
-  LEVEL_ARROW_COUNT,
-  LEVEL_ARROW_DURATION_SECONDS,
-  LEVEL_ARROW_SIZE,
-  LEVEL_ARROW_STAGGER_SECONDS,
-  LEVEL_ARROW_STROKE_WIDTH,
+  LEVEL_VERDICT_DURATION_SECONDS,
+  LEVEL_WIPE_DURATION_SECONDS,
+  LEVEL_WIPE_STAGE_COLOR,
+  LEVEL_WIPE_STAGE_DELAY_RATIO,
+  LEVEL_VERDICT_INK,
+  LEVEL_COVER_SECONDS,
+  START_TILT_DEGREES,
+  MILLISECONDS_PER_SECOND,
+  LEVEL_VERDICT_STAGGER_SECONDS,
   MAX_TILT_DEGREES,
   SILENT_SENSOR_TIMEOUT_MS,
   TILT_SMOOTHING,
@@ -77,11 +90,25 @@ const reactiveConfig = createReactiveConfig({
     gravityStrength: GRAVITY_STRENGTH,
     inverted: false
   },
+  diagnostics: { showSensor: false },
   camera: { leanPerDegree: CAMERA_LEAN_PER_DEGREE }
 })
 
 const outcome = ref<TiltMazeOutcome>('playing')
 const hasStarted = ref(false)
+/** Covers the board and pulls back to reveal it, so a round opens the way a level change closes. */
+const isRevealing = ref(false)
+let revealTimer: ReturnType<typeof setTimeout> | undefined
+
+const playStartWipe = (): void => {
+  isRevealing.value = true
+  clearTimeout(revealTimer)
+  revealTimer = setTimeout(() => {
+    isRevealing.value = false
+  }, LEVEL_WIPE_DURATION_SECONDS * MILLISECONDS_PER_SECOND)
+}
+
+onUnmounted(() => clearTimeout(revealTimer))
 const level = ref(1)
 const bestLevel = ref(loadBestLevel())
 const isNewRecord = ref(false)
@@ -89,22 +116,31 @@ const isNewRecord = ref(false)
 /** Assigned once the scene exists; a decided round drives the next one through it. */
 let startNextRound: () => void = () => undefined
 
-/**
- * The chevrons that sweep the way the level just moved. The sweep has to travel in that
- * direction to read as one, so the chevron the stack ends on is the one that lights last.
- */
-const levelArrows = computed(() =>
-  Array.from({ length: LEVEL_ARROW_COUNT }, (_unused, index) => ({
-    position: index,
+/** What the round did to the level, said outright rather than implied by a direction. */
+const levelVerdict = computed(() => (outcome.value === 'won' ? 'Level up' : 'Level down'))
+
+/** Each letter lands in turn, so the phrase assembles itself rather than simply appearing. */
+const verdictLetters = computed(() =>
+  [...levelVerdict.value].map((character, index) => ({
+    key: `${index}-${character}`,
+    character: character === ' ' ? '\u00a0' : character,
     style: {
-      animationDelay: `${(outcome.value === 'won' ? LEVEL_ARROW_COUNT - 1 - index : index) * LEVEL_ARROW_STAGGER_SECONDS}s`,
-      animationDuration: `${LEVEL_ARROW_DURATION_SECONDS}s`
+      animationDelay: `${index * LEVEL_VERDICT_STAGGER_SECONDS}s`,
+      animationDuration: `${LEVEL_VERDICT_DURATION_SECONDS}s`
     }
   }))
 )
-const levelArrowColor = computed(() =>
+
+const levelVerdictColor = computed(() =>
   toCssColor(outcome.value === 'won' ? GOAL_COLOR : TRAP_COLOR)
 )
+
+/** The disc the verdict is read against, the same whichever way the level went. */
+const stageColor = toCssColor(LEVEL_WIPE_STAGE_COLOR)
+const verdictInk = toCssColor(LEVEL_VERDICT_INK)
+
+/** Won rises, lost drops — the phrase travels the way the level just moved. */
+const verdictDirection = computed(() => (outcome.value === 'won' ? 'up' : 'down'))
 
 const { isFullscreen, isFullscreenSupported, toggleFullscreen } = useFullscreen(stage)
 
@@ -130,13 +166,25 @@ const browserLabel = ((): string => {
   return /Chrome/.test(agent) ? 'Chrome' : 'Other'
 })()
 const sensorPlatform = getSensorPlatform(navigator.userAgent)
+
+/**
+ * Whether this is a device that leans rather than a desk that types.
+ *
+ * Keyed on the platform, not on whether the sensor is currently reporting: iOS cannot report
+ * until permission is granted, and permission needs a tap. Reading the live sensor here told an
+ * iPhone it was a desktop — arrow keys it does not have, and an instruction to tilt that could
+ * not work, with no hint that a tap was the way in.
+ */
+const isHandheld = sensorPlatform !== 'desktop'
 const motionPermission = ref<'granted' | 'denied' | 'unsupported' | 'prompt'>(
   motion.isSupported() ? (motion.needsPermission() ? 'prompt' : 'granted') : 'unsupported'
 )
 const isTilting = ref(false)
 const promptCount = ref(0)
 const lastReading = ref<MotionReading | null>(null)
-const showDiagnostics = ref(false)
+// Lives in the Config panel rather than on the canvas: it is a debugging readout, and game
+// chrome is for things the player needs mid-round.
+const showDiagnostics = computed(() => reactiveConfig.value.diagnostics.showSensor)
 const sensorDialogDismissed = ref(false)
 const sensorChecked = ref(false)
 
@@ -186,6 +234,7 @@ const watchForSilentSensor = (): void => {
  * Fullscreen keeps its own button rather than competing for this one.
  */
 const handleStart = async (): Promise<void> => {
+  if (hasStarted.value) return
   hasStarted.value = true
   const permissionAttempt = motion.requestMotionPermission()
 
@@ -211,20 +260,106 @@ const handleFullscreen = async (): Promise<void> => {
  * sensor when one is live and falls back to held keys, so a desk and a phone drive the same
  * board through the same value.
  */
+/**
+ * Begin on the first real lean, from either device. The title card has no button any more, so
+ * the gesture that starts the game is the same one that plays it.
+ * @param tilt The lean being asked for this frame
+ */
+const startOnFirstTilt = (tilt: ScreenTilt): void => {
+  if (hasStarted.value) return
+  // A phone is never level in a hand, so its lean would start the round before the player has
+  // read the title. There, a tap is the deliberate signal — and on iOS it is also the gesture
+  // the motion permission grant requires.
+  if (isHandheld) return
+  if (Math.hypot(tilt.tiltX, tilt.tiltZ) < START_TILT_DEGREES) return
+  void handleStart()
+}
+
+/**
+ * Record what the round did: the outcome, the level it moves to, and whether that beat the
+ * record.
+ *
+ * Only a level cleared counts. The run no longer ends, so the record is the highest level ever
+ * unlocked rather than the level a run happened to die on — and a trap on level one, which
+ * moves nowhere, must not read as an achievement.
+ * @param reachedGoal Whether the ball fell into the goal rather than a trap
+ */
+// The swap happens under a covered screen: the discs get their full run before the next board
+// replaces this one, so the transition never cuts to a board mid-build.
+const cover = { seconds: 0 }
+
+/**
+ * Whether the cover has been up long enough to swap the board behind it.
+ * @param deltaSeconds Seconds since the last frame
+ * @returns True on the frame the cover completes, then false until the next round
+ */
+const isCoverComplete = (deltaSeconds: number): boolean => {
+  cover.seconds += deltaSeconds
+  if (cover.seconds < LEVEL_COVER_SECONDS) return false
+  cover.seconds = 0
+  return true
+}
+
+const settleRound = (reachedGoal: boolean): void => {
+  outcome.value = reachedGoal ? 'won' : 'trapped'
+  level.value = getNextLevel(level.value, outcome.value)
+  isNewRecord.value = reachedGoal && commitRecord(level.value)
+  bestLevel.value = loadBestLevel()
+}
+
 const readTargetTilt = (): ScreenTilt => {
   isTilting.value = motion.isReceiving()
   lastReading.value = motion.getReading()
   if (!isTilting.value) {
-    return getKeyboardTilt(Object.keys(currentActions), KEYBOARD_TILT_DEGREES)
+    // Released actions keep their entry in currentActions, so the keys have to be filtered by
+    // value. Reading them all reports a permanent hard-left lean that nobody asked for.
+    const held = Object.keys(currentActions).filter((action) => currentActions[action])
+    return getKeyboardTilt(held, KEYBOARD_TILT_DEGREES)
   }
   const lean = motion.getTilt()
   return applyTiltInversion({ tiltX: lean.x, tiltZ: lean.y }, reactiveConfig.value.tilt.inverted)
 }
 
-onMounted(async () => {
-  if (!canvas.value) return
+/** The lean this frame, which also decides whether an unstarted round begins. */
+/**
+ * The tilt driver for a scene, reading its tuning live from the panel.
+ * @param camera The scene camera it moves
+ * @param world The physics world whose gravity it leans
+ * @returns The per-frame driver
+ */
+const createDriverFor = (camera: THREE.Camera, world: RAPIER.World): TiltDriver =>
+  createTiltDriver({
+    camera,
+    world,
+    getTargetTilt: readAndMaybeStart,
+    getSettings: () => ({
+      smoothing: reactiveConfig.value.tilt.smoothing,
+      gravityStrength: reactiveConfig.value.tilt.gravityStrength,
+      cameraLeanPerDegree: getActiveLean(isTilting.value, reactiveConfig.value.camera.leanPerDegree)
+    })
+  })
+
+const readAndMaybeStart = (): ScreenTilt => {
+  const tilt = readTargetTilt()
+  startOnFirstTilt(tilt)
+  return tilt
+}
+
+/**
+ * Everything the view needs before the scene exists: the cover that opens the game, the font the
+ * overlays are set in, and the panel registration.
+ */
+const prepareView = (): void => {
+  // Opens the game the way a level change closes: the cover pulls back off the board once,
+  // here, and never again for a start.
+  playStartWipe()
   loadGoogleFont(DARUMADROP_URL, FONT_KEY)
   registerViewConfig(route.name as string, reactiveConfig, configControls)
+}
+
+onMounted(async () => {
+  if (!canvas.value) return
+  prepareView()
 
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showScene: true, showElements: false },
@@ -234,16 +369,14 @@ onMounted(async () => {
       let built = buildLevel(scene, world, level.value)
       let cameraHeight = built.cameraHeight
       let victory: VictoryBurst | null = null
+
+      const decorations = createBoardDecorations(scene, built, level.value)
+      let decorationSeconds = 0
+      onUnmounted(() => decorations.dispose())
       // Walls stand tall enough that a leaning camera puts them in front of the ball; fading
       // whatever blocks the line of sight keeps the ball findable instead of guessed at.
       const occlusion = createOcclusionFader()
       onUnmounted(() => occlusion.dispose())
-
-      // The board is generated once for the screen it started on; a later rotation refits the
-      // framing rather than regenerating, which would throw away the run in progress.
-      const refitCamera = (): void => {
-        cameraHeight = getCameraHeight(built.layout, window.innerWidth, window.innerHeight)
-      }
 
       /**
        * A level is a new board, not a rearranged one. The old one is disposed first so its
@@ -256,22 +389,21 @@ onMounted(async () => {
         built.board.dispose()
         built = buildLevel(scene, world, level.value)
         cameraHeight = built.cameraHeight
+        decorations.rebuild(built, level.value)
         isNewRecord.value = false
         outcome.value = 'playing'
+        // The cover is still on screen at this point; closing it is what shows the new board.
+        playStartWipe()
+      }
+      // The board is generated once for the screen it started on; a later rotation refits the
+      // framing rather than regenerating, which would throw away the run in progress.
+      const refitCamera = (): void => {
+        cameraHeight = getCameraHeight(built.layout, window.innerWidth, window.innerHeight)
       }
       window.addEventListener('resize', refitCamera)
       onUnmounted(() => window.removeEventListener('resize', refitCamera))
 
-      const driver = createTiltDriver({
-        camera,
-        world,
-        getTargetTilt: readTargetTilt,
-        getSettings: () => ({
-          smoothing: reactiveConfig.value.tilt.smoothing,
-          gravityStrength: reactiveConfig.value.tilt.gravityStrength,
-          cameraLeanPerDegree: reactiveConfig.value.camera.leanPerDegree
-        })
-      })
+      const driver = createDriverFor(camera, world)
 
       const handleFall = (): void => {
         if (outcome.value !== 'playing') return
@@ -279,13 +411,7 @@ onMounted(async () => {
         const hole = findNearestHole(ball.position.x, ball.position.z, holes)
         const reachedGoal = Boolean(hole?.isGoal)
 
-        outcome.value = reachedGoal ? 'won' : 'trapped'
-        level.value = getNextLevel(level.value, outcome.value)
-        // Only a level cleared counts. The run no longer ends, so the record is the highest
-        // level ever unlocked rather than the level a run happened to die on — and a trap on
-        // level one, which moves nowhere, must not read as an achievement.
-        isNewRecord.value = reachedGoal && commitRecord(level.value)
-        bestLevel.value = loadBestLevel()
+        settleRound(reachedGoal)
 
         victory?.dispose()
         victory = hole
@@ -305,26 +431,55 @@ onMounted(async () => {
       )
 
       /**
-       * A finished round ends itself, either way, so the game flows without the player having
-       * to find a button between rounds. The hole burst doubles as the pause: without waiting
-       * for it the next board would appear before the player saw which hole they went down.
+       * A finished round ends itself, either way, so the game flows without the player having to
+       * find a button between rounds.
+       *
+       * The cover runs from the moment the round is decided, alongside the hole burst rather
+       * than after it. Waiting for the burst first made the two queue up — the discs finished
+       * covering the screen and then sat there while a burst nobody could see played out
+       * underneath them.
        */
       const advanceFinishedRound = (): void => {
-        if (!victory) startNextRound()
+        if (!isCoverComplete(getDelta())) return
+        startNextRound()
+      }
+
+      /**
+       * One frame of everything that is not the physics step: the goal beacon, the camera, and
+       * the occlusion fade that keeps the ball findable behind a wall.
+       */
+      const stepFrame = (): void => {
+        // Keeps orbiting through a decided round, so the goal is already marked on the board
+        // waiting behind the result overlay.
+        decorationSeconds += getDelta()
+        decorations.update(decorationSeconds)
+
+        const height = getFramedCameraHeight(isTilting.value, cameraHeight, CAMERA_LEAN_MARGIN)
+
+        // Nothing moves until the round begins. A phone is always leaning, so without this the
+        // ball rolls around behind the title card and the game looks started when it is not.
+        // The lean is still read, because reading it is what notices the round should start —
+        // parking alone would freeze the board and the start together.
+        if (!hasStarted.value) {
+          readAndMaybeStart()
+          driver.park(height)
+          return
+        }
+
+        // A decided round parks the ball instead of freezing the loop, so the scene
+        // keeps rendering behind the result overlay.
+        if (outcome.value !== 'playing') {
+          driver.park(height)
+          advanceFinishedRound()
+          return
+        }
+
+        driver.apply(height, built.board.ball)
+        occlusion.update(camera, built.board.ball, built.board.walls)
       }
 
       animate({
-        beforeTimeline: () => {
-          // A decided round parks the ball instead of freezing the loop, so the scene
-          // keeps rendering behind the result overlay.
-          if (outcome.value !== 'playing') {
-            driver.park(cameraHeight)
-            advanceFinishedRound()
-            return
-          }
-          driver.apply(cameraHeight, built.board.ball)
-          occlusion.update(camera, built.board.ball, built.board.walls)
-        },
+        beforeTimeline: stepFrame,
         afterTimeline: () => {
           if (victory && !victory.update(getDelta())) {
             victory.dispose()
@@ -354,42 +509,71 @@ onUnmounted(() => {
     <canvas ref="canvas" class="tilt-maze__canvas"></canvas>
 
     <div v-if="!hasStarted" class="tilt-maze__overlay">
-      <div class="tilt-maze__backdrop"></div>
-      <div class="tilt-maze__panel lui-slide-in">
+      <div class="tilt-maze__backdrop" :style="{ backgroundColor: stageColor }"></div>
+      <div
+        class="tilt-maze__panel tilt-maze__panel--tappable lui-slide-in"
+        :style="{ color: verdictInk }"
+        @click="handleStart"
+      >
         <h1 class="tilt-maze__title">Tilt Maze</h1>
         <p class="tilt-maze__hint">
-          Hold the phone flat and reach the green one
-          <LobbyUIKeyPill :keyboard="['←', '↑', '→', '↓']" :gamepad="['Stick']" />
+          {{ isHandheld ? 'Tap to begin' : 'Tilt to begin' }} — reach the green one
         </p>
-        <LobbyUIButton variant="cta" size="sm" autofocus @click="handleStart">Start</LobbyUIButton>
+        <!-- Below the line rather than trailing it: the keys are the answer to "how", so they
+             read as their own row instead of punctuation on the end of a sentence. -->
+        <LobbyUIKeyPill v-if="!isHandheld" :keyboard="['←', '↑', '→', '↓']" :gamepad="['Stick']" />
       </div>
     </div>
 
-    <!-- The level change has no panel to announce it, so it is read off the direction the
-         chevrons travel while the hole burst plays. -->
+    <!-- The level change has no panel to announce it, so the verdict says it outright while the
+         hole burst plays. The verdict lives inside the yellow disc rather than beside it, so the
+         circle carries the text with it as it moves. -->
     <div v-else-if="outcome !== 'playing'" class="tilt-maze__overlay">
-      <div class="tilt-maze__arrows" :style="{ color: levelArrowColor }">
-        <component
-          :is="outcome === 'won' ? ChevronUp : ChevronDown"
-          v-for="arrow in levelArrows"
-          :key="arrow.position"
-          class="tilt-maze__arrow"
-          :size="LEVEL_ARROW_SIZE"
-          :stroke-width="LEVEL_ARROW_STROKE_WIDTH"
-          :style="arrow.style"
-        />
-        <p v-if="isNewRecord" class="tilt-maze__record">New record</p>
+      <div
+        class="tilt-maze__wipe"
+        :style="{
+          backgroundColor: levelVerdictColor,
+          animationDuration: `${LEVEL_WIPE_DURATION_SECONDS}s`
+        }"
+      ></div>
+      <div
+        class="tilt-maze__wipe tilt-maze__wipe--stage"
+        :style="{
+          backgroundColor: stageColor,
+          animationDuration: `${LEVEL_WIPE_DURATION_SECONDS}s`,
+          animationDelay: `${LEVEL_WIPE_DURATION_SECONDS * LEVEL_WIPE_STAGE_DELAY_RATIO}s`
+        }"
+      >
+        <div class="tilt-maze__verdict" :class="`tilt-maze__verdict--${verdictDirection}`">
+          <p class="tilt-maze__verdict-line">
+            <span
+              v-for="letter in verdictLetters"
+              :key="letter.key"
+              class="tilt-maze__verdict-letter"
+              :style="letter.style"
+              >{{ letter.character }}</span
+            >
+          </p>
+          <p v-if="isNewRecord" class="tilt-maze__record">New record</p>
+        </div>
       </div>
     </div>
 
-    <p v-if="hasStarted" class="tilt-maze__level">
-      Level {{ level }}<span v-if="bestLevel"> · Best {{ bestLevel }}</span>
-    </p>
+    <!-- Starting closes the same circle instead of opening it, so a round begins by pulling the
+         cover back off the board. -->
+    <div v-else-if="isRevealing" class="tilt-maze__overlay">
+      <div
+        class="tilt-maze__wipe tilt-maze__wipe--reveal"
+        :style="{
+          backgroundColor: stageColor,
+          animationDuration: `${LEVEL_WIPE_DURATION_SECONDS}s`
+        }"
+      ></div>
+    </div>
+
+    <p v-if="hasStarted && bestLevel" class="tilt-maze__level">Best {{ bestLevel }}</p>
 
     <div v-if="hasStarted && outcome === 'playing'" class="tilt-maze__chrome">
-      <LobbyUIButton variant="ghost" size="sm" @click="showDiagnostics = !showDiagnostics">
-        Sensor
-      </LobbyUIButton>
       <LobbyUIButton
         v-if="isFullscreenSupported"
         variant="ghost"
@@ -480,6 +664,13 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* The card takes the tap that starts a round on a phone. Scoped to the card rather than the
+   whole overlay: a full-screen hit area swallowed every click on the app chrome behind it and
+   started the game whenever anything else was pressed. */
+.tilt-maze__panel--tappable {
+  cursor: pointer;
+}
+
 .tilt-maze__overlay {
   position: absolute;
   inset: 0;
@@ -490,11 +681,60 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/* Two solid irises opening from the centre, the second trailing the first: the outcome colour
+   sweeps the board, then the stage the verdict is read against opens inside it. Both hold at
+   full cover, so the next board is built behind them rather than in view. */
+.tilt-maze__wipe {
+  position: absolute;
+  inset: 0;
+  animation-name: tilt-maze-wipe;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+/* 120%, not 100%: the percentage is measured against a reference circle, so anything less
+   leaves the corners of a wide screen showing and the board flashes through the handover. */
+@keyframes tilt-maze-wipe {
+  from {
+    clip-path: circle(0% at 50% 50%);
+  }
+
+  to {
+    clip-path: circle(120% at 50% 50%);
+  }
+}
+
+/* Holds the verdict, so the circle carries the text rather than the text sitting beside it. */
+.tilt-maze__wipe--stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* The reverse: the cover closes onto the middle, taking the verdict with it and leaving the
+   new board behind. It starts where the opening ended, so the two are one continuous cover. */
+.tilt-maze__wipe--reveal {
+  animation-name: tilt-maze-wipe-reveal;
+  animation-timing-function: ease-in;
+}
+
+@keyframes tilt-maze-wipe-reveal {
+  from {
+    clip-path: circle(120% at 50% 50%);
+  }
+
+  to {
+    clip-path: circle(0% at 50% 50%);
+  }
+}
+
+/* The same pastel yellow the verdict lands on, so opening the game and changing level are
+   visibly the same surface. Solid rather than a tint: the board behind it is about to be
+   replaced by the first level anyway. */
 .tilt-maze__backdrop {
   position: absolute;
   inset: 0;
-  background: var(--lui-backdrop-tint);
-  backdrop-filter: blur(var(--lui-backdrop-blur));
 }
 
 .tilt-maze__panel {
@@ -517,33 +757,63 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* The stack inherits its colour from the outcome, so the chevrons and the record line read as
-   the same event as the hole burst underneath them. The kit's hard offset shadow carries them
-   over the board, which is pastel and would otherwise swallow a pastel stroke. */
-.tilt-maze__arrows {
+/* Inherits its colour from the outcome, so the verdict and the record line read as the same
+   event as the hole burst underneath them. The kit's hard offset shadow carries them over the
+   board, which is pastel and would otherwise swallow a pastel stroke. */
+.tilt-maze__verdict {
   display: flex;
   flex-direction: column;
   align-items: center;
   filter: drop-shadow(var(--lui-border-shadow));
 }
 
-/* Each chevron holds once it has arrived rather than fading back out, so the whole stack is
+.tilt-maze__verdict-line {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  font-family: var(--lui-font);
+  font-size: var(--lui-text-important);
+  text-align: center;
+  text-transform: uppercase;
+
+  /* White on the pastel yellow, carried by the kit's outline — the same pairing the title uses
+     on this surface, and lighter than inking it in the background plum. */
+  color: var(--lui-text-color);
+  text-shadow: var(--lui-text-shadow);
+}
+
+/* Each letter holds once it has landed rather than fading back out, so the whole phrase is
    still on screen when the next board replaces it. */
-.tilt-maze__arrow {
-  animation-name: tilt-maze-arrow-sweep;
-  animation-timing-function: ease-out;
+.tilt-maze__verdict-letter {
+  display: inline-block;
+  animation-name: tilt-maze-verdict-drop;
+  animation-timing-function: cubic-bezier(0.2, 1.6, 0.35, 1);
   animation-fill-mode: both;
 }
 
-@keyframes tilt-maze-arrow-sweep {
-  from {
+/* Won rises into place, lost falls into it: the phrase travels the way the level just moved. */
+.tilt-maze__verdict--up .tilt-maze__verdict-letter {
+  --tilt-maze-verdict-from: 0.7em;
+}
+
+.tilt-maze__verdict--down .tilt-maze__verdict-letter {
+  --tilt-maze-verdict-from: -0.7em;
+}
+
+@keyframes tilt-maze-verdict-drop {
+  0% {
     opacity: 0;
-    transform: scale(0.6);
+    transform: translateY(var(--tilt-maze-verdict-from)) scale(0.6) rotate(-8deg);
   }
 
-  to {
+  60% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1.15) rotate(3deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
   }
 }
 

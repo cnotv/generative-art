@@ -36,6 +36,31 @@ code is in the repo and will change; the reasoning is what has to survive.
 
 Guides may carry code, but every snippet is a liability the moment the code moves.
 
+## Show it when it is visual
+
+**Any documentation of something with a visual outcome carries an image of it.** A transition, a
+shader, a camera behaviour, a layout, a generated mesh — prose describing what it looks like is
+the weakest possible record, and the first thing to go stale. Capture the real thing from the
+running app rather than mocking it up, using the `verify` procedure to drive it.
+
+- **Images**: `documentation/static/img/<feature>/<name>.webp`, referenced from the root as
+  `/img/<feature>/<name>.webp`. Convert with the `sharp` already in the repo; a flat-shaded
+  screenshot drops to roughly a fifth of its PNG size.
+- **Video**, when the point is motion and stills cannot carry it:
+  `documentation/static/video/<feature>/<name>.webm`, embedded with a `<video>` tag. Record with
+  Playwright's `recordVideo`, trim to the few seconds that matter with `ffmpeg`, and keep it
+  under a few hundred kilobytes. Always include text inside the tag describing what happens, for
+  anyone who cannot play it.
+- A sequence of beats reads better as a captioned grid of stills than as one image; a motion that
+  only makes sense in time needs the video.
+
+How to produce either, from the running app, is in
+`documentation/docs/guides/capturing-documentation-media.md`.
+
+This applies to journey docs as much as guides. The no-code-snippets rule is about code going
+stale, not about keeping the page abstract — a picture of the result ages far better than a
+paragraph describing it.
+
 ## Keeping guides true
 
 A guide that documents specific files declares them in a `Source files` note. When you
