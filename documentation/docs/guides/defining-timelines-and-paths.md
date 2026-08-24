@@ -111,7 +111,7 @@ object the scene supplies to react to edits:
 ```ts
 export interface PathConfig {
   speed: number
-  obstacleImpulse: number
+  obstacleImpulse: number // no panel control; a view exposes it itself if it pushes obstacles
   easing: string
   easingIntensity: number
   playing: boolean // pauses only this path, not the whole timeline

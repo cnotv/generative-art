@@ -465,14 +465,14 @@ to restore.
 
 ## What each camera looks like
 
-The same target, the same arena, four of the behaviours above:
+The same target, the same arena, the three follow modes:
 
 |                                                                                         |                                                                                   |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | ![Third person: the target framed from behind and above](/img/camera/third-person.webp) | ![First person: eye level, looking down the track](/img/camera/first-person.webp) |
 | **Third person.** Behind and above the target, looking at it.                           | **First person.** At the target's eye height, looking where it is going.          |
-| ![Free chase: pulled back high over the arena](/img/camera/free-chase.webp)             | ![Side placement: the arena seen from one side](/img/camera/side.webp)            |
-| **Free chase.** Further back and higher, keeping the surroundings in view.              | **Side.** A one-shot placement rather than a follow.                              |
+| ![Free chase: pulled back high over the arena](/img/camera/free-chase.webp)             |                                                                                   |
+| **Free chase.** Further back and higher, keeping the surroundings in view.              |                                                                                   |
 
 ## Camera Utilities
 
@@ -495,6 +495,45 @@ Apply a camera preset configuration.
 import { setCameraPreset, CameraPreset } from '@webgamekit/threejs'
 
 setCameraPreset(camera, CameraPreset.TopDown)
+```
+
+### getCylinder(scene, world, options)
+
+Create a cylinder with physics, for anything round that the cuboid and ball primitives cannot be
+— a column, a pillar, a barrel.
+
+```typescript
+import { getCylinder } from '@webgamekit/threejs'
+
+getCylinder(scene, world, {
+  name: 'column',
+  size: [2.2, 16, 2.2], // [diameter, height, diameter], read the same way a cube reads its size
+  position: [0, 3, -9], // the underside, as getCube positions from
+  segments: 24,
+  type: 'fixed',
+  texture: marbleTexture,
+  textureRepeat: [1, 3]
+})
+```
+
+`size` and `position` follow `getCube` exactly, so one can be swapped for the other without
+rethinking a layout. The collider is a Rapier cylinder rather than a box, so a ball rolling
+against it behaves as the shape looks.
+
+### textureRepeat on a model
+
+Without it a texture is stretched once across whatever it is put on, so the same stone reads at
+a different grain on a wide step than on a narrow column. `textureRepeat: [horizontal, vertical]`
+tiles it instead, and the wrapping needed for that is set for you.
+
+```typescript
+const tile = 6
+const repeat = (width: number, height: number): [number, number] => [
+  Math.max(1, Math.round(width / tile)),
+  Math.max(1, Math.round(height / tile))
+]
+
+getCube(scene, world, { size: [44, 1, 30], texture, textureRepeat: repeat(44, 30) })
 ```
 
 ### updateCamera(camera, config)
