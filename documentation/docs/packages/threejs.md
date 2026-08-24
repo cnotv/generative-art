@@ -404,17 +404,8 @@ For intros, replays and cutscenes: the camera travels a declared route over a fi
 Sampling is arc-length parameterised, so it holds a steady speed rather than accelerating
 through tightly spaced points.
 
-<video controls loop muted playsInline width="720" src="/video/camera/cinematic-path.webm">
-  The camera approaches a marble colonnade head-on, passes between its columns into the
-  interior, climbs until the architrave is overhead, leaves over one side and circles the
-  whole monument, holding it in frame throughout.
-</video>
-
-The same four beats as stills, for anywhere the video will not play:
-
-![Four frames of the sweep: the colonnade head-on, between its columns, looking down into it from above the architrave, and the circuit around it](/img/camera/cinematic-path-beats.webp)
-
-Every behaviour below can be compared side by side in the `/tests/CameraShowcase` view.
+Every behaviour below can be compared side by side in the `/tests/CameraShowcase` view, which
+is also where to see what each one looks like.
 
 ### cameraPathCreate(camera, options)
 
@@ -467,18 +458,6 @@ if (!cameraPathIsActive()) {
 
 The follow camera resumes by itself once the path completes or is cancelled — there is nothing
 to restore.
-
-## What each camera looks like
-
-The same target walking the same circuit inside the colonnade, the mode switched between them.
-Captured from `/tests/CameraShowcase`.
-
-|                                                                                                             |                                                                                                     |
-| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| ![Third person: the target framed from behind and above on the marble floor](/img/camera/third-person.webp) | ![First person: eye level between two columns, sky and grass beyond](/img/camera/first-person.webp) |
-| **Third person.** Behind and above the target, looking at it.                                               | **First person.** At the target's eye height, looking where it is going.                            |
-| ![Free chase: the whole monument from above and behind](/img/camera/free-chase.webp)                        | ![Cinematic path: the colonnade seen head-on from the approach](/img/camera/cinematic-path.webp)    |
-| **Free chase.** Further back and higher, keeping the surroundings in view.                                  | **Cinematic path.** A declared route, here on its approach to the monument.                         |
 
 ## Camera Utilities
 
