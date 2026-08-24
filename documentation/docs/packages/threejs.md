@@ -405,8 +405,9 @@ Sampling is arc-length parameterised, so it holds a steady speed rather than acc
 through tightly spaced points.
 
 <video controls loop muted playsInline width="720" src="/video/camera/cinematic-path.webm">
-  The camera lifts away from a red target circling an arena of stone pillars, sweeps around the
-  whole arena while holding the centre in frame, and settles on the far side.
+  The camera approaches a marble colonnade head-on, passes between its columns into the
+  interior, climbs until the architrave is overhead, leaves over one side and circles the
+  whole monument, holding it in frame throughout.
 </video>
 
 Every behaviour below can be compared side by side in the `/tests/CameraShowcase` view.
