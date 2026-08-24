@@ -410,6 +410,10 @@ through tightly spaced points.
   whole monument, holding it in frame throughout.
 </video>
 
+The same four beats as stills, for anywhere the video will not play:
+
+![Four frames of the sweep: the colonnade head-on, between its columns, looking down into it from above the architrave, and the circuit around it](/img/camera/cinematic-path-beats.webp)
+
 Every behaviour below can be compared side by side in the `/tests/CameraShowcase` view.
 
 ### cameraPathCreate(camera, options)
