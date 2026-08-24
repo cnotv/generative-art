@@ -32,6 +32,19 @@ const safeVec3 = (vec?: { x?: number; y?: number; z?: number }) => ({
   z: vec?.z ?? 0
 })
 
+/**
+ * A real vector from anything shaped like one.
+ *
+ * A camera reaches this module from a view, a swap or a test double, and only the first is
+ * guaranteed to carry `THREE.Vector3` methods — cloning one directly throws on the others.
+ * @param vec - Anything with x, y and z, or nothing
+ * @returns A vector safe to keep and mutate
+ */
+const toVector3 = (vec?: { x?: number; y?: number; z?: number }): THREE.Vector3 => {
+  const { x, y, z } = safeVec3(vec)
+  return new THREE.Vector3(x, y, z)
+}
+
 const buildCameraDefaults = (cam: THREE.Camera, orbit?: OrbitControls | null) => {
   const persp = cam as THREE.PerspectiveCamera
   const orbitTarget = orbit?.target ?? { x: 0, y: 0, z: 0 }
@@ -255,8 +268,8 @@ const snapshotCamera = (
   const persp = camera as THREE.PerspectiveCamera
   const ortho = camera as THREE.OrthographicCamera
   return {
-    position: camera.position.clone(),
-    target: (orbit ? orbit.target : ORIGIN).clone(),
+    position: toVector3(camera.position),
+    target: toVector3(orbit ? orbit.target : ORIGIN),
     fov: persp.fov ?? DEFAULT_FOV,
     left: ortho.left ?? 0,
     right: ortho.right ?? 0,
