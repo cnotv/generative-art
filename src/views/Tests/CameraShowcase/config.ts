@@ -21,9 +21,18 @@ export const CAMERA_CASE_LABELS: Record<CameraCase, string> = {
   path: 'Cinematic path'
 }
 
-export const TRACK_RADIUS = 38
+/**
+ * The target walks a circuit inside the colonnade, on its floor.
+ *
+ * Outside it there is nothing to see: a follow camera looks along the target's heading, which on
+ * a circle around the monument points permanently away from it, so first and third person framed
+ * empty grass. Inside, every mode has columns in shot — which is the point of the view.
+ *
+ * Radius 7 clears the columns: the nearest sit at z +/-9 with a 1.1 radius.
+ */
+export const TRACK_RADIUS = 7
 export const TRACK_SECONDS = 20
-export const TARGET_HEIGHT = 1
+export const TARGET_HEIGHT = 3
 
 /**
  * A colonnade: three steps, a ring of square columns, and the beams they carry.

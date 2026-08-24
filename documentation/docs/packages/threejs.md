@@ -465,14 +465,15 @@ to restore.
 
 ## What each camera looks like
 
-The same target, the same arena, the three follow modes:
+The same target walking the same circuit inside the colonnade, the mode switched between them.
+Captured from `/tests/CameraShowcase`.
 
-|                                                                                         |                                                                                   |
-| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| ![Third person: the target framed from behind and above](/img/camera/third-person.webp) | ![First person: eye level, looking down the track](/img/camera/first-person.webp) |
-| **Third person.** Behind and above the target, looking at it.                           | **First person.** At the target's eye height, looking where it is going.          |
-| ![Free chase: pulled back high over the arena](/img/camera/free-chase.webp)             |                                                                                   |
-| **Free chase.** Further back and higher, keeping the surroundings in view.              |                                                                                   |
+|                                                                                                             |                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| ![Third person: the target framed from behind and above on the marble floor](/img/camera/third-person.webp) | ![First person: eye level between two columns, sky and grass beyond](/img/camera/first-person.webp) |
+| **Third person.** Behind and above the target, looking at it.                                               | **First person.** At the target's eye height, looking where it is going.                            |
+| ![Free chase: the whole monument from above and behind](/img/camera/free-chase.webp)                        | ![Cinematic path: the colonnade seen head-on from the approach](/img/camera/cinematic-path.webp)    |
+| **Free chase.** Further back and higher, keeping the surroundings in view.                                  | **Cinematic path.** A declared route, here on its approach to the monument.                         |
 
 ## Camera Utilities
 
