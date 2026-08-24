@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Input } from '@/components/ui/input'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import { logicClassifyPathSegment, type PathStepType } from '@webgamekit/logic'
 import type { PathEntry, PathConfig } from '@/stores/debugScene'
@@ -29,6 +30,10 @@ interface Properties {
 const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
+
+// Collapsed to start: a path's waypoint table and its dozen settings are longer than everything
+// else on an element put together, and push whatever sits above them off the panel.
+const expanded = ref(false)
 
 /** True for the waypoint row currently being interacted with in the viewport. */
 const isActiveRow = (index: number): boolean => {
@@ -61,7 +66,7 @@ const handleConfigUpdate = (key: string, value: unknown) => {
 
 const pathSchema = {
   speed: { min: 1, max: 100, step: 1, label: 'Speed' },
-  obstacleImpulse: { min: 0, max: 50, step: 1, label: 'Push Force' },
+  curved: { boolean: true, label: 'Curved' },
   easing: { bezier: true, label: 'Easing' },
   easingIntensity: { min: 0, max: 5, step: 0.01, label: 'Easing Intensity' },
   playing: { boolean: true, label: 'Playing' },
@@ -76,6 +81,15 @@ const pathSchema = {
 <template>
   <div class="element-path-section">
     <div class="element-path-section__header">
+      <IconButton
+        panel-colors
+        size="xs"
+        :title="expanded ? 'Collapse path' : 'Expand path'"
+        @click.stop="expanded = !expanded"
+      >
+        <ChevronDown v-if="expanded" />
+        <ChevronRight v-else />
+      </IconButton>
       <span class="element-path-section__title">Path ({{ path.waypoints.length }})</span>
       <IconButton panel-colors size="xs" title="Add waypoint" @click.stop="handleAddWaypoint">
         <Plus />
@@ -90,7 +104,7 @@ const pathSchema = {
       </IconButton>
     </div>
 
-    <div class="element-path-section__content">
+    <div v-if="expanded" class="element-path-section__content">
       <div
         class="element-path-section__grid"
         :class="{ 'element-path-section__grid--stepped': path.stepped }"

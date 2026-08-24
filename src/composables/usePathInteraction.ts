@@ -51,6 +51,24 @@ const intersectGround = (
   return raycaster.ray.intersectPlane(plane, target) ? target : null
 }
 
+/**
+ * Where the pointer meets the horizontal plane a node sits in.
+ *
+ * A node is dragged in its own plane rather than the ground's: a path whose waypoints differ in
+ * height — a camera sweep, say — would otherwise be flattened onto the ground by the first drag.
+ * For a path laid flat on the ground the two planes are the same, so nothing changes there.
+ * @param ndc - Pointer position in normalised device coordinates
+ * @param camera - The camera to raycast from
+ * @param node - The node being dragged
+ * @returns The point under the pointer at the node's height, or null if the ray misses
+ */
+const intersectNodePlane = (
+  ndc: THREE.Vector2,
+  camera: THREE.Camera,
+  node: THREE.Mesh
+): THREE.Vector3 | null =>
+  intersectGround(ndc, camera, new THREE.Plane(new THREE.Vector3(0, 1, 0), -node.position.y))
+
 const hitTestNodes = (ndc: THREE.Vector2, camera: THREE.Camera, nodes: THREE.Mesh[]): number => {
   if (nodes.length === 0) return -1
   const raycaster = new THREE.Raycaster()
@@ -121,9 +139,11 @@ export const usePathInteraction = ({
     const canvasElement = canvas.value
     const camera = getCamera()
     if (selectedNodeIndex !== null && canvasElement && camera) {
+      const node = getNodes()[selectedNodeIndex]
+      if (!node) return
       const ndc = getNdcFromEvent(event, canvasElement)
-      const worldPos = intersectGround(ndc, camera, groundPlane)
-      if (worldPos) onUpdateWaypoint(selectedNodeIndex, [worldPos.x, groundY, worldPos.z])
+      const worldPos = intersectNodePlane(ndc, camera, node)
+      if (worldPos) onUpdateWaypoint(selectedNodeIndex, [worldPos.x, node.position.y, worldPos.z])
       return
     }
     if (isPointerDown) tryAddWaypoint(event)

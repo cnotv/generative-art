@@ -7,6 +7,7 @@ import type { PathConfig, PathHandlers, PathEntry } from './debugScene'
 const makePathConfig = (overrides: Partial<PathConfig> = {}): PathConfig => ({
   speed: 10,
   obstacleImpulse: 0,
+  curved: true,
   easing: 'linear',
   easingIntensity: 1,
   playing: true,
@@ -178,6 +179,50 @@ describe('useDebugSceneStore — paths', () => {
       store.addPath(makePathEntry('p1', 'brick-1', handlers))
       store.updatePathConfig('p1', 'loop', true)
       expect(handlers.onConfigChange).toHaveBeenCalledWith('loop', true)
+    })
+  })
+
+  describe('updateSceneElementType', () => {
+    const CAMERA_ROW = { name: 'Camera', type: 'PerspectiveCamera', hidden: false }
+    const OTHER_ROW = { name: 'ground', type: 'Mesh', hidden: false }
+    const noHandlers = { onToggleVisibility: () => {}, onRemove: () => {} }
+
+    it('retypes the named element and leaves the rest alone', () => {
+      const store = useDebugSceneStore()
+      store.setSceneElements([CAMERA_ROW, OTHER_ROW], noHandlers)
+
+      store.updateSceneElementType('Camera', 'OrthographicCamera')
+
+      expect(store.sceneElements.map((e) => e.type)).toEqual(['OrthographicCamera', 'Mesh'])
+    })
+
+    it('keeps rows registered on top of the scene list, which a rebuild would drop', () => {
+      // A follow rig and a path are not scene children, so rebuilding the list from the scene
+      // to pick up a camera swap silently removes them.
+      const store = useDebugSceneStore()
+      store.setSceneElements([CAMERA_ROW], noHandlers)
+      store.addSceneElement(
+        { name: 'rig', type: 'Rig', hidden: false },
+        {
+          title: 'rig',
+          schema: {},
+          getValue: () => undefined,
+          updateValue: () => {}
+        }
+      )
+
+      store.updateSceneElementType('Camera', 'OrthographicCamera')
+
+      expect(store.sceneElements.map((e) => e.name)).toEqual(['Camera', 'rig'])
+    })
+
+    it('does nothing for a name that is not in the list', () => {
+      const store = useDebugSceneStore()
+      store.setSceneElements([CAMERA_ROW], noHandlers)
+
+      store.updateSceneElementType('missing', 'Mesh')
+
+      expect(store.sceneElements).toEqual([CAMERA_ROW])
     })
   })
 

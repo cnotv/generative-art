@@ -9,6 +9,8 @@ import {
   AccordionTrigger,
   AccordionContent
 } from '@/components/ui/accordion'
+import { Select } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import { RotateCcw, RotateCw } from 'lucide-vue-next'
 import { CameraPreset, cameraPresets } from '@webgamekit/threejs'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
@@ -29,8 +31,40 @@ const emit = defineEmits<{
 }>()
 
 const cameraConfigStore = useCameraConfigStore()
-const { activeSlot, transitionEnabled } = storeToRefs(cameraConfigStore)
-const { applyPresetToActiveSlot, rotateActiveSlot, setTransitionEnabled } = cameraConfigStore
+const {
+  activeSlot,
+  transitionEnabled,
+  followViews,
+  activeFollowView,
+  followConfig,
+  followSettings,
+  followTargetLabel,
+  followTargets,
+  activeFollowTarget,
+  orbitEnabled
+} = storeToRefs(cameraConfigStore)
+const {
+  applyPresetToActiveSlot,
+  rotateActiveSlot,
+  setTransitionEnabled,
+  selectFollowView,
+  resumeFollowView,
+  setOrbitEnabled,
+  setFollowTarget,
+  updateFollowSetting,
+  resetCameraToSceneDefault
+} = cameraConfigStore
+
+/** First person in a parallel projection has no vanishing point, so there is nothing to see. */
+const ORTHOGRAPHIC_EXCLUDED_VIEWS = ['first']
+
+const availableFollowViews = computed(() =>
+  activePresetType.value === 'orthographic'
+    ? followViews.value.filter((view) => !ORTHOGRAPHIC_EXCLUDED_VIEWS.includes(view.value))
+    : followViews.value
+)
+
+const isFollowing = computed(() => activeFollowView.value !== null)
 
 const ROTATION_STEP_DEGREES = 45
 
@@ -51,9 +85,19 @@ const hasExpandedSchema = computed(
  */
 const PRESET_LABEL_OVERRIDES: Partial<Record<CameraPreset, string>> = {
   [CameraPreset.OrthographicFollowing]: 'Ortho Follow',
-  [CameraPreset.TopDown]: 'Top Down',
-  [CameraPreset.OrthographicFirstPerson]: 'Ortho First',
-  [CameraPreset.OrthographicThirdPerson]: 'Ortho Third'
+  [CameraPreset.TopDown]: 'Top Down'
+}
+
+/**
+ * The preset each projection falls back to when the type is toggled rather than a preset picked.
+ *
+ * Named rather than taken as the first preset of that type: declaration order is not a
+ * statement about which preset represents a projection, and relying on it silently turned the
+ * Orthographic button into whichever preset happened to be declared first.
+ */
+const DEFAULT_PRESET_BY_TYPE: Record<'perspective' | 'orthographic', CameraPreset> = {
+  perspective: CameraPreset.Perspective,
+  orthographic: CameraPreset.Orthographic
 }
 
 /**
@@ -95,13 +139,14 @@ const filteredPresets = computed(() =>
 )
 
 const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
-  const presets = type === 'perspective' ? perspectivePresets.value : orthographicPresets.value
-  if (presets.length > 0) applyPresetToActiveSlot(presets[0][0])
+  applyPresetToActiveSlot(DEFAULT_PRESET_BY_TYPE[type])
 }
 </script>
 
 <template>
-  <Accordion type="multiple" :default-value="['presets', 'properties', 'recording']">
+  <!-- Properties and Recording stay shut: the presets and the follow rig are what a camera is
+       reached for, and two long sections below them push both off the panel. -->
+  <Accordion type="multiple" :default-value="['presets', 'following']">
     <AccordionItem value="presets">
       <AccordionTrigger>Presets</AccordionTrigger>
       <AccordionContent>
@@ -142,6 +187,26 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
             >{{ label }}</Button
           >
         </div>
+        <div v-if="availableFollowViews.length" class="element-camera__preset-grid">
+          <Button
+            v-for="view in availableFollowViews"
+            :key="view.value"
+            :variant="activeFollowView === view.value ? 'default' : 'outline'"
+            size="sm"
+            class="text-xs"
+            @click="selectFollowView(view.value)"
+            >{{ view.label }}</Button
+          >
+        </div>
+        <Button
+          :variant="orbitEnabled ? 'default' : 'outline'"
+          size="sm"
+          class="element-camera__wide-toggle w-full text-xs"
+          title="Drag the canvas to orbit the camera"
+          @click="setOrbitEnabled(!orbitEnabled)"
+        >
+          Orbit Controls: {{ orbitEnabled ? 'On' : 'Off' }}
+        </Button>
         <div class="element-camera__rotate-row">
           <Button
             variant="outline"
@@ -165,14 +230,73 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
           </Button>
         </div>
         <Button
+          variant="outline"
+          size="sm"
+          class="element-camera__wide-toggle w-full text-xs"
+          title="Put the camera back where this scene declared it"
+          @click="resetCameraToSceneDefault()"
+        >
+          Reset to scene default
+        </Button>
+        <Button
           :variant="transitionEnabled ? 'default' : 'outline'"
           size="sm"
-          class="element-camera__transition-toggle w-full text-xs"
+          class="element-camera__wide-toggle w-full text-xs"
           title="Animate transitions between camera states"
           @click="setTransitionEnabled(!transitionEnabled)"
         >
           Transitions: {{ transitionEnabled ? 'On' : 'Off' }}
         </Button>
+      </AccordionContent>
+    </AccordionItem>
+    <AccordionItem v-if="followSettings.length" value="following">
+      <AccordionTrigger>Following</AccordionTrigger>
+      <AccordionContent>
+        <Button
+          :variant="isFollowing ? 'default' : 'outline'"
+          size="sm"
+          class="element-camera__wide-toggle w-full text-xs"
+          :title="
+            isFollowing ? 'Stop following, so presets and rotation hold' : 'Follow the target again'
+          "
+          @click="isFollowing ? selectFollowView(null) : resumeFollowView()"
+        >
+          {{ isFollowing ? `Following ${followTargetLabel ?? 'target'}` : 'Not following' }}
+        </Button>
+        <Button
+          :variant="followConfig.followRotation ? 'default' : 'outline'"
+          size="sm"
+          class="element-camera__wide-toggle w-full text-xs"
+          title="Swing the camera round as the target turns, rather than holding its heading"
+          @click="updateFollowSetting('followRotation', !followConfig.followRotation)"
+        >
+          Follow rotation: {{ followConfig.followRotation ? 'On' : 'Off' }}
+        </Button>
+        <div v-if="followTargets.length" class="element-camera__setting">
+          <label for="follow-target" class="text-xs font-medium">Target</label>
+          <Select
+            id="follow-target"
+            :model-value="activeFollowTarget ?? ''"
+            :options="followTargets"
+            class="h-7 text-xs"
+            @update:model-value="(value) => setFollowTarget(String(value))"
+          />
+        </div>
+        <div v-for="setting in followSettings" :key="setting.key" class="element-camera__setting">
+          <label :for="`follow-${setting.key}`" class="text-xs font-medium">
+            {{ setting.label }}: {{ followConfig[setting.key] }}
+          </label>
+          <Slider
+            :id="`follow-${setting.key}`"
+            :model-value="[followConfig[setting.key]]"
+            :min="setting.min"
+            :max="setting.max"
+            :step="setting.step"
+            @update:model-value="
+              (value) => updateFollowSetting(setting.key, (value as number[])[0])
+            "
+          />
+        </div>
       </AccordionContent>
     </AccordionItem>
     <AccordionItem v-if="hasExpandedSchema" value="properties">
@@ -221,7 +345,14 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
   margin-top: var(--spacing-1);
 }
 
-.element-camera__transition-toggle {
+.element-camera__wide-toggle {
   margin-top: var(--spacing-1);
+}
+
+.element-camera__setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-2);
 }
 </style>

@@ -80,6 +80,8 @@ export interface SpawnGroup {
 export interface PathConfig {
   speed: number
   obstacleImpulse: number
+  /** Smooth the route through its waypoints, rather than joining them with straight segments. */
+  curved: boolean
   easing: string
   easingIntensity: number
   playing: boolean
@@ -186,7 +188,20 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
       }
     )
     if ('fov' in camera) {
-      registerCameraProperties({ camera, orbit, renderer, setCamera })
+      registerCameraProperties({
+        camera,
+        orbit,
+        renderer,
+        // Wrapped so the row's type follows the swap: it was read off the camera when the list
+        // was built, and an orthographic camera would otherwise still call itself perspective.
+        setCamera: setCamera
+          ? (newCamera: THREE.Camera) => {
+              const nextOrbit = setCamera(newCamera)
+              updateSceneElementType('Camera', newCamera.type)
+              return nextOrbit
+            }
+          : undefined
+      })
     }
     if (renderer) usePerfMetricsStore().setRenderer(renderer)
   }
@@ -219,6 +234,21 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
   const removeSceneElement = (name: string) => {
     sceneElements.value = sceneElements.value.filter((e) => e.name !== name)
     useElementPropertiesStore().unregisterElementProperties(name)
+  }
+
+  /**
+   * Retypes one element in place, for a camera whose projection has been swapped.
+   *
+   * Narrow on purpose: rebuilding the whole list from the scene would be the obvious fix, and
+   * it drops every row registered on top of it — a follow rig, a path — because those are not
+   * scene children.
+   * @param name The element to retype
+   * @param type Its new type, shown in the panel and used to route its controls
+   */
+  const updateSceneElementType = (name: string, type: string) => {
+    sceneElements.value = sceneElements.value.map((element) =>
+      element.name === name ? { ...element, type } : element
+    )
   }
 
   const clearSceneElements = () => {
@@ -393,6 +423,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     setSceneElements,
     addSceneElement,
     removeSceneElement,
+    updateSceneElementType,
     registerSceneElements,
     addInstancedGroup,
     removeInstancedGroup,

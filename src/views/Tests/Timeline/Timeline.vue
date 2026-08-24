@@ -76,9 +76,9 @@ const timelinePanelStore = useTimelinePanelStore()
 const debugSceneStore = useDebugSceneStore()
 const textureGroupsStore = useTextureGroupsStore()
 
-// A path is only shown while its element is the selected one; re-evaluate on change.
+// A path is only shown while its element's panel is open; re-evaluate on either change.
 watch(
-  () => useElementPropertiesStore().selectedElementName,
+  [() => useElementPropertiesStore().selectedElementName, () => usePanelsStore().isElementsOpen],
   () => activePathTicks.forEach((tick) => updateTickVisibility(tick))
 )
 
@@ -978,7 +978,9 @@ const updateTickVisibility = (tick: ActivePathTick): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry) return
   const baseVisible =
-    useElementPropertiesStore().selectedElementName === entry.elementName && !entry.hidden
+    usePanelsStore().isElementsOpen &&
+    useElementPropertiesStore().selectedElementName === entry.elementName &&
+    !entry.hidden
   if (tick.pathLine) tick.pathLine.visible = baseVisible && entry.config.showPath
   tick.waypointNodes.forEach((node) => {
     node.visible = baseVisible && entry.config.showNodes
@@ -999,7 +1001,9 @@ const refreshPathLine = (
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   const closed = entry?.config.loop ?? false
   const points = waypoints.map(([x, y, z]) => ({ x, y, z }))
-  if (tick.stepped) {
+  // A stepped path already classifies each segment as a walk or a jump, so it is drawn segment
+  // by segment whatever the toggle says; every other path follows it.
+  if (tick.stepped || entry?.config.curved === false) {
     tick.smoothWaypoints = points
     tick.pathLine = pathCreateSteppedVisualization(
       scene,
@@ -1080,6 +1084,10 @@ const makePathHandlers = (
       if (index !== -1) activePathTicks.splice(index, 1)
     },
     onConfigChange: (key) => {
+      if (key === 'curved' || key === 'loop') {
+        const entry = findEntry()
+        if (entry) refreshPathLine(scene, tick, entry.waypoints)
+      }
       if (key === 'showNodes') {
         pathRemoveWaypointNodes(scene, tick.waypointNodes)
         tick.waypointNodes = findEntry()?.config.showNodes
@@ -1098,6 +1106,7 @@ const PATH_DEFAULT_SPEED = 20
 const makeDefaultPathConfig = (overrides: Partial<PathConfig> = {}): PathConfig => ({
   speed: PATH_DEFAULT_SPEED,
   obstacleImpulse: 0,
+  curved: true,
   easing: 'linear',
   easingIntensity: 1,
   playing: true,

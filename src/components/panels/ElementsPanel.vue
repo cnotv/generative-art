@@ -41,7 +41,7 @@ const { sceneElements, sceneGroups, spawns, instancedGroups, spawnGroups, paths 
 const elementPropertiesStore = useElementPropertiesStore()
 const { selectedElementName, activeProperties, selectionRequestNonce } =
   storeToRefs(elementPropertiesStore)
-const { openElementProperties } = elementPropertiesStore
+const { openElementProperties, closeElementProperties } = elementPropertiesStore
 const textureStore = useTextureGroupsStore()
 
 const expandedName = ref<string | null>(null)
@@ -86,10 +86,12 @@ const triggerFileUpload = (onchange: (event: Event) => void) => {
 const handleElementClick = (element: SceneElement) => {
   expandedName.value = expandedName.value === element.name ? null : element.name
   if (expandedName.value) openElementProperties(element.name)
+  else closeElementProperties()
 }
 
 const handleGroupToggle = (groupId: string) => {
   expandedName.value = expandedName.value === groupId ? null : groupId
+  if (!expandedName.value) closeElementProperties()
   if (expandedName.value) {
     openElementProperties(groupId)
     textureStore.handlers?.onSelectGroup(groupId)

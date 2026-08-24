@@ -125,6 +125,14 @@ const applyOrthographicPreset = (
   if (orbit) orbit.update()
 }
 
+/**
+ * Applies a perspective preset's lens without moving the camera.
+ *
+ * Every perspective preset shares one nominal position, so honouring it would throw away
+ * wherever the view had been orbited to. Following a character is a rig's job, not a preset's.
+ * @param cam - The perspective camera to reconfigure
+ * @param preset - The preset configuration
+ */
 const applyPerspectivePreset = (cam: THREE.PerspectiveCamera, preset: CameraPresetConfig): void => {
   if (preset.fov !== undefined) cam.fov = preset.fov
   if (preset.near !== undefined) cam.near = preset.near
@@ -160,6 +168,67 @@ const applyOrbitProperty = (path: string, value: unknown, orbit: OrbitControls):
   } else if (path === 'orbitEnabled') {
     setOrbitEnabled(orbit, value as boolean)
   }
+}
+
+/** The camera framing a scene declared, captured before anything could change it. */
+interface SceneDefaultCamera extends CameraSnapshot {
+  rotation: Vec3
+  type: 'perspective' | 'orthographic'
+  orbitEnabled: boolean
+}
+
+/**
+ * Puts a camera back to the framing its scene declared.
+ *
+ * The projection is restored by the caller first: writing a perspective framing onto an
+ * orthographic camera leaves every number right and the picture wrong.
+ * @param camera - The camera to restore, already of the right projection
+ * @param sceneDefault - What the scene declared
+ * @param orbit - The controls that own the aim, when the view has them
+ */
+const applySceneDefault = (
+  camera: THREE.Camera,
+  sceneDefault: SceneDefaultCamera,
+  orbit: OrbitControls | null | undefined
+): void => {
+  camera.position.copy(sceneDefault.position)
+  camera.rotation.set(sceneDefault.rotation.x, sceneDefault.rotation.y, sceneDefault.rotation.z)
+  if (camera instanceof THREE.PerspectiveCamera) {
+    camera.fov = sceneDefault.fov
+    camera.near = sceneDefault.near
+    camera.far = sceneDefault.far
+  }
+  camera.updateProjectionMatrix()
+  if (!orbit) return
+  orbit.target.copy(sceneDefault.target)
+  setOrbitEnabled(orbit, sceneDefault.orbitEnabled)
+  orbit.update()
+}
+
+const CAMERA_FORWARD = new THREE.Vector3(0, 0, -1)
+const lookDirection = new THREE.Vector3()
+
+/**
+ * Points the camera by moving what it looks at, rather than by setting its orientation.
+ *
+ * `orbit.update()` runs every frame and re-aims the camera at `orbit.target`, so an orientation
+ * written directly survives exactly until the next frame. Expressed as a target the same
+ * distance ahead, the same rotation holds.
+ * @param camera - The camera to point
+ * @param rotation - The Euler angles asked for, in radians
+ * @param orbit - The controls that own the aim, when the view has them
+ */
+const applyCameraRotation = (
+  camera: THREE.Camera,
+  rotation: Vec3,
+  orbit: OrbitControls | null | undefined
+): void => {
+  camera.rotation.set(rotation.x, rotation.y, rotation.z)
+  if (!orbit) return
+  const distance = orbit.target.distanceTo(camera.position) || 1
+  lookDirection.copy(CAMERA_FORWARD).applyEuler(camera.rotation)
+  orbit.target.copy(camera.position).addScaledVector(lookDirection, distance)
+  orbit.update()
 }
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
@@ -317,10 +386,9 @@ export const registerCameraProperties = ({
     if (path === 'position') {
       const pos = value as Vec3
       activeCamera.position.set(pos.x, pos.y, pos.z)
-      if (orbit && orbit.enabled) orbit.update()
-    } else if (path === 'rotation' && !(orbit && orbit.enabled)) {
-      const rot = value as Vec3
-      activeCamera.rotation.set(rot.x, rot.y, rot.z)
+      if (orbit) orbit.update()
+    } else if (path === 'rotation') {
+      applyCameraRotation(activeCamera, value as Vec3, orbit)
     } else if (orbit) {
       applyOrbitProperty(path, value, orbit)
     }
@@ -332,6 +400,9 @@ export const registerCameraProperties = ({
     schema: schema ?? cameraSchema,
     getValue: (path) => getNestedValue(cameraConfig.value, path),
     updateValue: (path, value) => {
+      // Editing the camera by hand is reaching for it, so the rig lets go — otherwise the next
+      // frame overwrites whatever was just typed, exactly as a preset would.
+      useCameraConfigStore().releaseCameraFromRig()
       cameraConfig.value = setNestedValueImmutable(cameraConfig.value, path, value)
       applyCameraUpdate(path, value)
     }
@@ -356,25 +427,27 @@ export const registerCameraProperties = ({
     })
   }
 
-  if (!externalConfig) {
-    registerCameraPresetHandlers({
-      orbit,
-      renderer,
-      setCamera,
-      getActiveCamera: () => activeCamera,
-      getCameraType: () => cameraType,
-      setActiveCamera: (cam) => {
-        activeCamera = cam
-      },
-      setCameraType: (type) => {
-        cameraType = type
-      },
-      cameraConfig,
-      buildDefaults,
-      initialCamera,
-      cameraType
-    })
-  }
+  // Registered whether or not the caller brought its own config: skipping it left the panel's
+  // preset buttons wired to nothing in every view that goes through the scene store, which is
+  // every view that passes one. The only view with its own preset handlers is the scene editor,
+  // and it registers them after its own init, so it still wins.
+  registerCameraPresetHandlers({
+    orbit,
+    renderer,
+    setCamera,
+    getActiveCamera: () => activeCamera,
+    getCameraType: () => cameraType,
+    setActiveCamera: (cam) => {
+      activeCamera = cam
+    },
+    setCameraType: (type) => {
+      cameraType = type
+    },
+    cameraConfig,
+    buildDefaults,
+    initialCamera,
+    cameraType
+  })
 
   return { cameraConfig }
 }
@@ -407,6 +480,18 @@ const registerCameraPresetHandlers = ({
   cameraType
 }: PresetHandlerOptions): void => {
   const cameraConfigStore = useCameraConfigStore()
+  cameraConfigStore.syncOrbitEnabled(orbit?.enabled ?? false)
+
+  // Captured before anything can move the camera, which is what makes it the scene's own
+  // framing rather than a default the app invented.
+  const sceneDefault = {
+    ...snapshotCamera(initialCamera, orbit),
+    // Read the tolerant way, as the rest of this module does: a camera reaches here from a
+    // view, a test double or a swap, and not all of them carry a real Euler.
+    rotation: safeVec3(initialCamera.rotation),
+    type: cameraType,
+    orbitEnabled: orbit?.enabled ?? false
+  }
 
   const getAspect = () =>
     renderer
@@ -420,6 +505,20 @@ const registerCameraPresetHandlers = ({
       return buildPerspToOrtho(active as THREE.PerspectiveCamera, orbit, aspect)
     }
     return buildOrthoToPersp(active as THREE.OrthographicCamera, orbit, aspect)
+  }
+
+  /**
+   * Returns the active camera already in the wanted projection, swapping it if it is not.
+   * @param wanted - The projection to end up in
+   * @returns The camera to write the restored framing onto
+   */
+  const restoreProjection = (wanted: 'perspective' | 'orthographic'): THREE.Camera => {
+    if (wanted === getCameraType()) return getActiveCamera()
+    const swapped = buildNewCamera(wanted)
+    setCamera?.(swapped)
+    setActiveCamera(swapped)
+    setCameraType(wanted)
+    return swapped
   }
 
   const syncConfig = (active: THREE.Camera) => {
@@ -476,6 +575,11 @@ const registerCameraPresetHandlers = ({
           } else if (camera instanceof THREE.PerspectiveCamera) {
             applyPerspectivePreset(camera, presetConfig)
           }
+          // A preset that names an orbit setting carries it: the free-look presets hand the
+          // camera to the viewer, the framed ones do not.
+          const wantsOrbit = presetConfig.orbit ?? false
+          if (orbit) setOrbitEnabled(orbit, wantsOrbit)
+          cameraConfigStore.syncOrbitEnabled(wantsOrbit)
         }
 
         if (isTypeSwitch) {
@@ -497,6 +601,16 @@ const registerCameraPresetHandlers = ({
         applyWithOptionalTween(active, () => rotateCameraAroundY(active, orbit, degrees))
       },
       onSlotActivate: () => {},
+      onOrbitToggle: (enabled) => {
+        if (orbit) setOrbitEnabled(orbit, enabled)
+      },
+      onResetToSceneDefault: () => {
+        const restored = restoreProjection(sceneDefault.type)
+        applySceneDefault(restored, sceneDefault, orbit)
+        cameraConfigStore.syncOrbitEnabled(sceneDefault.orbitEnabled)
+        syncConfig(restored)
+        return sceneDefault.type
+      },
       onCleanup: () => {}
     }
   )

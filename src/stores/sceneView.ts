@@ -926,6 +926,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         ? (newCamera: THREE.Camera) => {
             const nextOrbit = swap(newCamera)
             threeCamera.value = newCamera
+            // The row's type was read off the camera when the list was built, so without this
+            // an orthographic camera still calls itself a PerspectiveCamera in the panel.
+            debugSceneStore.updateSceneElementType('Camera', newCamera.type)
             orbitReference.value = nextOrbit
             return nextOrbit
           }
