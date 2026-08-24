@@ -15,13 +15,36 @@ const owner: { current?: CameraPath } = {}
  */
 export const cameraPathIsActive = (): boolean => owner.current !== undefined
 
-const curveThrough = (points: readonly CameraPathPoint[]): THREE.CatmullRomCurve3 =>
-  new THREE.CatmullRomCurve3(points.map(({ position }) => new THREE.Vector3(...position)))
+/**
+ * A Catmull-Rom curve with no tension is straight between its points, so one curve type covers
+ * both a rounded sweep and a route that flies the segments exactly as drawn.
+ */
+const STRAIGHT_TENSION = 0
 
-const lookAtCurve = (points: readonly CameraPathPoint[]): THREE.CatmullRomCurve3 | undefined => {
+const curveOf = (positions: THREE.Vector3[], curved: boolean): THREE.CatmullRomCurve3 =>
+  curved
+    ? new THREE.CatmullRomCurve3(positions)
+    : new THREE.CatmullRomCurve3(positions, false, 'catmullrom', STRAIGHT_TENSION)
+
+const curveThrough = (
+  points: readonly CameraPathPoint[],
+  curved: boolean
+): THREE.CatmullRomCurve3 =>
+  curveOf(
+    points.map(({ position }) => new THREE.Vector3(...position)),
+    curved
+  )
+
+const lookAtCurve = (
+  points: readonly CameraPathPoint[],
+  curved: boolean
+): THREE.CatmullRomCurve3 | undefined => {
   const targets = points.map(({ lookAt }) => lookAt)
   if (targets.some((target) => target === undefined)) return undefined
-  return new THREE.CatmullRomCurve3(targets.map((target) => new THREE.Vector3(...target!)))
+  return curveOf(
+    targets.map((target) => new THREE.Vector3(...target!)),
+    curved
+  )
 }
 
 /**
@@ -35,7 +58,7 @@ const lookAtCurve = (points: readonly CameraPathPoint[]): THREE.CatmullRomCurve3
  * @returns A handle whose update is called each frame with the seconds elapsed
  */
 export const cameraPathCreate = (camera: THREE.Camera, options: CameraPathOptions): CameraPath => {
-  const { points, seconds, easing = (t: number) => t, onComplete } = options
+  const { points, seconds, easing = (t: number) => t, curved = true, onComplete } = options
 
   if (points.length < MINIMUM_POINTS) {
     throw new Error(`A camera path needs at least two points, received ${points.length}`)
@@ -44,8 +67,8 @@ export const cameraPathCreate = (camera: THREE.Camera, options: CameraPathOption
     throw new Error(`A camera path needs a positive seconds, received ${seconds}`)
   }
 
-  const positions = curveThrough(points)
-  const targets = lookAtCurve(points)
+  const positions = curveThrough(points, curved)
+  const targets = lookAtCurve(points, curved)
 
   // Pre-allocated because update runs every frame; see the animation-loop rules.
   const position = new THREE.Vector3()

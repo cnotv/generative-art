@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
 import { cameraPathCreate, cameraPathIsActive } from './cameraPath'
+import type { CameraPathPoint } from './types'
 
 const makeCamera = () => new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
 
@@ -166,5 +167,44 @@ describe('cameraPathIsActive', () => {
     path.update(1)
 
     expect(camera.position.x).toBeCloseTo(stopped)
+  })
+})
+
+describe('cameraPathCreate straight routes', () => {
+  const CORNER: CameraPathPoint[] = [
+    { position: [0, 0, 0] },
+    { position: [10, 0, 0] },
+    { position: [10, 0, 10] }
+  ]
+
+  const sampleAt = (curved: boolean, progress: number): THREE.Vector3 => {
+    const camera = new THREE.PerspectiveCamera()
+    const path = cameraPathCreate(camera, { points: CORNER, seconds: 1, curved })
+    path.update(progress)
+    path.cancel()
+    return camera.position.clone()
+  }
+
+  it('travels the corner exactly when the route is not curved', () => {
+    // Halfway along a two-segment right angle is the corner itself, if the segments are straight.
+    const straight = sampleAt(false, 0.5)
+    expect(straight.x).toBeCloseTo(10, 1)
+    expect(straight.z).toBeCloseTo(0, 1)
+  })
+
+  it('cuts the corner when the route is curved, rather than reaching it', () => {
+    // Both pass close to the corner at the halfway mark, so the difference is which side: the
+    // straight route touches it exactly, the curved one rounds inside it.
+    const corner = new THREE.Vector3(10, 0, 0)
+    const straight = sampleAt(false, 0.5).distanceTo(corner)
+    const curved = sampleAt(true, 0.5).distanceTo(corner)
+    expect(curved).toBeGreaterThan(straight)
+  })
+
+  it('lands on the final point either way', () => {
+    ;[true, false].forEach((curved) => {
+      const landed = sampleAt(curved, 1)
+      expect(landed.toArray().map((n) => Math.round(n))).toEqual([10, 0, 10])
+    })
   })
 })

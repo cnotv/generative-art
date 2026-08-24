@@ -39,7 +39,7 @@ export interface ModelOptions extends CommonOptions {
   setUV2?: boolean
   rotation?: CoordinateTuple
   scale?: CoordinateTuple
-  shape?: 'cuboid' | 'ball'
+  shape?: 'cuboid' | 'ball' | 'cylinder'
   castShadow?: boolean
   receiveShadow?: boolean
   hasGravity?: boolean
@@ -47,6 +47,14 @@ export interface ModelOptions extends CommonOptions {
   showHelper?: boolean
   helperColor?: number
   texture?: string
+  /**
+   * How many times the texture tiles across the surface, as [horizontal, vertical].
+   *
+   * Without it a texture is stretched once over whatever it is put on, so the same marble
+   * reads at a different scale on a step than on a column. Repeating by size keeps the grain
+   * the same size wherever it appears.
+   */
+  textureRepeat?: [number, number]
   textures?: {
     random: boolean
     list: string[]
@@ -73,7 +81,7 @@ export interface ModelOptions extends CommonOptions {
 }
 
 export interface PhysicOptions extends CommonOptions {
-  shape?: 'cuboid' | 'ball'
+  shape?: 'cuboid' | 'ball' | 'cylinder'
 }
 
 export interface StatsLike {
@@ -273,6 +281,13 @@ export type FollowCameraConfig = {
   freeCamHeight: number
   freeCamBack: number
   transitionSeconds: number
+  /**
+   * Whether the camera swings round as the target turns, or holds the heading it started from.
+   *
+   * On suits a chase camera behind a character. Off suits a scene framed from a fixed side: the
+   * camera then tracks the target's movement without the shot spinning every time it turns.
+   */
+  followRotation: boolean
 }
 
 /** Where a following camera should sit and what it should look at. */
@@ -305,6 +320,11 @@ export type CameraPathOptions = {
   points: readonly CameraPathPoint[]
   seconds: number
   easing?: (t: number) => number
+  /**
+   * Round the corners through the points, rather than travelling straight between them.
+   * Defaults to true; false makes the camera fly the same line the route is drawn as.
+   */
+  curved?: boolean
   onComplete?: () => void
 }
 

@@ -20,6 +20,8 @@ interface CameraPresetConfig {
   far?: number
   frustumSize?: number
   verticalOffset?: number
+  /** Whether the viewer may orbit this camera by dragging, applied with the preset. */
+  orbit?: boolean
 }
 
 /**
@@ -28,14 +30,8 @@ interface CameraPresetConfig {
 export enum CameraPreset {
   Perspective = 'perspective',
   Fisheye = 'fisheye',
-  Cinematic = 'cinematic',
-  Orbit = 'orbit',
-  FirstPerson = 'first-person',
-  ThirdPerson = 'third-person',
   Orthographic = 'orthographic',
   OrthographicFollowing = 'orthographic-following',
-  OrthographicFirstPerson = 'orthographic-first-person',
-  OrthographicThirdPerson = 'orthographic-third-person',
   TopDown = 'top-down'
 }
 
@@ -50,69 +46,23 @@ export enum CameraSide {
  * Dictionary of predefined camera presets for common use cases
  */
 export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
+  // Both hand the camera to the viewer, so they turn orbit on: a preset the player can then
+  // drag from is the point of them, and nothing else is writing the camera once one is picked.
   [CameraPreset.Perspective]: {
     type: 'perspective',
     fov: 75,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000
+    far: 1000,
+    orbit: true
   },
   [CameraPreset.Fisheye]: {
     type: 'perspective',
     fov: 120,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.Cinematic]: {
-    type: 'perspective',
-    fov: 35,
-    position: [0, 5, 20],
-    near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.Orbit]: {
-    type: 'perspective',
-    fov: 75,
-    position: [0, 10, 15],
-    near: 0.1,
-    far: 1000
-  },
-  // Eye height and chase distance match DEFAULT_FOLLOW_CAMERA, so switching between a preset
-  // and the matching follow mode does not jump the view.
-  [CameraPreset.FirstPerson]: {
-    type: 'perspective',
-    fov: 75,
-    position: [0, 3.3, 2.8],
-    lookAt: [0, 3.3, -20],
-    near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.ThirdPerson]: {
-    type: 'perspective',
-    fov: 65,
-    position: [0, 14, 12],
-    lookAt: [0, 0, 0],
-    near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.OrthographicFirstPerson]: {
-    type: 'orthographic',
-    position: [0, 3.3, 2.8],
-    lookAt: [0, 3.3, -20],
-    frustumSize: 20,
-    verticalOffset: 0,
-    near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.OrthographicThirdPerson]: {
-    type: 'orthographic',
-    position: [0, 14, 12],
-    lookAt: [0, 0, 0],
-    frustumSize: 30,
-    verticalOffset: 0,
-    near: 0.1,
-    far: 1000
+    far: 1000,
+    orbit: true
   },
   [CameraPreset.Orthographic]: {
     type: 'orthographic',
