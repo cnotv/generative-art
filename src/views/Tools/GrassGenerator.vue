@@ -207,11 +207,13 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     getLights(scene)
 
     const lights = scene.children.filter((c) => c.type.includes('Light'))
+    // The fourth argument is an options object, not the renderer: passing it bare left the
+    // camera panel with no renderer for the perf readouts and no orbit to sync against.
     registerSceneElements(
       camera,
       [...lights, { name: 'Grass Field', type: 'InstancedMesh' }],
       undefined,
-      renderer
+      { renderer, orbit }
     )
 
     // Populate grass
