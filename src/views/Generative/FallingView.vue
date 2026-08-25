@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { video } from '@/utils/video'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
-import { getLights, getEnvironment, getGround, removeElements } from '@webgamekit/threejs'
+import { getLights, getScene, getGround, removeElements } from '@webgamekit/threejs'
 import { bindAnimatedElements, animateTimeline } from '@webgamekit/animation'
 import { getBall } from '@webgamekit/threejs'
 import { times } from '@/utils/lodash'
@@ -44,10 +44,10 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   })
 
   const setup = async () => {
-    const { renderer, scene, camera, clock, world } = await getEnvironment(canvas, {
+    const { renderer, scene, camera, clock, world } = await getScene(canvas, {
       camera: { position: [0, 150, 0] }
     })
-    getLights(scene, { directionalLightIntensity: config.directional.intensity })
+    getLights(scene, { directional: { intensity: config.directional.intensity } })
     getGround(scene, world, { size: 1000.0, color: 0xffffff })
 
     let elements = [] as any[]

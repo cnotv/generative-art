@@ -14,7 +14,8 @@ import {
   CameraConfig,
   OnProgress
 } from './types'
-import { getEnvironment, getLights, getGround, getSky } from './getters'
+import { getScene, getGround, getSky } from './getters'
+import { getLights, getEnvironmentLight } from './lights'
 import { disposeScene } from './dispose'
 import { updateCamera } from './camera'
 import { deepMerge } from './utils/lodash'
@@ -87,6 +88,7 @@ const createOrbitControls = (
 }
 
 const applySceneConfig = (
+  renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   world: RAPIER.World,
@@ -94,7 +96,11 @@ const applySceneConfig = (
 ) => {
   if (resolved.scene?.backgroundColor)
     scene.background = new THREE.Color(resolved.scene.backgroundColor)
-  if (resolved.lights !== false) getLights(scene, resolved.lights)
+  if (resolved.lights !== false) {
+    getLights(scene, resolved.lights)
+    if (resolved.lights?.environment)
+      getEnvironmentLight(renderer, scene, resolved.lights.environment)
+  }
   const ground = resolved.ground !== false ? getGround(scene, world, resolved.ground ?? {}) : null
   if (resolved.sky !== false) getSky(scene, resolved.sky ?? {})
   if (resolved.camera) updateCamera(camera, resolved.camera)
@@ -171,7 +177,7 @@ export const getTools = async ({
   let simulationFrame = 0
   let frameRate = 1 / 60
   emitProgress(onProgress, 'Physics')
-  const { renderer, scene, camera, world } = await getEnvironment(canvas)
+  const { renderer, scene, camera, world } = await getScene(canvas)
   let activeCamera: THREE.Camera = camera
   activeRendererReference.current = renderer
   let composer: EffectComposer | null = null
@@ -194,7 +200,7 @@ export const getTools = async ({
     const childrenCountBefore = scene.children.length
     frameRate = resolved?.global?.frameRate || frameRate
     if (resolved.orbit !== false) orbit = createOrbitControls(camera, renderer, resolved.orbit)
-    const ground = applySceneConfig(scene, camera, world, resolved)
+    const ground = applySceneConfig(renderer, scene, camera, world, resolved)
     if (config.postprocessing) {
       const pp = await setupPostprocessing({
         renderer,

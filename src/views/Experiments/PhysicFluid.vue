@@ -5,7 +5,7 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { video } from '@/utils/video'
 import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
-import { getLights, getEnvironment } from '@webgamekit/threejs'
+import { getLights, getScene } from '@webgamekit/threejs'
 import { bindAnimatedElements, animateTimeline, createTimelineManager } from '@webgamekit/animation'
 import { getBall, getWalls } from '@webgamekit/threejs'
 import { times } from '@/utils/lodash'
@@ -49,10 +49,10 @@ const init = async (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
   const setup = async () => {
     const length = 25
-    const { renderer, scene, camera, clock, orbit, world } = await getEnvironment(canvas, {
+    const { renderer, scene, camera, clock, orbit, world } = await getScene(canvas, {
       camera: { position: [0, 40, 100] }
     })
-    getLights(scene, { directionalLightIntensity: config.directional.intensity })
+    getLights(scene, { directional: { intensity: config.directional.intensity } })
     // getGround(scene, world, { size: 1000.0 });
     getWalls(scene, world, { length, height: 200, depth: 10, opacity: 0 })
 

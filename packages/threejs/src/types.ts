@@ -111,7 +111,13 @@ export interface ToolsConfig {
   onProgress?: OnProgress
 }
 
+export interface EnvironmentLightConfig {
+  texture?: string
+  intensity?: number
+}
+
 export interface LightsConfig {
+  environment?: EnvironmentLightConfig | false
   ambient?: {
     color?: number
     intensity?: number

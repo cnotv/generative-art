@@ -194,6 +194,7 @@ export const PATH_LOOK_AT: CoordinateTuple = [0, 11, 0]
 export const setupConfig: SetupConfig = {
   camera: { position: [0, 16, 62], lookAt: [0, 11, 0], fov: 65, near: 0.1, far: 2000 },
   lights: {
+    environment: { intensity: 0.35 },
     ambient: { intensity: 0.65 },
     directional: { intensity: 1.3, position: [30, 50, 20], castShadow: true }
   },

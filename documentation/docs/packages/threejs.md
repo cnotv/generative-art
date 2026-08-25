@@ -112,13 +112,15 @@ Configure scene with camera, lights, ground, and sky.
     lookAt?: CoordinateTuple | THREE.Vector3
   },
   lights?: {
+    environment?: false | { texture?: string, intensity?: number },
     ambient?: { color?: number, intensity?: number },
     directional?: {
       color?: number,
       intensity?: number,
       position?: CoordinateTuple,
       castShadow?: boolean
-    }
+    },
+    hemisphere?: { colors?: [number, number], intensity?: number }
   },
   ground?: false | {
     size?: CoordinateTuple,
@@ -557,6 +559,36 @@ import { instanceMatrixMesh } from '@webgamekit/threejs'
 
 const trees = instanceMatrixMesh(scene, geometry, material, treePositions)
 ```
+
+## Lights
+
+All light logic lives in the `lights` module. Two terms are distinct here:
+
+- **Direct lights**: the ambient, directional and hemisphere lights `getLights` creates from
+  `SetupConfig.lights`.
+- **Environment light**: indirect, image-based illumination applied through
+  `scene.environment`, lighting every PBR material from all directions. Not to be confused
+  with `getScene`, the renderer and physics bootstrap.
+
+### getLights(scene, config?)
+
+Create the direct lights. Returns `{ directionalLight, ambientLight }`. The directional
+light always receives a large shadow frustum, even when the `shadow` key is omitted.
+
+### getEnvironmentLight(renderer, scene, config?)
+
+Apply an environment light and return its texture, reusable as a material `envMap`. With no
+config it bakes the neutral `RoomEnvironment`; `texture` loads an equirectangular image
+instead, and `intensity` maps to `scene.environmentIntensity`.
+
+```typescript
+import { getEnvironmentLight } from '@webgamekit/threejs'
+
+getEnvironmentLight(renderer, scene, { intensity: 0.35 })
+```
+
+Through `setup()`, the same config sits under `lights.environment` and is opt in: scenes
+without the key render exactly as before.
 
 ## Texture Utilities
 
