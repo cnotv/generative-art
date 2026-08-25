@@ -179,7 +179,6 @@ export const WALL_ELEMENT_NAME = 'edge-walls'
 export const TRACK_ELEMENT_NAME = 'track'
 export const FOG_ELEMENT_NAME = 'fog'
 export const ROCK_ELEMENT_NAME = 'player-rock'
-export const CAMERA_ELEMENT_NAME = 'run-camera'
 
 // The countryside flanking the deck. Purely visual and collider-free: it gives
 // the scatter something to stand on instead of floating over the sky.

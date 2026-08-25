@@ -3,7 +3,6 @@ import { registerFollowCameraPanel } from '@/utils/followCameraPanel'
 import type { CameraMode, RunCameraConfig } from '../types'
 import {
   CHASE_BACK,
-  CAMERA_ELEMENT_NAME,
   CHASE_HEIGHT,
   CAMERA_TRANSITION_SECONDS,
   FIRST_PERSON_FORWARD,
@@ -117,8 +116,6 @@ export type CameraPanel = {
  */
 export const registerCameraElements = (options: CameraPanelOptions): CameraPanel =>
   registerFollowCameraPanel({
-    name: CAMERA_ELEMENT_NAME,
-    label: 'Run camera',
     mode: options.mode,
     setMode: options.setMode,
     defaults: DEFAULT_RUN_CAMERA

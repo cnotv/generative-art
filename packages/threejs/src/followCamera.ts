@@ -14,7 +14,8 @@ export const DEFAULT_FOLLOW_CAMERA: FollowCameraConfig = {
   firstPersonLookAhead: 20,
   freeCamHeight: 40,
   freeCamBack: 50,
-  transitionSeconds: 0.6
+  transitionSeconds: 0.6,
+  followRotation: true
 }
 
 /**
@@ -95,19 +96,61 @@ export const followCameraPlacement = (
   return { position: scratchGoal, lookAt: scratchLookTarget }
 }
 
+/**
+ * The offsets that would leave a camera exactly where it already is.
+ *
+ * The inverse of `followCameraPlacement`: given where the camera sits relative to the target,
+ * it answers with the configuration that reproduces that framing. Switching a rig on can then
+ * hold the shot a scene was built around instead of snapping to numbers picked elsewhere.
+ *
+ * Only height and distance along the heading are recoverable, because that is all the follow
+ * model has. A camera parked off to one side calibrates to the same distance directly behind.
+ *
+ * @param mode - The mode being calibrated, since each keeps its own offsets
+ * @param cameraPosition - Where the camera is now
+ * @param target - World position of the thing being followed
+ * @param direction - Unit heading it is travelling in, on the horizontal plane
+ * @returns The offsets for that mode, to merge into a config
+ */
+export const followCameraCalibrate = (
+  mode: FollowCameraMode,
+  cameraPosition: THREE.Vector3,
+  target: THREE.Vector3,
+  direction: THREE.Vector3
+): Partial<FollowCameraConfig> => {
+  const height = cameraPosition.y - target.y
+  const alongHeading =
+    (cameraPosition.x - target.x) * direction.x + (cameraPosition.z - target.z) * direction.z
+
+  if (mode === 'first') {
+    return { firstPersonHeight: height, firstPersonForward: alongHeading }
+  }
+  if (mode === 'free') {
+    return { freeCamHeight: height, freeCamBack: -alongHeading }
+  }
+  return { thirdPersonHeight: height, thirdPersonBack: -alongHeading }
+}
+
+/**
+ * The offsets each mode exposes.
+ *
+ * Distances run negative as well as positive: a camera in front of what it follows is a real
+ * framing — a scene that introduces its character face-on has one — and calibrating from such a
+ * shot produces a negative distance the panel then has to be able to show and offer back.
+ */
 const MODE_CONTROLS: Record<FollowCameraMode, Record<string, unknown>> = {
   third: {
-    thirdPersonHeight: { min: 1, max: 80, step: 0.5, label: 'Height' },
-    thirdPersonBack: { min: 1, max: 120, step: 0.5, label: 'Distance behind' }
+    thirdPersonHeight: { min: -80, max: 80, step: 0.5, label: 'Height' },
+    thirdPersonBack: { min: -120, max: 120, step: 0.5, label: 'Distance behind' }
   },
   first: {
-    firstPersonHeight: { min: 0, max: 20, step: 0.1, label: 'Eye height' },
-    firstPersonForward: { min: 0, max: 20, step: 0.1, label: 'Eye forward' },
-    firstPersonLookAhead: { min: 1, max: 200, step: 1, label: 'Looks ahead' }
+    firstPersonHeight: { min: -20, max: 20, step: 0.1, label: 'Eye height' },
+    firstPersonForward: { min: -20, max: 20, step: 0.1, label: 'Eye forward' },
+    firstPersonLookAhead: { min: -200, max: 200, step: 1, label: 'Looks ahead' }
   },
   free: {
-    freeCamHeight: { min: 1, max: 300, step: 1, label: 'Height' },
-    freeCamBack: { min: 1, max: 300, step: 1, label: 'Distance behind' }
+    freeCamHeight: { min: -300, max: 300, step: 1, label: 'Height' },
+    freeCamBack: { min: -300, max: 300, step: 1, label: 'Distance behind' }
   }
 }
 

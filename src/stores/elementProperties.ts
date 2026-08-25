@@ -51,6 +51,16 @@ export const useElementPropertiesStore = defineStore('elementProperties', () => 
     selectedElementName.value = name
   }
 
+  /**
+   * Clears the selection, for a panel collapsing rather than moving to another element.
+   *
+   * Without this the name outlives the open panel, and anything keyed on "the selected element"
+   * — a path's tube and nodes, most visibly — stays on screen after its controls have gone.
+   */
+  const closeElementProperties = () => {
+    selectedElementName.value = null
+  }
+
   /** Request that the Elements panel select and expand a named element,
    *  e.g. from a click in the 3D scene. */
   const requestElementSelection = (name: string) => {
@@ -66,6 +76,7 @@ export const useElementPropertiesStore = defineStore('elementProperties', () => 
     unregisterElementProperties,
     clearAllElementProperties,
     openElementProperties,
+    closeElementProperties,
     requestElementSelection
   }
 })

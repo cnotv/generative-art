@@ -4,6 +4,10 @@ import { getOffset } from './getters'
 import { OrbitControls } from 'three/examples/jsm/Addons.js'
 import type { CameraConfig } from './types'
 
+const DEFAULT_PRESET_ASPECT = 16 / 9
+const DEFAULT_PRESET_FRUSTUM_SIZE = 40
+const DEFAULT_PRESET_VERTICAL_OFFSET = 15
+
 /**
  * Camera preset configurations for different viewing styles
  */
@@ -16,6 +20,8 @@ interface CameraPresetConfig {
   far?: number
   frustumSize?: number
   verticalOffset?: number
+  /** Whether the viewer may orbit this camera by dragging, applied with the preset. */
+  orbit?: boolean
 }
 
 /**
@@ -24,8 +30,6 @@ interface CameraPresetConfig {
 export enum CameraPreset {
   Perspective = 'perspective',
   Fisheye = 'fisheye',
-  Cinematic = 'cinematic',
-  Orbit = 'orbit',
   Orthographic = 'orthographic',
   OrthographicFollowing = 'orthographic-following',
   TopDown = 'top-down'
@@ -42,33 +46,23 @@ export enum CameraSide {
  * Dictionary of predefined camera presets for common use cases
  */
 export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
+  // Both hand the camera to the viewer, so they turn orbit on: a preset the player can then
+  // drag from is the point of them, and nothing else is writing the camera once one is picked.
   [CameraPreset.Perspective]: {
     type: 'perspective',
     fov: 75,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000
+    far: 1000,
+    orbit: true
   },
   [CameraPreset.Fisheye]: {
     type: 'perspective',
     fov: 120,
     position: [0, 5, 20],
     near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.Cinematic]: {
-    type: 'perspective',
-    fov: 35,
-    position: [0, 5, 20],
-    near: 0.1,
-    far: 1000
-  },
-  [CameraPreset.Orbit]: {
-    type: 'perspective',
-    fov: 75,
-    position: [0, 10, 15],
-    near: 0.1,
-    far: 1000
+    far: 1000,
+    orbit: true
   },
   [CameraPreset.Orthographic]: {
     type: 'orthographic',
@@ -123,10 +117,72 @@ export const getLookAt = (model: Model, config: CameraConfig) => {
  * @param aspect - Optional aspect ratio (defaults to current window aspect ratio)
  * @returns The configured camera, or null if preset not found
  */
+/**
+ * Apply a perspective preset's framing to a perspective camera.
+ * @param camera The camera to configure
+ * @param preset The preset to apply
+ * @param aspect The viewport aspect ratio
+ */
+const applyPerspectivePresetFraming = (
+  camera: THREE.PerspectiveCamera,
+  preset: CameraPresetConfig,
+  aspect: number
+): void => {
+  camera.position.set(...preset.position)
+  camera.aspect = aspect
+  if (preset.fov !== undefined) camera.fov = preset.fov
+  if (preset.near !== undefined) camera.near = preset.near
+  if (preset.far !== undefined) camera.far = preset.far
+}
+
+/**
+ * Apply an orthographic preset's frustum to an orthographic camera.
+ * @param camera The camera to configure
+ * @param preset The preset to apply
+ * @param aspect The viewport aspect ratio
+ */
+const applyOrthographicPresetFrustum = (
+  camera: THREE.OrthographicCamera,
+  preset: CameraPresetConfig,
+  aspect: number
+): void => {
+  const frustumSize = preset.frustumSize ?? DEFAULT_PRESET_FRUSTUM_SIZE
+  const verticalOffset = preset.verticalOffset ?? DEFAULT_PRESET_VERTICAL_OFFSET
+
+  camera.position.set(...preset.position)
+  camera.left = (frustumSize * aspect) / -2
+  camera.right = (frustumSize * aspect) / 2
+  camera.top = frustumSize / 2 + verticalOffset
+  camera.bottom = frustumSize / -2 + verticalOffset
+  if (preset.near !== undefined) camera.near = preset.near
+  if (preset.far !== undefined) camera.far = preset.far
+}
+
+/**
+ * Point a camera at a preset's look-at target, defaulting to the origin.
+ * @param camera The camera to aim
+ * @param preset The preset being applied
+ */
+const aimAtPresetTarget = (camera: THREE.Camera, preset: CameraPresetConfig): void => {
+  camera.lookAt(new THREE.Vector3(...(preset.lookAt ?? [0, 0, 0])))
+  ;(camera as THREE.PerspectiveCamera).updateProjectionMatrix()
+}
+
+/**
+ * Apply a named preset to a camera of the matching projection.
+ *
+ * A camera cannot change its class in place, so a preset of the other projection returns null
+ * rather than pretending to work — the caller has to build the other camera first, which is
+ * what the camera panel does.
+ * @param camera The camera to configure
+ * @param presetName Which preset to apply
+ * @param aspect The viewport aspect ratio
+ * @returns The configured camera, or null when the preset does not match its projection
+ */
 export const setCameraPreset = (
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   presetName: CameraPreset,
-  aspect: number = 16 / 9
+  aspect: number = DEFAULT_PRESET_ASPECT
 ): THREE.Camera | null => {
   const preset = cameraPresets[presetName]
 
@@ -137,30 +193,23 @@ export const setCameraPreset = (
     return null
   }
 
-  const isPerspective = preset.type === 'perspective'
-  const isOrthographic = preset.type === 'orthographic'
-  const frustumSize = preset.frustumSize ?? 40
-  const verticalOffset = preset.verticalOffset || 15
-  const lookAt = preset.lookAt || [0, 0, 0]
+  const wantsPerspective = preset.type === 'perspective'
+  const isPerspective = camera instanceof THREE.PerspectiveCamera
 
-  if (isPerspective && camera instanceof THREE.PerspectiveCamera) {
-    camera.position.set(...preset.position)
-    camera.aspect = aspect
-    if (preset.fov !== undefined) camera.fov = preset.fov
-    if (preset.near !== undefined) camera.near = preset.near
-    if (preset.far !== undefined) camera.far = preset.far
-  } else if (isOrthographic && camera instanceof THREE.OrthographicCamera) {
-    camera.position.set(...preset.position)
-    camera.left = (frustumSize * aspect) / -2
-    camera.right = (frustumSize * aspect) / 2
-    camera.top = frustumSize / 2 + verticalOffset
-    camera.bottom = frustumSize / -2 + verticalOffset
-    if (preset.near !== undefined) camera.near = preset.near
-    if (preset.far !== undefined) camera.far = preset.far
+  if (wantsPerspective !== isPerspective) {
+    console.warn(
+      `Camera preset "${presetName}" is ${preset.type}, but the camera is not. Build the other camera type first, or apply the preset through the camera panel.`
+    )
+    return null
   }
-  camera.lookAt(new THREE.Vector3(...lookAt))
-  camera.updateProjectionMatrix()
 
+  if (camera instanceof THREE.PerspectiveCamera) {
+    applyPerspectivePresetFraming(camera, preset, aspect)
+  } else {
+    applyOrthographicPresetFrustum(camera, preset, aspect)
+  }
+
+  aimAtPresetTarget(camera, preset)
   return camera
 }
 

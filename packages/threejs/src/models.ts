@@ -339,6 +339,11 @@ export const applyTextureToMesh = (
 ): void => {
   if (!texture) return
   const tex = textureLoader.load(texture)
+  // Set whatever the repeat, so a caller can tile rather than stretch: the default clamps, and
+  // any repeat above one then reads as a smear along the last row of pixels.
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  if (options.textureRepeat) tex.repeat.set(...options.textureRepeat)
   const mat = Array.isArray(mesh.material)
     ? (mesh.material[0] as THREE.MeshPhysicalMaterial)
     : (mesh.material as THREE.MeshPhysicalMaterial)
@@ -356,7 +361,7 @@ const setupCubeMesh = (
 ): THREE.Mesh => {
   const geometry = new THREE.BoxGeometry(...size)
   const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
-  applyTextureToMesh(mesh, options.texture)
+  applyTextureToMesh(mesh, options.texture, options)
   mesh.position.set(...(position as CoordinateTuple))
   mesh.rotation.set(...rotation)
   mesh.castShadow = options.castShadow ?? true
@@ -740,6 +745,80 @@ export const getCube = (
       actions: {},
       mixer: undefined,
       helper,
+      type,
+      characterController,
+      hasGravity,
+      onSpawn
+    }
+  })
+
+  if (onSpawn) onSpawn()
+
+  return complexModel
+}
+
+/**
+ * Create a cylinder with physics, for anything round the cuboid and ball primitives cannot be.
+ *
+ * `size` reads the same way as a cube's, so one can be swapped for the other without rethinking
+ * the layout: `[diameter, height, diameter]`, positioned from its underside.
+ *
+ * @param scene The Three.js scene
+ * @param world The Rapier physics world
+ * @param options Size, position, material and physics options
+ * @returns The cylinder as a complex model
+ */
+export const getCylinder = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  options: ModelOptions = {}
+): ComplexModel => {
+  const {
+    name,
+    size = [2, 5, 2] as CoordinateTuple,
+    rotation = [0, 0, 0] as CoordinateTuple,
+    position = [0, 0, 0] as CoordinateTuple,
+    segments = 24,
+    hasGravity = false,
+    origin = { y: 0 },
+    onSpawn,
+    type = 'dynamic'
+  } = options
+
+  const sizeArray = getCubeSizeArray(size)
+  const [offsetX, offsetY, offsetZ] = getOriginOffset(sizeArray, origin)
+  const centerPosition: CoordinateTuple = [
+    position[0] + offsetX,
+    position[1] + offsetY,
+    position[2] + offsetZ
+  ]
+
+  const radius = sizeArray[0] / 2
+  const geometry = new THREE.CylinderGeometry(radius, radius, sizeArray[1], segments)
+  const mesh = applyModelMaterial(new THREE.Mesh(geometry), options)
+  applyTextureToMesh(mesh, options.texture, options)
+  mesh.position.set(...centerPosition)
+  mesh.rotation.set(...rotation)
+  mesh.castShadow = options.castShadow ?? true
+  mesh.receiveShadow = options.receiveShadow ?? true
+  if (name) mesh.name = name
+  scene.add(mesh)
+
+  const { rigidBody, collider, characterController } = getPhysic(world, {
+    ...options,
+    position: centerPosition,
+    size: sizeArray,
+    shape: 'cylinder'
+  })
+
+  const complexModel = Object.assign(mesh, {
+    userData: {
+      body: rigidBody,
+      collider,
+      initialValues: { size, rotation, position: centerPosition, color: options.color },
+      actions: {},
+      mixer: undefined,
+      helper: undefined,
       type,
       characterController,
       hasGravity,

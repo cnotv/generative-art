@@ -40,10 +40,18 @@ const syncFromPreset = (name: EasingName) => {
   cp2.value = { x: p.x2, y: p.y2 }
 }
 
-watch(() => props.modelValue, syncFromPreset, { immediate: true })
+// Ignored while dragging: the drag emits its own value, and syncing from it would snap the
+// handle back to the preset's canonical shape under the pointer.
+watch(
+  () => props.modelValue,
+  (name) => {
+    if (!dragging.value) syncFromPreset(name)
+  },
+  { immediate: true }
+)
 
 // SVG coordinate system:
-// viewBox "-5 -30 110 160" → chart area [0..100] × [0..100] with room for handles
+// viewBox "-6 -26 112 152" → chart area [0..100] × [0..100] with room for out-of-range handles
 // Bezier x ∈ [0,1] → SVG x ∈ [0,100]
 // Bezier y ∈ [0,1] → SVG y ∈ [100,0]  (y-axis flipped)
 const toSvgX = (x: number) => x * 100
@@ -64,19 +72,39 @@ const curvePath = computed(
     `M ${p0.x},${p0.y} C ${p1svg.value.x},${p1svg.value.y} ${p2svg.value.x},${p2svg.value.y} ${p3.x},${p3.y}`
 )
 
+/**
+ * Where the pointer is in the SVG's own coordinates.
+ *
+ * Read through the element's screen transform rather than reconstructed from its bounding box
+ * and viewBox: any padding, aspect-ratio letterboxing or transform on an ancestor breaks the
+ * arithmetic version, and the handle then trails the cursor by a margin that changes with the
+ * panel width.
+ * @param event The pointer or touch event being tracked
+ * @returns The point in viewBox units, or null before the SVG is laid out
+ */
 const getPointerInSvg = (event: MouseEvent | TouchEvent): { x: number; y: number } | null => {
-  if (!svgReference.value) return null
-  const rect = svgReference.value.getBoundingClientRect()
-  // The chart area spans [5, 105] px (viewBox offset −5) → map to [0, 100]
-  const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-  const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
-  const svgW = 110 // viewBox width
-  const svgH = 160 // viewBox height
-  return {
-    x: ((clientX - rect.left) / rect.width) * svgW - 5,
-    y: ((clientY - rect.top) / rect.height) * svgH - 30
-  }
+  const svg = svgReference.value
+  const transform = svg?.getScreenCTM()
+  if (!svg || !transform) return null
+  const source = event instanceof MouseEvent ? event : event.touches[0]
+  const point = svg.createSVGPoint()
+  point.x = source.clientX
+  point.y = source.clientY
+  const local = point.matrixTransform(transform.inverse())
+  return { x: local.x, y: local.y }
 }
+
+/** The preset whose control points sit closest to where the handles have been dragged. */
+const nearestPreset = (): Preset =>
+  PRESETS.reduce((best, preset) => {
+    const distance =
+      Math.hypot(preset.x1 - cp1.value.x, preset.y1 - cp1.value.y) +
+      Math.hypot(preset.x2 - cp2.value.x, preset.y2 - cp2.value.y)
+    const bestDistance =
+      Math.hypot(best.x1 - cp1.value.x, best.y1 - cp1.value.y) +
+      Math.hypot(best.x2 - cp2.value.x, best.y2 - cp2.value.y)
+    return distance < bestDistance ? preset : best
+  })
 
 const onMove = (event: MouseEvent | TouchEvent) => {
   if (!dragging.value) return
@@ -85,22 +113,17 @@ const onMove = (event: MouseEvent | TouchEvent) => {
   const coords = fromSvgCoords(pt.x, pt.y)
   if (dragging.value === 1) cp1.value = coords
   else cp2.value = coords
+  // Emitted as the handle moves, so the curve being dragged is the curve in effect.
+  emit('update:modelValue', nearestPreset().name)
 }
 
 const onRelease = () => {
   if (!dragging.value) return
+  const settled = nearestPreset()
   dragging.value = null
-  // Find closest preset and emit it
-  const best = PRESETS.reduce((best, p) => {
-    const d =
-      Math.hypot(p.x1 - cp1.value.x, p.y1 - cp1.value.y) +
-      Math.hypot(p.x2 - cp2.value.x, p.y2 - cp2.value.y)
-    const bd =
-      Math.hypot(best.x1 - cp1.value.x, best.y1 - cp1.value.y) +
-      Math.hypot(best.x2 - cp2.value.x, best.y2 - cp2.value.y)
-    return d < bd ? p : best
-  })
-  emit('update:modelValue', best.name)
+  // Snapped only once the drag ends, so the handles come to rest on the preset actually chosen.
+  syncFromPreset(settled.name)
+  emit('update:modelValue', settled.name)
 }
 
 onMounted(() => {
@@ -131,7 +154,7 @@ onUnmounted(() => {
     <svg
       ref="svgReference"
       class="bezier-picker__svg"
-      viewBox="-5 -30 110 160"
+      viewBox="-6 -26 112 152"
       xmlns="http://www.w3.org/2000/svg"
     >
       <!-- Chart border -->
@@ -151,16 +174,16 @@ onUnmounted(() => {
       <circle
         :cx="p1svg.x"
         :cy="p1svg.y"
-        r="5"
-        class="bezier-picker__handle"
+        r="4.5"
+        class="bezier-picker__handle bezier-picker__handle--first"
         @mousedown.prevent="dragging = 1"
         @touchstart.prevent="dragging = 1"
       />
       <circle
         :cx="p2svg.x"
         :cy="p2svg.y"
-        r="5"
-        class="bezier-picker__handle"
+        r="4.5"
+        class="bezier-picker__handle bezier-picker__handle--second"
         @mousedown.prevent="dragging = 2"
         @touchstart.prevent="dragging = 2"
       />
@@ -176,8 +199,9 @@ onUnmounted(() => {
 }
 
 .bezier-picker__svg {
-  width: 50%;
-  aspect-ratio: 110 / 160;
+  width: 100%;
+  max-width: 132px;
+  aspect-ratio: 112 / 152;
   overflow: visible;
   cursor: default;
 }
@@ -221,5 +245,12 @@ onUnmounted(() => {
 
 .bezier-picker__handle:active {
   cursor: grabbing;
+}
+
+/* Linear puts both control points on the same spot; a filled second handle keeps the two
+   tellable apart, and the first stays grabbable underneath. */
+.bezier-picker__handle--second {
+  fill: var(--color-primary);
+  stroke: var(--color-background);
 }
 </style>

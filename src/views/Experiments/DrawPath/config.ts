@@ -93,6 +93,7 @@ export const defaultConfigValues = {
   mode: 'mesh' as FollowerMode,
   speed: DEFAULT_FOLLOW_SPEED,
   obstacleImpulse: 20,
+  curved: true,
   easing: 'linear' as EasingName,
   easingIntensity: 0.6,
   playing: true,

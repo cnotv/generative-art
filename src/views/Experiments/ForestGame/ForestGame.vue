@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue'
 import { useRoute } from 'vue-router'
-import { getModel, getCube, cameraFollowPlayer, type ComplexModel } from '@webgamekit/threejs'
+import {
+  getModel,
+  getCube,
+  cameraFollowPlayer,
+  prefabSpawn,
+  type ComplexModel
+} from '@webgamekit/threejs'
 import {
   controllerForward,
   type CoordinateTuple,
@@ -24,6 +30,7 @@ import TouchControl from '@/components/TouchControl.vue'
 import ControlsLogger from '@/components/ControlsLogger.vue'
 import {
   playerSettings,
+  playerPrefab,
   setupConfig,
   controlBindings,
   assets,
@@ -271,8 +278,7 @@ onMounted(async () => {
       const obstacles: ComplexModel[] = []
       const cameraOffset = (setupConfig.camera?.position || [0, 10, 20]) as CoordinateTuple
 
-      const player = await getModel(scene, world, 'mushroom.glb', playerSettings.model)
-      player.name = 'Player'
+      const player = await prefabSpawn(scene, world, playerPrefab)
 
       const groundBodies: ComplexModel[] = ground?.mesh
         ? [ground.mesh as unknown as ComplexModel]

@@ -58,32 +58,35 @@ call:
 
 ```ts
 const panel = registerFollowCameraPanel({
-  name: 'run-camera',
-  label: 'Run camera',
+  targetLabel: 'the runner', // names who the rig is holding
   mode: cameraMode, // Ref<FollowCameraMode> the view already owns
   setMode: setCameraMode,
   defaults: { thirdPersonBack: 12 }
 })
 
 // panel.config is what the render loop places the camera from
-// panel.teardown() removes the row
+// panel.enabled is false while the camera panel is driving instead
+// panel.teardown() clears the controls
 ```
 
-That gives a row with the three modes as tabs, showing only the selected mode's
-offsets rather than all eight at once.
+Everything lands on the **Camera element**: the three views as buttons beside the
+lens presets, and the offsets of whichever view is in effect below them. There is
+no row of its own. A rig is a way of driving the camera, not a second thing in the
+scene, and splitting the two left a player toggling one while the other quietly
+overrode it.
 
-### The two things that are easy to get wrong
+A view with more than the three follow modes — a cinematic path, say — passes its
+own `views`, the `activeView` ref it already switches on, and a `selectView` that
+takes any of them.
 
-**Choosing a tab switches the camera, not just the controls.** Someone tuning a
-mode wants to be looking through it, so the selector calls `setMode`. The binding
-runs the other way too: the helper watches the mode ref, so cycling the camera
-from the keyboard moves the tabs with it.
+### The thing that is easy to get wrong
 
-**The element must not be typed `Camera`.** The elements panel routes any type
-containing that word to its shared camera component, which renders lens and
-projection instead of the element's own schema — a row typed `Camera` shows the
-wrong controls entirely, with no error. The helper types the row `Rig` and puts
-the readable name in the label instead.
+**A rig and the camera panel cannot both drive.** A rig writes position and aim
+every frame, so a preset, a 45 degree rotation or a dragged coordinate from the
+camera panel is overwritten before anyone sees it. The two hand the camera to each
+other instead: reaching for one of those panel controls switches the rig off, and
+picking a view switches it back on. `panel.enabled` is that switch, and the render
+loop must respect it — place the camera from the rig only while it is true.
 
 ### Doing it in another host
 

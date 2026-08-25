@@ -53,7 +53,7 @@ describe('useCameraConfigStore', () => {
       const store = useCameraConfigStore()
 
       store.registerCameraHandlers(
-        [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2', CameraPreset.Orbit)],
+        [makeSlot('cam-1', 'Camera 1'), makeSlot('cam-2', 'Camera 2', CameraPreset.Fisheye)],
         makeHandlers()
       )
       await nextTick()
@@ -330,6 +330,226 @@ describe('useCameraConfigStore', () => {
       const store = useCameraConfigStore()
       expect(store.activeSlot).not.toBeNull()
       expect(store.activeSlot?.id).toBe('cam-default')
+    })
+  })
+
+  describe('follow views', () => {
+    const FOLLOW_VIEWS = [
+      { value: 'third', label: 'Third Person' },
+      { value: 'first', label: 'First Person' },
+      { value: 'free', label: 'Free Chase' }
+    ]
+
+    const registerRig = (store: ReturnType<typeof useCameraConfigStore>) => {
+      const onChange = vi.fn()
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], makeHandlers())
+      store.registerFollowViews(FOLLOW_VIEWS, 'third', onChange)
+      return onChange
+    }
+
+    it('offers a rig its views on the camera panel', () => {
+      const store = useCameraConfigStore()
+      registerRig(store)
+
+      expect(store.followViews).toEqual(FOLLOW_VIEWS)
+      expect(store.activeFollowView).toBe('third')
+    })
+
+    it.each(FOLLOW_VIEWS)('hands $value back to the rig when picked', ({ value }) => {
+      const store = useCameraConfigStore()
+      const onChange = registerRig(store)
+
+      store.selectFollowView(value)
+
+      expect(onChange).toHaveBeenCalledWith(value)
+    })
+
+    it('releases the rig when a preset is applied, so the preset survives the next frame', () => {
+      const store = useCameraConfigStore()
+      const onChange = registerRig(store)
+
+      store.applyPresetToActiveSlot(CameraPreset.TopDown)
+
+      expect(onChange).toHaveBeenCalledWith(null)
+    })
+
+    it('releases the rig when the camera is rotated, so the rotation survives', () => {
+      const store = useCameraConfigStore()
+      const onChange = registerRig(store)
+
+      store.rotateActiveSlot(45)
+
+      expect(onChange).toHaveBeenCalledWith(null)
+    })
+
+    it('does not keep releasing a rig that is already released', () => {
+      const store = useCameraConfigStore()
+      const onChange = registerRig(store)
+
+      store.setActiveFollowView(null)
+      store.rotateActiveSlot(45)
+      store.applyPresetToActiveSlot(CameraPreset.TopDown)
+
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('picks the only target for the player, since there is nothing to choose', () => {
+      const store = useCameraConfigStore()
+      const onChange = vi.fn()
+
+      store.registerFollowTargets([{ value: 'player', label: 'player' }], onChange)
+
+      expect(store.activeFollowTarget).toBe('player')
+      expect(onChange).toHaveBeenCalledWith('player')
+    })
+
+    it('leaves the choice open when there is more than one', () => {
+      const store = useCameraConfigStore()
+
+      store.registerFollowTargets(
+        [
+          { value: 'player', label: 'player' },
+          { value: 'crate', label: 'crate' }
+        ],
+        vi.fn()
+      )
+
+      expect(store.activeFollowTarget).toBeNull()
+    })
+
+    it('keeps a chosen target when the list is republished', () => {
+      // The list is rebuilt whenever the scene changes, which must not undo a deliberate pick.
+      const store = useCameraConfigStore()
+      const targets = [
+        { value: 'player', label: 'player' },
+        { value: 'crate', label: 'crate' }
+      ]
+      store.registerFollowTargets(targets, vi.fn())
+      store.setFollowTarget('crate')
+
+      store.registerFollowTargets(targets, vi.fn())
+
+      expect(store.activeFollowTarget).toBe('crate')
+    })
+
+    it('starts on the target a scene names, among several', () => {
+      const store = useCameraConfigStore()
+      const targets = [
+        { value: 'player', label: 'player' },
+        { value: 'landmark', label: 'landmark' }
+      ]
+
+      store.registerFollowTargets(targets, vi.fn(), 'player')
+
+      expect(store.activeFollowTarget).toBe('player')
+    })
+
+    it('ignores a named target that is not in the scene', () => {
+      const store = useCameraConfigStore()
+
+      store.registerFollowTargets([{ value: 'player', label: 'player' }], vi.fn(), 'missing')
+
+      expect(store.activeFollowTarget).toBe('player')
+    })
+
+    it('drops a target that has left the scene', () => {
+      const store = useCameraConfigStore()
+      store.registerFollowTargets([{ value: 'crate', label: 'crate' }], vi.fn())
+
+      store.registerFollowTargets([{ value: 'player', label: 'player' }], vi.fn())
+
+      expect(store.activeFollowTarget).toBe('player')
+    })
+
+    it('resets to the scene default and lets go of the rig, so the framing holds', () => {
+      const store = useCameraConfigStore()
+      const onResetToSceneDefault = vi.fn(() => 'perspective' as const)
+      const onChange = registerRig(store)
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], {
+        ...makeHandlers(),
+        onResetToSceneDefault
+      })
+      store.registerFollowViews(FOLLOW_VIEWS, 'third', onChange)
+
+      store.resetCameraToSceneDefault()
+
+      expect(onChange).toHaveBeenCalledWith(null)
+      expect(onResetToSceneDefault).toHaveBeenCalled()
+    })
+
+    it.each([
+      { restored: 'orthographic' as const, preset: CameraPreset.Orthographic },
+      { restored: 'perspective' as const, preset: CameraPreset.Perspective }
+    ])('shows the $restored preset after resetting to it', ({ restored, preset }) => {
+      // The panel has to agree with the camera: a reset that puts the projection back while the
+      // toggle still reads the other one is the same lie as not resetting at all.
+      const store = useCameraConfigStore()
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1', CameraPreset.TopDown)], {
+        ...makeHandlers(),
+        onResetToSceneDefault: () => restored
+      })
+
+      store.resetCameraToSceneDefault()
+
+      expect(store.activeSlot?.preset).toBe(preset)
+    })
+
+    it('does not re-apply a preset while resetting, which would move the camera again', () => {
+      const store = useCameraConfigStore()
+      const handlers = { ...makeHandlers(), onResetToSceneDefault: () => 'perspective' as const }
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], handlers)
+
+      store.resetCameraToSceneDefault()
+
+      expect(handlers.onPresetChange).not.toHaveBeenCalled()
+    })
+
+    it('puts the follow offsets back to what the scene asked for', () => {
+      // A dragged height is a camera setting like any other: left behind, the next follow view
+      // is framed by whatever was last fiddled with rather than by the scene.
+      const store = useCameraConfigStore()
+      const onFollowReset = vi.fn()
+      store.registerCameraHandlers([makeSlot('cam-1', 'Camera 1')], {
+        ...makeHandlers(),
+        onResetToSceneDefault: () => 'perspective' as const
+      })
+      store.registerFollowReset(onFollowReset)
+
+      store.resetCameraToSceneDefault()
+
+      expect(onFollowReset).toHaveBeenCalled()
+    })
+
+    it('forgets how to reset the offsets once the rig is gone', () => {
+      const store = useCameraConfigStore()
+      const onFollowReset = vi.fn()
+      store.registerFollowReset(onFollowReset)
+
+      store.unregisterFollowViews()
+      store.resetCameraToSceneDefault()
+
+      expect(onFollowReset).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      { key: 'thirdPersonHeight' as const, value: 12 },
+      { key: 'followRotation' as const, value: false }
+    ])('writes $key, whether it is a number or a switch', ({ key, value }) => {
+      const store = useCameraConfigStore()
+
+      store.updateFollowSetting(key, value)
+
+      expect(store.followConfig[key]).toBe(value)
+    })
+
+    it('forgets the views once the rig is gone', () => {
+      const store = useCameraConfigStore()
+      registerRig(store)
+
+      store.unregisterFollowViews()
+
+      expect(store.followViews).toEqual([])
+      expect(store.activeFollowView).toBeNull()
     })
   })
 })

@@ -37,3 +37,39 @@ export const pathGetEasingMultiplier = (
   })()
   return 1 + (raw - 1) * it
 }
+
+const BACK_OVERSHOOT = 1.70158
+const BACK_SCALE = BACK_OVERSHOOT + 1
+
+/** The eased progress each preset describes, before intensity is applied. */
+const EASING_CURVES: Record<EasingName, (t: number) => number> = {
+  linear: (t) => t,
+  'ease-in': (t) => t * t,
+  'ease-out': (t) => 1 - (1 - t) * (1 - t),
+  'ease-in-out': (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
+  'ease-in-back': (t) => BACK_SCALE * t ** 3 - BACK_OVERSHOOT * t * t,
+  'ease-out-back': (t) => 1 + BACK_SCALE * (t - 1) ** 3 + BACK_OVERSHOOT * (t - 1) ** 2
+}
+
+/**
+ * Remaps progress along a path, for anything driven by a fraction of the way through rather
+ * than by a per-frame speed.
+ *
+ * The companion to `pathGetEasingMultiplier`, which answers the same question for a follower
+ * that moves a step at a time. Intensity blends towards linear the same way in both, so a
+ * shared control means the same thing whichever is reading it.
+ * @param t - Normalised progress in [0, 1]
+ * @param easing - Named easing curve
+ * @param intensity - Blend factor, 0 for linear and 1 for the full curve (default 1)
+ * @returns The eased progress, clamped to [0, 1]
+ */
+export const pathGetEasingProgress = (
+  t: number,
+  easing: EasingName,
+  intensity: number = 1
+): number => {
+  const clamped = Math.max(0, Math.min(1, t))
+  const eased = (EASING_CURVES[easing] ?? EASING_CURVES.linear)(clamped)
+  const blended = clamped + (eased - clamped) * Math.max(0, intensity)
+  return Math.max(0, Math.min(1, blended))
+}

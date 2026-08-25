@@ -29,13 +29,17 @@
   "Model Animation": {
     "description": "Load and preview animated 3D models with playback controls."
   },
-  "Moon Two": { "description": "3D Moon surface rendering with displacement mapping." },
-  "Moon View": { "description": "Detailed 3D Moon view with realistic surface shading." },
+  "Moon Two": {
+    "description": "3D Moon surface rendering with displacement mapping."
+  },
+  "Moon View": {
+    "description": "Detailed 3D Moon view with realistic surface shading."
+  },
   "Matchmaker": {
-    "description": "Browse online players and negotiate a P2P session — request, accept, or ignore individual matches."
+    "description": "Browse online players and negotiate a P2P session \u2014 request, accept, or ignore individual matches."
   },
   "Multiplayer Client": {
-    "description": "Socket.IO client demo — connect to a dedicated server and watch the player registry update."
+    "description": "Socket.IO client demo \u2014 connect to a dedicated server and watch the player registry update."
   },
   "Multiplayer P 2 P": {
     "description": "Peer-to-peer multiplayer demo using WebRTC data channels."
@@ -68,7 +72,7 @@
     "description": "Music visualiser with frequency-reactive 3D geometry."
   },
   "Chick Run": {
-    "description": "Endless runner game — dodge obstacles as a speedy chick."
+    "description": "Endless runner game \u2014 dodge obstacles as a speedy chick."
   },
   "Forest Game": {
     "description": "3D forest exploration game with character movement and environment."
@@ -80,7 +84,7 @@
     "description": "3D maze navigation game with procedural maze generation and pathfinding enemies."
   },
   "Tilt Maze": {
-    "description": "Roll a ball through a maze of pits by tilting your phone — each escape levels up into a finer, deadlier maze."
+    "description": "Roll a ball through a maze of pits by tilting your phone \u2014 each escape levels up into a finer, deadlier maze."
   },
   "Pictionary": {
     "description": "Multiplayer drawing and guessing game with real-time collaboration."
@@ -138,5 +142,8 @@
   },
   "Avatar Editor": {
     "description": "Customise the stickman avatar: resize each limb and paint its texture maps live on the model."
+  },
+  "Camera Showcase": {
+    "description": "Camera behaviours with no UI of their own: third and first person, free chase, a cinematic path and side placements. Presets live in the Elements panel."
   }
 }

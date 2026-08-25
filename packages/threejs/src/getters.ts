@@ -289,6 +289,12 @@ const buildColliderShape = (
       : ([sizeValue * boundary, sizeValue * boundary, sizeValue * boundary] as CoordinateTuple)
     return RAPIER.ColliderDesc.cuboid(...halfExtents)
   }
+  if (shape === 'cylinder') {
+    const [diameter, height] = Array.isArray(sizeValue)
+      ? sizeValue
+      : [sizeValue, sizeValue, sizeValue]
+    return RAPIER.ColliderDesc.cylinder((height * boundary) / 2, (diameter * boundary) / 2)
+  }
   return RAPIER.ColliderDesc.ball((Array.isArray(sizeValue) ? sizeValue[0] : sizeValue) as number)
 }
 
