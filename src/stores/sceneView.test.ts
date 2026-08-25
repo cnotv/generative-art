@@ -279,13 +279,30 @@ describe('useSceneViewStore', () => {
         expect(mockScene.environmentIntensity).toBe(1.2)
       })
 
+      it('opens on a moving sky at four times speed', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+
+        expect(store.lightTransitionEnabled).toBe(true)
+        expect(store.lightTransitionSpeed).toBe(4)
+        expect(store.activeLightPreset).toBe(null)
+        store.setLightTransitionEnabled(false)
+      })
+
+      it('leaves the lights alone in a scene that declared none', async () => {
+        const store = useSceneViewStore()
+        const canvas = document.createElement('canvas')
+
+        await store.init(canvas, { lights: false })
+
+        expect(store.lightTransitionEnabled).toBe(false)
+      })
+
       it('stops the transition player and settles the rig into the panel state', async () => {
         const store = useSceneViewStore()
 
         await initWithEnvironment(store)
-        store.setLightTransitionEnabled(true)
-        expect(store.lightTransitionEnabled).toBe(true)
-        expect(store.activeLightPreset).toBe(null)
 
         store.setLightTransitionEnabled(false)
 
@@ -295,15 +312,14 @@ describe('useSceneViewStore', () => {
         )
       })
 
-      it('turning on the player clears the active preset', async () => {
+      it('picking a preset takes the sky off the cycle', async () => {
         const store = useSceneViewStore()
 
         await initWithEnvironment(store)
         store.applyLightPreset('noon')
-        store.setLightTransitionEnabled(true)
 
-        expect(store.activeLightPreset).toBe(null)
-        store.setLightTransitionEnabled(false)
+        expect(store.lightTransitionEnabled).toBe(false)
+        expect(store.activeLightPreset).toBe('noon')
       })
     })
 

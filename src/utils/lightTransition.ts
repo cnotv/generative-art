@@ -9,6 +9,9 @@ const LIGHT_PRESET_CYCLE: LightPreset[] = ['dawn', 'noon', 'dusk', 'night']
 /** Seconds for one full day at speed 1, slow enough to read as a passing day. */
 const CYCLE_SECONDS = 60
 
+/** Scenes open on a moving sky, at a speed that shows a whole day without waiting a minute. */
+export const DEFAULT_SPEED = 4
+
 /** Wrap into [0, length), which `%` alone does not do for negative values. */
 const wrapPhase = (value: number, length: number): number => ((value % length) + length) % length
 
@@ -33,7 +36,7 @@ export const createLightTransitionPlayer = ({
   onStop
 }: LightTransitionOptions) => {
   const enabled = ref(false)
-  const speed = ref(1)
+  const speed = ref(DEFAULT_SPEED)
   let frameId = 0
   let phase = 0
   let lastTime = 0
