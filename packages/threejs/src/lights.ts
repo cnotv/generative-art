@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CoordinateTuple } from '@webgamekit/animation'
-import { EnvironmentLightConfig, LightsConfig } from './types'
+import { EnvironmentLightConfig, LightPreset, LightsConfig } from './types'
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
 
@@ -68,6 +68,86 @@ export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
   scene.add(directionalLight)
 
   return { directionalLight, ambientLight }
+}
+
+/**
+ * Whole-rig light presets keyed by time of day. Each is a plain LightsConfig,
+ * applied to an existing scene with `updateLights`. Soft, desaturated palettes:
+ * a low warm sun at the edges of the day, a cool dim wash at night.
+ */
+export const lightPresets: Record<LightPreset, LightsConfig> = {
+  dawn: {
+    ambient: { color: 0xf3e2d9, intensity: 1.6 },
+    directional: { color: 0xf7c8a8, intensity: 2.2, position: [60, 15, 20] },
+    environment: { intensity: 0.5 }
+  },
+  noon: {
+    ambient: { color: 0xffffff, intensity: 2 },
+    directional: { color: 0xfff6e5, intensity: 4, position: [20, 60, 20] },
+    environment: { intensity: 1 }
+  },
+  dusk: {
+    ambient: { color: 0xe6d4e0, intensity: 1.4 },
+    directional: { color: 0xe8a798, intensity: 1.8, position: [-60, 12, -10] },
+    environment: { intensity: 0.4 }
+  },
+  night: {
+    ambient: { color: 0xc3cbe8, intensity: 0.9 },
+    directional: { color: 0xbfc8e6, intensity: 0.7, position: [-20, 50, -30] },
+    environment: { intensity: 0.15 }
+  }
+}
+
+const updateAmbientLight = (
+  light: THREE.AmbientLight,
+  config: NonNullable<LightsConfig['ambient']>
+) => {
+  if (config.color !== undefined) light.color.set(config.color)
+  if (config.intensity !== undefined) light.intensity = config.intensity
+}
+
+const updateDirectionalLight = (
+  light: THREE.DirectionalLight,
+  config: NonNullable<LightsConfig['directional']>
+) => {
+  if (config.color !== undefined) light.color.set(config.color)
+  if (config.intensity !== undefined) light.intensity = config.intensity
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+}
+
+const updateHemisphereLight = (
+  light: THREE.HemisphereLight,
+  config: NonNullable<LightsConfig['hemisphere']>
+) => {
+  if (config.colors) {
+    light.color.set(config.colors[0])
+    light.groundColor.set(config.colors[1])
+  }
+  if (config.intensity !== undefined) light.intensity = config.intensity
+}
+
+/**
+ * Apply a LightsConfig onto the lights `getLights` created in the scene, found by their
+ * names. Missing lights and missing config keys are skipped, and the environment entry
+ * only scales `scene.environmentIntensity`; it never creates the environment texture.
+ * @param scene
+ * @param config
+ */
+export const updateLights = (scene: THREE.Scene, config: LightsConfig): void => {
+  const ambientLight = scene.getObjectByName('ambient-light')
+  if (config.ambient && ambientLight instanceof THREE.AmbientLight)
+    updateAmbientLight(ambientLight, config.ambient)
+
+  const directionalLight = scene.getObjectByName('directional-light')
+  if (config.directional && directionalLight instanceof THREE.DirectionalLight)
+    updateDirectionalLight(directionalLight, config.directional)
+
+  const hemisphereLight = scene.getObjectByName('hemisphere-light')
+  if (config.hemisphere && hemisphereLight instanceof THREE.HemisphereLight)
+    updateHemisphereLight(hemisphereLight, config.hemisphere)
+
+  if (config.environment && config.environment.intensity !== undefined)
+    scene.environmentIntensity = config.environment.intensity
 }
 
 const bakeRoomEnvironment = (renderer: THREE.WebGLRenderer): THREE.Texture => {

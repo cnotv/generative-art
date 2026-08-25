@@ -20,3 +20,12 @@ export const replaceGeometry = (
 export const setOrbitEnabled = (orbit: { enabled: boolean }, enabled: boolean): void => {
   orbit.enabled = enabled
 }
+
+export const setSceneEnvironment = (
+  scene: THREE.Scene,
+  texture: THREE.Texture | null
+): THREE.Texture | null => {
+  const previous = scene.environment
+  scene.environment = texture
+  return previous
+}

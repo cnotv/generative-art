@@ -2,8 +2,21 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
-import { getTools, getCube, generateAreaPositions, SCENE_DEFAULTS } from '@webgamekit/threejs'
-import type { SetupConfig, CoordinateTuple, AreaConfig, OnProgress } from '@webgamekit/threejs'
+import {
+  getTools,
+  getCube,
+  generateAreaPositions,
+  SCENE_DEFAULTS,
+  updateLights,
+  lightPresets
+} from '@webgamekit/threejs'
+import type {
+  SetupConfig,
+  CoordinateTuple,
+  AreaConfig,
+  OnProgress,
+  LightPreset
+} from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { usePanelsStore } from '@/stores/panels'
 import { useViewPanelsStore } from '@/stores/viewPanels'
@@ -13,10 +26,15 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
 import type { TextureGroup, GroupConfig } from '@/stores/textureGroups'
 import { addGroupMeshes, removeGroupMeshes } from '@/utils/groupMeshes'
-import { toggleObjectVisibility, replaceGeometry } from '@/utils/threeObjectUpdaters'
+import {
+  toggleObjectVisibility,
+  replaceGeometry,
+  setSceneEnvironment
+} from '@/utils/threeObjectUpdaters'
 import {
   groundSchema,
   lightsSchema,
+  environmentLightSchema,
   skySchema,
   configControls
 } from '@/views/Tools/SceneEditor/config'
@@ -156,7 +174,10 @@ const buildLightsConfigFromSetup = (config: SetupConfig): Record<string, unknown
         y: directionalPosition[1],
         z: directionalPosition[2]
       }
-    }
+    },
+    ...(lightsOverrides.environment && typeof lightsOverrides.environment === 'object'
+      ? { environment: { ...(lightsOverrides.environment as Record<string, unknown>) } }
+      : {})
   }
 }
 
@@ -220,6 +241,115 @@ const applyLightsUpdate = (
   }
 }
 
+type LightElementReferences = {
+  elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
+  lightsConfig: Ref<Record<string, unknown>>
+  threeScene: Ref<THREE.Scene | null>
+  activeLightPreset: Ref<LightPreset | null>
+  ambientLightReference: Ref<THREE.Light | null>
+  directionalLightReference: Ref<THREE.Light | null>
+}
+
+const applyLightPresetToScene = (
+  preset: LightPreset,
+  references: Pick<LightElementReferences, 'lightsConfig' | 'threeScene' | 'activeLightPreset'>
+): void => {
+  const { lightsConfig, threeScene, activeLightPreset } = references
+  const scene = threeScene.value
+  if (!scene) return
+  const presetConfig = lightPresets[preset]
+  updateLights(scene, presetConfig)
+  // Mirror the applied values into the panel state so the ambient and directional
+  // rows show what the preset set rather than the values from before it.
+  lightsConfig.value = {
+    ...lightsConfig.value,
+    ambient: {
+      ...(lightsConfig.value.ambient as Record<string, unknown>),
+      ...presetConfig.ambient
+    },
+    directional: {
+      ...(lightsConfig.value.directional as Record<string, unknown>),
+      ...presetConfig.directional,
+      // The panel state keeps the position as {x, y, z} while the preset carries a tuple.
+      ...(presetConfig.directional?.position
+        ? {
+            position: {
+              x: presetConfig.directional.position[0],
+              y: presetConfig.directional.position[1],
+              z: presetConfig.directional.position[2]
+            }
+          }
+        : {})
+    },
+    ...(lightsConfig.value.environment
+      ? {
+          environment: {
+            ...(lightsConfig.value.environment as Record<string, unknown>),
+            ...presetConfig.environment
+          }
+        }
+      : {})
+  }
+  activeLightPreset.value = preset
+}
+
+const registerEnvironmentLightProperties = (references: LightElementReferences): void => {
+  const { elementPropertiesStore, lightsConfig, threeScene, activeLightPreset } = references
+  if (!lightsConfig.value.environment) return
+
+  elementPropertiesStore.registerElementProperties('environment-light', {
+    title: 'Environment Light',
+    schema: environmentLightSchema,
+    getValue: (path) =>
+      path === 'preset'
+        ? activeLightPreset.value
+        : getNestedValue(lightsConfig.value.environment as Record<string, unknown>, path),
+    updateValue: (path, value) => {
+      if (path === 'preset') {
+        applyLightPresetToScene(value as LightPreset, references)
+        return
+      }
+      lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `environment.${path}`, value)
+      if (path === 'intensity' && threeScene.value)
+        threeScene.value.environmentIntensity = value as number
+    }
+  })
+}
+
+const registerLightElementProperties = (references: LightElementReferences): void => {
+  const { elementPropertiesStore, lightsConfig, ambientLightReference, directionalLightReference } =
+    references
+  if (Object.keys(lightsConfig.value).length === 0) return
+
+  registerEnvironmentLightProperties(references)
+
+  elementPropertiesStore.registerElementProperties('ambient-light', {
+    title: 'Ambient Light',
+    schema: lightsSchema.ambient,
+    getValue: (path) => getNestedValue(lightsConfig.value.ambient as Record<string, unknown>, path),
+    updateValue: (path, value) => {
+      lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `ambient.${path}`, value)
+      applyLightsUpdate(`ambient.${path}`, value, ambientLightReference, directionalLightReference)
+    }
+  })
+
+  elementPropertiesStore.registerElementProperties('directional-light', {
+    title: 'Directional Light',
+    schema: lightsSchema.directional,
+    getValue: (path) =>
+      getNestedValue(lightsConfig.value.directional as Record<string, unknown>, path),
+    updateValue: (path, value) => {
+      lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `directional.${path}`, value)
+      applyLightsUpdate(
+        `directional.${path}`,
+        value,
+        ambientLightReference,
+        directionalLightReference
+      )
+    }
+  })
+}
+
 const applySkyUpdate = (path: string, value: unknown, skyMeshReference: Ref<THREE.Mesh | null>) => {
   const mesh = skyMeshReference.value
   if (!mesh) return
@@ -278,7 +408,12 @@ const buildSceneElements = (
     groupId: g.id
   }))
 
-  return [cameraElement, ...sceneChildren, ...textureGroupElements]
+  // The environment light is scene.environment, not a scene child, so it needs its own row.
+  const environmentElements: SceneElement[] = scene.environment
+    ? [{ name: 'environment-light', type: 'Environment', hidden: false }]
+    : []
+
+  return [cameraElement, ...environmentElements, ...sceneChildren, ...textureGroupElements]
 }
 
 const buildAreaMeshCacheFromScene = (
@@ -852,6 +987,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const areaMeshCache = ref<Record<string, THREE.Object3D[]>>({})
 
   let activeToolsCleanup: (() => void) | null = null
+  let environmentTextureStash: THREE.Texture | null = null
 
   const panelsStore = usePanelsStore()
   const viewPanelsStore = useViewPanelsStore()
@@ -876,7 +1012,12 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       const camera = threeCamera.value
       if (!scene) return
       const cachedMeshes = getAreaMeshes(name)
-      if (cachedMeshes.length > 0) {
+      if (name === 'environment-light') {
+        environmentTextureStash = setSceneEnvironment(
+          scene,
+          scene.environment ? null : environmentTextureStash
+        )
+      } else if (cachedMeshes.length > 0) {
         cachedMeshes.forEach((child) => toggleObjectVisibility(child))
       } else {
         const object =
@@ -950,45 +1091,17 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     })
   }
 
-  const registerLightsProperties = () => {
-    if (Object.keys(lightsConfig.value).length === 0) return
+  const activeLightPreset = ref<LightPreset | null>(null)
 
-    elementPropertiesStore.registerElementProperties('ambient-light', {
-      title: 'Ambient Light',
-      schema: lightsSchema.ambient,
-      getValue: (path) =>
-        getNestedValue(lightsConfig.value.ambient as Record<string, unknown>, path),
-      updateValue: (path, value) => {
-        lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `ambient.${path}`, value)
-        applyLightsUpdate(
-          `ambient.${path}`,
-          value,
-          ambientLightReference,
-          directionalLightReference
-        )
-      }
+  const registerLightsProperties = () =>
+    registerLightElementProperties({
+      elementPropertiesStore,
+      lightsConfig,
+      threeScene,
+      activeLightPreset,
+      ambientLightReference,
+      directionalLightReference
     })
-
-    elementPropertiesStore.registerElementProperties('directional-light', {
-      title: 'Directional Light',
-      schema: lightsSchema.directional,
-      getValue: (path) =>
-        getNestedValue(lightsConfig.value.directional as Record<string, unknown>, path),
-      updateValue: (path, value) => {
-        lightsConfig.value = setNestedValueImmutable(
-          lightsConfig.value,
-          `directional.${path}`,
-          value
-        )
-        applyLightsUpdate(
-          `directional.${path}`,
-          value,
-          ambientLightReference,
-          directionalLightReference
-        )
-      }
-    })
-  }
 
   const registerSkyProperties = () => {
     if (Object.keys(skyConfig.value).length === 0) return

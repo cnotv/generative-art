@@ -116,6 +116,8 @@ export interface EnvironmentLightConfig {
   intensity?: number
 }
 
+export type LightPreset = 'dawn' | 'noon' | 'dusk' | 'night'
+
 export interface LightsConfig {
   environment?: EnvironmentLightConfig | false
   ambient?: {

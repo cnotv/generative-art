@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
-import { getLights, getEnvironmentLight } from './lights'
+import { getLights, getEnvironmentLight, updateLights, lightPresets } from './lights'
+import type { LightPreset } from './types'
 
 vi.mock('three', async (importOriginal) => {
   const actual = await importOriginal<typeof import('three')>()
@@ -60,6 +61,50 @@ describe('getLights', () => {
     getLights(scene, config)
 
     expect((scene.getObjectByName(lightName) as THREE.Light).intensity).toBe(expectedIntensity)
+  })
+})
+
+describe('updateLights and lightPresets', () => {
+  const presetEntries = Object.entries(lightPresets) as [
+    LightPreset,
+    (typeof lightPresets)[LightPreset]
+  ][]
+
+  it.each(presetEntries)(
+    'applies the %s preset onto the existing lights and environment',
+    (_, preset) => {
+      const scene = new THREE.Scene()
+      const { ambientLight, directionalLight } = getLights(scene)
+
+      updateLights(scene, preset)
+
+      expect(ambientLight.color.getHex()).toBe(preset.ambient?.color)
+      expect(ambientLight.intensity).toBe(preset.ambient?.intensity)
+      expect(directionalLight.color.getHex()).toBe(preset.directional?.color)
+      expect(directionalLight.intensity).toBe(preset.directional?.intensity)
+      expect(directionalLight.position.toArray()).toEqual(preset.directional?.position)
+      expect(scene.environmentIntensity).toBe(
+        preset.environment !== false ? preset.environment?.intensity : undefined
+      )
+    }
+  )
+
+  it('does nothing on a scene without the named lights', () => {
+    const scene = new THREE.Scene()
+
+    expect(() => updateLights(scene, lightPresets.noon)).not.toThrow()
+  })
+
+  it('updates a hemisphere light when one exists and the config names it', () => {
+    const scene = new THREE.Scene()
+    getLights(scene, { hemisphere: { colors: [0xffffff, 0x444444] } })
+
+    updateLights(scene, { hemisphere: { colors: [0xf0e0d0, 0x304050], intensity: 0.8 } })
+
+    const hemisphereLight = scene.getObjectByName('hemisphere-light') as THREE.HemisphereLight
+    expect(hemisphereLight.color.getHex()).toBe(0xf0e0d0)
+    expect(hemisphereLight.groundColor.getHex()).toBe(0x304050)
+    expect(hemisphereLight.intensity).toBe(0.8)
   })
 })
 

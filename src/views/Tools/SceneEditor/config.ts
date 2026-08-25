@@ -217,6 +217,20 @@ export const groundSchema = {
   }
 }
 
+export const environmentLightSchema = {
+  preset: {
+    component: 'ButtonSelector',
+    label: 'Time of Day',
+    options: [
+      { value: 'dawn', label: 'Dawn' },
+      { value: 'noon', label: 'Noon' },
+      { value: 'dusk', label: 'Dusk' },
+      { value: 'night', label: 'Night' }
+    ]
+  },
+  intensity: { min: 0, max: 3, step: 0.05, label: 'Intensity' }
+}
+
 export const lightsSchema = {
   ambient: {
     color: { color: true, label: 'Color' },

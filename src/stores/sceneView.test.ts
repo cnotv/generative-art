@@ -11,6 +11,8 @@ vi.mock('vue-router', () => ({
 // Mock Three.js scene children
 const mockScene = {
   children: [] as Array<{ name: string; type: string; visible: boolean }>,
+  environment: null as THREE.Texture | null,
+  environmentIntensity: 1,
   getObjectByName: vi.fn((name: string) => {
     if (name === 'ambient-light') return { intensity: 1, color: new THREE.Color(0xffffff) }
     if (name === 'directional-light')
@@ -100,6 +102,8 @@ describe('useSceneViewStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockScene.children = []
+    mockScene.environment = null
+    mockScene.environmentIntensity = 1
     setActivePinia(createPinia())
   })
 
@@ -194,6 +198,73 @@ describe('useSceneViewStore', () => {
 
       elementPropertiesStore.openElementProperties(elementName)
       expect(elementPropertiesStore.activeProperties?.title).toBe(expectedTitle)
+    })
+
+    describe('environment light', () => {
+      const initWithEnvironment = async (store: ReturnType<typeof useSceneViewStore>) => {
+        const canvas = document.createElement('canvas')
+        await store.init(canvas, { lights: { environment: { intensity: 0.5 } } })
+      }
+
+      it('registers environment-light element properties when configured', async () => {
+        const store = useSceneViewStore()
+        const elementPropertiesStore = useElementPropertiesStore()
+
+        await initWithEnvironment(store)
+
+        elementPropertiesStore.openElementProperties('environment-light')
+        expect(elementPropertiesStore.activeProperties?.title).toBe('Environment Light')
+        expect(elementPropertiesStore.activeProperties?.getValue('intensity')).toBe(0.5)
+      })
+
+      it('does not register the element without an environment entry', async () => {
+        const store = useSceneViewStore()
+        const elementPropertiesStore = useElementPropertiesStore()
+        const canvas = document.createElement('canvas')
+
+        await store.init(canvas, { lights: { ambient: { intensity: 1 } } })
+
+        elementPropertiesStore.openElementProperties('environment-light')
+        expect(elementPropertiesStore.activeProperties?.title).not.toBe('Environment Light')
+        expect(elementPropertiesStore.activeProperties?.schema).toEqual({})
+      })
+
+      it('lists an environment-light row when the scene has an environment', async () => {
+        const store = useSceneViewStore()
+        const debugSceneStore = useDebugSceneStore()
+        mockScene.environment = {} as THREE.Texture
+
+        await initWithEnvironment(store)
+
+        expect(debugSceneStore.sceneElements.some((e) => e.name === 'environment-light')).toBe(true)
+      })
+
+      it('applies a day time preset to the scene and mirrors it into the panel state', async () => {
+        const store = useSceneViewStore()
+        const elementPropertiesStore = useElementPropertiesStore()
+
+        await initWithEnvironment(store)
+        elementPropertiesStore.openElementProperties('environment-light')
+        elementPropertiesStore.activeProperties!.updateValue('preset', 'dusk')
+
+        expect(elementPropertiesStore.activeProperties!.getValue('preset')).toBe('dusk')
+        expect(mockScene.environmentIntensity).toBe(0.4)
+        expect((store.lightsConfig.ambient as { color: number }).color).toBe(0xe6d4e0)
+        expect((store.lightsConfig.directional as { position: { x: number } }).position.x).toBe(-60)
+        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(0.4)
+      })
+
+      it('writes intensity onto scene.environmentIntensity', async () => {
+        const store = useSceneViewStore()
+        const elementPropertiesStore = useElementPropertiesStore()
+
+        await initWithEnvironment(store)
+        elementPropertiesStore.openElementProperties('environment-light')
+        elementPropertiesStore.activeProperties!.updateValue('intensity', 1.2)
+
+        expect(mockScene.environmentIntensity).toBe(1.2)
+        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(1.2)
+      })
     })
 
     it('should set scene elements in debug store', async () => {

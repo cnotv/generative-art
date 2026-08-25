@@ -590,6 +590,22 @@ getEnvironmentLight(renderer, scene, { intensity: 0.35 })
 Through `setup()`, the same config sits under `lights.environment` and is opt in: scenes
 without the key render exactly as before.
 
+### updateLights(scene, config) and lightPresets
+
+`updateLights` applies a `LightsConfig` onto the lights `getLights` created, found by their
+names; missing lights and keys are skipped, and an `environment` entry only scales
+`scene.environmentIntensity`. `lightPresets` holds a whole-rig `LightsConfig` per time of
+day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`).
+
+```typescript
+import { updateLights, lightPresets } from '@webgamekit/threejs'
+
+updateLights(scene, lightPresets.dusk)
+```
+
+In the playground these presets are the Time of Day buttons on the environment light
+element in the Elements panel.
+
 ## Texture Utilities
 
 ### createZigzagTexture(options)
