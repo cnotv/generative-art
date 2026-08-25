@@ -99,32 +99,36 @@ const ORIGIN = new THREE.Vector3(0, 0, 0)
 const DEFAULT_FRUSTUM_SIZE = 40
 
 /**
- * Applies an orthographic preset scaled to the current scene framing.
- * The preset's position direction and frustumSize/distance ratio are preserved,
- * but scaled to the camera's current distance from the orbit target so the zoom
- * level stays consistent regardless of scene scale.
+ * Applies an orthographic preset scaled to the scene's own framing.
+ * The preset's position direction and frustumSize/distance ratio are preserved, scaled to
+ * the distance the scene declared its camera at, so the zoom level suits the scene's scale.
+ *
+ * Scaled to the scene's distance rather than the camera's current one: a preset that reads
+ * where the camera happens to be frames differently every time it is picked, inheriting
+ * whatever a sweep, a follow rig or the preset before it left behind, and never settles.
  * @param camera - The orthographic camera to reconfigure
  * @param preset - The preset configuration providing direction and frustum ratio
  * @param orbit - Optional orbit controls supplying the look-at target
  * @param aspect - The viewport aspect ratio
+ * @param sceneDistance - How far the scene declared its camera from what it looks at
  */
 const applyOrthographicPreset = (
   camera: THREE.OrthographicCamera,
   preset: CameraPresetConfig,
   orbit: OrbitControls | null | undefined,
-  aspect: number
+  aspect: number,
+  sceneDistance: number
 ): void => {
   const target = orbit ? orbit.target : ORIGIN
   const presetPosition = new THREE.Vector3(...preset.position)
   const presetDistance = presetPosition.length() || DEFAULT_ORBIT_DISTANCE
-  const currentDistance = camera.position.distanceTo(target) || presetDistance
-  const scale = currentDistance / presetDistance
+  const scale = (sceneDistance || presetDistance) / presetDistance
   const frustumHeight = (preset.frustumSize ?? DEFAULT_FRUSTUM_SIZE) * scale
   const halfH = frustumHeight / 2
 
   // Generous depth range so the scene is never clipped: near is pushed behind the
   // camera and far well past it, scaled to the distance and visible frustum size.
-  const reach = (currentDistance + frustumHeight) * 2
+  const reach = (presetDistance * scale + frustumHeight) * 2
 
   camera.position.copy(target).add(presetPosition.multiplyScalar(scale))
   camera.left = -halfH * aspect
@@ -137,6 +141,36 @@ const applyOrthographicPreset = (
   camera.updateProjectionMatrix()
   if (orbit) orbit.update()
 }
+
+interface PresetApplierOptions {
+  presetConfig: CameraPresetConfig
+  orbit: OrbitControls | null | undefined
+  aspect: number
+  sceneDistance: number
+  syncOrbit: (enabled: boolean) => void
+}
+
+/**
+ * Builds the function that writes one preset onto whichever camera is active, so the same
+ * application runs whether the projection was swapped for it or it kept the current camera.
+ * @param options - The preset, the orbit controls, the viewport aspect, the scene's framing
+ *   distance, and how to report the orbit setting the preset carries
+ * @returns A function applying the preset to a camera
+ */
+const buildPresetApplier =
+  ({ presetConfig, orbit, aspect, sceneDistance, syncOrbit }: PresetApplierOptions) =>
+  (camera: THREE.Camera): void => {
+    if (camera instanceof THREE.OrthographicCamera) {
+      applyOrthographicPreset(camera, presetConfig, orbit, aspect, sceneDistance)
+    } else if (camera instanceof THREE.PerspectiveCamera) {
+      applyPerspectivePreset(camera, presetConfig)
+    }
+    // A preset that names an orbit setting carries it: the free-look presets hand the
+    // camera to the viewer, the framed ones do not.
+    const wantsOrbit = presetConfig.orbit ?? false
+    if (orbit) setOrbitEnabled(orbit, wantsOrbit)
+    syncOrbit(wantsOrbit)
+  }
 
 /**
  * Applies a perspective preset's lens without moving the camera.
@@ -579,23 +613,15 @@ const registerCameraPresetHandlers = ({
         const presetConfig = cameraPresets[preset]
         if (!presetConfig) return
         const targetType = presetConfig.type as 'perspective' | 'orthographic'
-        const aspect = getAspect()
-        const isTypeSwitch = targetType !== getCameraType()
+        const applyPreset = buildPresetApplier({
+          presetConfig,
+          orbit,
+          aspect: getAspect(),
+          sceneDistance: sceneDefault.position.distanceTo(sceneDefault.target),
+          syncOrbit: cameraConfigStore.syncOrbitEnabled
+        })
 
-        const applyPreset = (camera: THREE.Camera) => {
-          if (camera instanceof THREE.OrthographicCamera) {
-            applyOrthographicPreset(camera, presetConfig, orbit, aspect)
-          } else if (camera instanceof THREE.PerspectiveCamera) {
-            applyPerspectivePreset(camera, presetConfig)
-          }
-          // A preset that names an orbit setting carries it: the free-look presets hand the
-          // camera to the viewer, the framed ones do not.
-          const wantsOrbit = presetConfig.orbit ?? false
-          if (orbit) setOrbitEnabled(orbit, wantsOrbit)
-          cameraConfigStore.syncOrbitEnabled(wantsOrbit)
-        }
-
-        if (isTypeSwitch) {
+        if (targetType !== getCameraType()) {
           if (!setCamera) return
           const active = buildNewCamera(targetType)
           setCamera(active)
