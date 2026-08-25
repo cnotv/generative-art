@@ -122,6 +122,14 @@ export interface LightPresetConfig extends LightsConfig {
   sky?: { color?: number }
 }
 
+export interface LightRig {
+  sky: { color: number }
+  hemisphere: { colors: [number, number]; intensity: number }
+  ambient: { color: number; intensity: number }
+  directional: { color: number; intensity: number; position: CoordinateTuple }
+  environment: { intensity: number }
+}
+
 export interface LightsConfig {
   environment?: EnvironmentLightConfig | false
   ambient?: {

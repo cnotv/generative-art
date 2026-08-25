@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
-import { getLights, getEnvironmentLight, updateLights, lightPresets } from './lights'
+import {
+  getLights,
+  getEnvironmentLight,
+  updateLights,
+  lightPresets,
+  blendLightPresets
+} from './lights'
 import type { LightPreset } from './types'
 
 vi.mock('three', async (importOriginal) => {
@@ -81,19 +87,17 @@ describe('updateLights and lightPresets', () => {
 
       updateLights(scene, preset)
 
-      expect(ambientLight.color.getHex()).toBe(preset.ambient?.color)
-      expect(ambientLight.intensity).toBe(preset.ambient?.intensity)
-      expect(directionalLight.color.getHex()).toBe(preset.directional?.color)
-      expect(directionalLight.intensity).toBe(preset.directional?.intensity)
-      expect(directionalLight.position.toArray()).toEqual(preset.directional?.position)
+      expect(ambientLight.color.getHex()).toBe(preset.ambient.color)
+      expect(ambientLight.intensity).toBe(preset.ambient.intensity)
+      expect(directionalLight.color.getHex()).toBe(preset.directional.color)
+      expect(directionalLight.intensity).toBe(preset.directional.intensity)
+      expect(directionalLight.position.toArray()).toEqual(preset.directional.position)
       const hemisphereLight = scene.getObjectByName('hemisphere-light') as THREE.HemisphereLight
-      expect(hemisphereLight.color.getHex()).toBe(preset.hemisphere?.colors?.[0])
-      expect(hemisphereLight.groundColor.getHex()).toBe(preset.hemisphere?.colors?.[1])
-      expect(hemisphereLight.intensity).toBe(preset.hemisphere?.intensity)
-      expect(scene.environmentIntensity).toBe(
-        preset.environment !== false ? preset.environment?.intensity : undefined
-      )
-      expect((scene.background as THREE.Color).getHex()).toBe(preset.sky?.color)
+      expect(hemisphereLight.color.getHex()).toBe(preset.hemisphere.colors[0])
+      expect(hemisphereLight.groundColor.getHex()).toBe(preset.hemisphere.colors[1])
+      expect(hemisphereLight.intensity).toBe(preset.hemisphere.intensity)
+      expect(scene.environmentIntensity).toBe(preset.environment.intensity)
+      expect((scene.background as THREE.Color).getHex()).toBe(preset.sky.color)
     }
   )
 
@@ -145,6 +149,31 @@ describe('updateLights and lightPresets', () => {
     expect(hemisphereLight.color.getHex()).toBe(0xf0e0d0)
     expect(hemisphereLight.groundColor.getHex()).toBe(0x304050)
     expect(hemisphereLight.intensity).toBe(0.8)
+  })
+})
+
+describe('blendLightPresets', () => {
+  it.each([
+    ['start', 0, lightPresets.dawn],
+    ['end', 1, lightPresets.noon]
+  ])('returns the %s rig at alpha %d', (_, alpha, expected) => {
+    const blended = blendLightPresets(lightPresets.dawn, lightPresets.noon, alpha)
+
+    expect(blended).toEqual(expected)
+  })
+
+  it('interpolates intensities and the sun position at the midpoint', () => {
+    const blended = blendLightPresets(lightPresets.dawn, lightPresets.noon, 0.5)
+
+    expect(blended.ambient.intensity).toBeCloseTo(
+      (lightPresets.dawn.ambient.intensity + lightPresets.noon.ambient.intensity) / 2
+    )
+    expect(blended.directional.position[1]).toBeCloseTo(
+      (lightPresets.dawn.directional.position[1] + lightPresets.noon.directional.position[1]) / 2
+    )
+    expect(blended.environment.intensity).toBeCloseTo(
+      (lightPresets.dawn.environment.intensity + lightPresets.noon.environment.intensity) / 2
+    )
   })
 })
 

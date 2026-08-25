@@ -1,7 +1,13 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CoordinateTuple } from '@webgamekit/animation'
-import { EnvironmentLightConfig, LightPreset, LightPresetConfig, LightsConfig } from './types'
+import {
+  EnvironmentLightConfig,
+  LightPreset,
+  LightPresetConfig,
+  LightRig,
+  LightsConfig
+} from './types'
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
 
@@ -77,7 +83,7 @@ export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
  * black, the environment intensity, and the sky colour itself. Applied with `updateLights`,
  * which creates whichever of these the scene does not have yet.
  */
-export const lightPresets: Record<LightPreset, LightPresetConfig> = {
+export const lightPresets: Record<LightPreset, LightRig> = {
   dawn: {
     sky: { color: 0xf2c4a8 },
     hemisphere: { colors: [0xf7d4b8, 0x6b5d52], intensity: 0.9 },
@@ -191,6 +197,50 @@ export const updateLights = (scene: THREE.Scene, config: LightPresetConfig): voi
 
   if (config.sky?.color !== undefined) updateSkyColor(scene, config.sky.color)
 }
+
+const blendFromColor = new THREE.Color()
+const blendToColor = new THREE.Color()
+
+const blendHexColors = (from: number, to: number, alpha: number): number =>
+  blendFromColor.setHex(from).lerp(blendToColor.setHex(to), alpha).getHex()
+
+const blendNumbers = (from: number, to: number, alpha: number): number => from + (to - from) * alpha
+
+/**
+ * Interpolate between two complete light rigs, for animating a day cycle. Colours lerp
+ * through THREE.Color, intensities and the sun position linearly. Apply the result with
+ * `updateLights`.
+ * @param from The rig at alpha 0
+ * @param to The rig at alpha 1
+ * @param alpha Blend position between the two, 0 to 1
+ * @returns The blended rig
+ */
+export const blendLightPresets = (from: LightRig, to: LightRig, alpha: number): LightRig => ({
+  sky: { color: blendHexColors(from.sky.color, to.sky.color, alpha) },
+  hemisphere: {
+    colors: [
+      blendHexColors(from.hemisphere.colors[0], to.hemisphere.colors[0], alpha),
+      blendHexColors(from.hemisphere.colors[1], to.hemisphere.colors[1], alpha)
+    ],
+    intensity: blendNumbers(from.hemisphere.intensity, to.hemisphere.intensity, alpha)
+  },
+  ambient: {
+    color: blendHexColors(from.ambient.color, to.ambient.color, alpha),
+    intensity: blendNumbers(from.ambient.intensity, to.ambient.intensity, alpha)
+  },
+  directional: {
+    color: blendHexColors(from.directional.color, to.directional.color, alpha),
+    intensity: blendNumbers(from.directional.intensity, to.directional.intensity, alpha),
+    position: [
+      blendNumbers(from.directional.position[0], to.directional.position[0], alpha),
+      blendNumbers(from.directional.position[1], to.directional.position[1], alpha),
+      blendNumbers(from.directional.position[2], to.directional.position[2], alpha)
+    ]
+  },
+  environment: {
+    intensity: blendNumbers(from.environment.intensity, to.environment.intensity, alpha)
+  }
+})
 
 const bakeRoomEnvironment = (renderer: THREE.WebGLRenderer): THREE.Texture => {
   const pmremGenerator = new THREE.PMREMGenerator(renderer)

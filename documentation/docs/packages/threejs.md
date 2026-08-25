@@ -606,8 +606,20 @@ import { updateLights, lightPresets } from '@webgamekit/threejs'
 updateLights(scene, lightPresets.dusk)
 ```
 
-In the playground these presets are the Time of Day buttons on the environment light
-element in the Elements panel.
+In the playground these presets are the Presets section of the Lights element in the
+Elements panel, which holds the whole rig: the four lights and the sky.
+
+### blendLightPresets(from, to, alpha)
+
+Interpolate between two rigs, colours through `THREE.Color` and intensities and the sun
+position linearly. Feed the result to `updateLights` each frame to animate a day cycle;
+the playground's transition player does exactly that.
+
+```typescript
+import { blendLightPresets, lightPresets, updateLights } from '@webgamekit/threejs'
+
+updateLights(scene, blendLightPresets(lightPresets.dusk, lightPresets.night, 0.5))
+```
 
 ## Texture Utilities
 
