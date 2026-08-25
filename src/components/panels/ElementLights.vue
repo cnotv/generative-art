@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
 import {
   Accordion,
@@ -80,12 +80,12 @@ const getLightValue = (group: LightGroup, path: string) =>
 
         <div class="element-lights__player">
           <label class="element-lights__player-row" for="light-transition-toggle">
-            <span class="text-xs font-medium">Transition</span>
-            <Switch
+            <Checkbox
               id="light-transition-toggle"
               :model-value="lightTransitionEnabled"
               @update:model-value="setLightTransitionEnabled"
             />
+            <span class="text-xs font-medium">Transition</span>
           </label>
           <label class="text-xs font-medium" for="light-transition-speed">
             Speed: {{ lightTransitionSpeed }}x
@@ -147,6 +147,7 @@ const getLightValue = (group: LightGroup, path: string) =>
 .element-lights__player-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--spacing-2);
+  cursor: pointer;
 }
 </style>

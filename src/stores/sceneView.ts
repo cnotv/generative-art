@@ -34,6 +34,7 @@ import {
 import { groundSchema, configControls } from '@/views/Tools/SceneEditor/config'
 import { registerCameraProperties as registerCameraPropertiesShared } from '@/utils/cameraProperties'
 import { createLightTransitionPlayer } from '@/utils/lightTransition'
+import { numberDuplicateNames } from '@/utils/elementNames'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
 type Vec3 = { x: number; y: number; z: number }
@@ -151,13 +152,13 @@ const buildGroundConfigFromSetup = (config: SetupConfig): Record<string, unknown
   }
 }
 
+const DEFAULT_HEMISPHERE = { skyColor: 0xbfe3ff, groundColor: 0x8a8f7a }
+
 /**
  * The panel keeps hemisphere colors as skyColor/groundColor while SetupConfig carries a
  * tuple. Always present so the panel can offer all four lights: a scene without one gets
  * it at zero intensity, which creates nothing and changes nothing until it is raised.
  */
-const DEFAULT_HEMISPHERE = { skyColor: 0xbfe3ff, groundColor: 0x8a8f7a }
-
 const buildHemisphereConfig = (
   hemisphereOverrides: { colors?: [number, number]; intensity?: number } | undefined
 ): Record<string, unknown> => {
@@ -450,26 +451,31 @@ const buildSceneElements = (
   )
   const cameraElement: SceneElement = { name: 'Camera', type: camera.type, hidden: false }
 
-  const sceneChildren: SceneElement[] = scene.children
+  const listedChildren = scene.children
     .filter((child) => !LIGHT_RIG_CHILD_NAMES.has(child.name))
     .filter((child) => !cachedMeshNames.has(child.name))
     .filter((child) => !child.userData?.spawnId)
     .filter((child) => !(child instanceof THREE.BoxHelper))
     .filter((child) => child.name !== 'PathDebug')
-    .map((child) => {
-      const groupId = textureGroups.find(
-        (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
-      )?.id
-      const childCount =
-        child instanceof THREE.Group && child.children.length > 0 ? child.children.length : null
-      return {
-        name: child.name || child.type,
-        label: childCount !== null ? `${child.name || child.type} [${childCount}]` : undefined,
-        type: groupId ? 'TextureArea' : child.type,
-        hidden: false,
-        groupId
-      }
-    })
+
+  // A scene names every column `column`, so without numbering each repeat selects the first.
+  const childNames = numberDuplicateNames(listedChildren.map((child) => child.name || child.type))
+
+  const sceneChildren: SceneElement[] = listedChildren.map((child, index) => {
+    const groupId = textureGroups.find(
+      (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
+    )?.id
+    const childCount =
+      child instanceof THREE.Group && child.children.length > 0 ? child.children.length : null
+    return {
+      name: childNames[index],
+      label: childCount !== null ? `${childNames[index]} [${childCount}]` : undefined,
+      type: groupId ? 'TextureArea' : child.type,
+      hidden: false,
+      groupId,
+      objectId: child.uuid
+    }
+  })
 
   const textureGroupElements: SceneElement[] = textureGroups.map((g) => ({
     name: g.id,
@@ -990,6 +996,7 @@ interface RemoveHandlerContext {
   textureAreaDefinitions: Ref<TextureAreaDefinition[]>
   elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
   getAreaMeshes: (name: string) => THREE.Object3D[]
+  findObject: (name: string) => THREE.Object3D | undefined
   updateSceneElements: () => void
 }
 
@@ -1026,7 +1033,7 @@ const removeSceneElement = (name: string, context: RemoveHandlerContext) => {
     textureAreaDefinitions.value = textureAreaDefinitions.value.filter((a) => a.name !== name)
     elementPropertiesStore.unregisterElementProperties(name)
   } else {
-    const object = scene.getObjectByName(name)
+    const object = context.findObject(name)
     if (object) {
       removePhysicsBodies(object)
       object.removeFromParent()
@@ -1071,6 +1078,16 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
   const getAreaMeshes = (areaName: string): THREE.Object3D[] => areaMeshCache.value[areaName] ?? []
 
+  /** Resolve a panel row to its object: a numbered duplicate carries the uuid of its own. */
+  const findSceneObject = (scene: THREE.Scene, name: string): THREE.Object3D | undefined => {
+    const objectId = debugSceneStore.sceneElements.find(
+      (element) => element.name === name
+    )?.objectId
+    return objectId
+      ? (scene.getObjectByProperty('uuid', objectId) as THREE.Object3D | undefined)
+      : scene.getObjectByName(name)
+  }
+
   const buildAreaMeshCache = () => {
     const scene = threeScene.value
     if (!scene) return
@@ -1091,7 +1108,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         cachedMeshes.forEach((child) => toggleObjectVisibility(child))
       } else {
         const object =
-          name === 'Camera' ? (camera as unknown as THREE.Object3D) : scene.getObjectByName(name)
+          name === 'Camera' ? (camera as unknown as THREE.Object3D) : findSceneObject(scene, name)
         if (object) toggleObjectVisibility(object)
       }
       debugSceneStore.$patch({
@@ -1109,6 +1126,10 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         textureAreaDefinitions,
         elementPropertiesStore,
         getAreaMeshes,
+        findObject: (objectName: string) => {
+          const scene = threeScene.value
+          return scene ? findSceneObject(scene, objectName) : undefined
+        },
         updateSceneElements
       })
 

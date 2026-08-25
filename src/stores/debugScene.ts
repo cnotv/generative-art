@@ -6,6 +6,7 @@ import type { CoordinateTuple } from '@webgamekit/threejs'
 import { usePerfMetricsStore } from './perfMetrics'
 import { useElementPropertiesStore, type ElementPropertiesConfig } from './elementProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
+import { numberDuplicateNames } from '@/utils/elementNames'
 
 const GENERIC_THREE_TYPES = new Set([
   'Mesh',
@@ -35,6 +36,8 @@ export interface SceneElement {
   hidden?: boolean
   groupId?: string
   spawnId?: string
+  /** uuid of the Three.js object, so a numbered duplicate still resolves to its own object. */
+  objectId?: string
 }
 
 export interface SpawnEntry {
@@ -158,14 +161,12 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
       return rawName
     })
 
-  const resolveElementNames = (objects: ObjectEntry[]): SceneElement[] => {
-    const rawNames = resolveRawNames(objects)
-    return rawNames.map((rawName, index) => {
-      const previousCount = rawNames.slice(0, index).filter((n) => n === rawName).length
-      const name = previousCount === 0 ? rawName : `${rawName} (${previousCount + 1})`
-      return { name, type: objects[index].type, hidden: false }
-    })
-  }
+  const resolveElementNames = (objects: ObjectEntry[]): SceneElement[] =>
+    numberDuplicateNames(resolveRawNames(objects)).map((name, index) => ({
+      name,
+      type: objects[index].type,
+      hidden: false
+    }))
 
   const registerSceneElements = (
     camera: THREE.Camera,
