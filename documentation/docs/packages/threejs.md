@@ -592,10 +592,13 @@ without the key render exactly as before.
 
 ### updateLights(scene, config) and lightPresets
 
-`updateLights` applies a `LightsConfig` onto the lights `getLights` created, found by their
-names; missing lights and keys are skipped, and an `environment` entry only scales
-`scene.environmentIntensity`. `lightPresets` holds a whole-rig `LightsConfig` per time of
-day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`).
+`updateLights` applies a whole light rig onto the scene: every group the config names
+(`ambient`, `directional`, `hemisphere`) is updated in place, or created with the standard
+names when the scene lacks it. An `environment` entry scales `scene.environmentIntensity`,
+and a `sky` entry recolours the `sky` mesh and the scene background. `lightPresets` holds
+one such rig per time of day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`):
+a hemisphere carrying sky and ground bounce, a sun or moon at that hour's elevation and
+colour temperature, a low flat ambient, the environment intensity and the sky colour.
 
 ```typescript
 import { updateLights, lightPresets } from '@webgamekit/threejs'

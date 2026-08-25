@@ -35,6 +35,7 @@ import {
   groundSchema,
   lightsSchema,
   environmentLightSchema,
+  hemisphereLightSchema,
   skySchema,
   configControls
 } from '@/views/Tools/SceneEditor/config'
@@ -156,12 +157,35 @@ const buildGroundConfigFromSetup = (config: SetupConfig): Record<string, unknown
   }
 }
 
+// The panel keeps hemisphere colors as skyColor/groundColor while SetupConfig carries a tuple.
+const buildHemisphereConfig = (
+  hemisphereOverrides: { colors?: [number, number]; intensity?: number } | undefined
+): Record<string, unknown> =>
+  hemisphereOverrides
+    ? {
+        hemisphere: {
+          ...(hemisphereOverrides.colors
+            ? {
+                skyColor: hemisphereOverrides.colors[0],
+                groundColor: hemisphereOverrides.colors[1]
+              }
+            : {}),
+          ...(hemisphereOverrides.intensity !== undefined
+            ? { intensity: hemisphereOverrides.intensity }
+            : {})
+        }
+      }
+    : {}
+
 const buildLightsConfigFromSetup = (config: SetupConfig): Record<string, unknown> => {
   const lightsOverrides = (
     config.lights && typeof config.lights === 'object' ? config.lights : {}
   ) as Record<string, unknown>
   const ambientOverrides = (lightsOverrides.ambient ?? {}) as Record<string, unknown>
   const directionalOverrides = (lightsOverrides.directional ?? {}) as Record<string, unknown>
+  const hemisphereOverrides = lightsOverrides.hemisphere as
+    | { colors?: [number, number]; intensity?: number }
+    | undefined
   const directionalPosition = (directionalOverrides.position ??
     SCENE_DEFAULTS.lights.directional.position) as number[]
   return {
@@ -177,7 +201,8 @@ const buildLightsConfigFromSetup = (config: SetupConfig): Record<string, unknown
     },
     ...(lightsOverrides.environment && typeof lightsOverrides.environment === 'object'
       ? { environment: { ...(lightsOverrides.environment as Record<string, unknown>) } }
-      : {})
+      : {}),
+    ...buildHemisphereConfig(hemisphereOverrides)
   }
 }
 
@@ -244,53 +269,86 @@ const applyLightsUpdate = (
 type LightElementReferences = {
   elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
   lightsConfig: Ref<Record<string, unknown>>
+  skyConfig: Ref<Record<string, unknown>>
   threeScene: Ref<THREE.Scene | null>
   activeLightPreset: Ref<LightPreset | null>
   ambientLightReference: Ref<THREE.Light | null>
   directionalLightReference: Ref<THREE.Light | null>
+  refreshElements: () => void
 }
+
+/**
+ * Mirror an applied preset into the panel state so the light rows show what the preset
+ * set rather than the values from before it. The panel keeps the directional position as
+ * {x, y, z} and the hemisphere colors as skyColor/groundColor, while the preset carries
+ * tuples.
+ */
+const mirrorLightPresetIntoConfig = (
+  current: Record<string, unknown>,
+  presetConfig: (typeof lightPresets)[LightPreset]
+): Record<string, unknown> => ({
+  ...current,
+  ambient: {
+    ...(current.ambient as Record<string, unknown>),
+    ...presetConfig.ambient
+  },
+  directional: {
+    ...(current.directional as Record<string, unknown>),
+    ...presetConfig.directional,
+    ...(presetConfig.directional?.position
+      ? {
+          position: {
+            x: presetConfig.directional.position[0],
+            y: presetConfig.directional.position[1],
+            z: presetConfig.directional.position[2]
+          }
+        }
+      : {})
+  },
+  ...(presetConfig.hemisphere
+    ? {
+        hemisphere: {
+          ...(current.hemisphere as Record<string, unknown>),
+          ...(presetConfig.hemisphere.colors
+            ? {
+                skyColor: presetConfig.hemisphere.colors[0],
+                groundColor: presetConfig.hemisphere.colors[1]
+              }
+            : {}),
+          ...(presetConfig.hemisphere.intensity !== undefined
+            ? { intensity: presetConfig.hemisphere.intensity }
+            : {})
+        }
+      }
+    : {}),
+  ...(current.environment
+    ? {
+        environment: {
+          ...(current.environment as Record<string, unknown>),
+          ...presetConfig.environment
+        }
+      }
+    : {})
+})
 
 const applyLightPresetToScene = (
   preset: LightPreset,
-  references: Pick<LightElementReferences, 'lightsConfig' | 'threeScene' | 'activeLightPreset'>
+  references: Pick<
+    LightElementReferences,
+    'lightsConfig' | 'skyConfig' | 'threeScene' | 'activeLightPreset' | 'refreshElements'
+  >
 ): void => {
-  const { lightsConfig, threeScene, activeLightPreset } = references
+  const { lightsConfig, skyConfig, threeScene, activeLightPreset, refreshElements } = references
   const scene = threeScene.value
   if (!scene) return
   const presetConfig = lightPresets[preset]
   updateLights(scene, presetConfig)
-  // Mirror the applied values into the panel state so the ambient and directional
-  // rows show what the preset set rather than the values from before it.
-  lightsConfig.value = {
-    ...lightsConfig.value,
-    ambient: {
-      ...(lightsConfig.value.ambient as Record<string, unknown>),
-      ...presetConfig.ambient
-    },
-    directional: {
-      ...(lightsConfig.value.directional as Record<string, unknown>),
-      ...presetConfig.directional,
-      // The panel state keeps the position as {x, y, z} while the preset carries a tuple.
-      ...(presetConfig.directional?.position
-        ? {
-            position: {
-              x: presetConfig.directional.position[0],
-              y: presetConfig.directional.position[1],
-              z: presetConfig.directional.position[2]
-            }
-          }
-        : {})
-    },
-    ...(lightsConfig.value.environment
-      ? {
-          environment: {
-            ...(lightsConfig.value.environment as Record<string, unknown>),
-            ...presetConfig.environment
-          }
-        }
-      : {})
-  }
+  lightsConfig.value = mirrorLightPresetIntoConfig(lightsConfig.value, presetConfig)
+  if (presetConfig.sky?.color !== undefined && Object.keys(skyConfig.value).length > 0)
+    skyConfig.value = setNestedValueImmutable(skyConfig.value, 'color', presetConfig.sky.color)
   activeLightPreset.value = preset
+  // A preset may have created lights the scene did not have, so rebuild the element rows.
+  refreshElements()
 }
 
 const registerEnvironmentLightProperties = (references: LightElementReferences): void => {
@@ -316,12 +374,42 @@ const registerEnvironmentLightProperties = (references: LightElementReferences):
   })
 }
 
+const registerHemisphereLightProperties = (references: LightElementReferences): void => {
+  const { elementPropertiesStore, lightsConfig, threeScene } = references
+
+  elementPropertiesStore.registerElementProperties('hemisphere-light', {
+    title: 'Hemisphere Light',
+    schema: hemisphereLightSchema,
+    getValue: (path) =>
+      getNestedValue((lightsConfig.value.hemisphere ?? {}) as Record<string, unknown>, path),
+    updateValue: (path, value) => {
+      lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `hemisphere.${path}`, value)
+      const scene = threeScene.value
+      if (!scene) return
+      const hemisphere = lightsConfig.value.hemisphere as {
+        skyColor?: number
+        groundColor?: number
+        intensity?: number
+      }
+      updateLights(scene, {
+        hemisphere: {
+          ...(hemisphere.skyColor !== undefined && hemisphere.groundColor !== undefined
+            ? { colors: [hemisphere.skyColor, hemisphere.groundColor] as [number, number] }
+            : {}),
+          ...(hemisphere.intensity !== undefined ? { intensity: hemisphere.intensity } : {})
+        }
+      })
+    }
+  })
+}
+
 const registerLightElementProperties = (references: LightElementReferences): void => {
   const { elementPropertiesStore, lightsConfig, ambientLightReference, directionalLightReference } =
     references
   if (Object.keys(lightsConfig.value).length === 0) return
 
   registerEnvironmentLightProperties(references)
+  registerHemisphereLightProperties(references)
 
   elementPropertiesStore.registerElementProperties('ambient-light', {
     title: 'Ambient Light',
@@ -1097,10 +1185,12 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     registerLightElementProperties({
       elementPropertiesStore,
       lightsConfig,
+      skyConfig,
       threeScene,
       activeLightPreset,
       ambientLightReference,
-      directionalLightReference
+      directionalLightReference,
+      refreshElements: updateSceneElements
     })
 
   const registerSkyProperties = () => {

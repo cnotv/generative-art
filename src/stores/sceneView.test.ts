@@ -248,10 +248,29 @@ describe('useSceneViewStore', () => {
         elementPropertiesStore.activeProperties!.updateValue('preset', 'dusk')
 
         expect(elementPropertiesStore.activeProperties!.getValue('preset')).toBe('dusk')
-        expect(mockScene.environmentIntensity).toBe(0.4)
-        expect((store.lightsConfig.ambient as { color: number }).color).toBe(0xe6d4e0)
-        expect((store.lightsConfig.directional as { position: { x: number } }).position.x).toBe(-60)
-        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(0.4)
+        expect(mockScene.environmentIntensity).toBe(0.35)
+        expect((store.lightsConfig.ambient as { color: number }).color).toBe(0xe8cabc)
+        expect((store.lightsConfig.directional as { position: { x: number } }).position.x).toBe(-80)
+        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(0.35)
+        const hemisphere = store.lightsConfig.hemisphere as {
+          skyColor: number
+          groundColor: number
+          intensity: number
+        }
+        expect(hemisphere.skyColor).toBe(0xf0b391)
+        expect(hemisphere.groundColor).toBe(0x4a4458)
+        expect(hemisphere.intensity).toBe(0.85)
+        expect((store.skyConfig as { color?: number }).color).toBe(0xe89b7d)
+      })
+
+      it('registers hemisphere-light element properties alongside the other lights', async () => {
+        const store = useSceneViewStore()
+        const elementPropertiesStore = useElementPropertiesStore()
+
+        await initWithEnvironment(store)
+
+        elementPropertiesStore.openElementProperties('hemisphere-light')
+        expect(elementPropertiesStore.activeProperties?.title).toBe('Hemisphere Light')
       })
 
       it('writes intensity onto scene.environmentIntensity', async () => {

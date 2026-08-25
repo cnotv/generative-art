@@ -231,6 +231,12 @@ export const environmentLightSchema = {
   intensity: { min: 0, max: 3, step: 0.05, label: 'Intensity' }
 }
 
+export const hemisphereLightSchema = {
+  skyColor: { color: true, label: 'Sky Color' },
+  groundColor: { color: true, label: 'Ground Color' },
+  intensity: { min: 0, max: 5, step: 0.05, label: 'Intensity' }
+}
+
 export const lightsSchema = {
   ambient: {
     color: { color: true, label: 'Color' },

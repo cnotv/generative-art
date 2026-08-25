@@ -118,6 +118,10 @@ export interface EnvironmentLightConfig {
 
 export type LightPreset = 'dawn' | 'noon' | 'dusk' | 'night'
 
+export interface LightPresetConfig extends LightsConfig {
+  sky?: { color?: number }
+}
+
 export interface LightsConfig {
   environment?: EnvironmentLightConfig | false
   ambient?: {

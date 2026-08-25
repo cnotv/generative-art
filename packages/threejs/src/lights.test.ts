@@ -71,10 +71,13 @@ describe('updateLights and lightPresets', () => {
   ][]
 
   it.each(presetEntries)(
-    'applies the %s preset onto the existing lights and environment',
+    'applies the whole %s rig onto the existing lights, environment and sky',
     (_, preset) => {
       const scene = new THREE.Scene()
-      const { ambientLight, directionalLight } = getLights(scene)
+      scene.background = new THREE.Color(0xbfd1e5)
+      const { ambientLight, directionalLight } = getLights(scene, {
+        hemisphere: { colors: [0xffffff, 0x444444] }
+      })
 
       updateLights(scene, preset)
 
@@ -83,19 +86,56 @@ describe('updateLights and lightPresets', () => {
       expect(directionalLight.color.getHex()).toBe(preset.directional?.color)
       expect(directionalLight.intensity).toBe(preset.directional?.intensity)
       expect(directionalLight.position.toArray()).toEqual(preset.directional?.position)
+      const hemisphereLight = scene.getObjectByName('hemisphere-light') as THREE.HemisphereLight
+      expect(hemisphereLight.color.getHex()).toBe(preset.hemisphere?.colors?.[0])
+      expect(hemisphereLight.groundColor.getHex()).toBe(preset.hemisphere?.colors?.[1])
+      expect(hemisphereLight.intensity).toBe(preset.hemisphere?.intensity)
       expect(scene.environmentIntensity).toBe(
         preset.environment !== false ? preset.environment?.intensity : undefined
       )
+      expect((scene.background as THREE.Color).getHex()).toBe(preset.sky?.color)
     }
   )
 
-  it('does nothing on a scene without the named lights', () => {
+  it('creates the lights a rig names when the scene has none', () => {
     const scene = new THREE.Scene()
 
-    expect(() => updateLights(scene, lightPresets.noon)).not.toThrow()
+    updateLights(scene, lightPresets.night)
+
+    expect(scene.getObjectByName('ambient-light')).toBeInstanceOf(THREE.AmbientLight)
+    expect(scene.getObjectByName('directional-light')).toBeInstanceOf(THREE.DirectionalLight)
+    expect(scene.getObjectByName('hemisphere-light')).toBeInstanceOf(THREE.HemisphereLight)
+    const sun = scene.getObjectByName('directional-light') as THREE.DirectionalLight
+    expect(sun.castShadow).toBe(true)
+    expect(sun.shadow.camera.left).toBe(-150)
   })
 
-  it('updates a hemisphere light when one exists and the config names it', () => {
+  it('does not duplicate a light that already exists', () => {
+    const scene = new THREE.Scene()
+    getLights(scene)
+
+    updateLights(scene, lightPresets.noon)
+    updateLights(scene, lightPresets.dusk)
+
+    const ambientLights = scene.children.filter((child) => child.name === 'ambient-light')
+    const hemisphereLights = scene.children.filter((child) => child.name === 'hemisphere-light')
+    expect(ambientLights).toHaveLength(1)
+    expect(hemisphereLights).toHaveLength(1)
+  })
+
+  it('recolors the sky mesh when the scene has one', () => {
+    const scene = new THREE.Scene()
+    const skyMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaff })
+    const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1), skyMaterial)
+    skyMesh.name = 'sky'
+    scene.add(skyMesh)
+
+    updateLights(scene, { sky: { color: 0x1f2740 } })
+
+    expect(skyMaterial.color.getHex()).toBe(0x1f2740)
+  })
+
+  it('updates a hemisphere light in place when the config names it', () => {
     const scene = new THREE.Scene()
     getLights(scene, { hemisphere: { colors: [0xffffff, 0x444444] } })
 
