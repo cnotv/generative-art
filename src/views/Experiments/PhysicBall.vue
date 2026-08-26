@@ -43,6 +43,9 @@ const BOWL_MOVE_SENSITIVITY = 0.05
 /** How far the bowl can be slid from where it started, so it cannot be lost off screen. */
 const BOWL_MOVE_LIMIT = BOWL_RADIUS * 2
 
+/** How much of the remaining distance the bowl covers each frame while chasing the pointer. */
+const BOWL_MOVE_SMOOTHING = 0.15
+
 /** How far the bowl can be tipped before its contents would simply pour out. */
 const BOWL_MAX_TILT = Math.PI / 3
 
@@ -67,6 +70,7 @@ let bowlPitch = 0
 const bowlEuler = new THREE.Euler()
 const bowlRotation = new THREE.Quaternion()
 const bowlPosition = new THREE.Vector3()
+const bowlTarget = new THREE.Vector3()
 // Pre-allocated: a drag reads the camera's own axes so the bowl goes where the screen says.
 const dragRight = new THREE.Vector3()
 const dragUp = new THREE.Vector3()
@@ -125,7 +129,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     },
     ball: {
       weight: 3,
-      friction: 1,
+      friction: 1.5,
       restitution: 0.333
     }
     // size: 50,
@@ -199,6 +203,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     createLights(scene, config)
     bowlPosition.set(...BOWL_POSITION)
+    bowlTarget.set(...BOWL_POSITION)
     const { bowl, body: bowlBody } = getBowl(scene, world)
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball))
 
@@ -228,10 +233,10 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         // Slid along the camera's own right and up, so the bowl follows the pointer whatever
         // angle the scene is viewed from. Screen y counts downwards, hence the sign.
         camera.matrixWorld.extractBasis(dragRight, dragUp, dragForward)
-        bowlPosition
+        bowlTarget
           .addScaledVector(dragRight, deltaX * BOWL_MOVE_SENSITIVITY)
           .addScaledVector(dragUp, -deltaY * BOWL_MOVE_SENSITIVITY)
-        bowlPosition.clampScalar(-BOWL_MOVE_LIMIT, BOWL_MOVE_LIMIT)
+        bowlTarget.clampScalar(-BOWL_MOVE_LIMIT, BOWL_MOVE_LIMIT)
         return
       }
 
@@ -273,6 +278,10 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       bowlEuler.set(BOWL_TILT + bowlPitch, bowlYaw, 0)
       bowlRotation.setFromEuler(bowlEuler)
       bowlBody.setNextKinematicRotation(bowlRotation)
+      // Chased rather than jumped to: a bowl that teleports to the pointer lands on the balls
+      // and carries them along as one lump, where one that travels there lets them slide and
+      // slosh against the wall the way loose balls do.
+      bowlPosition.lerp(bowlTarget, BOWL_MOVE_SMOOTHING)
       bowlBody.setNextKinematicTranslation(bowlPosition)
       bowl.quaternion.copy(bowlRotation)
       bowl.position.copy(bowlPosition)
@@ -474,7 +483,13 @@ const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
         )
     )
     .reverse()
-  const geometry = new THREE.LatheGeometry([...profile, ...outerWall], BOWL_SEGMENTS)
+  // Outer wall first and each arc reversed, so the triangles wind outwards. Winding is not
+  // cosmetic here: the solver reads neighbouring normals below, and an inside-out mesh points
+  // every one of them into the wall.
+  const geometry = new THREE.LatheGeometry(
+    [...[...outerWall].reverse(), ...[...profile].reverse()],
+    BOWL_SEGMENTS
+  )
 
   const material = new THREE.MeshPhysicalMaterial({
     color: 0x222222,
@@ -501,9 +516,9 @@ const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
       .setTranslation(...BOWL_POSITION)
       .setRotation(rotation)
   )
-  // FIX_INTERNAL_EDGES, or a ball rolling across the seam between two triangles catches on
-  // the edge and stops dead halfway up the wall. The flag has the solver read the neighbouring
-  // triangle's normal instead of treating each one as a cliff of its own.
+  // A mesh collider is a bag of separate triangles, and a ball crossing the seam between two
+  // of them meets the next edge on and stops dead. FIX_INTERNAL_EDGES has the solver take the
+  // neighbouring triangle's normal into account, so the wall acts as the smooth curve it looks.
   const collider = world.createCollider(
     RAPIER.ColliderDesc.trimesh(vertices, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES),
     body
