@@ -37,6 +37,12 @@ const BOWL_TILT = -Math.PI / 8
 /** How far a drag turns the bowl, per pixel moved. */
 const BOWL_DRAG_SENSITIVITY = 0.008
 
+/** How far a shift drag slides the bowl, per pixel moved. */
+const BOWL_MOVE_SENSITIVITY = 0.05
+
+/** How far the bowl can be slid from where it started, so it cannot be lost off screen. */
+const BOWL_MOVE_LIMIT = BOWL_RADIUS * 2
+
 /** How far the bowl can be tipped before its contents would simply pour out. */
 const BOWL_MAX_TILT = Math.PI / 3
 
@@ -60,6 +66,11 @@ let bowlYaw = 0
 let bowlPitch = 0
 const bowlEuler = new THREE.Euler()
 const bowlRotation = new THREE.Quaternion()
+const bowlPosition = new THREE.Vector3()
+// Pre-allocated: a drag reads the camera's own axes so the bowl goes where the screen says.
+const dragRight = new THREE.Vector3()
+const dragUp = new THREE.Vector3()
+const dragForward = new THREE.Vector3()
 let world
 let animationFrameId = 0
 
@@ -114,7 +125,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     },
     ball: {
       weight: 3,
-      friction: 1.5,
+      friction: 1,
       restitution: 0.333
     }
     // size: 50,
@@ -187,6 +198,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     orbit.enabled = false
 
     createLights(scene, config)
+    bowlPosition.set(...BOWL_POSITION)
     const { bowl, body: bowlBody } = getBowl(scene, world)
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball))
 
@@ -211,6 +223,18 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       const deltaY = event.clientY - dragOrigin.y
       dragOrigin = { x: event.clientX, y: event.clientY }
       dragged += Math.abs(deltaX) + Math.abs(deltaY)
+
+      if (event.shiftKey) {
+        // Slid along the camera's own right and up, so the bowl follows the pointer whatever
+        // angle the scene is viewed from. Screen y counts downwards, hence the sign.
+        camera.matrixWorld.extractBasis(dragRight, dragUp, dragForward)
+        bowlPosition
+          .addScaledVector(dragRight, deltaX * BOWL_MOVE_SENSITIVITY)
+          .addScaledVector(dragUp, -deltaY * BOWL_MOVE_SENSITIVITY)
+        bowlPosition.clampScalar(-BOWL_MOVE_LIMIT, BOWL_MOVE_LIMIT)
+        return
+      }
+
       bowlYaw += deltaX * BOWL_DRAG_SENSITIVITY
       bowlPitch = Math.max(
         -BOWL_MAX_TILT,
@@ -249,7 +273,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       bowlEuler.set(BOWL_TILT + bowlPitch, bowlYaw, 0)
       bowlRotation.setFromEuler(bowlEuler)
       bowlBody.setNextKinematicRotation(bowlRotation)
+      bowlBody.setNextKinematicTranslation(bowlPosition)
       bowl.quaternion.copy(bowlRotation)
+      bowl.position.copy(bowlPosition)
 
       world.step()
 
@@ -373,10 +399,12 @@ const setModelPosition = (
   // Kept over the bowl: there is no floor any more, so a ball dropped wide of it falls for
   // ever and the click is spent on nothing.
   const reach = BOWL_RADIUS - SPAWN_SPREAD
+  const over = (along: number, centre: number) =>
+    Math.max(centre - reach, Math.min(centre + reach, along))
   const spawn = {
-    x: Math.max(-reach, Math.min(reach, x + spread())),
-    y,
-    z: Math.max(-reach, Math.min(reach, spread()))
+    x: over(x + spread(), bowlPosition.x),
+    y: y + bowlPosition.y,
+    z: over(bowlPosition.z + spread(), bowlPosition.z)
   }
 
   model.position.set(spawn.x, spawn.y, spawn.z)
@@ -473,7 +501,13 @@ const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
       .setTranslation(...BOWL_POSITION)
       .setRotation(rotation)
   )
-  const collider = world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, indices), body)
+  // FIX_INTERNAL_EDGES, or a ball rolling across the seam between two triangles catches on
+  // the edge and stops dead halfway up the wall. The flag has the solver read the neighbouring
+  // triangle's normal instead of treating each one as a cliff of its own.
+  const collider = world.createCollider(
+    RAPIER.ColliderDesc.trimesh(vertices, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES),
+    body
+  )
 
   return { bowl, body, collider }
 }
