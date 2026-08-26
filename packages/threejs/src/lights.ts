@@ -297,6 +297,48 @@ const updateSkyColor = (scene: THREE.Scene, color: number) => {
  * @param scene
  * @param config
  */
+const updatePointLight = (light: THREE.PointLight, config: NonNullable<LightsConfig['point']>) => {
+  if (config.color !== undefined) light.color.set(config.color)
+  if (config.intensity !== undefined) light.intensity = config.intensity
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+}
+
+const updateSpotLight = (light: THREE.SpotLight, config: NonNullable<LightsConfig['spot']>) => {
+  if (config.color !== undefined) light.color.set(config.color)
+  if (config.intensity !== undefined) light.intensity = config.intensity
+  if (config.angle !== undefined) light.angle = config.angle
+  if (config.penumbra !== undefined) light.penumbra = config.penumbra
+}
+
+const updateRectAreaLight = (
+  light: THREE.RectAreaLight,
+  config: NonNullable<LightsConfig['rectArea']>
+) => {
+  if (config.color !== undefined) light.color.set(config.color)
+  if (config.intensity !== undefined) light.intensity = config.intensity
+  if (config.width !== undefined) light.width = config.width
+  if (config.height !== undefined) light.height = config.height
+}
+
+/**
+ * Update the lights that only a scene declaring them can have, so a panel can drive them.
+ * Unlike the rig lights these are never created here: a scene without a spotlight did not
+ * ask for one.
+ * @param scene
+ * @param config
+ */
+const updateOptionalLights = (scene: THREE.Scene, config: LightsConfig): void => {
+  const point = scene.getObjectByName('point-light')
+  if (config.point && point instanceof THREE.PointLight) updatePointLight(point, config.point)
+
+  const spot = scene.getObjectByName('spot-light')
+  if (config.spot && spot instanceof THREE.SpotLight) updateSpotLight(spot, config.spot)
+
+  const rectArea = scene.getObjectByName('rect-area-light')
+  if (config.rectArea && rectArea instanceof THREE.RectAreaLight)
+    updateRectAreaLight(rectArea, config.rectArea)
+}
+
 export const updateLights = (scene: THREE.Scene, config: LightPresetConfig): void => {
   if (config.ambient) updateAmbientLight(ensureAmbientLight(scene), config.ambient)
   if (config.directional) updateDirectionalLight(ensureDirectionalLight(scene), config.directional)
@@ -306,6 +348,8 @@ export const updateLights = (scene: THREE.Scene, config: LightPresetConfig): voi
     scene.environmentIntensity = config.environment.intensity
 
   if (config.sky?.color !== undefined) updateSkyColor(scene, config.sky.color)
+
+  updateOptionalLights(scene, config)
 }
 
 const blendFromColor = new THREE.Color()

@@ -614,7 +614,8 @@ without the key render exactly as before.
 
 `updateLights` applies a whole light rig onto the scene: every group the config names
 (`ambient`, `directional`, `hemisphere`) is updated in place, or created with the standard
-names when the scene lacks it. An `environment` entry scales `scene.environmentIntensity`,
+names when the scene lacks it. `point`, `spot` and `rectArea` are updated when the scene
+already has them and never created, since a scene without a spotlight did not ask for one. An `environment` entry scales `scene.environmentIntensity`,
 and a `sky` entry recolours the `sky` mesh and the scene background. `lightPresets` holds
 one such rig per time of day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`):
 a hemisphere carrying sky and ground bounce, a sun or moon at that hour's elevation and

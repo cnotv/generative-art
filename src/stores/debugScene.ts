@@ -7,6 +7,8 @@ import { usePerfMetricsStore } from './perfMetrics'
 import { useElementPropertiesStore, type ElementPropertiesConfig } from './elementProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { numberDuplicateNames } from '@/utils/elementNames'
+import { LIGHT_ELEMENT_NAMES } from '@/utils/sceneLights'
+import { useSceneViewStore } from '@/stores/sceneView'
 
 const GENERIC_THREE_TYPES = new Set([
   'Mesh',
@@ -152,7 +154,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     setCamera?: (newCamera: THREE.Camera) => OrbitControls | null
   }
 
-  type ObjectEntry = { name?: string; type: string; visible?: boolean }
+  type ObjectEntry = { name?: string; type: string; visible?: boolean; parent?: unknown }
 
   const resolveRawNames = (objects: ObjectEntry[]): string[] =>
     objects.map((element) => {
@@ -168,6 +170,26 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
       hidden: false
     }))
 
+  /**
+   * Put every light behind the one Lights element, as a scene the view store set up already
+   * does: a row per lamp is six rows saying what one panel says better. The scene goes to
+   * that store too, so the element has real lights to drive.
+   * @param objects - The scene children being registered
+   * @returns The Lights row, if any, and everything that still needs its own
+   */
+  const groupLights = (objects: ObjectEntry[]) => {
+    const isLight = (object: ObjectEntry) => LIGHT_ELEMENT_NAMES.has(object.name ?? '')
+    const lit = objects.filter(isLight)
+    const litScene = lit[0]?.parent as THREE.Scene | undefined
+    if (litScene) useSceneViewStore().adoptSceneLights(litScene)
+    return {
+      lightsElement: lit.length
+        ? ([{ name: 'Lights', type: 'Lights', hidden: false }] as SceneElement[])
+        : [],
+      rest: objects.filter((object) => !isLight(object))
+    }
+  }
+
   const registerSceneElements = (
     camera: THREE.Camera,
     objects: ObjectEntry[],
@@ -181,8 +203,14 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
         Reflect.set(sceneObject, 'visible', !sceneObject.visible)
       }
     }
+    const { lightsElement, rest } = groupLights(objects)
+
     setSceneElements(
-      [{ name: 'Camera', type: camera.type, hidden: false }, ...resolveElementNames(objects)],
+      [
+        { name: 'Camera', type: camera.type, hidden: false },
+        ...lightsElement,
+        ...resolveElementNames(rest)
+      ],
       {
         onToggleVisibility: elementHandlers?.onToggleVisibility ?? defaultToggleVisibility,
         onRemove: elementHandlers?.onRemove ?? (() => {})

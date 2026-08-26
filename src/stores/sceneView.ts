@@ -15,7 +15,8 @@ import type {
   CoordinateTuple,
   AreaConfig,
   OnProgress,
-  LightPreset
+  LightPreset,
+  LightsConfig
 } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { usePanelsStore } from '@/stores/panels'
@@ -35,6 +36,7 @@ import { groundSchema, configControls } from '@/views/Tools/SceneEditor/config'
 import { registerCameraProperties as registerCameraPropertiesShared } from '@/utils/cameraProperties'
 import { createLightTransitionPlayer } from '@/utils/lightTransition'
 import { numberDuplicateNames } from '@/utils/elementNames'
+import { LIGHT_ELEMENT_NAMES, readLightsFromScene } from '@/utils/sceneLights'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
 type Vec3 = { x: number; y: number; z: number }
@@ -241,13 +243,6 @@ const applyGroundUpdate = (
   }
 }
 
-const LIGHT_RIG_CHILD_NAMES: Set<string> = new Set([
-  'ambient-light',
-  'directional-light',
-  'hemisphere-light',
-  'sky'
-])
-
 type LightPanelReferences = {
   lightsConfig: Ref<Record<string, unknown>>
   skyConfig: Ref<Record<string, unknown>>
@@ -317,7 +312,7 @@ const toggleLightRigVisibility = (
   scene: THREE.Scene,
   environmentStash: THREE.Texture | null
 ): THREE.Texture | null => {
-  const rigObjects = [...LIGHT_RIG_CHILD_NAMES]
+  const rigObjects = [...LIGHT_ELEMENT_NAMES]
     .map((childName) => scene.getObjectByName(childName))
     .filter((object): object is THREE.Object3D => object !== undefined)
   const hiding = rigObjects.some((object) => object.visible) || !!scene.environment
@@ -326,6 +321,48 @@ const toggleLightRigVisibility = (
     .forEach((object) => toggleObjectVisibility(object))
   if (hiding) return scene.environment ? setSceneEnvironment(scene, null) : environmentStash
   return environmentStash ? setSceneEnvironment(scene, environmentStash) : null
+}
+
+/**
+ * Take on a scene this store did not build, so a view that lit itself still reaches the
+ * Lights element. Does nothing for a scene the store set up, which already has its config.
+ * @param scene - The scene whose lights the panel should drive
+ * @param references - Where the adopted scene and its light state are kept
+ */
+const adoptSceneLightsInto = (
+  scene: THREE.Scene,
+  references: Pick<LightPanelReferences, 'threeScene' | 'lightsConfig' | 'skyConfig'> & {
+    isInitialized: Ref<boolean>
+  }
+): void => {
+  if (references.isInitialized.value) return
+  references.threeScene.value = scene
+  const { lights, sky } = readLightsFromScene(scene)
+  references.lightsConfig.value = lights
+  references.skyConfig.value = sky
+}
+
+/**
+ * Register the ground row, when the scene declared one.
+ * @param references - The properties store, the panel state and the ground it drives
+ */
+const registerGroundElementProperties = (references: {
+  elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
+  groundConfig: Ref<Record<string, unknown>>
+  groundReference: Ref<{ mesh?: THREE.Mesh } | null>
+}): void => {
+  const { elementPropertiesStore, groundConfig, groundReference } = references
+  if (Object.keys(groundConfig.value).length === 0) return
+
+  elementPropertiesStore.registerElementProperties('ground', {
+    title: 'Ground',
+    schema: groundSchema,
+    getValue: (path) => getNestedValue(groundConfig.value, path),
+    updateValue: (path, value) => {
+      groundConfig.value = setNestedValueImmutable(groundConfig.value, path, value)
+      applyGroundUpdate(path, value, groundReference)
+    }
+  })
 }
 
 const mirrorRigIntoPanelState = (
@@ -350,7 +387,14 @@ const applyLightPresetToScene = (preset: LightPreset, references: LightPanelRefe
   references.activeLightPreset.value = preset
 }
 
-export type LightGroup = 'ambient' | 'directional' | 'hemisphere' | 'environment'
+export type LightGroup =
+  | 'ambient'
+  | 'directional'
+  | 'hemisphere'
+  | 'environment'
+  | 'point'
+  | 'spot'
+  | 'rectArea'
 
 /**
  * Translate one group of the panel's light state into the config `updateLights` takes:
@@ -412,6 +456,11 @@ const LIGHT_GROUP_UPDATE_BUILDERS: Record<
   environment: buildEnvironmentUpdate,
   ambient: (lightsConfig) => ({
     ambient: (lightsConfig.ambient ?? {}) as { color?: number; intensity?: number }
+  }),
+  point: (lightsConfig) => ({ point: (lightsConfig.point ?? {}) as LightsConfig['point'] }),
+  spot: (lightsConfig) => ({ spot: (lightsConfig.spot ?? {}) as LightsConfig['spot'] }),
+  rectArea: (lightsConfig) => ({
+    rectArea: (lightsConfig.rectArea ?? {}) as LightsConfig['rectArea']
   })
 }
 
@@ -452,7 +501,7 @@ const buildSceneElements = (
   const cameraElement: SceneElement = { name: 'Camera', type: camera.type, hidden: false }
 
   const listedChildren = scene.children
-    .filter((child) => !LIGHT_RIG_CHILD_NAMES.has(child.name))
+    .filter((child) => !LIGHT_ELEMENT_NAMES.has(child.name))
     .filter((child) => !cachedMeshNames.has(child.name))
     .filter((child) => !child.userData?.spawnId)
     .filter((child) => !(child instanceof THREE.BoxHelper))
@@ -487,7 +536,7 @@ const buildSceneElements = (
   // The whole rig lives on one row: the individual lights and the sky are filtered out of
   // the children above, and scene.environment is not a child at all.
   const hasLightRig =
-    scene.children.some((child) => LIGHT_RIG_CHILD_NAMES.has(child.name)) || !!scene.environment
+    scene.children.some((child) => LIGHT_ELEMENT_NAMES.has(child.name)) || !!scene.environment
   const lightsElements: SceneElement[] = hasLightRig
     ? [{ name: 'Lights', type: 'Lights', hidden: false }]
     : []
@@ -1168,19 +1217,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     })
   }
 
-  const registerGroundProperties = () => {
-    if (Object.keys(groundConfig.value).length === 0) return
-
-    elementPropertiesStore.registerElementProperties('ground', {
-      title: 'Ground',
-      schema: groundSchema,
-      getValue: (path) => getNestedValue(groundConfig.value, path),
-      updateValue: (path, value) => {
-        groundConfig.value = setNestedValueImmutable(groundConfig.value, path, value)
-        applyGroundUpdate(path, value, groundReference)
-      }
-    })
-  }
+  const registerGroundProperties = () =>
+    registerGroundElementProperties({ elementPropertiesStore, groundConfig, groundReference })
 
   const activeLightPreset = ref<LightPreset | null>(null)
 
@@ -1191,6 +1229,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     },
     onStop: (rig) => mirrorRigIntoPanelState(rig, { lightsConfig, skyConfig })
   })
+
+  const adoptSceneLights = (scene: THREE.Scene) =>
+    adoptSceneLightsInto(scene, { threeScene, lightsConfig, skyConfig, isInitialized })
 
   const applyLightPreset = (preset: LightPreset) => {
     lightTransition.setEnabled(false)
@@ -1526,6 +1567,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     isInitialized,
     playMode,
     activeLightPreset,
+    adoptSceneLights,
     lightTransitionEnabled: lightTransition.enabled,
     lightTransitionSpeed: lightTransition.speed,
     applyLightPreset,

@@ -18,6 +18,9 @@ import {
   lightsSchema,
   environmentLightSchema,
   hemisphereLightSchema,
+  pointLightSchema,
+  spotLightSchema,
+  rectAreaLightSchema,
   skySchema
 } from '@/views/Tools/SceneEditor/config'
 import { getNestedValue } from '@/utils/nestedObjects'
@@ -46,7 +49,10 @@ const lightSections: { group: LightGroup; label: string; schema: Record<string, 
   { group: 'environment', label: 'Environment Light', schema: environmentLightSchema },
   { group: 'hemisphere', label: 'Hemisphere Light', schema: hemisphereLightSchema },
   { group: 'ambient', label: 'Ambient Light', schema: lightsSchema.ambient },
-  { group: 'directional', label: 'Directional Light', schema: lightsSchema.directional }
+  { group: 'directional', label: 'Directional Light', schema: lightsSchema.directional },
+  { group: 'point', label: 'Point Light', schema: pointLightSchema },
+  { group: 'spot', label: 'Spot Light', schema: spotLightSchema },
+  { group: 'rectArea', label: 'Rect Area Light', schema: rectAreaLightSchema }
 ]
 
 const availableSections = computed(() =>
