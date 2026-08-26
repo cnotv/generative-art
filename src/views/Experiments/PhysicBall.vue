@@ -27,19 +27,39 @@ const models = [] as {
   mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial, THREE.Object3DEventMap>
   rigidBody: RAPIER.RigidBody
 }[]
-const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple
+const BOWL_RADIUS = 13
+const BOWL_THICKNESS = 1
+const BOWL_SEGMENTS = 48
+const BOWL_POSITION = [0, 0, 0] as CoordinateTuple
+/** Tipped towards the camera, so the balls inside are in view without moving the camera. */
+const BOWL_TILT = -Math.PI / 8
 
-/** How many balls the floor holds before the oldest is recycled. */
-const MAX_BALLS = 12
+/** How far a drag turns the bowl, per pixel moved. */
+const BOWL_DRAG_SENSITIVITY = 0.008
+
+/** How far the bowl can be tipped before its contents would simply pour out. */
+const BOWL_MAX_TILT = Math.PI / 3
+
+/** Movement, in pixels, past which a press counts as turning the bowl rather than a tap. */
+const DRAG_THRESHOLD = 6
+
+/** How many balls the bowl holds before the oldest is recycled, to bound what it costs. */
+const MAX_BALLS = 60
+
+/** Below this a ball has gone over the rim and is falling for ever, so it is cleared away. */
+const FALL_OUT_DEPTH = -BOWL_RADIUS * 4
 
 /** How wide a drop is scattered: wider than a ball, so two never land joined. */
 const SPAWN_SPREAD = 3
 
 const sphereSize = () => Math.random() * 0.5 + 0.5
 
-const modelPosition = [0.0, 5.0, 0.0] as CoordinateTuple
-const groundPosition = [1, -1, 1] as CoordinateTuple
+const modelPosition = [0.0, 15.0, 0.0] as CoordinateTuple
 const gravity = { x: 0.0, y: -9.81, z: 0.0 }
+let bowlYaw = 0
+let bowlPitch = 0
+const bowlEuler = new THREE.Euler()
+const bowlRotation = new THREE.Quaternion()
 let world
 let animationFrameId = 0
 
@@ -163,15 +183,44 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     camera.position.z = -20
     camera.position.y = 10
+    orbit.target.set(...BOWL_POSITION)
+    orbit.enabled = false
 
     createLights(scene, config)
-    getGround(groundSize, groundPosition, scene, world)
+    const { bowl, body: bowlBody } = getBowl(scene, world)
     models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball))
 
     registerSceneElements(camera, scene.children)
 
-    // Change mesh position
-    document.addEventListener('click', (event) => {
+    // Dragging turns the bowl and a tap drops a ball, told apart by how far the pointer
+    // moved. On the canvas rather than the document, so both end when the view does.
+    let dragging = false
+    let dragOrigin = { x: 0, y: 0 }
+    let dragged = 0
+
+    canvas.addEventListener('pointerdown', (event) => {
+      dragging = true
+      dragged = 0
+      dragOrigin = { x: event.clientX, y: event.clientY }
+      canvas.setPointerCapture(event.pointerId)
+    })
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (!dragging) return
+      const deltaX = event.clientX - dragOrigin.x
+      const deltaY = event.clientY - dragOrigin.y
+      dragOrigin = { x: event.clientX, y: event.clientY }
+      dragged += Math.abs(deltaX) + Math.abs(deltaY)
+      bowlYaw += deltaX * BOWL_DRAG_SENSITIVITY
+      bowlPitch = Math.max(
+        -BOWL_MAX_TILT,
+        Math.min(BOWL_MAX_TILT, bowlPitch + deltaY * BOWL_DRAG_SENSITIVITY)
+      )
+    })
+
+    canvas.addEventListener('pointerup', (event) => {
+      dragging = false
+      if (dragged > DRAG_THRESHOLD) return
       const { mesh, rigidBody } = getModel(
         sphereSize(),
         modelPosition,
@@ -185,12 +234,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       // The oldest ball goes when the pile reaches its limit, so dropping more never stops.
       if (models.length > MAX_BALLS) {
         const oldest = models.shift()
-        if (oldest) {
-          scene.remove(oldest.mesh)
-          oldest.mesh.geometry.dispose()
-          oldest.mesh.material.dispose()
-          world.removeRigidBody(oldest.rigidBody)
-        }
+        if (oldest) releaseBall(scene, world, oldest)
       }
     })
 
@@ -199,6 +243,14 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
     function animate() {
       stats.start(route)
       animationFrameId = requestAnimationFrame(animate)
+
+      // The bowl is moved as a body rather than posed as a mesh, so the solver knows where it
+      // is going and carries whatever is resting against it. Allocated once above the loop.
+      bowlEuler.set(BOWL_TILT + bowlPitch, bowlYaw, 0)
+      bowlRotation.setFromEuler(bowlEuler)
+      bowlBody.setNextKinematicRotation(bowlRotation)
+      bowl.quaternion.copy(bowlRotation)
+
       world.step()
 
       models.forEach(({ mesh, rigidBody }) => {
@@ -207,6 +259,14 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         const rotation = rigidBody.rotation()
         mesh.rotation.set(rotation.x, rotation.y, rotation.z)
       })
+
+      // Nothing catches a ball that leaves the bowl, so one that is still falling well below
+      // it never comes back and would hold its place in the pile for ever.
+      const escaped = models.findIndex(({ mesh }) => mesh.position.y < FALL_OUT_DEPTH)
+      if (escaped >= 0) {
+        const [lost] = models.splice(escaped, 1)
+        releaseBall(scene, world, lost)
+      }
 
       orbit.update()
 
@@ -310,7 +370,14 @@ const setModelPosition = (
   // with the overlap: enough of it and the solver panics, which poisons the world and stops
   // the scene for good.
   const spread = () => (Math.random() - 0.5) * SPAWN_SPREAD
-  const spawn = { x: x + spread(), y, z: spread() }
+  // Kept over the bowl: there is no floor any more, so a ball dropped wide of it falls for
+  // ever and the click is spent on nothing.
+  const reach = BOWL_RADIUS - SPAWN_SPREAD
+  const spawn = {
+    x: Math.max(-reach, Math.min(reach, x + spread())),
+    y,
+    z: Math.max(-reach, Math.min(reach, spread()))
+  }
 
   model.position.set(spawn.x, spawn.y, spawn.z)
   rigidBody.setTranslation(spawn, true)
@@ -334,40 +401,81 @@ const getTextures = (img: string) => {
 }
 
 /**
- * Create scene ground with physics, texture, and shadow
- * @param size
- * @param position
+ * Take a ball out of the scene and the simulation, and free what it held.
  * @param scene
  * @param world
+ * @param ball - The mesh and body to release
  */
-const getGround = (
-  size: CoordinateTuple,
-  position: CoordinateTuple,
+const releaseBall = (
   scene: THREE.Scene,
-  world: RAPIER.World
+  world: RAPIER.World,
+  ball: {
+    mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial>
+    rigidBody: RAPIER.RigidBody
+  }
 ) => {
-  // Create and add model
-  const geometry = new THREE.BoxGeometry(...size)
+  scene.remove(ball.mesh)
+  ball.mesh.geometry.dispose()
+  ball.mesh.material.dispose()
+  world.removeRigidBody(ball.rigidBody)
+}
+
+/**
+ * Create the bowl the balls fall into, with physics and shadow.
+ *
+ * A bowl is a hollow shape, so its collider cannot be one of the solid primitives: any of
+ * them would fill the hollow and leave the balls resting on a lid. The collider is the mesh
+ * itself, triangle for triangle, which is the only shape that is concave where the bowl is.
+ * @param scene
+ * @param world
+ * @returns The bowl mesh and its collider
+ */
+const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
+  // Turned from a profile rather than cut from a sphere, so the bowl has a wall with two
+  // sides and a rim, instead of the infinitely thin skin a half sphere gives.
+  const profile = Array.from({ length: BOWL_SEGMENTS + 1 }, (_, step) => {
+    const angle = (step / BOWL_SEGMENTS) * (Math.PI / 2)
+    return new THREE.Vector2(BOWL_RADIUS * Math.sin(angle), -BOWL_RADIUS * Math.cos(angle))
+  })
+  const outerWall = profile
+    .map(
+      (point) =>
+        new THREE.Vector2(
+          point.x * ((BOWL_RADIUS + BOWL_THICKNESS) / BOWL_RADIUS),
+          point.y * ((BOWL_RADIUS + BOWL_THICKNESS) / BOWL_RADIUS)
+        )
+    )
+    .reverse()
+  const geometry = new THREE.LatheGeometry([...profile, ...outerWall], BOWL_SEGMENTS)
+
   const material = new THREE.MeshPhysicalMaterial({
     color: 0x222222,
-    // envMap: reflection,
     reflectivity: 0.3,
     roughness: 0.3,
-    transmission: 1
+    side: THREE.DoubleSide
   })
-  const ground = new THREE.Mesh(geometry, material)
-  ground.position.set(...position)
-  ground.receiveShadow = true
-  scene.add(ground)
+  const bowl = new THREE.Mesh(geometry, material)
+  bowl.name = 'bowl'
+  bowl.position.set(...BOWL_POSITION)
+  bowl.rotation.x = BOWL_TILT
+  bowl.receiveShadow = true
+  scene.add(bowl)
 
-  // Create a dynamic rigid-body.
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
+  // The collider is the mesh itself, triangle for triangle: a bowl is hollow, and every
+  // solid primitive would fill the hollow and leave the balls resting on a lid.
+  const vertices = geometry.attributes['position'].array as Float32Array
+  const indices = new Uint32Array(geometry.index!.array)
+  // Kinematic rather than fixed: a bowl that turns has to be a body the solver moves, or it
+  // would sweep through the balls without ever pushing them.
+  const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(BOWL_TILT, 0, 0))
+  const body = world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased()
+      .setTranslation(...BOWL_POSITION)
+      .setRotation(rotation)
+  )
+  const collider = world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, indices), body)
 
-  // Create a cuboid collider attached to the dynamic rigidBody.
-  const colliderDesc = RAPIER.ColliderDesc.cuboid(...size).setTranslation(...position)
-  const collider = world.createCollider(colliderDesc)
-
-  return { ground, collider }
+  return { bowl, body, collider }
 }
 
 /**
@@ -399,11 +507,11 @@ const getModel = (
     transmission: 1
   })
   const mesh = new THREE.Mesh(geometry, material)
+  mesh.name = 'ball'
   mesh.position.set(...position)
   mesh.rotation.set(0.5, 0.5, 0.5)
   mesh.castShadow = true
   mesh.receiveShadow = false //default
-  orbit.target.copy(mesh.position)
   scene.add(mesh)
 
   // Create a dynamic rigid-body. Weight is the gravity scale, as getPhysic reads it.
