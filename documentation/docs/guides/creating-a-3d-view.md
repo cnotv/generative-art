@@ -53,7 +53,8 @@ description whenever someone shares it.
 ## Declare the scene before writing Three.js
 
 Audit what `SetupConfig` already covers in `packages/threejs/src/types.ts` — `scene.backgroundColor`,
-`lights.ambient` / `directional` / `hemisphere`, `ground.color` / `size` / `texture`,
+`lights.ambient` / `directional` / `hemisphere` / `point` / `spot` / `rectArea` /
+`environment`, `ground.color` / `size` / `texture`,
 `sky.color` / `texture` / `size`, `camera.position` / `fov` / `near` / `far`, `orbit`,
 `postprocessing` — then declare the layout in `config.ts` rather than inlining numbers in
 the component:
