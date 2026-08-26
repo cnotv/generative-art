@@ -13,6 +13,12 @@ import type { CoordinateTuple } from '@/types/three'
 
 type ProjectConfig = any
 
+interface BallPhysics {
+  weight: number
+  friction: number
+  restitution: number
+}
+
 const statsElement = ref(null)
 const canvas = ref(null)
 const route = useRoute()
@@ -22,7 +28,15 @@ const models = [] as {
   rigidBody: RAPIER.RigidBody
 }[]
 const groundSize = [1000.0, 0.1, 1000.0] as CoordinateTuple
+
+/** How many balls the floor holds before the oldest is recycled. */
+const MAX_BALLS = 12
+
+/** How wide a drop is scattered: wider than a ball, so two never land joined. */
+const SPAWN_SPREAD = 3
+
 const sphereSize = () => Math.random() * 0.5 + 0.5
+
 const modelPosition = [0.0, 5.0, 0.0] as CoordinateTuple
 const groundPosition = [1, -1, 1] as CoordinateTuple
 const gravity = { x: 0.0, y: -9.81, z: 0.0 }
@@ -79,7 +93,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       intensity: 1
     },
     ball: {
-      weight: 1
+      weight: 3,
+      friction: 1.5,
+      restitution: 0.333
     }
     // size: 50,
   }
@@ -120,7 +136,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         intensity: {}
       },
       ball: {
-        weight: {}
+        weight: {},
+        friction: {},
+        restitution: {}
       }
     },
     () => {
@@ -148,7 +166,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     createLights(scene, config)
     getGround(groundSize, groundPosition, scene, world)
-    models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball.weight))
+    models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball))
 
     registerSceneElements(camera, scene.children)
 
@@ -160,10 +178,20 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         scene,
         orbit,
         world,
-        config.ball.weight
+        config.ball
       )
       setModelPosition(event, mesh, rigidBody)
       models.push({ mesh, rigidBody })
+      // The oldest ball goes when the pile reaches its limit, so dropping more never stops.
+      if (models.length > MAX_BALLS) {
+        const oldest = models.shift()
+        if (oldest) {
+          scene.remove(oldest.mesh)
+          oldest.mesh.geometry.dispose()
+          oldest.mesh.material.dispose()
+          world.removeRigidBody(oldest.rigidBody)
+        }
+      }
     })
 
     video.record(canvas, route)
@@ -277,9 +305,15 @@ const setModelPosition = (
 ) => {
   const x = -(click.clientX - window.innerWidth / 2) / 50
   const y = -(click.clientY - window.innerHeight) / 50
+  // Dropped around the point clicked rather than exactly on it. Clicking twice in a place
+  // put one ball inside another, and freeing two overlapping balls takes a shove that grows
+  // with the overlap: enough of it and the solver panics, which poisons the world and stops
+  // the scene for good.
+  const spread = () => (Math.random() - 0.5) * SPAWN_SPREAD
+  const spawn = { x: x + spread(), y, z: spread() }
 
-  model.position.set(x, y, 0)
-  rigidBody.setTranslation({ x, y, z: 0 }, true)
+  model.position.set(spawn.x, spawn.y, spawn.z)
+  rigidBody.setTranslation(spawn, true)
 }
 
 /**
@@ -344,7 +378,7 @@ const getGround = (
  * @param scene
  * @param orbit
  * @param world
- * @param weight How strongly gravity pulls the ball down
+ * @param physics How heavy the ball is, and how much it grips and bounces
  */
 const getModel = (
   size: number,
@@ -352,7 +386,7 @@ const getModel = (
   scene: THREE.Scene,
   orbit: OrbitControls,
   world: RAPIER.World,
-  weight: number
+  { weight, friction, restitution }: BallPhysics
 ) => {
   // Create and add model
   const geometry = new THREE.SphereGeometry(size)
@@ -373,6 +407,7 @@ const getModel = (
   scene.add(mesh)
 
   // Create a dynamic rigid-body. Weight is the gravity scale, as getPhysic reads it.
+  // Create a dynamic rigid-body. Weight is the gravity scale, as getPhysic reads it.
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
     .setTranslation(...position)
     .setGravityScale(weight)
@@ -380,9 +415,11 @@ const getModel = (
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true)
 
   // Create a cuboid collider attached to the dynamic rigidBody.
+  // Kept size based, so a pile is never uniform: the small ones bounce livelier and the big
+  // ones grip harder, which is what makes a stack of them lean and give way rather than set.
   const colliderDesc = RAPIER.ColliderDesc.ball(size)
-    .setRestitution(1 / size / 3)
-    .setFriction(5 * size)
+    .setRestitution(restitution / size)
+    .setFriction(friction * size)
   const collider = world.createCollider(colliderDesc, rigidBody)
 
   return { mesh, rigidBody, collider }
