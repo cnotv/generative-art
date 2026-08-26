@@ -77,6 +77,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       enabled: true,
       helper: false,
       intensity: 1
+    },
+    ball: {
+      weight: 1
     }
     // size: 50,
   }
@@ -115,6 +118,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         enabled: {},
         helper: {},
         intensity: {}
+      },
+      ball: {
+        weight: {}
       }
     },
     () => {
@@ -142,13 +148,20 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     createLights(scene, config)
     getGround(groundSize, groundPosition, scene, world)
-    models.push(getModel(sphereSize(), modelPosition, scene, orbit, world))
+    models.push(getModel(sphereSize(), modelPosition, scene, orbit, world, config.ball.weight))
 
     registerSceneElements(camera, scene.children)
 
     // Change mesh position
     document.addEventListener('click', (event) => {
-      const { mesh, rigidBody } = getModel(sphereSize(), modelPosition, scene, orbit, world)
+      const { mesh, rigidBody } = getModel(
+        sphereSize(),
+        modelPosition,
+        scene,
+        orbit,
+        world,
+        config.ball.weight
+      )
       setModelPosition(event, mesh, rigidBody)
       models.push({ mesh, rigidBody })
     })
@@ -331,13 +344,15 @@ const getGround = (
  * @param scene
  * @param orbit
  * @param world
+ * @param weight How strongly gravity pulls the ball down
  */
 const getModel = (
   size: number,
   position: CoordinateTuple,
   scene: THREE.Scene,
   orbit: OrbitControls,
-  world: RAPIER.World
+  world: RAPIER.World,
+  weight: number
 ) => {
   // Create and add model
   const geometry = new THREE.SphereGeometry(size)
@@ -357,8 +372,10 @@ const getModel = (
   orbit.target.copy(mesh.position)
   scene.add(mesh)
 
-  // Create a dynamic rigid-body.
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(...position)
+  // Create a dynamic rigid-body. Weight is the gravity scale, as getPhysic reads it.
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+    .setTranslation(...position)
+    .setGravityScale(weight)
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   rigidBody.setRotation({ w: 1.0, x: 0.5, y: 0.5, z: 0.5 }, true)
 
