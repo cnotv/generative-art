@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { Menu, Settings, Bug, Box, Clock, X } from 'lucide-vue-next'
+import { Menu, Settings, Bug, Box, Clock, Search, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { GithubExampleLoader } from '@/components/GithubExampleLoader'
 import { usePanelsStore } from '@/stores/panels'
 import type { PanelType } from '@/stores/panels'
 
@@ -15,6 +16,7 @@ interface PanelButton {
 
 const panelsStore = usePanelsStore()
 const isNearTop = ref(false)
+const isExampleLoaderOpen = ref(false)
 const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0)
 
 const onMouseMove = (e: MouseEvent) => {
@@ -47,7 +49,7 @@ const handleToggle = (panelType: PanelType) => {
 <template>
   <nav
     class="global-navigation"
-    :class="{ 'global-navigation--visible': isNearTop || hasOpenPanels }"
+    :class="{ 'global-navigation--visible': isNearTop || hasOpenPanels || isExampleLoaderOpen }"
   >
     <div class="global-navigation__left">
       <Button
@@ -59,6 +61,17 @@ const handleToggle = (panelType: PanelType) => {
         @click="handleToggle(navigationButton.type)"
       >
         <component :is="navigationButton.icon" class="h-5 w-5" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        class="global-navigation__button"
+        :class="{ 'global-navigation__button--active': isExampleLoaderOpen }"
+        aria-label="Load an example from GitHub"
+        @click="isExampleLoaderOpen = !isExampleLoaderOpen"
+      >
+        <Search class="h-5 w-5" />
       </Button>
     </div>
 
@@ -89,6 +102,8 @@ const handleToggle = (panelType: PanelType) => {
       </Button>
     </div>
   </nav>
+
+  <GithubExampleLoader v-if="isExampleLoaderOpen" @close="isExampleLoaderOpen = false" />
 </template>
 
 <style scoped>
@@ -117,12 +132,14 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .global-navigation__left {
-  flex-shrink: 0;
-  width: 2.5rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .global-navigation__center {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -130,8 +147,7 @@ const handleToggle = (panelType: PanelType) => {
 }
 
 .global-navigation__right {
-  flex-shrink: 0;
-  width: 2.5rem;
+  flex: 1;
   display: flex;
   justify-content: flex-end;
 }
