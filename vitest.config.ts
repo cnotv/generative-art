@@ -8,7 +8,15 @@ export default mergeConfig(
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test-setup.ts'],
-      exclude: [...configDefaults.exclude, 'e2e/*', '**/*.browser.test.ts', 'rules/**'],
+      // .claude/worktrees holds throwaway checkouts of this same repo, so collecting them
+      // runs a second copy of every test against whatever branch happens to be sitting there.
+      exclude: [
+        ...configDefaults.exclude,
+        'e2e/*',
+        '**/*.browser.test.ts',
+        'rules/**',
+        '.claude/worktrees/**'
+      ],
       root: fileURLToPath(new URL('./', import.meta.url)),
       server: {
         deps: {
