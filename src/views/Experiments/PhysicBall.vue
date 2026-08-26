@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { textureLoader, disposeScene } from '@webgamekit/threejs'
+import { textureLoader, disposeScene, getLights } from '@webgamekit/threejs'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -9,7 +9,6 @@ import { controls } from '@/utils/control'
 import { stats } from '@/utils/stats'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import RAPIER from '@dimforge/rapier3d-compat'
-import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js'
 import type { CoordinateTuple } from '@/types/three'
 
 type ProjectConfig = any
@@ -125,7 +124,9 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
   )
 
   const setup = async () => {
-    world = await new RAPIER.World(gravity)
+    // The wasm has to be up before a world can be built, or every Rapier call reads off undefined.
+    await RAPIER.init()
+    world = new RAPIER.World(gravity)
     const renderer = getRenderer(canvas)
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -187,105 +188,68 @@ const getRenderer = (canvas: HTMLCanvasElement) => {
   return renderer
 }
 
-const createLights = (scene: THREE.Scene, config: ProjectConfig) => {
-  if (config.directional.enabled) {
-    // Add directional light with shadows
-    const directionalLight = new THREE.DirectionalLight(0xffffff, config.directional.intensity)
-    directionalLight.position.set(5, 10, 5)
-    directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 2048
-    directionalLight.shadow.mapSize.height = 2048
-    directionalLight.shadow.camera.near = 0.5
-    directionalLight.shadow.camera.far = 500
-    directionalLight.shadow.camera.left = -30
-    directionalLight.shadow.camera.right = 30
-    directionalLight.shadow.camera.top = 30
-    directionalLight.shadow.camera.bottom = -30
-    directionalLight.shadow.bias = -0.0001
-    scene.add(directionalLight)
+/**
+ * The hemisphere tint the view has always used, kept as the HSL it was written in.
+ */
+const HEMISPHERE_SKY_COLOR = new THREE.Color().setHSL(0.6, 1, 0.6).getHex()
+const HEMISPHERE_GROUND_COLOR = new THREE.Color().setHSL(0.095, 1, 0.75).getHex()
 
-    if (config.directional.helper) {
-      // Add light helper
-      const helper = new THREE.DirectionalLightHelper(directionalLight, 5)
-      scene.add(helper)
-    }
-  }
-
-  if (config.area.enabled) {
-    const rectLight = new THREE.RectAreaLight(
-      0xffffff,
-      config.area.intensity,
-      config.area.width,
-      config.area.height
-    )
-    rectLight.position.set(5, 5, 5)
-    rectLight.lookAt(0, 0, 0)
-    scene.add(rectLight)
-
-    if (config.area.helper) {
-      // Add light helper
-      const helper = new RectAreaLightHelper(rectLight, 5)
-      scene.add(helper)
-    }
-  }
-
-  if (config.ambient.enabled) {
-    const ambient = new THREE.AmbientLight(0xffffff, config.ambient.intensity)
-    ambient.position.set(5, 5, 5)
-    scene.add(ambient)
-  }
-
-  if (config.hemisphere.enabled) {
-    const hemisphereLight = new THREE.HemisphereLight(
-      0xffffff,
-      0xffffff,
-      config.hemisphere.intensity
-    )
-    hemisphereLight.color.setHSL(0.6, 1, 0.6)
-    hemisphereLight.groundColor.setHSL(0.095, 1, 0.75)
-    hemisphereLight.position.set(0, 50, 0)
-    scene.add(hemisphereLight)
-
-    if (config.hemisphere.helper) {
-      const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 10)
-      scene.add(hemisphereLightHelper)
-    }
-  }
-
-  if (config.point.enabled) {
-    const pointLight = new THREE.PointLight(0xffffff, 1.2)
-    pointLight.position.set(5, 5, 5)
-    pointLight.castShadow = true
-    pointLight.shadow.mapSize.width = 2048
-    pointLight.shadow.mapSize.height = 2048
-    pointLight.shadow.camera.near = 0.5
-    pointLight.shadow.camera.far = 50
-    pointLight.shadow.bias = -0.0001
-    scene.add(pointLight)
-
-    if (config.hemisphere.helper) {
-      const pointLightHelper = new THREE.PointLightHelper(pointLight, 10)
-      scene.add(pointLightHelper)
-    }
-  }
-
-  if (config.spot.enabled) {
-    const spotLight = new THREE.SpotLight(0xffffff, 1.2)
-    spotLight.position.set(5, 5, 5)
-    spotLight.castShadow = true
-    spotLight.shadow.mapSize.width = 2048
-    spotLight.shadow.mapSize.height = 2048
-    spotLight.shadow.camera.near = 0.5
-    spotLight.shadow.camera.far = 50
-    spotLight.shadow.bias = -0.0001
-    scene.add(spotLight)
-
-    if (config.spot.helper) {
-      const spotLightHelper = new THREE.SpotLightHelper(spotLight, 10)
-      scene.add(spotLightHelper)
-    }
-  }
-}
+const createLights = (scene: THREE.Scene, config: ProjectConfig) =>
+  getLights(scene, {
+    ambient: config.ambient.enabled && { color: 0xffffff, intensity: config.ambient.intensity },
+    directional: config.directional.enabled && {
+      color: 0xffffff,
+      intensity: config.directional.intensity,
+      position: [5, 10, 5],
+      castShadow: true,
+      helper: config.directional.helper,
+      shadow: {
+        mapSize: { width: 2048, height: 2048 },
+        camera: { near: 0.5, far: 500, left: -30, right: 30, top: 30, bottom: -30 },
+        bias: -0.0001
+      }
+    },
+    ...(config.hemisphere.enabled
+      ? {
+          hemisphere: {
+            colors: [HEMISPHERE_SKY_COLOR, HEMISPHERE_GROUND_COLOR] as [number, number],
+            intensity: config.hemisphere.intensity,
+            position: [0, 50, 0] as CoordinateTuple,
+            helper: config.hemisphere.helper
+          }
+        }
+      : {}),
+    ...(config.point.enabled
+      ? {
+          point: {
+            intensity: config.point.intensity,
+            position: [5, 5, 5] as CoordinateTuple,
+            helper: config.point.helper
+          }
+        }
+      : {}),
+    ...(config.spot.enabled
+      ? {
+          spot: {
+            intensity: config.spot.intensity,
+            position: [5, 5, 5] as CoordinateTuple,
+            helper: config.spot.helper
+          }
+        }
+      : {}),
+    ...(config.area.enabled
+      ? {
+          rectArea: {
+            intensity: config.area.intensity,
+            width: config.area.width,
+            height: config.area.height,
+            position: [5, 5, 5] as CoordinateTuple,
+            lookAt: [0, 0, 0] as CoordinateTuple,
+            helper: config.area.helper
+          }
+        }
+      : {})
+  })
 
 /**
  * Reassign ball position on click

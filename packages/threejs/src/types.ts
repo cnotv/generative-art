@@ -132,32 +132,69 @@ export interface LightRig {
 
 export interface LightsConfig {
   environment?: EnvironmentLightConfig | false
-  ambient?: {
-    color?: number
-    intensity?: number
-  }
-  directional?: {
-    color?: number
-    intensity?: number
-    position?: CoordinateTuple
-    castShadow?: boolean
-    shadow?: {
-      mapSize?: { width: number; height: number }
-      camera?: {
-        near?: number
-        far?: number
-        left?: number
-        right?: number
-        top?: number
-        bottom?: number
+  /** `false` leaves the light out, for a scene lighting itself some other way. */
+  ambient?:
+    | {
+        color?: number
+        intensity?: number
       }
-      bias?: number
-      radius?: number
-    }
-  }
+    | false
+  directional?:
+    | {
+        color?: number
+        intensity?: number
+        position?: CoordinateTuple
+        castShadow?: boolean
+        helper?: boolean
+        shadow?: {
+          mapSize?: { width: number; height: number }
+          camera?: {
+            near?: number
+            far?: number
+            left?: number
+            right?: number
+            top?: number
+            bottom?: number
+          }
+          bias?: number
+          radius?: number
+        }
+      }
+    | false
   hemisphere?: {
     colors?: [number, number]
     intensity?: number
+    position?: CoordinateTuple
+    helper?: boolean
+  }
+  point?: {
+    color?: number
+    intensity?: number
+    position?: CoordinateTuple
+    distance?: number
+    decay?: number
+    castShadow?: boolean
+    helper?: boolean
+  }
+  spot?: {
+    color?: number
+    intensity?: number
+    position?: CoordinateTuple
+    angle?: number
+    penumbra?: number
+    distance?: number
+    decay?: number
+    castShadow?: boolean
+    helper?: boolean
+  }
+  rectArea?: {
+    color?: number
+    intensity?: number
+    position?: CoordinateTuple
+    lookAt?: CoordinateTuple
+    width?: number
+    height?: number
+    helper?: boolean
   }
 }
 

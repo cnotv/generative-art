@@ -112,7 +112,7 @@ const setup = async (canvas: HTMLCanvasElement) => {
       animationWalk.update(delta)
       girl.position.z += 0.15
     }
-    directionalLight.position.copy({
+    directionalLight?.position.copy({
       x: girl.position.x + 5,
       y: girl.position.y + 5,
       z: girl.position.z + 5

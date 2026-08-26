@@ -131,7 +131,7 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         })
       )
     )
-    getLights(scene, { directionalLightIntensity: 10 })
+    getLights(scene, { directional: { intensity: 10 } })
 
     registerSceneElements(camera, scene.children)
 

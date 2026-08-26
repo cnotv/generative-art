@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js'
+import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js'
 import { CoordinateTuple } from '@webgamekit/animation'
 import {
   EnvironmentLightConfig,
@@ -11,7 +13,7 @@ import {
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
 
-type DirectionalConfig = NonNullable<LightsConfig['directional']>
+type DirectionalConfig = NonNullable<Exclude<LightsConfig['directional'], false>>
 type ShadowConfig = NonNullable<DirectionalConfig['shadow']>
 
 const applyDirectionalShadow = (light: THREE.DirectionalLight, shadow: ShadowConfig) => {
@@ -30,50 +32,158 @@ const applyDirectionalShadow = (light: THREE.DirectionalLight, shadow: ShadowCon
   light.shadow.camera.updateProjectionMatrix()
 }
 
-/**
- * Create and return default lights
- * @param scene
- * @param config
- * @returns The created directional and ambient lights
- */
-export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
-  const {
-    ambient = SCENE_DEFAULTS.lights.ambient,
-    directional = {
-      ...SCENE_DEFAULTS.lights.directional,
-      shadow: {
-        mapSize: { width: 4096, height: 4096 },
-        camera: { near: 0.5, far: 500, left: -150, right: 150, top: 150, bottom: -150 },
-        bias: -0.0001,
-        radius: 1
-      }
-    },
-    hemisphere
-  } = config
+/** Local shadow map settings for the lights that light their own surroundings. */
+const applyLocalShadow = (light: THREE.PointLight | THREE.SpotLight) => {
+  light.shadow.mapSize.width = 2048
+  light.shadow.mapSize.height = 2048
+  light.shadow.camera.near = 0.5
+  light.shadow.camera.far = 50
+  light.shadow.bias = -0.0001
+}
 
-  if (hemisphere?.colors) {
-    const hemisphereLight = new THREE.HemisphereLight(...hemisphere.colors)
-    hemisphereLight.name = 'hemisphere-light'
-    if (hemisphere.intensity !== undefined) hemisphereLight.intensity = hemisphere.intensity
-    scene.add(hemisphereLight)
+const addHelper = (scene: THREE.Scene, helper: THREE.Object3D, name: string) => {
+  helper.name = name
+  scene.add(helper)
+}
+
+const HELPER_SIZE = 5
+
+const createPointLight = (
+  scene: THREE.Scene,
+  config: NonNullable<LightsConfig['point']>
+): THREE.PointLight => {
+  const light = new THREE.PointLight(config.color ?? 0xffffff, config.intensity ?? 1)
+  light.name = 'point-light'
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  if (config.distance !== undefined) light.distance = config.distance
+  if (config.decay !== undefined) light.decay = config.decay
+  light.castShadow = config.castShadow ?? true
+  applyLocalShadow(light)
+  scene.add(light)
+  if (config.helper)
+    addHelper(scene, new THREE.PointLightHelper(light, HELPER_SIZE), 'point-light-helper')
+  return light
+}
+
+const createSpotLight = (
+  scene: THREE.Scene,
+  config: NonNullable<LightsConfig['spot']>
+): THREE.SpotLight => {
+  const light = new THREE.SpotLight(config.color ?? 0xffffff, config.intensity ?? 1)
+  light.name = 'spot-light'
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  if (config.angle !== undefined) light.angle = config.angle
+  if (config.penumbra !== undefined) light.penumbra = config.penumbra
+  if (config.distance !== undefined) light.distance = config.distance
+  if (config.decay !== undefined) light.decay = config.decay
+  light.castShadow = config.castShadow ?? true
+  applyLocalShadow(light)
+  scene.add(light)
+  if (config.helper) addHelper(scene, new THREE.SpotLightHelper(light), 'spot-light-helper')
+  return light
+}
+
+const createRectAreaLight = (
+  scene: THREE.Scene,
+  config: NonNullable<LightsConfig['rectArea']>
+): THREE.RectAreaLight => {
+  // Without this the light contributes nothing: the shader it needs is not in the core build.
+  RectAreaLightUniformsLib.init()
+  const light = new THREE.RectAreaLight(
+    config.color ?? 0xffffff,
+    config.intensity ?? 1,
+    config.width ?? 10,
+    config.height ?? 10
+  )
+  light.name = 'rect-area-light'
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  light.lookAt(...((config.lookAt ?? [0, 0, 0]) as CoordinateTuple))
+  scene.add(light)
+  if (config.helper) addHelper(scene, new RectAreaLightHelper(light), 'rect-area-light-helper')
+  return light
+}
+
+const DEFAULT_DIRECTIONAL = {
+  ...SCENE_DEFAULTS.lights.directional,
+  shadow: {
+    mapSize: { width: 4096, height: 4096 },
+    camera: { near: 0.5, far: 500, left: -150, right: 150, top: 150, bottom: -150 },
+    bias: -0.0001,
+    radius: 1
   }
+}
 
-  const ambientLight = new THREE.AmbientLight(ambient.color, ambient.intensity)
-  ambientLight.name = 'ambient-light'
-  scene.add(ambientLight)
+const createAmbientLight = (
+  scene: THREE.Scene,
+  config: NonNullable<Exclude<LightsConfig['ambient'], false>>
+): THREE.AmbientLight => {
+  const light = new THREE.AmbientLight(config.color, config.intensity)
+  light.name = 'ambient-light'
+  scene.add(light)
+  return light
+}
 
-  const directionalLight = new THREE.DirectionalLight(directional.color, directional.intensity)
-  directionalLight.name = 'directional-light'
-  if (directional.position)
-    directionalLight.position.set(...(directional.position as CoordinateTuple))
-  directionalLight.castShadow = directional.castShadow ?? true
+const createDirectionalLight = (
+  scene: THREE.Scene,
+  config: NonNullable<Exclude<LightsConfig['directional'], false>>
+): THREE.DirectionalLight => {
+  const light = new THREE.DirectionalLight(config.color, config.intensity)
+  light.name = 'directional-light'
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  light.castShadow = config.castShadow ?? true
 
   // Always apply shadow camera defaults so scenes that omit the shadow key
   // still get a large-enough frustum (Three.js default is only ~±5 units).
-  applyDirectionalShadow(directionalLight, directional.shadow ?? {})
-  scene.add(directionalLight)
+  applyDirectionalShadow(light, config.shadow ?? {})
+  scene.add(light)
+  if (config.helper)
+    addHelper(
+      scene,
+      new THREE.DirectionalLightHelper(light, HELPER_SIZE),
+      'directional-light-helper'
+    )
+  return light
+}
 
-  return { directionalLight, ambientLight }
+const createHemisphereLight = (
+  scene: THREE.Scene,
+  config: NonNullable<LightsConfig['hemisphere']>
+): THREE.HemisphereLight | undefined => {
+  if (!config.colors) return undefined
+  const light = new THREE.HemisphereLight(...config.colors)
+  light.name = 'hemisphere-light'
+  if (config.intensity !== undefined) light.intensity = config.intensity
+  if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  scene.add(light)
+  if (config.helper)
+    addHelper(scene, new THREE.HemisphereLightHelper(light, HELPER_SIZE), 'hemisphere-light-helper')
+  return light
+}
+
+/**
+ * Create the lights a scene declares. Ambient and directional are made unless the config
+ * turns them off with `false`; hemisphere, point, spot and rect area are made only when the
+ * config names them, each with an optional helper.
+ * @param scene
+ * @param config
+ * @returns Every light created, so a caller can drive them afterwards
+ */
+export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
+  const ambient =
+    config.ambient === false ? undefined : (config.ambient ?? SCENE_DEFAULTS.lights.ambient)
+  const directional =
+    config.directional === false ? undefined : (config.directional ?? DEFAULT_DIRECTIONAL)
+
+  return {
+    ambientLight: ambient ? createAmbientLight(scene, ambient) : undefined,
+    directionalLight: directional ? createDirectionalLight(scene, directional) : undefined,
+    hemisphereLight: config.hemisphere
+      ? createHemisphereLight(scene, config.hemisphere)
+      : undefined,
+    pointLight: config.point ? createPointLight(scene, config.point) : undefined,
+    spotLight: config.spot ? createSpotLight(scene, config.spot) : undefined,
+    rectAreaLight: config.rectArea ? createRectAreaLight(scene, config.rectArea) : undefined
+  }
 }
 
 /**
@@ -116,7 +226,7 @@ export const lightPresets: Record<LightPreset, LightRig> = {
 
 const updateAmbientLight = (
   light: THREE.AmbientLight,
-  config: NonNullable<LightsConfig['ambient']>
+  config: NonNullable<Exclude<LightsConfig['ambient'], false>>
 ) => {
   if (config.color !== undefined) light.color.set(config.color)
   if (config.intensity !== undefined) light.intensity = config.intensity
@@ -124,7 +234,7 @@ const updateAmbientLight = (
 
 const updateDirectionalLight = (
   light: THREE.DirectionalLight,
-  config: NonNullable<LightsConfig['directional']>
+  config: NonNullable<Exclude<LightsConfig['directional'], false>>
 ) => {
   if (config.color !== undefined) light.color.set(config.color)
   if (config.intensity !== undefined) light.intensity = config.intensity

@@ -113,14 +113,18 @@ Configure scene with camera, lights, ground, and sky.
   },
   lights?: {
     environment?: false | { texture?: string, intensity?: number },
-    ambient?: { color?: number, intensity?: number },
-    directional?: {
+    ambient?: false | { color?: number, intensity?: number },
+    directional?: false | {
       color?: number,
       intensity?: number,
       position?: CoordinateTuple,
-      castShadow?: boolean
+      castShadow?: boolean,
+      helper?: boolean
     },
-    hemisphere?: { colors?: [number, number], intensity?: number }
+    hemisphere?: { colors?: [number, number], intensity?: number, helper?: boolean },
+    point?: { color?: number, intensity?: number, position?: CoordinateTuple, helper?: boolean },
+    spot?: { color?: number, intensity?: number, angle?: number, penumbra?: number, helper?: boolean },
+    rectArea?: { color?: number, intensity?: number, width?: number, height?: number, helper?: boolean }
   },
   ground?: false | {
     size?: CoordinateTuple,
@@ -572,8 +576,24 @@ All light logic lives in the `lights` module. Two terms are distinct here:
 
 ### getLights(scene, config?)
 
-Create the direct lights. Returns `{ directionalLight, ambientLight }`. The directional
-light always receives a large shadow frustum, even when the `shadow` key is omitted.
+Create the lights a scene declares, and return every one of them:
+`{ ambientLight, directionalLight, hemisphereLight, pointLight, spotLight, rectAreaLight }`.
+
+Ambient and directional are made unless the config sets them to `false`; hemisphere, point,
+spot and rect area are made only when the config names them. Each takes a `helper: true` to
+add its matching Three.js helper, so a scene never hand-builds one. The directional light
+always receives a large shadow frustum, even when the `shadow` key is omitted, and the point
+and spot lights get a local one sized for their shorter reach.
+
+```typescript
+getLights(scene, {
+  ambient: { intensity: 0.2 },
+  directional: { intensity: 10, position: [5, 10, 5], helper: true },
+  point: { intensity: 1, position: [5, 5, 5] },
+  spot: { intensity: 1, position: [5, 5, 5], angle: Math.PI / 6 },
+  rectArea: { intensity: 1, width: 10, height: 10, position: [5, 5, 5], lookAt: [0, 0, 0] }
+})
+```
 
 ### getEnvironmentLight(renderer, scene, config?)
 

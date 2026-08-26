@@ -28,9 +28,9 @@ describe('getLights', () => {
 
     expect(scene.getObjectByName('ambient-light')).toBe(ambientLight)
     expect(scene.getObjectByName('directional-light')).toBe(directionalLight)
-    expect(ambientLight.intensity).toBe(2)
-    expect(directionalLight.intensity).toBe(4)
-    expect(directionalLight.castShadow).toBe(true)
+    expect(ambientLight!.intensity).toBe(2)
+    expect(directionalLight!.intensity).toBe(4)
+    expect(directionalLight!.castShadow).toBe(true)
   })
 
   it('applies the large shadow frustum even when the shadow key is omitted', () => {
@@ -38,9 +38,9 @@ describe('getLights', () => {
 
     const { directionalLight } = getLights(scene, { directional: { intensity: 1 } })
 
-    expect(directionalLight.shadow.mapSize.width).toBe(4096)
-    expect(directionalLight.shadow.camera.left).toBe(-150)
-    expect(directionalLight.shadow.camera.far).toBe(500)
+    expect(directionalLight!.shadow.mapSize.width).toBe(4096)
+    expect(directionalLight!.shadow.camera.left).toBe(-150)
+    expect(directionalLight!.shadow.camera.far).toBe(500)
   })
 
   it('adds a hemisphere light only when its colors are configured', () => {
@@ -87,11 +87,11 @@ describe('updateLights and lightPresets', () => {
 
       updateLights(scene, preset)
 
-      expect(ambientLight.color.getHex()).toBe(preset.ambient.color)
-      expect(ambientLight.intensity).toBe(preset.ambient.intensity)
-      expect(directionalLight.color.getHex()).toBe(preset.directional.color)
-      expect(directionalLight.intensity).toBe(preset.directional.intensity)
-      expect(directionalLight.position.toArray()).toEqual(preset.directional.position)
+      expect(ambientLight!.color.getHex()).toBe(preset.ambient.color)
+      expect(ambientLight!.intensity).toBe(preset.ambient.intensity)
+      expect(directionalLight!.color.getHex()).toBe(preset.directional.color)
+      expect(directionalLight!.intensity).toBe(preset.directional.intensity)
+      expect(directionalLight!.position.toArray()).toEqual(preset.directional.position)
       const hemisphereLight = scene.getObjectByName('hemisphere-light') as THREE.HemisphereLight
       expect(hemisphereLight.color.getHex()).toBe(preset.hemisphere.colors[0])
       expect(hemisphereLight.groundColor.getHex()).toBe(preset.hemisphere.colors[1])
@@ -149,6 +149,85 @@ describe('updateLights and lightPresets', () => {
     expect(hemisphereLight.color.getHex()).toBe(0xf0e0d0)
     expect(hemisphereLight.groundColor.getHex()).toBe(0x304050)
     expect(hemisphereLight.intensity).toBe(0.8)
+  })
+})
+
+describe('getLights with the remaining light types', () => {
+  it.each([
+    ['point', 'point-light', THREE.PointLight],
+    ['spot', 'spot-light', THREE.SpotLight],
+    ['rectArea', 'rect-area-light', THREE.RectAreaLight]
+  ] as const)('creates the %s light only when configured', (key, name, constructor) => {
+    const bareScene = new THREE.Scene()
+    const configuredScene = new THREE.Scene()
+
+    getLights(bareScene)
+    getLights(configuredScene, { [key]: { intensity: 2 } })
+
+    expect(bareScene.getObjectByName(name)).toBeUndefined()
+    const light = configuredScene.getObjectByName(name) as THREE.Light
+    expect(light).toBeInstanceOf(constructor)
+    expect(light.intensity).toBe(2)
+  })
+
+  it('gives the point and spot lights a shadow map rather than leaving them flat', () => {
+    const scene = new THREE.Scene()
+
+    getLights(scene, { point: {}, spot: {} })
+
+    const point = scene.getObjectByName('point-light') as THREE.PointLight
+    const spot = scene.getObjectByName('spot-light') as THREE.SpotLight
+    expect(point.castShadow).toBe(true)
+    expect(point.shadow.mapSize.width).toBe(2048)
+    expect(spot.castShadow).toBe(true)
+    expect(spot.shadow.camera.far).toBe(50)
+  })
+
+  it('sizes and aims the rect area light', () => {
+    const scene = new THREE.Scene()
+
+    getLights(scene, {
+      rectArea: { width: 8, height: 3, position: [5, 5, 5], lookAt: [0, 0, 0] }
+    })
+
+    const rectArea = scene.getObjectByName('rect-area-light') as THREE.RectAreaLight
+    expect(rectArea.width).toBe(8)
+    expect(rectArea.height).toBe(3)
+    expect(rectArea.position.toArray()).toEqual([5, 5, 5])
+  })
+
+  it.each([
+    ['directional', 'directional-light-helper'],
+    ['hemisphere', 'hemisphere-light-helper'],
+    ['point', 'point-light-helper'],
+    ['spot', 'spot-light-helper'],
+    ['rectArea', 'rect-area-light-helper']
+  ] as const)('adds the %s helper only when asked for', (key, helperName) => {
+    const withoutHelper = new THREE.Scene()
+    const withHelper = new THREE.Scene()
+    const config = { colors: [0xffffff, 0x444444] as [number, number] }
+
+    getLights(withoutHelper, { [key]: { ...config } })
+    getLights(withHelper, { [key]: { ...config, helper: true } })
+
+    expect(withoutHelper.getObjectByName(helperName)).toBeUndefined()
+    expect(withHelper.getObjectByName(helperName)).toBeDefined()
+  })
+
+  it('returns every light it created so a caller can drive them', () => {
+    const scene = new THREE.Scene()
+
+    const lights = getLights(scene, {
+      hemisphere: { colors: [0xffffff, 0x444444] },
+      point: {},
+      spot: {},
+      rectArea: {}
+    })
+
+    expect(lights.pointLight).toBeInstanceOf(THREE.PointLight)
+    expect(lights.spotLight).toBeInstanceOf(THREE.SpotLight)
+    expect(lights.rectAreaLight).toBeInstanceOf(THREE.RectAreaLight)
+    expect(lights.hemisphereLight).toBeInstanceOf(THREE.HemisphereLight)
   })
 })
 
