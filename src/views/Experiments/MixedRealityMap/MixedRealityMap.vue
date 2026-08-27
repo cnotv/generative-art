@@ -36,7 +36,7 @@ import type { GeoPoint, PermissionStage, Place } from './types'
 const AIM_SMOOTHING = 0.15
 
 const stage = ref<PermissionStage>('idle')
-const blockedMessage = ref<string | null>(null)
+const cameraMessage = ref<string | null>(null)
 const placesMessage = ref<string | null>(null)
 const isLoadingPlaces = ref(false)
 
@@ -49,6 +49,7 @@ const places = ref<Place[]>([])
 const selectedPlaceId = ref<string | null>(null)
 
 const aim = ref<DeviceAim>({ headingDegrees: 0, pitchDegrees: 0, rollDegrees: 0 })
+const sensorPermission = ref<'idle' | 'granted' | 'denied' | 'unsupported'>('idle')
 const hasSensor = ref(false)
 const headingOffsetDegrees = ref(0)
 const horizontalFieldOfView = ref(DEFAULT_HORIZONTAL_FIELD_OF_VIEW)
@@ -114,11 +115,24 @@ const openStreetMapUrl = computed(() =>
     : 'https://www.openstreetmap.org'
 )
 
-const headingReadout = computed(() =>
-  hasSensor.value
-    ? `${Math.round(aim.value.headingDegrees + headingOffsetDegrees.value)}°`
-    : 'no compass'
-)
+/**
+ * A compass that was never asked, one that was refused and one that answers all read
+ * differently. Collapsing them into "no compass" hid a permission that was never requested.
+ */
+const headingReadout = computed(() => {
+  if (hasSensor.value) {
+    return `${Math.round(aim.value.headingDegrees + headingOffsetDegrees.value)}°`
+  }
+
+  const states = {
+    idle: 'not asked',
+    granted: 'no reading yet',
+    denied: 'refused',
+    unsupported: 'none on this device'
+  }
+
+  return states[sensorPermission.value]
+})
 
 const measureViewport = (): void => {
   viewportAspectRatio.value = window.innerWidth / Math.max(1, window.innerHeight)
@@ -176,43 +190,86 @@ const receivePosition = (position: GeolocationPosition): void => {
   if (!previous || getDistanceMeters(previous, next) > REFETCH_DISTANCE_METERS) loadPlaces(next)
 }
 
-const startCamera = async (): Promise<void> => {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' } },
-    audio: false
-  })
-  cameraStream.value = stream
-  if (!videoElement.value) return
-  videoElement.value.srcObject = stream
-  await videoElement.value.play()
+/**
+ * Say what actually went wrong, by the name the platform used.
+ *
+ * A camera can fail for reasons the person can fix and reasons they cannot, and the two look
+ * identical from a single "it did not open" line. Naming the cause is the difference between
+ * a setting they can change and a browser they have to leave.
+ */
+const describeCameraFailure = (error: unknown): string => {
+  const name = error instanceof Error ? error.name : 'Unknown'
+  const reasons: Record<string, string> = {
+    NotAllowedError: 'Camera access was refused. Allow it for this site and press Start again.',
+    NotFoundError: 'This device reports no camera.',
+    NotReadableError: 'Another app is holding the camera. Close it and press Start again.',
+    OverconstrainedError: 'No rear camera. The front one will be tried on the next attempt.',
+    SecurityError: 'The camera needs a secure page.'
+  }
+
+  return reasons[name] ?? `The camera did not open (${name}).`
+}
+
+/**
+ * Open the rear camera, reporting rather than throwing.
+ *
+ * Playback is started separately and its failure ignored: the element also carries `autoplay`,
+ * and a stream that is live but not yet playing is not a camera failure.
+ * @returns A message when it did not open, null when it did
+ */
+const startCamera = async (): Promise<string | null> => {
+  // Absent on an insecure page, and on more than one iOS browser that is not Safari.
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return 'This browser exposes no camera to the page. Safari or Chrome will.'
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    })
+    cameraStream.value = stream
+    if (videoElement.value) {
+      videoElement.value.srcObject = stream
+      videoElement.value.play().catch(() => undefined)
+    }
+    return null
+  } catch (error) {
+    return describeCameraFailure(error)
+  }
+}
+
+const startLocation = (): void => {
+  if (!navigator.geolocation) {
+    placesMessage.value = 'This browser reports no location at all.'
+    return
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    receivePosition,
+    (error) => {
+      placesMessage.value = `Location is unavailable, so there is nothing to place (${error.message}).`
+    },
+    GEOLOCATION_OPTIONS
+  )
 }
 
 const start = async (): Promise<void> => {
   stage.value = 'requesting'
   measureViewport()
 
-  try {
-    await startCamera()
-  } catch {
-    stage.value = 'blocked'
-    blockedMessage.value =
-      'The camera did not open. It needs a secure page and permission for this site.'
-    return
-  }
+  // Both prompts are opened before anything is awaited. iOS grants the orientation sensor only
+  // while the tap that asked for it is still live, and awaiting the camera first spends that
+  // activation, so the compass is refused without ever showing its prompt.
+  const sensorRequest = motion.requestMotionPermission()
+  const cameraRequest = startCamera()
 
-  hasSensor.value = (await motion.requestMotionPermission()) === 'granted'
+  sensorPermission.value = await sensorRequest
+  cameraMessage.value = await cameraRequest
 
-  if (navigator.geolocation) {
-    watchId = navigator.geolocation.watchPosition(
-      receivePosition,
-      () => {
-        placesMessage.value = 'Location was refused, so there is nothing to place.'
-      },
-      GEOLOCATION_OPTIONS
-    )
-  } else {
-    placesMessage.value = 'This browser reports no location at all.'
-  }
+  // The three are independent: a refused camera still leaves a usable compass and a usable
+  // location, which is a black screen with the street named on it rather than nothing at all.
+  startLocation()
 
   // The overlay turns with the world by itself; letting the page turn as well would take the
   // labels round twice, and the compensation for it is guesswork on the devices that lie.
@@ -263,7 +320,10 @@ onBeforeUnmount(() => {
         <dd>{{ accuracyMeters === null ? 'waiting' : formatDistance(accuracyMeters) }}</dd>
       </dl>
 
-      <p v-if="placesMessage" class="mrm__notice">{{ placesMessage }}</p>
+      <div class="mrm__notices">
+        <p v-if="cameraMessage" class="mrm__notice">{{ cameraMessage }}</p>
+        <p v-if="placesMessage" class="mrm__notice">{{ placesMessage }}</p>
+      </div>
 
       <article v-if="selectedPlace" class="mrm__detail">
         <h2 class="mrm__detail-name">{{ selectedPlace.name }}</h2>
@@ -312,10 +372,9 @@ onBeforeUnmount(() => {
       <h1 class="mrm__gate-title">Mixed reality map</h1>
       <p class="mrm__gate-body">
         Names the streets, shops and landmarks around you, over the camera, where they actually
-        stand. It needs the camera, your location and the compass, and all three are asked for at
-        once.
+        stand. It asks for the camera, your location and the compass at once, and carries on with
+        whichever of the three it is given.
       </p>
-      <p v-if="blockedMessage" class="mrm__gate-error">{{ blockedMessage }}</p>
       <Button size="lg" :disabled="stage === 'requesting'" @click="start">
         {{ stage === 'requesting' ? 'Asking…' : 'Start' }}
       </Button>
@@ -407,8 +466,13 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.mrm__notice {
+.mrm__notices {
   grid-area: notice;
+  display: grid;
+  gap: var(--spacing-1);
+}
+
+.mrm__notice {
   margin: 0;
   font-size: var(--font-size-sm);
 }
@@ -492,11 +556,5 @@ onBeforeUnmount(() => {
   max-width: 32rem;
   margin: 0;
   font-size: var(--font-size-base);
-}
-
-.mrm__gate-error {
-  margin: 0;
-  color: var(--color-destructive);
-  font-size: var(--font-size-sm);
 }
 </style>

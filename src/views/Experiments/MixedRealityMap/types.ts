@@ -27,4 +27,8 @@ export interface FieldOfView {
   verticalDegrees: number
 }
 
-export type PermissionStage = 'idle' | 'requesting' | 'ready' | 'blocked'
+/**
+ * There is no blocked stage: the camera, the location and the compass are asked for together
+ * and granted separately, so any one of them failing still leaves a view worth showing.
+ */
+export type PermissionStage = 'idle' | 'requesting' | 'ready'
