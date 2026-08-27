@@ -190,7 +190,7 @@ const walkDir = (dir, extensions) => {
       const fullPath = resolve(currentDir, entry.name)
       if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
         walk(fullPath)
-      } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
+      } else if (extensions.some((extension) => entry.name.endsWith(extension))) {
         results.push(fullPath)
       }
     })

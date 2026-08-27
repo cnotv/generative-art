@@ -4,99 +4,162 @@ sidebar_position: 1
 
 # Getting Started
 
-Welcome to **WebGameKit** - a framework-agnostic toolkit for creating 3D games, environments, and generative art with Three.js and Rapier physics.
+**WebGameKit** is a framework-agnostic toolkit for 3D games and environments, built on Three.js
+and Rapier physics. It is a set of npm packages, not a framework you build inside: you bring the
+page, it brings the scene, the physics and the loop.
 
-## Quick Start
+Nothing on this page needs this repository. If you want to work on the toolkit itself rather than
+build with it, see [contributing](./contributing.md).
 
-### Installation
-
-```bash
-git clone https://github.com/cnotv/generative-art.git
-cd generative-art
-pnpm install
-```
-
-### Development
+## Install
 
 ```bash
-# Start development server
-pnpm dev
-
-# Run tests
-pnpm test:unit
-
-# Build for production
-pnpm build
-
-# View documentation
-cd documentation && pnpm start
+pnpm add @webgamekit/threejs @webgamekit/animation @webgamekit/controls three @dimforge/rapier3d-compat
 ```
 
-## Packages
+Three.js and Rapier are peer dependencies — the toolkit does not pin them for you, so a project
+that already has a Three.js version keeps it.
 
-### [@webgamekit/threejs](./packages/threejs.md)
+## A running scene in one file
 
-Core 3D engine with Three.js and Rapier physics integration.
+An empty page, a canvas, and a physics world with something falling in it.
 
-```typescript
-import { getTools } from '@webgamekit/threejs';
-
-const { setup, animate, scene, camera, world } = await getTools({ canvas });
+```html
+<!doctype html>
+<html>
+  <body style="margin: 0">
+    <canvas id="scene"></canvas>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>
 ```
 
-### [@webgamekit/controls](./packages/controls.md)
+```typescript
+import { getTools, getCube } from '@webgamekit/threejs'
+import { createTimelineManager } from '@webgamekit/animation'
 
-Multi-input controller supporting keyboard, gamepad, touch, and mouse.
+const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
+
+const { setup, animate, scene, world } = await getTools({ canvas })
+
+await setup({
+  config: {
+    camera: { position: [0, 8, 18], lookAt: [0, 0, 0] },
+    lights: {
+      ambient: { intensity: 0.6 },
+      directional: { intensity: 1.4, position: [10, 20, 10], castShadow: true }
+    },
+    ground: { size: [40, 1, 40], color: 0x3f6d4e },
+    sky: { color: 0x87ceeb }
+  },
+  defineSetup: () => {
+    getCube(scene, world, {
+      size: [2, 2, 2],
+      position: [0, 12, 0],
+      color: 0xef6461,
+      type: 'dynamic',
+      castShadow: true
+    })
+  }
+})
+
+animate({ timeline: createTimelineManager() })
+```
+
+That is the whole thing. `getTools` builds the renderer, the scene, the camera and the Rapier
+world; `setup` fills them from plain configuration; `animate` runs the loop and steps the physics.
+The cube falls, lands on the ground and casts a shadow.
+
+## Rapier needs two lines of build config
+
+Rapier ships as WebAssembly, and bundlers need telling. With Vite:
 
 ```typescript
-import { createControls } from '@webgamekit/controls';
+import { defineConfig } from 'vite'
+import wasm from 'vite-plugin-wasm'
+
+export default defineConfig({
+  plugins: [wasm()],
+  optimizeDeps: { exclude: ['@dimforge/rapier3d-compat'] },
+  build: { target: 'esnext' }
+})
+```
+
+`optimizeDeps.exclude` matters: pre-bundling breaks the wasm instantiation. `esnext` is needed
+because `getTools` is awaited at the top level.
+
+## Adding input
+
+```typescript
+import { createControls } from '@webgamekit/controls'
 
 const { currentActions } = createControls({
-  mapping: { keyboard: { w: 'move-forward' } }
-});
+  mapping: {
+    keyboard: { w: 'move-forward', s: 'move-back', a: 'move-left', d: 'move-right', ' ': 'jump' },
+    gamepad: { 'axis0-up': 'move-forward', cross: 'jump' }
+  }
+})
 ```
 
-### [@webgamekit/animation](./packages/animation.md)
+`currentActions` is a live record of what is pressed, by action name rather than by key, so the
+same game logic serves keyboard, gamepad and touch without knowing which one is in use.
 
-Timeline-based animation system and physics-based character movement.
+## Per-frame work is a named action
+
+Everything that happens each frame is an action on a timeline, not a branch inside one growing
+callback:
 
 ```typescript
-import { animateTimeline, Direction } from '@webgamekit/animation';
+const timeline = createTimelineManager()
 
-animateTimeline([
-  { id: 'update', every: 1, do: () => updatePhysics() }
-], frame);
+timeline.addAction({
+  name: 'move the player',
+  category: 'user-input',
+  action: () => {
+    /* read currentActions, move the body */
+  }
+})
+
+timeline.addAction({
+  name: 'spawn an obstacle',
+  frequency: 45, // every 45th frame
+  category: 'game-logic',
+  action: () => {
+    /* … */
+  }
+})
+
+animate({ timeline })
 ```
 
-### [@webgamekit/game](./packages/game.md)
+Naming them is what later lets you pause a category, log one, remove one, or see them on a
+timeline panel.
 
-Reactive game state management that works with any UI framework.
+## Start from a template instead
 
-```typescript
-import { createGame } from '@webgamekit/game';
+Two starters in the repository are built to be copied rather than read:
 
-const game = createGame({ score: 0, lives: 3 });
-game.setData('score', 100);
-game.setStatus('playing');
-```
+| Template                                                                                            | Shows                                                            |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [platformer-starter](https://github.com/cnotv/generative-art/tree/main/examples/platformer-starter) | third-person movement, jumping, fixed platforms, a follow camera |
+| [runner-starter](https://github.com/cnotv/generative-art/tree/main/examples/runner-starter)         | lane switching, spawning and despawning, scoring, collision      |
 
-### [@webgamekit/audio](./packages/audio.md)
+![The platformer starter: a red player cube on green ground, with three brown platforms casting shadows](/img/starters/platformer-starter.webp)
 
-Audio playback utilities for games and interactive experiences.
+![The runner starter: the player cube in the centre lane of a dark track, an obstacle approaching in the distance, the score in the corner](/img/starters/runner-starter.webp)
 
-```typescript
-import { initializeAudio, createSound, playSound } from '@webgamekit/audio';
+Each is a standalone Vite app of roughly a hundred lines, with every constant in a `config.ts`
+and the game itself as a handful of named timeline actions.
 
-const audioContext = initializeAudio();
-const sfx = createSound(audioContext, '/audio/jump.mp3');
-playSound(sfx);
-```
+Both also play in the playground without being copied first: they are listed under Examples at the
+bottom of its navigation panel, and the app serves them from its own origin.
 
-## Next Steps
+![The playground's navigation panel scrolled to the bottom, showing an Examples group with Platformer and Endless Runner below the Tests group](/img/starters/navigation-examples.webp)
 
-- **[Monorepo Architecture](./architecture/monorepo.md)** - Understand the project structure
-- **[Package Documentation](./packages/threejs.md)** - Detailed API references
+## Where to go next
 
-## Contributing
-
-This is a personal project, but feel free to explore the code and use it as inspiration for your own projects.
+- [@webgamekit/threejs](./packages/threejs.md) — scenes, physics, models, cameras, asset loading
+- [@webgamekit/animation](./packages/animation.md) — the timeline, character movement, clips
+- [@webgamekit/controls](./packages/controls.md) — keyboard, gamepad, touch and remapping
+- [Guides](./guides/creating-a-3d-view.md) — longer walkthroughs
+- [Journey](./journey/animation.md) — why things are the way they are

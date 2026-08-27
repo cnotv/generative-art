@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platformer Starter</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #101014;
+      }
+      canvas {
+        display: block;
+      }
+      p {
+        position: fixed;
+        bottom: 1rem;
+        left: 1rem;
+        margin: 0;
+        color: #fff;
+        font:
+          14px system-ui,
+          sans-serif;
+        text-shadow: 0 1px 2px #000;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <p>WASD or arrow keys to move, space to jump</p>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

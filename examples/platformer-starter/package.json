@@ -1,0 +1,23 @@
+{
+  "name": "@webgamekit/example-platformer-starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
+    "@webgamekit/animation": "workspace:*",
+    "@webgamekit/controls": "workspace:*",
+    "@webgamekit/threejs": "workspace:*",
+    "three": "^0.178.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vite-plugin-wasm": "^3.3.0"
+  }
+}

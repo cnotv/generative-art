@@ -22,6 +22,17 @@ const packages = [
 ]
 const allowedHosts = ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
 
+// The starters are standalone Vite apps, and the playground also runs them in a frame. The dev
+// server already serves any HTML below the root; a build only emits theirs if it is an entry.
+const playableExamples = ['platformer-starter', 'runner-starter']
+
+const playableExampleInputs = Object.fromEntries(
+  playableExamples.map((example) => [
+    example,
+    fileURLToPath(new URL(`./examples/${example}/index.html`, import.meta.url))
+  ])
+)
+
 const packageAliases = Object.fromEntries(
   packages.map((package_) => [
     `@webgamekit/${package_}`,
@@ -64,7 +75,11 @@ export default defineConfig({
     target: 'esnext',
     sourcemap: true,
     rollupOptions: {
-      treeshake: false
+      treeshake: false,
+      input: {
+        app: fileURLToPath(new URL('./index.html', import.meta.url)),
+        ...playableExampleInputs
+      }
     }
   },
   optimizeDeps: {
