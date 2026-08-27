@@ -26,6 +26,9 @@
   "Materials List": {
     "description": "Interactive showcase of all Three.js PBR material types with live property controls."
   },
+  "Mixed Reality Map": {
+    "description": "Names the shops, landmarks and streets around you over the phone camera, placed where they actually stand."
+  },
   "Model Animation": {
     "description": "Load and preview animated 3D models with playback controls."
   },

@@ -1,6 +1,7 @@
 import type {
   ControlMapping,
   ControlHandlers,
+  DeviceAim,
   GravityDirection,
   MotionTilt,
   MotionReading
@@ -21,6 +22,54 @@ const DIRECTION_TRIGGERS = {
 
 type OrientationPermissionRequest = () => Promise<'granted' | 'denied'>
 
+const FULL_TURN_DEGREES = 360
+
+/**
+ * Where the device's rear camera is pointing, and how far the horizon is turned on its screen.
+ *
+ * Taken from the orientation matrix rather than from the reported angles, for the same reason
+ * `getDeviceGravity` is: a phone held up to look through sits at roughly ninety degrees of
+ * pitch, which is exactly where the Euler angles lock and the heading stops responding. The
+ * direction the camera faces is a plain vector and has no such fault, so both the bearing and
+ * the pitch are read off it.
+ *
+ * WebKit reports a relative `alpha` alongside an absolute `webkitCompassHeading`, so the
+ * compass reading, when there is one, replaces `alpha` before any of this rather than being
+ * blended in afterwards, which keeps one path through the maths for every platform.
+ * @param reading The latest reading
+ * @returns Bearing, pitch and roll in degrees
+ */
+export const getDeviceAim = ({ alpha, beta, gamma, compassHeading }: MotionReading): DeviceAim => {
+  const absoluteAlpha = compassHeading === null ? alpha : FULL_TURN_DEGREES - compassHeading
+  const a = absoluteAlpha * DEGREES_TO_RADIANS
+  const b = beta * DEGREES_TO_RADIANS
+  const g = gamma * DEGREES_TO_RADIANS
+  const [cosA, sinA] = [Math.cos(a), Math.sin(a)]
+  const [cosB, sinB] = [Math.cos(b), Math.sin(b)]
+  const [cosG, sinG] = [Math.cos(g), Math.sin(g)]
+
+  // The camera looks out of the back of the screen, along the device's negative Z, so its
+  // world direction is the third column of the Z-X'-Y'' rotation matrix, negated. World axes
+  // are east, north and up.
+  const east = -(cosA * sinG + sinA * sinB * cosG)
+  const north = -(sinA * sinG - cosA * sinB * cosG)
+  const up = -cosB * cosG
+
+  // World up, expressed in the device's own axes, is the matrix's third row. Its shadow on the
+  // screen plane is the direction a plumb line would hang, which is what the horizon is square
+  // to; flat on a table it vanishes, and there is no horizon to be square to either.
+  const screenRight = -cosB * sinG
+  const screenUp = sinB
+
+  return {
+    headingDegrees:
+      (((Math.atan2(east, north) * RADIANS_TO_DEGREES) % FULL_TURN_DEGREES) + FULL_TURN_DEGREES) %
+      FULL_TURN_DEGREES,
+    pitchDegrees: Math.asin(Math.max(-1, Math.min(1, up))) * RADIANS_TO_DEGREES,
+    rollDegrees: Math.atan2(screenRight, screenUp) * RADIANS_TO_DEGREES
+  }
+}
+
 export interface MotionController {
   bind: () => void
   unbind: () => void
@@ -29,6 +78,7 @@ export interface MotionController {
   requestPermission: () => Promise<'granted' | 'denied' | 'unsupported'>
   getTilt: () => MotionTilt
   getReading: () => MotionReading | null
+  getAim: () => DeviceAim | null
   isReceiving: () => boolean
   getPromptCount: () => number
 }
@@ -222,9 +272,14 @@ export function createMotionController(
     const orientation = event as DeviceOrientationEvent
     if (orientation.beta === null && orientation.gamma === null) return
 
+    const { webkitCompassHeading } = orientation as DeviceOrientationEvent & {
+      webkitCompassHeading?: number
+    }
     const reading: MotionReading = {
+      alpha: orientation.alpha ?? 0,
       beta: orientation.beta ?? 0,
-      gamma: orientation.gamma ?? 0
+      gamma: orientation.gamma ?? 0,
+      compassHeading: typeof webkitCompassHeading === 'number' ? webkitCompassHeading : null
     }
     state.reading = reading
     state.receiving = true
@@ -288,6 +343,7 @@ export function createMotionController(
     requestPermission,
     getTilt: () => state.tilt,
     getReading: () => state.reading,
+    getAim: () => (state.reading ? getDeviceAim(state.reading) : null),
     isReceiving: () => state.receiving,
     getPromptCount: () => state.promptCount
   }

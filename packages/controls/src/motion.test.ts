@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   createMotionController,
+  getDeviceAim,
   getDeviceGravity,
   getLevelTilt,
   rotateToScreenFrame
@@ -16,9 +17,14 @@ const MOTION_MAPPING: ControlMapping = {
   }
 }
 
-const sendOrientation = (beta: number, gamma: number, eventName = 'deviceorientation'): void => {
+const sendOrientation = (
+  beta: number,
+  gamma: number,
+  eventName = 'deviceorientation',
+  extras: Record<string, number> = {}
+): void => {
   const event = new Event(eventName)
-  Object.assign(event, { beta, gamma, alpha: 0 })
+  Object.assign(event, { beta, gamma, alpha: 0 }, extras)
   window.dispatchEvent(event)
 }
 
@@ -308,7 +314,12 @@ describe('createMotionController', () => {
 
     sendOrientation(61, -3)
 
-    expect(controller.getReading()).toEqual({ beta: 61, gamma: -3 })
+    expect(controller.getReading()).toEqual({
+      alpha: 0,
+      beta: 61,
+      gamma: -3,
+      compassHeading: null
+    })
     controller.unbind()
   })
 
@@ -413,6 +424,115 @@ describe('prompt invocation counting', () => {
     await controller.requestPermission()
 
     expect(controller.getPromptCount()).toBe(0)
+    controller.unbind()
+  })
+})
+
+describe('getDeviceAim', () => {
+  const upright = { beta: 90, gamma: 0, compassHeading: null }
+
+  it('looks along the horizon from a phone held upright', () => {
+    const aim = getDeviceAim({ alpha: 0, ...upright })
+
+    expect(aim.headingDegrees).toBeCloseTo(0)
+    expect(aim.pitchDegrees).toBeCloseTo(0)
+  })
+
+  it.each([
+    [0, 0],
+    [90, 270],
+    [180, 180],
+    [270, 90]
+  ])('turns an alpha of %i degrees into a compass heading of %i', (alpha, expected) => {
+    const aim = getDeviceAim({ alpha, ...upright })
+
+    expect(aim.headingDegrees).toBeCloseTo(expected)
+  })
+
+  it.each([
+    [-90, 90],
+    [360, 0],
+    [720, 0]
+  ])('folds an alpha of %i degrees back into a single turn', (alpha, expected) => {
+    const aim = getDeviceAim({ alpha, ...upright })
+
+    expect(aim.headingDegrees).toBeCloseTo(expected)
+  })
+
+  it('reads a phone lying face up as looking straight down', () => {
+    const aim = getDeviceAim({ alpha: 0, beta: 0, gamma: 0, compassHeading: null })
+
+    expect(aim.pitchDegrees).toBeCloseTo(-90)
+  })
+
+  it('reads a phone tipped back past upright as looking above the horizon', () => {
+    const aim = getDeviceAim({ alpha: 0, beta: 120, gamma: 0, compassHeading: null })
+
+    expect(aim.pitchDegrees).toBeCloseTo(30)
+  })
+
+  it('prefers an absolute compass reading over a relative alpha', () => {
+    const aim = getDeviceAim({ alpha: 0, beta: 90, gamma: 0, compassHeading: 90 })
+
+    expect(aim.headingDegrees).toBeCloseTo(90)
+  })
+
+  it('holds the horizon level while the phone is upright', () => {
+    const aim = getDeviceAim({ alpha: 0, ...upright })
+
+    expect(aim.rollDegrees).toBeCloseTo(0)
+  })
+
+  it.each([
+    ['clockwise', 270, 90, -90],
+    ['anticlockwise', 90, -90, 90]
+  ])(
+    'turns the horizon against a phone rolled %s into landscape',
+    (_direction, alpha, gamma, expected) => {
+      const aim = getDeviceAim({ alpha, beta: 0, gamma, compassHeading: null })
+
+      expect(aim.headingDegrees).toBeCloseTo(0)
+      expect(aim.rollDegrees).toBeCloseTo(expected)
+    }
+  )
+})
+
+describe('motion controller aim', () => {
+  const noopHandlers: ControlHandlers = {
+    onAction: () => undefined,
+    onRelease: () => undefined,
+    onInput: () => undefined
+  }
+
+  beforeEach(() => {
+    stubOrientationSupport()
+    setScreenAngle(0)
+  })
+
+  it('reports no aim before any reading has arrived', () => {
+    const controller = createMotionController({ current: MOTION_MAPPING }, noopHandlers)
+
+    expect(controller.getAim()).toBeNull()
+  })
+
+  it('aims by the latest reading', () => {
+    const controller = createMotionController({ current: MOTION_MAPPING }, noopHandlers)
+    controller.bind()
+
+    sendOrientation(90, 0, 'deviceorientation', { alpha: 180 })
+
+    expect(controller.getAim()?.headingDegrees).toBeCloseTo(180)
+    controller.unbind()
+  })
+
+  it('keeps the compass heading the device reported alongside the raw angles', () => {
+    const controller = createMotionController({ current: MOTION_MAPPING }, noopHandlers)
+    controller.bind()
+
+    sendOrientation(90, 0, 'deviceorientation', { alpha: 0, webkitCompassHeading: 270 })
+
+    expect(controller.getReading()?.compassHeading).toBe(270)
+    expect(controller.getAim()?.headingDegrees).toBeCloseTo(270)
     controller.unbind()
   })
 })

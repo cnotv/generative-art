@@ -12,8 +12,24 @@ export interface ControlMapping {
 
 /** A raw orientation reading in the device's own frame, before screen rotation is applied. */
 export interface MotionReading {
+  alpha: number
   beta: number
   gamma: number
+  /** WebKit's absolute compass bearing, where the platform reports one; null elsewhere. */
+  compassHeading: number | null
+}
+
+/**
+ * Where the device's rear camera points, and how far the world's horizon is turned on screen.
+ * All three are degrees.
+ */
+export interface DeviceAim {
+  /** Compass bearing of the view direction, 0 at north and increasing clockwise. */
+  headingDegrees: number
+  /** How far the view is raised above the horizon, negative when it points at the ground. */
+  pitchDegrees: number
+  /** Clockwise turn to apply to screen content for it to stay level with the world. */
+  rollDegrees: number
 }
 
 /** A unit vector pointing down, in the device's own axes. */
@@ -89,6 +105,8 @@ export interface MotionControls {
   getTilt: () => MotionTilt
   /** The latest raw reading, for diagnostics. */
   getReading: () => MotionReading | null
+  /** Where the rear camera points, for views that draw the world rather than steer in it. */
+  getAim: () => DeviceAim | null
   isReceiving: () => boolean
   /** How many times the platform permission prompt has actually been invoked. */
   getPromptCount: () => number

@@ -12,6 +12,7 @@ export type {
   ControlSkin,
   ControlSkinId,
   ControlPreset,
+  DeviceAim,
   MotionControls,
   MotionReading,
   MotionTilt
@@ -22,7 +23,7 @@ export type { FauxPadController, FauxPadPosition, FauxPadOptions } from './fauxp
 export { DEFAULT_BUTTON_MAP } from './constants'
 export { createControls, isMobile } from './core'
 export { createFauxPadController } from './fauxpad'
-export { createMotionController, rotateToScreenFrame } from './motion'
+export { createMotionController, getDeviceAim, rotateToScreenFrame } from './motion'
 export type { MotionController, MotionOptions } from './motion'
 export { lockScreenOrientation, unlockScreenOrientation } from './orientation'
 export type { FauxPadOptions as FauxPadControllerOptions } from './fauxpad'
