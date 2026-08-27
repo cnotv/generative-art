@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { cameraFollowPlayer } from '@webgamekit/threejs'
+import { cameraFollowPlayer, syncMeshWithBody } from '@webgamekit/threejs'
 import type { ComplexModel } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 
@@ -88,10 +88,7 @@ export const createPhysicsSyncAction = (
   action: () => {
     const mesh = getMesh()
     if (!mesh) return
-    const pos = mesh.userData.body.translation()
-    mesh.position.set(pos.x, pos.y + visualYOffset, pos.z)
-    const rot = mesh.userData.body.rotation()
-    mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
+    syncMeshWithBody(mesh, visualYOffset)
   }
 })
 
