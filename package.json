@@ -59,6 +59,7 @@
     "@webgamekit/multiplayer-p2p": "workspace:^",
     "@webgamekit/threejs": "workspace:^",
     "dat.gui": "^0.7.9",
+    "heic-to": "^1.5.2",
     "p5": "^1.9.0",
     "pinia": "^2.3.0",
     "socket.io-client": "^4.8.1",

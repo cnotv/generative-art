@@ -17,6 +17,8 @@ export type ConvertResult = {
   format: ImageFormat
   originalSize: number
   convertedSize: number
+  sourceWidth: number
+  sourceHeight: number
   width: number
   height: number
 }
@@ -44,4 +46,4 @@ export const DEFAULT_FORMAT: ImageFormat = 'image/webp'
 export const DEFAULT_QUALITY = 85
 export const DEFAULT_MAX_DIMENSION = 0
 export const DEFAULT_SCALE_PCT = 100
-export const ACCEPTED_TYPES = 'image/*'
+export const ACCEPTED_TYPES = 'image/*,.heic,.heif'

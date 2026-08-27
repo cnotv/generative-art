@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, onUnmounted } from 'vue'
 import ConverterWorker from './imageConverter.worker?worker'
 import DropZone from './DropZone.vue'
+import { isHeicBuffer } from './heic'
 import {
   FORMAT_OPTIONS,
   DEFAULT_FORMAT,
@@ -21,7 +22,7 @@ type FileEntry = {
   originalSize: number
   mimeType: string
   buffer: ArrayBuffer
-  previewUrl: string
+  previewUrl?: string
   status: 'pending' | 'processing' | 'done' | 'error'
   convertedBlob?: Blob
   convertedSize?: number
@@ -63,6 +64,9 @@ const savings = (entry: FileEntry): string => {
 
 const resultExtension = computed(() => selectedFormatOption.value.extension)
 
+/** A HEIF source has no preview until the worker has decoded it, so the result stands in. */
+const thumbnailUrl = (entry: FileEntry): string | undefined => entry.previewUrl ?? entry.downloadUrl
+
 const downloadName = (entry: FileEntry): string => {
   const base = entry.name.replace(/\.[^.]+$/, '')
   return `${base}.${resultExtension.value}`
@@ -83,6 +87,8 @@ worker.onmessage = (event: MessageEvent<ConvertResult | ConvertError>) => {
   const blob = new Blob([result.buffer], { type: result.format })
   entry.convertedBlob = blob
   entry.convertedSize = result.convertedSize
+  entry.imageWidth = result.sourceWidth
+  entry.imageHeight = result.sourceHeight
   entry.convertedWidth = result.width
   entry.convertedHeight = result.height
   entry.downloadUrl = URL.createObjectURL(blob)
@@ -111,33 +117,18 @@ const processEntry = (entry: FileEntry): void => {
   worker.postMessage(request)
 }
 
-const readFile = (file: File): Promise<FileEntry> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const buffer = e.target?.result as ArrayBuffer
-      const previewUrl = URL.createObjectURL(file)
-      const img = new Image()
-      const entry: FileEntry = {
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        originalSize: file.size,
-        mimeType: file.type,
-        buffer,
-        previewUrl,
-        status: 'pending'
-      }
-      img.onload = () => {
-        entry.imageWidth = img.naturalWidth
-        entry.imageHeight = img.naturalHeight
-        resolve(entry)
-      }
-      img.onerror = () => resolve(entry)
-      img.src = previewUrl
-    }
-    reader.onerror = () => reject(reader.error)
-    reader.readAsArrayBuffer(file)
-  })
+const readFile = async (file: File): Promise<FileEntry> => {
+  const buffer = await file.arrayBuffer()
+  return {
+    id: `${Date.now()}-${Math.random()}`,
+    name: file.name,
+    originalSize: file.size,
+    mimeType: file.type,
+    buffer,
+    previewUrl: isHeicBuffer(buffer) ? undefined : URL.createObjectURL(file),
+    status: 'pending'
+  }
+}
 
 const addFiles = async (fileList: FileList): Promise<void> => {
   hasScrolledToResults.value = false
@@ -174,7 +165,7 @@ const downloadAll = (): void => {
 const removeEntry = (id: string): void => {
   const entry = files.value.find((f) => f.id === id)
   if (entry) {
-    URL.revokeObjectURL(entry.previewUrl)
+    if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl)
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
   }
   files.value = files.value.filter((f) => f.id !== id)
@@ -182,7 +173,7 @@ const removeEntry = (id: string): void => {
 
 const clearAll = (): void => {
   files.value.forEach((entry) => {
-    URL.revokeObjectURL(entry.previewUrl)
+    if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl)
     if (entry.downloadUrl) URL.revokeObjectURL(entry.downloadUrl)
   })
   files.value = []
@@ -312,7 +303,13 @@ onUnmounted(() => {
 
     <ul v-if="files.length > 0" ref="resultsReference" class="image-converter__file-list">
       <li v-for="entry in files" :key="entry.id" class="image-converter__file-item">
-        <img :src="entry.previewUrl" :alt="entry.name" class="image-converter__thumb" />
+        <img
+          v-if="thumbnailUrl(entry)"
+          :src="thumbnailUrl(entry)"
+          :alt="entry.name"
+          class="image-converter__thumb"
+        />
+        <div v-else class="image-converter__thumb" aria-hidden="true" />
 
         <div class="image-converter__file-info">
           <span class="image-converter__file-name" :title="entry.name">{{ entry.name }}</span>

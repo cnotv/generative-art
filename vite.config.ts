@@ -54,6 +54,12 @@ export default defineConfig({
       }
     }
   },
+  worker: {
+    // Vite's default worker format is `iife`, which cannot code-split and so would inline
+    // the HEIF decoder into the converter worker for everyone. ES workers let it stay a
+    // separate chunk, fetched only when a HEIF file actually turns up.
+    format: 'es'
+  },
   build: {
     target: 'esnext',
     sourcemap: true,
