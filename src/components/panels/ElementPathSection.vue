@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import SchemaControls from './ConfigControls.vue'
 import IconButton from '@/components/IconButton.vue'
 import { Input } from '@/components/ui/input'
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent
+} from '@/components/ui/accordion'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import { logicClassifyPathSegment, type PathStepType } from '@webgamekit/logic'
 import type { PathEntry, PathConfig } from '@/stores/debugScene'
@@ -30,10 +35,6 @@ interface Properties {
 const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
-
-// Collapsed to start: a path's waypoint table and its dozen settings are longer than everything
-// else on an element put together, and push whatever sits above them off the panel.
-const expanded = ref(false)
 
 /** True for the waypoint row currently being interacted with in the viewport. */
 const isActiveRow = (index: number): boolean => {
@@ -79,117 +80,103 @@ const pathSchema = {
 </script>
 
 <template>
-  <div class="element-path-section">
-    <div class="element-path-section__header">
-      <IconButton
-        panel-colors
-        size="xs"
-        :title="expanded ? 'Collapse path' : 'Expand path'"
-        @click.stop="expanded = !expanded"
-      >
-        <ChevronDown v-if="expanded" />
-        <ChevronRight v-else />
-      </IconButton>
-      <span class="element-path-section__title">Path ({{ path.waypoints.length }})</span>
-      <IconButton panel-colors size="xs" title="Add waypoint" @click.stop="handleAddWaypoint">
-        <Plus />
-      </IconButton>
-      <IconButton
-        panel-colors
-        size="xs"
-        title="Remove path"
-        @click.stop="debugSceneStore.removePath(path.id)"
-      >
-        <Trash2 />
-      </IconButton>
-    </div>
-
-    <div v-if="expanded" class="element-path-section__content">
-      <div
-        class="element-path-section__grid"
-        :class="{ 'element-path-section__grid--stepped': path.stepped }"
-      >
-        <div class="element-path-section__head">
-          <span></span>
-          <span v-if="path.stepped"></span>
-          <span class="element-path-section__axis-head">x</span>
-          <span class="element-path-section__axis-head">y</span>
-          <span class="element-path-section__axis-head">z</span>
-          <span></span>
-        </div>
-        <div
-          v-for="(position, index) in path.waypoints"
-          :key="index"
-          class="element-path-section__row"
-          :class="{ 'element-path-section__row--active': isActiveRow(index) }"
-        >
-          <span class="element-path-section__index">{{ index + 1 }}</span>
-          <span
-            v-if="path.stepped"
-            class="element-path-section__step"
-            :title="STEP_DESCRIPTIONS[stepTypeAt(path, index)]"
+  <!-- Collapsed to start: a path's waypoint table and its dozen settings are longer than
+       everything else on an element put together, and push whatever sits above them off
+       the panel. -->
+  <Accordion type="multiple" class="element-path-section">
+    <AccordionItem value="path">
+      <AccordionTrigger>Path ({{ path.waypoints.length }})</AccordionTrigger>
+      <AccordionContent>
+        <div class="element-path-section__content">
+          <div class="element-path-section__actions">
+            <IconButton panel-colors size="xs" title="Add waypoint" @click="handleAddWaypoint">
+              <Plus />
+            </IconButton>
+            <IconButton
+              panel-colors
+              size="xs"
+              title="Remove path"
+              @click="debugSceneStore.removePath(path.id)"
+            >
+              <Trash2 />
+            </IconButton>
+          </div>
+          <div
+            class="element-path-section__grid"
+            :class="{ 'element-path-section__grid--stepped': path.stepped }"
           >
-            {{ stepTypeAt(path, index) }}
-          </span>
-          <Input
-            v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const"
-            :key="axis"
-            class="element-path-section__input"
-            type="number"
-            :model-value="position[axisIndex as 0 | 1 | 2]"
-            @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
+            <div class="element-path-section__head">
+              <span></span>
+              <span v-if="path.stepped"></span>
+              <span class="element-path-section__axis-head">x</span>
+              <span class="element-path-section__axis-head">y</span>
+              <span class="element-path-section__axis-head">z</span>
+              <span></span>
+            </div>
+            <div
+              v-for="(position, index) in path.waypoints"
+              :key="index"
+              class="element-path-section__row"
+              :class="{ 'element-path-section__row--active': isActiveRow(index) }"
+            >
+              <span class="element-path-section__index">{{ index + 1 }}</span>
+              <span
+                v-if="path.stepped"
+                class="element-path-section__step"
+                :title="STEP_DESCRIPTIONS[stepTypeAt(path, index)]"
+              >
+                {{ stepTypeAt(path, index) }}
+              </span>
+              <Input
+                v-for="(axis, axisIndex) in ['x', 'y', 'z'] as const"
+                :key="axis"
+                class="element-path-section__input"
+                type="number"
+                :model-value="position[axisIndex as 0 | 1 | 2]"
+                @update:model-value="handleUpdateWaypoint(index, axisIndex as 0 | 1 | 2, $event)"
+              />
+              <IconButton
+                panel-colors
+                size="xs"
+                title="Remove waypoint"
+                @click="handleDeleteWaypoint(index)"
+              >
+                <Trash2 />
+              </IconButton>
+            </div>
+          </div>
+
+          <SchemaControls
+            :schema="pathSchema"
+            :get-value="(key: string) => (path.config as Record<string, unknown>)[key]"
+            :on-update="handleConfigUpdate"
+            :on-action="
+              (name: string) => {
+                if (name === 'reset') path.handlers.onReset()
+              }
+            "
           />
-          <IconButton
-            panel-colors
-            size="xs"
-            title="Remove waypoint"
-            @click="handleDeleteWaypoint(index)"
-          >
-            <Trash2 />
-          </IconButton>
         </div>
-      </div>
-
-      <SchemaControls
-        :schema="pathSchema"
-        :get-value="(key: string) => (path.config as Record<string, unknown>)[key]"
-        :on-update="handleConfigUpdate"
-        :on-action="
-          (name: string) => {
-            if (name === 'reset') path.handlers.onReset()
-          }
-        "
-      />
-    </div>
-  </div>
+      </AccordionContent>
+    </AccordionItem>
+  </Accordion>
 </template>
 
 <style scoped>
 .element-path-section {
-  display: flex;
-  flex-direction: column;
   margin-top: var(--spacing-2);
-  border-top: 1px solid var(--color-border);
-}
-
-.element-path-section__header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.element-path-section__title {
-  flex: 1;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  color: var(--color-foreground);
 }
 
 .element-path-section__content {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  margin-top: var(--spacing-1-5);
+}
+
+.element-path-section__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-1);
 }
 
 .element-path-section__grid {

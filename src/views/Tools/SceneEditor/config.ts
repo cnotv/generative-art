@@ -217,6 +217,35 @@ export const groundSchema = {
   }
 }
 
+export const environmentLightSchema = {
+  intensity: { min: 0, max: 3, step: 0.05, label: 'Intensity' }
+}
+
+export const hemisphereLightSchema = {
+  skyColor: { color: true, label: 'Sky Color' },
+  groundColor: { color: true, label: 'Ground Color' },
+  intensity: { min: 0, max: 5, step: 0.05, label: 'Intensity' }
+}
+
+export const pointLightSchema = {
+  color: { color: true, label: 'Color' },
+  intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' }
+}
+
+export const spotLightSchema = {
+  color: { color: true, label: 'Color' },
+  intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' },
+  angle: { min: 0, max: 1.57, step: 0.01, label: 'Angle' },
+  penumbra: { min: 0, max: 1, step: 0.05, label: 'Penumbra' }
+}
+
+export const rectAreaLightSchema = {
+  color: { color: true, label: 'Color' },
+  intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' },
+  width: { min: 1, max: 100, step: 1, label: 'Width' },
+  height: { min: 1, max: 100, step: 1, label: 'Height' }
+}
+
 export const lightsSchema = {
   ambient: {
     color: { color: true, label: 'Color' },

@@ -112,13 +112,19 @@ Configure scene with camera, lights, ground, and sky.
     lookAt?: CoordinateTuple | THREE.Vector3
   },
   lights?: {
-    ambient?: { color?: number, intensity?: number },
-    directional?: {
+    environment?: false | { texture?: string, intensity?: number },
+    ambient?: false | { color?: number, intensity?: number },
+    directional?: false | {
       color?: number,
       intensity?: number,
       position?: CoordinateTuple,
-      castShadow?: boolean
-    }
+      castShadow?: boolean,
+      helper?: boolean
+    },
+    hemisphere?: { colors?: [number, number], intensity?: number, helper?: boolean },
+    point?: { color?: number, intensity?: number, position?: CoordinateTuple, helper?: boolean },
+    spot?: { color?: number, intensity?: number, angle?: number, penumbra?: number, helper?: boolean },
+    rectArea?: { color?: number, intensity?: number, width?: number, height?: number, helper?: boolean }
   },
   ground?: false | {
     size?: CoordinateTuple,
@@ -556,6 +562,88 @@ Create an instanced mesh for rendering many identical objects efficiently.
 import { instanceMatrixMesh } from '@webgamekit/threejs'
 
 const trees = instanceMatrixMesh(scene, geometry, material, treePositions)
+```
+
+## Lights
+
+All light logic lives in the `lights` module. Two terms are distinct here:
+
+- **Direct lights**: the ambient, directional and hemisphere lights `getLights` creates from
+  `SetupConfig.lights`.
+- **Environment light**: indirect, image-based illumination applied through
+  `scene.environment`, lighting every PBR material from all directions. Not to be confused
+  with `getScene`, the renderer and physics bootstrap.
+
+### getLights(scene, config?)
+
+Create the lights a scene declares, and return every one of them:
+`{ ambientLight, directionalLight, hemisphereLight, pointLight, spotLight, rectAreaLight }`.
+
+Ambient and directional are made unless the config sets them to `false`; hemisphere, point,
+spot and rect area are made only when the config names them. Each takes a `helper: true` to
+add its matching Three.js helper, so a scene never hand-builds one. The directional light
+always receives a large shadow frustum, even when the `shadow` key is omitted, and the point
+and spot lights get a local one sized for their shorter reach.
+
+```typescript
+getLights(scene, {
+  ambient: { intensity: 0.2 },
+  directional: { intensity: 10, position: [5, 10, 5], helper: true },
+  point: { intensity: 1, position: [5, 5, 5] },
+  spot: { intensity: 1, position: [5, 5, 5], angle: Math.PI / 6 },
+  rectArea: { intensity: 1, width: 10, height: 10, position: [5, 5, 5], lookAt: [0, 0, 0] }
+})
+```
+
+### getEnvironmentLight(renderer, scene, config?)
+
+Apply an environment light and return its texture, reusable as a material `envMap`. With no
+config it bakes the neutral `RoomEnvironment`; `texture` loads an equirectangular image
+instead, and `intensity` maps to `scene.environmentIntensity`.
+
+```typescript
+import { getEnvironmentLight } from '@webgamekit/threejs'
+
+getEnvironmentLight(renderer, scene, { intensity: 0.35 })
+```
+
+Through `setup()`, the same config sits under `lights.environment` and is opt in: scenes
+without the key render exactly as before.
+
+### updateLights(scene, config) and lightPresets
+
+`updateLights` applies a whole light rig onto the scene: every group the config names
+(`ambient`, `directional`, `hemisphere`) is updated in place, or created with the standard
+names when the scene lacks it. `point`, `spot` and `rectArea` are updated when the scene
+already has them and never created, since a scene without a spotlight did not ask for one. An `environment` entry scales `scene.environmentIntensity`,
+and a `sky` entry recolours the `sky` mesh and the scene background. `lightPresets` holds
+one such rig per time of day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`):
+a hemisphere carrying sky and ground bounce, a sun or moon at that hour's elevation and
+colour temperature, a low flat ambient, the environment intensity and the sky colour.
+
+```typescript
+import { updateLights, lightPresets } from '@webgamekit/threejs'
+
+updateLights(scene, lightPresets.dusk)
+```
+
+![The same scene under each of the four day time presets](/img/lights/day-presets.webp)
+
+In the playground these presets are the Presets section of the Lights element in the
+Elements panel, which holds the whole rig: the four lights and the sky.
+
+![The Lights element, with the preset grid, the transition player and a collapsed section per light](/img/lights/lights-panel.webp)
+
+### blendLightPresets(from, to, alpha)
+
+Interpolate between two rigs, colours through `THREE.Color` and intensities and the sun
+position linearly. Feed the result to `updateLights` each frame to animate a day cycle;
+the playground's transition player does exactly that.
+
+```typescript
+import { blendLightPresets, lightPresets, updateLights } from '@webgamekit/threejs'
+
+updateLights(scene, blendLightPresets(lightPresets.dusk, lightPresets.night, 0.5))
 ```
 
 ## Texture Utilities

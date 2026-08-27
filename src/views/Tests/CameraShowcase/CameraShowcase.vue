@@ -27,6 +27,7 @@ import {
 import { usePathInteraction } from '@/composables/usePathInteraction'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { usePanelsStore } from '@/stores/panels'
+import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { pathGetEasingProgress, type EasingName } from '@/utils/pathEasing'
 import type { PathConfig } from '@/stores/debugScene'
 import {
@@ -61,6 +62,7 @@ const store = useSceneViewStore()
 const debugSceneStore = useDebugSceneStore()
 const elementPropertiesStore = useElementPropertiesStore()
 const panelsStore = usePanelsStore()
+const cameraConfigStore = useCameraConfigStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 const selectedCaseValue = ref<CameraCase>('path')
@@ -265,11 +267,36 @@ const startIntroPath = (): void => {
   })
 }
 
+/** Stop the sweep and leave the camera wherever it stands. */
+const stopIntroPath = (): void => {
+  introPath?.cancel()
+  introPath = null
+}
+
+/**
+ * Taking hold of the camera ends the sweep: a path that keeps flying while someone drags or
+ * rotates the camera fights them for it every frame.
+ */
+const stopIntroPathOnCameraInput = (): void => {
+  if (introPath) stopIntroPath()
+}
+
+/**
+ * Only a drag that can actually move the camera counts. With orbit switched off, a press on
+ * the canvas is aimed at a waypoint or an element, and killing the sweep for that is a
+ * surprise rather than a handover.
+ */
+const stopIntroPathOnDrag = (): void => {
+  if (toRaw(store.orbitReference)?.enabled) stopIntroPathOnCameraInput()
+}
+
 watch(selectedCaseValue, (value) => {
   if (toCameraCase(value) !== 'path') {
-    introPath?.cancel()
+    stopIntroPath()
     return
   }
+  // Picking the sweep plays it as a loop; the Loop control can still stop it afterwards.
+  pathConfig.loop = true
   // Unticked rather than overridden: the tube runs along the camera's own line, so flying it
   // means looking at the inside of it. Saying so through the control that already governs this
   // leaves the choice visible, and re-tickable, instead of hidden in a condition.
@@ -283,8 +310,16 @@ watch(
   applyPathVisibility
 )
 
+/** Camera panel actions that reposition or re-aim the camera by hand. */
+const CAMERA_MOVE_ACTIONS = new Set(['rotateActiveSlot', 'resetCameraToSceneDefault'])
+
+const stopSweepOnPanelMove = cameraConfigStore.$onAction(({ name }) => {
+  if (CAMERA_MOVE_ACTIONS.has(name)) stopIntroPathOnCameraInput()
+})
+
 onMounted(async () => {
   if (!canvas.value) return
+  canvas.value.addEventListener('pointerdown', stopIntroPathOnDrag)
 
   await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: false, showScene: true },
@@ -472,12 +507,13 @@ const registerCameraPath = (): void => {
 }
 
 onUnmounted(() => {
+  canvas.value?.removeEventListener('pointerdown', stopIntroPathOnDrag)
+  stopSweepOnPanelMove()
   pathInteraction.unmount()
   followPanel?.teardown()
   followPanel = null
   destroyControls()
-  introPath?.cancel()
-  introPath = null
+  stopIntroPath()
   const scene = toRaw(store.threeScene)
   if (pathLine && scene) pathRemoveVisualization(scene, pathLine)
   if (scene) pathRemoveWaypointNodes(scene, pathNodes)

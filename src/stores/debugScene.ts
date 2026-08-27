@@ -6,6 +6,9 @@ import type { CoordinateTuple } from '@webgamekit/threejs'
 import { usePerfMetricsStore } from './perfMetrics'
 import { useElementPropertiesStore, type ElementPropertiesConfig } from './elementProperties'
 import { registerCameraProperties } from '@/utils/cameraProperties'
+import { numberDuplicateNames } from '@/utils/elementNames'
+import { LIGHT_ELEMENT_NAMES } from '@/utils/sceneLights'
+import { useSceneViewStore } from '@/stores/sceneView'
 
 const GENERIC_THREE_TYPES = new Set([
   'Mesh',
@@ -35,6 +38,8 @@ export interface SceneElement {
   hidden?: boolean
   groupId?: string
   spawnId?: string
+  /** uuid of the Three.js object, so a numbered duplicate still resolves to its own object. */
+  objectId?: string
 }
 
 export interface SpawnEntry {
@@ -149,7 +154,7 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
     setCamera?: (newCamera: THREE.Camera) => OrbitControls | null
   }
 
-  type ObjectEntry = { name?: string; type: string; visible?: boolean }
+  type ObjectEntry = { name?: string; type: string; visible?: boolean; parent?: unknown }
 
   const resolveRawNames = (objects: ObjectEntry[]): string[] =>
     objects.map((element) => {
@@ -158,13 +163,31 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
       return rawName
     })
 
-  const resolveElementNames = (objects: ObjectEntry[]): SceneElement[] => {
-    const rawNames = resolveRawNames(objects)
-    return rawNames.map((rawName, index) => {
-      const previousCount = rawNames.slice(0, index).filter((n) => n === rawName).length
-      const name = previousCount === 0 ? rawName : `${rawName} (${previousCount + 1})`
-      return { name, type: objects[index].type, hidden: false }
-    })
+  const resolveElementNames = (objects: ObjectEntry[]): SceneElement[] =>
+    numberDuplicateNames(resolveRawNames(objects)).map((name, index) => ({
+      name,
+      type: objects[index].type,
+      hidden: false
+    }))
+
+  /**
+   * Put every light behind the one Lights element, as a scene the view store set up already
+   * does: a row per lamp is six rows saying what one panel says better. The scene goes to
+   * that store too, so the element has real lights to drive.
+   * @param objects - The scene children being registered
+   * @returns The Lights row, if any, and everything that still needs its own
+   */
+  const groupLights = (objects: ObjectEntry[]) => {
+    const isLight = (object: ObjectEntry) => LIGHT_ELEMENT_NAMES.has(object.name ?? '')
+    const lit = objects.filter(isLight)
+    const litScene = lit[0]?.parent as THREE.Scene | undefined
+    if (litScene) useSceneViewStore().adoptSceneLights(litScene)
+    return {
+      lightsElement: lit.length
+        ? ([{ name: 'Lights', type: 'Lights', hidden: false }] as SceneElement[])
+        : [],
+      rest: objects.filter((object) => !isLight(object))
+    }
   }
 
   const registerSceneElements = (
@@ -180,8 +203,14 @@ export const useDebugSceneStore = defineStore('debugScene', () => {
         Reflect.set(sceneObject, 'visible', !sceneObject.visible)
       }
     }
+    const { lightsElement, rest } = groupLights(objects)
+
     setSceneElements(
-      [{ name: 'Camera', type: camera.type, hidden: false }, ...resolveElementNames(objects)],
+      [
+        { name: 'Camera', type: camera.type, hidden: false },
+        ...lightsElement,
+        ...resolveElementNames(rest)
+      ],
       {
         onToggleVisibility: elementHandlers?.onToggleVisibility ?? defaultToggleVisibility,
         onRemove: elementHandlers?.onRemove ?? (() => {})

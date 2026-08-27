@@ -144,9 +144,9 @@ const handleTypeToggle = (type: 'perspective' | 'orthographic') => {
 </script>
 
 <template>
-  <!-- Properties and Recording stay shut: the presets and the follow rig are what a camera is
-       reached for, and two long sections below them push both off the panel. -->
-  <Accordion type="multiple" :default-value="['presets', 'following']">
+  <!-- Every section starts shut, as in the other elements: four open sections of controls
+       do not fit the panel together, and the one being reached for is never the same. -->
+  <Accordion type="multiple">
     <AccordionItem value="presets">
       <AccordionTrigger>Presets</AccordionTrigger>
       <AccordionContent>

@@ -2,8 +2,22 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import * as THREE from 'three'
-import { getTools, getCube, generateAreaPositions, SCENE_DEFAULTS } from '@webgamekit/threejs'
-import type { SetupConfig, CoordinateTuple, AreaConfig, OnProgress } from '@webgamekit/threejs'
+import {
+  getTools,
+  getCube,
+  generateAreaPositions,
+  SCENE_DEFAULTS,
+  updateLights,
+  lightPresets
+} from '@webgamekit/threejs'
+import type {
+  SetupConfig,
+  CoordinateTuple,
+  AreaConfig,
+  OnProgress,
+  LightPreset,
+  LightsConfig
+} from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { usePanelsStore } from '@/stores/panels'
 import { useViewPanelsStore } from '@/stores/viewPanels'
@@ -13,14 +27,16 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTextureGroupsStore } from '@/stores/textureGroups'
 import type { TextureGroup, GroupConfig } from '@/stores/textureGroups'
 import { addGroupMeshes, removeGroupMeshes } from '@/utils/groupMeshes'
-import { toggleObjectVisibility, replaceGeometry } from '@/utils/threeObjectUpdaters'
 import {
-  groundSchema,
-  lightsSchema,
-  skySchema,
-  configControls
-} from '@/views/Tools/SceneEditor/config'
+  toggleObjectVisibility,
+  replaceGeometry,
+  setSceneEnvironment
+} from '@/utils/threeObjectUpdaters'
+import { groundSchema, configControls } from '@/views/Tools/SceneEditor/config'
 import { registerCameraProperties as registerCameraPropertiesShared } from '@/utils/cameraProperties'
+import { createLightTransitionPlayer } from '@/utils/lightTransition'
+import { numberDuplicateNames } from '@/utils/elementNames'
+import { LIGHT_ELEMENT_NAMES, readLightsFromScene } from '@/utils/sceneLights'
 import { getNestedValue, setNestedValueImmutable } from '@/utils/nestedObjects'
 
 type Vec3 = { x: number; y: number; z: number }
@@ -138,12 +154,35 @@ const buildGroundConfigFromSetup = (config: SetupConfig): Record<string, unknown
   }
 }
 
+const DEFAULT_HEMISPHERE = { skyColor: 0xbfe3ff, groundColor: 0x8a8f7a }
+
+/**
+ * The panel keeps hemisphere colors as skyColor/groundColor while SetupConfig carries a
+ * tuple. Always present so the panel can offer all four lights: a scene without one gets
+ * it at zero intensity, which creates nothing and changes nothing until it is raised.
+ */
+const buildHemisphereConfig = (
+  hemisphereOverrides: { colors?: [number, number]; intensity?: number } | undefined
+): Record<string, unknown> => {
+  const colors = hemisphereOverrides?.colors
+  return {
+    hemisphere: {
+      skyColor: colors?.[0] ?? DEFAULT_HEMISPHERE.skyColor,
+      groundColor: colors?.[1] ?? DEFAULT_HEMISPHERE.groundColor,
+      intensity: hemisphereOverrides?.intensity ?? (colors ? 1 : 0)
+    }
+  }
+}
+
 const buildLightsConfigFromSetup = (config: SetupConfig): Record<string, unknown> => {
   const lightsOverrides = (
     config.lights && typeof config.lights === 'object' ? config.lights : {}
   ) as Record<string, unknown>
   const ambientOverrides = (lightsOverrides.ambient ?? {}) as Record<string, unknown>
   const directionalOverrides = (lightsOverrides.directional ?? {}) as Record<string, unknown>
+  const hemisphereOverrides = lightsOverrides.hemisphere as
+    | { colors?: [number, number]; intensity?: number }
+    | undefined
   const directionalPosition = (directionalOverrides.position ??
     SCENE_DEFAULTS.lights.directional.position) as number[]
   return {
@@ -156,7 +195,11 @@ const buildLightsConfigFromSetup = (config: SetupConfig): Record<string, unknown
         y: directionalPosition[1],
         z: directionalPosition[2]
       }
-    }
+    },
+    ...(lightsOverrides.environment && typeof lightsOverrides.environment === 'object'
+      ? { environment: { ...(lightsOverrides.environment as Record<string, unknown>) } }
+      : {}),
+    ...buildHemisphereConfig(hemisphereOverrides)
   }
 }
 
@@ -200,25 +243,231 @@ const applyGroundUpdate = (
   }
 }
 
-const applyLightsUpdate = (
-  path: string,
-  value: unknown,
-  ambientLightReference: Ref<THREE.Light | null>,
-  directionalLightReference: Ref<THREE.Light | null>
-) => {
-  const [group, field] = path.split('.')
-  if (group === 'ambient' && ambientLightReference.value) {
-    if (field === 'intensity') ambientLightReference.value.intensity = value as number
-    else if (field === 'color') ambientLightReference.value.color.set(value as number)
-  } else if (group === 'directional' && directionalLightReference.value) {
-    if (field === 'intensity') directionalLightReference.value.intensity = value as number
-    else if (field === 'color') directionalLightReference.value.color.set(value as number)
-    else if (field === 'position') {
-      const pos = value as Vec3
-      directionalLightReference.value.position.set(pos.x, pos.y, pos.z)
+type LightPanelReferences = {
+  lightsConfig: Ref<Record<string, unknown>>
+  skyConfig: Ref<Record<string, unknown>>
+  threeScene: Ref<THREE.Scene | null>
+  activeLightPreset: Ref<LightPreset | null>
+}
+
+/**
+ * Mirror an applied preset into the panel state so the light rows show what the preset
+ * set rather than the values from before it. The panel keeps the directional position as
+ * {x, y, z} and the hemisphere colors as skyColor/groundColor, while the preset carries
+ * tuples.
+ */
+const mirrorLightPresetIntoConfig = (
+  current: Record<string, unknown>,
+  presetConfig: (typeof lightPresets)[LightPreset]
+): Record<string, unknown> => ({
+  ...current,
+  ambient: {
+    ...(current.ambient as Record<string, unknown>),
+    ...presetConfig.ambient
+  },
+  directional: {
+    ...(current.directional as Record<string, unknown>),
+    ...presetConfig.directional,
+    ...(presetConfig.directional?.position
+      ? {
+          position: {
+            x: presetConfig.directional.position[0],
+            y: presetConfig.directional.position[1],
+            z: presetConfig.directional.position[2]
+          }
+        }
+      : {})
+  },
+  ...(presetConfig.hemisphere
+    ? {
+        hemisphere: {
+          ...(current.hemisphere as Record<string, unknown>),
+          ...(presetConfig.hemisphere.colors
+            ? {
+                skyColor: presetConfig.hemisphere.colors[0],
+                groundColor: presetConfig.hemisphere.colors[1]
+              }
+            : {}),
+          ...(presetConfig.hemisphere.intensity !== undefined
+            ? { intensity: presetConfig.hemisphere.intensity }
+            : {})
+        }
+      }
+    : {}),
+  ...(current.environment
+    ? {
+        environment: {
+          ...(current.environment as Record<string, unknown>),
+          ...presetConfig.environment
+        }
+      }
+    : {})
+})
+
+/**
+ * Hide or restore the whole rig as one: every light object plus the environment map,
+ * which is not a scene child and so has to be stashed rather than made invisible.
+ */
+const toggleLightRigVisibility = (
+  scene: THREE.Scene,
+  environmentStash: THREE.Texture | null
+): THREE.Texture | null => {
+  const rigObjects = [...LIGHT_ELEMENT_NAMES]
+    .map((childName) => scene.getObjectByName(childName))
+    .filter((object): object is THREE.Object3D => object !== undefined)
+  const hiding = rigObjects.some((object) => object.visible) || !!scene.environment
+  rigObjects
+    .filter((object) => object.visible === hiding)
+    .forEach((object) => toggleObjectVisibility(object))
+  if (hiding) return scene.environment ? setSceneEnvironment(scene, null) : environmentStash
+  return environmentStash ? setSceneEnvironment(scene, environmentStash) : null
+}
+
+/**
+ * Take on a scene this store did not build, so a view that lit itself still reaches the
+ * Lights element. Does nothing for a scene the store set up, which already has its config.
+ * @param scene - The scene whose lights the panel should drive
+ * @param references - Where the adopted scene and its light state are kept
+ */
+const adoptSceneLightsInto = (
+  scene: THREE.Scene,
+  references: Pick<LightPanelReferences, 'threeScene' | 'lightsConfig' | 'skyConfig'> & {
+    isInitialized: Ref<boolean>
+  }
+): void => {
+  if (references.isInitialized.value) return
+  references.threeScene.value = scene
+  const { lights, sky } = readLightsFromScene(scene)
+  references.lightsConfig.value = lights
+  references.skyConfig.value = sky
+}
+
+/**
+ * Register the ground row, when the scene declared one.
+ * @param references - The properties store, the panel state and the ground it drives
+ */
+const registerGroundElementProperties = (references: {
+  elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
+  groundConfig: Ref<Record<string, unknown>>
+  groundReference: Ref<{ mesh?: THREE.Mesh } | null>
+}): void => {
+  const { elementPropertiesStore, groundConfig, groundReference } = references
+  if (Object.keys(groundConfig.value).length === 0) return
+
+  elementPropertiesStore.registerElementProperties('ground', {
+    title: 'Ground',
+    schema: groundSchema,
+    getValue: (path) => getNestedValue(groundConfig.value, path),
+    updateValue: (path, value) => {
+      groundConfig.value = setNestedValueImmutable(groundConfig.value, path, value)
+      applyGroundUpdate(path, value, groundReference)
+    }
+  })
+}
+
+const mirrorRigIntoPanelState = (
+  rig: (typeof lightPresets)[LightPreset],
+  references: Pick<LightPanelReferences, 'lightsConfig' | 'skyConfig'>
+): void => {
+  references.lightsConfig.value = mirrorLightPresetIntoConfig(references.lightsConfig.value, rig)
+  if (rig.sky?.color !== undefined && Object.keys(references.skyConfig.value).length > 0)
+    references.skyConfig.value = setNestedValueImmutable(
+      references.skyConfig.value,
+      'color',
+      rig.sky.color
+    )
+}
+
+const applyLightPresetToScene = (preset: LightPreset, references: LightPanelReferences): void => {
+  const scene = references.threeScene.value
+  if (!scene) return
+  const presetConfig = lightPresets[preset]
+  updateLights(scene, presetConfig)
+  mirrorRigIntoPanelState(presetConfig, references)
+  references.activeLightPreset.value = preset
+}
+
+export type LightGroup =
+  | 'ambient'
+  | 'directional'
+  | 'hemisphere'
+  | 'environment'
+  | 'point'
+  | 'spot'
+  | 'rectArea'
+
+/**
+ * Translate one group of the panel's light state into the config `updateLights` takes:
+ * the panel keeps the directional position as {x, y, z} and the hemisphere colors as
+ * skyColor/groundColor, while the package expects tuples.
+ */
+const buildHemisphereUpdate = (
+  lightsConfig: Record<string, unknown>
+): Parameters<typeof updateLights>[1] => {
+  const hemisphere = (lightsConfig.hemisphere ?? {}) as {
+    skyColor?: number
+    groundColor?: number
+    intensity?: number
+  }
+  const hasColors = hemisphere.skyColor !== undefined && hemisphere.groundColor !== undefined
+  return {
+    hemisphere: {
+      ...(hasColors
+        ? { colors: [hemisphere.skyColor, hemisphere.groundColor] as [number, number] }
+        : {}),
+      ...(hemisphere.intensity !== undefined ? { intensity: hemisphere.intensity } : {})
     }
   }
 }
+
+const buildDirectionalUpdate = (
+  lightsConfig: Record<string, unknown>
+): Parameters<typeof updateLights>[1] => {
+  const directional = (lightsConfig.directional ?? {}) as {
+    color?: number
+    intensity?: number
+    position?: Vec3
+  }
+  const { position } = directional
+  return {
+    directional: {
+      ...(directional.color !== undefined ? { color: directional.color } : {}),
+      ...(directional.intensity !== undefined ? { intensity: directional.intensity } : {}),
+      ...(position ? { position: [position.x, position.y, position.z] as CoordinateTuple } : {})
+    }
+  }
+}
+
+const buildEnvironmentUpdate = (
+  lightsConfig: Record<string, unknown>
+): Parameters<typeof updateLights>[1] => {
+  const environment = (lightsConfig.environment ?? {}) as { intensity?: number }
+  return environment.intensity !== undefined
+    ? { environment: { intensity: environment.intensity } }
+    : {}
+}
+
+const LIGHT_GROUP_UPDATE_BUILDERS: Record<
+  LightGroup,
+  (lightsConfig: Record<string, unknown>) => Parameters<typeof updateLights>[1]
+> = {
+  hemisphere: buildHemisphereUpdate,
+  directional: buildDirectionalUpdate,
+  environment: buildEnvironmentUpdate,
+  ambient: (lightsConfig) => ({
+    ambient: (lightsConfig.ambient ?? {}) as { color?: number; intensity?: number }
+  }),
+  point: (lightsConfig) => ({ point: (lightsConfig.point ?? {}) as LightsConfig['point'] }),
+  spot: (lightsConfig) => ({ spot: (lightsConfig.spot ?? {}) as LightsConfig['spot'] }),
+  rectArea: (lightsConfig) => ({
+    rectArea: (lightsConfig.rectArea ?? {}) as LightsConfig['rectArea']
+  })
+}
+
+const buildLightGroupUpdate = (
+  group: LightGroup,
+  lightsConfig: Record<string, unknown>
+): Parameters<typeof updateLights>[1] => LIGHT_GROUP_UPDATE_BUILDERS[group](lightsConfig)
 
 const applySkyUpdate = (path: string, value: unknown, skyMeshReference: Ref<THREE.Mesh | null>) => {
   const mesh = skyMeshReference.value
@@ -251,25 +500,31 @@ const buildSceneElements = (
   )
   const cameraElement: SceneElement = { name: 'Camera', type: camera.type, hidden: false }
 
-  const sceneChildren: SceneElement[] = scene.children
+  const listedChildren = scene.children
+    .filter((child) => !LIGHT_ELEMENT_NAMES.has(child.name))
     .filter((child) => !cachedMeshNames.has(child.name))
     .filter((child) => !child.userData?.spawnId)
     .filter((child) => !(child instanceof THREE.BoxHelper))
     .filter((child) => child.name !== 'PathDebug')
-    .map((child) => {
-      const groupId = textureGroups.find(
-        (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
-      )?.id
-      const childCount =
-        child instanceof THREE.Group && child.children.length > 0 ? child.children.length : null
-      return {
-        name: child.name || child.type,
-        label: childCount !== null ? `${child.name || child.type} [${childCount}]` : undefined,
-        type: groupId ? 'TextureArea' : child.type,
-        hidden: false,
-        groupId
-      }
-    })
+
+  // A scene names every column `column`, so without numbering each repeat selects the first.
+  const childNames = numberDuplicateNames(listedChildren.map((child) => child.name || child.type))
+
+  const sceneChildren: SceneElement[] = listedChildren.map((child, index) => {
+    const groupId = textureGroups.find(
+      (g) => child.name?.startsWith(`grp-${g.id}-`) || child.name === `wireframe-${g.id}`
+    )?.id
+    const childCount =
+      child instanceof THREE.Group && child.children.length > 0 ? child.children.length : null
+    return {
+      name: childNames[index],
+      label: childCount !== null ? `${childNames[index]} [${childCount}]` : undefined,
+      type: groupId ? 'TextureArea' : child.type,
+      hidden: false,
+      groupId,
+      objectId: child.uuid
+    }
+  })
 
   const textureGroupElements: SceneElement[] = textureGroups.map((g) => ({
     name: g.id,
@@ -278,7 +533,15 @@ const buildSceneElements = (
     groupId: g.id
   }))
 
-  return [cameraElement, ...sceneChildren, ...textureGroupElements]
+  // The whole rig lives on one row: the individual lights and the sky are filtered out of
+  // the children above, and scene.environment is not a child at all.
+  const hasLightRig =
+    scene.children.some((child) => LIGHT_ELEMENT_NAMES.has(child.name)) || !!scene.environment
+  const lightsElements: SceneElement[] = hasLightRig
+    ? [{ name: 'Lights', type: 'Lights', hidden: false }]
+    : []
+
+  return [cameraElement, ...lightsElements, ...sceneChildren, ...textureGroupElements]
 }
 
 const buildAreaMeshCacheFromScene = (
@@ -782,6 +1045,7 @@ interface RemoveHandlerContext {
   textureAreaDefinitions: Ref<TextureAreaDefinition[]>
   elementPropertiesStore: ReturnType<typeof useElementPropertiesStore>
   getAreaMeshes: (name: string) => THREE.Object3D[]
+  findObject: (name: string) => THREE.Object3D | undefined
   updateSceneElements: () => void
 }
 
@@ -818,7 +1082,7 @@ const removeSceneElement = (name: string, context: RemoveHandlerContext) => {
     textureAreaDefinitions.value = textureAreaDefinitions.value.filter((a) => a.name !== name)
     elementPropertiesStore.unregisterElementProperties(name)
   } else {
-    const object = scene.getObjectByName(name)
+    const object = context.findObject(name)
     if (object) {
       removePhysicsBodies(object)
       object.removeFromParent()
@@ -852,6 +1116,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const areaMeshCache = ref<Record<string, THREE.Object3D[]>>({})
 
   let activeToolsCleanup: (() => void) | null = null
+  let environmentTextureStash: THREE.Texture | null = null
 
   const panelsStore = usePanelsStore()
   const viewPanelsStore = useViewPanelsStore()
@@ -861,6 +1126,16 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const debouncedRegenerate = createDebouncedMap()
 
   const getAreaMeshes = (areaName: string): THREE.Object3D[] => areaMeshCache.value[areaName] ?? []
+
+  /** Resolve a panel row to its object: a numbered duplicate carries the uuid of its own. */
+  const findSceneObject = (scene: THREE.Scene, name: string): THREE.Object3D | undefined => {
+    const objectId = debugSceneStore.sceneElements.find(
+      (element) => element.name === name
+    )?.objectId
+    return objectId
+      ? (scene.getObjectByProperty('uuid', objectId) as THREE.Object3D | undefined)
+      : scene.getObjectByName(name)
+  }
 
   const buildAreaMeshCache = () => {
     const scene = threeScene.value
@@ -876,11 +1151,13 @@ export const useSceneViewStore = defineStore('sceneView', () => {
       const camera = threeCamera.value
       if (!scene) return
       const cachedMeshes = getAreaMeshes(name)
-      if (cachedMeshes.length > 0) {
+      if (name === 'Lights') {
+        environmentTextureStash = toggleLightRigVisibility(scene, environmentTextureStash)
+      } else if (cachedMeshes.length > 0) {
         cachedMeshes.forEach((child) => toggleObjectVisibility(child))
       } else {
         const object =
-          name === 'Camera' ? (camera as unknown as THREE.Object3D) : scene.getObjectByName(name)
+          name === 'Camera' ? (camera as unknown as THREE.Object3D) : findSceneObject(scene, name)
         if (object) toggleObjectVisibility(object)
       }
       debugSceneStore.$patch({
@@ -898,6 +1175,10 @@ export const useSceneViewStore = defineStore('sceneView', () => {
         textureAreaDefinitions,
         elementPropertiesStore,
         getAreaMeshes,
+        findObject: (objectName: string) => {
+          const scene = threeScene.value
+          return scene ? findSceneObject(scene, objectName) : undefined
+        },
         updateSceneElements
       })
 
@@ -936,72 +1217,38 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     })
   }
 
-  const registerGroundProperties = () => {
-    if (Object.keys(groundConfig.value).length === 0) return
+  const registerGroundProperties = () =>
+    registerGroundElementProperties({ elementPropertiesStore, groundConfig, groundReference })
 
-    elementPropertiesStore.registerElementProperties('ground', {
-      title: 'Ground',
-      schema: groundSchema,
-      getValue: (path) => getNestedValue(groundConfig.value, path),
-      updateValue: (path, value) => {
-        groundConfig.value = setNestedValueImmutable(groundConfig.value, path, value)
-        applyGroundUpdate(path, value, groundReference)
-      }
-    })
+  const activeLightPreset = ref<LightPreset | null>(null)
+
+  const lightTransition = createLightTransitionPlayer({
+    threeScene,
+    onStart: () => {
+      activeLightPreset.value = null
+    },
+    onStop: (rig) => mirrorRigIntoPanelState(rig, { lightsConfig, skyConfig })
+  })
+
+  const adoptSceneLights = (scene: THREE.Scene) =>
+    adoptSceneLightsInto(scene, { threeScene, lightsConfig, skyConfig, isInitialized })
+
+  const applyLightPreset = (preset: LightPreset) => {
+    lightTransition.setEnabled(false)
+    applyLightPresetToScene(preset, { lightsConfig, skyConfig, threeScene, activeLightPreset })
   }
 
-  const registerLightsProperties = () => {
-    if (Object.keys(lightsConfig.value).length === 0) return
-
-    elementPropertiesStore.registerElementProperties('ambient-light', {
-      title: 'Ambient Light',
-      schema: lightsSchema.ambient,
-      getValue: (path) =>
-        getNestedValue(lightsConfig.value.ambient as Record<string, unknown>, path),
-      updateValue: (path, value) => {
-        lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `ambient.${path}`, value)
-        applyLightsUpdate(
-          `ambient.${path}`,
-          value,
-          ambientLightReference,
-          directionalLightReference
-        )
-      }
-    })
-
-    elementPropertiesStore.registerElementProperties('directional-light', {
-      title: 'Directional Light',
-      schema: lightsSchema.directional,
-      getValue: (path) =>
-        getNestedValue(lightsConfig.value.directional as Record<string, unknown>, path),
-      updateValue: (path, value) => {
-        lightsConfig.value = setNestedValueImmutable(
-          lightsConfig.value,
-          `directional.${path}`,
-          value
-        )
-        applyLightsUpdate(
-          `directional.${path}`,
-          value,
-          ambientLightReference,
-          directionalLightReference
-        )
-      }
-    })
+  const updateLightValue = (group: LightGroup, path: string, value: unknown) => {
+    lightsConfig.value = setNestedValueImmutable(lightsConfig.value, `${group}.${path}`, value)
+    activeLightPreset.value = null
+    const scene = threeScene.value
+    if (!scene) return
+    updateLights(scene, buildLightGroupUpdate(group, lightsConfig.value))
   }
 
-  const registerSkyProperties = () => {
-    if (Object.keys(skyConfig.value).length === 0) return
-
-    elementPropertiesStore.registerElementProperties('sky', {
-      title: 'Sky',
-      schema: skySchema,
-      getValue: (path) => getNestedValue(skyConfig.value, path),
-      updateValue: (path, value) => {
-        skyConfig.value = setNestedValueImmutable(skyConfig.value, path, value)
-        applySkyUpdate(path, value, skyMeshReference)
-      }
-    })
+  const updateSkyValue = (path: string, value: unknown) => {
+    skyConfig.value = setNestedValueImmutable(skyConfig.value, path, value)
+    applySkyUpdate(path, value, skyMeshReference)
   }
 
   const getGroupConfig = (groupId: string): GroupConfig => {
@@ -1222,8 +1469,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     registerCameraProperties()
     if (config.ground !== false) registerGroundProperties()
-    if (config.lights !== false) registerLightsProperties()
-    if (config.sky !== false) registerSkyProperties()
+    // A scene with lights opens on a moving sky. Started here rather than defaulted on in the
+    // player, which cannot run before there is a scene to light.
+    if (config.lights !== false) lightTransition.setEnabled(true)
 
     viewPanelsStore.setViewPanels(resolvedOptions.viewPanels ?? {})
     updateSceneElements()
@@ -1277,6 +1525,8 @@ export const useSceneViewStore = defineStore('sceneView', () => {
   const cleanup = () => {
     activeToolsCleanup?.()
     activeToolsCleanup = null
+    lightTransition.stop()
+    activeLightPreset.value = null
     viewPanelsStore.clearViewPanels()
     debugSceneStore.clearSceneElements()
     elementPropertiesStore.clearAllElementProperties()
@@ -1316,6 +1566,15 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     orbitReference,
     isInitialized,
     playMode,
+    activeLightPreset,
+    adoptSceneLights,
+    lightTransitionEnabled: lightTransition.enabled,
+    lightTransitionSpeed: lightTransition.speed,
+    applyLightPreset,
+    updateLightValue,
+    updateSkyValue,
+    setLightTransitionEnabled: lightTransition.setEnabled,
+    setLightTransitionSpeed: lightTransition.setSpeed,
     init,
     initTextureGroups,
     registerTextureAreas,

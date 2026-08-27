@@ -259,6 +259,122 @@ describe('registerCameraProperties', () => {
     perspective.forEach((preset) => expect(cameraPresets[preset].lookAt).toBeUndefined())
   })
 
+  describe('rotation presets', () => {
+    /** Every preset the panel offers, in the order its buttons sit. */
+    const PRESET_CYCLE = Object.values(CameraPreset)
+
+    const LAPS = 3
+
+    const round = (value: number) => Number(value.toFixed(4))
+
+    const placement = (camera: THREE.Camera) => ({
+      position: camera.position.toArray().map(round),
+      quaternion: camera.quaternion.toArray().map(round)
+    })
+
+    /**
+     * Everything the preset itself decides, rounded past floating point noise.
+     *
+     * A perspective preset is a lens and nothing more: it deliberately leaves the camera
+     * where it stands, so where it stands is not its result to be judged on. An
+     * orthographic preset places the camera as well, so all of it counts.
+     */
+    const snapshotCamera = (camera: THREE.Camera, orbit: { target: THREE.Vector3 }) => ({
+      type: camera.type,
+      orbitTarget: orbit.target.toArray().map(round),
+      ...(camera instanceof THREE.OrthographicCamera
+        ? {
+            left: round(camera.left),
+            right: round(camera.right),
+            top: round(camera.top),
+            bottom: round(camera.bottom),
+            near: round(camera.near),
+            far: round(camera.far),
+            ...placement(camera)
+          }
+        : {
+            fov: round((camera as THREE.PerspectiveCamera).fov),
+            near: round((camera as THREE.PerspectiveCamera).near),
+            far: round((camera as THREE.PerspectiveCamera).far)
+          })
+    })
+
+    /**
+     * Drive the camera away the way the cinematic sweep does, so the next preset is picked
+     * from somewhere the presets did not put the camera.
+     */
+    const flyCinematicPath = async (camera: THREE.Camera) => {
+      const { cameraPathCreate } = await import('@webgamekit/threejs')
+      const path = cameraPathCreate(camera, {
+        points: [
+          { position: [0, 16, 62], lookAt: [0, 11, 0] },
+          { position: [27, 27, -11], lookAt: [0, 11, 0] },
+          { position: [-11, 14, 52], lookAt: [0, 11, 0] }
+        ],
+        seconds: 4
+      })
+      Array.from({ length: 30 }, () => path.update(0.05))
+      path.cancel()
+    }
+
+    it('lands on the same camera state every lap, whatever the camera did in between', async () => {
+      // Arrange: a camera the panel can swap projections on, as the real view supplies.
+      const { registerCameraProperties } = await import('./cameraProperties')
+      const { useCameraConfigStore } = await import('@/stores/cameraConfig')
+      const orbit = makeOrbit()
+      let active: THREE.Camera = makePerspCamera()
+      registerCameraProperties({
+        camera: active as THREE.PerspectiveCamera,
+        orbit,
+        setCamera: (next: THREE.Camera) => {
+          active = next
+          return orbit
+        }
+      })
+      const store = useCameraConfigStore()
+
+      // Act: go round every preset several times, flying the cinematic path between laps.
+      const laps = await Array.from({ length: LAPS }).reduce<
+        Promise<Record<string, ReturnType<typeof snapshotCamera>>[]>
+      >(async (previous) => {
+        const recorded = await previous
+        const lap = PRESET_CYCLE.reduce<Record<string, ReturnType<typeof snapshotCamera>>>(
+          (states, preset) => {
+            store.applyPresetToActiveSlot(preset)
+            return { ...states, [preset]: snapshotCamera(active, orbit) }
+          },
+          {}
+        )
+        await flyCinematicPath(active)
+        return [...recorded, lap]
+      }, Promise.resolve([]))
+
+      // Assert: every later lap repeats the first, preset for preset.
+      laps.slice(1).forEach((lap) => expect(lap).toEqual(laps[0]))
+    })
+
+    it.each(PRESET_CYCLE.filter((preset) => cameraPresets[preset].type === 'perspective'))(
+      'the %s preset changes the lens without moving the camera',
+      async (preset) => {
+        // Arrange: a camera left somewhere no preset put it, as a sweep or a drag would.
+        const { registerCameraProperties } = await import('./cameraProperties')
+        const { useCameraConfigStore } = await import('@/stores/cameraConfig')
+        const orbit = makeOrbit()
+        const camera = makePerspCamera()
+        registerCameraProperties({ camera, orbit })
+        await flyCinematicPath(camera)
+        const before = placement(camera)
+
+        // Act
+        useCameraConfigStore().applyPresetToActiveSlot(preset)
+
+        // Assert
+        expect(placement(camera)).toEqual(before)
+        expect(round(camera.fov)).toBe(cameraPresets[preset].fov)
+      }
+    )
+  })
+
   it('orbitEnabled toggle calls setOrbitEnabled', async () => {
     const { registerCameraProperties } = await import('./cameraProperties')
     const { useElementPropertiesStore } = await import('@/stores/elementProperties')

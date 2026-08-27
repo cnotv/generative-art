@@ -11,6 +11,8 @@ vi.mock('vue-router', () => ({
 // Mock Three.js scene children
 const mockScene = {
   children: [] as Array<{ name: string; type: string; visible: boolean }>,
+  environment: null as THREE.Texture | null,
+  environmentIntensity: 1,
   getObjectByName: vi.fn((name: string) => {
     if (name === 'ambient-light') return { intensity: 1, color: new THREE.Color(0xffffff) }
     if (name === 'directional-light')
@@ -89,6 +91,7 @@ vi.mock('@/utils/groupMeshes', () => ({
 }))
 
 // Import after mocks
+import { lightPresets } from '@webgamekit/threejs'
 import { useSceneViewStore } from './sceneView'
 import { usePanelsStore } from './panels'
 import { useViewPanelsStore } from './viewPanels'
@@ -100,6 +103,8 @@ describe('useSceneViewStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockScene.children = []
+    mockScene.environment = null
+    mockScene.environmentIntensity = 1
     setActivePinia(createPinia())
   })
 
@@ -159,41 +164,163 @@ describe('useSceneViewStore', () => {
       expect(elementPropertiesStore.activeProperties?.title).toBe('Camera')
     })
 
-    it.each([
-      [
-        'ground',
-        { ground: { color: 0x888888, size: [100, 0.1, 100] as [number, number, number] } },
-        'Ground'
-      ],
-      ['sky', { sky: { color: 0xaaaaff, size: 1000 } }, 'Sky']
-    ] as const)(
-      'should register element properties for %s',
-      async (name, config, expectedTitle) => {
-        const store = useSceneViewStore()
-        const elementPropertiesStore = useElementPropertiesStore()
-        const canvas = document.createElement('canvas')
-
-        await store.init(canvas, config)
-
-        elementPropertiesStore.openElementProperties(name)
-        expect(elementPropertiesStore.activeProperties?.title).toBe(expectedTitle)
-      }
-    )
-
-    it.each([
-      ['ambient-light', 'Ambient Light'],
-      ['directional-light', 'Directional Light']
-    ])('should register %s element properties', async (elementName, expectedTitle) => {
+    it('should register element properties for ground', async () => {
       const store = useSceneViewStore()
       const elementPropertiesStore = useElementPropertiesStore()
       const canvas = document.createElement('canvas')
 
       await store.init(canvas, {
-        lights: { ambient: { color: 0xffffff, intensity: 1 } }
+        ground: { color: 0x888888, size: [100, 0.1, 100] as [number, number, number] }
       })
 
-      elementPropertiesStore.openElementProperties(elementName)
-      expect(elementPropertiesStore.activeProperties?.title).toBe(expectedTitle)
+      elementPropertiesStore.openElementProperties('ground')
+      expect(elementPropertiesStore.activeProperties?.title).toBe('Ground')
+    })
+
+    it('carries the sky config into the panel state', async () => {
+      const store = useSceneViewStore()
+      const canvas = document.createElement('canvas')
+
+      await store.init(canvas, { sky: { color: 0xaaaaff, size: 1000 } })
+
+      expect((store.skyConfig as { color?: number }).color).toBe(0xaaaaff)
+    })
+
+    describe('lights', () => {
+      const initWithEnvironment = async (store: ReturnType<typeof useSceneViewStore>) => {
+        const canvas = document.createElement('canvas')
+        await store.init(canvas, { lights: { environment: { intensity: 0.5 } } })
+      }
+
+      it('lists one Lights row instead of a row per light', async () => {
+        const store = useSceneViewStore()
+        const debugSceneStore = useDebugSceneStore()
+        mockScene.environment = {} as THREE.Texture
+        mockScene.children = [
+          { name: 'ambient-light', type: 'AmbientLight', visible: true },
+          { name: 'directional-light', type: 'DirectionalLight', visible: true },
+          { name: 'sky', type: 'Mesh', visible: true }
+        ]
+
+        await initWithEnvironment(store)
+
+        const names = debugSceneStore.sceneElements.map((element) => element.name)
+        expect(names).toContain('Lights')
+        expect(names).not.toContain('ambient-light')
+        expect(names).not.toContain('directional-light')
+        expect(names).not.toContain('sky')
+      })
+
+      it('lists no Lights row when the scene has neither lights nor an environment', async () => {
+        const store = useSceneViewStore()
+        const debugSceneStore = useDebugSceneStore()
+        const canvas = document.createElement('canvas')
+
+        await store.init(canvas, { lights: false })
+
+        expect(debugSceneStore.sceneElements.some((element) => element.name === 'Lights')).toBe(
+          false
+        )
+      })
+
+      it('carries the environment intensity from the setup config into the panel state', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+
+        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(0.5)
+      })
+
+      it('applies a day time preset to the scene and mirrors the whole rig into the panel', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+        store.applyLightPreset('dusk')
+
+        expect(store.activeLightPreset).toBe('dusk')
+        expect(mockScene.environmentIntensity).toBe(0.35)
+        expect((store.lightsConfig.ambient as { color: number }).color).toBe(0xe8cabc)
+        expect((store.lightsConfig.directional as { position: { x: number } }).position.x).toBe(-80)
+        expect((store.lightsConfig.environment as { intensity: number }).intensity).toBe(0.35)
+        const hemisphere = store.lightsConfig.hemisphere as {
+          skyColor: number
+          groundColor: number
+          intensity: number
+        }
+        expect(hemisphere.skyColor).toBe(0xf0b391)
+        expect(hemisphere.groundColor).toBe(0x4a4458)
+        expect(hemisphere.intensity).toBe(0.85)
+        expect((store.skyConfig as { color?: number }).color).toBe(0xe89b7d)
+      })
+
+      it.each([
+        ['environment', 'intensity', 1.2],
+        ['ambient', 'intensity', 0.8]
+      ] as const)(
+        'updates the %s light %s and clears the active preset',
+        async (group, path, value) => {
+          const store = useSceneViewStore()
+
+          await initWithEnvironment(store)
+          store.applyLightPreset('noon')
+          store.updateLightValue(group, path, value)
+
+          expect(store.activeLightPreset).toBe(null)
+          expect((store.lightsConfig[group] as Record<string, number>)[path]).toBe(value)
+        }
+      )
+
+      it('writes environment intensity through to the scene', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+        store.updateLightValue('environment', 'intensity', 1.2)
+
+        expect(mockScene.environmentIntensity).toBe(1.2)
+      })
+
+      it('opens on a moving sky at four times speed', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+
+        expect(store.lightTransitionEnabled).toBe(true)
+        expect(store.lightTransitionSpeed).toBe(4)
+        expect(store.activeLightPreset).toBe(null)
+        store.setLightTransitionEnabled(false)
+      })
+
+      it('leaves the lights alone in a scene that declared none', async () => {
+        const store = useSceneViewStore()
+        const canvas = document.createElement('canvas')
+
+        await store.init(canvas, { lights: false })
+
+        expect(store.lightTransitionEnabled).toBe(false)
+      })
+
+      it('stops the transition player and settles the rig into the panel state', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+
+        store.setLightTransitionEnabled(false)
+
+        expect(store.lightTransitionEnabled).toBe(false)
+        expect((store.lightsConfig.ambient as { color: number }).color).toBe(
+          lightPresets.dawn.ambient.color
+        )
+      })
+
+      it('picking a preset takes the sky off the cycle', async () => {
+        const store = useSceneViewStore()
+
+        await initWithEnvironment(store)
+        store.applyLightPreset('noon')
+
+        expect(store.lightTransitionEnabled).toBe(false)
+        expect(store.activeLightPreset).toBe('noon')
+      })
     })
 
     it('should set scene elements in debug store', async () => {

@@ -4,6 +4,7 @@ import GenericPanel from './GenericPanel.vue'
 import SchemaControls from './ConfigControls.vue'
 import ElementItem from './ElementItem.vue'
 import ElementCamera from './ElementCamera.vue'
+import ElementLights from './ElementLights.vue'
 import ElementGroup from './ElementGroup.vue'
 import ElementSpawn from './ElementSpawn.vue'
 import ElementInstancedGroup from './ElementInstancedGroup.vue'
@@ -144,6 +145,12 @@ const isCameraExpanded = computed(() => {
   )
 })
 
+const isLightsExpanded = computed(
+  () =>
+    !!expandedName.value &&
+    sceneElements.value.find((e) => e.name === expandedName.value)?.type === 'Lights'
+)
+
 const grouped = computed(() => {
   const filtered = sceneElements.value.filter(isElementVisible)
   const ungrouped: SceneElement[] = []
@@ -271,6 +278,7 @@ const hasExpandedSchema = computed(
             @start="(ms: number) => emit('start', ms)"
             @stop="emit('stop')"
           />
+          <ElementLights v-else-if="isLightsExpanded" />
           <template v-else>
             <SchemaControls
               v-if="hasExpandedSchema"

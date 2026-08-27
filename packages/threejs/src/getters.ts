@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
 import { times } from './utils/lodash'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
-import { GeneratedInstanceConfig, InstanceConfig, LightsConfig, PhysicOptions } from './types'
+import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
 
@@ -12,14 +12,14 @@ import { textureLoader } from './loaders'
  * @param options
  * @returns
  */
-type EnvironmentOptions = {
+type SceneOptions = {
   camera?: { position?: CoordinateTuple; distance?: number }
   scene?: { background?: number }
 }
 
-export const getEnvironment = async (
+export const getScene = async (
   canvas: HTMLCanvasElement,
-  options: EnvironmentOptions = {
+  options: SceneOptions = {
     camera: { position: SCENE_DEFAULTS.camera.position, distance: SCENE_DEFAULTS.camera.distance },
     scene: { background: SCENE_DEFAULTS.scene.background }
   }
@@ -173,70 +173,6 @@ export const getInstanceConfig = ({
   })
 
   return generatedConfig
-}
-
-type DirectionalConfig = NonNullable<LightsConfig['directional']>
-type ShadowConfig = NonNullable<DirectionalConfig['shadow']>
-
-const applyDirectionalShadow = (light: THREE.DirectionalLight, shadow: ShadowConfig) => {
-  const shadowCam = shadow.camera ?? {}
-  const mapSize = shadow.mapSize
-  light.shadow.mapSize.width = mapSize?.width ?? 4096
-  light.shadow.mapSize.height = mapSize?.height ?? 4096
-  light.shadow.camera.near = shadowCam.near ?? 0.5
-  light.shadow.camera.far = shadowCam.far ?? 500
-  light.shadow.camera.left = shadowCam.left ?? -150
-  light.shadow.camera.right = shadowCam.right ?? 150
-  light.shadow.camera.top = shadowCam.top ?? 150
-  light.shadow.camera.bottom = shadowCam.bottom ?? -150
-  if (shadow.bias !== undefined) light.shadow.bias = shadow.bias
-  if (shadow.radius !== undefined) light.shadow.radius = shadow.radius
-  light.shadow.camera.updateProjectionMatrix()
-}
-
-/**
- * Create and return default lights
- * @param scene
- * @returns
- */
-export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
-  const {
-    ambient = SCENE_DEFAULTS.lights.ambient,
-    directional = {
-      ...SCENE_DEFAULTS.lights.directional,
-      shadow: {
-        mapSize: { width: 4096, height: 4096 },
-        camera: { near: 0.5, far: 500, left: -150, right: 150, top: 150, bottom: -150 },
-        bias: -0.0001,
-        radius: 1
-      }
-    },
-    hemisphere
-  } = config
-
-  if (hemisphere?.colors) {
-    const hemisphereLight = new THREE.HemisphereLight(...hemisphere.colors)
-    hemisphereLight.name = 'hemisphere-light'
-    if (hemisphere.intensity !== undefined) hemisphereLight.intensity = hemisphere.intensity
-    scene.add(hemisphereLight)
-  }
-
-  const ambientLight = new THREE.AmbientLight(ambient.color, ambient.intensity)
-  ambientLight.name = 'ambient-light'
-  scene.add(ambientLight)
-
-  const directionalLight = new THREE.DirectionalLight(directional.color, directional.intensity)
-  directionalLight.name = 'directional-light'
-  if (directional.position)
-    directionalLight.position.set(...(directional.position as CoordinateTuple))
-  directionalLight.castShadow = directional.castShadow ?? true
-
-  // Always apply shadow camera defaults so scenes that omit the shadow key
-  // still get a large-enough frustum (Three.js default is only ~±5 units).
-  applyDirectionalShadow(directionalLight, directional.shadow ?? {})
-  scene.add(directionalLight)
-
-  return { directionalLight, ambientLight }
 }
 
 export const getOffset = (
