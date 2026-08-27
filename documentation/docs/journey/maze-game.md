@@ -4,7 +4,9 @@ sidebar_position: 11
 
 # MazeGame: Procedural Maze with Enemy Pathfinding
 
-The MazeGame combines procedural level generation, A* pathfinding for enemies, elevator transitions between levels, and a coin collection mechanic — all built on `@webgamekit/threejs` and `@webgamekit/logic`.
+The MazeGame combines procedural level generation, A\* pathfinding for enemies, elevator transitions between levels, and a coin collection mechanic — all built on `@webgamekit/threejs` and `@webgamekit/logic`.
+
+![The procedurally generated office maze, with the minimap tracking the player and the enemies](/img/maze-game/office-maze.webp)
 
 ## Procedural Maze Generation
 
@@ -14,7 +16,7 @@ The grid size is derived from `ISLAND_SIZE / MAZE_CELL_SIZE` — with an 80-unit
 
 ## Navigation Grid (2× Resolution)
 
-The raw maze grid is too coarse for smooth A* navigation. A 2×-resolution nav grid is built on top:
+The raw maze grid is too coarse for smooth A\* navigation. A 2×-resolution nav grid is built on top:
 
 - Maze cells map to **even** nav-grid positions (0, 2, 4, …)
 - Wall passages and corners occupy **odd** positions
@@ -25,7 +27,7 @@ For a 5×5 maze (5 cells per side), the nav grid is 9×9 with a cell size of 8 w
 
 ## Backward-Path Bug
 
-A subtle issue with `Math.floor`-based world→grid conversion: when an agent is exactly between two cells, `Math.floor` maps it to the cell it just left (behind the agent). A* then routes backward from that cell.
+A subtle issue with `Math.floor`-based world→grid conversion: when an agent is exactly between two cells, `Math.floor` maps it to the cell it just left (behind the agent). A\* then routes backward from that cell.
 
 The fix uses `Math.round` to always map to the **nearest** cell, which is typically the one ahead of the agent. This prevents the characteristic "back and forth" movement visible when enemies approached waypoints.
 
@@ -35,10 +37,10 @@ Each paper-plane enemy maintains a `PaperPlanePathState`:
 
 ```typescript
 interface PaperPlanePathState {
-  path: Position2D[] | null;
-  currentIndex: number;
-  timeSinceReplan: number;
-  stuckTime: number;
+  path: Position2D[] | null
+  currentIndex: number
+  timeSinceReplan: number
+  stuckTime: number
 }
 ```
 
@@ -51,10 +53,11 @@ Waypoint advancement uses a reach distance of ~62% of the nav cell size (5 units
 Snap-rotating to face a new waypoint direction every frame caused visible stutter when enemies hugged walls. A turn-speed limit (`PAPER_PLANE_TURN_SPEED = 8 rad/s`) smooths the rotation:
 
 ```typescript
-let angleDiff = targetAngle - plane.rotation.y;
-while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-plane.rotation.y += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), PAPER_PLANE_TURN_SPEED * delta);
+let angleDiff = targetAngle - plane.rotation.y
+while (angleDiff > Math.PI) angleDiff -= Math.PI * 2
+while (angleDiff < -Math.PI) angleDiff += Math.PI * 2
+plane.rotation.y +=
+  Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), PAPER_PLANE_TURN_SPEED * delta)
 ```
 
 The `[-π, π]` normalization ensures the character always takes the shortest rotation arc.

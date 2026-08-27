@@ -8,6 +8,8 @@ The Timeline panel (`src/components/panels/TimelinePanel.vue`) offers two
 distinct ways to stop animation: pausing the entire simulation, and disabling
 a single action's row without affecting any other action.
 
+![The timeline panel: the playing state, the window slider and a pause control on every track](/img/timeline/panel.webp)
+
 Both controls are rendered as flat, ghost-style play/pause icon buttons
 (`IconButton` with a `Play`/`Pause` icon) rather than checkboxes: a `Pause`
 icon means the target is currently running (click to stop), and a `Play` icon

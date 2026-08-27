@@ -6,13 +6,20 @@ sidebar_position: 7
 
 A virtual joystick rendered as a DOM element — the user drags from a center point and the displacement vector drives input actions.
 
+<video controls loop muted playsinline width="720" src="/video/controls/faux-pad.webm">
+  A finger drags the virtual stick around its ring, the knob following the pointer to the edge
+  in each direction and springing back to the centre when released, then taps the button beside it.
+</video>
+
+![The faux-pad tab of the controls mapper, where each on-screen control is bound to a game action](/img/controls/mapper-faux-pad.webp)
+
 ## Key Findings
 
 - **Circular boundary clamping**: without clamping, the thumb can be dragged far outside the visual circle, producing extreme axis values. The displacement vector must be clamped to the circle's radius before normalisation.
 
 ```ts
-const distance = Math.min(Math.hypot(dx, dy), maxRadius);
-const angle = Math.atan2(dy, dx);
+const distance = Math.min(Math.hypot(dx, dy), maxRadius)
+const angle = Math.atan2(dy, dx)
 ```
 
 - **8-way directional detection**: converting the angle to one of 8 sectors (N, NE, E, SE, S, SW, W, NW) requires dividing the circle into 45° arcs. An `axisThreshold` (dead zone) prevents accidental diagonals when the user intends a cardinal direction.

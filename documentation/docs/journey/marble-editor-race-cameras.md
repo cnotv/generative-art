@@ -9,6 +9,8 @@ Play mode offers three cameras and cycles between them with a single button:
 the three modes share one dispatcher, and the one rendering subtlety that shapes
 the whole design.
 
+![A race camera following the marble down the track](/img/marble-madness/race-camera.webp)
+
 ## One heading drives everything
 
 All three cameras and the marble's own controls are built on a single value: a

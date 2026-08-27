@@ -4,6 +4,8 @@ sidebar_position: 105
 
 # Selecting Scene Elements by Clicking in the Viewport
 
+![A click on empty ground in the viewport, selecting and expanding the ground row in the elements panel](/img/scene-editor/click-selection.webp)
+
 ## The gap
 
 The Elements panel lists every named object in a scene and lets you expand one to edit its properties. But finding the row for a specific object meant scanning the list by name — there was no way to go the other direction, from "that thing I can see in the 3D view" to "its entry in the panel". For scenes with many similarly named elements (several goombas, a cluster of cubes) this is the slow path.

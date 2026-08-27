@@ -4,6 +4,8 @@ sidebar_position: 16
 
 # Materials Infographic Layout
 
+![The materials infographic: the property list, the shaded sphere and the texture maps that feed it](/img/materials/infographic.webp)
+
 ## Goal
 
 Build a visual reference scene that places one sphere per Three.js material type along a sine-wave path, with annotated labels, feature descriptions, and code-style property blocks — styled as a flat graphic rather than a 3D scene.

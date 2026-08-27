@@ -10,6 +10,8 @@ This guide tracks `src/config/router.ts`, `src/config/viewsMeta.json`,
 you change any of them, update this guide in the same change.
 :::
 
+![A finished 3D view: the scene rendering beside the elements panel that lists its camera, lights and meshes](/img/timeline/elements-panel.webp)
+
 ## How a scene runs
 
 1. The view imports from `@webgamekit/*`, which Vite aliases to package source for HMR

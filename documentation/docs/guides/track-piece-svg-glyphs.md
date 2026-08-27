@@ -8,6 +8,8 @@ Every piece in the marble editor's palette shows a small schematic glyph so
 players recognize a piece by shape instead of reading its label. This guide
 explains how those glyphs are authored and how to add one for a new piece.
 
+![The piece palette, each track piece drawn as a single-stroke SVG glyph above its name](/img/marble-editor/build-mode.webp)
+
 > **Source files**: `src/views/Games/MarbleEditor/editor/PiecePreviewIcon.vue`
 > (glyph paths and rendering), `src/views/Games/MarbleEditor/editor/EditorPalette.vue`
 > (where the tiles consume the icon). Update this guide when either changes.

@@ -6,6 +6,8 @@ sidebar_position: 100
 
 This documents how minigolf holes are defined in data, rendered in Three.js, and previewed as SVG thumbnails in the lobby.
 
+![The hole picker, each hole an SVG preview of its layout with its par](/img/minigolf/hole-previews.webp)
+
 ## Hole configuration format
 
 Every hole is described by a `HoleConfig` object in `config.ts`:

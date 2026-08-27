@@ -6,6 +6,8 @@ sidebar_position: 22
 
 Design and implementation of the SVG sparkline charts added to the debug panel as part of [#136](https://github.com/cnotv/generative-art/issues/136).
 
+![The sparkline charts in the debug panel, one per stat, over the selected time range](/img/performance/stats-chart.webp)
+
 ## Goal
 
 The live numeric stats (FPS, frame ms, draw calls, triangles, heap MB) give a point-in-time reading. A chart adds temporal context — a spike that lasted 200 ms looks very different from one that has been running for 10 minutes.

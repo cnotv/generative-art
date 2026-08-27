@@ -4,6 +4,8 @@ sidebar_position: 102
 
 # Minigolf: Gamepad Aiming and the LobbyUI Score Overlay
 
+![The score overlay above the green: hole number, par and stroke count, with the aiming hint on the left](/img/minigolf/hole-framing.webp)
+
 ## Gamepad aiming dot guard conflict
 
 The minigolf aim indicator shows a row of small dots along the aim direction. Two input paths both update those dots each frame: the mouse/pointer path (which runs during drag) and the gamepad path (which runs when the stick is moved).

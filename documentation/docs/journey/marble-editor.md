@@ -10,6 +10,8 @@ P2P, and race the result. Building it surfaced a handful of non-obvious
 problems in coordinate math, rigid-body physics, and control design that this
 page records.
 
+![Build mode in the marble editor: the piece palette on the left and the bedroom the track is built in](/img/marble-editor/build-mode.webp)
+
 ## The track is a fold, not a scene graph
 
 A track is stored as nothing more than an ordered list of `{ type, color }`

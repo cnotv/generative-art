@@ -4,6 +4,8 @@ sidebar_position: 116
 
 # Rock Runner: a self-driving centering assist
 
+![The rock held near the middle of the track with no input, by the centering assist](/img/rock-runner/scenery.webp)
+
 ## The problem
 
 Rock Runner's track is an endless, procedurally generated ribbon: heading and

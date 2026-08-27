@@ -6,6 +6,8 @@ sidebar_position: 99
 
 This documents the non-obvious problems encountered while building the Bust-a-Move / Puzzle Bobble style bubble shooter (PR #145).
 
+![The bubble shooter board: bubbles packed on the hex grid, the aim line, and the red fire line below them](/img/bubble-shooter/board.webp)
+
 ## Hex grid: odd-row overflow
 
 The grid is 9 columns wide. Odd rows are offset right by half a bubble diameter to create the classic honeycomb pattern. The first implementation placed 9 bubbles in every row — but the rightmost bubble in an offset row exceeds the wall boundary by half a radius, causing balls to clip through the wall.

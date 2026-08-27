@@ -6,16 +6,18 @@ sidebar_position: 3
 
 Rendering many identical objects (grass blades, trees, particles) with individual `Mesh` instances sends one draw call per object. At thousands of objects this saturates the CPU–GPU command buffer.
 
+![A field of cubes drawn from a single instanced mesh](/img/instancing/cube-matrix.webp)
+
 **`THREE.InstancedMesh`** batches all instances into a single draw call. Only the per-instance transformation matrix (position, rotation, scale) differs.
 
 ```ts
-const mesh = new THREE.InstancedMesh(geometry, material, count);
-const matrix = new THREE.Matrix4();
+const mesh = new THREE.InstancedMesh(geometry, material, count)
+const matrix = new THREE.Matrix4()
 Array.from({ length: count }).forEach((_, i) => {
-  matrix.compose(position, quaternion, scale);
-  mesh.setMatrixAt(i, matrix);
-});
-mesh.instanceMatrix.needsUpdate = true;
+  matrix.compose(position, quaternion, scale)
+  mesh.setMatrixAt(i, matrix)
+})
+mesh.instanceMatrix.needsUpdate = true
 ```
 
 **Key findings**:
@@ -30,9 +32,9 @@ mesh.instanceMatrix.needsUpdate = true;
 Sharing geometry and material works until instances need **different material properties** per group. In that case, `.clone()` the material and modify only the clone:
 
 ```ts
-const uniqueMaterial = sharedMaterial.clone();
-uniqueMaterial.color.set(0xff0000);
-const mesh = new THREE.InstancedMesh(sharedGeometry, uniqueMaterial, count);
+const uniqueMaterial = sharedMaterial.clone()
+uniqueMaterial.color.set(0xff0000)
+const mesh = new THREE.InstancedMesh(sharedGeometry, uniqueMaterial, count)
 ```
 
 Common cases where cloning is necessary:
@@ -45,6 +47,6 @@ Common cases where cloning is necessary:
 **Dispose cloned materials explicitly**: unlike shared materials, cloned materials must be disposed when their `InstancedMesh` is removed — they are not referenced anywhere else.
 
 ```ts
-mesh.material.dispose(); // safe: this is a clone, not the shared original
-mesh.geometry.dispose(); // only if geometry was also cloned
+mesh.material.dispose() // safe: this is a clone, not the shared original
+mesh.geometry.dispose() // only if geometry was also cloned
 ```

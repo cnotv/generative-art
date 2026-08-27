@@ -10,6 +10,8 @@ govern each. Every figure is the shipped default from
 the Player rock element in the elements panel, or from the config panel for the
 body's own settings.
 
+![The rock rolling down the forest track, every force in the guide acting on it at once](/img/rock-runner/mid-run.webp)
+
 For why these values are what they are — particularly why mass is not the weight
 lever — see [What it actually takes to make a rolling ball feel
 heavy](../journey/rock-runner-weight.md).

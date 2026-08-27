@@ -6,6 +6,8 @@ sidebar_position: 12
 
 Adding real-time P2P multiplayer using WebRTC via [Trystero](https://github.com/dmotz/trystero) (NOSTR signaling — no dedicated server required).
 
+![The matchmaker with a second peer online and a request pending](/img/multiplayer/matchmaker-peers.webp)
+
 ## Package split: client, server, P2P
 
 The initial `@webgamekit/multiplayer` was a Socket.IO client only. It was replaced by three focused packages:

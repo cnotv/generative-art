@@ -4,12 +4,14 @@ sidebar_position: 5
 
 # Animation with Three.js
 
+![A layered animation sequence playing in the complex animation scene](/img/animation/complex-animation.webp)
+
 ## AnimationMixer
 
 The `THREE.AnimationMixer` drives skeletal and morph-target animations. It must be updated every frame with the elapsed delta:
 
 ```ts
-mixer.update(delta);
+mixer.update(delta)
 ```
 
 **Double-update bug**: the `finished` event on an `AnimationAction` fires synchronously inside `mixer.update()`. If the event handler also calls `mixer.update()`, the mixer advances twice in one frame — animations skip a frame and timing breaks. Guard the handler so it only fires once and never calls `mixer.update()` recursively.
@@ -19,8 +21,8 @@ mixer.update(delta);
 Blending between actions (e.g. walk → idle) uses `crossFadeTo`:
 
 ```ts
-idleAction.reset().fadeIn(0.3);
-walkAction.fadeOut(0.3);
+idleAction.reset().fadeIn(0.3)
+walkAction.fadeOut(0.3)
 ```
 
 Calling `action.reset()` before `fadeIn` is important — without it, if the action was previously playing at the end of its clip, it starts from the last frame instead of the beginning.

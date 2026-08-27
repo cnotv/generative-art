@@ -6,6 +6,8 @@ sidebar_position: 3
 
 The Debug panel shows five live metrics for any active Three.js scene:
 
+![Performance stats in the debug panel: FPS, frame milliseconds, draw calls, triangles and heap, each coloured against its budget](/img/performance/stats-panel.webp)
+
 | Metric         | What it measures                             |
 | -------------- | -------------------------------------------- |
 | **FPS**        | Frames rendered per second (last 1 s window) |

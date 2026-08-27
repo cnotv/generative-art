@@ -6,6 +6,8 @@ sidebar_position: 21
 
 Investigation and resolution of GPU and CPU leaks across all Three.js views, introduced as part of epic [#123](https://github.com/cnotv/generative-art/issues/123).
 
+![The heap chart in the debug panel, the readout a leak shows up on first](/img/performance/stats-chart.webp)
+
 ## Diagnosis
 
 ### The symptoms

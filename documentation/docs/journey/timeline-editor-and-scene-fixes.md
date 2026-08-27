@@ -4,6 +4,8 @@ sidebar_position: 103
 
 # Timeline Editor and Timeline Test Scene Fixes
 
+![The timeline test scene with both panels open, the pairing the editor fixes were made against](/img/timeline/elements-panel.webp)
+
 ## Overlapping timeline bars in the new Timeline panel
 
 Issue #20 asked for a debug-style panel that shows every timeline action as a bar across a fixed time window, with a moving cursor and a click-to-inspect details view. The first version rendered every bar in a single row, absolutely positioned by start/end percentage.

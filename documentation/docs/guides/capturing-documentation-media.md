@@ -48,6 +48,49 @@ await browser.close()
 A 3D view needs roughly eight seconds before models and textures have loaded. Screenshotting
 earlier photographs a half-built scene, which is the most common way these end up wrong.
 
+Clip the shot to the canvas rather than taking the whole page. It drops the page band above the
+canvas while keeping the DOM overlays that sit inside that rectangle, so the HUD still appears:
+
+```js
+const clip = await page.locator('canvas').first().boundingBox()
+await page.screenshot({ path: '/tmp/shot.png', clip })
+```
+
+## Four things that will waste a run
+
+Each of these fails silently or times out rather than saying what is wrong.
+
+**The panel toolbar is hidden until the pointer is near the top.** `GlobalNavigation` tracks the
+pointer against `NAV_HEIGHT_PX`, so clicking `[aria-label="Debug"]` does nothing at all on a view
+whose panels start closed. Move the mouse to the top edge first, wait a beat, then click. The
+close-all button appears to work without this only because open panels already keep the bar
+visible.
+
+**Most games do not mount a scene until their lobby wizard is started.** A route reporting zero
+canvases is usually waiting on that rather than broken. `getByRole('button', { name: 'Start',
+exact: true })` is the handle. Pictionary is the exception: it refuses to start below two
+players, so a capture has to open a second page on the same room URL first. Wordle and Squares
+start solo.
+
+**LobbyUI config rows are native `<select>` elements**, so looking for a button with the option's
+label times out. Target the option instead:
+
+```js
+await page.locator('select:has(option[value="stickman"])').selectOption('stickman')
+```
+
+**The loading overlay never appears on a warm dev cache.** Hold it on screen by delaying the
+asset requests, then navigate to a view whose models have not been fetched yet — re-entering one
+already loaded in that page re-requests nothing:
+
+```js
+await page.route('**/*.{glb,gltf,hdr,fbx}', async (route) => {
+  await new Promise((resolve) => setTimeout(resolve, 9000))
+  await route.continue()
+})
+await page.goto('http://localhost:5317/games/MazeGame')
+```
+
 ## Catching a moment that only happens mid-play
 
 A transition, a hit, a game-over — these cannot be waited for on a timer. Poll for the element

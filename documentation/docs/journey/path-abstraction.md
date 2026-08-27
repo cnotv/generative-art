@@ -4,6 +4,8 @@ sidebar_position: 104
 
 # Abstracting Path-Following into a Reusable Feature
 
+![A path drawn by dragging, smoothed into the curve an element follows](/img/paths/drawn-curve.webp)
+
 ## Starting point
 
 The DrawPath experiment shipped a complete path-following implementation: users hold-draw a curve on the ground, a follower mesh travels along it with easing, and waypoint nodes can be dragged to reshape the path in real time. The logic was entirely self-contained inside `DrawPath.vue` and its adjacent helpers, which meant every future scene that wanted path-following would have to duplicate it.

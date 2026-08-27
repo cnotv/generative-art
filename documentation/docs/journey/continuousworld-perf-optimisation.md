@@ -6,6 +6,8 @@ sidebar_position: 20
 
 Investigation and resolution of high triangle counts (grass) and high draw calls (trees) in the ContinuousWorld experiment, using the performance tooling introduced in epic [#19](https://github.com/cnotv/generative-art/issues/19).
 
+![The continuous world terrain, the mesh the optimisation work had to keep affordable](/img/continuous-world/terrain.webp)
+
 ## Diagnosis
 
 The debug panel (`?debug=true`) was used to read live metrics while loading each scene variant:

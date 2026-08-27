@@ -4,6 +4,8 @@ sidebar_position: 108
 
 # A Font That Only Existed in Development
 
+![The landing page lettering, the type that resolved in development and vanished in the build](/img/landing/logo.webp)
+
 ## The symptom
 
 In production, the LandingPage experiment threw an uncaught error that surfaced

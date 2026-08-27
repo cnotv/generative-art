@@ -10,6 +10,8 @@ glue — while flat straights stay perfectly fast. This write-up explains why a
 single mis-modelled parameter causes it, and why the cure is to model weight as
 **mass**, not **gravity**.
 
+![A marble on a built track, approaching the funnel where a heavy ball tends to stick](/img/marble-editor/race-track.webp)
+
 ## The symptom
 
 | Ball weight     | Straights    | Curves / funnel           |

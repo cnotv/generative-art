@@ -6,6 +6,8 @@ sidebar_position: 99
 
 How the project grew from keyboard-only lobby screens to a unified system where a DualShock or Xbox controller navigates every screen — lobby, wizard, gameplay, and header — with consistent visual feedback and no per-view boilerplate.
 
+![The lobby with the focus ring on Pictionary, the highlight gamepad and keyboard navigation moves around](/img/lobby/game-grid.webp)
+
 ---
 
 ## The starting point

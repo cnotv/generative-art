@@ -13,6 +13,8 @@ separate meshes, how the body was split into editable parts, how those
 properties reach the running scene, and why the figure floated above the track
 until its feet were measured rather than guessed.
 
+![The stickman rig riding the invisible rolling sphere, in place of the rock](/img/rock-runner/stickman-run.webp)
+
 ## A costume, not a character
 
 The rock is an invisible sphere with a textured mesh on it. Everything the game

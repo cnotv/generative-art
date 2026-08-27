@@ -6,6 +6,8 @@ sidebar_position: 99
 
 This documents the design decisions behind the rhythm game (issue #138).
 
+![Notes falling down the lanes towards the hit line](/img/rhythm-game/lanes.webp)
+
 ## The core timing problem: setTimeout drifts
 
 The existing audio package schedules notes using `setTimeout`. This is fine for background music where occasional drift is imperceptible, but a rhythm game lives or dies by timing accuracy. If a note appears at time T on screen and the corresponding sound fires 30 ms late, players feel something is wrong even if they cannot name it.

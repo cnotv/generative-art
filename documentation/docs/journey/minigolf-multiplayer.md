@@ -6,6 +6,8 @@ sidebar_position: 99
 
 This documents three non-obvious problems encountered while building the multiplayer minigolf game.
 
+![A hole mid-turn, the state every player in the room has to agree on](/img/minigolf/later-hole.webp)
+
 ## Turn system → simultaneous play
 
 The first multiplayer design assigned a `currentPlayerIndex` tracked in the Pinia store and broadcast over a `TURN_CHANNEL`. The host controlled whose turn it was, advancing the index after the ball stopped.

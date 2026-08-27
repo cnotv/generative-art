@@ -6,6 +6,8 @@ sidebar_position: 4
 
 Use the **Debug panel** to read live metrics while your scene runs, and the **`analyze-assets` script** to audit the codebase before committing.
 
+![The debug panel over a running game, reading the draw calls and triangle count the work has to bring down](/img/rock-runner/debug-panel.webp)
+
 ```bash
 node scripts/analyze-assets.mjs          # full report
 node scripts/analyze-assets.mjs --glb-only   # GLB triangle/size table only

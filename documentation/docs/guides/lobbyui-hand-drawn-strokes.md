@@ -9,6 +9,8 @@ and underlines that look drawn by hand rather than ruled with a straightedge.
 This guide explains the two techniques behind that look — **sketch radii** and
 **squiggle lines** — and how to use them.
 
+![The LobbyUI showcase: stroke-backed field rows and a squiggly underline under the name input](/img/lobby-ui/showcase.webp)
+
 > **Source files**: `src/assets/styles/lobby-ui.scss` (the tokens). Components
 > consume them; new LobbyUI components must reuse these tokens rather than
 > inventing their own strokes. Update this guide if the tokens change.

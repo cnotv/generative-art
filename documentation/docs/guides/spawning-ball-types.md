@@ -10,6 +10,8 @@ a track's physics without steering. Each ball is either the default **marble**
 Examples experiment — Rubber, Balloon, Bowling, Paper, Tennis and Ping Pong —
 each with its own weight, restitution, friction and damping.
 
+![The marble picker in the lobby, one swatch per ball type the race can spawn](/img/marble-madness/lobby.webp)
+
 The ball definitions live in a single shared catalog so the Physic Examples
 playground and the Marble Editor spawner stay in sync.
 

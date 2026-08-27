@@ -6,6 +6,8 @@ sidebar_position: 101
 
 `fitCamera()` (in `useMinigolfGame.ts`) frames each hole from directly overhead by computing how high the perspective camera must sit so the whole green is visible. Without any allowance for the wall thickness or breathing room, the wall perimeter rendered flush against the canvas edge — the track looked clipped, with no separation between the play area and the viewport border.
 
+![A hole framed by the camera fit, with padding around the track rather than the green touching the edges](/img/minigolf/hole-framing.webp)
+
 ## What the camera height is solving for
 
 A perspective camera's vertical field of view, `fov`, defines a cone. At a given height `y` above the ground, the cone's half-angle `fov / 2` determines how much world-space extent fits inside the frame: `extent = y · tan(fov / 2)`. Inverting that gives the height needed to fit a target extent:

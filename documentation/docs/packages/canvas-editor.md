@@ -9,6 +9,8 @@ persistence, and helpers for turning the result into a texture. It owns no UI an
 — the caller supplies a `CanvasRenderingContext2D`, which is what lets the same functions
 back a drawing game, a texture painter and an avatar editor.
 
+![The canvas editor in use, with its brush, fill, colour, undo and export controls](/img/canvas-editor/painted.webp)
+
 ## Installation
 
 ```bash

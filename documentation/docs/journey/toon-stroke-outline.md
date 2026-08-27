@@ -7,6 +7,8 @@ tags: [three-js, shaders, games, visual-style]
 
 Adding black outlines to 3D objects to create a toon/sketch aesthetic. Two techniques are needed because they solve different problems.
 
+![Toon outlines in play: a black contour around the rock and around every scenery mesh](/img/rock-runner/track-start.webp)
+
 ## Why two techniques
 
 No single approach works for every mesh:

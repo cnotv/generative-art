@@ -5,6 +5,8 @@ tags: [three-js, shadows, lighting, games, performance]
 
 # Crisp Directional Shadows in Three.js Games
 
+![A tight, crisp shadow under the ball on the green rather than a soft smear](/img/minigolf/shadows.webp)
+
 ## The default is blurry and wasteful
 
 Out of the box, a `DirectionalLight` with `castShadow: true` places its shadow camera frustum at ±150 world units. A 4096×4096 shadow map over 300 units gives roughly 13 pixels per unit — so a 1-unit marble casts a 13-pixel smear. Multiply that by `PCFSoftShadowMap`'s blur kernel and the shadow becomes a hazy halo rather than a crisp contact shadow.

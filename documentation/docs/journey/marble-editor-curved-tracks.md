@@ -9,6 +9,8 @@ started as jagged, catch-prone segments and went through three distinct fixes
 before they read as smooth ramps a marble could roll around cleanly. This page
 records the problem and the reasoning behind each fix.
 
+![Chained pieces running as one continuous track, the seams smoothed away](/img/marble-editor/race-track.webp)
+
 ## The problem: a curve is not a row of boxes
 
 Every straight piece is a box — a flat deck with a wall on each side. The first
