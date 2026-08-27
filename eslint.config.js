@@ -23,7 +23,10 @@ export default [
       '**/.vite/**',
       '**/documentation/.docusaurus/**',
       '**/documentation/build/**',
-      '**/coverage/**'
+      '**/coverage/**',
+      // .claude/worktrees holds throwaway checkouts of this same repo, so linting them walks
+      // a second and third copy of every source file and exhausts the heap.
+      '.claude/worktrees/**'
     ]
   },
 
