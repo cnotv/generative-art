@@ -66,6 +66,49 @@ agent tools render images inline, so it can be inspected like any other file.
 - The console shows recurring `HTTP 400 https://gateway.umami.is/api/send`. That is external
   analytics, not an app error.
 
+## Faking a phone
+
+A view driven by the camera, the location or the tilt sensor looks unverifiable on a desktop.
+It is not: Chromium will fake all three, so "you need a phone for this" is almost never true.
+
+```js
+const browser = await chromium.launch({
+  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream']
+})
+const context = await browser.newContext({
+  viewport: { width: 420, height: 860 },
+  permissions: ['camera', 'geolocation'],
+  geolocation: { latitude: 52.3731, longitude: 4.8922 },
+  isMobile: true,
+  hasTouch: true
+})
+```
+
+The fake camera is a green rotating pattern rather than a street, which is what makes an
+overlay legible in a screenshot: the real output stands in front of a stand-in world.
+
+Orientation has no Playwright API, so dispatch the event the page already listens for. Fire it
+many times in one `evaluate`, or per-frame smoothing will still be easing toward the pose when
+the screenshot is taken:
+
+```js
+await page.evaluate(() => {
+  Array.from({ length: 90 }).forEach(() => {
+    const event = new Event('deviceorientation')
+    Object.assign(event, { alpha: 270, beta: 90, gamma: 0 })
+    window.dispatchEvent(event)
+  })
+})
+```
+
+Two poses are worth knowing, because they are the ones that catch sign errors: upright facing
+north is `alpha 0, beta 90, gamma 0`, and rolled a quarter turn clockwise into landscape while
+still facing north is `alpha 270, beta 0, gamma 90`.
+
+Assert the transform, not just the picture — `getComputedStyle(el).transform` on an overlay
+layer gives a matrix whose rotation can be read off directly, which pins a sign a screenshot
+only suggests.
+
 ## Choosing an angle
 
 Orbit controls respond to mouse drag on the canvas, so a second angle is cheap and often
