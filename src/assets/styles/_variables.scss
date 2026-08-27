@@ -104,6 +104,11 @@
   --timeline-bar-foreground: hsl(0deg 0% 100%);
   --timeline-gutter-width: 8rem;
 
+  // Text laid over a 3D canvas. The canvas is not themed, so these stay fixed across light
+  // and dark: the outline is what makes the text readable, not the surrounding surface.
+  --color-canvas-overlay-foreground: hsl(0deg 0% 100%);
+  --shadow-text-canvas-overlay: 0 1px 3px hsl(0deg 0% 0% / 80%);
+
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
   --panel-item-bg-hover: hsl(0deg 0% 94%);
