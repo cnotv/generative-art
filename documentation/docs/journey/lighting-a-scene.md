@@ -7,6 +7,8 @@ sidebar_position: 123
 Four findings from gathering every light in the toolkit into one module, each of them
 invisible from reading the code that was there before.
 
+![One scene under the dawn, noon, dusk and night presets](/img/lights/day-presets.webp)
+
 ## Two things were called the environment
 
 The word arrived already taken. The bootstrap that builds a renderer, a scene and a physics

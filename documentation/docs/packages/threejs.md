@@ -627,8 +627,12 @@ import { updateLights, lightPresets } from '@webgamekit/threejs'
 updateLights(scene, lightPresets.dusk)
 ```
 
+![The same scene under each of the four day time presets](/img/lights/day-presets.webp)
+
 In the playground these presets are the Presets section of the Lights element in the
 Elements panel, which holds the whole rig: the four lights and the sky.
+
+![The Lights element, with the preset grid, the transition player and a collapsed section per light](/img/lights/lights-panel.webp)
 
 ### blendLightPresets(from, to, alpha)
 
