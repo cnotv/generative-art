@@ -33,6 +33,11 @@ const expanded = ref(false)
   line-height: 1.4;
   margin: var(--spacing-4);
   gap: var(--spacing-1);
+
+  /* Floats over a 3D canvas whose colours the theme knows nothing about, so it carries its
+     own legibility rather than inheriting the document's text colour. */
+  color: var(--color-canvas-overlay-foreground);
+  text-shadow: var(--shadow-text-canvas-overlay);
 }
 
 .controls-logger__header {

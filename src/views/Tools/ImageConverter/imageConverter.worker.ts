@@ -1,10 +1,27 @@
 import type { ConvertRequest, ConvertResult, ConvertError } from './config'
+import { isHeicBuffer } from './heic'
+
+/**
+ * `heic-to` is imported only once a HEIF brand is seen, and its `bitmap` target is the only
+ * one that works here: the blob and canvas targets reach for `document`, which a worker does
+ * not have, and they would re-encode the image on the way past for nothing. Keeping this in
+ * the worker rather than beside `isHeicBuffer` also keeps the decoder out of the main bundle,
+ * which would otherwise carry a second copy it never loads.
+ */
+const decodeBitmap = async (buffer: ArrayBuffer, mimeType: string): Promise<ImageBitmap> => {
+  const blob = new Blob([buffer], { type: mimeType })
+  if (!isHeicBuffer(buffer)) return createImageBitmap(blob)
+
+  const { heicTo } = await import('heic-to')
+  return heicTo({ blob, type: 'bitmap' })
+}
 
 const convertImage = async (request: ConvertRequest): Promise<void> => {
   const { id, buffer, mimeType, format, quality, maxWidth, maxHeight, scalePct } = request
 
-  const blob = new Blob([buffer], { type: mimeType })
-  const bitmap = await createImageBitmap(blob)
+  const bitmap = await decodeBitmap(buffer, mimeType)
+  const sourceWidth = bitmap.width
+  const sourceHeight = bitmap.height
 
   const pctScale = scalePct > 0 ? scalePct / 100 : 1
   const dimScale =
@@ -40,6 +57,8 @@ const convertImage = async (request: ConvertRequest): Promise<void> => {
     format,
     originalSize: buffer.byteLength,
     convertedSize: outputBuffer.byteLength,
+    sourceWidth,
+    sourceHeight,
     width,
     height
   }

@@ -109,6 +109,13 @@ Only a concern that is genuinely shared by unrelated views earns a new root comp
   never a `$name:` SCSS variable.
 - Light and dark are both defined centrally in `_variables.scss`. Never put a dark-mode
   override in a component's scoped styles.
+- **Text drawn over a 3D canvas sets its own colour**, from
+  `--color-canvas-overlay-foreground` and `--shadow-text-canvas-overlay`. It must never
+  inherit, and must never use `--color-foreground`: both describe the document, and the
+  document is not what is behind the text. The scene is, and nothing in CSS knows what
+  colour it is painting. An overlay that inherits looks correct until the scene, or the
+  inherited value, changes underneath it. See
+  `documentation/docs/journey/background-propagation.md`.
 - Never `!important` outside a utility class designed to override, such as in `vendor.scss`.
   If a style is not applying, fix the specificity.
 - Never put `overflow: hidden` on an element that also has a text or box shadow — the
