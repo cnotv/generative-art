@@ -10,6 +10,8 @@ correctly, and each attempt fixed one complaint by causing its opposite. This is
 what a renderer's ordering rules actually guarantee, and why a line drawn _on_ a
 picture is a different problem from an object drawn _in_ one.
 
+![The ink line reading on top of the scene from the free camera, across the track edge and the scenery alike](/img/rock-runner/free-camera.webp)
+
 ## Why an outline is not just geometry
 
 The outline around the rock is an inverted hull: a slightly grown copy of the

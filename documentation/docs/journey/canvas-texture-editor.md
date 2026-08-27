@@ -4,6 +4,8 @@ sidebar_position: 15
 
 # Canvas Texture Editor
 
+![Strokes painted in the canvas texture editor, with the brush, fill, undo and export tools below](/img/canvas-editor/painted.webp)
+
 ## Goal
 
 Build a reusable in-browser canvas drawing tool that lets users paint front/back character textures and share them across a P2P multiplayer session.

@@ -6,6 +6,8 @@ sidebar_position: 17
 
 Two P2P multiplayer word games built in one session: **SquaresMultiplayer** (Boggle-style drag-to-spell) and **WordleMultiplayer** (competitive Wordle). Both share the same lobby, matchmaker, sidebar, and session patterns established in Pictionary.
 
+![A Squares round: the letter grid and the found-word buckets scored by length](/img/word-games/squares-board.webp)
+
 ## Architecture
 
 Each game is a standalone view folder containing:

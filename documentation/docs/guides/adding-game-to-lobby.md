@@ -6,6 +6,8 @@ sidebar_position: 2
 
 The Games Lobby (`/games/Lobby`) is a shared room-discovery and matchmaking hub. Adding a new game requires changes to **three files only** — the rest wires up automatically.
 
+![The shared lobby, one entry per registered game beside the profile, online and rooms sidebars](/img/lobby/game-grid.webp)
+
 ## Prerequisites
 
 Your game must follow the P2P multiplayer pattern described in [Building a P2P Multiplayer Word Game](./p2p-multiplayer-word-game.md):

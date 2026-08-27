@@ -4,6 +4,8 @@ sidebar_position: 119
 
 # Avatar Editor
 
+![The avatar editor: a paper-doll of head, torso, arms and legs beside the per-part drawing controls](/img/avatar-editor/editor.webp)
+
 ## Goal
 
 Give the stickman rig a single place to be dressed and reshaped: draw on it

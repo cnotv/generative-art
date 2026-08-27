@@ -12,6 +12,8 @@ see the commit on `perf/rockrunner-chunk-streaming`) addresses _when_ and
 _how often_ expensive work happens. This document is about the other half:
 making the expensive work itself cheaper, which nothing in that fix touches.
 
+![The debug panel over Rock Runner, showing the frame budget a trimesh collider rebuild has to fit inside](/img/rock-runner/debug-panel.webp)
+
 ## Where the cost actually is
 
 Every new track chunk (`trackChunks.ts`, `buildChunk`) does two kinds of

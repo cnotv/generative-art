@@ -9,6 +9,14 @@ almost always needs: a chase camera behind it, a first-person eye riding it, and
 a free camera pulled back to see the whole scene. The package owns the
 arithmetic and the settings; the host owns the rendering and the panel.
 
+<video controls loop muted playsinline width="720" src="/video/rock-runner/camera-modes.webm">
+  A rock rolls down a forest track while the camera cycles through the three modes: a chase
+  camera behind it, a first-person eye riding it, and a free camera pulled back off the track,
+  each change easing into place rather than snapping.
+</video>
+
+![Four camera placements side by side: perspective, isometric, following and orbit](/img/camera/presets.webp)
+
 ## What is in the package
 
 Everything here is pure and framework-free — no Vue, no store, no DOM.

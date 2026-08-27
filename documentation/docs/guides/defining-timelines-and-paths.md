@@ -9,6 +9,8 @@ frame-based actions the Timeline panel can show, pause, and scrub) and how to
 attach **paths** to meshes so they follow waypoints — walking, jumping, or
 gliding along a curve.
 
+![The timeline panel, one track per element, with the playhead sweeping across the defined actions](/img/timeline/panel.webp)
+
 The running example is the test scene at `/tests/Timeline`, where a coin spins,
 balls spawn, a cube bobs, and goombas patrol — one of them climbing a brick
 column, bumping a coin block, and walking back down.

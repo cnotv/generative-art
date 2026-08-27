@@ -8,6 +8,8 @@ A scene that runs at 60fps on a laptop can crawl on a phone for reasons that
 never show up on desktop. This guide covers what is different about mobile, the
 order to attack it in, and how to tier quality without forking the scene.
 
+![The debug panel's performance stats, the readings a phone has to keep inside budget](/img/performance/stats-panel.webp)
+
 For general cost reduction that applies everywhere, see
 [Reducing Triangles, Draw Calls, and Heap MB](./reducing-performance-costs.md).
 This guide is about what to do _differently_ when the target is a phone.

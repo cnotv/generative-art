@@ -6,6 +6,8 @@ sidebar_position: 99
 
 Non-obvious decisions made while building the Rush endless mode (PR #172–173): procedural chunk streaming, physics-derived gap sizing, and lateral drift.
 
+![A generated rush track, with the gap the marble has to carry enough speed to clear](/img/marble-madness/rush.webp)
+
 ## Chunk streaming instead of a fixed track
 
 The Race mode loads a static `TrackConfig` — a hand-authored list of platform positions baked into `config.ts`. Rush must run forever, so a fixed list is impossible.

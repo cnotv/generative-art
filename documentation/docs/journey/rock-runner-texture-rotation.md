@@ -10,6 +10,8 @@ a single textured quad. This is how they are turned to face the player, why the
 turn is baked rather than computed each frame, and why a couple of degrees of
 deliberate error matters more than the alignment itself.
 
+![Flat illustrations of trees and plants rotated to read as scenery from the first-person camera](/img/rock-runner/first-person.webp)
+
 ## The problem a flat picture has
 
 A quad has no thickness. Seen face-on it reads as a tree; seen edge-on it

@@ -6,6 +6,11 @@ sidebar_position: 99
 
 This documents the non-obvious problems encountered while adding a global loading overlay to all Three.js views and building the CSS3 cube animation (PR #12).
 
+<video controls loop muted playsinline width="720" src="/video/loading/scene-loading.webm">
+  A wireframe cube turns slowly in the middle of a dark screen while a scene loads behind it,
+  the label beneath it naming the stage currently in progress.
+</video>
+
 ## Vue Teleport defer causes null-component crashes on mount and unmount
 
 `<Teleport defer>` was added to Vue 3.5 so the Teleport can wait for its target DOM element to be available. It achieves this by scheduling a second patch cycle after the initial mount. When the component is inside a fragment (multiple root nodes), this deferred cycle runs against a partially-initialised vnode tree.

@@ -6,6 +6,8 @@ sidebar_position: 110
 
 :::note Source files
 
+![A later stretch of track, generated from the seed as the rock rolls into it](/img/rock-runner/streamed-track.webp)
+
 `src/views/Games/RockRunner/trackPath.ts`, `trackChunks.ts`,
 `scatter/scatterPlacement.ts`, `scatter/scatterAreas.ts`, `config.ts`, and the
 shared sweep primitives in `src/utils/sweptGeometry.ts`.

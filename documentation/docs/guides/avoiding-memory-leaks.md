@@ -6,6 +6,8 @@ sidebar_position: 5
 
 Every Three.js view allocates GPU resources (geometries, materials, textures, render targets) and starts a `requestAnimationFrame` loop. If these are not released when the component unmounts, they accumulate across route changes and eventually crash the tab.
 
+![The heap reading in the debug panel, the number a leaked scene keeps pushing up between view changes](/img/performance/stats-chart.webp)
+
 ---
 
 ## The two leak types

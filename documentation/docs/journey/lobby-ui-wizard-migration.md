@@ -6,6 +6,8 @@ sidebar_position: 99
 
 The original `GameLobbyWizard` served every multiplayer game for months. Replacing it with `LobbyUIWizard` — a transparent, game-overlay-styled equivalent — looked simple at first: same props, same emits, swap the import. The reality was a long chain of interdependent problems, each visible only after the previous one was solved.
 
+![A game lobby rebuilt on the LobbyUI wizard: tabbed rows, colour and marble pickers, player list and chat in one layout](/img/marble-madness/lobby.webp)
+
 ---
 
 ## The starting point looked deceptively clean

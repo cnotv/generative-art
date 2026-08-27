@@ -4,6 +4,8 @@ sidebar_position: 22
 
 # Minigolf: Sharpening Three.js Shadows
 
+![The sharpened shadow under the ball and the flag on the green](/img/minigolf/shadows.webp)
+
 ## Why shadows look soft by default
 
 `PCFSoftShadowMap` (common default) applies a multi-sample blur kernel to hide shadow map edges. The shadow map itself defaults to 512×512 — a small texture stretched over the entire light frustum — so detail is inherently limited before any filtering is applied.

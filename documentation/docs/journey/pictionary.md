@@ -6,6 +6,8 @@ sidebar_position: 16
 
 Real-time multiplayer Pictionary built on top of the existing P2P, chat, and dictionary packages.
 
+![The word pick that opens a round, with both players listed in the room](/img/pictionary/drawing-round.webp)
+
 ## Package split
 
 Two framework-agnostic packages were added to keep the view thin and the logic testable:

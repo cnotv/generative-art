@@ -6,6 +6,8 @@ sidebar_position: 1
 
 This guide walks through creating a browser-based multiplayer word game using the patterns established in SquaresMultiplayer and WordleMultiplayer. No server needed — players connect directly via WebRTC.
 
+![A guess entered on the shared Wordle board, with the room id and player list around it](/img/word-games/wordle-board.webp)
+
 ## Prerequisites
 
 - Vue 3 + TypeScript + Pinia project (Vite)

@@ -10,6 +10,8 @@ puzzle about the game and turned out to be a rule of the surrounding framework â
 Vue's reactivity, the CSS overflow spec, or a registry that had to be updated in
 more places than it looked.
 
+![The debug panel open over the running game, one of the surfaces outside the renderer that had to keep working](/img/rock-runner/debug-panel.webp)
+
 :::note Source files
 
 `src/views/Games/Lobby/Lobby.vue`, `src/components/panels/ConfigControls.vue`,

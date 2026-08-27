@@ -6,6 +6,8 @@ sidebar_position: 4
 
 A\* pathfinding on a uniform grid is straightforward in 2D but requires additional handling for 3D terrain.
 
+![A* running on the grid: the route traced from the green start cube to the red target](/img/pathfinding/grid.webp)
+
 **Grid construction**: the world is divided into a uniform grid of nodes. Each node stores walkability and, in 3D scenes, its Y height sampled from the terrain.
 
 **A\* specifics**:

@@ -6,6 +6,8 @@ sidebar_position: 99
 
 The `@webgamekit/controls` package shipped with a polling loop that assumed every connected controller would land at slot 0 of `navigator.getGamepads()`. For a while this held — most users plug a single device in and the OS dutifully assigns it index 0. Then the kit started failing intermittently in pages where it had worked the day before: ForestGame, MixamoPlayground, MarbleMadness. Buttons did nothing, and no log explained why.
 
+![The gamepad tab of the controls mapper, where a pad has to be detected before it can be bound](/img/controls/mapper-gamepad.webp)
+
 ## The browser's gamepad API is a sparse array
 
 `navigator.getGamepads()` returns a fixed-length array — typically four slots. Each slot is either a `Gamepad` object or `null`. The slot a controller occupies depends on the order it appeared, OS bookkeeping, and whether something else (Steam, DS4Windows, a Bluetooth dongle, an Apple Magic Trackpad sharing the bus) reserved a lower index. Reconnects can shuffle the assignment without notice.

@@ -7,6 +7,8 @@ sidebar_position: 15
 Every game view uses the crisp layered text style established by GoombaRunner by default.
 Deviate only when the game's brief explicitly calls for a different visual language.
 
+![The game UI style in place: chunky outlined type, tabbed config rows and a yellow Start button](/img/rock-runner/lobby-wizard.webp)
+
 :::note Source files
 This guide tracks `src/assets/styles/game-ui.scss`, `src/utils/ui.ts` and
 `src/utils/gameTimelineActions.ts`. If you change any of them, update this guide in the same

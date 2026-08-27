@@ -6,14 +6,16 @@ sidebar_position: 9
 
 Building an infinite world that generates on demand as the player moves.
 
+![Terrain chunks streamed in around the walking character as the world scrolls under it](/img/continuous-world/streamed-chunks.webp)
+
 ## Chunk Coordinate System
 
 The world is divided into uniform square chunks. A chunk is identified by its integer grid coordinates `(chunkX, chunkZ)`, serialised to a string key `"chunkX,chunkZ"` for use as a `Map` key.
 
 ```ts
-const chunkX = Math.floor(worldX / chunkSize);
-const chunkZ = Math.floor(worldZ / chunkSize);
-const key = `${chunkX},${chunkZ}`;
+const chunkX = Math.floor(worldX / chunkSize)
+const chunkZ = Math.floor(worldZ / chunkSize)
+const key = `${chunkX},${chunkZ}`
 ```
 
 ## Load/Unload Strategy
@@ -27,7 +29,7 @@ const key = `${chunkX},${chunkZ}`;
 Every chunk is generated from a seed derived from its coordinates:
 
 ```ts
-const seed = chunkX * 73856093 ^ chunkZ * 19349663;
+const seed = (chunkX * 73856093) ^ (chunkZ * 19349663)
 ```
 
 This ensures the same chunk always produces the same terrain, trees, and grass regardless of the order it was loaded. The player can walk away and return to find the world unchanged.

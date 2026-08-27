@@ -6,6 +6,8 @@ sidebar_position: 99
 
 Non-obvious problems encountered while building the marble racing game (PR #162): texture discovery, P2P deduplication, ghost rendering, and game-UI style extraction.
 
+![A marble race in progress on the blue track](/img/marble-madness/race.webp)
+
 ## Build-time marble asset discovery
 
 The game offers nine selectable marble textures. The initial approach was to import each image individually and assemble an array by hand. This breaks as soon as an image is added or renamed, and has no natural ordering.

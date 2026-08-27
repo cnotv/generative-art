@@ -8,6 +8,8 @@ When you select a track piece in the editor — by clicking it, cycling with the
 d-pad, or loading a track — the camera glides over and frames it. This page
 explains how that transition works and the decisions behind how it feels.
 
+![Build mode, where picking a piece pulls the camera round to frame it](/img/marble-editor/build-mode.webp)
+
 ## The goal
 
 Two things make a selection feel good, and they pull in opposite directions:

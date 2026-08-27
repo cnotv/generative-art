@@ -9,6 +9,8 @@ and almost every intuitive fix for that turned out to be the wrong lever. This
 is what each one really does, measured against the physics solver rather than
 argued from first principles, and what finally worked.
 
+![The rock mid-roll, the moment every weight tuning decision is judged on](/img/rock-runner/mid-run.webp)
+
 ## The lever that does nothing: mass
 
 The obvious move is to make a heavy thing heavier. It does not work, and it is

@@ -8,6 +8,8 @@ When a LobbyUI dialog opens over a game (a leave confirm, a race summary),
 every input — keyboard, stick, d-pad, face buttons — must reach only the
 dialog. This guide explains how that is achieved.
 
+![A LobbyUI confirm dialog over a blurred backdrop, focus trapped on the Leave button](/img/lobby-ui/dialog-focus.webp)
+
 > **Source files**: `src/composables/useMenuNavigation.ts` (modal scope),
 > `src/composables/useMenuFocus.ts` (row navigation),
 > `src/composables/useDialogFocusTrap.ts` (the trap),

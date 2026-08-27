@@ -6,6 +6,8 @@ sidebar_position: 6
 
 Three.js mutates objects in place — `mesh.position.x = 5` does not trigger Vue's reactivity system. Bridging the two requires deliberate effort.
 
+![Panel controls bound to live Three.js objects, editing the scene while it renders](/img/scene-editor/config-controls.webp)
+
 ## Strategies
 
 **Store-mediated updates**: Three.js callbacks (OrbitControls `change` event, animation loop) write to a Pinia store. Vue components read from the store reactively.

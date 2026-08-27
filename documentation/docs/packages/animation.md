@@ -6,6 +6,8 @@ sidebar_position: 3
 
 Animation utilities for Three.js scenes, including timeline-based animations and physics-based character movement.
 
+![A model clip played back by the animation package](/img/animation/model-animation.webp)
+
 ## Installation
 
 ```bash

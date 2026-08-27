@@ -6,6 +6,8 @@ sidebar_position: 111
 
 :::note Source files
 
+![Fog fading the scene out sideways rather than by distance, so the track ahead stays readable](/img/rock-runner/free-camera.webp)
+
 `src/views/Games/RockRunner/lateralFog.ts`, `trackChunks.ts`,
 `scatter/scatterAreas.ts`, `trackPanel.ts`, `config.ts`.
 

@@ -10,6 +10,8 @@ model visually catches up, and correcting models whose geometry is oriented the
 "wrong" way. The theory below is what made the difference between a fix that
 worked and several that looked right on paper but failed on screen.
 
+![A rig mid-stride, its heading interpolated rather than snapped to the input direction](/img/animation/model-animation.webp)
+
 ## Snapping versus interpolating
 
 The original controller set the model's `rotation.y` directly to the input

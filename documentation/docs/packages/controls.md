@@ -6,6 +6,8 @@ sidebar_position: 2
 
 Framework-agnostic multi-input controller supporting keyboard, gamepad, touch, and virtual FauxPad.
 
+![The controls mapper listing each action against its keyboard bindings](/img/controls/mapper-keyboard.webp)
+
 ## Installation
 
 ```bash
