@@ -148,5 +148,8 @@
   },
   "Image Converter": {
     "description": "Convert and compress images in the browser to WebP, JPEG, AVIF or PNG, including HEIC and HEIF input, with no upload."
+  },
+  "Isometric Editor": {
+    "description": "Build a scene on an isometric grid: pick a primitive from the palette and click a cell to place it, snapped to the square."
   }
 }
