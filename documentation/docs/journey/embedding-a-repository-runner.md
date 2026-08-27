@@ -74,6 +74,8 @@ That left them as ordinary pages of the same site, which is a link, so they were
 navigation the app already had rather than given a loader, a frame or a button of their own. The
 feature that began as a virtual machine in an iframe ended as two more entries in a list.
 
+![The navigation panel scrolled to its end, where an Examples group holds Platformer and Endless Runner alongside every other route](/img/starters/navigation-examples.webp)
+
 ## The general lesson
 
 Before designing around an embed, check what the embedded document sends, not just whether it

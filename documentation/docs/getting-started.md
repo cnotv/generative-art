@@ -144,11 +144,17 @@ Two starters in the repository are built to be copied rather than read:
 | [platformer-starter](https://github.com/cnotv/generative-art/tree/main/examples/platformer-starter) | third-person movement, jumping, fixed platforms, a follow camera |
 | [runner-starter](https://github.com/cnotv/generative-art/tree/main/examples/runner-starter)         | lane switching, spawning and despawning, scoring, collision      |
 
+![The platformer starter: a red player cube on green ground, with three brown platforms casting shadows](/img/starters/platformer-starter.webp)
+
+![The runner starter: the player cube in the centre lane of a dark track, an obstacle approaching in the distance, the score in the corner](/img/starters/runner-starter.webp)
+
 Each is a standalone Vite app of roughly a hundred lines, with every constant in a `config.ts`
 and the game itself as a handful of named timeline actions.
 
-Both also play in the playground without being copied first: they are listed under Examples in its
-navigation sidebar, and the app serves them from its own origin.
+Both also play in the playground without being copied first: they are listed under Examples at the
+bottom of its navigation panel, and the app serves them from its own origin.
+
+![The playground's navigation panel scrolled to the bottom, showing an Examples group with Platformer and Endless Runner below the Tests group](/img/starters/navigation-examples.webp)
 
 ## Where to go next
 
