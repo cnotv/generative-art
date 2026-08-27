@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { Menu, Settings, Bug, Box, Clock, Search, X } from 'lucide-vue-next'
+import { Menu, Settings, Bug, Box, Clock, Gamepad2, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { GithubExampleLoader } from '@/components/GithubExampleLoader'
+import { ExampleLoader } from '@/components/ExampleLoader'
 import { usePanelsStore } from '@/stores/panels'
 import type { PanelType } from '@/stores/panels'
 
@@ -68,10 +68,10 @@ const handleToggle = (panelType: PanelType) => {
         size="icon"
         class="global-navigation__button"
         :class="{ 'global-navigation__button--active': isExampleLoaderOpen }"
-        aria-label="Load an example from GitHub"
+        aria-label="Run an example"
         @click="isExampleLoaderOpen = !isExampleLoaderOpen"
       >
-        <Search class="h-5 w-5" />
+        <Gamepad2 class="h-5 w-5" />
       </Button>
     </div>
 
@@ -103,7 +103,7 @@ const handleToggle = (panelType: PanelType) => {
     </div>
   </nav>
 
-  <GithubExampleLoader v-if="isExampleLoaderOpen" @close="isExampleLoaderOpen = false" />
+  <ExampleLoader v-if="isExampleLoaderOpen" @close="isExampleLoaderOpen = false" />
 </template>
 
 <style scoped>

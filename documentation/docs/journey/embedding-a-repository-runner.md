@@ -4,11 +4,11 @@ sidebar_position: 123
 
 # Embedding a Repository Runner: The Isolation Deadlock
 
-The GitHub example loader was meant to run someone else's starter inside the playground: pick a
-repository from a search, watch it boot in a frame, never leave the app. It ships instead as a
-search that hands back a link and a clone command. What closed the door is a constraint that no
-amount of reading our own code would reveal, because it lives entirely in the headers of two
-servers neither of which we control.
+The playground was meant to run any starter from GitHub inside itself: pick a repository, watch it
+boot in a frame, never leave the app. It ships running **this repository's own starters** in a
+frame, and nobody else's. What closed the door on the general case is a constraint that no amount
+of reading our own code would reveal, because it lives entirely in the headers of two servers
+neither of which we control.
 
 ## What a browser runner actually needs
 
@@ -28,7 +28,7 @@ refuses to load the frame at all. So the parent's two choices lead to two differ
 
 ```mermaid
 flowchart TD
-    A[Playground embeds the runner in an iframe] --> B{Does the playground<br/>send isolation headers?}
+    A[Playground embeds a third-party runner] --> B{Does the playground<br/>send isolation headers?}
     B -->|No| C[Frame loads and clones the repo]
     C --> D[Runner asks for SharedArrayBuffer]
     D --> E[Refused: 'Unable to run Embedded Project']
@@ -57,23 +57,22 @@ subresources, not nested documents. A frame still needs its own policy either wa
 | Use a runner that builds server side instead  | The anonymous import path for the obvious one now 422s   |
 | Build the repository in the page ourselves    | A TypeScript toolchain in the browser, to preview a link |
 
-The last row is the one worth naming out loud. Every alternative to embedding is some amount of
-compiler shipped to the client, and the thing being bought is a preview pane.
+The last row is the one worth naming out loud. Every alternative to embedding somebody else's
+repository is some amount of compiler shipped to the client, and the thing being bought is a
+preview pane.
 
 ## The shape that survived
 
-Splitting the feature along the line the browser drew turned out to cost nothing. Search,
-autocomplete and the repository reference all live in the shell, where they were always going to
-live; only the running of the code moved out, to a tab for the browser route and to a clone
-command for the terminal. The terminal route is the one that was actually asked for, and it never
-needed a frame.
+The whole negotiation exists to protect one origin from another. Our own starters are not another
+origin, so none of it applies to them, and the feature that was worth having turns out to be the
+one the browser never objected to.
 
-Two smaller things fell out of it. The autocomplete is a native datalist, which means the browser
-owns filtering, keyboard navigation and dismissal; the only selection signal it gives back is the
-chosen value appearing in the field, so a complete owner-and-name is what triggers a load, and
-pasting one by hand works for free. And an unauthenticated repository search is rate limited to
-ten requests a minute and reports exhaustion with a status that also means refusal, so the
-request is debounced and the message distinguishes the two cases by hand.
+The starters are standalone builds, but they sit below this app's Vite root, and a dev server
+already serves every HTML file below its root. Only the production build had to be told about
+them, by naming their pages as extra entries rather than assuming the single one at the root.
+After that a plain frame runs them: same origin, no isolation, no `SharedArrayBuffer`, no service
+in the middle. The playground gained a way to play its own examples without a runner, a search or
+an API call, and anyone wanting to run a stranger's repository is pointed at a tab.
 
 ## The general lesson
 
@@ -81,3 +80,6 @@ Before designing around an embed, check what the embedded document sends, not ju
 renders. A service can be perfectly embeddable in the sense that it refuses no frames, and still
 be unusable because the thing it needs to do inside that frame is gated on a negotiation both
 ends have to join. The headers are the contract; the rendering is not evidence of one.
+
+And when a constraint only applies across origins, the cheapest answer is often to stop crossing
+one.
