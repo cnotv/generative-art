@@ -70,9 +70,9 @@ one the browser never objected to.
 The starters are standalone builds, but they sit below this app's Vite root, and a dev server
 already serves every HTML file below its root. Only the production build had to be told about
 them, by naming their pages as extra entries rather than assuming the single one at the root.
-After that a plain frame runs them: same origin, no isolation, no `SharedArrayBuffer`, no service
-in the middle. The playground gained a way to play its own examples without a runner, a search or
-an API call, and anyone wanting to run a stranger's repository is pointed at a tab.
+That left them as ordinary pages of the same site, which is a link, so they were appended to the
+navigation the app already had rather than given a loader, a frame or a button of their own. The
+feature that began as a virtual machine in an iframe ended as two more entries in a list.
 
 ## The general lesson
 

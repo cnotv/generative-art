@@ -147,8 +147,8 @@ Two starters in the repository are built to be copied rather than read:
 Each is a standalone Vite app of roughly a hundred lines, with every constant in a `config.ts`
 and the game itself as a handful of named timeline actions.
 
-Both also play inside the playground without being copied first: the gamepad button in the
-navigation bar opens them, and the app serves them from its own origin.
+Both also play in the playground without being copied first: they are listed under Examples in its
+navigation sidebar, and the app serves them from its own origin.
 
 ## Where to go next
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { buildExampleUrl, playableExamples } from './exampleCatalogue'
+import { buildExampleUrl, playableExamples } from './examples'
 
 describe('buildExampleUrl', () => {
   it('addresses the starter through the deployment base path', () => {
