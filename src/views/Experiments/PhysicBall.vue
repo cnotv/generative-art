@@ -37,7 +37,7 @@ const BOWL_TILT = -Math.PI / 8
 /** How far a drag turns the bowl, per pixel moved. */
 const BOWL_DRAG_SENSITIVITY = 0.008
 
-/** How far a shift drag slides the bowl, per pixel moved. */
+/** How far a move gesture slides the bowl, per pixel moved. */
 const BOWL_MOVE_SENSITIVITY = 0.05
 
 /** How far the bowl can be slid from where it started, so it cannot be lost off screen. */
@@ -51,6 +51,12 @@ const BOWL_MAX_TILT = Math.PI / 3
 
 /** Movement, in pixels, past which a press counts as turning the bowl rather than a tap. */
 const DRAG_THRESHOLD = 6
+
+/** The mouse button that moves the bowl rather than turning it. */
+const RIGHT_BUTTON = 2
+
+/** Fingers on the glass that mean move rather than turn. */
+const MOVE_FINGERS = 2
 
 /** How many balls the bowl holds before the oldest is recycled, to bound what it costs. */
 const MAX_BALLS = 60
@@ -209,27 +215,40 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
 
     registerSceneElements(camera, scene.children)
 
-    // Dragging turns the bowl and a tap drops a ball, told apart by how far the pointer
-    // moved. On the canvas rather than the document, so both end when the view does.
-    let dragging = false
-    let dragOrigin = { x: 0, y: 0 }
+    // One finger or the left button turns the bowl; two fingers or the right button move it.
+    // A press that goes nowhere drops a ball instead. All on the canvas, so every listener
+    // ends with the view, and with the browser's own gestures held off it.
+    canvas.style.touchAction = 'none'
+    canvas.addEventListener('contextmenu', (event) => event.preventDefault())
+
+    const pointers = new Map<number, { x: number; y: number }>()
+    let gesture: 'turn' | 'move' | null = null
     let dragged = 0
 
     canvas.addEventListener('pointerdown', (event) => {
-      dragging = true
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+      // Capture keeps a drag alive past the edge of the canvas, but a pointer already let go
+      // of throws rather than reporting it, and losing the gesture matters more than the hold.
+      try {
+        canvas.setPointerCapture(event.pointerId)
+      } catch {
+        // The drag still works, it just stops at the canvas edge.
+      }
       dragged = 0
-      dragOrigin = { x: event.clientX, y: event.clientY }
-      canvas.setPointerCapture(event.pointerId)
+      // A second finger arriving mid-turn switches to moving, which is how a hand does it.
+      const moves = event.button === RIGHT_BUTTON || pointers.size >= MOVE_FINGERS
+      gesture = moves ? 'move' : 'turn'
     })
 
     canvas.addEventListener('pointermove', (event) => {
-      if (!dragging) return
-      const deltaX = event.clientX - dragOrigin.x
-      const deltaY = event.clientY - dragOrigin.y
-      dragOrigin = { x: event.clientX, y: event.clientY }
+      const previous = pointers.get(event.pointerId)
+      if (!previous || !gesture) return
+      const deltaX = event.clientX - previous.x
+      const deltaY = event.clientY - previous.y
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
       dragged += Math.abs(deltaX) + Math.abs(deltaY)
 
-      if (event.shiftKey) {
+      if (gesture === 'move') {
         // Slid along the camera's own right and up, so the bowl follows the pointer whatever
         // angle the scene is viewed from. Screen y counts downwards, hence the sign.
         camera.matrixWorld.extractBasis(dragRight, dragUp, dragForward)
@@ -247,9 +266,13 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
       )
     })
 
-    canvas.addEventListener('pointerup', (event) => {
-      dragging = false
-      if (dragged > DRAG_THRESHOLD) return
+    const endGesture = (event: PointerEvent) => {
+      pointers.delete(event.pointerId)
+      if (pointers.size > 0) return
+      const tapped = gesture === 'turn' && dragged <= DRAG_THRESHOLD
+      gesture = null
+      if (!tapped) return
+
       const { mesh, rigidBody } = getModel(
         sphereSize(),
         modelPosition,
@@ -265,7 +288,10 @@ const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement) => {
         const oldest = models.shift()
         if (oldest) releaseBall(scene, world, oldest)
       }
-    })
+    }
+
+    canvas.addEventListener('pointerup', endGesture)
+    canvas.addEventListener('pointercancel', endGesture)
 
     video.record(canvas, route)
 
