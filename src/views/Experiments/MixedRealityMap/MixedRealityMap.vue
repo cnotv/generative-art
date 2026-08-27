@@ -50,6 +50,9 @@ const selectedPlaceId = ref<string | null>(null)
 
 const aim = ref<DeviceAim>({ headingDegrees: 0, pitchDegrees: 0, rollDegrees: 0 })
 const sensorPermission = ref<'idle' | 'granted' | 'denied' | 'unsupported'>('idle')
+// Counted, because a permission that was never asked and one that was answered no look
+// identical from the outcome alone, and they need opposite advice.
+const sensorPromptCount = ref(0)
 const hasSensor = ref(false)
 const headingOffsetDegrees = ref(0)
 const horizontalFieldOfView = ref(DEFAULT_HORIZONTAL_FIELD_OF_VIEW)
@@ -133,6 +136,10 @@ const headingReadout = computed(() => {
 
   return states[sensorPermission.value]
 })
+
+// Orientation and camera both fail silently off a secure page, on every platform rather than
+// only iOS, so the state is surfaced rather than guessed at from a failure that looks the same.
+const isSecurePage = window.isSecureContext
 
 const measureViewport = (): void => {
   viewportAspectRatio.value = window.innerWidth / Math.max(1, window.innerHeight)
@@ -254,18 +261,32 @@ const startLocation = (): void => {
   )
 }
 
+/**
+ * Ask for the orientation sensor, from whatever tap is calling.
+ *
+ * Kept callable twice: on the platform that gates this, a request made while another dialog
+ * was on screen comes back denied without having asked, and the only way through is a fresh
+ * tap with nothing else competing for it.
+ */
+const requestSensor = async (): Promise<void> => {
+  sensorPermission.value = await motion.requestMotionPermission()
+  sensorPromptCount.value = motion.getPromptCount()
+}
+
+const retryCamera = async (): Promise<void> => {
+  cameraMessage.value = await startCamera()
+}
+
 const start = async (): Promise<void> => {
   stage.value = 'requesting'
   measureViewport()
 
-  // Both prompts are opened before anything is awaited. iOS grants the orientation sensor only
-  // while the tap that asked for it is still live, and awaiting the camera first spends that
-  // activation, so the compass is refused without ever showing its prompt.
-  const sensorRequest = motion.requestMotionPermission()
-  const cameraRequest = startCamera()
-
-  sensorPermission.value = await sensorRequest
-  cameraMessage.value = await cameraRequest
+  // One prompt at a time, sensor first. iOS grants the orientation sensor only from a live tap,
+  // and it will not raise a second dialog while one is already up — asking for both in the same
+  // tick returns the sensor denied without its prompt ever appearing, which looks from the
+  // outside exactly like the person having said no.
+  await requestSensor()
+  cameraMessage.value = await startCamera()
 
   // The three are independent: a refused camera still leaves a usable compass and a usable
   // location, which is a black screen with the street named on it rather than nothing at all.
@@ -321,7 +342,21 @@ onBeforeUnmount(() => {
       </dl>
 
       <div class="mrm__notices">
-        <p v-if="cameraMessage" class="mrm__notice">{{ cameraMessage }}</p>
+        <p v-if="cameraMessage" class="mrm__notice">
+          {{ cameraMessage }}
+          <Button variant="secondary" size="sm" @click="retryCamera">Try the camera again</Button>
+        </p>
+        <p v-if="stage === 'ready' && sensorPermission !== 'granted'" class="mrm__notice">
+          The compass was not granted, so the labels cannot follow where you turn.
+          <Button
+            v-if="sensorPermission === 'denied'"
+            variant="secondary"
+            size="sm"
+            @click="requestSensor"
+          >
+            Ask for the compass again
+          </Button>
+        </p>
         <p v-if="placesMessage" class="mrm__notice">{{ placesMessage }}</p>
       </div>
 
@@ -358,6 +393,11 @@ onBeforeUnmount(() => {
         <p class="mrm__hint">
           Widen the view until a label sits on the thing it names. Without a compass, the offset
           sweeps the horizon by hand.
+        </p>
+        <p class="mrm__hint">
+          Sensor {{ sensorPermission }}, prompted {{ sensorPromptCount }}×, readings
+          {{ hasSensor ? 'arriving' : 'none' }}. Camera {{ cameraMessage ? 'blocked' : 'open' }}.
+          Secure page {{ isSecurePage ? 'yes' : 'no' }}.
         </p>
       </section>
 
@@ -473,8 +513,13 @@ onBeforeUnmount(() => {
 }
 
 .mrm__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
   margin: 0;
   font-size: var(--font-size-sm);
+  pointer-events: auto;
 }
 
 .mrm__detail {
