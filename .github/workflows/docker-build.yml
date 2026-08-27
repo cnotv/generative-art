@@ -1,0 +1,22 @@
+name: Docker image build
+
+on:
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # The deploy workflow builds this same image on main; building it here without
+      # pushing means a broken Dockerfile fails the pull request instead of the deploy.
+      - name: Build website image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
