@@ -244,7 +244,11 @@ export const spreadLabels = (
       (other) => Math.abs(other.xPercent - label.xPercent) < columnWidthPercent
     ).length
 
-    return [...placed, { ...label, yPercent: label.yPercent - sharingColumn * rowHeightPercent }]
+    // Held inside the frame. A landscape phone is short, and a stack of five lifted off one
+    // horizon runs straight off the top edge, where an overlapping label would at least be read.
+    const lifted = label.yPercent - sharingColumn * rowHeightPercent
+
+    return [...placed, { ...label, yPercent: Math.max(lifted, rowHeightPercent) }]
   }, [])
 
 /**

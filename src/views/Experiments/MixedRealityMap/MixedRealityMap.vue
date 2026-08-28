@@ -150,15 +150,22 @@ const streetRuns = computed(() =>
 const streetNames = computed(() => getStreetNamePositions(streetRuns.value))
 
 /**
- * The labels turn with the world, not with the phone, which is what makes them read as fixed to
- * the street rather than painted on the glass.
+ * The labels stay square to the world, which is what makes them read as fixed to the street
+ * rather than painted on the glass.
  *
- * The page's own rotation is deliberately not subtracted back out. A camera stream arrives in
- * the device's fixed orientation and is not re-oriented when the page turns, so the world in
- * the picture leans exactly as the phone does, and the labels have to lean with it. Taking the
- * page's rotation off left them square to the page while the picture behind them was sideways.
+ * Square to the world is not the same as turning with the phone, and which one it looks like
+ * depends on something the page does not control. When the browser rotates the page, it rotates
+ * the camera picture with it, so the world is already upright in the frame and the labels have
+ * to be upright too; the page's own rotation is taken back off for exactly that. When the page
+ * stays put — locked to portrait, or a browser that does not turn — the picture leans with the
+ * phone and the labels lean with it, which is the turning motion the feature is named for.
+ *
+ * The angle is only believed when the viewport has visibly taken it: some browsers report the
+ * angle the device is held at rather than the one the document was turned by.
  */
-const worldTransform = computed(() => `rotate(${aim.value.rollDegrees.toFixed(2)}deg)`)
+const worldTransform = computed(
+  () => `rotate(${(aim.value.rollDegrees - screenAngleDegrees.value).toFixed(2)}deg)`
+)
 
 const selectedPlace = computed(
   () => places.value.find(({ id }) => id === selectedPlaceId.value) ?? null
@@ -225,10 +232,11 @@ const measureViewport = (): void => {
   const height = Math.max(1, window.innerHeight)
   viewportAspectRatio.value = width / height
 
-  // Recorded for the diagnostics line only. Nothing is placed by it: browsers disagree over
-  // whether it reports the angle the page was turned by or the one the device is held at, and
-  // the overlay leans by the sensor instead, which does not have that ambiguity.
-  screenAngleDegrees.value = window.screen?.orientation?.angle ?? 0
+  // Only believe a rotation the page has visibly taken. Some browsers report the angle the
+  // device is held at rather than the one the document was turned by, and taking that at its
+  // word turns the whole overlay a quarter turn while the page is plainly still portrait.
+  const reported = window.screen?.orientation?.angle ?? 0
+  screenAngleDegrees.value = width > height ? reported : 0
 }
 
 let frameId = 0
@@ -411,7 +419,10 @@ const start = async (): Promise<void> => {
   // The overlay turns with the world by itself; letting the page turn as well would take the
   // labels round twice, and the compensation for it is guesswork on the devices that lie.
   lockScreenOrientation('portrait')
+  // Both, because a browser that turns the page does not reliably resize it, and one that
+  // resizes does not always report a turn.
   window.addEventListener('resize', measureViewport)
+  window.addEventListener('orientationchange', measureViewport)
   stage.value = 'ready'
   readAim()
 }
@@ -421,6 +432,7 @@ onBeforeUnmount(() => {
   pendingRequest?.abort()
   pendingStreets?.abort()
   window.removeEventListener('resize', measureViewport)
+  window.removeEventListener('orientationchange', measureViewport)
   if (watchId !== null) navigator.geolocation.clearWatch(watchId)
   cameraStream.value?.getTracks().forEach((track) => track.stop())
   unlockScreenOrientation()

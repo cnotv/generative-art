@@ -475,6 +475,14 @@ describe('spreadLabels', () => {
     expect(spread.map(({ yPercent }) => yPercent)).toEqual([50, 50])
   })
 
+  it('stops lifting at the top of the frame rather than off it', () => {
+    const stack = Array.from({ length: 12 }, (_unused, index) => at(`label-${index}`, 50))
+
+    const spread = spreadLabels(stack, 7, 30)
+
+    spread.forEach(({ yPercent }) => expect(yPercent).toBeGreaterThanOrEqual(7))
+  })
+
   it('keeps the labels and their order', () => {
     const spread = spreadLabels([at('one', 50), at('two', 52)], 7, 30)
 
