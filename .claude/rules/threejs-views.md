@@ -131,6 +131,12 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
 ## Gotchas
 
 - Rapier needs `vite-plugin-wasm` and `optimizeDeps.exclude: ['@dimforge/rapier3d-compat']`.
+- **A scene with lights does not keep the lights it declared.** `store.init` starts the day
+  cycle, which overwrites every light and the scene background a frame later, so a
+  `SetupConfig` palette silently becomes dawn, then night. That is the intended default. A
+  view whose subject has to stay readable opts out with
+  `store.setLightTransitionEnabled(false)` straight after `init`, which lands before the
+  cycle's first frame and leaves the declared rig in place.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.
