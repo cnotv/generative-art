@@ -49,6 +49,20 @@ export const STREET_WIDTH_METERS = 12
 export const PLACE_MARKER_METERS = 6
 
 /**
+ * Wikipedia's own search by position: free, no key, and it answers with an open cross-origin
+ * header, which a page doing all its own fetching needs.
+ */
+export const WIKIPEDIA_ENDPOINT = 'https://en.wikipedia.org/w/api.php'
+export const WIKIPEDIA_PAGE_BASE = 'https://en.wikipedia.org/wiki/'
+
+/** Tight, because the question is what this building is and not what district it stands in. */
+export const IMAGE_SEARCH_RADIUS_METERS = 120
+export const IMAGE_THUMBNAIL_WIDTH = 480
+
+/** What the corner map's half-width covers on the ground, which is a few streets either way. */
+export const MINIMAP_RADIUS_METERS = 200
+
+/**
  * How upright the phone has to be before its roll is worth believing. Below this the plumb line
  * points through the screen, there is no horizon, and the reported roll is sensor noise.
  */

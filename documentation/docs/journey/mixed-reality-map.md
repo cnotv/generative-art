@@ -144,8 +144,27 @@ builds never report an absolute bearing at all, and a desktop has no sensor what
 heading offset covers all three, and doubles as the only way to look around on a machine that
 cannot be turned.
 
-![The two calibration sliders open above the icon bar](/img/mixed-reality-map/detail.webp)
+![A tapped place with its picture, beside the plan view in the corner](/img/mixed-reality-map/detail.webp)
 
 Which kinds of thing are named is a row of icon toggles along the bottom rather than a setting
 behind a button, because it is the control that gets used while walking: a street of shops is a
 wall of names, and turning four of the five kinds off is how you find the one you wanted.
+
+## The map is drawn, not fetched
+
+A plan view in the corner is the obvious place to reach for map tiles, and the wrong one. The
+street geometry is already loaded to draw the road surfaces, and the places are already loaded
+to label them, so the plan is a second projection of data the view is holding anyway: no key to
+carry, no usage policy to honour, nothing to fetch, and no way for the map to disagree with the
+labels, because it is the same data seen from above.
+
+It is turned so the way you are facing points up, rather than north. North-up is the convention
+and it is wrong here: the whole purpose is to line the plan up with what the camera is showing,
+and a map you have to rotate in your head does not do that. The view cone is the one thing on it
+that does not turn, because it belongs to the screen rather than to the ground.
+
+Pictures come from Wikipedia's search by position, which is free and keyless like everything
+else here. It answers with the nearest article that has a photograph, and for an ordinary shop
+that is usually the street or the district rather than the shop itself — so the card names the
+article it took the picture from. A photograph presented as the place, when it is really the
+neighbourhood, would be the kind of small lie that makes the rest untrustworthy.

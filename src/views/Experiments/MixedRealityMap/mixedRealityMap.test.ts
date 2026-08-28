@@ -14,6 +14,8 @@ import {
 } from './projection'
 import { buildPlacesUrl, parsePlaces } from './places'
 import { parseStreetPaths } from './streets'
+import { buildMinimap, getMinimapPoint } from './minimap'
+import { buildImageUrl, parsePlaceImage } from './imagery'
 import { PLACE_GROUPS, getPlaceGroup } from './config'
 import type { FieldOfView, Place, PlacedLabel } from './types'
 
@@ -471,6 +473,171 @@ describe('projectStreetRibbons', () => {
     expect(ribbons).toHaveLength(1)
     expect(ribbons[0].points).toHaveLength(4)
   })
+})
+
+describe('getMinimapPoint', () => {
+  it('puts the viewer at the middle of their own map', () => {
+    expect(getMinimapPoint(AMSTERDAM, AMSTERDAM, 200)).toEqual({ x: 50, y: 50 })
+  })
+
+  it.each([
+    ['north', 0.001, 0, 50, 'above'],
+    ['south', -0.001, 0, 50, 'below'],
+    ['east', 0, 0.001, 0, 'right'],
+    ['west', 0, -0.001, 0, 'left']
+  ])('draws what is %s of you %s the middle', (_direction, latitudeStep, longitudeStep) => {
+    const point = getMinimapPoint(
+      AMSTERDAM,
+      {
+        latitude: AMSTERDAM.latitude + latitudeStep,
+        longitude: AMSTERDAM.longitude + longitudeStep
+      },
+      200
+    )
+
+    if (latitudeStep > 0) expect(point.y).toBeLessThan(50)
+    if (latitudeStep < 0) expect(point.y).toBeGreaterThan(50)
+    if (longitudeStep > 0) expect(point.x).toBeGreaterThan(50)
+    if (longitudeStep < 0) expect(point.x).toBeLessThan(50)
+  })
+
+  it('puts the map edge exactly a radius away', () => {
+    const northEdge = {
+      latitude: AMSTERDAM.latitude + 200 / 111_320,
+      longitude: AMSTERDAM.longitude
+    }
+
+    expect(getMinimapPoint(AMSTERDAM, northEdge, 200).y).toBeCloseTo(0, 1)
+  })
+
+  it('shrinks what it draws when the map covers more ground', () => {
+    const point = { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude }
+    const near = getMinimapPoint(AMSTERDAM, point, 100)
+    const far = getMinimapPoint(AMSTERDAM, point, 400)
+
+    expect(Math.abs(far.y - 50)).toBeLessThan(Math.abs(near.y - 50))
+  })
+})
+
+describe('buildMinimap', () => {
+  const nearby = makePlace('nearby', AMSTERDAM.latitude + 0.0005, AMSTERDAM.longitude)
+  const distant = makePlace('distant', AMSTERDAM.latitude + 0.05, AMSTERDAM.longitude)
+  const street = {
+    id: 'way/1',
+    name: 'Damrak',
+    points: [
+      { latitude: AMSTERDAM.latitude + 0.0005, longitude: AMSTERDAM.longitude },
+      { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude }
+    ]
+  }
+
+  it('keeps what falls on the map and drops what does not', () => {
+    const view = buildMinimap([street], [nearby, distant], AMSTERDAM, 200)
+
+    expect(view.places.map(({ id }) => id)).toEqual(['nearby'])
+    expect(view.streets.map(({ id }) => id)).toEqual(['way/1'])
+  })
+
+  it('keeps a street whole when only part of it lands, so the map clips it', () => {
+    const crossing = {
+      ...street,
+      points: [
+        { latitude: AMSTERDAM.latitude, longitude: AMSTERDAM.longitude },
+        { latitude: AMSTERDAM.latitude + 0.05, longitude: AMSTERDAM.longitude }
+      ]
+    }
+
+    const [drawn] = buildMinimap([crossing], [], AMSTERDAM, 200).streets
+
+    expect(drawn.points).toHaveLength(2)
+  })
+
+  it('drops a street that is nowhere near', () => {
+    const elsewhere = {
+      ...street,
+      points: street.points.map(({ latitude, longitude }) => ({
+        latitude: latitude + 0.05,
+        longitude
+      }))
+    }
+
+    expect(buildMinimap([elsewhere], [], AMSTERDAM, 200).streets).toEqual([])
+  })
+
+  it('carries the group, so the map can be filtered like the labels', () => {
+    const [place] = buildMinimap([], [nearby], AMSTERDAM, 200).places
+
+    expect(place.group).toBe('food')
+  })
+})
+
+describe('buildImageUrl', () => {
+  it('asks around the place, at the size it will be shown', () => {
+    const url = new URL(buildImageUrl(AMSTERDAM, 120, 480))
+
+    expect(url.searchParams.get('ggscoord')).toBe('52.3676|4.9041')
+    expect(url.searchParams.get('ggsradius')).toBe('120')
+    expect(url.searchParams.get('pithumbsize')).toBe('480')
+  })
+
+  it('asks for a cross-origin answer, without which a browser is refused', () => {
+    const url = new URL(buildImageUrl(AMSTERDAM, 120, 480))
+
+    expect(url.searchParams.get('origin')).toBe('*')
+  })
+})
+
+describe('parsePlaceImage', () => {
+  const page = (index: number, title: string, source?: string) => ({
+    index,
+    title,
+    ...(source ? { thumbnail: { source } } : {})
+  })
+
+  it('reads the picture and where it came from', () => {
+    const image = parsePlaceImage({
+      query: { pages: { '1': page(0, 'Dam Square', 'https://example.test/dam.jpg') } }
+    })
+
+    expect(image).toEqual({
+      title: 'Dam Square',
+      thumbnailUrl: 'https://example.test/dam.jpg',
+      pageUrl: 'https://en.wikipedia.org/wiki/Dam_Square'
+    })
+  })
+
+  it('takes the nearest article that actually has a picture', () => {
+    const image = parsePlaceImage({
+      query: {
+        pages: {
+          '1': page(0, 'No Picture Here'),
+          '2': page(1, 'Has One', 'https://example.test/one.jpg')
+        }
+      }
+    })
+
+    expect(image?.title).toBe('Has One')
+  })
+
+  it('prefers the nearer of two that both have pictures', () => {
+    const image = parsePlaceImage({
+      query: {
+        pages: {
+          '1': page(3, 'Further', 'https://example.test/far.jpg'),
+          '2': page(1, 'Nearer', 'https://example.test/near.jpg')
+        }
+      }
+    })
+
+    expect(image?.title).toBe('Nearer')
+  })
+
+  it.each([[null], [{}], [{ query: {} }], [{ query: { pages: {} } }], [{ query: { pages: 42 } }]])(
+    'reads nothing out of a response with no picture in it',
+    (payload) => {
+      expect(parsePlaceImage(payload)).toBeNull()
+    }
+  )
 })
 
 describe('spreadLabels', () => {

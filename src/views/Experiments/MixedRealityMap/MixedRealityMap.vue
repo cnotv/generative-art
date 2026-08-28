@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import IconButton from '@/components/IconButton.vue'
 import { fetchNearbyPlaces } from './places'
+import { fetchPlaceImage } from './imagery'
+import { buildMinimap } from './minimap'
 import { fetchStreetPaths } from './streets'
 import {
   formatDistance,
@@ -31,6 +33,8 @@ import {
   DEFAULT_HORIZONTAL_FIELD_OF_VIEW,
   EYE_HEIGHT_METERS,
   GEOLOCATION_OPTIONS,
+  IMAGE_SEARCH_RADIUS_METERS,
+  IMAGE_THUMBNAIL_WIDTH,
   LABEL_COLUMN_WIDTH_PERCENT,
   LABEL_ROW_HEIGHT_PERCENT,
   MAXIMUM_FIELD_OF_VIEW,
@@ -38,6 +42,7 @@ import {
   MAX_PLACES,
   MAX_VISIBLE_LABELS,
   MINIMUM_FIELD_OF_VIEW,
+  MINIMAP_RADIUS_METERS,
   MINIMUM_HORIZON_STRENGTH,
   PLACE_MARKER_METERS,
   PLACE_GROUPS,
@@ -46,7 +51,7 @@ import {
   STREET_RADIUS_METERS,
   STREET_WIDTH_METERS
 } from './config'
-import type { GeoPoint, PermissionStage, Place, StreetPath } from './types'
+import type { GeoPoint, PermissionStage, Place, PlaceImage, StreetPath } from './types'
 
 /** Enough to settle a magnetometer without the labels lagging behind the phone. */
 const AIM_SMOOTHING = 0.15
@@ -67,6 +72,8 @@ const accuracyMeters = ref<number | null>(null)
 const places = ref<Place[]>([])
 const streetPaths = ref<StreetPath[]>([])
 const selectedPlaceId = ref<string | null>(null)
+const placeImage = ref<PlaceImage | null>(null)
+const isLoadingImage = ref(false)
 
 const aim = ref<DeviceAim>({
   headingDegrees: 0,
@@ -196,6 +203,71 @@ const selectedPlace = computed(
   () => places.value.find(({ id }) => id === selectedPlaceId.value) ?? null
 )
 
+/**
+ * The plan view in the corner, turned so the way you are facing points up.
+ *
+ * North-up would be the conventional choice and the wrong one here: the whole point is to line
+ * the map up with what the camera is showing, and a map you have to mentally rotate does not do
+ * that.
+ */
+const minimap = computed(() =>
+  origin.value
+    ? buildMinimap(streetPaths.value, visiblePlaces.value, origin.value, MINIMAP_RADIUS_METERS)
+    : { streets: [], places: [] }
+)
+
+const minimapTransform = computed(
+  () => `rotate(${(-(aim.value.headingDegrees + headingOffsetDegrees.value)).toFixed(1)} 50 50)`
+)
+
+/**
+ * The wedge showing how much of the plan the camera actually takes in.
+ *
+ * Drawn straight up the map, because the map is turned to face the same way and the cone is the
+ * one thing on it that belongs to the screen rather than to the ground.
+ */
+const minimapCone = computed(() => {
+  const half = (fieldOfView.value.horizontalDegrees / 2) * (Math.PI / 180)
+  const reach = 50
+  const left = { x: 50 - Math.sin(half) * reach, y: 50 - Math.cos(half) * reach }
+  const right = { x: 50 + Math.sin(half) * reach, y: 50 - Math.cos(half) * reach }
+
+  return `M 50 50 L ${left.x.toFixed(1)} ${left.y.toFixed(1)} L ${right.x.toFixed(1)} ${right.y.toFixed(1)} Z`
+})
+
+const selectImage = async (place: Place): Promise<void> => {
+  pendingImage?.abort()
+  const request = new AbortController()
+  pendingImage = request
+  placeImage.value = null
+  isLoadingImage.value = true
+
+  try {
+    placeImage.value = await fetchPlaceImage(
+      place,
+      IMAGE_SEARCH_RADIUS_METERS,
+      IMAGE_THUMBNAIL_WIDTH,
+      request.signal
+    )
+  } catch {
+    if (!request.signal.aborted) placeImage.value = null
+  } finally {
+    if (!request.signal.aborted) isLoadingImage.value = false
+  }
+}
+
+const selectPlace = (place: Place): void => {
+  selectedPlaceId.value = place.id
+  selectImage(place)
+}
+
+const closePlace = (): void => {
+  pendingImage?.abort()
+  selectedPlaceId.value = null
+  placeImage.value = null
+  isLoadingImage.value = false
+}
+
 const selectedDistance = computed(() =>
   selectedPlace.value && origin.value
     ? formatDistance(getDistanceMeters(origin.value, selectedPlace.value))
@@ -268,6 +340,7 @@ let frameId = 0
 let watchId: number | null = null
 let pendingRequest: AbortController | null = null
 let pendingStreets: AbortController | null = null
+let pendingImage: AbortController | null = null
 
 const blend = (current: number, target: number): number =>
   current + (target - current) * AIM_SMOOTHING
@@ -456,6 +529,7 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frameId)
   pendingRequest?.abort()
   pendingStreets?.abort()
+  pendingImage?.abort()
   window.removeEventListener('resize', measureViewport)
   window.removeEventListener('orientationchange', measureViewport)
   if (watchId !== null) navigator.geolocation.clearWatch(watchId)
@@ -514,7 +588,7 @@ onBeforeUnmount(() => {
         variant="ghost"
         class="mrm__label"
         :style="{ left: `${label.xPercent}%`, top: `${label.yPercent}%` }"
-        @click="selectedPlaceId = label.place.id"
+        @click="selectPlace(label.place)"
       >
         <span class="mrm__label-name">{{ label.place.name }}</span>
         <span class="mrm__label-detail">
@@ -532,6 +606,35 @@ onBeforeUnmount(() => {
         <dt>Accuracy</dt>
         <dd>{{ accuracyMeters === null ? 'waiting' : formatDistance(accuracyMeters) }}</dd>
       </dl>
+
+      <svg
+        v-if="origin"
+        class="mrm__minimap"
+        viewBox="0 0 100 100"
+        role="img"
+        aria-label="Plan of the streets around you, turned so the way you face is up"
+      >
+        <circle class="mrm__minimap-ground" cx="50" cy="50" r="49" />
+        <g :transform="minimapTransform">
+          <polyline
+            v-for="street in minimap.streets"
+            :key="street.id"
+            class="mrm__minimap-street"
+            :points="street.points.map(({ x, y }) => `${x},${y}`).join(' ')"
+          />
+          <circle
+            v-for="place in minimap.places"
+            :key="place.id"
+            class="mrm__minimap-place"
+            :cx="place.x"
+            :cy="place.y"
+            r="2"
+          />
+        </g>
+        <!-- Fixed to the frame rather than turned with the map: it is where the camera looks. -->
+        <path class="mrm__minimap-cone" :d="minimapCone" />
+        <circle class="mrm__minimap-viewer" cx="50" cy="50" r="3" />
+      </svg>
 
       <div class="mrm__notices">
         <p v-if="cameraMessage" class="mrm__notice">
@@ -553,12 +656,31 @@ onBeforeUnmount(() => {
       </div>
 
       <article v-if="selectedPlace" class="mrm__detail">
+        <img
+          v-if="placeImage"
+          class="mrm__detail-image"
+          :src="placeImage.thumbnailUrl"
+          :alt="`Photograph captioned ${placeImage.title}`"
+          loading="lazy"
+        />
+        <p v-else class="mrm__detail-line">
+          {{ isLoadingImage ? 'Looking for a picture…' : 'No picture of this one.' }}
+        </p>
+
         <h2 class="mrm__detail-name">{{ selectedPlace.name }}</h2>
         <p class="mrm__detail-line">{{ selectedPlace.category }} · {{ selectedDistance }}</p>
+        <!-- Named plainly: the picture is of whatever Wikipedia has nearest, which for a shop
+             is usually the street or the district rather than the shop itself. -->
+        <p v-if="placeImage" class="mrm__detail-line">
+          Nearest picture on Wikipedia:
+          <a class="mrm__detail-link" :href="placeImage.pageUrl" target="_blank" rel="noreferrer">
+            {{ placeImage.title }}
+          </a>
+        </p>
         <a class="mrm__detail-link" :href="openStreetMapUrl" target="_blank" rel="noreferrer">
           Open in OpenStreetMap
         </a>
-        <Button variant="secondary" size="sm" @click="selectedPlaceId = null">Close</Button>
+        <Button variant="secondary" size="sm" @click="closePlace">Close</Button>
       </article>
 
       <section v-if="isCalibrating" class="mrm__calibration">
@@ -745,11 +867,12 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-areas:
     'readout'
+    'minimap'
     'notice'
     'detail'
     'calibration'
     'actions';
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto auto auto 1fr auto auto;
   gap: var(--spacing-2);
   padding: var(--nav-height) var(--spacing-4) var(--spacing-6);
   pointer-events: none;
@@ -772,6 +895,48 @@ onBeforeUnmount(() => {
 .mrm__readout dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Drawn from the street geometry the overlay already holds, so there is nothing to fetch and
+ * the plan cannot disagree with the labels.
+ */
+.mrm__minimap {
+  grid-area: minimap;
+  justify-self: end;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.mrm__minimap-ground {
+  fill: var(--color-canvas-overlay-surface-strong);
+  stroke: var(--color-canvas-overlay-border);
+  stroke-width: 1;
+}
+
+.mrm__minimap-street {
+  fill: none;
+  stroke: var(--color-canvas-overlay-foreground);
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mrm__minimap-place {
+  fill: var(--color-canvas-overlay-foreground);
+  fill-opacity: 0.85;
+}
+
+.mrm__minimap-cone {
+  fill: var(--color-canvas-overlay-foreground);
+  fill-opacity: 0.16;
+}
+
+.mrm__minimap-viewer {
+  fill: var(--color-canvas-overlay-foreground);
 }
 
 .mrm__notices {
@@ -801,6 +966,13 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-xl);
   background: var(--color-canvas-overlay-surface-strong);
   pointer-events: auto;
+}
+
+.mrm__detail-image {
+  width: 100%;
+  max-height: 40vh;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
 }
 
 .mrm__detail-name {

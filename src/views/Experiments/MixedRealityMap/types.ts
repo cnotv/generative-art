@@ -60,6 +60,19 @@ export interface StreetRibbon {
   namePoint: FramePoint
 }
 
+/** The plan view drawn in the corner, in a hundred-unit square with north up. */
+export interface MinimapView {
+  streets: { id: string; points: { x: number; y: number }[] }[]
+  places: { id: string; group: string; x: number; y: number }[]
+}
+
+/** A picture of a place, and where it came from. */
+export interface PlaceImage {
+  title: string
+  thumbnailUrl: string
+  pageUrl: string
+}
+
 /** How wide a view the camera takes in, which no browser API reports. */
 export interface FieldOfView {
   horizontalDegrees: number
