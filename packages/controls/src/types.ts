@@ -30,6 +30,12 @@ export interface DeviceAim {
   pitchDegrees: number
   /** Clockwise turn to apply to screen content for it to stay level with the world. */
   rollDegrees: number
+  /**
+   * How well defined `rollDegrees` is, from 0 lying flat to 1 held upright. A device on a table
+   * has no horizon to be square to, so its roll is noise; hold the last good one below about
+   * 0.2 rather than turning a view by it.
+   */
+  horizonStrength: number
 }
 
 /** A unit vector pointing down, in the device's own axes. */

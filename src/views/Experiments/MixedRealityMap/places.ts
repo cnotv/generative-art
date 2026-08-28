@@ -1,4 +1,4 @@
-import { PHOTON_ENDPOINT, UNPLACEABLE_TYPES } from './config'
+import { PHOTON_ENDPOINT, UNPLACEABLE_TYPES, getPlaceGroup } from './config'
 import type { GeoPoint, Place } from './types'
 
 const METERS_IN_A_KILOMETER = 1000
@@ -27,30 +27,43 @@ export const buildPlacesUrl = (origin: GeoPoint, radiusMeters: number, limit: nu
 }
 
 /**
+ * Read a GeoJSON point, which writes longitude before latitude.
+ * @param geometry The feature's geometry member
+ * @returns The position, or null where there is not a usable one
+ */
+const readPosition = (geometry: unknown): GeoPoint | null => {
+  if (!isRecord(geometry) || !Array.isArray(geometry.coordinates)) return null
+  const [longitude, latitude] = geometry.coordinates
+  if (typeof longitude !== 'number' || typeof latitude !== 'number') return null
+
+  return { latitude, longitude }
+}
+
+/**
  * Read a single GeoJSON feature, or nothing where it cannot be drawn as a label.
- * @param value One entry of the feature collection
+ * @param feature One entry of the feature collection
  * @returns The place, or null
  */
-const readPlace = (value: unknown): Place | null => {
-  if (!isRecord(value)) return null
-  const { properties, geometry } = value
-  if (!isRecord(properties) || !isRecord(geometry)) return null
+const readPlace = (feature: unknown): Place | null => {
+  if (!isRecord(feature) || !isRecord(feature.properties)) return null
+  const { properties } = feature
 
   const name = readString(properties.name)
-  const kind = readString(properties.type)
-  const coordinates = geometry.coordinates
-  if (!name || !Array.isArray(coordinates)) return null
+  const position = readPosition(feature.geometry)
+  if (!name || !position) return null
 
-  const [longitude, latitude] = coordinates
-  if (typeof longitude !== 'number' || typeof latitude !== 'number') return null
-  if (kind !== null && UNPLACEABLE_TYPES.some((skipped) => skipped === kind)) return null
+  const kind = readString(properties.type) ?? ''
+  if (UNPLACEABLE_TYPES.some((skipped) => skipped === kind)) return null
+
+  const tagKey = readString(properties.osm_key) ?? ''
+  const tagValue = readString(properties.osm_value) ?? ''
 
   return {
     id: `${readString(properties.osm_type) ?? 'X'}${String(properties.osm_id ?? name)}`,
     name,
-    category: readString(properties.osm_value) ?? kind ?? 'place',
-    latitude,
-    longitude
+    category: tagValue || kind || 'place',
+    group: getPlaceGroup(tagKey, tagValue, kind),
+    ...position
   }
 }
 

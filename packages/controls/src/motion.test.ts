@@ -477,6 +477,26 @@ describe('getDeviceAim', () => {
     expect(aim.headingDegrees).toBeCloseTo(90)
   })
 
+  it('reports a full horizon from a phone held upright', () => {
+    expect(getDeviceAim({ alpha: 0, ...upright }).horizonStrength).toBeCloseTo(1)
+  })
+
+  it('reports no horizon at all from a phone lying flat, where the roll is noise', () => {
+    const aim = getDeviceAim({ alpha: 0, beta: 0, gamma: 0, compassHeading: null })
+
+    expect(aim.horizonStrength).toBeCloseTo(0)
+  })
+
+  it.each([
+    [30, 0.5],
+    [60, 0.866],
+    [90, 1]
+  ])('grows the horizon as the phone is raised to %i degrees', (beta, expected) => {
+    const aim = getDeviceAim({ alpha: 0, beta, gamma: 0, compassHeading: null })
+
+    expect(aim.horizonStrength).toBeCloseTo(expected, 2)
+  })
+
   it('holds the horizon level while the phone is upright', () => {
     const aim = getDeviceAim({ alpha: 0, ...upright })
 

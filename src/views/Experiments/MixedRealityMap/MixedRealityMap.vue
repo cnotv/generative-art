@@ -5,15 +5,18 @@ import {
   lockScreenOrientation,
   unlockScreenOrientation
 } from '@webgamekit/controls'
-import type { DeviceAim } from '@webgamekit/controls'
+import type { DeviceAim, MotionReading } from '@webgamekit/controls'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
 import { fetchNearbyPlaces } from './places'
+import { fetchStreetPaths } from './streets'
 import {
   formatDistance,
   getDistanceMeters,
   getVerticalFieldOfView,
   placeLabels,
+  projectStreets,
   smoothBearing
 } from './projection'
 import {
@@ -27,10 +30,13 @@ import {
   MAX_PLACES,
   MAX_VISIBLE_LABELS,
   MINIMUM_FIELD_OF_VIEW,
+  MINIMUM_HORIZON_STRENGTH,
+  PLACE_GROUPS,
   REFETCH_DISTANCE_METERS,
-  SEARCH_RADIUS_METERS
+  SEARCH_RADIUS_METERS,
+  STREET_RADIUS_METERS
 } from './config'
-import type { GeoPoint, PermissionStage, Place } from './types'
+import type { GeoPoint, PermissionStage, Place, StreetPath } from './types'
 
 /** Enough to settle a magnetometer without the labels lagging behind the phone. */
 const AIM_SMOOTHING = 0.15
@@ -46,14 +52,21 @@ const cameraStream = shallowRef<MediaStream | null>(null)
 const origin = ref<GeoPoint | null>(null)
 const accuracyMeters = ref<number | null>(null)
 const places = ref<Place[]>([])
+const streetPaths = ref<StreetPath[]>([])
 const selectedPlaceId = ref<string | null>(null)
 
-const aim = ref<DeviceAim>({ headingDegrees: 0, pitchDegrees: 0, rollDegrees: 0 })
+const aim = ref<DeviceAim>({
+  headingDegrees: 0,
+  pitchDegrees: 0,
+  rollDegrees: 0,
+  horizonStrength: 0
+})
 const sensorPermission = ref<'idle' | 'granted' | 'denied' | 'unsupported'>('idle')
 // Counted, because a permission that was never asked and one that was answered no look
 // identical from the outcome alone, and they need opposite advice.
 const sensorPromptCount = ref(0)
 const hasSensor = ref(false)
+const lastReading = ref<MotionReading | null>(null)
 const headingOffsetDegrees = ref(0)
 const horizontalFieldOfView = ref(DEFAULT_HORIZONTAL_FIELD_OF_VIEW)
 const isCalibrating = ref(false)
@@ -73,10 +86,30 @@ const fieldOfView = computed(() => ({
   verticalDegrees: getVerticalFieldOfView(horizontalFieldOfView.value, viewportAspectRatio.value)
 }))
 
+const hiddenGroups = ref<string[]>([])
+
+const toggleGroup = (id: string): void => {
+  hiddenGroups.value = hiddenGroups.value.includes(id)
+    ? hiddenGroups.value.filter((hidden) => hidden !== id)
+    : [...hiddenGroups.value, id]
+}
+
+const visiblePlaces = computed(() =>
+  places.value.filter(({ group }) => !hiddenGroups.value.includes(group))
+)
+
+/** How many of each kind were found, so a filter says what turning it off would cost. */
+const groupCounts = computed(() =>
+  places.value.reduce<Record<string, number>>(
+    (counts, { group }) => ({ ...counts, [group]: (counts[group] ?? 0) + 1 }),
+    {}
+  )
+)
+
 const labels = computed(() =>
   origin.value
     ? placeLabels(
-        places.value,
+        visiblePlaces.value,
         origin.value,
         {
           headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
@@ -98,6 +131,21 @@ const labels = computed(() =>
  * to the street rather than painted on the glass. Where the browser has rotated the page
  * itself, that turn has already happened and is taken back out here.
  */
+const streetRuns = computed(() =>
+  origin.value && !hiddenGroups.value.includes('streets')
+    ? projectStreets(
+        streetPaths.value,
+        origin.value,
+        {
+          headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
+          pitchDegrees: aim.value.pitchDegrees
+        },
+        fieldOfView.value,
+        EYE_HEIGHT_METERS
+      )
+    : []
+)
+
 const worldTransform = computed(
   () => `rotate(${(aim.value.rollDegrees - screenAngleDegrees.value).toFixed(2)}deg)`
 )
@@ -124,7 +172,10 @@ const openStreetMapUrl = computed(() =>
  */
 const headingReadout = computed(() => {
   if (hasSensor.value) {
-    return `${Math.round(aim.value.headingDegrees + headingOffsetDegrees.value)}°`
+    // Both the blend and the offset can push the sum onto or past a full turn, and a compass
+    // that reads 360 rather than 0 looks broken.
+    const heading = (((aim.value.headingDegrees + headingOffsetDegrees.value) % 360) + 360) % 360
+    return `${Math.round(heading) % 360}°`
   }
 
   const states = {
@@ -141,14 +192,40 @@ const headingReadout = computed(() => {
 // only iOS, so the state is surfaced rather than guessed at from a failure that looks the same.
 const isSecurePage = window.isSecureContext
 
+/**
+ * The raw angles beside what was made of them. Every wrong-looking overlay is one of these two
+ * halves, and from the outside they produce the same picture.
+ */
+const orientationDiagnostics = computed(() => {
+  const reading = lastReading.value
+  if (!reading) return 'No orientation reading.'
+
+  const round = (value: number): string => value.toFixed(0)
+  const raw = `a${round(reading.alpha)} b${round(reading.beta)} g${round(reading.gamma)}`
+  const compass = reading.compassHeading === null ? 'none' : round(reading.compassHeading)
+  // The blended roll is kept inside a single turn, where level reads as 360 rather than 0.
+  const signedRoll = ((aim.value.rollDegrees + 180) % 360) - 180
+  const applied = `${round(signedRoll)}° roll, horizon ${aim.value.horizonStrength.toFixed(2)}`
+
+  return `${raw}, compass ${compass}, screen ${screenAngleDegrees.value}° · ${applied}`
+})
+
 const measureViewport = (): void => {
-  viewportAspectRatio.value = window.innerWidth / Math.max(1, window.innerHeight)
-  screenAngleDegrees.value = window.screen?.orientation?.angle ?? 0
+  const width = window.innerWidth
+  const height = Math.max(1, window.innerHeight)
+  viewportAspectRatio.value = width / height
+
+  // Only believe a reported rotation the page has visibly taken. Some browsers report the angle
+  // the device is held at rather than the one the document was turned by, and taking that at its
+  // word turns the whole overlay a quarter turn while the page is plainly still portrait.
+  const reported = window.screen?.orientation?.angle ?? 0
+  screenAngleDegrees.value = width > height ? reported : 0
 }
 
 let frameId = 0
 let watchId: number | null = null
 let pendingRequest: AbortController | null = null
+let pendingStreets: AbortController | null = null
 
 const blend = (current: number, target: number): number =>
   current + (target - current) * AIM_SMOOTHING
@@ -159,10 +236,19 @@ const readAim = (): void => {
   if (!reading) return
 
   hasSensor.value = true
+  lastReading.value = motion.getReading()
   aim.value = {
     headingDegrees: smoothBearing(aim.value.headingDegrees, reading.headingDegrees, AIM_SMOOTHING),
     pitchDegrees: blend(aim.value.pitchDegrees, reading.pitchDegrees),
-    rollDegrees: blend(aim.value.rollDegrees, reading.rollDegrees)
+    // Roll is an angle and wraps, so it is blended the short way round. Averaging it as a plain
+    // number sends the overlay the long way through half a turn every time it crosses the wrap.
+    // Below the threshold the phone is too flat for a horizon to exist, and the last good roll
+    // is held rather than following noise a quarter turn out.
+    rollDegrees:
+      reading.horizonStrength < MINIMUM_HORIZON_STRENGTH
+        ? aim.value.rollDegrees
+        : smoothBearing(aim.value.rollDegrees, reading.rollDegrees, AIM_SMOOTHING),
+    horizonStrength: reading.horizonStrength
   }
 }
 
@@ -183,6 +269,24 @@ const loadPlaces = async (from: GeoPoint): Promise<void> => {
   }
 }
 
+/**
+ * Street geometry is a bonus, not a dependency: Overpass is the only free source of it and its
+ * mirrors fail often, so a failure leaves the labels alone and simply draws no lines.
+ */
+const loadStreets = async (from: GeoPoint): Promise<void> => {
+  // Its own controller, not the one the places request uses. Sharing it meant the next position
+  // update aborted a street query that was still in flight, and the lines vanished at random.
+  pendingStreets?.abort()
+  const request = new AbortController()
+  pendingStreets = request
+
+  try {
+    streetPaths.value = await fetchStreetPaths(from, STREET_RADIUS_METERS, request.signal)
+  } catch {
+    if (!request.signal.aborted) streetPaths.value = []
+  }
+}
+
 const receivePosition = (position: GeolocationPosition): void => {
   const next = {
     latitude: position.coords.latitude,
@@ -194,7 +298,10 @@ const receivePosition = (position: GeolocationPosition): void => {
 
   // Overpass is a shared public service, so it is asked again only once the walk has been far
   // enough that the answer would actually differ.
-  if (!previous || getDistanceMeters(previous, next) > REFETCH_DISTANCE_METERS) loadPlaces(next)
+  if (!previous || getDistanceMeters(previous, next) > REFETCH_DISTANCE_METERS) {
+    loadPlaces(next)
+    loadStreets(next)
+  }
 }
 
 /**
@@ -303,6 +410,7 @@ const start = async (): Promise<void> => {
 onBeforeUnmount(() => {
   cancelAnimationFrame(frameId)
   pendingRequest?.abort()
+  pendingStreets?.abort()
   window.removeEventListener('resize', measureViewport)
   if (watchId !== null) navigator.geolocation.clearWatch(watchId)
   cameraStream.value?.getTracks().forEach((track) => track.stop())
@@ -316,6 +424,21 @@ onBeforeUnmount(() => {
     <video ref="videoElement" class="mrm__feed" playsinline muted autoplay></video>
 
     <div class="mrm__world" :style="{ transform: worldTransform }">
+      <svg
+        v-if="streetRuns.length > 0"
+        class="mrm__streets"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <polyline
+          v-for="run in streetRuns"
+          :key="run.id"
+          class="mrm__street"
+          :points="run.points.map(({ xPercent, yPercent }) => `${xPercent},${yPercent}`).join(' ')"
+        />
+      </svg>
+
       <Button
         v-for="label in labels"
         :key="label.place.id"
@@ -390,6 +513,18 @@ onBeforeUnmount(() => {
             @update:model-value="headingOffsetDegrees = $event?.[0] ?? headingOffsetDegrees"
           />
         </label>
+        <fieldset class="mrm__groups">
+          <legend class="mrm__groups-title">Show</legend>
+          <label v-for="group in PLACE_GROUPS" :key="group.id" class="mrm__group">
+            <Checkbox
+              class="mrm__checkbox"
+              :model-value="!hiddenGroups.includes(group.id)"
+              @update:model-value="toggleGroup(group.id)"
+            />
+            <span>{{ group.label }} · {{ groupCounts[group.id] ?? 0 }}</span>
+          </label>
+        </fieldset>
+
         <p class="mrm__hint">
           Widen the view until a label sits on the thing it names. Without a compass, the offset
           sweeps the horizon by hand.
@@ -399,6 +534,7 @@ onBeforeUnmount(() => {
           {{ hasSensor ? 'arriving' : 'none' }}. Camera {{ cameraMessage ? 'blocked' : 'open' }}.
           Secure page {{ isSecurePage ? 'yes' : 'no' }}.
         </p>
+        <p class="mrm__hint">{{ orientationDiagnostics }}</p>
       </section>
 
       <div class="mrm__actions">
@@ -444,6 +580,22 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   transform-origin: center;
+}
+
+.mrm__streets {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mrm__street {
+  fill: none;
+  stroke: var(--color-canvas-overlay-foreground);
+  stroke-opacity: 0.45;
+  stroke-width: 0.4;
+  vector-effect: non-scaling-stroke;
 }
 
 .mrm__label {
@@ -566,6 +718,34 @@ onBeforeUnmount(() => {
   display: grid;
   gap: var(--spacing-2);
   font-size: var(--font-size-sm);
+}
+
+.mrm__groups {
+  display: grid;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.mrm__groups-title {
+  padding: 0;
+  font-size: var(--font-size-xs);
+  opacity: 0.8;
+}
+
+.mrm__group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+/* The kit's checkbox is drawn for a themed panel, and this one sits on a camera feed instead. */
+.mrm__checkbox {
+  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  background: var(--color-canvas-overlay-surface);
+  color: var(--color-canvas-overlay-foreground);
 }
 
 .mrm__hint {

@@ -1,5 +1,5 @@
 import type { DeviceAim } from '@webgamekit/controls'
-import type { FieldOfView, GeoPoint, PlacedLabel, Place } from './types'
+import type { FieldOfView, GeoPoint, PlacedLabel, Place, StreetPath, StreetRun } from './types'
 
 const DEGREES_TO_RADIANS = Math.PI / 180
 const RADIANS_TO_DEGREES = 180 / Math.PI
@@ -110,7 +110,7 @@ export const getScreenPlacement = (
   elevationDegrees: number,
   aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
   fieldOfView: FieldOfView
-): { xPercent: number; yPercent: number; isInView: boolean } => {
+): { xPercent: number; yPercent: number; isInView: boolean; isInFront: boolean } => {
   const bearing = getBearingOffset(bearingDegrees, aim.headingDegrees) * DEGREES_TO_RADIANS
   const elevation = elevationDegrees * DEGREES_TO_RADIANS
   const pitch = aim.pitchDegrees * DEGREES_TO_RADIANS
@@ -135,7 +135,10 @@ export const getScreenPlacement = (
     yPercent: FRAME_CENTER_PERCENT + (vertical / halfHeight) * FRAME_HALF_PERCENT,
     // Behind the camera the division flips sign and would otherwise fold the place back into
     // the frame, facing the wrong way.
-    isInView: forward > 0 && Math.abs(horizontal) <= halfWidth && Math.abs(vertical) <= halfHeight
+    isInView: forward > 0 && Math.abs(horizontal) <= halfWidth && Math.abs(vertical) <= halfHeight,
+    // A label off the edge of the frame is simply not drawn, but a line running off it still has
+    // to be drawn to where it leaves, so being in front is asked separately from being in view.
+    isInFront: forward > 0
   }
 }
 
@@ -151,6 +154,50 @@ export const getScreenPlacement = (
  */
 export const smoothBearing = (current: number, target: number, smoothing: number): number =>
   (current + getBearingOffset(target, current) * smoothing + FULL_TURN_DEGREES) % FULL_TURN_DEGREES
+
+/**
+ * Project street centre lines onto the frame as runs that stay in front of the camera.
+ *
+ * A street crossing behind the viewer would otherwise fold back into the frame as a line running
+ * the wrong way, so a path is cut wherever it passes the camera plane and comes back as separate
+ * runs. Every point is put on the ground at eye height, which is what makes the lines converge
+ * toward the horizon the way the street does.
+ * @param paths The street centre lines
+ * @param origin Where the viewer is
+ * @param aim Where the camera points
+ * @param fieldOfView How much the camera takes in
+ * @param eyeHeightMeters How high the camera is held
+ * @returns Drawable runs, in frame percentages
+ */
+export const projectStreets = (
+  paths: readonly StreetPath[],
+  origin: GeoPoint,
+  aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
+  fieldOfView: FieldOfView,
+  eyeHeightMeters: number
+): StreetRun[] =>
+  paths.flatMap((path) => {
+    const placed = path.points.map((point) => {
+      const distanceMeters = getDistanceMeters(origin, point)
+      const elevation = getGroundElevation(distanceMeters, eyeHeightMeters)
+
+      return getScreenPlacement(getBearingDegrees(origin, point), elevation, aim, fieldOfView)
+    })
+
+    const runs = placed.reduce<{ xPercent: number; yPercent: number }[][]>(
+      (collected, { xPercent, yPercent, isInFront }) => {
+        if (!isInFront) return [...collected, []]
+        const current = collected[collected.length - 1]
+
+        return [...collected.slice(0, -1), [...current, { xPercent, yPercent }]]
+      },
+      [[]]
+    )
+
+    return runs
+      .filter((points) => points.length >= 2)
+      .map((points, index) => ({ id: `${path.id}/${index}`, name: path.name, points }))
+  })
 
 /**
  * Lift labels off each other where they would land in the same place.

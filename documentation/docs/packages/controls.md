@@ -281,14 +281,22 @@ the camera looking at" — and `getAim` answers that instead.
 
 ```typescript
 const aim = motion.getAim()
-// { headingDegrees: 214.6, pitchDegrees: -3.1, rollDegrees: 0.4 }
+// { headingDegrees: 214.6, pitchDegrees: -3.1, rollDegrees: 0.4, horizonStrength: 0.99 }
 ```
 
-| Field            | Meaning                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| `headingDegrees` | Compass bearing of the view direction, 0 at north, increasing clockwise |
-| `pitchDegrees`   | Degrees above the horizon, negative when aimed at the ground            |
-| `rollDegrees`    | Clockwise turn to apply to screen content for it to stay level          |
+| Field             | Meaning                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `headingDegrees`  | Compass bearing of the view direction, 0 at north, increasing clockwise |
+| `pitchDegrees`    | Degrees above the horizon, negative when aimed at the ground            |
+| `rollDegrees`     | Clockwise turn to apply to screen content for it to stay level          |
+| `horizonStrength` | How well defined that roll is, 0 lying flat and 1 held upright          |
+
+`horizonStrength` is not optional detail. A device lying flat has no horizon to be square to —
+the plumb line points straight through the screen — so the roll beside it is whichever way the
+last of the sensor noise fell, and a view that turns by it is spun a quarter turn by nothing at
+all. Hold the last good roll below about `0.2` rather than following it, and blend roll the way
+you would any other angle: it wraps, and averaging it as a plain number sends the view the long
+way round every time it crosses.
 
 Both are read from the orientation matrix rather than from the reported angles, which matters
 more here than it does for tilt: a phone held up to look through sits near ninety degrees of

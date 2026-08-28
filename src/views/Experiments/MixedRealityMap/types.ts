@@ -7,7 +7,10 @@ export interface GeoPoint {
 export interface Place extends GeoPoint {
   id: string
   name: string
+  /** The word shown under the name, such as `cafe`. */
   category: string
+  /** Which of the filter groups it falls in, such as `food`. */
+  group: string
 }
 
 /** Where a place lands on screen for the aim the device currently holds. */
@@ -19,6 +22,20 @@ export interface PlacedLabel {
   xPercent: number
   /** Percent down the viewport from its top edge. */
   yPercent: number
+}
+
+/** A street's centre line, as the chain of points the map draws it through. */
+export interface StreetPath {
+  id: string
+  name: string
+  points: GeoPoint[]
+}
+
+/** A run of a street that stays in front of the camera, in frame percentages. */
+export interface StreetRun {
+  id: string
+  name: string
+  points: { xPercent: number; yPercent: number }[]
 }
 
 /** How wide a view the camera takes in, which no browser API reports. */

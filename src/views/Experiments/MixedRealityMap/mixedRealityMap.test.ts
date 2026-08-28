@@ -7,10 +7,13 @@ import {
   getVerticalFieldOfView,
   formatDistance,
   placeLabels,
+  projectStreets,
   smoothBearing,
   spreadLabels
 } from './projection'
 import { buildPlacesUrl, parsePlaces } from './places'
+import { parseStreetPaths } from './streets'
+import { PLACE_GROUPS, getPlaceGroup } from './config'
 import type { FieldOfView, Place, PlacedLabel } from './types'
 
 const AMSTERDAM = { latitude: 52.3676, longitude: 4.9041 }
@@ -21,6 +24,7 @@ const makePlace = (id: string, latitude: number, longitude: number): Place => ({
   id,
   name: `Place ${id}`,
   category: 'cafe',
+  group: 'food',
   latitude,
   longitude
 })
@@ -78,7 +82,7 @@ describe('getScreenPlacement', () => {
   it('centres what the camera points straight at', () => {
     const placement = getScreenPlacement(0, 0, LEVEL_AIM, FIELD_OF_VIEW)
 
-    expect(placement).toEqual({ xPercent: 50, yPercent: 50, isInView: true })
+    expect(placement).toEqual({ xPercent: 50, yPercent: 50, isInView: true, isInFront: true })
   })
 
   it.each([
@@ -136,7 +140,7 @@ describe('getScreenPlacement', () => {
   it('leaves the roll to the layer, which turns as a whole', () => {
     const rolled = getScreenPlacement(0, 0, { ...LEVEL_AIM, rollDegrees: 45 }, FIELD_OF_VIEW)
 
-    expect(rolled).toEqual({ xPercent: 50, yPercent: 50, isInView: true })
+    expect(rolled).toEqual({ xPercent: 50, yPercent: 50, isInView: true, isInFront: true })
   })
 })
 
@@ -261,6 +265,144 @@ describe('placeLabels', () => {
   })
 })
 
+describe('getPlaceGroup', () => {
+  it.each([
+    ['a street by its kind', '', '', 'street', 'streets'],
+    ['a road by its tag', 'highway', 'residential', 'house', 'streets'],
+    ['a restaurant', 'amenity', 'restaurant', 'house', 'food'],
+    ['a bakery, which is tagged as a shop', 'shop', 'bakery', 'house', 'food'],
+    ['a clothes shop', 'shop', 'clothes', 'house', 'shops'],
+    ['a museum', 'tourism', 'museum', 'house', 'landmarks'],
+    ['a memorial', 'historic', 'memorial', 'house', 'landmarks'],
+    ['a bench', 'amenity', 'bench', 'house', 'other']
+  ])('files %s under %s', (_description, key, value, kind, expected) => {
+    expect(getPlaceGroup(key, value, kind)).toBe(expected)
+  })
+
+  it('offers a group for everything it can return', () => {
+    const offered = PLACE_GROUPS.map(({ id }) => id)
+    const produced = [
+      getPlaceGroup('', '', 'street'),
+      getPlaceGroup('amenity', 'restaurant', 'house'),
+      getPlaceGroup('shop', 'clothes', 'house'),
+      getPlaceGroup('tourism', 'museum', 'house'),
+      getPlaceGroup('amenity', 'bench', 'house')
+    ]
+
+    produced.forEach((group) => expect(offered).toContain(group))
+  })
+})
+
+describe('parseStreetPaths', () => {
+  const way = (geometry: unknown, id = 1): unknown => ({
+    type: 'way',
+    id,
+    geometry,
+    tags: { name: 'Damrak', highway: 'residential' }
+  })
+
+  it('reads the node chain a way is drawn through', () => {
+    const paths = parseStreetPaths({
+      elements: [
+        way([
+          { lat: 52.1, lon: 4.2 },
+          { lat: 52.2, lon: 4.3 }
+        ])
+      ]
+    })
+
+    expect(paths).toEqual([
+      {
+        id: 'way/1',
+        name: 'Damrak',
+        points: [
+          { latitude: 52.1, longitude: 4.2 },
+          { latitude: 52.2, longitude: 4.3 }
+        ]
+      }
+    ])
+  })
+
+  it('drops a way with only one point, which draws no line', () => {
+    expect(parseStreetPaths({ elements: [way([{ lat: 52.1, lon: 4.2 }])] })).toEqual([])
+  })
+
+  it('drops a point whose coordinates are not numbers', () => {
+    const paths = parseStreetPaths({
+      elements: [
+        way([
+          { lat: 52.1, lon: 4.2 },
+          { lat: 'north', lon: 4.3 },
+          { lat: 52.3, lon: 4.4 }
+        ])
+      ]
+    })
+
+    expect(paths[0].points).toHaveLength(2)
+  })
+
+  it.each([[null], [{}], [{ elements: 'not a list' }], [{ elements: [42, null] }]])(
+    'reads nothing out of a malformed response',
+    (payload) => {
+      expect(parseStreetPaths(payload)).toEqual([])
+    }
+  )
+})
+
+describe('projectStreets', () => {
+  const northward = {
+    id: 'way/1',
+    name: 'Damrak',
+    points: [
+      { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude },
+      { latitude: AMSTERDAM.latitude + 0.002, longitude: AMSTERDAM.longitude }
+    ]
+  }
+
+  it('projects a street ahead into a drawable run', () => {
+    const [run] = projectStreets([northward], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
+
+    expect(run.name).toBe('Damrak')
+    expect(run.points).toHaveLength(2)
+  })
+
+  it('draws the further point higher, so the street runs toward the horizon', () => {
+    const [run] = projectStreets([northward], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
+    const [near, far] = run.points
+
+    expect(far.yPercent).toBeLessThan(near.yPercent)
+  })
+
+  it('drops a street entirely behind the camera', () => {
+    const behind = {
+      ...northward,
+      points: northward.points.map(({ latitude, longitude }) => ({
+        latitude: AMSTERDAM.latitude - (latitude - AMSTERDAM.latitude),
+        longitude
+      }))
+    }
+
+    expect(projectStreets([behind], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)).toEqual([])
+  })
+
+  it('cuts a street that passes the camera into separate runs', () => {
+    const throughTheViewer = {
+      ...northward,
+      points: [
+        { latitude: AMSTERDAM.latitude + 0.002, longitude: AMSTERDAM.longitude },
+        { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude },
+        { latitude: AMSTERDAM.latitude - 0.001, longitude: AMSTERDAM.longitude },
+        { latitude: AMSTERDAM.latitude - 0.002, longitude: AMSTERDAM.longitude }
+      ]
+    }
+
+    const runs = projectStreets([throughTheViewer], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
+
+    expect(runs).toHaveLength(1)
+    expect(runs[0].points).toHaveLength(2)
+  })
+})
+
 describe('spreadLabels', () => {
   const at = (id: string, xPercent: number): PlacedLabel => ({
     place: makePlace(id, 0, 0),
@@ -335,7 +477,14 @@ describe('parsePlaces', () => {
     })
 
     expect(places).toEqual([
-      { id: 'N12', name: 'Cafe Bruin', category: 'cafe', latitude: 52.3, longitude: 4.9 }
+      {
+        id: 'N12',
+        name: 'Cafe Bruin',
+        category: 'cafe',
+        group: 'food',
+        latitude: 52.3,
+        longitude: 4.9
+      }
     ])
   })
 
@@ -370,7 +519,7 @@ describe('parsePlaces', () => {
     })
 
     expect(places).toEqual([
-      { id: 'X4', name: 'Dam', category: 'square', latitude: 52.3, longitude: 4.9 }
+      { id: 'X4', name: 'Dam', category: 'square', group: 'other', latitude: 52.3, longitude: 4.9 }
     ])
   })
 

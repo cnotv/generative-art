@@ -66,7 +66,11 @@ export const getDeviceAim = ({ alpha, beta, gamma, compassHeading }: MotionReadi
       (((Math.atan2(east, north) * RADIANS_TO_DEGREES) % FULL_TURN_DEGREES) + FULL_TURN_DEGREES) %
       FULL_TURN_DEGREES,
     pitchDegrees: Math.asin(Math.max(-1, Math.min(1, up))) * RADIANS_TO_DEGREES,
-    rollDegrees: Math.atan2(screenRight, screenUp) * RADIANS_TO_DEGREES
+    rollDegrees: Math.atan2(screenRight, screenUp) * RADIANS_TO_DEGREES,
+    // How much of a horizon there is to be square to. Near zero the plumb line points straight
+    // through the screen, the roll above is whichever way the last of the sensor noise fell,
+    // and a caller that turns its view by it will be spun a quarter turn by nothing at all.
+    horizonStrength: Math.hypot(screenRight, screenUp)
   }
 }
 

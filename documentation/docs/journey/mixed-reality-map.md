@@ -69,7 +69,18 @@ frame where up is up.
 
 The page must then not turn as well, or the same rotation happens twice. Locking the page to
 portrait is the honest fix; where a platform ignores the lock, the rotation the browser
-already applied is subtracted back out.
+already applied is subtracted back out — but only when the page has visibly taken it. Some
+browsers report the angle the device is held at rather than the one the document was turned
+by, and believing that turns the overlay a quarter turn while the page is plainly still
+portrait. The viewport's own shape is the check: a portrait viewport has not been rotated,
+whatever the angle claims.
+
+Two more ways to be spun a quarter turn by nothing, both of which took a phone to find. A
+device lying flat has no horizon — the plumb line points straight through the screen — so its
+roll is whichever way the last of the sensor noise fell, and it has to be held rather than
+followed. And roll is an angle: blending it as a plain number sends the overlay the long way
+round half a turn every time it crosses the wrap. Neither shows up on a desk, and both look
+identical to the projection being wrong.
 
 ![The same labels with the phone rolled into landscape, turned against the still-portrait page](/img/mixed-reality-map/rolled.webp)
 
@@ -105,6 +116,17 @@ Its answers still need filtering. A city, a county and a postcode all come back 
 position, but that position is wherever the centre happened to be drawn, so labelling them
 puts a city's name on one arbitrary building. Names repeat too, because a square, the footway
 across it and the cycleway along it are three features sharing one name.
+
+The one thing it cannot answer is geometry. A reverse geocoder returns a street as a single
+point, and a street drawn on the ground needs the whole chain of nodes it runs through, so the
+centre lines do come from Overpass after all — a much smaller question than the original one,
+named roads only, and treated as a bonus that simply produces no lines when the mirror is
+having a bad day.
+
+Those lines then want a far shorter radius than the labels. From standing height the ground
+falls away fast: a street two hundred metres off sits half a degree below the horizon, and
+every street past that piles into the same few pixels of it. Drawing more of them adds a smear
+rather than information.
 
 ## Calibration is not optional
 
