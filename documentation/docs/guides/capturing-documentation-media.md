@@ -178,6 +178,10 @@ Embed it with a `<video>` tag, and put a description inside the tag for anyone w
 </video>
 ```
 
+The same clip belongs in the pull request that changed the thing it shows.
+[Showing a video in a pull request](./videos-in-pull-requests.md) covers that, and why GitHub
+needs an `.mp4` rather than the `.webm` written here.
+
 ## Checking it before committing
 
 ```bash
