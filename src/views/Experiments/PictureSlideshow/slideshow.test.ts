@@ -1,146 +1,221 @@
 import { describe, it, expect } from 'vitest'
-import { canvasRoleAt, fallDropAt, fallTumbleAt, liftAmountAt, slideshowFrameAt } from './slideshow'
+import {
+  advanceSlideshow,
+  canvasRoleAt,
+  createSlideshowState,
+  exitAmountAt,
+  holdAmountAt,
+  slideshowFrame,
+  startChange
+} from './slideshow'
+import type { SlideshowState } from './types'
 
-const TIMING = { hold: 3, drop: 1, lift: 1 }
-const CYCLE = TIMING.hold + TIMING.drop + TIMING.lift
+const TIMING = { hold: 3, release: 1, arrive: 1 }
 const SLIDE_COUNT = 6
 
-describe('slideshowFrameAt', () => {
+/** Runs the clock forward in small steps, the way the animation loop does. */
+const runFor = (state: SlideshowState, seconds: number): SlideshowState =>
+  Array.from({ length: Math.round(seconds / 0.05) }).reduce<SlideshowState>(
+    (current) => advanceSlideshow(current, 0.05, TIMING, SLIDE_COUNT),
+    state
+  )
+
+describe('startChange', () => {
+  it('sends the held picture out and brings its neighbour in', () => {
+    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT)
+
+    expect(changed.leavingIndex).toBe(0)
+    expect(changed.index).toBe(1)
+    expect(changed.direction).toBe(1)
+    expect(changed.changeSeconds).toBe(0)
+  })
+
+  it('steps backwards to the left', () => {
+    const changed = startChange(createSlideshowState(), -1, SLIDE_COUNT)
+
+    expect(changed.index).toBe(SLIDE_COUNT - 1)
+    expect(changed.direction).toBe(-1)
+  })
+
+  it('wraps past the end of the list in both directions', () => {
+    const atLast = { ...createSlideshowState(), index: SLIDE_COUNT - 1 }
+
+    expect(startChange(atLast, 1, SLIDE_COUNT).index).toBe(0)
+    expect(startChange(createSlideshowState(), -1, SLIDE_COUNT).index).toBe(SLIDE_COUNT - 1)
+  })
+
+  it('ignores a change requested while one is already running', () => {
+    const running = startChange(createSlideshowState(), 1, SLIDE_COUNT)
+    const interrupted = startChange(running, -1, SLIDE_COUNT)
+
+    expect(interrupted).toBe(running)
+  })
+
+  it('restarts the hold clock, so a change is looked at for a full hold', () => {
+    const nearlyDue = { ...createSlideshowState(), holdSeconds: TIMING.hold - 0.1 }
+
+    expect(startChange(nearlyDue, 1, SLIDE_COUNT).holdSeconds).toBe(0)
+  })
+})
+
+describe('advanceSlideshow', () => {
+  it('advances on its own once the hold has run out', () => {
+    const held = runFor(createSlideshowState(), TIMING.hold - 0.1)
+    const advanced = runFor(createSlideshowState(), TIMING.hold + 0.1)
+
+    expect(held.changeSeconds).toBeNull()
+    expect(advanced.changeSeconds).not.toBeNull()
+    expect(advanced.index).toBe(1)
+  })
+
+  it('advances to the right when nobody asked for a direction', () => {
+    expect(runFor(createSlideshowState(), TIMING.hold + 0.1).direction).toBe(1)
+  })
+
+  it('settles back into a hold once the change has run its course', () => {
+    const settled = runFor(startChange(createSlideshowState(), 1, SLIDE_COUNT), 2.2)
+
+    expect(settled.changeSeconds).toBeNull()
+    expect(settled.index).toBe(1)
+    // Only the 0.2s past the end of the change counts towards the next one.
+    expect(settled.holdSeconds).toBeCloseTo(0.2)
+  })
+
+  it('keeps stepping one picture at a time when left alone', () => {
+    const cycle = TIMING.hold + TIMING.release + TIMING.arrive
+    const afterThree = runFor(createSlideshowState(), cycle * 3 + 0.5)
+
+    expect(afterThree.index).toBe(3)
+  })
+})
+
+describe('slideshowFrame', () => {
   it.each([
-    ['the first hold', 0, 'hold', 0],
-    ['mid hold', 1.5, 'hold', 0.5],
-    ['the drop opening', 3, 'drop', 0],
-    ['mid drop', 3.5, 'drop', 0.5],
-    ['the lift opening', 4, 'lift', 0],
-    ['mid lift', 4.5, 'lift', 0.5],
-    ['the second hold', 5, 'hold', 0]
-  ])('reports %s', (_label, elapsed, phase, phaseProgress) => {
-    const frame = slideshowFrameAt(elapsed as number, TIMING, SLIDE_COUNT)
+    ['holding', 0, 'hold'],
+    ['releasing', 0.5, 'release'],
+    ['arriving', 1.5, 'arrive']
+  ])('reports %s', (_label, changeSeconds, phase) => {
+    const state = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT) }
+    const running = changeSeconds === 0 ? createSlideshowState() : { ...state, changeSeconds }
 
-    expect(frame.phase).toBe(phase)
-    expect(frame.phaseProgress).toBeCloseTo(phaseProgress as number)
+    expect(slideshowFrame(running, TIMING).phase).toBe(phase)
   })
 
-  it('holds a picture during hold, nothing during the drop, and the next one on the lift', () => {
-    const hold = slideshowFrameAt(1, TIMING, SLIDE_COUNT)
-    const drop = slideshowFrameAt(3.5, TIMING, SLIDE_COUNT)
-    const lift = slideshowFrameAt(4.5, TIMING, SLIDE_COUNT)
+  it('empties both hands while the old picture is on its way out', () => {
+    const releasing = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 0.5 }
+    const frame = slideshowFrame(releasing, TIMING)
 
-    expect(hold.heldIndex).toBe(0)
-    expect(drop.heldIndex).toBeNull()
-    expect(lift.heldIndex).toBe(1)
+    expect(frame.heldIndex).toBeNull()
+    expect(frame.leavingIndex).toBe(0)
   })
 
-  it('carries the lifted picture into the next hold', () => {
-    const nextHold = slideshowFrameAt(CYCLE + 1, TIMING, SLIDE_COUNT)
+  it('carries the arriving picture in the hands, with the old one still leaving', () => {
+    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
+    const frame = slideshowFrame(arriving, TIMING)
 
-    expect(nextHold.heldIndex).toBe(1)
+    expect(frame.heldIndex).toBe(1)
+    expect(frame.leavingIndex).toBe(0)
   })
 
-  it('reveals the following picture at the waiting spot as the lift starts', () => {
-    const hold = slideshowFrameAt(1, TIMING, SLIDE_COUNT)
-    const drop = slideshowFrameAt(3.5, TIMING, SLIDE_COUNT)
-    const lift = slideshowFrameAt(4.5, TIMING, SLIDE_COUNT)
+  it('keeps the released picture travelling for the whole change, not just the release', () => {
+    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
 
-    expect(hold.waitingIndex).toBe(1)
-    expect(drop.waitingIndex).toBe(1)
-    expect(lift.waitingIndex).toBe(2)
+    expect(slideshowFrame(arriving, TIMING).leftSeconds).toBeCloseTo(1.5)
   })
 
-  it('drops nothing while holding, and keeps the released picture falling through the lift', () => {
-    const hold = slideshowFrameAt(1, TIMING, SLIDE_COUNT)
-    const drop = slideshowFrameAt(3.5, TIMING, SLIDE_COUNT)
-    const lift = slideshowFrameAt(4.5, TIMING, SLIDE_COUNT)
+  it('carries the direction through, so the scene knows which way to throw', () => {
+    const leftwards = {
+      ...startChange(createSlideshowState(), -1, SLIDE_COUNT),
+      changeSeconds: 0.5
+    }
 
-    expect(hold.fallingIndex).toBeNull()
-    expect(drop.fallingIndex).toBe(0)
-    expect(lift.fallingIndex).toBe(0)
-    expect(drop.fallSeconds).toBeCloseTo(0.5)
-    expect(lift.fallSeconds).toBeCloseTo(1.5)
-  })
-
-  it('never gives one picture two roles in the same frame', () => {
-    const samples = Array.from({ length: 200 }, (_, step) => step * 0.05)
-
-    samples.forEach((elapsed) => {
-      const { heldIndex, waitingIndex, fallingIndex } = slideshowFrameAt(
-        elapsed,
-        TIMING,
-        SLIDE_COUNT
-      )
-      const claimed = [heldIndex, waitingIndex, fallingIndex].filter(
-        (index): index is number => index !== null
-      )
-
-      expect(new Set(claimed).size).toBe(claimed.length)
-    })
-  })
-
-  it('wraps every index back around the picture list', () => {
-    const frame = slideshowFrameAt(CYCLE * SLIDE_COUNT + 1, TIMING, SLIDE_COUNT)
-
-    expect(frame.heldIndex).toBe(0)
-    expect(frame.waitingIndex).toBe(1)
+    expect(slideshowFrame(leftwards, TIMING).direction).toBe(-1)
   })
 })
 
-describe('liftAmountAt', () => {
+describe('holdAmountAt', () => {
+  const amountAt = (changeSeconds: number | null) =>
+    holdAmountAt(
+      slideshowFrame(
+        changeSeconds === null
+          ? createSlideshowState()
+          : { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        TIMING
+      )
+    )
+
   it.each([
-    ['stays raised through the hold', 1, 1],
-    ['is fully raised as the drop opens', 3, 1],
-    ['is fully lowered as the drop closes', 3.999, 0],
-    ['is fully lowered as the lift opens', 4.001, 0],
-    ['is fully raised again as the lift closes', CYCLE - 0.001, 1]
-  ])('%s', (_label, elapsed, expected) => {
-    const amount = liftAmountAt(slideshowFrameAt(elapsed as number, TIMING, SLIDE_COUNT))
-
-    expect(amount).toBeCloseTo(expected as number, 2)
+    ['stays raised through the hold', null, 1],
+    ['is fully raised as the release opens', 0, 1],
+    ['is empty by the end of the release', 0.999, 0],
+    ['is still empty as the arrival opens', 1.001, 0],
+    ['is holding again by the end of the arrival', 1.999, 1]
+  ])('%s', (_label, changeSeconds, expected) => {
+    expect(amountAt(changeSeconds as number | null)).toBeCloseTo(expected as number, 2)
   })
 
-  it('falls monotonically through the drop and rises monotonically through the lift', () => {
-    const amountAt = (elapsed: number) =>
-      liftAmountAt(slideshowFrameAt(elapsed, TIMING, SLIDE_COUNT))
-    const dropSamples = Array.from({ length: 20 }, (_, step) => amountAt(3 + step * 0.05))
-    const liftSamples = Array.from({ length: 20 }, (_, step) => amountAt(4 + step * 0.05))
+  it('falls through the release and rises through the arrival, without reversing', () => {
+    const release = Array.from({ length: 20 }, (_, step) => amountAt(step * 0.05))
+    const arrive = Array.from({ length: 20 }, (_, step) => amountAt(1 + step * 0.05))
 
-    expect(
-      dropSamples.every((value, index) => index === 0 || value <= dropSamples[index - 1])
-    ).toBe(true)
-    expect(
-      liftSamples.every((value, index) => index === 0 || value >= liftSamples[index - 1])
-    ).toBe(true)
+    expect(release.every((value, index) => index === 0 || value <= release[index - 1])).toBe(true)
+    expect(arrive.every((value, index) => index === 0 || value >= arrive[index - 1])).toBe(true)
   })
 })
 
-describe('fallDropAt', () => {
-  it('starts where the canvas was released', () => {
-    expect(fallDropAt(0, 9.81)).toBe(0)
+describe('exitAmountAt', () => {
+  const exitAt = (changeSeconds: number) =>
+    exitAmountAt(
+      slideshowFrame(
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        TIMING
+      ),
+      TIMING
+    )
+
+  it('starts in the hands', () => {
+    expect(exitAt(0)).toBe(0)
   })
 
-  it('accelerates rather than travelling at a constant rate', () => {
-    const firstHalf = fallDropAt(0.5, 9.81)
-    const second = fallDropAt(1, 9.81)
-
-    expect(second).toBeGreaterThan(firstHalf * 2)
+  it('is flung rather than travelling at a constant rate', () => {
+    expect(exitAt(1)).toBeGreaterThan(exitAt(0.5) * 2)
   })
-})
 
-describe('fallTumbleAt', () => {
-  it('turns at a steady rate from the moment of release', () => {
-    expect(fallTumbleAt(0, 4)).toBe(0)
-    expect(fallTumbleAt(2, 4)).toBeCloseTo(8)
+  it('is still travelling through the arrival, and is all the way out by the end', () => {
+    expect(exitAt(1.5)).toBeGreaterThan(exitAt(1))
+    expect(exitAt(2)).toBeCloseTo(1)
   })
 })
 
 describe('canvasRoleAt', () => {
-  const frame = slideshowFrameAt(4.5, TIMING, SLIDE_COUNT)
+  it('gives the held picture no other role while nothing is moving', () => {
+    const frame = slideshowFrame(createSlideshowState(), TIMING)
+
+    expect(canvasRoleAt(frame, 0)).toBe('held')
+    expect(canvasRoleAt(frame, 1)).toBe('hidden')
+  })
 
   it.each([
-    ['held', 1, 'held'],
-    ['waiting', 2, 'waiting'],
-    ['falling', 0, 'falling'],
-    ['hidden', 4, 'hidden']
-  ])('reads picture %s', (_label, index, role) => {
-    expect(canvasRoleAt(frame, index as number)).toBe(role)
+    ['the picture on its way out', 0, 'leaving'],
+    ['the picture on its way in', 1, 'arriving'],
+    ['a picture with no part in this change', 4, 'hidden']
+  ])('reads %s', (_label, index, role) => {
+    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
+
+    expect(canvasRoleAt(slideshowFrame(arriving, TIMING), index as number)).toBe(role)
+  })
+
+  it('never gives one picture two roles in the same frame', () => {
+    const samples = Array.from({ length: 60 }, (_, step) => step * 0.05)
+
+    samples.forEach((changeSeconds) => {
+      const frame = slideshowFrame(
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        TIMING
+      )
+      const roles = Array.from({ length: SLIDE_COUNT }, (_, index) => canvasRoleAt(frame, index))
+
+      expect(roles.filter((role) => role !== 'hidden').length).toBeLessThanOrEqual(2)
+    })
   })
 })

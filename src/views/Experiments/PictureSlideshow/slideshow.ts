@@ -1,4 +1,10 @@
-import type { CanvasRole, SlideshowFrame, SlideshowTiming } from './types'
+import type {
+  CanvasRole,
+  SlideDirection,
+  SlideshowFrame,
+  SlideshowState,
+  SlideshowTiming
+} from './types'
 
 /**
  * Smoothstep, so an arm starts and stops moving rather than snapping into and
@@ -8,96 +14,143 @@ import type { CanvasRole, SlideshowFrame, SlideshowTiming } from './types'
  */
 const ease = (progress: number): number => progress * progress * (3 - 2 * progress)
 
+/** Wrap into [0, count), which `%` alone does not do for a step to the left. */
+const wrapIndex = (index: number, slideCount: number): number =>
+  ((index % slideCount) + slideCount) % slideCount
+
 /**
- * Reads the whole cycle at one instant: which picture is where, and how far
- * through its own phase the change is.
- *
- * Cycle n holds picture n, releases it, and lifts picture n + 1 into its place,
- * so the lift's own picture is already the one the next hold carries. The
- * waiting picture is deliberately the one after whatever is currently held,
- * which means the moment the lift starts — the moment the lifted picture is
- * still sitting exactly on the waiting spot — its successor takes that spot
- * behind it and is uncovered by the lift itself, rather than appearing out of
- * nothing in open view.
- * @param elapsedSeconds - Seconds since the slideshow started
- * @param timing - How long each phase lasts
- * @param slideCount - How many pictures the slideshow cycles through
- * @returns Every index and progress the scene needs for this frame
+ * A slideshow sitting on its first picture, with nothing yet in motion.
+ * @returns The opening state
  */
-export const slideshowFrameAt = (
-  elapsedSeconds: number,
-  timing: SlideshowTiming,
+export const createSlideshowState = (): SlideshowState => ({
+  index: 0,
+  leavingIndex: 0,
+  direction: 1,
+  changeSeconds: null,
+  holdSeconds: 0
+})
+
+/**
+ * Sends the held picture away and brings its neighbour in behind it.
+ *
+ * A change already running is left alone rather than restarted: a second swipe
+ * arriving mid-flight would otherwise strand the picture halfway out of frame
+ * and skip whichever one was on its way in.
+ * @param state - Where the slideshow is now
+ * @param direction - 1 to send the held picture out to the right, -1 to the left
+ * @param slideCount - How many pictures the slideshow cycles through
+ * @returns The state with the change started, or the same state if one is running
+ */
+export const startChange = (
+  state: SlideshowState,
+  direction: SlideDirection,
   slideCount: number
-): SlideshowFrame => {
-  const cycleLength = timing.hold + timing.drop + timing.lift
-  const cycle = Math.floor(elapsedSeconds / cycleLength)
-  const cycleTime = elapsedSeconds - cycle * cycleLength
-  const slideAt = (offset: number): number => (cycle + offset) % slideCount
-  const fallSeconds = Math.max(cycleTime - timing.hold, 0)
-
-  if (cycleTime < timing.hold) {
-    return {
-      phase: 'hold',
-      phaseProgress: cycleTime / timing.hold,
-      heldIndex: slideAt(0),
-      waitingIndex: slideAt(1),
-      fallingIndex: null,
-      fallSeconds: 0
-    }
-  }
-
-  if (cycleTime < timing.hold + timing.drop) {
-    return {
-      phase: 'drop',
-      phaseProgress: (cycleTime - timing.hold) / timing.drop,
-      heldIndex: null,
-      waitingIndex: slideAt(1),
-      fallingIndex: slideAt(0),
-      fallSeconds
-    }
-  }
-
+): SlideshowState => {
+  if (state.changeSeconds !== null) return state
   return {
-    phase: 'lift',
-    phaseProgress: (cycleTime - timing.hold - timing.drop) / timing.lift,
-    heldIndex: slideAt(1),
-    waitingIndex: slideAt(2),
-    fallingIndex: slideAt(0),
-    fallSeconds
+    index: wrapIndex(state.index + direction, slideCount),
+    leavingIndex: state.index,
+    direction,
+    changeSeconds: 0,
+    holdSeconds: 0
   }
 }
 
 /**
- * How raised the arms are, from 0 down at the floor to 1 up at the display height.
+ * Moves the slideshow on by one frame.
  *
- * The held picture reads the same scalar, which is what keeps it in the hands
- * through the whole lift instead of being animated alongside them and drifting.
- * @param frame - The current frame
- * @returns The eased raise amount, from 0 to 1
+ * Holding is what runs the clock towards the automatic advance; a change runs
+ * to its own end and cannot be interrupted, so the hold timer only restarts
+ * once a picture is settled and actually being looked at.
+ * @param state - Where the slideshow is now
+ * @param deltaSeconds - Seconds since the previous frame
+ * @param timing - How long each phase lasts
+ * @param slideCount - How many pictures the slideshow cycles through
+ * @returns The state one frame later
  */
-export const liftAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number => {
+export const advanceSlideshow = (
+  state: SlideshowState,
+  deltaSeconds: number,
+  timing: SlideshowTiming,
+  slideCount: number
+): SlideshowState => {
+  if (state.changeSeconds !== null) {
+    const changeSeconds = state.changeSeconds + deltaSeconds
+    if (changeSeconds < timing.release + timing.arrive) return { ...state, changeSeconds }
+    return { ...state, changeSeconds: null, holdSeconds: 0 }
+  }
+  const holdSeconds = state.holdSeconds + deltaSeconds
+  if (holdSeconds < timing.hold) return { ...state, holdSeconds }
+  return startChange(state, 1, slideCount)
+}
+
+/**
+ * Reads the state as the phase, progress and roles the scene draws from.
+ * @param state - Where the slideshow is now
+ * @param timing - How long each phase lasts
+ * @returns Everything one frame needs
+ */
+export const slideshowFrame = (state: SlideshowState, timing: SlideshowTiming): SlideshowFrame => {
+  const { changeSeconds, direction, index, leavingIndex } = state
+  if (changeSeconds === null) {
+    return {
+      phase: 'hold',
+      phaseProgress: Math.min(state.holdSeconds / timing.hold, 1),
+      direction,
+      heldIndex: index,
+      leavingIndex: null,
+      leftSeconds: 0
+    }
+  }
+  if (changeSeconds < timing.release) {
+    return {
+      phase: 'release',
+      phaseProgress: changeSeconds / timing.release,
+      direction,
+      heldIndex: null,
+      leavingIndex,
+      leftSeconds: changeSeconds
+    }
+  }
+  return {
+    phase: 'arrive',
+    phaseProgress: (changeSeconds - timing.release) / timing.arrive,
+    direction,
+    heldIndex: index,
+    leavingIndex,
+    leftSeconds: changeSeconds
+  }
+}
+
+/**
+ * How far the hands are up at the display pose, from 0 empty and lowered to 1 holding.
+ *
+ * The arriving picture reads the same scalar for its own travel, which is what
+ * keeps it in the hands at the end of a change rather than merely near them.
+ * @param frame - The current frame
+ * @returns The eased amount, from 0 to 1
+ */
+export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number => {
   if (phase === 'hold') return 1
-  if (phase === 'drop') return 1 - ease(phaseProgress)
+  if (phase === 'release') return 1 - ease(phaseProgress)
   return ease(phaseProgress)
 }
 
 /**
- * How far a released picture has fallen.
- * @param fallSeconds - Seconds since it was let go
- * @param gravity - Downward acceleration, in scene units per second squared
- * @returns The distance fallen, always positive
+ * How far along its exit a released picture has travelled, from 0 to 1 and beyond.
+ *
+ * Eased in rather than linear, so it leaves the hands slowly and is flung the
+ * rest of the way, and deliberately not clamped: the picture keeps going for
+ * the whole change rather than parking just off frame halfway through it.
+ * @param frame - The current frame
+ * @param timing - How long each phase lasts
+ * @returns The fraction of the exit travelled
  */
-export const fallDropAt = (fallSeconds: number, gravity: number): number =>
-  0.5 * gravity * fallSeconds * fallSeconds
-
-/**
- * How far a released picture has turned end over end.
- * @param fallSeconds - Seconds since it was let go
- * @param spinRate - Radians per second
- * @returns The angle turned, in radians
- */
-export const fallTumbleAt = (fallSeconds: number, spinRate: number): number =>
-  fallSeconds * spinRate
+export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number => {
+  const span = timing.release + timing.arrive
+  const progress = Math.min(frame.leftSeconds / span, 1)
+  return progress * progress
+}
 
 /**
  * What one picture is doing this frame, so the scene can place it or hide it.
@@ -106,8 +159,7 @@ export const fallTumbleAt = (fallSeconds: number, spinRate: number): number =>
  * @returns Its role, or 'hidden' when it has none
  */
 export const canvasRoleAt = (frame: SlideshowFrame, slideIndex: number): CanvasRole => {
-  if (slideIndex === frame.heldIndex) return 'held'
-  if (slideIndex === frame.waitingIndex) return 'waiting'
-  if (slideIndex === frame.fallingIndex) return 'falling'
+  if (slideIndex === frame.leavingIndex) return 'leaving'
+  if (slideIndex === frame.heldIndex) return frame.phase === 'hold' ? 'held' : 'arriving'
   return 'hidden'
 }

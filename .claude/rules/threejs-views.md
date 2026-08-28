@@ -137,6 +137,15 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   view whose subject has to stay readable opts out with
   `store.setLightTransitionEnabled(false)` straight after `init`, which lands before the
   cycle's first frame and leaves the declared rig in place.
+- **`camera.lookAt` loses to `orbit.target`, even when orbit is disabled.** Orbit aims the
+  camera at its target on its first update regardless, so a `SetupConfig` that sets `lookAt`
+  and `orbit: { disabled: true }` frames on the origin instead. Set both, from the same
+  constant. The symptom is a scene framed too low with no obvious cause.
+- **An arm's world bounding box is not its reach.** `Box3.setFromObject` on a limb rotated on
+  two axes returns an axis-aligned hull whose corners are nowhere near the mesh — it
+  overstated one rig's reach by more than double. Transform the far end of the mesh's own
+  local bounding box instead, and remember a perspective camera only preserves a world-space
+  margin between things at the same depth.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.

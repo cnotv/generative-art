@@ -1,11 +1,16 @@
 export type ControlAction = string
-export type ControlDevice = 'keyboard' | 'gamepad' | 'touch' | 'faux-pad' | 'motion'
+export type ControlDevice = 'keyboard' | 'gamepad' | 'touch' | 'pointer' | 'faux-pad' | 'motion'
 export type ControlEvent = 'touchstart' | 'touchend' | 'mousedown' | 'mouseup'
+
+/** A press and release read as one horizontal gesture, by where it happened and how far it moved. */
+export type PointerGesture = 'tap-left' | 'tap-right' | 'swipe-left' | 'swipe-right'
 
 export interface ControlMapping {
   keyboard?: Record<string, ControlAction>
   gamepad?: Record<string, ControlAction> // Supports both buttons (cross, dpad-up) and axes (axis0-left, axis1-up)
   touch?: Record<string, ControlAction>
+  /** Horizontal pointer gestures, over mouse, touch and pen alike: see `PointerGesture`. */
+  pointer?: Partial<Record<PointerGesture, ControlAction>>
   'faux-pad'?: Record<string, ControlAction> // Virtual faux-pad: up, down, left, right
   motion?: Record<string, ControlAction> // Device tilt: tilt-left, tilt-right, tilt-up, tilt-down
 }
@@ -41,6 +46,10 @@ export interface ControlsOptions {
   keyboardTarget?: HTMLElement | null
   touchTarget?: HTMLElement | null
   mouseTarget?: HTMLElement | null
+  pointer?: boolean
+  pointerTarget?: HTMLElement | null
+  /** Travel at or past which a press reads as a swipe rather than a tap (default: 40) */
+  swipeThreshold?: number
   buttonMap?: string[] // Optional: custom button names by index
   axisThreshold?: number // Threshold for axis activation (default: 0.5)
   motion?: boolean // Device orientation; still requires requestMotionPermission() from a tap

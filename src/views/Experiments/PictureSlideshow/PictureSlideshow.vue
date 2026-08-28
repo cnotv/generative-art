@@ -4,32 +4,46 @@ import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { getCube, getCylinder, getModel } from '@webgamekit/threejs'
 import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
+import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
 import { createStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
-import { canvasRoleAt, fallDropAt, fallTumbleAt, liftAmountAt, slideshowFrameAt } from './slideshow'
+import {
+  advanceSlideshow,
+  canvasRoleAt,
+  createSlideshowState,
+  exitAmountAt,
+  holdAmountAt,
+  slideshowFrame,
+  startChange
+} from './slideshow'
+import type { SlideDirection, SlideshowState } from './types'
 import {
   ARM_PITCH_DOWN,
   ARM_PITCH_UP,
+  ARM_ROLL_DOWN,
+  ARM_ROLL_UP,
   CANVAS_DISPLAY_POSITION,
   CANVAS_DISPLAY_ROTATION,
+  CANVAS_ENTRY_DISTANCE,
+  CANVAS_ENTRY_DROP,
   CANVAS_MATERIAL,
   CANVAS_SIZE,
-  CANVAS_WAITING_POSITION,
-  CANVAS_WAITING_ROTATION,
+  CONTROL_MAPPING,
   DEFAULT_TIMING,
-  FALL_DRIFT,
-  FALL_GRAVITY,
-  FALL_HIDE_BELOW,
-  FALL_SPIN,
+  EXIT_DISTANCE,
+  EXIT_DROP,
+  EXIT_SPIN,
   PICTURES,
   PLINTH,
   SETUP_CONFIG,
   STICKMAN_MODEL_PATH,
   STICKMAN_SCALE,
   STICKMAN_YAW,
+  STICKMAN_YAW_SWING,
+  UP_AXIS,
   configControls
 } from './config'
 
@@ -48,27 +62,44 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const reactiveConfig = createReactiveConfig({
   timing: { ...DEFAULT_TIMING },
-  fall: { gravity: FALL_GRAVITY, drift: FALL_DRIFT, spin: FALL_SPIN },
-  arms: { pitchUp: ARM_PITCH_UP, pitchDown: ARM_PITCH_DOWN }
+  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN },
+  arms: { pitchUp: ARM_PITCH_UP, rollUp: ARM_ROLL_UP }
 })
+
+/**
+ * The slideshow's own state, deliberately outside Vue.
+ *
+ * It is written every frame by the animation loop and read nowhere else, so
+ * reactivity would buy nothing and cost a dependency notification per frame.
+ */
+let slideshow: SlideshowState = createSlideshowState()
+
+const requestChange = (direction: SlideDirection): void => {
+  slideshow = startChange(slideshow, direction, PICTURES.length)
+}
+
+/** Bound in `onMounted`: the pointer target is the canvas, which does not exist before then. */
+let destroyControls: (() => void) | null = null
 
 const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount
 
 /**
  * Loads the rig, straightens it, stands it on the plinth and hands back the
- * two arm nodes the cycle swings.
+ * arm nodes, each paired with the direction it rolls away from the body.
  *
  * The rig's own origin is not at its feet, so the height it spawns at says
  * nothing about where it stands; measured after `prepareStickmanRig`, which is
- * what moves the shoulder caps onto the arms so they swing as one piece.
+ * what moves the shoulder caps onto the arms so they swing as one piece. The
+ * sign is read from the shoulder's own x rather than the node's name, so a
+ * rig that names its sides the other way round still spreads outwards.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
- * @returns The arm nodes, in no particular order
+ * @returns The rig, and its arms with the roll direction each one takes
  */
 const spawnStickman = async (
   scene: THREE.Scene,
   world: Parameters<typeof getModel>[1]
-): Promise<THREE.Object3D[]> => {
+): Promise<{ stickman: THREE.Object3D; arms: { node: THREE.Object3D; side: number }[] }> => {
   const stickman = await getModel(scene, world, STICKMAN_MODEL_PATH, {
     name: 'stickman',
     position: [0, 0, 0],
@@ -81,7 +112,11 @@ const spawnStickman = async (
   const partRig = prepareStickmanRig(stickman, createStickmanPartOffsets())
   const spawnBox = new THREE.Box3().setFromObject(stickman)
   stickman.position.y -= spawnBox.min.y
-  return [...partRig.armLeft, ...partRig.armRight].map(({ node }) => node)
+  const arms = [...partRig.armLeft, ...partRig.armRight].map(({ node, restPosition }) => ({
+    node,
+    side: Math.sign(restPosition.x) || 1
+  }))
+  return { stickman, arms }
 }
 
 /**
@@ -101,8 +136,8 @@ const spawnCanvases = (scene: THREE.Scene, world: Parameters<typeof getCube>[1])
       ...CANVAS_MATERIAL,
       name: `picture-${name}`,
       size: CANVAS_SIZE,
-      position: CANVAS_WAITING_POSITION,
-      rotation: CANVAS_WAITING_ROTATION,
+      position: CANVAS_DISPLAY_POSITION,
+      rotation: CANVAS_DISPLAY_ROTATION,
       texture: url,
       origin: {}
     })
@@ -111,29 +146,44 @@ const spawnCanvases = (scene: THREE.Scene, world: Parameters<typeof getCube>[1])
 onMounted(async () => {
   if (!canvas.value) return
   registerViewConfig(route.name as string, reactiveConfig, configControls)
+  // The canvas fills the viewport, and it is the element whose halves decide
+  // whether a tap means forward or back.
+  destroyControls = createControls({
+    mapping: CONTROL_MAPPING,
+    pointerTarget: canvas.value,
+    onAction: (action) => requestChange(action === 'previous' ? -1 : 1)
+  }).destroyControls
 
   await store.init(canvas.value, SETUP_CONFIG, {
     viewPanels: { showConfig: true, showElements: false },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, getDelta, animate }) => {
       getCylinder(scene, world, PLINTH)
-      const arms = await spawnStickman(scene, world)
+      const { stickman, arms } = await spawnStickman(scene, world)
       const canvases = spawnCanvases(scene, world)
       const timelineManager = createTimelineManager()
-      let elapsedSeconds = 0
 
       timelineManager.addAction({
         name: 'Picture change',
         category: 'animation',
         action: () => {
-          const { timing, fall, arms: armConfig } = reactiveConfig.value
-          elapsedSeconds += getDelta()
-          const frame = slideshowFrameAt(elapsedSeconds, timing, canvases.length)
-          const lift = liftAmountAt(frame)
+          const { timing, exit, arms: armConfig } = reactiveConfig.value
+          slideshow = advanceSlideshow(slideshow, getDelta(), timing, canvases.length)
+          const frame = slideshowFrame(slideshow, timing)
+          const hold = holdAmountAt(frame)
+          const exitAmount = exitAmountAt(frame, timing)
 
-          arms.forEach((arm) => {
-            arm.rotation.x = mix(armConfig.pitchDown, armConfig.pitchUp, lift)
+          arms.forEach(({ node, side }) => {
+            node.rotation.x = mix(ARM_PITCH_DOWN, armConfig.pitchUp, hold)
+            node.rotation.z = side * mix(ARM_ROLL_DOWN, armConfig.rollUp, hold)
           })
+          // Turning after the picture being sent away is what makes the change
+          // read as one movement rather than two objects passing each other.
+          const swing = frame.phase === 'hold' ? 0 : Math.sin(Math.PI * exitAmount)
+          stickman.quaternion.setFromAxisAngle(
+            UP_AXIS,
+            STICKMAN_YAW + frame.direction * STICKMAN_YAW_SWING * swing
+          )
 
           canvases.forEach((picture, index) => {
             const role = canvasRoleAt(frame, index)
@@ -141,38 +191,33 @@ onMounted(async () => {
               picture.visible = false
               return
             }
-            if (role === 'waiting') {
-              picture.visible = true
-              picture.position.set(...CANVAS_WAITING_POSITION)
-              picture.rotation.set(...CANVAS_WAITING_ROTATION)
-              return
-            }
+            picture.visible = true
             if (role === 'held') {
-              picture.visible = true
-              picture.position.set(
-                mix(CANVAS_WAITING_POSITION[0], CANVAS_DISPLAY_POSITION[0], lift),
-                mix(CANVAS_WAITING_POSITION[1], CANVAS_DISPLAY_POSITION[1], lift),
-                mix(CANVAS_WAITING_POSITION[2], CANVAS_DISPLAY_POSITION[2], lift)
-              )
-              picture.rotation.set(
-                mix(CANVAS_WAITING_ROTATION[0], CANVAS_DISPLAY_ROTATION[0], lift),
-                0,
-                0
-              )
+              picture.position.set(...CANVAS_DISPLAY_POSITION)
+              picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
               return
             }
-            const height = CANVAS_DISPLAY_POSITION[1] - fallDropAt(frame.fallSeconds, fall.gravity)
-            picture.visible = height > FALL_HIDE_BELOW
+            if (role === 'arriving') {
+              // In from the side opposite the one the old picture left by.
+              const entry = -frame.direction * CANVAS_ENTRY_DISTANCE
+              picture.position.set(
+                mix(entry, CANVAS_DISPLAY_POSITION[0], hold),
+                mix(
+                  CANVAS_DISPLAY_POSITION[1] + CANVAS_ENTRY_DROP,
+                  CANVAS_DISPLAY_POSITION[1],
+                  hold
+                ),
+                CANVAS_DISPLAY_POSITION[2]
+              )
+              picture.rotation.set(CANVAS_DISPLAY_ROTATION[0], 0, 0)
+              return
+            }
             picture.position.set(
-              CANVAS_DISPLAY_POSITION[0],
-              height,
-              CANVAS_DISPLAY_POSITION[2] + frame.fallSeconds * fall.drift
+              CANVAS_DISPLAY_POSITION[0] + frame.direction * exit.distance * exitAmount,
+              CANVAS_DISPLAY_POSITION[1] - exit.drop * exitAmount,
+              CANVAS_DISPLAY_POSITION[2]
             )
-            picture.rotation.set(
-              CANVAS_DISPLAY_ROTATION[0] + fallTumbleAt(frame.fallSeconds, fall.spin),
-              0,
-              0
-            )
+            picture.rotation.set(0, 0, -frame.direction * exit.spin * exitAmount)
           })
         }
       })
@@ -189,6 +234,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   store.cleanup()
+  destroyControls?.()
   unregisterViewConfig(route.name as string)
 })
 </script>
@@ -203,5 +249,8 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+
+  /* The whole canvas is the control surface, so a swipe must not be taken as a page scroll. */
+  touch-action: none;
 }
 </style>
