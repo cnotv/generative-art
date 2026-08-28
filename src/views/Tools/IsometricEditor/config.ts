@@ -1,16 +1,5 @@
 import type { CoordinateTuple, SetupConfig } from '@webgamekit/threejs'
-import type { ConfigControlsSchema } from '@/stores/viewConfig'
-import { cameraSchema as sceneCameraSchema } from '@/views/Tools/SceneEditor/config'
-import type { CellIndex, CityModel, LayoutPreset } from './types'
-
-/** The shared camera controls without field of view, which an orthographic camera has none of. */
-export const cameraSchema = {
-  position: sceneCameraSchema.position,
-  rotation: sceneCameraSchema.rotation,
-  near: sceneCameraSchema.near,
-  far: sceneCameraSchema.far,
-  orbitTarget: sceneCameraSchema.orbitTarget
-}
+import type { CityModel, LayoutPreset } from './types'
 
 /** Palette entry that clears a cell instead of filling it. */
 export const ERASE_MODEL = 'erase'
@@ -174,8 +163,6 @@ export const CITY_MODELS: CityModel[] = [
   }
 ]
 
-const toSwatch = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
-
 /** One cell is one cell. Components are sized in cells, so this is what they are sized against. */
 export const CELL_SIZE = 4
 
@@ -212,20 +199,6 @@ export const CAMERA_FAR = 500
 /** How far a pointer may travel between press and release and still place a model. */
 export const DRAG_THRESHOLD_PIXELS = 4
 
-const range = (from: number, to: number): number[] =>
-  Array.from({ length: to - from + 1 }, (_, index) => from + index)
-
-/** A run of cells along X, which is how a street or a terrace is written. */
-const alongX = (fromX: number, toX: number, cellZ: number): CellIndex[] =>
-  range(fromX, toX).map((cellX) => [cellX, cellZ])
-
-/** A run of cells along Z, for a street crossing the other way. */
-const alongZ = (cellX: number, fromZ: number, toZ: number): CellIndex[] =>
-  range(fromZ, toZ).map((cellZ) => [cellX, cellZ])
-
-const block = (fromX: number, toX: number, fromZ: number, toZ: number): CellIndex[] =>
-  range(fromX, toX).flatMap((cellX) => range(fromZ, toZ).map((cellZ): CellIndex => [cellX, cellZ]))
-
 /**
  * A worked example: three avenues and three streets, terraces filling the blocks between them,
  * towers where they cross, and parks and trees in the gaps. Loading it beats staring at an
@@ -237,99 +210,118 @@ export const CITY_PRESET: LayoutPreset = {
   pieces: [
     {
       model: 'road',
-      cells: [
-        ...alongX(-8, 6, -4),
+      runs: [
+        [-8, 6, -4, -4],
         // The avenue runs on past the town and over the river, which makes cell [8, 0] a bridge.
-        ...alongX(-8, 9, 0),
-        ...alongX(-8, 6, 4),
-        ...alongZ(-5, -7, 7),
-        ...alongZ(0, -7, 7),
-        ...alongZ(4, -3, 7)
+        [-8, 9, 0, 0],
+        [-8, 6, 4, 4],
+        [-5, -5, -7, 7],
+        [0, 0, -7, 7],
+        [4, 4, -3, 7]
       ]
     },
-    { model: 'water', cells: [...alongZ(8, -9, -1), ...alongZ(8, 1, 9)] },
+    {
+      model: 'water',
+      runs: [
+        [8, 8, -9, -1],
+        [8, 8, 1, 9]
+      ]
+    },
     {
       model: 'bushes',
-      cells: [
-        [-1, 3],
-        ...alongX(-2, -1, 7),
-        ...alongX(1, 3, 7),
-        ...block(-8, -7, 1, 2),
-        ...alongX(-8, -6, -7),
-        ...alongX(-8, -6, -5)
+      runs: [
+        [-1, -1, 3, 3],
+        [-2, -1, 7, 7],
+        [1, 3, 7, 7],
+        [-8, -7, 1, 2],
+        [-8, -6, -7, -7],
+        [-8, -6, -5, -5]
       ]
     },
     {
       model: 'house',
-      cells: [
-        ...alongX(-4, -1, -3),
-        ...alongX(-4, -2, 1),
-        ...alongX(-4, -2, 3),
-        ...alongX(1, 3, 3),
-        [-4, 5],
-        ...alongX(-2, -1, 5),
-        ...alongX(-4, -3, 7),
-        [1, 5],
-        [3, 5],
-        ...alongX(-8, -6, -1),
-        ...alongX(-8, -7, -3),
-        [-6, 1],
-        [-6, 3],
-        ...alongX(-8, -6, 5),
-        ...alongX(-8, -6, 7),
-        ...alongX(1, 3, -5),
-        ...alongX(1, 3, -7),
-        ...alongX(-4, -1, -5),
-        ...alongX(-4, -1, -7),
-        ...alongX(5, 6, -1),
-        ...alongX(5, 6, 1),
-        ...alongX(5, 6, 3),
-        ...alongX(5, 6, 5)
+      runs: [
+        [-4, -1, -3, -3],
+        [-4, -2, 1, 1],
+        [-4, -2, 3, 3],
+        [1, 3, 3, 3],
+        [-4, -4, 5, 5],
+        [-2, -1, 5, 5],
+        [-4, -3, 7, 7],
+        [1, 1, 5, 5],
+        [3, 3, 5, 5],
+        [-8, -6, -1, -1],
+        [-8, -7, -3, -3],
+        [-6, -6, 1, 1],
+        [-6, -6, 3, 3],
+        [-8, -6, 5, 5],
+        [-8, -6, 7, 7],
+        [1, 3, -5, -5],
+        [1, 3, -7, -7],
+        [-4, -1, -5, -5],
+        [-4, -1, -7, -7],
+        [5, 6, -1, -1],
+        [5, 6, 1, 1],
+        [5, 6, 3, 3],
+        [5, 6, 5, 5]
       ]
     },
-    { model: 'school', cells: [[-3, 5]] },
-    { model: 'hospital', cells: [[2, 5]] },
-    { model: 'cityHall', cells: [[-2, -1]] },
-    { model: 'shop', cells: [...alongX(-4, -3, -1), [-1, -1], ...alongX(1, 3, 1)] },
+    { model: 'school', runs: [[-3, -3, 5, 5]] },
+    { model: 'hospital', runs: [[2, 2, 5, 5]] },
+    { model: 'cityHall', runs: [[-2, -2, -1, -1]] },
+    {
+      model: 'shop',
+      runs: [
+        [-4, -3, -1, -1],
+        [-1, -1, -1, -1],
+        [1, 3, 1, 1]
+      ]
+    },
     {
       model: 'tower',
-      cells: [
-        [1, -1],
-        [3, -1],
-        [3, -3]
+      runs: [
+        [1, 1, -1, -1],
+        [3, 3, -1, -1],
+        [3, 3, -3, -3]
       ]
     },
     {
       model: 'skyscraper',
-      cells: [
-        [2, -1],
-        [1, -3]
+      runs: [
+        [2, 2, -1, -1],
+        [1, 1, -3, -3]
       ]
     },
     {
       model: 'tree',
-      cells: [
-        [-3, -2],
-        [-1, -2],
-        [2, -2],
-        [-4, 2],
-        [-2, 2],
-        [2, 2],
-        [-3, 6],
-        [-1, 6],
-        [2, 6],
-        [-7, -2],
-        [-8, 3],
-        [-7, 6],
-        [2, -6],
-        [-3, -6],
-        [-1, -6],
-        [-7, -6],
-        [5, -3],
-        [6, 7]
+      runs: [
+        [-3, -3, -2, -2],
+        [-1, -1, -2, -2],
+        [2, 2, -2, -2],
+        [-4, -4, 2, 2],
+        [-2, -2, 2, 2],
+        [2, 2, 2, 2],
+        [-3, -3, 6, 6],
+        [-1, -1, 6, 6],
+        [2, 2, 6, 6],
+        [-7, -7, -2, -2],
+        [-8, -8, 3, 3],
+        [-7, -7, 6, 6],
+        [2, 2, -6, -6],
+        [-3, -3, -6, -6],
+        [-1, -1, -6, -6],
+        [-7, -7, -6, -6],
+        [5, 5, -3, -3],
+        [6, 6, 7, 7]
       ]
     },
-    { model: 'fence', cells: [...alongX(-6, 1, -8), ...alongX(-6, 1, 8)] }
+    {
+      model: 'fence',
+      runs: [
+        [-6, 1, -8, -8],
+        [-6, 1, 8, 8]
+      ]
+    }
   ]
 }
 
@@ -338,35 +330,6 @@ export const defaultConfig = {
   grid: { show: true, size: BOARD_SIZE_DEFAULT },
   // Off by default so a drag paints a run of cells rather than swinging the camera.
   orbit: false
-}
-
-export const configControls: ConfigControlsSchema = {
-  model: {
-    label: 'Model',
-    component: 'ButtonSelector',
-    // Wrapped rather than stacked: a column of fourteen pushes the rest of the panel off screen.
-    direction: 'row',
-    options: [
-      ...CITY_MODELS.map(({ value, label, swatch }) => ({
-        value,
-        label,
-        color: toSwatch(swatch)
-      })),
-      { value: ERASE_MODEL, label: 'Erase' }
-    ]
-  },
-  loadPreset: { label: `Load ${CITY_PRESET.name.toLowerCase()}`, callback: 'loadPreset' },
-  clearAll: { label: 'Clear all', callback: 'clearAll' },
-  orbit: { boolean: false, label: 'Orbit camera' },
-  grid: {
-    show: { boolean: true, label: 'Show grid' },
-    size: {
-      label: 'Board size',
-      min: BOARD_SIZE_MIN,
-      max: BOARD_SIZE_MAX,
-      step: BOARD_SIZE_STEP
-    }
-  }
 }
 
 export const sceneSetupConfig: SetupConfig = {

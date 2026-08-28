@@ -3,13 +3,12 @@ import type { ControlOption, ControlSchema } from '@/stores/viewConfig'
 import {
   CITY_MODELS,
   ERASE_MODEL,
-  cameraSchema,
-  configControls,
   defaultConfig,
   BOARD_SIZE_MAX,
   BOARD_SIZE_STEP,
   CELL_SIZE
 } from './config'
+import { cameraSchema, configControls } from './panelControls'
 
 const modelControl = configControls.model as ControlSchema
 const modelOptions = modelControl.options as ControlOption[]

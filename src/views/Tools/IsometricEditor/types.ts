@@ -34,10 +34,24 @@ export interface PaintTarget {
   z: number
 }
 
-/** Every cell one component fills in a laid-out preset. */
+/**
+ * A rectangle of cells, as `[fromX, toX, fromZ, toZ]` inclusive.
+ *
+ * A street, a terrace and a single house are all one of these, which is what lets a layout stay
+ * a list of values rather than a list of function calls.
+ */
+export type CellRun = [number, number, number, number]
+
+/** One cell of a loaded layout, and the component that fills it. */
+export interface PresetPlacement {
+  model: string
+  cell: CellIndex
+}
+
+/** Every run of cells one component fills in a laid-out preset. */
 export interface LayoutPiece {
   model: string
-  cells: CellIndex[]
+  runs: CellRun[]
 }
 
 /** A board someone can load instead of starting from an empty grid. */

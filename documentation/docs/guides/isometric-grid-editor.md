@@ -18,8 +18,11 @@ an empty grid.
 ## Source files
 
 - `src/views/Tools/IsometricEditor/IsometricEditor.vue` — the view and its pointer handling
-- `src/views/Tools/IsometricEditor/config.ts` — `CITY_MODELS`, `CITY_PRESET`, the scene and the
-  control schema
+- `src/views/Tools/IsometricEditor/config.ts` — `CITY_MODELS`, `CITY_PRESET` and the scene, as
+  values only: a config file in this repo holds no logic
+- `src/views/Tools/IsometricEditor/panelControls.ts` — the Config panel schema, derived from the
+  catalogue so a new component brings its own palette button
+- `src/views/Tools/IsometricEditor/preset.ts` — expanding a layout's rectangles into cells
 - `src/views/Tools/IsometricEditor/models.ts` — assembling a catalogue entry into a scene group
 - `src/views/Tools/IsometricEditor/grid.ts` — the snapping and grid arithmetic
 - `src/views/Tools/IsometricEditor/strokes.ts` — what a press on a cell does
@@ -157,10 +160,14 @@ it fills. Loading it clears the board, sizes it to the board the layout was draw
 every cell through the same `placeModel` a click goes through, so there is no second code path
 that can drift from the first.
 
-Runs are written as runs — `alongX(-8, 6, 0)` is an avenue, `alongZ(8, 1, 9)` half a river —
-which keeps a two-hundred-and-forty-cell city readable as data. The avenue crosses the river
-because it is written one cell longer than the water is wide, and the road wins the shared cell:
-that is the whole of the bridge.
+Runs are written as runs. Each is a rectangle of cells, `[fromX, toX, fromZ, toZ]` inclusive, so
+`[-8, 9, 0, 0]` is an avenue, `[8, 8, 1, 9]` half a river and `[-3, -3, 5, 5]` a single school.
+That keeps a city of two hundred and forty cells readable as two dozen lines, and it keeps the
+layout as **values** rather than function calls: `config.ts` holds no logic, so `expandRun` in
+`preset.ts` turns the rectangles into cells at load time.
+
+The avenue crosses the river because it is written one cell longer than the water is wide, and
+the road wins the shared cell: that is the whole of the bridge.
 
 Tests hold every named component to one the palette can build, every cell to the board, and
 every cell to a single owner: two components claiming one cell would mean the layout on screen

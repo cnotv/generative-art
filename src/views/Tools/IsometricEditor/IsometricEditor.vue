@@ -43,12 +43,12 @@ import {
   HIGHLIGHT_OPACITY,
   CITY_MODELS,
   CITY_PRESET,
-  cameraSchema,
-  configControls,
   defaultConfig,
   sceneSetupConfig
 } from './config'
+import { cameraSchema, configControls } from './panelControls'
 import { buildCityModel } from './models'
+import { getPresetPlacements } from './preset'
 import { resolveStrokeMode } from './strokes'
 import type { CityModel, PaintMode, PaintTarget } from './types'
 
@@ -336,14 +336,12 @@ const loadPreset = (): void => {
   reactiveConfig.value.grid.size = CITY_PRESET.boardSize
   syncBoard()
 
-  CITY_PRESET.pieces.forEach((piece) => {
-    const model = CITY_MODELS.find((entry) => entry.value === piece.model)
+  getPresetPlacements(CITY_PRESET).forEach(({ model: value, cell: [cellX, cellZ] }) => {
+    const model = CITY_MODELS.find((entry) => entry.value === value)
     if (!model) return
-    piece.cells.forEach(([cellX, cellZ]) => {
-      const x = getCellCentre(cellX, CELL_SIZE)
-      const z = getCellCentre(cellZ, CELL_SIZE)
-      placeModel(model, getCellKey(x, z, CELL_SIZE), x, z)
-    })
+    const x = getCellCentre(cellX, CELL_SIZE)
+    const z = getCellCentre(cellZ, CELL_SIZE)
+    placeModel(model, getCellKey(x, z, CELL_SIZE), x, z)
   })
 }
 

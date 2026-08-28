@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { CELL_SIZE, CITY_MODELS, CITY_PRESET } from './config'
 import { getGridDivisions } from './grid'
+import { getPresetPlacements } from './preset'
 
 const modelValues = new Set(CITY_MODELS.map((model) => model.value))
-const cells = CITY_PRESET.pieces.flatMap((piece) => piece.cells)
+const placements = getPresetPlacements(CITY_PRESET)
+const cells = placements.map((placement) => placement.cell)
 const halfBoard = getGridDivisions(CITY_PRESET.boardSize, CELL_SIZE) / 2
 
 describe('city preset', () => {
@@ -23,15 +25,12 @@ describe('city preset', () => {
   // within one piece is fine: that is what a crossroads is, two runs of road meeting.
   it('never gives one cell to two different components', () => {
     const owners = new Map<string, string>()
-    const contested = CITY_PRESET.pieces.flatMap((piece) =>
-      piece.cells
-        .map((cell) => cell.join(','))
-        .filter((key) => {
-          const owner = owners.get(key)
-          owners.set(key, piece.model)
-          return owner !== undefined && owner !== piece.model
-        })
-    )
+    const contested = placements.filter(({ model, cell }) => {
+      const key = cell.join(',')
+      const owner = owners.get(key)
+      owners.set(key, model)
+      return owner !== undefined && owner !== model
+    })
     expect(contested).toEqual([])
   })
 
