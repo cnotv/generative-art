@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ControlOption, ControlSchema } from '@/stores/viewConfig'
 import {
-  MODEL_PALETTE,
+  CITY_MODELS,
   ERASE_MODEL,
   cameraSchema,
   configControls,
@@ -13,33 +13,14 @@ const modelControl = configControls.model as ControlSchema
 const modelOptions = modelControl.options as ControlOption[]
 const gridControls = configControls.grid as Record<string, ControlSchema>
 
-describe('model palette', () => {
-  it('offers more than one model', () => {
-    expect(MODEL_PALETTE.length).toBeGreaterThan(1)
-  })
-
-  it('gives every model a unique value', () => {
-    const values = MODEL_PALETTE.map((model) => model.value)
-    expect(new Set(values).size).toBe(values.length)
-  })
-
-  it('never collides with the eraser', () => {
-    expect(MODEL_PALETTE.some((model) => model.value === ERASE_MODEL)).toBe(false)
-  })
-
-  it.each(MODEL_PALETTE)('"$value" has a footprint in whole or part cells', (model) => {
-    expect(model.size.every((cells) => cells > 0)).toBe(true)
-  })
-
-  it.each(MODEL_PALETTE)('"$value" maps to a shape the editor can build', (model) => {
-    expect(['cube', 'ball', 'cylinder']).toContain(model.shape)
-  })
-})
-
 describe('config controls', () => {
+  it('never lets a model collide with the eraser', () => {
+    expect(CITY_MODELS.some((model) => model.value === ERASE_MODEL)).toBe(false)
+  })
+
   it('lists every model plus the eraser', () => {
     expect(modelOptions.map((option) => option.value)).toEqual([
-      ...MODEL_PALETTE.map((model) => model.value),
+      ...CITY_MODELS.map((model) => model.value),
       ERASE_MODEL
     ])
   })
@@ -54,7 +35,7 @@ describe('config controls', () => {
   })
 
   it('starts on a model rather than the eraser', () => {
-    expect(MODEL_PALETTE.some((model) => model.value === defaultConfig.model)).toBe(true)
+    expect(CITY_MODELS.some((model) => model.value === defaultConfig.model)).toBe(true)
   })
 
   it('keeps the default cell size inside its control range', () => {

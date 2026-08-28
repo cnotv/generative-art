@@ -3,8 +3,8 @@ import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { getBall, getCube, getCylinder, getTools, disposeObject } from '@webgamekit/threejs'
-import type { CoordinateTuple, LoadProgress } from '@webgamekit/threejs'
+import { getTools, disposeObject } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
@@ -38,13 +38,14 @@ import {
   HIGHLIGHT_COLOR,
   HIGHLIGHT_HEIGHT,
   HIGHLIGHT_OPACITY,
-  MODEL_PALETTE,
+  CITY_MODELS,
   cameraSchema,
   configControls,
   defaultConfig,
   sceneSetupConfig
 } from './config'
-import type { PlaceableModel } from './types'
+import { buildCityModel } from './models'
+import type { CityModel } from './types'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const loadingVisible = ref(true)
@@ -68,7 +69,8 @@ const raycaster = new THREE.Raycaster()
 const pointerPosition = new THREE.Vector2()
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const groundHit = new THREE.Vector3()
-const placedModels = new Map<string, THREE.Mesh>()
+const partPosition = new THREE.Vector3()
+const placedModels = new Map<string, THREE.Group>()
 
 let sceneReference: THREE.Scene | null = null
 let worldReference: RAPIER.World | null = null
@@ -145,54 +147,50 @@ const getGroundPoint = (event: PointerEvent): THREE.Vector3 | null => {
   return raycaster.ray.intersectPlane(groundPlane, groundHit)
 }
 
-const buildModel = (
-  scene: THREE.Scene,
-  world: RAPIER.World,
-  model: PlaceableModel,
-  position: { x: number; z: number; cellSize: number },
-  name: string
-): THREE.Mesh => {
-  const { x, z, cellSize } = position
-  const [cellsWide, cellsTall, cellsDeep] = model.size
-  const options = { name, color: model.color, type: 'fixed' as const }
-
-  if (model.shape === 'ball') {
-    const radius = (cellsWide * cellSize) / 2
-    return getBall(scene, world, { ...options, size: radius, position: [x, radius, z] })
-  }
-
-  const size: CoordinateTuple = [cellsWide * cellSize, cellsTall * cellSize, cellsDeep * cellSize]
-  const getShape = model.shape === 'cube' ? getCube : getCylinder
-  return getShape(scene, world, { ...options, size, position: [x, 0, z] })
+/**
+ * Move each part's collider onto the part, since the group is what the panel moves and a body
+ * follows nothing on its own.
+ * @param group The placed model
+ */
+const syncPartBodies = (group: THREE.Group): void => {
+  group.updateMatrixWorld(true)
+  group.children.forEach((part) => {
+    part.getWorldPosition(partPosition)
+    part.userData.body?.setTranslation(partPosition, true)
+  })
 }
 
 const removePlacedModel = (cellKey: string): void => {
-  const mesh = placedModels.get(cellKey)
-  if (!mesh || !sceneReference) return
-  sceneReference.remove(mesh)
-  if (worldReference && mesh.userData.body) worldReference.removeRigidBody(mesh.userData.body)
-  disposeObject(mesh)
+  const group = placedModels.get(cellKey)
+  if (!group || !sceneReference) return
+  group.children.forEach((part) => {
+    if (worldReference && part.userData.body) worldReference.removeRigidBody(part.userData.body)
+  })
+  sceneReference.remove(group)
+  disposeObject(group)
   placedModels.delete(cellKey)
-  debugSceneStore.removeSceneElement(mesh.name)
+  debugSceneStore.removeSceneElement(group.name)
 }
 
-const placeModel = (model: PlaceableModel, cellKey: string, x: number, z: number): void => {
+const placeModel = (model: CityModel, cellKey: string, x: number, z: number): void => {
   if (!sceneReference || !worldReference) return
   removePlacedModel(cellKey)
 
   const { cellSize } = reactiveConfig.value.grid
   const name = [model.value, cellKey].join('_')
-  const mesh = buildModel(sceneReference, worldReference, model, { x, z, cellSize }, name)
-  const properties = createObjectPropertiesConfig(mesh, name)
+  const group = buildCityModel(sceneReference, worldReference, model, cellSize, name)
+  group.position.set(x, 0, z)
+  syncPartBodies(group)
 
-  placedModels.set(cellKey, mesh)
+  const properties = createObjectPropertiesConfig(group, name)
+  placedModels.set(cellKey, group)
   debugSceneStore.addSceneElement(
     { name, type: model.label, hidden: false },
     {
       ...properties,
       updateValue: (path, value) => {
         properties.updateValue(path, value)
-        mesh.userData.body?.setTranslation(mesh.position, true)
+        syncPartBodies(group)
       }
     }
   )
@@ -208,7 +206,7 @@ const handleToggleVisibility = (name: string): void => {
 }
 
 const handleRemove = (name: string): void => {
-  const entry = [...placedModels].find(([, mesh]) => mesh.name === name)
+  const entry = [...placedModels].find(([, group]) => group.name === name)
   if (entry) removePlacedModel(entry[0])
 }
 
@@ -246,7 +244,7 @@ const handlePointerUp = (event: PointerEvent): void => {
     return
   }
 
-  const model = MODEL_PALETTE.find((entry) => entry.value === reactiveConfig.value.model)
+  const model = CITY_MODELS.find((entry) => entry.value === reactiveConfig.value.model)
   if (model) {
     placeModel(model, cellKey, snapToCell(point.x, cellSize), snapToCell(point.z, cellSize))
   }

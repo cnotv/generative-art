@@ -1,11 +1,22 @@
 import type { CoordinateTuple } from '@webgamekit/threejs'
 
-/** A primitive the editor stamps onto the grid, sized in cells rather than world units. */
-export interface PlaceableModel {
+export type PrimitiveShape = 'cube' | 'ball' | 'cylinder'
+
+/** One primitive of a composed model, measured in cells so it scales with the grid. */
+export interface ModelPart {
+  shape: PrimitiveShape
+  /** Width, height and depth, in cells. */
+  size: CoordinateTuple
+  /** Where the part's underside sits, in cells from the centre of the cell at ground level. */
+  offset: CoordinateTuple
+  color: number
+}
+
+/** A city component the editor stamps into one cell, built from a handful of primitives. */
+export interface CityModel {
   value: string
   label: string
-  shape: 'cube' | 'ball' | 'cylinder'
-  /** Width, height and depth in cells, so a footprint survives a change of cell size. */
-  size: CoordinateTuple
-  color: number
+  /** The colour that stands for the model in the palette. */
+  swatch: number
+  parts: ModelPart[]
 }
