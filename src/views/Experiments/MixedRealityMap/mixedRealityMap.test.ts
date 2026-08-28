@@ -3,6 +3,7 @@ import {
   getBearingDegrees,
   getDistanceMeters,
   getGroundElevation,
+  getStreetNamePositions,
   getScreenPlacement,
   getVerticalFieldOfView,
   formatDistance,
@@ -400,6 +401,52 @@ describe('projectStreets', () => {
 
     expect(runs).toHaveLength(1)
     expect(runs[0].points).toHaveLength(2)
+  })
+})
+
+describe('getStreetNamePositions', () => {
+  const run = (id: string, name: string, points: { xPercent: number; yPercent: number }[]) => ({
+    id,
+    name,
+    points
+  })
+
+  it('anchors a name at the run point nearest the viewer', () => {
+    const positions = getStreetNamePositions([
+      run('a', 'Damrak', [
+        { xPercent: 50, yPercent: 40 },
+        { xPercent: 55, yPercent: 70 }
+      ])
+    ])
+
+    expect(positions).toEqual([{ id: 'a', name: 'Damrak', xPercent: 55, yPercent: 70 }])
+  })
+
+  it('writes each name once, however many runs carry it', () => {
+    const positions = getStreetNamePositions([
+      run('a', 'Damrak', [
+        { xPercent: 50, yPercent: 70 },
+        { xPercent: 51, yPercent: 60 }
+      ]),
+      run('b', 'Damrak', [
+        { xPercent: 20, yPercent: 90 },
+        { xPercent: 21, yPercent: 80 }
+      ])
+    ])
+
+    expect(positions).toHaveLength(1)
+    expect(positions[0].id).toBe('a')
+  })
+
+  it('skips a run with no name to write', () => {
+    const positions = getStreetNamePositions([
+      run('a', '', [
+        { xPercent: 50, yPercent: 70 },
+        { xPercent: 51, yPercent: 60 }
+      ])
+    ])
+
+    expect(positions).toEqual([])
   })
 })
 

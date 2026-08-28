@@ -200,6 +200,29 @@ export const projectStreets = (
   })
 
 /**
+ * Where to write each street's name: on the run, once per name, nearest the viewer.
+ *
+ * Drawn as ordinary elements rather than inside the line drawing, whose viewBox is stretched to
+ * the frame and would stretch the lettering with it. One street arrives as many ways, so the
+ * nearest run wins the name and the rest go unnamed.
+ * @param runs The projected street runs
+ * @returns One position per distinct name
+ */
+export const getStreetNamePositions = (
+  runs: readonly StreetRun[]
+): { id: string; name: string; xPercent: number; yPercent: number }[] =>
+  runs.reduce<{ id: string; name: string; xPercent: number; yPercent: number }[]>((named, run) => {
+    if (!run.name || named.some(({ name }) => name === run.name)) return named
+
+    // The lowest point of the run is its nearest, since the ground rises toward the horizon.
+    const anchor = run.points.reduce((lowest, point) =>
+      point.yPercent > lowest.yPercent ? point : lowest
+    )
+
+    return [...named, { id: run.id, name: run.name, ...anchor }]
+  }, [])
+
+/**
  * Lift labels off each other where they would land in the same place.
  *
  * A street of shops is a row of names a few metres apart, and their true positions overlap into

@@ -14,6 +14,7 @@ import { fetchStreetPaths } from './streets'
 import {
   formatDistance,
   getDistanceMeters,
+  getStreetNamePositions,
   getVerticalFieldOfView,
   placeLabels,
   projectStreets,
@@ -146,9 +147,18 @@ const streetRuns = computed(() =>
     : []
 )
 
-const worldTransform = computed(
-  () => `rotate(${(aim.value.rollDegrees - screenAngleDegrees.value).toFixed(2)}deg)`
-)
+const streetNames = computed(() => getStreetNamePositions(streetRuns.value))
+
+/**
+ * The labels turn with the world, not with the phone, which is what makes them read as fixed to
+ * the street rather than painted on the glass.
+ *
+ * The page's own rotation is deliberately not subtracted back out. A camera stream arrives in
+ * the device's fixed orientation and is not re-oriented when the page turns, so the world in
+ * the picture leans exactly as the phone does, and the labels have to lean with it. Taking the
+ * page's rotation off left them square to the page while the picture behind them was sideways.
+ */
+const worldTransform = computed(() => `rotate(${aim.value.rollDegrees.toFixed(2)}deg)`)
 
 const selectedPlace = computed(
   () => places.value.find(({ id }) => id === selectedPlaceId.value) ?? null
@@ -215,11 +225,10 @@ const measureViewport = (): void => {
   const height = Math.max(1, window.innerHeight)
   viewportAspectRatio.value = width / height
 
-  // Only believe a reported rotation the page has visibly taken. Some browsers report the angle
-  // the device is held at rather than the one the document was turned by, and taking that at its
-  // word turns the whole overlay a quarter turn while the page is plainly still portrait.
-  const reported = window.screen?.orientation?.angle ?? 0
-  screenAngleDegrees.value = width > height ? reported : 0
+  // Recorded for the diagnostics line only. Nothing is placed by it: browsers disagree over
+  // whether it reports the angle the page was turned by or the one the device is held at, and
+  // the overlay leans by the sensor instead, which does not have that ambiguity.
+  screenAngleDegrees.value = window.screen?.orientation?.angle ?? 0
 }
 
 let frameId = 0
@@ -439,6 +448,15 @@ onBeforeUnmount(() => {
         />
       </svg>
 
+      <span
+        v-for="street in streetNames"
+        :key="street.id"
+        class="mrm__street-name"
+        :style="{ left: `${street.xPercent}%`, top: `${street.yPercent}%` }"
+      >
+        {{ street.name }}
+      </span>
+
       <Button
         v-for="label in labels"
         :key="label.place.id"
@@ -590,12 +608,31 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
+/*
+ * `non-scaling-stroke` measures the width in screen pixels rather than in the stretched user
+ * units of the viewBox, so this is a real width and not a fraction of one.
+ */
 .mrm__street {
   fill: none;
   stroke: var(--color-canvas-overlay-foreground);
-  stroke-opacity: 0.45;
-  stroke-width: 0.4;
+  stroke-opacity: 0.7;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  paint-order: stroke;
   vector-effect: non-scaling-stroke;
+}
+
+.mrm__street-name {
+  position: absolute;
+  padding: var(--spacing-0-5) var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: var(--color-canvas-overlay-surface);
+  color: var(--color-canvas-overlay-foreground);
+  font-size: var(--font-size-xs);
+  text-shadow: var(--shadow-text-canvas-overlay);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
 }
 
 .mrm__label {
