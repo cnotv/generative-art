@@ -1,13 +1,22 @@
 const CELL_CENTRE_OFFSET = 0.5
 
 /**
+ * Centre of a cell named by its index, for a layout written in cells rather than world units
+ * @param cellIndex The cell's index along the X or Z axis
+ * @param cellSize The width of one grid cell in world units
+ * @returns The coordinate of the cell centre
+ */
+export const getCellCentre = (cellIndex: number, cellSize: number): number =>
+  (cellIndex + CELL_CENTRE_OFFSET) * cellSize
+
+/**
  * Centre of the cell holding a world coordinate, so a model lands in the middle of its square
  * @param value A world coordinate on the X or Z axis
  * @param cellSize The width of one grid cell in world units
  * @returns The coordinate of the cell centre
  */
 export const snapToCell = (value: number, cellSize: number): number =>
-  (Math.floor(value / cellSize) + CELL_CENTRE_OFFSET) * cellSize
+  getCellCentre(Math.floor(value / cellSize), cellSize)
 
 /**
  * Identify a cell by its integer coordinates, so one placement per square can be enforced

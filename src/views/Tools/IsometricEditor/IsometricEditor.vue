@@ -15,8 +15,9 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useCameraConfigStore } from '@/stores/cameraConfig'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { createObjectPropertiesConfig } from '@/utils/objectProperties'
-import { toggleObjectVisibility } from '@/utils/threeObjectUpdaters'
+import { setOrbitEnabled, toggleObjectVisibility } from '@/utils/threeObjectUpdaters'
 import {
+  getCellCentre,
   getCellKey,
   getGridDivisions,
   getGridExtent,
@@ -39,13 +40,14 @@ import {
   HIGHLIGHT_HEIGHT,
   HIGHLIGHT_OPACITY,
   CITY_MODELS,
+  CITY_PRESET,
   cameraSchema,
   configControls,
   defaultConfig,
   sceneSetupConfig
 } from './config'
 import { buildCityModel } from './models'
-import type { CityModel } from './types'
+import type { CityModel, PaintMode, PaintTarget } from './types'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const loadingVisible = ref(true)
@@ -78,7 +80,10 @@ let cameraReference: THREE.OrthographicCamera | null = null
 let gridHelper: THREE.GridHelper | null = null
 let cellHighlight: THREE.Mesh | null = null
 let cleanupTools: (() => void) | null = null
+let orbitReference: { enabled: boolean } | null = null
 let pointerDownAt: [number, number] | null = null
+let strokeMode: PaintMode | null = null
+let strokedCellKey: string | null = null
 let appliedCellSize = 0
 let gridExtent = getGridExtent(GROUND_SIZE, defaultConfig.grid.cellSize)
 
@@ -134,6 +139,16 @@ const syncGrid = (): void => {
   gridHelper.position.setY(GRID_ELEVATION)
   sceneReference.add(gridHelper)
   cellHighlight?.scale.set(cellSize, 1, cellSize)
+}
+
+/** Orbit and painting both live on a drag, so only one of them is listening at a time. */
+const syncOrbit = (): void => {
+  if (orbitReference) setOrbitEnabled(orbitReference, reactiveConfig.value.orbit)
+}
+
+const applyConfig = (): void => {
+  syncGrid()
+  syncOrbit()
 }
 
 const getGroundPoint = (event: PointerEvent): THREE.Vector3 | null => {
@@ -210,44 +225,102 @@ const handleRemove = (name: string): void => {
   if (entry) removePlacedModel(entry[0])
 }
 
+const resolveCell = (event: PointerEvent): PaintTarget | null => {
+  const { cellSize } = reactiveConfig.value.grid
+  const point = getGroundPoint(event)
+  if (!point || !isInsideGrid(point.x, point.z, gridExtent)) return null
+  return {
+    cellKey: getCellKey(point.x, point.z, cellSize),
+    x: snapToCell(point.x, cellSize),
+    z: snapToCell(point.z, cellSize)
+  }
+}
+
+/**
+ * What a gesture starting on this cell does, held for the whole stroke.
+ *
+ * Pressing on a cell that is already filled takes its component away, so the same click both
+ * places and removes. The mode is then fixed, or dragging a road across a park would erase the
+ * park instead of paving it.
+ * @param cellKey The cell the gesture started on
+ * @returns Whether the stroke fills cells or empties them
+ */
+const getStrokeMode = (cellKey: string): PaintMode =>
+  reactiveConfig.value.model === ERASE_MODEL || placedModels.has(cellKey) ? 'erasing' : 'placing'
+
+const applyToCell = ({ cellKey, x, z }: PaintTarget, mode: PaintMode): void => {
+  if (mode === 'erasing') {
+    removePlacedModel(cellKey)
+    return
+  }
+  const model = CITY_MODELS.find((entry) => entry.value === reactiveConfig.value.model)
+  if (model) placeModel(model, cellKey, x, z)
+}
+
+const endStroke = (): void => {
+  strokeMode = null
+  strokedCellKey = null
+}
+
 const handlePointerDown = (event: PointerEvent): void => {
   pointerDownAt = [event.clientX, event.clientY]
+  if (reactiveConfig.value.orbit) return
+
+  const target = resolveCell(event)
+  if (!target) return
+  strokeMode = getStrokeMode(target.cellKey)
+  strokedCellKey = target.cellKey
+  applyToCell(target, strokeMode)
 }
 
 const handlePointerMove = (event: PointerEvent): void => {
-  if (!cellHighlight) return
   const { cellSize } = reactiveConfig.value.grid
   const point = getGroundPoint(event)
-  cellHighlight.visible = Boolean(point) && isInsideGrid(point?.x ?? 0, point?.z ?? 0, gridExtent)
-  if (!point || !cellHighlight.visible) return
-  cellHighlight.position.set(
-    snapToCell(point.x, cellSize),
-    HIGHLIGHT_HEIGHT / 2,
-    snapToCell(point.z, cellSize)
-  )
+  const onGrid = Boolean(point) && isInsideGrid(point?.x ?? 0, point?.z ?? 0, gridExtent)
+  if (cellHighlight) cellHighlight.visible = onGrid
+  if (!point || !onGrid) return
+
+  const x = snapToCell(point.x, cellSize)
+  const z = snapToCell(point.z, cellSize)
+  cellHighlight?.position.set(x, HIGHLIGHT_HEIGHT / 2, z)
+
+  if (!strokeMode) return
+  const cellKey = getCellKey(point.x, point.z, cellSize)
+  if (cellKey === strokedCellKey) return
+  strokedCellKey = cellKey
+  applyToCell({ cellKey, x, z }, strokeMode)
 }
 
 const handlePointerUp = (event: PointerEvent): void => {
   const startedAt = pointerDownAt
   pointerDownAt = null
-  if (!startedAt) return
-  const endedAt: [number, number] = [event.clientX, event.clientY]
-  if (isDragGesture(startedAt, endedAt, DRAG_THRESHOLD_PIXELS)) return
-
-  const { cellSize } = reactiveConfig.value.grid
-  const point = getGroundPoint(event)
-  if (!point || !isInsideGrid(point.x, point.z, gridExtent)) return
-
-  const cellKey = getCellKey(point.x, point.z, cellSize)
-  if (reactiveConfig.value.model === ERASE_MODEL) {
-    removePlacedModel(cellKey)
+  if (strokeMode) {
+    endStroke()
     return
   }
 
-  const model = CITY_MODELS.find((entry) => entry.value === reactiveConfig.value.model)
-  if (model) {
-    placeModel(model, cellKey, snapToCell(point.x, cellSize), snapToCell(point.z, cellSize))
-  }
+  // Orbit is on, so a drag belongs to the camera and only a click reaches the board.
+  if (!startedAt) return
+  const endedAt: [number, number] = [event.clientX, event.clientY]
+  if (isDragGesture(startedAt, endedAt, DRAG_THRESHOLD_PIXELS)) return
+  const target = resolveCell(event)
+  if (target) applyToCell(target, getStrokeMode(target.cellKey))
+}
+
+const loadPreset = (): void => {
+  clearAll()
+  reactiveConfig.value.grid.cellSize = CITY_PRESET.cellSize
+  syncGrid()
+
+  CITY_PRESET.pieces.forEach((piece) => {
+    const model = CITY_MODELS.find((entry) => entry.value === piece.model)
+    if (!model) return
+    piece.cells.forEach(([cellX, cellZ]) => {
+      const x = getCellCentre(cellX, CITY_PRESET.cellSize)
+      const z = getCellCentre(cellZ, CITY_PRESET.cellSize)
+      placeModel(model, getCellKey(x, z, CITY_PRESET.cellSize), x, z)
+    })
+  })
 }
 
 const initScene = async (): Promise<void> => {
@@ -265,8 +338,9 @@ const initScene = async (): Promise<void> => {
   cameraReference = createIsometricCamera()
   const orbit = setActiveCamera(cameraReference)
 
+  orbitReference = orbit
   cellHighlight = createCellHighlight(scene)
-  syncGrid()
+  applyConfig()
 
   debugSceneStore.registerSceneElements(
     cameraReference,
@@ -281,13 +355,19 @@ const initScene = async (): Promise<void> => {
   canvas.value.addEventListener('pointerdown', handlePointerDown)
   canvas.value.addEventListener('pointermove', handlePointerMove)
   canvas.value.addEventListener('pointerup', handlePointerUp)
+  // A stroke that ends off the canvas never reports its pointerup, and would otherwise keep
+  // painting when the pointer came back.
+  canvas.value.addEventListener('pointerleave', endStroke)
 
   animate({ timeline: createTimelineManager() })
 }
 
 onMounted(() => {
   setViewPanels({ showConfig: true, showElements: true })
-  registerViewConfig(route.name as string, reactiveConfig, configControls, syncGrid, { clearAll })
+  registerViewConfig(route.name as string, reactiveConfig, configControls, applyConfig, {
+    clearAll,
+    loadPreset
+  })
   openPanel('config')
   initScene()
 })
@@ -296,6 +376,7 @@ onBeforeUnmount(() => {
   canvas.value?.removeEventListener('pointerdown', handlePointerDown)
   canvas.value?.removeEventListener('pointermove', handlePointerMove)
   canvas.value?.removeEventListener('pointerup', handlePointerUp)
+  canvas.value?.removeEventListener('pointerleave', endStroke)
   clearAll()
   if (sceneReference && gridHelper) {
     sceneReference.remove(gridHelper)

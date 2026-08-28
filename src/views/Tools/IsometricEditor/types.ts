@@ -20,3 +20,30 @@ export interface CityModel {
   swatch: number
   parts: ModelPart[]
 }
+
+/** One square of the grid, as integer indices rather than world coordinates. */
+export type CellIndex = [number, number]
+
+/** Whether a pointer stroke fills the cells it crosses or empties them. */
+export type PaintMode = 'placing' | 'erasing'
+
+/** The cell a stroke is acting on, keyed for lookup and centred for placement. */
+export interface PaintTarget {
+  cellKey: string
+  x: number
+  z: number
+}
+
+/** Every cell one component fills in a laid-out preset. */
+export interface LayoutPiece {
+  model: string
+  cells: CellIndex[]
+}
+
+/** A board someone can load instead of starting from an empty grid. */
+export interface LayoutPreset {
+  name: string
+  /** The cell size the layout was drawn for, applied when it loads. */
+  cellSize: number
+  pieces: LayoutPiece[]
+}

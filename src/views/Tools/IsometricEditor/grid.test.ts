@@ -1,12 +1,28 @@
 import { describe, it, expect } from 'vitest'
 import {
   snapToCell,
+  getCellCentre,
   getCellKey,
   isInsideGrid,
   getGridDivisions,
   getGridExtent,
   isDragGesture
 } from './grid'
+
+describe('getCellCentre', () => {
+  it.each([
+    ['the first positive cell', 0, 4, 2],
+    ['the next one along', 1, 4, 6],
+    ['the first negative cell', -1, 4, -2],
+    ['a one unit grid centres on halves', 7, 1, 7.5]
+  ])('%s', (_case, cellIndex, cellSize, expected) => {
+    expect(getCellCentre(cellIndex, cellSize)).toBe(expected)
+  })
+
+  it('agrees with snapping a world coordinate inside the same cell', () => {
+    expect(getCellCentre(-2, 4)).toBe(snapToCell(-5, 4))
+  })
+})
 
 describe('snapToCell', () => {
   it.each([

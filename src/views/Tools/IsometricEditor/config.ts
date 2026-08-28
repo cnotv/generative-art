@@ -1,7 +1,7 @@
 import type { CoordinateTuple, SetupConfig } from '@webgamekit/threejs'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import { cameraSchema as sceneCameraSchema } from '@/views/Tools/SceneEditor/config'
-import type { CityModel } from './types'
+import type { CellIndex, CityModel, LayoutPreset } from './types'
 
 /** The shared camera controls without field of view, which an orthographic camera has none of. */
 export const cameraSchema = {
@@ -108,9 +108,120 @@ export const CAMERA_FAR = 500
 /** How far a pointer may travel between press and release and still place a model. */
 export const DRAG_THRESHOLD_PIXELS = 4
 
+const range = (from: number, to: number): number[] =>
+  Array.from({ length: to - from + 1 }, (_, index) => from + index)
+
+/** A run of cells along X, which is how a street or a terrace is written. */
+const alongX = (fromX: number, toX: number, cellZ: number): CellIndex[] =>
+  range(fromX, toX).map((cellX) => [cellX, cellZ])
+
+/** A run of cells along Z, for a street crossing the other way. */
+const alongZ = (cellX: number, fromZ: number, toZ: number): CellIndex[] =>
+  range(fromZ, toZ).map((cellZ) => [cellX, cellZ])
+
+const block = (fromX: number, toX: number, fromZ: number, toZ: number): CellIndex[] =>
+  range(fromX, toX).flatMap((cellX) => range(fromZ, toZ).map((cellZ): CellIndex => [cellX, cellZ]))
+
+/**
+ * A worked example: three avenues and three streets, terraces filling the blocks between them,
+ * towers where they cross, and parks and trees in the gaps. Loading it beats staring at an
+ * empty grid wondering what the components are for.
+ */
+export const CITY_PRESET: LayoutPreset = {
+  name: 'Small city',
+  cellSize: 4,
+  pieces: [
+    {
+      model: 'road',
+      cells: [
+        ...alongX(-8, 6, -4),
+        ...alongX(-8, 6, 0),
+        ...alongX(-8, 6, 4),
+        ...alongZ(-5, -7, 7),
+        ...alongZ(0, -7, 7),
+        ...alongZ(4, -3, 7)
+      ]
+    },
+    {
+      model: 'park',
+      cells: [
+        [-1, 3],
+        ...alongX(-2, -1, 7),
+        ...alongX(1, 3, 7),
+        ...block(-8, -7, 1, 2),
+        ...alongX(-8, -6, -7),
+        ...alongX(-8, -6, -5)
+      ]
+    },
+    {
+      model: 'house',
+      cells: [
+        ...alongX(-4, -1, -3),
+        ...alongX(-4, -2, 1),
+        ...alongX(-4, -2, 3),
+        ...alongX(1, 3, 3),
+        ...alongX(-4, -1, 5),
+        ...alongX(-4, -3, 7),
+        ...alongX(1, 3, 5),
+        ...alongX(-8, -6, -1),
+        ...alongX(-8, -7, -3),
+        [-6, 1],
+        [-6, 3],
+        ...alongX(-8, -6, 5),
+        ...alongX(-8, -6, 7),
+        ...alongX(1, 3, -5),
+        ...alongX(1, 3, -7),
+        ...alongX(-4, -1, -5),
+        ...alongX(-4, -1, -7),
+        ...alongX(5, 6, -1),
+        ...alongX(5, 6, 1),
+        ...alongX(5, 6, 3),
+        ...alongX(5, 6, 5)
+      ]
+    },
+    { model: 'shop', cells: [...alongX(-4, -1, -1), ...alongX(1, 3, 1)] },
+    {
+      model: 'tower',
+      cells: [
+        [1, -1],
+        [2, -1],
+        [3, -1],
+        [1, -3],
+        [3, -3]
+      ]
+    },
+    {
+      model: 'tree',
+      cells: [
+        [-3, -2],
+        [-1, -2],
+        [2, -2],
+        [-4, 2],
+        [-2, 2],
+        [2, 2],
+        [-3, 6],
+        [-1, 6],
+        [2, 6],
+        [-7, -2],
+        [-8, 3],
+        [-7, 6],
+        [2, -6],
+        [-3, -6],
+        [-1, -6],
+        [-7, -6],
+        [5, -3],
+        [6, 7]
+      ]
+    },
+    { model: 'fence', cells: [...alongX(-6, 1, -8), ...alongX(-6, 1, 8)] }
+  ]
+}
+
 export const defaultConfig = {
   model: CITY_MODELS[0].value,
-  grid: { cellSize: 4 }
+  grid: { cellSize: 4 },
+  // Off by default so a drag paints a run of cells rather than swinging the camera.
+  orbit: false
 }
 
 export const configControls: ConfigControlsSchema = {
@@ -127,7 +238,9 @@ export const configControls: ConfigControlsSchema = {
       { value: ERASE_MODEL, label: 'Erase' }
     ]
   },
+  loadPreset: { label: `Load ${CITY_PRESET.name.toLowerCase()}`, callback: 'loadPreset' },
   clearAll: { label: 'Clear all', callback: 'clearAll' },
+  orbit: { boolean: false, label: 'Orbit camera' },
   grid: {
     cellSize: { label: 'Cell size', min: 1, max: 10, step: 1 }
   }
