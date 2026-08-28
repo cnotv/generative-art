@@ -20,6 +20,11 @@ node scripts/gh-video.mjs clip.mp4 --pr 270 --comment  # post it as a comment
 node scripts/gh-video.mjs clip.mp4 --append            # add it to the pull request body
 ```
 
+What lands on the pull request is a collapsible player carrying the original file name, not a
+link:
+
+![A GitHub comment showing a video player labelled demo.mp4, with play, mute and fullscreen controls](/img/videos-in-pull-requests/rendered-player.webp)
+
 Several files in one run upload in one browser session, and their URLs print one per line.
 Without `--pr`, the pull request of the current branch is used. Nothing is posted unless
 `--comment` or `--append` is passed, so the default run is safe to repeat: it hands back a URL to
