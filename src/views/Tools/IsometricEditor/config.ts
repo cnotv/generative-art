@@ -16,6 +16,13 @@ export const cameraSchema = {
 export const ERASE_MODEL = 'erase'
 
 /**
+ * Every green or wet cell is the same slab, so grass, water, trees and bushes lie flush with
+ * each other. A tree on its own patch of grass beside a plain one must not show a step.
+ */
+const GROUND_COVER_HEIGHT = 0.04
+const GRASS_COLOR = 0xbcd0a0
+
+/**
  * The pieces a city is built from, each a handful of primitives inside one cell.
  *
  * A model never reaches past its cell, so neighbours meet without intersecting and a run of
@@ -43,6 +50,38 @@ export const CITY_MODELS: CityModel[] = [
     ]
   },
   {
+    value: 'school',
+    label: 'School',
+    swatch: 0xb9a679,
+    parts: [
+      { shape: 'cube', size: [0.9, 0.5, 0.7], offset: [0, 0, 0], color: 0xe8dcc0 },
+      { shape: 'cube', size: [1, 0.12, 0.8], offset: [0, 0.5, 0], color: 0xb9a679 },
+      { shape: 'cube', size: [0.18, 0.35, 0.18], offset: [-0.3, 0.62, 0], color: 0xd9cfa6 }
+    ]
+  },
+  {
+    value: 'hospital',
+    label: 'Hospital',
+    swatch: 0xd98f8f,
+    parts: [
+      { shape: 'cube', size: [0.85, 0.6, 0.8], offset: [0, 0, 0], color: 0xeae6e2 },
+      { shape: 'cube', size: [0.95, 0.1, 0.9], offset: [0, 0.6, 0], color: 0xc9c4bf },
+      { shape: 'cube', size: [0.4, 0.06, 0.12], offset: [0, 0.7, 0], color: 0xd98f8f },
+      { shape: 'cube', size: [0.12, 0.06, 0.4], offset: [0, 0.7, 0], color: 0xd98f8f }
+    ]
+  },
+  {
+    value: 'cityHall',
+    label: 'City hall',
+    swatch: 0xa6c7bd,
+    parts: [
+      { shape: 'cube', size: [0.9, 0.45, 0.75], offset: [0, 0, 0], color: 0xe6e0d4 },
+      { shape: 'cube', size: [0.9, 0.06, 0.14], offset: [0, 0, 0.42], color: 0xcfc7b6 },
+      { shape: 'cube', size: [0.55, 0.3, 0.5], offset: [0, 0.45, 0], color: 0xcfc7b6 },
+      { shape: 'ball', size: [0.4, 0.4, 0.4], offset: [0, 0.75, 0], color: 0xa6c7bd }
+    ]
+  },
+  {
     value: 'tower',
     label: 'Tower',
     swatch: 0xc4c6e0,
@@ -52,22 +91,64 @@ export const CITY_MODELS: CityModel[] = [
     ]
   },
   {
+    value: 'skyscraper',
+    label: 'Skyscraper',
+    swatch: 0x9aa0c4,
+    parts: [
+      { shape: 'cube', size: [0.62, 1.8, 0.62], offset: [0, 0, 0], color: 0xb9bed8 },
+      { shape: 'cube', size: [0.42, 1.1, 0.42], offset: [0, 1.8, 0], color: 0x9aa0c4 },
+      { shape: 'cylinder', size: [0.1, 0.5, 0.1], offset: [0, 2.9, 0], color: 0xd9d5cc }
+    ]
+  },
+  {
     value: 'tree',
     label: 'Tree',
     swatch: 0x8fbfa0,
     parts: [
-      { shape: 'cylinder', size: [0.16, 0.45, 0.16], offset: [0, 0, 0], color: 0xa8917c },
-      { shape: 'ball', size: [0.62, 0.62, 0.62], offset: [0, 0.4, 0], color: 0x8fbfa0 }
+      { shape: 'cube', size: [1, GROUND_COVER_HEIGHT, 1], offset: [0, 0, 0], color: GRASS_COLOR },
+      {
+        shape: 'cylinder',
+        size: [0.16, 0.45, 0.16],
+        offset: [0, GROUND_COVER_HEIGHT, 0],
+        color: 0xa8917c
+      },
+      { shape: 'ball', size: [0.62, 0.62, 0.62], offset: [0, 0.44, 0], color: 0x8fbfa0 }
     ]
   },
   {
-    value: 'park',
-    label: 'Park',
-    swatch: 0xa7c9a0,
+    value: 'bushes',
+    label: 'Bushes',
+    swatch: 0x9ccfae,
     parts: [
-      { shape: 'cube', size: [1, 0.06, 1], offset: [0, 0, 0], color: 0xa7c9a0 },
-      { shape: 'ball', size: [0.34, 0.34, 0.34], offset: [0.22, 0.06, -0.18], color: 0x8fbfa0 },
-      { shape: 'ball', size: [0.24, 0.24, 0.24], offset: [-0.25, 0.06, 0.2], color: 0x9ccfae }
+      { shape: 'cube', size: [1, GROUND_COVER_HEIGHT, 1], offset: [0, 0, 0], color: GRASS_COLOR },
+      {
+        shape: 'ball',
+        size: [0.34, 0.34, 0.34],
+        offset: [0.22, GROUND_COVER_HEIGHT, -0.18],
+        color: 0x8fbfa0
+      },
+      {
+        shape: 'ball',
+        size: [0.24, 0.24, 0.24],
+        offset: [-0.25, GROUND_COVER_HEIGHT, 0.2],
+        color: 0x9ccfae
+      }
+    ]
+  },
+  {
+    value: 'grass',
+    label: 'Grass',
+    swatch: GRASS_COLOR,
+    parts: [
+      { shape: 'cube', size: [1, GROUND_COVER_HEIGHT, 1], offset: [0, 0, 0], color: GRASS_COLOR }
+    ]
+  },
+  {
+    value: 'water',
+    label: 'Water',
+    swatch: 0x9fc4d8,
+    parts: [
+      { shape: 'cube', size: [1, GROUND_COVER_HEIGHT, 1], offset: [0, 0, 0], color: 0x9fc4d8 }
     ]
   },
   {
@@ -135,15 +216,18 @@ export const CITY_PRESET: LayoutPreset = {
       model: 'road',
       cells: [
         ...alongX(-8, 6, -4),
-        ...alongX(-8, 6, 0),
+        // The avenue runs on past the town and over the river, which makes cell [8, 0] a bridge.
+        ...alongX(-8, 9, 0),
         ...alongX(-8, 6, 4),
         ...alongZ(-5, -7, 7),
         ...alongZ(0, -7, 7),
         ...alongZ(4, -3, 7)
       ]
     },
+    { model: 'water', cells: [...alongZ(8, -9, -1), ...alongZ(8, 1, 9)] },
+    { model: 'grass', cells: [...alongZ(7, -9, -1), ...alongZ(7, 1, 9)] },
     {
-      model: 'park',
+      model: 'bushes',
       cells: [
         [-1, 3],
         ...alongX(-2, -1, 7),
@@ -160,9 +244,11 @@ export const CITY_PRESET: LayoutPreset = {
         ...alongX(-4, -2, 1),
         ...alongX(-4, -2, 3),
         ...alongX(1, 3, 3),
-        ...alongX(-4, -1, 5),
+        [-4, 5],
+        ...alongX(-2, -1, 5),
         ...alongX(-4, -3, 7),
-        ...alongX(1, 3, 5),
+        [1, 5],
+        [3, 5],
         ...alongX(-8, -6, -1),
         ...alongX(-8, -7, -3),
         [-6, 1],
@@ -179,15 +265,23 @@ export const CITY_PRESET: LayoutPreset = {
         ...alongX(5, 6, 5)
       ]
     },
-    { model: 'shop', cells: [...alongX(-4, -1, -1), ...alongX(1, 3, 1)] },
+    { model: 'school', cells: [[-3, 5]] },
+    { model: 'hospital', cells: [[2, 5]] },
+    { model: 'cityHall', cells: [[-2, -1]] },
+    { model: 'shop', cells: [...alongX(-4, -3, -1), [-1, -1], ...alongX(1, 3, 1)] },
     {
       model: 'tower',
       cells: [
         [1, -1],
-        [2, -1],
         [3, -1],
-        [1, -3],
         [3, -3]
+      ]
+    },
+    {
+      model: 'skyscraper',
+      cells: [
+        [2, -1],
+        [1, -3]
       ]
     },
     {
@@ -228,7 +322,8 @@ export const configControls: ConfigControlsSchema = {
   model: {
     label: 'Model',
     component: 'ButtonSelector',
-    direction: 'column',
+    // Wrapped rather than stacked: a column of fourteen pushes the rest of the panel off screen.
+    direction: 'row',
     options: [
       ...CITY_MODELS.map(({ value, label, swatch }) => ({
         value,

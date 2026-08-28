@@ -13,7 +13,7 @@ view does one thing.
 **Load small city** fills the board with a worked example, which is a faster introduction than
 an empty grid.
 
-![A small city of terraced houses, a downtown cluster of towers, shop rows, parks and fenced outskirts, laid out on a road grid](/img/isometric-editor/city.webp)
+![A small city of terraced houses, a downtown cluster of towers and skyscrapers, a school, a hospital, a city hall, planted squares, and a river along one side crossed by the main avenue](/img/isometric-editor/city.webp)
 
 ## Source files
 
@@ -25,21 +25,32 @@ an empty grid.
 
 ## The components
 
-The palette does not offer primitives. It offers pieces of a city, each assembled from two or
-three primitives — a house is a box with a wider box for a roof, a tree is a cylinder with a
-sphere on top — so a placement reads as a thing rather than a shape.
+The palette does not offer primitives. It offers pieces of a city, each assembled from a handful
+of them — a house is a box with a wider box for a roof, a hospital is a box with two thin bars
+crossed on its roof — so a placement reads as a thing rather than a shape.
 
 ![One of each component on the board, beside the palette in the Config panel](/img/isometric-editor/components.webp)
 
-| Component | Made of                           | Reads as                           |
-| --------- | --------------------------------- | ---------------------------------- |
-| House     | body box, wide roof box           | a cottage; a run of them a terrace |
-| Shop      | body box, roof band, awning strip | a shopfront on the street side     |
-| Tower     | tall shaft box, cap box           | an office block, three cells high  |
-| Tree      | trunk cylinder, canopy sphere     | a street tree                      |
-| Park      | grass slab, two bushes            | a green square                     |
-| Road      | one flat slab                     | tarmac; a run of them a street     |
-| Fence     | rail box, two posts               | a boundary along the X axis        |
+| Component  | Made of                               | Reads as                           |
+| ---------- | ------------------------------------- | ---------------------------------- |
+| House      | body box, wide roof box               | a cottage; a run of them a terrace |
+| Shop       | body box, roof band, awning strip     | a shopfront on the street side     |
+| School     | long low body, roof, bell tower       | a schoolhouse                      |
+| Hospital   | body, roof, two bars crossed on it    | the red cross reads from above     |
+| City hall  | base, portico step, upper block, dome | the civic building of the town     |
+| Tower      | tall shaft box, cap box               | an office block, two cells high    |
+| Skyscraper | shaft, narrower upper shaft, spire    | downtown, nearly twice a tower     |
+| Tree       | grass slab, trunk cylinder, canopy    | a street tree on its own patch     |
+| Bushes     | grass slab, two bush spheres          | a planted green square             |
+| Grass      | one thin slab                         | open green; a run of them a field  |
+| Water      | one thin slab                         | a run of them a river or a lake    |
+| Road       | one flat slab                         | tarmac; a run of them a street     |
+| Fence      | rail box, two posts                   | a boundary along the X axis        |
+
+Grass, Water, Tree and Bushes share one slab height, so a tree on its patch lies flush with the
+plain grass beside it and a riverbank meets the water without a step. Anything that stands on
+green ground carries its own grass rather than needing a tile placed under it, since only one
+component fits in a cell.
 
 **Erase** is not a component: it forces a stroke to empty the cells it crosses, which is how a
 sweep starting on bare ground clears a run. **Clear all** empties the board.
@@ -57,8 +68,9 @@ changes.
   label: 'Tree',
   swatch: 0x8fbfa0,
   parts: [
-    { shape: 'cylinder', size: [0.16, 0.45, 0.16], offset: [0, 0, 0], color: 0xa8917c },
-    { shape: 'ball', size: [0.62, 0.62, 0.62], offset: [0, 0.4, 0], color: 0x8fbfa0 }
+    { shape: 'cube', size: [1, GROUND_COVER_HEIGHT, 1], offset: [0, 0, 0], color: GRASS_COLOR },
+    { shape: 'cylinder', size: [0.16, 0.45, 0.16], offset: [0, GROUND_COVER_HEIGHT, 0], color: 0xa8917c },
+    { shape: 'ball', size: [0.62, 0.62, 0.62], offset: [0, 0.44, 0], color: 0x8fbfa0 }
   ]
 }
 ```
@@ -90,7 +102,7 @@ What a stroke does is decided where it starts and then held for its whole length
 
 Pressing on a filled cell and releasing without moving therefore takes that component away: one
 gesture both places and removes. Fixing the mode at the start is what lets a road be drawn
-across a park — the stroke keeps paving instead of flipping to erase over the first occupied
+across a planted square — the stroke keeps paving instead of flipping to erase over the first
 cell it meets.
 
 **Orbit camera** in the Config panel hands the drag back to the camera. With it on, dragging
@@ -121,10 +133,15 @@ it fills. Loading it clears the board, sets the cell size the layout was drawn f
 every cell through the same `placeModel` a click goes through, so there is no second code path
 that can drift from the first.
 
-Runs are written as runs — `alongX(-8, 6, 0)` is an avenue, `block(-8, -7, 1, 2)` a park — which
-keeps a two-hundred-cell city readable as data. Tests hold every named component to one the
-palette can build, every cell to the board, and every cell to a single owner: two components
-claiming one cell would mean the layout on screen is not the layout that was written.
+Runs are written as runs — `alongX(-8, 6, 0)` is an avenue, `alongZ(8, 1, 9)` half a river —
+which keeps a two-hundred-and-forty-cell city readable as data. The avenue crosses the river
+because it is written one cell longer than the water is wide, and the road wins the shared cell:
+that is the whole of the bridge.
+
+Tests hold every named component to one the palette can build, every cell to the board, and
+every cell to a single owner: two components claiming one cell would mean the layout on screen
+is not the layout that was written. A cell repeated inside one piece is fine, since that is what
+a crossroads is.
 
 Turning the orbit on shows what the flat isometric angle hides.
 
