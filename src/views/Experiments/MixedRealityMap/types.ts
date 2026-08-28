@@ -22,6 +22,10 @@ export interface PlacedLabel {
   xPercent: number
   /** Percent down the viewport from its top edge. */
   yPercent: number
+  /** Where the place actually stands, before any lift to clear other labels. */
+  groundPoint: FramePoint
+  /** The side of its marker box, as a percent of the frame width, shrinking with distance. */
+  boxPercent: number
 }
 
 /** A street's centre line, as the chain of points the map draws it through. */
@@ -31,11 +35,29 @@ export interface StreetPath {
   points: GeoPoint[]
 }
 
+/** A point on the frame, as percentages of its width and height. */
+export interface FramePoint {
+  xPercent: number
+  yPercent: number
+}
+
 /** A run of a street that stays in front of the camera, in frame percentages. */
 export interface StreetRun {
   id: string
   name: string
-  points: { xPercent: number; yPercent: number }[]
+  points: FramePoint[]
+}
+
+/**
+ * A run of a street drawn with its real width, as the closed outline of the road surface.
+ * `points` runs up one kerb and back down the other, ready to fill.
+ */
+export interface StreetRibbon {
+  id: string
+  name: string
+  points: FramePoint[]
+  /** Where to write the name: on the centre line, at the near end of the run. */
+  namePoint: FramePoint
 }
 
 /** How wide a view the camera takes in, which no browser API reports. */

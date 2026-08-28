@@ -39,6 +39,16 @@ export const MAX_VISIBLE_LABELS = 12
 export const EYE_HEIGHT_METERS = 1.6
 
 /**
+ * How wide to lay a street down. A carriageway with its pavements is about this, and drawing it
+ * at a real width is what makes it lie on the ground and narrow into the distance rather than
+ * read as a wire strung across the picture.
+ */
+export const STREET_WIDTH_METERS = 12
+
+/** The footprint of a marker box, roughly a shopfront, so it shrinks with distance like one. */
+export const PLACE_MARKER_METERS = 6
+
+/**
  * How upright the phone has to be before its roll is worth believing. Below this the plumb line
  * points through the screen, there is no horizon, and the reported roll is sensor noise.
  */

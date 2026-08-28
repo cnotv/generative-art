@@ -128,6 +128,13 @@ falls away fast: a street two hundred metres off sits half a degree below the ho
 every street past that piles into the same few pixels of it. Drawing more of them adds a smear
 rather than information.
 
+A line is also the wrong shape to draw them with. A stroke has a width in pixels, so it stays
+the same thickness however far away it runs, and reads as a wire strung across the picture
+rather than as ground. A road has a width in metres, and projecting both kerbs from it gives a
+surface that narrows into the distance exactly as the street in the picture does. The same
+reasoning sizes the marker on a shop: a fixed dot says nothing, and a box drawn at a shopfront's
+real width shrinks with distance and so says where the thing is.
+
 ## Calibration is not optional
 
 No browser reports the camera's field of view, and it differs by device. It is also the one

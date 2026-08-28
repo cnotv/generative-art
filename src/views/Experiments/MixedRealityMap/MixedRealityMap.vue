@@ -22,10 +22,9 @@ import { fetchStreetPaths } from './streets'
 import {
   formatDistance,
   getDistanceMeters,
-  getStreetNamePositions,
   getVerticalFieldOfView,
   placeLabels,
-  projectStreets,
+  projectStreetRibbons,
   smoothBearing
 } from './projection'
 import {
@@ -40,10 +39,12 @@ import {
   MAX_VISIBLE_LABELS,
   MINIMUM_FIELD_OF_VIEW,
   MINIMUM_HORIZON_STRENGTH,
+  PLACE_MARKER_METERS,
   PLACE_GROUPS,
   REFETCH_DISTANCE_METERS,
   SEARCH_RADIUS_METERS,
-  STREET_RADIUS_METERS
+  STREET_RADIUS_METERS,
+  STREET_WIDTH_METERS
 } from './config'
 import type { GeoPoint, PermissionStage, Place, StreetPath } from './types'
 
@@ -140,20 +141,16 @@ const labels = computed(() =>
           eyeHeightMeters: EYE_HEIGHT_METERS,
           maximumLabels: MAX_VISIBLE_LABELS,
           rowHeightPercent: LABEL_ROW_HEIGHT_PERCENT,
-          columnWidthPercent: LABEL_COLUMN_WIDTH_PERCENT
+          columnWidthPercent: LABEL_COLUMN_WIDTH_PERCENT,
+          markerMeters: PLACE_MARKER_METERS
         }
       )
     : []
 )
 
-/**
- * The labels turn with the world, not with the phone, which is what makes them read as fixed
- * to the street rather than painted on the glass. Where the browser has rotated the page
- * itself, that turn has already happened and is taken back out here.
- */
-const streetRuns = computed(() =>
+const streetRibbons = computed(() =>
   origin.value && !hiddenGroups.value.includes('streets')
-    ? projectStreets(
+    ? projectStreetRibbons(
         streetPaths.value,
         origin.value,
         {
@@ -161,12 +158,21 @@ const streetRuns = computed(() =>
           pitchDegrees: aim.value.pitchDegrees
         },
         fieldOfView.value,
-        EYE_HEIGHT_METERS
+        { eyeHeightMeters: EYE_HEIGHT_METERS, widthMeters: STREET_WIDTH_METERS }
       )
     : []
 )
 
-const streetNames = computed(() => getStreetNamePositions(streetRuns.value))
+/** One name per street, on the run of it that comes nearest, so a road is not written twice. */
+const streetNames = computed(() =>
+  streetRibbons.value.reduce<{ id: string; name: string; xPercent: number; yPercent: number }[]>(
+    (named, ribbon) =>
+      !ribbon.name || named.some(({ name }) => name === ribbon.name)
+        ? named
+        : [...named, { id: ribbon.id, name: ribbon.name, ...ribbon.namePoint }],
+    []
+  )
+)
 
 /**
  * The labels stay square to the world, which is what makes them read as fixed to the street
@@ -465,17 +471,19 @@ onBeforeUnmount(() => {
 
     <div class="mrm__world" :style="{ transform: worldTransform }">
       <svg
-        v-if="streetRuns.length > 0"
+        v-if="streetRibbons.length > 0"
         class="mrm__streets"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <polyline
-          v-for="run in streetRuns"
-          :key="run.id"
+        <polygon
+          v-for="ribbon in streetRibbons"
+          :key="ribbon.id"
           class="mrm__street"
-          :points="run.points.map(({ xPercent, yPercent }) => `${xPercent},${yPercent}`).join(' ')"
+          :points="
+            ribbon.points.map(({ xPercent, yPercent }) => `${xPercent},${yPercent}`).join(' ')
+          "
         />
       </svg>
 
@@ -487,6 +495,18 @@ onBeforeUnmount(() => {
       >
         {{ street.name }}
       </span>
+
+      <span
+        v-for="label in labels"
+        :key="`${label.place.id}-marker`"
+        class="mrm__marker"
+        :style="{
+          left: `${label.groundPoint.xPercent}%`,
+          top: `${label.groundPoint.yPercent}%`,
+          width: `${label.boxPercent}%`,
+          height: `${label.boxPercent}%`
+        }"
+      ></span>
 
       <Button
         v-for="label in labels"
@@ -653,15 +673,33 @@ onBeforeUnmount(() => {
  * `non-scaling-stroke` measures the width in screen pixels rather than in the stretched user
  * units of the viewBox, so this is a real width and not a fraction of one.
  */
+
+/*
+ * A filled surface rather than a line, so the road lies on the ground and narrows into the
+ * distance. `non-scaling-stroke` measures the kerb in screen pixels rather than in the
+ * stretched user units of the viewBox, so it stays even along a road running away from you.
+ */
 .mrm__street {
-  fill: none;
+  fill: var(--color-canvas-overlay-foreground);
+  fill-opacity: 0.22;
   stroke: var(--color-canvas-overlay-foreground);
-  stroke-opacity: 0.7;
-  stroke-width: 3;
-  stroke-linecap: round;
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
   stroke-linejoin: round;
-  paint-order: stroke;
   vector-effect: non-scaling-stroke;
+}
+
+/*
+ * Where the place actually stands, drawn at its real footprint so it shrinks with distance.
+ * Sized in percent of the frame width, which is why the height is set from the same number.
+ */
+.mrm__marker {
+  position: absolute;
+  border: var(--spacing-px) solid var(--color-canvas-overlay-foreground);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas-overlay-surface);
+  opacity: 0.75;
+  transform: translate(-50%, -50%);
 }
 
 .mrm__street-name {

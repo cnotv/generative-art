@@ -1,5 +1,5 @@
 import type { DeviceAim } from '@webgamekit/controls'
-import type { FieldOfView, GeoPoint, PlacedLabel, Place, StreetPath, StreetRun } from './types'
+import type { FieldOfView, GeoPoint, PlacedLabel, Place, StreetPath, StreetRibbon } from './types'
 
 const DEGREES_TO_RADIANS = Math.PI / 180
 const RADIANS_TO_DEGREES = 180 / Math.PI
@@ -155,72 +155,118 @@ export const getScreenPlacement = (
 export const smoothBearing = (current: number, target: number, smoothing: number): number =>
   (current + getBearingOffset(target, current) * smoothing + FULL_TURN_DEGREES) % FULL_TURN_DEGREES
 
+const METERS_PER_DEGREE_LATITUDE = 111_320
+const QUARTER_TURN_DEGREES = 90
+
 /**
- * Project street centre lines onto the frame as runs that stay in front of the camera.
+ * Step a position a given distance along a bearing.
  *
- * A street crossing behind the viewer would otherwise fold back into the frame as a line running
- * the wrong way, so a path is cut wherever it passes the camera plane and comes back as separate
- * runs. Every point is put on the ground at eye height, which is what makes the lines converge
- * toward the horizon the way the street does.
+ * Flat-earth arithmetic, which is exact enough over the tens of metres a road is wide and much
+ * cheaper than the spherical form.
+ * @param from Where to start
+ * @param bearingDegrees Which way to step, 0 at north
+ * @param meters How far to step
+ * @returns The stepped position
+ */
+export const offsetGeoPoint = (
+  from: GeoPoint,
+  bearingDegrees: number,
+  meters: number
+): GeoPoint => {
+  const bearing = bearingDegrees * DEGREES_TO_RADIANS
+  const northward = (meters * Math.cos(bearing)) / METERS_PER_DEGREE_LATITUDE
+  const eastward =
+    (meters * Math.sin(bearing)) /
+    (METERS_PER_DEGREE_LATITUDE * Math.cos(from.latitude * DEGREES_TO_RADIANS))
+
+  return { latitude: from.latitude + northward, longitude: from.longitude + eastward }
+}
+
+/**
+ * Which way the path is running at each of its points, for offsetting the kerbs off it.
+ * @param points The centre line
+ * @returns One bearing per point, the ends borrowing their neighbour's
+ */
+const getPathBearings = (points: readonly GeoPoint[]): number[] =>
+  points.map((point, index) =>
+    index === points.length - 1
+      ? getBearingDegrees(points[index - 1] ?? point, point)
+      : getBearingDegrees(point, points[index + 1])
+  )
+
+/**
+ * Project streets as the road surface rather than as a line down the middle of it.
+ *
+ * A line has no width and reads as a wire strung across the picture; a road has a real width in
+ * metres, and drawing it as one makes it lie on the ground and narrow into the distance the way
+ * the street in the picture does. The outline runs up one kerb and back down the other, so it
+ * closes into a fillable shape.
  * @param paths The street centre lines
  * @param origin Where the viewer is
  * @param aim Where the camera points
  * @param fieldOfView How much the camera takes in
- * @param eyeHeightMeters How high the camera is held
- * @returns Drawable runs, in frame percentages
+ * @param road How high the camera is held and how wide to draw the carriageway
+ * @returns Fillable outlines, each with somewhere to write its name
  */
-export const projectStreets = (
+export const projectStreetRibbons = (
   paths: readonly StreetPath[],
   origin: GeoPoint,
   aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
   fieldOfView: FieldOfView,
-  eyeHeightMeters: number
-): StreetRun[] =>
+  road: { eyeHeightMeters: number; widthMeters: number }
+): StreetRibbon[] =>
   paths.flatMap((path) => {
-    const placed = path.points.map((point) => {
+    const bearings = getPathBearings(path.points)
+
+    const place = (point: GeoPoint) => {
       const distanceMeters = getDistanceMeters(origin, point)
-      const elevation = getGroundElevation(distanceMeters, eyeHeightMeters)
+      const elevation = getGroundElevation(distanceMeters, road.eyeHeightMeters)
 
       return getScreenPlacement(getBearingDegrees(origin, point), elevation, aim, fieldOfView)
+    }
+
+    const projected = path.points.map((point, index) => {
+      const halfWidth = road.widthMeters / 2
+      const centre = place(point)
+
+      return {
+        centre,
+        left: place(offsetGeoPoint(point, bearings[index] - QUARTER_TURN_DEGREES, halfWidth)),
+        right: place(offsetGeoPoint(point, bearings[index] + QUARTER_TURN_DEGREES, halfWidth))
+      }
     })
 
-    const runs = placed.reduce<{ xPercent: number; yPercent: number }[][]>(
-      (collected, { xPercent, yPercent, isInFront }) => {
-        if (!isInFront) return [...collected, []]
-        const current = collected[collected.length - 1]
-
-        return [...collected.slice(0, -1), [...current, { xPercent, yPercent }]]
-      },
+    // Cut wherever the road passes the camera, or the part behind would fold back into frame.
+    const runs = projected.reduce<(typeof projected)[]>(
+      (collected, step) =>
+        step.centre.isInFront
+          ? [...collected.slice(0, -1), [...collected[collected.length - 1], step]]
+          : [...collected, []],
       [[]]
     )
 
     return runs
-      .filter((points) => points.length >= 2)
-      .map((points, index) => ({ id: `${path.id}/${index}`, name: path.name, points }))
+      .filter((run) => run.length >= 2)
+      .map((run, index) => {
+        const toFramePoint = ({ xPercent, yPercent }: (typeof run)[number]['centre']) => ({
+          xPercent,
+          yPercent
+        })
+        const nearest = run.reduce((lowest, step) =>
+          step.centre.yPercent > lowest.centre.yPercent ? step : lowest
+        )
+
+        return {
+          id: `${path.id}/${index}`,
+          name: path.name,
+          points: [
+            ...run.map((step) => toFramePoint(step.left)),
+            ...[...run].reverse().map((step) => toFramePoint(step.right))
+          ],
+          namePoint: toFramePoint(nearest.centre)
+        }
+      })
   })
-
-/**
- * Where to write each street's name: on the run, once per name, nearest the viewer.
- *
- * Drawn as ordinary elements rather than inside the line drawing, whose viewBox is stretched to
- * the frame and would stretch the lettering with it. One street arrives as many ways, so the
- * nearest run wins the name and the rest go unnamed.
- * @param runs The projected street runs
- * @returns One position per distinct name
- */
-export const getStreetNamePositions = (
-  runs: readonly StreetRun[]
-): { id: string; name: string; xPercent: number; yPercent: number }[] =>
-  runs.reduce<{ id: string; name: string; xPercent: number; yPercent: number }[]>((named, run) => {
-    if (!run.name || named.some(({ name }) => name === run.name)) return named
-
-    // The lowest point of the run is its nearest, since the ground rises toward the horizon.
-    const anchor = run.points.reduce((lowest, point) =>
-      point.yPercent > lowest.yPercent ? point : lowest
-    )
-
-    return [...named, { id: run.id, name: run.name, ...anchor }]
-  }, [])
 
 /**
  * Lift labels off each other where they would land in the same place.
@@ -260,7 +306,9 @@ export const spreadLabels = (
  * @param origin Where the viewer is
  * @param aim Where the camera points
  * @param fieldOfView How much the camera takes in
- * @param limits The eye height to measure from, how many labels fit, and how far apart they sit
+ * Each label keeps the point the place actually stands on, and the size a marker there should
+ * be drawn at, so the name can be lifted clear of its neighbours while the marker stays put.
+ * @param limits The eye height, how many labels fit, how far apart they sit, and the marker size
  * @returns The labels to draw, furthest first
  */
 export const placeLabels = (
@@ -273,8 +321,11 @@ export const placeLabels = (
     maximumLabels: number
     rowHeightPercent: number
     columnWidthPercent: number
+    markerMeters: number
   }
 ): PlacedLabel[] => {
+  const halfWidth = Math.tan((fieldOfView.horizontalDegrees / 2) * DEGREES_TO_RADIANS)
+
   const nearestFirst = places
     .flatMap((place) => {
       const bearingDegrees = getBearingDegrees(origin, place)
@@ -286,8 +337,25 @@ export const placeLabels = (
         aim,
         fieldOfView
       )
+      if (!isInView) return []
 
-      return isInView ? [{ place, bearingDegrees, distanceMeters, xPercent, yPercent }] : []
+      // The frame spans twice the half-view across, so a thing of a given size covers that
+      // fraction of it. Far away this goes to nothing, which is the point of drawing it.
+      const boxPercent =
+        (limits.markerMeters / Math.max(distanceMeters, limits.markerMeters) / (2 * halfWidth)) *
+        100
+
+      return [
+        {
+          place,
+          bearingDegrees,
+          distanceMeters,
+          xPercent,
+          yPercent,
+          groundPoint: { xPercent, yPercent },
+          boxPercent
+        }
+      ]
     })
     .sort((first, second) => first.distanceMeters - second.distanceMeters)
     .slice(0, limits.maximumLabels)

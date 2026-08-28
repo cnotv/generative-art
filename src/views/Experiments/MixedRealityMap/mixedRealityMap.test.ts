@@ -3,12 +3,12 @@ import {
   getBearingDegrees,
   getDistanceMeters,
   getGroundElevation,
-  getStreetNamePositions,
   getScreenPlacement,
   getVerticalFieldOfView,
   formatDistance,
   placeLabels,
-  projectStreets,
+  offsetGeoPoint,
+  projectStreetRibbons,
   smoothBearing,
   spreadLabels
 } from './projection'
@@ -203,7 +203,8 @@ describe('placeLabels', () => {
     eyeHeightMeters: 1.6,
     maximumLabels: 12,
     rowHeightPercent: 0,
-    columnWidthPercent: 0
+    columnWidthPercent: 0,
+    markerMeters: 6
   }
   const ahead = makePlace('ahead', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
   const behind = makePlace('behind', AMSTERDAM.latitude - 0.001, AMSTERDAM.longitude)
@@ -235,6 +236,30 @@ describe('placeLabels', () => {
 
     expect(label.bearingDegrees).toBeCloseTo(0, 1)
     expect(label.distanceMeters).toBeCloseTo(111, 0)
+  })
+
+  it('keeps the ground point a marker is drawn on, apart from the lifted label', () => {
+    const [label] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, {
+      ...LIMITS,
+      rowHeightPercent: 7,
+      columnWidthPercent: 30
+    })
+
+    expect(label.groundPoint.yPercent).toBeGreaterThan(label.yPercent)
+  })
+
+  it('draws a nearer marker larger than a far one', () => {
+    const [distant, near] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+
+    expect(near.boxPercent).toBeGreaterThan(distant.boxPercent)
+  })
+
+  it('never draws a marker wider than the frame, however close it gets', () => {
+    const underfoot = makePlace('underfoot', AMSTERDAM.latitude + 0.00001, AMSTERDAM.longitude)
+
+    const [label] = placeLabels([underfoot], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+
+    expect(label?.boxPercent ?? 0).toBeLessThanOrEqual(100)
   })
 
   it('draws a nearer place lower in the frame than a far one', () => {
@@ -350,28 +375,72 @@ describe('parseStreetPaths', () => {
   )
 })
 
-describe('projectStreets', () => {
+describe('offsetGeoPoint', () => {
+  it.each([
+    ['north', 0, 1, 0],
+    ['south', 180, -1, 0],
+    ['east', 90, 0, 1],
+    ['west', 270, 0, -1]
+  ])('steps %s', (_direction, bearing, latitudeSign, longitudeSign) => {
+    const stepped = offsetGeoPoint(AMSTERDAM, bearing, 50)
+
+    expect(Math.sign(stepped.latitude - AMSTERDAM.latitude)).toBe(latitudeSign)
+    expect(Math.sign(stepped.longitude - AMSTERDAM.longitude)).toBe(longitudeSign)
+  })
+
+  it('steps the distance it was asked for', () => {
+    const stepped = offsetGeoPoint(AMSTERDAM, 37, 50)
+
+    expect(getDistanceMeters(AMSTERDAM, stepped)).toBeCloseTo(50, 0)
+  })
+
+  it('goes nowhere when asked for nothing', () => {
+    expect(offsetGeoPoint(AMSTERDAM, 90, 0)).toEqual(AMSTERDAM)
+  })
+})
+
+describe('projectStreetRibbons', () => {
   const northward = {
     id: 'way/1',
     name: 'Damrak',
     points: [
-      { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude },
+      { latitude: AMSTERDAM.latitude + 0.0005, longitude: AMSTERDAM.longitude },
       { latitude: AMSTERDAM.latitude + 0.002, longitude: AMSTERDAM.longitude }
     ]
   }
+  const project = (paths: (typeof northward)[], aim = LEVEL_AIM) =>
+    projectStreetRibbons(paths, AMSTERDAM, aim, FIELD_OF_VIEW, {
+      eyeHeightMeters: 1.6,
+      widthMeters: 12
+    })
 
-  it('projects a street ahead into a drawable run', () => {
-    const [run] = projectStreets([northward], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
+  it('closes the road into an outline with both kerbs', () => {
+    const [ribbon] = project([northward])
 
-    expect(run.name).toBe('Damrak')
-    expect(run.points).toHaveLength(2)
+    expect(ribbon.points).toHaveLength(northward.points.length * 2)
+    expect(ribbon.name).toBe('Damrak')
   })
 
-  it('draws the further point higher, so the street runs toward the horizon', () => {
-    const [run] = projectStreets([northward], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
-    const [near, far] = run.points
+  it('narrows into the distance, which is what puts it on the ground', () => {
+    const [ribbon] = project([northward])
+    const [nearLeft, farLeft] = ribbon.points
+    const farRight = ribbon.points[2]
+    const nearRight = ribbon.points[3]
 
-    expect(far.yPercent).toBeLessThan(near.yPercent)
+    expect(Math.abs(nearLeft.xPercent - nearRight.xPercent)).toBeGreaterThan(
+      Math.abs(farLeft.xPercent - farRight.xPercent)
+    )
+  })
+
+  it('writes the name on the centre line at the near end of the run', () => {
+    const [ribbon] = project([northward])
+    const nearEdge = Math.max(...ribbon.points.map(({ yPercent }) => yPercent))
+    const farEdge = Math.min(...ribbon.points.map(({ yPercent }) => yPercent))
+
+    expect(ribbon.namePoint.yPercent).toBeCloseTo(nearEdge, 2)
+    expect(ribbon.namePoint.yPercent).toBeGreaterThan(farEdge)
+    // Below the horizon, because the road is on the ground rather than in the sky.
+    expect(ribbon.namePoint.yPercent).toBeGreaterThan(50)
   })
 
   it('drops a street entirely behind the camera', () => {
@@ -383,7 +452,7 @@ describe('projectStreets', () => {
       }))
     }
 
-    expect(projectStreets([behind], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)).toEqual([])
+    expect(project([behind])).toEqual([])
   })
 
   it('cuts a street that passes the camera into separate runs', () => {
@@ -397,56 +466,10 @@ describe('projectStreets', () => {
       ]
     }
 
-    const runs = projectStreets([throughTheViewer], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, 1.6)
+    const ribbons = project([throughTheViewer])
 
-    expect(runs).toHaveLength(1)
-    expect(runs[0].points).toHaveLength(2)
-  })
-})
-
-describe('getStreetNamePositions', () => {
-  const run = (id: string, name: string, points: { xPercent: number; yPercent: number }[]) => ({
-    id,
-    name,
-    points
-  })
-
-  it('anchors a name at the run point nearest the viewer', () => {
-    const positions = getStreetNamePositions([
-      run('a', 'Damrak', [
-        { xPercent: 50, yPercent: 40 },
-        { xPercent: 55, yPercent: 70 }
-      ])
-    ])
-
-    expect(positions).toEqual([{ id: 'a', name: 'Damrak', xPercent: 55, yPercent: 70 }])
-  })
-
-  it('writes each name once, however many runs carry it', () => {
-    const positions = getStreetNamePositions([
-      run('a', 'Damrak', [
-        { xPercent: 50, yPercent: 70 },
-        { xPercent: 51, yPercent: 60 }
-      ]),
-      run('b', 'Damrak', [
-        { xPercent: 20, yPercent: 90 },
-        { xPercent: 21, yPercent: 80 }
-      ])
-    ])
-
-    expect(positions).toHaveLength(1)
-    expect(positions[0].id).toBe('a')
-  })
-
-  it('skips a run with no name to write', () => {
-    const positions = getStreetNamePositions([
-      run('a', '', [
-        { xPercent: 50, yPercent: 70 },
-        { xPercent: 51, yPercent: 60 }
-      ])
-    ])
-
-    expect(positions).toEqual([])
+    expect(ribbons).toHaveLength(1)
+    expect(ribbons[0].points).toHaveLength(4)
   })
 })
 
