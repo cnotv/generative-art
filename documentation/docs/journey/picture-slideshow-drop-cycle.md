@@ -7,9 +7,10 @@ sidebar_position: 124
 :::note Source files
 
 <video controls loop muted playsinline width="720" src="/video/picture-slideshow/hand-off.webm">
-  A stickman stands on a plinth holding a photograph. Tapping the right of the screen sends it
-  spinning away to the right while he turns after it and a new one arrives from the left into
-  his hands. It happens twice more, the last one in the other direction.
+  A stickman, cut off at the knees by the bottom of the frame, holds a photograph. Tapping the
+  right of the screen sends it spinning away to the right while he turns after it and a new one
+  arrives from the left into his hands. It happens twice more, the last one in the other
+  direction.
 </video>
 
 `src/views/Experiments/PictureSlideshow/slideshow.ts`, `config.ts`,
@@ -62,8 +63,12 @@ opposite ends, and travelling sideways solves both at once.
 land is the obvious reading, and it does not work: a discarded picture lying at the
 character's feet has to be gone again before its turn comes round, and there is nowhere
 off-camera for it to go, so it blinks out in plain view a few seconds later. Anything
-that comes to rest inside the frame must later be removed inside the frame. The plinth
-is what makes the throw possible — with a floor the picture would have to land on it.
+that comes to rest inside the frame must later be removed inside the frame. The scene has
+no floor at all, which is what makes the throw possible: there is nothing to land on.
+
+That is also why the character stands on nothing and runs off the bottom of the shot. A
+base under him would be a floor by another name — something a thrown picture could hit,
+and something the composition has to make room for below the subject.
 
 **The picture that arrives** comes in from the side opposite the one just vacated,
 starting far enough out to be off camera before it moves. It is hidden entirely during

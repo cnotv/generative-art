@@ -25,19 +25,26 @@ export const PICTURES: { name: string; url: string }[] = [
   { name: 'living room', url: livingRoomUrl }
 ]
 
-/** Roughly the middle of the picture, so it is the subject rather than the plinth. */
-const VIEW_TARGET: CoordinateTuple = [0, 1.7, 0]
+/**
+ * Where the camera is aimed, which is what decides how much of the rig is in shot.
+ *
+ * The rig's legs run from 0 to 1.82, and the frame's lower edge lands at 0.88 from here, so
+ * the character stands half out of the bottom of the picture rather than on anything. That
+ * is the whole floor: with nothing under him there is nothing for a thrown picture to land
+ * on either.
+ */
+const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
 
 export const SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xd7d9e4 },
-  camera: { position: [0, 2.3, 8.2], fov: 50, lookAt: VIEW_TARGET },
+  camera: { position: [0, 3.3, 5.2], fov: 50, lookAt: VIEW_TARGET },
   // An orbit drag and a swipe are the same gesture, and the swipe is the one
   // this scene is driven by, so the camera stays where it was composed. The
   // target still has to be set: disabled or not, orbit aims the camera at it,
   // and `camera.lookAt` above is overwritten on the first update.
   orbit: { target: new THREE.Vector3(...VIEW_TARGET), disabled: true },
-  // A released picture has to keep going once it leaves, so there is nothing
-  // for it to land on and no floor for it to clip through.
+  // A released picture has to keep going once it leaves, so there is no floor
+  // for it to land on or clip through.
   ground: false,
   sky: false,
   lights: {
@@ -50,19 +57,6 @@ export const SETUP_CONFIG: SetupConfig = {
       shadow: { radius: 3, bias: -0.0004 }
     }
   }
-}
-
-/** The stand the stickman works on, wide enough to read as a base and no wider. */
-export const PLINTH_RADIUS = 2.2
-export const PLINTH: ModelOptions = {
-  name: 'plinth',
-  size: [PLINTH_RADIUS * 2, 1, PLINTH_RADIUS * 2],
-  position: [0, -1, 0],
-  color: 0xb9ae9f,
-  roughness: 0.95,
-  metalness: 0,
-  type: 'fixed',
-  hasGravity: false
 }
 
 export const STICKMAN_MODEL_PATH = 'stickboy.glb'
@@ -113,9 +107,9 @@ export const CANVAS_ENTRY_DROP = 0.6
 /**
  * How the released picture leaves.
  *
- * Sideways is what keeps it off the plinth: it has cleared the base well before
- * it has fallen as far as the top. The drop and the tumble are what stop the
- * exit reading as a slide along a rail.
+ * Sideways is what carries it out of shot, and it has left the frame long before
+ * the drop matters. The drop and the tumble are what stop the exit reading as a
+ * slide along a rail.
  */
 export const EXIT_DISTANCE = 11
 export const EXIT_DROP = 5

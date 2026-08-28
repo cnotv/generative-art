@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { getCube, getCylinder, getModel } from '@webgamekit/threejs'
+import { getCube, getModel } from '@webgamekit/threejs'
 import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
 import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
@@ -37,7 +37,6 @@ import {
   EXIT_DROP,
   EXIT_SPIN,
   PICTURES,
-  PLINTH,
   SETUP_CONFIG,
   STICKMAN_MODEL_PATH,
   STICKMAN_SCALE,
@@ -84,7 +83,7 @@ let destroyControls: (() => void) | null = null
 const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount
 
 /**
- * Loads the rig, straightens it, stands it on the plinth and hands back the
+ * Loads the rig, straightens it, stands its feet on zero and hands back the
  * arm nodes, each paired with the direction it rolls away from the body.
  *
  * The rig's own origin is not at its feet, so the height it spawns at says
@@ -158,7 +157,6 @@ onMounted(async () => {
     viewPanels: { showConfig: true, showElements: false },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, getDelta, animate }) => {
-      getCylinder(scene, world, PLINTH)
       const { stickman, arms } = await spawnStickman(scene, world)
       const canvases = spawnCanvases(scene, world)
       const timelineManager = createTimelineManager()
