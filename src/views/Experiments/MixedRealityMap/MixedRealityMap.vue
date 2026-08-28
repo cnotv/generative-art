@@ -6,9 +6,17 @@ import {
   unlockScreenOrientation
 } from '@webgamekit/controls'
 import type { DeviceAim, MotionReading } from '@webgamekit/controls'
+import {
+  Landmark,
+  MapPin,
+  Route,
+  ShoppingBag,
+  SlidersHorizontal,
+  UtensilsCrossed
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
+import IconButton from '@/components/IconButton.vue'
 import { fetchNearbyPlaces } from './places'
 import { fetchStreetPaths } from './streets'
 import {
@@ -41,6 +49,9 @@ import type { GeoPoint, PermissionStage, Place, StreetPath } from './types'
 
 /** Enough to settle a magnetometer without the labels lagging behind the phone. */
 const AIM_SMOOTHING = 0.15
+
+/** Named in the config so the groups stay data, and resolved to components only here. */
+const GROUP_ICONS = { Route, UtensilsCrossed, ShoppingBag, Landmark, MapPin }
 
 const stage = ref<PermissionStage>('idle')
 const cameraMessage = ref<string | null>(null)
@@ -99,13 +110,21 @@ const visiblePlaces = computed(() =>
   places.value.filter(({ group }) => !hiddenGroups.value.includes(group))
 )
 
-/** How many of each kind were found, so a filter says what turning it off would cost. */
-const groupCounts = computed(() =>
-  places.value.reduce<Record<string, number>>(
+/**
+ * How many of each kind were found, so a toggle says what turning it off would cost.
+ *
+ * Streets count their drawn centre lines as well as their named points, because the lines are
+ * most of what that toggle governs and they come from a service that fails often enough to be
+ * worth telling apart from an empty street.
+ */
+const groupCounts = computed(() => {
+  const byGroup = places.value.reduce<Record<string, number>>(
     (counts, { group }) => ({ ...counts, [group]: (counts[group] ?? 0) + 1 }),
     {}
   )
-)
+
+  return { ...byGroup, streets: (byGroup.streets ?? 0) + streetPaths.value.length }
+})
 
 const labels = computed(() =>
   origin.value
@@ -543,18 +562,6 @@ onBeforeUnmount(() => {
             @update:model-value="headingOffsetDegrees = $event?.[0] ?? headingOffsetDegrees"
           />
         </label>
-        <fieldset class="mrm__groups">
-          <legend class="mrm__groups-title">Show</legend>
-          <label v-for="group in PLACE_GROUPS" :key="group.id" class="mrm__group">
-            <Checkbox
-              class="mrm__checkbox"
-              :model-value="!hiddenGroups.includes(group.id)"
-              @update:model-value="toggleGroup(group.id)"
-            />
-            <span>{{ group.label }} · {{ groupCounts[group.id] ?? 0 }}</span>
-          </label>
-        </fieldset>
-
         <p class="mrm__hint">
           Widen the view until a label sits on the thing it names. Without a compass, the offset
           sweeps the horizon by hand.
@@ -568,9 +575,31 @@ onBeforeUnmount(() => {
       </section>
 
       <div class="mrm__actions">
-        <Button variant="secondary" size="sm" @click="isCalibrating = !isCalibrating">
-          {{ isCalibrating ? 'Done' : 'Calibrate' }}
-        </Button>
+        <IconButton
+          v-for="group in PLACE_GROUPS"
+          :key="group.id"
+          class="mrm__toggle"
+          size="lg"
+          :title="`${group.label} · ${groupCounts[group.id] ?? 0}`"
+          :aria-label="`${group.label}, ${groupCounts[group.id] ?? 0} found`"
+          :aria-pressed="!hiddenGroups.includes(group.id)"
+          :active="!hiddenGroups.includes(group.id)"
+          @click="toggleGroup(group.id)"
+        >
+          <component :is="GROUP_ICONS[group.icon]" />
+        </IconButton>
+
+        <IconButton
+          class="mrm__toggle mrm__settings-toggle"
+          size="lg"
+          title="Calibrate"
+          aria-label="Field of view and compass settings"
+          :aria-pressed="isCalibrating"
+          :active="isCalibrating"
+          @click="isCalibrating = !isCalibrating"
+        >
+          <SlidersHorizontal />
+        </IconButton>
       </div>
     </div>
 
@@ -769,34 +798,6 @@ onBeforeUnmount(() => {
   font-size: var(--font-size-sm);
 }
 
-.mrm__groups {
-  display: grid;
-  gap: var(--spacing-2);
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
-.mrm__groups-title {
-  padding: 0;
-  font-size: var(--font-size-xs);
-  opacity: 0.8;
-}
-
-.mrm__group {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--font-size-sm);
-}
-
-/* The kit's checkbox is drawn for a themed panel, and this one sits on a camera feed instead. */
-.mrm__checkbox {
-  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  background: var(--color-canvas-overlay-surface);
-  color: var(--color-canvas-overlay-foreground);
-}
-
 .mrm__hint {
   margin: 0;
   font-size: var(--font-size-xs);
@@ -805,8 +806,42 @@ onBeforeUnmount(() => {
 
 .mrm__actions {
   grid-area: actions;
-  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--color-canvas-overlay-surface-strong);
   pointer-events: auto;
+}
+
+/*
+ * The kit's icon button is drawn for themed chrome, and this one sits on a camera feed. Its
+ * hover fill is a light theme colour, which swallowed a white icon whole.
+ */
+.mrm__toggle {
+  border-radius: var(--radius-full);
+  color: var(--color-canvas-overlay-foreground);
+  opacity: 0.5;
+}
+
+.mrm__toggle:hover,
+.mrm__toggle:focus-visible {
+  background: var(--color-canvas-overlay-border);
+  color: var(--color-canvas-overlay-foreground);
+  opacity: 1;
+}
+
+.mrm__toggle[aria-pressed='true'] {
+  background: var(--color-canvas-overlay-border);
+  opacity: 1;
+}
+
+/* The last button changes what the bar shows rather than what the world does. */
+.mrm__settings-toggle {
+  margin-left: var(--spacing-2);
 }
 
 .mrm__gate {

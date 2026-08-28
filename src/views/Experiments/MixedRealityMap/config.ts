@@ -62,11 +62,11 @@ export const UNPLACEABLE_TYPES = ['city', 'county', 'state', 'country', 'other']
  * key spans a restaurant, a bench and a wastebasket.
  */
 export const PLACE_GROUPS = [
-  { id: 'streets', label: 'Streets' },
-  { id: 'food', label: 'Food and drink' },
-  { id: 'shops', label: 'Shops' },
-  { id: 'landmarks', label: 'Landmarks' },
-  { id: 'other', label: 'Everything else' }
+  { id: 'streets', label: 'Streets', icon: 'Route' },
+  { id: 'food', label: 'Food and drink', icon: 'UtensilsCrossed' },
+  { id: 'shops', label: 'Shops', icon: 'ShoppingBag' },
+  { id: 'landmarks', label: 'Landmarks', icon: 'Landmark' },
+  { id: 'other', label: 'Everything else', icon: 'MapPin' }
 ] as const
 
 const FOOD_VALUES = [

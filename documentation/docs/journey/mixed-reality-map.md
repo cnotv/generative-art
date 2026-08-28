@@ -8,7 +8,7 @@ Labelling the world through a phone camera turned out to be three problems that 
 like one: knowing where the camera points, knowing what is out there, and drawing the answer
 so it can be read. Each had a wrong first answer that seemed obviously right.
 
-![Named places drawn over the camera feed, nearest lowest in the frame](/img/mixed-reality-map/labels.webp)
+![Named places over the camera feed with street lines and the icon bar](/img/mixed-reality-map/labels.webp)
 
 The camera here is the browser's synthetic test pattern rather than a street, which is what
 makes the layout legible in a screenshot: the labels, their stacking and their distances are
@@ -137,4 +137,8 @@ builds never report an absolute bearing at all, and a desktop has no sensor what
 heading offset covers all three, and doubles as the only way to look around on a machine that
 cannot be turned.
 
-![A tapped label's card open beside the two calibration sliders](/img/mixed-reality-map/detail.webp)
+![The two calibration sliders open above the icon bar](/img/mixed-reality-map/detail.webp)
+
+Which kinds of thing are named is a row of icon toggles along the bottom rather than a setting
+behind a button, because it is the control that gets used while walking: a street of shops is a
+wall of names, and turning four of the five kinds off is how you find the one you wanted.
