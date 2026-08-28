@@ -6,7 +6,9 @@ import {
   cameraSchema,
   configControls,
   defaultConfig,
-  GROUND_SIZE
+  BOARD_SIZE_MAX,
+  BOARD_SIZE_STEP,
+  CELL_SIZE
 } from './config'
 
 const modelControl = configControls.model as ControlSchema
@@ -38,13 +40,20 @@ describe('config controls', () => {
     expect(CITY_MODELS.some((model) => model.value === defaultConfig.model)).toBe(true)
   })
 
-  it('keeps the default cell size inside its control range', () => {
-    expect(defaultConfig.grid.cellSize).toBeGreaterThanOrEqual(gridControls.cellSize.min as number)
-    expect(defaultConfig.grid.cellSize).toBeLessThanOrEqual(gridControls.cellSize.max as number)
+  it('keeps the default board size inside its control range', () => {
+    expect(defaultConfig.grid.size).toBeGreaterThanOrEqual(gridControls.size.min as number)
+    expect(defaultConfig.grid.size).toBeLessThanOrEqual(gridControls.size.max as number)
   })
 
-  it('never offers a cell wider than the board it divides', () => {
-    expect(gridControls.cellSize.max).toBeLessThan(GROUND_SIZE)
+  // Every reachable board size has to be a whole even number of cells, or the drawn lines fall
+  // half a cell out of step with the cells the snapping computes from the origin.
+  it.each(
+    Array.from(
+      { length: (BOARD_SIZE_MAX - (gridControls.size.min as number)) / BOARD_SIZE_STEP + 1 },
+      (_, step) => (gridControls.size.min as number) + step * BOARD_SIZE_STEP
+    )
+  )('board size %i is an even number of cells', (boardSize) => {
+    expect(boardSize % (CELL_SIZE * 2)).toBe(0)
   })
 })
 

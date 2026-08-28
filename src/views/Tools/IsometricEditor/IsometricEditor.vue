@@ -33,9 +33,11 @@ import {
   DRAG_THRESHOLD_PIXELS,
   ERASE_MODEL,
   GRID_CENTER_COLOR,
-  GRID_ELEVATION,
+  GRID_ELEVATION_CELLS,
   GRID_LINE_COLOR,
-  GROUND_SIZE,
+  GRID_OPACITY,
+  BOARD_SIZE_DEFAULT,
+  CELL_SIZE,
   HIGHLIGHT_COLOR,
   HIGHLIGHT_HEIGHT,
   HIGHLIGHT_OPACITY,
@@ -47,6 +49,7 @@ import {
   sceneSetupConfig
 } from './config'
 import { buildCityModel } from './models'
+import { resolveStrokeMode } from './strokes'
 import type { CityModel, PaintMode, PaintTarget } from './types'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -80,12 +83,13 @@ let cameraReference: THREE.OrthographicCamera | null = null
 let gridHelper: THREE.GridHelper | null = null
 let cellHighlight: THREE.Mesh | null = null
 let cleanupTools: (() => void) | null = null
+let groundMesh: THREE.Mesh | null = null
 let orbitReference: { enabled: boolean } | null = null
 let pointerDownAt: [number, number] | null = null
 let strokeMode: PaintMode | null = null
 let strokedCellKey: string | null = null
-let appliedCellSize = 0
-let gridExtent = getGridExtent(GROUND_SIZE, defaultConfig.grid.cellSize)
+let appliedBoardSize = 0
+let gridExtent = getGridExtent(defaultConfig.grid.size, CELL_SIZE)
 
 const createIsometricCamera = (): THREE.OrthographicCamera => {
   const halfHeight = CAMERA_FRUSTUM_HEIGHT / 2
@@ -103,9 +107,12 @@ const createIsometricCamera = (): THREE.OrthographicCamera => {
   return camera
 }
 
+/** Rides at the grid's height, so hovering a road or a river still shows which cell is armed. */
+const HIGHLIGHT_ELEVATION = GRID_ELEVATION_CELLS * CELL_SIZE
+
 const createCellHighlight = (scene: THREE.Scene): THREE.Mesh => {
   const highlight = new THREE.Mesh(
-    new THREE.BoxGeometry(1, HIGHLIGHT_HEIGHT, 1),
+    new THREE.BoxGeometry(CELL_SIZE, HIGHLIGHT_HEIGHT, CELL_SIZE),
     new THREE.MeshBasicMaterial({
       color: HIGHLIGHT_COLOR,
       transparent: true,
@@ -118,12 +125,31 @@ const createCellHighlight = (scene: THREE.Scene): THREE.Mesh => {
   return highlight
 }
 
-/** Redraws the grid when the cell size changes, leaving models already placed where they are. */
-const syncGrid = (): void => {
-  const { cellSize } = reactiveConfig.value.grid
-  if (!sceneReference || cellSize === appliedCellSize) return
-  appliedCellSize = cellSize
-  gridExtent = getGridExtent(GROUND_SIZE, cellSize)
+const syncGridVisibility = (): void => {
+  if (gridHelper) gridHelper.visible = reactiveConfig.value.grid.show
+}
+
+/** Drops whatever a shrunken board no longer covers, rather than leaving it hanging in the air. */
+const trimToBoard = (): void => {
+  ;[...placedModels]
+    .filter(([, group]) => !isInsideGrid(group.position.x, group.position.z, gridExtent))
+    .forEach(([cellKey]) => removePlacedModel(cellKey))
+}
+
+/**
+ * Resizes the board and redraws its grid, leaving the cells themselves alone: components are
+ * sized in cells, so a board that grew keeps every placement exactly where it was.
+ */
+const syncBoard = (): void => {
+  const boardSize = reactiveConfig.value.grid.size
+  if (!sceneReference || boardSize === appliedBoardSize) return
+  appliedBoardSize = boardSize
+  gridExtent = getGridExtent(boardSize, CELL_SIZE)
+
+  // The ground is one flat box, so scaling it is the whole resize. Its collider stays the size
+  // it was built at, which nothing in an editor reads.
+  const groundScale = boardSize / BOARD_SIZE_DEFAULT
+  groundMesh?.scale.set(groundScale, 1, groundScale)
 
   if (gridHelper) {
     sceneReference.remove(gridHelper)
@@ -131,14 +157,19 @@ const syncGrid = (): void => {
   }
   gridHelper = new THREE.GridHelper(
     gridExtent,
-    getGridDivisions(GROUND_SIZE, cellSize),
+    getGridDivisions(boardSize, CELL_SIZE),
     GRID_CENTER_COLOR,
     GRID_LINE_COLOR
   )
   gridHelper.name = 'placement-grid'
-  gridHelper.position.setY(GRID_ELEVATION)
+  gridHelper.position.setY(GRID_ELEVATION_CELLS * CELL_SIZE)
+  // Solid white lines over a road read as a fence rather than a guide.
+  const gridMaterial = gridHelper.material as THREE.Material
+  gridMaterial.transparent = true
+  gridMaterial.opacity = GRID_OPACITY
   sceneReference.add(gridHelper)
-  cellHighlight?.scale.set(cellSize, 1, cellSize)
+  syncGridVisibility()
+  trimToBoard()
 }
 
 /** Orbit and painting both live on a drag, so only one of them is listening at a time. */
@@ -147,7 +178,8 @@ const syncOrbit = (): void => {
 }
 
 const applyConfig = (): void => {
-  syncGrid()
+  syncBoard()
+  syncGridVisibility()
   syncOrbit()
 }
 
@@ -191,9 +223,8 @@ const placeModel = (model: CityModel, cellKey: string, x: number, z: number): vo
   if (!sceneReference || !worldReference) return
   removePlacedModel(cellKey)
 
-  const { cellSize } = reactiveConfig.value.grid
   const name = [model.value, cellKey].join('_')
-  const group = buildCityModel(sceneReference, worldReference, model, cellSize, name)
+  const group = buildCityModel(sceneReference, worldReference, model, CELL_SIZE, name)
   group.position.set(x, 0, z)
   syncPartBodies(group)
 
@@ -226,27 +257,21 @@ const handleRemove = (name: string): void => {
 }
 
 const resolveCell = (event: PointerEvent): PaintTarget | null => {
-  const { cellSize } = reactiveConfig.value.grid
   const point = getGroundPoint(event)
   if (!point || !isInsideGrid(point.x, point.z, gridExtent)) return null
   return {
-    cellKey: getCellKey(point.x, point.z, cellSize),
-    x: snapToCell(point.x, cellSize),
-    z: snapToCell(point.z, cellSize)
+    cellKey: getCellKey(point.x, point.z, CELL_SIZE),
+    x: snapToCell(point.x, CELL_SIZE),
+    z: snapToCell(point.z, CELL_SIZE)
   }
 }
 
-/**
- * What a gesture starting on this cell does, held for the whole stroke.
- *
- * Pressing on a cell that is already filled takes its component away, so the same click both
- * places and removes. The mode is then fixed, or dragging a road across a park would erase the
- * park instead of paving it.
- * @param cellKey The cell the gesture started on
- * @returns Whether the stroke fills cells or empties them
- */
 const getStrokeMode = (cellKey: string): PaintMode =>
-  reactiveConfig.value.model === ERASE_MODEL || placedModels.has(cellKey) ? 'erasing' : 'placing'
+  resolveStrokeMode(
+    reactiveConfig.value.model,
+    placedModels.get(cellKey)?.userData.model,
+    ERASE_MODEL
+  )
 
 const applyToCell = ({ cellKey, x, z }: PaintTarget, mode: PaintMode): void => {
   if (mode === 'erasing') {
@@ -274,18 +299,17 @@ const handlePointerDown = (event: PointerEvent): void => {
 }
 
 const handlePointerMove = (event: PointerEvent): void => {
-  const { cellSize } = reactiveConfig.value.grid
   const point = getGroundPoint(event)
   const onGrid = Boolean(point) && isInsideGrid(point?.x ?? 0, point?.z ?? 0, gridExtent)
   if (cellHighlight) cellHighlight.visible = onGrid
   if (!point || !onGrid) return
 
-  const x = snapToCell(point.x, cellSize)
-  const z = snapToCell(point.z, cellSize)
-  cellHighlight?.position.set(x, HIGHLIGHT_HEIGHT / 2, z)
+  const x = snapToCell(point.x, CELL_SIZE)
+  const z = snapToCell(point.z, CELL_SIZE)
+  cellHighlight?.position.set(x, HIGHLIGHT_ELEVATION, z)
 
   if (!strokeMode) return
-  const cellKey = getCellKey(point.x, point.z, cellSize)
+  const cellKey = getCellKey(point.x, point.z, CELL_SIZE)
   if (cellKey === strokedCellKey) return
   strokedCellKey = cellKey
   applyToCell({ cellKey, x, z }, strokeMode)
@@ -309,16 +333,16 @@ const handlePointerUp = (event: PointerEvent): void => {
 
 const loadPreset = (): void => {
   clearAll()
-  reactiveConfig.value.grid.cellSize = CITY_PRESET.cellSize
-  syncGrid()
+  reactiveConfig.value.grid.size = CITY_PRESET.boardSize
+  syncBoard()
 
   CITY_PRESET.pieces.forEach((piece) => {
     const model = CITY_MODELS.find((entry) => entry.value === piece.model)
     if (!model) return
     piece.cells.forEach(([cellX, cellZ]) => {
-      const x = getCellCentre(cellX, CITY_PRESET.cellSize)
-      const z = getCellCentre(cellZ, CITY_PRESET.cellSize)
-      placeModel(model, getCellKey(x, z, CITY_PRESET.cellSize), x, z)
+      const x = getCellCentre(cellX, CELL_SIZE)
+      const z = getCellCentre(cellZ, CELL_SIZE)
+      placeModel(model, getCellKey(x, z, CELL_SIZE), x, z)
     })
   })
 }
@@ -333,7 +357,8 @@ const initScene = async (): Promise<void> => {
   worldReference = world
   cleanupTools = cleanup
 
-  const { elements } = await setup({ config: sceneSetupConfig })
+  const { elements, ground } = await setup({ config: sceneSetupConfig })
+  groundMesh = ground?.mesh ?? null
 
   cameraReference = createIsometricCamera()
   const orbit = setActiveCamera(cameraReference)

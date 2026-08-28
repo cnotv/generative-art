@@ -22,6 +22,7 @@ an empty grid.
   control schema
 - `src/views/Tools/IsometricEditor/models.ts` — assembling a catalogue entry into a scene group
 - `src/views/Tools/IsometricEditor/grid.ts` — the snapping and grid arithmetic
+- `src/views/Tools/IsometricEditor/strokes.ts` — what a press on a cell does
 
 ## The components
 
@@ -42,7 +43,7 @@ crossed on its roof — so a placement reads as a thing rather than a shape.
 | Skyscraper | shaft, narrower upper shaft, spire    | downtown, nearly twice a tower     |
 | Tree       | grass slab, trunk cylinder, canopy    | a street tree on its own patch     |
 | Bushes     | grass slab, two bush spheres          | a planted green square             |
-| Grass      | one thin slab                         | open green; a run of them a field  |
+| Grass      | one thin slab                         | mown green, fresher than the board |
 | Water      | one thin slab                         | a run of them a river or a lake    |
 | Road       | one flat slab                         | tarmac; a run of them a street     |
 | Fence      | rail box, two posts                   | a boundary along the X axis        |
@@ -52,6 +53,10 @@ plain grass beside it and a riverbank meets the water without a step. Anything t
 green ground carries its own grass rather than needing a tile placed under it, since only one
 component fits in a cell.
 
+**The board starts green**, so nothing has to be laid down before building and erasing a cell
+returns it to open ground. The Grass tile is a shade fresher than the board it lies on: laying
+grass on grass has to show, or the component would do nothing at all.
+
 **Erase** is not a component: it forces a stroke to empty the cells it crosses, which is how a
 sweep starting on bare ground clears a run. **Clear all** empties the board.
 
@@ -59,8 +64,8 @@ sweep starting on bare ground clears a run. **Clear all** empties the board.
 
 A component is data, not code: an entry in `CITY_MODELS` with a `label`, a palette `swatch` and
 a list of parts. Each part names a primitive, its size and the offset of its underside, both
-**in cells** rather than world units, so the whole catalogue follows the grid when its cell size
-changes.
+**in cells** rather than world units, so a part is written against the square it has to fit
+rather than against `CELL_SIZE`.
 
 ```ts
 {
@@ -94,16 +99,20 @@ drag rather than fifteen clicks.
 
 What a stroke does is decided where it starts and then held for its whole length:
 
-| Press on              | The stroke    |
-| --------------------- | ------------- |
-| an empty cell         | fills cells   |
-| a cell already filled | empties cells |
-| any cell, with Erase  | empties cells |
+| Press on                          | The stroke             |
+| --------------------------------- | ---------------------- |
+| an empty cell                     | fills cells            |
+| a cell holding something else     | fills cells, replacing |
+| a cell holding the same component | empties cells          |
+| any cell, with Erase              | empties cells          |
 
-Pressing on a filled cell and releasing without moving therefore takes that component away: one
-gesture both places and removes. Fixing the mode at the start is what lets a road be drawn
-across a planted square — the stroke keeps paving instead of flipping to erase over the first
-cell it meets.
+A press empties a cell only when it would otherwise place the very thing already standing there.
+Clicking a house with House selected takes it away; clicking it with Road selected paves over it.
+Erasing on any mismatch instead would make paving a road over a terrace a two-pass job, which is
+most of what building a city is.
+
+Fixing the mode at the start matters just as much: deciding per cell would flip a road into an
+eraser at the first occupied cell it met and chew a hole through the town.
 
 **Orbit camera** in the Config panel hands the drag back to the camera. With it on, dragging
 turns the view and only a click that does not move places anything, which is how the angled
@@ -117,19 +126,34 @@ way to tell which square a click will land in on an isometric projection.
 
 ![The peach highlight tile marking the empty cell under the pointer](/img/isometric-editor/cell-highlight.webp)
 
-Cell size is a control in the Config panel. The board itself never changes size: the grid is
-drawn to fit a whole number of cells inside it, so a cell size that does not divide the board
-leaves a thin ring around the edge where the highlight refuses to appear. Changing the cell size
-redraws the grid and leaves components already placed exactly where they are.
+The white lines float just above the flattest components rather than sitting on the ground, so a
+street or a river is still divided into cells instead of swallowing them. Anything taller hides
+the lines the way it should, and **Show grid** turns them off for a clean look at the result.
 
-The division count is always even. A `GridHelper` draws its lines outward from `-size / 2`, so
-an odd count puts every drawn line half a cell out of step with the cells the snapping computes
-from the origin, and components land straddling the line they were aimed at.
+![A run of road and a run of water, both still divided into cells by the white grid drawn over them](/img/isometric-editor/grid-over-flat.webp)
+
+## The board grows and shrinks, the cells do not
+
+A cell is always the same size, because components are sized in cells: changing it would resize
+every building in the town. **Board size** changes how many cells there are instead. The ground
+is one flat box, so scaling it is the whole resize, and growing the board leaves every placement
+exactly where it was with open green around it.
+
+![The same city on a board grown well beyond it, the cells unchanged and open ground all around](/img/isometric-editor/board-size.webp)
+
+Shrinking drops whatever the smaller board no longer covers, rather than leaving it hanging over
+the edge. That is destructive and deliberate: the alternative is components floating in the air
+outside the grid that nothing can reach to erase.
+
+Every reachable board size is a whole **even** number of cells, which is what the step of two
+cells buys. A `GridHelper` draws its lines outward from `-size / 2`, so an odd count would put
+every drawn line half a cell out of step with the cells the snapping computes from the origin,
+and components would land straddling the line they were aimed at.
 
 ## The preset
 
-`CITY_PRESET` is a layout rather than a scene: a cell size and, per component, the list of cells
-it fills. Loading it clears the board, sets the cell size the layout was drawn for, and places
+`CITY_PRESET` is a layout rather than a scene: a board size and, per component, the list of cells
+it fills. Loading it clears the board, sizes it to the board the layout was drawn for, and places
 every cell through the same `placeModel` a click goes through, so there is no second code path
 that can drift from the first.
 

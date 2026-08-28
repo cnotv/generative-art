@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { CITY_MODELS, CITY_PRESET, GROUND_SIZE } from './config'
+import { CELL_SIZE, CITY_MODELS, CITY_PRESET } from './config'
 import { getGridDivisions } from './grid'
 
 const modelValues = new Set(CITY_MODELS.map((model) => model.value))
 const cells = CITY_PRESET.pieces.flatMap((piece) => piece.cells)
-const halfBoard = getGridDivisions(GROUND_SIZE, CITY_PRESET.cellSize) / 2
+const halfBoard = getGridDivisions(CITY_PRESET.boardSize, CELL_SIZE) / 2
 
 describe('city preset', () => {
   it('places something', () => {
@@ -42,8 +42,7 @@ describe('city preset', () => {
     expect(offBoard).toEqual([])
   })
 
-  it('loads at a cell size the grid control offers', () => {
-    expect(Number.isInteger(CITY_PRESET.cellSize)).toBe(true)
-    expect(CITY_PRESET.cellSize).toBeGreaterThan(0)
+  it('loads onto a board whose cells line up with the grid', () => {
+    expect(CITY_PRESET.boardSize % (CELL_SIZE * 2)).toBe(0)
   })
 })

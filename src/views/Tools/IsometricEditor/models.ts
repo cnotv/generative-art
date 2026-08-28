@@ -59,7 +59,9 @@ export const buildCityModel = (
   cellSize: number,
   name: string
 ): THREE.Group => {
-  const group = Object.assign(new THREE.Group(), { name })
+  // The group carries which entry built it, so a press can tell "the same again" — which
+  // removes — from "something else here", which replaces.
+  const group = Object.assign(new THREE.Group(), { name, userData: { model: model.value } })
   // Each getter adds its mesh to the scene, and adding it to the group moves it across.
   model.parts.forEach((part) => group.add(buildPart(scene, world, part, cellSize)))
   scene.add(group)

@@ -43,7 +43,7 @@ export interface LayoutPiece {
 /** A board someone can load instead of starting from an empty grid. */
 export interface LayoutPreset {
   name: string
-  /** The cell size the layout was drawn for, applied when it loads. */
-  cellSize: number
+  /** The board the layout was drawn for, applied when it loads so every cell fits. */
+  boardSize: number
   pieces: LayoutPiece[]
 }

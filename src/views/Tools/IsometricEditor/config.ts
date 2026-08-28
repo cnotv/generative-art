@@ -19,8 +19,13 @@ export const ERASE_MODEL = 'erase'
  * Every green or wet cell is the same slab, so grass, water, trees and bushes lie flush with
  * each other. A tree on its own patch of grass beside a plain one must not show a step.
  */
-const GROUND_COVER_HEIGHT = 0.04
-const GRASS_COLOR = 0xbcd0a0
+const GROUND_COVER_HEIGHT = 0.03
+/**
+ * The board is already green, so nothing has to be laid down before building. The tile is a
+ * shade fresher than the board it lies on, or placing grass on grass would do nothing visible.
+ */
+const GROUND_COLOR = 0xa2bd92
+const GRASS_COLOR = 0xbcd4a4
 
 /**
  * The pieces a city is built from, each a handful of primitives inside one cell.
@@ -171,11 +176,29 @@ export const CITY_MODELS: CityModel[] = [
 
 const toSwatch = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
 
+/** One cell is one cell. Components are sized in cells, so this is what they are sized against. */
+export const CELL_SIZE = 4
+
 /** The board is the grid: one size for both, so no ground is ever left outside a cell. */
-export const GROUND_SIZE = 80
-export const GRID_ELEVATION = 0.02
-export const GRID_LINE_COLOR = 0x5f5a6b
-export const GRID_CENTER_COLOR = 0xe8e2d8
+export const BOARD_SIZE_DEFAULT = 80
+export const BOARD_SIZE_MIN = 24
+export const BOARD_SIZE_MAX = 160
+/**
+ * Two cells, so the board is always an even number of them. A `GridHelper` draws its lines
+ * outward from `-size / 2`, and an odd count would put every line half a cell out of step with
+ * the cells the snapping computes from the origin.
+ */
+export const BOARD_SIZE_STEP = CELL_SIZE * 2
+
+/**
+ * The grid floats above the flattest components rather than on the ground, so a street or a
+ * river is still divided into cells instead of swallowing the lines. In cells, since the
+ * components it has to clear are measured that way too.
+ */
+export const GRID_ELEVATION_CELLS = 0.07
+export const GRID_LINE_COLOR = 0xffffff
+export const GRID_CENTER_COLOR = 0xffffff
+export const GRID_OPACITY = 0.4
 
 export const HIGHLIGHT_COLOR = 0xf0b49a
 export const HIGHLIGHT_HEIGHT = 0.06
@@ -210,7 +233,7 @@ const block = (fromX: number, toX: number, fromZ: number, toZ: number): CellInde
  */
 export const CITY_PRESET: LayoutPreset = {
   name: 'Small city',
-  cellSize: 4,
+  boardSize: BOARD_SIZE_DEFAULT,
   pieces: [
     {
       model: 'road',
@@ -225,7 +248,6 @@ export const CITY_PRESET: LayoutPreset = {
       ]
     },
     { model: 'water', cells: [...alongZ(8, -9, -1), ...alongZ(8, 1, 9)] },
-    { model: 'grass', cells: [...alongZ(7, -9, -1), ...alongZ(7, 1, 9)] },
     {
       model: 'bushes',
       cells: [
@@ -313,7 +335,7 @@ export const CITY_PRESET: LayoutPreset = {
 
 export const defaultConfig = {
   model: CITY_MODELS[0].value,
-  grid: { cellSize: 4 },
+  grid: { show: true, size: BOARD_SIZE_DEFAULT },
   // Off by default so a drag paints a run of cells rather than swinging the camera.
   orbit: false
 }
@@ -337,13 +359,19 @@ export const configControls: ConfigControlsSchema = {
   clearAll: { label: 'Clear all', callback: 'clearAll' },
   orbit: { boolean: false, label: 'Orbit camera' },
   grid: {
-    cellSize: { label: 'Cell size', min: 1, max: 10, step: 1 }
+    show: { boolean: true, label: 'Show grid' },
+    size: {
+      label: 'Board size',
+      min: BOARD_SIZE_MIN,
+      max: BOARD_SIZE_MAX,
+      step: BOARD_SIZE_STEP
+    }
   }
 }
 
 export const sceneSetupConfig: SetupConfig = {
   scene: { backgroundColor: 0xe9e5df },
-  ground: { color: 0x7c7688, size: GROUND_SIZE, position: [0, 0, 0] },
+  ground: { color: GROUND_COLOR, size: BOARD_SIZE_DEFAULT, position: [0, 0, 0] },
   sky: false,
   lights: {
     ambient: { intensity: 1.3 },
@@ -351,7 +379,8 @@ export const sceneSetupConfig: SetupConfig = {
       intensity: 2,
       position: [40, 60, 25],
       castShadow: true,
-      shadow: { camera: { left: -60, right: 60, top: 60, bottom: -60 }, bias: -0.0005 }
+      // Wide enough for the largest board, or its edges lose their shadows.
+      shadow: { camera: { left: -120, right: 120, top: 120, bottom: -120 }, bias: -0.0005 }
     }
   }
 }
