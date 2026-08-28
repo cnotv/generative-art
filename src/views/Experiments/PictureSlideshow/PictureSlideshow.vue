@@ -2,13 +2,12 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { getCube, getModel } from '@webgamekit/threejs'
+import { getCube, getModel, getAnimations } from '@webgamekit/threejs'
 import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
 import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
-import { createStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   advanceSlideshow,
@@ -21,10 +20,6 @@ import {
 } from './slideshow'
 import type { SlideDirection, SlideshowState } from './types'
 import {
-  ARM_PITCH_DOWN,
-  ARM_PITCH_UP,
-  ARM_ROLL_DOWN,
-  ARM_ROLL_UP,
   CANVAS_DISPLAY_POSITION,
   CANVAS_DISPLAY_ROTATION,
   CANVAS_ENTRY_DISTANCE,
@@ -36,13 +31,13 @@ import {
   EXIT_DISTANCE,
   EXIT_DROP,
   EXIT_SPIN,
+  CHARACTER_ANIMATION,
+  CHARACTER_HAND_BONES,
+  CHARACTER_MODEL_PATH,
+  CHARACTER_SCALE,
+  CHARACTER_YAW,
   PICTURES,
   SETUP_CONFIG,
-  STICKMAN_MODEL_PATH,
-  STICKMAN_SCALE,
-  STICKMAN_YAW,
-  STICKMAN_YAW_SWING,
-  UP_AXIS,
   configControls
 } from './config'
 
@@ -61,8 +56,7 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const reactiveConfig = createReactiveConfig({
   timing: { ...DEFAULT_TIMING },
-  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN },
-  arms: { pitchUp: ARM_PITCH_UP, rollUp: ARM_ROLL_UP }
+  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN }
 })
 
 /**
@@ -83,39 +77,45 @@ let destroyControls: (() => void) | null = null
 const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount
 
 /**
- * Loads the rig, straightens it, stands its feet on zero and hands back the
- * arm nodes, each paired with the direction it rolls away from the body.
+ * Loads the character, stands its feet on zero and starts its gesture playing.
  *
  * The rig's own origin is not at its feet, so the height it spawns at says
- * nothing about where it stands; measured after `prepareStickmanRig`, which is
- * what moves the shoulder caps onto the arms so they swing as one piece. The
- * sign is read from the shoulder's own x rather than the node's name, so a
- * rig that names its sides the other way round still spreads outwards.
+ * nothing about where it stands. Its hands are what the picture is hung from,
+ * so they are handed back with it: wherever the clip puts them, the picture
+ * follows, which is what keeps the two from ever disagreeing.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
- * @returns The rig, and its arms with the roll direction each one takes
+ * @returns The rig, its animation mixer and the two hand bones
  */
-const spawnStickman = async (
+const spawnCharacter = async (
   scene: THREE.Scene,
   world: Parameters<typeof getModel>[1]
-): Promise<{ stickman: THREE.Object3D; arms: { node: THREE.Object3D; side: number }[] }> => {
-  const stickman = await getModel(scene, world, STICKMAN_MODEL_PATH, {
-    name: 'stickman',
+): Promise<{
+  character: THREE.Object3D
+  mixer: THREE.AnimationMixer
+  hands: THREE.Object3D[]
+}> => {
+  const character = await getModel(scene, world, CHARACTER_MODEL_PATH, {
+    name: 'character',
     position: [0, 0, 0],
-    scale: [STICKMAN_SCALE, STICKMAN_SCALE, STICKMAN_SCALE],
-    rotation: [0, STICKMAN_YAW, 0],
+    scale: [CHARACTER_SCALE, CHARACTER_SCALE, CHARACTER_SCALE],
+    rotation: [0, CHARACTER_YAW, 0],
     type: 'fixed',
     hasGravity: false,
-    castShadow: true
+    castShadow: true,
+    material: 'MeshLambertMaterial'
   })
-  const partRig = prepareStickmanRig(stickman, createStickmanPartOffsets())
-  const spawnBox = new THREE.Box3().setFromObject(stickman)
-  stickman.position.y -= spawnBox.min.y
-  const arms = [...partRig.armLeft, ...partRig.armRight].map(({ node, restPosition }) => ({
-    node,
-    side: Math.sign(restPosition.x) || 1
-  }))
-  return { stickman, arms }
+  const spawnBox = new THREE.Box3().setFromObject(character)
+  character.position.y -= spawnBox.min.y
+
+  const mixer = new THREE.AnimationMixer(character)
+  const actions = await getAnimations(mixer, CHARACTER_ANIMATION)
+  Object.values(actions).forEach((action) => action.play())
+
+  const hands = CHARACTER_HAND_BONES.map((name) => character.getObjectByName(name)).filter(
+    (node): node is THREE.Object3D => !!node
+  )
+  return { character, mixer, hands }
 }
 
 /**
@@ -157,31 +157,32 @@ onMounted(async () => {
     viewPanels: { showConfig: true, showElements: false },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, getDelta, animate }) => {
-      const { stickman, arms } = await spawnStickman(scene, world)
+      const { mixer, hands } = await spawnCharacter(scene, world)
       const canvases = spawnCanvases(scene, world)
       const timelineManager = createTimelineManager()
+      // Pre-allocated: the hands are read every frame, and the loop allocates nothing.
+      const leftHand = new THREE.Vector3()
+      const rightHand = new THREE.Vector3()
+      const held = new THREE.Vector3()
 
       timelineManager.addAction({
         name: 'Picture change',
         category: 'animation',
         action: () => {
-          const { timing, exit, arms: armConfig } = reactiveConfig.value
-          slideshow = advanceSlideshow(slideshow, getDelta(), timing, canvases.length)
+          const { timing, exit } = reactiveConfig.value
+          const delta = getDelta()
+          mixer.update(delta)
+          slideshow = advanceSlideshow(slideshow, delta, timing, canvases.length)
           const frame = slideshowFrame(slideshow, timing)
           const hold = holdAmountAt(frame)
           const exitAmount = exitAmountAt(frame, timing)
 
-          arms.forEach(({ node, side }) => {
-            node.rotation.x = mix(ARM_PITCH_DOWN, armConfig.pitchUp, hold)
-            node.rotation.z = side * mix(ARM_ROLL_DOWN, armConfig.rollUp, hold)
-          })
-          // Turning after the picture being sent away is what makes the change
-          // read as one movement rather than two objects passing each other.
-          const swing = frame.phase === 'hold' ? 0 : Math.sin(Math.PI * exitAmount)
-          stickman.quaternion.setFromAxisAngle(
-            UP_AXIS,
-            STICKMAN_YAW + frame.direction * STICKMAN_YAW_SWING * swing
-          )
+          // The picture hangs between the hands wherever the clip has put them,
+          // but keeps its own facing: a picture that turned with the body would
+          // spend half the gesture edge-on to the viewer.
+          hands[0].getWorldPosition(leftHand)
+          hands[1].getWorldPosition(rightHand)
+          held.addVectors(leftHand, rightHand).multiplyScalar(0.5)
 
           canvases.forEach((picture, index) => {
             const role = canvasRoleAt(frame, index)
@@ -191,7 +192,7 @@ onMounted(async () => {
             }
             picture.visible = true
             if (role === 'held') {
-              picture.position.set(...CANVAS_DISPLAY_POSITION)
+              picture.position.copy(held)
               picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
               return
             }
@@ -199,21 +200,17 @@ onMounted(async () => {
               // In from the side opposite the one the old picture left by.
               const entry = -frame.direction * CANVAS_ENTRY_DISTANCE
               picture.position.set(
-                mix(entry, CANVAS_DISPLAY_POSITION[0], hold),
-                mix(
-                  CANVAS_DISPLAY_POSITION[1] + CANVAS_ENTRY_DROP,
-                  CANVAS_DISPLAY_POSITION[1],
-                  hold
-                ),
-                CANVAS_DISPLAY_POSITION[2]
+                mix(entry, held.x, hold),
+                mix(held.y + CANVAS_ENTRY_DROP, held.y, hold),
+                held.z
               )
               picture.rotation.set(CANVAS_DISPLAY_ROTATION[0], 0, 0)
               return
             }
             picture.position.set(
-              CANVAS_DISPLAY_POSITION[0] + frame.direction * exit.distance * exitAmount,
-              CANVAS_DISPLAY_POSITION[1] - exit.drop * exitAmount,
-              CANVAS_DISPLAY_POSITION[2]
+              held.x + frame.direction * exit.distance * exitAmount,
+              held.y - exit.drop * exitAmount,
+              held.z
             )
             picture.rotation.set(0, 0, -frame.direction * exit.spin * exitAmount)
           })

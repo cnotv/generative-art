@@ -28,16 +28,16 @@ export const PICTURES: { name: string; url: string }[] = [
 /**
  * Where the camera is aimed, which is what decides how much of the rig is in shot.
  *
- * The rig's legs run from 0 to 1.82, and the frame's lower edge lands at 0.88 from here, so
+ * The rig's legs reach the hip at 3.2, and the frame's lower edge lands at 1.58 from here, so
  * the character stands half out of the bottom of the picture rather than on anything. That
  * is the whole floor: with nothing under him there is nothing for a thrown picture to land
  * on either.
  */
-const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
+const VIEW_TARGET: CoordinateTuple = [0, 4.1, 0]
 
 export const SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xd7d9e4 },
-  camera: { position: [0, 3.3, 5.2], fov: 50, lookAt: VIEW_TARGET },
+  camera: { position: [0, 4.1, 5.4], fov: 50, lookAt: VIEW_TARGET },
   // An orbit drag and a swipe are the same gesture, and the swipe is the one
   // this scene is driven by, so the camera stays where it was composed. The
   // target still has to be set: disabled or not, orbit aims the camera at it,
@@ -59,28 +59,24 @@ export const SETUP_CONFIG: SetupConfig = {
   }
 }
 
-export const STICKMAN_MODEL_PATH = 'stickboy.glb'
-/** Stands the rig 4.7 units tall, which the poses below are measured against. */
-export const STICKMAN_SCALE = 3.5
-export const STICKMAN_YAW = Math.PI
-/** How far the rig turns after the picture it is sending away, at the peak of a change. */
-export const STICKMAN_YAW_SWING = 0.22
+export const CHARACTER_MODEL_PATH = 'mixamoYBot.fbx'
+/** The Mixamo rig is authored 180 units tall; this stands it 5.8 units tall here. */
+export const CHARACTER_SCALE = 0.032
+/** The rig is modelled facing the camera already, so it needs no turn. */
+export const CHARACTER_YAW = 0
+/** Warm off-white, so the rig sits in the same pastel range as the background. */
+export const CHARACTER_COLOR = 0xe4ddd2
 
 /**
- * The arm pose, as a pitch forward and a roll outwards.
- *
- * The rig's shoulders sit 1.05 either side of centre with 1.33 of arm below
- * them, so pitch alone can only ever put the hands 2.1 apart — narrower than a
- * picture worth looking at, which would bury them behind it. Rolling the arms
- * out as well swings each hand wide of its own shoulder, and the two together
- * put the hands past the picture's edges where they can be seen holding it.
+ * The gesture the character plays, authored against this skeleton by
+ * `scripts/generate-present-animation.mjs` and written as a bare clip.
  */
-export const ARM_PITCH_DOWN = -0.55
-export const ARM_PITCH_UP = -1.6
-export const ARM_ROLL_DOWN = 0.1
-export const ARM_ROLL_UP = 0.95
+export const CHARACTER_ANIMATION = 'animations/present.json'
 
-export const CANVAS_SIZE: CoordinateTuple = [2.9, 2.05, 0.12]
+/** The picture hangs between these two, so it goes wherever the clip puts them. */
+export const CHARACTER_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
+
+export const CANVAS_SIZE: CoordinateTuple = [2.6, 1.85, 0.12]
 export const CANVAS_MATERIAL: ModelOptions = {
   roughness: 0.85,
   metalness: 0,
@@ -89,17 +85,15 @@ export const CANVAS_MATERIAL: ModelOptions = {
 }
 
 /**
- * Where a picture sits once it is up, and where the next one comes from.
+ * How the picture sits relative to the hands, and where the next one comes from.
  *
- * The hands settle at (±2, 2.66, 0.93), so the picture is hung at their height
- * and only just in front of them. Depth matters more than it looks: perspective
- * magnifies whatever is nearer the camera, so a picture held further forward
- * than the hands outgrows them on screen and swallows its own grip however wide
- * the arms are spread. At the same depth, the margin drawn is the margin built.
- * A picture enters from the side opposite the one leaving, far enough out to be
- * off camera before it starts.
+ * The picture is hung on the midpoint of the two hands rather than at a fixed
+ * spot, so it goes wherever the clip puts them. It is nudged forward of that
+ * midpoint by just enough that the palms sit behind the board and only the
+ * outer edge of each hand shows past its sides. A picture enters from the side
+ * opposite the one leaving, far enough out to be off camera before it starts.
  */
-export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.48]
+export const CANVAS_HAND_OFFSET_Z = 0.14
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
 export const CANVAS_ENTRY_DISTANCE = 9
 export const CANVAS_ENTRY_DROP = 0.6
@@ -139,12 +133,5 @@ export const configControls: ConfigControlsSchema = {
     distance: { label: 'Throw distance', min: 4, max: 20, step: 0.5 },
     drop: { label: 'Throw drop', min: 0, max: 12, step: 0.5 },
     spin: { label: 'Tumble', min: 0, max: 10, step: 0.1 }
-  },
-  arms: {
-    pitchUp: { label: 'Arms raised', min: -3, max: 0, step: 0.05 },
-    rollUp: { label: 'Arms spread', min: 0, max: 1.2, step: 0.02 }
   }
 }
-
-/** Named rather than a bare index, since the yaw swing turns about it every frame. */
-export const UP_AXIS = new THREE.Vector3(0, 1, 0)

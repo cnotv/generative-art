@@ -240,40 +240,46 @@ const getUniqueName = (
  * @param filenames Filename or array of filenames to load animations from
  * @returns Record mapping animation names to animation actions
  */
-export const getAnimations = (
+/**
+ * Read the clips out of one animation file.
+ *
+ * A `.json` file is a bare `AnimationClip`, which is the only format three.js can write as
+ * well as read — the FBX clips here came from a motion library, an authored one has to be
+ * emitted by a script. Both bind the same way, by track name, so a rig does not care which
+ * of the two a clip arrived in.
+ * @param filename Path under the public root
+ * @returns Every clip the file holds
+ */
+const loadClipsFromFile = async (filename: string): Promise<THREE.AnimationClip[]> => {
+  if (filename.endsWith('.json')) {
+    const response = await fetch(`/${filename}`)
+    if (!response.ok) throw new Error(`Could not load animation ${filename}`)
+    return [THREE.AnimationClip.parse(await response.json())]
+  }
+  const loaded = await fbxLoader.loadAsync(`/${filename}`)
+  return loaded.animations
+}
+
+export const getAnimations = async (
   mixer: THREE.AnimationMixer,
   filenames: string | string[],
   onProgress?: OnProgress
 ): Promise<Record<string, THREE.AnimationAction>> => {
   const files = Array.isArray(filenames) ? filenames : [filenames]
-  return new Promise((resolve, reject) => {
-    const loader = fbxLoader
-    const allActions: Record<string, THREE.AnimationAction> = {}
-    let loadedCount = 0
-    if (files.length === 0) {
-      resolve(allActions)
-      return
-    }
-    files.forEach((filename) => {
+  return files.reduce(
+    async (collected, filename, index) => {
+      const allActions = await collected
       const baseName = (filename.split('/').pop() ?? filename).replace(/\.[^./]+$/, '')
-      emitProgress(onProgress, 'Animations', `${baseName} (${loadedCount + 1}/${files.length})`)
-      loader.load(
-        `/${filename}`,
-        (animation) => {
-          animation.animations.forEach((anim) => {
-            const name = getUniqueName(allActions, baseName, 1)
-            allActions[name] = mixer.clipAction(anim)
-          })
-          loadedCount++
-          if (loadedCount === files.length) {
-            resolve(allActions)
-          }
-        },
-        undefined,
-        reject
-      )
-    })
-  })
+      emitProgress(onProgress, 'Animations', `${baseName} (${index + 1}/${files.length})`)
+      const clips = await loadClipsFromFile(filename)
+      clips.forEach((clip) => {
+        const name = getUniqueName(allActions, baseName, 1)
+        allActions[name] = mixer.clipAction(clip)
+      })
+      return allActions
+    },
+    Promise.resolve({} as Record<string, THREE.AnimationAction>)
+  )
 }
 
 const applyModelShadows = (mesh: Model, castShadow: boolean, receiveShadow: boolean): void => {
