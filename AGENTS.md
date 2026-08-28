@@ -58,6 +58,9 @@ reuse an existing feature branch, however related it looks.
 - **Split large functions** into small, single-purpose ones with names that say what they do.
 - **Exported types live in a types module** — a `types.ts` or `types/` folder containing only
   type declarations, never alongside logic. A component's own local `interface Props` is exempt.
+- **Config files hold data, never logic.** A `config.ts` or `src/config/**` is a flat list of
+  literal values: no functions, no `map` building entries, no branching, nothing derived from
+  another value. Whatever has to be worked out, the module that uses it works out.
 - **Update every call site.** When a signature, type or export changes, `grep` the whole repo
   and fix all consumers in the same change. Never add an overload, a shim or a deprecated
   alias to keep old callers working. Fix it properly rather than layering a workaround.

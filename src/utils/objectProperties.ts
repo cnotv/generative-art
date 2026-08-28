@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { useElementPropertiesStore, type ElementPropertiesConfig } from '@/stores/elementProperties'
 
 const POSITION_STEP = 0.1
 const ROTATION_STEP = 0.01
@@ -37,6 +37,24 @@ interface RegisterObjectOptions {
 }
 
 /**
+ * Builds the position and rotation controls for a Three.js object, for a caller that hands
+ * the configuration to `addSceneElement` rather than registering it on its own.
+ *
+ * @param object - The Three.js Object3D to inspect and control
+ * @param title - Display title in the properties panel
+ * @returns The properties configuration for that object
+ */
+export const createObjectPropertiesConfig = (
+  object: THREE.Object3D,
+  title: string
+): ElementPropertiesConfig => ({
+  title,
+  schema: objectSchema,
+  getValue: (path) => getObjectValue(object, path),
+  updateValue: (path, value) => setObjectValue(object, path, value)
+})
+
+/**
  * Registers a Three.js object's position and rotation for the element properties panel.
  *
  * @param options.object - The Three.js Object3D to inspect and control
@@ -45,10 +63,5 @@ interface RegisterObjectOptions {
  */
 export const registerObjectProperties = ({ object, name, title }: RegisterObjectOptions): void => {
   const store = useElementPropertiesStore()
-  store.registerElementProperties(name, {
-    title: title ?? name,
-    schema: objectSchema,
-    getValue: (path) => getObjectValue(object, path),
-    updateValue: (path, value) => setObjectValue(object, path, value)
-  })
+  store.registerElementProperties(name, createObjectPropertiesConfig(object, title ?? name))
 }
