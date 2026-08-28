@@ -824,18 +824,38 @@ onBeforeUnmount(() => {
 .mrm__toggle {
   border-radius: var(--radius-full);
   color: var(--color-canvas-overlay-foreground);
-  opacity: 0.5;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mrm__toggle:hover,
-.mrm__toggle:focus-visible {
+/*
+ * Whether it is on decides how it looks, and nothing else does. A tap leaves the hover state
+ * behind on a touch screen, so a toggle switched off went on looking exactly like one still on
+ * until something else was touched. Both states therefore answer for their own hover.
+ */
+.mrm__toggle[aria-pressed='true'],
+.mrm__toggle[aria-pressed='true']:hover {
   background: var(--color-canvas-overlay-border);
   color: var(--color-canvas-overlay-foreground);
   opacity: 1;
 }
 
-.mrm__toggle[aria-pressed='true'] {
-  background: var(--color-canvas-overlay-border);
+.mrm__toggle[aria-pressed='false'],
+.mrm__toggle[aria-pressed='false']:hover {
+  background: transparent;
+  color: var(--color-canvas-overlay-foreground);
+  opacity: 0.5;
+}
+
+/* Only a pointer that can really hover gets the hover state back. */
+@media (hover: hover) {
+  .mrm__toggle[aria-pressed='false']:hover {
+    background: var(--color-canvas-overlay-border);
+    opacity: 1;
+  }
+}
+
+.mrm__toggle:focus-visible {
   opacity: 1;
 }
 
