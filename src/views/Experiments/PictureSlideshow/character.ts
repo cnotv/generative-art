@@ -7,7 +7,8 @@ import {
   getModel
 } from '@webgamekit/threejs'
 import { createStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
-import { stickmanSkinById } from '@/views/Games/RockRunner/elements/stickmanSkins'
+import { STICKMAN_SKINS, stickmanSkinById } from '@/views/Games/RockRunner/elements/stickmanSkins'
+import type { ControlOption } from '@/stores/viewConfig'
 import {
   ARM_PITCH_DOWN,
   ARM_PITCH_UP,
@@ -15,7 +16,9 @@ import {
   ARM_ROLL_UP,
   CANVAS_DISPLAY_POSITION,
   MIXAMO_ANIMATION,
+  CUT_OUT_LABEL_PREFIX,
   MIXAMO_CHARACTER,
+  MIXAMO_CHARACTER_LABEL,
   MIXAMO_COLOR,
   MIXAMO_HAND_BONES,
   MIXAMO_MODEL_PATH,
@@ -180,3 +183,19 @@ export const despawnSlideshowCharacter = (
   scene.remove(character.model)
   disposeObject(character.model)
 }
+
+/**
+ * The character list the panel offers, built from the shared skin catalogue.
+ *
+ * Derived rather than written out, so a skin added for another view turns up
+ * here without this one being touched — which is also why it is worked out
+ * beside the characters instead of listed in the config.
+ * @returns One option per character, the animated rig first
+ */
+export const characterOptions = (): ControlOption[] => [
+  { value: MIXAMO_CHARACTER, label: MIXAMO_CHARACTER_LABEL },
+  ...STICKMAN_SKINS.map((skin) => ({
+    value: skin.id,
+    label: `${CUT_OUT_LABEL_PREFIX} — ${skin.label}`
+  }))
+]

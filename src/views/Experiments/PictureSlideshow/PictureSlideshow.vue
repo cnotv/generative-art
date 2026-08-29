@@ -8,7 +8,7 @@ import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
-import { despawnSlideshowCharacter, spawnSlideshowCharacter } from './character'
+import { characterOptions, despawnSlideshowCharacter, spawnSlideshowCharacter } from './character'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   advanceSlideshow,
@@ -35,6 +35,7 @@ import {
   EXIT_SPIN,
   PICTURES,
   SETUP_CONFIG,
+  VIEW_TARGET,
   configControls
 } from './config'
 
@@ -112,7 +113,14 @@ const spawnCanvases = (scene: THREE.Scene, world: Parameters<typeof getCube>[1])
 
 onMounted(async () => {
   if (!canvas.value) return
-  registerViewConfig(route.name as string, reactiveConfig, configControls, handleConfigChange)
+  registerViewConfig(
+    route.name as string,
+    reactiveConfig,
+    // The character row is assembled here rather than in the config, which holds
+    // only literal values; its options come from the shared skin catalogue.
+    { character: { label: 'Character', options: characterOptions() }, ...configControls },
+    handleConfigChange
+  )
   // The canvas fills the viewport, and it is the element whose halves decide
   // whether a tap means forward or back.
   destroyControls = createControls({
@@ -121,7 +129,14 @@ onMounted(async () => {
     onAction: (action) => requestChange(action === 'previous' ? -1 : 1)
   }).destroyControls
 
-  await store.init(canvas.value, SETUP_CONFIG, {
+  // Orbit is disabled but still aims the camera at its target on the first update,
+  // so the target has to be set or `camera.lookAt` above is overwritten by the origin.
+  const setupConfig = {
+    ...SETUP_CONFIG,
+    orbit: { target: new THREE.Vector3(...VIEW_TARGET), disabled: true }
+  }
+
+  await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showElements: false },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, getDelta, animate }) => {

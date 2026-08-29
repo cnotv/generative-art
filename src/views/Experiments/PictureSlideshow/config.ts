@@ -1,8 +1,6 @@
-import * as THREE from 'three'
 import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
 import type { ControlMapping } from '@webgamekit/controls'
-import type { ConfigControlsSchema, ControlOption } from '@/stores/viewConfig'
-import { STICKMAN_SKINS } from '@/views/Games/RockRunner/elements/stickmanSkins'
+import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import concertUrl from '@/assets/images/generic/concert.webp'
 import landscapeUrl from '@/assets/images/generic/landscape.webp'
 import lightsUrl from '@/assets/images/generic/lights.webp'
@@ -34,7 +32,7 @@ export const PICTURES: { name: string; url: string }[] = [
  * is the whole floor: with nothing under him there is nothing for a thrown picture to land
  * on either.
  */
-const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
+export const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
 
 export const SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xd7d9e4 },
@@ -43,7 +41,7 @@ export const SETUP_CONFIG: SetupConfig = {
   // this scene is driven by, so the camera stays where it was composed. The
   // target still has to be set: disabled or not, orbit aims the camera at it,
   // and `camera.lookAt` above is overwritten on the first update.
-  orbit: { target: new THREE.Vector3(...VIEW_TARGET), disabled: true },
+  orbit: { disabled: true },
   // A released picture has to keep going once it leaves, so there is no floor
   // for it to land on or clip through.
   ground: false,
@@ -125,12 +123,10 @@ export const MIXAMO_ANIMATION = 'animations/present.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
 export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 
-/** Every character the panel offers: the Mixamo rig, then one entry per cut-out skin. */
+/** The one character that is not a cut-out skin; `character.ts` lists the rest. */
 export const MIXAMO_CHARACTER = 'mixamo'
-export const CHARACTER_OPTIONS: ControlOption[] = [
-  { value: MIXAMO_CHARACTER, label: 'Mixamo (animated)' },
-  ...STICKMAN_SKINS.map((skin) => ({ value: skin.id, label: `Cut-out — ${skin.label}` }))
-]
+export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
+export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
 export const DEFAULT_CHARACTER = 'wild-boy'
 
 export const CANVAS_SIZE: CoordinateTuple = [2.6, 1.85, 0.12]
@@ -183,7 +179,6 @@ export const CONTROL_MAPPING: ControlMapping = {
 }
 
 export const configControls: ConfigControlsSchema = {
-  character: { label: 'Character', options: CHARACTER_OPTIONS },
   timing: {
     hold: { label: 'Hold', min: 1, max: 20, step: 0.5 },
     release: { label: 'Release', min: 0.3, max: 3, step: 0.05 },
