@@ -2,12 +2,13 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { getCube, getModel, getAnimations } from '@webgamekit/threejs'
+import { getCube, getModel } from '@webgamekit/threejs'
 import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
 import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
+import { despawnSlideshowCharacter, spawnSlideshowCharacter } from './character'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   advanceSlideshow,
@@ -18,24 +19,20 @@ import {
   slideshowFrame,
   startChange
 } from './slideshow'
-import type { SlideDirection, SlideshowState } from './types'
+import type { SlideDirection, SlideshowCharacter, SlideshowState } from './types'
 import {
-  CANVAS_DISPLAY_POSITION,
   CANVAS_DISPLAY_ROTATION,
   CANVAS_ENTRY_DISTANCE,
   CANVAS_ENTRY_DROP,
   CANVAS_MATERIAL,
   CANVAS_SIZE,
+  CANVAS_DISPLAY_POSITION,
   CONTROL_MAPPING,
+  DEFAULT_CHARACTER,
   DEFAULT_TIMING,
   EXIT_DISTANCE,
   EXIT_DROP,
   EXIT_SPIN,
-  CHARACTER_ANIMATION,
-  CHARACTER_HAND_BONES,
-  CHARACTER_MODEL_PATH,
-  CHARACTER_SCALE,
-  CHARACTER_YAW,
   PICTURES,
   SETUP_CONFIG,
   configControls
@@ -55,9 +52,22 @@ const handleProgress = (progress: LoadProgress): void => {
 }
 
 const reactiveConfig = createReactiveConfig({
+  character: DEFAULT_CHARACTER,
   timing: { ...DEFAULT_TIMING },
   exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN }
 })
+
+/** Set once the scene exists, so a panel change can rebuild the character. */
+let swapCharacter: ((characterId: string) => Promise<void>) | null = null
+let spawnedCharacter = DEFAULT_CHARACTER
+
+/** Rebuild only when the choice actually changed: every slider fires this too. */
+const handleConfigChange = (): void => {
+  const wanted = reactiveConfig.value.character
+  if (wanted === spawnedCharacter || !swapCharacter) return
+  spawnedCharacter = wanted
+  void swapCharacter(wanted)
+}
 
 /**
  * The slideshow's own state, deliberately outside Vue.
@@ -75,48 +85,6 @@ const requestChange = (direction: SlideDirection): void => {
 let destroyControls: (() => void) | null = null
 
 const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount
-
-/**
- * Loads the character, stands its feet on zero and starts its gesture playing.
- *
- * The rig's own origin is not at its feet, so the height it spawns at says
- * nothing about where it stands. Its hands are what the picture is hung from,
- * so they are handed back with it: wherever the clip puts them, the picture
- * follows, which is what keeps the two from ever disagreeing.
- * @param scene - The scene to add the rig to
- * @param world - The physics world `getModel` needs
- * @returns The rig, its animation mixer and the two hand bones
- */
-const spawnCharacter = async (
-  scene: THREE.Scene,
-  world: Parameters<typeof getModel>[1]
-): Promise<{
-  character: THREE.Object3D
-  mixer: THREE.AnimationMixer
-  hands: THREE.Object3D[]
-}> => {
-  const character = await getModel(scene, world, CHARACTER_MODEL_PATH, {
-    name: 'character',
-    position: [0, 0, 0],
-    scale: [CHARACTER_SCALE, CHARACTER_SCALE, CHARACTER_SCALE],
-    rotation: [0, CHARACTER_YAW, 0],
-    type: 'fixed',
-    hasGravity: false,
-    castShadow: true,
-    material: 'MeshLambertMaterial'
-  })
-  const spawnBox = new THREE.Box3().setFromObject(character)
-  character.position.y -= spawnBox.min.y
-
-  const mixer = new THREE.AnimationMixer(character)
-  const actions = await getAnimations(mixer, CHARACTER_ANIMATION)
-  Object.values(actions).forEach((action) => action.play())
-
-  const hands = CHARACTER_HAND_BONES.map((name) => character.getObjectByName(name)).filter(
-    (node): node is THREE.Object3D => !!node
-  )
-  return { character, mixer, hands }
-}
 
 /**
  * One flat board per picture, textured once at setup.
@@ -144,7 +112,7 @@ const spawnCanvases = (scene: THREE.Scene, world: Parameters<typeof getCube>[1])
 
 onMounted(async () => {
   if (!canvas.value) return
-  registerViewConfig(route.name as string, reactiveConfig, configControls)
+  registerViewConfig(route.name as string, reactiveConfig, configControls, handleConfigChange)
   // The canvas fills the viewport, and it is the element whose halves decide
   // whether a tap means forward or back.
   destroyControls = createControls({
@@ -157,13 +125,20 @@ onMounted(async () => {
     viewPanels: { showConfig: true, showElements: false },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, getDelta, animate }) => {
-      const { mixer, hands } = await spawnCharacter(scene, world)
+      let character: SlideshowCharacter = await spawnSlideshowCharacter(
+        scene,
+        world,
+        reactiveConfig.value.character
+      )
       const canvases = spawnCanvases(scene, world)
       const timelineManager = createTimelineManager()
-      // Pre-allocated: the hands are read every frame, and the loop allocates nothing.
-      const leftHand = new THREE.Vector3()
-      const rightHand = new THREE.Vector3()
+      // Pre-allocated: written every frame, and the loop allocates nothing.
       const held = new THREE.Vector3()
+
+      swapCharacter = async (characterId: string) => {
+        despawnSlideshowCharacter(scene, character)
+        character = await spawnSlideshowCharacter(scene, world, characterId)
+      }
 
       timelineManager.addAction({
         name: 'Picture change',
@@ -171,18 +146,14 @@ onMounted(async () => {
         action: () => {
           const { timing, exit } = reactiveConfig.value
           const delta = getDelta()
-          mixer.update(delta)
+          character.mixer?.update(delta)
           slideshow = advanceSlideshow(slideshow, delta, timing, canvases.length)
           const frame = slideshowFrame(slideshow, timing)
           const hold = holdAmountAt(frame)
           const exitAmount = exitAmountAt(frame, timing)
 
-          // The picture hangs between the hands wherever the clip has put them,
-          // but keeps its own facing: a picture that turned with the body would
-          // spend half the gesture edge-on to the viewer.
-          hands[0].getWorldPosition(leftHand)
-          hands[1].getWorldPosition(rightHand)
-          held.addVectors(leftHand, rightHand).multiplyScalar(0.5)
+          character.pose(hold)
+          character.heldPoint(held)
 
           canvases.forEach((picture, index) => {
             const role = canvasRoleAt(frame, index)

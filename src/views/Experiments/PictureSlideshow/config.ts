@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
 import type { ControlMapping } from '@webgamekit/controls'
-import type { ConfigControlsSchema } from '@/stores/viewConfig'
+import type { ConfigControlsSchema, ControlOption } from '@/stores/viewConfig'
+import { STICKMAN_SKINS } from '@/views/Games/RockRunner/elements/stickmanSkins'
 import concertUrl from '@/assets/images/generic/concert.webp'
 import landscapeUrl from '@/assets/images/generic/landscape.webp'
 import lightsUrl from '@/assets/images/generic/lights.webp'
@@ -28,16 +29,16 @@ export const PICTURES: { name: string; url: string }[] = [
 /**
  * Where the camera is aimed, which is what decides how much of the rig is in shot.
  *
- * The rig's legs reach the hip at 3.2, and the frame's lower edge lands at 1.58 from here, so
+ * The rig's legs run from 0 to 1.82, and the frame's lower edge lands at 0.88 from here, so
  * the character stands half out of the bottom of the picture rather than on anything. That
  * is the whole floor: with nothing under him there is nothing for a thrown picture to land
  * on either.
  */
-const VIEW_TARGET: CoordinateTuple = [0, 4.1, 0]
+const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
 
 export const SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xd7d9e4 },
-  camera: { position: [0, 4.1, 5.4], fov: 50, lookAt: VIEW_TARGET },
+  camera: { position: [0, 3.3, 5.2], fov: 50, lookAt: VIEW_TARGET },
   // An orbit drag and a swipe are the same gesture, and the swipe is the one
   // this scene is driven by, so the camera stays where it was composed. The
   // target still has to be set: disabled or not, orbit aims the camera at it,
@@ -59,22 +60,78 @@ export const SETUP_CONFIG: SetupConfig = {
   }
 }
 
-export const CHARACTER_MODEL_PATH = 'mixamoYBot.fbx'
-/** The Mixamo rig is authored 180 units tall; this stands it 5.8 units tall here. */
-export const CHARACTER_SCALE = 0.032
-/** The rig is modelled facing the camera already, so it needs no turn. */
-export const CHARACTER_YAW = 0
-/** Warm off-white, so the rig sits in the same pastel range as the background. */
-export const CHARACTER_COLOR = 0xe4ddd2
+export const STICKMAN_MODEL_PATH = 'stickboy.glb'
+/** Stands the cut-out rig 4.7 units tall, which the arm poses below are measured against. */
+export const STICKMAN_SCALE = 3.5
+/**
+ * The rig faces the camera at zero.
+ *
+ * It was turned by half a circle here for a long time, on the assumption that its
+ * own zero faced away. The arms were then pitched towards the camera to hold the
+ * picture, which is the body's back — so it presented the picture over its own
+ * shoulders. The picture has to be on the camera's side, so the body must be too.
+ */
+export const STICKMAN_YAW = 0
 
 /**
- * The gesture the character plays, authored against this skeleton by
- * `scripts/generate-present-animation.mjs` and written as a bare clip.
+ * The illustration the rig wears, from the shared skin catalogue.
+ *
+ * The rig is a flat cut-out, so a character drawing projected onto it reads as
+ * that character rather than as a texture on a mannequin. Alpha-tested rather
+ * than blended, and still writing depth: a cutout is opaque or discarded per
+ * pixel, so it should occlude like any solid.
  */
-export const CHARACTER_ANIMATION = 'animations/present.json'
+export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
 
+/**
+ * The arm pose, as a pitch forward and a roll outwards.
+ *
+ * The rig's shoulders sit 1.05 either side of centre with only 0.53 of arm
+ * beyond them, so pitch alone can never hold the hands wider than the shoulders
+ * — narrower than a picture worth looking at, which would bury them behind it.
+ * Rolling the arms out as well swings each hand wide of its own shoulder, and
+ * the two together put the hands past the picture's edges.
+ *
+ * The pitch is positive because the rig's front is its local +z. A negative
+ * pitch swings the arms behind the body, which still puts the hands on the
+ * camera's side if the body is turned away — the picture then looks held, and
+ * is in fact being presented over the character's own shoulders.
+ *
+ * It is also small. The picture sits barely half a unit in front of the body,
+ * so the arms need almost no forward travel to reach behind it, and a cut-out
+ * arm swung far forward turns its edge to the camera and reads as a spike. Held
+ * near horizontal, the arm keeps its painted face towards the viewer.
+ */
+export const ARM_PITCH_DOWN = 0.15
+export const ARM_PITCH_UP = 0.35
+export const ARM_ROLL_DOWN = 0.1
+export const ARM_ROLL_UP = 0.95
+
+export const MIXAMO_MODEL_PATH = 'mixamoYBot.fbx'
+/**
+ * Scaled so its hands land as far apart as the cut-out rig's, not so the two
+ * are the same height.
+ *
+ * The picture is sized to a hand span, so matching spans is what lets both
+ * characters hold the same board and share one camera. Their proportions differ,
+ * so matching the span leaves the Mixamo rig taller — which is why it is stood
+ * by its hands rather than its feet, below.
+ */
+export const MIXAMO_SCALE = 0.0322
+/** Warm off-white, so the rig sits in the same pastel range as the background. */
+export const MIXAMO_COLOR = 0xe4ddd2
+/** Authored against this skeleton by `scripts/generate-present-animation.mjs`. */
+export const MIXAMO_ANIMATION = 'animations/present.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
-export const CHARACTER_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
+export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
+
+/** Every character the panel offers: the Mixamo rig, then one entry per cut-out skin. */
+export const MIXAMO_CHARACTER = 'mixamo'
+export const CHARACTER_OPTIONS: ControlOption[] = [
+  { value: MIXAMO_CHARACTER, label: 'Mixamo (animated)' },
+  ...STICKMAN_SKINS.map((skin) => ({ value: skin.id, label: `Cut-out — ${skin.label}` }))
+]
+export const DEFAULT_CHARACTER = 'wild-boy'
 
 export const CANVAS_SIZE: CoordinateTuple = [2.6, 1.85, 0.12]
 export const CANVAS_MATERIAL: ModelOptions = {
@@ -85,15 +142,17 @@ export const CANVAS_MATERIAL: ModelOptions = {
 }
 
 /**
- * How the picture sits relative to the hands, and where the next one comes from.
+ * Where a picture sits once it is up, and where the next one comes from.
  *
- * The picture is hung on the midpoint of the two hands rather than at a fixed
- * spot, so it goes wherever the clip puts them. It is nudged forward of that
- * midpoint by just enough that the palms sit behind the board and only the
- * outer edge of each hand shows past its sides. A picture enters from the side
- * opposite the one leaving, far enough out to be off camera before it starts.
+ * The hands settle at (±2, 2.66, 0.93), so the picture is hung at their height
+ * and only just in front of them. Depth matters more than it looks: perspective
+ * magnifies whatever is nearer the camera, so a picture held further forward
+ * than the hands outgrows them on screen and swallows its own grip however wide
+ * the arms are spread. At the same depth, the margin drawn is the margin built.
+ * A picture enters from the side opposite the one leaving, far enough out to be
+ * off camera before it starts.
  */
-export const CANVAS_HAND_OFFSET_Z = 0.14
+export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.48]
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
 export const CANVAS_ENTRY_DISTANCE = 9
 export const CANVAS_ENTRY_DROP = 0.6
@@ -124,6 +183,7 @@ export const CONTROL_MAPPING: ControlMapping = {
 }
 
 export const configControls: ConfigControlsSchema = {
+  character: { label: 'Character', options: CHARACTER_OPTIONS },
   timing: {
     hold: { label: 'Hold', min: 1, max: 20, step: 0.5 },
     release: { label: 'Release', min: 0.3, max: 3, step: 0.05 },

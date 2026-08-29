@@ -44,3 +44,17 @@ export interface SlideshowFrame {
   /** Seconds since the leaving picture was let go, for arcing it away. */
   leftSeconds: number
 }
+
+/**
+ * One character the slideshow can run, whichever rig it happens to be.
+ *
+ * `pose` is how a rig the slideshow drives itself is posed; a rig posed by its
+ * own animation clip ignores it. `heldPoint` is the one thing every rig must
+ * answer: where the picture hangs this frame.
+ */
+export interface SlideshowCharacter {
+  model: import('three').Object3D
+  mixer: import('three').AnimationMixer | null
+  pose: (holdAmount: number) => void
+  heldPoint: (target: import('three').Vector3) => void
+}
