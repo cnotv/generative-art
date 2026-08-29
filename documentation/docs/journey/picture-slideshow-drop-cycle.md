@@ -43,6 +43,11 @@ stateDiagram-v2
     Arrive --> Hold: the new one is in the hands
 ```
 
+The picture hangs off the hands, which is what keeps the two from disagreeing — and also
+means every degree the body moves, the picture moves with it. The authored gesture is
+deliberately small for that reason: a slideshow's picture is meant to be read, so the
+character stays alive without its subject drifting.
+
 Everything the hands do is derived from a single eased scalar: one holding a picture at
 display height, zero with the hands empty and lowered, falling across the release and
 rising across the arrival. It sets the arm pitch, it sets how far the arms are spread,
@@ -131,13 +136,13 @@ things the same distance from the camera.
 
 ## The beats
 
-| Hold                                                                                                                               | Release                                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ![The cut-out character wearing the wild-boy illustration, a hand at each edge of the picture](/img/picture-slideshow/1-hold.webp) | ![The picture beginning to tip away as it is let go](/img/picture-slideshow/2-release.webp) |
+| Hold                                                                                                | Release                                                                                     |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| ![The character holding a picture, a hand at each of its edges](/img/picture-slideshow/1-hold.webp) | ![The picture beginning to tip away as it is let go](/img/picture-slideshow/2-release.webp) |
 
-| Crossing                                                                                                              | The other character                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ![The released picture spinning away to the right, both hands empty and lowered](/img/picture-slideshow/3-cross.webp) | ![The Mixamo rig holding the same picture, posed by its own clip](/img/picture-slideshow/4-mixamo.webp) |
+| Crossing                                                                                                              | The other character                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| ![The released picture spinning away to the right, both hands empty and lowered](/img/picture-slideshow/3-cross.webp) | ![The cut-out character holding the same picture, posed by the scene instead of a clip](/img/picture-slideshow/4-cutout.webp) |
 
 ## A swipe and an orbit drag are the same gesture
 
@@ -176,6 +181,12 @@ hand span, so matching spans is what lets one board serve both. Their proportion
 the hands at different heights, which is answered by standing each rig by its hands rather
 than by its feet. Since the legs are cut off by the bottom of the frame anyway, nothing is
 lost by letting the feet fall where they may.
+
+Reach is also why the clip is authored against the rig that plays it. Rotations retarget
+between Mixamo skeletons, which is the whole point of the format, but reach does not: the
+same angles on a shorter-armed rig hold the hands closer together. A gesture solved against
+one skeleton and played on another came out at half the intended span, with both hands well
+inside the picture — correct as rotation, wrong as pose.
 
 Behind that, each character answers one question every frame — where does the picture hang —
 and the slideshow asks nothing else. A rig the scene poses itself computes it from its own

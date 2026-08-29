@@ -20,15 +20,32 @@ import { fileURLToPath } from 'node:url'
 import * as THREE from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 
+// The rig carries embedded textures, and unpacking one wants a browser: the loader
+// wraps each image in a Blob URL and hands it to an ImageLoader. Only the skeleton is
+// read here, so both steps are answered with a stub rather than a DOM being faked
+// around them.
+globalThis.window = { URL: { createObjectURL: () => '' } }
+THREE.ImageLoader.prototype.load = function loadNothing(url, onLoad) {
+  const image = {}
+  if (onLoad) onLoad(image)
+  return image
+}
+
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const RIG_FILE = resolve(projectRoot, 'public/mixamoYBot.fbx')
+const RIG_FILE = resolve(projectRoot, 'public/character2.fbx')
 const CLIP_FILE = resolve(projectRoot, 'public/animations/present.json')
 
 const CLIP_NAME = 'present'
 const DURATION_SECONDS = 2.8
 const SAMPLES_PER_SECOND = 15
-/** How far the body turns each way, toned down from the reference's full turn. */
-const SWAY_RADIANS = 0.34
+/**
+ * How far the body turns each way, well down from the reference's full turn.
+ *
+ * The picture hangs off the hands, so every degree the body moves is a degree the
+ * picture moves with it — and a slideshow's picture is meant to be read. Enough to
+ * keep the character alive, not enough to make its subject drift.
+ */
+const SWAY_RADIANS = 0.11
 
 const ARMS = [
   { side: 1, arm: 'mixamorigLeftArm', fore: 'mixamorigLeftForeArm', hand: 'mixamorigLeftHand' },
@@ -52,15 +69,19 @@ const clamp = (value, low, high) => Math.min(Math.max(value, low), high)
  *
  * The reference draws both hands together into the chest, which cannot be used as-is: hands
  * that close inwards end up inside the picture they are meant to be holding by its edges.
- * The span is held steady instead, and the reference's push-and-draw is carried by depth and
- * height, which a held picture tolerates.
+ * The span is fixed instead, and only a little of the reference's push-and-draw survives, in
+ * depth and height — the two directions a held picture tolerates moving in.
+ *
+ * These are this skeleton's own units. Rotations retarget between Mixamo rigs but reach does
+ * not: the same angles on a shorter-armed rig hold the hands closer together, which is why
+ * the clip is authored against the rig that actually plays it.
  * @param side 1 for the left hand, -1 for the right
  * @param phase How far through the loop, from 0 to 1
  * @returns The hand's target position, in the rig's own units
  */
 const handTarget = (side, phase) => {
   const reach = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2)
-  return new THREE.Vector3(side * (46 + 2 * reach), 128 + 4 * reach, 24 + 14 * reach)
+  return new THREE.Vector3(side * 39, 116 + 1.5 * reach, 21 + 7 * reach)
 }
 
 /**

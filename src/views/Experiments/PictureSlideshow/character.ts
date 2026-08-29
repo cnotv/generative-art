@@ -19,7 +19,6 @@ import {
   CUT_OUT_LABEL_PREFIX,
   MIXAMO_CHARACTER,
   MIXAMO_CHARACTER_LABEL,
-  MIXAMO_COLOR,
   MIXAMO_HAND_BONES,
   MIXAMO_MODEL_PATH,
   MIXAMO_SCALE,
@@ -119,8 +118,9 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
     type: 'fixed',
     hasGravity: false,
     castShadow: true,
-    material: 'MeshLambertMaterial',
-    color: MIXAMO_COLOR
+    // The model carries its own textures, so it is only given a cheaper material
+    // to shade them with, never a colour that would paint over them.
+    material: 'MeshLambertMaterial'
   })
   const mixer = new THREE.AnimationMixer(model)
   const actions = await getAnimations(mixer, MIXAMO_ANIMATION)

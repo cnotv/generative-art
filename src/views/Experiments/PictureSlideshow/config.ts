@@ -105,19 +105,17 @@ export const ARM_PITCH_UP = 0.35
 export const ARM_ROLL_DOWN = 0.1
 export const ARM_ROLL_UP = 0.95
 
-export const MIXAMO_MODEL_PATH = 'mixamoYBot.fbx'
+export const MIXAMO_MODEL_PATH = 'character2.fbx'
 /**
  * Scaled so its hands land as far apart as the cut-out rig's, not so the two
- * are the same height.
+ * are the same height. The rig is authored 166 units tall, so this stands it 6.3.
  *
  * The picture is sized to a hand span, so matching spans is what lets both
  * characters hold the same board and share one camera. Their proportions differ,
  * so matching the span leaves the Mixamo rig taller — which is why it is stood
  * by its hands rather than its feet, below.
  */
-export const MIXAMO_SCALE = 0.0322
-/** Warm off-white, so the rig sits in the same pastel range as the background. */
-export const MIXAMO_COLOR = 0xe4ddd2
+export const MIXAMO_SCALE = 0.038
 /** Authored against this skeleton by `scripts/generate-present-animation.mjs`. */
 export const MIXAMO_ANIMATION = 'animations/present.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
@@ -127,7 +125,7 @@ export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 export const MIXAMO_CHARACTER = 'mixamo'
 export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
 export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
-export const DEFAULT_CHARACTER = 'wild-boy'
+export const DEFAULT_CHARACTER = MIXAMO_CHARACTER
 
 export const CANVAS_SIZE: CoordinateTuple = [2.6, 1.85, 0.12]
 export const CANVAS_MATERIAL: ModelOptions = {
