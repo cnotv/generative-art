@@ -7,10 +7,11 @@ sidebar_position: 124
 :::note Source files
 
 <video controls loop muted playsinline width="720" src="/video/picture-slideshow/hand-off.webm">
-  A stickman, cut off at the knees by the bottom of the frame, holds a photograph. Tapping the
-  right of the screen sends it spinning away to the right while he turns after it and a new one
-  arrives from the left into his hands. It happens twice more, the last one in the other
-  direction.
+  A leaf-clad character, cut off at the knees by the bottom of the frame, holds a photograph.
+  Tapping the right of the screen sends it spinning away to the right and a new one arrives from
+  the left into his hands; tapping the left sends the next one back the other way. The character
+  is then switched from the panel to a Mixamo figure, which holds the picture the same way while
+  playing its own gesture.
 </video>
 
 `src/views/Experiments/PictureSlideshow/slideshow.ts`, `config.ts`,
@@ -94,6 +95,28 @@ more than double. The number that means something is the far end of the arm's ow
 transformed into the world — and taking it from the box instead produced a picture sized
 for a reach the character did not have, with both hands hidden behind it.
 
+## Verifying the part, not the whole
+
+The character spent a long time presenting the picture over its own shoulders, and every
+check made of it passed.
+
+The picture has to be on the camera's side, so the hands have to reach that way, and a
+measurement confirmed they did. What was never checked was which way the _body_ faced. It
+had been turned half a circle early on, on an assumption about the rig's own zero that was
+never tested, and from the front a flat cut-out gives nothing away: the arms come round the
+sides of the picture and look exactly as they should. Only a side view shows the picture in
+front of the body and the arms reaching behind it.
+
+The correction is not the turn on its own. Arm pitch is expressed in the body's frame, so
+facing the body forward sends the arms backwards instead — the two are one fix, not two. And
+the pitch that then reads best is a small one, because a flat arm swung far forward turns
+its edge to the camera and reads as a spike rather than a limb.
+
+The lesson is about what a measurement covers. Confirming the hands were in the right place
+proved the hands were in the right place; it said nothing about the body they were attached
+to, and a front view could not tell the difference. A pose needs a second angle before it is
+believed, and the cheapest one is the axis the composition does not use.
+
 ## Perspective decides the margin, not the layout
 
 Even once the hands were genuinely wider than the picture, they stayed hidden. The
@@ -108,13 +131,13 @@ things the same distance from the camera.
 
 ## The beats
 
-| Hold                                                                                                  | Release                                                                                     |
-| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ![A photograph held up, with a hand visible at each of its edges](/img/picture-slideshow/1-hold.webp) | ![The picture beginning to tip away as it is let go](/img/picture-slideshow/2-release.webp) |
+| Hold                                                                                                                               | Release                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| ![The cut-out character wearing the wild-boy illustration, a hand at each edge of the picture](/img/picture-slideshow/1-hold.webp) | ![The picture beginning to tip away as it is let go](/img/picture-slideshow/2-release.webp) |
 
-| Crossing                                                                                                              | Arrival                                                                                                |
-| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| ![The released picture spinning away to the right, both hands empty and lowered](/img/picture-slideshow/3-cross.webp) | ![The next picture arriving from the left into the raised hands](/img/picture-slideshow/4-arrive.webp) |
+| Crossing                                                                                                              | The other character                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| ![The released picture spinning away to the right, both hands empty and lowered](/img/picture-slideshow/3-cross.webp) | ![The Mixamo rig holding the same picture, posed by its own clip](/img/picture-slideshow/4-mixamo.webp) |
 
 ## A swipe and an orbit drag are the same gesture
 
@@ -139,6 +162,25 @@ background colour a frame later. A declared palette is correct for exactly one f
 That is the right default for a landscape and the wrong one for a gallery, where the
 subject has to stay readable. Turning the cycle off before its first frame runs leaves the
 declared rig in place.
+
+## Two characters, one stage
+
+The scene now offers a choice from the panel: the cut-out rig wearing any of the shared
+skins, or a Mixamo skeleton playing a gesture authored for it. They are different shapes
+with different reaches, and the naive way to support both is two cameras and two picture
+sizes, re-tuned against each other every time either changes.
+
+They share one of each instead, on two decisions. The rigs are scaled so their _hands_ end
+up the same distance apart rather than so their heights match — the picture is sized to a
+hand span, so matching spans is what lets one board serve both. Their proportions then leave
+the hands at different heights, which is answered by standing each rig by its hands rather
+than by its feet. Since the legs are cut off by the bottom of the frame anyway, nothing is
+lost by letting the feet fall where they may.
+
+Behind that, each character answers one question every frame — where does the picture hang —
+and the slideshow asks nothing else. A rig the scene poses itself computes it from its own
+pose; a rig driven by a clip reads it from the hand bones. Neither needs to know the other
+exists.
 
 The camera has a quieter version of the same problem. Orbit aims the camera at its target
 on its first update whether or not it is enabled, so a scene that sets `camera.lookAt` and

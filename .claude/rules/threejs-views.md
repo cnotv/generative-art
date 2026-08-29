@@ -141,6 +141,13 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   camera at its target on its first update regardless, so a `SetupConfig` that sets `lookAt`
   and `orbit: { disabled: true }` frames on the origin instead. Set both, from the same
   constant. The symptom is a scene framed too low with no obvious cause.
+- **Check a pose from a second angle before believing it.** A rig can be turned the wrong
+  way round and still put its hands exactly where the front view wants them — it is then
+  presenting over its own shoulders, and the arms are pitched backwards. Confirming the hands
+  landed correctly says nothing about the body they hang off. Shoot the axis the composition
+  does not use; on a flat cut-out the front view cannot tell the difference at all. Note the
+  turn and the limb rotation are one fix: limb angles are in the body's frame, so flipping the
+  body alone just moves the error.
 - **An arm's world bounding box is not its reach.** `Box3.setFromObject` on a limb rotated on
   two axes returns an axis-aligned hull whose corners are nowhere near the mesh — it
   overstated one rig's reach by more than double. Transform the far end of the mesh's own
