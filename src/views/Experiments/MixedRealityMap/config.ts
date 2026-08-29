@@ -9,10 +9,18 @@ export const PHOTON_ENDPOINT = 'https://photon.komoot.io/reverse'
 
 /**
  * Street centre lines come from Overpass, because it is the only free service that returns
- * geometry rather than a single point per feature. Its public mirrors are unreliable enough
- * that the paths are treated as a bonus: when the query fails there are simply no lines.
+ * geometry rather than a single point per feature.
+ *
+ * Several of them, tried in turn, because one is not enough: these are shared public servers
+ * under permanent load, and over the course of this work each has variously answered 502, 504,
+ * 500, an HTML error page under a success status, and nothing at all. A single endpoint means
+ * no streets whenever that endpoint is having a bad minute, which is often.
  */
-export const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
+export const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+]
 
 /**
  * How far out to look. Far enough to reach the other side of a square, short enough that the
@@ -54,9 +62,14 @@ export const PLACE_MARKER_METERS = 6
  */
 export const WIKIPEDIA_ENDPOINT = 'https://en.wikipedia.org/w/api.php'
 export const WIKIPEDIA_PAGE_BASE = 'https://en.wikipedia.org/wiki/'
+export const OPENSTREETMAP_BASE = 'https://www.openstreetmap.org/'
 
-/** Tight, because the question is what this building is and not what district it stands in. */
-export const IMAGE_SEARCH_RADIUS_METERS = 120
+/**
+ * Wide enough to find something. A tight radius is truer to "what is this building", but most
+ * of what a street holds has no article at all, and an empty card every time is worse than one
+ * that says which nearby thing it is showing.
+ */
+export const IMAGE_SEARCH_RADIUS_METERS = 400
 export const IMAGE_THUMBNAIL_WIDTH = 480
 
 /** What the corner map's half-width covers on the ground, which is a few streets either way. */

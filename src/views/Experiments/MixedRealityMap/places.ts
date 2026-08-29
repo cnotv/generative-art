@@ -3,6 +3,9 @@ import type { GeoPoint, Place } from './types'
 
 const METERS_IN_A_KILOMETER = 1000
 
+/** The geocoder abbreviates the three OpenStreetMap element types; a link needs them spelled. */
+const OSM_TYPE_NAMES: Record<string, string> = { N: 'node', W: 'way', R: 'relation' }
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
@@ -25,6 +28,20 @@ export const buildPlacesUrl = (origin: GeoPoint, radiusMeters: number, limit: nu
 
   return `${PHOTON_ENDPOINT}?${query}`
 }
+
+/**
+ * The path a place has on the map site, or nothing where it cannot be linked to.
+ *
+ * Built here and left null when either half is missing, rather than composing a URL that answers
+ * with a not-found page: the geocoder returns some features with no usable element behind them.
+ * @param osmType The abbreviated element type, `N`, `W` or `R`
+ * @param osmId The element's numeric id, as it arrived
+ * @returns Something like `node/12`, or null
+ */
+const getOsmReference = (osmType: string, osmId: unknown): string | null =>
+  OSM_TYPE_NAMES[osmType] && typeof osmId === 'number'
+    ? `${OSM_TYPE_NAMES[osmType]}/${osmId}`
+    : null
 
 /**
  * Read a GeoJSON point, which writes longitude before latitude.
@@ -57,9 +74,12 @@ const readPlace = (feature: unknown): Place | null => {
 
   const tagKey = readString(properties.osm_key) ?? ''
   const tagValue = readString(properties.osm_value) ?? ''
+  const osmType = readString(properties.osm_type) ?? ''
+  const osmId = properties.osm_id
 
   return {
-    id: `${readString(properties.osm_type) ?? 'X'}${String(properties.osm_id ?? name)}`,
+    id: `${osmType || 'X'}${String(osmId ?? name)}`,
+    osmReference: getOsmReference(osmType, osmId),
     name,
     category: tagValue || kind || 'place',
     group: getPlaceGroup(tagKey, tagValue, kind),

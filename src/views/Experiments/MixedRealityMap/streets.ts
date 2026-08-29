@@ -1,4 +1,4 @@
-import { OVERPASS_ENDPOINT } from './config'
+import { OVERPASS_ENDPOINTS } from './config'
 import type { GeoPoint, StreetPath } from './types'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -63,12 +63,29 @@ export const fetchStreetPaths = async (
   radiusMeters: number,
   signal?: AbortSignal
 ): Promise<StreetPath[]> => {
-  const response = await fetch(OVERPASS_ENDPOINT, {
-    method: 'POST',
-    body: new URLSearchParams({ data: buildStreetsQuery(origin, radiusMeters) }),
-    signal
-  })
-  if (!response.ok) throw new Error(`The street service answered ${response.status}`)
+  const body = new URLSearchParams({ data: buildStreetsQuery(origin, radiusMeters) })
 
-  return parseStreetPaths(await response.json())
+  /**
+   * Walk the mirrors in order, keeping the first usable answer. A mirror that is overloaded
+   * says so in several different ways, including a success status wrapping an HTML error page,
+   * so anything that will not parse as the expected shape counts as a failure and moves on.
+   */
+  const attempt = async (remaining: readonly string[], lastError: Error): Promise<StreetPath[]> => {
+    const [endpoint, ...rest] = remaining
+    if (!endpoint) throw lastError
+
+    try {
+      const response = await fetch(endpoint, { method: 'POST', body, signal })
+      if (!response.ok) throw new Error(`The street service answered ${response.status}`)
+
+      return parseStreetPaths(await response.json())
+    } catch (error) {
+      // An abort is the caller changing its mind, not a mirror failing, so it stops here.
+      if (signal?.aborted) throw error
+
+      return attempt(rest, error instanceof Error ? error : new Error('The street service failed'))
+    }
+  }
+
+  return attempt(OVERPASS_ENDPOINTS, new Error('No street service was reachable'))
 }

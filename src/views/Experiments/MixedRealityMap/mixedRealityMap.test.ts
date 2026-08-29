@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   getBearingDegrees,
   getDistanceMeters,
@@ -13,10 +13,10 @@ import {
   spreadLabels
 } from './projection'
 import { buildPlacesUrl, parsePlaces } from './places'
-import { parseStreetPaths } from './streets'
+import { fetchStreetPaths, parseStreetPaths } from './streets'
 import { buildMinimap, getMinimapPoint } from './minimap'
 import { buildImageUrl, parsePlaceImage } from './imagery'
-import { PLACE_GROUPS, getPlaceGroup } from './config'
+import { OVERPASS_ENDPOINTS, PLACE_GROUPS, getPlaceGroup } from './config'
 import type { FieldOfView, Place, PlacedLabel } from './types'
 
 const AMSTERDAM = { latitude: 52.3676, longitude: 4.9041 }
@@ -28,6 +28,7 @@ const makePlace = (id: string, latitude: number, longitude: number): Place => ({
   name: `Place ${id}`,
   category: 'cafe',
   group: 'food',
+  osmReference: `node/${id}`,
   latitude,
   longitude
 })
@@ -640,6 +641,76 @@ describe('parsePlaceImage', () => {
   )
 })
 
+describe('fetchStreetPaths across mirrors', () => {
+  const way = {
+    type: 'way',
+    id: 1,
+    geometry: [
+      { lat: 52.1, lon: 4.2 },
+      { lat: 52.2, lon: 4.3 }
+    ],
+    tags: { name: 'Damrak' }
+  }
+  const ok = () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ elements: [way] }) })
+  const failing = (status: number) => () => Promise.resolve({ ok: false, status })
+  const htmlUnder200 = () =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.reject(new Error('not JSON')) })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('takes the first mirror that answers', async () => {
+    const fetchMock = vi.fn(ok)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const paths = await fetchStreetPaths(AMSTERDAM, 120)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(paths).toHaveLength(1)
+  })
+
+  it('moves on from a mirror that is refusing work', async () => {
+    const fetchMock = vi.fn().mockImplementationOnce(failing(504)).mockImplementationOnce(ok)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const paths = await fetchStreetPaths(AMSTERDAM, 120)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(paths).toHaveLength(1)
+  })
+
+  it('moves on from an error page served under a success status', async () => {
+    const fetchMock = vi.fn().mockImplementationOnce(htmlUnder200).mockImplementationOnce(ok)
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchStreetPaths(AMSTERDAM, 120)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives up with the last complaint once every mirror has been tried', async () => {
+    const fetchMock = vi.fn(failing(500))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchStreetPaths(AMSTERDAM, 120)).rejects.toThrow('answered 500')
+    expect(fetchMock).toHaveBeenCalledTimes(OVERPASS_ENDPOINTS.length)
+  })
+
+  it('stops walking the mirrors when the caller has changed its mind', async () => {
+    const controller = new AbortController()
+    const fetchMock = vi.fn(() => {
+      controller.abort()
+      return Promise.reject(new Error('aborted'))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchStreetPaths(AMSTERDAM, 120, controller.signal)).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('spreadLabels', () => {
   const at = (id: string, xPercent: number): PlacedLabel => ({
     place: makePlace(id, 0, 0),
@@ -724,6 +795,7 @@ describe('parsePlaces', () => {
     expect(places).toEqual([
       {
         id: 'N12',
+        osmReference: 'node/12',
         name: 'Cafe Bruin',
         category: 'cafe',
         group: 'food',
@@ -731,6 +803,31 @@ describe('parsePlaces', () => {
         longitude: 4.9
       }
     ])
+  })
+
+  it.each([
+    ['N', 'node/12'],
+    ['W', 'way/12'],
+    ['R', 'relation/12']
+  ])('spells out a %s reference for the map link', (osmType, expected) => {
+    const [place] = parsePlaces({
+      features: [feature({ osm_type: osmType, osm_id: 12, name: 'Somewhere', type: 'house' })]
+    })
+
+    expect(place.osmReference).toBe(expected)
+  })
+
+  it.each([
+    ['an unknown type', { osm_type: 'Z', osm_id: 12 }],
+    ['no type at all', { osm_id: 12 }],
+    ['no id', { osm_type: 'N' }],
+    ['an id that is not a number', { osm_type: 'N', osm_id: 'twelve' }]
+  ])('links nowhere rather than to a broken page, given %s', (_case, identity) => {
+    const [place] = parsePlaces({
+      features: [feature({ ...identity, name: 'Somewhere', type: 'house' })]
+    })
+
+    expect(place.osmReference).toBeNull()
   })
 
   it('reads longitude before latitude, which is the order GeoJSON writes them', () => {
@@ -764,7 +861,15 @@ describe('parsePlaces', () => {
     })
 
     expect(places).toEqual([
-      { id: 'X4', name: 'Dam', category: 'square', group: 'other', latitude: 52.3, longitude: 4.9 }
+      {
+        id: 'X4',
+        osmReference: null,
+        name: 'Dam',
+        category: 'square',
+        group: 'other',
+        latitude: 52.3,
+        longitude: 4.9
+      }
     ])
   })
 

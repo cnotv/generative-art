@@ -11,6 +11,8 @@ export interface Place extends GeoPoint {
   category: string
   /** Which of the filter groups it falls in, such as `food`. */
   group: string
+  /** `node/12` and the like, for linking to the map; null when the geocoder gave no usable id. */
+  osmReference: string | null
 }
 
 /** Where a place lands on screen for the aim the device currently holds. */

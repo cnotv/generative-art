@@ -120,8 +120,18 @@ across it and the cycleway along it are three features sharing one name.
 The one thing it cannot answer is geometry. A reverse geocoder returns a street as a single
 point, and a street drawn on the ground needs the whole chain of nodes it runs through, so the
 centre lines do come from Overpass after all — a much smaller question than the original one,
-named roads only, and treated as a bonus that simply produces no lines when the mirror is
-having a bad day.
+named roads only.
+
+One endpoint was not enough. Over the course of this work the public mirrors variously answered
+502, 504, 500, an HTML error page under a success status, and nothing at all, and a single
+endpoint means no streets whenever that one is having a bad minute. Several are now tried in
+turn, and anything that will not parse as the expected shape counts as a failure and moves on,
+because a busy mirror does not reliably say so in its status code.
+
+Failing quietly was its own bug. The lines simply did not appear, which is indistinguishable
+from a projection that is wrong, and cost two rounds of looking in the wrong place. A slow
+answer now says it is loading and a failed one says what went wrong and offers to try again —
+worth far more here than another attempt at making the fetch succeed.
 
 Those lines then want a far shorter radius than the labels. From standing height the ground
 falls away fast: a street two hundred metres off sits half a degree below the horizon, and

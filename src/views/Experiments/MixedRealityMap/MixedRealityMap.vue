@@ -43,6 +43,7 @@ import {
   MAX_VISIBLE_LABELS,
   MINIMUM_FIELD_OF_VIEW,
   MINIMAP_RADIUS_METERS,
+  OPENSTREETMAP_BASE,
   MINIMUM_HORIZON_STRENGTH,
   PLACE_MARKER_METERS,
   PLACE_GROUPS,
@@ -62,6 +63,9 @@ const GROUP_ICONS = { Route, UtensilsCrossed, ShoppingBag, Landmark, MapPin }
 const stage = ref<PermissionStage>('idle')
 const cameraMessage = ref<string | null>(null)
 const placesMessage = ref<string | null>(null)
+const streetsMessage = ref<string | null>(null)
+const isLoadingStreets = ref(false)
+const imageMessage = ref<string | null>(null)
 const isLoadingPlaces = ref(false)
 
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -240,6 +244,7 @@ const selectImage = async (place: Place): Promise<void> => {
   const request = new AbortController()
   pendingImage = request
   placeImage.value = null
+  imageMessage.value = null
   isLoadingImage.value = true
 
   try {
@@ -249,8 +254,13 @@ const selectImage = async (place: Place): Promise<void> => {
       IMAGE_THUMBNAIL_WIDTH,
       request.signal
     )
-  } catch {
-    if (!request.signal.aborted) placeImage.value = null
+  } catch (error) {
+    if (!request.signal.aborted) {
+      placeImage.value = null
+      imageMessage.value = `The picture service did not answer (${
+        error instanceof Error ? error.message : 'unknown'
+      }).`
+    }
   } finally {
     if (!request.signal.aborted) isLoadingImage.value = false
   }
@@ -275,9 +285,9 @@ const selectedDistance = computed(() =>
 )
 
 const openStreetMapUrl = computed(() =>
-  selectedPlace.value
-    ? `https://www.openstreetmap.org/${selectedPlace.value.id}`
-    : 'https://www.openstreetmap.org'
+  selectedPlace.value?.osmReference
+    ? `${OPENSTREETMAP_BASE}${selectedPlace.value.osmReference}`
+    : null
 )
 
 /**
@@ -389,6 +399,8 @@ const loadPlaces = async (from: GeoPoint): Promise<void> => {
  * mirrors fail often, so a failure leaves the labels alone and simply draws no lines.
  */
 const loadStreets = async (from: GeoPoint): Promise<void> => {
+  streetsMessage.value = null
+  isLoadingStreets.value = true
   // Its own controller, not the one the places request uses. Sharing it meant the next position
   // update aborted a street query that was still in flight, and the lines vanished at random.
   pendingStreets?.abort()
@@ -397,9 +409,26 @@ const loadStreets = async (from: GeoPoint): Promise<void> => {
 
   try {
     streetPaths.value = await fetchStreetPaths(from, STREET_RADIUS_METERS, request.signal)
-  } catch {
-    if (!request.signal.aborted) streetPaths.value = []
+    if (streetPaths.value.length === 0) {
+      streetsMessage.value = 'No named streets came back for here.'
+    }
+  } catch (error) {
+    if (request.signal.aborted) return
+    streetPaths.value = []
+    streetsMessage.value = `Street shapes did not load (${
+      error instanceof Error ? error.message : 'unknown'
+    }).`
+  } finally {
+    if (!request.signal.aborted) isLoadingStreets.value = false
   }
+}
+
+/**
+ * Ask again by hand. The street service is a shared free one and queues under load, so a failed
+ * or slow query is worth another go without waiting to walk far enough to trigger one.
+ */
+const retryStreets = (): void => {
+  if (origin.value) loadStreets(origin.value)
 }
 
 const receivePosition = (position: GeolocationPosition): void => {
@@ -653,6 +682,11 @@ onBeforeUnmount(() => {
           </Button>
         </p>
         <p v-if="placesMessage" class="mrm__notice">{{ placesMessage }}</p>
+        <p v-if="isLoadingStreets" class="mrm__notice">Loading street shapes…</p>
+        <p v-else-if="streetsMessage" class="mrm__notice">
+          {{ streetsMessage }}
+          <Button variant="secondary" size="sm" @click="retryStreets">Try again</Button>
+        </p>
       </div>
 
       <article v-if="selectedPlace" class="mrm__detail">
@@ -664,7 +698,11 @@ onBeforeUnmount(() => {
           loading="lazy"
         />
         <p v-else class="mrm__detail-line">
-          {{ isLoadingImage ? 'Looking for a picture…' : 'No picture of this one.' }}
+          {{
+            isLoadingImage
+              ? 'Looking for a picture…'
+              : (imageMessage ?? 'Nothing near here has a picture on Wikipedia.')
+          }}
         </p>
 
         <h2 class="mrm__detail-name">{{ selectedPlace.name }}</h2>
@@ -677,7 +715,13 @@ onBeforeUnmount(() => {
             {{ placeImage.title }}
           </a>
         </p>
-        <a class="mrm__detail-link" :href="openStreetMapUrl" target="_blank" rel="noreferrer">
+        <a
+          v-if="openStreetMapUrl"
+          class="mrm__detail-link"
+          :href="openStreetMapUrl"
+          target="_blank"
+          rel="noreferrer"
+        >
           Open in OpenStreetMap
         </a>
         <Button variant="secondary" size="sm" @click="closePlace">Close</Button>
@@ -714,6 +758,10 @@ onBeforeUnmount(() => {
           Secure page {{ isSecurePage ? 'yes' : 'no' }}.
         </p>
         <p class="mrm__hint">{{ orientationDiagnostics }}</p>
+        <p class="mrm__hint">
+          Streets {{ streetPaths.length }} fetched, {{ streetRibbons.length }} drawn. Places
+          {{ places.length }} fetched, {{ labels.length }} in frame.
+        </p>
       </section>
 
       <div class="mrm__actions">
@@ -789,6 +837,9 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: visible;
+
+  /* Ground drawing, not a control: it must never swallow a tap meant for a label above it. */
+  pointer-events: none;
 }
 
 /*
@@ -821,6 +872,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-sm);
   background: var(--color-canvas-overlay-surface);
   opacity: 0.75;
+  pointer-events: none;
   transform: translate(-50%, -50%);
 }
 
@@ -833,6 +885,7 @@ onBeforeUnmount(() => {
   font-size: var(--font-size-xs);
   text-shadow: var(--shadow-text-canvas-overlay);
   white-space: nowrap;
+  pointer-events: none;
   transform: translate(-50%, -50%);
 }
 
