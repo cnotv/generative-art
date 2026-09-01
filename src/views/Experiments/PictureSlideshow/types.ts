@@ -46,15 +46,35 @@ export interface SlideshowFrame {
 }
 
 /**
+ * How much a rig driven by clips, rather than by the slideshow directly, should blend
+ * between its idle hold loop and its one-shot push gesture this frame.
+ *
+ * The push gesture plays forward through release and backward through arrive, so one
+ * clip per throw direction covers both halves of the round trip with nothing to
+ * mirror or swap partway through.
+ */
+export interface GesturePose {
+  /** How much of the looping hold clip to mix in, from 0 to 1. */
+  holdWeight: number
+  /** How much of the push clip to mix in, from 0 to 1. Complements `holdWeight`. */
+  pushWeight: number
+  /** Which throw direction's push clip is playing. */
+  direction: SlideDirection
+  /** Where in the push clip's own timeline to sample, from 0 to 1. */
+  pushProgress: number
+}
+
+/**
  * One character the slideshow can run, whichever rig it happens to be.
  *
- * `pose` is how a rig the slideshow drives itself is posed; a rig posed by its
- * own animation clip ignores it. `heldPoint` is the one thing every rig must
- * answer: where the picture hangs this frame.
+ * `pose` receives the full frame so either kind of rig can read whatever it needs from
+ * it: a rig the slideshow drives itself works out its own hold amount, and a rig posed
+ * by clips reads the phase and direction to pick and blend between them. `heldPoint` is
+ * the one thing every rig must answer: where the picture hangs this frame.
  */
 export interface SlideshowCharacter {
   model: import('three').Object3D
   mixer: import('three').AnimationMixer | null
-  pose: (holdAmount: number) => void
+  pose: (frame: SlideshowFrame) => void
   heldPoint: (target: import('three').Vector3) => void
 }

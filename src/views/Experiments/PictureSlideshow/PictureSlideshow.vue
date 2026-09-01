@@ -167,7 +167,7 @@ onMounted(async () => {
           const hold = holdAmountAt(frame)
           const exitAmount = exitAmountAt(frame, timing)
 
-          character.pose(hold)
+          character.pose(frame)
           character.heldPoint(held)
 
           canvases.forEach((picture, index) => {

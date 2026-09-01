@@ -15,7 +15,9 @@ import {
   ARM_ROLL_DOWN,
   ARM_ROLL_UP,
   CANVAS_DISPLAY_POSITION,
-  MIXAMO_ANIMATION,
+  MIXAMO_HOLD_ANIMATION,
+  MIXAMO_PUSH_LEFT_ANIMATION,
+  MIXAMO_PUSH_RIGHT_ANIMATION,
   CUT_OUT_LABEL_PREFIX,
   MIXAMO_CHARACTER,
   MIXAMO_CHARACTER_LABEL,
@@ -27,7 +29,8 @@ import {
   STICKMAN_TEXTURE_ALPHA_TEST,
   STICKMAN_YAW
 } from './config'
-import type { SlideshowCharacter } from './types'
+import { gesturePoseAt, holdAmountAt } from './slideshow'
+import type { SlideDirection, SlideshowCharacter, SlideshowFrame } from './types'
 
 type World = Parameters<typeof getModel>[1]
 
@@ -91,7 +94,8 @@ const spawnStickman = async (
   return {
     model,
     mixer: null,
-    pose: (holdAmount: number) => {
+    pose: (frame: SlideshowFrame) => {
+      const holdAmount = holdAmountAt(frame)
       arms.forEach(({ node, side }) => {
         node.rotation.x = ARM_PITCH_DOWN + (ARM_PITCH_UP - ARM_PITCH_DOWN) * holdAmount
         node.rotation.z = side * (ARM_ROLL_DOWN + (ARM_ROLL_UP - ARM_ROLL_DOWN) * holdAmount)
@@ -102,13 +106,16 @@ const spawnStickman = async (
 }
 
 /**
- * The Mixamo rig, posed by the authored gesture clip rather than by the slideshow.
+ * The Mixamo rig, posed by its own authored clips rather than by the slideshow directly.
  *
- * Its hands are what the picture is hung from, so wherever the clip puts them
- * the picture follows and the two can never disagree.
+ * Its hands are what the picture is hung from, so wherever a clip puts them the picture
+ * follows and the two can never disagree. `hold` loops for as long as a picture sits on
+ * display; the push clip for whichever direction is currently in play is scrubbed by
+ * `gesturePoseAt` instead of running on its own clock, forward through release and
+ * backward through arrive, and crossfaded against `hold` at both ends of that trip.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
- * @returns The character, whose pose comes from its own clip
+ * @returns The character, whose pose comes from its clips
  */
 const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowCharacter> => {
   const model = await getModel(scene, world, MIXAMO_MODEL_PATH, {
@@ -123,10 +130,30 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
     material: 'MeshLambertMaterial'
   })
   const mixer = new THREE.AnimationMixer(model)
-  const actions = await getAnimations(mixer, MIXAMO_ANIMATION)
-  Object.values(actions).forEach((action) => action.play())
-  // One frame of the clip has to be applied before the hands are anywhere but
-  // the T-pose, and the rig is stood by where they end up.
+  const actions = await getAnimations(mixer, [
+    MIXAMO_HOLD_ANIMATION,
+    MIXAMO_PUSH_RIGHT_ANIMATION,
+    MIXAMO_PUSH_LEFT_ANIMATION
+  ])
+  const holdAction = actions.hold
+  const pushActions: Record<SlideDirection, THREE.AnimationAction> = {
+    1: actions['push-right'],
+    [-1]: actions['push-left']
+  }
+  const pushDuration = pushActions[1].getClip().duration
+
+  holdAction.play()
+  Object.values(pushActions).forEach((action) => {
+    // Scrubbed by hand each frame rather than left to run on the mixer's own clock,
+    // so its position tracks the release/arrive phase instead of real time. A zero
+    // time scale, rather than `paused`, keeps it off the mixer's own clock without
+    // a raw property write.
+    action.play()
+    action.setEffectiveTimeScale(0)
+    action.setEffectiveWeight(0)
+  })
+  // One frame of a clip has to be applied before the hands are anywhere but the
+  // T-pose, and the rig is stood by where they end up.
   mixer.update(0)
   model.updateMatrixWorld(true)
 
@@ -143,7 +170,15 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
   return {
     model,
     mixer,
-    pose: () => {},
+    pose: (frame: SlideshowFrame) => {
+      const { holdWeight, pushWeight, direction, pushProgress } = gesturePoseAt(frame)
+      holdAction.setEffectiveWeight(holdWeight)
+      const activePush = pushActions[direction]
+      const idlePush = pushActions[direction === 1 ? -1 : 1]
+      idlePush.setEffectiveWeight(0)
+      activePush.setEffectiveWeight(pushWeight)
+      activePush.time = pushProgress * pushDuration
+    },
     heldPoint: (target: THREE.Vector3) => {
       hands[0].getWorldPosition(left)
       hands[1].getWorldPosition(right)

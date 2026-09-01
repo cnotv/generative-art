@@ -153,6 +153,13 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   overstated one rig's reach by more than double. Transform the far end of the mesh's own
   local bounding box instead, and remember a perspective camera only preserves a world-space
   margin between things at the same depth.
+- **A clip left on the mixer's own clock drifts against whatever cycle it is meant to serve.**
+  If a gesture has to line up with phase boundaries a state machine owns, do not `.play()` it
+  and let `mixer.update(delta)` carry it — pause it (`setEffectiveTimeScale(0)`, not the raw
+  `.paused` field) and set `action.time` from that phase's own progress instead, forward or
+  backward as the phase requires. Cross-fade the weight between two such actions over a
+  _fraction_ of the phase's own progress, never a fixed number of seconds, or the blend either
+  finishes instantly or never finishes once that phase's duration is tunable.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.

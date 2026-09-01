@@ -4,6 +4,7 @@ import {
   canvasRoleAt,
   createSlideshowState,
   exitAmountAt,
+  gesturePoseAt,
   holdAmountAt,
   slideshowFrame,
   startChange
@@ -184,6 +185,72 @@ describe('exitAmountAt', () => {
   it('is still travelling through the arrival, and is all the way out by the end', () => {
     expect(exitAt(1.5)).toBeGreaterThan(exitAt(1))
     expect(exitAt(2)).toBeCloseTo(1)
+  })
+})
+
+describe('gesturePoseAt', () => {
+  const poseAt = (changeSeconds: number | null, direction: 1 | -1 = 1) =>
+    gesturePoseAt(
+      slideshowFrame(
+        changeSeconds === null
+          ? createSlideshowState()
+          : { ...startChange(createSlideshowState(), direction, SLIDE_COUNT), changeSeconds },
+        TIMING
+      )
+    )
+
+  it('rests fully on the hold loop while nothing is changing', () => {
+    expect(poseAt(null)).toMatchObject({ holdWeight: 1, pushWeight: 0 })
+  })
+
+  it('carries the direction a throw started with', () => {
+    expect(poseAt(0.5, -1).direction).toBe(-1)
+  })
+
+  it.each([
+    ['is fully on the hold loop the instant release opens', 0, 0, 1],
+    ['is fully on the push clip by a fifth into release', TIMING.release * 0.2, 1, 0],
+    ['stays fully on the push clip for the rest of release', TIMING.release * 0.99, 1, 0],
+    [
+      'stays fully on the push clip for most of arrive',
+      TIMING.release + TIMING.arrive * 0.79,
+      1,
+      0
+    ],
+    [
+      'is fully back on the hold loop by the end of arrive',
+      TIMING.release + TIMING.arrive * 0.999,
+      0,
+      1
+    ]
+  ])('%s', (_label, changeSeconds, expectedPushWeight, expectedHoldWeight) => {
+    const pose = poseAt(changeSeconds)
+
+    expect(pose.pushWeight).toBeCloseTo(expectedPushWeight, 2)
+    expect(pose.holdWeight).toBeCloseTo(expectedHoldWeight, 2)
+  })
+
+  it('scrubs the push clip forward through release', () => {
+    const early = poseAt(TIMING.release * 0.3).pushProgress
+    const late = poseAt(TIMING.release * 0.9).pushProgress
+
+    expect(late).toBeGreaterThan(early)
+  })
+
+  it('scrubs the push clip backward through arrive, ending where release began', () => {
+    const start = poseAt(TIMING.release + 0.001).pushProgress
+    const end = poseAt(TIMING.release + TIMING.arrive * 0.999).pushProgress
+
+    expect(start).toBeGreaterThan(end)
+    expect(end).toBeCloseTo(0, 1)
+  })
+
+  it('is continuous across the release-to-arrive boundary, with nothing to pop', () => {
+    const endOfRelease = poseAt(TIMING.release - 0.001)
+    const startOfArrive = poseAt(TIMING.release + 0.001)
+
+    expect(startOfArrive.pushProgress).toBeCloseTo(endOfRelease.pushProgress, 1)
+    expect(startOfArrive.pushWeight).toBeCloseTo(endOfRelease.pushWeight, 2)
   })
 })
 

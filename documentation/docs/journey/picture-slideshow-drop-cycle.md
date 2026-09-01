@@ -198,3 +198,30 @@ on its first update whether or not it is enabled, so a scene that sets `camera.l
 disables orbit without also setting `orbit.target` is framed on the origin instead — which
 here cropped the character's head, and looked for all the world like a bad camera height.
 Both constraints are recorded in the Three.js views rule.
+
+## A clip on its own clock drifts against the cycle it serves
+
+The Mixamo gesture originally answered "where does the picture hang" with a single clip
+left to run continuously on the mixer's own clock, independent of the hold, release and
+arrival it was meant to accompany. It looked alive on its own and wrong in context: since
+nothing tied its length to the cycle's, the two drifted against each other on every
+repeat, and a picture nominally sitting still in the hands was quietly bobbing and
+breathing the whole time it was supposedly held — the wobble was small, but it was there
+for the entire hold, not just the change either side of it.
+
+The fix follows from the same principle as the eased scalar above: derive the pose from
+the phase, not from the wall clock. The rig now holds two clips rather than one, and
+neither is allowed to run free. A calm loop plays for as long as a picture sits in the
+hands, its motion cut down until it reads as breathing rather than drifting. A one-shot
+shove, authored once per throw side, is scrubbed by hand from the release and arrival's
+own progress — forward through the release, backward through the arrival — so the same
+gesture that throws a picture clear is what pulls the arms back to catch the next one,
+with nothing to mirror or splice at the seam between the two.
+
+The two clips still have to hand off to each other without a pop, and the fix is the same
+shape as the picture's own entry: cross-fade their weights over a _fraction_ of whichever
+phase is running, rather than a fixed number of seconds. Release and arrival are both
+exposed as panel sliders, anywhere from a third of a second to three, and a blend timed in
+real seconds would either finish instantly on the short end or never finish on the long
+one. Timed as a fraction of the phase's own progress, it holds up at either end of the
+slider without knowing which one the panel is set to.

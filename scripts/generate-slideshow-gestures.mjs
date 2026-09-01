@@ -1,6 +1,6 @@
 /**
- * Authors the picture-holding gesture for the Mixamo skeleton and writes it as a bare
- * `AnimationClip`.
+ * Authors the Mixamo gestures the picture-slideshow character plays, and writes each as
+ * a bare `AnimationClip`.
  *
  * The other clips in `public/animations` came from a motion library as FBX. Three.js can
  * read that format but cannot write it, so an authored clip is emitted as clip JSON
@@ -12,7 +12,7 @@
  * real rest pose to do it. Guessing quaternions against a skeleton whose bone axes are
  * unknown produces a pretzel; aiming a bone at a point does not care what its axes are.
  *
- * Usage: node scripts/generate-present-animation.mjs
+ * Usage: node scripts/generate-slideshow-gestures.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -33,26 +33,16 @@ THREE.ImageLoader.prototype.load = function loadNothing(url, onLoad) {
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const RIG_FILE = resolve(projectRoot, 'public/character2.fbx')
-const CLIP_FILE = resolve(projectRoot, 'public/animations/present.json')
+const ANIMATIONS_DIR = resolve(projectRoot, 'public/animations')
 
-const CLIP_NAME = 'present'
-const DURATION_SECONDS = 2.8
 const SAMPLES_PER_SECOND = 15
-/**
- * How far the body turns each way, well down from the reference's full turn.
- *
- * The picture hangs off the hands, so every degree the body moves is a degree the
- * picture moves with it — and a slideshow's picture is meant to be read. Enough to
- * keep the character alive, not enough to make its subject drift.
- */
-const SWAY_RADIANS = 0.11
 
 const ARMS = [
   { side: 1, arm: 'mixamorigLeftArm', fore: 'mixamorigLeftForeArm', hand: 'mixamorigLeftHand' },
   { side: -1, arm: 'mixamorigRightArm', fore: 'mixamorigRightForeArm', hand: 'mixamorigRightHand' }
 ]
 
-/** Every bone the clip writes a track for; the rest keep their rest pose. */
+/** Every bone a clip writes a track for; the rest keep their rest pose. */
 const TRACKED_BONES = [
   'mixamorigHips',
   'mixamorigSpine',
@@ -63,26 +53,7 @@ const TRACKED_BONES = [
 ]
 
 const clamp = (value, low, high) => Math.min(Math.max(value, low), high)
-
-/**
- * Where one hand should be, in the body's own frame.
- *
- * The reference draws both hands together into the chest, which cannot be used as-is: hands
- * that close inwards end up inside the picture they are meant to be holding by its edges.
- * The span is fixed instead, and only a little of the reference's push-and-draw survives, in
- * depth and height — the two directions a held picture tolerates moving in.
- *
- * These are this skeleton's own units. Rotations retarget between Mixamo rigs but reach does
- * not: the same angles on a shorter-armed rig hold the hands closer together, which is why
- * the clip is authored against the rig that actually plays it.
- * @param side 1 for the left hand, -1 for the right
- * @param phase How far through the loop, from 0 to 1
- * @returns The hand's target position, in the rig's own units
- */
-const handTarget = (side, phase) => {
-  const reach = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2)
-  return new THREE.Vector3(side * 39, 116 + 1.5 * reach, 21 + 7 * reach)
-}
+const ease = (progress) => progress * progress * (3 - 2 * progress)
 
 /**
  * Where the elbow has to sit for a two-bone chain to reach a target.
@@ -147,23 +118,25 @@ const restPose = new Map(TRACKED_BONES.map((name) => [name, boneNamed(name).quat
 const upperLength = worldOf('mixamorigLeftArm').distanceTo(worldOf('mixamorigLeftForeArm'))
 const foreLength = worldOf('mixamorigLeftForeArm').distanceTo(worldOf('mixamorigLeftHand'))
 
-const sampleCount = Math.round(DURATION_SECONDS * SAMPLES_PER_SECOND) + 1
-const times = Array.from({ length: sampleCount }, (_, index) => index / SAMPLES_PER_SECOND)
-
-const poses = times.map((time) => {
-  const phase = time / DURATION_SECONDS
+/**
+ * Poses the rig for one sample and reads back each tracked bone's quaternion.
+ * @param yaw How far the hips turn for this sample, in radians
+ * @param spineCounter How much the spine counter-rotates against the hips, as a fraction of yaw
+ * @param handAt Given a hand's side, where it should be this sample, in the body's own frame
+ * @returns One quaternion per tracked bone, in `TRACKED_BONES` order
+ */
+const poseSample = (yaw, spineCounter, handAt) => {
   TRACKED_BONES.forEach((name) => boneNamed(name).quaternion.copy(restPose.get(name)))
 
-  const yaw = SWAY_RADIANS * Math.sin(phase * Math.PI * 2)
   const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
   boneNamed('mixamorigHips').quaternion.premultiply(turn)
   boneNamed('mixamorigSpine').quaternion.premultiply(
-    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -yaw * 0.35)
+    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -yaw * spineCounter)
   )
   rig.updateMatrixWorld(true)
 
   ARMS.forEach(({ side, arm, fore, hand }) => {
-    const target = handTarget(side, phase).applyQuaternion(turn)
+    const target = handAt(side).applyQuaternion(turn)
     const pole = new THREE.Vector3(side * 0.35, -1, -0.35).applyQuaternion(turn).normalize()
     const elbow = solveElbow(worldOf(arm), target, upperLength, foreLength, pole)
     aimBoneAt(boneNamed(arm), boneNamed(fore), elbow)
@@ -171,17 +144,78 @@ const poses = times.map((time) => {
   })
 
   return TRACKED_BONES.map((name) => boneNamed(name).quaternion.clone())
+}
+
+/**
+ * Samples a pose function across a duration and writes the result as clip JSON.
+ * @param name The clip's name and output filename, without extension
+ * @param durationSeconds How long the clip runs
+ * @param poseAt Given how far through the clip this sample is, from 0 to 1, the pose to hit
+ * @returns Nothing; the clip lands at `public/animations/<name>.json`
+ */
+const writeClip = (name, durationSeconds, poseAt) => {
+  const sampleCount = Math.round(durationSeconds * SAMPLES_PER_SECOND) + 1
+  const times = Array.from({ length: sampleCount }, (_, index) => index / SAMPLES_PER_SECOND)
+  const poses = times.map((time) => {
+    const { yaw, spineCounter, handAt } = poseAt(time / durationSeconds)
+    return poseSample(yaw, spineCounter, handAt)
+  })
+  const tracks = TRACKED_BONES.map(
+    (boneName, boneIndex) =>
+      new THREE.QuaternionKeyframeTrack(
+        `${boneName}.quaternion`,
+        times,
+        poses.flatMap((pose) => pose[boneIndex].toArray())
+      )
+  )
+  const clip = new THREE.AnimationClip(name, durationSeconds, tracks)
+  const file = resolve(ANIMATIONS_DIR, `${name}.json`)
+  writeFileSync(file, `${JSON.stringify(THREE.AnimationClip.toJSON(clip))}\n`)
+  console.log(`Wrote ${file}: ${tracks.length} tracks, ${sampleCount} keys`)
+}
+
+/**
+ * The idle sway while a picture sits in the hands, looping the whole time it is on display.
+ *
+ * Deliberately subtle: this runs continuously, uncoupled from how long a hold actually
+ * lasts, so anything more than a breath of motion reads as the held picture drifting
+ * rather than a character quietly standing.
+ */
+const HOLD_DURATION_SECONDS = 2.8
+const HOLD_SWAY_RADIANS = 0.03
+writeClip('hold', HOLD_DURATION_SECONDS, (phase) => {
+  const reach = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2)
+  return {
+    yaw: HOLD_SWAY_RADIANS * Math.sin(phase * Math.PI * 2),
+    spineCounter: 0.35,
+    handAt: (side) => new THREE.Vector3(side * 39, 116 + 0.4 * reach, 21 + 2 * reach)
+  }
 })
 
-const tracks = TRACKED_BONES.map(
-  (name, boneIndex) =>
-    new THREE.QuaternionKeyframeTrack(
-      `${name}.quaternion`,
-      times,
-      poses.flatMap((pose) => pose[boneIndex].toArray())
-    )
-)
-
-const clip = new THREE.AnimationClip(CLIP_NAME, DURATION_SECONDS, tracks)
-writeFileSync(CLIP_FILE, `${JSON.stringify(THREE.AnimationClip.toJSON(clip))}\n`)
-console.log(`Wrote ${CLIP_FILE}: ${tracks.length} tracks, ${sampleCount} keys`)
+/**
+ * The one-shot shove that throws the held picture clear, one clip per throw direction.
+ *
+ * The rig that plays this scrubs it forward through release and backward through
+ * arrive: its last frame is the moment of release, and its first frame sits at the
+ * same neutral reach `hold` loops around, so there is nothing to mirror or splice at
+ * either end, only a direction to pick.
+ */
+const PUSH_DURATION_SECONDS = 1
+const PUSH_YAW_RADIANS = 0.5
+const PUSH_REACH_UNITS = 34
+const PUSH_FORWARD_UNITS = 16
+;[1, -1].forEach((pushSign) => {
+  writeClip(pushSign === 1 ? 'push-right' : 'push-left', PUSH_DURATION_SECONDS, (phase) => {
+    const extend = ease(phase)
+    return {
+      yaw: PUSH_YAW_RADIANS * pushSign * extend,
+      spineCounter: 0.35,
+      handAt: (side) =>
+        new THREE.Vector3(
+          side * 39 + pushSign * PUSH_REACH_UNITS * extend,
+          116,
+          21 + PUSH_FORWARD_UNITS * extend
+        )
+    }
+  })
+})

@@ -116,8 +116,14 @@ export const MIXAMO_MODEL_PATH = 'character2.fbx'
  * by its hands rather than its feet, below.
  */
 export const MIXAMO_SCALE = 0.038
-/** Authored against this skeleton by `scripts/generate-present-animation.mjs`. */
-export const MIXAMO_ANIMATION = 'animations/present.json'
+/**
+ * The gestures authored against this skeleton by `scripts/generate-slideshow-gestures.mjs`:
+ * the looping idle held while a picture is on display, and one one-shot push per throw
+ * direction, scrubbed forward through release and backward through arrive.
+ */
+export const MIXAMO_HOLD_ANIMATION = 'animations/hold.json'
+export const MIXAMO_PUSH_RIGHT_ANIMATION = 'animations/push-right.json'
+export const MIXAMO_PUSH_LEFT_ANIMATION = 'animations/push-left.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
 export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 

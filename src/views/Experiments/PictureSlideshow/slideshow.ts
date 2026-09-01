@@ -1,10 +1,22 @@
 import type {
   CanvasRole,
+  GesturePose,
   SlideDirection,
   SlideshowFrame,
   SlideshowState,
   SlideshowTiming
 } from './types'
+
+/**
+ * How much of a phase's own progress is spent crossfading, at its start or its end.
+ *
+ * A rig driven by clips switches between a continuous hold loop and a one-shot push
+ * gesture; cutting between them at full weight pops, so each switch fades over this
+ * fraction of whichever phase it happens in rather than over a fixed number of seconds
+ * — which is what lets it hold up whether release and arrive are tuned to a third of a
+ * second or three.
+ */
+const GESTURE_CROSSFADE_FRACTION = 0.2
 
 /**
  * Smoothstep, so an arm starts and stops moving rather than snapping into and
@@ -150,6 +162,39 @@ export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): nu
   const span = timing.release + timing.arrive
   const progress = Math.min(frame.leftSeconds / span, 1)
   return progress * progress
+}
+
+/**
+ * How a clip-driven rig should blend between its hold loop and its push gesture.
+ *
+ * The push clip runs forward across release and backward across arrive, so the same
+ * clip and the same direction cover the whole round trip: the rig is still reaching
+ * out from the throw when arrive begins, and eases back to the hold pose by its end.
+ * Only the two ends of that trip — settling into hold, and leaving it — need a
+ * crossfade at all.
+ * @param frame - The current frame
+ * @returns The weights and push-clip position the rig should apply
+ */
+export const gesturePoseAt = (frame: SlideshowFrame): GesturePose => {
+  if (frame.phase === 'hold') {
+    return { holdWeight: 1, pushWeight: 0, direction: frame.direction, pushProgress: 0 }
+  }
+  if (frame.phase === 'release') {
+    const pushWeight = Math.min(frame.phaseProgress / GESTURE_CROSSFADE_FRACTION, 1)
+    return {
+      holdWeight: 1 - pushWeight,
+      pushWeight,
+      direction: frame.direction,
+      pushProgress: frame.phaseProgress
+    }
+  }
+  const pushWeight = Math.min((1 - frame.phaseProgress) / GESTURE_CROSSFADE_FRACTION, 1)
+  return {
+    holdWeight: 1 - pushWeight,
+    pushWeight,
+    direction: frame.direction,
+    pushProgress: 1 - frame.phaseProgress
+  }
 }
 
 /**
