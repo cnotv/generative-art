@@ -580,6 +580,17 @@ onBeforeUnmount(() => {
         preserveAspectRatio="none"
         aria-hidden="true"
       >
+        <defs>
+          <!--
+            Vertical, so it reads as depth: a shape's own bounding box runs from its farthest
+            point (small y, near the horizon) to its nearest (large y, near the camera), and the
+            fill fades out toward the horizon the way the road itself does.
+          -->
+          <linearGradient id="mrm-street-fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--color-street-overlay)" stop-opacity="0.03" />
+            <stop offset="100%" stop-color="var(--color-street-overlay)" stop-opacity="0.4" />
+          </linearGradient>
+        </defs>
         <polygon
           v-for="ribbon in streetRibbons"
           :key="ribbon.id"
@@ -851,15 +862,22 @@ onBeforeUnmount(() => {
  * A filled surface rather than a line, so the road lies on the ground and narrows into the
  * distance. `non-scaling-stroke` measures the kerb in screen pixels rather than in the
  * stretched user units of the viewBox, so it stays even along a road running away from you.
+ *
+ * A flat, single-opacity fill read as a wash rather than a road: nothing told the eye which
+ * end was near. The gradient fades it toward the horizon the way the real surface does, the
+ * dashed kerb reads as a road marking rather than a shape's outline, and the drop shadow is the
+ * same trick the labels use to stay legible over whatever the camera happens to be pointed at,
+ * light pavement or dark.
  */
 .mrm__street {
-  fill: var(--color-canvas-overlay-foreground);
-  fill-opacity: 0.22;
-  stroke: var(--color-canvas-overlay-foreground);
-  stroke-opacity: 0.55;
-  stroke-width: 1.5;
+  fill: url('#mrm-street-fade');
+  stroke: var(--color-street-overlay);
+  stroke-opacity: 0.85;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+  filter: drop-shadow(var(--shadow-text-canvas-overlay));
 }
 
 /*
