@@ -146,6 +146,15 @@ describe('getScreenPlacement', () => {
 
     expect(rolled).toEqual({ xPercent: 50, yPercent: 50, isInView: true, isInFront: true })
   })
+
+  it('bounds a point near the side plane rather than letting the divide explode', () => {
+    // Just short of a right angle off centre, forward is a hair above zero: the divide that
+    // turns direction into a screen position would otherwise send this to a six-figure percent.
+    const edgeOn = getScreenPlacement(89.99, 0, LEVEL_AIM, FIELD_OF_VIEW)
+
+    expect(edgeOn.isInFront).toBe(true)
+    expect(Math.abs(edgeOn.xPercent)).toBeLessThanOrEqual(1050)
+  })
 })
 
 describe('smoothBearing', () => {

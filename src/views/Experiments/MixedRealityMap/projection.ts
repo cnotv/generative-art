@@ -74,6 +74,7 @@ export const getVerticalFieldOfView = (horizontalDegrees: number, aspectRatio: n
 
 const FRAME_CENTER_PERCENT = 50
 const FRAME_HALF_PERCENT = 50
+const MAX_OFFSET_PERCENT = 1000
 
 /**
  * How far below the horizon the foot of something standing on the ground appears.
@@ -130,9 +131,20 @@ export const getScreenPlacement = (
   const horizontal = right / forward
   const vertical = -up / forward
 
+  // A point near the side of the camera, still in front but only barely, has a forward close
+  // to zero: the divide that turns it into a screen position explodes toward infinity right
+  // where isInFront is still true. A label never reaches this, because it is dropped by
+  // isInView first, but a street ribbon is drawn a little past the frame edge on purpose, and
+  // without a bound its far corner lands thousands of percent off the frame and drags a stray
+  // edge across the visible part of the shape on the way there.
+  const clampOffsetPercent = (value: number): number =>
+    Math.max(-MAX_OFFSET_PERCENT, Math.min(MAX_OFFSET_PERCENT, value))
+
   return {
-    xPercent: FRAME_CENTER_PERCENT + (horizontal / halfWidth) * FRAME_HALF_PERCENT,
-    yPercent: FRAME_CENTER_PERCENT + (vertical / halfHeight) * FRAME_HALF_PERCENT,
+    xPercent:
+      FRAME_CENTER_PERCENT + clampOffsetPercent((horizontal / halfWidth) * FRAME_HALF_PERCENT),
+    yPercent:
+      FRAME_CENTER_PERCENT + clampOffsetPercent((vertical / halfHeight) * FRAME_HALF_PERCENT),
     // Behind the camera the division flips sign and would otherwise fold the place back into
     // the frame, facing the wrong way.
     isInView: forward > 0 && Math.abs(horizontal) <= halfWidth && Math.abs(vertical) <= halfHeight,
