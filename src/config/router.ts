@@ -1,3 +1,15 @@
+// Kept in sync with `toRouteName` in scripts/routes.mjs, which derives the same names at
+// build time for the prerendered SEO meta tags. Node has no TypeScript runner here, so the
+// two can't share one module without adding a dependency.
+export const deriveRouteName = (baseName: string): string =>
+  baseName
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // word boundary: lowercase to uppercase
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2') // acronym followed by a capitalized word
+    .replace(/([A-Za-z])(\d+)/g, '$1 $2') // letter to digit
+    .replace(/(\d+)([A-Z])/g, '$1 $2') // digit to letter
+    .trim()
+    .replace(/^\w/, (c) => c.toUpperCase())
+
 export const getRoutes = (views: Record<string, () => Promise<unknown>>, dir: string) => {
   return Object.keys(views)
     .map((key) => {
@@ -14,12 +26,7 @@ export const getRoutes = (views: Record<string, () => Promise<unknown>>, dir: st
       // If repetition (e.g., GoombaRunner/GoombaRunner), use only one for name/path
       const baseName = segments[0]
 
-      // Convert route name to a more readable title
-      // e.g., "GoombaRunner" -> "Goomba Runner" or "CubeMatrix" -> "Cube Matrix"
-      const name = baseName
-        .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-        .trim() // Remove leading space
-        .replace(/^\w/, (c) => c.toUpperCase()) // Capitalize first letter
+      const name = deriveRouteName(baseName)
 
       return {
         path: `/${dir.toLowerCase()}/${baseName}`,

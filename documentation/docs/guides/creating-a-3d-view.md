@@ -32,9 +32,13 @@ src/views/{Group}/{SceneName}/
 
 The router discovers anything matching `{Dir}/{Name}/{Name}.vue`, and `{Name}/index.vue`
 also works. Group directories are `Games/`, `Experiments/`, `Generative/`, `Tools/` and
-`Stages/`. The component name becomes the route and the title is derived by inserting spaces
-before capitals: `GoombaRunner/GoombaRunner.vue` serves `/games/GoombaRunner` and is titled
-"Goomba Runner".
+`Stages/`. The component name becomes the route and the title is derived by splitting it at
+word, acronym and digit boundaries: `GoombaRunner/GoombaRunner.vue` serves
+`/games/GoombaRunner` and is titled "Goomba Runner", `CubeMatrix2` is titled "Cube Matrix 2",
+and `LobbyUIShowcase` is titled "Lobby UI Showcase". The same derivation lives in
+`deriveRouteName` in `src/config/router.ts` and `toRouteName` in `scripts/routes.mjs`; a test
+in `src/tests/routeNames.test.ts` checks the two stay identical and that every generated
+route name has a matching `viewsMeta.json` entry.
 
 ### The meta entry is mandatory
 

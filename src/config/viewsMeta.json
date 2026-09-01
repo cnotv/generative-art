@@ -151,5 +151,41 @@
   },
   "Isometric Editor": {
     "description": "Build a scene on an isometric grid: pick a primitive from the palette and click a cell to place it, snapped to the square."
+  },
+  "Bubble Shooter": {
+    "description": "Multiplayer bubble shooter with hex grid matching and a shared color queue."
+  },
+  "Marble Editor": {
+    "description": "Build and test physics-driven marble run tracks piece by piece."
+  },
+  "Marble Madness": {
+    "description": "Marble run game with Rapier physics and heading-relative controls."
+  },
+  "Minigolf": {
+    "description": "Physics-based mini golf across a set of procedurally laid out holes."
+  },
+  "Rhythm Game": {
+    "description": "Timing-based rhythm game synced to a beat track."
+  },
+  "Rock Runner": {
+    "description": "Endless runner dodging rocks across a procedurally generated course."
+  },
+  "Squares Multiplayer": {
+    "description": "Multiplayer grid-claiming game with real-time opponent moves."
+  },
+  "Wordle Multiplayer": {
+    "description": "Multiplayer word-guessing game with shared rounds and live opponent state."
+  },
+  "Controls Mapper": {
+    "description": "Remap keyboard, gamepad and touch controls and preview the bindings live."
+  },
+  "Loader Preview": {
+    "description": "Preview the loading overlay and progress states used across the app."
+  },
+  "Lobby UI Showcase": {
+    "description": "Reference gallery of every LobbyUI component and variant."
+  },
+  "Grass Generator": {
+    "description": "Procedural grass field generator with density and wind controls."
   }
 }
