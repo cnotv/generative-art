@@ -149,7 +149,7 @@ const poseSample = (yaw, spineCounter, handAt) => {
 
   ARMS.forEach(({ side, arm, fore, hand }) => {
     const target = handAt(side).applyQuaternion(turn)
-    const pole = new THREE.Vector3(side * 0.35, -1, -0.35).applyQuaternion(turn).normalize()
+    const pole = new THREE.Vector3(side * 0.6, -0.8, -0.1).applyQuaternion(turn).normalize()
     const elbow = solveElbow(worldOf(arm), target, upperLength, foreLength, pole)
     aimBoneAt(boneNamed(arm), boneNamed(fore), elbow)
     aimBoneAt(boneNamed(fore), boneNamed(hand), target)
@@ -195,6 +195,16 @@ const writeClip = (name, durationSeconds, poseAt) => {
 }
 
 /**
+ * Where a hand rests in the neutral holding pose, in the body's own frame — close enough
+ * to the shoulder that the two-bone solve has slack left to bend the elbow with, rather
+ * than reaching out nearly straight. `push`, below, shares this same base position so
+ * neither clip pops against the other at the crossfade.
+ */
+const HOLD_HAND_X_UNITS = 24
+const HOLD_HAND_Y_UNITS = 108
+const HOLD_HAND_Z_UNITS = 14
+
+/**
  * The idle sway while a picture sits in the hands, looping the whole time it is on display.
  *
  * Deliberately subtle: this runs continuously, uncoupled from how long a hold actually
@@ -208,7 +218,12 @@ writeClip('hold', HOLD_DURATION_SECONDS, (phase) => {
   return {
     yaw: HOLD_SWAY_RADIANS * Math.sin(phase * Math.PI * 2),
     spineCounter: 0.35,
-    handAt: (side) => new THREE.Vector3(side * 39, 116 + 0.4 * reach, 21 + 2 * reach)
+    handAt: (side) =>
+      new THREE.Vector3(
+        side * HOLD_HAND_X_UNITS,
+        HOLD_HAND_Y_UNITS + 0.4 * reach,
+        HOLD_HAND_Z_UNITS + 2 * reach
+      )
   }
 })
 
@@ -241,15 +256,15 @@ const PUSH_RELEASE_PULLBACK_UNITS = 18
         const isTrailingHand = side * pushSign < 0
         if (isTrailingHand) {
           return new THREE.Vector3(
-            side * 39 + pushSign * PUSH_THROW_REACH_UNITS * extend,
-            116,
-            21 + PUSH_THROW_FORWARD_UNITS * extend
+            side * HOLD_HAND_X_UNITS + pushSign * PUSH_THROW_REACH_UNITS * extend,
+            HOLD_HAND_Y_UNITS,
+            HOLD_HAND_Z_UNITS + PUSH_THROW_FORWARD_UNITS * extend
           )
         }
         return new THREE.Vector3(
-          side * 39,
-          116 - PUSH_RELEASE_DROP_UNITS * extend,
-          21 - PUSH_RELEASE_PULLBACK_UNITS * extend
+          side * HOLD_HAND_X_UNITS,
+          HOLD_HAND_Y_UNITS - PUSH_RELEASE_DROP_UNITS * extend,
+          HOLD_HAND_Z_UNITS - PUSH_RELEASE_PULLBACK_UNITS * extend
         )
       }
     }

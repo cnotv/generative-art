@@ -96,6 +96,10 @@ export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
  * Rolling the arms out as well swings each hand wide of its own shoulder, and
  * the two together put the hands past the picture's edges.
  *
+ * The shoulders alone are already wider than `CANVAS_SIZE`'s current width, so
+ * this rig's hands sit outside the picture at any roll from here up — the roll
+ * only decides by how much, not whether.
+ *
  * The pitch is positive because the rig's front is its local +z. A negative
  * pitch swings the arms behind the body, which still puts the hands on the
  * camera's side if the body is turned away — the picture then looks held, and
@@ -109,7 +113,7 @@ export const STICKMAN_TEXTURE_ALPHA_TEST = 0.5
 export const ARM_PITCH_DOWN = 0.15
 export const ARM_PITCH_UP = 0.35
 export const ARM_ROLL_DOWN = 0.1
-export const ARM_ROLL_UP = 0.95
+export const ARM_ROLL_UP = 0.2
 
 export const MIXAMO_MODEL_PATH = 'character2.fbx'
 /**
@@ -139,7 +143,7 @@ export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
 export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
 export const DEFAULT_CHARACTER = MIXAMO_CHARACTER
 
-export const CANVAS_SIZE: CoordinateTuple = [2.6, 1.85, 0.12]
+export const CANVAS_SIZE: CoordinateTuple = [1.8, 1.3, 0.12]
 export const CANVAS_MATERIAL: ModelOptions = {
   roughness: 0.85,
   metalness: 0,
@@ -150,11 +154,13 @@ export const CANVAS_MATERIAL: ModelOptions = {
 /**
  * Where a picture sits once it is up, and where the next one comes from.
  *
- * The hands settle at (±2, 2.66, 0.93), so the picture is hung at their height
- * and only just in front of them. Depth matters more than it looks: perspective
- * magnifies whatever is nearer the camera, so a picture held further forward
- * than the hands outgrows them on screen and swallows its own grip however wide
- * the arms are spread. At the same depth, the margin drawn is the margin built.
+ * `standByHands` stands each rig so its hands land at this height regardless of the
+ * rig's own proportions, and `CANVAS_SIZE`'s width is what the hold pose's own hand
+ * spread was tuned against — the two have to be retuned together. Depth matters more
+ * than it looks: perspective magnifies whatever is nearer the camera, so a picture held
+ * further forward than the hands outgrows them on screen and swallows its own grip
+ * however wide the arms are spread. At the same depth, the margin drawn is the margin
+ * built.
  */
 export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.48]
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]

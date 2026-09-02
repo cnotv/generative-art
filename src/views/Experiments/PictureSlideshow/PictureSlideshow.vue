@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { getCube, getModel } from '@webgamekit/threejs'
@@ -8,7 +8,11 @@ import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
+import { useElementPropertiesStore } from '@/stores/elementProperties'
+import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { characterOptions, despawnSlideshowCharacter, spawnSlideshowCharacter } from './character'
+import { createRagdollEditor, RAGDOLL_SCHEMA } from './ragdollEditor'
+import type { HandSide, RagdollEditor, RigPosition } from './ragdollEditor'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   advanceSlideshow,
@@ -34,6 +38,7 @@ import {
   EXIT_DISTANCE,
   EXIT_DROP,
   EXIT_SPIN,
+  MIXAMO_CHARACTER,
   PICTURES,
   SETUP_CONFIG,
   VIEW_TARGET,
@@ -43,6 +48,8 @@ import {
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
 const store = useSceneViewStore()
+const elementPropertiesStore = useElementPropertiesStore()
+const timelinePanelStore = useTimelinePanelStore()
 
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -63,6 +70,9 @@ const reactiveConfig = createReactiveConfig({
 /** Set once the scene exists, so a panel change can rebuild the character. */
 let swapCharacter: ((characterId: string) => Promise<void>) | null = null
 let spawnedCharacter = DEFAULT_CHARACTER
+
+/** Set once the scene exists, so `onUnmounted` can undo the Elements/Timeline registration. */
+let disposeRagdollEditor: (() => void) | null = null
 
 /** Rebuild only when the choice actually changed: every slider fires this too. */
 const handleConfigChange = (): void => {
@@ -137,9 +147,9 @@ onMounted(async () => {
   }
 
   await store.init(canvas.value, setupConfig, {
-    viewPanels: { showConfig: true, showElements: false },
+    viewPanels: { showConfig: true, showElements: true },
     onProgress: handleProgress,
-    defineSetup: async ({ scene, world, getDelta, animate }) => {
+    defineSetup: async ({ scene, world, camera, getDelta, animate }) => {
       let character: SlideshowCharacter = await spawnSlideshowCharacter(
         scene,
         world,
@@ -150,15 +160,69 @@ onMounted(async () => {
       // Pre-allocated: written every frame, and the loop allocates nothing.
       const held = new THREE.Vector3()
 
+      /**
+       * Only the Mixamo rig is IK-posed, so only it gets a ragdoll editor. Swapping
+       * characters tears down and rebuilds this alongside the model itself.
+       */
+      let ragdollEditor: RagdollEditor | null = null
+      // Read (never written to) inside getValue below, purely so editing the pose from a
+      // drag — which touches no Vue state on its own — still marks the panel's displayed
+      // numbers stale and worth re-reading.
+      const ragdollVersion = ref(0)
+      const syncRagdollEditor = (characterId: string): void => {
+        ragdollEditor?.dispose()
+        ragdollEditor = null
+        elementPropertiesStore.unregisterElementProperties('character')
+        if (characterId !== MIXAMO_CHARACTER || !canvas.value) return
+        ragdollEditor = createRagdollEditor(character.model, camera, canvas.value, scene, () => {
+          ragdollVersion.value += 1
+        })
+        elementPropertiesStore.registerElementProperties('character', {
+          title: 'Character',
+          schema: RAGDOLL_SCHEMA,
+          getValue: (path) => {
+            void ragdollVersion.value
+            return ragdollEditor?.getRigPosition(path as HandSide) ?? { x: 0, y: 0, z: 0 }
+          },
+          updateValue: (path, value) =>
+            ragdollEditor?.setRigPosition(path as HandSide, value as RigPosition)
+        })
+      }
+      syncRagdollEditor(reactiveConfig.value.character)
+
       swapCharacter = async (characterId: string) => {
         despawnSlideshowCharacter(scene, character)
         character = await spawnSlideshowCharacter(scene, world, characterId)
+        syncRagdollEditor(characterId)
+      }
+
+      // Only meaningful while paused: the ragdoll editor writes bone rotations directly,
+      // and nothing else drives those bones to fight it while the timeline is stopped.
+      let simulationFrame = 0
+      timelinePanelStore.register({
+        getTimeline: () => timelineManager.getTimeline(),
+        getCurrentFrame: () => simulationFrame,
+        getFrameRate: () => 1 / 60,
+        setActionEnabled: (id, enabled) => timelineManager.updateAction(id, { enabled })
+      })
+      const stopRagdollWatch = watch(
+        () => [elementPropertiesStore.selectedElementName, timelinePanelStore.isPaused] as const,
+        ([selectedElementName, isPaused]) =>
+          ragdollEditor?.setEnabled(selectedElementName === 'character' && isPaused),
+        { immediate: true }
+      )
+      disposeRagdollEditor = () => {
+        stopRagdollWatch()
+        ragdollEditor?.dispose()
+        elementPropertiesStore.unregisterElementProperties('character')
+        timelinePanelStore.unregister()
       }
 
       timelineManager.addAction({
         name: 'Picture change',
         category: 'animation',
         action: () => {
+          simulationFrame += 1
           const { timing, exit } = reactiveConfig.value
           const delta = getDelta()
           character.mixer?.update(delta)
@@ -196,7 +260,7 @@ onMounted(async () => {
         }
       })
 
-      animate({ timeline: timelineManager })
+      animate({ timeline: timelineManager, isPaused: () => timelinePanelStore.isPaused })
     }
   })
 
@@ -209,6 +273,7 @@ onMounted(async () => {
 onUnmounted(() => {
   store.cleanup()
   destroyControls?.()
+  disposeRagdollEditor?.()
   unregisterViewConfig(route.name as string)
 })
 </script>
