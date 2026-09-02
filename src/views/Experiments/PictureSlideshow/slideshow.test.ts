@@ -261,68 +261,97 @@ describe('flightOffset', () => {
 })
 
 describe('gesturePoseAt', () => {
-  const poseAt = (changeSeconds: number | null, direction: 1 | -1 = 1) =>
+  // Every case below throws right (direction 1): push-right is the throw clip, reaching
+  // out through release; push-left is the catch clip, reaching for the entry side and
+  // carrying that through arrive.
+  const poseAt = (changeSeconds: number | null) =>
     gesturePoseAt(
       slideshowFrame(
         changeSeconds === null
           ? createSlideshowState()
-          : { ...startChange(createSlideshowState(), direction, SLIDE_COUNT), changeSeconds },
+          : { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
         TIMING
       )
     )
 
   it('rests fully on the hold loop while nothing is changing', () => {
-    expect(poseAt(null)).toMatchObject({ holdWeight: 1, pushWeight: 0 })
-  })
-
-  it('carries the direction a throw started with', () => {
-    expect(poseAt(0.5, -1).direction).toBe(-1)
+    expect(poseAt(null)).toMatchObject({ holdWeight: 1, pushRightWeight: 0, pushLeftWeight: 0 })
   })
 
   it.each([
-    ['is fully on the hold loop the instant release opens', 0, 0, 1],
-    ['is fully on the push clip by a fifth into release', TIMING.release * 0.2, 1, 0],
-    ['stays fully on the push clip for the rest of release', TIMING.release * 0.99, 1, 0],
+    ['is fully on the hold loop the instant release opens', 0, 1, 0, 0],
+    ['is fully on the throw by a fifth into release', TIMING.release * 0.2, 0, 1, 0],
     [
-      'stays fully on the push clip for most of arrive',
+      'is swinging from throw to catch in the last fifth of release',
+      TIMING.release * 0.9,
+      0,
+      0.5,
+      0.5
+    ],
+    ['has fully swung to the catch right as arrive opens', TIMING.release, 0, 0, 1],
+    [
+      'stays fully on the catch through most of arrive',
       TIMING.release + TIMING.arrive * 0.79,
-      1,
-      0
+      0,
+      0,
+      1
+    ],
+    [
+      'is swinging from catch back to hold in the last fifth of arrive',
+      TIMING.release + TIMING.arrive * 0.9,
+      0.5,
+      0,
+      0.5
     ],
     [
       'is fully back on the hold loop by the end of arrive',
       TIMING.release + TIMING.arrive * 0.999,
+      1,
       0,
-      1
+      0
     ]
-  ])('%s', (_label, changeSeconds, expectedPushWeight, expectedHoldWeight) => {
+  ])('%s', (_label, changeSeconds, expectedHold, expectedThrow, expectedCatch) => {
     const pose = poseAt(changeSeconds)
 
-    expect(pose.pushWeight).toBeCloseTo(expectedPushWeight, 2)
-    expect(pose.holdWeight).toBeCloseTo(expectedHoldWeight, 2)
+    expect(pose.holdWeight).toBeCloseTo(expectedHold, 1)
+    expect(pose.pushRightWeight).toBeCloseTo(expectedThrow, 1)
+    expect(pose.pushLeftWeight).toBeCloseTo(expectedCatch, 1)
   })
 
-  it('scrubs the push clip forward through release', () => {
-    const early = poseAt(TIMING.release * 0.3).pushProgress
-    const late = poseAt(TIMING.release * 0.9).pushProgress
+  it('scrubs the throw clip forward through release', () => {
+    const early = poseAt(TIMING.release * 0.3).pushRightProgress
+    const late = poseAt(TIMING.release * 0.6).pushRightProgress
 
     expect(late).toBeGreaterThan(early)
   })
 
-  it('scrubs the push clip backward through arrive, ending where release began', () => {
-    const start = poseAt(TIMING.release + 0.001).pushProgress
-    const end = poseAt(TIMING.release + TIMING.arrive * 0.999).pushProgress
+  it('holds the catch clip at full extension through the swing, then scrubs it backward through arrive', () => {
+    const midSwing = poseAt(TIMING.release * 0.9).pushLeftProgress
+    const startOfArrive = poseAt(TIMING.release + 0.001).pushLeftProgress
+    const endOfArrive = poseAt(TIMING.release + TIMING.arrive * 0.999).pushLeftProgress
 
-    expect(start).toBeGreaterThan(end)
-    expect(end).toBeCloseTo(0, 1)
+    expect(midSwing).toBeCloseTo(1, 1)
+    expect(startOfArrive).toBeCloseTo(1, 1)
+    expect(endOfArrive).toBeCloseTo(0, 1)
   })
 
-  it('reaches for the entry side in arrive, not the side release just threw towards', () => {
-    const endOfRelease = poseAt(TIMING.release - 0.001, 1)
-    const startOfArrive = poseAt(TIMING.release + 0.001, 1)
+  it('is continuous across the release-to-arrive boundary, with nothing to pop', () => {
+    const endOfRelease = poseAt(TIMING.release - 0.001)
+    const startOfArrive = poseAt(TIMING.release + 0.001)
 
-    expect(endOfRelease.direction).toBe(1)
-    expect(startOfArrive.direction).toBe(-1)
+    expect(startOfArrive.pushLeftWeight).toBeCloseTo(endOfRelease.pushLeftWeight, 1)
+    expect(startOfArrive.pushLeftProgress).toBeCloseTo(endOfRelease.pushLeftProgress, 1)
+  })
+
+  it('throws with push-left instead when the change runs the other way', () => {
+    const leftwardState = {
+      ...startChange(createSlideshowState(), -1, SLIDE_COUNT),
+      changeSeconds: TIMING.release * 0.5
+    }
+    const pose = gesturePoseAt(slideshowFrame(leftwardState, TIMING))
+
+    expect(pose.pushLeftWeight).toBeCloseTo(1, 1)
+    expect(pose.pushRightWeight).toBeCloseTo(0, 1)
   })
 })
 

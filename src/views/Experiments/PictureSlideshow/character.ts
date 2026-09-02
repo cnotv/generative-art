@@ -171,19 +171,21 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
     model,
     mixer,
     pose: (frame: SlideshowFrame) => {
-      const { holdWeight, pushWeight, direction, pushProgress } = gesturePoseAt(frame)
+      const { holdWeight, pushRightWeight, pushRightProgress, pushLeftWeight, pushLeftProgress } =
+        gesturePoseAt(frame)
       holdAction.setEffectiveWeight(holdWeight)
-      const activePush = pushActions[direction]
-      const idlePush = pushActions[direction === 1 ? -1 : 1]
-      idlePush.setEffectiveWeight(0)
-      activePush.setEffectiveWeight(pushWeight)
-      activePush.time = pushProgress * pushDuration
+      pushActions[1].setEffectiveWeight(pushRightWeight)
+      pushActions[1].time = pushRightProgress * pushDuration
+      pushActions[-1].setEffectiveWeight(pushLeftWeight)
+      pushActions[-1].time = pushLeftProgress * pushDuration
     },
     heldPoint: (target: THREE.Vector3) => {
+      // At the hands' own depth, not offset from it: a fixed offset here was
+      // calibrated against one particular hand reach and silently went stale the
+      // moment that reach changed, floating the picture away from the grip.
       hands[0].getWorldPosition(left)
       hands[1].getWorldPosition(right)
       target.addVectors(left, right).multiplyScalar(0.5)
-      target.z += CANVAS_DISPLAY_POSITION[2]
     }
   }
 }

@@ -203,39 +203,66 @@ export const flightOffset = (
 })
 
 /**
- * How a clip-driven rig should blend between its hold loop and its push gesture.
+ * How a clip-driven rig should blend between its hold loop, its throw and its catch.
  *
- * Release and arrive each get their own one-shot: release plays the throw's own
- * direction forward, shoving the old picture clear; arrive plays the *opposite*
- * direction backward, since the new picture is entering from the side release just
- * emptied, not the side it was just thrown towards. The rig is reaching for one
- * picture at the end of release and a completely different one at the start of
- * arrive, so that boundary is a cut rather than something to smooth over — only the
- * outer ends, settling into hold and leaving it, get a crossfade.
+ * Release throws the old picture clear, playing the throw's own direction forward.
+ * Arrive catches the new one, playing the *opposite* direction backward, since it is
+ * entering from the side release just emptied, not the side it was thrown towards. The
+ * hand-off between the two happens inside release's own last fifth, blending throw's
+ * weight down to nothing as catch's blends up to full — a plain weighted average
+ * between two clips posing the same bones swings the arm across from one extended
+ * pose to the other, rather than cutting. Arrive then carries that catch weight
+ * through its own length before crossfading into hold at the very end, mirroring how
+ * hold first crossfades into release.
  * @param frame - The current frame
- * @returns The weights and push-clip position the rig should apply
+ * @returns The weight and scrub position for the hold loop and each push clip
  */
 export const gesturePoseAt = (frame: SlideshowFrame): GesturePose => {
   if (frame.phase === 'hold') {
-    return { holdWeight: 1, pushWeight: 0, direction: frame.direction, pushProgress: 0 }
-  }
-  if (frame.phase === 'release') {
-    const pushWeight = Math.min(frame.phaseProgress / GESTURE_CROSSFADE_FRACTION, 1)
     return {
-      holdWeight: 1 - pushWeight,
-      pushWeight,
-      direction: frame.direction,
-      pushProgress: frame.phaseProgress
+      holdWeight: 1,
+      pushRightWeight: 0,
+      pushRightProgress: 0,
+      pushLeftWeight: 0,
+      pushLeftProgress: 0
     }
   }
-  const pushWeight = Math.min((1 - frame.phaseProgress) / GESTURE_CROSSFADE_FRACTION, 1)
+
+  const progress = frame.phaseProgress
+  const fadeIn = Math.min(progress / GESTURE_CROSSFADE_FRACTION, 1)
+  const fadeOut = Math.max(
+    (progress - (1 - GESTURE_CROSSFADE_FRACTION)) / GESTURE_CROSSFADE_FRACTION,
+    0
+  )
+
+  // `throw` is whichever side this whole change is travelling towards; `catch` is the
+  // opposite side, where the arriving picture is. Release runs throw forward and, in
+  // its own last fifth, swings across into catch; arrive just carries catch the rest
+  // of the way and fades it into hold.
+  const { holdWeight, throwWeight, throwProgress, catchWeight, catchProgress } =
+    frame.phase === 'release'
+      ? {
+          holdWeight: 1 - fadeIn,
+          throwWeight: fadeIn - fadeOut,
+          throwProgress: progress,
+          catchWeight: fadeOut,
+          catchProgress: 1
+        }
+      : {
+          holdWeight: fadeOut,
+          throwWeight: 0,
+          throwProgress: 0,
+          catchWeight: 1 - fadeOut,
+          catchProgress: 1 - progress
+        }
+
+  const throwsRight = frame.direction === 1
   return {
-    holdWeight: 1 - pushWeight,
-    pushWeight,
-    // The entry side, not the throw's own — picking the new picture up from where it
-    // is, rather than continuing to reach the way the old one left.
-    direction: frame.direction === 1 ? -1 : 1,
-    pushProgress: 1 - frame.phaseProgress
+    holdWeight,
+    pushRightWeight: throwsRight ? throwWeight : catchWeight,
+    pushRightProgress: throwsRight ? throwProgress : catchProgress,
+    pushLeftWeight: throwsRight ? catchWeight : throwWeight,
+    pushLeftProgress: throwsRight ? catchProgress : throwProgress
   }
 }
 

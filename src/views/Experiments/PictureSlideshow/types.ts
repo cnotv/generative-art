@@ -70,12 +70,14 @@ export interface FlightOffset {
 export interface GesturePose {
   /** How much of the looping hold clip to mix in, from 0 to 1. */
   holdWeight: number
-  /** How much of the push clip to mix in, from 0 to 1. Complements `holdWeight`. */
-  pushWeight: number
-  /** Which throw direction's push clip is playing. */
-  direction: SlideDirection
-  /** Where in the push clip's own timeline to sample, from 0 to 1. */
-  pushProgress: number
+  /** How much of the push-right clip to mix in, from 0 to 1. */
+  pushRightWeight: number
+  /** Where in the push-right clip's own timeline to sample, from 0 to 1. */
+  pushRightProgress: number
+  /** How much of the push-left clip to mix in, from 0 to 1. */
+  pushLeftWeight: number
+  /** Where in the push-left clip's own timeline to sample, from 0 to 1. */
+  pushLeftProgress: number
 }
 
 /**
