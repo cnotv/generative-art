@@ -7,11 +7,9 @@ sidebar_position: 124
 :::note Source files
 
 <video controls loop muted playsinline width="720" src="/video/picture-slideshow/hand-off.webm">
-  A leaf-clad character, cut off at the knees by the bottom of the frame, holds a photograph.
-  Tapping the right of the screen sends it spinning away to the right and a new one arrives from
-  the left into his hands; tapping the left sends the next one back the other way. The character
-  is then switched from the panel to a Mixamo figure, which holds the picture the same way while
-  playing its own gesture.
+  A Mixamo character, cut off at the knees by the bottom of the frame, holds a photograph in a
+  bent-elbow grip. Tapping the right of the screen throws it clear to the right, both hands still
+  on it as it tips away, and the next picture arrives from the left back into the same grip.
 </video>
 
 `src/views/Experiments/PictureSlideshow/slideshow.ts`, `config.ts`,
@@ -225,3 +223,27 @@ exposed as panel sliders, anywhere from a third of a second to three, and a blen
 real seconds would either finish instantly on the short end or never finish on the long
 one. Timed as a fraction of the phase's own progress, it holds up at either end of the
 slider without knowing which one the panel is set to.
+
+## Matching endpoints is not matching a curve
+
+Fixing the drift above made the hand and the picture agree at the two ends of every
+flight: both start at the grip, both finish at the grip. For most of the distance
+between those ends, they still disagreed. A picture flying home would be most of the
+way back while the hand still carrying it was only half-reached, so a screenshot taken
+mid-flight showed a hand reaching at nothing, some distance from where the picture
+actually was.
+
+The two were driven by unrelated systems sharing nothing but a raw progress number: the
+picture's own offset eased on a plain squared curve, chosen for how a thrown object
+should decelerate, while the hand's reach came from a clip baked with a smoothstep,
+chosen for how an arm should move. Both are reasonable curves in isolation. Agreeing at
+the boundary only guarantees the two lines cross at 0 and 1 — nothing stops one from
+running ahead of the other everywhere in between, and the steeper the two curves'
+difference, the wider that gap gets before it closes back to zero at the far end.
+
+Two values driven by the same raw input still have to share a shape, not just a
+domain, if anything is meant to track something else across the whole span rather than
+only greet it at the finish. The fix was to put the picture's flight on the exact same
+`ease` the gesture already used, so a given progress produces the same fraction of
+"still travelling" on both sides, all the way through — not a new curve, just the one
+already there, reused.
