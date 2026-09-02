@@ -221,9 +221,9 @@ writeClip('hold', HOLD_DURATION_SECONDS, (phase) => {
  * either end, only a direction to pick.
  *
  * The two hands do different things rather than sliding sideways together, which read
- * as only one hand moving: the throwing hand — on the side the picture is being sent
- * towards — reaches out and forward as if shoving it away, while the other lets go,
- * dropping and pulling back rather than following it out.
+ * as only one hand moving: the hand trailing the throw — on the side the picture is
+ * being sent away from — reaches out and forward as if shoving it clear, while the
+ * leading hand drops and pulls back, letting go first rather than following it out.
  */
 const PUSH_DURATION_SECONDS = 1
 const PUSH_YAW_RADIANS = 0.5
@@ -238,8 +238,8 @@ const PUSH_RELEASE_PULLBACK_UNITS = 18
       yaw: PUSH_YAW_RADIANS * pushSign * extend,
       spineCounter: 0.35,
       handAt: (side) => {
-        const isThrowingHand = side * pushSign > 0
-        if (isThrowingHand) {
+        const isTrailingHand = side * pushSign < 0
+        if (isTrailingHand) {
           return new THREE.Vector3(
             side * 39 + pushSign * PUSH_THROW_REACH_UNITS * extend,
             116,
