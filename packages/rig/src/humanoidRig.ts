@@ -65,7 +65,6 @@ export const rigGenerateHumanoidSkeleton = (box: THREE.Box3): HumanoidSkeleton =
   return { root, bones, skeleton: new THREE.Skeleton(bones) }
 }
 
-const AUTO_SKIN_MAX_INFLUENCES = 2
 const AUTO_SKIN_EPSILON = 1e-6
 
 interface BoneSegment {
@@ -100,19 +99,188 @@ const distanceToSegment = (point: THREE.Vector3, segment: BoneSegment): number =
   return point.distanceTo(closest)
 }
 
+/** The mesh vertex sitting nearest (straight-line) to a bone's segment, to seed the graph search from. */
+const nearestVertexToSegment = (segment: BoneSegment, positions: THREE.Vector3[]): number =>
+  positions.reduce(
+    (best, position, index) => {
+      const distance = distanceToSegment(position, segment)
+      return distance < best.distance ? { index, distance } : best
+    },
+    { index: 0, distance: Infinity }
+  ).index
+
+interface VertexGraph {
+  positions: THREE.Vector3[]
+  neighbors: number[][]
+}
+
+/** Triangle corner triples, from an indexed or a flat (three-vertices-per-face) geometry. */
+const readTriangleIndices = (geometry: THREE.BufferGeometry): number[] =>
+  geometry.index
+    ? [...geometry.index.array]
+    : Array.from({ length: geometry.attributes.position.count }, (_, index) => index)
+
 /**
- * ponytail: weights a vertex by inverse distance to the nearest two bone segments, not a real
- * heat-diffusion skin. Upgrade to a bind-pose heat-map weighter if generated skins pinch
- * visibly at joints.
+ * The mesh's own surface, as a vertex adjacency graph. Distance measured by walking this graph
+ * follows the skin the way a heat-diffusion or bounded-biharmonic skinner would, rather than
+ * cutting straight through the model's interior the way a plain Euclidean distance does: two
+ * points across a narrow gap (an armpit and the chest below it, one finger and its neighbour)
+ * read as close in straight-line distance but far apart once a path has to stay on the surface.
+ * @param geometry The mesh geometry to build a graph over
  */
-const weighVertex = (
+const buildVertexGraph = (geometry: THREE.BufferGeometry): VertexGraph => {
+  const positionAttribute = geometry.attributes.position
+  const positions = Array.from({ length: positionAttribute.count }, (_, index) =>
+    new THREE.Vector3().fromBufferAttribute(positionAttribute, index)
+  )
+  const triangleIndices = readTriangleIndices(geometry)
+
+  const edges = Array.from({ length: Math.floor(triangleIndices.length / 3) }, (_, face) => {
+    const [a, b, c] = [
+      triangleIndices[face * 3],
+      triangleIndices[face * 3 + 1],
+      triangleIndices[face * 3 + 2]
+    ]
+    return [
+      [a, b],
+      [b, c],
+      [c, a]
+    ]
+  }).flat()
+
+  const neighborSets = edges.reduce<Map<number, Set<number>>>((sets, [a, b]) => {
+    const withA = new Map([...sets, [a, new Set([...(sets.get(a) ?? []), b])]])
+    return new Map([...withA, [b, new Set([...(withA.get(b) ?? []), a])]])
+  }, new Map())
+
+  const neighbors = positions.map((_, index) => [...(neighborSets.get(index) ?? [])])
+
+  return { positions, neighbors }
+}
+
+interface FrontierNode {
+  vertexIndex: number
+  boneIndex: number
+  distance: number
+}
+
+type SettledVertices = Map<number, { boneIndex: number; distance: number }>
+
+/** Extend the frontier with a settled node's unsettled neighbours, updating a shorter path in place. */
+const relaxNeighbors = (
+  current: FrontierNode,
+  graph: VertexGraph,
+  frontier: FrontierNode[],
+  settled: SettledVertices
+): FrontierNode[] =>
+  graph.neighbors[current.vertexIndex].reduce<FrontierNode[]>((nextFrontier, neighborIndex) => {
+    if (settled.has(neighborIndex)) return nextFrontier
+
+    const edgeWeight = graph.positions[current.vertexIndex].distanceTo(
+      graph.positions[neighborIndex]
+    )
+    const candidate: FrontierNode = {
+      vertexIndex: neighborIndex,
+      boneIndex: current.boneIndex,
+      distance: current.distance + edgeWeight
+    }
+    const existingIndex = nextFrontier.findIndex((node) => node.vertexIndex === neighborIndex)
+
+    if (existingIndex === -1) return [...nextFrontier, candidate]
+    if (candidate.distance >= nextFrontier[existingIndex].distance) return nextFrontier
+    return nextFrontier.map((node, index) => (index === existingIndex ? candidate : node))
+  }, frontier)
+
+interface GeodesicState {
+  frontier: FrontierNode[]
+  settled: SettledVertices
+}
+
+/** Settle the frontier's nearest node, the one Dijkstra step, expressed without mutation. */
+const geodesicStep = (state: GeodesicState, graph: VertexGraph): GeodesicState => {
+  if (state.frontier.length === 0) return state
+
+  const current = state.frontier.reduce((best, node) =>
+    node.distance < best.distance ? node : best
+  )
+  const remainingFrontier = state.frontier.filter((node) => node !== current)
+  if (state.settled.has(current.vertexIndex))
+    return { frontier: remainingFrontier, settled: state.settled }
+
+  const settled: SettledVertices = new Map([
+    ...state.settled,
+    [current.vertexIndex, { boneIndex: current.boneIndex, distance: current.distance }]
+  ])
+
+  return { frontier: relaxNeighbors(current, graph, remainingFrontier, settled), settled }
+}
+
+/**
+ * ponytail: an O(vertices^2) multi-source Dijkstra (linear scan for the frontier minimum,
+ * matching this repo's own pathfinding style rather than a priority queue). Fine for the
+ * low-poly meshes this tool targets; a binary heap would be the upgrade for a dense scan mesh.
+ */
+const runGeodesicMultiSource = (seeds: FrontierNode[], graph: VertexGraph): SettledVertices =>
+  Array.from({ length: graph.positions.length }).reduce<GeodesicState>(
+    (state) => geodesicStep(state, graph),
+    { frontier: seeds, settled: new Map() }
+  ).settled
+
+const mostFrequent = (values: number[]): number => {
+  const counts = values.reduce<Map<number, number>>(
+    (accumulator, value) => new Map([...accumulator, [value, (accumulator.get(value) ?? 0) + 1]]),
+    new Map()
+  )
+  return [...counts.entries()].reduce((best, entry) => (entry[1] > best[1] ? entry : best))[0]
+}
+
+interface VertexWeights {
+  indices: [number, number]
+  weights: [number, number]
+}
+
+/**
+ * Blend a settled vertex with a neighbouring bone only where its graph-neighbours disagree with
+ * it, so a seam (elbow, shoulder) grades smoothly across the one or two rings of vertices
+ * actually straddling it instead of every vertex committing fully to a single bone.
+ */
+const blendSettledVertex = (
+  vertexIndex: number,
+  settled: SettledVertices,
+  neighbors: number[][]
+): VertexWeights => {
+  const own = settled.get(vertexIndex)
+  const primaryBone = own?.boneIndex ?? 0
+  const neighborList = neighbors[vertexIndex]
+
+  const differingNeighborBones = neighborList
+    .map((neighborIndex) => settled.get(neighborIndex)?.boneIndex)
+    .filter(
+      (boneIndex): boneIndex is number => boneIndex !== undefined && boneIndex !== primaryBone
+    )
+
+  if (differingNeighborBones.length === 0 || neighborList.length === 0) {
+    return { indices: [primaryBone, primaryBone], weights: [1, 0] }
+  }
+
+  const secondaryBone = mostFrequent(differingNeighborBones)
+  const secondaryWeight = differingNeighborBones.length / neighborList.length
+
+  return {
+    indices: [primaryBone, secondaryBone],
+    weights: [1 - secondaryWeight, secondaryWeight]
+  }
+}
+
+/** Euclidean nearest-two-bones fallback, for a vertex the surface graph search never reached (an isolated mesh island disconnected from every bone seed). */
+const weighByStraightLineDistance = (
   point: THREE.Vector3,
   segments: BoneSegment[]
-): { indices: [number, number]; weights: [number, number] } => {
+): VertexWeights => {
   const ranked = segments
     .map((segment) => ({ index: segment.index, distance: distanceToSegment(point, segment) }))
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, AUTO_SKIN_MAX_INFLUENCES)
+    .slice(0, 2)
 
   const inverseDistances = ranked.map((entry) => 1 / (entry.distance + AUTO_SKIN_EPSILON))
   const total = inverseDistances.reduce((sum, value) => sum + value, 0)
@@ -124,20 +292,29 @@ const weighVertex = (
 }
 
 /**
- * Bind every vertex in a geometry to its two nearest bones by proximity, so a mesh that was
- * never skinned can be posed by a generated skeleton.
+ * Bind every vertex in a geometry to its two nearest bones, following the mesh's own surface
+ * rather than a straight line through it, so a mesh that was never skinned can be posed by a
+ * generated skeleton.
  * @param geometry The geometry to skin in place, adding skinIndex and skinWeight attributes
  * @param bones The skeleton's bones, in skeleton order, with up-to-date world matrices
  */
 export const rigAutoSkinMesh = (geometry: THREE.BufferGeometry, bones: THREE.Bone[]): void => {
   const segments = buildBoneSegments(bones)
-  const positionAttribute = geometry.attributes.position
-  const vertex = new THREE.Vector3()
+  const graph = buildVertexGraph(geometry)
 
-  const perVertexWeights = Array.from({ length: positionAttribute.count }, (_, index) => {
-    vertex.fromBufferAttribute(positionAttribute, index)
-    return weighVertex(vertex, segments)
-  })
+  const seeds: FrontierNode[] = segments.map((segment) => ({
+    vertexIndex: nearestVertexToSegment(segment, graph.positions),
+    boneIndex: segment.index,
+    distance: 0
+  }))
+
+  const settled = runGeodesicMultiSource(seeds, graph)
+
+  const perVertexWeights = graph.positions.map((point, vertexIndex) =>
+    settled.has(vertexIndex)
+      ? blendSettledVertex(vertexIndex, settled, graph.neighbors)
+      : weighByStraightLineDistance(point, segments)
+  )
 
   const skinIndices = perVertexWeights.flatMap(({ indices }) => [indices[0], indices[1], 0, 0])
   const skinWeights = perVertexWeights.flatMap(({ weights }) => [weights[0], weights[1], 0, 0])

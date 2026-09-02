@@ -63,9 +63,13 @@ const unrigged = rigFindUnskinnedMeshes(model) // meshes with no skeleton at all
 ## rigGenerateHumanoidSkeleton / rigAutoSkinMesh
 
 For a model with meshes but no skeleton: generate a canonical Mixamo-named humanoid
-skeleton fit to the model's bounding box, then auto-skin each mesh to it by nearest-bone
-proximity. A heuristic fallback, not a substitute for an authored rig: expect rough
-deformation at joints on unusual proportions.
+skeleton fit to the model's bounding box, then auto-skin each mesh to it. Weighting walks
+the mesh's own surface (a vertex adjacency graph, searched with a multi-source Dijkstra
+seeded from each bone) rather than measuring straight-line distance through the model's
+interior, so a narrow gap the skin doesn't actually cross, an armpit and the chest below
+it, one finger and its neighbour, does not bleed weight from one limb into another. A
+heuristic fallback, not a substitute for an authored rig: expect rough deformation at
+joints on unusual proportions.
 
 ```typescript
 import { rigGenerateHumanoidSkeleton, rigAutoSkinMesh } from '@webgamekit/rig'

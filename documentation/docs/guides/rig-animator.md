@@ -88,11 +88,13 @@ frames apart already read as a movement once you scrub between them.
 
 A model with meshes but no skeleton shows **Auto-rig as Humanoid** instead of a bone list.
 It generates a canonical Mixamo-named bone hierarchy sized from the model's own bounding box,
-then binds each mesh to it by nearest-bone proximity. This is a heuristic, not a hand-weighted
-rig: it is meant to get an unrigged humanoid posable at all, and can pinch at a joint on
-unusual proportions. There is no detection step deciding whether a model "looks" humanoid: the
-button is offered whenever a skeleton is missing, and posing it is how you find out whether the
-fit works for that particular mesh.
+then binds each mesh to it by walking the mesh's own surface out from each bone (a graph
+search, not a straight line through the model), so a narrow gap the skin doesn't actually
+cross does not pull weight from one limb into another. This is a heuristic, not a
+hand-weighted rig: it is meant to get an unrigged humanoid posable at all, and can pinch at a
+joint on unusual proportions. There is no detection step deciding whether a model "looks"
+humanoid: the button is offered whenever a skeleton is missing, and posing it is how you find
+out whether the fit works for that particular mesh.
 
 ## Saving the animation
 
