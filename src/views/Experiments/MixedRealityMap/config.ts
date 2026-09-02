@@ -107,7 +107,6 @@ export const UNPLACEABLE_TYPES = ['city', 'county', 'state', 'country', 'other']
  * key spans a restaurant, a bench and a wastebasket.
  */
 export const PLACE_GROUPS = [
-  { id: 'streets', label: 'Streets', icon: 'Route' },
   { id: 'food', label: 'Food and drink', icon: 'UtensilsCrossed' },
   { id: 'shops', label: 'Shops', icon: 'ShoppingBag' },
   { id: 'landmarks', label: 'Landmarks', icon: 'Landmark' },
@@ -133,13 +132,15 @@ const LANDMARK_VALUES = ['artwork', 'monument', 'memorial', 'museum', 'attractio
 
 /**
  * Sort a feature into the group it belongs to, by its OpenStreetMap key and value.
+ *
+ * A street is drawn as its own overlay, always on, never one of these toggleable tags: a
+ * street-tagged feature that still turns up here as a place falls into "everything else"
+ * rather than a bucket with no toggle of its own.
  * @param key The top-level tag, such as `amenity` or `shop`
  * @param value The tag's value, such as `restaurant`
- * @param kind What the geocoder called the feature, such as `street`
  * @returns The group's id
  */
-export const getPlaceGroup = (key: string, value: string, kind: string): string => {
-  if (kind === 'street' || key === 'highway') return 'streets'
+export const getPlaceGroup = (key: string, value: string): string => {
   // A bakery is a shop by its tag and a place to eat by every other measure, so food is asked
   // first and wins it.
   if (FOOD_VALUES.includes(value)) return 'food'

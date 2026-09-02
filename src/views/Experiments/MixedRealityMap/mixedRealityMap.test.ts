@@ -257,26 +257,29 @@ describe('placeLabels', () => {
 
 describe('getPlaceGroup', () => {
   it.each([
-    ['a street by its kind', '', '', 'street', 'streets'],
-    ['a road by its tag', 'highway', 'residential', 'house', 'streets'],
-    ['a restaurant', 'amenity', 'restaurant', 'house', 'food'],
-    ['a bakery, which is tagged as a shop', 'shop', 'bakery', 'house', 'food'],
-    ['a clothes shop', 'shop', 'clothes', 'house', 'shops'],
-    ['a museum', 'tourism', 'museum', 'house', 'landmarks'],
-    ['a memorial', 'historic', 'memorial', 'house', 'landmarks'],
-    ['a bench', 'amenity', 'bench', 'house', 'other']
-  ])('files %s under %s', (_description, key, value, kind, expected) => {
-    expect(getPlaceGroup(key, value, kind)).toBe(expected)
+    [
+      'a road by its tag, folded into everything else since streets are not a tag',
+      'highway',
+      'residential',
+      'other'
+    ],
+    ['a restaurant', 'amenity', 'restaurant', 'food'],
+    ['a bakery, which is tagged as a shop', 'shop', 'bakery', 'food'],
+    ['a clothes shop', 'shop', 'clothes', 'shops'],
+    ['a museum', 'tourism', 'museum', 'landmarks'],
+    ['a memorial', 'historic', 'memorial', 'landmarks'],
+    ['a bench', 'amenity', 'bench', 'other']
+  ])('files %s under %s', (_description, key, value, expected) => {
+    expect(getPlaceGroup(key, value)).toBe(expected)
   })
 
   it('offers a group for everything it can return', () => {
     const offered = PLACE_GROUPS.map(({ id }) => id)
     const produced = [
-      getPlaceGroup('', '', 'street'),
-      getPlaceGroup('amenity', 'restaurant', 'house'),
-      getPlaceGroup('shop', 'clothes', 'house'),
-      getPlaceGroup('tourism', 'museum', 'house'),
-      getPlaceGroup('amenity', 'bench', 'house')
+      getPlaceGroup('amenity', 'restaurant'),
+      getPlaceGroup('shop', 'clothes'),
+      getPlaceGroup('tourism', 'museum'),
+      getPlaceGroup('amenity', 'bench')
     ]
 
     produced.forEach((group) => expect(offered).toContain(group))

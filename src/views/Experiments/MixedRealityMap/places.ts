@@ -82,7 +82,7 @@ const readPlace = (feature: unknown): Place | null => {
     osmReference: getOsmReference(osmType, osmId),
     name,
     category: tagValue || kind || 'place',
-    group: getPlaceGroup(tagKey, tagValue, kind),
+    group: getPlaceGroup(tagKey, tagValue),
     houseNumber: readString(properties.housenumber),
     street: readString(properties.street),
     ...position

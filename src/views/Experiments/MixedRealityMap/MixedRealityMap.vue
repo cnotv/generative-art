@@ -12,7 +12,6 @@ import {
   CameraOff,
   Landmark,
   MapPin,
-  Route,
   ShoppingBag,
   SlidersHorizontal,
   UtensilsCrossed
@@ -61,7 +60,7 @@ import type { GeoPoint, PermissionStage, Place, PlaceImage, StreetPath } from '.
 const AIM_SMOOTHING = 0.15
 
 /** Named in the config so the groups stay data, and resolved to components only here. */
-const GROUP_ICONS = { Route, UtensilsCrossed, ShoppingBag, Landmark, MapPin }
+const GROUP_ICONS = { UtensilsCrossed, ShoppingBag, Landmark, MapPin }
 
 const stage = ref<PermissionStage>('idle')
 const cameraMessage = ref<string | null>(null)
@@ -97,7 +96,6 @@ const lastReading = ref<MotionReading | null>(null)
 const headingOffsetDegrees = ref(0)
 const horizontalFieldOfView = ref(DEFAULT_HORIZONTAL_FIELD_OF_VIEW)
 const isCalibrating = ref(false)
-const screenAngleDegrees = ref(0)
 // Off by default: the streets and cards read the same way without it, and asking for it up
 // front is one more permission dialog before the person has even seen what the view offers.
 const isCameraEnabled = ref(false)
@@ -131,21 +129,13 @@ const visiblePlaces = computed(() =>
  */
 const placeClusters = computed(() => clusterPlacesByAddress(visiblePlaces.value))
 
-/**
- * How many of each kind were found, so a toggle says what turning it off would cost.
- *
- * Streets count their drawn centre lines as well as their named points, because the lines are
- * most of what that toggle governs and they come from a service that fails often enough to be
- * worth telling apart from an empty street.
- */
-const groupCounts = computed(() => {
-  const byGroup = places.value.reduce<Record<string, number>>(
+/** How many of each kind were found, so a toggle says what turning it off would cost. */
+const groupCounts = computed(() =>
+  places.value.reduce<Record<string, number>>(
     (counts, { group }) => ({ ...counts, [group]: (counts[group] ?? 0) + 1 }),
     {}
   )
-
-  return { ...byGroup, streets: (byGroup.streets ?? 0) + streetPaths.value.length }
-})
+)
 
 /**
  * Both the streets and the cards sweep by this alone: the phone's own tilt no longer moves
@@ -186,7 +176,7 @@ const adjacentStreetPaths = computed(() =>
 )
 
 const streetLines = computed(() =>
-  origin.value && !hiddenGroups.value.includes('streets')
+  origin.value
     ? projectStreetLines(
         adjacentStreetPaths.value,
         origin.value,
@@ -206,24 +196,6 @@ const streetNames = computed(() =>
         : [...named, { id: line.id, name: line.name, ...line.namePoint }],
     []
   )
-)
-
-/**
- * The labels stay square to the world, which is what makes them read as fixed to the street
- * rather than painted on the glass.
- *
- * Square to the world is not the same as turning with the phone, and which one it looks like
- * depends on something the page does not control. When the browser rotates the page, it rotates
- * the camera picture with it, so the world is already upright in the frame and the labels have
- * to be upright too; the page's own rotation is taken back off for exactly that. When the page
- * stays put — locked to portrait, or a browser that does not turn — the picture leans with the
- * phone and the labels lean with it, which is the turning motion the feature is named for.
- *
- * The angle is only believed when the viewport has visibly taken it: some browsers report the
- * angle the device is held at rather than the one the document was turned by.
- */
-const worldTransform = computed(
-  () => `rotate(${(aim.value.rollDegrees - screenAngleDegrees.value).toFixed(2)}deg)`
 )
 
 const selectedPlace = computed(
@@ -360,19 +332,8 @@ const orientationDiagnostics = computed(() => {
   const signedRoll = ((aim.value.rollDegrees + 180) % 360) - 180
   const applied = `${round(signedRoll)}° roll, horizon ${aim.value.horizonStrength.toFixed(2)}`
 
-  return `${raw}, compass ${compass}, screen ${screenAngleDegrees.value}° · ${applied}`
+  return `${raw}, compass ${compass} · ${applied}`
 })
-
-const measureViewport = (): void => {
-  const width = window.innerWidth
-  const height = window.innerHeight
-
-  // Only believe a rotation the page has visibly taken. Some browsers report the angle the
-  // device is held at rather than the one the document was turned by, and taking that at its
-  // word turns the whole overlay a quarter turn while the page is plainly still portrait.
-  const reported = window.screen?.orientation?.angle ?? 0
-  screenAngleDegrees.value = width > height ? reported : 0
-}
 
 let frameId = 0
 let watchId: number | null = null
@@ -578,7 +539,6 @@ const toggleCamera = async (): Promise<void> => {
 
 const start = async (): Promise<void> => {
   stage.value = 'requesting'
-  measureViewport()
 
   // One prompt at a time, sensor first. iOS grants the orientation sensor only from a live tap,
   // and it will not raise a second dialog while one is already up — asking for both in the same
@@ -591,13 +551,9 @@ const start = async (): Promise<void> => {
   // black screen with the street named on it rather than nothing at all.
   startLocation()
 
-  // The overlay turns with the world by itself; letting the page turn as well would take the
-  // labels round twice, and the compensation for it is guesswork on the devices that lie.
+  // Nothing here reads the page's own rotation any more, but the video feed and the layout
+  // both still assume a portrait frame, and a browser that turns the page reflows both.
   lockScreenOrientation('portrait')
-  // Both, because a browser that turns the page does not reliably resize it, and one that
-  // resizes does not always report a turn.
-  window.addEventListener('resize', measureViewport)
-  window.addEventListener('orientationchange', measureViewport)
   stage.value = 'ready'
   readAim()
 }
@@ -607,8 +563,6 @@ onBeforeUnmount(() => {
   pendingRequest?.abort()
   pendingStreets?.abort()
   pendingImage?.abort()
-  window.removeEventListener('resize', measureViewport)
-  window.removeEventListener('orientationchange', measureViewport)
   if (watchId !== null) navigator.geolocation.clearWatch(watchId)
   cameraStream.value?.getTracks().forEach((track) => track.stop())
   unlockScreenOrientation()
@@ -627,7 +581,7 @@ onBeforeUnmount(() => {
       autoplay
     ></video>
 
-    <div class="mrm__world" :style="{ transform: worldTransform }">
+    <div class="mrm__world">
       <svg
         v-if="streetLines.length > 0"
         class="mrm__streets"
@@ -671,11 +625,15 @@ onBeforeUnmount(() => {
             <span class="mrm__label-detail">
               {{ place.category }} · {{ formatDistance(label.distanceMeters) }}
             </span>
-            <span v-if="place.street && place.houseNumber" class="mrm__label-address">
-              {{ place.houseNumber }} {{ place.street }}
-            </span>
           </span>
         </Button>
+        <!-- One line for the whole group: every tenant clustered here shares the address. -->
+        <span
+          v-if="label.places[0].street && label.places[0].houseNumber"
+          class="mrm__label-address"
+        >
+          {{ label.places[0].houseNumber }} {{ label.places[0].street }}
+        </span>
       </div>
     </div>
 
@@ -879,7 +837,11 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: hsl(0deg 0% 0%);
+  background: linear-gradient(
+    180deg,
+    var(--color-canvas-overlay-background-start),
+    var(--color-canvas-overlay-background-end)
+  );
   color: var(--color-canvas-overlay-foreground);
   text-shadow: var(--shadow-text-canvas-overlay);
 }
@@ -895,7 +857,6 @@ onBeforeUnmount(() => {
 .mrm__world {
   position: absolute;
   inset: 0;
-  transform-origin: center;
 }
 
 .mrm__streets {
@@ -944,13 +905,17 @@ onBeforeUnmount(() => {
 /*
  * One card, sitting on the frame's fixed label row. Its own rows are laid out by flex rather
  * than by percentage math, so a tenant added to the group grows the card instead of squeezing
- * its neighbours or overlapping them.
+ * its neighbours or overlapping them. Left-aligned rather than stretched or centred, so a
+ * short name and a long one still share one edge to read down instead of each finding its own
+ * centre.
  */
 .mrm__label-group {
   position: absolute;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--spacing-1);
+  text-align: left;
   transform: translate(-50%, -50%);
 }
 
@@ -991,8 +956,12 @@ onBeforeUnmount(() => {
   opacity: 0.8;
 }
 
+/* One line for the whole group, so a shared address is not repeated under every tenant. */
 .mrm__label-address {
+  padding: 0 var(--spacing-3);
   font-size: var(--font-size-xs);
+  color: var(--color-canvas-overlay-foreground);
+  text-shadow: var(--shadow-text-canvas-overlay);
   opacity: 0.6;
 }
 

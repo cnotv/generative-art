@@ -113,6 +113,11 @@
   --color-canvas-overlay-border: hsl(0deg 0% 100% / 35%);
   --color-street-overlay: hsl(42deg 55% 68%);
 
+  // A dusk gradient behind an overlay with no camera feed showing through it: dark enough that
+  // white overlay text keeps the same contrast it has over a genuinely dark street.
+  --color-canvas-overlay-background-start: hsl(230deg 35% 12%);
+  --color-canvas-overlay-background-end: hsl(280deg 25% 9%);
+
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
   --panel-item-bg-hover: hsl(0deg 0% 94%);
