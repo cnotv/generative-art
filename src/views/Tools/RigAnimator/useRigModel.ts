@@ -18,6 +18,8 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const skinnedMesh = shallowRef<THREE.SkinnedMesh | null>(null)
   const bones = shallowRef<THREE.Bone[]>([])
   const boneMarkers = shallowRef<THREE.Mesh[]>([])
+  /** Every bone's transform as loaded, so a bad edit (a position drag gone too far) can be undone. */
+  const restPoses = new Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion }>()
 
   const boneNames = computed(() => bones.value.map((bone) => bone.name))
   const needsAutoRig = computed(
@@ -42,6 +44,13 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     // very first render gets a chance to update them.
     model.value?.updateMatrixWorld(true)
     boneMarkers.value = createBoneMarkers(bones.value)
+    restPoses.clear()
+    bones.value.forEach((bone) => {
+      restPoses.set(bone.name, {
+        position: bone.position.clone(),
+        quaternion: bone.quaternion.clone()
+      })
+    })
   }
 
   /** Tear down the currently loaded model and every piece of rig state it owned. */
@@ -54,6 +63,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     skinnedMesh.value = null
     bones.value = []
     boneMarkers.value = []
+    restPoses.clear()
     config.value.selectedBone = ''
   }
 
@@ -115,6 +125,21 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     bones.value.find((candidate) => candidate.name === config.value.selectedBone)
   )
 
+  /**
+   * Undo any position or rotation edit on the selected bone, back to how it was when the rig
+   * was loaded (or auto-rigged). This is the only way back after a drag lands somewhere that
+   * visibly tears the mesh, since moving a bone does not preserve the limb length the way
+   * rotating it does.
+   */
+  const resetSelectedBone = (): void => {
+    const bone = selectedBone.value
+    const rest = bone ? restPoses.get(bone.name) : undefined
+    if (!bone || !rest) return
+    bone.position.copy(rest.position)
+    bone.quaternion.copy(rest.quaternion)
+    selectBone(bone.name)
+  }
+
   return {
     model,
     skinnedMesh,
@@ -129,6 +154,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     selectBone,
     pickBoneFromRay,
     applyBoneRotation,
-    applyBonePosition
+    applyBonePosition,
+    resetSelectedBone
   }
 }

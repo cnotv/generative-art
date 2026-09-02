@@ -16,7 +16,7 @@ import {
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
-import { RIG_ANIMATOR_SETUP_CONFIG, DEFAULT_FPS } from './config'
+import { RIG_ANIMATOR_SETUP_CONFIG, DEFAULT_FPS, DEFAULT_MODEL_PATH } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { frameCameraOnModel } from './cameraFraming'
@@ -192,6 +192,8 @@ const init = async (): Promise<void> => {
       }
     }
   )
+
+  reactiveConfig.value.model = DEFAULT_MODEL_PATH
 }
 
 onMounted(async () => {
@@ -205,6 +207,9 @@ onMounted(async () => {
       autoRig: () => {
         rig.runAutoRig()
         refreshSchema()
+      },
+      resetBone: () => {
+        rig.resetSelectedBone()
       },
       addKeyframe: () => {
         rig.addKeyframe()

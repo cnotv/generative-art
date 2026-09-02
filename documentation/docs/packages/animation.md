@@ -355,7 +355,7 @@ poseApply(skinnedMesh.skeleton.bones, restPose) // back to rest
 ### poseBuildClip
 
 Build a playable `AnimationClip` from an ordered set of pose keyframes. Three.js interpolates
-between consecutive poses on its own — this only builds the tracks.
+between consecutive poses on its own; this only builds the tracks.
 
 ```typescript
 import { poseBuildClip } from '@webgamekit/animation'
@@ -388,7 +388,7 @@ const unrigged = rigFindUnskinnedMeshes(model) // meshes with no skeleton at all
 
 For a model with meshes but no skeleton: generate a canonical Mixamo-named humanoid
 skeleton fit to the model's bounding box, then auto-skin each mesh to it by nearest-bone
-proximity. A heuristic fallback, not a substitute for an authored rig — expect rough
+proximity. A heuristic fallback, not a substitute for an authored rig: expect rough
 deformation at joints on unusual proportions.
 
 ```typescript

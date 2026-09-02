@@ -11,7 +11,7 @@ import {
  * Build the config panel schema for the rig animator. Rebuilt whenever the bone list, the
  * keyframe list or the auto-rig availability changes, since those decide which rows even
  * make sense to show. Playback itself lives on the shared Timeline panel, which also draws
- * every pose keyframe as a bar over the frame axis — this schema only authors them.
+ * every pose keyframe as a bar over the frame axis; this schema only authors them.
  * @param boneNames Every bone in the loaded rig, empty when nothing is rigged yet
  * @param keyframeFrames Every frame a pose keyframe already exists at
  * @param needsAutoRig Whether the loaded model has meshes but no skeleton
@@ -42,7 +42,8 @@ export const buildRigAnimatorSchema = (
             y: positionRange * POSITION_STEP_FRACTION,
             z: positionRange * POSITION_STEP_FRACTION
           }
-        }
+        },
+        resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' }
       }
     : {}),
   frame: {

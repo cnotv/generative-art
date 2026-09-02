@@ -21,6 +21,7 @@ export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
 
 export const MODEL_FILE_ACCEPT = '.fbx,.glb,.gltf'
 export const POSES_FILE_ACCEPT = 'application/json'
+export const DEFAULT_MODEL_PATH = '/character2.fbx'
 
 export const BONE_MARKER_RADIUS_FRACTION = 0.015
 export const BONE_MARKER_COLOR_DEFAULT = 0xb8c4f0
