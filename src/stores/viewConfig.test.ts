@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useViewConfigStore, createReactiveConfig, type ConfigControlsSchema } from './viewConfig'
 
@@ -145,6 +145,25 @@ describe('useViewConfigStore', () => {
       store.updateViewSchema('Test View', { updated: {} })
 
       expect(store.version).toBe(version + 1)
+    })
+
+    it('propagates to a computed reading the registry entry, the way ConfigPanel does', async () => {
+      // Mutating entry.schema in place while returning the same entry object left a computed
+      // depending on that object reference looking unchanged to Vue, even though version had
+      // bumped: the computed recomputed internally but never notified its own dependents.
+      const store = useViewConfigStore()
+      store.registerViewConfig('Test View', ref({}), { old: {} })
+      const currentEntry = computed(() => {
+        void store.version
+        return store.registry['Test View']
+      })
+      const currentSchema = computed(() => currentEntry.value?.schema)
+      expect(currentSchema.value).toEqual({ old: {} })
+
+      store.updateViewSchema('Test View', { new: {} })
+      await nextTick()
+
+      expect(currentSchema.value).toEqual({ new: {} })
     })
   })
 
