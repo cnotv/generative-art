@@ -37,15 +37,43 @@ export const buildImageUrl = (
   return `${WIKIPEDIA_ENDPOINT}?${query}`
 }
 
+/** Lowercased and stripped to bare words, so punctuation and case cannot fail a real match. */
+const normalizeForMatch = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^\da-z]+/g, ' ')
+    .trim()
+
 /**
- * Read the nearest article that actually has a picture.
- *
- * The generator orders its pages by distance and most of them carry no image at all, so the
- * first with a thumbnail wins rather than the first outright.
- * @param payload The parsed JSON body
- * @returns The picture, or null where nothing nearby has one
+ * Whether an article is actually about the place, rather than merely the nearest thing that
+ * happens to have a picture.
+ * @param title The article's title
+ * @param placeName The tapped place's name
+ * @returns True where one name plainly contains the other
  */
-export const parsePlaceImage = (payload: unknown): PlaceImage | null => {
+const namesMatch = (title: string, placeName: string): boolean => {
+  const normalizedTitle = normalizeForMatch(title)
+  const normalizedPlace = normalizeForMatch(placeName)
+
+  return (
+    normalizedPlace.length > 0 &&
+    (normalizedTitle.includes(normalizedPlace) || normalizedPlace.includes(normalizedTitle))
+  )
+}
+
+/**
+ * Read the nearest article that is both pictured and actually about the place.
+ *
+ * The generator orders its pages by distance, and most of what is nearby is unrelated to the
+ * thing that was tapped: a shop with no article of its own sits a few metres from the street,
+ * the district, and every other landmark around it, all of which have pictures. Showing the
+ * first one anyway put someone else's photograph under the tapped place's name, so a candidate
+ * only counts when its title is actually the place, not just nearby it.
+ * @param payload The parsed JSON body
+ * @param placeName The tapped place's name
+ * @returns The picture, or null where nothing nearby is genuinely of the place
+ */
+export const parsePlaceImage = (payload: unknown, placeName: string): PlaceImage | null => {
   if (!isRecord(payload) || !isRecord(payload.query) || !isRecord(payload.query.pages)) return null
 
   const withPictures = Object.values(payload.query.pages)
@@ -53,7 +81,13 @@ export const parsePlaceImage = (payload: unknown): PlaceImage | null => {
       if (!isRecord(page) || !isRecord(page.thumbnail)) return []
       const { title, thumbnail, index } = page
       const source = thumbnail.source
-      if (typeof title !== 'string' || typeof source !== 'string') return []
+      if (
+        typeof title !== 'string' ||
+        typeof source !== 'string' ||
+        !namesMatch(title, placeName)
+      ) {
+        return []
+      }
 
       return [{ title, source, index: typeof index === 'number' ? index : Number.MAX_SAFE_INTEGER }]
     })
@@ -72,13 +106,15 @@ export const parsePlaceImage = (payload: unknown): PlaceImage | null => {
 /**
  * Fetch a picture of what stands at a position.
  * @param point Where the place is
+ * @param placeName The place's name, so a nearby but unrelated picture is left out
  * @param radiusMeters How far around it to look
  * @param thumbnailWidth How wide a picture to ask for
  * @param signal Abort signal, so tapping another place cancels the one before it
- * @returns The picture, or null where nothing nearby has one
+ * @returns The picture, or null where nothing nearby is genuinely of the place
  */
 export const fetchPlaceImage = async (
   point: GeoPoint,
+  placeName: string,
   radiusMeters: number,
   thumbnailWidth: number,
   signal?: AbortSignal
@@ -86,5 +122,5 @@ export const fetchPlaceImage = async (
   const response = await fetch(buildImageUrl(point, radiusMeters, thumbnailWidth), { signal })
   if (!response.ok) throw new Error(`The picture service answered ${response.status}`)
 
-  return parsePlaceImage(await response.json())
+  return parsePlaceImage(await response.json(), placeName)
 }

@@ -250,6 +250,7 @@ const selectImage = async (place: Place): Promise<void> => {
   try {
     placeImage.value = await fetchPlaceImage(
       place,
+      place.name,
       IMAGE_SEARCH_RADIUS_METERS,
       IMAGE_THUMBNAIL_WIDTH,
       request.signal

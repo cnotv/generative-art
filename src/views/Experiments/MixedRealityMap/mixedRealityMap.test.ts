@@ -605,9 +605,10 @@ describe('parsePlaceImage', () => {
   })
 
   it('reads the picture and where it came from', () => {
-    const image = parsePlaceImage({
-      query: { pages: { '1': page(0, 'Dam Square', 'https://example.test/dam.jpg') } }
-    })
+    const image = parsePlaceImage(
+      { query: { pages: { '1': page(0, 'Dam Square', 'https://example.test/dam.jpg') } } },
+      'Dam Square'
+    )
 
     expect(image).toEqual({
       title: 'Dam Square',
@@ -617,35 +618,54 @@ describe('parsePlaceImage', () => {
   })
 
   it('takes the nearest article that actually has a picture', () => {
-    const image = parsePlaceImage({
-      query: {
-        pages: {
-          '1': page(0, 'No Picture Here'),
-          '2': page(1, 'Has One', 'https://example.test/one.jpg')
+    const image = parsePlaceImage(
+      {
+        query: {
+          pages: {
+            '1': page(0, 'No Picture Here'),
+            '2': page(1, 'Has One', 'https://example.test/one.jpg')
+          }
         }
-      }
-    })
+      },
+      'Has One'
+    )
 
     expect(image?.title).toBe('Has One')
   })
 
   it('prefers the nearer of two that both have pictures', () => {
-    const image = parsePlaceImage({
-      query: {
-        pages: {
-          '1': page(3, 'Further', 'https://example.test/far.jpg'),
-          '2': page(1, 'Nearer', 'https://example.test/near.jpg')
+    const image = parsePlaceImage(
+      {
+        query: {
+          pages: {
+            '1': page(3, 'Further Bakery', 'https://example.test/far.jpg'),
+            '2': page(1, 'Nearer Bakery', 'https://example.test/near.jpg')
+          }
         }
-      }
-    })
+      },
+      'Bakery'
+    )
 
-    expect(image?.title).toBe('Nearer')
+    expect(image?.title).toBe('Nearer Bakery')
+  })
+
+  it('drops a nearby picture that is not actually of the place', () => {
+    const image = parsePlaceImage(
+      {
+        query: {
+          pages: { '1': page(0, 'Trafalgar Square', 'https://example.test/square.jpg') }
+        }
+      },
+      'Bakerloo Line'
+    )
+
+    expect(image).toBeNull()
   })
 
   it.each([[null], [{}], [{ query: {} }], [{ query: { pages: {} } }], [{ query: { pages: 42 } }]])(
     'reads nothing out of a response with no picture in it',
     (payload) => {
-      expect(parsePlaceImage(payload)).toBeNull()
+      expect(parsePlaceImage(payload, 'Anywhere')).toBeNull()
     }
   )
 })
