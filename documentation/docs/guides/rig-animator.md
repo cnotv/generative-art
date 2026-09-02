@@ -31,9 +31,9 @@ two poses are already a movement.
 - `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema, rebuilt whenever the
   bone list, the keyframe list or the auto-rig availability changes
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
-- `packages/animation/src/pose.ts`, `humanoidRig.ts`, `rig.ts`: the framework-agnostic logic.
-  See the [animation package's rigging section](/docs/packages/animation#rigging-and-pose-animation)
-  for the pose-capture, clip-building and auto-rig API.
+- `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`: the framework-agnostic logic. See
+  the [rig package's docs](/docs/packages/rig) for the pose-capture, clip-building and
+  auto-rig API.
 
 ## Uploading a model
 

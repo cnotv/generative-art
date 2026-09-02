@@ -1,6 +1,6 @@
 import { computed, shallowRef, type Ref } from 'vue'
 import * as THREE from 'three'
-import { rigFindSkinnedMesh, rigFindUnskinnedMeshes } from '@webgamekit/animation'
+import { rigFindSkinnedMesh, rigFindUnskinnedMeshes } from '@webgamekit/rig'
 import {
   computeRigDiagonal,
   createBoneMarkers,

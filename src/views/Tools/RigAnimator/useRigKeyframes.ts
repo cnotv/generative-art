@@ -1,6 +1,6 @@
 import { computed, shallowRef, ref, type Ref, type ShallowRef } from 'vue'
 import * as THREE from 'three'
-import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/animation'
+import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
 import { exportRigClipAsGlb, exportPosesAsJson, parsePosesJson } from './export'
 import { EXPORT_GLB_FILENAME, EXPORT_JSON_FILENAME } from './config'
 import type { RigAnimatorConfig } from './types'

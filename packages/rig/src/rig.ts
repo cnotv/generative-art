@@ -20,10 +20,10 @@ export const rigFindSkinnedMesh = (root: THREE.Object3D): THREE.SkinnedMesh | nu
  * @returns Every un-skinned mesh found, in traversal order
  */
 export const rigFindUnskinnedMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
-  const meshes: THREE.Mesh[] = []
+  let meshes: THREE.Mesh[] = []
   root.traverse((child) => {
     if ((child as THREE.Mesh).isMesh && !(child as THREE.SkinnedMesh).isSkinnedMesh) {
-      meshes.push(child as THREE.Mesh)
+      meshes = [...meshes, child as THREE.Mesh]
     }
   })
   return meshes

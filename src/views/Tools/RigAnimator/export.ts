@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
-import type { PoseKeyframe } from '@webgamekit/animation'
+import type { PoseKeyframe } from '@webgamekit/rig'
 import { downloadDataUrl } from '@/utils/downloadDataUrl'
 
 /**

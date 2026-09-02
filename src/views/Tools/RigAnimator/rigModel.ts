@@ -4,7 +4,7 @@ import {
   rigFindUnskinnedMeshes,
   rigGenerateHumanoidSkeleton,
   rigAutoSkinMesh
-} from '@webgamekit/animation'
+} from '@webgamekit/rig'
 
 const GLTF_EXTENSION_PATTERN = /\.(glb|gltf)$/i
 

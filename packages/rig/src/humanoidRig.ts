@@ -34,11 +34,10 @@ export const rigGenerateHumanoidSkeleton = (box: THREE.Box3): HumanoidSkeleton =
     ])
   )
   const bonesByName = new Map<string, THREE.Bone>(
-    HUMANOID_BONE_HIERARCHY.map((definition) => {
-      const bone = new THREE.Bone()
-      bone.name = definition.name
-      return [definition.name, bone]
-    })
+    HUMANOID_BONE_HIERARCHY.map((definition) => [
+      definition.name,
+      Object.assign(new THREE.Bone(), { name: definition.name })
+    ])
   )
 
   HUMANOID_BONE_HIERARCHY.forEach((definition) => {
