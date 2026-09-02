@@ -83,6 +83,8 @@ const readPlace = (feature: unknown): Place | null => {
     name,
     category: tagValue || kind || 'place',
     group: getPlaceGroup(tagKey, tagValue, kind),
+    houseNumber: readString(properties.housenumber),
+    street: readString(properties.street),
     ...position
   }
 }
@@ -128,4 +130,45 @@ export const fetchNearbyPlaces = async (
   if (!response.ok) throw new Error(`The map service answered ${response.status}`)
 
   return parsePlaces(await response.json())
+}
+
+/** The street and house number a place shares its address with, or null where it has neither. */
+const getAddressKey = (place: Place): string | null =>
+  place.street && place.houseNumber ? `${place.street} ${place.houseNumber}` : null
+
+const average = (values: number[]): number =>
+  values.reduce((total, value) => total + value, 0) / values.length
+
+/**
+ * Merge tenants of the same building into one place, so a shop directory does not draw a
+ * pin per name.
+ *
+ * A house number alone is not enough, since two different streets can both have a number 12;
+ * only a place carrying both is treated as sharing an address, and everything else is left as
+ * it was.
+ * @param places Everything found, already resolved to individual businesses
+ * @returns One place per address shared by more than one, standing among the rest untouched
+ */
+export const groupPlacesByAddress = (places: readonly Place[]): Place[] => {
+  const byAddress = places.reduce<Map<string, Place[]>>((groups, place) => {
+    const key = getAddressKey(place)
+    if (!key) return groups
+
+    return new Map(groups).set(key, [...(groups.get(key) ?? []), place])
+  }, new Map())
+
+  const shared = [...byAddress.values()].filter((tenants) => tenants.length > 1)
+  const groupedIds = new Set(shared.flatMap((tenants) => tenants.map(({ id }) => id)))
+
+  const merged = shared.map((tenants) => ({
+    ...tenants[0],
+    id: tenants.map(({ id }) => id).join('+'),
+    name: tenants.map(({ name }) => name).join(', '),
+    category: `${tenants.length} places`,
+    osmReference: null,
+    latitude: average(tenants.map(({ latitude }) => latitude)),
+    longitude: average(tenants.map(({ longitude }) => longitude))
+  }))
+
+  return [...places.filter(({ id }) => !groupedIds.has(id)), ...merged]
 }

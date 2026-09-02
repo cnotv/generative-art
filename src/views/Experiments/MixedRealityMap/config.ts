@@ -40,6 +40,15 @@ export const MAX_PLACES = 80
  */
 export const STREET_RADIUS_METERS = 120
 
+/**
+ * How close a street has to pass to count as one you are actually standing on or at the corner
+ * of, rather than one merely somewhere within the fetch radius above.
+ *
+ * Half the drawn carriageway width, plus slack for a phone GPS fix, which is commonly ten to
+ * twenty metres off outdoors and worse between buildings.
+ */
+export const ADJACENT_STREET_METERS = 20
+
 /** How many labels the frame will hold before it stops being readable. */
 export const MAX_VISIBLE_LABELS = 12
 

@@ -195,6 +195,67 @@ export const offsetGeoPoint = (
 }
 
 /**
+ * A position in flat metres north and east of an origin, cheap enough to call once per point of
+ * every street on every position update.
+ * @param origin Where the distances are measured from
+ * @param point The position to convert
+ * @returns Metres north and east of the origin
+ */
+const toLocalMeters = (origin: GeoPoint, point: GeoPoint): { east: number; north: number } => {
+  const distanceMeters = getDistanceMeters(origin, point)
+  const bearing = getBearingDegrees(origin, point) * DEGREES_TO_RADIANS
+
+  return { east: distanceMeters * Math.sin(bearing), north: distanceMeters * Math.cos(bearing) }
+}
+
+/**
+ * How far the origin sits from the nearest point of a single stretch of road, not just its ends.
+ * @param origin Where the viewer is
+ * @param start One end of the stretch
+ * @param end The other end
+ * @returns The perpendicular distance in metres, falling back to the nearer end past it
+ */
+const getDistanceToSegmentMeters = (origin: GeoPoint, start: GeoPoint, end: GeoPoint): number => {
+  const from = toLocalMeters(origin, start)
+  const to = toLocalMeters(origin, end)
+  const runEast = to.east - from.east
+  const runNorth = to.north - from.north
+  const lengthSquared = runEast ** 2 + runNorth ** 2
+
+  const alongRun =
+    lengthSquared === 0
+      ? 0
+      : Math.max(0, Math.min(1, -(from.east * runEast + from.north * runNorth) / lengthSquared))
+
+  return Math.hypot(from.east + alongRun * runEast, from.north + alongRun * runNorth)
+}
+
+/**
+ * Whether a street actually crosses close to where the viewer stands, rather than merely
+ * passing somewhere within the wider fetch radius.
+ *
+ * A radius alone keeps every named road for blocks around, which draws far more than the one
+ * or two streets meeting at a corner. Distance to the nearest segment, not to the path's nodes,
+ * because a long straight stretch can pass right by the viewer between two nodes that are both
+ * some way off.
+ * @param path The street to test
+ * @param origin Where the viewer is
+ * @param thresholdMeters How close counts as crossing
+ * @returns True where some stretch of the path comes within the threshold
+ */
+export const isAdjacentStreetPath = (
+  path: StreetPath,
+  origin: GeoPoint,
+  thresholdMeters: number
+): boolean =>
+  path.points
+    .slice(1)
+    .some(
+      (point, index) =>
+        getDistanceToSegmentMeters(origin, path.points[index], point) <= thresholdMeters
+    )
+
+/**
  * Which way the path is running at each of its points, for offsetting the kerbs off it.
  * @param points The centre line
  * @returns One bearing per point, the ends borrowing their neighbour's

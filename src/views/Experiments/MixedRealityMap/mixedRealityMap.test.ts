@@ -6,13 +6,14 @@ import {
   getScreenPlacement,
   getVerticalFieldOfView,
   formatDistance,
+  isAdjacentStreetPath,
   placeLabels,
   offsetGeoPoint,
   projectStreetRibbons,
   smoothBearing,
   spreadLabels
 } from './projection'
-import { buildPlacesUrl, parsePlaces } from './places'
+import { buildPlacesUrl, groupPlacesByAddress, parsePlaces } from './places'
 import { fetchStreetPaths, parseStreetPaths } from './streets'
 import { buildMinimap, getMinimapPoint } from './minimap'
 import { buildImageUrl, parsePlaceImage } from './imagery'
@@ -29,6 +30,8 @@ const makePlace = (id: string, latitude: number, longitude: number): Place => ({
   category: 'cafe',
   group: 'food',
   osmReference: `node/${id}`,
+  houseNumber: null,
+  street: null,
   latitude,
   longitude
 })
@@ -485,6 +488,49 @@ describe('projectStreetRibbons', () => {
   })
 })
 
+describe('isAdjacentStreetPath', () => {
+  const throughTheViewer = {
+    id: 'way/1',
+    name: 'Damstraat',
+    points: [
+      { latitude: AMSTERDAM.latitude - 0.001, longitude: AMSTERDAM.longitude },
+      { latitude: AMSTERDAM.latitude + 0.001, longitude: AMSTERDAM.longitude }
+    ]
+  }
+
+  it('keeps a street whose nearest stretch passes right by the viewer', () => {
+    expect(isAdjacentStreetPath(throughTheViewer, AMSTERDAM, 20)).toBe(true)
+  })
+
+  it('drops a street that only comes close between two far-apart nodes, not at either one', () => {
+    const passingBetweenNodes = {
+      id: 'way/2',
+      name: 'Nieuwezijds Voorburgwal',
+      points: [
+        { latitude: AMSTERDAM.latitude, longitude: AMSTERDAM.longitude + 0.002 },
+        { latitude: AMSTERDAM.latitude, longitude: AMSTERDAM.longitude - 0.002 }
+      ]
+    }
+
+    // Both nodes sit roughly 150m out to either side, well past the threshold, but the segment
+    // between them runs directly past the viewer: the nearest point is on the segment.
+    expect(isAdjacentStreetPath(passingBetweenNodes, AMSTERDAM, 20)).toBe(true)
+  })
+
+  it('drops a street that stays out of reach along its whole length', () => {
+    const farAway = {
+      id: 'way/3',
+      name: 'Prinsengracht',
+      points: [
+        { latitude: AMSTERDAM.latitude + 0.0005, longitude: AMSTERDAM.longitude },
+        { latitude: AMSTERDAM.latitude + 0.002, longitude: AMSTERDAM.longitude }
+      ]
+    }
+
+    expect(isAdjacentStreetPath(farAway, AMSTERDAM, 20)).toBe(false)
+  })
+})
+
 describe('getMinimapPoint', () => {
   it('puts the viewer at the middle of their own map', () => {
     expect(getMinimapPoint(AMSTERDAM, AMSTERDAM, 200)).toEqual({ x: 50, y: 50 })
@@ -828,10 +874,30 @@ describe('parsePlaces', () => {
         name: 'Cafe Bruin',
         category: 'cafe',
         group: 'food',
+        houseNumber: null,
+        street: null,
         latitude: 52.3,
         longitude: 4.9
       }
     ])
+  })
+
+  it('reads the house number and street, for grouping tenants of one address', () => {
+    const [place] = parsePlaces({
+      features: [
+        feature({
+          osm_type: 'N',
+          osm_id: 12,
+          name: 'Cafe Bruin',
+          type: 'house',
+          housenumber: '12',
+          street: 'Damstraat'
+        })
+      ]
+    })
+
+    expect(place.houseNumber).toBe('12')
+    expect(place.street).toBe('Damstraat')
   })
 
   it.each([
@@ -896,6 +962,8 @@ describe('parsePlaces', () => {
         name: 'Dam',
         category: 'square',
         group: 'other',
+        houseNumber: null,
+        street: null,
         latitude: 52.3,
         longitude: 4.9
       }
@@ -921,5 +989,45 @@ describe('parsePlaces', () => {
     expect(parsePlaces({ features: [feature({ osm_id: 7, name: 'Broken' }, ['a', 'b'])] })).toEqual(
       []
     )
+  })
+})
+
+describe('groupPlacesByAddress', () => {
+  const tenant = (id: string, name: string, houseNumber: string | null, street: string | null) => ({
+    ...makePlace(id, AMSTERDAM.latitude, AMSTERDAM.longitude),
+    name,
+    houseNumber,
+    street
+  })
+
+  it('merges tenants of the same street and house number into one, names joined', () => {
+    const grouped = groupPlacesByAddress([
+      tenant('a', 'itsu', '554', 'Oxford Street'),
+      tenant('b', 'Pret A Manger', '554', 'Oxford Street')
+    ])
+
+    expect(grouped).toHaveLength(1)
+    expect(grouped[0].name).toBe('itsu, Pret A Manger')
+    expect(grouped[0].id).toBe('a+b')
+  })
+
+  it('leaves a place with no house number standing on its own', () => {
+    const grouped = groupPlacesByAddress([
+      tenant('a', 'itsu', '554', 'Oxford Street'),
+      tenant('b', 'Wafflemeister', null, 'Oxford Street')
+    ])
+
+    expect(grouped.map(({ name }) => name)).toEqual(
+      expect.arrayContaining(['itsu', 'Wafflemeister'])
+    )
+  })
+
+  it('never merges the same number on two different streets', () => {
+    const grouped = groupPlacesByAddress([
+      tenant('a', 'itsu', '12', 'Oxford Street'),
+      tenant('b', 'The Cumberland Hotel', '12', 'Great Cumberland Place')
+    ])
+
+    expect(grouped).toHaveLength(2)
   })
 })

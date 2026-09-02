@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import IconButton from '@/components/IconButton.vue'
-import { fetchNearbyPlaces } from './places'
+import { fetchNearbyPlaces, groupPlacesByAddress } from './places'
 import { fetchPlaceImage } from './imagery'
 import { buildMinimap } from './minimap'
 import { fetchStreetPaths } from './streets'
@@ -25,11 +25,13 @@ import {
   formatDistance,
   getDistanceMeters,
   getVerticalFieldOfView,
+  isAdjacentStreetPath,
   placeLabels,
   projectStreetRibbons,
   smoothBearing
 } from './projection'
 import {
+  ADJACENT_STREET_METERS,
   DEFAULT_HORIZONTAL_FIELD_OF_VIEW,
   EYE_HEIGHT_METERS,
   GEOLOCATION_OPTIONS,
@@ -123,6 +125,15 @@ const visiblePlaces = computed(() =>
 )
 
 /**
+ * Tenants sharing a building get one label between them, so a shop directory reads as one pin.
+ *
+ * Grouped from what is currently shown, not from everything found: grouping across a filtered
+ * group would join in an id that filter is hiding, and a tap on the merged pin would then look
+ * for a place that never rendered.
+ */
+const groupedVisiblePlaces = computed(() => groupPlacesByAddress(visiblePlaces.value))
+
+/**
  * How many of each kind were found, so a toggle says what turning it off would cost.
  *
  * Streets count their drawn centre lines as well as their named points, because the lines are
@@ -141,7 +152,7 @@ const groupCounts = computed(() => {
 const labels = computed(() =>
   origin.value
     ? placeLabels(
-        visiblePlaces.value,
+        groupedVisiblePlaces.value,
         origin.value,
         {
           headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
@@ -159,10 +170,23 @@ const labels = computed(() =>
     : []
 )
 
+/**
+ * Only the streets actually at the corner you are standing on, not everything named within the
+ * wider fetch radius: a block can hold half a dozen roads, and only one or two of them are the
+ * one underfoot.
+ */
+const adjacentStreetPaths = computed(() =>
+  origin.value
+    ? streetPaths.value.filter((path) =>
+        isAdjacentStreetPath(path, origin.value, ADJACENT_STREET_METERS)
+      )
+    : []
+)
+
 const streetRibbons = computed(() =>
   origin.value && !hiddenGroups.value.includes('streets')
     ? projectStreetRibbons(
-        streetPaths.value,
+        adjacentStreetPaths.value,
         origin.value,
         {
           headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
@@ -204,7 +228,7 @@ const worldTransform = computed(
 )
 
 const selectedPlace = computed(
-  () => places.value.find(({ id }) => id === selectedPlaceId.value) ?? null
+  () => groupedVisiblePlaces.value.find(({ id }) => id === selectedPlaceId.value) ?? null
 )
 
 /**
@@ -216,7 +240,12 @@ const selectedPlace = computed(
  */
 const minimap = computed(() =>
   origin.value
-    ? buildMinimap(streetPaths.value, visiblePlaces.value, origin.value, MINIMAP_RADIUS_METERS)
+    ? buildMinimap(
+        adjacentStreetPaths.value,
+        visiblePlaces.value,
+        origin.value,
+        MINIMAP_RADIUS_METERS
+      )
     : { streets: [], places: [] }
 )
 

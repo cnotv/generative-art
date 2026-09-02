@@ -13,6 +13,10 @@ export interface Place extends GeoPoint {
   group: string
   /** `node/12` and the like, for linking to the map; null when the geocoder gave no usable id. */
   osmReference: string | null
+  /** The building's number on its street, for grouping tenants of the same address; null when the geocoder gave none. */
+  houseNumber: string | null
+  /** The street this place fronts on, null when the geocoder gave none. */
+  street: string | null
 }
 
 /** Where a place lands on screen for the aim the device currently holds. */
