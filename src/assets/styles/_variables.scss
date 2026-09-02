@@ -118,6 +118,13 @@
   --color-canvas-overlay-background-start: hsl(230deg 35% 12%);
   --color-canvas-overlay-background-end: hsl(280deg 25% 9%);
 
+  // A small pastel chip meant to look pressable, like a soft rubber button: a light-to-base
+  // gradient reads as a rounded surface, and the foreground is dark enough to read on either
+  // end of it, which a white foreground over a pale pastel would not be.
+  --color-scan-chip-highlight: hsl(255deg 60% 90%);
+  --color-scan-chip-base: hsl(255deg 45% 78%);
+  --color-scan-chip-foreground: hsl(258deg 45% 22%);
+
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
   --panel-item-bg-hover: hsl(0deg 0% 94%);

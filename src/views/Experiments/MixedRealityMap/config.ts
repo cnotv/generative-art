@@ -47,6 +47,12 @@ export const STREET_RADIUS_METERS = 120
  */
 export const ADJACENT_STREET_METERS = 20
 
+/**
+ * The fewest streets to draw when that many were even found, so a quiet corner still reads as
+ * a street scene rather than an empty one.
+ */
+export const MINIMUM_STREET_COUNT = 4
+
 /** How many labels the frame will hold before it stops being readable. */
 export const MAX_VISIBLE_LABELS = 12
 

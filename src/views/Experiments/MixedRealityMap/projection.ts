@@ -55,7 +55,7 @@ export const getBearingDegrees = (from: GeoPoint, to: GeoPoint): number => {
  * @param headingDegrees Where the camera points
  * @returns Signed difference in degrees, positive when the place is to the right
  */
-const getBearingOffset = (bearingDegrees: number, headingDegrees: number): number =>
+export const getBearingOffset = (bearingDegrees: number, headingDegrees: number): number =>
   ((bearingDegrees - headingDegrees + HALF_TURN_DEGREES * 3) % FULL_TURN_DEGREES) -
   HALF_TURN_DEGREES
 
@@ -180,13 +180,30 @@ const getDistanceToSegmentMeters = (origin: GeoPoint, start: GeoPoint, end: GeoP
 }
 
 /**
+ * How close a street actually comes to where the viewer stands, along its nearest stretch
+ * rather than its nearest node.
+ *
+ * A long straight stretch can pass right by the viewer between two nodes that are both some
+ * way off, so every segment is checked rather than every point.
+ * @param path The street to measure
+ * @param origin Where the viewer is
+ * @returns The perpendicular distance to the nearest stretch, in metres
+ */
+const getPathDistanceMeters = (path: StreetPath, origin: GeoPoint): number =>
+  path.points
+    .slice(1)
+    .reduce(
+      (closest, point, index) =>
+        Math.min(closest, getDistanceToSegmentMeters(origin, path.points[index], point)),
+      Infinity
+    )
+
+/**
  * Whether a street actually crosses close to where the viewer stands, rather than merely
  * passing somewhere within the wider fetch radius.
  *
  * A radius alone keeps every named road for blocks around, which draws far more than the one
- * or two streets meeting at a corner. Distance to the nearest segment, not to the path's nodes,
- * because a long straight stretch can pass right by the viewer between two nodes that are both
- * some way off.
+ * or two streets meeting at a corner.
  * @param path The street to test
  * @param origin Where the viewer is
  * @param thresholdMeters How close counts as crossing
@@ -196,13 +213,37 @@ export const isAdjacentStreetPath = (
   path: StreetPath,
   origin: GeoPoint,
   thresholdMeters: number
-): boolean =>
-  path.points
-    .slice(1)
-    .some(
-      (point, index) =>
-        getDistanceToSegmentMeters(origin, path.points[index], point) <= thresholdMeters
-    )
+): boolean => getPathDistanceMeters(path, origin) <= thresholdMeters
+
+/**
+ * Which streets to draw: everything actually crossing where the viewer stands, padded out with
+ * whatever is nearest until there is something to draw at all.
+ *
+ * A corner with nothing crossing it directly, or a single street running past, would otherwise
+ * draw one line or none, which reads as broken rather than as a quiet block. Padding out to a
+ * minimum keeps the overlay looking populated everywhere without drawing streets that are
+ * nowhere near the one actually underfoot when there is no shortage of those.
+ * @param paths Every street found within the wider fetch radius
+ * @param origin Where the viewer is
+ * @param thresholdMeters How close counts as crossing
+ * @param minimumCount The fewest streets to draw, when that many exist at all
+ * @returns The streets to draw, nearest first
+ */
+export const selectNearbyStreetPaths = (
+  paths: readonly StreetPath[],
+  origin: GeoPoint,
+  thresholdMeters: number,
+  minimumCount: number
+): StreetPath[] => {
+  const nearestFirst = [...paths].sort(
+    (first, second) => getPathDistanceMeters(first, origin) - getPathDistanceMeters(second, origin)
+  )
+  const adjacentCount = nearestFirst.filter(
+    (path) => getPathDistanceMeters(path, origin) <= thresholdMeters
+  ).length
+
+  return nearestFirst.slice(0, Math.max(adjacentCount, Math.min(minimumCount, nearestFirst.length)))
+}
 
 /**
  * Project streets as a continuous line at a fixed height, sweeping only with the compass.
@@ -289,6 +330,9 @@ export const spreadLabels = (
  *   every card starts on
  * @returns The cards to draw, furthest first
  */
+/** The stable id for a cluster of one or more places sharing a card. */
+const getClusterId = (cluster: readonly Place[]): string => cluster.map(({ id }) => id).join('+')
+
 export const placeLabels = (
   clusters: readonly Place[][],
   origin: GeoPoint,
@@ -315,7 +359,7 @@ export const placeLabels = (
 
       return [
         {
-          id: tenants.map(({ id }) => id).join('+'),
+          id: getClusterId(tenants),
           places: [nearest, ...rest],
           bearingDegrees,
           distanceMeters,
@@ -332,6 +376,39 @@ export const placeLabels = (
     (first, second) => second.distanceMeters - first.distanceMeters
   )
 }
+
+/**
+ * How many venues sit off to each side of the frame right now, summarised to the two
+ * directions turning the phone actually moves them toward.
+ *
+ * Anything not drawn as a card counts, whether it fell outside the field of view or was simply
+ * past the cap on how many cards fit at once; a bearing still says which way to turn for it
+ * either way.
+ * @param clusters Everything found nearby, grouped the same way the cards are
+ * @param shownIds The clusters currently drawn as cards, by id
+ * @param origin Where the viewer is
+ * @param headingDegrees Where the camera points
+ * @returns How many venues are off to the left and to the right
+ */
+export const countOffScreenVenues = (
+  clusters: readonly Place[][],
+  shownIds: Set<string>,
+  origin: GeoPoint,
+  headingDegrees: number
+): { left: number; right: number } =>
+  clusters.reduce(
+    (counts, cluster) => {
+      const nearest = cluster[0]
+      if (!nearest || shownIds.has(getClusterId(cluster))) return counts
+
+      const offset = getBearingOffset(getBearingDegrees(origin, nearest), headingDegrees)
+
+      return offset < 0
+        ? { ...counts, left: counts.left + cluster.length }
+        : { ...counts, right: counts.right + cluster.length }
+    },
+    { left: 0, right: 0 }
+  )
 
 /**
  * Write a distance the way a person walking would say it.

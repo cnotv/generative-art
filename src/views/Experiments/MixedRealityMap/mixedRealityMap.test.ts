@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
+  countOffScreenVenues,
   getBearingDegrees,
   getDistanceMeters,
   getHorizontalPlacement,
@@ -8,6 +9,7 @@ import {
   placeLabels,
   offsetGeoPoint,
   projectStreetLines,
+  selectNearbyStreetPaths,
   smoothBearing,
   spreadLabels
 } from './projection'
@@ -463,6 +465,85 @@ describe('isAdjacentStreetPath', () => {
     }
 
     expect(isAdjacentStreetPath(farAway, AMSTERDAM, 20)).toBe(false)
+  })
+})
+
+describe('selectNearbyStreetPaths', () => {
+  const streetAt = (id: string, offsetMeters: number) => {
+    const point = offsetGeoPoint(AMSTERDAM, 90, offsetMeters)
+    return { id, name: id, points: [point, offsetGeoPoint(point, 0, 5)] }
+  }
+
+  it('keeps every street genuinely adjacent, even past the minimum', () => {
+    const streets = [
+      streetAt('a', 5),
+      streetAt('b', 8),
+      streetAt('c', 12),
+      streetAt('d', 15),
+      streetAt('e', 18)
+    ]
+
+    expect(selectNearbyStreetPaths(streets, AMSTERDAM, 20, 4)).toHaveLength(5)
+  })
+
+  it('pads out to the minimum when fewer than that are adjacent', () => {
+    const streets = [
+      streetAt('near', 5),
+      streetAt('far1', 100),
+      streetAt('far2', 120),
+      streetAt('far3', 140),
+      streetAt('far4', 160)
+    ]
+
+    const selected = selectNearbyStreetPaths(streets, AMSTERDAM, 20, 4)
+
+    expect(selected.map(({ id }) => id)).toEqual(['near', 'far1', 'far2', 'far3'])
+  })
+
+  it('never asks for more streets than exist', () => {
+    const streets = [streetAt('a', 5), streetAt('b', 100)]
+
+    expect(selectNearbyStreetPaths(streets, AMSTERDAM, 20, 4)).toHaveLength(2)
+  })
+
+  it('orders nearest first', () => {
+    const streets = [streetAt('far', 100), streetAt('near', 5)]
+
+    const selected = selectNearbyStreetPaths(streets, AMSTERDAM, 20, 4)
+
+    expect(selected.map(({ id }) => id)).toEqual(['near', 'far'])
+  })
+})
+
+describe('countOffScreenVenues', () => {
+  const north = makePlace('north', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
+  const east = makePlace('east', AMSTERDAM.latitude, AMSTERDAM.longitude + 0.001)
+  const west = makePlace('west', AMSTERDAM.latitude, AMSTERDAM.longitude - 0.001)
+
+  it('counts a shown cluster as neither left nor right', () => {
+    const counts = countOffScreenVenues([[north]], new Set(['north']), AMSTERDAM, 0)
+
+    expect(counts).toEqual({ left: 0, right: 0 })
+  })
+
+  it('puts a place to the right of centre in the right count', () => {
+    expect(countOffScreenVenues([[east]], new Set(), AMSTERDAM, 0)).toEqual({ left: 0, right: 1 })
+  })
+
+  it('puts a place to the left of centre in the left count', () => {
+    expect(countOffScreenVenues([[west]], new Set(), AMSTERDAM, 0)).toEqual({ left: 1, right: 0 })
+  })
+
+  it('counts every tenant of a grouped cluster, not just the cluster itself', () => {
+    const shop = makePlace('shop', AMSTERDAM.latitude, AMSTERDAM.longitude + 0.001)
+    const cafe = makePlace('cafe', AMSTERDAM.latitude, AMSTERDAM.longitude + 0.001)
+
+    expect(countOffScreenVenues([[shop, cafe]], new Set(), AMSTERDAM, 0).right).toBe(2)
+  })
+
+  it('follows the heading, not a fixed compass side', () => {
+    // Facing east, a place due north is now behind and to the left rather than ahead.
+    expect(countOffScreenVenues([[north]], new Set(), AMSTERDAM, 90).left).toBe(1)
   })
 })
 

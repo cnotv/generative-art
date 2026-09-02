@@ -7,6 +7,8 @@ import {
 } from '@webgamekit/controls'
 import type { DeviceAim, MotionReading } from '@webgamekit/controls'
 import {
+  ArrowLeft,
+  ArrowRight,
   Building2,
   Camera,
   CameraOff,
@@ -24,11 +26,12 @@ import { fetchPlaceImage } from './imagery'
 import { buildMinimap } from './minimap'
 import { fetchStreetPaths } from './streets'
 import {
+  countOffScreenVenues,
   formatDistance,
   getDistanceMeters,
-  isAdjacentStreetPath,
   placeLabels,
   projectStreetLines,
+  selectNearbyStreetPaths,
   smoothBearing
 } from './projection'
 import {
@@ -46,6 +49,7 @@ import {
   MAX_VISIBLE_LABELS,
   MINIMUM_FIELD_OF_VIEW,
   MINIMAP_RADIUS_METERS,
+  MINIMUM_STREET_COUNT,
   OPENSTREETMAP_BASE,
   MINIMUM_HORIZON_STRENGTH,
   PLACE_GROUPS,
@@ -163,14 +167,32 @@ const labels = computed(() =>
 )
 
 /**
- * Only the streets actually at the corner you are standing on, not everything named within the
+ * How many venues are off to the left and right, summarised from every direction to the one
+ * axis turning the phone actually moves them along.
+ */
+const offScreenCounts = computed(() =>
+  origin.value
+    ? countOffScreenVenues(
+        placeClusters.value,
+        new Set(labels.value.map((label) => label.id)),
+        origin.value,
+        correctedHeadingDegrees.value
+      )
+    : { left: 0, right: 0 }
+)
+
+/**
+ * The streets actually at the corner you are standing on, not everything named within the
  * wider fetch radius: a block can hold half a dozen roads, and only one or two of them are the
- * one underfoot.
+ * one underfoot. Padded out to a minimum count so a quiet corner still reads as a street scene.
  */
 const adjacentStreetPaths = computed(() =>
   origin.value
-    ? streetPaths.value.filter((path) =>
-        isAdjacentStreetPath(path, origin.value, ADJACENT_STREET_METERS)
+    ? selectNearbyStreetPaths(
+        streetPaths.value,
+        origin.value,
+        ADJACENT_STREET_METERS,
+        MINIMUM_STREET_COUNT
       )
     : []
 )
@@ -647,6 +669,23 @@ onBeforeUnmount(() => {
         <dd>{{ accuracyMeters === null ? 'waiting' : formatDistance(accuracyMeters) }}</dd>
       </dl>
 
+      <span
+        v-if="offScreenCounts.left > 0"
+        class="mrm__scan mrm__scan--left"
+        :aria-label="`${offScreenCounts.left} more to the left`"
+      >
+        <ArrowLeft class="mrm__scan-icon" aria-hidden="true" />
+        {{ offScreenCounts.left }}
+      </span>
+      <span
+        v-if="offScreenCounts.right > 0"
+        class="mrm__scan mrm__scan--right"
+        :aria-label="`${offScreenCounts.right} more to the right`"
+      >
+        {{ offScreenCounts.right }}
+        <ArrowRight class="mrm__scan-icon" aria-hidden="true" />
+      </span>
+
       <svg
         v-if="origin"
         class="mrm__minimap"
@@ -999,6 +1038,50 @@ onBeforeUnmount(() => {
 .mrm__readout dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A small pastel chip meant to look pressable rather than flat: the gradient reads as a
+ * rounded, lit-from-above surface, and the layered shadow is the same trick a physical rubber
+ * button uses, a soft outer lift plus an inner sheen along the top edge and an inner shade
+ * along the bottom. Held to the frame's edge, not the world, so it never moves with a card.
+ */
+.mrm__scan {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    180deg,
+    var(--color-scan-chip-highlight),
+    var(--color-scan-chip-base)
+  );
+  color: var(--color-scan-chip-foreground);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 3px 5px hsl(0deg 0% 0% / 30%),
+    inset 0 1px 0 hsl(0deg 0% 100% / 60%),
+    inset 0 -3px 4px hsl(0deg 0% 0% / 15%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.mrm__scan--left {
+  left: var(--spacing-3);
+}
+
+.mrm__scan--right {
+  right: var(--spacing-3);
+}
+
+.mrm__scan-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 /*
