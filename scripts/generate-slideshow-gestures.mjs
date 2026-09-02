@@ -156,9 +156,14 @@ const poseSample = (yaw, spineCounter, handAt) => {
     // The aim above only ever places the hand, never turns it, so left alone it stays
     // an open flat palm at any pose. Curled here, in the hand's own local space, on
     // top of whatever the aim produced.
+    //
+    // Not `side * GRIP_PITCH_RADIANS`: this is a mirrored rig, so the left and right
+    // forearms' own local +X axes already point in opposite world directions. Flipping
+    // the angle's sign on top of that un-mirrors it back to the same physical rotation,
+    // which curled one hand's fingers backwards instead of into a grip.
     const grip = new THREE.Quaternion().setFromAxisAngle(
       new THREE.Vector3(1, 0, 0),
-      side * GRIP_PITCH_RADIANS
+      GRIP_PITCH_RADIANS
     )
     boneNamed(hand).quaternion.multiply(grip)
   })
