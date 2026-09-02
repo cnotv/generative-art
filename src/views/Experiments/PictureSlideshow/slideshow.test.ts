@@ -180,8 +180,12 @@ describe('exitAmountAt', () => {
     expect(exitAt(0)).toBe(0)
   })
 
-  it('is flung rather than travelling at a constant rate', () => {
-    expect(exitAt(TIMING.release)).toBeGreaterThan(exitAt(TIMING.release / 2) * 2)
+  it('follows the same smoothstep curve the hand clip is scrubbed through, not a constant rate', () => {
+    // Point-symmetric about the midpoint, the hallmark of the smoothstep `ease` this and
+    // the hand's own clip both run on: matching curves is what keeps the two together
+    // for the whole flight rather than only at its two ends.
+    expect(exitAt(TIMING.release * 0.3) + exitAt(TIMING.release * 0.7)).toBeCloseTo(1)
+    expect(exitAt(TIMING.release / 2)).toBeCloseTo(0.5)
   })
 
   it('is fully away by the end of the release, and stays there through the arrival', () => {

@@ -153,16 +153,19 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
 /**
  * How far along its exit a released picture has travelled, from 0 to 1.
  *
- * Eased in rather than linear, so it leaves the hands slowly and is flung the rest of
- * the way. Reaches 1 by the end of the release and stays there through the arrival —
- * the picture is already gone by then, not still travelling.
+ * The same smoothstep as the hand clip's own baked motion — not the sharper curve this
+ * used to run on. A hand's authored reach and a picture's flight are driven by two
+ * unrelated systems, so the only way to keep them looking attached along the way,
+ * rather than only at the two ends, is to give them the identical shape against the
+ * same progress. Reaches 1 by the end of the release and stays there through the
+ * arrival — the picture is already gone by then, not still travelling.
  * @param frame - The current frame
  * @param timing - How long each phase lasts
  * @returns The fraction of the exit travelled
  */
 export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number => {
   const progress = Math.min(frame.leftSeconds, timing.release) / timing.release
-  return progress * progress
+  return ease(progress)
 }
 
 /**
@@ -170,14 +173,12 @@ export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): nu
  *
  * The exact same eased shape as `exitAmountAt`, run backward across the arrival's own
  * duration instead of forward across the release's — the entrance is a reverse of the
- * exit, not a separately timed effect.
+ * exit, not a separately timed effect. Also the same shape the catching hand's own clip
+ * is scrubbed through at this same progress, which is what keeps the two together.
  * @param frame - The current frame, expected to be in the arrive phase
  * @returns The fraction of the entrance still to go
  */
-export const entryAmountAt = (frame: SlideshowFrame): number => {
-  const remaining = 1 - frame.phaseProgress
-  return remaining * remaining
-}
+export const entryAmountAt = (frame: SlideshowFrame): number => ease(1 - frame.phaseProgress)
 
 /**
  * Where a picture sits relative to the held position, partway through flying clear of
