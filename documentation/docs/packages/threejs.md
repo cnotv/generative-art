@@ -105,7 +105,7 @@ Configure scene with camera, lights, ground, and sky.
 {
   scene?: {
     backgroundColor?: number,
-    backgroundTexture?: string  // takes over from backgroundColor when set
+    transparent?: boolean  // clears to nothing instead, so CSS behind the canvas shows through
   },
   camera?: {
     position?: CoordinateTuple | THREE.Vector3,

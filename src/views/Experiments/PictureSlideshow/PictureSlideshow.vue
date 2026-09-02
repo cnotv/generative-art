@@ -22,11 +22,13 @@ import {
 } from './slideshow'
 import type { SlideDirection, SlideshowCharacter, SlideshowState } from './types'
 import {
+  BACKDROP_URL,
   CANVAS_DISPLAY_ROTATION,
   CANVAS_MATERIAL,
   CANVAS_SIZE,
   CANVAS_DISPLAY_POSITION,
   CONTROL_MAPPING,
+  DEFAULT_BACKGROUND_BLUR,
   DEFAULT_CHARACTER,
   DEFAULT_TIMING,
   EXIT_DISTANCE,
@@ -54,7 +56,8 @@ const handleProgress = (progress: LoadProgress): void => {
 const reactiveConfig = createReactiveConfig({
   character: DEFAULT_CHARACTER,
   timing: { ...DEFAULT_TIMING },
-  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN }
+  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN },
+  background: { blur: DEFAULT_BACKGROUND_BLUR }
 })
 
 /** Set once the scene exists, so a panel change can rebuild the character. */
@@ -211,15 +214,37 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div
+    class="backdrop"
+    :style="{
+      backgroundImage: `url(${BACKDROP_URL})`,
+      filter: `blur(${reactiveConfig.background.blur}px)`
+    }"
+  ></div>
   <canvas ref="canvas"></canvas>
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
 <style scoped>
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+
+  /* Blur samples past its own edge; scaled up, what that reveals is cropped away by the
+     viewport instead of showing as a faint halo at the border. */
+  transform: scale(1.15);
+}
+
 canvas {
   display: block;
+  position: relative;
   width: 100%;
   height: 100vh;
+
+  /* Transparent so the backdrop behind it shows through. */
+  background: transparent;
 
   /* The whole canvas is the control surface, so a swipe must not be taken as a page scroll. */
   touch-action: none;

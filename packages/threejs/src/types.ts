@@ -275,8 +275,8 @@ export interface SetupConfig {
   }
   scene?: {
     backgroundColor?: number
-    /** Takes over from `backgroundColor` when set, rather than combining with it. */
-    backgroundTexture?: string
+    /** Clears to nothing instead of `backgroundColor`, so a layer behind the canvas shows through. */
+    transparent?: boolean
   }
   camera?: CameraConfig
   ground?: GroundConfig | false

@@ -35,8 +35,13 @@ export const PICTURES: { name: string; url: string }[] = [
  */
 export const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
 
+/** Behind the canvas as a CSS layer, per `SETUP_CONFIG.scene.transparent` below. */
+export const BACKDROP_URL = backdropUrl
+
 export const SETUP_CONFIG: SetupConfig = {
-  scene: { backgroundTexture: backdropUrl },
+  // The backdrop photo is a CSS layer behind the canvas instead, so its blur can be a
+  // panel slider rather than baked into the image at build time.
+  scene: { transparent: true },
   camera: { position: [0, 3.3, 5.2], fov: 50, lookAt: VIEW_TARGET },
   // An orbit drag and a swipe are the same gesture, and the swipe is the one
   // this scene is driven by, so the camera stays where it was composed. The
@@ -169,6 +174,9 @@ export const EXIT_SPIN = 3.4
 
 export const DEFAULT_TIMING: SlideshowTiming = { hold: 4, release: 0.85, arrive: 0.95 }
 
+/** How much the backdrop photo is blurred, in CSS pixels. */
+export const DEFAULT_BACKGROUND_BLUR = 20
+
 /** Right advances, left goes back, by tap or swipe alike. Arrow keys do the same on a desktop. */
 export const CONTROL_MAPPING: ControlMapping = {
   pointer: {
@@ -191,5 +199,8 @@ export const configControls: ConfigControlsSchema = {
     distance: { label: 'Throw distance', min: 4, max: 20, step: 0.5 },
     drop: { label: 'Throw drop', min: 0, max: 12, step: 0.5 },
     spin: { label: 'Tumble', min: 0, max: 10, step: 0.1 }
+  },
+  background: {
+    blur: { label: 'Backdrop blur', min: 0, max: 40, step: 1 }
   }
 }
