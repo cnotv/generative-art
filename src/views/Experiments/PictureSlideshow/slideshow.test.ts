@@ -317,12 +317,12 @@ describe('gesturePoseAt', () => {
     expect(end).toBeCloseTo(0, 1)
   })
 
-  it('is continuous across the release-to-arrive boundary, with nothing to pop', () => {
-    const endOfRelease = poseAt(TIMING.release - 0.001)
-    const startOfArrive = poseAt(TIMING.release + 0.001)
+  it('reaches for the entry side in arrive, not the side release just threw towards', () => {
+    const endOfRelease = poseAt(TIMING.release - 0.001, 1)
+    const startOfArrive = poseAt(TIMING.release + 0.001, 1)
 
-    expect(startOfArrive.pushProgress).toBeCloseTo(endOfRelease.pushProgress, 1)
-    expect(startOfArrive.pushWeight).toBeCloseTo(endOfRelease.pushWeight, 2)
+    expect(endOfRelease.direction).toBe(1)
+    expect(startOfArrive.direction).toBe(-1)
   })
 })
 

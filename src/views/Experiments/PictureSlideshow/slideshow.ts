@@ -205,11 +205,13 @@ export const flightOffset = (
 /**
  * How a clip-driven rig should blend between its hold loop and its push gesture.
  *
- * The push clip runs forward across release and backward across arrive, so the same
- * clip and the same direction cover the whole round trip: the rig is still reaching
- * out from the throw when arrive begins, and eases back to the hold pose by its end.
- * Only the two ends of that trip — settling into hold, and leaving it — need a
- * crossfade at all.
+ * Release and arrive each get their own one-shot: release plays the throw's own
+ * direction forward, shoving the old picture clear; arrive plays the *opposite*
+ * direction backward, since the new picture is entering from the side release just
+ * emptied, not the side it was just thrown towards. The rig is reaching for one
+ * picture at the end of release and a completely different one at the start of
+ * arrive, so that boundary is a cut rather than something to smooth over — only the
+ * outer ends, settling into hold and leaving it, get a crossfade.
  * @param frame - The current frame
  * @returns The weights and push-clip position the rig should apply
  */
@@ -230,7 +232,9 @@ export const gesturePoseAt = (frame: SlideshowFrame): GesturePose => {
   return {
     holdWeight: 1 - pushWeight,
     pushWeight,
-    direction: frame.direction,
+    // The entry side, not the throw's own — picking the new picture up from where it
+    // is, rather than continuing to reach the way the old one left.
+    direction: frame.direction === 1 ? -1 : 1,
     pushProgress: 1 - frame.phaseProgress
   }
 }
