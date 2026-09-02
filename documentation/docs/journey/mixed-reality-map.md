@@ -10,9 +10,9 @@ so it can be read. Each had a wrong first answer that seemed obviously right.
 
 ![Named places over the camera feed with street lines and the icon bar](/img/mixed-reality-map/labels.webp)
 
-The camera here is the browser's synthetic test pattern rather than a street, which is what
-makes the layout legible in a screenshot: the labels, their stacking and their distances are
-the real output, standing in front of a stand-in world.
+The camera starts off, which is the actual default rather than a stand-in for a screenshot: the
+overlay reads the same way over the plain background it draws on here as it does over the live
+feed a toggle can bring in behind it.
 
 ## The orientation angles lock in exactly the pose this needs
 
@@ -90,15 +90,20 @@ labels have turned the other way to stay square to the world.
 ## Everything on the horizon is everything in one place
 
 Placing each name at its bearing and leaving the vertical alone puts every label on a single
-line, where the near ones bury the far ones and a street of shops becomes an unreadable
-smear. The correction is not a layout trick. Something standing on the ground is genuinely
-below eye level, by an angle that grows as it gets closer, and using that angle separates a
-doorway two paces away from a tower four streets back the way the eye already expects.
+line, where the near ones bury the far ones and a street of shops becomes an unreadable smear.
+The first fix used an angle: something standing on the ground is genuinely below eye level, by
+an angle that grows as it gets closer, and that angle separated a doorway two paces away from a
+tower four streets back the way the eye already expects. It also meant a card's height on the
+frame depended on the phone's pitch, which is exactly the axis a hand holding a phone cannot
+hold still, so the whole picture breathed with every small tilt of the wrist.
 
-That is not enough on its own, because two shops next door to each other are at the same
-distance and the same bearing. The rest is a declutter pass: a label sharing a column with
-one already placed rises a row above it. Nearest first, so the closest label keeps its true
-position and the ones lifted clear are the ones already reading as further away.
+Every card now starts on the same fixed row regardless of distance, and separation is left
+entirely to what shares a column with it: a card sharing a column with one already placed is
+pushed up by the actual height of that stack rather than a guessed step, so a several-tenant
+card pushes the next one further than a single row would. Nearest first, so the closest card
+keeps the base row and the ones pushed clear are the ones already reading as further away. The
+ground marker that used to carry a shop's true, distance-shrunk position is gone along with the
+elevation it depended on; a building icon on the card is what says what kind of thing it is now.
 
 ## The obvious map API is the one that does not answer
 
@@ -138,12 +143,16 @@ falls away fast: a street two hundred metres off sits half a degree below the ho
 every street past that piles into the same few pixels of it. Drawing more of them adds a smear
 rather than information.
 
-A line is also the wrong shape to draw them with. A stroke has a width in pixels, so it stays
-the same thickness however far away it runs, and reads as a wire strung across the picture
-rather than as ground. A road has a width in metres, and projecting both kerbs from it gives a
-surface that narrows into the distance exactly as the street in the picture does. The same
-reasoning sizes the marker on a shop: a fixed dot says nothing, and a box drawn at a shopfront's
-real width shrinks with distance and so says where the thing is.
+A line was also the wrong shape to draw them with, for as long as pitch decided where on the
+frame a street sat: a stroke has a width in pixels, so it stays the same thickness however far
+away it runs, and read as a wire strung across the picture rather than as ground. Projecting
+both kerbs from the road's real width into a surface that narrowed into the distance fixed
+that. Dropping pitch from the projection later dropped the reason for the surface along with
+it: a street swept purely by compass heading has no distance left to narrow into, so it is a
+line again, this time because there is nothing left for a surface to draw. The shop marker went
+the same way in reverse: it used to be a box sized to a real shopfront so it would shrink with
+distance, and once distance no longer decided its position either, that box became a building
+icon on the card carrying the name, rather than a separate mark on the ground.
 
 ## Calibration is not optional
 
@@ -163,7 +172,7 @@ wall of names, and turning four of the five kinds off is how you find the one yo
 ## The map is drawn, not fetched
 
 A plan view in the corner is the obvious place to reach for map tiles, and the wrong one. The
-street geometry is already loaded to draw the road surfaces, and the places are already loaded
+street geometry is already loaded to draw the overlay's lines, and the places are already loaded
 to label them, so the plan is a second projection of data the view is holding anyway: no key to
 carry, no usage policy to honour, nothing to fetch, and no way for the map to disagree with the
 labels, because it is the same data seen from above.
