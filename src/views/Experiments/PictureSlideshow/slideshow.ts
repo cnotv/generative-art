@@ -1,5 +1,7 @@
 import type {
   CanvasRole,
+  ExitConfig,
+  FlightOffset,
   GesturePose,
   SlideDirection,
   SlideshowFrame,
@@ -149,20 +151,56 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
 }
 
 /**
- * How far along its exit a released picture has travelled, from 0 to 1 and beyond.
+ * How far along its exit a released picture has travelled, from 0 to 1.
  *
- * Eased in rather than linear, so it leaves the hands slowly and is flung the
- * rest of the way, and deliberately not clamped: the picture keeps going for
- * the whole change rather than parking just off frame halfway through it.
+ * Eased in rather than linear, so it leaves the hands slowly and is flung the rest of
+ * the way. Reaches 1 by the end of the release and stays there through the arrival —
+ * the picture is already gone by then, not still travelling.
  * @param frame - The current frame
  * @param timing - How long each phase lasts
  * @returns The fraction of the exit travelled
  */
 export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number => {
-  const span = timing.release + timing.arrive
-  const progress = Math.min(frame.leftSeconds / span, 1)
+  const progress = Math.min(frame.leftSeconds, timing.release) / timing.release
   return progress * progress
 }
+
+/**
+ * How much of its entrance an arriving picture still has left to make, from 1 to 0.
+ *
+ * The exact same eased shape as `exitAmountAt`, run backward across the arrival's own
+ * duration instead of forward across the release's — the entrance is a reverse of the
+ * exit, not a separately timed effect.
+ * @param frame - The current frame, expected to be in the arrive phase
+ * @returns The fraction of the entrance still to go
+ */
+export const entryAmountAt = (frame: SlideshowFrame): number => {
+  const remaining = 1 - frame.phaseProgress
+  return remaining * remaining
+}
+
+/**
+ * Where a picture sits relative to the held position, partway through flying clear of
+ * the hands or back into them.
+ *
+ * The same shape serves both directions: an arriving picture is placed by calling this
+ * with the throw's direction flipped, so its path is a mirror of the departure's rather
+ * than a curve authored separately.
+ * @param direction - Which way the picture is travelling: the throw's own direction when
+ * leaving, the opposite when arriving
+ * @param amount - How far into the flight this is, from 0 at the hands to 1 fully away
+ * @param exit - How far, how steeply and how hard the picture flies
+ * @returns The offset to add to the held position
+ */
+export const flightOffset = (
+  direction: SlideDirection,
+  amount: number,
+  exit: ExitConfig
+): FlightOffset => ({
+  x: direction * exit.distance * amount,
+  y: -exit.drop * amount,
+  rotationZ: -direction * exit.spin * amount
+})
 
 /**
  * How a clip-driven rig should blend between its hold loop and its push gesture.

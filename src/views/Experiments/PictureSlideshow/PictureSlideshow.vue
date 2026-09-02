@@ -14,16 +14,15 @@ import {
   advanceSlideshow,
   canvasRoleAt,
   createSlideshowState,
+  entryAmountAt,
   exitAmountAt,
-  holdAmountAt,
+  flightOffset,
   slideshowFrame,
   startChange
 } from './slideshow'
 import type { SlideDirection, SlideshowCharacter, SlideshowState } from './types'
 import {
   CANVAS_DISPLAY_ROTATION,
-  CANVAS_ENTRY_DISTANCE,
-  CANVAS_ENTRY_DROP,
   CANVAS_MATERIAL,
   CANVAS_SIZE,
   CANVAS_DISPLAY_POSITION,
@@ -84,8 +83,6 @@ const requestChange = (direction: SlideDirection): void => {
 
 /** Bound in `onMounted`: the pointer target is the canvas, which does not exist before then. */
 let destroyControls: (() => void) | null = null
-
-const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount
 
 /**
  * One flat board per picture, textured once at setup.
@@ -164,8 +161,6 @@ onMounted(async () => {
           character.mixer?.update(delta)
           slideshow = advanceSlideshow(slideshow, delta, timing, canvases.length)
           const frame = slideshowFrame(slideshow, timing)
-          const hold = holdAmountAt(frame)
-          const exitAmount = exitAmountAt(frame, timing)
 
           character.pose(frame)
           character.heldPoint(held)
@@ -182,23 +177,18 @@ onMounted(async () => {
               picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
               return
             }
-            if (role === 'arriving') {
-              // In from the side opposite the one the old picture left by.
-              const entry = -frame.direction * CANVAS_ENTRY_DISTANCE
-              picture.position.set(
-                mix(entry, held.x, hold),
-                mix(held.y + CANVAS_ENTRY_DROP, held.y, hold),
-                held.z
-              )
-              picture.rotation.set(CANVAS_DISPLAY_ROTATION[0], 0, 0)
-              return
-            }
-            picture.position.set(
-              held.x + frame.direction * exit.distance * exitAmount,
-              held.y - exit.drop * exitAmount,
-              held.z
-            )
-            picture.rotation.set(0, 0, -frame.direction * exit.spin * exitAmount)
+            // Leaving flies the throw's own direction; arriving is the mirror of that
+            // same flight, coming from the opposite side.
+            const isLeaving = role === 'leaving'
+            const amount = isLeaving ? exitAmountAt(frame, timing) : entryAmountAt(frame)
+            const travelDirection: SlideDirection = isLeaving
+              ? frame.direction
+              : frame.direction === 1
+                ? -1
+                : 1
+            const offset = flightOffset(travelDirection, amount, exit)
+            picture.position.set(held.x + offset.x, held.y + offset.y, held.z)
+            picture.rotation.set(0, 0, offset.rotationZ)
           })
         }
       })

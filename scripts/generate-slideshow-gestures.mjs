@@ -48,9 +48,21 @@ const TRACKED_BONES = [
   'mixamorigSpine',
   'mixamorigLeftArm',
   'mixamorigLeftForeArm',
+  'mixamorigLeftHand',
   'mixamorigRightArm',
-  'mixamorigRightForeArm'
+  'mixamorigRightForeArm',
+  'mixamorigRightHand'
 ]
+
+/**
+ * How a gripping hand sits rotated from its rest pose, curled as if closed around an edge.
+ *
+ * The two-bone solve only ever aims the forearm so the hand lands on a point — the hand's
+ * own rotation is never touched, so left at rest it stays a flat open palm no matter where
+ * the arm points. This is applied on top of the aimed pose, in the hand's own local space,
+ * so it curls the same way whichever direction the arm is reaching.
+ */
+const GRIP_PITCH_RADIANS = 0.5
 
 const clamp = (value, low, high) => Math.min(Math.max(value, low), high)
 const ease = (progress) => progress * progress * (3 - 2 * progress)
@@ -141,6 +153,14 @@ const poseSample = (yaw, spineCounter, handAt) => {
     const elbow = solveElbow(worldOf(arm), target, upperLength, foreLength, pole)
     aimBoneAt(boneNamed(arm), boneNamed(fore), elbow)
     aimBoneAt(boneNamed(fore), boneNamed(hand), target)
+    // The aim above only ever places the hand, never turns it, so left alone it stays
+    // an open flat palm at any pose. Curled here, in the hand's own local space, on
+    // top of whatever the aim produced.
+    const grip = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      side * GRIP_PITCH_RADIANS
+    )
+    boneNamed(hand).quaternion.multiply(grip)
   })
 
   return TRACKED_BONES.map((name) => boneNamed(name).quaternion.clone())
@@ -199,23 +219,39 @@ writeClip('hold', HOLD_DURATION_SECONDS, (phase) => {
  * arrive: its last frame is the moment of release, and its first frame sits at the
  * same neutral reach `hold` loops around, so there is nothing to mirror or splice at
  * either end, only a direction to pick.
+ *
+ * The two hands do different things rather than sliding sideways together, which read
+ * as only one hand moving: the throwing hand — on the side the picture is being sent
+ * towards — reaches out and forward as if shoving it away, while the other lets go,
+ * dropping and pulling back rather than following it out.
  */
 const PUSH_DURATION_SECONDS = 1
 const PUSH_YAW_RADIANS = 0.5
-const PUSH_REACH_UNITS = 34
-const PUSH_FORWARD_UNITS = 16
+const PUSH_THROW_REACH_UNITS = 30
+const PUSH_THROW_FORWARD_UNITS = 10
+const PUSH_RELEASE_DROP_UNITS = 34
+const PUSH_RELEASE_PULLBACK_UNITS = 18
 ;[1, -1].forEach((pushSign) => {
   writeClip(pushSign === 1 ? 'push-right' : 'push-left', PUSH_DURATION_SECONDS, (phase) => {
     const extend = ease(phase)
     return {
       yaw: PUSH_YAW_RADIANS * pushSign * extend,
       spineCounter: 0.35,
-      handAt: (side) =>
-        new THREE.Vector3(
-          side * 39 + pushSign * PUSH_REACH_UNITS * extend,
-          116,
-          21 + PUSH_FORWARD_UNITS * extend
+      handAt: (side) => {
+        const isThrowingHand = side * pushSign > 0
+        if (isThrowingHand) {
+          return new THREE.Vector3(
+            side * 39 + pushSign * PUSH_THROW_REACH_UNITS * extend,
+            116,
+            21 + PUSH_THROW_FORWARD_UNITS * extend
+          )
+        }
+        return new THREE.Vector3(
+          side * 39,
+          116 - PUSH_RELEASE_DROP_UNITS * extend,
+          21 - PUSH_RELEASE_PULLBACK_UNITS * extend
         )
+      }
     }
   })
 })

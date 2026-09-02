@@ -45,6 +45,20 @@ export interface SlideshowFrame {
   leftSeconds: number
 }
 
+/** How far and how hard a picture flies clear of the hands, panel-tunable. */
+export interface ExitConfig {
+  distance: number
+  drop: number
+  spin: number
+}
+
+/** Where a flying picture sits relative to the held position, at some point in its flight. */
+export interface FlightOffset {
+  x: number
+  y: number
+  rotationZ: number
+}
+
 /**
  * How much a rig driven by clips, rather than by the slideshow directly, should blend
  * between its idle hold loop and its one-shot push gesture this frame.

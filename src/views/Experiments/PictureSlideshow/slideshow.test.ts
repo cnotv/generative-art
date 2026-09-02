@@ -3,7 +3,9 @@ import {
   advanceSlideshow,
   canvasRoleAt,
   createSlideshowState,
+  entryAmountAt,
   exitAmountAt,
+  flightOffset,
   gesturePoseAt,
   holdAmountAt,
   slideshowFrame,
@@ -179,12 +181,82 @@ describe('exitAmountAt', () => {
   })
 
   it('is flung rather than travelling at a constant rate', () => {
-    expect(exitAt(1)).toBeGreaterThan(exitAt(0.5) * 2)
+    expect(exitAt(TIMING.release)).toBeGreaterThan(exitAt(TIMING.release / 2) * 2)
   })
 
-  it('is still travelling through the arrival, and is all the way out by the end', () => {
-    expect(exitAt(1.5)).toBeGreaterThan(exitAt(1))
-    expect(exitAt(2)).toBeCloseTo(1)
+  it('is fully away by the end of the release, and stays there through the arrival', () => {
+    expect(exitAt(TIMING.release)).toBeCloseTo(1)
+    expect(exitAt(TIMING.release + TIMING.arrive / 2)).toBeCloseTo(1)
+    expect(exitAt(TIMING.release + TIMING.arrive)).toBeCloseTo(1)
+  })
+})
+
+describe('entryAmountAt', () => {
+  const entryAt = (changeSeconds: number) =>
+    entryAmountAt(
+      slideshowFrame(
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        TIMING
+      )
+    )
+
+  it('is the exact reverse of exitAmountAt, run across the arrival instead of the release', () => {
+    const exitAt = (changeSeconds: number) =>
+      exitAmountAt(
+        slideshowFrame(
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          TIMING
+        ),
+        TIMING
+      )
+
+    // exitAmountAt(t) across the release and entryAmountAt(release + arrive - t) across
+    // the arrival trace the same curve, just run in opposite directions.
+    ;[0, 0.25, 0.5, 0.75, 1].forEach((fraction) => {
+      const intoRelease = fraction * TIMING.release
+      const beforeArriveEnds = TIMING.release + TIMING.arrive - fraction * TIMING.arrive
+      expect(entryAt(beforeArriveEnds)).toBeCloseTo(exitAt(intoRelease), 5)
+    })
+  })
+
+  it('is fully arrived, with nothing left to travel, right at the end of the arrival', () => {
+    expect(entryAt(TIMING.release + TIMING.arrive)).toBeCloseTo(0)
+  })
+})
+
+describe('flightOffset', () => {
+  const exit = { distance: 10, drop: 4, spin: 2 }
+
+  it('carries a picture the throw distance in the throw direction, at full flight', () => {
+    expect(flightOffset(1, 1, exit).x).toBe(10)
+    expect(flightOffset(-1, 1, exit).x).toBe(-10)
+  })
+
+  it('sits exactly on the held position with nothing yet travelled', () => {
+    const offset = flightOffset(1, 0, exit)
+
+    expect(offset.x).toBeCloseTo(0)
+    expect(offset.y).toBeCloseTo(0)
+    expect(offset.rotationZ).toBeCloseTo(0)
+  })
+
+  it('drops as it flies, regardless of which way it is thrown', () => {
+    expect(flightOffset(1, 1, exit).y).toBe(-4)
+    expect(flightOffset(-1, 1, exit).y).toBe(-4)
+  })
+
+  it('tumbles opposite the throw direction', () => {
+    expect(flightOffset(1, 1, exit).rotationZ).toBe(-2)
+    expect(flightOffset(-1, 1, exit).rotationZ).toBe(2)
+  })
+
+  it('mirroring the direction mirrors the path, which is what an arrival reuses', () => {
+    const leaving = flightOffset(1, 0.6, exit)
+    const arriving = flightOffset(-1, 0.6, exit)
+
+    expect(arriving.x).toBe(-leaving.x)
+    expect(arriving.y).toBe(leaving.y)
+    expect(arriving.rotationZ).toBe(-leaving.rotationZ)
   })
 })
 

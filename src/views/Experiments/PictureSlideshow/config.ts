@@ -149,16 +149,14 @@ export const CANVAS_MATERIAL: ModelOptions = {
  * magnifies whatever is nearer the camera, so a picture held further forward
  * than the hands outgrows them on screen and swallows its own grip however wide
  * the arms are spread. At the same depth, the margin drawn is the margin built.
- * A picture enters from the side opposite the one leaving, far enough out to be
- * off camera before it starts.
  */
 export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.48]
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
-export const CANVAS_ENTRY_DISTANCE = 9
-export const CANVAS_ENTRY_DROP = 0.6
 
 /**
- * How the released picture leaves.
+ * How the released picture leaves, and the arriving one is drawn arriving: the same
+ * distance, drop and tumble, run in reverse from the opposite side, since an entrance
+ * is a mirror of an exit rather than a separately authored effect.
  *
  * Sideways is what carries it out of shot, and it has left the frame long before
  * the drop matters. The drop and the tumble are what stop the exit reading as a
