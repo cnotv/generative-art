@@ -7,9 +7,15 @@ export const ROOT = join(__dirname, '..')
 export const VIEWS_DIR = join(ROOT, 'src/views')
 export const GROUPS = ['Experiments', 'Games', 'Generative', 'Tools', 'Stages']
 
-const toRouteName = (dirName) =>
+// Kept in sync with `deriveRouteName` in src/config/router.ts, which derives the same names
+// at runtime for the client-side page title and meta. Node has no TypeScript runner here, so
+// the two can't share one module without adding a dependency.
+export const toRouteName = (dirName) =>
   dirName
-    .replace(/([A-Z])/g, ' $1')
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // word boundary: lowercase to uppercase
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2') // acronym followed by a capitalized word
+    .replace(/([A-Za-z])(\d+)/g, '$1 $2') // letter to digit
+    .replace(/(\d+)([A-Z])/g, '$1 $2') // digit to letter
     .trim()
     .replace(/^\w/, (c) => c.toUpperCase())
 
