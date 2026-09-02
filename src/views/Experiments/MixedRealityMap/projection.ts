@@ -342,32 +342,31 @@ export const projectStreetRibbons = (
   })
 
 /**
- * Lift labels off each other where they would land in the same place.
+ * Push cards off each other where they would land in the same place, rather than letting them
+ * squeeze together or overlap.
  *
- * A street of shops is a row of names a few metres apart, and their true positions overlap into
- * an unreadable smear. Each one that shares a column with something already placed rises a row
- * above it, which is the direction the frame has room in and the one that already means
- * "further away".
- * @param labels The labels, nearest first, since the nearest keeps its true position
- * @param rowHeightPercent How far a lifted label rises
+ * Every card starts on the same fixed row, so two sharing a column is the common case rather
+ * than the rare one. Each is pushed up by the actual height of whatever is already stacked in
+ * its column, a grouped card's several rows included, rather than by a single guessed step that
+ * would work for one row and cut a taller card off from the next.
+ * @param labels The labels, nearest first, since the nearest keeps the base row
  * @param columnWidthPercent How close two labels have to be to count as sharing a column
- * @returns The same labels, lifted clear of each other
+ * @returns The same labels, pushed clear of each other
  */
 export const spreadLabels = (
   labels: readonly PlacedLabel[],
-  rowHeightPercent: number,
   columnWidthPercent: number
 ): PlacedLabel[] =>
   labels.reduce<PlacedLabel[]>((placed, label) => {
-    const sharingColumn = placed.filter(
-      (other) => Math.abs(other.xPercent - label.xPercent) < columnWidthPercent
-    ).length
+    const stackedHeight = placed
+      .filter((other) => Math.abs(other.xPercent - label.xPercent) < columnWidthPercent)
+      .reduce((total, other) => total + other.heightPercent, 0)
 
-    // Held inside the frame. A landscape phone is short, and a stack of five lifted off one
-    // horizon runs straight off the top edge, where an overlapping label would at least be read.
-    const lifted = label.yPercent - sharingColumn * rowHeightPercent
+    // Held inside the frame. A landscape phone is short, and a tall stack pushed off one
+    // horizon runs straight off the top edge, where an overlapping card would at least be read.
+    const pushed = label.yPercent - stackedHeight
 
-    return [...placed, { ...label, yPercent: Math.max(lifted, rowHeightPercent) }]
+    return [...placed, { ...label, yPercent: Math.max(pushed, label.heightPercent) }]
   }, [])
 
 /**
@@ -375,17 +374,18 @@ export const spreadLabels = (
  *
  * Only the nearest few survive, because a city centre has more names within reach than a phone
  * screen has room for, and they are returned furthest first so the nearest label draws on top.
- * @param places Everything found nearby
+ * @param clusters Everything found nearby, grouped with whatever else shares its address
  * @param origin Where the viewer is
  * @param aim Where the camera points
  * @param fieldOfView How much the camera takes in
- * Each label keeps the point the place actually stands on, and the size a marker there should
- * be drawn at, so the name can be lifted clear of its neighbours while the marker stays put.
- * @param limits The eye height, how many labels fit, how far apart they sit, and the marker size
- * @returns The labels to draw, furthest first
+ * Each card keeps the point its nearest tenant actually stands on, and the size a marker there
+ * should be drawn at, so the card can sit on the fixed row while the marker stays on the ground.
+ * @param limits The eye height, how many cards fit, how tall a row is, how far apart cards sit,
+ *   the marker size, and the row every card starts on
+ * @returns The cards to draw, furthest first
  */
 export const placeLabels = (
-  places: readonly Place[],
+  clusters: readonly Place[][],
   origin: GeoPoint,
   aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
   fieldOfView: FieldOfView,
@@ -395,22 +395,23 @@ export const placeLabels = (
     rowHeightPercent: number
     columnWidthPercent: number
     markerMeters: number
+    baseRowPercent: number
   }
 ): PlacedLabel[] => {
   const halfWidth = Math.tan((fieldOfView.horizontalDegrees / 2) * DEGREES_TO_RADIANS)
 
-  const nearestFirst = places
-    .flatMap((place) => {
-      const bearingDegrees = getBearingDegrees(origin, place)
-      const distanceMeters = getDistanceMeters(origin, place)
-      const elevation = getGroundElevation(distanceMeters, limits.eyeHeightMeters)
-      const { xPercent, yPercent, isInView } = getScreenPlacement(
-        bearingDegrees,
-        elevation,
-        aim,
-        fieldOfView
+  const nearestFirst = clusters
+    .flatMap((tenants) => {
+      const [nearest, ...rest] = [...tenants].sort(
+        (first, second) => getDistanceMeters(origin, first) - getDistanceMeters(origin, second)
       )
-      if (!isInView) return []
+      if (!nearest) return []
+
+      const bearingDegrees = getBearingDegrees(origin, nearest)
+      const distanceMeters = getDistanceMeters(origin, nearest)
+      const elevation = getGroundElevation(distanceMeters, limits.eyeHeightMeters)
+      const placement = getScreenPlacement(bearingDegrees, elevation, aim, fieldOfView)
+      if (!placement.isInView) return []
 
       // The frame spans twice the half-view across, so a thing of a given size covers that
       // fraction of it. Far away this goes to nothing, which is the point of drawing it.
@@ -420,20 +421,22 @@ export const placeLabels = (
 
       return [
         {
-          place,
+          id: tenants.map(({ id }) => id).join('+'),
+          places: [nearest, ...rest],
           bearingDegrees,
           distanceMeters,
-          xPercent,
-          yPercent,
-          groundPoint: { xPercent, yPercent },
-          boxPercent
+          xPercent: placement.xPercent,
+          yPercent: limits.baseRowPercent,
+          groundPoint: { xPercent: placement.xPercent, yPercent: placement.yPercent },
+          boxPercent,
+          heightPercent: limits.rowHeightPercent * tenants.length
         }
       ]
     })
     .sort((first, second) => first.distanceMeters - second.distanceMeters)
     .slice(0, limits.maximumLabels)
 
-  return spreadLabels(nearestFirst, limits.rowHeightPercent, limits.columnWidthPercent).sort(
+  return spreadLabels(nearestFirst, limits.columnWidthPercent).sort(
     (first, second) => second.distanceMeters - first.distanceMeters
   )
 }

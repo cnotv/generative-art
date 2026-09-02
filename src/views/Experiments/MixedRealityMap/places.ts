@@ -136,20 +136,19 @@ export const fetchNearbyPlaces = async (
 const getAddressKey = (place: Place): string | null =>
   place.street && place.houseNumber ? `${place.street} ${place.houseNumber}` : null
 
-const average = (values: number[]): number =>
-  values.reduce((total, value) => total + value, 0) / values.length
-
 /**
- * Merge tenants of the same building into one place, so a shop directory does not draw a
- * pin per name.
+ * Cluster tenants of the same building together, so a shop directory draws one card at one
+ * spot rather than a pin per name stacked on top of each other.
  *
- * A house number alone is not enough, since two different streets can both have a number 12;
- * only a place carrying both is treated as sharing an address, and everything else is left as
- * it was.
+ * Every place survives as itself: nothing is merged or renamed, so each tenant is still its own
+ * row, independently tappable for its own detail card. A house number alone is not enough to
+ * cluster on, since two different streets can both have a number 12; only a place carrying both
+ * fields is treated as sharing an address.
  * @param places Everything found, already resolved to individual businesses
- * @returns One place per address shared by more than one, standing among the rest untouched
+ * @returns Every place, grouped with whichever others share its address; a place with no
+ *   address, or the only one at its address, is its own cluster of one
  */
-export const groupPlacesByAddress = (places: readonly Place[]): Place[] => {
+export const clusterPlacesByAddress = (places: readonly Place[]): Place[][] => {
   const byAddress = places.reduce<Map<string, Place[]>>((groups, place) => {
     const key = getAddressKey(place)
     if (!key) return groups
@@ -158,17 +157,8 @@ export const groupPlacesByAddress = (places: readonly Place[]): Place[] => {
   }, new Map())
 
   const shared = [...byAddress.values()].filter((tenants) => tenants.length > 1)
-  const groupedIds = new Set(shared.flatMap((tenants) => tenants.map(({ id }) => id)))
+  const clusteredIds = new Set(shared.flatMap((tenants) => tenants.map(({ id }) => id)))
+  const standalone = places.filter(({ id }) => !clusteredIds.has(id)).map((place) => [place])
 
-  const merged = shared.map((tenants) => ({
-    ...tenants[0],
-    id: tenants.map(({ id }) => id).join('+'),
-    name: tenants.map(({ name }) => name).join(', '),
-    category: `${tenants.length} places`,
-    osmReference: null,
-    latitude: average(tenants.map(({ latitude }) => latitude)),
-    longitude: average(tenants.map(({ longitude }) => longitude))
-  }))
-
-  return [...places.filter(({ id }) => !groupedIds.has(id)), ...merged]
+  return [...standalone, ...shared]
 }

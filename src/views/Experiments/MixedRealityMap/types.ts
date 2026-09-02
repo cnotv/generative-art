@@ -19,19 +19,29 @@ export interface Place extends GeoPoint {
   street: string | null
 }
 
-/** Where a place lands on screen for the aim the device currently holds. */
+/**
+ * Where one or more places land on screen for the aim the device currently holds.
+ *
+ * More than one place when they share a building: one card, its rows independently tappable,
+ * rather than a pin per tenant stacked on the same spot.
+ */
 export interface PlacedLabel {
-  place: Place
+  id: string
+  /** The tenants of this spot, nearest first. Almost always one. */
+  places: Place[]
+  /** Of the nearest place in the group. */
   distanceMeters: number
   bearingDegrees: number
   /** Percent across the viewport from its left edge. */
   xPercent: number
-  /** Percent down the viewport from its top edge. */
+  /** Percent down the viewport from its top edge, the same for every card in the frame. */
   yPercent: number
-  /** Where the place actually stands, before any lift to clear other labels. */
+  /** Where the place actually stands, unrelated to the fixed row its card is written on. */
   groundPoint: FramePoint
   /** The side of its marker box, as a percent of the frame width, shrinking with distance. */
   boxPercent: number
+  /** How much vertical room the card needs, as a percent of the frame height. */
+  heightPercent: number
 }
 
 /** A street's centre line, as the chain of points the map draws it through. */

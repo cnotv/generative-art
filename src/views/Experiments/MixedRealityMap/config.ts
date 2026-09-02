@@ -90,9 +90,18 @@ export const MINIMAP_RADIUS_METERS = 200
  */
 export const MINIMUM_HORIZON_STRENGTH = 0.2
 
-/** Roughly one label's height and width, as a share of the frame, for lifting them apart. */
+/** Roughly one card row's height and a label's width, as a share of the frame. */
 export const LABEL_ROW_HEIGHT_PERCENT = 7
 export const LABEL_COLUMN_WIDTH_PERCENT = 30
+
+/**
+ * Where every label card sits vertically, so a name reads from the same place in the frame
+ * regardless of how far off the place it names actually is.
+ *
+ * The marker still stands at the place's real position on the ground; only the card carrying
+ * its name is pinned here, and only lifts from it when another card shares its column.
+ */
+export const LABEL_BASE_ROW_PERCENT = 62
 
 /**
  * Things too large to stand anywhere in particular. A city's point is wherever its centre was

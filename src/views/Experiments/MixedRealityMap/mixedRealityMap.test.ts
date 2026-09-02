@@ -13,7 +13,7 @@ import {
   smoothBearing,
   spreadLabels
 } from './projection'
-import { buildPlacesUrl, groupPlacesByAddress, parsePlaces } from './places'
+import { buildPlacesUrl, clusterPlacesByAddress, parsePlaces } from './places'
 import { fetchStreetPaths, parseStreetPaths } from './streets'
 import { buildMinimap, getMinimapPoint } from './minimap'
 import { buildImageUrl, parsePlaceImage } from './imagery'
@@ -219,52 +219,93 @@ describe('placeLabels', () => {
     maximumLabels: 12,
     rowHeightPercent: 0,
     columnWidthPercent: 0,
-    markerMeters: 6
+    markerMeters: 6,
+    baseRowPercent: 50
   }
   const ahead = makePlace('ahead', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
   const behind = makePlace('behind', AMSTERDAM.latitude - 0.001, AMSTERDAM.longitude)
   const far = makePlace('far', AMSTERDAM.latitude + 0.004, AMSTERDAM.longitude)
+  const cluster = (place: Place): Place[] => [place]
 
   it('keeps only what falls inside the frame', () => {
-    const labels = placeLabels([ahead, behind], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const labels = placeLabels(
+      [cluster(ahead), cluster(behind)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      LIMITS
+    )
 
-    expect(labels.map(({ place }) => place.id)).toEqual(['ahead'])
+    expect(labels.map((label) => label.places[0].id)).toEqual(['ahead'])
   })
 
   it('orders the furthest first, so the nearest label draws over it', () => {
-    const labels = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const labels = placeLabels(
+      [cluster(ahead), cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      LIMITS
+    )
 
-    expect(labels.map(({ place }) => place.id)).toEqual(['far', 'ahead'])
+    expect(labels.map((label) => label.places[0].id)).toEqual(['far', 'ahead'])
   })
 
   it('keeps only the nearest, once the frame is full', () => {
-    const labels = placeLabels([far, ahead], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, {
-      ...LIMITS,
-      maximumLabels: 1
-    })
+    const labels = placeLabels(
+      [cluster(far), cluster(ahead)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      {
+        ...LIMITS,
+        maximumLabels: 1
+      }
+    )
 
-    expect(labels.map(({ place }) => place.id)).toEqual(['ahead'])
+    expect(labels.map((label) => label.places[0].id)).toEqual(['ahead'])
   })
 
   it('carries the distance and bearing it placed each label by', () => {
-    const [label] = placeLabels([ahead], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const [label] = placeLabels([cluster(ahead)], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
 
     expect(label.bearingDegrees).toBeCloseTo(0, 1)
     expect(label.distanceMeters).toBeCloseTo(111, 0)
   })
 
-  it('keeps the ground point a marker is drawn on, apart from the lifted label', () => {
-    const [label] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, {
-      ...LIMITS,
-      rowHeightPercent: 7,
-      columnWidthPercent: 30
-    })
+  it('draws every card on the same fixed row, whatever the distance', () => {
+    const [distant, near] = placeLabels(
+      [cluster(ahead), cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      LIMITS
+    )
 
-    expect(label.groundPoint.yPercent).toBeGreaterThan(label.yPercent)
+    expect(near.yPercent).toBe(LIMITS.baseRowPercent)
+    expect(distant.yPercent).toBe(LIMITS.baseRowPercent)
+  })
+
+  it("keeps the ground marker at the place's real, distance-dependent position", () => {
+    const [distant, near] = placeLabels(
+      [cluster(ahead), cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      LIMITS
+    )
+
+    expect(near.groundPoint.yPercent).toBeGreaterThan(distant.groundPoint.yPercent)
   })
 
   it('draws a nearer marker larger than a far one', () => {
-    const [distant, near] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const [distant, near] = placeLabels(
+      [cluster(ahead), cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      LIMITS
+    )
 
     expect(near.boxPercent).toBeGreaterThan(distant.boxPercent)
   })
@@ -272,20 +313,14 @@ describe('placeLabels', () => {
   it('never draws a marker wider than the frame, however close it gets', () => {
     const underfoot = makePlace('underfoot', AMSTERDAM.latitude + 0.00001, AMSTERDAM.longitude)
 
-    const [label] = placeLabels([underfoot], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const [label] = placeLabels([cluster(underfoot)], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
 
     expect(label?.boxPercent ?? 0).toBeLessThanOrEqual(100)
   })
 
-  it('draws a nearer place lower in the frame than a far one', () => {
-    const [distant, near] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
-
-    expect(near.yPercent).toBeGreaterThan(distant.yPercent)
-  })
-
   it('turns the whole frame when the heading is corrected', () => {
     const corrected = placeLabels(
-      [ahead],
+      [cluster(ahead)],
       AMSTERDAM,
       { ...LEVEL_AIM, headingDegrees: 15 },
       FIELD_OF_VIEW,
@@ -295,14 +330,32 @@ describe('placeLabels', () => {
     expect(corrected[0].xPercent).toBeLessThan(50)
   })
 
-  it('lifts the further of two labels sharing a column clear of the nearer one', () => {
-    const [distant, near] = placeLabels([ahead, far], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, {
-      ...LIMITS,
-      rowHeightPercent: 7,
-      columnWidthPercent: 30
-    })
+  it('pushes the further of two labels sharing a column clear of the nearer one', () => {
+    const [distant, near] = placeLabels(
+      [cluster(ahead), cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      { ...LIMITS, rowHeightPercent: 7, columnWidthPercent: 30 }
+    )
 
-    expect(near.yPercent - distant.yPercent).toBeGreaterThan(7)
+    expect(near.yPercent - distant.yPercent).toBe(7)
+  })
+
+  it('gives a cluster of several tenants a taller card, so it pushes the next one further', () => {
+    const shop = makePlace('shop', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
+    const cafe = makePlace('cafe', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
+
+    const [distant, near] = placeLabels(
+      [[shop, cafe], cluster(far)],
+      AMSTERDAM,
+      LEVEL_AIM,
+      FIELD_OF_VIEW,
+      { ...LIMITS, rowHeightPercent: 7, columnWidthPercent: 30 }
+    )
+
+    expect(near.places).toHaveLength(2)
+    expect(near.yPercent - distant.yPercent).toBe(14)
   })
 })
 
@@ -787,42 +840,52 @@ describe('fetchStreetPaths across mirrors', () => {
 })
 
 describe('spreadLabels', () => {
-  const at = (id: string, xPercent: number): PlacedLabel => ({
-    place: makePlace(id, 0, 0),
+  const at = (id: string, xPercent: number, heightPercent = 7): PlacedLabel => ({
+    id,
+    places: [makePlace(id, 0, 0)],
     distanceMeters: 10,
     bearingDegrees: 0,
     xPercent,
-    yPercent: 50
+    yPercent: 50,
+    groundPoint: { xPercent, yPercent: 50 },
+    boxPercent: 5,
+    heightPercent
   })
 
   it('leaves the first label exactly where it landed', () => {
-    expect(spreadLabels([at('one', 50)], 7, 30)[0].yPercent).toBe(50)
+    expect(spreadLabels([at('one', 50)], 30)[0].yPercent).toBe(50)
   })
 
-  it('lifts each label that shares a column with one already placed', () => {
-    const spread = spreadLabels([at('one', 50), at('two', 52), at('three', 54)], 7, 30)
+  it('pushes each label that shares a column with one already placed', () => {
+    const spread = spreadLabels([at('one', 50), at('two', 52), at('three', 54)], 30)
 
     expect(spread.map(({ yPercent }) => yPercent)).toEqual([50, 43, 36])
   })
 
   it('leaves a label in its own column alone', () => {
-    const spread = spreadLabels([at('left', 10), at('right', 90)], 7, 30)
+    const spread = spreadLabels([at('left', 10), at('right', 90)], 30)
 
     expect(spread.map(({ yPercent }) => yPercent)).toEqual([50, 50])
   })
 
-  it('stops lifting at the top of the frame rather than off it', () => {
+  it('stops pushing at the top of the frame rather than off it', () => {
     const stack = Array.from({ length: 12 }, (_unused, index) => at(`label-${index}`, 50))
 
-    const spread = spreadLabels(stack, 7, 30)
+    const spread = spreadLabels(stack, 30)
 
     spread.forEach(({ yPercent }) => expect(yPercent).toBeGreaterThanOrEqual(7))
   })
 
   it('keeps the labels and their order', () => {
-    const spread = spreadLabels([at('one', 50), at('two', 52)], 7, 30)
+    const spread = spreadLabels([at('one', 50), at('two', 52)], 30)
 
-    expect(spread.map(({ place }) => place.id)).toEqual(['one', 'two'])
+    expect(spread.map(({ id }) => id)).toEqual(['one', 'two'])
+  })
+
+  it('pushes a taller card by its own height rather than a fixed guess', () => {
+    const spread = spreadLabels([at('tall', 50, 21), at('next', 52)], 30)
+
+    expect(spread[1].yPercent).toBe(50 - 21)
   })
 })
 
@@ -992,7 +1055,7 @@ describe('parsePlaces', () => {
   })
 })
 
-describe('groupPlacesByAddress', () => {
+describe('clusterPlacesByAddress', () => {
   const tenant = (id: string, name: string, houseNumber: string | null, street: string | null) => ({
     ...makePlace(id, AMSTERDAM.latitude, AMSTERDAM.longitude),
     name,
@@ -1000,34 +1063,32 @@ describe('groupPlacesByAddress', () => {
     street
   })
 
-  it('merges tenants of the same street and house number into one, names joined', () => {
-    const grouped = groupPlacesByAddress([
-      tenant('a', 'itsu', '554', 'Oxford Street'),
-      tenant('b', 'Pret A Manger', '554', 'Oxford Street')
-    ])
+  it('clusters tenants of the same street and house number, neither renamed nor merged', () => {
+    const itsu = tenant('a', 'itsu', '554', 'Oxford Street')
+    const pret = tenant('b', 'Pret A Manger', '554', 'Oxford Street')
 
-    expect(grouped).toHaveLength(1)
-    expect(grouped[0].name).toBe('itsu, Pret A Manger')
-    expect(grouped[0].id).toBe('a+b')
+    const clusters = clusterPlacesByAddress([itsu, pret])
+
+    expect(clusters).toHaveLength(1)
+    expect(clusters[0]).toEqual(expect.arrayContaining([itsu, pret]))
   })
 
   it('leaves a place with no house number standing on its own', () => {
-    const grouped = groupPlacesByAddress([
+    const clusters = clusterPlacesByAddress([
       tenant('a', 'itsu', '554', 'Oxford Street'),
       tenant('b', 'Wafflemeister', null, 'Oxford Street')
     ])
 
-    expect(grouped.map(({ name }) => name)).toEqual(
-      expect.arrayContaining(['itsu', 'Wafflemeister'])
-    )
+    expect(clusters).toHaveLength(2)
+    expect(clusters.map((cluster) => cluster.length)).toEqual([1, 1])
   })
 
-  it('never merges the same number on two different streets', () => {
-    const grouped = groupPlacesByAddress([
+  it('never clusters the same number on two different streets', () => {
+    const clusters = clusterPlacesByAddress([
       tenant('a', 'itsu', '12', 'Oxford Street'),
       tenant('b', 'The Cumberland Hotel', '12', 'Great Cumberland Place')
     ])
 
-    expect(grouped).toHaveLength(2)
+    expect(clusters).toHaveLength(2)
   })
 })

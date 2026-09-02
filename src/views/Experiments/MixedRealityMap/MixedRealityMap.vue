@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import IconButton from '@/components/IconButton.vue'
-import { fetchNearbyPlaces, groupPlacesByAddress } from './places'
+import { clusterPlacesByAddress, fetchNearbyPlaces } from './places'
 import { fetchPlaceImage } from './imagery'
 import { buildMinimap } from './minimap'
 import { fetchStreetPaths } from './streets'
@@ -37,6 +37,7 @@ import {
   GEOLOCATION_OPTIONS,
   IMAGE_SEARCH_RADIUS_METERS,
   IMAGE_THUMBNAIL_WIDTH,
+  LABEL_BASE_ROW_PERCENT,
   LABEL_COLUMN_WIDTH_PERCENT,
   LABEL_ROW_HEIGHT_PERCENT,
   MAXIMUM_FIELD_OF_VIEW,
@@ -125,13 +126,13 @@ const visiblePlaces = computed(() =>
 )
 
 /**
- * Tenants sharing a building get one label between them, so a shop directory reads as one pin.
+ * Tenants sharing a building get one card between them, its rows still independently tappable,
+ * so a shop directory reads as one spot rather than a pin per name stacked on top of itself.
  *
- * Grouped from what is currently shown, not from everything found: grouping across a filtered
- * group would join in an id that filter is hiding, and a tap on the merged pin would then look
- * for a place that never rendered.
+ * Clustered from what is currently shown, not from everything found: clustering across a
+ * filtered group would draw a tenant the filter is hiding.
  */
-const groupedVisiblePlaces = computed(() => groupPlacesByAddress(visiblePlaces.value))
+const placeClusters = computed(() => clusterPlacesByAddress(visiblePlaces.value))
 
 /**
  * How many of each kind were found, so a toggle says what turning it off would cost.
@@ -152,7 +153,7 @@ const groupCounts = computed(() => {
 const labels = computed(() =>
   origin.value
     ? placeLabels(
-        groupedVisiblePlaces.value,
+        placeClusters.value,
         origin.value,
         {
           headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
@@ -164,7 +165,8 @@ const labels = computed(() =>
           maximumLabels: MAX_VISIBLE_LABELS,
           rowHeightPercent: LABEL_ROW_HEIGHT_PERCENT,
           columnWidthPercent: LABEL_COLUMN_WIDTH_PERCENT,
-          markerMeters: PLACE_MARKER_METERS
+          markerMeters: PLACE_MARKER_METERS,
+          baseRowPercent: LABEL_BASE_ROW_PERCENT
         }
       )
     : []
@@ -228,7 +230,7 @@ const worldTransform = computed(
 )
 
 const selectedPlace = computed(
-  () => groupedVisiblePlaces.value.find(({ id }) => id === selectedPlaceId.value) ?? null
+  () => places.value.find(({ id }) => id === selectedPlaceId.value) ?? null
 )
 
 /**
@@ -642,7 +644,7 @@ onBeforeUnmount(() => {
 
       <span
         v-for="label in labels"
-        :key="`${label.place.id}-marker`"
+        :key="`${label.id}-marker`"
         class="mrm__marker"
         :style="{
           left: `${label.groundPoint.xPercent}%`,
@@ -652,19 +654,28 @@ onBeforeUnmount(() => {
         }"
       ></span>
 
-      <Button
+      <div
         v-for="label in labels"
-        :key="label.place.id"
-        variant="ghost"
-        class="mrm__label"
+        :key="label.id"
+        class="mrm__label-group"
         :style="{ left: `${label.xPercent}%`, top: `${label.yPercent}%` }"
-        @click="selectPlace(label.place)"
       >
-        <span class="mrm__label-name">{{ label.place.name }}</span>
-        <span class="mrm__label-detail">
-          {{ label.place.category }} · {{ formatDistance(label.distanceMeters) }}
-        </span>
-      </Button>
+        <Button
+          v-for="place in label.places"
+          :key="place.id"
+          variant="ghost"
+          class="mrm__label"
+          @click="selectPlace(place)"
+        >
+          <span class="mrm__label-name">{{ place.name }}</span>
+          <span class="mrm__label-detail">
+            {{ place.category }} · {{ formatDistance(label.distanceMeters) }}
+          </span>
+          <span v-if="place.street && place.houseNumber" class="mrm__label-address">
+            {{ place.houseNumber }} {{ place.street }}
+          </span>
+        </Button>
+      </div>
     </div>
 
     <div class="mrm__chrome">
@@ -937,8 +948,20 @@ onBeforeUnmount(() => {
   transform: translate(-50%, -50%);
 }
 
-.mrm__label {
+/*
+ * One card, sitting on the frame's fixed label row. Its own rows are laid out by flex rather
+ * than by percentage math, so a tenant added to the group grows the card instead of squeezing
+ * its neighbours or overlapping them.
+ */
+.mrm__label-group {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  transform: translate(-50%, -50%);
+}
+
+.mrm__label {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-0-5);
@@ -949,7 +972,6 @@ onBeforeUnmount(() => {
   background: var(--color-canvas-overlay-surface);
   color: var(--color-canvas-overlay-foreground);
   text-shadow: var(--shadow-text-canvas-overlay);
-  transform: translate(-50%, -50%);
 }
 
 .mrm__label-name {
@@ -960,6 +982,11 @@ onBeforeUnmount(() => {
 .mrm__label-detail {
   font-size: var(--font-size-xs);
   opacity: 0.8;
+}
+
+.mrm__label-address {
+  font-size: var(--font-size-xs);
+  opacity: 0.6;
 }
 
 .mrm__chrome {
