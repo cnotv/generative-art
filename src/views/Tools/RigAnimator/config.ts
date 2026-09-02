@@ -25,6 +25,10 @@ export const POSES_FILE_ACCEPT = 'application/json'
 export const BONE_MARKER_RADIUS_FRACTION = 0.015
 export const BONE_MARKER_COLOR_DEFAULT = 0xb8c4f0
 export const BONE_MARKER_COLOR_SELECTED = 0xf0a8a0
+/** Each hierarchy level below the root shrinks a marker by this factor, so depth reads visually. */
+export const BONE_MARKER_DEPTH_FALLOFF = 0.82
+/** A marker never shrinks past this fraction of its rig's base size, however deep the chain. */
+export const BONE_MARKER_MIN_SCALE = 0.35
 
 export const DEFAULT_FPS = 30
 export const DEFAULT_FRAME_MAX = 150
@@ -36,6 +40,12 @@ export const ROTATION_CONTROL = {
   max: { x: Math.PI, y: Math.PI, z: Math.PI },
   step: { x: 0.01, y: 0.01, z: 0.01 }
 }
+
+/** Fraction of the rig's own spread used as the +/- range for the Bone Position panel field. */
+export const POSITION_RANGE_FRACTION = 0.6
+export const POSITION_STEP_FRACTION = 0.002
+/** Fallback +/- range for Bone Position before any rig is loaded. */
+export const DEFAULT_POSITION_RANGE = 1
 
 export const EXPORT_GLB_FILENAME = 'rig-animation.glb'
 export const EXPORT_JSON_FILENAME = 'rig-animation.json'

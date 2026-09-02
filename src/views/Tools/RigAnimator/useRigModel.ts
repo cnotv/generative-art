@@ -1,8 +1,14 @@
 import { computed, shallowRef, type Ref } from 'vue'
 import * as THREE from 'three'
 import { rigFindSkinnedMesh, rigFindUnskinnedMeshes } from '@webgamekit/animation'
-import { createBoneMarkers, highlightBoneMarker, pickBoneMarker } from './boneMarkers'
+import {
+  computeRigDiagonal,
+  createBoneMarkers,
+  highlightBoneMarker,
+  pickBoneMarker
+} from './boneMarkers'
 import { loadModelFile, disposeModel, generateAutoRig } from './rigModel'
+import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import type { RigAnimatorConfig } from './types'
 
 /** Owns the loaded model, its rig and its bone markers for the rig animator tool. */
@@ -17,6 +23,12 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const needsAutoRig = computed(
     () =>
       bones.value.length === 0 && !!model.value && rigFindUnskinnedMeshes(model.value).length > 0
+  )
+  /** +/- range the Bone Position panel field offers, scaled to this rig so it fits any model. */
+  const positionRange = computed(() =>
+    bones.value.length > 0
+      ? computeRigDiagonal(bones.value) * POSITION_RANGE_FRACTION
+      : DEFAULT_POSITION_RANGE
   )
 
   const setScene = (nextScene: THREE.Scene): void => {
@@ -69,13 +81,14 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (skinnedMeshes) attachRig(skinnedMeshes[0])
   }
 
-  /** Select a bone by name, highlighting its marker and loading its rotation into the panel. */
+  /** Select a bone by name, highlighting its marker and loading its transform into the panel. */
   const selectBone = (name: string): void => {
     config.value.selectedBone = name
     highlightBoneMarker(boneMarkers.value, name)
     const bone = bones.value.find((candidate) => candidate.name === name)
     if (bone) {
       config.value.boneRotation = { x: bone.rotation.x, y: bone.rotation.y, z: bone.rotation.z }
+      config.value.bonePosition = { x: bone.position.x, y: bone.position.y, z: bone.position.z }
     }
   }
 
@@ -91,17 +104,31 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (bone) bone.rotation.set(rotation.x, rotation.y, rotation.z)
   }
 
+  /** Apply a position from the panel (or a gizmo drag) to the currently selected bone. */
+  const applyBonePosition = (position: { x: number; y: number; z: number }): void => {
+    const bone = bones.value.find((candidate) => candidate.name === config.value.selectedBone)
+    if (bone) bone.position.set(position.x, position.y, position.z)
+  }
+
+  /** The currently selected bone, if any, for the view to attach a transform gizmo to. */
+  const selectedBone = computed(() =>
+    bones.value.find((candidate) => candidate.name === config.value.selectedBone)
+  )
+
   return {
     model,
     skinnedMesh,
     bones,
     boneNames,
     needsAutoRig,
+    positionRange,
+    selectedBone,
     setScene,
     loadModel,
     runAutoRig,
     selectBone,
     pickBoneFromRay,
-    applyBoneRotation
+    applyBoneRotation,
+    applyBonePosition
   }
 }

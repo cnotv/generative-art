@@ -2,31 +2,47 @@ import * as THREE from 'three'
 import {
   BONE_MARKER_COLOR_DEFAULT,
   BONE_MARKER_COLOR_SELECTED,
+  BONE_MARKER_DEPTH_FALLOFF,
+  BONE_MARKER_MIN_SCALE,
   BONE_MARKER_RADIUS_FRACTION
 } from './config'
 
 const MARKER_NAME_PREFIX = 'bone-marker:'
 const MARKER_SEGMENTS = 8
 
-/** How far the rig's bones spread in world space, so markers can scale to match any model. */
-const computeRigDiagonal = (bones: THREE.Bone[]): number => {
+/**
+ * How far the rig's bones spread in world space, so markers and the position panel field can
+ * scale to match any model.
+ * @param bones The rig's bones, with up-to-date world matrices
+ */
+export const computeRigDiagonal = (bones: THREE.Bone[]): number => {
   const box = new THREE.Box3()
   bones.forEach((bone) => box.expandByPoint(bone.getWorldPosition(new THREE.Vector3())))
   return box.getSize(new THREE.Vector3()).length()
 }
 
+/** How many Bone ancestors sit between this bone and the skeleton's root (root itself is 0). */
+const boneDepth = (bone: THREE.Bone): number =>
+  bone.parent instanceof THREE.Bone ? boneDepth(bone.parent) + 1 : 0
+
 /**
  * Add a small clickable marker to every bone, parented to the bone itself so it tracks the
  * bone's pose automatically without any per-frame syncing. Sized as a fraction of the rig's
- * own spread, so it reads at any model scale instead of a fixed absolute size.
+ * own spread so it reads at any model scale, and shrinking with hierarchy depth so a root
+ * joint reads larger than the fingertip several bones below it.
  * @param bones The rig's bones to mark, with up-to-date world matrices
  * @returns The created markers, in the same order as the bones
  */
 export const createBoneMarkers = (bones: THREE.Bone[]): THREE.Mesh[] => {
-  const radius = computeRigDiagonal(bones) * BONE_MARKER_RADIUS_FRACTION
-  const geometry = new THREE.SphereGeometry(radius, MARKER_SEGMENTS, MARKER_SEGMENTS)
+  const baseRadius = computeRigDiagonal(bones) * BONE_MARKER_RADIUS_FRACTION
 
   return bones.map((bone) => {
+    const depthScale = Math.max(BONE_MARKER_MIN_SCALE, BONE_MARKER_DEPTH_FALLOFF ** boneDepth(bone))
+    const geometry = new THREE.SphereGeometry(
+      baseRadius * depthScale,
+      MARKER_SEGMENTS,
+      MARKER_SEGMENTS
+    )
     const material = new THREE.MeshBasicMaterial({
       color: BONE_MARKER_COLOR_DEFAULT,
       depthTest: false

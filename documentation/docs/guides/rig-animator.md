@@ -5,26 +5,31 @@ sidebar_position: 23
 # Posing a model into an animation
 
 The Rig Animator at `/tools/RigAnimator` turns an uploaded model into a standalone animation
-clip. Upload a model, pick a bone by clicking its marker or from the panel list, drag it into a
-pose, drop a keyframe, move to another frame and pose it again. Three.js interpolates between
-whatever keyframes exist, so two poses are already a movement.
+clip. Upload a model, select a bone, move and rotate it into a pose, drop a keyframe, move to
+another frame and pose it again. Three.js interpolates between whatever keyframes exist, so
+two poses are already a movement.
 
-![Selecting mixamorigRightArm and dropping it into a pose, with every other bone still marked in the rest colour](/img/animation/rig-posing.webp)
+![mixamorigRightArm selected and pulled into a pose: the translate gizmo at its joint, the marker turned rose, its rotation and position both edited, every other bone still marked in the rest colour and shrinking toward the fingertips](/img/animation/rig-posing.webp)
 
 ## Source files
 
 - `src/views/Tools/RigAnimator/RigAnimator.vue` — the view: scene setup, canvas picking, and
   wiring the panel schema to the composables below
-- `src/views/Tools/RigAnimator/useRigModel.ts` — the loaded model, its rig and its bone markers
+- `src/views/Tools/RigAnimator/useRigModel.ts` — the loaded model, its rig, its bone markers
+  and the selected bone
 - `src/views/Tools/RigAnimator/useRigKeyframes.ts` — the authored pose keyframes and the preview
   and export clips built from them
 - `src/views/Tools/RigAnimator/rigModel.ts` — loading a model file and generating an auto-rig
-- `src/views/Tools/RigAnimator/boneMarkers.ts` — the clickable per-bone markers
+- `src/views/Tools/RigAnimator/boneMarkers.ts` — the clickable, hierarchy-scaled per-bone markers
+- `src/views/Tools/RigAnimator/useBoneGizmo.ts` — the translate gizmo (Three.js's own
+  `TransformControls`) for dragging the selected bone
+- `src/views/Tools/RigAnimator/timelineSource.ts` — exposes the pose keyframes to the shared
+  Timeline panel
 - `src/views/Tools/RigAnimator/cameraFraming.ts` — framing the camera to whatever scale the
   uploaded model happens to use
 - `src/views/Tools/RigAnimator/export.ts` — the GLB and JSON export/import
 - `src/views/Tools/RigAnimator/panelSchema.ts` — the Config panel schema, rebuilt whenever the
-  bone list, the keyframe list or the playback state changes
+  bone list, the keyframe list or the auto-rig availability changes
 - `src/views/Tools/RigAnimator/config.ts` — the scene setup and every tunable, as values only
 - `packages/animation/src/pose.ts`, `humanoidRig.ts`, `rig.ts` — the framework-agnostic logic:
   see the [animation package's rigging section](/docs/packages/animation#rigging-and-pose-animation)
@@ -41,19 +46,36 @@ somewhere behind a shoe.
 ## Picking and posing a bone
 
 Every bone gets a small marker, sized as a fraction of the whole rig's spread so it reads at any
-model scale. Clicking a marker on the canvas, or picking a name from the **Bone** dropdown,
-selects it and loads its current rotation into the X/Y/Z fields. The selected marker turns
-rose; every other one stays the default periwinkle. Editing the rotation fields rotates the bone
-live, so a pose is built by eye against the model rather than by typing numbers blind.
+model scale, and shrinking with hierarchy depth so a hip or shoulder joint reads larger than a
+fingertip several bones further down the chain. Clicking a marker on the canvas, or picking a
+name from the **Bone** dropdown, selects it: the marker turns rose, every other one stays the
+default periwinkle, and a translate gizmo appears at the bone's joint.
+
+Rotating and moving both work two ways, kept in sync with each other:
+
+- **Drag the gizmo** in the 3D view to move the bone — the orbit camera steps aside for the
+  duration of the drag.
+- **Type into the Bone Rotation / Bone Position fields**, ranged to whatever scale the loaded
+  rig happens to be.
+
+Either one updates the model live and the other's fields immediately, so a pose is built by eye
+against the model rather than by typing numbers blind.
+
+Only rotation is part of a keyframe. Moving a bone corrects where it sits — most useful for
+nudging an auto-rigged skeleton's guessed joint placement — rather than authoring an
+animated translation, so a position edit is not captured by **Add Keyframe at Frame** and does
+not appear in the exported clip.
 
 ## Keyframes and interpolation
 
-**Frame** is the current position on the timeline. **Add Keyframe at Frame** captures every
-bone's current rotation at that frame; adding one at a frame that already holds a keyframe
-replaces it. Moving Frame while nothing is playing scrubs the preview to that instant,
-interpolated between whichever keyframes bracket it — two poses ten frames apart already read
-as a movement once you scrub between them. **Play Preview** runs the clip in real time at the
-chosen **FPS**; **Delete Keyframe at Frame** removes whatever keyframe sits at the current frame.
+Frame-based scheduling already has a home in this app: the Timeline panel, shared with every
+other view that schedules something over frames. Each pose keyframe you drop shows up there as
+a named bar — `Pose @ frame 12` — and its own **Play/Pause** button runs the clip in real time.
+**Frame** in the Config panel is the authoring position: **Add Keyframe at Frame** captures
+every bone's current rotation and position at that frame, replacing whatever keyframe already
+sat there; **Delete Keyframe at Frame** removes it. Moving Frame while nothing is playing scrubs
+the preview to that instant, interpolated between whichever keyframes bracket it — two poses ten
+frames apart already read as a movement once you scrub between them.
 
 ## Auto-rig for a model with no skeleton
 
