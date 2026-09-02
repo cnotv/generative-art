@@ -275,6 +275,8 @@ export interface SetupConfig {
   }
   scene?: {
     backgroundColor?: number
+    /** Takes over from `backgroundColor` when set, rather than combining with it. */
+    backgroundTexture?: string
   }
   camera?: CameraConfig
   ground?: GroundConfig | false

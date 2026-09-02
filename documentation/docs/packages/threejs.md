@@ -103,6 +103,10 @@ Configure scene with camera, lights, ground, and sky.
 
 ```typescript
 {
+  scene?: {
+    backgroundColor?: number,
+    backgroundTexture?: string  // takes over from backgroundColor when set
+  },
   camera?: {
     position?: CoordinateTuple | THREE.Vector3,
     fov?: number,

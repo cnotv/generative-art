@@ -1,6 +1,7 @@
 import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
 import type { ControlMapping } from '@webgamekit/controls'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
+import backdropUrl from '@/assets/images/backgrounds/field.webp'
 import concertUrl from '@/assets/images/generic/concert.webp'
 import landscapeUrl from '@/assets/images/generic/landscape.webp'
 import lightsUrl from '@/assets/images/generic/lights.webp'
@@ -35,7 +36,7 @@ export const PICTURES: { name: string; url: string }[] = [
 export const VIEW_TARGET: CoordinateTuple = [0, 3.3, 0]
 
 export const SETUP_CONFIG: SetupConfig = {
-  scene: { backgroundColor: 0xd7d9e4 },
+  scene: { backgroundTexture: backdropUrl },
   camera: { position: [0, 3.3, 5.2], fov: 50, lookAt: VIEW_TARGET },
   // An orbit drag and a swipe are the same gesture, and the swipe is the one
   // this scene is driven by, so the camera stays where it was composed. The

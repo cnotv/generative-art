@@ -94,7 +94,11 @@ const applySceneConfig = (
   world: RAPIER.World,
   resolved: SetupConfig
 ) => {
-  if (resolved.scene?.backgroundColor)
+  if (resolved.scene?.backgroundTexture)
+    scene.background = textureLoader.load(
+      new URL(resolved.scene.backgroundTexture, import.meta.url) as unknown as string
+    )
+  else if (resolved.scene?.backgroundColor)
     scene.background = new THREE.Color(resolved.scene.backgroundColor)
   if (resolved.lights !== false) {
     getLights(scene, resolved.lights)
