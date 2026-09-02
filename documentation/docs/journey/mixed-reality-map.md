@@ -8,7 +8,7 @@ Labelling the world through a phone camera turned out to be three problems that 
 like one: knowing where the camera points, knowing what is out there, and drawing the answer
 so it can be read. Each had a wrong first answer that seemed obviously right.
 
-![Named places over the camera feed with street lines and the icon bar](/img/mixed-reality-map/labels.webp)
+![Named places as building cards over the street line and the icon bar](/img/mixed-reality-map/labels.webp)
 
 The camera starts off, which is the actual default rather than a stand-in for a screenshot: the
 overlay reads the same way over the plain background it draws on here as it does over the live
@@ -45,10 +45,10 @@ up, and rolled into landscape.
 ```mermaid
 flowchart LR
   A["alpha, beta, gamma"] --> B["One rotation"]
-  B --> C["Backward axis<br/>heading and pitch"]
+  B --> C["Backward axis<br/>heading"]
   B --> D["World up on screen<br/>roll"]
-  C --> E["Where a label goes"]
-  D --> F["How far the layer turns"]
+  C --> E["Where a card goes"]
+  D --> F["Roll readout in calibration"]
 ```
 
 One platform difference survives this. WebKit reports a relative first angle and publishes
@@ -56,36 +56,28 @@ the absolute compass separately, where every other engine puts the absolute valu
 angle itself. Rather than branching downstream, the compass reading substitutes for the angle
 before the rotation is built, which leaves a single path through the maths.
 
-## Rotating the overlay is what makes it look fixed
+## Rotating the overlay turned out to be the wrong instinct after all
 
-The instinct is to hold the labels upright, the way a map's text stays upright. That is
-exactly backwards. Upright text is painted on the glass and travels with the phone, and a
-viewer reads it as an interface. Text that turns against the phone stays square to the
-horizon, and a viewer reads it as part of the street.
+The first answer rotated the whole layer against the phone's roll. The reasoning read well at
+the time: upright text is painted on the glass and travels with the phone, so a viewer reads it
+as an interface, while text that turns against the phone stays square to the horizon and reads
+as part of the street. Because every label turned by the same amount, the layer turned once
+rather than each label being placed into an already-turned frame.
 
-Because every label turns by the same amount, the layer turns once rather than each label
-being placed into an already-turned frame. That also keeps the placement arithmetic in a
-frame where up is up.
+Getting there took two real bugs, both invisible on a desk. A device lying flat has no horizon —
+the plumb line points straight through the screen — so its roll is whichever way the last of the
+sensor noise fell, and had to be held rather than followed. And roll is an angle: blending it as
+a plain number sent the overlay the long way round half a turn every time it crossed the wrap.
+Both looked identical to the projection being wrong, which is what made them worth writing down
+even after the rotation they were fixing was itself dropped.
 
-The page must then not turn as well, or the same rotation happens twice. Locking the page to
-portrait is the honest fix; where a platform ignores the lock, the rotation the browser
-already applied is subtracted back out — but only when the page has visibly taken it. Some
-browsers report the angle the device is held at rather than the one the document was turned
-by, and believing that turns the overlay a quarter turn while the page is plainly still
-portrait. The viewport's own shape is the check: a portrait viewport has not been rotated,
-whatever the angle claims.
-
-Two more ways to be spun a quarter turn by nothing, both of which took a phone to find. A
-device lying flat has no horizon — the plumb line points straight through the screen — so its
-roll is whichever way the last of the sensor noise fell, and it has to be held rather than
-followed. And roll is an angle: blending it as a plain number sends the overlay the long way
-round half a turn every time it crosses the wrap. Neither shows up on a desk, and both look
-identical to the projection being wrong.
-
-![The same labels with the phone rolled into landscape, turned against the still-portrait page](/img/mixed-reality-map/rolled.webp)
-
-The page is still portrait in that shot. The phone has been rolled a quarter turn, and the
-labels have turned the other way to stay square to the world.
+It was dropped once cards stopped answering to the phone's pitch as well. A label that turns to
+stay "square to the world" only reads that way when its position is also answering to the real
+world; once every card sits on a fixed row regardless of pitch, a card that still rotated with
+roll would be turning to match a world it had already stopped tracking in every other way. Roll
+is still read and smoothed the same way, the wrap and the flat-phone cases included, and the
+lock to portrait still stands so the video feed and the layout do not reflow — the overlay
+itself simply stopped answering to it. A card stays upright no matter how the phone is held.
 
 ## Everything on the horizon is everything in one place
 
@@ -165,9 +157,12 @@ cannot be turned.
 
 ![A tapped place with its picture, beside the plan view in the corner](/img/mixed-reality-map/detail.webp)
 
-Which kinds of thing are named is a row of icon toggles along the bottom rather than a setting
+Which kinds of place are named is a row of icon toggles along the bottom rather than a setting
 behind a button, because it is the control that gets used while walking: a street of shops is a
-wall of names, and turning four of the five kinds off is how you find the one you wanted.
+wall of names, and turning three of the four kinds off is how you find the one you wanted.
+Streets are not one of the four: they are a different kind of thing shown at the same time as
+places rather than a category to switch between them, so the line is always drawn and never one
+of the toggles.
 
 ## The map is drawn, not fetched
 
