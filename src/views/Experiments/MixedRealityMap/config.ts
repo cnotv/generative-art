@@ -32,11 +32,9 @@ export const SEARCH_RADIUS_METERS = 400
 export const MAX_PLACES = 80
 
 /**
- * Street lines are drawn from much closer in than the labels.
- *
- * From eye height the ground falls away fast: a street two hundred metres off sits half a degree
- * below the horizon, and every street past that piles into the same few pixels of it. Only the
- * ones near enough to have visible shape are worth drawing, and the rest are a smear.
+ * Street lines are fetched from much closer in than the labels, and narrowed further still by
+ * `ADJACENT_STREET_METERS` below: a search this wide is only ever a starting pool for that
+ * closer filter, not what ends up drawn.
  */
 export const STREET_RADIUS_METERS = 120
 
@@ -51,19 +49,6 @@ export const ADJACENT_STREET_METERS = 20
 
 /** How many labels the frame will hold before it stops being readable. */
 export const MAX_VISIBLE_LABELS = 12
-
-/** Where a phone is held, which decides how far below the horizon a nearby place sits. */
-export const EYE_HEIGHT_METERS = 1.6
-
-/**
- * How wide to lay a street down. A carriageway with its pavements is about this, and drawing it
- * at a real width is what makes it lie on the ground and narrow into the distance rather than
- * read as a wire strung across the picture.
- */
-export const STREET_WIDTH_METERS = 12
-
-/** The footprint of a marker box, roughly a shopfront, so it shrinks with distance like one. */
-export const PLACE_MARKER_METERS = 6
 
 /**
  * Wikipedia's own search by position: free, no key, and it answers with an open cross-origin
@@ -95,13 +80,18 @@ export const LABEL_ROW_HEIGHT_PERCENT = 7
 export const LABEL_COLUMN_WIDTH_PERCENT = 30
 
 /**
- * Where every label card sits vertically, so a name reads from the same place in the frame
- * regardless of how far off the place it names actually is.
- *
- * The marker still stands at the place's real position on the ground; only the card carrying
- * its name is pinned here, and only lifts from it when another card shares its column.
+ * Where every building card sits vertically, so a name reads from the same place in the frame
+ * regardless of how far off the place it names actually is. It only rises from here when
+ * another card shares its column.
  */
-export const LABEL_BASE_ROW_PERCENT = 62
+export const LABEL_BASE_ROW_PERCENT = 55
+
+/**
+ * Where the street line sits vertically, below the row the building cards start on: the street
+ * is underfoot, and the buildings named on it stand over it in the frame the way they do in a
+ * real street.
+ */
+export const STREET_ROW_PERCENT = 75
 
 /**
  * Things too large to stand anywhere in particular. A city's point is wherever its centre was

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from 'vue'
 import {
   createControls,
   lockScreenOrientation,
@@ -7,6 +7,9 @@ import {
 } from '@webgamekit/controls'
 import type { DeviceAim, MotionReading } from '@webgamekit/controls'
 import {
+  Building2,
+  Camera,
+  CameraOff,
   Landmark,
   MapPin,
   Route,
@@ -24,16 +27,14 @@ import { fetchStreetPaths } from './streets'
 import {
   formatDistance,
   getDistanceMeters,
-  getVerticalFieldOfView,
   isAdjacentStreetPath,
   placeLabels,
-  projectStreetRibbons,
+  projectStreetLines,
   smoothBearing
 } from './projection'
 import {
   ADJACENT_STREET_METERS,
   DEFAULT_HORIZONTAL_FIELD_OF_VIEW,
-  EYE_HEIGHT_METERS,
   GEOLOCATION_OPTIONS,
   IMAGE_SEARCH_RADIUS_METERS,
   IMAGE_THUMBNAIL_WIDTH,
@@ -48,12 +49,11 @@ import {
   MINIMAP_RADIUS_METERS,
   OPENSTREETMAP_BASE,
   MINIMUM_HORIZON_STRENGTH,
-  PLACE_MARKER_METERS,
   PLACE_GROUPS,
   REFETCH_DISTANCE_METERS,
   SEARCH_RADIUS_METERS,
   STREET_RADIUS_METERS,
-  STREET_WIDTH_METERS
+  STREET_ROW_PERCENT
 } from './config'
 import type { GeoPoint, PermissionStage, Place, PlaceImage, StreetPath } from './types'
 
@@ -97,8 +97,10 @@ const lastReading = ref<MotionReading | null>(null)
 const headingOffsetDegrees = ref(0)
 const horizontalFieldOfView = ref(DEFAULT_HORIZONTAL_FIELD_OF_VIEW)
 const isCalibrating = ref(false)
-const viewportAspectRatio = ref(1)
 const screenAngleDegrees = ref(0)
+// Off by default: the streets and cards read the same way without it, and asking for it up
+// front is one more permission dialog before the person has even seen what the view offers.
+const isCameraEnabled = ref(false)
 
 const { destroyControls, motion } = createControls({
   mapping: {},
@@ -107,11 +109,6 @@ const { destroyControls, motion } = createControls({
   touch: false,
   mouse: false
 })
-
-const fieldOfView = computed(() => ({
-  horizontalDegrees: horizontalFieldOfView.value,
-  verticalDegrees: getVerticalFieldOfView(horizontalFieldOfView.value, viewportAspectRatio.value)
-}))
 
 const hiddenGroups = ref<string[]>([])
 
@@ -150,22 +147,25 @@ const groupCounts = computed(() => {
   return { ...byGroup, streets: (byGroup.streets ?? 0) + streetPaths.value.length }
 })
 
+/**
+ * Both the streets and the cards sweep by this alone: the phone's own tilt no longer moves
+ * anything, only turning on the spot does.
+ */
+const correctedHeadingDegrees = computed(
+  () => aim.value.headingDegrees + headingOffsetDegrees.value
+)
+
 const labels = computed(() =>
   origin.value
     ? placeLabels(
         placeClusters.value,
         origin.value,
+        correctedHeadingDegrees.value,
+        horizontalFieldOfView.value,
         {
-          headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
-          pitchDegrees: aim.value.pitchDegrees
-        },
-        fieldOfView.value,
-        {
-          eyeHeightMeters: EYE_HEIGHT_METERS,
           maximumLabels: MAX_VISIBLE_LABELS,
           rowHeightPercent: LABEL_ROW_HEIGHT_PERCENT,
           columnWidthPercent: LABEL_COLUMN_WIDTH_PERCENT,
-          markerMeters: PLACE_MARKER_METERS,
           baseRowPercent: LABEL_BASE_ROW_PERCENT
         }
       )
@@ -185,28 +185,25 @@ const adjacentStreetPaths = computed(() =>
     : []
 )
 
-const streetRibbons = computed(() =>
+const streetLines = computed(() =>
   origin.value && !hiddenGroups.value.includes('streets')
-    ? projectStreetRibbons(
+    ? projectStreetLines(
         adjacentStreetPaths.value,
         origin.value,
-        {
-          headingDegrees: aim.value.headingDegrees + headingOffsetDegrees.value,
-          pitchDegrees: aim.value.pitchDegrees
-        },
-        fieldOfView.value,
-        { eyeHeightMeters: EYE_HEIGHT_METERS, widthMeters: STREET_WIDTH_METERS }
+        correctedHeadingDegrees.value,
+        horizontalFieldOfView.value,
+        STREET_ROW_PERCENT
       )
     : []
 )
 
 /** One name per street, on the run of it that comes nearest, so a road is not written twice. */
 const streetNames = computed(() =>
-  streetRibbons.value.reduce<{ id: string; name: string; xPercent: number; yPercent: number }[]>(
-    (named, ribbon) =>
-      !ribbon.name || named.some(({ name }) => name === ribbon.name)
+  streetLines.value.reduce<{ id: string; name: string; xPercent: number; yPercent: number }[]>(
+    (named, line) =>
+      !line.name || named.some(({ name }) => name === line.name)
         ? named
-        : [...named, { id: ribbon.id, name: ribbon.name, ...ribbon.namePoint }],
+        : [...named, { id: line.id, name: line.name, ...line.namePoint }],
     []
   )
 )
@@ -262,7 +259,7 @@ const minimapTransform = computed(
  * one thing on it that belongs to the screen rather than to the ground.
  */
 const minimapCone = computed(() => {
-  const half = (fieldOfView.value.horizontalDegrees / 2) * (Math.PI / 180)
+  const half = (horizontalFieldOfView.value / 2) * (Math.PI / 180)
   const reach = 50
   const left = { x: 50 - Math.sin(half) * reach, y: 50 - Math.cos(half) * reach }
   const right = { x: 50 + Math.sin(half) * reach, y: 50 - Math.cos(half) * reach }
@@ -368,8 +365,7 @@ const orientationDiagnostics = computed(() => {
 
 const measureViewport = (): void => {
   const width = window.innerWidth
-  const height = Math.max(1, window.innerHeight)
-  viewportAspectRatio.value = width / height
+  const height = window.innerHeight
 
   // Only believe a rotation the page has visibly taken. Some browsers report the angle the
   // device is held at rather than the one the document was turned by, and taking that at its
@@ -560,6 +556,26 @@ const retryCamera = async (): Promise<void> => {
   cameraMessage.value = await startCamera()
 }
 
+/** Stops the tracks rather than just hiding the picture, so turning it off actually lets go of it. */
+const stopCamera = (): void => {
+  cameraStream.value?.getTracks().forEach((track) => track.stop())
+  cameraStream.value = null
+  cameraMessage.value = null
+  if (videoElement.value) videoElement.value.srcObject = null
+}
+
+const toggleCamera = async (): Promise<void> => {
+  isCameraEnabled.value = !isCameraEnabled.value
+
+  if (isCameraEnabled.value) {
+    // The element the stream attaches to only exists once the `v-if` toggling it on has rendered.
+    await nextTick()
+    cameraMessage.value = await startCamera()
+  } else {
+    stopCamera()
+  }
+}
+
 const start = async (): Promise<void> => {
   stage.value = 'requesting'
   measureViewport()
@@ -567,12 +583,12 @@ const start = async (): Promise<void> => {
   // One prompt at a time, sensor first. iOS grants the orientation sensor only from a live tap,
   // and it will not raise a second dialog while one is already up — asking for both in the same
   // tick returns the sensor denied without its prompt ever appearing, which looks from the
-  // outside exactly like the person having said no.
+  // outside exactly like the person having said no. The camera is not part of this at all: it
+  // starts off, and only the toggle asks for it, from its own tap.
   await requestSensor()
-  cameraMessage.value = await startCamera()
 
-  // The three are independent: a refused camera still leaves a usable compass and a usable
-  // location, which is a black screen with the street named on it rather than nothing at all.
+  // Independent of the camera: a refused compass still leaves a usable location, which is a
+  // black screen with the street named on it rather than nothing at all.
   startLocation()
 
   // The overlay turns with the world by itself; letting the page turn as well would take the
@@ -602,34 +618,28 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mrm">
-    <video ref="videoElement" class="mrm__feed" playsinline muted autoplay></video>
+    <video
+      v-if="isCameraEnabled"
+      ref="videoElement"
+      class="mrm__feed"
+      playsinline
+      muted
+      autoplay
+    ></video>
 
     <div class="mrm__world" :style="{ transform: worldTransform }">
       <svg
-        v-if="streetRibbons.length > 0"
+        v-if="streetLines.length > 0"
         class="mrm__streets"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <defs>
-          <!--
-            Vertical, so it reads as depth: a shape's own bounding box runs from its farthest
-            point (small y, near the horizon) to its nearest (large y, near the camera), and the
-            fill fades out toward the horizon the way the road itself does.
-          -->
-          <linearGradient id="mrm-street-fade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--color-street-overlay)" stop-opacity="0.03" />
-            <stop offset="100%" stop-color="var(--color-street-overlay)" stop-opacity="0.4" />
-          </linearGradient>
-        </defs>
-        <polygon
-          v-for="ribbon in streetRibbons"
-          :key="ribbon.id"
+        <polyline
+          v-for="line in streetLines"
+          :key="line.id"
           class="mrm__street"
-          :points="
-            ribbon.points.map(({ xPercent, yPercent }) => `${xPercent},${yPercent}`).join(' ')
-          "
+          :points="line.points.map(({ xPercent, yPercent }) => `${xPercent},${yPercent}`).join(' ')"
         />
       </svg>
 
@@ -641,18 +651,6 @@ onBeforeUnmount(() => {
       >
         {{ street.name }}
       </span>
-
-      <span
-        v-for="label in labels"
-        :key="`${label.id}-marker`"
-        class="mrm__marker"
-        :style="{
-          left: `${label.groundPoint.xPercent}%`,
-          top: `${label.groundPoint.yPercent}%`,
-          width: `${label.boxPercent}%`,
-          height: `${label.boxPercent}%`
-        }"
-      ></span>
 
       <div
         v-for="label in labels"
@@ -667,12 +665,15 @@ onBeforeUnmount(() => {
           class="mrm__label"
           @click="selectPlace(place)"
         >
-          <span class="mrm__label-name">{{ place.name }}</span>
-          <span class="mrm__label-detail">
-            {{ place.category }} · {{ formatDistance(label.distanceMeters) }}
-          </span>
-          <span v-if="place.street && place.houseNumber" class="mrm__label-address">
-            {{ place.houseNumber }} {{ place.street }}
+          <Building2 class="mrm__label-icon" aria-hidden="true" />
+          <span class="mrm__label-body">
+            <span class="mrm__label-name">{{ place.name }}</span>
+            <span class="mrm__label-detail">
+              {{ place.category }} · {{ formatDistance(label.distanceMeters) }}
+            </span>
+            <span v-if="place.street && place.houseNumber" class="mrm__label-address">
+              {{ place.houseNumber }} {{ place.street }}
+            </span>
           </span>
         </Button>
       </div>
@@ -806,12 +807,13 @@ onBeforeUnmount(() => {
         </p>
         <p class="mrm__hint">
           Sensor {{ sensorPermission }}, prompted {{ sensorPromptCount }}×, readings
-          {{ hasSensor ? 'arriving' : 'none' }}. Camera {{ cameraMessage ? 'blocked' : 'open' }}.
-          Secure page {{ isSecurePage ? 'yes' : 'no' }}.
+          {{ hasSensor ? 'arriving' : 'none' }}. Camera
+          {{ cameraMessage ? 'blocked' : isCameraEnabled ? 'open' : 'off' }}. Secure page
+          {{ isSecurePage ? 'yes' : 'no' }}.
         </p>
         <p class="mrm__hint">{{ orientationDiagnostics }}</p>
         <p class="mrm__hint">
-          Streets {{ streetPaths.length }} fetched, {{ streetRibbons.length }} drawn. Places
+          Streets {{ streetPaths.length }} fetched, {{ streetLines.length }} drawn. Places
           {{ places.length }} fetched, {{ labels.length }} in frame.
         </p>
       </section>
@@ -834,6 +836,19 @@ onBeforeUnmount(() => {
         <IconButton
           class="mrm__toggle mrm__settings-toggle"
           size="lg"
+          :title="isCameraEnabled ? 'Turn the camera off' : 'Turn the camera on'"
+          :aria-label="isCameraEnabled ? 'Turn the camera off' : 'Turn the camera on'"
+          :aria-pressed="isCameraEnabled"
+          :active="isCameraEnabled"
+          @click="toggleCamera"
+        >
+          <Camera v-if="isCameraEnabled" />
+          <CameraOff v-else />
+        </IconButton>
+
+        <IconButton
+          class="mrm__toggle"
+          size="lg"
           title="Calibrate"
           aria-label="Field of view and compass settings"
           :aria-pressed="isCalibrating"
@@ -848,9 +863,9 @@ onBeforeUnmount(() => {
     <div v-if="stage !== 'ready'" class="mrm__gate">
       <h1 class="mrm__gate-title">Mixed reality map</h1>
       <p class="mrm__gate-body">
-        Names the streets, shops and landmarks around you, over the camera, where they actually
-        stand. It asks for the camera, your location and the compass at once, and carries on with
-        whichever of the three it is given.
+        Names the streets, shops and landmarks around you, swept across the frame the way you are
+        actually facing. It asks for your location and the compass to start; the camera stays off
+        until its own toggle turns it on.
       </p>
       <Button size="lg" :disabled="stage === 'requesting'" @click="start">
         {{ stage === 'requesting' ? 'Asking…' : 'Start' }}
@@ -895,44 +910,22 @@ onBeforeUnmount(() => {
 }
 
 /*
+ * A single steady stroke, held to one row and swept only by the compass: it reads as a
+ * continuous line rather than competing with the camera image underneath it, and cannot itself
+ * bob with every small tilt of the phone the way a perspective-projected one did.
  * `non-scaling-stroke` measures the width in screen pixels rather than in the stretched user
- * units of the viewBox, so this is a real width and not a fraction of one.
- */
-
-/*
- * A filled surface rather than a line, so the road lies on the ground and narrows into the
- * distance. `non-scaling-stroke` measures the kerb in screen pixels rather than in the
- * stretched user units of the viewBox, so it stays even along a road running away from you.
- *
- * A flat, single-opacity fill read as a wash rather than a road: nothing told the eye which
- * end was near. The gradient fades it toward the horizon the way the real surface does, the
- * dashed kerb reads as a road marking rather than a shape's outline, and the drop shadow is the
- * same trick the labels use to stay legible over whatever the camera happens to be pointed at,
- * light pavement or dark.
+ * units of the viewBox. The drop shadow is the same trick the labels use to stay legible over
+ * whatever the camera happens to be pointed at, light pavement or dark.
  */
 .mrm__street {
-  fill: url('#mrm-street-fade');
+  fill: none;
   stroke: var(--color-street-overlay);
   stroke-opacity: 0.85;
   stroke-width: 2;
-  stroke-dasharray: 4 3;
   stroke-linejoin: round;
+  stroke-linecap: round;
   vector-effect: non-scaling-stroke;
   filter: drop-shadow(var(--shadow-text-canvas-overlay));
-}
-
-/*
- * Where the place actually stands, drawn at its real footprint so it shrinks with distance.
- * Sized in percent of the frame width, which is why the height is set from the same number.
- */
-.mrm__marker {
-  position: absolute;
-  border: var(--spacing-px) solid var(--color-canvas-overlay-foreground);
-  border-radius: var(--radius-sm);
-  background: var(--color-canvas-overlay-surface);
-  opacity: 0.75;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
 }
 
 .mrm__street-name {
@@ -961,17 +954,31 @@ onBeforeUnmount(() => {
   transform: translate(-50%, -50%);
 }
 
+/* A building card: a shape with some architecture to it, rather than a plain rounded pill. */
 .mrm__label {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-0-5);
+  align-items: center;
+  gap: var(--spacing-2);
   height: auto;
   padding: var(--spacing-1-5) var(--spacing-3);
   border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
   background: var(--color-canvas-overlay-surface);
   color: var(--color-canvas-overlay-foreground);
   text-shadow: var(--shadow-text-canvas-overlay);
+}
+
+.mrm__label-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.mrm__label-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+  text-align: left;
 }
 
 .mrm__label-name {
@@ -1197,7 +1204,7 @@ onBeforeUnmount(() => {
   opacity: 1;
 }
 
-/* The last button changes what the bar shows rather than what the world does. */
+/* These two change what the view shows and how it is fed, not which places it names. */
 .mrm__settings-toggle {
   margin-left: var(--spacing-2);
 }

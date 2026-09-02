@@ -1,5 +1,4 @@
-import type { DeviceAim } from '@webgamekit/controls'
-import type { FieldOfView, GeoPoint, PlacedLabel, Place, StreetPath, StreetRibbon } from './types'
+import type { GeoPoint, PlacedLabel, Place, StreetLine, StreetPath } from './types'
 
 const DEGREES_TO_RADIANS = Math.PI / 180
 const RADIANS_TO_DEGREES = 180 / Math.PI
@@ -60,97 +59,48 @@ const getBearingOffset = (bearingDegrees: number, headingDegrees: number): numbe
   ((bearingDegrees - headingDegrees + HALF_TURN_DEGREES * 3) % FULL_TURN_DEGREES) -
   HALF_TURN_DEGREES
 
-/**
- * The vertical view a camera takes in, which follows from the horizontal one and the shape of
- * the frame rather than being reported separately.
- * @param horizontalDegrees The horizontal field of view
- * @param aspectRatio Frame width divided by its height
- * @returns The vertical field of view in degrees
- */
-export const getVerticalFieldOfView = (horizontalDegrees: number, aspectRatio: number): number =>
-  2 *
-  Math.atan(Math.tan((horizontalDegrees * DEGREES_TO_RADIANS) / 2) / aspectRatio) *
-  RADIANS_TO_DEGREES
-
 const FRAME_CENTER_PERCENT = 50
 const FRAME_HALF_PERCENT = 50
 const MAX_OFFSET_PERCENT = 1000
 
-/**
- * How far below the horizon the foot of something standing on the ground appears.
- *
- * Without this every label sits on one line and the near ones bury the far ones, which is both
- * unreadable and wrong: what is a few paces away really is near your feet, and what is streets
- * away really is on the horizon.
- * @param distanceMeters How far off the place is
- * @param eyeHeightMeters How high the camera is held
- * @returns Elevation in degrees, negative because the ground is below the eye
- */
-export const getGroundElevation = (distanceMeters: number, eyeHeightMeters: number): number =>
-  -Math.atan2(eyeHeightMeters, Math.max(distanceMeters, 0)) * RADIANS_TO_DEGREES
+// A bearing near the side of the camera, still in front but only barely, has a cosine close to
+// zero: the divide that turns it into a screen position explodes toward infinity right where
+// isInFront is still true. A card never reaches this, because it is dropped by isInView first,
+// but a street line is drawn a little past the frame edge on purpose, and without a bound its
+// far end lands thousands of percent off the frame and drags a stray edge across the visible
+// part of the line on the way there.
+const clampOffsetPercent = (value: number): number =>
+  Math.max(-MAX_OFFSET_PERCENT, Math.min(MAX_OFFSET_PERCENT, value))
 
 /**
- * Where a direction lands on the frame for a given aim.
+ * Where a bearing lands across the frame's width.
  *
- * A lens draws the world in perspective, so the mapping from angle to pixel is a tangent and
- * not a proportion: a label half a field of view off centre belongs at the frame edge, and one
- * a quarter of the way off belongs nearer the middle than a straight division would put it.
- * The two axes are not independent either, which is why this projects the direction through
- * the camera rather than scaling each angle on its own.
- *
- * The roll is deliberately ignored: every label turns by the same amount, so the layer holding
- * them turns once instead of each label being placed into an already-turned frame.
- * @param bearingDegrees Compass bearing of the place
- * @param elevationDegrees How far the place sits above the horizon, negative below it
- * @param aim Where the camera points
- * @param fieldOfView How much the camera takes in
- * @returns Position as percentages of the frame, and whether it falls inside it at all
+ * Height plays no part: with the camera's own tilt taken out of the picture, a compass bearing
+ * is the whole of what decides where something sits, and it sits on whatever fixed row its kind
+ * of thing is drawn on. A lens still draws the world in perspective across that one axis, so the
+ * mapping from angle to pixel is a tangent and not a proportion: a bearing half a field of view
+ * off centre belongs at the frame edge, and one a quarter of the way off belongs nearer the
+ * middle than a straight division would put it.
+ * @param bearingDegrees Compass bearing of the thing
+ * @param headingDegrees Where the camera points
+ * @param horizontalDegrees How much of the compass the frame's width takes in
+ * @returns Position as a percent of the frame's width, and whether it falls inside it at all
  */
-export const getScreenPlacement = (
+export const getHorizontalPlacement = (
   bearingDegrees: number,
-  elevationDegrees: number,
-  aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
-  fieldOfView: FieldOfView
-): { xPercent: number; yPercent: number; isInView: boolean; isInFront: boolean } => {
-  const bearing = getBearingOffset(bearingDegrees, aim.headingDegrees) * DEGREES_TO_RADIANS
-  const elevation = elevationDegrees * DEGREES_TO_RADIANS
-  const pitch = aim.pitchDegrees * DEGREES_TO_RADIANS
-  const halfWidth = Math.tan((fieldOfView.horizontalDegrees / 2) * DEGREES_TO_RADIANS)
-  const halfHeight = Math.tan((fieldOfView.verticalDegrees / 2) * DEGREES_TO_RADIANS)
-
-  // The place as a direction, then that direction tipped into the camera's own frame by the
-  // angle the camera is raised.
-  const right = Math.sin(bearing) * Math.cos(elevation)
-  const forward =
-    Math.cos(bearing) * Math.cos(elevation) * Math.cos(pitch) +
-    Math.sin(elevation) * Math.sin(pitch)
-  const up =
-    Math.sin(elevation) * Math.cos(pitch) -
-    Math.cos(bearing) * Math.cos(elevation) * Math.sin(pitch)
-
-  const horizontal = right / forward
-  const vertical = -up / forward
-
-  // A point near the side of the camera, still in front but only barely, has a forward close
-  // to zero: the divide that turns it into a screen position explodes toward infinity right
-  // where isInFront is still true. A label never reaches this, because it is dropped by
-  // isInView first, but a street ribbon is drawn a little past the frame edge on purpose, and
-  // without a bound its far corner lands thousands of percent off the frame and drags a stray
-  // edge across the visible part of the shape on the way there.
-  const clampOffsetPercent = (value: number): number =>
-    Math.max(-MAX_OFFSET_PERCENT, Math.min(MAX_OFFSET_PERCENT, value))
+  headingDegrees: number,
+  horizontalDegrees: number
+): { xPercent: number; isInView: boolean; isInFront: boolean } => {
+  const offset = getBearingOffset(bearingDegrees, headingDegrees) * DEGREES_TO_RADIANS
+  const halfWidth = Math.tan((horizontalDegrees / 2) * DEGREES_TO_RADIANS)
+  const horizontal = Math.tan(offset)
+  const isInFront = Math.cos(offset) > 0
 
   return {
     xPercent:
       FRAME_CENTER_PERCENT + clampOffsetPercent((horizontal / halfWidth) * FRAME_HALF_PERCENT),
-    yPercent:
-      FRAME_CENTER_PERCENT + clampOffsetPercent((vertical / halfHeight) * FRAME_HALF_PERCENT),
-    // Behind the camera the division flips sign and would otherwise fold the place back into
-    // the frame, facing the wrong way.
-    isInView: forward > 0 && Math.abs(horizontal) <= halfWidth && Math.abs(vertical) <= halfHeight,
-    // A label off the edge of the frame is simply not drawn, but a line running off it still has
-    // to be drawn to where it leaves, so being in front is asked separately from being in view.
-    isInFront: forward > 0
+    isInFront,
+    isInView: isInFront && Math.abs(horizontal) <= halfWidth
   }
 }
 
@@ -168,7 +118,6 @@ export const smoothBearing = (current: number, target: number, smoothing: number
   (current + getBearingOffset(target, current) * smoothing + FULL_TURN_DEGREES) % FULL_TURN_DEGREES
 
 const METERS_PER_DEGREE_LATITUDE = 111_320
-const QUARTER_TURN_DEGREES = 90
 
 /**
  * Step a position a given distance along a bearing.
@@ -256,63 +205,34 @@ export const isAdjacentStreetPath = (
     )
 
 /**
- * Which way the path is running at each of its points, for offsetting the kerbs off it.
- * @param points The centre line
- * @returns One bearing per point, the ends borrowing their neighbour's
- */
-const getPathBearings = (points: readonly GeoPoint[]): number[] =>
-  points.map((point, index) =>
-    index === points.length - 1
-      ? getBearingDegrees(points[index - 1] ?? point, point)
-      : getBearingDegrees(point, points[index + 1])
-  )
-
-/**
- * Project streets as the road surface rather than as a line down the middle of it.
+ * Project streets as a continuous line at a fixed height, sweeping only with the compass.
  *
- * A line has no width and reads as a wire strung across the picture; a road has a real width in
- * metres, and drawing it as one makes it lie on the ground and narrow into the distance the way
- * the street in the picture does. The outline runs up one kerb and back down the other, so it
- * closes into a fillable shape.
+ * A road that narrows into the distance still reads as fussy laid over a moving camera image; a
+ * street held to one steady row and swept purely by bearing reads as a stable anchor for its
+ * name instead, and cannot itself bob with every small tilt of the phone.
  * @param paths The street centre lines
  * @param origin Where the viewer is
- * @param aim Where the camera points
- * @param fieldOfView How much the camera takes in
- * @param road How high the camera is held and how wide to draw the carriageway
- * @returns Fillable outlines, each with somewhere to write its name
+ * @param headingDegrees Where the camera points
+ * @param horizontalDegrees How much of the compass the frame's width takes in
+ * @param rowPercent The fixed row every street is drawn on
+ * @returns Each run of a street that stays in front of the camera, with somewhere to write its name
  */
-export const projectStreetRibbons = (
+export const projectStreetLines = (
   paths: readonly StreetPath[],
   origin: GeoPoint,
-  aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
-  fieldOfView: FieldOfView,
-  road: { eyeHeightMeters: number; widthMeters: number }
-): StreetRibbon[] =>
+  headingDegrees: number,
+  horizontalDegrees: number,
+  rowPercent: number
+): StreetLine[] =>
   paths.flatMap((path) => {
-    const bearings = getPathBearings(path.points)
+    const projected = path.points.map((point) =>
+      getHorizontalPlacement(getBearingDegrees(origin, point), headingDegrees, horizontalDegrees)
+    )
 
-    const place = (point: GeoPoint) => {
-      const distanceMeters = getDistanceMeters(origin, point)
-      const elevation = getGroundElevation(distanceMeters, road.eyeHeightMeters)
-
-      return getScreenPlacement(getBearingDegrees(origin, point), elevation, aim, fieldOfView)
-    }
-
-    const projected = path.points.map((point, index) => {
-      const halfWidth = road.widthMeters / 2
-      const centre = place(point)
-
-      return {
-        centre,
-        left: place(offsetGeoPoint(point, bearings[index] - QUARTER_TURN_DEGREES, halfWidth)),
-        right: place(offsetGeoPoint(point, bearings[index] + QUARTER_TURN_DEGREES, halfWidth))
-      }
-    })
-
-    // Cut wherever the road passes the camera, or the part behind would fold back into frame.
+    // Cut wherever the street passes the camera, or the part behind would fold back into frame.
     const runs = projected.reduce<(typeof projected)[]>(
       (collected, step) =>
-        step.centre.isInFront
+        step.isInFront
           ? [...collected.slice(0, -1), [...collected[collected.length - 1], step]]
           : [...collected, []],
       [[]]
@@ -320,25 +240,12 @@ export const projectStreetRibbons = (
 
     return runs
       .filter((run) => run.length >= 2)
-      .map((run, index) => {
-        const toFramePoint = ({ xPercent, yPercent }: (typeof run)[number]['centre']) => ({
-          xPercent,
-          yPercent
-        })
-        const nearest = run.reduce((lowest, step) =>
-          step.centre.yPercent > lowest.centre.yPercent ? step : lowest
-        )
-
-        return {
-          id: `${path.id}/${index}`,
-          name: path.name,
-          points: [
-            ...run.map((step) => toFramePoint(step.left)),
-            ...[...run].reverse().map((step) => toFramePoint(step.right))
-          ],
-          namePoint: toFramePoint(nearest.centre)
-        }
-      })
+      .map((run, index) => ({
+        id: `${path.id}/${index}`,
+        name: path.name,
+        points: run.map(({ xPercent }) => ({ xPercent, yPercent: rowPercent })),
+        namePoint: { xPercent: run[Math.floor(run.length / 2)].xPercent, yPercent: rowPercent }
+      }))
   })
 
 /**
@@ -373,33 +280,27 @@ export const spreadLabels = (
  * Place every visible thing on the frame.
  *
  * Only the nearest few survive, because a city centre has more names within reach than a phone
- * screen has room for, and they are returned furthest first so the nearest label draws on top.
+ * screen has room for, and they are returned furthest first so the nearest card draws on top.
  * @param clusters Everything found nearby, grouped with whatever else shares its address
  * @param origin Where the viewer is
- * @param aim Where the camera points
- * @param fieldOfView How much the camera takes in
- * Each card keeps the point its nearest tenant actually stands on, and the size a marker there
- * should be drawn at, so the card can sit on the fixed row while the marker stays on the ground.
- * @param limits The eye height, how many cards fit, how tall a row is, how far apart cards sit,
- *   the marker size, and the row every card starts on
+ * @param headingDegrees Where the camera points
+ * @param horizontalDegrees How much of the compass the frame's width takes in
+ * @param limits How many cards fit, how tall a row is, how far apart cards sit, and the row
+ *   every card starts on
  * @returns The cards to draw, furthest first
  */
 export const placeLabels = (
   clusters: readonly Place[][],
   origin: GeoPoint,
-  aim: Pick<DeviceAim, 'headingDegrees' | 'pitchDegrees'>,
-  fieldOfView: FieldOfView,
+  headingDegrees: number,
+  horizontalDegrees: number,
   limits: {
-    eyeHeightMeters: number
     maximumLabels: number
     rowHeightPercent: number
     columnWidthPercent: number
-    markerMeters: number
     baseRowPercent: number
   }
 ): PlacedLabel[] => {
-  const halfWidth = Math.tan((fieldOfView.horizontalDegrees / 2) * DEGREES_TO_RADIANS)
-
   const nearestFirst = clusters
     .flatMap((tenants) => {
       const [nearest, ...rest] = [...tenants].sort(
@@ -409,15 +310,8 @@ export const placeLabels = (
 
       const bearingDegrees = getBearingDegrees(origin, nearest)
       const distanceMeters = getDistanceMeters(origin, nearest)
-      const elevation = getGroundElevation(distanceMeters, limits.eyeHeightMeters)
-      const placement = getScreenPlacement(bearingDegrees, elevation, aim, fieldOfView)
+      const placement = getHorizontalPlacement(bearingDegrees, headingDegrees, horizontalDegrees)
       if (!placement.isInView) return []
-
-      // The frame spans twice the half-view across, so a thing of a given size covers that
-      // fraction of it. Far away this goes to nothing, which is the point of drawing it.
-      const boxPercent =
-        (limits.markerMeters / Math.max(distanceMeters, limits.markerMeters) / (2 * halfWidth)) *
-        100
 
       return [
         {
@@ -427,8 +321,6 @@ export const placeLabels = (
           distanceMeters,
           xPercent: placement.xPercent,
           yPercent: limits.baseRowPercent,
-          groundPoint: { xPercent: placement.xPercent, yPercent: placement.yPercent },
-          boxPercent,
           heightPercent: limits.rowHeightPercent * tenants.length
         }
       ]

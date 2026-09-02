@@ -2,14 +2,12 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   getBearingDegrees,
   getDistanceMeters,
-  getGroundElevation,
-  getScreenPlacement,
-  getVerticalFieldOfView,
+  getHorizontalPlacement,
   formatDistance,
   isAdjacentStreetPath,
   placeLabels,
   offsetGeoPoint,
-  projectStreetRibbons,
+  projectStreetLines,
   smoothBearing,
   spreadLabels
 } from './projection'
@@ -18,11 +16,10 @@ import { fetchStreetPaths, parseStreetPaths } from './streets'
 import { buildMinimap, getMinimapPoint } from './minimap'
 import { buildImageUrl, parsePlaceImage } from './imagery'
 import { OVERPASS_ENDPOINTS, PLACE_GROUPS, getPlaceGroup } from './config'
-import type { FieldOfView, Place, PlacedLabel } from './types'
+import type { Place, PlacedLabel } from './types'
 
 const AMSTERDAM = { latitude: 52.3676, longitude: 4.9041 }
-const FIELD_OF_VIEW: FieldOfView = { horizontalDegrees: 60, verticalDegrees: 40 }
-const LEVEL_AIM = { headingDegrees: 0, pitchDegrees: 0, rollDegrees: 0 }
+const HORIZONTAL_FIELD_OF_VIEW = 60
 
 const makePlace = (id: string, latitude: number, longitude: number): Place => ({
   id,
@@ -85,75 +82,46 @@ describe('getBearingDegrees', () => {
   })
 })
 
-describe('getScreenPlacement', () => {
+describe('getHorizontalPlacement', () => {
   it('centres what the camera points straight at', () => {
-    const placement = getScreenPlacement(0, 0, LEVEL_AIM, FIELD_OF_VIEW)
+    const placement = getHorizontalPlacement(0, 0, HORIZONTAL_FIELD_OF_VIEW)
 
-    expect(placement).toEqual({ xPercent: 50, yPercent: 50, isInView: true, isInFront: true })
+    expect(placement).toEqual({ xPercent: 50, isInView: true, isInFront: true })
   })
 
   it.each([
     ['right', 30, 100],
     ['left', 330, 0]
   ])('puts a bearing a half view to the %s at the frame edge', (_side, bearing, expected) => {
-    const placement = getScreenPlacement(bearing, 0, LEVEL_AIM, FIELD_OF_VIEW)
+    const placement = getHorizontalPlacement(bearing, 0, HORIZONTAL_FIELD_OF_VIEW)
 
     expect(placement.xPercent).toBeCloseTo(expected)
     expect(placement.isInView).toBe(true)
   })
 
   it('drops what sits behind the camera', () => {
-    expect(getScreenPlacement(180, 0, LEVEL_AIM, FIELD_OF_VIEW).isInView).toBe(false)
+    expect(getHorizontalPlacement(180, 0, HORIZONTAL_FIELD_OF_VIEW).isInView).toBe(false)
   })
 
   it('crosses the wrap at north without jumping to the far edge', () => {
-    const placement = getScreenPlacement(
-      350,
-      0,
-      { ...LEVEL_AIM, headingDegrees: 10 },
-      FIELD_OF_VIEW
-    )
+    const placement = getHorizontalPlacement(350, 10, HORIZONTAL_FIELD_OF_VIEW)
 
     expect(placement.xPercent).toBeGreaterThan(0)
     expect(placement.xPercent).toBeLessThan(50)
   })
 
   it('draws the frame in perspective, not in proportion', () => {
-    const quarterOff = getScreenPlacement(15, 0, LEVEL_AIM, FIELD_OF_VIEW)
+    const quarterOff = getHorizontalPlacement(15, 0, HORIZONTAL_FIELD_OF_VIEW)
 
     expect(quarterOff.xPercent).toBeCloseTo(
       50 + (Math.tan(Math.PI / 12) / Math.tan(Math.PI / 6)) * 50
     )
   })
 
-  it('drives labels down the frame as the camera is raised', () => {
-    const raised = getScreenPlacement(0, 0, { ...LEVEL_AIM, pitchDegrees: 10 }, FIELD_OF_VIEW)
-
-    expect(raised.yPercent).toBeGreaterThan(50)
-  })
-
-  it('drives labels up the frame as the camera is lowered', () => {
-    const lowered = getScreenPlacement(0, 0, { ...LEVEL_AIM, pitchDegrees: -10 }, FIELD_OF_VIEW)
-
-    expect(lowered.yPercent).toBeLessThan(50)
-  })
-
-  it('drops what the camera has been raised past', () => {
-    const overhead = getScreenPlacement(0, 0, { ...LEVEL_AIM, pitchDegrees: 80 }, FIELD_OF_VIEW)
-
-    expect(overhead.isInView).toBe(false)
-  })
-
-  it('leaves the roll to the layer, which turns as a whole', () => {
-    const rolled = getScreenPlacement(0, 0, { ...LEVEL_AIM, rollDegrees: 45 }, FIELD_OF_VIEW)
-
-    expect(rolled).toEqual({ xPercent: 50, yPercent: 50, isInView: true, isInFront: true })
-  })
-
   it('bounds a point near the side plane rather than letting the divide explode', () => {
-    // Just short of a right angle off centre, forward is a hair above zero: the divide that
-    // turns direction into a screen position would otherwise send this to a six-figure percent.
-    const edgeOn = getScreenPlacement(89.99, 0, LEVEL_AIM, FIELD_OF_VIEW)
+    // Just short of a right angle off centre, the tangent that turns a bearing into a screen
+    // position would otherwise send this to a six-figure percent.
+    const edgeOn = getHorizontalPlacement(89.99, 0, HORIZONTAL_FIELD_OF_VIEW)
 
     expect(edgeOn.isInFront).toBe(true)
     expect(Math.abs(edgeOn.xPercent)).toBeLessThanOrEqual(1050)
@@ -181,45 +149,11 @@ describe('smoothBearing', () => {
   })
 })
 
-describe('getVerticalFieldOfView', () => {
-  it('matches the horizontal view on a square frame', () => {
-    expect(getVerticalFieldOfView(60, 1)).toBeCloseTo(60)
-  })
-
-  it('narrows on a frame wider than it is tall', () => {
-    expect(getVerticalFieldOfView(60, 16 / 9)).toBeLessThan(60)
-  })
-
-  it('widens on a portrait frame, which is how a phone is held', () => {
-    expect(getVerticalFieldOfView(60, 9 / 16)).toBeGreaterThan(60)
-  })
-})
-
-describe('getGroundElevation', () => {
-  it('puts what is streets away on the horizon', () => {
-    expect(getGroundElevation(400, 1.6)).toBeCloseTo(0, 0)
-  })
-
-  it('puts what is a stride away down near your feet', () => {
-    expect(getGroundElevation(1.6, 1.6)).toBeCloseTo(-45)
-  })
-
-  it('drops further below the horizon the closer a place gets', () => {
-    expect(getGroundElevation(10, 1.6)).toBeLessThan(getGroundElevation(100, 1.6))
-  })
-
-  it('looks straight down at something underfoot', () => {
-    expect(getGroundElevation(0, 1.6)).toBeCloseTo(-90)
-  })
-})
-
 describe('placeLabels', () => {
   const LIMITS = {
-    eyeHeightMeters: 1.6,
     maximumLabels: 12,
     rowHeightPercent: 0,
     columnWidthPercent: 0,
-    markerMeters: 6,
     baseRowPercent: 50
   }
   const ahead = makePlace('ahead', AMSTERDAM.latitude + 0.001, AMSTERDAM.longitude)
@@ -231,8 +165,8 @@ describe('placeLabels', () => {
     const labels = placeLabels(
       [cluster(ahead), cluster(behind)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       LIMITS
     )
 
@@ -243,8 +177,8 @@ describe('placeLabels', () => {
     const labels = placeLabels(
       [cluster(ahead), cluster(far)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       LIMITS
     )
 
@@ -255,8 +189,8 @@ describe('placeLabels', () => {
     const labels = placeLabels(
       [cluster(far), cluster(ahead)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       {
         ...LIMITS,
         maximumLabels: 1
@@ -267,7 +201,7 @@ describe('placeLabels', () => {
   })
 
   it('carries the distance and bearing it placed each label by', () => {
-    const [label] = placeLabels([cluster(ahead)], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
+    const [label] = placeLabels([cluster(ahead)], AMSTERDAM, 0, HORIZONTAL_FIELD_OF_VIEW, LIMITS)
 
     expect(label.bearingDegrees).toBeCloseTo(0, 1)
     expect(label.distanceMeters).toBeCloseTo(111, 0)
@@ -277,8 +211,8 @@ describe('placeLabels', () => {
     const [distant, near] = placeLabels(
       [cluster(ahead), cluster(far)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       LIMITS
     )
 
@@ -286,46 +220,8 @@ describe('placeLabels', () => {
     expect(distant.yPercent).toBe(LIMITS.baseRowPercent)
   })
 
-  it("keeps the ground marker at the place's real, distance-dependent position", () => {
-    const [distant, near] = placeLabels(
-      [cluster(ahead), cluster(far)],
-      AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
-      LIMITS
-    )
-
-    expect(near.groundPoint.yPercent).toBeGreaterThan(distant.groundPoint.yPercent)
-  })
-
-  it('draws a nearer marker larger than a far one', () => {
-    const [distant, near] = placeLabels(
-      [cluster(ahead), cluster(far)],
-      AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
-      LIMITS
-    )
-
-    expect(near.boxPercent).toBeGreaterThan(distant.boxPercent)
-  })
-
-  it('never draws a marker wider than the frame, however close it gets', () => {
-    const underfoot = makePlace('underfoot', AMSTERDAM.latitude + 0.00001, AMSTERDAM.longitude)
-
-    const [label] = placeLabels([cluster(underfoot)], AMSTERDAM, LEVEL_AIM, FIELD_OF_VIEW, LIMITS)
-
-    expect(label?.boxPercent ?? 0).toBeLessThanOrEqual(100)
-  })
-
   it('turns the whole frame when the heading is corrected', () => {
-    const corrected = placeLabels(
-      [cluster(ahead)],
-      AMSTERDAM,
-      { ...LEVEL_AIM, headingDegrees: 15 },
-      FIELD_OF_VIEW,
-      LIMITS
-    )
+    const corrected = placeLabels([cluster(ahead)], AMSTERDAM, 15, HORIZONTAL_FIELD_OF_VIEW, LIMITS)
 
     expect(corrected[0].xPercent).toBeLessThan(50)
   })
@@ -334,8 +230,8 @@ describe('placeLabels', () => {
     const [distant, near] = placeLabels(
       [cluster(ahead), cluster(far)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       { ...LIMITS, rowHeightPercent: 7, columnWidthPercent: 30 }
     )
 
@@ -349,8 +245,8 @@ describe('placeLabels', () => {
     const [distant, near] = placeLabels(
       [[shop, cafe], cluster(far)],
       AMSTERDAM,
-      LEVEL_AIM,
-      FIELD_OF_VIEW,
+      0,
+      HORIZONTAL_FIELD_OF_VIEW,
       { ...LIMITS, rowHeightPercent: 7, columnWidthPercent: 30 }
     )
 
@@ -467,7 +363,8 @@ describe('offsetGeoPoint', () => {
   })
 })
 
-describe('projectStreetRibbons', () => {
+describe('projectStreetLines', () => {
+  const ROW_PERCENT = 75
   const northward = {
     id: 'way/1',
     name: 'Damrak',
@@ -476,39 +373,21 @@ describe('projectStreetRibbons', () => {
       { latitude: AMSTERDAM.latitude + 0.002, longitude: AMSTERDAM.longitude }
     ]
   }
-  const project = (paths: (typeof northward)[], aim = LEVEL_AIM) =>
-    projectStreetRibbons(paths, AMSTERDAM, aim, FIELD_OF_VIEW, {
-      eyeHeightMeters: 1.6,
-      widthMeters: 12
-    })
+  const project = (paths: (typeof northward)[], headingDegrees = 0) =>
+    projectStreetLines(paths, AMSTERDAM, headingDegrees, HORIZONTAL_FIELD_OF_VIEW, ROW_PERCENT)
 
-  it('closes the road into an outline with both kerbs', () => {
-    const [ribbon] = project([northward])
+  it('keeps one point per node of the path', () => {
+    const [line] = project([northward])
 
-    expect(ribbon.points).toHaveLength(northward.points.length * 2)
-    expect(ribbon.name).toBe('Damrak')
+    expect(line.points).toHaveLength(northward.points.length)
+    expect(line.name).toBe('Damrak')
   })
 
-  it('narrows into the distance, which is what puts it on the ground', () => {
-    const [ribbon] = project([northward])
-    const [nearLeft, farLeft] = ribbon.points
-    const farRight = ribbon.points[2]
-    const nearRight = ribbon.points[3]
+  it('draws every point of the line on the same fixed row', () => {
+    const [line] = project([northward])
 
-    expect(Math.abs(nearLeft.xPercent - nearRight.xPercent)).toBeGreaterThan(
-      Math.abs(farLeft.xPercent - farRight.xPercent)
-    )
-  })
-
-  it('writes the name on the centre line at the near end of the run', () => {
-    const [ribbon] = project([northward])
-    const nearEdge = Math.max(...ribbon.points.map(({ yPercent }) => yPercent))
-    const farEdge = Math.min(...ribbon.points.map(({ yPercent }) => yPercent))
-
-    expect(ribbon.namePoint.yPercent).toBeCloseTo(nearEdge, 2)
-    expect(ribbon.namePoint.yPercent).toBeGreaterThan(farEdge)
-    // Below the horizon, because the road is on the ground rather than in the sky.
-    expect(ribbon.namePoint.yPercent).toBeGreaterThan(50)
+    line.points.forEach((point) => expect(point.yPercent).toBe(ROW_PERCENT))
+    expect(line.namePoint.yPercent).toBe(ROW_PERCENT)
   })
 
   it('drops a street entirely behind the camera', () => {
@@ -534,10 +413,10 @@ describe('projectStreetRibbons', () => {
       ]
     }
 
-    const ribbons = project([throughTheViewer])
+    const lines = project([throughTheViewer])
 
-    expect(ribbons).toHaveLength(1)
-    expect(ribbons[0].points).toHaveLength(4)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].points).toHaveLength(2)
   })
 })
 
@@ -847,8 +726,6 @@ describe('spreadLabels', () => {
     bearingDegrees: 0,
     xPercent,
     yPercent: 50,
-    groundPoint: { xPercent, yPercent: 50 },
-    boxPercent: 5,
     heightPercent
   })
 

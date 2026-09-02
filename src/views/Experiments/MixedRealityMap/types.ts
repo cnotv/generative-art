@@ -34,12 +34,8 @@ export interface PlacedLabel {
   bearingDegrees: number
   /** Percent across the viewport from its left edge. */
   xPercent: number
-  /** Percent down the viewport from its top edge, the same for every card in the frame. */
+  /** Percent down the viewport from its top edge, the same row every card starts on. */
   yPercent: number
-  /** Where the place actually stands, unrelated to the fixed row its card is written on. */
-  groundPoint: FramePoint
-  /** The side of its marker box, as a percent of the frame width, shrinking with distance. */
-  boxPercent: number
   /** How much vertical room the card needs, as a percent of the frame height. */
   heightPercent: number
 }
@@ -58,21 +54,11 @@ export interface FramePoint {
 }
 
 /** A run of a street that stays in front of the camera, in frame percentages. */
-export interface StreetRun {
+export interface StreetLine {
   id: string
   name: string
   points: FramePoint[]
-}
-
-/**
- * A run of a street drawn with its real width, as the closed outline of the road surface.
- * `points` runs up one kerb and back down the other, ready to fill.
- */
-export interface StreetRibbon {
-  id: string
-  name: string
-  points: FramePoint[]
-  /** Where to write the name: on the centre line, at the near end of the run. */
+  /** Where to write the name: somewhere along the middle of the run. */
   namePoint: FramePoint
 }
 
@@ -87,12 +73,6 @@ export interface PlaceImage {
   title: string
   thumbnailUrl: string
   pageUrl: string
-}
-
-/** How wide a view the camera takes in, which no browser API reports. */
-export interface FieldOfView {
-  horizontalDegrees: number
-  verticalDegrees: number
 }
 
 /**
