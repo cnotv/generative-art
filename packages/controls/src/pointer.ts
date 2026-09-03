@@ -3,6 +3,13 @@ import type { ControlHandlers, ControlMapping, PointerGesture } from './types'
 export interface PointerController {
   bind: (target: HTMLElement) => void
   unbind: (target: HTMLElement) => void
+  /**
+   * How far a press in progress has travelled, signed and relative to the target's own
+   * width: 0 while idle, growing towards 1 (right) or -1 (left) as the press nears the far
+   * edge. Read every frame by anything that wants a gesture to drive an animation as it
+   * happens rather than only once the press ends.
+   */
+  getDragProgress: () => number
 }
 
 /** How far a pointer travels before a press counts as a swipe rather than a tap. */
@@ -55,11 +62,20 @@ export function createPointerController(
 ): PointerController {
   let activePointerId: number | null = null
   let startX = 0
+  let targetWidth = 0
+  let dragProgress = 0
 
-  const onPointerDown = (event: PointerEvent) => {
+  const onPointerDown = (event: PointerEvent, target: HTMLElement) => {
     if (activePointerId !== null) return
     activePointerId = event.pointerId
     startX = event.clientX
+    targetWidth = target.getBoundingClientRect().width
+    dragProgress = 0
+  }
+
+  const onPointerMove = (event: PointerEvent) => {
+    if (activePointerId !== event.pointerId || targetWidth <= 0) return
+    dragProgress = Math.min(Math.max((event.clientX - startX) / targetWidth, -1), 1)
   }
 
   const finish = (event: PointerEvent, target: HTMLElement) => {
@@ -83,22 +99,32 @@ export function createPointerController(
     if (activePointerId === event.pointerId) activePointerId = null
   }
 
+  let boundDown: ((event: PointerEvent) => void) | null = null
+  let boundMove: ((event: PointerEvent) => void) | null = null
   let boundUp: ((event: PointerEvent) => void) | null = null
 
   function bind(target: HTMLElement) {
+    boundDown = (event: PointerEvent) => onPointerDown(event, target)
+    boundMove = onPointerMove
     boundUp = (event: PointerEvent) => finish(event, target)
-    target.addEventListener('pointerdown', onPointerDown)
+    target.addEventListener('pointerdown', boundDown)
+    target.addEventListener('pointermove', boundMove)
     target.addEventListener('pointerup', boundUp)
     target.addEventListener('pointercancel', onPointerCancel)
   }
 
   function unbind(target: HTMLElement) {
-    target.removeEventListener('pointerdown', onPointerDown)
+    if (boundDown) target.removeEventListener('pointerdown', boundDown)
+    if (boundMove) target.removeEventListener('pointermove', boundMove)
     if (boundUp) target.removeEventListener('pointerup', boundUp)
     target.removeEventListener('pointercancel', onPointerCancel)
+    boundDown = null
+    boundMove = null
     boundUp = null
     activePointerId = null
   }
 
-  return { bind, unbind }
+  const getDragProgress = () => (activePointerId !== null ? dragProgress : 0)
+
+  return { bind, unbind, getDragProgress }
 }

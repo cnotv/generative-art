@@ -21,6 +21,7 @@ import {
   createSlideshowState,
   entryAmountAt,
   exitAmountAt,
+  scrubByDrag,
   slideshowFrame,
   startChange
 } from './slideshow'
@@ -132,6 +133,8 @@ const requestChange = (direction: SlideDirection): void => {
 
 /** Bound in `onMounted`: the pointer target is the canvas, which does not exist before then. */
 let destroyControls: (() => void) | null = null
+/** Set alongside `destroyControls`, so the animation loop can read a live drag every frame. */
+let getDragProgress: (() => number) | null = null
 
 /**
  * One flat board per picture, textured once at setup.
@@ -169,11 +172,13 @@ onMounted(async () => {
   )
   // The canvas fills the viewport, and it is the element whose halves decide
   // whether a tap means forward or back.
-  destroyControls = createControls({
+  const controls = createControls({
     mapping: CONTROL_MAPPING,
     pointerTarget: canvas.value,
     onAction: (action) => requestChange(action === 'previous' ? -1 : 1)
-  }).destroyControls
+  })
+  destroyControls = controls.destroyControls
+  getDragProgress = controls.pointer.getDragProgress
 
   // Orbit is disabled but still aims the camera at its target on the first update,
   // so the target has to be set or `camera.lookAt` above is overwritten by the origin.
@@ -301,8 +306,15 @@ onMounted(async () => {
           simulationFrame += 1
           const { timing } = reactiveConfig.value
           const delta = getDelta()
+          const drag = getDragProgress?.() ?? 0
+          // A finger in motion sets the change's progress directly, so the hands and the
+          // picture track it live; once it lifts, the ordinary timed advance carries
+          // whatever is left of the change the rest of the way on its own.
+          slideshow =
+            drag !== 0
+              ? scrubByDrag(slideshow, drag, timing, canvases.length)
+              : advanceSlideshow(slideshow, delta, timing, canvases.length)
           character.mixer?.update(delta)
-          slideshow = advanceSlideshow(slideshow, delta, timing, canvases.length)
           const frame = slideshowFrame(slideshow, timing)
 
           character.pose(frame)

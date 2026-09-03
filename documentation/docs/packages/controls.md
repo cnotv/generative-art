@@ -244,6 +244,27 @@ bind the gestures to something the camera does not listen on. A canvas that is t
 surface also wants `touch-action: none`, or a phone reads the swipe as a page scroll and the
 gesture never completes.
 
+### Following a press as it happens
+
+`tap`/`swipe` only report once a press ends. A scene that wants to track the finger while it is
+still down — scrubbing an animation the way a photo app's swipe does, rather than only playing
+it once the gesture resolves — reads `pointer.getDragProgress()` every frame instead:
+
+```typescript
+const { pointer } = createControls({
+  mapping: { pointer: { 'swipe-right': 'next', 'swipe-left': 'previous' } },
+  pointerTarget: canvasElement
+})
+
+// Inside the animation loop:
+const progress = pointer.getDragProgress() // 0 idle, towards 1 (right) or -1 (left)
+```
+
+Signed and relative to the target's own width: 0 while nothing is pressed, growing towards 1 or
+-1 as the press nears the target's far edge, and back to 0 the instant it ends. `tap`/`swipe`
+still fire on release exactly as before — this is an additional continuous read, not a
+replacement for the discrete gesture.
+
 ## Motion (Device Tilt)
 
 Device orientation is a control device alongside keyboard, gamepad, touch and the faux-pad.
@@ -389,6 +410,8 @@ Creates a unified control system.
 
 - `currentActions`: Reactive object with active actions
 - `destroyControls`: Cleanup function
+- `pointer.getDragProgress()`: Continuous read of a press in progress on the `pointer` device —
+  see [Following a press as it happens](#following-a-press-as-it-happens)
 
 ### createPointerController(mappingRef, handlers, swipeThreshold?)
 

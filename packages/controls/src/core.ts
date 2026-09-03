@@ -262,6 +262,9 @@ export function createControls(options: ControlsOptions): ControlsExtras {
       getReading: controllers.motion.getReading,
       isReceiving: controllers.motion.isReceiving,
       getPromptCount: controllers.motion.getPromptCount
+    },
+    pointer: {
+      getDragProgress: controllers.pointer.getDragProgress
     }
   }
 }

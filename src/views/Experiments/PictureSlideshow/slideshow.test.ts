@@ -6,6 +6,7 @@ import {
   entryAmountAt,
   exitAmountAt,
   holdAmountAt,
+  scrubByDrag,
   slideshowFrame,
   startChange
 } from './slideshow'
@@ -56,6 +57,55 @@ describe('startChange', () => {
     const nearlyDue = { ...createSlideshowState(), holdSeconds: TIMING.hold - 0.1 }
 
     expect(startChange(nearlyDue, 1, SLIDE_COUNT).holdSeconds).toBe(0)
+  })
+
+  it('starts from a given changeSeconds, so a drag already under way does not snap back', () => {
+    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT, 0.4)
+
+    expect(changed.changeSeconds).toBe(0.4)
+  })
+})
+
+describe('scrubByDrag', () => {
+  it('leaves an idle slideshow alone', () => {
+    const idle = createSlideshowState()
+
+    expect(scrubByDrag(idle, 0, TIMING, SLIDE_COUNT)).toBe(idle)
+  })
+
+  it('starts a change towards the right from a rightward drag', () => {
+    const scrubbed = scrubByDrag(createSlideshowState(), 0.5, TIMING, SLIDE_COUNT)
+
+    expect(scrubbed.direction).toBe(1)
+    expect(scrubbed.index).toBe(1)
+    expect(scrubbed.changeSeconds).toBeCloseTo(0.5 * (TIMING.release + TIMING.arrive))
+  })
+
+  it('starts a change towards the left from a leftward drag', () => {
+    const scrubbed = scrubByDrag(createSlideshowState(), -0.5, TIMING, SLIDE_COUNT)
+
+    expect(scrubbed.direction).toBe(-1)
+    expect(scrubbed.index).toBe(SLIDE_COUNT - 1)
+  })
+
+  it('clamps progress past a full drag to the end of the change', () => {
+    const scrubbed = scrubByDrag(createSlideshowState(), 2, TIMING, SLIDE_COUNT)
+
+    expect(scrubbed.changeSeconds).toBeCloseTo(TIMING.release + TIMING.arrive)
+  })
+
+  it('keeps a running change following the same drag as it continues', () => {
+    const started = scrubByDrag(createSlideshowState(), 0.2, TIMING, SLIDE_COUNT)
+    const followed = scrubByDrag(started, 0.6, TIMING, SLIDE_COUNT)
+
+    expect(followed.index).toBe(started.index)
+    expect(followed.changeSeconds).toBeCloseTo(0.6 * (TIMING.release + TIMING.arrive))
+  })
+
+  it('leaves a change running the other way untouched', () => {
+    const runningLeft = startChange(createSlideshowState(), -1, SLIDE_COUNT, 0.3)
+
+    expect(scrubByDrag(runningLeft, 0.5, TIMING, SLIDE_COUNT)).toBe(runningLeft)
   })
 })
 

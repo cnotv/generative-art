@@ -39,21 +39,56 @@ export const createSlideshowState = (): SlideshowState => ({
  * @param state - Where the slideshow is now
  * @param direction - 1 to send the held picture out to the right, -1 to the left
  * @param slideCount - How many pictures the slideshow cycles through
+ * @param changeSeconds - Where the change's own clock starts, in seconds. Defaults to 0;
+ * a change already scrubbed into being by a live drag starts from wherever that drag had
+ * reached instead, so the picture does not snap back the instant the finger lets go.
  * @returns The state with the change started, or the same state if one is running
  */
 export const startChange = (
   state: SlideshowState,
   direction: SlideDirection,
-  slideCount: number
+  slideCount: number,
+  changeSeconds = 0
 ): SlideshowState => {
   if (state.changeSeconds !== null) return state
   return {
     index: wrapIndex(state.index + direction, slideCount),
     leavingIndex: state.index,
     direction,
-    changeSeconds: 0,
+    changeSeconds,
     holdSeconds: 0
   }
+}
+
+/**
+ * Sets a running change's progress straight from a live drag, in place of the passage of
+ * time: this is what lets the picture and the character's own clip track a finger while it
+ * is moving, rather than only playing out once it lets go.
+ *
+ * A drag that reverses direction mid-press is left exactly where it was rather than run
+ * backwards — the picture holds its ground until the press ends and the ordinary timed
+ * advance either finishes the change or, from the next hold, starts a fresh one the other
+ * way.
+ * ponytail: no reverse-scrub or cancel-by-dragging-back; add if a change of heart mid swipe
+ * turns out to matter.
+ * @param state - Where the slideshow is now
+ * @param drag - The live press's progress, signed and from -1 through 0 to 1
+ * @param timing - How long each phase lasts
+ * @param slideCount - How many pictures the slideshow cycles through
+ * @returns The state with its change progress following the drag, or unchanged once idle
+ */
+export const scrubByDrag = (
+  state: SlideshowState,
+  drag: number,
+  timing: SlideshowTiming,
+  slideCount: number
+): SlideshowState => {
+  if (drag === 0) return state
+  const direction: SlideDirection = drag > 0 ? 1 : -1
+  const changeSeconds = Math.min(Math.abs(drag), 1) * (timing.release + timing.arrive)
+  if (state.changeSeconds === null) return startChange(state, direction, slideCount, changeSeconds)
+  if (state.direction !== direction) return state
+  return { ...state, changeSeconds }
 }
 
 /**

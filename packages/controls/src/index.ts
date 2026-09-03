@@ -15,7 +15,8 @@ export type {
   ControlPreset,
   MotionControls,
   MotionReading,
-  MotionTilt
+  MotionTilt,
+  PointerControls
 } from './types'
 
 export type { FauxPadController, FauxPadPosition, FauxPadOptions } from './fauxpad'

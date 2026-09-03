@@ -144,4 +144,70 @@ describe('createPointerController', () => {
 
     expect(handlers.onAction).not.toHaveBeenCalled()
   })
+
+  describe('getDragProgress', () => {
+    it('reads 0 while nothing is pressed', () => {
+      const { target } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      expect(controller.getDragProgress()).toBe(0)
+    })
+
+    it('tracks a press moving right as positive, relative to the target width', () => {
+      const { target, fire } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      fire('pointerdown', 1, 100)
+      fire('pointermove', 1, 300)
+
+      expect(controller.getDragProgress()).toBeCloseTo(200 / WIDTH)
+    })
+
+    it('tracks a press moving left as negative', () => {
+      const { target, fire } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      fire('pointerdown', 1, 300)
+      fire('pointermove', 1, 100)
+
+      expect(controller.getDragProgress()).toBeCloseTo(-200 / WIDTH)
+    })
+
+    it('clamps to the target width rather than growing past it', () => {
+      const { target, fire } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      fire('pointerdown', 1, 0)
+      fire('pointermove', 1, WIDTH * 2)
+
+      expect(controller.getDragProgress()).toBe(1)
+    })
+
+    it('drops back to 0 once the press ends', () => {
+      const { target, fire } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      fire('pointerdown', 1, 100)
+      fire('pointermove', 1, 300)
+      fire('pointerup', 1, 300)
+
+      expect(controller.getDragProgress()).toBe(0)
+    })
+
+    it('ignores movement from a second pointer arriving mid-press', () => {
+      const { target, fire } = createTarget()
+      const controller = createPointerController(MAPPING, createHandlers())
+      controller.bind(target)
+
+      fire('pointerdown', 1, 100)
+      fire('pointermove', 2, 700)
+
+      expect(controller.getDragProgress()).toBe(0)
+    })
+  })
 })
