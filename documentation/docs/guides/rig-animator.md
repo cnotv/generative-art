@@ -23,6 +23,8 @@ two poses are already a movement.
 - `src/views/Tools/RigAnimator/boneMarkers.ts`: the clickable, hierarchy-scaled per-bone markers
 - `src/views/Tools/RigAnimator/useBoneGizmo.ts`: the translate gizmo (Three.js's own
   `TransformControls`) for dragging the selected bone
+- `src/views/Tools/RigAnimator/boneDragTarget.ts`: resolves a gizmo drag into a two-bone IK
+  solve or a plain position edit, and resets a whole IK chain back to rest
 - `src/views/Tools/RigAnimator/timelineSource.ts`: exposes the pose keyframes to the shared
   Timeline panel
 - `src/views/Tools/RigAnimator/cameraFraming.ts`: framing the camera to whatever scale the
@@ -31,9 +33,9 @@ two poses are already a movement.
 - `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema, rebuilt whenever the
   bone list, the keyframe list or the auto-rig availability changes
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
-- `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`: the framework-agnostic logic. See
-  the [rig package's docs](/docs/packages/rig) for the pose-capture, clip-building and
-  auto-rig API.
+- `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`: the framework-agnostic
+  logic. See the [rig package's docs](/docs/packages/rig) for the pose-capture, clip-building,
+  auto-rig and IK API.
 
 ## Uploading a model
 
@@ -62,16 +64,38 @@ Rotating and moving both work two ways, kept in sync with each other:
 Either one updates the model live and the other's fields immediately, so a pose is built by eye
 against the model rather than by typing numbers blind.
 
-Only rotation is part of a keyframe. Moving a bone corrects where it sits, which is most useful
-for nudging an auto-rigged skeleton's guessed joint placement, rather than authoring an animated
-translation, so a position edit is not captured by **Add Keyframe at Frame** and does not appear
-in the exported clip.
+Only rotation is part of a keyframe. Typing into Bone Position corrects where a bone sits,
+which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather than
+authoring an animated translation, so it is not captured by **Add Keyframe at Frame** and does
+not appear in the exported clip.
 
-Moving a bone can also easily go too far: a joint dragged well past its rest offset tears the
-mesh at that seam, since translation, unlike rotation, does not preserve limb length. **Reset
-Bone to Rest Pose** undoes any position or rotation edit on the selected bone back to how it
-was when the rig was loaded (or auto-rigged), without touching any other bone or any keyframe
-already captured.
+## Reaching with the gizmo: two-bone IK
+
+A bone with two Bone ancestors, a hand or a foot on any rig, regardless of naming, is the end
+of a limb: dragging its gizmo does not move the bone itself. Instead it solves the limb
+analytically (the same closed-form two-bone solve any rigging tool uses for a shoulder/elbow or
+a hip/knee) so the shoulder and elbow (or hip and knee) rotate to reach wherever the gizmo was
+dragged to, the way pulling a puppet's hand bends its arm rather than stretching it. The elbow
+bends toward whichever side it already bent toward before the drag, so the limb keeps a
+consistent, predictable pose as the target moves. Since only rotations change, the result is
+exactly what **Add Keyframe at Frame** already captures, no different from posing the shoulder
+and elbow by hand one at a time. A bone with fewer than two Bone ancestors (a hip, a spine
+segment, a shoulder itself) has no chain to solve with, so dragging it keeps moving the bone
+directly, exactly as typing into Bone Position does.
+
+A target farther than the limb can reach clamps to the fully extended limb rather than failing
+to solve.
+
+![mixamorigRightHand dragged upward with the gizmo: the elbow bent to follow it, the mesh at the shoulder and elbow intact, the Bone Position field still reading the hand's rest offset since only its shoulder and elbow ancestors rotated](/img/animation/rig-ik-reach.webp)
+
+## Undoing a bad edit
+
+A position edit or an IK reach can both go too far: a joint dragged well past its rest offset
+tears the mesh at that seam, since translation, unlike rotation, does not preserve limb length,
+and an IK reach beyond the limb's own proportions can pull it into an unnatural line. **Reset
+Bone to Rest Pose** undoes either back to how the selected bone (and, for an IK reach, the
+shoulder and elbow or hip and knee that actually moved) was when the rig was loaded or
+auto-rigged, without touching any other bone or any keyframe already captured.
 
 ## Keyframes and interpolation
 

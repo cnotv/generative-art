@@ -84,6 +84,33 @@ const skinnedMesh = new THREE.SkinnedMesh(mesh.geometry, mesh.material)
 skinnedMesh.bind(skeleton)
 ```
 
+## ikFindTwoBoneChain / ikSolveTwoBoneChain
+
+Analytic (closed-form, non-iterative) two-bone inverse kinematics: given a bone with two Bone
+ancestors, a hand or a foot on any rig regardless of naming, solve the root and mid bones'
+rotations so the end bone reaches a world-space target, the way pulling a puppet's hand bends
+its elbow rather than stretching its arm. A target beyond the chain's combined length clamps to
+the fully extended limb instead of failing to solve. The end bone's own local transform is
+never touched, only its ancestors rotate to bring it to the target, so the result is exactly
+what a manually posed rotation would be, capturable by the same keyframe.
+
+```typescript
+import { ikFindTwoBoneChain, ikSolveTwoBoneChain } from '@webgamekit/rig'
+import * as THREE from 'three'
+
+const chain = ikFindTwoBoneChain(handBone) // null if handBone has fewer than two Bone ancestors
+if (chain) {
+  const poleWorldPosition = chain.mid.getWorldPosition(new THREE.Vector3()) // bend hint
+  ikSolveTwoBoneChain(chain, targetWorldPosition, poleWorldPosition)
+}
+```
+
+The pole position only hints which side the mid joint bends toward; passing the chain's own
+current mid-bone position keeps the bend where it already visually is as the target moves,
+rather than requiring a second draggable target.
+
+![A hand dragged upward with the Rig Animator's gizmo, its elbow bent by ikSolveTwoBoneChain to follow](/img/animation/rig-ik-reach.webp)
+
 ## Types
 
 ```typescript
@@ -113,5 +140,11 @@ interface HumanoidSkeleton {
   root: THREE.Bone
   bones: THREE.Bone[]
   skeleton: THREE.Skeleton
+}
+
+interface TwoBoneIkChain {
+  root: THREE.Bone
+  mid: THREE.Bone
+  end: THREE.Bone
 }
 ```

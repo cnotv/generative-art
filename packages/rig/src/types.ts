@@ -34,3 +34,10 @@ export interface HumanoidSkeleton {
   bones: THREE.Bone[]
   skeleton: THREE.Skeleton
 }
+
+/** A two-bone limb chain (shoulder/elbow/hand, hip/knee/foot) an analytic IK solve reaches with */
+export interface TwoBoneIkChain {
+  root: THREE.Bone
+  mid: THREE.Bone
+  end: THREE.Bone
+}

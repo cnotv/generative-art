@@ -160,13 +160,7 @@ const init = async (): Promise<void> => {
     (dragging) => {
       if (orbitReference) orbitReference.enabled = !dragging
     },
-    (bone) => {
-      reactiveConfig.value.bonePosition = {
-        x: bone.position.x,
-        y: bone.position.y,
-        z: bone.position.z
-      }
-    }
+    (bone) => rig.applyBoneDragTarget(bone)
   )
   scene.add(gizmo.helper)
 

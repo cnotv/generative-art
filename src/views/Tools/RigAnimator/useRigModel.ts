@@ -7,6 +7,12 @@ import {
   highlightBoneMarker,
   pickBoneMarker
 } from './boneMarkers'
+import {
+  applyGizmoDragToChain,
+  captureRestPoses,
+  resetBoneChainToRest,
+  type BoneRestPose
+} from './boneDragTarget'
 import { loadModelFile, disposeModel, generateAutoRig } from './rigModel'
 import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import type { RigAnimatorConfig } from './types'
@@ -19,7 +25,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const bones = shallowRef<THREE.Bone[]>([])
   const boneMarkers = shallowRef<THREE.Mesh[]>([])
   /** Every bone's transform as loaded, so a bad edit (a position drag gone too far) can be undone. */
-  const restPoses = new Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion }>()
+  let restPoses: Map<string, BoneRestPose> = new Map()
 
   const boneNames = computed(() => bones.value.map((bone) => bone.name))
   const needsAutoRig = computed(
@@ -44,13 +50,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     // very first render gets a chance to update them.
     model.value?.updateMatrixWorld(true)
     boneMarkers.value = createBoneMarkers(bones.value)
-    restPoses.clear()
-    bones.value.forEach((bone) => {
-      restPoses.set(bone.name, {
-        position: bone.position.clone(),
-        quaternion: bone.quaternion.clone()
-      })
-    })
+    restPoses = captureRestPoses(bones.value)
   }
 
   /** Tear down the currently loaded model and every piece of rig state it owned. */
@@ -63,7 +63,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     skinnedMesh.value = null
     bones.value = []
     boneMarkers.value = []
-    restPoses.clear()
+    restPoses = new Map()
     config.value.selectedBone = ''
   }
 
@@ -114,10 +114,19 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (bone) bone.rotation.set(rotation.x, rotation.y, rotation.z)
   }
 
-  /** Apply a position from the panel (or a gizmo drag) to the currently selected bone. */
+  /** Apply a position typed into the panel to the currently selected bone. */
   const applyBonePosition = (position: { x: number; y: number; z: number }): void => {
     const bone = bones.value.find((candidate) => candidate.name === config.value.selectedBone)
     if (bone) bone.position.set(position.x, position.y, position.z)
+  }
+
+  /**
+   * Handle a gizmo drag: an IK solve or a plain position edit, see `applyGizmoDragToChain`.
+   * @param bone The bone the gizmo just moved, already carrying the drag's new local position
+   */
+  const applyBoneDragTarget = (bone: THREE.Bone): void => {
+    applyGizmoDragToChain(bone, restPoses)
+    config.value.bonePosition = { x: bone.position.x, y: bone.position.y, z: bone.position.z }
   }
 
   /** The currently selected bone, if any, for the view to attach a transform gizmo to. */
@@ -126,17 +135,15 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   )
 
   /**
-   * Undo any position or rotation edit on the selected bone, back to how it was when the rig
-   * was loaded (or auto-rigged). This is the only way back after a drag lands somewhere that
-   * visibly tears the mesh, since moving a bone does not preserve the limb length the way
-   * rotating it does.
+   * Undo any position or rotation edit on the selected bone (and its IK chain, if it has one)
+   * back to how it was when the rig was loaded (or auto-rigged). This is the only way back
+   * after a drag lands somewhere that visibly tears the mesh, since moving a bone does not
+   * preserve the limb length the way rotating it does.
    */
   const resetSelectedBone = (): void => {
     const bone = selectedBone.value
-    const rest = bone ? restPoses.get(bone.name) : undefined
-    if (!bone || !rest) return
-    bone.position.copy(rest.position)
-    bone.quaternion.copy(rest.quaternion)
+    if (!bone || !restPoses.has(bone.name)) return
+    resetBoneChainToRest(bone, restPoses)
     selectBone(bone.name)
   }
 
@@ -155,6 +162,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     pickBoneFromRay,
     applyBoneRotation,
     applyBonePosition,
+    applyBoneDragTarget,
     resetSelectedBone
   }
 }
