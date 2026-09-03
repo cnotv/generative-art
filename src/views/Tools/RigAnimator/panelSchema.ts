@@ -8,17 +8,28 @@ import { MODEL_FILE_ACCEPT, POSITION_STEP_FRACTION, ROTATION_CONTROL } from './c
  * live on the dedicated rig timeline instead of in this panel.
  * @param boneNames Every bone in the loaded rig, empty when nothing is rigged yet
  * @param needsAutoRig Whether the loaded model has meshes but no skeleton
+ * @param canCaptureFromCamera Whether the loaded rig has every bone camera pose capture needs
  * @param positionRange The +/- range the Bone Position field offers, scaled to the loaded rig
  * @returns The schema to hand to registerViewConfig/updateViewSchema
  */
 export const buildRigAnimatorSchema = (
   boneNames: string[],
   needsAutoRig: boolean,
+  canCaptureFromCamera: boolean,
   positionRange: number
 ): ConfigControlsSchema => ({
   model: { file: MODEL_FILE_ACCEPT, label: 'Upload Model' },
   ...(needsAutoRig
     ? { autoRig: { callback: 'autoRig', label: 'Auto-rig as Humanoid', sectionStart: true } }
+    : {}),
+  ...(canCaptureFromCamera
+    ? {
+        captureFromCamera: {
+          callback: 'captureFromCamera',
+          label: 'Capture Pose from Camera',
+          sectionStart: true
+        }
+      }
     : {}),
   ...(boneNames.length > 0
     ? {

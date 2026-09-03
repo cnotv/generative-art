@@ -54,3 +54,8 @@ export const EXPORT_GLB_FILENAME = 'rig-animation.glb'
 export const EXPORT_JSON_FILENAME = 'rig-animation.json'
 
 export const CAMERA_FRAME_DISTANCE_MULTIPLIER = 2.5
+
+export const MEDIAPIPE_WASM_BASE_PATH =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
+export const MEDIAPIPE_POSE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'

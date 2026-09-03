@@ -24,6 +24,8 @@ import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
+import CameraPoseCapture from './CameraPoseCapture.vue'
+import type { CameraLandmark } from './cameraPoseMapping'
 import type { RigAnimatorConfig } from './types'
 
 const route = useRoute()
@@ -52,6 +54,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
 })
 
 const rig = useRigAnimator(reactiveConfig)
+const showCameraCapture = ref(false)
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
@@ -116,8 +119,18 @@ const onWindowPointerUp = (): void => {
 const refreshSchema = (): void => {
   updateViewSchema(
     routeName,
-    buildRigAnimatorSchema(rig.boneNames.value, rig.needsAutoRig.value, rig.positionRange.value)
+    buildRigAnimatorSchema(
+      rig.boneNames.value,
+      rig.needsAutoRig.value,
+      rig.canCaptureFromCamera.value,
+      rig.positionRange.value
+    )
   )
+}
+
+const handleCameraPoseCaptured = (landmarks: CameraLandmark[]): void => {
+  rig.applyCameraPose(landmarks)
+  showCameraCapture.value = false
 }
 
 watch(
@@ -207,7 +220,7 @@ onMounted(async () => {
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value),
+    buildRigAnimatorSchema([], false, false, rig.positionRange.value),
     undefined,
     {
       autoRig: () => {
@@ -216,6 +229,9 @@ onMounted(async () => {
       },
       resetBone: () => {
         rig.resetSelectedBone()
+      },
+      captureFromCamera: () => {
+        showCameraCapture.value = true
       }
     }
   )
@@ -252,6 +268,11 @@ onUnmounted(() => {
     @export-json="rig.exportJson"
     @select-preset="rig.loadPreset"
     @reset-all="rig.resetAutosave"
+  />
+  <CameraPoseCapture
+    v-if="showCameraCapture"
+    @capture="handleCameraPoseCaptured"
+    @close="showCameraCapture = false"
   />
 </template>
 

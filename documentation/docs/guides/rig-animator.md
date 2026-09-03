@@ -42,6 +42,14 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema (upload, auto-rig,
   bone selection and pose fields), rebuilt whenever the bone list or the auto-rig availability
   changes
+- `src/views/Tools/RigAnimator/cameraPoseMapping.ts`: pure mapping from detected camera
+  landmarks to world-space bone targets, anchored and scaled to the loaded rig
+- `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
+  Pose Landmarker, running live detection for the capture dialog's overlay
+- `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
+  and applying a detected pose onto the rig
+- `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
+  preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`: the framework-agnostic
   logic. See the [rig package's docs](/docs/packages/rig) for the pose-capture, clip-building,
@@ -156,6 +164,29 @@ hand-weighted rig: it is meant to get an unrigged humanoid posable at all, and c
 joint on unusual proportions. There is no detection step deciding whether a model "looks"
 humanoid: the button is offered whenever a skeleton is missing, and posing it is how you find
 out whether the fit works for that particular mesh.
+
+## Capturing a pose from the camera
+
+Once the rig has every bone the mapping needs (`mixamorigHips`, `mixamorigLeftShoulder`,
+`mixamorigRightShoulder`, and a `mixamorigLeftHand`/`RightHand`/`LeftFoot`/`RightFoot`/`Head` to
+drive), the Config panel offers **Capture Pose from Camera** next to Auto-rig. It opens a
+mirrored preview of the webcam with a live skeleton overlay from MediaPipe's Pose Landmarker, so
+you can see the detection tracking you before committing to it.
+
+**Capture Pose** reads the detector's current 3D world landmarks for the wrist, ankle and nose,
+anchors them to the rig's own hip position, and scales them by the ratio between the rig's
+shoulder width and the detected person's, so the same pose maps sensibly regardless of the
+model's scale. Each mapped bone then reaches for its target through the exact same drag-to-chain
+IK solve a mouse drag on that bone already uses (see "Dragging never stretches a segment" above):
+no separate rotation math for camera input, just a different source of target positions. A body
+part out of frame, or below the detector's own confidence threshold, leaves its bone untouched
+rather than snapping it to the origin.
+
+This is a single-frame capture, not a recording: applying a detected pose changes the live rig
+exactly as a manual drag would, and **Add Keyframe** on the rig timeline is still what commits it
+to the animation. Spine bend, fingers and continuous motion capture are not part of this: the
+Pose Landmarker has no per-vertebra landmarks to drive a convincing torso curve, so v1 only
+drives the limbs and the head.
 
 ## Presets: evaluating the timeline with real motion
 
