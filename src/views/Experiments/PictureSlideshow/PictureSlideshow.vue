@@ -2,11 +2,12 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { getCube, getModel } from '@webgamekit/threejs'
+import { applyTextureToMesh, getCube, getModel } from '@webgamekit/threejs'
 import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
 import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
+import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
@@ -53,6 +54,28 @@ const pictureMaterial = (picture: ComplexModel): THREE.Material => {
   return Array.isArray(material) ? material[0] : material
 }
 
+/**
+ * A picture board's transform, offered in the Elements panel purely to inspect where the
+ * animation loop has it this instant — editing only actually sticks while the timeline is
+ * paused, since otherwise the very next frame overwrites whatever was typed in.
+ */
+const PICTURE_SCHEMA: ConfigControlsSchema = {
+  position: {
+    component: 'CoordinateInput',
+    label: 'Position',
+    min: { x: -5, y: -5, z: -5 },
+    max: { x: 5, y: 5, z: 5 },
+    step: { x: 0.05, y: 0.05, z: 0.05 }
+  },
+  rotation: {
+    component: 'CoordinateInput',
+    label: 'Rotation',
+    min: { x: -Math.PI, y: -Math.PI, z: -Math.PI },
+    max: { x: Math.PI, y: Math.PI, z: Math.PI },
+    step: { x: 0.05, y: 0.05, z: 0.05 }
+  }
+}
+
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
 const store = useSceneViewStore()
@@ -71,15 +94,18 @@ const handleProgress = (progress: LoadProgress): void => {
 const reactiveConfig = createReactiveConfig({
   character: DEFAULT_CHARACTER,
   timing: { ...DEFAULT_TIMING },
-  background: { blur: DEFAULT_BACKGROUND_BLUR }
+  background: { blur: DEFAULT_BACKGROUND_BLUR },
+  // An object URL, applied to whichever picture is currently on display; never a
+  // literal default, since there is nothing to preload it from.
+  image: ''
 })
 
 /** Set once the scene exists, so a panel change can rebuild the character. */
 let swapCharacter: ((characterId: string) => Promise<void>) | null = null
 let spawnedCharacter = DEFAULT_CHARACTER
 
-/** Set once the scene exists, so `onUnmounted` can undo the Elements/Timeline registration. */
-let disposeRagdollEditor: (() => void) | null = null
+/** Set once the scene exists, so `onUnmounted` can undo the Elements/Timeline/watch setup. */
+let disposeViewExtras: (() => void) | null = null
 
 /** Rebuild only when the choice actually changed: every slider fires this too. */
 const handleConfigChange = (): void => {
@@ -167,6 +193,33 @@ onMounted(async () => {
       // Pre-allocated: written every frame, and the loop allocates nothing.
       const held = new THREE.Vector3()
 
+      canvases.forEach((picture) => {
+        elementPropertiesStore.registerElementProperties(picture.name, {
+          title: picture.name,
+          schema: PICTURE_SCHEMA,
+          getValue: (path) => {
+            const source = path === 'position' ? picture.position : picture.rotation
+            return { x: source.x, y: source.y, z: source.z }
+          },
+          updateValue: (path, value) => {
+            if (!timelinePanelStore.isPaused) return
+            const { x, y, z } = value as RigPosition
+            const target = path === 'position' ? picture.position : picture.rotation
+            target.set(x, y, z)
+          }
+        })
+      })
+      // An uploaded picture always replaces whichever one is currently on display,
+      // so it appears exactly where the user is already looking rather than on a
+      // slide they would have to navigate to first.
+      const stopImageWatch = watch(
+        () => reactiveConfig.value.image,
+        (url) => {
+          if (!url) return
+          applyTextureToMesh(canvases[slideshow.index] as unknown as THREE.Mesh, url)
+        }
+      )
+
       /**
        * Only the Mixamo rig is IK-posed, so only it gets a ragdoll editor. Swapping
        * characters tears down and rebuilds this alongside the model itself.
@@ -218,10 +271,14 @@ onMounted(async () => {
           ragdollEditor?.setEnabled(selectedElementName === 'character' && isPaused),
         { immediate: true }
       )
-      disposeRagdollEditor = () => {
+      disposeViewExtras = () => {
         stopRagdollWatch()
+        stopImageWatch()
         ragdollEditor?.dispose()
         elementPropertiesStore.unregisterElementProperties('character')
+        canvases.forEach((picture) =>
+          elementPropertiesStore.unregisterElementProperties(picture.name)
+        )
         timelinePanelStore.unregister()
       }
 
@@ -255,7 +312,7 @@ onMounted(async () => {
               role === 'leaving'
                 ? 1 - exitAmountAt(frame, timing)
                 : role === 'arriving'
-                  ? 1 - entryAmountAt(frame)
+                  ? 1 - entryAmountAt(frame, timing)
                   : 1
           })
         }
@@ -274,7 +331,7 @@ onMounted(async () => {
 onUnmounted(() => {
   store.cleanup()
   destroyControls?.()
-  disposeRagdollEditor?.()
+  disposeViewExtras?.()
   unregisterViewConfig(route.name as string)
 })
 </script>

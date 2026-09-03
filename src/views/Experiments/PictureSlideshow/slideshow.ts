@@ -136,20 +136,29 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
   return ease(phaseProgress)
 }
 
+/** Where in a 0 to 1 span a value sits, clamped, or 1 outright once the span is empty. */
+const fadeProgress = (raw: number, fadeStart: number, fadeEnd: number): number => {
+  const span = fadeEnd - fadeStart
+  if (span <= 0) return 1
+  return Math.min(Math.max((raw - fadeStart) / span, 0), 1)
+}
+
 /**
  * How far a released picture has faded out, from 0 to 1.
  *
  * The picture never leaves the hands any more — the clip's own drop and pick motion
  * carries the hands themselves — so this is what shows a change is happening instead of
- * a travelled distance. Reaches 1 by the end of the release and stays there through the
+ * a travelled distance. `timing.fadeStart`/`fadeEnd` narrow the fade to part of the
+ * release rather than the whole thing; outside that window the picture sits fully
+ * opaque or fully gone. Reaches 1 by the end of the release and stays there through the
  * arrival, since the picture is already gone by then rather than still fading.
  * @param frame - The current frame
- * @param timing - How long each phase lasts
+ * @param timing - How long each phase lasts, and where within it the fade runs
  * @returns The fraction faded out
  */
 export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number => {
-  const progress = Math.min(frame.leftSeconds, timing.release) / timing.release
-  return ease(progress)
+  const raw = Math.min(frame.leftSeconds, timing.release) / timing.release
+  return ease(fadeProgress(raw, timing.fadeStart, timing.fadeEnd))
 }
 
 /**
@@ -157,11 +166,13 @@ export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): nu
  *
  * The exact same eased shape as `exitAmountAt`, run backward across the arrival's own
  * duration instead of forward across the release's — the entrance is a reverse of the
- * exit, not a separately timed effect.
+ * exit, not a separately timed effect, and reads the same `fadeStart`/`fadeEnd` window.
  * @param frame - The current frame, expected to be in the arrive phase
+ * @param timing - How long each phase lasts, and where within it the fade runs
  * @returns The fraction of the fade-in still to go
  */
-export const entryAmountAt = (frame: SlideshowFrame): number => ease(1 - frame.phaseProgress)
+export const entryAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number =>
+  ease(1 - fadeProgress(frame.phaseProgress, timing.fadeStart, timing.fadeEnd))
 
 /**
  * What one picture is doing this frame, so the scene can place it or hide it.

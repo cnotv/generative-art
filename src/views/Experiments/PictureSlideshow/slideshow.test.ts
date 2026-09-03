@@ -11,7 +11,7 @@ import {
 } from './slideshow'
 import type { SlideshowState } from './types'
 
-const TIMING = { hold: 3, release: 1, arrive: 1 }
+const TIMING = { hold: 3, release: 1, arrive: 1, fadeStart: 0, fadeEnd: 1 }
 const SLIDE_COUNT = 6
 
 /** Runs the clock forward in small steps, the way the animation loop does. */
@@ -191,6 +191,22 @@ describe('exitAmountAt', () => {
     expect(exitAt(TIMING.release + TIMING.arrive / 2)).toBeCloseTo(1)
     expect(exitAt(TIMING.release + TIMING.arrive)).toBeCloseTo(1)
   })
+
+  it('stays fully opaque until fadeStart, and fully gone from fadeEnd, when narrowed', () => {
+    const narrow = { ...TIMING, fadeStart: 0.5, fadeEnd: 0.75 }
+    const exitAtNarrow = (changeSeconds: number) =>
+      exitAmountAt(
+        slideshowFrame(
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          narrow
+        ),
+        narrow
+      )
+
+    expect(exitAtNarrow(TIMING.release * 0.4)).toBe(0)
+    expect(exitAtNarrow(TIMING.release * 0.625)).toBeCloseTo(0.5)
+    expect(exitAtNarrow(TIMING.release * 0.8)).toBe(1)
+  })
 })
 
 describe('entryAmountAt', () => {
@@ -199,7 +215,8 @@ describe('entryAmountAt', () => {
       slideshowFrame(
         { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
         TIMING
-      )
+      ),
+      TIMING
     )
 
   it('is the exact reverse of exitAmountAt, run across the arrival instead of the release', () => {

@@ -12,6 +12,13 @@ export interface SlideshowTiming {
   hold: number
   release: number
   arrive: number
+  /**
+   * Where, as a fraction of its own phase, a leaving or arriving picture's fade begins
+   * and ends. Both default to the full 0 to 1 span; narrowing them holds a picture fully
+   * opaque or fully gone for part of the phase instead of fading across the whole thing.
+   */
+  fadeStart: number
+  fadeEnd: number
 }
 
 /**

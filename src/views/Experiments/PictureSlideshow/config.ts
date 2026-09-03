@@ -175,7 +175,13 @@ export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
  * and arrive gets the rest. A picture never leaves the hands any more — it fades where
  * it sits — so it is this shared clock, not a separate distance, that has to line up.
  */
-export const DEFAULT_TIMING: SlideshowTiming = { hold: 5, release: 0.47, arrive: 0.8 }
+export const DEFAULT_TIMING: SlideshowTiming = {
+  hold: 5,
+  release: 0.47,
+  arrive: 0.8,
+  fadeStart: 0,
+  fadeEnd: 1
+}
 
 /** How much the backdrop photo is blurred, in CSS pixels. */
 export const DEFAULT_BACKGROUND_BLUR = 20
@@ -196,9 +202,12 @@ export const configControls: ConfigControlsSchema = {
   timing: {
     hold: { label: 'Hold', min: 1, max: 20, step: 0.5 },
     release: { label: 'Release', min: 0.3, max: 3, step: 0.05 },
-    arrive: { label: 'Arrive', min: 0.3, max: 3, step: 0.05 }
+    arrive: { label: 'Arrive', min: 0.3, max: 3, step: 0.05 },
+    fadeStart: { label: 'Fade start', min: 0, max: 1, step: 0.05 },
+    fadeEnd: { label: 'Fade end', min: 0, max: 1, step: 0.05 }
   },
   background: {
     blur: { label: 'Backdrop blur', min: 0, max: 40, step: 1 }
-  }
+  },
+  image: { file: 'image/*', label: 'Load a picture' }
 }
