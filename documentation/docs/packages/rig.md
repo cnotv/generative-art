@@ -128,6 +128,30 @@ if (!ikFindTwoBoneChain(spineBone) && spineBone.parent instanceof THREE.Bone) {
 }
 ```
 
+## applyHandPose / resolveHandSide / handPoseRequiredBoneNames
+
+Apply a canned finger pose (see `HAND_POSE_PRESETS`) to one hand's finger bones on a
+mixamorig-named rig, curling each joint around its local X axis, the flexion axis for both
+hands. `resolveHandSide` reads a bone name to decide which hand it belongs to, matching the hand
+bone itself or any of its finger descendants; `handPoseRequiredBoneNames` lists the 15 finger
+bone names a preset needs for one side, for checking a rig has them all before offering one.
+Finger bones are not part of `rigGenerateHumanoidSkeleton`'s generated skeleton, so this only
+applies to a model that already shipped with them, such as a genuine Mixamo export.
+
+```typescript
+import {
+  applyHandPose,
+  resolveHandSide,
+  handPoseRequiredBoneNames,
+  HAND_POSE_PRESETS
+} from '@webgamekit/rig'
+
+const side = resolveHandSide(selectedBone.name) // 'Left' | 'Right' | null
+if (side && handPoseRequiredBoneNames(side).every((name) => boneNames.includes(name))) {
+  applyHandPose(bones, side, HAND_POSE_PRESETS.Fist)
+}
+```
+
 ## Types
 
 ```typescript
@@ -163,5 +187,15 @@ interface TwoBoneIkChain {
   root: THREE.Bone
   mid: THREE.Bone
   end: THREE.Bone
+}
+
+type HandSide = 'Left' | 'Right'
+
+interface HandPoseDefinition {
+  thumb: [number, number, number] // local-X curl angle per joint, palm outward
+  index: [number, number, number]
+  middle: [number, number, number]
+  ring: [number, number, number]
+  pinky: [number, number, number]
 }
 ```

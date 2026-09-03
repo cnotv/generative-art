@@ -2,13 +2,14 @@ import type { Ref } from 'vue'
 import { useRigModel } from './useRigModel'
 import { useRigKeyframes } from './useRigKeyframes'
 import { useRigCameraPose } from './useRigCameraPose'
+import { useRigHandPose } from './useRigHandPose'
 import type { RigAnimatorConfig } from './types'
 
 /**
- * Composes the rig/model state with the pose-keyframe and camera-pose-capture state for the rig
- * animator tool. Split across composables so each stays focused: one owns the loaded model and
- * its rig, one owns the authored keyframes and the clips built from them, and one owns mapping a
- * detected camera pose onto the rig.
+ * Composes the rig/model state with the pose-keyframe, camera-pose-capture and hand-pose state
+ * for the rig animator tool. Split across composables so each stays focused: one owns the loaded
+ * model and its rig, one owns the authored keyframes and the clips built from them, one owns
+ * mapping a detected camera pose onto the rig, and one owns applying a canned hand pose.
  */
 export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const rigModel = useRigModel(config)
@@ -19,6 +20,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigModel.boneNames
   )
   const rigCameraPose = useRigCameraPose(rigModel.bones, rigModel.applyBoneDragTarget)
+  const rigHandPose = useRigHandPose(rigModel.bones, config)
 
   /** Load a model and drop whatever keyframes belonged to the one it replaces. */
   const loadModel = async (url: string): Promise<void> => {
@@ -36,6 +38,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     ...rigModel,
     ...rigKeyframes,
     ...rigCameraPose,
+    ...rigHandPose,
     loadModel,
     addKeyframe,
     pasteKeyframe

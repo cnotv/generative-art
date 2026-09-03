@@ -1,4 +1,4 @@
-import type { HumanoidBoneDefinition } from './types'
+import type { HandPoseDefinition, HumanoidBoneDefinition } from './types'
 
 /**
  * Standard humanoid rig template, named after Mixamo's convention so a generated skeleton
@@ -141,3 +141,40 @@ export const HUMANOID_BONE_HIERARCHY: HumanoidBoneDefinition[] = [
     spreadFraction: 0.15
   }
 ]
+
+const FLAT_FINGER: [number, number, number] = [0, 0, 0]
+const CURLED_THUMB: [number, number, number] = [0.7, 0.6, 0.5]
+const CURLED_FINGER: [number, number, number] = [1.2, 1.1, 0.9]
+const CURLED_PINKY: [number, number, number] = [1.1, 1.0, 0.8]
+
+/** Canned finger poses a hand pose preset picker offers, keyed by their display name. */
+export const HAND_POSE_PRESETS: Record<string, HandPoseDefinition> = {
+  Open: {
+    thumb: FLAT_FINGER,
+    index: FLAT_FINGER,
+    middle: FLAT_FINGER,
+    ring: FLAT_FINGER,
+    pinky: FLAT_FINGER
+  },
+  Fist: {
+    thumb: CURLED_THUMB,
+    index: CURLED_FINGER,
+    middle: CURLED_FINGER,
+    ring: CURLED_FINGER,
+    pinky: CURLED_PINKY
+  },
+  Point: {
+    thumb: CURLED_THUMB,
+    index: FLAT_FINGER,
+    middle: CURLED_FINGER,
+    ring: CURLED_FINGER,
+    pinky: CURLED_PINKY
+  },
+  'Thumbs Up': {
+    thumb: FLAT_FINGER,
+    index: CURLED_FINGER,
+    middle: CURLED_FINGER,
+    ring: CURLED_FINGER,
+    pinky: CURLED_PINKY
+  }
+}

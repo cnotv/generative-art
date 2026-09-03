@@ -55,10 +55,12 @@ exist, so two poses are already a movement.
   render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
+- `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
+  applying a preset to whichever hand the selected bone belongs to
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
-- `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`: the framework-agnostic
-  logic. See the [rig package's docs](/docs/packages/rig) for the pose-capture, clip-building,
-  auto-rig and IK API.
+- `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
+  framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
+  pose-capture, clip-building, auto-rig, IK and hand pose API.
 
 ## Uploading a model
 
@@ -165,6 +167,18 @@ row, split into parts left to right.
   frame range; it never shrinks past the current frame or the furthest keyframe.
 - **Presets**, **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right, the
   first as a labelled dropdown and the rest as plain icons: see the next two sections.
+
+## Hand pose presets
+
+**Hand Pose**, next to Copy/Paste, offers a handful of canned finger poses (**Open**, **Fist**,
+**Point**, **Thumbs Up**) for whichever hand the currently selected bone belongs to: select the
+hand itself or any of its fingers, and the dropdown enables once every finger bone that hand
+needs is present on the rig. Applying a preset curls each finger joint around its local X axis,
+the flexion axis on both hands for a mixamorig-named rig, and only ever touches the selected
+hand's own fingers. Like a manual bone edit, it changes the live rig immediately; **Add
+Keyframe** is still what commits it to the timeline. Finger bones are not part of the auto-rig
+heuristic's generated skeleton, so this is only available on a model that already shipped with
+them, such as a genuine Mixamo export.
 
 ## Auto-rig for a model with no skeleton
 

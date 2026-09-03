@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select'
 import { POSES_FILE_ACCEPT } from './config'
 import { RIG_PRESETS } from './presets'
 import { computeTimelineTicks } from './timelineTicks'
+import { HAND_POSE_PRESETS } from '@webgamekit/rig'
 
 interface Properties {
   frame: number
@@ -24,6 +25,7 @@ interface Properties {
   keyframeFrames: number[]
   isPlaying: boolean
   hasClipboard: boolean
+  canApplyHandPose: boolean
 }
 
 const props = defineProps<Properties>()
@@ -35,6 +37,7 @@ const emit = defineEmits<{
   deleteKeyframe: []
   copyKeyframe: []
   pasteKeyframe: []
+  selectHandPose: [presetName: string]
   moveKeyframe: [oldFrame: number, newFrame: number]
   togglePlayback: []
   importPoses: [url: string]
@@ -48,6 +51,7 @@ const trackElement = ref<HTMLDivElement | null>(null)
 const fileInputElement = ref<HTMLInputElement | null>(null)
 const hasKeyframeAtCurrentFrame = computed(() => props.keyframeFrames.includes(props.frame))
 const presetOptions = RIG_PRESETS.map((preset) => ({ value: preset.url, label: preset.name }))
+const handPoseOptions = Object.keys(HAND_POSE_PRESETS).map((name) => ({ value: name, label: name }))
 const ticks = computed(() => computeTimelineTicks(props.frameMax))
 
 const percentFor = (frame: number): number =>
@@ -164,6 +168,14 @@ onUnmounted(stopDrag)
     >
       <ClipboardPaste />
     </IconButton>
+    <div class="rig-timeline__hand-pose">
+      <Select
+        placeholder="Hand Pose"
+        :options="handPoseOptions"
+        :disabled="!canApplyHandPose"
+        @update:model-value="emit('selectHandPose', $event)"
+      />
+    </div>
     <div class="rig-timeline__scrubber">
       <div class="rig-timeline__ruler" @pointerdown="onTrackPointerDown">
         <span
@@ -323,7 +335,8 @@ onUnmounted(stopDrag)
   cursor: ew-resize;
 }
 
-.rig-timeline__presets {
+.rig-timeline__presets,
+.rig-timeline__hand-pose {
   width: 8rem;
   flex-shrink: 0;
 }
