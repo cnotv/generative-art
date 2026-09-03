@@ -111,6 +111,23 @@ rather than requiring a second draggable target.
 
 ![A hand dragged upward with the Rig Animator's gizmo, its elbow bent by ikSolveTwoBoneChain to follow](/img/animation/rig-ik-reach.webp)
 
+## ikSolveOneBoneAim
+
+The degenerate one-segment case of the same idea: for a bone with only a Bone parent (no full
+two-bone chain to solve with, a spine segment, a shoulder root, a thigh whose own parent is the
+skeleton root), rotate that parent so the direction toward the bone points at a world-space
+target. Only the direction changes, never the bone's own local offset, so the segment can
+never stretch, only point somewhere else, and everything attached below the bone swings with
+it as one rigid piece.
+
+```typescript
+import { ikFindTwoBoneChain, ikSolveOneBoneAim } from '@webgamekit/rig'
+
+if (!ikFindTwoBoneChain(spineBone) && spineBone.parent instanceof THREE.Bone) {
+  ikSolveOneBoneAim(spineBone.parent, spineBone, targetWorldPosition)
+}
+```
+
 ## Types
 
 ```typescript

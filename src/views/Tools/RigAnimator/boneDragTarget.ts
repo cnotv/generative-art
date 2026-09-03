@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { ikFindTwoBoneChain, ikSolveTwoBoneChain } from '@webgamekit/rig'
+import { ikFindTwoBoneChain, ikSolveTwoBoneChain, ikSolveOneBoneAim } from '@webgamekit/rig'
 
 /** A bone's transform as loaded, so an IK solve can snap the dragged bone itself back to it. */
 export interface BoneRestPose {
@@ -22,43 +22,55 @@ export const captureRestPoses = (bones: THREE.Bone[]): Map<string, BoneRestPose>
   )
 
 /**
- * Resolve a gizmo drag on a bone into a two-bone IK solve when it has one to solve with. A
- * hand or a foot on any rig, regardless of naming, has two Bone ancestors: the shoulder and
- * elbow (or hip and knee) rotate to reach the dragged world position, and the dragged bone's
- * own local transform snaps back to rest so it never accumulates a raw position edit.
+ * Resolve a gizmo drag on a bone into whichever length-preserving solve it has bones to solve
+ * with, so no drag ever stretches a segment: two-bone IK for a hand or foot (any bone with two
+ * Bone ancestors), a one-bone aim for a bone with only a Bone parent (a spine segment, a thigh
+ * whose own parent is the skeleton root), or nothing at all for the skeleton root itself, which
+ * has no parent segment to preserve and so keeps translating freely with the whole rig. Either
+ * solve snaps the dragged bone's own local transform back to rest first, since only its
+ * ancestor(s) ever rotate to reach it.
  * @param bone The bone the gizmo just moved, already carrying the drag's new local position
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates the chain's root/mid quaternions and the dragged bone's position
- *   when a two-bone chain exists, or leaves the bone exactly as the gizmo already set it
+ * @returns Nothing; mutates whichever ancestor bone(s) solve for this bone, or leaves the bone
+ *   exactly as the gizmo already set it when it has no Bone parent at all
  */
 export const applyGizmoDragToChain = (
   bone: THREE.Bone,
   restPoses: Map<string, BoneRestPose>
 ): void => {
-  const chain = ikFindTwoBoneChain(bone)
-  if (!chain) return
   const targetWorldPosition = bone.getWorldPosition(new THREE.Vector3())
   const rest = restPoses.get(bone.name)
-  if (rest) bone.position.copy(rest.position)
-  const poleWorldPosition = chain.mid.getWorldPosition(new THREE.Vector3())
-  ikSolveTwoBoneChain(chain, targetWorldPosition, poleWorldPosition)
+  const chain = ikFindTwoBoneChain(bone)
+  if (chain) {
+    if (rest) bone.position.copy(rest.position)
+    const poleWorldPosition = chain.mid.getWorldPosition(new THREE.Vector3())
+    ikSolveTwoBoneChain(chain, targetWorldPosition, poleWorldPosition)
+    return
+  }
+  if (bone.parent instanceof THREE.Bone) {
+    if (rest) bone.position.copy(rest.position)
+    ikSolveOneBoneAim(bone.parent, bone, targetWorldPosition)
+  }
 }
 
 /**
- * Reset a bone back to rest, and the root/mid of its IK chain along with it when it has one:
- * an IK drag leaves the dragged bone's own transform at rest already, so undoing just that
- * bone would do nothing, the shoulder and elbow (or hip and knee) that actually moved need
- * resetting too.
+ * Reset a bone back to rest, and whichever ancestor(s) solved its last drag along with it: a
+ * length-preserving drag leaves the dragged bone's own transform at rest already, so undoing
+ * just that bone would do nothing, the ancestor(s) that actually rotated need resetting too.
  * @param bone The selected bone to reset
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates every bone in the chain back to its rest transform
+ * @returns Nothing; mutates every bone in the reset back to its rest transform
  */
 export const resetBoneChainToRest = (
   bone: THREE.Bone,
   restPoses: Map<string, BoneRestPose>
 ): void => {
   const chain = ikFindTwoBoneChain(bone)
-  const chainBones = chain ? [chain.root, chain.mid, bone] : [bone]
+  const chainBones = chain
+    ? [chain.root, chain.mid, bone]
+    : bone.parent instanceof THREE.Bone
+      ? [bone.parent, bone]
+      : [bone]
   chainBones.forEach((chainBone) => {
     const rest = restPoses.get(chainBone.name)
     if (rest) {

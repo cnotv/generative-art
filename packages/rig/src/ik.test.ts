@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { ikFindTwoBoneChain, ikSolveTwoBoneChain } from './ik'
+import { ikFindTwoBoneChain, ikSolveTwoBoneChain, ikSolveOneBoneAim } from './ik'
 
 /** A straight two-segment chain (root: 0..1, mid: 1..2), unit-length bones, rest pose vertical. */
 const buildStraightChain = (): { root: THREE.Bone; mid: THREE.Bone; end: THREE.Bone } => {
@@ -75,5 +75,32 @@ describe('ikSolveTwoBoneChain', () => {
 
     expect(end.position.equals(localPositionBefore)).toBe(true)
     expect(end.quaternion.equals(localQuaternionBefore)).toBe(true)
+  })
+})
+
+describe('ikSolveOneBoneAim', () => {
+  it('points the parent at the target while preserving the child’s segment length', () => {
+    const { root, mid } = buildStraightChain()
+    const target = new THREE.Vector3(1, 1, 0)
+
+    ikSolveOneBoneAim(root, mid, target)
+
+    const rootPosition = root.getWorldPosition(new THREE.Vector3())
+    const midPosition = mid.getWorldPosition(new THREE.Vector3())
+    const direction = midPosition.clone().sub(rootPosition).normalize()
+    const expectedDirection = target.clone().sub(rootPosition).normalize()
+    expect(direction.dot(expectedDirection)).toBeCloseTo(1, 4)
+    expect(rootPosition.distanceTo(midPosition)).toBeCloseTo(1, 4)
+  })
+
+  it('leaves the child’s own local transform untouched', () => {
+    const { root, mid } = buildStraightChain()
+    const localPositionBefore = mid.position.clone()
+    const localQuaternionBefore = mid.quaternion.clone()
+
+    ikSolveOneBoneAim(root, mid, new THREE.Vector3(1, 1, 0))
+
+    expect(mid.position.equals(localPositionBefore)).toBe(true)
+    expect(mid.quaternion.equals(localQuaternionBefore)).toBe(true)
   })
 })

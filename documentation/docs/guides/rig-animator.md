@@ -24,7 +24,8 @@ two poses are already a movement.
 - `src/views/Tools/RigAnimator/useBoneGizmo.ts`: the translate gizmo (Three.js's own
   `TransformControls`) for dragging the selected bone
 - `src/views/Tools/RigAnimator/boneDragTarget.ts`: resolves a gizmo drag into a two-bone IK
-  solve or a plain position edit, and resets a whole IK chain back to rest
+  solve, a one-bone aim, or (for the skeleton root only) a plain position edit, and resets
+  whichever bones a drag rotated back to rest
 - `src/views/Tools/RigAnimator/timelineSource.ts`: exposes the pose keyframes to the shared
   Timeline panel
 - `src/views/Tools/RigAnimator/cameraFraming.ts`: framing the camera to whatever scale the
@@ -56,8 +57,8 @@ default periwinkle, and a translate gizmo appears at the bone's joint.
 
 Rotating and moving both work two ways, kept in sync with each other:
 
-- **Drag the gizmo** in the 3D view to move the bone. The orbit camera steps aside for the
-  duration of the drag.
+- **Drag the gizmo** in the 3D view to pose the bone; see the next section for exactly what
+  moving it does. The orbit camera steps aside for the duration of the drag.
 - **Type into the Bone Rotation / Bone Position fields**, ranged to whatever scale the loaded
   rig happens to be.
 
@@ -69,33 +70,39 @@ which is most useful for nudging an auto-rigged skeleton's guessed joint placeme
 authoring an animated translation, so it is not captured by **Add Keyframe at Frame** and does
 not appear in the exported clip.
 
-## Reaching with the gizmo: two-bone IK
+## Dragging the gizmo never stretches a segment
 
-A bone with two Bone ancestors, a hand or a foot on any rig, regardless of naming, is the end
-of a limb: dragging its gizmo does not move the bone itself. Instead it solves the limb
-analytically (the same closed-form two-bone solve any rigging tool uses for a shoulder/elbow or
-a hip/knee) so the shoulder and elbow (or hip and knee) rotate to reach wherever the gizmo was
-dragged to, the way pulling a puppet's hand bends its arm rather than stretching it. The elbow
-bends toward whichever side it already bent toward before the drag, so the limb keeps a
-consistent, predictable pose as the target moves. Since only rotations change, the result is
-exactly what **Add Keyframe at Frame** already captures, no different from posing the shoulder
-and elbow by hand one at a time. A bone with fewer than two Bone ancestors (a hip, a spine
-segment, a shoulder itself) has no chain to solve with, so dragging it keeps moving the bone
-directly, exactly as typing into Bone Position does.
+Dragging the gizmo never moves the selected bone itself. Instead it rotates whichever ancestor
+bone(s) get the selected bone to wherever the gizmo was dragged to, so no segment's length ever
+changes, only its direction, the way a puppet's limb bends or swings rather than stretching:
 
-A target farther than the limb can reach clamps to the fully extended limb rather than failing
-to solve.
+- A bone with **two Bone ancestors**, a hand or a foot on any rig regardless of naming, is the
+  end of a limb: it solves analytically (the same closed-form two-bone solve any rigging tool
+  uses for a shoulder/elbow or a hip/knee) so the two ancestor bones rotate to reach the target.
+  The bend favours whichever side it already bent toward before the drag, so the limb keeps a
+  consistent, predictable pose as the target moves. A target farther than the limb can reach
+  clamps to the fully extended limb rather than failing to solve.
+- A bone with **only a Bone parent** (a spine segment, a shoulder root, a thigh whose own
+  parent is the skeleton root) has no full chain, so its parent alone rotates to aim it at the
+  target: the whole subtree below that parent, everything attached to the dragged bone,
+  swings with it as one rigid piece, exactly as tipping a puppet's torso swings its arms too.
+- The **skeleton root** (a model's hip bone, typically) has no Bone parent to rotate, so it
+  keeps translating freely: nothing above it to preserve a segment length against, so dragging
+  it repositions the whole rig rather than stretching anything.
+
+Either way the result is only ever rotation, so it is exactly what **Add Keyframe at Frame**
+already captures, no different from posing each bone by hand one at a time.
 
 ![mixamorigRightHand dragged upward with the gizmo: the elbow bent to follow it, the mesh at the shoulder and elbow intact, the Bone Position field still reading the hand's rest offset since only its shoulder and elbow ancestors rotated](/img/animation/rig-ik-reach.webp)
 
 ## Undoing a bad edit
 
-A position edit or an IK reach can both go too far: a joint dragged well past its rest offset
-tears the mesh at that seam, since translation, unlike rotation, does not preserve limb length,
-and an IK reach beyond the limb's own proportions can pull it into an unnatural line. **Reset
-Bone to Rest Pose** undoes either back to how the selected bone (and, for an IK reach, the
-shoulder and elbow or hip and knee that actually moved) was when the rig was loaded or
-auto-rigged, without touching any other bone or any keyframe already captured.
+Typing an exact position can still go too far: a joint moved well past its rest offset tears
+the mesh at that seam, since translation, unlike rotation, does not preserve limb length. An IK
+reach beyond a limb's own proportions can likewise pull it into an unnatural line. **Reset Bone
+to Rest Pose** undoes either back to how the selected bone, and whichever ancestor bone(s) a
+drag actually rotated, was when the rig was loaded or auto-rigged, without touching any other
+bone or any keyframe already captured.
 
 ## Keyframes and interpolation
 

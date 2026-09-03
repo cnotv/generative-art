@@ -114,3 +114,27 @@ export const ikSolveTwoBoneChain = (
     .normalize()
   applyWorldDirectionToBone(chain.mid, currentLowerDirection, desiredLowerDirection)
 }
+
+/**
+ * Aim a single bone at a world-space target by rotating its parent, the degenerate one-segment
+ * case of the same idea as `ikSolveTwoBoneChain`: only the direction from parent to child
+ * changes, never the child's own local offset, so the segment can never stretch or shrink, only
+ * point somewhere else. Used for a bone with a Bone parent but no full two-bone chain to solve
+ * with (a spine segment, a shoulder root, a thigh whose own parent is the skeleton root).
+ * @param parent The bone to rotate
+ * @param child The bone being aimed at the target, whose own local transform is never touched
+ * @param targetWorldPosition The direction to aim toward, in world space; only its direction
+ *   from the parent matters, not its distance
+ * @returns Nothing; mutates the parent bone's local quaternion
+ */
+export const ikSolveOneBoneAim = (
+  parent: THREE.Bone,
+  child: THREE.Bone,
+  targetWorldPosition: THREE.Vector3
+): void => {
+  const parentWorldPosition = parent.getWorldPosition(new THREE.Vector3())
+  const childWorldPosition = child.getWorldPosition(new THREE.Vector3())
+  const desiredDirection = targetWorldPosition.clone().sub(parentWorldPosition).normalize()
+  const currentDirection = childWorldPosition.clone().sub(parentWorldPosition).normalize()
+  applyWorldDirectionToBone(parent, currentDirection, desiredDirection)
+}
