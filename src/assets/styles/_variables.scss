@@ -108,6 +108,22 @@
   // and dark: the outline is what makes the text readable, not the surrounding surface.
   --color-canvas-overlay-foreground: hsl(0deg 0% 100%);
   --shadow-text-canvas-overlay: 0 1px 3px hsl(0deg 0% 0% / 80%);
+  --color-canvas-overlay-surface: hsl(0deg 0% 0% / 55%);
+  --color-canvas-overlay-surface-strong: hsl(0deg 0% 0% / 78%);
+  --color-canvas-overlay-border: hsl(0deg 0% 100% / 35%);
+  --color-street-overlay: hsl(42deg 55% 68%);
+
+  // A dusk gradient behind an overlay with no camera feed showing through it: dark enough that
+  // white overlay text keeps the same contrast it has over a genuinely dark street.
+  --color-canvas-overlay-background-start: hsl(230deg 35% 12%);
+  --color-canvas-overlay-background-end: hsl(280deg 25% 9%);
+
+  // A small pastel chip meant to look pressable, like a soft rubber button: a light-to-base
+  // gradient reads as a rounded surface, and the foreground is dark enough to read on either
+  // end of it, which a white foreground over a pale pastel would not be.
+  --color-scan-chip-highlight: hsl(255deg 60% 90%);
+  --color-scan-chip-base: hsl(255deg 45% 78%);
+  --color-scan-chip-foreground: hsl(258deg 45% 22%);
 
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);

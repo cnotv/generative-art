@@ -1,0 +1,177 @@
+/**
+ * Komoot's reverse geocoder over OpenStreetMap: free, no key, no sign-up, and it answers with
+ * an open CORS header, which a page doing all its own fetching needs.
+ *
+ * Overpass is the more obvious choice and was the first one tried, but its public mirrors time
+ * out under load often enough that the view spent more time apologising than labelling.
+ */
+export const PHOTON_ENDPOINT = 'https://photon.komoot.io/reverse'
+
+/**
+ * Street centre lines come from Overpass, because it is the only free service that returns
+ * geometry rather than a single point per feature.
+ *
+ * Several of them, tried in turn, because one is not enough: these are shared public servers
+ * under permanent load, and over the course of this work each has variously answered 502, 504,
+ * 500, an HTML error page under a success status, and nothing at all. A single endpoint means
+ * no streets whenever that endpoint is having a bad minute, which is often.
+ */
+export const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+]
+
+/**
+ * How far out to look. Far enough to reach the other side of a square, short enough that the
+ * labels still describe what is actually in front of the camera rather than a haze of names.
+ */
+export const SEARCH_RADIUS_METERS = 400
+
+/** A city centre has hundreds within reach, and the screen fits a handful. */
+export const MAX_PLACES = 80
+
+/**
+ * Street lines are fetched from much closer in than the labels, and narrowed further still by
+ * `ADJACENT_STREET_METERS` below: a search this wide is only ever a starting pool for that
+ * closer filter, not what ends up drawn.
+ */
+export const STREET_RADIUS_METERS = 120
+
+/**
+ * How close a street has to pass to count as one you are actually standing on or at the corner
+ * of, rather than one merely somewhere within the fetch radius above.
+ *
+ * Half the drawn carriageway width, plus slack for a phone GPS fix, which is commonly ten to
+ * twenty metres off outdoors and worse between buildings.
+ */
+export const ADJACENT_STREET_METERS = 20
+
+/**
+ * The fewest streets to draw when that many were even found, so a quiet corner still reads as
+ * a street scene rather than an empty one.
+ */
+export const MINIMUM_STREET_COUNT = 4
+
+/** How many labels the frame will hold before it stops being readable. */
+export const MAX_VISIBLE_LABELS = 12
+
+/**
+ * Wikipedia's own search by position: free, no key, and it answers with an open cross-origin
+ * header, which a page doing all its own fetching needs.
+ */
+export const WIKIPEDIA_ENDPOINT = 'https://en.wikipedia.org/w/api.php'
+export const WIKIPEDIA_PAGE_BASE = 'https://en.wikipedia.org/wiki/'
+export const OPENSTREETMAP_BASE = 'https://www.openstreetmap.org/'
+
+/**
+ * Wide enough to find something. A tight radius is truer to "what is this building", but most
+ * of what a street holds has no article at all, and an empty card every time is worse than one
+ * that says which nearby thing it is showing.
+ */
+export const IMAGE_SEARCH_RADIUS_METERS = 400
+export const IMAGE_THUMBNAIL_WIDTH = 480
+
+/** What the corner map's half-width covers on the ground, which is a few streets either way. */
+export const MINIMAP_RADIUS_METERS = 200
+
+/**
+ * How upright the phone has to be before its roll is worth believing. Below this the plumb line
+ * points through the screen, there is no horizon, and the reported roll is sensor noise.
+ */
+export const MINIMUM_HORIZON_STRENGTH = 0.2
+
+/** Roughly one card row's height and a label's width, as a share of the frame. */
+export const LABEL_ROW_HEIGHT_PERCENT = 7
+export const LABEL_COLUMN_WIDTH_PERCENT = 30
+
+/**
+ * Where every building card sits vertically, so a name reads from the same place in the frame
+ * regardless of how far off the place it names actually is. It only rises from here when
+ * another card shares its column.
+ */
+export const LABEL_BASE_ROW_PERCENT = 55
+
+/**
+ * Where the street line sits vertically, below the row the building cards start on: the street
+ * is underfoot, and the buildings named on it stand over it in the frame the way they do in a
+ * real street.
+ */
+export const STREET_ROW_PERCENT = 75
+
+/**
+ * Things too large to stand anywhere in particular. A city's point is wherever its centre was
+ * drawn, so labelling it puts "Amsterdam" on one arbitrary building.
+ */
+export const UNPLACEABLE_TYPES = ['city', 'county', 'state', 'country', 'other'] as const
+
+/**
+ * The kinds worth telling apart, in the order they are offered.
+ *
+ * Grouped by what someone standing in the street is looking for rather than by how
+ * OpenStreetMap files it: "somewhere to eat" spans two of its top-level keys, and its `amenity`
+ * key spans a restaurant, a bench and a wastebasket.
+ */
+export const PLACE_GROUPS = [
+  { id: 'food', label: 'Food and drink', icon: 'UtensilsCrossed' },
+  { id: 'shops', label: 'Shops', icon: 'ShoppingBag' },
+  { id: 'landmarks', label: 'Landmarks', icon: 'Landmark' },
+  { id: 'other', label: 'Everything else', icon: 'MapPin' }
+] as const
+
+const FOOD_VALUES = [
+  'restaurant',
+  'cafe',
+  'bar',
+  'pub',
+  'fast_food',
+  'ice_cream',
+  'biergarten',
+  'food_court',
+  'bakery',
+  'confectionery',
+  'deli'
+]
+
+const LANDMARK_KEYS = ['tourism', 'historic']
+const LANDMARK_VALUES = ['artwork', 'monument', 'memorial', 'museum', 'attraction', 'viewpoint']
+
+/**
+ * Sort a feature into the group it belongs to, by its OpenStreetMap key and value.
+ *
+ * A street is drawn as its own overlay, always on, never one of these toggleable tags: a
+ * street-tagged feature that still turns up here as a place falls into "everything else"
+ * rather than a bucket with no toggle of its own.
+ * @param key The top-level tag, such as `amenity` or `shop`
+ * @param value The tag's value, such as `restaurant`
+ * @returns The group's id
+ */
+export const getPlaceGroup = (key: string, value: string): string => {
+  // A bakery is a shop by its tag and a place to eat by every other measure, so food is asked
+  // first and wins it.
+  if (FOOD_VALUES.includes(value)) return 'food'
+  if (key === 'shop') return 'shops'
+  if (LANDMARK_KEYS.includes(key) || LANDMARK_VALUES.includes(value)) return 'landmarks'
+
+  return 'other'
+}
+
+/**
+ * Roughly a phone's rear camera, which no browser API will tell us. It is the one number that
+ * decides whether a label sits on the building it names, so the view offers it as a control.
+ */
+export const DEFAULT_HORIZONTAL_FIELD_OF_VIEW = 65
+export const MINIMUM_FIELD_OF_VIEW = 30
+export const MAXIMUM_FIELD_OF_VIEW = 110
+
+/** How far the compass may be nudged, for the many devices whose magnetometer reads off. */
+export const MAXIMUM_HEADING_OFFSET = 180
+
+/** Refetch once the reported position has moved far enough for the results to have changed. */
+export const REFETCH_DISTANCE_METERS = 120
+
+export const GEOLOCATION_OPTIONS = {
+  enableHighAccuracy: true,
+  maximumAge: 10_000,
+  timeout: 20_000
+}

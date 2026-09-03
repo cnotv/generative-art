@@ -269,8 +269,49 @@ left-to-right meaning left-to-right with nothing to reset.
 | `needsPermission()`         | `boolean`                                         | Whether a prompt is required (iOS)                               |
 | `requestMotionPermission()` | `Promise<'granted' \| 'denied' \| 'unsupported'>` | Ask for access, from a tap                                       |
 | `getTilt()`                 | `MotionTilt`                                      | Continuous lean in degrees, `x` screen-right and `y` screen-down |
-| `getReading()`              | `MotionReading \| null`                           | The latest raw `beta`/`gamma`, for diagnostics                   |
+| `getReading()`              | `MotionReading \| null`                           | The latest raw angles, for diagnostics                           |
+| `getAim()`                  | `DeviceAim \| null`                               | Where the rear camera points, for views that draw the world      |
 | `isReceiving()`             | `boolean`                                         | Whether any reading has arrived                                  |
+
+### Aiming rather than steering
+
+`getTilt` answers "which way is the player leaning", which is what a game steered by tilt
+needs. A view that draws the world through the camera needs the opposite question — "what is
+the camera looking at" — and `getAim` answers that instead.
+
+```typescript
+const aim = motion.getAim()
+// { headingDegrees: 214.6, pitchDegrees: -3.1, rollDegrees: 0.4, horizonStrength: 0.99 }
+```
+
+| Field             | Meaning                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `headingDegrees`  | Compass bearing of the view direction, 0 at north, increasing clockwise |
+| `pitchDegrees`    | Degrees above the horizon, negative when aimed at the ground            |
+| `rollDegrees`     | Clockwise turn to apply to screen content for it to stay level          |
+| `horizonStrength` | How well defined that roll is, 0 lying flat and 1 held upright          |
+
+`horizonStrength` is not optional detail. A device lying flat has no horizon to be square to —
+the plumb line points straight through the screen — so the roll beside it is whichever way the
+last of the sensor noise fell, and a view that turns by it is spun a quarter turn by nothing at
+all. Hold the last good roll below about `0.2` rather than following it, and blend roll the way
+you would any other angle: it wraps, and averaging it as a plain number sends the view the long
+way round every time it crosses.
+
+Both are read from the orientation matrix rather than from the reported angles, which matters
+more here than it does for tilt: a phone held up to look through sits near ninety degrees of
+pitch, which is exactly where the Euler angles lock and the heading stops responding. That
+pose is an awkward corner for a tilt game and the normal one for an aimed view.
+
+`rollDegrees` is what keeps an overlay looking fixed to the world. Apply it as a rotation to
+the layer drawn over the camera feed and the labels stay square to the horizon while the phone
+turns under them.
+
+Heading needs an absolute reference, and WebKit is the one engine that does not put it in
+`alpha`: it reports a relative `alpha` plus an absolute `webkitCompassHeading`. The reading
+carries both, and `getAim` prefers the compass value where there is one, so a caller never has
+to branch on the platform. Where neither is absolute — some Android builds only ever fire
+`deviceorientationabsolute` — headings drift, which is what a user-facing offset is for.
 
 ## Screen orientation
 

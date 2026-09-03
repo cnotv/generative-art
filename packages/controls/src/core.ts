@@ -240,6 +240,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
       requestMotionPermission: controllers.motion.requestPermission,
       getTilt: controllers.motion.getTilt,
       getReading: controllers.motion.getReading,
+      getAim: controllers.motion.getAim,
       isReceiving: controllers.motion.isReceiving,
       getPromptCount: controllers.motion.getPromptCount
     }
