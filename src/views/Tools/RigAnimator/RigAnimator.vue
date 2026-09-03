@@ -50,7 +50,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   boneRotation: { x: 0, y: 0, z: 0 },
   bonePosition: { x: 0, y: 0, z: 0 },
   frame: 0,
-  fps: DEFAULT_FPS
+  fps: DEFAULT_FPS,
+  showBoneMarkers: true
 })
 
 const rig = useRigAnimator(reactiveConfig)
@@ -169,6 +170,10 @@ watch(
   { deep: true }
 )
 watch(
+  () => reactiveConfig.value.showBoneMarkers,
+  (visible) => rig.setMarkersVisible(visible)
+)
+watch(
   () => reactiveConfig.value.frame,
   (frame) => {
     // During playback the frame field only displays where tickPlayback already put the
@@ -254,13 +259,15 @@ onUnmounted(() => {
   <RigTimeline
     :frame="reactiveConfig.frame"
     :frame-max="rig.frameMax.value"
-    :fps="reactiveConfig.fps"
     :keyframe-frames="rig.keyframeFrames.value"
     :is-playing="rig.isPlaying.value"
+    :has-clipboard="rig.hasClipboard.value"
     @update:frame="(value) => (reactiveConfig.frame = value)"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
     @delete-keyframe="rig.deleteKeyframe"
+    @copy-keyframe="rig.copyKeyframe"
+    @paste-keyframe="rig.pasteKeyframe"
     @move-keyframe="rig.moveKeyframe"
     @toggle-playback="rig.togglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"

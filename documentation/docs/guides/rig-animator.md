@@ -48,6 +48,11 @@ exist, so two poses are already a movement.
   Pose Landmarker, running live detection for the capture dialog's overlay
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
+- `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
+  timeline's ruler, whatever the frame range happens to be
+- `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting a keyframe's pose
+- `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
+  render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
@@ -70,7 +75,9 @@ Every bone gets a small marker, sized as a fraction of the whole rig's spread so
 model scale, and shrinking with hierarchy depth so a hip or shoulder joint reads larger than a
 fingertip further down the chain. Clicking a marker, or picking a name from the Config panel's
 **Bone** dropdown, selects it: the marker turns rose, every other one stays the default
-periwinkle.
+periwinkle. **Show Bone Markers**, in the same panel, hides them all for a clean view of the
+model itself; picking a bone by clicking its marker is unavailable while they are hidden, but
+the **Bone** dropdown still selects one.
 
 Rotating and moving both work two ways, kept in sync with each other:
 
@@ -140,10 +147,16 @@ dedicated bar docked along the bottom of the view, not in the Config panel and n
 app's shared Timeline panel (built for generic scheduled actions, not pose keyframes): a single
 row, split into parts left to right.
 
-![The rig timeline: Play/Add/Delete, the frame readout, the draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
+![The rig timeline: Play/Add/Delete/Copy/Paste, the ruler and draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
 
-- **Play/Pause**, **Add keyframe** and **Delete keyframe** act on the current frame, shown in
-  the readout just after them (`frame / range @ fps`).
+- **Play/Pause**, **Add keyframe** and **Delete keyframe** act on the current frame.
+- **Copy** and **Paste** copy the pose at the current frame onto a clipboard and paste it onto
+  whatever frame you scrub to afterward, replacing any keyframe already there. Paste applies the
+  pose to the live rig immediately, the same as scrubbing onto an existing keyframe would.
+- **The ruler**, above the track, marks frames at whatever round interval keeps roughly fifteen
+  ticks readable across the current range (every 10 frames at the default 150-frame range,
+  further apart for a longer one). Clicking or dragging the ruler scrubs the playhead exactly
+  like the track below it does.
 - **The track** is the frame axis. Click or drag anywhere on it to scrub the playhead;
   interpolation between whichever keyframes bracket that instant is what makes two poses ten
   frames apart already read as a movement. Each keyframe shows as a small diamond you can drag

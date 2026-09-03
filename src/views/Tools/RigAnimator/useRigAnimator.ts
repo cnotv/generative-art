@@ -29,11 +29,15 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Capture the rig's current pose as a keyframe at the panel's current frame. */
   const addKeyframe = (): void => rigKeyframes.addKeyframe(rigModel.bones.value)
 
+  /** Paste the copied pose onto the current frame and apply it to the live rig. */
+  const pasteKeyframe = (): void => rigKeyframes.pasteKeyframe(rigModel.bones.value)
+
   return {
     ...rigModel,
     ...rigKeyframes,
     ...rigCameraPose,
     loadModel,
-    addKeyframe
+    addKeyframe,
+    pasteKeyframe
   }
 }

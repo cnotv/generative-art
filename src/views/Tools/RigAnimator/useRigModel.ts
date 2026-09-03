@@ -15,6 +15,7 @@ import {
 } from './boneDragTarget'
 import { loadModelFile, disposeModel, generateAutoRig } from './rigModel'
 import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
+import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
 import type { RigAnimatorConfig } from './types'
 
 /** Owns the loaded model, its rig and its bone markers for the rig animator tool. */
@@ -24,6 +25,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const skinnedMesh = shallowRef<THREE.SkinnedMesh | null>(null)
   const bones = shallowRef<THREE.Bone[]>([])
   const boneMarkers = shallowRef<THREE.Mesh[]>([])
+  const markerVisibility = useRigBoneMarkerVisibility(boneMarkers)
   /** Every bone's transform as loaded, so a bad edit (a position drag gone too far) can be undone. */
   let restPoses: Map<string, BoneRestPose> = new Map()
 
@@ -50,6 +52,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     // very first render gets a chance to update them.
     model.value?.updateMatrixWorld(true)
     boneMarkers.value = createBoneMarkers(bones.value)
+    markerVisibility.applyCurrentVisibility()
     restPoses = captureRestPoses(bones.value)
   }
 
@@ -108,6 +111,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
    * the current selection's mid joint (which should not change the selection at all).
    */
   const identifyBoneFromRay = (raycaster: THREE.Raycaster): THREE.Bone | null => {
+    if (!markerVisibility.areMarkersVisible.value) return null
     const name = pickBoneMarker(boneMarkers.value, raycaster)
     return name ? (bones.value.find((candidate) => candidate.name === name) ?? null) : null
   }
@@ -151,6 +155,8 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     needsAutoRig,
     positionRange,
     selectedBone,
+    areMarkersVisible: markerVisibility.areMarkersVisible,
+    setMarkersVisible: markerVisibility.setMarkersVisible,
     setScene,
     loadModel,
     runAutoRig,

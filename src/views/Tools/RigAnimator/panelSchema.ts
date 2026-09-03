@@ -46,7 +46,8 @@ export const buildRigAnimatorSchema = (
             z: positionRange * POSITION_STEP_FRACTION
           }
         },
-        resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' }
+        resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' },
+        showBoneMarkers: { checkbox: true, label: 'Show Bone Markers' }
       }
     : {}),
   fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }
