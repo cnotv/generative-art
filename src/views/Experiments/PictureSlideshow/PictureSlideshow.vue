@@ -55,9 +55,11 @@ const pictureMaterial = (picture: ComplexModel): THREE.Material => {
 }
 
 /**
- * A picture board's transform, offered in the Elements panel purely to inspect where the
- * animation loop has it this instant — editing only actually sticks while the timeline is
- * paused, since otherwise the very next frame overwrites whatever was typed in.
+ * Where a held picture sits and faces, shared by every picture rather than owned by any
+ * one of them — there is only ever one held position, wherever the hands currently are,
+ * and this is the offset and facing applied on top of it. Registered under each picture's
+ * own name so any of them can be selected to reach it, but reading or writing through one
+ * reads or writes the same value the others see.
  */
 const PICTURE_SCHEMA: ConfigControlsSchema = {
   position: {
@@ -192,31 +194,40 @@ onMounted(async () => {
       const timelineManager = createTimelineManager()
       // Pre-allocated: written every frame, and the loop allocates nothing.
       const held = new THREE.Vector3()
+      // Editable from the Elements panel, on top of the hand-tracked `held` point above:
+      // an offset rather than an absolute position, since `held` itself moves every frame
+      // and a fixed position would either fight it or only hold true for one frame.
+      const heldOffset = new THREE.Vector3()
+      const heldRotation = new THREE.Vector3(...CANVAS_DISPLAY_ROTATION)
+      // Read (never written to) inside getValue below, purely so editing either vector —
+      // which touches no Vue state on its own — still marks the panel's displayed
+      // numbers stale and worth re-reading.
+      const heldTransformVersion = ref(0)
 
       canvases.forEach((picture) => {
         elementPropertiesStore.registerElementProperties(picture.name, {
           title: picture.name,
           schema: PICTURE_SCHEMA,
           getValue: (path) => {
-            const source = path === 'position' ? picture.position : picture.rotation
+            void heldTransformVersion.value
+            const source = path === 'position' ? heldOffset : heldRotation
             return { x: source.x, y: source.y, z: source.z }
           },
           updateValue: (path, value) => {
-            if (!timelinePanelStore.isPaused) return
             const { x, y, z } = value as RigPosition
-            const target = path === 'position' ? picture.position : picture.rotation
-            target.set(x, y, z)
+            ;(path === 'position' ? heldOffset : heldRotation).set(x, y, z)
+            heldTransformVersion.value += 1
           }
         })
       })
-      // An uploaded picture always replaces whichever one is currently on display,
-      // so it appears exactly where the user is already looking rather than on a
-      // slide they would have to navigate to first.
+      // Every board always carries the same picture, so an upload replaces it on all
+      // of them at once — otherwise the boards it missed would resurface it on the
+      // very next change, undoing what was just loaded.
       const stopImageWatch = watch(
         () => reactiveConfig.value.image,
         (url) => {
           if (!url) return
-          applyTextureToMesh(canvases[slideshow.index] as unknown as THREE.Mesh, url)
+          canvases.forEach((picture) => applyTextureToMesh(picture as unknown as THREE.Mesh, url))
         }
       )
 
@@ -306,8 +317,8 @@ onMounted(async () => {
             // A picture never leaves the hands any more — the clip's own drop and pick
             // motion is what carries them — so every visible role sits at the same
             // point and only its opacity says whether a change is under way.
-            picture.position.copy(held)
-            picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
+            picture.position.copy(held).add(heldOffset)
+            picture.rotation.set(heldRotation.x, heldRotation.y, heldRotation.z)
             pictureMaterial(picture).opacity =
               role === 'leaving'
                 ? 1 - exitAmountAt(frame, timing)

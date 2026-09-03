@@ -139,7 +139,11 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
 /** Where in a 0 to 1 span a value sits, clamped, or 1 outright once the span is empty. */
 const fadeProgress = (raw: number, fadeStart: number, fadeEnd: number): number => {
   const span = fadeEnd - fadeStart
-  if (span <= 0) return 1
+  // A zero or negative span is a snap rather than a ramp: nothing before fadeStart,
+  // fully there from it on. Dividing by that span would either be a NaN or, worse,
+  // silently read as "already fully faded" for the whole phase, including before
+  // fadeStart, which is what made a picture vanish the instant a change began.
+  if (span <= 0) return raw < fadeStart ? 0 : 1
   return Math.min(Math.max((raw - fadeStart) / span, 0), 1)
 }
 

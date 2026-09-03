@@ -207,6 +207,21 @@ describe('exitAmountAt', () => {
     expect(exitAtNarrow(TIMING.release * 0.625)).toBeCloseTo(0.5)
     expect(exitAtNarrow(TIMING.release * 0.8)).toBe(1)
   })
+
+  it('snaps at fadeStart rather than fading the whole phase, when fadeStart equals fadeEnd', () => {
+    const snap = { ...TIMING, fadeStart: 0.2, fadeEnd: 0.2 }
+    const exitAtSnap = (changeSeconds: number) =>
+      exitAmountAt(
+        slideshowFrame(
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          snap
+        ),
+        snap
+      )
+
+    expect(exitAtSnap(TIMING.release * 0.1)).toBe(0)
+    expect(exitAtSnap(TIMING.release * 0.3)).toBe(1)
+  })
 })
 
 describe('entryAmountAt', () => {

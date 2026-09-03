@@ -2,27 +2,21 @@ import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/thr
 import type { ControlMapping } from '@webgamekit/controls'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import backdropUrl from '@/assets/images/backgrounds/field.webp'
-import concertUrl from '@/assets/images/generic/concert.webp'
 import landscapeUrl from '@/assets/images/generic/landscape.webp'
-import lightsUrl from '@/assets/images/generic/lights.webp'
-import livingRoomUrl from '@/assets/images/generic/livingroom.webp'
-import stageUrl from '@/assets/images/generic/stage.webp'
-import streetUrl from '@/assets/images/generic/street.webp'
 import type { SlideshowTiming } from './types'
 
+/** The one picture shown until a custom one is loaded from the Config panel. */
+export const DEFAULT_PICTURE_URL = landscapeUrl
+
 /**
- * The pictures the stickman works through, in order.
- *
- * Two is the floor: one is leaving and one is arriving. Any more simply gives
- * the slideshow somewhere further to go.
+ * Two identical boards, never more — one leaving, one arriving, per the floor a change
+ * needs. They always carry the same picture: `DEFAULT_PICTURE_URL` until the Config
+ * panel's uploader replaces it on both at once, after which every change keeps showing
+ * that one instead.
  */
 export const PICTURES: { name: string; url: string }[] = [
-  { name: 'landscape', url: landscapeUrl },
-  { name: 'street', url: streetUrl },
-  { name: 'concert', url: concertUrl },
-  { name: 'stage', url: stageUrl },
-  { name: 'lights', url: lightsUrl },
-  { name: 'living room', url: livingRoomUrl }
+  { name: '1', url: DEFAULT_PICTURE_URL },
+  { name: '2', url: DEFAULT_PICTURE_URL }
 ]
 
 /**
