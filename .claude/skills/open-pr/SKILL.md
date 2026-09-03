@@ -115,6 +115,14 @@ gh run view <run-id> --log-failed
 Fix the cause, commit, push, and repeat until every check passes. Never bypass hooks with
 `--no-verify` — if a hook fails, the hook is usually right.
 
+Once `deploy/netlify` succeeds, hand over its preview link (`targetUrl` in
+`gh pr view <number> --json statusCheckRollup`) rather than making the reader dig for it.
+Append any query parameter the change relies on, so the link opens straight to the state
+being demonstrated instead of the bare root.
+
+Whenever a pull request exists for the work, end the report with a link to it too, so it is
+one click away rather than something the reader has to go find.
+
 ## 5. Keep the PR and the issue current
 
 After every subsequent push, update **both**:

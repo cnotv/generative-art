@@ -407,7 +407,9 @@ export const getPixelRatio = (devicePixelRatio: number, maxPixelRatio = 2): numb
   Math.min(devicePixelRatio, maxPixelRatio)
 
 export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+  // Alpha is always on: it costs nothing for a scene that clears to an opaque colour,
+  // and it is what lets `scene.transparent` show a layer behind the canvas later.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
   renderer.setPixelRatio(getPixelRatio(window.devicePixelRatio))
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setClearColor(0xaaaaff)

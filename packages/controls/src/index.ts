@@ -9,6 +9,7 @@ export type {
   ControlsLogs,
   ControlHandlers,
   ControlEvent,
+  PointerGesture,
   ControlSkin,
   ControlSkinId,
   ControlPreset,
@@ -22,6 +23,12 @@ export type { FauxPadController, FauxPadPosition, FauxPadOptions } from './fauxp
 export { DEFAULT_BUTTON_MAP } from './constants'
 export { createControls, isMobile } from './core'
 export { createFauxPadController } from './fauxpad'
+export {
+  createPointerController,
+  resolvePointerGesture,
+  DEFAULT_SWIPE_THRESHOLD_PIXELS
+} from './pointer'
+export type { PointerController } from './pointer'
 export { createMotionController, rotateToScreenFrame } from './motion'
 export type { MotionController, MotionOptions } from './motion'
 export { lockScreenOrientation, unlockScreenOrientation } from './orientation'

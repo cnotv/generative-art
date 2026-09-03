@@ -131,6 +131,35 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
 ## Gotchas
 
 - Rapier needs `vite-plugin-wasm` and `optimizeDeps.exclude: ['@dimforge/rapier3d-compat']`.
+- **A scene with lights does not keep the lights it declared.** `store.init` starts the day
+  cycle, which overwrites every light and the scene background a frame later, so a
+  `SetupConfig` palette silently becomes dawn, then night. That is the intended default. A
+  view whose subject has to stay readable opts out with
+  `store.setLightTransitionEnabled(false)` straight after `init`, which lands before the
+  cycle's first frame and leaves the declared rig in place.
+- **`camera.lookAt` loses to `orbit.target`, even when orbit is disabled.** Orbit aims the
+  camera at its target on its first update regardless, so a `SetupConfig` that sets `lookAt`
+  and `orbit: { disabled: true }` frames on the origin instead. Set both, from the same
+  constant. The symptom is a scene framed too low with no obvious cause.
+- **Check a pose from a second angle before believing it.** A rig can be turned the wrong
+  way round and still put its hands exactly where the front view wants them — it is then
+  presenting over its own shoulders, and the arms are pitched backwards. Confirming the hands
+  landed correctly says nothing about the body they hang off. Shoot the axis the composition
+  does not use; on a flat cut-out the front view cannot tell the difference at all. Note the
+  turn and the limb rotation are one fix: limb angles are in the body's frame, so flipping the
+  body alone just moves the error.
+- **An arm's world bounding box is not its reach.** `Box3.setFromObject` on a limb rotated on
+  two axes returns an axis-aligned hull whose corners are nowhere near the mesh — it
+  overstated one rig's reach by more than double. Transform the far end of the mesh's own
+  local bounding box instead, and remember a perspective camera only preserves a world-space
+  margin between things at the same depth.
+- **A clip left on the mixer's own clock drifts against whatever cycle it is meant to serve.**
+  If a gesture has to line up with phase boundaries a state machine owns, do not `.play()` it
+  and let `mixer.update(delta)` carry it — pause it (`setEffectiveTimeScale(0)`, not the raw
+  `.paused` field) and set `action.time` from that phase's own progress instead, forward or
+  backward as the phase requires. Cross-fade the weight between two such actions over a
+  _fraction_ of the phase's own progress, never a fixed number of seconds, or the blend either
+  finishes instantly or never finishes once that phase's duration is tunable.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.

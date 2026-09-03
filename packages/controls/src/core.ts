@@ -16,6 +16,8 @@ import { createTouchController } from './touch'
 import type { TouchController } from './touch'
 import { createMouseController } from './mouse'
 import type { MouseController } from './mouse'
+import { createPointerController } from './pointer'
+import type { PointerController } from './pointer'
 import { createMotionController } from './motion'
 import type { MotionController } from './motion'
 
@@ -40,6 +42,7 @@ interface BoundControllers {
   gamepad: GamepadController
   touch: TouchController
   mouse: MouseController
+  pointer: PointerController
   motion: MotionController
 }
 
@@ -101,6 +104,21 @@ function bindMouse(
   boundList.push(() => controller.unbind(mouseTarget))
 }
 
+/**
+ * Gestures need an element with a width to measure a tap's side against, so unlike the
+ * other devices this one does not fall back to `window` and stays unbound without a target.
+ */
+function bindPointer(
+  controller: PointerController,
+  options: ControlsOptions,
+  boundList: Array<() => void>
+) {
+  const pointerTarget = options.pointerTarget
+  if (options.pointer === false || !pointerTarget) return
+  controller.bind(pointerTarget)
+  boundList.push(() => controller.unbind(pointerTarget))
+}
+
 function bindAllControllers(
   controllers: BoundControllers,
   options: ControlsOptions,
@@ -110,6 +128,7 @@ function bindAllControllers(
   bindGamepad(controllers.gamepad, options, boundList)
   bindTouch(controllers.touch, options, boundList)
   bindMouse(controllers.mouse, options, boundList)
+  bindPointer(controllers.pointer, options, boundList)
   bindMotion(controllers.motion, options, boundList)
 }
 
@@ -181,6 +200,7 @@ export function createControls(options: ControlsOptions): ControlsExtras {
     ),
     touch: createTouchController(mappingReference, handlers),
     mouse: createMouseController(mappingReference, handlers),
+    pointer: createPointerController(mappingReference, handlers, options.swipeThreshold),
     motion: createMotionController(mappingReference, handlers, {
       threshold: options.motionThreshold,
       maxDegrees: options.motionMaxDegrees

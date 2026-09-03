@@ -190,5 +190,8 @@
   },
   "Grass Generator": {
     "description": "Procedural grass field generator with density and wind controls."
+  },
+  "Picture Slideshow": {
+    "description": "A character changes pictures by throwing one aside and catching the next, driven by a tap or a swipe."
   }
 }

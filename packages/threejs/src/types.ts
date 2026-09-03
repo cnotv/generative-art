@@ -275,6 +275,8 @@ export interface SetupConfig {
   }
   scene?: {
     backgroundColor?: number
+    /** Clears to nothing instead of `backgroundColor`, so a layer behind the canvas shows through. */
+    transparent?: boolean
   }
   camera?: CameraConfig
   ground?: GroundConfig | false

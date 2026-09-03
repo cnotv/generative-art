@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Package: @webgamekit/controls
 
-Framework-agnostic multi-input controller supporting keyboard, gamepad, touch, and virtual FauxPad.
+Framework-agnostic multi-input controller supporting keyboard, gamepad, touch, pointer gestures, and virtual FauxPad.
 
 ![The controls mapper listing each action against its keyboard bindings](/img/controls/mapper-keyboard.webp)
 
@@ -195,6 +195,55 @@ The TouchControl Vue component wraps the FauxPad controller:
 </template>
 ```
 
+## Pointer gestures (tap a side, swipe a direction)
+
+Where the `touch` device answers "was the screen pressed", the `pointer` device answers
+"where, and which way". A press and release resolves to one of four horizontal gestures and
+arrives as an ordinary action, so a page that already reads `currentActions` gains
+next/previous navigation by adding a `pointer` mapping and a target.
+
+```typescript
+const { destroyControls } = createControls({
+  mapping: {
+    pointer: {
+      'tap-right': 'next',
+      'swipe-right': 'next',
+      'tap-left': 'previous',
+      'swipe-left': 'previous'
+    },
+    keyboard: { ArrowRight: 'next', ArrowLeft: 'previous' }
+  },
+  pointerTarget: canvasElement,
+  swipeThreshold: 40
+})
+```
+
+Pointer events are one stream for mouse, touch and pen, so this is a single path rather than
+a touch path and a mouse path that can disagree. Only the press that opened a gesture is
+followed: a second finger landing mid-swipe cannot end it somewhere the first one never went.
+
+### Triggers
+
+`tap-left`, `tap-right`, `swipe-left`, `swipe-right`. Travel decides first — past
+`swipeThreshold` pixels the press is a swipe, whichever half it happened in — and only a press
+that stayed put falls through to a tap, named by the half of the target it landed in.
+
+### It needs a real element, not the window
+
+`pointerTarget` has no default. The other devices fall back to `window`, but a gesture is
+measured against the target's own box: which half a tap landed in is meaningless without a
+width, and a target reporting zero width yields no gesture rather than a guess. Pass the
+element the gestures belong to — usually the canvas — and note it does not exist until the
+component is mounted.
+
+### It will fight anything else that reads a drag
+
+A swipe and an orbit drag are the same gesture. A scene with `OrbitControls` live on the same
+element will rotate the camera and change the picture at once, so pick one: disable orbit, or
+bind the gestures to something the camera does not listen on. A canvas that is the control
+surface also wants `touch-action: none`, or a phone reads the swipe as a page scroll and the
+gesture never completes.
+
 ## Motion (Device Tilt)
 
 Device orientation is a control device alongside keyboard, gamepad, touch and the faux-pad.
@@ -340,6 +389,18 @@ Creates a unified control system.
 
 - `currentActions`: Reactive object with active actions
 - `destroyControls`: Cleanup function
+
+### createPointerController(mappingRef, handlers, swipeThreshold?)
+
+Creates the pointer-gesture controller directly. `createControls` already builds one and binds
+it when `pointerTarget` is given, so this is only for wiring gestures into something that is
+not a `createControls` setup.
+
+### resolvePointerGesture(startX, endX, targetWidth, swipeThreshold?)
+
+The pure rule behind the controller: press and release positions relative to the target's left
+edge, plus its width, in — a `PointerGesture` or `null` out. Useful for testing a mapping, or
+for reading gestures from a stream the controller does not bind.
 
 ### createMotionController(mappingRef, handlers, options?)
 
