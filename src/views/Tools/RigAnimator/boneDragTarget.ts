@@ -1,5 +1,10 @@
 import * as THREE from 'three'
-import { ikFindTwoBoneChain, ikSolveTwoBoneChain, ikSolveOneBoneAim } from '@webgamekit/rig'
+import {
+  ikFindTwoBoneChain,
+  ikSolveTwoBoneChain,
+  ikSolveOneBoneAim,
+  type TwoBoneIkChain
+} from '@webgamekit/rig'
 
 /** A bone's transform as loaded, so an IK solve can snap the dragged bone itself back to it. */
 export interface BoneRestPose {
@@ -22,23 +27,24 @@ export const captureRestPoses = (bones: THREE.Bone[]): Map<string, BoneRestPose>
   )
 
 /**
- * Resolve a gizmo drag on a bone into whichever length-preserving solve it has bones to solve
- * with, so no drag ever stretches a segment: two-bone IK for a hand or foot (any bone with two
- * Bone ancestors), a one-bone aim for a bone with only a Bone parent (a spine segment, a thigh
- * whose own parent is the skeleton root), or nothing at all for the skeleton root itself, which
- * has no parent segment to preserve and so keeps translating freely with the whole rig. Either
- * solve snaps the dragged bone's own local transform back to rest first, since only its
- * ancestor(s) ever rotate to reach it.
- * @param bone The bone the gizmo just moved, already carrying the drag's new local position
+ * Resolve a drag on a bone toward a world-space target into whichever length-preserving solve
+ * it has bones to solve with, so no drag ever stretches a segment: two-bone IK for a hand or
+ * foot (any bone with two Bone ancestors), a one-bone aim for a bone with only a Bone parent (a
+ * spine segment, a thigh whose own parent is the skeleton root), or a plain translate for the
+ * skeleton root itself, which has no parent segment to preserve. Either IK solve snaps the
+ * dragged bone's own local transform back to rest first, since only its ancestor(s) ever rotate
+ * to reach it.
+ * @param bone The bone being dragged
+ * @param targetWorldPosition Where the drag wants this bone to end up, in world space
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates whichever ancestor bone(s) solve for this bone, or leaves the bone
- *   exactly as the gizmo already set it when it has no Bone parent at all
+ * @returns Nothing; mutates whichever ancestor bone(s) solve for this bone, or the bone's own
+ *   local position directly when it has no Bone parent at all
  */
 export const applyGizmoDragToChain = (
   bone: THREE.Bone,
+  targetWorldPosition: THREE.Vector3,
   restPoses: Map<string, BoneRestPose>
 ): void => {
-  const targetWorldPosition = bone.getWorldPosition(new THREE.Vector3())
   const rest = restPoses.get(bone.name)
   const chain = ikFindTwoBoneChain(bone)
   if (chain) {
@@ -50,7 +56,27 @@ export const applyGizmoDragToChain = (
   if (bone.parent instanceof THREE.Bone) {
     if (rest) bone.position.copy(rest.position)
     ikSolveOneBoneAim(bone.parent, bone, targetWorldPosition)
+    return
   }
+  if (bone.parent) {
+    bone.position.copy(bone.parent.worldToLocal(targetWorldPosition.clone()))
+  } else {
+    bone.position.copy(targetWorldPosition)
+  }
+}
+
+/**
+ * Re-solve a chain with its end effector held at its own current position but a new pole hint,
+ * so dragging the mid joint (an elbow, a knee) swings which way the limb bends without moving
+ * the hand or foot it belongs to: the same two-bone solve `applyGizmoDragToChain` uses, just
+ * re-run with a different bend hint instead of a different target.
+ * @param chain The chain whose mid bone is being dragged as a pole hint
+ * @param poleWorldPosition Where the drag wants the bend to lean toward, in world space
+ * @returns Nothing; mutates the chain's root/mid quaternions
+ */
+export const applyPoleDrag = (chain: TwoBoneIkChain, poleWorldPosition: THREE.Vector3): void => {
+  const targetWorldPosition = chain.end.getWorldPosition(new THREE.Vector3())
+  ikSolveTwoBoneChain(chain, targetWorldPosition, poleWorldPosition)
 }
 
 /**

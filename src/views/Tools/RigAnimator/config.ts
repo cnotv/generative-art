@@ -33,6 +33,8 @@ export const BONE_MARKER_MIN_SCALE = 0.35
 
 export const DEFAULT_FPS = 30
 export const DEFAULT_FRAME_MAX = 150
+/** The rig timeline's frame range never shrinks below this, dragging its resize handle in. */
+export const FRAME_MAX_MIN = 10
 
 export const ROTATION_CONTROL = {
   label: 'Bone Rotation',

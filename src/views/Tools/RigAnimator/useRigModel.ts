@@ -102,10 +102,14 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     }
   }
 
-  /** Resolve a canvas click to a bone marker and select it, if the ray hit one. */
-  const pickBoneFromRay = (raycaster: THREE.Raycaster): void => {
+  /**
+   * Resolve a pointer event to a bone marker, without selecting it: the caller decides first
+   * whether this hit means a normal drag (and should select the bone) or a pole-hint drag on
+   * the current selection's mid joint (which should not change the selection at all).
+   */
+  const identifyBoneFromRay = (raycaster: THREE.Raycaster): THREE.Bone | null => {
     const name = pickBoneMarker(boneMarkers.value, raycaster)
-    if (name) selectBone(name)
+    return name ? (bones.value.find((candidate) => candidate.name === name) ?? null) : null
   }
 
   /** Apply a rotation from the panel to the currently selected bone. */
@@ -120,12 +124,9 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (bone) bone.position.set(position.x, position.y, position.z)
   }
 
-  /**
-   * Handle a gizmo drag: an IK solve or a plain position edit, see `applyGizmoDragToChain`.
-   * @param bone The bone the gizmo just moved, already carrying the drag's new local position
-   */
-  const applyBoneDragTarget = (bone: THREE.Bone): void => {
-    applyGizmoDragToChain(bone, restPoses)
+  /** Handle a drag toward a world target: an IK solve or a plain translate, see `applyGizmoDragToChain`. */
+  const applyBoneDragTarget = (bone: THREE.Bone, targetWorldPosition: THREE.Vector3): void => {
+    applyGizmoDragToChain(bone, targetWorldPosition, restPoses)
     config.value.bonePosition = { x: bone.position.x, y: bone.position.y, z: bone.position.z }
   }
 
@@ -134,12 +135,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     bones.value.find((candidate) => candidate.name === config.value.selectedBone)
   )
 
-  /**
-   * Undo any position or rotation edit on the selected bone (and its IK chain, if it has one)
-   * back to how it was when the rig was loaded (or auto-rigged). This is the only way back
-   * after a drag lands somewhere that visibly tears the mesh, since moving a bone does not
-   * preserve the limb length the way rotating it does.
-   */
+  /** Undo a position/rotation edit on the selected bone, and its IK chain if it has one, back to rest. */
   const resetSelectedBone = (): void => {
     const bone = selectedBone.value
     if (!bone || !restPoses.has(bone.name)) return
@@ -159,7 +155,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     loadModel,
     runAutoRig,
     selectBone,
-    pickBoneFromRay,
+    identifyBoneFromRay,
     applyBoneRotation,
     applyBonePosition,
     applyBoneDragTarget,

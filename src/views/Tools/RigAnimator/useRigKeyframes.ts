@@ -1,11 +1,14 @@
 import { computed, shallowRef, ref, type Ref, type ShallowRef } from 'vue'
 import * as THREE from 'three'
 import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
-import { exportRigClipAsGlb, exportPosesAsJson, parsePosesJson } from './export'
-import { EXPORT_GLB_FILENAME, EXPORT_JSON_FILENAME } from './config'
+import { DEFAULT_FRAME_MAX } from './config'
+import { clampFrameMax } from './frameRange'
+import { moveKeyframeInList } from './keyframeOps'
+import { saveRigAutosave } from './autosave'
+import { useRigKeyframeIO } from './useRigKeyframeIO'
 import type { RigAnimatorConfig } from './types'
 
-/** Owns the authored pose keyframes and the preview/export clips built from them. */
+/** Owns the authored pose keyframes and the preview clip built from them. */
 export const useRigKeyframes = (
   config: Ref<RigAnimatorConfig>,
   model: ShallowRef<THREE.Object3D | null>,
@@ -17,16 +20,33 @@ export const useRigKeyframes = (
   const mixer = shallowRef<THREE.AnimationMixer | null>(null)
   const action = shallowRef<THREE.AnimationAction | null>(null)
   const clock = new THREE.Clock()
-
+  /** The rig timeline's visible frame range, resized by dragging its right edge. */
+  const frameMax = ref(DEFAULT_FRAME_MAX)
   const keyframeFrames = computed(() =>
     keyframes.value.map((keyframe) => keyframe.frame).sort((a, b) => a - b)
   )
+
+  /**
+   * Persist the current edit, called explicitly from every genuine user change (never from
+   * `reset` or `restoreAutosave`, so the reset-then-restore that runs on every model load can
+   * never win a race and save a transient empty edit over a real one).
+   */
+  const persistAutosave = (): void => {
+    saveRigAutosave({ fps: config.value.fps, frameMax: frameMax.value, keyframes: keyframes.value })
+  }
 
   /** Drop every keyframe and the clip built from them, for a freshly loaded model. */
   const reset = (): void => {
     keyframes.value = []
     mixer.value = null
     action.value = null
+    frameMax.value = DEFAULT_FRAME_MAX
+  }
+
+  /** Resize the rig timeline's visible frame range, see `clampFrameMax`. */
+  const setFrameMax = (nextFrameMax: number): void => {
+    frameMax.value = clampFrameMax(nextFrameMax, config.value.frame, keyframeFrames.value)
+    persistAutosave()
   }
 
   /** Rebuild the preview clip from the current keyframes, or drop it when there are none. */
@@ -58,12 +78,23 @@ export const useRigKeyframes = (
     )
     keyframes.value = [...withoutSameFrame, { frame: config.value.frame, pose }]
     rebuildPreviewClip()
+    persistAutosave()
   }
 
   /** Remove the keyframe at the panel's current frame, if one exists there. */
   const deleteKeyframe = (): void => {
     keyframes.value = keyframes.value.filter((keyframe) => keyframe.frame !== config.value.frame)
     rebuildPreviewClip()
+    persistAutosave()
+  }
+
+  /** Reposition a keyframe dragged on the rig timeline, see `moveKeyframeInList`. */
+  const moveKeyframe = (oldFrame: number, newFrame: number): void => {
+    const next = moveKeyframeInList(keyframes.value, oldFrame, newFrame)
+    if (next === keyframes.value) return
+    keyframes.value = next
+    rebuildPreviewClip()
+    persistAutosave()
   }
 
   /** Start or stop real-time playback of the preview clip. */
@@ -82,44 +113,31 @@ export const useRigKeyframes = (
       clipDuration > 0 ? Math.round((mixer.value.time % clipDuration) * config.value.fps) : 0
   }
 
-  /** Export the model with the authored clip baked in as a standalone .glb. */
-  const exportGlb = async (): Promise<void> => {
-    if (!model.value || keyframes.value.length === 0) return
-    const clip = poseBuildClip(keyframes.value, boneNames.value, config.value.fps, 'RigAnimation')
-    await exportRigClipAsGlb(model.value, clip, EXPORT_GLB_FILENAME)
-  }
-
-  /** Export the raw pose keyframes as JSON, for re-editing later in this same tool. */
-  const exportJson = (): void => {
-    exportPosesAsJson(keyframes.value, config.value.fps, EXPORT_JSON_FILENAME)
-  }
-
-  /**
-   * Load a previously exported poses file, replacing the current keyframes.
-   * @param url The blob URL the file input produced
-   */
-  const importJson = async (url: string): Promise<void> => {
-    if (!url) return
-    const text = await fetch(url).then((response) => response.text())
-    const parsed = parsePosesJson(text)
-    if (!parsed) return
-    config.value.fps = parsed.fps
-    keyframes.value = parsed.keyframes
-    rebuildPreviewClip()
-  }
+  const io = useRigKeyframeIO({
+    config,
+    model,
+    boneNames,
+    keyframes,
+    keyframeFrames,
+    frameMax,
+    setFrameMax,
+    rebuildPreviewClip,
+    reset
+  })
 
   return {
     keyframes,
     keyframeFrames,
+    frameMax,
+    setFrameMax,
     isPlaying,
     reset,
     addKeyframe,
     deleteKeyframe,
+    moveKeyframe,
     scrubToFrame,
     togglePlayback,
     tickPlayback,
-    exportGlb,
-    exportJson,
-    importJson
+    ...io
   }
 }
