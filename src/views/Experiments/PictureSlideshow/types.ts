@@ -41,22 +41,8 @@ export interface SlideshowFrame {
   heldIndex: number | null
   /** The picture on its way out of frame, or null while nothing is leaving. */
   leavingIndex: number | null
-  /** Seconds since the leaving picture was let go, for arcing it away. */
+  /** Seconds since the leaving picture was let go, for fading it out. */
   leftSeconds: number
-}
-
-/** How far and how hard a picture flies clear of the hands, panel-tunable. */
-export interface ExitConfig {
-  distance: number
-  drop: number
-  spin: number
-}
-
-/** Where a flying picture sits relative to the held position, at some point in its flight. */
-export interface FlightOffset {
-  x: number
-  y: number
-  rotationZ: number
 }
 
 /**
@@ -64,9 +50,8 @@ export interface FlightOffset {
  *
  * `pose` receives the full frame so either kind of rig can read whatever it needs from
  * it: a rig the slideshow drives itself works out its own hold amount, and a clip-driven
- * rig reads the phase to know when a fresh picture has arrived and its clip should play
- * again. `heldPoint` is the one thing every rig must answer: where the picture hangs
- * this frame.
+ * rig reads the phase to know when a click or swipe has fired and its clip should play.
+ * `heldPoint` is the one thing every rig must answer: where the picture hangs this frame.
  */
 export interface SlideshowCharacter {
   model: import('three').Object3D

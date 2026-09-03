@@ -20,7 +20,6 @@ import {
   createSlideshowState,
   entryAmountAt,
   exitAmountAt,
-  flightOffset,
   slideshowFrame,
   startChange
 } from './slideshow'
@@ -35,15 +34,24 @@ import {
   DEFAULT_BACKGROUND_BLUR,
   DEFAULT_CHARACTER,
   DEFAULT_TIMING,
-  EXIT_DISTANCE,
-  EXIT_DROP,
-  EXIT_SPIN,
   MIXAMO_CHARACTER,
   PICTURES,
   SETUP_CONFIG,
   VIEW_TARGET,
   configControls
 } from './config'
+
+/**
+ * The material a picture board was built with, whichever of the shapes `getCube` can
+ * return it as. Only ever one plain material here, never an array — this just narrows
+ * the type enough to reach `.opacity`.
+ * @param picture - The board whose material is read
+ * @returns Its material, ready to have `opacity` set on it
+ */
+const pictureMaterial = (picture: ComplexModel): THREE.Material => {
+  const material = (picture as unknown as THREE.Mesh).material
+  return Array.isArray(material) ? material[0] : material
+}
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const route = useRoute()
@@ -63,7 +71,6 @@ const handleProgress = (progress: LoadProgress): void => {
 const reactiveConfig = createReactiveConfig({
   character: DEFAULT_CHARACTER,
   timing: { ...DEFAULT_TIMING },
-  exit: { distance: EXIT_DISTANCE, drop: EXIT_DROP, spin: EXIT_SPIN },
   background: { blur: DEFAULT_BACKGROUND_BLUR }
 })
 
@@ -223,7 +230,7 @@ onMounted(async () => {
         category: 'animation',
         action: () => {
           simulationFrame += 1
-          const { timing, exit } = reactiveConfig.value
+          const { timing } = reactiveConfig.value
           const delta = getDelta()
           character.mixer?.update(delta)
           slideshow = advanceSlideshow(slideshow, delta, timing, canvases.length)
@@ -239,23 +246,17 @@ onMounted(async () => {
               return
             }
             picture.visible = true
-            if (role === 'held') {
-              picture.position.copy(held)
-              picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
-              return
-            }
-            // Leaving flies the throw's own direction; arriving is the mirror of that
-            // same flight, coming from the opposite side.
-            const isLeaving = role === 'leaving'
-            const amount = isLeaving ? exitAmountAt(frame, timing) : entryAmountAt(frame)
-            const travelDirection: SlideDirection = isLeaving
-              ? frame.direction
-              : frame.direction === 1
-                ? -1
-                : 1
-            const offset = flightOffset(travelDirection, amount, exit)
-            picture.position.set(held.x + offset.x, held.y + offset.y, held.z)
-            picture.rotation.set(0, 0, offset.rotationZ)
+            // A picture never leaves the hands any more — the clip's own drop and pick
+            // motion is what carries them — so every visible role sits at the same
+            // point and only its opacity says whether a change is under way.
+            picture.position.copy(held)
+            picture.rotation.set(...CANVAS_DISPLAY_ROTATION)
+            pictureMaterial(picture).opacity =
+              role === 'leaving'
+                ? 1 - exitAmountAt(frame, timing)
+                : role === 'arriving'
+                  ? 1 - entryAmountAt(frame)
+                  : 1
           })
         }
       })

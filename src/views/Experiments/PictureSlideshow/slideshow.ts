@@ -1,7 +1,5 @@
 import type {
   CanvasRole,
-  ExitConfig,
-  FlightOffset,
   SlideDirection,
   SlideshowFrame,
   SlideshowState,
@@ -139,17 +137,15 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
 }
 
 /**
- * How far along its exit a released picture has travelled, from 0 to 1.
+ * How far a released picture has faded out, from 0 to 1.
  *
- * The same smoothstep as the hand clip's own baked motion — not the sharper curve this
- * used to run on. A hand's authored reach and a picture's flight are driven by two
- * unrelated systems, so the only way to keep them looking attached along the way,
- * rather than only at the two ends, is to give them the identical shape against the
- * same progress. Reaches 1 by the end of the release and stays there through the
- * arrival — the picture is already gone by then, not still travelling.
+ * The picture never leaves the hands any more — the clip's own drop and pick motion
+ * carries the hands themselves — so this is what shows a change is happening instead of
+ * a travelled distance. Reaches 1 by the end of the release and stays there through the
+ * arrival, since the picture is already gone by then rather than still fading.
  * @param frame - The current frame
  * @param timing - How long each phase lasts
- * @returns The fraction of the exit travelled
+ * @returns The fraction faded out
  */
 export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): number => {
   const progress = Math.min(frame.leftSeconds, timing.release) / timing.release
@@ -157,39 +153,15 @@ export const exitAmountAt = (frame: SlideshowFrame, timing: SlideshowTiming): nu
 }
 
 /**
- * How much of its entrance an arriving picture still has left to make, from 1 to 0.
+ * How much of its fade-in an arriving picture still has left to make, from 1 to 0.
  *
  * The exact same eased shape as `exitAmountAt`, run backward across the arrival's own
  * duration instead of forward across the release's — the entrance is a reverse of the
- * exit, not a separately timed effect. Also the same shape the catching hand's own clip
- * is scrubbed through at this same progress, which is what keeps the two together.
+ * exit, not a separately timed effect.
  * @param frame - The current frame, expected to be in the arrive phase
- * @returns The fraction of the entrance still to go
+ * @returns The fraction of the fade-in still to go
  */
 export const entryAmountAt = (frame: SlideshowFrame): number => ease(1 - frame.phaseProgress)
-
-/**
- * Where a picture sits relative to the held position, partway through flying clear of
- * the hands or back into them.
- *
- * The same shape serves both directions: an arriving picture is placed by calling this
- * with the throw's direction flipped, so its path is a mirror of the departure's rather
- * than a curve authored separately.
- * @param direction - Which way the picture is travelling: the throw's own direction when
- * leaving, the opposite when arriving
- * @param amount - How far into the flight this is, from 0 at the hands to 1 fully away
- * @param exit - How far, how steeply and how hard the picture flies
- * @returns The offset to add to the held position
- */
-export const flightOffset = (
-  direction: SlideDirection,
-  amount: number,
-  exit: ExitConfig
-): FlightOffset => ({
-  x: direction * exit.distance * amount,
-  y: -exit.drop * amount,
-  rotationZ: -direction * exit.spin * amount
-})
 
 /**
  * What one picture is doing this frame, so the scene can place it or hide it.

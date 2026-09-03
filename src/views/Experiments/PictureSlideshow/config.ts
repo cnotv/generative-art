@@ -128,11 +128,11 @@ export const MIXAMO_MODEL_PATH = 'character2.fbx'
 export const MIXAMO_SCALE = 0.038
 /**
  * A pose-keyframe export from the Rig Animator tool, not a bare `AnimationClip` `getAnimations`
- * reads directly — built into a clip at load time instead. Played once every time a picture
- * settles into the hold phase, then held at its final pose until the next change starts it
- * again; never looped.
+ * reads directly — built into a clip at load time instead. Its own hold-to-hold round trip:
+ * holding, dropping, picking the next one up, holding again. Played once, start to finish, the
+ * instant a click or swipe starts a change; frozen on its opening frame the rest of the time.
  */
-export const MIXAMO_HOLD_ANIMATION = 'animations/rig-animation.json'
+export const MIXAMO_HOLD_ANIMATION = 'animations/hold-to-hold.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
 export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 
@@ -147,7 +147,11 @@ export const CANVAS_MATERIAL: ModelOptions = {
   roughness: 0.85,
   metalness: 0,
   type: 'fixed',
-  hasGravity: false
+  hasGravity: false,
+  // A leaving or arriving picture fades rather than travels, which needs the material
+  // to blend; still written to depth so it keeps occluding normally while opaque.
+  transparent: true,
+  depthWrite: true
 }
 
 /**
@@ -161,23 +165,17 @@ export const CANVAS_MATERIAL: ModelOptions = {
  * however wide the arms are spread. At the same depth, the margin drawn is the margin
  * built.
  */
-export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.48]
+export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.65]
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
 
 /**
- * How the released picture leaves, and the arriving one is drawn arriving: the same
- * distance, drop and tumble, run in reverse from the opposite side, since an entrance
- * is a mirror of an exit rather than a separately authored effect.
- *
- * Sideways is what carries it out of shot, and it has left the frame long before
- * the drop matters. The drop and the tumble are what stop the exit reading as a
- * slide along a rail.
+ * How long release and arrive each last, split to match the hold-to-hold clip's own
+ * timing rather than run to an unrelated clock: the clip drops the old picture by its
+ * frame 14 of 38 (at 30fps), so release is timed to that same fraction of its length,
+ * and arrive gets the rest. A picture never leaves the hands any more — it fades where
+ * it sits — so it is this shared clock, not a separate distance, that has to line up.
  */
-export const EXIT_DISTANCE = 11
-export const EXIT_DROP = 5
-export const EXIT_SPIN = 3.4
-
-export const DEFAULT_TIMING: SlideshowTiming = { hold: 4, release: 0.85, arrive: 0.95 }
+export const DEFAULT_TIMING: SlideshowTiming = { hold: 5, release: 0.47, arrive: 0.8 }
 
 /** How much the backdrop photo is blurred, in CSS pixels. */
 export const DEFAULT_BACKGROUND_BLUR = 20
@@ -199,11 +197,6 @@ export const configControls: ConfigControlsSchema = {
     hold: { label: 'Hold', min: 1, max: 20, step: 0.5 },
     release: { label: 'Release', min: 0.3, max: 3, step: 0.05 },
     arrive: { label: 'Arrive', min: 0.3, max: 3, step: 0.05 }
-  },
-  exit: {
-    distance: { label: 'Throw distance', min: 4, max: 20, step: 0.5 },
-    drop: { label: 'Throw drop', min: 0, max: 12, step: 0.5 },
-    spin: { label: 'Tumble', min: 0, max: 10, step: 0.1 }
   },
   background: {
     blur: { label: 'Backdrop blur', min: 0, max: 40, step: 1 }

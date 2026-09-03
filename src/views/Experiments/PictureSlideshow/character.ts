@@ -121,10 +121,11 @@ const spawnStickman = async (
  * The Mixamo rig, posed by its own one authored clip rather than by the slideshow directly.
  *
  * Its hands are what the picture is hung from, so wherever the clip puts them the picture
- * follows and the two can never disagree. The clip is never looped: it plays once every
- * time a fresh picture settles into the hold phase, then sits frozen on its final pose
- * — release and arrive leave the rig exactly as the clip left it, since the picture's own
- * flight is what shows the change is happening, not the arms.
+ * follows and the two can never disagree. The clip is the whole hold-to-hold round trip —
+ * dropping and picking up baked into its own middle frames — so it only ever needs to play
+ * once, start to finish, the instant a click or swipe fires. Outside of that it is paused
+ * on its own opening frame rather than left running, since nothing should move until the
+ * next change actually starts one.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
  * @returns The character, whose pose comes from its one clip
@@ -146,6 +147,7 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
   holdAction.setLoop(THREE.LoopOnce, 1)
   holdAction.clampWhenFinished = true
   holdAction.play()
+  holdAction.paused = true
   // One frame of the clip has to be applied before the hands are anywhere but the
   // T-pose, and the rig is stood by where they end up.
   mixer.update(0)
@@ -160,15 +162,22 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
 
   const left = new THREE.Vector3()
   const right = new THREE.Vector3()
-  // The clip already played once above for the rig's very first pose, so the first
-  // frame this reads must not look like a fresh arrival and replay it again.
   let previousPhase: SlideshowFrame['phase'] = 'hold'
 
   return {
     model,
     mixer,
     pose: (frame: SlideshowFrame) => {
-      if (frame.phase === 'hold' && previousPhase !== 'hold') holdAction.reset().play()
+      if (frame.phase !== 'hold' && previousPhase === 'hold') {
+        // A click or swipe just fired: run the whole round trip once, on its own clock.
+        holdAction.paused = false
+        holdAction.time = 0
+      } else if (frame.phase === 'hold' && previousPhase !== 'hold') {
+        // Settled back into hold: freeze on the clip's own opening frame rather than
+        // wherever it happened to finish, so idle is always the exact same pose.
+        holdAction.paused = true
+        holdAction.time = 0
+      }
       previousPhase = frame.phase
     },
     heldPoint: (target: THREE.Vector3) => {

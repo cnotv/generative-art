@@ -5,7 +5,6 @@ import {
   createSlideshowState,
   entryAmountAt,
   exitAmountAt,
-  flightOffset,
   holdAmountAt,
   slideshowFrame,
   startChange
@@ -224,42 +223,6 @@ describe('entryAmountAt', () => {
 
   it('is fully arrived, with nothing left to travel, right at the end of the arrival', () => {
     expect(entryAt(TIMING.release + TIMING.arrive)).toBeCloseTo(0)
-  })
-})
-
-describe('flightOffset', () => {
-  const exit = { distance: 10, drop: 4, spin: 2 }
-
-  it('carries a picture the throw distance in the throw direction, at full flight', () => {
-    expect(flightOffset(1, 1, exit).x).toBe(10)
-    expect(flightOffset(-1, 1, exit).x).toBe(-10)
-  })
-
-  it('sits exactly on the held position with nothing yet travelled', () => {
-    const offset = flightOffset(1, 0, exit)
-
-    expect(offset.x).toBeCloseTo(0)
-    expect(offset.y).toBeCloseTo(0)
-    expect(offset.rotationZ).toBeCloseTo(0)
-  })
-
-  it('drops as it flies, regardless of which way it is thrown', () => {
-    expect(flightOffset(1, 1, exit).y).toBe(-4)
-    expect(flightOffset(-1, 1, exit).y).toBe(-4)
-  })
-
-  it('tumbles opposite the throw direction', () => {
-    expect(flightOffset(1, 1, exit).rotationZ).toBe(-2)
-    expect(flightOffset(-1, 1, exit).rotationZ).toBe(2)
-  })
-
-  it('mirroring the direction mirrors the path, which is what an arrival reuses', () => {
-    const leaving = flightOffset(1, 0.6, exit)
-    const arriving = flightOffset(-1, 0.6, exit)
-
-    expect(arriving.x).toBe(-leaving.x)
-    expect(arriving.y).toBe(leaving.y)
-    expect(arriving.rotationZ).toBe(-leaving.rotationZ)
   })
 })
 
