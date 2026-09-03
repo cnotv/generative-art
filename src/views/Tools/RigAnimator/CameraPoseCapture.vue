@@ -71,7 +71,11 @@ onUnmounted(() => capture.stop())
         No person detected yet. Step into frame.
       </p>
       <div class="camera-pose-capture__actions">
+        <Button v-if="capture.error.value" size="sm" variant="secondary" @click="capture.start">
+          Try Again
+        </Button>
         <Button
+          v-else
           size="sm"
           variant="secondary"
           :disabled="!capture.worldLandmarks.value"
