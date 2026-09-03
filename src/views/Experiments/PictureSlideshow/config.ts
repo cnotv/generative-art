@@ -134,6 +134,12 @@ export const MIXAMO_SCALE = 0.038
 export const MIXAMO_HOLD_ANIMATION = 'animations/hold.json'
 export const MIXAMO_PUSH_RIGHT_ANIMATION = 'animations/push-right.json'
 export const MIXAMO_PUSH_LEFT_ANIMATION = 'animations/push-left.json'
+/**
+ * A pose-keyframe export from the Rig Animator tool, not a bare `AnimationClip` like the
+ * three above — built into one at load time instead of read by `getAnimations`. Played once
+ * as the character's own greeting the moment it spawns, before the hold loop takes over.
+ */
+export const MIXAMO_GREETING_ANIMATION = 'animations/rig-animation.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
 export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 
