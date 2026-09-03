@@ -1,11 +1,5 @@
 import * as THREE from 'three'
-import {
-  applyMaterial,
-  applyTextureToMesh,
-  disposeObject,
-  getAnimations,
-  getModel
-} from '@webgamekit/threejs'
+import { applyMaterial, applyTextureToMesh, disposeObject, getModel } from '@webgamekit/threejs'
 import { poseBuildClip } from '@webgamekit/rig'
 import type { PoseKeyframe } from '@webgamekit/rig'
 import { createStickmanPartOffsets, prepareStickmanRig } from '@/utils/stickmanRig'
@@ -17,10 +11,7 @@ import {
   ARM_ROLL_DOWN,
   ARM_ROLL_UP,
   CANVAS_DISPLAY_POSITION,
-  MIXAMO_GREETING_ANIMATION,
   MIXAMO_HOLD_ANIMATION,
-  MIXAMO_PUSH_LEFT_ANIMATION,
-  MIXAMO_PUSH_RIGHT_ANIMATION,
   CUT_OUT_LABEL_PREFIX,
   MIXAMO_CHARACTER,
   MIXAMO_CHARACTER_LABEL,
@@ -32,19 +23,18 @@ import {
   STICKMAN_TEXTURE_ALPHA_TEST,
   STICKMAN_YAW
 } from './config'
-import { gesturePoseAt, holdAmountAt } from './slideshow'
-import type { SlideDirection, SlideshowCharacter, SlideshowFrame } from './types'
+import { holdAmountAt } from './slideshow'
+import type { SlideshowCharacter, SlideshowFrame } from './types'
 
 type World = Parameters<typeof getModel>[1]
 
 /**
  * Reads a Rig Animator pose-keyframe export and builds it into a playable clip.
  *
- * This is a different file shape from `hold`/`push-*`: those are bare `AnimationClip`s
- * `getAnimations` reads directly, while this one is the tool's own `{ fps, keyframes }`
- * export, built into a clip with `poseBuildClip` instead. The bones it names are read from
- * the keyframes themselves rather than a fixed list, so the clip carries a track for
- * whichever bones the recording actually posed.
+ * This is the tool's own `{ fps, keyframes }` export rather than a bare `AnimationClip`,
+ * so it is built into one with `poseBuildClip` instead of being read directly. The bones
+ * it names are read from the keyframes themselves rather than a fixed list, so the clip
+ * carries a track for whichever bones the recording actually posed.
  * @param url - Path under the public root
  * @returns The clip, ready for `mixer.clipAction`
  */
@@ -53,7 +43,7 @@ const loadPoseClip = async (url: string): Promise<THREE.AnimationClip> => {
   if (!response.ok) throw new Error(`Could not load animation ${url}`)
   const { fps, keyframes } = (await response.json()) as { fps: number; keyframes: PoseKeyframe[] }
   const boneNames = [...new Set(keyframes.flatMap((keyframe) => Object.keys(keyframe.pose)))]
-  return poseBuildClip(keyframes, boneNames, fps, 'greeting')
+  return poseBuildClip(keyframes, boneNames, fps, 'hold')
 }
 
 /**
@@ -128,16 +118,16 @@ const spawnStickman = async (
 }
 
 /**
- * The Mixamo rig, posed by its own authored clips rather than by the slideshow directly.
+ * The Mixamo rig, posed by its own one authored clip rather than by the slideshow directly.
  *
- * Its hands are what the picture is hung from, so wherever a clip puts them the picture
- * follows and the two can never disagree. `hold` loops for as long as a picture sits on
- * display; the push clip for whichever direction is currently in play is scrubbed by
- * `gesturePoseAt` instead of running on its own clock, forward through release and
- * backward through arrive, and crossfaded against `hold` at both ends of that trip.
+ * Its hands are what the picture is hung from, so wherever the clip puts them the picture
+ * follows and the two can never disagree. The clip is never looped: it plays once every
+ * time a fresh picture settles into the hold phase, then sits frozen on its final pose
+ * — release and arrive leave the rig exactly as the clip left it, since the picture's own
+ * flight is what shows the change is happening, not the arms.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
- * @returns The character, whose pose comes from its clips
+ * @returns The character, whose pose comes from its one clip
  */
 const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowCharacter> => {
   const model = await getModel(scene, world, MIXAMO_MODEL_PATH, {
@@ -152,29 +142,11 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
     material: 'MeshLambertMaterial'
   })
   const mixer = new THREE.AnimationMixer(model)
-  const actions = await getAnimations(mixer, [
-    MIXAMO_HOLD_ANIMATION,
-    MIXAMO_PUSH_RIGHT_ANIMATION,
-    MIXAMO_PUSH_LEFT_ANIMATION
-  ])
-  const holdAction = actions.hold
-  const pushActions: Record<SlideDirection, THREE.AnimationAction> = {
-    1: actions['push-right'],
-    [-1]: actions['push-left']
-  }
-  const pushDuration = pushActions[1].getClip().duration
-
+  const holdAction = mixer.clipAction(await loadPoseClip(MIXAMO_HOLD_ANIMATION))
+  holdAction.setLoop(THREE.LoopOnce, 1)
+  holdAction.clampWhenFinished = true
   holdAction.play()
-  Object.values(pushActions).forEach((action) => {
-    // Scrubbed by hand each frame rather than left to run on the mixer's own clock,
-    // so its position tracks the release/arrive phase instead of real time. A zero
-    // time scale, rather than `paused`, keeps it off the mixer's own clock without
-    // a raw property write.
-    action.play()
-    action.setEffectiveTimeScale(0)
-    action.setEffectiveWeight(0)
-  })
-  // One frame of a clip has to be applied before the hands are anywhere but the
+  // One frame of the clip has to be applied before the hands are anywhere but the
   // T-pose, and the rig is stood by where they end up.
   mixer.update(0)
   model.updateMatrixWorld(true)
@@ -186,33 +158,18 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
   hands[0].getWorldPosition(measured)
   standByHands(model, measured.y)
 
-  // A one-shot greeting the character plays once on arrival, before settling into the hold
-  // loop. Built after the rig is already stood up from the hold pose above, so this clip's
-  // own hand positions never factor into that one-time measurement.
-  const greetingAction = mixer.clipAction(await loadPoseClip(MIXAMO_GREETING_ANIMATION))
-  greetingAction.setLoop(THREE.LoopOnce, 1)
-  greetingAction.clampWhenFinished = false
-  greetingAction.play()
-  let greeting = true
-  mixer.addEventListener('finished', (event) => {
-    if (event.action === greetingAction) greeting = false
-  })
-
   const left = new THREE.Vector3()
   const right = new THREE.Vector3()
+  // The clip already played once above for the rig's very first pose, so the first
+  // frame this reads must not look like a fresh arrival and replay it again.
+  let previousPhase: SlideshowFrame['phase'] = 'hold'
 
   return {
     model,
     mixer,
     pose: (frame: SlideshowFrame) => {
-      const { holdWeight, pushRightWeight, pushRightProgress, pushLeftWeight, pushLeftProgress } =
-        gesturePoseAt(frame)
-      greetingAction.setEffectiveWeight(greeting ? 1 : 0)
-      holdAction.setEffectiveWeight(greeting ? 0 : holdWeight)
-      pushActions[1].setEffectiveWeight(pushRightWeight)
-      pushActions[1].time = pushRightProgress * pushDuration
-      pushActions[-1].setEffectiveWeight(pushLeftWeight)
-      pushActions[-1].time = pushLeftProgress * pushDuration
+      if (frame.phase === 'hold' && previousPhase !== 'hold') holdAction.reset().play()
+      previousPhase = frame.phase
     },
     heldPoint: (target: THREE.Vector3) => {
       // At the hands' own depth, not offset from it: a fixed offset here was

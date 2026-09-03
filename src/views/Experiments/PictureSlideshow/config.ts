@@ -127,19 +127,12 @@ export const MIXAMO_MODEL_PATH = 'character2.fbx'
  */
 export const MIXAMO_SCALE = 0.038
 /**
- * The gestures authored against this skeleton by `scripts/generate-slideshow-gestures.mjs`:
- * the looping idle held while a picture is on display, and one one-shot push per throw
- * direction, scrubbed forward through release and backward through arrive.
+ * A pose-keyframe export from the Rig Animator tool, not a bare `AnimationClip` `getAnimations`
+ * reads directly — built into a clip at load time instead. Played once every time a picture
+ * settles into the hold phase, then held at its final pose until the next change starts it
+ * again; never looped.
  */
-export const MIXAMO_HOLD_ANIMATION = 'animations/hold.json'
-export const MIXAMO_PUSH_RIGHT_ANIMATION = 'animations/push-right.json'
-export const MIXAMO_PUSH_LEFT_ANIMATION = 'animations/push-left.json'
-/**
- * A pose-keyframe export from the Rig Animator tool, not a bare `AnimationClip` like the
- * three above — built into one at load time instead of read by `getAnimations`. Played once
- * as the character's own greeting the moment it spawns, before the hold loop takes over.
- */
-export const MIXAMO_GREETING_ANIMATION = 'animations/rig-animation.json'
+export const MIXAMO_HOLD_ANIMATION = 'animations/rig-animation.json'
 /** The picture hangs between these two, so it goes wherever the clip puts them. */
 export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand']
 
@@ -149,7 +142,7 @@ export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
 export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
 export const DEFAULT_CHARACTER = MIXAMO_CHARACTER
 
-export const CANVAS_SIZE: CoordinateTuple = [1.8, 1.3, 0.12]
+export const CANVAS_SIZE: CoordinateTuple = [2.0, 1.45, 0.12]
 export const CANVAS_MATERIAL: ModelOptions = {
   roughness: 0.85,
   metalness: 0,

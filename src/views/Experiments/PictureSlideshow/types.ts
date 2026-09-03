@@ -60,33 +60,13 @@ export interface FlightOffset {
 }
 
 /**
- * How much a rig driven by clips, rather than by the slideshow directly, should blend
- * between its idle hold loop and its one-shot push gesture this frame.
- *
- * The push gesture plays forward through release and backward through arrive, so one
- * clip per throw direction covers both halves of the round trip with nothing to
- * mirror or swap partway through.
- */
-export interface GesturePose {
-  /** How much of the looping hold clip to mix in, from 0 to 1. */
-  holdWeight: number
-  /** How much of the push-right clip to mix in, from 0 to 1. */
-  pushRightWeight: number
-  /** Where in the push-right clip's own timeline to sample, from 0 to 1. */
-  pushRightProgress: number
-  /** How much of the push-left clip to mix in, from 0 to 1. */
-  pushLeftWeight: number
-  /** Where in the push-left clip's own timeline to sample, from 0 to 1. */
-  pushLeftProgress: number
-}
-
-/**
  * One character the slideshow can run, whichever rig it happens to be.
  *
  * `pose` receives the full frame so either kind of rig can read whatever it needs from
- * it: a rig the slideshow drives itself works out its own hold amount, and a rig posed
- * by clips reads the phase and direction to pick and blend between them. `heldPoint` is
- * the one thing every rig must answer: where the picture hangs this frame.
+ * it: a rig the slideshow drives itself works out its own hold amount, and a clip-driven
+ * rig reads the phase to know when a fresh picture has arrived and its clip should play
+ * again. `heldPoint` is the one thing every rig must answer: where the picture hangs
+ * this frame.
  */
 export interface SlideshowCharacter {
   model: import('three').Object3D
