@@ -7,6 +7,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const packages = [
   'animation',
+  'rig',
   'threejs',
   'audio',
   'game',

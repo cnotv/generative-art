@@ -131,6 +131,9 @@
   "Model Loader": {
     "description": "Drag-and-drop 3D model loader supporting GLB, GLTF, FBX formats."
   },
+  "Rig Animator": {
+    "description": "Upload a rigged or plain model, pose its skeleton, and interpolate between poses to export a standalone animation."
+  },
   "Panels Test": {
     "description": "Development testbed for the panel and configuration UI system."
   },

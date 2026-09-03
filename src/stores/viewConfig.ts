@@ -93,8 +93,13 @@ export const useViewConfigStore = defineStore('viewConfig', () => {
   const updateViewSchema = (routeName: string, schema: ConfigControlsSchema) => {
     const entry = registry[routeName]
     if (!entry) return
+    // A fresh entry object, not a mutation of the existing one: registry is shallowReactive,
+    // so only a reassignment of registry[routeName] itself is tracked. Mutating entry.schema in
+    // place leaves the entry reference unchanged, which makes ConfigPanel's currentEntry
+    // computed (itself returning that same reference) look unchanged to Vue and silently skip
+    // notifying currentSchema, even though version bumped.
     // eslint-disable-next-line functional/immutable-data
-    entry.schema = schema
+    registry[routeName] = { ...entry, schema }
     version.value++
   }
 
