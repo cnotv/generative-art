@@ -34,6 +34,7 @@ import {
   CONTROL_MAPPING,
   DEFAULT_BACKGROUND_BLUR,
   DEFAULT_CHARACTER,
+  DEFAULT_HELD_OFFSET,
   DEFAULT_TIMING,
   MIXAMO_CHARACTER,
   PICTURES,
@@ -197,7 +198,7 @@ onMounted(async () => {
       // Editable from the Elements panel, on top of the hand-tracked `held` point above:
       // an offset rather than an absolute position, since `held` itself moves every frame
       // and a fixed position would either fight it or only hold true for one frame.
-      const heldOffset = new THREE.Vector3()
+      const heldOffset = new THREE.Vector3(...DEFAULT_HELD_OFFSET)
       const heldRotation = new THREE.Vector3(...CANVAS_DISPLAY_ROTATION)
       // Read (never written to) inside getValue below, purely so editing either vector —
       // which touches no Vue state on its own — still marks the panel's displayed

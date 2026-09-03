@@ -163,18 +163,26 @@ export const CANVAS_DISPLAY_POSITION: CoordinateTuple = [0, 2.66, 0.65]
 export const CANVAS_DISPLAY_ROTATION: CoordinateTuple = [0, 0, 0]
 
 /**
- * How long release and arrive each last, split to match the hold-to-hold clip's own
- * timing rather than run to an unrelated clock: the clip drops the old picture by its
- * frame 14 of 38 (at 30fps), so release is timed to that same fraction of its length,
- * and arrive gets the rest. A picture never leaves the hands any more — it fades where
- * it sits — so it is this shared clock, not a separate distance, that has to line up.
+ * Nudged towards the camera on top of wherever the hands actually are, since only the
+ * Mixamo rig's own clip decides that depth and this is the one place left to correct it
+ * without re-authoring the clip. Editable live from the Elements panel; this is only
+ * where it starts.
+ */
+export const DEFAULT_HELD_OFFSET: CoordinateTuple = [0, 0, 0.5]
+
+/**
+ * Hand-tuned against the hold-to-hold clip's own drop and pick motion: release gives the
+ * drop room to read before the picture is gone, arrive settles quickly once the new one
+ * is already in view, and the fade itself only runs across the back half of the release
+ * rather than the whole thing, so the picture stays solid while the hands are still
+ * clearly carrying it away.
  */
 export const DEFAULT_TIMING: SlideshowTiming = {
   hold: 5,
-  release: 0.47,
-  arrive: 0.8,
-  fadeStart: 0,
-  fadeEnd: 1
+  release: 0.9,
+  arrive: 0.5,
+  fadeStart: 0.3,
+  fadeEnd: 0.45
 }
 
 /** How much the backdrop photo is blurred, in CSS pixels. */
