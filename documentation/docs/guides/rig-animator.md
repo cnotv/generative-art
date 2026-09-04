@@ -194,20 +194,27 @@ out whether the fit works for that particular mesh.
 
 ## Capturing a pose from the camera
 
-Once the rig has every bone the mapping needs (`mixamorigHips`, `mixamorigLeftShoulder`,
+Once the rig has every bone the mapping needs (`mixamorigLeftShoulder`,
 `mixamorigRightShoulder`, and a `mixamorigLeftHand`/`RightHand`/`LeftFoot`/`RightFoot`/`Head` to
 drive), the Config panel offers **Capture Pose from Camera** next to Auto-rig. It opens a
-mirrored preview of the webcam with a live skeleton overlay from MediaPipe's Pose Landmarker, so
-you can see the detection tracking you before committing to it.
+mirrored, portrait, full-height preview of the webcam with a live skeleton overlay from
+MediaPipe's Pose Landmarker, so you can see the detection tracking you before committing to it.
+The overlay only draws a landmark MediaPipe is actually confident about: one it isn't, typically
+a body part out of frame, still gets a guessed position internally, and drawing that would show
+a confident-looking line to something that isn't really there.
 
 **Capture Pose** reads the detector's current 3D world landmarks for the wrist, ankle and nose,
-anchors them to the rig's own hip position, and scales them by the ratio between the rig's
+anchors them to the rig's own shoulder center, and scales them by the ratio between the rig's
 shoulder width and the detected person's, so the same pose maps sensibly regardless of the
-model's scale. Each mapped bone then reaches for its target through the exact same drag-to-chain
-IK solve a mouse drag on that bone already uses (see "Dragging never stretches a segment" above):
-no separate rotation math for camera input, just a different source of target positions. A body
-part out of frame, or below the detector's own confidence threshold, leaves its bone untouched
-rather than snapping it to the origin.
+model's scale. Anchoring to the shoulders rather than the hips matters in practice: a webcam
+framed for arms and head, the normal way to use this feature, usually leaves the hips out of
+frame, where MediaPipe still reports a low-confidence guessed position for them rather than
+nothing, and anchoring to that guess used to throw the whole mapping off. Each mapped bone then
+reaches for its target through the exact same drag-to-chain IK solve a mouse drag on that bone
+already uses (see "Dragging never stretches a segment" above): no separate rotation math for
+camera input, just a different source of target positions. A body part out of frame, or below
+the detector's own confidence threshold, leaves its bone untouched rather than snapping it to
+the origin.
 
 This is a single-frame capture, not a recording: applying a detected pose changes the live rig
 exactly as a manual drag would, and **Add Keyframe** on the rig timeline is still what commits it

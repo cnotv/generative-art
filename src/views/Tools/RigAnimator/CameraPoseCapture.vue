@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { PoseLandmarker, DrawingUtils } from '@mediapipe/tasks-vision'
+import { PoseLandmarker, DrawingUtils, type NormalizedLandmark } from '@mediapipe/tasks-vision'
 import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
-import type { CameraLandmark } from './cameraPoseMapping'
+import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 
 const emit = defineEmits<{
   capture: [landmarks: CameraLandmark[]]
@@ -28,12 +28,20 @@ const drawOverlay = (): void => {
   }
   context.clearRect(0, 0, canvas.width, canvas.height)
   if (!capture.previewLandmarks.value) return
+  // A landmark MediaPipe isn't actually confident about (typically off frame, like the hips
+  // when a webcam is framed for arms and head) still gets a guessed position; drawing it would
+  // show a confident-looking line to something that isn't really there. drawConnectors/
+  // drawLandmarks both skip a hole in the array, so leaving one out is safe at runtime even
+  // though the type only says NormalizedLandmark.
+  const visibleLandmarks = capture.previewLandmarks.value.map((landmark) =>
+    landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
+  ) as NormalizedLandmark[]
   drawingUtilities ??= new DrawingUtils(context)
-  drawingUtilities.drawConnectors(capture.previewLandmarks.value, PoseLandmarker.POSE_CONNECTIONS, {
+  drawingUtilities.drawConnectors(visibleLandmarks, PoseLandmarker.POSE_CONNECTIONS, {
     color: '#f0a8a0',
     lineWidth: 2
   })
-  drawingUtilities.drawLandmarks(capture.previewLandmarks.value, { color: '#b8c4f0', radius: 3 })
+  drawingUtilities.drawLandmarks(visibleLandmarks, { color: '#b8c4f0', radius: 3 })
 }
 
 watch(capture.previewLandmarks, drawOverlay)
@@ -106,6 +114,7 @@ onUnmounted(() => capture.stop())
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-4);
+  height: 92vh;
   padding: var(--spacing-6);
   border-radius: var(--radius-lg);
   background: var(--color-background);
@@ -114,9 +123,11 @@ onUnmounted(() => capture.stop())
 
 .camera-pose-capture__preview {
   position: relative;
-  width: 480px;
-  max-width: 80vw;
-  aspect-ratio: 4 / 3;
+  flex: 1;
+  min-height: 0;
+  width: auto;
+  max-width: 90vw;
+  aspect-ratio: 3 / 4;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #000;
