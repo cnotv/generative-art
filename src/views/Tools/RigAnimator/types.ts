@@ -7,4 +7,8 @@ export interface RigAnimatorConfig {
   frame: number
   fps: number
   showBoneMarkers: boolean
+  cameraUseElbows: boolean
+  cameraUseKnees: boolean
+  cameraUseHips: boolean
+  cameraUseDepth: boolean
 }

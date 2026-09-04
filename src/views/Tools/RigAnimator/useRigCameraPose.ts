@@ -1,11 +1,15 @@
 import { computed, type Ref } from 'vue'
 import type * as THREE from 'three'
+import { ikFindTwoBoneChain } from '@webgamekit/rig'
 import {
   CAMERA_POSE_REQUIRED_BONES,
+  CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
   computeCameraRigAnchor,
   cameraLandmarksToBoneTargets,
-  type CameraLandmark
+  type CameraLandmark,
+  type CameraPoseMappingOptions
 } from './cameraPoseMapping'
+import { applyPoleDrag } from './boneDragTarget'
 
 /**
  * Owns the camera-pose-capture readiness check and applies a detected pose to the rig, split out
@@ -28,17 +32,29 @@ export const useRigCameraPose = (
    * whole rig to rest first: a bone the mapping does not drive this frame (a low-visibility
    * landmark, or a bone camera capture never touches at all) would otherwise keep whatever it
    * was left at by an earlier manual edit or a previous capture, mixing an old pose in with the
-   * new one instead of the photo driving the whole body.
+   * new one instead of the photo driving the whole body. A pole target re-bends an already
+   * placed chain toward the detected elbow or knee, the same re-solve a manual pole drag does,
+   * so it never changes where the hand or foot itself ended up.
    * @param landmarks The detected person's world landmarks, from `useCameraPoseCapture`
+   * @param options Which extra details (elbow/knee bend, hips, depth) to derive, see
+   *   `CameraPoseMappingOptions`
    */
-  const applyCameraPose = (landmarks: CameraLandmark[]): void => {
+  const applyCameraPose = (
+    landmarks: CameraLandmark[],
+    options: CameraPoseMappingOptions = CAMERA_POSE_MAPPING_OPTIONS_DEFAULT
+  ): void => {
     resetAllBonesToRest()
     const anchor = computeCameraRigAnchor(bones.value)
     if (!anchor) return
-    const targets = cameraLandmarksToBoneTargets(landmarks, anchor)
-    Object.entries(targets).forEach(([boneName, targetWorldPosition]) => {
+    const { boneTargets, poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, options)
+    Object.entries(boneTargets).forEach(([boneName, targetWorldPosition]) => {
       const bone = bones.value.find((candidate) => candidate.name === boneName)
       if (bone) applyBoneDragTarget(bone, targetWorldPosition)
+    })
+    Object.entries(poleTargets).forEach(([endBoneName, poleWorldPosition]) => {
+      const endBone = bones.value.find((candidate) => candidate.name === endBoneName)
+      const chain = endBone ? ikFindTwoBoneChain(endBone) : null
+      if (chain) applyPoleDrag(chain, poleWorldPosition)
     })
   }
 

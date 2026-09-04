@@ -4,7 +4,9 @@ import { rigGenerateHumanoidSkeleton } from '@webgamekit/rig'
 import {
   computeCameraRigAnchor,
   cameraLandmarksToBoneTargets,
+  smoothCameraLandmarks,
   CAMERA_POSE_BONE_LANDMARKS,
+  CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
   type CameraLandmark
 } from './cameraPoseMapping'
 import { captureRestPoses, applyGizmoDragToChain } from './boneDragTarget'
@@ -73,47 +75,101 @@ describe('cameraLandmarksToBoneTargets', () => {
   const anchor = computeCameraRigAnchor(buildTestRig())!
 
   it('maps every bone with a visible landmark', () => {
-    const targets = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
-    expect(Object.keys(targets).sort()).toEqual(Object.keys(CAMERA_POSE_BONE_LANDMARKS).sort())
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    expect(Object.keys(boneTargets).sort()).toEqual(Object.keys(CAMERA_POSE_BONE_LANDMARKS).sort())
   })
 
   it('places a landmark above shoulder height above the rig anchor, scaled to the rig', () => {
-    const targets = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
     // Landmark shoulder width is 0.4, the rig's is 0.8, so offsets double.
     // Nose offset from shoulder center is (0, -1, -0.3); y flips and scales: +2.
-    expect(targets.mixamorigHead.y).toBeCloseTo(anchor.shoulderCenterWorldPosition.y + 2)
+    expect(boneTargets.mixamorigHead.y).toBeCloseTo(anchor.shoulderCenterWorldPosition.y + 2)
   })
 
   it('places a landmark closer to the camera toward the viewer, scaled to the rig', () => {
-    const targets = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
     // z offset from shoulder center is -0.3 (closer to camera); z flips and scales: +0.6.
-    expect(targets.mixamorigHead.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z + 0.6)
+    expect(boneTargets.mixamorigHead.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z + 0.6)
   })
 
   it('places a landmark below shoulder height below the rig anchor', () => {
-    const targets = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
-    expect(targets.mixamorigLeftFoot.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    expect(boneTargets.mixamorigLeftFoot.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
   })
 
   it('skips a bone whose landmark visibility is below the threshold', () => {
     const landmarks = buildTestLandmarks()
     landmarks[15] = { ...landmarks[15], visibility: 0.1 }
-    const targets = cameraLandmarksToBoneTargets(landmarks, anchor)
-    expect(targets.mixamorigLeftHand).toBeUndefined()
-    expect(targets.mixamorigRightHand).toBeDefined()
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+    expect(boneTargets.mixamorigLeftHand).toBeUndefined()
+    expect(boneTargets.mixamorigRightHand).toBeDefined()
   })
 
   it('returns no targets when a shoulder landmark is below the visibility threshold', () => {
     const landmarks = buildTestLandmarks()
     landmarks[11] = { ...landmarks[11], visibility: 0.1 }
-    expect(cameraLandmarksToBoneTargets(landmarks, anchor)).toEqual({})
+    expect(cameraLandmarksToBoneTargets(landmarks, anchor)).toEqual({
+      boneTargets: {},
+      poleTargets: {}
+    })
   })
 
   it('returns no targets when the detected shoulders coincide (zero span, avoids a divide by zero)', () => {
     const landmarks = buildTestLandmarks()
     landmarks[11] = landmark(0, -0.5, 0)
     landmarks[12] = landmark(0, -0.5, 0)
-    expect(cameraLandmarksToBoneTargets(landmarks, anchor)).toEqual({})
+    expect(cameraLandmarksToBoneTargets(landmarks, anchor)).toEqual({
+      boneTargets: {},
+      poleTargets: {}
+    })
+  })
+
+  it('drops the depth term when depth is turned off, flattening every target onto the anchor plane', () => {
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeDepth: false
+    })
+    expect(boneTargets.mixamorigHead.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z)
+  })
+
+  it('reports no pole targets by default', () => {
+    const { poleTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    expect(poleTargets).toEqual({})
+  })
+
+  it('maps the elbow and knee landmarks to pole targets when those details are turned on', () => {
+    const landmarks = buildTestLandmarks()
+    landmarks[13] = landmark(-0.4, -0.2, 0) // left elbow
+    landmarks[14] = landmark(0.4, -0.2, 0) // right elbow
+    landmarks[25] = landmark(-0.1, 0, 0) // left knee
+    landmarks[26] = landmark(0.1, 0, 0) // right knee
+
+    const { poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeElbows: true,
+      includeKnees: true
+    })
+
+    expect(Object.keys(poleTargets).sort()).toEqual([
+      'mixamorigLeftFoot',
+      'mixamorigLeftHand',
+      'mixamorigRightFoot',
+      'mixamorigRightHand'
+    ])
+  })
+
+  it('maps the hip midpoint to the rig root when hips are turned on', () => {
+    const landmarks = buildTestLandmarks()
+    landmarks[23] = landmark(-0.1, 0.5, 0) // left hip
+    landmarks[24] = landmark(0.1, 0.5, 0) // right hip
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeHips: true
+    })
+
+    expect(boneTargets.mixamorigHips).toBeDefined()
+    expect(boneTargets.mixamorigHips.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
   })
 })
 
@@ -146,6 +202,30 @@ describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
   })
 })
 
+describe('smoothCameraLandmarks', () => {
+  it('returns the new frame as-is when there is no previous frame to blend against', () => {
+    const next = [landmark(1, 2, 3, 0.9)]
+    expect(smoothCameraLandmarks(null, next)).toEqual(next)
+  })
+
+  it('blends position toward the new frame by the given factor, keeping the new visibility', () => {
+    const previous = [landmark(0, 0, 0, 1)]
+    const next = [landmark(1, 1, 1, 0.4)]
+    const [smoothed] = smoothCameraLandmarks(previous, next, 0.25)
+    expect(smoothed.x).toBeCloseTo(0.25)
+    expect(smoothed.y).toBeCloseTo(0.25)
+    expect(smoothed.z).toBeCloseTo(0.25)
+    expect(smoothed.visibility).toBe(0.4)
+  })
+
+  it('takes a landmark missing from the previous frame as-is, rather than blending against nothing', () => {
+    const previous = [landmark(0, 0, 0, 1)]
+    const next = [landmark(0, 0, 0, 1), landmark(5, 5, 5, 1)]
+    const smoothed = smoothCameraLandmarks(previous, next, 0.25)
+    expect(smoothed[1]).toEqual(next[1])
+  })
+})
+
 describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
   /** A person facing the camera, standing straight with arms held out level with the shoulders. */
   const buildTPoseLandmarks = (): CameraLandmark[] => {
@@ -168,10 +248,10 @@ describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
 
     const anchor = computeCameraRigAnchor(bones)!
-    const targets = cameraLandmarksToBoneTargets(buildTPoseLandmarks(), anchor)
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTPoseLandmarks(), anchor)
 
     Object.keys(CAMERA_POSE_BONE_LANDMARKS).forEach((boneName) => {
-      applyGizmoDragToChain(findBone(boneName), targets[boneName], restPoses)
+      applyGizmoDragToChain(findBone(boneName), boneTargets[boneName], restPoses)
     })
 
     const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(

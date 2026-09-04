@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { CAMERA_LANDMARK_SMOOTHING_FACTOR } from './config'
 
 /** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
 export interface CameraLandmark {
@@ -8,12 +9,46 @@ export interface CameraLandmark {
   visibility: number
 }
 
+/**
+ * Blend a newly detected frame's landmarks into the previous smoothed set, an exponential
+ * moving average per landmark. The raw per-frame detection is noisy enough on its own (most
+ * visibly on depth) that applying it straight to the rig reads as jitter rather than motion;
+ * blending it against where the landmark just was removes that noise at the cost of a little
+ * lag. Visibility is taken from the new frame as-is rather than blended, so a landmark that just
+ * left or entered frame is not treated as still partway visible for a few extra frames.
+ * @param previous The previous frame's smoothed landmarks, or null for the first frame
+ * @param next This frame's freshly detected landmarks
+ * @param factor Fraction of `next` blended in; lower reads smoother but laggier
+ * @returns The smoothed landmarks to actually map onto the rig
+ */
+export const smoothCameraLandmarks = (
+  previous: CameraLandmark[] | null,
+  next: CameraLandmark[],
+  factor: number = CAMERA_LANDMARK_SMOOTHING_FACTOR
+): CameraLandmark[] =>
+  next.map((landmark, index) => {
+    const previousLandmark = previous?.[index]
+    if (!previousLandmark) return landmark
+    return {
+      x: previousLandmark.x + (landmark.x - previousLandmark.x) * factor,
+      y: previousLandmark.y + (landmark.y - previousLandmark.y) * factor,
+      z: previousLandmark.z + (landmark.z - previousLandmark.z) * factor,
+      visibility: landmark.visibility
+    }
+  })
+
 const LANDMARK_INDEX = {
   nose: 0,
   leftShoulder: 11,
   rightShoulder: 12,
+  leftElbow: 13,
+  rightElbow: 14,
   leftWrist: 15,
   rightWrist: 16,
+  leftHip: 23,
+  rightHip: 24,
+  leftKnee: 25,
+  rightKnee: 26,
   leftAnkle: 27,
   rightAnkle: 28
 } as const
@@ -33,12 +68,62 @@ export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
   mixamorigRightFoot: LANDMARK_INDEX.rightAnkle
 }
 
+/** The rig's root bone, optionally driven to the detected hip midpoint. */
+export const CAMERA_POSE_HIPS_BONE = 'mixamorigHips'
+
+/** Which landmark bends the elbow's chain toward it, when that detail is turned on. */
+export const CAMERA_POSE_ELBOW_POLE_LANDMARKS: Record<string, number> = {
+  mixamorigLeftHand: LANDMARK_INDEX.leftElbow,
+  mixamorigRightHand: LANDMARK_INDEX.rightElbow
+}
+
+/** Which landmark bends the knee's chain toward it, when that detail is turned on. */
+export const CAMERA_POSE_KNEE_POLE_LANDMARKS: Record<string, number> = {
+  mixamorigLeftFoot: LANDMARK_INDEX.leftKnee,
+  mixamorigRightFoot: LANDMARK_INDEX.rightKnee
+}
+
 /** Every bone name camera pose capture needs on the rig, the mapped bones plus the anchor bones. */
 export const CAMERA_POSE_REQUIRED_BONES = [
   'mixamorigLeftArm',
   'mixamorigRightArm',
   ...Object.keys(CAMERA_POSE_BONE_LANDMARKS)
 ]
+
+/**
+ * Which extra details a captured pose drives, all opt-in on top of the base head/hands/feet
+ * mapping: a bone with no pole hint keeps whichever bend direction its rest pose had, and the
+ * rig's root stays at rest unless hips are turned on. Depth defaults on since it is the base
+ * mapping's existing behaviour; the other three default off since they are new to try.
+ */
+export interface CameraPoseMappingOptions {
+  /** Bend the elbow chains toward the detected elbow, instead of the chain's rest bend. */
+  includeElbows: boolean
+  /** Bend the knee chains toward the detected knee, instead of the chain's rest bend. */
+  includeKnees: boolean
+  /** Move the rig's root to the detected hip midpoint, instead of leaving it at rest. */
+  includeHips: boolean
+  /**
+   * Use the landmark's depth (z) at all. A single photo gives MediaPipe far less to estimate
+   * depth from than two eyes or a video's motion do, making z the least reliable axis it
+   * reports; turning this off flattens every target onto the shoulder anchor's own depth plane.
+   */
+  includeDepth: boolean
+}
+
+export const CAMERA_POSE_MAPPING_OPTIONS_DEFAULT: CameraPoseMappingOptions = {
+  includeElbows: false,
+  includeKnees: false,
+  includeHips: false,
+  includeDepth: true
+}
+
+export interface CameraPoseTargets {
+  /** World-space targets for `applyBoneDragTarget`, keyed by bone name. */
+  boneTargets: Record<string, THREE.Vector3>
+  /** World-space bend hints for `applyPoleDrag`, keyed by the chain's end bone name. */
+  poleTargets: Record<string, THREE.Vector3>
+}
 
 /** A landmark below this visibility is treated as not detected, leaving its bone untouched. */
 export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
@@ -103,12 +188,14 @@ const landmarkDistance = (a: CameraLandmark, b: CameraLandmark): number =>
  * `poseApply` already has.
  * @param landmarks The 33 BlazePose world landmarks for one detected person
  * @param anchor The rig's own shoulder center and shoulder width, from `computeCameraRigAnchor`
- * @returns World-space target positions keyed by bone name, ready for `applyBoneDragTarget`
+ * @param options Which extra details (elbow/knee bend, hips, depth) to derive from this frame
+ * @returns Bone targets for `applyBoneDragTarget` and pole targets for `applyPoleDrag`
  */
 export const cameraLandmarksToBoneTargets = (
   landmarks: CameraLandmark[],
-  anchor: CameraRigAnchor
-): Record<string, THREE.Vector3> => {
+  anchor: CameraRigAnchor,
+  options: CameraPoseMappingOptions = CAMERA_POSE_MAPPING_OPTIONS_DEFAULT
+): CameraPoseTargets => {
   const leftShoulder = landmarks[LANDMARK_INDEX.leftShoulder]
   const rightShoulder = landmarks[LANDMARK_INDEX.rightShoulder]
   if (
@@ -117,17 +204,19 @@ export const cameraLandmarksToBoneTargets = (
     leftShoulder.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD ||
     rightShoulder.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD
   ) {
-    return {}
+    return { boneTargets: {}, poleTargets: {} }
   }
 
   const shoulderCenter = landmarkMidpoint(leftShoulder, rightShoulder)
   const shoulderWidthLandmark = landmarkDistance(leftShoulder, rightShoulder)
-  if (shoulderWidthLandmark < MINIMUM_LANDMARK_SHOULDER_SPAN) return {}
+  if (shoulderWidthLandmark < MINIMUM_LANDMARK_SHOULDER_SPAN)
+    return { boneTargets: {}, poleTargets: {} }
   const scale = anchor.shoulderWidthWorld / shoulderWidthLandmark
 
   // Landmark y grows downward and z grows away from the camera (MediaPipe's image-space
   // convention extended to 3D); the scene's y grows upward and, since the rig faces the scene
   // camera the same way the person faces their webcam, its z grows toward the viewer. Both flip.
+  // `includeDepth: false` drops the z term entirely instead, projecting onto the anchor's plane.
   const boneTarget = (landmark: CameraLandmark): THREE.Vector3 =>
     anchor.shoulderCenterWorldPosition
       .clone()
@@ -135,20 +224,46 @@ export const cameraLandmarksToBoneTargets = (
         new THREE.Vector3(
           (landmark.x - shoulderCenter.x) * scale,
           -(landmark.y - shoulderCenter.y) * scale,
-          -(landmark.z - shoulderCenter.z) * scale
+          options.includeDepth ? -(landmark.z - shoulderCenter.z) * scale : 0
         )
       )
 
-  return Object.fromEntries(
-    Object.entries(CAMERA_POSE_BONE_LANDMARKS)
-      .map(([boneName, landmarkIndex]): [string, CameraLandmark | undefined] => [
-        boneName,
-        landmarks[landmarkIndex]
-      ])
-      .filter(
-        (entry): entry is [string, CameraLandmark] =>
-          entry[1] !== undefined && entry[1].visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
-      )
-      .map(([boneName, landmark]): [string, THREE.Vector3] => [boneName, boneTarget(landmark)])
-  )
+  const targetForLandmark = (landmarkIndex: number): THREE.Vector3 | null => {
+    const landmark = landmarks[landmarkIndex]
+    if (!landmark || landmark.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD) return null
+    return boneTarget(landmark)
+  }
+
+  const entriesFor = (landmarksByBone: Record<string, number>): Record<string, THREE.Vector3> =>
+    Object.fromEntries(
+      Object.entries(landmarksByBone)
+        .map(([boneName, landmarkIndex]): [string, THREE.Vector3 | null] => [
+          boneName,
+          targetForLandmark(landmarkIndex)
+        ])
+        .filter((entry): entry is [string, THREE.Vector3] => entry[1] !== null)
+    )
+
+  const hipsTarget = (): Record<string, THREE.Vector3> => {
+    if (!options.includeHips) return {}
+    const leftHip = landmarks[LANDMARK_INDEX.leftHip]
+    const rightHip = landmarks[LANDMARK_INDEX.rightHip]
+    if (
+      !leftHip ||
+      !rightHip ||
+      leftHip.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD ||
+      rightHip.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+    ) {
+      return {}
+    }
+    return { [CAMERA_POSE_HIPS_BONE]: boneTarget(landmarkMidpoint(leftHip, rightHip)) }
+  }
+
+  return {
+    boneTargets: { ...entriesFor(CAMERA_POSE_BONE_LANDMARKS), ...hipsTarget() },
+    poleTargets: entriesFor({
+      ...(options.includeElbows ? CAMERA_POSE_ELBOW_POLE_LANDMARKS : {}),
+      ...(options.includeKnees ? CAMERA_POSE_KNEE_POLE_LANDMARKS : {})
+    })
+  }
 }

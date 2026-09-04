@@ -63,3 +63,7 @@ export const MEDIAPIPE_POSE_MODEL_URL =
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the remaining visible half. */
 export const CAMERA_PANEL_WIDTH_VW = 45
+
+/** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
+ * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */
+export const CAMERA_LANDMARK_SMOOTHING_FACTOR = 0.35

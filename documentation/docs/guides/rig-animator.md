@@ -43,7 +43,8 @@ exist, so two poses are already a movement.
   bone selection and pose fields), rebuilt whenever the bone list or the auto-rig availability
   changes
 - `src/views/Tools/RigAnimator/cameraPoseMapping.ts`: pure mapping from detected camera
-  landmarks to world-space bone targets, anchored and scaled to the loaded rig
+  landmarks to world-space bone targets, anchored and scaled to the loaded rig, plus the
+  exponential-moving-average landmark smoothing the live camera feed uses
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
   Pose Landmarker, running live detection for the capture dialog's overlay
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a pose from a single uploaded
@@ -227,8 +228,9 @@ current pose happens to be to the animation, the same as it always has.
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
 its image mode and feeds the result through the exact same mapping, applying it once as soon as
-a person is found. **Use Camera** switches back. A photo is shown as it is, not mirrored, since
-it is not a self-view the way a live webcam feed is.
+a person is found, and stays available once a photo is already loaded so picking a different
+one never needs switching back to the camera first. **Use Camera** switches back. A photo is
+shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is.
 
 The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
 to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
@@ -241,6 +243,9 @@ its target through the exact same drag-to-chain IK solve a mouse drag on that bo
 (see "Dragging never stretches a segment" above): no separate rotation math for camera input,
 just a different source of target positions. A body part out of frame, or below the detector's
 own confidence threshold, leaves its bone untouched rather than snapping it to the origin.
+Applying a captured pose resets the whole rig to its rest transform first, so a bone the mapping
+does not drive this frame never keeps a stale pose left over from an earlier manual edit or a
+previous capture.
 
 The head applies before the hands specifically, even though both are just entries in the same
 mapping table: the head's own IK chain root is the upper spine, an ancestor of both arms, so
@@ -248,8 +253,37 @@ aiming the head bends the spine the arms hang off. Applying it after the hands w
 already-placed hand out of position along with that bend.
 
 Spine bend and fingers are not driven by the camera: the Pose Landmarker has no per-vertebra
-landmarks to drive a convincing torso curve, so this only drives the limbs and the head. Fingers
-have their own manual presets instead, above.
+landmarks to drive a convincing torso curve, so this only drives the limbs and the head by
+default. Fingers have their own manual presets instead, above.
+
+### Extra details to try
+
+Four checkboxes in the Config panel, shown once the rig has every bone the base mapping needs,
+opt into more of what MediaPipe actually detects:
+
+- **Bend Elbows to Photo** and **Bend Knees to Photo** feed the detected elbow and knee
+  landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on that mid
+  joint already does (see "Re-aiming the bend without moving the hand" above). Without these,
+  a limb's bend direction just keeps whatever its rest pose had, since the base mapping only
+  ever drives the hand or foot as the chain's end target.
+- **Move Hips to Photo** moves the rig's root to the detected hip midpoint instead of leaving it
+  at rest, so a lean or a step reads in the root position too, not only the limbs.
+- **Use Depth (Z Axis)**, on by default, is the existing behaviour: a landmark's estimated depth
+  scales into the target the same as its x and y. A single photo gives MediaPipe far less to
+  judge depth from than two eyes or a video's own motion parallax do, making z the least
+  reliable of the three axes it reports; turning this off projects every target onto the
+  shoulder anchor's own depth plane instead of trusting a noisy estimate.
+
+All four are off except depth by default, precisely so the base mapping's already-tested
+behaviour does not change under anyone who has not gone looking for these.
+
+### Smoothing the live feed
+
+A live camera detection runs roughly every frame, and MediaPipe's own per-frame landmark noise,
+most visible on depth, reads as jitter if applied to the rig straight. Each frame is blended
+against the previous one, an exponential moving average per landmark, before it drives anything;
+a photo is a single detection with nothing to blend against, so this only affects the live
+camera feed. It costs a small amount of lag for a visibly steadier pose.
 
 ## Presets: evaluating the timeline with real motion
 

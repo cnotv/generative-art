@@ -1,7 +1,7 @@
 import { ref, shallowRef, onUnmounted } from 'vue'
 import { FilesetResolver, PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { MEDIAPIPE_WASM_BASE_PATH, MEDIAPIPE_POSE_MODEL_URL } from './config'
-import type { CameraLandmark } from './cameraPoseMapping'
+import { smoothCameraLandmarks, type CameraLandmark } from './cameraPoseMapping'
 
 /**
  * Owns the webcam stream and the MediaPipe Pose Landmarker for the camera pose capture dialog:
@@ -21,12 +21,18 @@ export const useCameraPoseCapture = () => {
   let landmarker: PoseLandmarker | null = null
   let stream: MediaStream | null = null
   let animationFrame: number | null = null
+  /** The last smoothed frame, so the next one blends against it instead of the raw detection. */
+  let previousWorldLandmarks: CameraLandmark[] | null = null
 
   const detectFrame = (): void => {
     if (!videoElement.value || !landmarker) return
     const result = landmarker.detectForVideo(videoElement.value, performance.now())
     previewLandmarks.value = result.landmarks[0] ?? null
-    worldLandmarks.value = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
+    const rawWorldLandmarks = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
+    worldLandmarks.value = rawWorldLandmarks
+      ? smoothCameraLandmarks(previousWorldLandmarks, rawWorldLandmarks)
+      : null
+    previousWorldLandmarks = worldLandmarks.value
     animationFrame = requestAnimationFrame(detectFrame)
   }
 
@@ -75,6 +81,7 @@ export const useCameraPoseCapture = () => {
     isActive.value = false
     previewLandmarks.value = null
     worldLandmarks.value = null
+    previousWorldLandmarks = null
   }
 
   onUnmounted(stop)
