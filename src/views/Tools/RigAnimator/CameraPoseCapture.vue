@@ -5,6 +5,7 @@ import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
+import { CAMERA_PANEL_WIDTH_VW } from './config'
 
 const emit = defineEmits<{
   apply: [landmarks: CameraLandmark[]]
@@ -103,7 +104,7 @@ onUnmounted(() => camera.stop())
 </script>
 
 <template>
-  <div class="camera-pose-capture">
+  <div class="camera-pose-capture" :style="{ width: `${CAMERA_PANEL_WIDTH_VW}vw` }">
     <div
       class="camera-pose-capture__preview"
       :class="{ 'camera-pose-capture__preview--mirrored': mode === 'camera' }"
@@ -173,7 +174,6 @@ onUnmounted(() => camera.stop())
   right: 0;
   bottom: 0;
   z-index: var(--z-overlay);
-  width: 45vw;
   display: flex;
   flex-direction: column;
   align-items: center;

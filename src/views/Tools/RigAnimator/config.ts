@@ -59,3 +59,7 @@ export const MEDIAPIPE_WASM_BASE_PATH =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
 export const MEDIAPIPE_POSE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+
+/** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
+ * layout and the 3D camera's re-centering onto the remaining visible half. */
+export const CAMERA_PANEL_WIDTH_VW = 45

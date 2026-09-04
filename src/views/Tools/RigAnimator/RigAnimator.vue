@@ -21,7 +21,8 @@ import {
   RIG_ANIMATOR_SETUP_CONFIG,
   DEFAULT_FPS,
   DEFAULT_MODEL_PATH,
-  MODEL_FILE_ACCEPT
+  MODEL_FILE_ACCEPT,
+  CAMERA_PANEL_WIDTH_VW
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
@@ -122,6 +123,33 @@ const onWindowPointerUp = (): void => {
   window.removeEventListener('pointerup', onWindowPointerUp)
 }
 
+/**
+ * Shifts the camera's view offset so the model appears centered in the visible half of the
+ * canvas while the camera/photo panel covers the other half, rather than sitting off-center
+ * against the divider. The canvas itself never resizes for this: `setViewOffset` shifts which
+ * part of a wider virtual frame the same render shows, so the shared package's window-based
+ * resize handling elsewhere never needs to know about the docked panel at all.
+ */
+const updateCameraCentering = (): void => {
+  const activeCamera = cameraReference
+  if (!canvas.value) return
+  if (
+    !(activeCamera instanceof THREE.PerspectiveCamera) &&
+    !(activeCamera instanceof THREE.OrthographicCamera)
+  ) {
+    return
+  }
+  const width = canvas.value.clientWidth
+  const height = canvas.value.clientHeight
+  if (showCameraCapture.value) {
+    const visibleWidth = width * (1 - CAMERA_PANEL_WIDTH_VW / 100)
+    activeCamera.setViewOffset(width * 2, height, width - visibleWidth / 2, 0, width, height)
+  } else {
+    activeCamera.clearViewOffset()
+  }
+  activeCamera.updateProjectionMatrix()
+}
+
 /** Rebuilds the panel schema from the rig's current bones and auto-rig state. */
 const refreshSchema = (): void => {
   updateViewSchema(
@@ -184,6 +212,7 @@ watch(
     if (!rig.isPlaying.value) rig.scrubToFrame(frame)
   }
 )
+watch(showCameraCapture, () => updateCameraCentering())
 
 const init = async (): Promise<void> => {
   if (!canvas.value) return
@@ -215,6 +244,7 @@ const init = async (): Promise<void> => {
       orbit,
       setCamera: (newCamera) => {
         cameraReference = newCamera
+        updateCameraCentering()
         return setActiveCamera(newCamera)
       }
     }
@@ -242,10 +272,12 @@ onMounted(async () => {
   )
   await init()
   canvas.value?.addEventListener('pointerdown', onCanvasPointerDown)
+  window.addEventListener('resize', updateCameraCentering)
 })
 
 onUnmounted(() => {
   canvas.value?.removeEventListener('pointerdown', onCanvasPointerDown)
+  window.removeEventListener('resize', updateCameraCentering)
   onWindowPointerUp()
   unregisterViewConfig(routeName)
   clearViewPanels()

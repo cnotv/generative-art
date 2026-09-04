@@ -211,6 +211,11 @@ about: one it isn't, typically a body part out of frame, still gets a guessed po
 internally, and drawing that would show a confident-looking line to something that isn't really
 there.
 
+The model re-centers within the now-narrower visible half rather than sitting off-center against
+the panel's edge, without the 3D canvas itself ever resizing: opening the panel shifts the
+camera's own view offset, the same technique used for tiled or multi-window rendering, so the
+model appears centered in whatever is actually visible. Closing the panel clears it.
+
 ![The camera panel docked to the right of the still-interactive 3D view, side by side for a live comparison](/img/animation/rig-camera-split-screen.webp)
 
 Every detected frame applies straight to the rig, live, the moment it arrives: there is no
