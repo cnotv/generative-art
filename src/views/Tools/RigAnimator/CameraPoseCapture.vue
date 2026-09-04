@@ -176,7 +176,10 @@ onUnmounted(() => camera.stop())
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
+
+  /* Stops above the rig timeline bar, which docks along the same bottom edge with a higher
+     z-index: without this, the timeline bar covers this panel's own action buttons. */
+  bottom: var(--rig-timeline-height);
   z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;

@@ -10,7 +10,8 @@ import {
   Upload,
   Download,
   Package,
-  RotateCcw
+  RotateCcw,
+  PersonStanding
 } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { Select } from '@/components/ui/select'
@@ -212,7 +213,11 @@ onUnmounted(stopDrag)
         placeholder="Presets"
         :options="presetOptions"
         @update:model-value="emit('selectPreset', $event)"
-      />
+      >
+        <template #icon>
+          <PersonStanding class="h-4 w-4" />
+        </template>
+      </Select>
     </div>
     <input
       ref="fileInputElement"
@@ -242,6 +247,7 @@ onUnmounted(stopDrag)
   left: 0;
   right: 0;
   bottom: 0;
+  min-height: var(--rig-timeline-height);
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -335,9 +341,12 @@ onUnmounted(stopDrag)
   cursor: ew-resize;
 }
 
-.rig-timeline__presets,
 .rig-timeline__hand-pose {
   width: 8rem;
+  flex-shrink: 0;
+}
+
+.rig-timeline__presets {
   flex-shrink: 0;
 }
 

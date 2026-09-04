@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   SelectRoot,
   SelectTrigger,
@@ -18,7 +19,7 @@ type SelectOption = {
   label: string
 }
 
-defineProps<{
+const props = defineProps<{
   modelValue?: string
   options: SelectOption[]
   placeholder?: string
@@ -29,6 +30,10 @@ defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
+
+const selectedLabel = computed(
+  () => props.options.find((option) => option.value === props.modelValue)?.label
+)
 </script>
 
 <template>
@@ -37,8 +42,14 @@ const emit = defineEmits<{
     :disabled="disabled"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <SelectTrigger :class="cn('select__trigger', $props.class)">
-      <SelectValue :placeholder="placeholder ?? 'Select...'" />
+    <SelectTrigger
+      :class="cn('select__trigger', { 'select__trigger--icon': !!$slots.icon }, $props.class)"
+      :title="$slots.icon ? (selectedLabel ?? placeholder) : undefined"
+    >
+      <slot name="icon" />
+      <span :class="{ 'sr-only': !!$slots.icon }">
+        <SelectValue :placeholder="placeholder ?? 'Select...'" />
+      </span>
       <ChevronDown class="h-4 w-4 opacity-50" />
     </SelectTrigger>
 
@@ -97,6 +108,11 @@ const emit = defineEmits<{
 
 .select__trigger[data-placeholder] {
   color: var(--color-muted-foreground);
+}
+
+.select__trigger--icon {
+  width: auto;
+  gap: var(--spacing-2);
 }
 
 .select__content {

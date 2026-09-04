@@ -7,8 +7,9 @@ import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
+import { Upload, Camera as CameraIcon } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
-import Button from '@/components/ui/button/Button.vue'
+import IconButton from '@/components/IconButton.vue'
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -296,15 +297,18 @@ onUnmounted(() => {
       class="rig-canvas-controls__hidden-input"
       @change="handleModelFileChange"
     />
-    <Button size="sm" variant="secondary" @click="modelFileInput?.click()">Upload Model</Button>
-    <Button
+    <IconButton size="sm" variant="outline" title="Upload Model" @click="modelFileInput?.click()">
+      <Upload />
+    </IconButton>
+    <IconButton
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
-      variant="secondary"
+      variant="outline"
+      title="Capture Pose from Camera"
       @click="showCameraCapture = true"
     >
-      Capture Pose from Camera
-    </Button>
+      <CameraIcon />
+    </IconButton>
   </div>
   <RigTimeline
     :frame="reactiveConfig.frame"
