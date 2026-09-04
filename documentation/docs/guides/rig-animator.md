@@ -46,6 +46,8 @@ exist, so two poses are already a movement.
   landmarks to world-space bone targets, anchored and scaled to the loaded rig
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
   Pose Landmarker, running live detection for the capture dialog's overlay
+- `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a pose from a single uploaded
+  photo instead of the live feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
@@ -202,6 +204,12 @@ MediaPipe's Pose Landmarker, so you can see the detection tracking you before co
 The overlay only draws a landmark MediaPipe is actually confident about: one it isn't, typically
 a body part out of frame, still gets a guessed position internally, and drawing that would show
 a confident-looking line to something that isn't really there.
+
+**Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
+from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
+its image mode and feeds the result through the exact same mapping, so everything below applies
+equally to a photo. **Use Camera** switches back. A photo is shown as it is, not mirrored, since
+it is not a self-view the way a live webcam feed is.
 
 **Capture Pose** reads the detector's current 3D world landmarks for the wrist, ankle and nose,
 anchors them to the rig's own shoulder center, and scales them by the ratio between the rig's
