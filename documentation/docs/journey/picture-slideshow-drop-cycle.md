@@ -136,6 +136,20 @@ equal depth both are magnified equally, and the clearance built into the layout 
 clearance the viewer sees. A margin measured in world units is only trustworthy between
 things the same distance from the camera.
 
+## Real pictures need the same prep the placeholder never did
+
+The placeholder used everywhere above was a single photo, repeated on every board, always
+opaque and never a strange aspect ratio — none of the things a real picture turns out to
+be. Two of the three paintings that replaced it carried real alpha transparency, which the
+board's material blends per pixel, so the scene showed through wherever a painting's own
+background wasn't opaque. Every picture is now flattened onto white and cover-fit to the
+board's own aspect ratio before it lands in `PICTURES`, cropping whichever side overflows
+rather than stretching or padding it — the same recipe any future addition needs.
+
+| Before (the placeholder)                                                                                        | After (a real painting, prepped)                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![The character holding the single placeholder photo used everywhere above](/img/picture-slideshow/1-hold.webp) | ![The character holding a butterfly painting, filling the board with no bleed-through or distortion](/img/picture-slideshow/real-pictures-after.webp) |
+
 ## The beats
 
 | Hold                                                                                                | Release                                                                                     |
