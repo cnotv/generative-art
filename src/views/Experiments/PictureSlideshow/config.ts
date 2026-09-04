@@ -184,6 +184,9 @@ export const DEFAULT_TIMING: SlideshowTiming = {
 /** How much the backdrop photo is blurred, in CSS pixels. */
 export const DEFAULT_BACKGROUND_BLUR = 20
 
+/** The picture's frame, as a hex colour. Editable live from the Config panel. */
+export const DEFAULT_FRAME_COLOR = 0x000000
+
 /**
  * Right or down advances, left goes back, by tap or swipe alike. Arrow keys do the same on
  * a desktop. Down rather than up for advancing: it reads as pulling the current picture away
@@ -212,5 +215,6 @@ export const configControls: ConfigControlsSchema = {
   background: {
     blur: { label: 'Backdrop blur', min: 0, max: 40, step: 1 }
   },
-  image: { file: 'image/*', label: 'Load a picture' }
+  image: { file: 'image/*', label: 'Load a picture' },
+  frame: { color: true, label: 'Frame colour' }
 }

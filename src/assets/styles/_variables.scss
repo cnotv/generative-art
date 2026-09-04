@@ -38,10 +38,6 @@
   --color-water-surface: #4ecdc4;
   --color-water-deep: #1565a0;
 
-  // Picture Slideshow's frame, dressing the DOM overlay standing in for a picture board.
-  // Always rendered over the 3D scene, so it stays fixed regardless of light/dark theme.
-  --slideshow-frame: #b89968;
-
   // Fade transition between game phases (lobby/playing/summary).
   --transition-game-phase: 1s;
 }

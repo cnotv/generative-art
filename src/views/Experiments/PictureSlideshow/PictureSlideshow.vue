@@ -32,6 +32,7 @@ import {
   CONTROL_MAPPING,
   DEFAULT_BACKGROUND_BLUR,
   DEFAULT_CHARACTER,
+  DEFAULT_FRAME_COLOR,
   DEFAULT_HELD_OFFSET,
   DEFAULT_TIMING,
   MIXAMO_CHARACTER,
@@ -40,6 +41,14 @@ import {
   VIEW_TARGET,
   configControls
 } from './config'
+
+/**
+ * A config colour, stored as the hex integer every other numeric colour in this app uses
+ * (`0xf3eee8` and so on), read as the CSS string an inline style needs.
+ * @param color - The colour, as a 24-bit hex integer
+ * @returns The same colour as `#rrggbb`
+ */
+const numberToHex = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
 
 /**
  * Where a held picture sits and faces: the offset and facing applied on top of wherever
@@ -92,7 +101,8 @@ const reactiveConfig = createReactiveConfig({
   background: { blur: DEFAULT_BACKGROUND_BLUR },
   // An object URL, applied to whichever picture is currently on display; never a
   // literal default, since there is nothing to preload it from.
-  image: ''
+  image: '',
+  frame: DEFAULT_FRAME_COLOR
 })
 
 /** Set once the scene exists, so a panel change can rebuild the character. */
@@ -242,12 +252,14 @@ onMounted(async () => {
        * @param index - Which picture belongs here, or null while nothing does
        * @param opacity - How visible it is this frame
        * @param rect - The projected rect shared by both slots, or null before it exists
+       * @param frameColor - The frame border colour, as a CSS hex string
        */
       const applyPictureSlot = (
         imageElement: HTMLImageElement | null,
         index: number | null,
         opacity: number,
-        rect: { left: number; top: number; width: number; height: number } | null
+        rect: { left: number; top: number; width: number; height: number } | null,
+        frameColor: string
       ): void => {
         if (!imageElement) return
         if (index === null || !rect) {
@@ -262,6 +274,7 @@ onMounted(async () => {
         imageElement.style.top = `${rect.top}px`
         imageElement.style.width = `${rect.width}px`
         imageElement.style.height = `${rect.height}px`
+        imageElement.style.borderColor = frameColor
         imageElement.style.transform = heldRotation.z ? `rotate(${heldRotation.z}rad)` : ''
       }
 
@@ -349,17 +362,20 @@ onMounted(async () => {
           // and only their opacity says whether a change is under way.
           pictureCenter.copy(held).add(heldOffset)
           const rect = projectPictureRect()
+          const frameColor = numberToHex(reactiveConfig.value.frame)
           applyPictureSlot(
             leavingPictureElement.value,
             frame.leavingIndex,
             1 - exitAmountAt(frame, timing),
-            rect
+            rect,
+            frameColor
           )
           applyPictureSlot(
             heldPictureElement.value,
             frame.heldIndex,
             frame.phase === 'arrive' ? 1 - entryAmountAt(frame, timing) : 1,
-            rect
+            rect,
+            frameColor
           )
         }
       })
@@ -431,9 +447,11 @@ canvas {
   object-fit: cover;
 
   /* The frame sits inside the projected rect rather than growing past it, so the
-     positioning math above still lines up with what's actually drawn on screen. */
+     positioning math above still lines up with what's actually drawn on screen.
+     Its colour is set inline every frame, from the Config panel's own colour picker. */
   box-sizing: border-box;
-  border: 0.75rem solid var(--slideshow-frame);
+  border-width: 0.75rem;
+  border-style: solid;
   box-shadow:
     inset 0 0 0 0.125rem rgb(0 0 0 / 35%),
     var(--shadow-xl);
