@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
+import { rigGenerateHumanoidSkeleton } from '@webgamekit/rig'
 import {
   computeCameraRigAnchor,
   cameraLandmarksToBoneTargets,
   CAMERA_POSE_BONE_LANDMARKS,
   type CameraLandmark
 } from './cameraPoseMapping'
+import { captureRestPoses, applyGizmoDragToChain } from './boneDragTarget'
 
 const buildBone = (name: string, position: [number, number, number]): THREE.Bone => {
   const bone = new THREE.Bone()
@@ -99,5 +101,34 @@ describe('cameraLandmarksToBoneTargets', () => {
     landmarks[11] = landmark(0, -0.5, 0)
     landmarks[12] = landmark(0, -0.5, 0)
     expect(cameraLandmarksToBoneTargets(landmarks, anchor)).toEqual({})
+  })
+})
+
+describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
+  it('applies the head before the hands, so bending the spine for the head does not drag an already-placed hand out of position', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const restPoses = captureRestPoses(bones)
+
+    const leftHand = bones.find((bone) => bone.name === 'mixamorigLeftHand')!
+    const head = bones.find((bone) => bone.name === 'mixamorigHead')!
+    const leftHandTarget = leftHand.getWorldPosition(new THREE.Vector3())
+    // Well off to the side, so aiming the head bends the neck/spine chain hard for it.
+    const headTarget = head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.6, 0, 0))
+    const targetsByBoneName: Record<string, THREE.Vector3> = {
+      mixamorigLeftHand: leftHandTarget,
+      mixamorigHead: headTarget
+    }
+
+    Object.keys(CAMERA_POSE_BONE_LANDMARKS)
+      .filter((boneName) => boneName in targetsByBoneName)
+      .forEach((boneName) => {
+        const bone = bones.find((candidate) => candidate.name === boneName)!
+        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses)
+      })
+
+    const finalLeftHandPosition = leftHand.getWorldPosition(new THREE.Vector3())
+    expect(finalLeftHandPosition.distanceTo(leftHandTarget)).toBeLessThan(0.05)
   })
 })

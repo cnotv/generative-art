@@ -18,13 +18,19 @@ const LANDMARK_INDEX = {
   rightAnkle: 28
 } as const
 
-/** Which landmark drives each mapped bone, matching `HUMANOID_BONE_HIERARCHY`'s naming. */
+/**
+ * Which landmark drives each mapped bone, matching `HUMANOID_BONE_HIERARCHY`'s naming. Key
+ * order matters and is relied on by callers that apply these targets with `Object.entries`:
+ * the head's IK chain root is `mixamorigSpine2`, an ancestor of both arms, so aiming the head
+ * rotates the whole upper body its hands hang off. The head has to apply first, or its spine
+ * bend drags an already-placed hand out of the position it was just aimed at.
+ */
 export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
+  mixamorigHead: LANDMARK_INDEX.nose,
   mixamorigLeftHand: LANDMARK_INDEX.leftWrist,
   mixamorigRightHand: LANDMARK_INDEX.rightWrist,
   mixamorigLeftFoot: LANDMARK_INDEX.leftAnkle,
-  mixamorigRightFoot: LANDMARK_INDEX.rightAnkle,
-  mixamorigHead: LANDMARK_INDEX.nose
+  mixamorigRightFoot: LANDMARK_INDEX.rightAnkle
 }
 
 /** Every bone name camera pose capture needs on the rig, the mapped bones plus the anchor bones. */
