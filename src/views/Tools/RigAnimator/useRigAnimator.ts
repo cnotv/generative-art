@@ -19,7 +19,11 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigModel.skinnedMesh,
     rigModel.boneNames
   )
-  const rigCameraPose = useRigCameraPose(rigModel.bones, rigModel.applyBoneDragTarget)
+  const rigCameraPose = useRigCameraPose(
+    rigModel.bones,
+    rigModel.applyBoneDragTarget,
+    rigModel.resetAllBonesToRest
+  )
   const rigHandPose = useRigHandPose(rigModel.bones, config)
 
   /** Load a model and drop whatever keyframes belonged to the one it replaces. */

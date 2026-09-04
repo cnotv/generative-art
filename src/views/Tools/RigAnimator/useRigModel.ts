@@ -11,6 +11,7 @@ import {
   applyGizmoDragToChain,
   captureRestPoses,
   resetBoneChainToRest,
+  resetAllBonesToRest as resetAllBoneTransformsToRest,
   type BoneRestPose
 } from './boneDragTarget'
 import { loadModelFile, disposeModel, generateAutoRig } from './rigModel'
@@ -70,11 +71,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     config.value.selectedBone = ''
   }
 
-  /**
-   * Load an uploaded model, replacing whatever was loaded before, and adopt its rig if it
-   * already has one.
-   * @param url The blob URL the file input produced
-   */
+  /** Load an uploaded model, replacing whatever was loaded before, and adopt its rig if it has one. */
   const loadModel = async (url: string): Promise<void> => {
     if (!scene.value || !url) return
     clearModel()
@@ -105,11 +102,9 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     }
   }
 
-  /**
-   * Resolve a pointer event to a bone marker, without selecting it: the caller decides first
-   * whether this hit means a normal drag (and should select the bone) or a pole-hint drag on
-   * the current selection's mid joint (which should not change the selection at all).
-   */
+  /** Resolve a pointer event to a bone marker, without selecting it: the caller decides whether
+   * this is a normal drag (selects the bone) or a pole-hint drag on the current selection's mid
+   * joint (must not change the selection). */
   const identifyBoneFromRay = (raycaster: THREE.Raycaster): THREE.Bone | null => {
     if (!markerVisibility.areMarkersVisible.value) return null
     const name = pickBoneMarker(boneMarkers.value, raycaster)
@@ -147,6 +142,9 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     selectBone(bone.name)
   }
 
+  /** Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc. */
+  const resetAllBonesToRest = (): void => resetAllBoneTransformsToRest(bones.value, restPoses)
+
   return {
     model,
     skinnedMesh,
@@ -165,6 +163,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     applyBoneRotation,
     applyBonePosition,
     applyBoneDragTarget,
-    resetSelectedBone
+    resetSelectedBone,
+    resetAllBonesToRest
   }
 }
