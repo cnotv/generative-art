@@ -38,8 +38,15 @@ export const useCameraPhotoPose = () => {
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Could not read that photo'
     } finally {
-      landmarker?.close()
+      // isLoading has to clear even if the detection above succeeded and closing the
+      // landmarker itself then throws, or the dialog is stuck showing "Reading photo…"
+      // forever despite already having a result.
       isLoading.value = false
+      try {
+        landmarker?.close()
+      } catch {
+        // Nothing to recover: the landmarker is being thrown away either way.
+      }
     }
   }
 

@@ -65,7 +65,12 @@ export const useCameraPoseCapture = () => {
     stream?.getTracks().forEach((track) => track.stop())
     stream = null
     if (videoElement.value) videoElement.value.srcObject = null
-    landmarker?.close()
+    // A throw here must never skip clearing the rest of the state below.
+    try {
+      landmarker?.close()
+    } catch {
+      // Nothing to recover: the landmarker is being thrown away either way.
+    }
     landmarker = null
     isActive.value = false
     previewLandmarks.value = null
