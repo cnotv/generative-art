@@ -159,6 +159,18 @@ const refreshSchema = (): void => {
   )
 }
 
+/**
+ * Closing the panel only clears the view-offset shift; it does not undo any orbit or pan the
+ * user did while the panel was open. Re-framing on close is what actually puts the model back
+ * where it started, rather than leaving it wherever the camera was last pointed.
+ */
+const handleCloseCamera = (): void => {
+  showCameraCapture.value = false
+  if (rig.model.value && cameraReference) {
+    frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
+  }
+}
+
 const handleModelFileChange = (event: Event): void => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -335,7 +347,7 @@ onUnmounted(() => {
   <CameraPoseCapture
     v-if="showCameraCapture"
     @apply="rig.applyCameraPose"
-    @close="showCameraCapture = false"
+    @close="handleCloseCamera"
   />
 </template>
 

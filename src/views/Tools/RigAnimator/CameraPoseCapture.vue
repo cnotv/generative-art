@@ -157,15 +157,12 @@ onUnmounted(() => camera.stop())
       >
         Try Again
       </Button>
-      <Button
-        v-if="mode === 'camera'"
-        size="sm"
-        variant="secondary"
-        @click="fileInputReference?.click()"
-      >
+      <Button size="sm" variant="secondary" @click="fileInputReference?.click()">
         Upload Photo
       </Button>
-      <Button v-else size="sm" variant="secondary" @click="handleUseCamera">Use Camera</Button>
+      <Button v-if="mode === 'photo'" size="sm" variant="secondary" @click="handleUseCamera">
+        Use Camera
+      </Button>
       <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
     </div>
   </div>
