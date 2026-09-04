@@ -2,21 +2,22 @@ import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/thr
 import type { ControlMapping } from '@webgamekit/controls'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import backdropUrl from '@/assets/images/backgrounds/field.webp'
-import landscapeUrl from '@/assets/images/generic/landscape.webp'
+import hopsUrl from '@/assets/images/slideshow/hops.webp'
+import butterflyUrl from '@/assets/images/slideshow/butterfly.webp'
+import autumnLeavesUrl from '@/assets/images/slideshow/autumn-leaves.webp'
 import type { SlideshowTiming } from './types'
 
-/** The one picture shown until a custom one is loaded from the Config panel. */
-export const DEFAULT_PICTURE_URL = landscapeUrl
-
 /**
- * Two identical boards, never more — one leaving, one arriving, per the floor a change
- * needs. They always carry the same picture: `DEFAULT_PICTURE_URL` until the Config
- * panel's uploader replaces it on both at once, after which every change keeps showing
- * that one instead.
+ * One board per picture, each textured once at setup — the cycle only ever decides where
+ * a board sits and whether it is visible, never what it shows. Any number is fine; the
+ * change logic only ever holds two roled at once, whichever is leaving and whichever is
+ * arriving. The Config panel's uploader can still override every board at once with a
+ * single custom image, after which every change keeps showing that one instead.
  */
 export const PICTURES: { name: string; url: string }[] = [
-  { name: '1', url: DEFAULT_PICTURE_URL },
-  { name: '2', url: DEFAULT_PICTURE_URL }
+  { name: 'hops', url: hopsUrl },
+  { name: 'butterfly', url: butterflyUrl },
+  { name: 'autumn-leaves', url: autumnLeavesUrl }
 ]
 
 /**
@@ -188,11 +189,16 @@ export const DEFAULT_TIMING: SlideshowTiming = {
 /** How much the backdrop photo is blurred, in CSS pixels. */
 export const DEFAULT_BACKGROUND_BLUR = 20
 
-/** Right advances, left goes back, by tap or swipe alike. Arrow keys do the same on a desktop. */
+/**
+ * Right or down advances, left goes back, by tap or swipe alike. Arrow keys do the same on
+ * a desktop. Down rather than up for advancing: it reads as pulling the current picture away
+ * to reveal the next one, the same motion a swipe-right pulls it aside with.
+ */
 export const CONTROL_MAPPING: ControlMapping = {
   pointer: {
     'tap-right': 'next',
     'swipe-right': 'next',
+    'swipe-down': 'next',
     'tap-left': 'previous',
     'swipe-left': 'previous'
   },

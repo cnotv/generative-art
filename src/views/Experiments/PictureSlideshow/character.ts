@@ -126,6 +126,8 @@ const spawnStickman = async (
  * scrubbed to `frame.leftSeconds` rather than left to play on its own clock. That is what
  * lets a live drag move the hands exactly as far as the finger has, instead of the whole
  * round trip only ever running once, at its own fixed pace, from whenever a change starts.
+ * Scrubbed backward through the same clip for `direction: -1`, so stepping to the previous
+ * picture reads as undoing the hand-off rather than repeating it.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
  * @returns The character, whose pose comes from its one clip
@@ -168,7 +170,12 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
     model,
     mixer,
     pose: (frame: SlideshowFrame) => {
-      holdAction.time = frame.phase === 'hold' ? 0 : Math.min(frame.leftSeconds, clipDuration)
+      if (frame.phase === 'hold') {
+        holdAction.time = 0
+        return
+      }
+      const elapsed = Math.min(frame.leftSeconds, clipDuration)
+      holdAction.time = frame.direction === 1 ? elapsed : clipDuration - elapsed
     },
     heldPoint: (target: THREE.Vector3) => {
       // At the hands' own depth, not offset from it: a fixed offset here was

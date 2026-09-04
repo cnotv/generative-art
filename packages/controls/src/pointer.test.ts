@@ -3,6 +3,7 @@ import { createPointerController, resolvePointerGesture } from './pointer'
 import type { ControlHandlers, ControlMapping } from './types'
 
 const WIDTH = 800
+const point = (x: number, y = 0) => ({ x, y })
 
 describe('resolvePointerGesture', () => {
   it.each([
@@ -15,18 +16,40 @@ describe('resolvePointerGesture', () => {
     ['a swipe rightwards that ends on the left half', 300, 350, 'swipe-right'],
     ['a swipe of exactly the threshold', 100, 140, 'swipe-right']
   ])('reads %s', (_label, startX, endX, expected) => {
-    const gesture = resolvePointerGesture(startX as number, endX as number, WIDTH)
+    const gesture = resolvePointerGesture(point(startX as number), point(endX as number), WIDTH)
 
     expect(gesture).toBe(expected)
   })
 
   it('honours a custom swipe threshold', () => {
-    expect(resolvePointerGesture(100, 160, WIDTH, 100)).toBe('tap-left')
-    expect(resolvePointerGesture(100, 160, WIDTH, 50)).toBe('swipe-right')
+    expect(resolvePointerGesture(point(100), point(160), WIDTH, 100)).toBe('tap-left')
+    expect(resolvePointerGesture(point(100), point(160), WIDTH, 50)).toBe('swipe-right')
   })
 
   it('reads no gesture from a target with no width', () => {
-    expect(resolvePointerGesture(0, 0, 0)).toBeNull()
+    expect(resolvePointerGesture(point(0), point(0), 0)).toBeNull()
+  })
+
+  it.each([
+    ['a swipe downwards', point(100, 100), point(100, 300), 'swipe-down'],
+    ['a swipe upwards', point(100, 300), point(100, 100), 'swipe-up'],
+    [
+      'a swipe down that also drifts sideways, but less',
+      point(100, 100),
+      point(130, 300),
+      'swipe-down'
+    ]
+  ])('reads %s', (_label, start, end, expected) => {
+    const gesture = resolvePointerGesture(start, end, WIDTH)
+
+    expect(gesture).toBe(expected)
+  })
+
+  it('picks whichever axis travelled furthest when both clear the threshold', () => {
+    // 200 sideways, 60 down: sideways wins.
+    expect(resolvePointerGesture(point(100, 100), point(300, 160), WIDTH)).toBe('swipe-right')
+    // 60 sideways, 200 down: down wins.
+    expect(resolvePointerGesture(point(100, 100), point(160, 300), WIDTH)).toBe('swipe-down')
   })
 })
 
@@ -39,12 +62,12 @@ const createTarget = () => {
     removeEventListener: (type: string, handler: (event: PointerEvent) => void) => {
       listeners[type] = (listeners[type] ?? []).filter((entry) => entry !== handler)
     },
-    getBoundingClientRect: () => ({ left: 0, width: WIDTH })
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: WIDTH })
   } as unknown as HTMLElement
 
-  const fire = (type: string, pointerId: number, clientX: number) =>
+  const fire = (type: string, pointerId: number, clientX: number, clientY = 0) =>
     (listeners[type] ?? []).forEach((handler) =>
-      handler({ pointerId, clientX } as unknown as PointerEvent)
+      handler({ pointerId, clientX, clientY } as unknown as PointerEvent)
     )
 
   return { target, fire }
@@ -61,7 +84,8 @@ const MAPPING: { current: ControlMapping } = {
       'tap-left': 'previous',
       'tap-right': 'next',
       'swipe-left': 'previous',
-      'swipe-right': 'next'
+      'swipe-right': 'next',
+      'swipe-down': 'next'
     }
   }
 }
@@ -77,6 +101,17 @@ describe('createPointerController', () => {
 
     expect(handlers.onAction).toHaveBeenCalledWith('next', 'tap-right', 'pointer')
     expect(handlers.onRelease).toHaveBeenCalledWith('next', 'tap-right', 'pointer')
+  })
+
+  it('reports the mapped action for a vertical swipe', () => {
+    const { target, fire } = createTarget()
+    const handlers = createHandlers()
+    createPointerController(MAPPING, handlers).bind(target)
+
+    fire('pointerdown', 1, 400, 100)
+    fire('pointerup', 1, 400, 300)
+
+    expect(handlers.onAction).toHaveBeenCalledWith('next', 'swipe-down', 'pointer')
   })
 
   it('measures from the target rather than the viewport', () => {

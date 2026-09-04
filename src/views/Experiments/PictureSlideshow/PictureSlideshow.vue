@@ -128,7 +128,7 @@ const handleConfigChange = (): void => {
 let slideshow: SlideshowState = createSlideshowState()
 
 const requestChange = (direction: SlideDirection): void => {
-  slideshow = startChange(slideshow, direction, PICTURES.length)
+  slideshow = startChange(slideshow, direction, PICTURES.length, reactiveConfig.value.timing)
 }
 
 /** Bound in `onMounted`: the pointer target is the canvas, which does not exist before then. */

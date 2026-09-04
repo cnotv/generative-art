@@ -16,30 +16,35 @@ export interface PointerController {
 export const DEFAULT_SWIPE_THRESHOLD_PIXELS = 40
 
 /**
- * Reads a press and release as one of four horizontal gestures.
+ * Reads a press and release as one gesture.
  *
- * Travel decides first: past the threshold it is a swipe, whichever half of the
- * target it happened in. Only a press that stayed put falls through to a tap,
- * which is then named by the half it landed in. A target with no width cannot
- * name a half, so a tap on one is no gesture at all rather than a guess.
- * @param startX - Where the press began, in pixels from the target's left edge
- * @param endX - Where it was released, in the same coordinates
+ * Travel decides first, on whichever axis moved furthest: past the threshold it is a
+ * swipe in that direction. Only a press that stayed put on both axes falls through to a
+ * tap, which is read horizontally and named by the half of the target it landed in. A
+ * target with no width cannot name a half, so a tap on one is no gesture at all rather
+ * than a guess.
+ * @param start - Where the press began, in pixels from the target's top left corner
+ * @param end - Where it was released, in the same coordinates
  * @param targetWidth - The target's width in pixels
  * @param swipeThresholdPixels - Travel at or past which the press is a swipe
  * @returns The gesture, or null when the target is too small to read one
  */
 export const resolvePointerGesture = (
-  startX: number,
-  endX: number,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
   targetWidth: number,
   swipeThresholdPixels: number = DEFAULT_SWIPE_THRESHOLD_PIXELS
 ): PointerGesture | null => {
   if (targetWidth <= 0) return null
-  const travel = endX - startX
-  if (Math.abs(travel) >= swipeThresholdPixels) {
-    return travel > 0 ? 'swipe-right' : 'swipe-left'
+  const travelX = end.x - start.x
+  const travelY = end.y - start.y
+  if (Math.abs(travelY) > Math.abs(travelX) && Math.abs(travelY) >= swipeThresholdPixels) {
+    return travelY > 0 ? 'swipe-down' : 'swipe-up'
   }
-  return endX < targetWidth / 2 ? 'tap-left' : 'tap-right'
+  if (Math.abs(travelX) >= swipeThresholdPixels) {
+    return travelX > 0 ? 'swipe-right' : 'swipe-left'
+  }
+  return end.x < targetWidth / 2 ? 'tap-left' : 'tap-right'
 }
 
 /**
@@ -62,6 +67,7 @@ export function createPointerController(
 ): PointerController {
   let activePointerId: number | null = null
   let startX = 0
+  let startY = 0
   let targetWidth = 0
   let dragProgress = 0
 
@@ -69,6 +75,7 @@ export function createPointerController(
     if (activePointerId !== null) return
     activePointerId = event.pointerId
     startX = event.clientX
+    startY = event.clientY
     targetWidth = target.getBoundingClientRect().width
     dragProgress = 0
   }
@@ -83,8 +90,8 @@ export function createPointerController(
     activePointerId = null
     const bounds = target.getBoundingClientRect()
     const gesture = resolvePointerGesture(
-      startX - bounds.left,
-      event.clientX - bounds.left,
+      { x: startX - bounds.left, y: startY - bounds.top },
+      { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
       bounds.width,
       swipeThresholdPixels
     )

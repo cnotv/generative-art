@@ -2,8 +2,15 @@ export type ControlAction = string
 export type ControlDevice = 'keyboard' | 'gamepad' | 'touch' | 'pointer' | 'faux-pad' | 'motion'
 export type ControlEvent = 'touchstart' | 'touchend' | 'mousedown' | 'mouseup'
 
-/** A press and release read as one horizontal gesture, by where it happened and how far it moved. */
-export type PointerGesture = 'tap-left' | 'tap-right' | 'swipe-left' | 'swipe-right'
+/** A press and release read as one gesture, by where it happened and how far it moved. Taps
+ * are read horizontally only; a swipe reads whichever axis it travelled furthest on. */
+export type PointerGesture =
+  | 'tap-left'
+  | 'tap-right'
+  | 'swipe-left'
+  | 'swipe-right'
+  | 'swipe-up'
+  | 'swipe-down'
 
 export interface ControlMapping {
   keyboard?: Record<string, ControlAction>

@@ -24,7 +24,7 @@ const runFor = (state: SlideshowState, seconds: number): SlideshowState =>
 
 describe('startChange', () => {
   it('sends the held picture out and brings its neighbour in', () => {
-    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT)
+    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING)
 
     expect(changed.leavingIndex).toBe(0)
     expect(changed.index).toBe(1)
@@ -33,7 +33,7 @@ describe('startChange', () => {
   })
 
   it('steps backwards to the left', () => {
-    const changed = startChange(createSlideshowState(), -1, SLIDE_COUNT)
+    const changed = startChange(createSlideshowState(), -1, SLIDE_COUNT, TIMING)
 
     expect(changed.index).toBe(SLIDE_COUNT - 1)
     expect(changed.direction).toBe(-1)
@@ -42,27 +42,45 @@ describe('startChange', () => {
   it('wraps past the end of the list in both directions', () => {
     const atLast = { ...createSlideshowState(), index: SLIDE_COUNT - 1 }
 
-    expect(startChange(atLast, 1, SLIDE_COUNT).index).toBe(0)
-    expect(startChange(createSlideshowState(), -1, SLIDE_COUNT).index).toBe(SLIDE_COUNT - 1)
-  })
-
-  it('ignores a change requested while one is already running', () => {
-    const running = startChange(createSlideshowState(), 1, SLIDE_COUNT)
-    const interrupted = startChange(running, -1, SLIDE_COUNT)
-
-    expect(interrupted).toBe(running)
+    expect(startChange(atLast, 1, SLIDE_COUNT, TIMING).index).toBe(0)
+    expect(startChange(createSlideshowState(), -1, SLIDE_COUNT, TIMING).index).toBe(SLIDE_COUNT - 1)
   })
 
   it('restarts the hold clock, so a change is looked at for a full hold', () => {
     const nearlyDue = { ...createSlideshowState(), holdSeconds: TIMING.hold - 0.1 }
 
-    expect(startChange(nearlyDue, 1, SLIDE_COUNT).holdSeconds).toBe(0)
+    expect(startChange(nearlyDue, 1, SLIDE_COUNT, TIMING).holdSeconds).toBe(0)
   })
 
   it('starts from a given changeSeconds, so a drag already under way does not snap back', () => {
-    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT, 0.4)
+    const changed = startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING, 0.4)
 
     expect(changed.changeSeconds).toBe(0.4)
+  })
+
+  it('lets a new change interrupt one still within its first 30%', () => {
+    // changeSeconds 0: the freshest a running change can be.
+    const running = startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING)
+    const interrupted = startChange(running, -1, SLIDE_COUNT, TIMING)
+
+    expect(interrupted.direction).toBe(-1)
+    // Restarts from the picture still actually on screen, not the one only ever arriving.
+    expect(interrupted.leavingIndex).toBe(running.leavingIndex)
+    expect(interrupted.index).toBe(SLIDE_COUNT - 1)
+  })
+
+  it('ignores a change requested once the running one is past its first 30%', () => {
+    const totalSeconds = TIMING.release + TIMING.arrive
+    const runningLate = startChange(
+      createSlideshowState(),
+      1,
+      SLIDE_COUNT,
+      TIMING,
+      totalSeconds * 0.31
+    )
+    const interrupted = startChange(runningLate, -1, SLIDE_COUNT, TIMING)
+
+    expect(interrupted).toBe(runningLate)
   })
 })
 
@@ -102,8 +120,23 @@ describe('scrubByDrag', () => {
     expect(followed.changeSeconds).toBeCloseTo(0.6 * (TIMING.release + TIMING.arrive))
   })
 
-  it('leaves a change running the other way untouched', () => {
-    const runningLeft = startChange(createSlideshowState(), -1, SLIDE_COUNT, 0.3)
+  it('turns a change around when the drag reverses within its first 30%', () => {
+    const runningLeft = startChange(createSlideshowState(), -1, SLIDE_COUNT, TIMING, 0.1)
+
+    const turned = scrubByDrag(runningLeft, 0.5, TIMING, SLIDE_COUNT)
+
+    expect(turned.direction).toBe(1)
+  })
+
+  it('leaves a change running the other way untouched once past its first 30%', () => {
+    const totalSeconds = TIMING.release + TIMING.arrive
+    const runningLeft = startChange(
+      createSlideshowState(),
+      -1,
+      SLIDE_COUNT,
+      TIMING,
+      totalSeconds * 0.4
+    )
 
     expect(scrubByDrag(runningLeft, 0.5, TIMING, SLIDE_COUNT)).toBe(runningLeft)
   })
@@ -124,7 +157,7 @@ describe('advanceSlideshow', () => {
   })
 
   it('settles back into a hold once the change has run its course', () => {
-    const settled = runFor(startChange(createSlideshowState(), 1, SLIDE_COUNT), 2.2)
+    const settled = runFor(startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), 2.2)
 
     expect(settled.changeSeconds).toBeNull()
     expect(settled.index).toBe(1)
@@ -146,14 +179,17 @@ describe('slideshowFrame', () => {
     ['releasing', 0.5, 'release'],
     ['arriving', 1.5, 'arrive']
   ])('reports %s', (_label, changeSeconds, phase) => {
-    const state = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT) }
+    const state = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING) }
     const running = changeSeconds === 0 ? createSlideshowState() : { ...state, changeSeconds }
 
     expect(slideshowFrame(running, TIMING).phase).toBe(phase)
   })
 
   it('empties both hands while the old picture is on its way out', () => {
-    const releasing = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 0.5 }
+    const releasing = {
+      ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING),
+      changeSeconds: 0.5
+    }
     const frame = slideshowFrame(releasing, TIMING)
 
     expect(frame.heldIndex).toBeNull()
@@ -161,7 +197,10 @@ describe('slideshowFrame', () => {
   })
 
   it('carries the arriving picture in the hands, with the old one still leaving', () => {
-    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
+    const arriving = {
+      ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING),
+      changeSeconds: 1.5
+    }
     const frame = slideshowFrame(arriving, TIMING)
 
     expect(frame.heldIndex).toBe(1)
@@ -169,14 +208,17 @@ describe('slideshowFrame', () => {
   })
 
   it('keeps the released picture travelling for the whole change, not just the release', () => {
-    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
+    const arriving = {
+      ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING),
+      changeSeconds: 1.5
+    }
 
     expect(slideshowFrame(arriving, TIMING).leftSeconds).toBeCloseTo(1.5)
   })
 
   it('carries the direction through, so the scene knows which way to throw', () => {
     const leftwards = {
-      ...startChange(createSlideshowState(), -1, SLIDE_COUNT),
+      ...startChange(createSlideshowState(), -1, SLIDE_COUNT, TIMING),
       changeSeconds: 0.5
     }
 
@@ -190,7 +232,7 @@ describe('holdAmountAt', () => {
       slideshowFrame(
         changeSeconds === null
           ? createSlideshowState()
-          : { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          : { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
         TIMING
       )
     )
@@ -218,7 +260,7 @@ describe('exitAmountAt', () => {
   const exitAt = (changeSeconds: number) =>
     exitAmountAt(
       slideshowFrame(
-        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
         TIMING
       ),
       TIMING
@@ -247,7 +289,7 @@ describe('exitAmountAt', () => {
     const exitAtNarrow = (changeSeconds: number) =>
       exitAmountAt(
         slideshowFrame(
-          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
           narrow
         ),
         narrow
@@ -263,7 +305,7 @@ describe('exitAmountAt', () => {
     const exitAtSnap = (changeSeconds: number) =>
       exitAmountAt(
         slideshowFrame(
-          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
           snap
         ),
         snap
@@ -278,7 +320,7 @@ describe('entryAmountAt', () => {
   const entryAt = (changeSeconds: number) =>
     entryAmountAt(
       slideshowFrame(
-        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
         TIMING
       ),
       TIMING
@@ -288,7 +330,7 @@ describe('entryAmountAt', () => {
     const exitAt = (changeSeconds: number) =>
       exitAmountAt(
         slideshowFrame(
-          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+          { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
           TIMING
         ),
         TIMING
@@ -321,7 +363,10 @@ describe('canvasRoleAt', () => {
     ['the picture on its way in', 1, 'arriving'],
     ['a picture with no part in this change', 4, 'hidden']
   ])('reads %s', (_label, index, role) => {
-    const arriving = { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds: 1.5 }
+    const arriving = {
+      ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING),
+      changeSeconds: 1.5
+    }
 
     expect(canvasRoleAt(slideshowFrame(arriving, TIMING), index as number)).toBe(role)
   })
@@ -331,7 +376,7 @@ describe('canvasRoleAt', () => {
 
     samples.forEach((changeSeconds) => {
       const frame = slideshowFrame(
-        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT), changeSeconds },
+        { ...startChange(createSlideshowState(), 1, SLIDE_COUNT, TIMING), changeSeconds },
         TIMING
       )
       const roles = Array.from({ length: SLIDE_COUNT }, (_, index) => canvasRoleAt(frame, index))
