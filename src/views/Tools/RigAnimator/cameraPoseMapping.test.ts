@@ -132,3 +132,65 @@ describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
     expect(finalLeftHandPosition.distanceTo(leftHandTarget)).toBeLessThan(0.05)
   })
 })
+
+describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
+  /** A person facing the camera, standing straight with arms held out level with the shoulders. */
+  const buildTPoseLandmarks = (): CameraLandmark[] => {
+    const landmarks: CameraLandmark[] = new Array(33).fill(null).map(() => landmark(0, 0, 0, 0))
+    landmarks[0] = landmark(0, -0.3, 0) // nose, above the shoulders
+    landmarks[11] = landmark(-0.2, 0, 0) // left shoulder
+    landmarks[12] = landmark(0.2, 0, 0) // right shoulder
+    landmarks[15] = landmark(-0.7, 0, 0) // left wrist, extended out level with the shoulder
+    landmarks[16] = landmark(0.7, 0, 0) // right wrist, extended out level with the shoulder
+    landmarks[27] = landmark(-0.15, 1.4, 0) // left ankle, near the floor
+    landmarks[28] = landmark(0.15, 1.4, 0) // right ankle
+    return landmarks
+  }
+
+  it('keeps every mapped bone on its own side, extended and above/below the shoulders as a T-pose should read', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const restPoses = captureRestPoses(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+
+    const anchor = computeCameraRigAnchor(bones)!
+    const targets = cameraLandmarksToBoneTargets(buildTPoseLandmarks(), anchor)
+
+    Object.keys(CAMERA_POSE_BONE_LANDMARKS).forEach((boneName) => {
+      applyGizmoDragToChain(findBone(boneName), targets[boneName], restPoses)
+    })
+
+    const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(
+      new THREE.Vector3()
+    )
+    const rightShoulderPosition = findBone('mixamorigRightShoulder').getWorldPosition(
+      new THREE.Vector3()
+    )
+    const shoulderCenterX = (leftShoulderPosition.x + rightShoulderPosition.x) / 2
+    const shoulderHalfWidth = Math.abs(rightShoulderPosition.x - shoulderCenterX)
+    const leftHandPosition = findBone('mixamorigLeftHand').getWorldPosition(new THREE.Vector3())
+    const rightHandPosition = findBone('mixamorigRightHand').getWorldPosition(new THREE.Vector3())
+    const headPosition = findBone('mixamorigHead').getWorldPosition(new THREE.Vector3())
+    const leftFootPosition = findBone('mixamorigLeftFoot').getWorldPosition(new THREE.Vector3())
+    const rightFootPosition = findBone('mixamorigRightFoot').getWorldPosition(new THREE.Vector3())
+
+    // Neither hand crosses over to the other side of the body.
+    expect(leftHandPosition.x).toBeLessThan(shoulderCenterX)
+    expect(rightHandPosition.x).toBeGreaterThan(shoulderCenterX)
+    // Both arms reach out further than the shoulders themselves, not collapsed inward.
+    expect(Math.abs(leftHandPosition.x - shoulderCenterX)).toBeGreaterThan(shoulderHalfWidth)
+    expect(Math.abs(rightHandPosition.x - shoulderCenterX)).toBeGreaterThan(shoulderHalfWidth)
+    // Both wrists land roughly level with the shoulders, the way an outstretched T-pose arm does.
+    const shoulderY = (leftShoulderPosition.y + rightShoulderPosition.y) / 2
+    expect(Math.abs(leftHandPosition.y - shoulderY)).toBeLessThan(shoulderHalfWidth)
+    expect(Math.abs(rightHandPosition.y - shoulderY)).toBeLessThan(shoulderHalfWidth)
+    // The head sits above the shoulders, and both feet sit well below them.
+    expect(headPosition.y).toBeGreaterThan(shoulderY)
+    expect(leftFootPosition.y).toBeLessThan(shoulderY)
+    expect(rightFootPosition.y).toBeLessThan(shoulderY)
+    // Neither foot crosses over to the other side of the body either.
+    expect(leftFootPosition.x).toBeLessThan(shoulderCenterX)
+    expect(rightFootPosition.x).toBeGreaterThan(shoulderCenterX)
+  })
+})
