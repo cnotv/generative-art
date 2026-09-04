@@ -31,37 +31,87 @@ export const createSlideshowState = (): SlideshowState => ({
 })
 
 /**
+ * How far into its own run a change may still be abandoned for a new one, as a fraction of
+ * its total duration. Early on the leaving picture has barely moved, so restarting reads as
+ * one continuous gesture; any later and the strand a restart would leave becomes visible.
+ */
+const INTERRUPT_PROGRESS_LIMIT = 0.3
+
+/**
  * Sends the held picture away and brings its neighbour in behind it.
  *
- * A change already running is left alone rather than restarted: a second swipe
- * arriving mid-flight would otherwise strand the picture halfway out of frame
- * and skip whichever one was on its way in.
+ * A change past `INTERRUPT_PROGRESS_LIMIT` is left alone rather than restarted: a second
+ * swipe arriving that late would otherwise strand the picture halfway out of frame and skip
+ * whichever one was on its way in. Earlier than that, the new change takes over from
+ * whichever picture is still actually on screen — the one the abandoned change had barely
+ * begun leaving — rather than from the one that was only ever about to arrive.
  * @param state - Where the slideshow is now
  * @param direction - 1 to send the held picture out to the right, -1 to the left
  * @param slideCount - How many pictures the slideshow cycles through
- * @returns The state with the change started, or the same state if one is running
+ * @param timing - How long each phase lasts, for judging how far a running change has got
+ * @param changeSeconds - Where the change's own clock starts, in seconds. Defaults to 0;
+ * a change already scrubbed into being by a live drag starts from wherever that drag had
+ * reached instead, so the picture does not snap back the instant the finger lets go.
+ * @returns The state with the change started, or the same state if one is running too far in
  */
 export const startChange = (
   state: SlideshowState,
   direction: SlideDirection,
-  slideCount: number
+  slideCount: number,
+  timing: SlideshowTiming,
+  changeSeconds = 0
 ): SlideshowState => {
-  if (state.changeSeconds !== null) return state
+  const isRunning = state.changeSeconds !== null
+  const runningProgress = isRunning
+    ? (state.changeSeconds as number) / (timing.release + timing.arrive)
+    : 0
+  if (isRunning && runningProgress >= INTERRUPT_PROGRESS_LIMIT) return state
+  const fromIndex = isRunning ? state.leavingIndex : state.index
   return {
-    index: wrapIndex(state.index + direction, slideCount),
-    leavingIndex: state.index,
+    index: wrapIndex(fromIndex + direction, slideCount),
+    leavingIndex: fromIndex,
     direction,
-    changeSeconds: 0,
+    changeSeconds,
     holdSeconds: 0
   }
 }
 
 /**
+ * Sets a running change's progress straight from a live drag, in place of the passage of
+ * time: this is what lets the picture and the character's own clip track a finger while it
+ * is moving, rather than only playing out once it lets go.
+ *
+ * A drag that reverses direction mid press only turns the change around within
+ * `INTERRUPT_PROGRESS_LIMIT` of it, exactly as a fresh tap or swipe would: past that the
+ * picture holds its ground until the press ends, and the ordinary timed advance either
+ * finishes the change or, from the next hold, starts a fresh one the other way.
+ * @param state - Where the slideshow is now
+ * @param drag - The live press's progress, signed and from -1 through 0 to 1
+ * @param timing - How long each phase lasts
+ * @param slideCount - How many pictures the slideshow cycles through
+ * @returns The state with its change progress following the drag, or unchanged once idle
+ */
+export const scrubByDrag = (
+  state: SlideshowState,
+  drag: number,
+  timing: SlideshowTiming,
+  slideCount: number
+): SlideshowState => {
+  if (drag === 0) return state
+  const direction: SlideDirection = drag > 0 ? 1 : -1
+  const changeSeconds = Math.min(Math.abs(drag), 1) * (timing.release + timing.arrive)
+  if (state.changeSeconds === null || state.direction !== direction) {
+    return startChange(state, direction, slideCount, timing, changeSeconds)
+  }
+  return { ...state, changeSeconds }
+}
+
+/**
  * Moves the slideshow on by one frame.
  *
- * Holding is what runs the clock towards the automatic advance; a change runs
- * to its own end and cannot be interrupted, so the hold timer only restarts
- * once a picture is settled and actually being looked at.
+ * Holding is what runs the clock towards the automatic advance; the hold timer only
+ * restarts once a picture is settled and actually being looked at, whether it got there by
+ * running its change to the end or by being interrupted early (see `startChange`).
  * @param state - Where the slideshow is now
  * @param deltaSeconds - Seconds since the previous frame
  * @param timing - How long each phase lasts
@@ -81,7 +131,7 @@ export const advanceSlideshow = (
   }
   const holdSeconds = state.holdSeconds + deltaSeconds
   if (holdSeconds < timing.hold) return { ...state, holdSeconds }
-  return startChange(state, 1, slideCount)
+  return startChange(state, 1, slideCount, timing)
 }
 
 /**

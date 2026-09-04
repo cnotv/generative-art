@@ -198,9 +198,9 @@ The TouchControl Vue component wraps the FauxPad controller:
 ## Pointer gestures (tap a side, swipe a direction)
 
 Where the `touch` device answers "was the screen pressed", the `pointer` device answers
-"where, and which way". A press and release resolves to one of four horizontal gestures and
-arrives as an ordinary action, so a page that already reads `currentActions` gains
-next/previous navigation by adding a `pointer` mapping and a target.
+"where, and which way". A press and release resolves to one of six gestures and arrives as
+an ordinary action, so a page that already reads `currentActions` gains next/previous
+navigation by adding a `pointer` mapping and a target.
 
 ```typescript
 const { destroyControls } = createControls({
@@ -224,9 +224,11 @@ followed: a second finger landing mid-swipe cannot end it somewhere the first on
 
 ### Triggers
 
-`tap-left`, `tap-right`, `swipe-left`, `swipe-right`. Travel decides first — past
-`swipeThreshold` pixels the press is a swipe, whichever half it happened in — and only a press
-that stayed put falls through to a tap, named by the half of the target it landed in.
+`tap-left`, `tap-right`, `swipe-left`, `swipe-right`, `swipe-up`, `swipe-down`. Travel
+decides first, on whichever axis moved furthest — past `swipeThreshold` pixels the press is a
+swipe in that direction — and only a press that stayed put on both axes falls through to a
+tap. A tap is read horizontally only, named by the half of the target it landed in; there is
+no `tap-up` or `tap-down`.
 
 ### It needs a real element, not the window
 
@@ -243,6 +245,27 @@ element will rotate the camera and change the picture at once, so pick one: disa
 bind the gestures to something the camera does not listen on. A canvas that is the control
 surface also wants `touch-action: none`, or a phone reads the swipe as a page scroll and the
 gesture never completes.
+
+### Following a press as it happens
+
+`tap`/`swipe` only report once a press ends. A scene that wants to track the finger while it is
+still down — scrubbing an animation the way a photo app's swipe does, rather than only playing
+it once the gesture resolves — reads `pointer.getDragProgress()` every frame instead:
+
+```typescript
+const { pointer } = createControls({
+  mapping: { pointer: { 'swipe-right': 'next', 'swipe-left': 'previous' } },
+  pointerTarget: canvasElement
+})
+
+// Inside the animation loop:
+const progress = pointer.getDragProgress() // 0 idle, towards 1 (right) or -1 (left)
+```
+
+Signed and relative to the target's own width: 0 while nothing is pressed, growing towards 1 or
+-1 as the press nears the target's far edge, and back to 0 the instant it ends. `tap`/`swipe`
+still fire on release exactly as before — this is an additional continuous read, not a
+replacement for the discrete gesture.
 
 ## Motion (Device Tilt)
 
@@ -389,6 +412,8 @@ Creates a unified control system.
 
 - `currentActions`: Reactive object with active actions
 - `destroyControls`: Cleanup function
+- `pointer.getDragProgress()`: Continuous read of a press in progress on the `pointer` device —
+  see [Following a press as it happens](#following-a-press-as-it-happens)
 
 ### createPointerController(mappingRef, handlers, swipeThreshold?)
 
@@ -396,11 +421,11 @@ Creates the pointer-gesture controller directly. `createControls` already builds
 it when `pointerTarget` is given, so this is only for wiring gestures into something that is
 not a `createControls` setup.
 
-### resolvePointerGesture(startX, endX, targetWidth, swipeThreshold?)
+### resolvePointerGesture(start, end, targetWidth, swipeThreshold?)
 
-The pure rule behind the controller: press and release positions relative to the target's left
-edge, plus its width, in — a `PointerGesture` or `null` out. Useful for testing a mapping, or
-for reading gestures from a stream the controller does not bind.
+The pure rule behind the controller: press and release points relative to the target's top
+left corner, plus its width, in — a `PointerGesture` or `null` out. Useful for testing a
+mapping, or for reading gestures from a stream the controller does not bind.
 
 ### createMotionController(mappingRef, handlers, options?)
 

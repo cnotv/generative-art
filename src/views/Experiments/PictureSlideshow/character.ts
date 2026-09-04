@@ -122,10 +122,12 @@ const spawnStickman = async (
  *
  * Its hands are what the picture is hung from, so wherever the clip puts them the picture
  * follows and the two can never disagree. The clip is the whole hold-to-hold round trip —
- * dropping and picking up baked into its own middle frames — so it only ever needs to play
- * once, start to finish, the instant a click or swipe fires. Outside of that it is paused
- * on its own opening frame rather than left running, since nothing should move until the
- * next change actually starts one.
+ * dropping and picking up baked into its own middle frames — and it is always paused,
+ * scrubbed to `frame.leftSeconds` rather than left to play on its own clock. That is what
+ * lets a live drag move the hands exactly as far as the finger has, instead of the whole
+ * round trip only ever running once, at its own fixed pace, from whenever a change starts.
+ * Scrubbed backward through the same clip for `direction: -1`, so stepping to the previous
+ * picture reads as undoing the hand-off rather than repeating it.
  * @param scene - The scene to add the rig to
  * @param world - The physics world `getModel` needs
  * @returns The character, whose pose comes from its one clip
@@ -144,6 +146,7 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
   })
   const mixer = new THREE.AnimationMixer(model)
   const holdAction = mixer.clipAction(await loadPoseClip(MIXAMO_HOLD_ANIMATION))
+  const clipDuration = holdAction.getClip().duration
   holdAction.setLoop(THREE.LoopOnce, 1)
   holdAction.clampWhenFinished = true
   holdAction.play()
@@ -162,23 +165,17 @@ const spawnMixamo = async (scene: THREE.Scene, world: World): Promise<SlideshowC
 
   const left = new THREE.Vector3()
   const right = new THREE.Vector3()
-  let previousPhase: SlideshowFrame['phase'] = 'hold'
 
   return {
     model,
     mixer,
     pose: (frame: SlideshowFrame) => {
-      if (frame.phase !== 'hold' && previousPhase === 'hold') {
-        // A click or swipe just fired: run the whole round trip once, on its own clock.
-        holdAction.paused = false
+      if (frame.phase === 'hold') {
         holdAction.time = 0
-      } else if (frame.phase === 'hold' && previousPhase !== 'hold') {
-        // Settled back into hold: freeze on the clip's own opening frame rather than
-        // wherever it happened to finish, so idle is always the exact same pose.
-        holdAction.paused = true
-        holdAction.time = 0
+        return
       }
-      previousPhase = frame.phase
+      const elapsed = Math.min(frame.leftSeconds, clipDuration)
+      holdAction.time = frame.direction === 1 ? elapsed : clipDuration - elapsed
     },
     heldPoint: (target: THREE.Vector3) => {
       // At the hands' own depth, not offset from it: a fixed offset here was

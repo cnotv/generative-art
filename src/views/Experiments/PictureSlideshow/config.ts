@@ -1,22 +1,27 @@
-import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
+import type { CoordinateTuple, SetupConfig } from '@webgamekit/threejs'
 import type { ControlMapping } from '@webgamekit/controls'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import backdropUrl from '@/assets/images/backgrounds/field.webp'
-import landscapeUrl from '@/assets/images/generic/landscape.webp'
+import hopsUrl from '@/assets/images/slideshow/hops.webp'
+import butterflyUrl from '@/assets/images/slideshow/butterfly.webp'
+import autumnLeavesUrl from '@/assets/images/slideshow/autumn-leaves.webp'
 import type { SlideshowTiming } from './types'
 
-/** The one picture shown until a custom one is loaded from the Config panel. */
-export const DEFAULT_PICTURE_URL = landscapeUrl
-
 /**
- * Two identical boards, never more — one leaving, one arriving, per the floor a change
- * needs. They always carry the same picture: `DEFAULT_PICTURE_URL` until the Config
- * panel's uploader replaces it on both at once, after which every change keeps showing
- * that one instead.
+ * Every picture the slideshow can show. The board itself is a DOM `<img>` rather than a
+ * textured mesh, so a picture is only ever a URL: nothing here is spawned in the scene, and
+ * any number is fine. The Config panel's uploader can still override every slot at once with
+ * a single custom image, after which every change keeps showing that one instead.
+ *
+ * Every image here is prepped before it lands in this list: flattened onto an opaque white
+ * background (a transparent source would otherwise show whatever page or panel sits behind
+ * the overlay) and cover-fit to `CANVAS_SIZE`'s own 2.0 x 1.45 aspect (1000 x 725px),
+ * cropping whichever side overflows rather than stretching it.
  */
 export const PICTURES: { name: string; url: string }[] = [
-  { name: '1', url: DEFAULT_PICTURE_URL },
-  { name: '2', url: DEFAULT_PICTURE_URL }
+  { name: 'hops', url: hopsUrl },
+  { name: 'butterfly', url: butterflyUrl },
+  { name: 'autumn-leaves', url: autumnLeavesUrl }
 ]
 
 /**
@@ -136,17 +141,8 @@ export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
 export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
 export const DEFAULT_CHARACTER = MIXAMO_CHARACTER
 
+/** The picture's own width and height, in world units; DOM overlay sizing is projected from this. */
 export const CANVAS_SIZE: CoordinateTuple = [2.0, 1.45, 0.12]
-export const CANVAS_MATERIAL: ModelOptions = {
-  roughness: 0.85,
-  metalness: 0,
-  type: 'fixed',
-  hasGravity: false,
-  // A leaving or arriving picture fades rather than travels, which needs the material
-  // to blend; still written to depth so it keeps occluding normally while opaque.
-  transparent: true,
-  depthWrite: true
-}
 
 /**
  * Where a picture sits once it is up, and where the next one comes from.
@@ -188,11 +184,19 @@ export const DEFAULT_TIMING: SlideshowTiming = {
 /** How much the backdrop photo is blurred, in CSS pixels. */
 export const DEFAULT_BACKGROUND_BLUR = 20
 
-/** Right advances, left goes back, by tap or swipe alike. Arrow keys do the same on a desktop. */
+/** The picture's frame, as a hex colour. Editable live from the Config panel. */
+export const DEFAULT_FRAME_COLOR = 0x000000
+
+/**
+ * Right or down advances, left goes back, by tap or swipe alike. Arrow keys do the same on
+ * a desktop. Down rather than up for advancing: it reads as pulling the current picture away
+ * to reveal the next one, the same motion a swipe-right pulls it aside with.
+ */
 export const CONTROL_MAPPING: ControlMapping = {
   pointer: {
     'tap-right': 'next',
     'swipe-right': 'next',
+    'swipe-down': 'next',
     'tap-left': 'previous',
     'swipe-left': 'previous'
   },
@@ -211,5 +215,6 @@ export const configControls: ConfigControlsSchema = {
   background: {
     blur: { label: 'Backdrop blur', min: 0, max: 40, step: 1 }
   },
-  image: { file: 'image/*', label: 'Load a picture' }
+  image: { file: 'image/*', label: 'Load a picture' },
+  frame: { color: true, label: 'Frame colour' }
 }

@@ -2,8 +2,15 @@ export type ControlAction = string
 export type ControlDevice = 'keyboard' | 'gamepad' | 'touch' | 'pointer' | 'faux-pad' | 'motion'
 export type ControlEvent = 'touchstart' | 'touchend' | 'mousedown' | 'mouseup'
 
-/** A press and release read as one horizontal gesture, by where it happened and how far it moved. */
-export type PointerGesture = 'tap-left' | 'tap-right' | 'swipe-left' | 'swipe-right'
+/** A press and release read as one gesture, by where it happened and how far it moved. Taps
+ * are read horizontally only; a swipe reads whichever axis it travelled furthest on. */
+export type PointerGesture =
+  | 'tap-left'
+  | 'tap-right'
+  | 'swipe-left'
+  | 'swipe-right'
+  | 'swipe-up'
+  | 'swipe-down'
 
 export interface ControlMapping {
   keyboard?: Record<string, ControlAction>
@@ -83,6 +90,13 @@ export type ControlsExtras = {
   logs: ControlsLogs
   buttonMap: string[]
   motion: MotionControls
+  pointer: PointerControls
+}
+
+/** Continuous read of the pointer gesture in progress, alongside the discrete action it fires on release. */
+export interface PointerControls {
+  /** How far the live press has travelled, signed and relative to the target's width: 0 idle, towards 1 or -1 as it nears an edge. */
+  getDragProgress: () => number
 }
 
 /**
