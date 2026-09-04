@@ -7,7 +7,7 @@ import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 
 const emit = defineEmits<{
-  capture: [landmarks: CameraLandmark[]]
+  apply: [landmarks: CameraLandmark[]]
   close: []
 }>()
 
@@ -70,9 +70,13 @@ const drawOverlay = (): void => {
 
 watch([previewLandmarks, () => photo.photoImage.value], drawOverlay)
 
-const handleCapture = (): void => {
-  if (worldLandmarks.value) emit('capture', worldLandmarks.value)
-}
+// Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
+// straight to the rig, so the model mirrors the source in real time instead of waiting for a
+// separate capture click. This is what makes the side-by-side comparison actually prove the
+// mapping matches, rather than only a snapshot of it.
+watch(worldLandmarks, (landmarks) => {
+  if (landmarks) emit('apply', landmarks)
+})
 
 const handlePhotoChange = (event: Event): void => {
   const input = event.target as HTMLInputElement
@@ -100,74 +104,64 @@ onUnmounted(() => camera.stop())
 
 <template>
   <div class="camera-pose-capture">
-    <div class="camera-pose-capture__card">
-      <div
-        class="camera-pose-capture__preview"
-        :class="{ 'camera-pose-capture__preview--mirrored': mode === 'camera' }"
+    <div
+      class="camera-pose-capture__preview"
+      :class="{ 'camera-pose-capture__preview--mirrored': mode === 'camera' }"
+    >
+      <video
+        v-show="mode === 'camera'"
+        ref="videoReference"
+        class="camera-pose-capture__video"
+        muted
+        playsinline
+      ></video>
+      <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
+    </div>
+    <p v-if="isLoading" class="camera-pose-capture__status">
+      {{ mode === 'camera' ? 'Starting camera…' : 'Reading photo…' }}
+    </p>
+    <p v-else-if="error" class="camera-pose-capture__status camera-pose-capture__status--error">
+      {{ error }}
+    </p>
+    <p
+      v-else-if="mode === 'camera' && camera.isActive.value && !worldLandmarks"
+      class="camera-pose-capture__status"
+    >
+      No person detected yet. Step into frame.
+    </p>
+    <p
+      v-else-if="mode === 'photo' && photo.photoImage.value && !worldLandmarks"
+      class="camera-pose-capture__status"
+    >
+      No person detected in this photo.
+    </p>
+    <p v-else class="camera-pose-capture__status">Applying live to the model.</p>
+    <input
+      ref="fileInputReference"
+      type="file"
+      accept="image/*"
+      class="camera-pose-capture__hidden-input"
+      @change="handlePhotoChange"
+    />
+    <div class="camera-pose-capture__actions">
+      <Button
+        v-if="error"
+        size="sm"
+        variant="secondary"
+        @click="mode === 'camera' ? camera.start() : fileInputReference?.click()"
       >
-        <video
-          v-show="mode === 'camera'"
-          ref="videoReference"
-          class="camera-pose-capture__video"
-          muted
-          playsinline
-        ></video>
-        <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
-      </div>
-      <p v-if="isLoading" class="camera-pose-capture__status">
-        {{ mode === 'camera' ? 'Starting camera…' : 'Reading photo…' }}
-      </p>
-      <p v-else-if="error" class="camera-pose-capture__status camera-pose-capture__status--error">
-        {{ error }}
-      </p>
-      <p
-        v-else-if="mode === 'camera' && camera.isActive.value && !worldLandmarks"
-        class="camera-pose-capture__status"
+        Try Again
+      </Button>
+      <Button
+        v-if="mode === 'camera'"
+        size="sm"
+        variant="secondary"
+        @click="fileInputReference?.click()"
       >
-        No person detected yet. Step into frame.
-      </p>
-      <p
-        v-else-if="mode === 'photo' && photo.photoImage.value && !worldLandmarks"
-        class="camera-pose-capture__status"
-      >
-        No person detected in this photo.
-      </p>
-      <input
-        ref="fileInputReference"
-        type="file"
-        accept="image/*"
-        class="camera-pose-capture__hidden-input"
-        @change="handlePhotoChange"
-      />
-      <div class="camera-pose-capture__actions">
-        <Button
-          v-if="error"
-          size="sm"
-          variant="secondary"
-          @click="mode === 'camera' ? camera.start() : fileInputReference?.click()"
-        >
-          Try Again
-        </Button>
-        <Button
-          v-else
-          size="sm"
-          variant="secondary"
-          :disabled="!worldLandmarks"
-          @click="handleCapture"
-        >
-          Capture Pose
-        </Button>
-        <Button
-          v-if="mode === 'camera'"
-          size="sm"
-          variant="secondary"
-          @click="fileInputReference?.click()"
-        >
-          Upload Photo
-        </Button>
-        <Button v-else size="sm" variant="secondary" @click="handleUseCamera">Use Camera</Button>
-        <Button size="sm" variant="secondary" @click="emit('close')">Cancel</Button>
-      </div>
+        Upload Photo
+      </Button>
+      <Button v-else size="sm" variant="secondary" @click="handleUseCamera">Use Camera</Button>
+      <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
     </div>
   </div>
 </template>
@@ -175,34 +169,25 @@ onUnmounted(() => camera.stop())
 <style scoped>
 .camera-pose-capture {
   position: fixed;
-  inset: 0;
-  z-index: calc(var(--z-overlay) + 2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(0 0 0 / 70%);
-  backdrop-filter: blur(4px);
-}
-
-.camera-pose-capture__card {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-overlay);
+  width: 45vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-4);
-  height: 92vh;
   padding: var(--spacing-6);
-  border-radius: var(--radius-lg);
   background: var(--color-background);
-  border: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
 }
 
 .camera-pose-capture__preview {
   position: relative;
   flex: 1;
   min-height: 0;
-  width: auto;
-  max-width: 90vw;
-  aspect-ratio: 3 / 4;
+  width: 100%;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #000;
@@ -220,7 +205,7 @@ onUnmounted(() => camera.stop())
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .camera-pose-capture__status {

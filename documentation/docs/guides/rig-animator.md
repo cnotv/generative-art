@@ -67,11 +67,13 @@ exist, so two poses are already a movement.
 ## Uploading a model
 
 The view opens with a default character already loaded, so there is something to pose before
-uploading anything. Any FBX, GLB or GLTF replaces it through the Config panel's file input. If
-it already carries a skeleton (a Mixamo export, a rigged glTF character), the bone list appears
-immediately. The camera re-frames to whatever scale the model happens to use, since a Mixamo
-FBX is roughly a hundred times the scale of a typical glTF asset and a fixed camera position
-would put one of them somewhere behind a shoe.
+uploading anything. **Upload Model**, docked on the canvas itself rather than in the Config
+panel, replaces it with any FBX, GLB or GLTF. If it already carries a skeleton (a Mixamo export,
+a rigged glTF character), the bone list appears immediately. The camera re-frames to whatever
+scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
+typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
+
+![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -182,6 +184,8 @@ Keyframe** is still what commits it to the timeline. Finger bones are not part o
 heuristic's generated skeleton, so this is only available on a model that already shipped with
 them, such as a genuine Mixamo export.
 
+![The right hand curled into the Fist preset, its fingers closed while the rest of the rig stays untouched](/img/animation/rig-hand-pose-fist.webp)
+
 ## Auto-rig for a model with no skeleton
 
 A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the Config panel instead
@@ -198,37 +202,49 @@ out whether the fit works for that particular mesh.
 
 Once the rig has every bone the mapping needs (`mixamorigLeftShoulder`,
 `mixamorigRightShoulder`, and a `mixamorigLeftHand`/`RightHand`/`LeftFoot`/`RightFoot`/`Head` to
-drive), the Config panel offers **Capture Pose from Camera** next to Auto-rig. It opens a
-mirrored, portrait, full-height preview of the webcam with a live skeleton overlay from
-MediaPipe's Pose Landmarker, so you can see the detection tracking you before committing to it.
-The overlay only draws a landmark MediaPipe is actually confident about: one it isn't, typically
-a body part out of frame, still gets a guessed position internally, and drawing that would show
-a confident-looking line to something that isn't really there.
+drive), **Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a panel
+docked to the right half of the screen: the 3D view stays fully visible and interactive in the
+left half, so you can watch the rig mirror you live instead of only seeing a preview of the
+camera feed. The panel shows a mirrored webcam feed with a live skeleton overlay from
+MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
+about: one it isn't, typically a body part out of frame, still gets a guessed position
+internally, and drawing that would show a confident-looking line to something that isn't really
+there.
+
+![The camera panel docked to the right of the still-interactive 3D view, side by side for a live comparison](/img/animation/rig-camera-split-screen.webp)
+
+Every detected frame applies straight to the rig, live, the moment it arrives: there is no
+separate "capture" click. This is what makes the split screen actually prove the mapping
+matches, rather than only a snapshot of it, since you can move and immediately see whether the
+rig moved the same way. **Add Keyframe** on the rig timeline still commits whatever the rig's
+current pose happens to be to the animation, the same as it always has.
 
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
-its image mode and feeds the result through the exact same mapping, so everything below applies
-equally to a photo. **Use Camera** switches back. A photo is shown as it is, not mirrored, since
+its image mode and feeds the result through the exact same mapping, applying it once as soon as
+a person is found. **Use Camera** switches back. A photo is shown as it is, not mirrored, since
 it is not a self-view the way a live webcam feed is.
 
-**Capture Pose** reads the detector's current 3D world landmarks for the wrist, ankle and nose,
-anchors them to the rig's own shoulder center, and scales them by the ratio between the rig's
-shoulder width and the detected person's, so the same pose maps sensibly regardless of the
-model's scale. Anchoring to the shoulders rather than the hips matters in practice: a webcam
-framed for arms and head, the normal way to use this feature, usually leaves the hips out of
-frame, where MediaPipe still reports a low-confidence guessed position for them rather than
-nothing, and anchoring to that guess used to throw the whole mapping off. Each mapped bone then
-reaches for its target through the exact same drag-to-chain IK solve a mouse drag on that bone
-already uses (see "Dragging never stretches a segment" above): no separate rotation math for
-camera input, just a different source of target positions. A body part out of frame, or below
-the detector's own confidence threshold, leaves its bone untouched rather than snapping it to
-the origin.
+The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
+to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
+and the detected person's, so the same pose maps sensibly regardless of the model's scale.
+Anchoring to the shoulders rather than the hips matters in practice: a webcam framed for arms
+and head, the normal way to use this feature, usually leaves the hips out of frame, where
+MediaPipe still reports a low-confidence guessed position for them rather than nothing, and
+anchoring to that guess used to throw the whole mapping off. Each mapped bone then reaches for
+its target through the exact same drag-to-chain IK solve a mouse drag on that bone already uses
+(see "Dragging never stretches a segment" above): no separate rotation math for camera input,
+just a different source of target positions. A body part out of frame, or below the detector's
+own confidence threshold, leaves its bone untouched rather than snapping it to the origin.
 
-This is a single-frame capture, not a recording: applying a detected pose changes the live rig
-exactly as a manual drag would, and **Add Keyframe** on the rig timeline is still what commits it
-to the animation. Spine bend, fingers and continuous motion capture are not part of this: the
-Pose Landmarker has no per-vertebra landmarks to drive a convincing torso curve, so v1 only
-drives the limbs and the head.
+The head applies before the hands specifically, even though both are just entries in the same
+mapping table: the head's own IK chain root is the upper spine, an ancestor of both arms, so
+aiming the head bends the spine the arms hang off. Applying it after the hands would drag an
+already-placed hand out of position along with that bend.
+
+Spine bend and fingers are not driven by the camera: the Pose Landmarker has no per-vertebra
+landmarks to drive a convincing torso curve, so this only drives the limbs and the head. Fingers
+have their own manual presets instead, above.
 
 ## Presets: evaluating the timeline with real motion
 

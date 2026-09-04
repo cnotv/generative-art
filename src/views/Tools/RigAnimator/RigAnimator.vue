@@ -8,6 +8,7 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import Button from '@/components/ui/button/Button.vue'
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -16,7 +17,12 @@ import {
 } from '@/stores/viewConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import { RIG_ANIMATOR_SETUP_CONFIG, DEFAULT_FPS, DEFAULT_MODEL_PATH } from './config'
+import {
+  RIG_ANIMATOR_SETUP_CONFIG,
+  DEFAULT_FPS,
+  DEFAULT_MODEL_PATH,
+  MODEL_FILE_ACCEPT
+} from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { frameCameraOnModel } from './cameraFraming'
@@ -25,7 +31,6 @@ import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
-import type { CameraLandmark } from './cameraPoseMapping'
 import type { RigAnimatorConfig } from './types'
 
 const route = useRoute()
@@ -56,6 +61,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
 
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
+const modelFileInput = ref<HTMLInputElement | null>(null)
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
@@ -120,18 +126,15 @@ const onWindowPointerUp = (): void => {
 const refreshSchema = (): void => {
   updateViewSchema(
     routeName,
-    buildRigAnimatorSchema(
-      rig.boneNames.value,
-      rig.needsAutoRig.value,
-      rig.canCaptureFromCamera.value,
-      rig.positionRange.value
-    )
+    buildRigAnimatorSchema(rig.boneNames.value, rig.needsAutoRig.value, rig.positionRange.value)
   )
 }
 
-const handleCameraPoseCaptured = (landmarks: CameraLandmark[]): void => {
-  rig.applyCameraPose(landmarks)
-  showCameraCapture.value = false
+const handleModelFileChange = (event: Event): void => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) reactiveConfig.model = URL.createObjectURL(file)
 }
 
 watch(
@@ -225,7 +228,7 @@ onMounted(async () => {
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, false, rig.positionRange.value),
+    buildRigAnimatorSchema([], false, rig.positionRange.value),
     undefined,
     {
       autoRig: () => {
@@ -234,9 +237,6 @@ onMounted(async () => {
       },
       resetBone: () => {
         rig.resetSelectedBone()
-      },
-      captureFromCamera: () => {
-        showCameraCapture.value = true
       }
     }
   )
@@ -256,6 +256,24 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
+  <div class="rig-canvas-controls">
+    <input
+      ref="modelFileInput"
+      type="file"
+      :accept="MODEL_FILE_ACCEPT"
+      class="rig-canvas-controls__hidden-input"
+      @change="handleModelFileChange"
+    />
+    <Button size="sm" variant="secondary" @click="modelFileInput?.click()">Upload Model</Button>
+    <Button
+      v-if="rig.canCaptureFromCamera.value"
+      size="sm"
+      variant="secondary"
+      @click="showCameraCapture = true"
+    >
+      Capture Pose from Camera
+    </Button>
+  </div>
   <RigTimeline
     :frame="reactiveConfig.frame"
     :frame-max="rig.frameMax.value"
@@ -280,7 +298,7 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
-    @capture="handleCameraPoseCaptured"
+    @apply="rig.applyCameraPose"
     @close="showCameraCapture = false"
   />
 </template>
@@ -290,5 +308,18 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+
+.rig-canvas-controls {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--spacing-3));
+  left: var(--spacing-3);
+  z-index: var(--z-overlay);
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.rig-canvas-controls__hidden-input {
+  display: none;
 }
 </style>
