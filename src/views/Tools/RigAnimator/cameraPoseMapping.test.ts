@@ -19,8 +19,8 @@ const buildBone = (name: string, position: [number, number, number]): THREE.Bone
 
 /** A minimal rig with just the bones camera pose capture reads. */
 const buildTestRig = (): THREE.Bone[] => [
-  buildBone('mixamorigLeftShoulder', [-0.4, 1, 0]),
-  buildBone('mixamorigRightShoulder', [0.4, 1, 0])
+  buildBone('mixamorigLeftArm', [-0.4, 1, 0]),
+  buildBone('mixamorigRightArm', [0.4, 1, 0])
 ]
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
@@ -51,8 +51,21 @@ describe('computeCameraRigAnchor', () => {
   })
 
   it('returns null when a required bone is missing', () => {
-    const [leftShoulder] = buildTestRig()
-    expect(computeCameraRigAnchor([leftShoulder])).toBeNull()
+    const [leftArm] = buildTestRig()
+    expect(computeCameraRigAnchor([leftArm])).toBeNull()
+  })
+
+  it('measures width from the Arm bones, not a narrower Shoulder bone', () => {
+    // On a mixamorig-named rig, Shoulder is the clavicle: close to the spine, much narrower
+    // than a real shoulder-width measurement. A real capture hit exactly this: the rig's own
+    // Shoulder bones sat six times closer together than its Arm bones, and scaling off that
+    // narrow span collapsed every mapped bone in toward the center.
+    const bones = [
+      buildBone('mixamorigLeftShoulder', [-0.05, 1, 0]),
+      buildBone('mixamorigRightShoulder', [0.05, 1, 0]),
+      ...buildTestRig()
+    ]
+    expect(computeCameraRigAnchor(bones)?.shoulderWidthWorld).toBeCloseTo(0.8)
   })
 })
 

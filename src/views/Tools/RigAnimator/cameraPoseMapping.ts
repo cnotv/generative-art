@@ -35,8 +35,8 @@ export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
 
 /** Every bone name camera pose capture needs on the rig, the mapped bones plus the anchor bones. */
 export const CAMERA_POSE_REQUIRED_BONES = [
-  'mixamorigLeftShoulder',
-  'mixamorigRightShoulder',
+  'mixamorigLeftArm',
+  'mixamorigRightArm',
   ...Object.keys(CAMERA_POSE_BONE_LANDMARKS)
 ]
 
@@ -60,16 +60,22 @@ export interface CameraRigAnchor {
 /**
  * Read the rig's own shoulder center and shoulder width from its current bone transforms, so
  * detected landmarks can be scaled and anchored to this specific rig instead of a fixed size.
+ * Reads the `Arm` bones rather than `Shoulder`: on a mixamorig-named rig `Shoulder` is the
+ * clavicle, close to the spine, not the outer joint a real shoulder-width measurement means.
+ * Scaling off that distance understates the rig's real width several times over, collapsing
+ * every mapped bone in toward the center, confirmed against a real detected pose where the
+ * clavicle-to-clavicle span was a sixth of the rig's own T-pose arm span. `Arm` is the bone
+ * where the visible arm actually begins, matching what MediaPipe's shoulder landmark measures.
  * @param bones The rig's bones
  * @returns The anchor, or null when the rig is missing a bone camera pose capture needs
  */
 export const computeCameraRigAnchor = (bones: THREE.Bone[]): CameraRigAnchor | null => {
-  const leftShoulder = bones.find((bone) => bone.name === 'mixamorigLeftShoulder')
-  const rightShoulder = bones.find((bone) => bone.name === 'mixamorigRightShoulder')
-  if (!leftShoulder || !rightShoulder) return null
+  const leftArm = bones.find((bone) => bone.name === 'mixamorigLeftArm')
+  const rightArm = bones.find((bone) => bone.name === 'mixamorigRightArm')
+  if (!leftArm || !rightArm) return null
 
-  const leftWorldPosition = leftShoulder.getWorldPosition(new THREE.Vector3())
-  const rightWorldPosition = rightShoulder.getWorldPosition(new THREE.Vector3())
+  const leftWorldPosition = leftArm.getWorldPosition(new THREE.Vector3())
+  const rightWorldPosition = rightArm.getWorldPosition(new THREE.Vector3())
   return {
     shoulderCenterWorldPosition: leftWorldPosition
       .clone()

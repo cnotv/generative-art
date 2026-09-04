@@ -55,18 +55,22 @@ const drawOverlay = (): void => {
   if (!previewLandmarks.value) return
   // A landmark MediaPipe isn't actually confident about (typically off frame, like the hips
   // when a webcam is framed for arms and head) still gets a guessed position; drawing it would
-  // show a confident-looking line to something that isn't really there. drawConnectors/
-  // drawLandmarks both skip a hole in the array, so leaving one out is safe at runtime even
-  // though the type only says NormalizedLandmark.
-  const visibleLandmarks = previewLandmarks.value.map((landmark) =>
+  // show a confident-looking line to something that isn't really there. drawConnectors reads a
+  // connection's two endpoints by their original array index and already skips a missing one,
+  // so a hole is safe there; drawLandmarks just iterates whatever it is given with no such
+  // guard, so it needs the holes actually removed rather than left as `undefined` entries.
+  const landmarksByIndex = previewLandmarks.value.map((landmark) =>
     landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
   ) as NormalizedLandmark[]
+  const visibleLandmarksOnly = landmarksByIndex.filter(
+    (landmark): landmark is NormalizedLandmark => landmark !== undefined
+  )
   drawingUtilities ??= new DrawingUtils(context)
-  drawingUtilities.drawConnectors(visibleLandmarks, PoseLandmarker.POSE_CONNECTIONS, {
+  drawingUtilities.drawConnectors(landmarksByIndex, PoseLandmarker.POSE_CONNECTIONS, {
     color: '#f0a8a0',
     lineWidth: 2
   })
-  drawingUtilities.drawLandmarks(visibleLandmarks, { color: '#b8c4f0', radius: 3 })
+  drawingUtilities.drawLandmarks(visibleLandmarksOnly, { color: '#b8c4f0', radius: 3 })
 }
 
 watch([previewLandmarks, () => photo.photoImage.value], drawOverlay)
