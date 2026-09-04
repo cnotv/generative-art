@@ -13,6 +13,13 @@ import type { SlideshowTiming } from './types'
  * change logic only ever holds two roled at once, whichever is leaving and whichever is
  * arriving. The Config panel's uploader can still override every board at once with a
  * single custom image, after which every change keeps showing that one instead.
+ *
+ * Every image here is prepped before it lands in this list: flattened onto an opaque white
+ * background (`CANVAS_MATERIAL`'s own transparency is for the cross-fade, not the picture's
+ * own alpha — anything translucent in the source shows the scene through the board) and
+ * cover-fit to `CANVAS_SIZE`'s own 2.0 x 1.45 aspect (1000 x 725px), cropping whichever side
+ * overflows rather than stretching or letterboxing. An image added without this prep will
+ * either bleed the backdrop through or distort against the board.
  */
 export const PICTURES: { name: string; url: string }[] = [
   { name: 'hops', url: hopsUrl },

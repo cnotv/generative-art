@@ -13,7 +13,7 @@ sidebar_position: 124
 </video>
 
 `src/views/Experiments/PictureSlideshow/slideshow.ts`, `config.ts`,
-`PictureSlideshow.vue`, `types.ts`, `packages/controls/src/pointer.ts`.
+`PictureSlideshow.vue`, `character.ts`, `types.ts`, `packages/controls/src/pointer.ts`.
 
 :::
 
@@ -30,8 +30,12 @@ you get to choose.
 ## The cycle is three phases and one number
 
 Each change is a hold, a release and an arrival, in that order. The hold ends either
-when the viewer asks for a change or when it simply times out, and the change itself
-runs to its own end and cannot be interrupted.
+when the viewer asks for a change or when it simply times out. A change past the first
+30% of its own run is likewise left to finish, but a second swipe arriving earlier than
+that turns it around instead of being ignored — restarting from whichever picture is
+still actually on screen (the one the abandoned change had barely begun leaving) rather
+than from the one that was only ever about to arrive. Early on there is nothing to
+strand; any later and there would be.
 
 ```mermaid
 stateDiagram-v2
@@ -199,30 +203,26 @@ Both constraints are recorded in the Three.js views rule.
 
 ## A clip on its own clock drifts against the cycle it serves
 
-The Mixamo gesture originally answered "where does the picture hang" with a single clip
-left to run continuously on the mixer's own clock, independent of the hold, release and
-arrival it was meant to accompany. It looked alive on its own and wrong in context: since
-nothing tied its length to the cycle's, the two drifted against each other on every
-repeat, and a picture nominally sitting still in the hands was quietly bobbing and
-breathing the whole time it was supposedly held — the wobble was small, but it was there
-for the entire hold, not just the change either side of it.
+The Mixamo gesture originally answered "where does the picture hang" with its clip left
+to run continuously on the mixer's own clock the instant a change started, independent of
+the hold, release and arrival it was meant to accompany. It looked alive on its own and
+wrong in context: since nothing tied the clip's length to the cycle's, the two drifted
+against each other whenever either was retuned, and a change that finished early or late
+against the clip either froze part way through a gesture or sat idle after it had already
+finished.
 
 The fix follows from the same principle as the eased scalar above: derive the pose from
-the phase, not from the wall clock. The rig now holds two clips rather than one, and
-neither is allowed to run free. A calm loop plays for as long as a picture sits in the
-hands, its motion cut down until it reads as breathing rather than drifting. A one-shot
-shove, authored once per throw side, is scrubbed by hand from the release and arrival's
-own progress — forward through the release, backward through the arrival — so the same
-gesture that throws a picture clear is what pulls the arms back to catch the next one,
-with nothing to mirror or splice at the seam between the two.
+the phase, not from the wall clock. The clip is the whole hold-to-hold round trip —
+dropping the leaving picture and picking up the next baked into its own middle frames as
+one authored gesture — and it is never left to play itself. It stays paused and is
+scrubbed by hand to the change's own elapsed seconds every frame, which is what lets a
+live drag move the hands exactly as far as the finger has moved, rather than the gesture
+only ever running once, at its own fixed pace, from whenever a change happens to start.
 
-The two clips still have to hand off to each other without a pop, and the fix is the same
-shape as the picture's own entry: cross-fade their weights over a _fraction_ of whichever
-phase is running, rather than a fixed number of seconds. Release and arrival are both
-exposed as panel sliders, anywhere from a third of a second to three, and a blend timed in
-real seconds would either finish instantly on the short end or never finish on the long
-one. Timed as a fraction of the phase's own progress, it holds up at either end of the
-slider without knowing which one the panel is set to.
+Scrubbing the same clip backward through itself for a change heading to the previous
+picture — instead of forward through the same frames again with a different picture
+behind it — is what makes going back read as undoing the hand-off rather than repeating
+it forward with the destination swapped.
 
 ## Matching endpoints is not matching a curve
 
