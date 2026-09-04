@@ -9,14 +9,24 @@ import {
 const GLTF_EXTENSION_PATTERN = /\.(glb|gltf)$/i
 
 /**
- * Load an uploaded model file, resolving both glTF/GLB and FBX blob URLs.
- * @param url The blob URL a file input produced
+ * Whether a model URL should resolve through the glTF/GLB loader rather than FBX, based on its
+ * extension. Exported on its own so the fragment-tagging convention `loadModelFile` relies on
+ * can be verified without actually loading geometry.
+ * @param url The model URL to check
+ */
+export const isGltfModelUrl = (url: string): boolean => GLTF_EXTENSION_PATTERN.test(url)
+
+/**
+ * Load an uploaded model file, resolving both glTF/GLB and FBX blob URLs. `URL.createObjectURL`
+ * gives back an opaque `blob:` URL with no file extension, so which loader to use has nothing
+ * to go on unless the caller tags the real filename onto it as a fragment (`${blobUrl}#${name}`)
+ * first; the browser strips that fragment before actually dereferencing the blob, so the fetch
+ * itself is unaffected, but the extension test above still sees it.
+ * @param url The blob URL a file input produced, ideally with the original filename as a fragment
  * @returns The loaded model, not yet added to any scene
  */
 export const loadModelFile = async (url: string): Promise<THREE.Object3D> =>
-  GLTF_EXTENSION_PATTERN.test(url)
-    ? (await gltfLoader.loadAsync(url)).scene
-    : await fbxLoader.loadAsync(url)
+  isGltfModelUrl(url) ? (await gltfLoader.loadAsync(url)).scene : await fbxLoader.loadAsync(url)
 
 /**
  * Dispose every geometry under a model before it is discarded.

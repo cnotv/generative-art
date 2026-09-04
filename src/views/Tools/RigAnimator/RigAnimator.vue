@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -58,8 +58,19 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   bonePosition: { x: 0, y: 0, z: 0 },
   frame: 0,
   fps: DEFAULT_FPS,
-  showBoneMarkers: true
+  showBoneMarkers: true,
+  cameraUseElbows: false,
+  cameraUseKnees: false,
+  cameraUseHips: false,
+  cameraUseDepth: true
 })
+
+const cameraPoseMappingOptions = computed(() => ({
+  includeElbows: reactiveConfig.value.cameraUseElbows,
+  includeKnees: reactiveConfig.value.cameraUseKnees,
+  includeHips: reactiveConfig.value.cameraUseHips,
+  includeDepth: reactiveConfig.value.cameraUseDepth
+}))
 
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
@@ -155,7 +166,12 @@ const updateCameraCentering = (): void => {
 const refreshSchema = (): void => {
   updateViewSchema(
     routeName,
-    buildRigAnimatorSchema(rig.boneNames.value, rig.needsAutoRig.value, rig.positionRange.value)
+    buildRigAnimatorSchema(
+      rig.boneNames.value,
+      rig.needsAutoRig.value,
+      rig.positionRange.value,
+      rig.canCaptureFromCamera.value
+    )
   )
 }
 
@@ -175,7 +191,9 @@ const handleModelFileChange = (event: Event): void => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (file) reactiveConfig.model = URL.createObjectURL(file)
+  // Tags the real filename onto the blob URL as a fragment: `loadModelFile` picks a loader by
+  // extension, and a bare `URL.createObjectURL` result carries none at all.
+  if (file) reactiveConfig.value.model = `${URL.createObjectURL(file)}#${file.name}`
 }
 
 watch(
@@ -271,7 +289,7 @@ onMounted(async () => {
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value),
+    buildRigAnimatorSchema([], false, rig.positionRange.value, false),
     undefined,
     {
       autoRig: () => {
@@ -346,7 +364,7 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
-    @apply="rig.applyCameraPose"
+    @apply="(landmarks) => rig.applyCameraPose(landmarks, cameraPoseMappingOptions)"
     @close="handleCloseCamera"
   />
 </template>
