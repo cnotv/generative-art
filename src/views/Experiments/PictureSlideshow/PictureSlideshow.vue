@@ -2,13 +2,13 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { applyTextureToMesh, getCube, getModel } from '@webgamekit/threejs'
-import type { ComplexModel, LoadProgress } from '@webgamekit/threejs'
+import type { LoadProgress } from '@webgamekit/threejs'
 import { createControls } from '@webgamekit/controls'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
+import { useDebugSceneStore } from '@/stores/debugScene'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import { useTimelinePanelStore } from '@/stores/timelinePanel'
 import { characterOptions, despawnSlideshowCharacter, spawnSlideshowCharacter } from './character'
@@ -17,7 +17,6 @@ import type { HandSide, RagdollEditor, RigPosition } from './ragdollEditor'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
   advanceSlideshow,
-  canvasRoleAt,
   createSlideshowState,
   entryAmountAt,
   exitAmountAt,
@@ -29,9 +28,7 @@ import type { SlideDirection, SlideshowCharacter, SlideshowState } from './types
 import {
   BACKDROP_URL,
   CANVAS_DISPLAY_ROTATION,
-  CANVAS_MATERIAL,
   CANVAS_SIZE,
-  CANVAS_DISPLAY_POSITION,
   CONTROL_MAPPING,
   DEFAULT_BACKGROUND_BLUR,
   DEFAULT_CHARACTER,
@@ -45,23 +42,10 @@ import {
 } from './config'
 
 /**
- * The material a picture board was built with, whichever of the shapes `getCube` can
- * return it as. Only ever one plain material here, never an array — this just narrows
- * the type enough to reach `.opacity`.
- * @param picture - The board whose material is read
- * @returns Its material, ready to have `opacity` set on it
- */
-const pictureMaterial = (picture: ComplexModel): THREE.Material => {
-  const material = (picture as unknown as THREE.Mesh).material
-  return Array.isArray(material) ? material[0] : material
-}
-
-/**
- * Where a held picture sits and faces, shared by every picture rather than owned by any
- * one of them — there is only ever one held position, wherever the hands currently are,
- * and this is the offset and facing applied on top of it. Registered under each picture's
- * own name so any of them can be selected to reach it, but reading or writing through one
- * reads or writes the same value the others see.
+ * Where a held picture sits and faces: the offset and facing applied on top of wherever
+ * the hands currently are, shared by both slots since only one position is ever held at
+ * once. Rotation's `x` and `y` are stored here but never applied to the DOM image — see
+ * `applyPictureSlot`.
  */
 const PICTURE_SCHEMA: ConfigControlsSchema = {
   position: {
@@ -81,9 +65,16 @@ const PICTURE_SCHEMA: ConfigControlsSchema = {
 }
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+// The picture itself is a DOM image rather than a WebGL texture, so it renders at the
+// browser's own resolution and colour handling instead of a mesh's. Two slots, never more:
+// the change logic only ever has a leaving picture and a held-or-arriving one on screen at
+// once, and both are repositioned to the same projected rect every frame.
+const leavingPictureElement = ref<HTMLImageElement | null>(null)
+const heldPictureElement = ref<HTMLImageElement | null>(null)
 const route = useRoute()
 const store = useSceneViewStore()
 const elementPropertiesStore = useElementPropertiesStore()
+const debugSceneStore = useDebugSceneStore()
 const timelinePanelStore = useTimelinePanelStore()
 
 const loadingVisible = ref(true)
@@ -136,30 +127,6 @@ let destroyControls: (() => void) | null = null
 /** Set alongside `destroyControls`, so the animation loop can read a live drag every frame. */
 let getDragProgress: (() => number) | null = null
 
-/**
- * One flat board per picture, textured once at setup.
- *
- * A board per picture rather than a pool of two means no texture is ever
- * swapped mid-run: the cycle only ever decides where each board is and whether
- * it is visible. `origin` is cleared so the positions below read as the board's
- * centre, which is what the animation writes every frame.
- * @param scene - The scene to add the boards to
- * @param world - The physics world `getCube` needs
- * @returns One board per picture, in picture order
- */
-const spawnCanvases = (scene: THREE.Scene, world: Parameters<typeof getCube>[1]): ComplexModel[] =>
-  PICTURES.map(({ name, url }) =>
-    getCube(scene, world, {
-      ...CANVAS_MATERIAL,
-      name: `picture-${name}`,
-      size: CANVAS_SIZE,
-      position: CANVAS_DISPLAY_POSITION,
-      rotation: CANVAS_DISPLAY_ROTATION,
-      texture: url,
-      origin: {}
-    })
-  )
-
 onMounted(async () => {
   if (!canvas.value) return
   registerViewConfig(
@@ -196,7 +163,6 @@ onMounted(async () => {
         world,
         reactiveConfig.value.character
       )
-      const canvases = spawnCanvases(scene, world)
       const timelineManager = createTimelineManager()
       // Pre-allocated: written every frame, and the loop allocates nothing.
       const held = new THREE.Vector3()
@@ -209,10 +175,20 @@ onMounted(async () => {
       // which touches no Vue state on its own — still marks the panel's displayed
       // numbers stale and worth re-reading.
       const heldTransformVersion = ref(0)
+      // Pre-allocated scratch for projecting the picture's world rect to the canvas's own
+      // screen box every frame; reused rather than allocated so the loop stays allocation-free.
+      const pictureCenter = new THREE.Vector3()
+      const projectedTopLeft = new THREE.Vector3()
+      const projectedBottomRight = new THREE.Vector3()
 
-      canvases.forEach((picture) => {
-        elementPropertiesStore.registerElementProperties(picture.name, {
-          title: picture.name,
+      // Not a scene child any more — the picture is a DOM image — so the Elements panel
+      // never discovers it on its own the way it does a named mesh. addSceneElement is
+      // what actually adds the row; registerElementProperties alone only supplies the
+      // schema for a row something else already listed.
+      debugSceneStore.addSceneElement(
+        { name: 'picture', type: 'Group' },
+        {
+          title: 'Picture',
           schema: PICTURE_SCHEMA,
           getValue: (path) => {
             void heldTransformVersion.value
@@ -224,18 +200,70 @@ onMounted(async () => {
             ;(path === 'position' ? heldOffset : heldRotation).set(x, y, z)
             heldTransformVersion.value += 1
           }
-        })
-      })
-      // Every board always carries the same picture, so an upload replaces it on all
-      // of them at once — otherwise the boards it missed would resurface it on the
-      // very next change, undoing what was just loaded.
-      const stopImageWatch = watch(
-        () => reactiveConfig.value.image,
-        (url) => {
-          if (!url) return
-          canvases.forEach((picture) => applyTextureToMesh(picture as unknown as THREE.Mesh, url))
         }
       )
+
+      /**
+       * Where the picture's world-space rectangle lands on the canvas's own screen box,
+       * in CSS pixels. Every visible picture shares this same rect — only their opacity
+       * and source differ — so it is projected once per frame rather than once per slot.
+       * @returns The rect, or null before the canvas has a measurable box
+       */
+      const projectPictureRect = (): {
+        left: number
+        top: number
+        width: number
+        height: number
+      } | null => {
+        const canvasElement = canvas.value
+        if (!canvasElement) return null
+        const halfWidth = CANVAS_SIZE[0] / 2
+        const halfHeight = CANVAS_SIZE[1] / 2
+        projectedTopLeft
+          .set(pictureCenter.x - halfWidth, pictureCenter.y + halfHeight, pictureCenter.z)
+          .project(camera)
+        projectedBottomRight
+          .set(pictureCenter.x + halfWidth, pictureCenter.y - halfHeight, pictureCenter.z)
+          .project(camera)
+        const bounds = canvasElement.getBoundingClientRect()
+        const left = bounds.left + ((projectedTopLeft.x + 1) / 2) * bounds.width
+        const top = bounds.top + ((1 - projectedTopLeft.y) / 2) * bounds.height
+        const right = bounds.left + ((projectedBottomRight.x + 1) / 2) * bounds.width
+        const bottom = bounds.top + ((1 - projectedBottomRight.y) / 2) * bounds.height
+        return { left, top, width: right - left, height: bottom - top }
+      }
+
+      /**
+       * Places one picture slot at the current rect, or hides it once its index is null.
+       * ponytail: only `heldRotation.z` reaches the DOM image; a tilt on x or y still
+       * updates the panel's numbers but has nothing left to apply them to, since a CSS
+       * rotation cannot reproduce the camera's own perspective on the other two axes.
+       * @param imageElement - The `<img>` element this slot owns
+       * @param index - Which picture belongs here, or null while nothing does
+       * @param opacity - How visible it is this frame
+       * @param rect - The projected rect shared by both slots, or null before it exists
+       */
+      const applyPictureSlot = (
+        imageElement: HTMLImageElement | null,
+        index: number | null,
+        opacity: number,
+        rect: { left: number; top: number; width: number; height: number } | null
+      ): void => {
+        if (!imageElement) return
+        if (index === null || !rect) {
+          imageElement.style.opacity = '0'
+          return
+        }
+        const url = reactiveConfig.value.image || PICTURES[index].url
+        if (imageElement.src !== url) imageElement.src = url
+        imageElement.alt = PICTURES[index].name
+        imageElement.style.opacity = String(opacity)
+        imageElement.style.left = `${rect.left}px`
+        imageElement.style.top = `${rect.top}px`
+        imageElement.style.width = `${rect.width}px`
+        imageElement.style.height = `${rect.height}px`
+        imageElement.style.transform = heldRotation.z ? `rotate(${heldRotation.z}rad)` : ''
+      }
 
       /**
        * Only the Mixamo rig is IK-posed, so only it gets a ragdoll editor. Swapping
@@ -290,12 +318,9 @@ onMounted(async () => {
       )
       disposeViewExtras = () => {
         stopRagdollWatch()
-        stopImageWatch()
         ragdollEditor?.dispose()
         elementPropertiesStore.unregisterElementProperties('character')
-        canvases.forEach((picture) =>
-          elementPropertiesStore.unregisterElementProperties(picture.name)
-        )
+        debugSceneStore.removeSceneElement('picture')
         timelinePanelStore.unregister()
       }
 
@@ -312,33 +337,30 @@ onMounted(async () => {
           // whatever is left of the change the rest of the way on its own.
           slideshow =
             drag !== 0
-              ? scrubByDrag(slideshow, drag, timing, canvases.length)
-              : advanceSlideshow(slideshow, delta, timing, canvases.length)
+              ? scrubByDrag(slideshow, drag, timing, PICTURES.length)
+              : advanceSlideshow(slideshow, delta, timing, PICTURES.length)
           character.mixer?.update(delta)
           const frame = slideshowFrame(slideshow, timing)
 
           character.pose(frame)
           character.heldPoint(held)
-
-          canvases.forEach((picture, index) => {
-            const role = canvasRoleAt(frame, index)
-            if (role === 'hidden') {
-              picture.visible = false
-              return
-            }
-            picture.visible = true
-            // A picture never leaves the hands any more — the clip's own drop and pick
-            // motion is what carries them — so every visible role sits at the same
-            // point and only its opacity says whether a change is under way.
-            picture.position.copy(held).add(heldOffset)
-            picture.rotation.set(heldRotation.x, heldRotation.y, heldRotation.z)
-            pictureMaterial(picture).opacity =
-              role === 'leaving'
-                ? 1 - exitAmountAt(frame, timing)
-                : role === 'arriving'
-                  ? 1 - entryAmountAt(frame, timing)
-                  : 1
-          })
+          // A picture never leaves the hands any more — the clip's own drop and pick
+          // motion is what carries them — so both slots sit at the same projected rect
+          // and only their opacity says whether a change is under way.
+          pictureCenter.copy(held).add(heldOffset)
+          const rect = projectPictureRect()
+          applyPictureSlot(
+            leavingPictureElement.value,
+            frame.leavingIndex,
+            1 - exitAmountAt(frame, timing),
+            rect
+          )
+          applyPictureSlot(
+            heldPictureElement.value,
+            frame.heldIndex,
+            frame.phase === 'arrive' ? 1 - entryAmountAt(frame, timing) : 1,
+            rect
+          )
         }
       })
 
@@ -369,6 +391,8 @@ onUnmounted(() => {
     }"
   ></div>
   <canvas ref="canvas"></canvas>
+  <img ref="leavingPictureElement" class="slideshow-picture" alt="" />
+  <img ref="heldPictureElement" class="slideshow-picture" alt="" />
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
 </template>
 
@@ -395,5 +419,26 @@ canvas {
 
   /* The whole canvas is the control surface, so a swipe must not be taken as a page scroll. */
   touch-action: none;
+}
+
+.slideshow-picture {
+  /* Positioned and sized every frame from the projected 3D anchor, not from layout. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-fixed);
+  opacity: 0;
+  object-fit: cover;
+
+  /* The frame sits inside the projected rect rather than growing past it, so the
+     positioning math above still lines up with what's actually drawn on screen. */
+  box-sizing: border-box;
+  border: 0.75rem solid var(--slideshow-frame);
+  box-shadow:
+    inset 0 0 0 0.125rem rgb(0 0 0 / 35%),
+    var(--shadow-xl);
+
+  /* Decorative only: the canvas underneath is the actual control surface. */
+  pointer-events: none;
 }
 </style>

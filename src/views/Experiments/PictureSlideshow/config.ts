@@ -1,4 +1,4 @@
-import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
+import type { CoordinateTuple, SetupConfig } from '@webgamekit/threejs'
 import type { ControlMapping } from '@webgamekit/controls'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import backdropUrl from '@/assets/images/backgrounds/field.webp'
@@ -8,18 +8,15 @@ import autumnLeavesUrl from '@/assets/images/slideshow/autumn-leaves.webp'
 import type { SlideshowTiming } from './types'
 
 /**
- * One board per picture, each textured once at setup — the cycle only ever decides where
- * a board sits and whether it is visible, never what it shows. Any number is fine; the
- * change logic only ever holds two roled at once, whichever is leaving and whichever is
- * arriving. The Config panel's uploader can still override every board at once with a
- * single custom image, after which every change keeps showing that one instead.
+ * Every picture the slideshow can show. The board itself is a DOM `<img>` rather than a
+ * textured mesh, so a picture is only ever a URL: nothing here is spawned in the scene, and
+ * any number is fine. The Config panel's uploader can still override every slot at once with
+ * a single custom image, after which every change keeps showing that one instead.
  *
  * Every image here is prepped before it lands in this list: flattened onto an opaque white
- * background (`CANVAS_MATERIAL`'s own transparency is for the cross-fade, not the picture's
- * own alpha — anything translucent in the source shows the scene through the board) and
- * cover-fit to `CANVAS_SIZE`'s own 2.0 x 1.45 aspect (1000 x 725px), cropping whichever side
- * overflows rather than stretching or letterboxing. An image added without this prep will
- * either bleed the backdrop through or distort against the board.
+ * background (a transparent source would otherwise show whatever page or panel sits behind
+ * the overlay) and cover-fit to `CANVAS_SIZE`'s own 2.0 x 1.45 aspect (1000 x 725px),
+ * cropping whichever side overflows rather than stretching it.
  */
 export const PICTURES: { name: string; url: string }[] = [
   { name: 'hops', url: hopsUrl },
@@ -144,17 +141,8 @@ export const MIXAMO_CHARACTER_LABEL = 'Mixamo (animated)'
 export const CUT_OUT_LABEL_PREFIX = 'Cut-out'
 export const DEFAULT_CHARACTER = MIXAMO_CHARACTER
 
+/** The picture's own width and height, in world units; DOM overlay sizing is projected from this. */
 export const CANVAS_SIZE: CoordinateTuple = [2.0, 1.45, 0.12]
-export const CANVAS_MATERIAL: ModelOptions = {
-  roughness: 0.85,
-  metalness: 0,
-  type: 'fixed',
-  hasGravity: false,
-  // A leaving or arriving picture fades rather than travels, which needs the material
-  // to blend; still written to depth so it keeps occluding normally while opaque.
-  transparent: true,
-  depthWrite: true
-}
 
 /**
  * Where a picture sits once it is up, and where the next one comes from.
