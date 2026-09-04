@@ -59,8 +59,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   frame: 0,
   fps: DEFAULT_FPS,
   showBoneMarkers: true,
-  cameraUseElbows: false,
-  cameraUseKnees: false,
+  cameraUseElbows: true,
+  cameraUseKnees: true,
   cameraUseHips: false,
   cameraUseDepth: true
 })

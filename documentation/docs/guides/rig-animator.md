@@ -259,23 +259,29 @@ default. Fingers have their own manual presets instead, above.
 ### Extra details to try
 
 Four checkboxes in the Config panel, shown once the rig has every bone the base mapping needs,
-opt into more of what MediaPipe actually detects:
+control more of what MediaPipe actually detects:
 
-- **Bend Elbows to Photo** and **Bend Knees to Photo** feed the detected elbow and knee
-  landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on that mid
-  joint already does (see "Re-aiming the bend without moving the hand" above). Without these,
-  a limb's bend direction just keeps whatever its rest pose had, since the base mapping only
-  ever drives the hand or foot as the chain's end target.
-- **Move Hips to Photo** moves the rig's root to the detected hip midpoint instead of leaving it
-  at rest, so a lean or a step reads in the root position too, not only the limbs.
-- **Use Depth (Z Axis)**, on by default, is the existing behaviour: a landmark's estimated depth
+- **Bend Elbows to Photo** and **Bend Knees to Photo**, on by default, feed the detected elbow
+  and knee landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on
+  that mid joint already does (see "Re-aiming the bend without moving the hand" above). Without
+  these, a limb's bend direction just keeps whatever its rest pose had, since the base mapping
+  only ever drives the hand or foot as the chain's end target: for anything but a rough T-pose,
+  the two-bone solve then has to reach the target by rotating almost entirely at the elbow or
+  knee while the upper arm or thigh barely moves at all, since that is the only bend direction it
+  has to work with. A seated photo is the clearest case: the solve was pulling nearly its whole
+  bend into the forearm and shin, which stayed pointed straight down from the shoulder or hip
+  like a standing pose, folding the limb into an unnatural zigzag rather than the shoulder/hip
+  and elbow/knee sharing the bend the way a real arm or leg actually does. Turning them off goes
+  back to that behaviour, closest to the original mapping.
+- **Move Hips to Photo**, off by default, moves the rig's root to the detected hip midpoint
+  instead of leaving it at rest, so a lean or a step reads in the root position too, not only the
+  limbs. Left off by default since it did not measurably improve the seated case above on its
+  own, and moving the whole root is a bigger, more visible change than re-aiming a limb's bend.
+- **Use Depth (Z Axis)**, on by default, is the original behaviour: a landmark's estimated depth
   scales into the target the same as its x and y. A single photo gives MediaPipe far less to
   judge depth from than two eyes or a video's own motion parallax do, making z the least
   reliable of the three axes it reports; turning this off projects every target onto the
   shoulder anchor's own depth plane instead of trusting a noisy estimate.
-
-All four are off except depth by default, precisely so the base mapping's already-tested
-behaviour does not change under anyone who has not gone looking for these.
 
 ### Smoothing the live feed
 
