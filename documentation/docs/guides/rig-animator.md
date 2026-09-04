@@ -45,10 +45,13 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/cameraPoseMapping.ts`: pure mapping from detected camera
   landmarks to world-space bone targets, anchored and scaled to the loaded rig, plus the
   exponential-moving-average landmark smoothing the live camera feed uses
+- `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): pure mapping from
+  detected hand landmarks to per-finger joint curl, and MediaPipe's handedness label to the
+  rig's actual left/right
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
-  Pose Landmarker, running live detection for the capture dialog's overlay
-- `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a pose from a single uploaded
-  photo instead of the live feed
+  Pose and Hand Landmarkers, running live detection for the capture dialog's overlay
+- `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
+  single uploaded photo instead of the live feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
@@ -187,6 +190,23 @@ them, such as a genuine Mixamo export.
 
 ![The right hand curled into the Fist preset, its fingers closed while the rest of the rig stays untouched](/img/animation/rig-hand-pose-fist.webp)
 
+### Fingers from the camera
+
+Camera capture and Upload Photo also run MediaPipe's Hand Landmarker alongside the Pose
+Landmarker, reading real per-finger curl instead of only offering these canned presets. For each
+hand it detects, it measures the bend at every joint the same way a preset's angle already
+means, zero for straight and growing as the joint curls, and applies it through the exact same
+`applyHandPose` a preset uses, so it fits a model's fingers no differently than picking Fist
+would. This rides along on the same live application the body mapping already does: no separate
+button, no separate confidence gate, since a hand simply not being detected in frame just leaves
+whatever the fingers were doing untouched.
+
+MediaPipe's Hand Landmarker documents its handedness as assuming a mirrored ("selfie") input;
+this tool feeds it the raw, unmirrored camera frame, so its label comes out reversed from the
+subject's actual side and is swapped back before applying. The body Pose Landmarker needs no
+such correction: unlike a hand considered on its own, its landmark topology already encodes the
+subject's own left/right from the whole body's shape.
+
 ## Auto-rig for a model with no skeleton
 
 A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the Config panel instead
@@ -252,9 +272,9 @@ mapping table: the head's own IK chain root is the upper spine, an ancestor of b
 aiming the head bends the spine the arms hang off. Applying it after the hands would drag an
 already-placed hand out of position along with that bend.
 
-Spine bend and fingers are not driven by the camera: the Pose Landmarker has no per-vertebra
-landmarks to drive a convincing torso curve, so this only drives the limbs and the head by
-default. Fingers have their own manual presets instead, above.
+Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra landmarks to
+drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
+a second detector alongside it, covered in "Fingers from the camera" above.
 
 ### Extra details to try
 

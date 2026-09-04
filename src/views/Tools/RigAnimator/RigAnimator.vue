@@ -6,7 +6,13 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
-import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
+import {
+  ikFindTwoBoneChain,
+  applyHandPose,
+  type TwoBoneIkChain,
+  type HandSide,
+  type HandPoseDefinition
+} from '@webgamekit/rig'
 import { Upload, Camera as CameraIcon } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
@@ -28,6 +34,7 @@ import {
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { frameCameraOnModel } from './cameraFraming'
+import type { CameraLandmark } from './cameraPoseMapping'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
@@ -185,6 +192,17 @@ const handleCloseCamera = (): void => {
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
   }
+}
+
+/** Applies a detected body pose and, riding along on the same emit, any detected hand poses. */
+const handleCameraApply = (
+  landmarks: CameraLandmark[],
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+): void => {
+  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value)
+  Object.entries(handPoses).forEach(([side, pose]) => {
+    applyHandPose(rig.bones.value, side as HandSide, pose)
+  })
 }
 
 const handleModelFileChange = (event: Event): void => {
@@ -364,7 +382,7 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
-    @apply="(landmarks) => rig.applyCameraPose(landmarks, cameraPoseMappingOptions)"
+    @apply="handleCameraApply"
     @close="handleCloseCamera"
   />
 </template>

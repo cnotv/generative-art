@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { PoseLandmarker, DrawingUtils, type NormalizedLandmark } from '@mediapipe/tasks-vision'
+import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
@@ -8,7 +9,7 @@ import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cam
 import { CAMERA_PANEL_WIDTH_VW } from './config'
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[]]
+  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
   close: []
 }>()
 
@@ -28,6 +29,9 @@ const previewLandmarks = computed(() =>
 )
 const worldLandmarks = computed(() =>
   mode.value === 'camera' ? camera.worldLandmarks.value : photo.worldLandmarks.value
+)
+const handPoses = computed(() =>
+  mode.value === 'camera' ? camera.handPoses.value : photo.handPoses.value
 )
 
 let drawingUtilities: DrawingUtils | null = null
@@ -78,9 +82,10 @@ watch([previewLandmarks, () => photo.photoImage.value], drawOverlay)
 // Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
 // straight to the rig, so the model mirrors the source in real time instead of waiting for a
 // separate capture click. This is what makes the side-by-side comparison actually prove the
-// mapping matches, rather than only a snapshot of it.
+// mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
+// since both detections finish within the same detectFrame/detectPhoto call.
 watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks)
+  if (landmarks) emit('apply', landmarks, handPoses.value)
 })
 
 const handlePhotoChange = (event: Event): void => {
