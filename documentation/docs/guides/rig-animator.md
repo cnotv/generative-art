@@ -219,13 +219,13 @@ would. This rides along on the same live application the body mapping already do
 button, no separate confidence gate, since a hand simply not being detected in frame just leaves
 whatever the fingers were doing untouched.
 
-MediaPipe's Hand Landmarker's own handedness label is passed straight through, no swap: an
-earlier version swapped it, reasoning from MediaPipe's documented caveat that Hand Landmarker
-assumes a mirrored ("selfie") input and this tool feeds it the raw, unmirrored frame instead.
-A real camera session immediately surfaced that as wrong, an arm and its own hand visibly
-moving as if they belonged to each other. The body Pose Landmarker's own left/right needs no
-swap either, confirmed separately against a real photo, so the two detectors turn out to
-already agree with each other here.
+MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
+through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
+reasoning from MediaPipe's documented caveat that it assumes a mirrored ("selfie") input; a
+real camera session immediately surfaced that as wrong, an arm and its own hand visibly moving
+as if they belonged to each other. The body Pose Landmarker's own left/right needs no swap
+either, confirmed separately against a real photo. What the live camera path does instead, for
+both detectors together, is described below.
 
 ## Auto-rig for a model with no skeleton
 
@@ -270,7 +270,22 @@ from a reference photo or when there is no working camera. It runs the same Pose
 its image mode and feeds the result through the exact same mapping, applying it once as soon as
 a person is found, and stays available once a photo is already loaded so picking a different
 one never needs switching back to the camera first. **Use Camera** switches back. A photo is
-shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is.
+shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is, and its
+detected pose maps onto the rig unmirrored too, matching what the photo actually shows.
+
+### Mirrored like a real mirror
+
+The live camera path mirrors the detected pose, not only the preview. A rig facing its own
+viewing camera the same way the subject faces their webcam moves the subject's real right arm
+on whichever screen side an actual mirror would show as the subject's left, unless the pose
+itself is reflected the same way the preview already is: `mirrorCameraLandmarks` negates every
+landmark's x and swaps each left/right pair (shoulders, wrists, hips, ankles, and so on) right
+where MediaPipe's landmarks are first read, before any of the mapping above ever sees them, and
+`mirrorCameraHandPoses` does the equivalent swap for which side a detected hand's finger curl
+lands on. Everything downstream, the bone mapping and the camera-angle-matching yaw estimate
+alike, needed no changes of its own: both simply read whichever pose they are handed, and a
+pre-mirrored one comes out correctly mirrored on its own. A photo gets neither of these, since
+its own preview is not mirrored either.
 
 The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
 to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width

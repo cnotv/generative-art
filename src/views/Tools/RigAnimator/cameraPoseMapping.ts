@@ -82,6 +82,56 @@ export const smoothCameraLandmarks = (
     return clampLandmarkJump(previousLandmark, blended, maxJump)
   })
 
+/**
+ * Every one of BlazePose's 33 landmark indices that swaps with another under a left/right
+ * mirror; the nose (0) is the only unpaired, on-the-midline point.
+ */
+const MIRRORED_LANDMARK_PAIRS: readonly (readonly [number, number])[] = [
+  [1, 4],
+  [2, 5],
+  [3, 6],
+  [7, 8],
+  [9, 10],
+  [11, 12],
+  [13, 14],
+  [15, 16],
+  [17, 18],
+  [19, 20],
+  [21, 22],
+  [23, 24],
+  [25, 26],
+  [27, 28],
+  [29, 30],
+  [31, 32]
+]
+
+/**
+ * Mirror a full set of detected landmarks across the vertical axis, the reflection a real mirror
+ * gives: negate every point's x, and swap each left/right pair so the array's own "left" slot
+ * still holds whichever side now reads as left after the reflection. Applied once, right where
+ * MediaPipe's own landmarks are first read, so every downstream reader, the bone mapping below
+ * and the camera yaw estimate alike, sees a consistently mirrored pose without needing its own
+ * left/right handling changed: without this, a rig facing its own viewing camera the same way the
+ * subject faces their webcam moved the subject's real right arm on the screen side an actual
+ * mirror would show as the subject's left, the opposite of the mirrored live preview right next
+ * to it. The preview itself needs no matching change: it is already mirrored by a CSS transform
+ * on the video element, entirely separate from this landmark data.
+ * @param landmarks This frame's freshly detected landmarks, in MediaPipe's own point order
+ * @returns The same landmarks, reflected across the vertical axis
+ */
+export const mirrorCameraLandmarks = (landmarks: CameraLandmark[]): CameraLandmark[] => {
+  const mirrored = landmarks.map((landmark) => ({ ...landmark, x: -landmark.x }))
+  MIRRORED_LANDMARK_PAIRS.forEach(([a, b]) => {
+    const landmarkA = mirrored[a]
+    const landmarkB = mirrored[b]
+    if (landmarkA && landmarkB) {
+      mirrored[a] = landmarkB
+      mirrored[b] = landmarkA
+    }
+  })
+  return mirrored
+}
+
 const LANDMARK_INDEX = {
   nose: 0,
   leftEar: 7,

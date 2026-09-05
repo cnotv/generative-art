@@ -6,6 +6,7 @@ import {
   cameraLandmarksToBoneTargets,
   smoothCameraLandmarks,
   clampLandmarkJump,
+  mirrorCameraLandmarks,
   estimateCameraYaw,
   CAMERA_POSE_BONE_LANDMARKS,
   CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
@@ -410,6 +411,58 @@ describe('clampLandmarkJump', () => {
     const previous = { x: 0, y: 0, z: 0 }
     const candidate = { x: 10, y: 0, z: 0, visibility: 1 }
     expect(clampLandmarkJump(previous, candidate, 0)).toEqual(candidate)
+  })
+})
+
+describe('mirrorCameraLandmarks', () => {
+  it('negates every landmark’s x, leaving y and z untouched', () => {
+    const landmarks = new Array(33).fill(null).map(() => landmark(0, 0, 0, 0))
+    landmarks[0] = landmark(0.3, -0.2, 0.5) // nose, unpaired
+    const [mirroredNose] = mirrorCameraLandmarks(landmarks)
+    expect(mirroredNose.x).toBeCloseTo(-0.3)
+    expect(mirroredNose.y).toBeCloseTo(-0.2)
+    expect(mirroredNose.z).toBeCloseTo(0.5)
+  })
+
+  it('swaps each left/right landmark pair, not just their sign', () => {
+    const landmarks = new Array(33).fill(null).map(() => landmark(0, 0, 0, 0))
+    landmarks[15] = landmark(-0.7, 0.1, 0) // left wrist
+    landmarks[16] = landmark(0.7, 0.2, 0) // right wrist
+
+    const mirrored = mirrorCameraLandmarks(landmarks)
+
+    // The array's own left-wrist slot now holds the old right wrist's data, mirrored.
+    expect(mirrored[15].x).toBeCloseTo(-0.7)
+    expect(mirrored[15].y).toBeCloseTo(0.2)
+    expect(mirrored[16].x).toBeCloseTo(0.7)
+    expect(mirrored[16].y).toBeCloseTo(0.1)
+  })
+
+  it('mirrors every paired landmark BlazePose defines, not only the wrists', () => {
+    const landmarks = new Array(33).fill(null).map((_, index) => landmark(index, 0, 0, 0))
+    const mirrored = mirrorCameraLandmarks(landmarks)
+    const pairs: Array<[number, number]> = [
+      [1, 4],
+      [2, 5],
+      [3, 6],
+      [7, 8],
+      [9, 10],
+      [11, 12],
+      [13, 14],
+      [15, 16],
+      [17, 18],
+      [19, 20],
+      [21, 22],
+      [23, 24],
+      [25, 26],
+      [27, 28],
+      [29, 30],
+      [31, 32]
+    ]
+    pairs.forEach(([a, b]) => {
+      expect(mirrored[a].x).toBeCloseTo(-b)
+      expect(mirrored[b].x).toBeCloseTo(-a)
+    })
   })
 })
 

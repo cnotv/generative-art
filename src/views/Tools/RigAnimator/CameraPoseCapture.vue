@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
-import { PoseLandmarker, DrawingUtils, type NormalizedLandmark } from '@mediapipe/tasks-vision'
+import {
+  PoseLandmarker,
+  HandLandmarker,
+  DrawingUtils,
+  type NormalizedLandmark
+} from '@mediapipe/tasks-vision'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
@@ -37,6 +42,9 @@ const error = computed(() => (mode.value === 'camera' ? camera.error.value : pho
 const previewLandmarks = computed(() =>
   mode.value === 'camera' ? camera.previewLandmarks.value : photo.previewLandmarks.value
 )
+const previewHandLandmarks = computed(() =>
+  mode.value === 'camera' ? camera.previewHandLandmarks.value : photo.previewHandLandmarks.value
+)
 const worldLandmarks = computed(() =>
   mode.value === 'camera' ? camera.worldLandmarks.value : photo.worldLandmarks.value
 )
@@ -66,28 +74,40 @@ const drawOverlay = (): void => {
     context.clearRect(0, 0, canvas.width, canvas.height)
   }
 
-  if (!previewLandmarks.value) return
-  // A landmark MediaPipe isn't actually confident about (typically off frame, like the hips
-  // when a webcam is framed for arms and head) still gets a guessed position; drawing it would
-  // show a confident-looking line to something that isn't really there. drawConnectors reads a
-  // connection's two endpoints by their original array index and already skips a missing one,
-  // so a hole is safe there; drawLandmarks just iterates whatever it is given with no such
-  // guard, so it needs the holes actually removed rather than left as `undefined` entries.
-  const landmarksByIndex = previewLandmarks.value.map((landmark) =>
-    landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
-  ) as NormalizedLandmark[]
-  const visibleLandmarksOnly = landmarksByIndex.filter(
-    (landmark): landmark is NormalizedLandmark => landmark !== undefined
-  )
   drawingUtilities ??= new DrawingUtils(context)
-  drawingUtilities.drawConnectors(landmarksByIndex, PoseLandmarker.POSE_CONNECTIONS, {
-    color: '#f0a8a0',
-    lineWidth: 2
+
+  if (previewLandmarks.value) {
+    // A landmark MediaPipe isn't actually confident about (typically off frame, like the hips
+    // when a webcam is framed for arms and head) still gets a guessed position; drawing it would
+    // show a confident-looking line to something that isn't really there. drawConnectors reads a
+    // connection's two endpoints by their original array index and already skips a missing one,
+    // so a hole is safe there; drawLandmarks just iterates whatever it is given with no such
+    // guard, so it needs the holes actually removed rather than left as `undefined` entries.
+    const landmarksByIndex = previewLandmarks.value.map((landmark) =>
+      landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
+    ) as NormalizedLandmark[]
+    const visibleLandmarksOnly = landmarksByIndex.filter(
+      (landmark): landmark is NormalizedLandmark => landmark !== undefined
+    )
+    drawingUtilities.drawConnectors(landmarksByIndex, PoseLandmarker.POSE_CONNECTIONS, {
+      color: '#f0a8a0',
+      lineWidth: 2
+    })
+    drawingUtilities.drawLandmarks(visibleLandmarksOnly, { color: '#b8c4f0', radius: 3 })
+  }
+
+  // Every one of a detected hand's 21 landmarks is always present with no per-point confidence
+  // (unlike the body pose above), so there is never a hole to filter out here.
+  previewHandLandmarks.value?.forEach((landmarksForHand) => {
+    drawingUtilities?.drawConnectors(landmarksForHand, HandLandmarker.HAND_CONNECTIONS, {
+      color: '#e8c874',
+      lineWidth: 2
+    })
+    drawingUtilities?.drawLandmarks(landmarksForHand, { color: '#a8d8c8', radius: 2 })
   })
-  drawingUtilities.drawLandmarks(visibleLandmarksOnly, { color: '#b8c4f0', radius: 3 })
 }
 
-watch([previewLandmarks, () => photo.photoImage.value], drawOverlay)
+watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], drawOverlay)
 
 // Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
 // straight to the rig, so the model mirrors the source in real time instead of waiting for a

@@ -4,6 +4,7 @@ import {
   cameraDetectedHandsToPoses,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
+  mirrorCameraHandPoses,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
 
@@ -88,6 +89,26 @@ describe('cameraDetectedHandsToPoses', () => {
       { worldLandmarks: buildOpenHandLandmarks(), categoryName: 'unknown' }
     ])
     expect(poses).toEqual({})
+  })
+})
+
+describe('mirrorCameraHandPoses', () => {
+  it('swaps a left pose onto the right side and vice versa', () => {
+    const leftPose = cameraHandLandmarksToPose(buildOpenHandLandmarks())
+    const rightPose = cameraHandLandmarksToPose(buildOpenHandLandmarks())
+    const mirrored = mirrorCameraHandPoses({ Left: leftPose, Right: rightPose })
+    expect(mirrored.Right).toBe(leftPose)
+    expect(mirrored.Left).toBe(rightPose)
+  })
+
+  it('leaves a single detected side keyed under the opposite side, not both', () => {
+    const leftPose = cameraHandLandmarksToPose(buildOpenHandLandmarks())
+    const mirrored = mirrorCameraHandPoses({ Left: leftPose })
+    expect(Object.keys(mirrored)).toEqual(['Right'])
+  })
+
+  it('returns an empty result when no hand was detected', () => {
+    expect(mirrorCameraHandPoses({})).toEqual({})
   })
 })
 

@@ -13,9 +13,14 @@ import {
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS
 } from './config'
-import { smoothCameraLandmarks, type CameraLandmark } from './cameraPoseMapping'
+import {
+  smoothCameraLandmarks,
+  mirrorCameraLandmarks,
+  type CameraLandmark
+} from './cameraPoseMapping'
 import {
   cameraDetectedHandsToPoses,
+  mirrorCameraHandPoses,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   type CameraHandLandmark
@@ -40,6 +45,8 @@ export const useCameraPoseCapture = (
   const error = ref<string | null>(null)
   /** Normalized [0,1] image-space landmarks, for drawing the overlay on the video. */
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
+  /** Normalized [0,1] image-space landmarks per detected hand, for drawing the finger overlay. */
+  const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   /** Metric world-space landmarks, for mapping onto the rig's bones. */
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   /** Detected finger curl per side, for whichever hand(s) are in frame. */
@@ -64,10 +71,13 @@ export const useCameraPoseCapture = (
     const result = landmarker.detectForVideo(videoElement.value, timestamp)
     previewLandmarks.value = result.landmarks[0] ?? null
     const rawWorldLandmarks = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
-    worldLandmarks.value = rawWorldLandmarks
+    const mirroredWorldLandmarks = rawWorldLandmarks
+      ? mirrorCameraLandmarks(rawWorldLandmarks)
+      : null
+    worldLandmarks.value = mirroredWorldLandmarks
       ? smoothCameraLandmarks(
           previousWorldLandmarks,
-          rawWorldLandmarks,
+          mirroredWorldLandmarks,
           smoothingFactor.value,
           maxJump.value
         )
@@ -75,6 +85,7 @@ export const useCameraPoseCapture = (
     previousWorldLandmarks = worldLandmarks.value
 
     const handResult = handLandmarker.detectForVideo(videoElement.value, timestamp)
+    previewHandLandmarks.value = handResult.landmarks.length > 0 ? handResult.landmarks : null
     const smoothedHands = handResult.worldLandmarks.map((landmarksForHand, index) => {
       const categoryName = handResult.handedness[index]?.[0]?.categoryName ?? ''
       const side = resolveCameraHandSide(categoryName)
@@ -87,7 +98,7 @@ export const useCameraPoseCapture = (
       if (side) previousHandLandmarksBySide = { ...previousHandLandmarksBySide, [side]: smoothed }
       return { worldLandmarks: smoothed, categoryName }
     })
-    handPoses.value = cameraDetectedHandsToPoses(smoothedHands)
+    handPoses.value = mirrorCameraHandPoses(cameraDetectedHandsToPoses(smoothedHands))
 
     animationFrame = requestAnimationFrame(detectFrame)
   }
@@ -147,6 +158,7 @@ export const useCameraPoseCapture = (
     handLandmarker = null
     isActive.value = false
     previewLandmarks.value = null
+    previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
     previousWorldLandmarks = null
@@ -161,6 +173,7 @@ export const useCameraPoseCapture = (
     isLoading,
     error,
     previewLandmarks,
+    previewHandLandmarks,
     worldLandmarks,
     handPoses,
     start,

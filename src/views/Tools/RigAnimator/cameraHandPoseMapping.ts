@@ -143,3 +143,19 @@ export const cameraDetectedHandsToPoses = (
       ])
       .filter((entry): entry is [HandSide, HandPoseDefinition] => entry[0] !== null)
   )
+
+/**
+ * Swap which side each detected hand's pose is keyed under, matching the mirrored reflection
+ * `mirrorCameraLandmarks` gives the live camera's body pose: the subject's real right hand ends
+ * up driving whichever wrist bone the mirrored body mapping now calls the rig's right, matching
+ * the mirrored live preview right next to it. A photo has no mirrored preview to match (a static
+ * photo is shown as captured, not as a self-view), so only the live camera path calls this.
+ * @param handPoses Poses keyed by each hand's own detected (unmirrored) side
+ * @returns The same poses, keyed by the opposite side
+ */
+export const mirrorCameraHandPoses = (
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+): Partial<Record<HandSide, HandPoseDefinition>> => ({
+  ...(handPoses.Left ? { Right: handPoses.Left } : {}),
+  ...(handPoses.Right ? { Left: handPoses.Right } : {})
+})

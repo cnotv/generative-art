@@ -25,6 +25,8 @@ export const useCameraPhotoPose = () => {
   const error = ref<string | null>(null)
   /** Normalized [0,1] image-space landmarks, for drawing the overlay on the photo. */
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
+  /** Normalized [0,1] image-space landmarks per detected hand, for drawing the finger overlay. */
+  const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   /** Metric world-space landmarks, for mapping onto the rig's bones. */
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   /** Detected finger curl per side, for whichever hand(s) the photo shows. */
@@ -35,6 +37,7 @@ export const useCameraPhotoPose = () => {
     isLoading.value = true
     error.value = null
     previewLandmarks.value = null
+    previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
     let landmarker: PoseLandmarker | null = null
@@ -57,6 +60,7 @@ export const useCameraPhotoPose = () => {
       worldLandmarks.value = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
 
       const handResult = handLandmarker.detect(photoImage.value)
+      previewHandLandmarks.value = handResult.landmarks.length > 0 ? handResult.landmarks : null
       handPoses.value = cameraDetectedHandsToPoses(
         handResult.worldLandmarks.map((landmarksForHand, index) => ({
           worldLandmarks: landmarksForHand,
@@ -87,6 +91,7 @@ export const useCameraPhotoPose = () => {
   const reset = (): void => {
     photoImage.value = null
     previewLandmarks.value = null
+    previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
     error.value = null
@@ -97,6 +102,7 @@ export const useCameraPhotoPose = () => {
     isLoading,
     error,
     previewLandmarks,
+    previewHandLandmarks,
     worldLandmarks,
     handPoses,
     detectPhoto,
