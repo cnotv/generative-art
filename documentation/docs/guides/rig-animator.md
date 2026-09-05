@@ -14,7 +14,8 @@ exist, so two poses are already a movement.
 ## Source files
 
 - `src/views/Tools/RigAnimator/RigAnimator.vue`: the view (scene setup, pointer picking and
-  dragging, wiring the rig timeline and the Config panel schema to the composables below)
+  dragging, wiring the rig timeline and the Config panel schema to the composables below,
+  keyboard/gamepad frame shortcuts via `@webgamekit/controls`)
 - `src/views/Tools/RigAnimator/useRigModel.ts`: the loaded model, its rig, its bone markers,
   its rest poses and the selected bone
 - `src/views/Tools/RigAnimator/useRigKeyframes.ts`: the authored pose keyframes, the preview
@@ -214,11 +215,13 @@ would. This rides along on the same live application the body mapping already do
 button, no separate confidence gate, since a hand simply not being detected in frame just leaves
 whatever the fingers were doing untouched.
 
-MediaPipe's Hand Landmarker documents its handedness as assuming a mirrored ("selfie") input;
-this tool feeds it the raw, unmirrored camera frame, so its label comes out reversed from the
-subject's actual side and is swapped back before applying. The body Pose Landmarker needs no
-such correction: unlike a hand considered on its own, its landmark topology already encodes the
-subject's own left/right from the whole body's shape.
+MediaPipe's Hand Landmarker's own handedness label is passed straight through, no swap: an
+earlier version swapped it, reasoning from MediaPipe's documented caveat that Hand Landmarker
+assumes a mirrored ("selfie") input and this tool feeds it the raw, unmirrored frame instead.
+A real camera session immediately surfaced that as wrong, an arm and its own hand visibly
+moving as if they belonged to each other. The body Pose Landmarker's own left/right needs no
+swap either, confirmed separately against a real photo, so the two detectors turn out to
+already agree with each other here.
 
 ## Auto-rig for a model with no skeleton
 
@@ -301,8 +304,8 @@ a second detector alongside it, covered in "Fingers from the camera" above.
 
 ### Extra details to try
 
-Five checkboxes in the Config panel, shown once the rig has every bone the base mapping needs,
-control more of what MediaPipe actually detects:
+Checkboxes and sliders in the Config panel, shown once the rig has every bone the base mapping
+needs, control more of what MediaPipe actually detects and how the result is tuned:
 
 - **Bend Elbows to Photo** and **Bend Knees to Photo**, on by default, feed the detected elbow
   and knee landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on
@@ -335,6 +338,19 @@ control more of what MediaPipe actually detects:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
+- **Reach Multiplier**, 1 by default, scales every mapped target's distance from its anchor by
+  this factor on top of the rig's own proportions, above 1 reaching further than the computed
+  scale predicts and below 1 reaching less far. Even with the right bone anchored to the right
+  landmark, a rig can still systematically under- or over-reach in a way neither the shoulder nor
+  the hip anchor accounts for, most often the head: a stylized character's head and neck length
+  relative to its own shoulder width does not have to match a real person's, so the same detected
+  nose landmark can pull the neck into a bend that reads as the head always pointing down,
+  independent of whatever the photo actually shows. This slider is the manual escape hatch for
+  that, tuned by eye per rig rather than solved by a fixed formula.
+- **Show Camera Preview**, on by default, hides the mirrored video/photo preview when turned
+  off without stopping detection: the feed keeps being read and applied to the rig exactly the
+  same, only what a person watching over your shoulder (or you, if you would rather not watch
+  yourself) would see disappears.
 
 ### Smoothing the live feed
 
@@ -342,7 +358,23 @@ A live camera detection runs roughly every frame, and MediaPipe's own per-frame 
 most visible on depth, reads as jitter if applied to the rig straight. Each frame is blended
 against the previous one, an exponential moving average per landmark, before it drives anything;
 a photo is a single detection with nothing to blend against, so this only affects the live
-camera feed. It costs a small amount of lag for a visibly steadier pose.
+camera feed. It costs a small amount of lag for a visibly steadier pose. **Smoothing (Live
+Feed)** in the Config panel tunes how much: lower blends in less of each new frame, reading
+smoother but laggier. The same blend, and the same slider, also applies to each detected hand's
+finger landmarks, tracked separately per hand side rather than by MediaPipe's own per-frame
+array order (a hand entering or leaving the frame can shift which index the other hand reports
+at, and blending against the wrong hand's last position would read as a jump): a hand's own
+per-joint curl angle is a small difference between two nearby points, so the same raw per-frame
+noise a body landmark shrugs off reads as visible finger twitching once it is small enough to
+change a joint's read angle.
+
+### Frame shortcuts
+
+**Space** (keyboard) or the gamepad's left face button adds a keyframe at the current frame, the
+same as the timeline's own **Add Keyframe** button. **Left Arrow** or the gamepad's D-pad left
+steps to the next frame; **Right Arrow** or D-pad right steps to the previous one. These are
+suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
+rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 
 ## Presets: evaluating the timeline with real motion
 
