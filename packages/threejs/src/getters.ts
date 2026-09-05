@@ -38,7 +38,7 @@ export const getScene = async (
   }
   const camera = new THREE.PerspectiveCamera(
     cameraConfig.distance,
-    window.innerWidth / window.innerHeight,
+    canvas.clientWidth / canvas.clientHeight,
     0.1,
     1000
   )
@@ -411,7 +411,7 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   // and it is what lets `scene.transparent` show a layer behind the canvas later.
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
   renderer.setPixelRatio(getPixelRatio(window.devicePixelRatio))
-  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight)
   renderer.setClearColor(0xaaaaff)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap

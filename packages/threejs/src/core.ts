@@ -155,17 +155,25 @@ const emitProgress = (
   callback?.({ stage, detail, done })
 }
 
+/**
+ * Resize the renderer and camera to the canvas element's own current CSS size, not the window's:
+ * a canvas docked beside a side panel is narrower than the window, and a resize event fired for
+ * an unrelated reason (a scrollbar toggling, say) must not stretch the render to fill space the
+ * canvas itself was never given.
+ */
 const createResizeHandler =
-  (renderer: THREE.WebGLRenderer, camera: THREE.Camera): (() => void) =>
+  (renderer: THREE.WebGLRenderer, camera: THREE.Camera, canvas: HTMLCanvasElement): (() => void) =>
   () => {
-    renderer.setSize(window.innerWidth, window.innerHeight)
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+    renderer.setSize(width, height)
     if (camera instanceof THREE.OrthographicCamera) {
       const halfH = camera.top
-      const newHalfW = halfH * (window.innerWidth / window.innerHeight)
+      const newHalfW = halfH * (width / height)
       camera.left = -newHalfW
       camera.right = newHalfW
     } else {
-      ;(camera as THREE.PerspectiveCamera).aspect = window.innerWidth / window.innerHeight
+      ;(camera as THREE.PerspectiveCamera).aspect = width / height
     }
     ;(camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).updateProjectionMatrix()
   }
@@ -281,14 +289,14 @@ export const getTools = async ({
     runAnimation()
   }
 
-  let handleResize = createResizeHandler(renderer, activeCamera)
+  let handleResize = createResizeHandler(renderer, activeCamera, canvas)
 
   if (resize !== false) window.addEventListener('resize', handleResize)
 
   const setActiveCamera = (newCamera: THREE.Camera): OrbitControls | null => {
     activeCamera = newCamera
     if (resize !== false) window.removeEventListener('resize', handleResize)
-    handleResize = createResizeHandler(renderer, newCamera)
+    handleResize = createResizeHandler(renderer, newCamera, canvas)
     if (resize !== false) window.addEventListener('resize', handleResize)
     if (orbit) {
       orbit.object = newCamera as THREE.PerspectiveCamera
