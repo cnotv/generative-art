@@ -134,9 +134,12 @@ Apply a canned finger pose (see `HAND_POSE_PRESETS`) to one hand's finger bones 
 mixamorig-named rig, curling each joint by the preset's angle around its own local X axis,
 composed on top of that joint's rest-pose quaternion rather than overwriting its Euler X
 component directly. Those give the same result for a joint whose rest pose carries no twist of
-its own (true for the four straight fingers), but not for the thumb: its CMC and MCP joints rest
-with a real, substantial tilt on every axis, an anatomical fact of thumb opposition, and
-overwriting just the X component left most of a curl reading as barely any visible movement.
+its own (true for the four straight fingers, and the thumb's own other two joints), but not for
+the thumb's own first joint: it alone rests with a real, substantial tilt on every axis, an
+anatomical fact of thumb opposition, and overwriting just the X component left most of a curl
+reading as barely any visible movement. Composing a curl on top of that tilt fixes the movement,
+but the same positive angle that curls the four straight fingers into the palm curls this one
+joint away from it instead; only this joint's own angle is negated to curl the right way.
 `resolveHandSide` reads a bone name to decide which hand it belongs to, matching the hand bone
 itself or any of its finger descendants; `handPoseRequiredBoneNames` lists the 15 finger bone
 names a preset needs for one side, for checking a rig has them all before offering one. Finger

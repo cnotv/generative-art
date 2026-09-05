@@ -198,9 +198,11 @@ hand itself or any of its fingers, and the dropdown enables once every finger bo
 needs is present on the rig. Applying a preset curls each finger joint by the preset's angle
 around its own local X axis, composed on top of that joint's rest pose rather than overwriting
 its rotation outright, and only ever touches the selected hand's own fingers. The composition
-matters for the thumb specifically: its CMC and MCP joints rest with a real tilt on every axis
-(anatomically, not an authoring accident), unlike the four straight fingers' own near-zero rest,
-so overwriting just the X component used to leave a curled thumb barely moving at all. Like a
+matters for the thumb's own first joint specifically: it rests with a real tilt on every axis
+(anatomically, not an authoring accident), unlike the four straight fingers and the thumb's own
+other two joints, whose rest is near enough to zero, so overwriting just the X component used to
+leave a curled thumb barely moving at all. The same positive angle that curls a straight finger
+into the palm curls that one joint away from it instead, so its own angle alone is negated. Like a
 manual bone edit, applying a preset changes the live rig immediately; **Add Keyframe** is still
 what commits it to the timeline. Finger bones are not part of the auto-rig heuristic's generated
 skeleton, so this is only available on a model that already shipped with them, such as a genuine

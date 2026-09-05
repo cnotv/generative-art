@@ -96,12 +96,70 @@ describe('applyHandPose', () => {
 
     applyHandPose([bone], 'Left', preset, restQuaternions)
 
+    // This joint's angle is negated (see `THUMB_CMC_JOINT_INDEX`'s own doc comment), so the
+    // composed rotation uses -0.7, not the preset's own +0.7.
     const expectedQuaternion = restQuaternion
       .clone()
-      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.7))
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.7))
     expect(bone.quaternion.angleTo(expectedQuaternion)).toBeLessThan(1e-6)
     // Overwriting just the Euler X component and leaving the rest pose's own y/z in place
     // would have landed somewhere else entirely; this is the exact bug the composition fixes.
     expect(bone.quaternion.angleTo(restQuaternion)).toBeGreaterThan(0.1)
+  })
+
+  it('does not negate the thumb’s other two joints, whose own rest carries no twist', () => {
+    // mixamorigLeftHandThumb2 and Thumb3's own real rest pose on a mixamorig-named rig: close
+    // enough to identity (roughly -0.06/0/0 and -0.04/0/0) that they behave like the straight
+    // fingers, unlike the thumb's first joint.
+    const name = 'mixamorigLeftHandThumb2'
+    const bone = buildBone(name)
+    const restQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.06, 0, 0))
+    const restQuaternions = new Map([[name, restQuaternion]])
+    const preset: typeof HAND_POSE_PRESETS.Fist = {
+      ...HAND_POSE_PRESETS.Open,
+      thumb: [0, 0.6, 0]
+    }
+
+    applyHandPose([bone], 'Left', preset, restQuaternions)
+
+    const expectedQuaternion = restQuaternion
+      .clone()
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.6))
+    expect(bone.quaternion.angleTo(expectedQuaternion)).toBeLessThan(1e-6)
+  })
+
+  it('curls the thumb toward the palm, not away from it, the failure this fixes', () => {
+    // A minimal three-joint thumb chain off a hand root, using the bundled model's own real
+    // rest orientations, plus a reference point standing in for the rest of the palm. Confirms
+    // the actual, physical direction of the fix (tip distance to the palm shrinks), not just
+    // that some rotation composed correctly.
+    const hand = buildBone('mixamorigLeftHand')
+    const thumb1 = buildBone('mixamorigLeftHandThumb1')
+    const thumb2 = buildBone('mixamorigLeftHandThumb2')
+    const thumb3 = buildBone('mixamorigLeftHandThumb3')
+    const palmReference = buildBone('mixamorigLeftHandMiddle1')
+    thumb1.position.set(0, 1, 0)
+    thumb2.position.set(0, 1, 0)
+    thumb3.position.set(0, 1, 0)
+    palmReference.position.set(1, 0, 0)
+    thumb1.rotation.set(0.3, 0.2, 0.58)
+    thumb2.rotation.set(-0.06, 0, 0)
+    thumb3.rotation.set(-0.04, 0, 0)
+    hand.add(thumb1)
+    thumb1.add(thumb2)
+    thumb2.add(thumb3)
+    hand.add(palmReference)
+    hand.updateMatrixWorld(true)
+
+    const bones = [hand, thumb1, thumb2, thumb3, palmReference]
+    const restQuaternions = new Map(bones.map((bone) => [bone.name, bone.quaternion.clone()]))
+    const palmPosition = palmReference.getWorldPosition(new THREE.Vector3())
+    const distanceBefore = thumb3.getWorldPosition(new THREE.Vector3()).distanceTo(palmPosition)
+
+    applyHandPose(bones, 'Left', HAND_POSE_PRESETS.Fist, restQuaternions)
+    hand.updateMatrixWorld(true)
+
+    const distanceAfter = thumb3.getWorldPosition(new THREE.Vector3()).distanceTo(palmPosition)
+    expect(distanceAfter).toBeLessThan(distanceBefore)
   })
 })
