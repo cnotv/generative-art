@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import { PoseLandmarker, DrawingUtils, type NormalizedLandmark } from '@mediapipe/tasks-vision'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
@@ -7,6 +7,13 @@ import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW } from './config'
+
+const props = defineProps<{
+  /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
+  smoothingFactor: number
+  /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
+  showPreview: boolean
+}>()
 
 const emit = defineEmits<{
   apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
@@ -16,7 +23,7 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture()
+const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'))
 const photo = useCameraPhotoPose()
 const mode = ref<'camera' | 'photo'>('camera')
 
@@ -116,7 +123,10 @@ onUnmounted(() => camera.stop())
   <div class="camera-pose-capture" :style="{ width: `${CAMERA_PANEL_WIDTH_VW}vw` }">
     <div
       class="camera-pose-capture__preview"
-      :class="{ 'camera-pose-capture__preview--mirrored': mode === 'camera' }"
+      :class="{
+        'camera-pose-capture__preview--mirrored': mode === 'camera',
+        'camera-pose-capture__preview--hidden': !showPreview
+      }"
     >
       <video
         v-show="mode === 'camera'"
@@ -206,6 +216,13 @@ onUnmounted(() => camera.stop())
   /* A live webcam feed reads as a mirror, matching how the person sees themselves. A static
      photo is left as it is, since it isn't a self-view. */
   transform: scaleX(-1);
+}
+
+.camera-pose-capture__preview--hidden {
+  /* Opacity, not display or v-if: the <video> element has to stay in the DOM and playing for
+     detection to keep reading frames from it, only what the person sees needs to disappear. */
+  opacity: 0;
+  pointer-events: none;
 }
 
 .camera-pose-capture__video,

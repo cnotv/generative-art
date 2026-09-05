@@ -6,6 +6,7 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
+import { createControls } from '@webgamekit/controls'
 import {
   ikFindTwoBoneChain,
   applyHandPose,
@@ -29,7 +30,9 @@ import {
   DEFAULT_FPS,
   DEFAULT_MODEL_PATH,
   MODEL_FILE_ACCEPT,
-  CAMERA_PANEL_WIDTH_VW
+  CAMERA_PANEL_WIDTH_VW,
+  CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  RIG_TIMELINE_KEYBOARD_MAPPING
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
@@ -70,14 +73,18 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseKnees: true,
   cameraUseHips: false,
   cameraUseDepth: true,
-  cameraUseViewpoint: false
+  cameraUseViewpoint: false,
+  cameraReachMultiplier: 1,
+  cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  cameraShowPreview: true
 })
 
 const cameraPoseMappingOptions = computed(() => ({
   includeElbows: reactiveConfig.value.cameraUseElbows,
   includeKnees: reactiveConfig.value.cameraUseKnees,
   includeHips: reactiveConfig.value.cameraUseHips,
-  includeDepth: reactiveConfig.value.cameraUseDepth
+  includeDepth: reactiveConfig.value.cameraUseDepth,
+  reachMultiplier: reactiveConfig.value.cameraReachMultiplier
 }))
 
 const rig = useRigAnimator(reactiveConfig)
@@ -87,6 +94,7 @@ const modelFileInput = ref<HTMLInputElement | null>(null)
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
 let hasRestoredAutosave = false
+let timelineControls: ReturnType<typeof createControls> | null = null
 /** Which drag is in flight: a plain target drag on a bone, or a pole-hint drag on its chain's mid joint. */
 let dragTargetBone: THREE.Bone | null = null
 let dragPoleChain: TwoBoneIkChain | null = null
@@ -312,6 +320,21 @@ const init = async (): Promise<void> => {
   reactiveConfig.value.model = DEFAULT_MODEL_PATH
 }
 
+/** True while a text or number field elsewhere in the panel has focus, so the timeline's own
+ * shortcuts (space, and especially the arrow keys) do not hijack normal field editing. */
+const isEditingAFormField = (): boolean => {
+  const active = document.activeElement
+  return active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
+}
+
+/** Steps the current frame by a delta, clamped to the timeline's own current range. */
+const stepFrame = (delta: number): void => {
+  reactiveConfig.value.frame = Math.min(
+    Math.max(reactiveConfig.value.frame + delta, 0),
+    rig.frameMax.value
+  )
+}
+
 onMounted(async () => {
   setViewPanels({ showConfig: true })
   registerViewConfig(
@@ -332,12 +355,22 @@ onMounted(async () => {
   await init()
   canvas.value?.addEventListener('pointerdown', onCanvasPointerDown)
   window.addEventListener('resize', updateCameraCentering)
+  timelineControls = createControls({
+    mapping: RIG_TIMELINE_KEYBOARD_MAPPING,
+    onAction: (action) => {
+      if (isEditingAFormField()) return
+      if (action === 'addKeyframe') rig.addKeyframe()
+      else if (action === 'nextFrame') stepFrame(1)
+      else if (action === 'previousFrame') stepFrame(-1)
+    }
+  })
 })
 
 onUnmounted(() => {
   canvas.value?.removeEventListener('pointerdown', onCanvasPointerDown)
   window.removeEventListener('resize', updateCameraCentering)
   onWindowPointerUp()
+  timelineControls?.destroyControls()
   unregisterViewConfig(routeName)
   clearViewPanels()
   clearSceneElements()
@@ -392,6 +425,8 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
+    :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
+    :show-preview="reactiveConfig.cameraShowPreview"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
   />

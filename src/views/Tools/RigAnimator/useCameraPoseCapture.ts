@@ -1,4 +1,4 @@
-import { ref, shallowRef, onUnmounted } from 'vue'
+import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import {
   FilesetResolver,
@@ -9,17 +9,27 @@ import {
 import {
   MEDIAPIPE_WASM_BASE_PATH,
   MEDIAPIPE_POSE_MODEL_URL,
-  MEDIAPIPE_HAND_MODEL_URL
+  MEDIAPIPE_HAND_MODEL_URL,
+  CAMERA_LANDMARK_SMOOTHING_FACTOR
 } from './config'
 import { smoothCameraLandmarks, type CameraLandmark } from './cameraPoseMapping'
-import { cameraDetectedHandsToPoses } from './cameraHandPoseMapping'
+import {
+  cameraDetectedHandsToPoses,
+  resolveCameraHandSide,
+  smoothCameraHandLandmarks,
+  type CameraHandLandmark
+} from './cameraHandPoseMapping'
 
 /**
  * Owns the webcam stream and the MediaPipe Pose and Hand Landmarkers for the camera pose
  * capture dialog: starting/stopping the camera, running live detection for the on-screen
  * skeleton overlay, and exposing the latest detected body and finger poses for a caller to read.
+ * @param smoothingFactor Fraction of each new frame blended in, read fresh every frame so a
+ *   Config panel slider takes effect immediately rather than only on the next `start()`
  */
-export const useCameraPoseCapture = () => {
+export const useCameraPoseCapture = (
+  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR)
+) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
   const isLoading = ref(false)
@@ -37,6 +47,12 @@ export const useCameraPoseCapture = () => {
   let animationFrame: number | null = null
   /** The last smoothed frame, so the next one blends against it instead of the raw detection. */
   let previousWorldLandmarks: CameraLandmark[] | null = null
+  /**
+   * The last smoothed landmarks per hand side, keyed by the resolved side rather than MediaPipe's
+   * own per-frame array index: a hand entering or leaving frame can shift which index the other
+   * hand reports at, and blending against the wrong hand's last position would read as a jump.
+   */
+  let previousHandLandmarksBySide: Partial<Record<HandSide, CameraHandLandmark[]>> = {}
 
   const detectFrame = (): void => {
     if (!videoElement.value || !landmarker || !handLandmarker) return
@@ -45,17 +61,23 @@ export const useCameraPoseCapture = () => {
     previewLandmarks.value = result.landmarks[0] ?? null
     const rawWorldLandmarks = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
     worldLandmarks.value = rawWorldLandmarks
-      ? smoothCameraLandmarks(previousWorldLandmarks, rawWorldLandmarks)
+      ? smoothCameraLandmarks(previousWorldLandmarks, rawWorldLandmarks, smoothingFactor.value)
       : null
     previousWorldLandmarks = worldLandmarks.value
 
     const handResult = handLandmarker.detectForVideo(videoElement.value, timestamp)
-    handPoses.value = cameraDetectedHandsToPoses(
-      handResult.worldLandmarks.map((landmarksForHand, index) => ({
-        worldLandmarks: landmarksForHand,
-        categoryName: handResult.handedness[index]?.[0]?.categoryName ?? ''
-      }))
-    )
+    const smoothedHands = handResult.worldLandmarks.map((landmarksForHand, index) => {
+      const categoryName = handResult.handedness[index]?.[0]?.categoryName ?? ''
+      const side = resolveCameraHandSide(categoryName)
+      const smoothed = smoothCameraHandLandmarks(
+        side ? (previousHandLandmarksBySide[side] ?? null) : null,
+        landmarksForHand as CameraHandLandmark[],
+        smoothingFactor.value
+      )
+      if (side) previousHandLandmarksBySide = { ...previousHandLandmarksBySide, [side]: smoothed }
+      return { worldLandmarks: smoothed, categoryName }
+    })
+    handPoses.value = cameraDetectedHandsToPoses(smoothedHands)
 
     animationFrame = requestAnimationFrame(detectFrame)
   }
@@ -118,6 +140,7 @@ export const useCameraPoseCapture = () => {
     worldLandmarks.value = null
     handPoses.value = {}
     previousWorldLandmarks = null
+    previousHandLandmarksBySide = {}
   }
 
   onUnmounted(stop)

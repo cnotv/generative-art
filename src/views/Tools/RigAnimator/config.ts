@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
+import type { ControlMapping } from '@webgamekit/controls'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
@@ -69,3 +70,28 @@ export const CAMERA_PANEL_WIDTH_VW = 45
 /** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
  * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */
 export const CAMERA_LANDMARK_SMOOTHING_FACTOR = 0.35
+/** Range and step the Config panel's smoothing slider offers. */
+export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.05, max: 1, step: 0.05 }
+
+/** Range and step the Config panel's reach multiplier slider offers. */
+export const CAMERA_REACH_MULTIPLIER_RANGE = { min: 0.5, max: 2, step: 0.05 }
+
+/**
+ * Keyboard and gamepad shortcuts for the rig timeline. X and Square are the same physical
+ * button under two different platforms' naming, so "X to save, Square for next" as asked
+ * would bind one button to two actions; next/previous instead use the D-pad (button14/15),
+ * matching the same convention this codebase already uses for a directional pair elsewhere
+ * (see RockRunner's own KEYBOARD_MAPPING), leaving the single face button for save.
+ */
+export const RIG_TIMELINE_KEYBOARD_MAPPING: ControlMapping = {
+  keyboard: {
+    ' ': 'addKeyframe',
+    ArrowLeft: 'nextFrame',
+    ArrowRight: 'previousFrame'
+  },
+  gamepad: {
+    button2: 'addKeyframe',
+    button14: 'nextFrame',
+    button15: 'previousFrame'
+  }
+}

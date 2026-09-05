@@ -123,13 +123,24 @@ export interface CameraPoseMappingOptions {
    * reports; turning this off flattens every target onto the shoulder anchor's own depth plane.
    */
   includeDepth: boolean
+  /**
+   * Scale every mapped target's distance from its anchor by this factor before applying it, on
+   * top of the rig's own proportions. 1 leaves the computed scale as-is; above 1 reaches further
+   * than the computed scale predicts, below 1 reaches less far. A rig whose own proportions
+   * differ from a real body's in ways neither the shoulder nor the hip anchor accounts for (a
+   * stylized head-and-neck length relative to shoulder width, say) can still systematically
+   * under- or over-reach even with the right bone anchored to the right landmark; this is the
+   * escape hatch for tuning that by eye rather than by a fixed formula.
+   */
+  reachMultiplier: number
 }
 
 export const CAMERA_POSE_MAPPING_OPTIONS_DEFAULT: CameraPoseMappingOptions = {
   includeElbows: false,
   includeKnees: false,
   includeHips: false,
-  includeDepth: true
+  includeDepth: true,
+  reachMultiplier: 1
 }
 
 export interface CameraPoseTargets {
@@ -332,13 +343,14 @@ export const cameraLandmarksToBoneTargets = (
   const shoulderWidthLandmark = landmarkDistance(leftShoulder, rightShoulder)
   if (shoulderWidthLandmark < MINIMUM_LANDMARK_SHOULDER_SPAN)
     return { boneTargets: {}, poleTargets: {} }
-  const scale = anchor.shoulderWidthWorld / shoulderWidthLandmark
-  const { legCenter, legScale, legAnchorWorldPosition } = computeLegAnchor(
-    landmarks,
-    anchor,
-    shoulderCenter,
-    scale
-  )
+  const rawScale = anchor.shoulderWidthWorld / shoulderWidthLandmark
+  const {
+    legCenter,
+    legScale: rawLegScale,
+    legAnchorWorldPosition
+  } = computeLegAnchor(landmarks, anchor, shoulderCenter, rawScale)
+  const scale = rawScale * options.reachMultiplier
+  const legScale = rawLegScale * options.reachMultiplier
 
   // Landmark y grows downward and z grows away from the camera (MediaPipe's image-space
   // convention extended to 3D); the scene's y grows upward and, since the rig faces the scene

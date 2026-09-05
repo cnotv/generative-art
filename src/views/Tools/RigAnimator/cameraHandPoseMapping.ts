@@ -69,21 +69,48 @@ export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): Hand
 }
 
 /**
- * Resolve MediaPipe's own handedness label to the side it actually belongs to on the rig.
- * MediaPipe's Hand Landmarker documents its handedness as assuming a mirrored ("selfie") input
- * image; this tool feeds the raw, unmirrored camera frame to the detector (the mirroring the
- * live preview shows is a CSS transform on the canvas only, never applied to the frame the
- * model actually reads), so its label comes out reversed from the subject's real side. The body
- * Pose Landmarker needs no such swap: unlike a hand considered in isolation, its landmark
- * topology already encodes the subject's own left/right from the whole body's shape, confirmed
- * against a real photo where the landmark it calls the left wrist sits on the subject's actual
- * left side with no correction needed.
+ * Blend a newly detected hand's landmarks into the previous smoothed set for that same side, the
+ * same exponential moving average `smoothCameraLandmarks` uses for the body. A hand held up to
+ * a webcam moves less steadily than a whole body does relative to its own scale, and a hand's
+ * per-joint curl angle is a small difference between two nearby points, so raw per-frame noise
+ * here reads as visible twitching in the fingers once mapped, more than the same noise does on
+ * a body landmark's own larger-scale movement.
+ * @param previous The previous frame's smoothed landmarks for this same hand side, or null for
+ *   the first frame this side was seen
+ * @param next This frame's freshly detected landmarks
+ * @param factor Fraction of `next` blended in; lower reads smoother but laggier
+ * @returns The smoothed landmarks to actually read a finger pose from
+ */
+export const smoothCameraHandLandmarks = (
+  previous: CameraHandLandmark[] | null,
+  next: CameraHandLandmark[],
+  factor: number
+): CameraHandLandmark[] =>
+  next.map((landmark, index) => {
+    const previousLandmark = previous?.[index]
+    if (!previousLandmark) return landmark
+    return {
+      x: previousLandmark.x + (landmark.x - previousLandmark.x) * factor,
+      y: previousLandmark.y + (landmark.y - previousLandmark.y) * factor,
+      z: previousLandmark.z + (landmark.z - previousLandmark.z) * factor
+    }
+  })
+
+/**
+ * Resolve MediaPipe's own handedness label to the side it actually belongs to on the rig: no
+ * swap, a direct passthrough. An earlier version of this swapped the label, reasoning from
+ * MediaPipe's own documented caveat that Hand Landmarker assumes a mirrored ("selfie") input;
+ * a real camera session immediately surfaced the opposite arm and hand moving as if they
+ * belonged to each other, meaning that reasoning did not hold for this pipeline. The body Pose
+ * Landmarker's own left/right needs no swap either (confirmed against a real photo, the
+ * landmark it calls the left wrist sits on the subject's actual left side), so the two
+ * detectors turn out to agree: pass both straight through.
  * @param categoryName MediaPipe's own "Left"/"Right" handedness label for one detected hand
  * @returns The subject's actual side, or null for an unrecognised label
  */
 export const resolveCameraHandSide = (categoryName: string): HandSide | null => {
-  if (categoryName === 'Left') return 'Right'
-  if (categoryName === 'Right') return 'Left'
+  if (categoryName === 'Left') return 'Left'
+  if (categoryName === 'Right') return 'Right'
   return null
 }
 

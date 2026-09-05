@@ -224,6 +224,18 @@ describe('cameraLandmarksToBoneTargets', () => {
     expect(boneTargets.mixamorigHips).toBeDefined()
     expect(boneTargets.mixamorigHips.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
   })
+
+  it('scales every target further from its anchor when the reach multiplier is above 1', () => {
+    const { boneTargets: normal } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    const { boneTargets: extended } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      reachMultiplier: 2
+    })
+    const anchorY = anchor.shoulderCenterWorldPosition.y
+    const normalOffset = Math.abs(normal.mixamorigHead.y - anchorY)
+    const extendedOffset = Math.abs(extended.mixamorigHead.y - anchorY)
+    expect(extendedOffset).toBeCloseTo(normalOffset * 2)
+  })
 })
 
 describe('legs scale off the hip anchor, not the shoulder one', () => {

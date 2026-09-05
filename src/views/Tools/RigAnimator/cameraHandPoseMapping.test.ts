@@ -3,6 +3,7 @@ import {
   cameraHandLandmarksToPose,
   cameraDetectedHandsToPoses,
   resolveCameraHandSide,
+  smoothCameraHandLandmarks,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
 
@@ -58,11 +59,14 @@ describe('cameraHandLandmarksToPose', () => {
 
 describe('resolveCameraHandSide', () => {
   it.each([
-    ['Left', 'Right'],
-    ['Right', 'Left']
-  ])("swaps MediaPipe's %s label to the subject's actual %s side", (categoryName, expectedSide) => {
-    expect(resolveCameraHandSide(categoryName)).toBe(expectedSide)
-  })
+    ['Left', 'Left'],
+    ['Right', 'Right']
+  ])(
+    "passes MediaPipe's %s label straight through as the subject's %s side",
+    (categoryName, expectedSide) => {
+      expect(resolveCameraHandSide(categoryName)).toBe(expectedSide)
+    }
+  )
 
   it('returns null for an unrecognised label', () => {
     expect(resolveCameraHandSide('unknown')).toBeNull()
@@ -70,7 +74,7 @@ describe('resolveCameraHandSide', () => {
 })
 
 describe('cameraDetectedHandsToPoses', () => {
-  it('keys each detected hand by its resolved side, swapping the raw label', () => {
+  it('keys each detected hand by its resolved side', () => {
     const openHand = buildOpenHandLandmarks()
     const poses = cameraDetectedHandsToPoses([
       { worldLandmarks: openHand, categoryName: 'Left' },
@@ -84,5 +88,28 @@ describe('cameraDetectedHandsToPoses', () => {
       { worldLandmarks: buildOpenHandLandmarks(), categoryName: 'unknown' }
     ])
     expect(poses).toEqual({})
+  })
+})
+
+describe('smoothCameraHandLandmarks', () => {
+  it('returns the new frame as-is when there is no previous frame to blend against', () => {
+    const next = [point(1, 2, 3)]
+    expect(smoothCameraHandLandmarks(null, next, 0.35)).toEqual(next)
+  })
+
+  it('blends position toward the new frame by the given factor', () => {
+    const previous = [point(0, 0, 0)]
+    const next = [point(1, 1, 1)]
+    const [smoothed] = smoothCameraHandLandmarks(previous, next, 0.25)
+    expect(smoothed.x).toBeCloseTo(0.25)
+    expect(smoothed.y).toBeCloseTo(0.25)
+    expect(smoothed.z).toBeCloseTo(0.25)
+  })
+
+  it('takes a landmark missing from the previous frame as-is', () => {
+    const previous = [point(0, 0, 0)]
+    const next = [point(0, 0, 0), point(5, 5, 5)]
+    const smoothed = smoothCameraHandLandmarks(previous, next, 0.25)
+    expect(smoothed[1]).toEqual(next[1])
   })
 })

@@ -1,5 +1,10 @@
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
-import { POSITION_STEP_FRACTION, ROTATION_CONTROL } from './config'
+import {
+  POSITION_STEP_FRACTION,
+  ROTATION_CONTROL,
+  CAMERA_SMOOTHING_FACTOR_RANGE,
+  CAMERA_REACH_MULTIPLIER_RANGE
+} from './config'
 
 /**
  * Build the config panel schema for the rig animator. Rebuilt whenever the bone list or the
@@ -50,7 +55,16 @@ export const buildRigAnimatorSchema = (
         cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
         cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
-        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' }
+        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
+        cameraReachMultiplier: {
+          ...CAMERA_REACH_MULTIPLIER_RANGE,
+          label: 'Camera Pose: Reach Multiplier'
+        },
+        cameraSmoothingFactor: {
+          ...CAMERA_SMOOTHING_FACTOR_RANGE,
+          label: 'Camera Pose: Smoothing (Live Feed)'
+        },
+        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
       }
     : {}),
   fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }
