@@ -41,3 +41,15 @@ export interface TwoBoneIkChain {
   mid: THREE.Bone
   end: THREE.Bone
 }
+
+/** Which hand a hand pose preset or a selected bone belongs to */
+export type HandSide = 'Left' | 'Right'
+
+/** Per-finger local-X curl angles (radians), one per joint from the palm outward */
+export interface HandPoseDefinition {
+  thumb: [number, number, number]
+  index: [number, number, number]
+  middle: [number, number, number]
+  ring: [number, number, number]
+  pinky: [number, number, number]
+}

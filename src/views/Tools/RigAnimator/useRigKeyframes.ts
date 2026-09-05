@@ -6,6 +6,7 @@ import { clampFrameMax } from './frameRange'
 import { moveKeyframeInList } from './keyframeOps'
 import { saveRigAutosave } from './autosave'
 import { useRigKeyframeIO } from './useRigKeyframeIO'
+import { useRigKeyframeClipboard } from './useRigKeyframeClipboard'
 import type { RigAnimatorConfig } from './types'
 
 /** Owns the authored pose keyframes and the preview clip built from them. */
@@ -124,6 +125,12 @@ export const useRigKeyframes = (
     rebuildPreviewClip,
     reset
   })
+  const clipboard = useRigKeyframeClipboard({
+    config,
+    keyframes,
+    rebuildPreviewClip,
+    persistAutosave
+  })
 
   return {
     keyframes,
@@ -138,6 +145,7 @@ export const useRigKeyframes = (
     scrubToFrame,
     togglePlayback,
     tickPlayback,
-    ...io
+    ...io,
+    ...clipboard
   }
 }

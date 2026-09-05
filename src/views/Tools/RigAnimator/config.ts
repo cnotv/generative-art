@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
+import type { ControlMapping } from '@webgamekit/controls'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
@@ -54,3 +55,50 @@ export const EXPORT_GLB_FILENAME = 'rig-animation.glb'
 export const EXPORT_JSON_FILENAME = 'rig-animation.json'
 
 export const CAMERA_FRAME_DISTANCE_MULTIPLIER = 2.5
+
+export const MEDIAPIPE_WASM_BASE_PATH =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
+export const MEDIAPIPE_POSE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+export const MEDIAPIPE_HAND_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+
+/** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
+ * layout and the 3D camera's re-centering onto the remaining visible half. */
+export const CAMERA_PANEL_WIDTH_VW = 45
+
+/** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
+ * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */
+export const CAMERA_LANDMARK_SMOOTHING_FACTOR = 0.35
+/** Range and step the Config panel's smoothing slider offers. Lower than the default's own
+ * 0.05 step reaches so heavier smoothing than the initial range allowed is still reachable. */
+export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.01, max: 1, step: 0.01 }
+
+/** Range and step the Config panel's reach multiplier slider offers. */
+export const CAMERA_REACH_MULTIPLIER_RANGE = { min: 0.5, max: 2, step: 0.05 }
+
+/** How far, in metres, a smoothed landmark may move in a single frame before the excess past
+ * this is clamped off as a sudden jump rather than genuine motion. */
+export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
+/** Range and step the Config panel's max jump slider offers. */
+export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
+
+/**
+ * Keyboard and gamepad shortcuts for the rig timeline. X and Square are the same physical
+ * button under two different platforms' naming, so "X to save, Square for next" as asked
+ * would bind one button to two actions; next/previous instead use the D-pad (button14/15),
+ * matching the same convention this codebase already uses for a directional pair elsewhere
+ * (see RockRunner's own KEYBOARD_MAPPING), leaving the single face button for save.
+ */
+export const RIG_TIMELINE_KEYBOARD_MAPPING: ControlMapping = {
+  keyboard: {
+    ' ': 'addKeyframe',
+    ArrowLeft: 'nextFrame',
+    ArrowRight: 'previousFrame'
+  },
+  gamepad: {
+    button2: 'addKeyframe',
+    button14: 'nextFrame',
+    button15: 'previousFrame'
+  }
+}

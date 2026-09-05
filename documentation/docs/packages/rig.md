@@ -128,6 +128,56 @@ if (!ikFindTwoBoneChain(spineBone) && spineBone.parent instanceof THREE.Bone) {
 }
 ```
 
+## applyHandPose / resolveHandSide / handPoseRequiredBoneNames
+
+Apply a canned finger pose (see `HAND_POSE_PRESETS`) to one hand's finger bones on a
+mixamorig-named rig, curling each joint by the preset's angle around its own local X axis,
+composed on top of that joint's rest-pose quaternion rather than overwriting its Euler X
+component directly. Those give the same result for a joint whose rest pose carries no twist of
+its own (true for the four straight fingers, and the thumb's own other two joints), but not for
+the thumb's own first joint: it alone rests with a real, substantial tilt on every axis, an
+anatomical fact of thumb opposition, and overwriting just the X component left most of a curl
+reading as barely any visible movement. Composing a curl on top of that tilt fixes the movement,
+but the same positive angle that curls the four straight fingers into the palm curls this one
+joint away from it instead; only this joint's own angle is negated to curl the right way.
+`resolveHandSide` reads a bone name to decide which hand it belongs to, matching the hand bone
+itself or any of its finger descendants; `handPoseRequiredBoneNames` lists the 15 finger bone
+names a preset needs for one side, for checking a rig has them all before offering one. Finger
+bones are not part of `rigGenerateHumanoidSkeleton`'s generated skeleton, so this only applies
+to a model that already shipped with them, such as a genuine Mixamo export.
+
+```typescript
+import {
+  applyHandPose,
+  resolveHandSide,
+  handPoseRequiredBoneNames,
+  HAND_POSE_PRESETS
+} from '@webgamekit/rig'
+
+const side = resolveHandSide(selectedBone.name) // 'Left' | 'Right' | null
+if (side && handPoseRequiredBoneNames(side).every((name) => boneNames.includes(name))) {
+  // restQuaternions: every bone's rest-pose local quaternion, keyed by name, captured once
+  // when the model loads (see the app's own captureRestPoses)
+  applyHandPose(bones, side, HAND_POSE_PRESETS.Fist, restQuaternions)
+}
+```
+
+## ikApplyWorldDirectionToBone
+
+Rotate a bone in world space so a direction it currently points turns into a direction it
+should point, keeping whatever roll the minimal rotation between the two implies. The building
+block `ikSolveTwoBoneChain` and `ikSolveOneBoneAim` are both built from. Calling it twice in a
+row on the same bone, once per reference direction, fully orients it: the second call's minimal
+rotation is necessarily a pure roll around the first call's now-matched axis, since both the
+current and desired second direction stay perpendicular to that shared axis by construction.
+
+```typescript
+import { ikApplyWorldDirectionToBone } from '@webgamekit/rig'
+
+// Aim the bone's own current direction (toward a child, say) at a new one.
+ikApplyWorldDirectionToBone(bone, currentWorldDirection, desiredWorldDirection)
+```
+
 ## Types
 
 ```typescript
@@ -163,5 +213,15 @@ interface TwoBoneIkChain {
   root: THREE.Bone
   mid: THREE.Bone
   end: THREE.Bone
+}
+
+type HandSide = 'Left' | 'Right'
+
+interface HandPoseDefinition {
+  thumb: [number, number, number] // local-X curl angle per joint, palm outward
+  index: [number, number, number]
+  middle: [number, number, number]
+  ring: [number, number, number]
+  pinky: [number, number, number]
 }
 ```

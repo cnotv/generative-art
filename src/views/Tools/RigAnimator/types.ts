@@ -6,4 +6,15 @@ export interface RigAnimatorConfig {
   bonePosition: { x: number; y: number; z: number }
   frame: number
   fps: number
+  showBoneMarkers: boolean
+  cameraUseElbows: boolean
+  cameraUseKnees: boolean
+  cameraUseNeck: boolean
+  cameraUseHips: boolean
+  cameraUseDepth: boolean
+  cameraUseViewpoint: boolean
+  cameraReachMultiplier: number
+  cameraSmoothingFactor: number
+  cameraMaxJump: number
+  cameraShowPreview: boolean
 }

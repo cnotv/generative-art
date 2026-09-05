@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { ikFindTwoBoneChain, ikSolveTwoBoneChain, ikSolveOneBoneAim } from './ik'
+import {
+  ikFindTwoBoneChain,
+  ikSolveTwoBoneChain,
+  ikSolveOneBoneAim,
+  ikApplyWorldDirectionToBone
+} from './ik'
 
 /** A straight two-segment chain (root: 0..1, mid: 1..2), unit-length bones, rest pose vertical. */
 const buildStraightChain = (): { root: THREE.Bone; mid: THREE.Bone; end: THREE.Bone } => {
@@ -102,5 +107,50 @@ describe('ikSolveOneBoneAim', () => {
 
     expect(mid.position.equals(localPositionBefore)).toBe(true)
     expect(mid.quaternion.equals(localQuaternionBefore)).toBe(true)
+  })
+})
+
+describe('ikApplyWorldDirectionToBone', () => {
+  it('rotates a bone so its current direction becomes the desired direction', () => {
+    const { root, mid } = buildStraightChain()
+    const desired = new THREE.Vector3(1, 0, 0)
+
+    ikApplyWorldDirectionToBone(root, new THREE.Vector3(0, 1, 0), desired)
+
+    const rootPosition = root.getWorldPosition(new THREE.Vector3())
+    const midPosition = mid.getWorldPosition(new THREE.Vector3())
+    const actual = midPosition.clone().sub(rootPosition).normalize()
+    expect(actual.dot(desired)).toBeCloseTo(1, 4)
+  })
+
+  it('fully orients a bone with two sequential calls, the second a pure roll around the first axis', () => {
+    // A bone with two children at right angles, so each tracks one of two reference directions.
+    const root = new THREE.Bone()
+    const childA = new THREE.Bone()
+    childA.position.set(0, 1, 0)
+    const childB = new THREE.Bone()
+    childB.position.set(1, 0, 0)
+    root.add(childA)
+    root.add(childB)
+    root.updateMatrixWorld(true)
+
+    const rootPosition = root.getWorldPosition(new THREE.Vector3())
+    const currentA = childA.getWorldPosition(new THREE.Vector3()).sub(rootPosition).normalize()
+    const desiredA = new THREE.Vector3(0, 0, 1)
+    // Perpendicular to desiredA, the same way childB starts out perpendicular to childA.
+    const desiredB = new THREE.Vector3(0, 1, 0)
+
+    ikApplyWorldDirectionToBone(root, currentA, desiredA)
+    const afterFirstB = childB
+      .getWorldPosition(new THREE.Vector3())
+      .sub(root.getWorldPosition(new THREE.Vector3()))
+      .normalize()
+    ikApplyWorldDirectionToBone(root, afterFirstB, desiredB)
+
+    const finalRootPosition = root.getWorldPosition(new THREE.Vector3())
+    const finalA = childA.getWorldPosition(new THREE.Vector3()).sub(finalRootPosition).normalize()
+    const finalB = childB.getWorldPosition(new THREE.Vector3()).sub(finalRootPosition).normalize()
+    expect(finalA.dot(desiredA)).toBeCloseTo(1, 4)
+    expect(finalB.dot(desiredB)).toBeCloseTo(1, 4)
   })
 })

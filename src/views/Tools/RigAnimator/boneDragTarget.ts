@@ -105,3 +105,25 @@ export const resetBoneChainToRest = (
     }
   })
 }
+
+/**
+ * Reset every bone back to its loaded rest transform. A caller that is about to derive a full
+ * pose from an external source (a camera capture, a preset) uses this first, so that source
+ * ends up driving the whole rig rather than mixing with whatever a handful of bones happened
+ * to be left at from an earlier edit.
+ * @param bones The rig's bones
+ * @param restPoses Every rigged bone's transform as loaded, keyed by name
+ * @returns Nothing; mutates every bone back to its rest transform
+ */
+export const resetAllBonesToRest = (
+  bones: THREE.Bone[],
+  restPoses: Map<string, BoneRestPose>
+): void => {
+  bones.forEach((bone) => {
+    const rest = restPoses.get(bone.name)
+    if (rest) {
+      bone.position.copy(rest.position)
+      bone.quaternion.copy(rest.quaternion)
+    }
+  })
+}

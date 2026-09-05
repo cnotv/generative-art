@@ -1,17 +1,32 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { Play, Pause, Plus, Trash2, Upload, Download, Package, RotateCcw } from 'lucide-vue-next'
+import {
+  Play,
+  Pause,
+  Plus,
+  Trash2,
+  Copy,
+  ClipboardPaste,
+  Upload,
+  Download,
+  Package,
+  RotateCcw,
+  PersonStanding
+} from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { Select } from '@/components/ui/select'
 import { POSES_FILE_ACCEPT } from './config'
 import { RIG_PRESETS } from './presets'
+import { computeTimelineTicks } from './timelineTicks'
+import { HAND_POSE_PRESETS } from '@webgamekit/rig'
 
 interface Properties {
   frame: number
   frameMax: number
-  fps: number
   keyframeFrames: number[]
   isPlaying: boolean
+  hasClipboard: boolean
+  canApplyHandPose: boolean
 }
 
 const props = defineProps<Properties>()
@@ -21,6 +36,9 @@ const emit = defineEmits<{
   'update:frameMax': [frameMax: number]
   addKeyframe: []
   deleteKeyframe: []
+  copyKeyframe: []
+  pasteKeyframe: []
+  selectHandPose: [presetName: string]
   moveKeyframe: [oldFrame: number, newFrame: number]
   togglePlayback: []
   importPoses: [url: string]
@@ -34,6 +52,8 @@ const trackElement = ref<HTMLDivElement | null>(null)
 const fileInputElement = ref<HTMLInputElement | null>(null)
 const hasKeyframeAtCurrentFrame = computed(() => props.keyframeFrames.includes(props.frame))
 const presetOptions = RIG_PRESETS.map((preset) => ({ value: preset.url, label: preset.name }))
+const handPoseOptions = Object.keys(HAND_POSE_PRESETS).map((name) => ({ value: name, label: name }))
+const ticks = computed(() => computeTimelineTicks(props.frameMax))
 
 const percentFor = (frame: number): number =>
   props.frameMax > 0 ? (frame / props.frameMax) * 100 : 0
@@ -133,31 +153,71 @@ onUnmounted(stopDrag)
     >
       <Trash2 />
     </IconButton>
-    <span class="rig-timeline__readout">{{ frame }} / {{ frameMax }} @ {{ fps }}fps</span>
-    <div ref="trackElement" class="rig-timeline__track" @pointerdown="onTrackPointerDown">
-      <button
-        v-for="keyframeFrame in keyframeFrames"
-        :key="keyframeFrame"
-        type="button"
-        class="rig-timeline__keyframe"
-        :class="{ 'rig-timeline__keyframe--current': keyframeFrame === frame }"
-        :style="{ left: `${percentFor(keyframeFrame)}%` }"
-        :title="`Pose @ frame ${keyframeFrame}`"
-        @pointerdown="onKeyframePointerDown(keyframeFrame, $event)"
+    <IconButton
+      size="sm"
+      title="Copy the pose at the current frame"
+      :disabled="!hasKeyframeAtCurrentFrame"
+      @click="emit('copyKeyframe')"
+    >
+      <Copy />
+    </IconButton>
+    <IconButton
+      size="sm"
+      title="Paste the copied pose at the current frame"
+      :disabled="!hasClipboard"
+      @click="emit('pasteKeyframe')"
+    >
+      <ClipboardPaste />
+    </IconButton>
+    <div class="rig-timeline__hand-pose">
+      <Select
+        placeholder="Hand Pose"
+        :options="handPoseOptions"
+        :disabled="!canApplyHandPose"
+        @update:model-value="emit('selectHandPose', $event)"
       />
-      <div class="rig-timeline__playhead" :style="{ left: `${percentFor(frame)}%` }" />
-      <div
-        class="rig-timeline__resize-handle"
-        title="Drag to extend or shrink the frame range"
-        @pointerdown="onResizePointerDown"
-      />
+    </div>
+    <div class="rig-timeline__scrubber">
+      <div class="rig-timeline__ruler" @pointerdown="onTrackPointerDown">
+        <span
+          v-for="tick in ticks"
+          :key="tick"
+          class="rig-timeline__tick"
+          :style="{ left: `${percentFor(tick)}%` }"
+        >
+          <span class="rig-timeline__tick-mark" />
+          <span class="rig-timeline__tick-label">{{ tick }}</span>
+        </span>
+      </div>
+      <div ref="trackElement" class="rig-timeline__track" @pointerdown="onTrackPointerDown">
+        <button
+          v-for="keyframeFrame in keyframeFrames"
+          :key="keyframeFrame"
+          type="button"
+          class="rig-timeline__keyframe"
+          :class="{ 'rig-timeline__keyframe--current': keyframeFrame === frame }"
+          :style="{ left: `${percentFor(keyframeFrame)}%` }"
+          :title="`Pose @ frame ${keyframeFrame}`"
+          @pointerdown="onKeyframePointerDown(keyframeFrame, $event)"
+        />
+        <div class="rig-timeline__playhead" :style="{ left: `${percentFor(frame)}%` }" />
+        <div
+          class="rig-timeline__resize-handle"
+          title="Drag to extend or shrink the frame range"
+          @pointerdown="onResizePointerDown"
+        />
+      </div>
     </div>
     <div class="rig-timeline__presets">
       <Select
         placeholder="Presets"
         :options="presetOptions"
         @update:model-value="emit('selectPreset', $event)"
-      />
+      >
+        <template #icon>
+          <PersonStanding class="h-4 w-4" />
+        </template>
+      </Select>
     </div>
     <input
       ref="fileInputElement"
@@ -187,6 +247,7 @@ onUnmounted(stopDrag)
   left: 0;
   right: 0;
   bottom: 0;
+  min-height: var(--rig-timeline-height);
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -196,16 +257,44 @@ onUnmounted(stopDrag)
   z-index: calc(var(--z-overlay) + 1);
 }
 
-.rig-timeline__readout {
+.rig-timeline__scrubber {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.rig-timeline__ruler {
+  position: relative;
+  height: var(--spacing-4);
+  cursor: pointer;
+}
+
+.rig-timeline__tick {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.rig-timeline__tick-mark {
+  width: 1px;
+  height: var(--spacing-1);
+  background: var(--color-border);
+}
+
+.rig-timeline__tick-label {
   font-size: var(--font-size-xs);
   color: var(--color-muted-foreground);
   font-family: var(--font-mono);
-  white-space: nowrap;
+  line-height: 1;
 }
 
 .rig-timeline__track {
   position: relative;
-  flex: 1;
   height: var(--spacing-6);
   background: var(--color-secondary);
   border-radius: var(--radius-sm);
@@ -252,8 +341,12 @@ onUnmounted(stopDrag)
   cursor: ew-resize;
 }
 
-.rig-timeline__presets {
+.rig-timeline__hand-pose {
   width: 8rem;
+  flex-shrink: 0;
+}
+
+.rig-timeline__presets {
   flex-shrink: 0;
 }
 

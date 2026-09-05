@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
-import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
+import { createControls } from '@webgamekit/controls'
+import {
+  ikFindTwoBoneChain,
+  applyHandPose,
+  type TwoBoneIkChain,
+  type HandSide,
+  type HandPoseDefinition
+} from '@webgamekit/rig'
+import { Upload, Camera as CameraIcon } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import IconButton from '@/components/IconButton.vue'
 import {
   registerViewConfig,
   unregisterViewConfig,
@@ -16,14 +25,25 @@ import {
 } from '@/stores/viewConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import { RIG_ANIMATOR_SETUP_CONFIG, DEFAULT_FPS, DEFAULT_MODEL_PATH } from './config'
+import {
+  RIG_ANIMATOR_SETUP_CONFIG,
+  DEFAULT_FPS,
+  DEFAULT_MODEL_PATH,
+  MODEL_FILE_ACCEPT,
+  CAMERA_PANEL_WIDTH_VW,
+  CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  CAMERA_LANDMARK_MAX_JUMP_METERS,
+  RIG_TIMELINE_KEYBOARD_MAPPING
+} from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { frameCameraOnModel } from './cameraFraming'
+import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
+import CameraPoseCapture from './CameraPoseCapture.vue'
 import type { RigAnimatorConfig } from './types'
 
 const route = useRoute()
@@ -48,14 +68,37 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   boneRotation: { x: 0, y: 0, z: 0 },
   bonePosition: { x: 0, y: 0, z: 0 },
   frame: 0,
-  fps: DEFAULT_FPS
+  fps: DEFAULT_FPS,
+  showBoneMarkers: false,
+  cameraUseElbows: true,
+  cameraUseKnees: true,
+  cameraUseNeck: true,
+  cameraUseHips: false,
+  cameraUseDepth: true,
+  cameraUseViewpoint: false,
+  cameraReachMultiplier: 1,
+  cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
+  cameraShowPreview: false
 })
 
+const cameraPoseMappingOptions = computed(() => ({
+  includeElbows: reactiveConfig.value.cameraUseElbows,
+  includeKnees: reactiveConfig.value.cameraUseKnees,
+  includeNeck: reactiveConfig.value.cameraUseNeck,
+  includeHips: reactiveConfig.value.cameraUseHips,
+  includeDepth: reactiveConfig.value.cameraUseDepth,
+  reachMultiplier: reactiveConfig.value.cameraReachMultiplier
+}))
+
 const rig = useRigAnimator(reactiveConfig)
+const showCameraCapture = ref(false)
+const modelFileInput = ref<HTMLInputElement | null>(null)
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
 let hasRestoredAutosave = false
+let timelineControls: ReturnType<typeof createControls> | null = null
 /** Which drag is in flight: a plain target drag on a bone, or a pole-hint drag on its chain's mid joint. */
 let dragTargetBone: THREE.Bone | null = null
 let dragPoleChain: TwoBoneIkChain | null = null
@@ -112,12 +155,88 @@ const onWindowPointerUp = (): void => {
   window.removeEventListener('pointerup', onWindowPointerUp)
 }
 
+/**
+ * Shifts the camera's view offset so the model appears centered in the visible half of the
+ * canvas while the camera/photo panel covers the other half, rather than sitting off-center
+ * against the divider. The canvas itself never resizes for this: `setViewOffset` shifts which
+ * part of a wider virtual frame the same render shows, so the shared package's window-based
+ * resize handling elsewhere never needs to know about the docked panel at all.
+ */
+const updateCameraCentering = (): void => {
+  const activeCamera = cameraReference
+  if (!canvas.value) return
+  if (
+    !(activeCamera instanceof THREE.PerspectiveCamera) &&
+    !(activeCamera instanceof THREE.OrthographicCamera)
+  ) {
+    return
+  }
+  const width = canvas.value.clientWidth
+  const height = canvas.value.clientHeight
+  // Hiding the preview shrinks the docked panel down to its action buttons, leaving the model
+  // the full canvas to sit in; only a visible preview actually covers half the screen.
+  if (showCameraCapture.value && reactiveConfig.value.cameraShowPreview) {
+    const visibleWidth = width * (1 - CAMERA_PANEL_WIDTH_VW / 100)
+    activeCamera.setViewOffset(width * 2, height, width - visibleWidth / 2, 0, width, height)
+  } else {
+    activeCamera.clearViewOffset()
+  }
+  activeCamera.updateProjectionMatrix()
+}
+
 /** Rebuilds the panel schema from the rig's current bones and auto-rig state. */
 const refreshSchema = (): void => {
   updateViewSchema(
     routeName,
-    buildRigAnimatorSchema(rig.boneNames.value, rig.needsAutoRig.value, rig.positionRange.value)
+    buildRigAnimatorSchema(
+      rig.boneNames.value,
+      rig.needsAutoRig.value,
+      rig.positionRange.value,
+      rig.canCaptureFromCamera.value
+    )
   )
+}
+
+/**
+ * Closing the panel only clears the view-offset shift; it does not undo any orbit or pan the
+ * user did while the panel was open. Re-framing on close is what actually puts the model back
+ * where it started, rather than leaving it wherever the camera was last pointed.
+ */
+const handleCloseCamera = (): void => {
+  showCameraCapture.value = false
+  if (rig.model.value && cameraReference) {
+    frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
+  }
+}
+
+/**
+ * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
+ * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
+ * from, the one camera-relative detail a single photo's body landmarks can actually support
+ * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ */
+const handleCameraApply = (
+  landmarks: CameraLandmark[],
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+): void => {
+  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value)
+  const restQuaternions = rig.getRestQuaternions()
+  Object.entries(handPoses).forEach(([side, pose]) => {
+    applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
+  })
+  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
+    const yaw = estimateCameraYaw(landmarks)
+    if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
+  }
+}
+
+const handleModelFileChange = (event: Event): void => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  // Tags the real filename onto the blob URL as a fragment: `loadModelFile` picks a loader by
+  // extension, and a bare `URL.createObjectURL` result carries none at all.
+  if (file) reactiveConfig.value.model = `${URL.createObjectURL(file)}#${file.name}`
 }
 
 watch(
@@ -156,12 +275,22 @@ watch(
   { deep: true }
 )
 watch(
+  () => reactiveConfig.value.showBoneMarkers,
+  (visible) => rig.setMarkersVisible(visible),
+  { immediate: true }
+)
+watch(
   () => reactiveConfig.value.frame,
   (frame) => {
     // During playback the frame field only displays where tickPlayback already put the
     // mixer; scrubbing it back would fight that same-tick update every frame.
     if (!rig.isPlaying.value) rig.scrubToFrame(frame)
   }
+)
+watch(showCameraCapture, () => updateCameraCentering())
+watch(
+  () => reactiveConfig.value.cameraShowPreview,
+  () => updateCameraCentering()
 )
 
 const init = async (): Promise<void> => {
@@ -194,6 +323,7 @@ const init = async (): Promise<void> => {
       orbit,
       setCamera: (newCamera) => {
         cameraReference = newCamera
+        updateCameraCentering()
         return setActiveCamera(newCamera)
       }
     }
@@ -202,12 +332,27 @@ const init = async (): Promise<void> => {
   reactiveConfig.value.model = DEFAULT_MODEL_PATH
 }
 
+/** True while a text or number field elsewhere in the panel has focus, so the timeline's own
+ * shortcuts (space, and especially the arrow keys) do not hijack normal field editing. */
+const isEditingAFormField = (): boolean => {
+  const active = document.activeElement
+  return active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
+}
+
+/** Steps the current frame by a delta, clamped to the timeline's own current range. */
+const stepFrame = (delta: number): void => {
+  reactiveConfig.value.frame = Math.min(
+    Math.max(reactiveConfig.value.frame + delta, 0),
+    rig.frameMax.value
+  )
+}
+
 onMounted(async () => {
   setViewPanels({ showConfig: true })
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value),
+    buildRigAnimatorSchema([], false, rig.positionRange.value, false),
     undefined,
     {
       autoRig: () => {
@@ -221,11 +366,23 @@ onMounted(async () => {
   )
   await init()
   canvas.value?.addEventListener('pointerdown', onCanvasPointerDown)
+  window.addEventListener('resize', updateCameraCentering)
+  timelineControls = createControls({
+    mapping: RIG_TIMELINE_KEYBOARD_MAPPING,
+    onAction: (action) => {
+      if (isEditingAFormField()) return
+      if (action === 'addKeyframe') rig.addKeyframe()
+      else if (action === 'nextFrame') stepFrame(1)
+      else if (action === 'previousFrame') stepFrame(-1)
+    }
+  })
 })
 
 onUnmounted(() => {
   canvas.value?.removeEventListener('pointerdown', onCanvasPointerDown)
+  window.removeEventListener('resize', updateCameraCentering)
   onWindowPointerUp()
+  timelineControls?.destroyControls()
   unregisterViewConfig(routeName)
   clearViewPanels()
   clearSceneElements()
@@ -235,16 +392,41 @@ onUnmounted(() => {
 <template>
   <canvas ref="canvas"></canvas>
   <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
+  <div class="rig-canvas-controls">
+    <input
+      ref="modelFileInput"
+      type="file"
+      :accept="MODEL_FILE_ACCEPT"
+      class="rig-canvas-controls__hidden-input"
+      @change="handleModelFileChange"
+    />
+    <IconButton size="sm" variant="outline" title="Upload Model" @click="modelFileInput?.click()">
+      <Upload />
+    </IconButton>
+    <IconButton
+      v-if="rig.canCaptureFromCamera.value"
+      size="sm"
+      variant="outline"
+      title="Capture Pose from Camera"
+      @click="showCameraCapture = true"
+    >
+      <CameraIcon />
+    </IconButton>
+  </div>
   <RigTimeline
     :frame="reactiveConfig.frame"
     :frame-max="rig.frameMax.value"
-    :fps="reactiveConfig.fps"
     :keyframe-frames="rig.keyframeFrames.value"
     :is-playing="rig.isPlaying.value"
+    :has-clipboard="rig.hasClipboard.value"
+    :can-apply-hand-pose="rig.canApplyHandPose.value"
     @update:frame="(value) => (reactiveConfig.frame = value)"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
     @delete-keyframe="rig.deleteKeyframe"
+    @copy-keyframe="rig.copyKeyframe"
+    @paste-keyframe="rig.pasteKeyframe"
+    @select-hand-pose="rig.applyHandPosePreset"
     @move-keyframe="rig.moveKeyframe"
     @toggle-playback="rig.togglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"
@@ -253,6 +435,14 @@ onUnmounted(() => {
     @select-preset="rig.loadPreset"
     @reset-all="rig.resetAutosave"
   />
+  <CameraPoseCapture
+    v-if="showCameraCapture"
+    :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
+    :max-jump="reactiveConfig.cameraMaxJump"
+    :show-preview="reactiveConfig.cameraShowPreview"
+    @apply="handleCameraApply"
+    @close="handleCloseCamera"
+  />
 </template>
 
 <style scoped>
@@ -260,5 +450,18 @@ canvas {
   display: block;
   width: 100%;
   height: 100vh;
+}
+
+.rig-canvas-controls {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--spacing-3));
+  left: var(--spacing-3);
+  z-index: var(--z-overlay);
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.rig-canvas-controls__hidden-input {
+  display: none;
 }
 </style>
