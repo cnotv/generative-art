@@ -76,7 +76,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseViewpoint: false,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
-  cameraShowPreview: true
+  cameraShowPreview: false
 })
 
 const cameraPoseMappingOptions = computed(() => ({
@@ -169,7 +169,9 @@ const updateCameraCentering = (): void => {
   }
   const width = canvas.value.clientWidth
   const height = canvas.value.clientHeight
-  if (showCameraCapture.value) {
+  // Hiding the preview shrinks the docked panel down to its action buttons, leaving the model
+  // the full canvas to sit in; only a visible preview actually covers half the screen.
+  if (showCameraCapture.value && reactiveConfig.value.cameraShowPreview) {
     const visibleWidth = width * (1 - CAMERA_PANEL_WIDTH_VW / 100)
     activeCamera.setViewOffset(width * 2, height, width - visibleWidth / 2, 0, width, height)
   } else {
@@ -280,6 +282,10 @@ watch(
   }
 )
 watch(showCameraCapture, () => updateCameraCentering())
+watch(
+  () => reactiveConfig.value.cameraShowPreview,
+  () => updateCameraCentering()
+)
 
 const init = async (): Promise<void> => {
   if (!canvas.value) return

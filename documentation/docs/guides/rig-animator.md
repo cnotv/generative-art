@@ -347,10 +347,10 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   nose landmark can pull the neck into a bend that reads as the head always pointing down,
   independent of whatever the photo actually shows. This slider is the manual escape hatch for
   that, tuned by eye per rig rather than solved by a fixed formula.
-- **Show Camera Preview**, on by default, hides the mirrored video/photo preview when turned
-  off without stopping detection: the feed keeps being read and applied to the rig exactly the
-  same, only what a person watching over your shoulder (or you, if you would rather not watch
-  yourself) would see disappears.
+- **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
+  on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
+  full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
+  same either way.
 
 ### Smoothing the live feed
 

@@ -120,7 +120,10 @@ onUnmounted(() => camera.stop())
 </script>
 
 <template>
-  <div class="camera-pose-capture" :style="{ width: `${CAMERA_PANEL_WIDTH_VW}vw` }">
+  <div
+    class="camera-pose-capture"
+    :style="{ width: showPreview ? `${CAMERA_PANEL_WIDTH_VW}vw` : 'auto' }"
+  >
     <div
       class="camera-pose-capture__preview"
       :class="{
@@ -220,7 +223,15 @@ onUnmounted(() => camera.stop())
 
 .camera-pose-capture__preview--hidden {
   /* Opacity, not display or v-if: the <video> element has to stay in the DOM and playing for
-     detection to keep reading frames from it, only what the person sees needs to disappear. */
+     detection to keep reading frames from it, only what the person sees needs to disappear.
+     Fixed positioning takes it out of this panel's own flex flow entirely, so the panel itself
+     shrinks down to just its status text and action buttons instead of keeping a black box
+     reserved on screen with nothing to show in it. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
   opacity: 0;
   pointer-events: none;
 }
