@@ -319,6 +319,12 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   like a standing pose, folding the limb into an unnatural zigzag rather than the shoulder/hip
   and elbow/knee sharing the bend the way a real arm or leg actually does. Turning them off goes
   back to that behaviour, closest to the original mapping.
+- **Bend Neck to Photo**, on by default, feeds the detected ear midpoint in as the head chain's
+  own pole hint, the same idea as the elbow and knee options above. MediaPipe has no landmark
+  for the neck itself the way it does for an elbow or knee, so the ear midpoint stands in as the
+  closest available proxy for which way the head should lean; without it the neck bends however
+  the two-bone solve happens to pick, which read as the head tending to point down with an
+  implausible fold at the neck.
 - **Move Hips to Photo**, off by default, moves the rig's root to the detected hip midpoint
   instead of leaving it at rest, so a lean or a step reads in the root position too, not only the
   limbs. Left off by default since it did not measurably improve the seated case above on its

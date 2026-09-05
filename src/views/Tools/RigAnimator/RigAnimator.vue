@@ -71,6 +71,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   showBoneMarkers: true,
   cameraUseElbows: true,
   cameraUseKnees: true,
+  cameraUseNeck: true,
   cameraUseHips: false,
   cameraUseDepth: true,
   cameraUseViewpoint: false,
@@ -82,6 +83,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
 const cameraPoseMappingOptions = computed(() => ({
   includeElbows: reactiveConfig.value.cameraUseElbows,
   includeKnees: reactiveConfig.value.cameraUseKnees,
+  includeNeck: reactiveConfig.value.cameraUseNeck,
   includeHips: reactiveConfig.value.cameraUseHips,
   includeDepth: reactiveConfig.value.cameraUseDepth,
   reachMultiplier: reactiveConfig.value.cameraReachMultiplier

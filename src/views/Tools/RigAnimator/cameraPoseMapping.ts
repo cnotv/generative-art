@@ -39,6 +39,8 @@ export const smoothCameraLandmarks = (
 
 const LANDMARK_INDEX = {
   nose: 0,
+  leftEar: 7,
+  rightEar: 8,
   leftShoulder: 11,
   rightShoulder: 12,
   leftElbow: 13,
@@ -115,6 +117,14 @@ export interface CameraPoseMappingOptions {
   includeElbows: boolean
   /** Bend the knee chains toward the detected knee, instead of the chain's rest bend. */
   includeKnees: boolean
+  /**
+   * Bend the head chain's neck joint toward the detected ear midpoint, instead of the chain's
+   * rest bend. MediaPipe has no landmark for the neck itself the way it does for an elbow or
+   * knee, so the ear midpoint stands in as the closest available proxy for which way the head
+   * should lean; without a hint here the neck bends however the two-bone solve happens to pick,
+   * which read as the head tending to point down with the neck folded implausibly.
+   */
+  includeNeck: boolean
   /** Move the rig's root to the detected hip midpoint, instead of leaving it at rest. */
   includeHips: boolean
   /**
@@ -138,6 +148,7 @@ export interface CameraPoseMappingOptions {
 export const CAMERA_POSE_MAPPING_OPTIONS_DEFAULT: CameraPoseMappingOptions = {
   includeElbows: false,
   includeKnees: false,
+  includeNeck: false,
   includeHips: false,
   includeDepth: true,
   reachMultiplier: 1
@@ -408,6 +419,21 @@ export const cameraLandmarksToBoneTargets = (
     return { [CAMERA_POSE_HIPS_BONE]: legTarget(landmarkMidpoint(leftHip, rightHip)) }
   }
 
+  const neckPoleTarget = (): Record<string, THREE.Vector3> => {
+    if (!options.includeNeck) return {}
+    const leftEar = landmarks[LANDMARK_INDEX.leftEar]
+    const rightEar = landmarks[LANDMARK_INDEX.rightEar]
+    if (
+      !leftEar ||
+      !rightEar ||
+      leftEar.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD ||
+      rightEar.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+    ) {
+      return {}
+    }
+    return { mixamorigHead: boneTarget(landmarkMidpoint(leftEar, rightEar)) }
+  }
+
   return {
     boneTargets: {
       ...entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget),
@@ -416,7 +442,8 @@ export const cameraLandmarksToBoneTargets = (
     },
     poleTargets: {
       ...(options.includeElbows ? entriesFor(CAMERA_POSE_ELBOW_POLE_LANDMARKS, boneTarget) : {}),
-      ...(options.includeKnees ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget) : {})
+      ...(options.includeKnees ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget) : {}),
+      ...neckPoleTarget()
     }
   }
 }

@@ -211,6 +211,31 @@ describe('cameraLandmarksToBoneTargets', () => {
     ])
   })
 
+  it('maps the ear midpoint to a pole target for the head when neck bending is turned on', () => {
+    const landmarks = buildTestLandmarks()
+    landmarks[7] = landmark(-0.1, -1.5, -0.2) // left ear
+    landmarks[8] = landmark(0.1, -1.5, -0.2) // right ear
+
+    const { poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeNeck: true
+    })
+
+    expect(poleTargets.mixamorigHead).toBeDefined()
+  })
+
+  it('reports no neck pole target when the ears are not both visible', () => {
+    const landmarks = buildTestLandmarks()
+    landmarks[7] = landmark(-0.1, -1.5, -0.2, 0.1) // left ear, below the visibility threshold
+
+    const { poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeNeck: true
+    })
+
+    expect(poleTargets.mixamorigHead).toBeUndefined()
+  })
+
   it('maps the hip midpoint to the rig root when hips are turned on', () => {
     const landmarks = buildTestLandmarks()
     landmarks[23] = landmark(-0.1, 0.5, 0) // left hip

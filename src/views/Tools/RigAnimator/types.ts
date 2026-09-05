@@ -9,6 +9,7 @@ export interface RigAnimatorConfig {
   showBoneMarkers: boolean
   cameraUseElbows: boolean
   cameraUseKnees: boolean
+  cameraUseNeck: boolean
   cameraUseHips: boolean
   cameraUseDepth: boolean
   cameraUseViewpoint: boolean
