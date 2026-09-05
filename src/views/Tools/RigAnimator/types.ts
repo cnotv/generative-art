@@ -11,4 +11,5 @@ export interface RigAnimatorConfig {
   cameraUseKnees: boolean
   cameraUseHips: boolean
   cameraUseDepth: boolean
+  cameraUseViewpoint: boolean
 }

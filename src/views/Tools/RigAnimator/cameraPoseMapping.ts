@@ -143,6 +143,40 @@ export interface CameraRigAnchor {
 }
 
 /**
+ * Estimate how far the subject is turned from square-to-camera, from the shoulder line's own
+ * rotation in the horizontal plane. Facing the camera straight on, both shoulders sit at the
+ * same depth, so the shoulder-to-shoulder vector points straight along x with no z component;
+ * turning the body moves one shoulder closer to the camera than the other, tilting that vector
+ * by exactly the angle turned. This is the one camera-relative angle a single photo's body
+ * landmarks can actually support: not a full camera pose (MediaPipe's world landmarks are
+ * already normalized to a real-world body scale, so they carry no cue at all about how far away
+ * or how zoomed in the original camera was), just which way the subject is facing.
+ * @param landmarks The detected person's world landmarks
+ * @returns The estimated yaw in radians, matching `frameCameraOnModel`'s own convention (0 is
+ *   square-on), or null when the shoulders aren't both confidently detected
+ */
+export const estimateCameraYaw = (landmarks: CameraLandmark[]): number | null => {
+  const leftShoulder = landmarks[LANDMARK_INDEX.leftShoulder]
+  const rightShoulder = landmarks[LANDMARK_INDEX.rightShoulder]
+  if (
+    !leftShoulder ||
+    !rightShoulder ||
+    leftShoulder.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD ||
+    rightShoulder.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+  ) {
+    return null
+  }
+  // MediaPipe's own landmark space puts the left shoulder at a larger x than the right (x
+  // grows toward the subject's own left), so the square-on reference vector points along
+  // negative x; negating it here is what makes 0 mean square-on instead of a half turn.
+  const dx = -(rightShoulder.x - leftShoulder.x)
+  // Scene z grows toward the viewer where landmark z grows away from it, the same flip
+  // `cameraLandmarksToBoneTargets` applies to every mapped position.
+  const dz = -(rightShoulder.z - leftShoulder.z)
+  return Math.atan2(dz, dx)
+}
+
+/**
  * Read the rig's own shoulder center and shoulder width from its current bone transforms, so
  * detected landmarks can be scaled and anchored to this specific rig instead of a fixed size.
  * Reads the `Arm` bones rather than `Shoulder`: on a mixamorig-named rig `Shoulder` is the

@@ -34,7 +34,7 @@ import {
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { frameCameraOnModel } from './cameraFraming'
-import type { CameraLandmark } from './cameraPoseMapping'
+import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
@@ -69,7 +69,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseElbows: true,
   cameraUseKnees: true,
   cameraUseHips: false,
-  cameraUseDepth: true
+  cameraUseDepth: true,
+  cameraUseViewpoint: false
 })
 
 const cameraPoseMappingOptions = computed(() => ({
@@ -194,7 +195,12 @@ const handleCloseCamera = (): void => {
   }
 }
 
-/** Applies a detected body pose and, riding along on the same emit, any detected hand poses. */
+/**
+ * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
+ * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
+ * from, the one camera-relative detail a single photo's body landmarks can actually support
+ * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
   handPoses: Partial<Record<HandSide, HandPoseDefinition>>
@@ -203,6 +209,10 @@ const handleCameraApply = (
   Object.entries(handPoses).forEach(([side, pose]) => {
     applyHandPose(rig.bones.value, side as HandSide, pose)
   })
+  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
+    const yaw = estimateCameraYaw(landmarks)
+    if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
+  }
 }
 
 const handleModelFileChange = (event: Event): void => {

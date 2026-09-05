@@ -36,8 +36,8 @@ exist, so two poses are already a movement.
   into a sparse set of pose keyframes
 - `src/views/Tools/RigAnimator/RigTimeline.vue`: the dedicated panel for playback, keyframes,
   the frame axis, presets, import and export (see below)
-- `src/views/Tools/RigAnimator/cameraFraming.ts`: framing the camera to whatever scale the
-  uploaded model happens to use
+- `src/views/Tools/RigAnimator/cameraFraming.ts` (+ `.test.ts`): framing the camera to whatever
+  scale the uploaded model happens to use, and to a detected photo's own viewing angle
 - `src/views/Tools/RigAnimator/export.ts`: the GLB/JSON export and JSON import file handling
 - `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema (upload, auto-rig,
   bone selection and pose fields), rebuilt whenever the bone list or the auto-rig availability
@@ -278,7 +278,7 @@ a second detector alongside it, covered in "Fingers from the camera" above.
 
 ### Extra details to try
 
-Four checkboxes in the Config panel, shown once the rig has every bone the base mapping needs,
+Five checkboxes in the Config panel, shown once the rig has every bone the base mapping needs,
 control more of what MediaPipe actually detects:
 
 - **Bend Elbows to Photo** and **Bend Knees to Photo**, on by default, feed the detected elbow
@@ -302,6 +302,16 @@ control more of what MediaPipe actually detects:
   judge depth from than two eyes or a video's own motion parallax do, making z the least
   reliable of the three axes it reports; turning this off projects every target onto the
   shoulder anchor's own depth plane instead of trusting a noisy estimate.
+- **Match Camera Angle to Photo**, off by default, turns the 3D view's own camera to roughly the
+  angle the photo shows the subject from, so a turned pose reads as turned in the viewport too
+  instead of always being viewed square-on. This is the one camera-relative detail a single
+  photo's body landmarks can actually support: MediaPipe's world landmarks are already
+  normalized to a real-world body scale, so unlike the subject's facing direction, nothing in
+  them hints at how close or how zoomed in the original camera was. The angle comes from the
+  shoulder line's own tilt in the horizontal plane: facing the camera straight on, both
+  shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
+  other by exactly the angle turned. Off by default since it moves the view every applied frame,
+  which fights any manual orbiting done in between.
 
 ### Smoothing the live feed
 

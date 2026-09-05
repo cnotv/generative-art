@@ -49,7 +49,8 @@ export const buildRigAnimatorSchema = (
         },
         cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
         cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
-        cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' }
+        cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
+        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' }
       }
     : {}),
   fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }

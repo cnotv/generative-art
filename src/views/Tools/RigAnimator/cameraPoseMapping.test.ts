@@ -5,6 +5,7 @@ import {
   computeCameraRigAnchor,
   cameraLandmarksToBoneTargets,
   smoothCameraLandmarks,
+  estimateCameraYaw,
   CAMERA_POSE_BONE_LANDMARKS,
   CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
   type CameraLandmark
@@ -44,6 +45,41 @@ const buildTestLandmarks = (): CameraLandmark[] => {
   landmarks[28] = landmark(0.1, 0.5, 0) // right ankle
   return landmarks
 }
+
+describe('estimateCameraYaw', () => {
+  // MediaPipe's own landmark space puts a subject's left shoulder at a larger x than their
+  // right (x grows toward the subject's own left), confirmed against two real detected photos
+  // this session; these fixtures match that real convention, not `buildTestLandmarks`'s made-up
+  // one above, which only has to stay consistent with its own matching `buildTestRig`.
+  const landmarksWithShoulders = (
+    leftShoulder: [number, number, number],
+    rightShoulder: [number, number, number]
+  ): CameraLandmark[] => {
+    const landmarks: CameraLandmark[] = new Array(33).fill(null).map(() => landmark(0, 0, 0, 0))
+    landmarks[11] = landmark(...leftShoulder)
+    landmarks[12] = landmark(...rightShoulder)
+    return landmarks
+  }
+
+  it('reads square-on as zero, both shoulders at the same depth', () => {
+    const yaw = estimateCameraYaw(landmarksWithShoulders([0.2, -0.5, 0], [-0.2, -0.5, 0]))
+    expect(yaw).toBeCloseTo(0)
+  })
+
+  it('reads a turn as a nonzero yaw, in the direction the shoulder line actually tilted', () => {
+    // The right shoulder sits closer to the camera (smaller z) than the left: the subject has
+    // turned toward their own right.
+    const yaw = estimateCameraYaw(landmarksWithShoulders([0.2, -0.5, 0], [-0.2, -0.5, -0.3]))
+    expect(yaw).not.toBeCloseTo(0)
+    expect(Math.abs(yaw!)).toBeLessThan(Math.PI / 2)
+  })
+
+  it('returns null when a shoulder is below the visibility threshold', () => {
+    const landmarks = landmarksWithShoulders([0.2, -0.5, 0], [-0.2, -0.5, 0])
+    landmarks[12] = { ...landmarks[12], visibility: 0.1 }
+    expect(estimateCameraYaw(landmarks)).toBeNull()
+  })
+})
 
 describe('computeCameraRigAnchor', () => {
   it('reads the shoulder center world position and shoulder width from the rig', () => {
