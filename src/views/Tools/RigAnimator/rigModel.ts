@@ -3,8 +3,36 @@ import { gltfLoader, fbxLoader } from '@webgamekit/threejs'
 import {
   rigFindUnskinnedMeshes,
   rigGenerateHumanoidSkeleton,
-  rigAutoSkinMesh
+  rigAutoSkinMesh,
+  HUMANOID_BONE_HIERARCHY
 } from '@webgamekit/rig'
+
+/** Where each canonical humanoid bone belongs in the Bone dropdown, core skeleton first. */
+const BONE_DISPLAY_ORDER = new Map(
+  HUMANOID_BONE_HIERARCHY.map((definition, index) => [definition.name, index])
+)
+
+/**
+ * Order a loaded rig's bone names for the Config panel's Bone dropdown, core skeleton (hips,
+ * spine, neck, head, arm and leg roots) first in a predictable, posing-relevant order, then
+ * everything else (fingers, toes, a custom rig's own extra bones) alphabetically after. A
+ * rig's own `skeleton.bones` array order comes straight from however its source file's skin
+ * table happened to list them, which for a real export is not necessarily the hierarchy at
+ * all: the default model's own bones came back as Neck, Spine2, Spine1, LeftShoulder, Spine,
+ * Hips, in that order, burying the very bones someone would reach for to bend a back for a
+ * seated or prone pose in an unpredictable scramble.
+ * @param boneNames The rig's bone names, in whatever order its skeleton happened to list them
+ * @returns The same names, reordered for a human scanning the dropdown top to bottom
+ */
+export const sortBoneNamesForDisplay = (boneNames: string[]): string[] =>
+  [...boneNames].sort((a, b) => {
+    const orderA = BONE_DISPLAY_ORDER.get(a)
+    const orderB = BONE_DISPLAY_ORDER.get(b)
+    if (orderA !== undefined && orderB !== undefined) return orderA - orderB
+    if (orderA !== undefined) return -1
+    if (orderB !== undefined) return 1
+    return a.localeCompare(b)
+  })
 
 const GLTF_EXTENSION_PATTERN = /\.(glb|gltf)$/i
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isGltfModelUrl } from './rigModel'
+import { isGltfModelUrl, sortBoneNamesForDisplay } from './rigModel'
 
 describe('isGltfModelUrl', () => {
   it.each([
@@ -13,5 +13,42 @@ describe('isGltfModelUrl', () => {
     ['blob:http://localhost:5327/00000000-0000-0000-0000-000000000000#character2.fbx', false]
   ])('%s resolves to gltf: %s', (url, expected) => {
     expect(isGltfModelUrl(url)).toBe(expected)
+  })
+})
+
+describe('sortBoneNamesForDisplay', () => {
+  it('puts the core skeleton first, in a sensible posing order, however the source scrambled it', () => {
+    // The exact scramble a real uploaded model's own skeleton.bones array came back in.
+    const scrambled = [
+      'mixamorigNeck',
+      'mixamorigSpine2',
+      'mixamorigSpine1',
+      'mixamorigLeftShoulder',
+      'mixamorigSpine',
+      'mixamorigHips'
+    ]
+    expect(sortBoneNamesForDisplay(scrambled)).toEqual([
+      'mixamorigHips',
+      'mixamorigSpine',
+      'mixamorigSpine1',
+      'mixamorigSpine2',
+      'mixamorigNeck',
+      'mixamorigLeftShoulder'
+    ])
+  })
+
+  it('sorts anything outside the canonical skeleton alphabetically after all of it', () => {
+    const names = ['mixamorigLeftHandThumb2', 'mixamorigHips', 'mixamorigLeftHandThumb1']
+    expect(sortBoneNamesForDisplay(names)).toEqual([
+      'mixamorigHips',
+      'mixamorigLeftHandThumb1',
+      'mixamorigLeftHandThumb2'
+    ])
+  })
+
+  it('does not mutate the array it was given', () => {
+    const names = ['mixamorigNeck', 'mixamorigHips']
+    sortBoneNamesForDisplay(names)
+    expect(names).toEqual(['mixamorigNeck', 'mixamorigHips'])
   })
 })

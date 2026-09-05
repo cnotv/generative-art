@@ -14,7 +14,7 @@ import {
   resetAllBonesToRest as resetAllBoneTransformsToRest,
   type BoneRestPose
 } from './boneDragTarget'
-import { loadModelFile, disposeModel, generateAutoRig } from './rigModel'
+import { loadModelFile, disposeModel, generateAutoRig, sortBoneNamesForDisplay } from './rigModel'
 import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
 import type { RigAnimatorConfig } from './types'
@@ -30,7 +30,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   /** Every bone's transform as loaded, so a bad edit (a position drag gone too far) can be undone. */
   let restPoses: Map<string, BoneRestPose> = new Map()
 
-  const boneNames = computed(() => bones.value.map((bone) => bone.name))
+  const boneNames = computed(() => sortBoneNamesForDisplay(bones.value.map((bone) => bone.name)))
   const needsAutoRig = computed(
     () =>
       bones.value.length === 0 && !!model.value && rigFindUnskinnedMeshes(model.value).length > 0

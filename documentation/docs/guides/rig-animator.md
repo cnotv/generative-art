@@ -21,7 +21,8 @@ exist, so two poses are already a movement.
   clip built from them, and explicit autosave persistence on every genuine edit
 - `src/views/Tools/RigAnimator/useRigKeyframeIO.ts`: every way keyframes enter or leave the
   tool: GLB/JSON export, JSON import, loading a bundled preset, autosave restore and reset
-- `src/views/Tools/RigAnimator/rigModel.ts`: loading a model file and generating an auto-rig
+- `src/views/Tools/RigAnimator/rigModel.ts` (+ `.test.ts`): loading a model file, generating an
+  auto-rig, and ordering the Bone dropdown's display
 - `src/views/Tools/RigAnimator/boneMarkers.ts`: the clickable, hierarchy-scaled per-bone markers
 - `src/views/Tools/RigAnimator/boneDragPlane.ts`: the camera-facing plane a drag reads the
   pointer against, so posing never jumps with a world axis
@@ -87,7 +88,15 @@ fingertip further down the chain. Clicking a marker, or picking a name from the 
 **Bone** dropdown, selects it: the marker turns rose, every other one stays the default
 periwinkle. **Show Bone Markers**, in the same panel, hides them all for a clean view of the
 model itself; picking a bone by clicking its marker is unavailable while they are hidden, but
-the **Bone** dropdown still selects one.
+the **Bone** dropdown still selects one. That dropdown lists the core skeleton first, in a
+posing-relevant order (hips, spine, neck, head, then each limb root), before anything else the
+rig happens to carry (fingers, toes, a custom rig's own extra bones), rather than whatever
+arbitrary order the model's own source file listed its skeleton in: an uploaded model's own
+`skeleton.bones` array reflects however its skin table happened to store them, not the
+hierarchy, and came back for the bundled default model as Neck, Spine2, Spine1, LeftShoulder,
+Spine, Hips, in that order. Reordering only the dropdown's display, never the rig's own bone
+array, is what makes a spine bone to bend a back into a seated or prone curve findable at all,
+rather than buried in a scramble of fifty finger bones.
 
 Rotating and moving both work two ways, kept in sync with each other:
 
@@ -99,7 +108,11 @@ Rotating and moving both work two ways, kept in sync with each other:
   whatever scale the loaded rig happens to be.
 
 Either one updates the model live and the other's fields immediately, so a pose is built by eye
-against the model rather than by typing numbers blind.
+against the model rather than by typing numbers blind. A single spine segment only bends its
+own immediate parent when dragged (see "Dragging never stretches a segment" below), so curving
+a whole back into a seated or prone pose means selecting Spine, Spine1, Spine2 and Neck in turn
+and rotating each a little, the same way a real spine's curve is really several vertebrae each
+bending a small amount rather than one joint bending sharply.
 
 Only rotation is part of a keyframe. Typing into Bone Position corrects where a bone sits,
 which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather than
