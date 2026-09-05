@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import type { HandPoseDefinition, HandSide } from '@webgamekit/rig'
+import { clampLandmarkJump } from './cameraPoseMapping'
+import { CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 
 /**
  * One hand landmark from MediaPipe's Hand Landmarker. Unlike a body pose landmark, a hand
@@ -79,21 +81,25 @@ export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): Hand
  *   the first frame this side was seen
  * @param next This frame's freshly detected landmarks
  * @param factor Fraction of `next` blended in; lower reads smoother but laggier
+ * @param maxJump The furthest a landmark may move from its previous position in one frame,
+ *   after blending; same jump clamp `smoothCameraLandmarks` applies to the body
  * @returns The smoothed landmarks to actually read a finger pose from
  */
 export const smoothCameraHandLandmarks = (
   previous: CameraHandLandmark[] | null,
   next: CameraHandLandmark[],
-  factor: number
+  factor: number,
+  maxJump: number = CAMERA_LANDMARK_MAX_JUMP_METERS
 ): CameraHandLandmark[] =>
   next.map((landmark, index) => {
     const previousLandmark = previous?.[index]
     if (!previousLandmark) return landmark
-    return {
+    const blended = {
       x: previousLandmark.x + (landmark.x - previousLandmark.x) * factor,
       y: previousLandmark.y + (landmark.y - previousLandmark.y) * factor,
       z: previousLandmark.z + (landmark.z - previousLandmark.z) * factor
     }
+    return clampLandmarkJump(previousLandmark, blended, maxJump)
   })
 
 /**

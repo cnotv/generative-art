@@ -10,7 +10,8 @@ import {
   MEDIAPIPE_WASM_BASE_PATH,
   MEDIAPIPE_POSE_MODEL_URL,
   MEDIAPIPE_HAND_MODEL_URL,
-  CAMERA_LANDMARK_SMOOTHING_FACTOR
+  CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  CAMERA_LANDMARK_MAX_JUMP_METERS
 } from './config'
 import { smoothCameraLandmarks, type CameraLandmark } from './cameraPoseMapping'
 import {
@@ -26,9 +27,12 @@ import {
  * skeleton overlay, and exposing the latest detected body and finger poses for a caller to read.
  * @param smoothingFactor Fraction of each new frame blended in, read fresh every frame so a
  *   Config panel slider takes effect immediately rather than only on the next `start()`
+ * @param maxJump The furthest a landmark may move from its previous position in one frame,
+ *   read fresh every frame the same way `smoothingFactor` is
  */
 export const useCameraPoseCapture = (
-  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR)
+  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR),
+  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -61,7 +65,12 @@ export const useCameraPoseCapture = (
     previewLandmarks.value = result.landmarks[0] ?? null
     const rawWorldLandmarks = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
     worldLandmarks.value = rawWorldLandmarks
-      ? smoothCameraLandmarks(previousWorldLandmarks, rawWorldLandmarks, smoothingFactor.value)
+      ? smoothCameraLandmarks(
+          previousWorldLandmarks,
+          rawWorldLandmarks,
+          smoothingFactor.value,
+          maxJump.value
+        )
       : null
     previousWorldLandmarks = worldLandmarks.value
 
@@ -72,7 +81,8 @@ export const useCameraPoseCapture = (
       const smoothed = smoothCameraHandLandmarks(
         side ? (previousHandLandmarksBySide[side] ?? null) : null,
         landmarksForHand as CameraHandLandmark[],
-        smoothingFactor.value
+        smoothingFactor.value,
+        maxJump.value
       )
       if (side) previousHandLandmarksBySide = { ...previousHandLandmarksBySide, [side]: smoothed }
       return { worldLandmarks: smoothed, categoryName }

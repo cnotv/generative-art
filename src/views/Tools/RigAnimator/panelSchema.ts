@@ -3,7 +3,8 @@ import {
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
   CAMERA_SMOOTHING_FACTOR_RANGE,
-  CAMERA_REACH_MULTIPLIER_RANGE
+  CAMERA_REACH_MULTIPLIER_RANGE,
+  CAMERA_MAX_JUMP_RANGE
 } from './config'
 
 /**
@@ -64,6 +65,10 @@ export const buildRigAnimatorSchema = (
         cameraSmoothingFactor: {
           ...CAMERA_SMOOTHING_FACTOR_RANGE,
           label: 'Camera Pose: Smoothing (Live Feed)'
+        },
+        cameraMaxJump: {
+          ...CAMERA_MAX_JUMP_RANGE,
+          label: 'Camera Pose: Max Jump (Live Feed)'
         },
         cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
       }

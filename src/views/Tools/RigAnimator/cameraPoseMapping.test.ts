@@ -5,6 +5,7 @@ import {
   computeCameraRigAnchor,
   cameraLandmarksToBoneTargets,
   smoothCameraLandmarks,
+  clampLandmarkJump,
   estimateCameraYaw,
   CAMERA_POSE_BONE_LANDMARKS,
   CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
@@ -359,7 +360,8 @@ describe('smoothCameraLandmarks', () => {
   it('blends position toward the new frame by the given factor, keeping the new visibility', () => {
     const previous = [landmark(0, 0, 0, 1)]
     const next = [landmark(1, 1, 1, 0.4)]
-    const [smoothed] = smoothCameraLandmarks(previous, next, 0.25)
+    // A jump cap far past this blend's own distance, so only the blend itself is under test.
+    const [smoothed] = smoothCameraLandmarks(previous, next, 0.25, 10)
     expect(smoothed.x).toBeCloseTo(0.25)
     expect(smoothed.y).toBeCloseTo(0.25)
     expect(smoothed.z).toBeCloseTo(0.25)
@@ -369,8 +371,45 @@ describe('smoothCameraLandmarks', () => {
   it('takes a landmark missing from the previous frame as-is, rather than blending against nothing', () => {
     const previous = [landmark(0, 0, 0, 1)]
     const next = [landmark(0, 0, 0, 1), landmark(5, 5, 5, 1)]
-    const smoothed = smoothCameraLandmarks(previous, next, 0.25)
+    const smoothed = smoothCameraLandmarks(previous, next, 0.25, 10)
     expect(smoothed[1]).toEqual(next[1])
+  })
+
+  it('clamps a sudden jump past the max jump distance instead of applying it whole', () => {
+    const previous = [landmark(0, 0, 0, 1)]
+    // Factor 1 (no blending) so the whole raw jump would otherwise land untouched.
+    const next = [landmark(10, 0, 0, 1)]
+    const [smoothed] = smoothCameraLandmarks(previous, next, 1, 0.15)
+    expect(smoothed.x).toBeCloseTo(0.15)
+  })
+
+  it('leaves a movement within the max jump distance untouched', () => {
+    const previous = [landmark(0, 0, 0, 1)]
+    const next = [landmark(0.1, 0, 0, 1)]
+    const [smoothed] = smoothCameraLandmarks(previous, next, 1, 0.15)
+    expect(smoothed.x).toBeCloseTo(0.1)
+  })
+})
+
+describe('clampLandmarkJump', () => {
+  it('leaves a candidate within reach untouched', () => {
+    const previous = { x: 0, y: 0, z: 0 }
+    const candidate = { x: 0.1, y: 0, z: 0, visibility: 1 }
+    expect(clampLandmarkJump(previous, candidate, 0.15)).toEqual(candidate)
+  })
+
+  it('pulls a candidate back to the max jump distance, keeping its direction', () => {
+    const previous = { x: 0, y: 0, z: 0 }
+    const candidate = { x: 10, y: 0, z: 0, visibility: 1 }
+    const clamped = clampLandmarkJump(previous, candidate, 0.15)
+    expect(clamped.x).toBeCloseTo(0.15)
+    expect(clamped.visibility).toBe(1)
+  })
+
+  it('treats a non-positive max jump as unlimited movement', () => {
+    const previous = { x: 0, y: 0, z: 0 }
+    const candidate = { x: 10, y: 0, z: 0, visibility: 1 }
+    expect(clampLandmarkJump(previous, candidate, 0)).toEqual(candidate)
   })
 })
 

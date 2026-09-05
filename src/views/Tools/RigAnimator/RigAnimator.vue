@@ -32,6 +32,7 @@ import {
   MODEL_FILE_ACCEPT,
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  CAMERA_LANDMARK_MAX_JUMP_METERS,
   RIG_TIMELINE_KEYBOARD_MAPPING
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
@@ -77,6 +78,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseViewpoint: false,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false
 })
 
@@ -434,6 +436,7 @@ onUnmounted(() => {
   <CameraPoseCapture
     v-if="showCameraCapture"
     :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
+    :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
     @apply="handleCameraApply"
     @close="handleCloseCamera"

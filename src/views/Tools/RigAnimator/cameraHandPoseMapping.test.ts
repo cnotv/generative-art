@@ -100,7 +100,8 @@ describe('smoothCameraHandLandmarks', () => {
   it('blends position toward the new frame by the given factor', () => {
     const previous = [point(0, 0, 0)]
     const next = [point(1, 1, 1)]
-    const [smoothed] = smoothCameraHandLandmarks(previous, next, 0.25)
+    // A jump cap far past this blend's own distance, so only the blend itself is under test.
+    const [smoothed] = smoothCameraHandLandmarks(previous, next, 0.25, 10)
     expect(smoothed.x).toBeCloseTo(0.25)
     expect(smoothed.y).toBeCloseTo(0.25)
     expect(smoothed.z).toBeCloseTo(0.25)
@@ -109,7 +110,14 @@ describe('smoothCameraHandLandmarks', () => {
   it('takes a landmark missing from the previous frame as-is', () => {
     const previous = [point(0, 0, 0)]
     const next = [point(0, 0, 0), point(5, 5, 5)]
-    const smoothed = smoothCameraHandLandmarks(previous, next, 0.25)
+    const smoothed = smoothCameraHandLandmarks(previous, next, 0.25, 10)
     expect(smoothed[1]).toEqual(next[1])
+  })
+
+  it('clamps a sudden jump past the max jump distance instead of applying it whole', () => {
+    const previous = [point(0, 0, 0)]
+    const next = [point(10, 0, 0)]
+    const [smoothed] = smoothCameraHandLandmarks(previous, next, 1, 0.15)
+    expect(smoothed.x).toBeCloseTo(0.15)
   })
 })

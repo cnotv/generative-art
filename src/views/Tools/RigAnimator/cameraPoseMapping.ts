@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { CAMERA_LANDMARK_SMOOTHING_FACTOR } from './config'
+import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 
 /** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
 export interface CameraLandmark {
@@ -9,32 +9,77 @@ export interface CameraLandmark {
   visibility: number
 }
 
+/** The minimal shape `clampLandmarkJump` needs: any landmark-like point. */
+interface LandmarkPoint {
+  x: number
+  y: number
+  z: number
+}
+
+/**
+ * Clamp how far `candidate` has moved from `previous`, in straight-line distance, to at most
+ * `maxJump`: a single misdetected frame that puts a landmark somewhere far from where it just
+ * was reads as a sudden, physically implausible snap rather than motion, and a real fast
+ * movement still gets there, just over a couple of extra frames instead of one. Preserves every
+ * other field `candidate` carries (a `CameraLandmark`'s `visibility`, say).
+ * @param previous Where this landmark was last frame
+ * @param candidate Where this frame's (possibly already-blended) landmark wants to move to
+ * @param maxJump The furthest `candidate` may move from `previous` in one call, in the same
+ *   units as the landmarks themselves (metres, for world landmarks)
+ * @returns `candidate` unchanged if within reach, otherwise pulled back to `maxJump` away
+ */
+export const clampLandmarkJump = <T extends LandmarkPoint>(
+  previous: LandmarkPoint,
+  candidate: T,
+  maxJump: number
+): T => {
+  const dx = candidate.x - previous.x
+  const dy = candidate.y - previous.y
+  const dz = candidate.z - previous.z
+  const distance = Math.hypot(dx, dy, dz)
+  if (maxJump <= 0 || distance <= maxJump) return candidate
+  const scale = maxJump / distance
+  return {
+    ...candidate,
+    x: previous.x + dx * scale,
+    y: previous.y + dy * scale,
+    z: previous.z + dz * scale
+  }
+}
+
 /**
  * Blend a newly detected frame's landmarks into the previous smoothed set, an exponential
- * moving average per landmark. The raw per-frame detection is noisy enough on its own (most
- * visibly on depth) that applying it straight to the rig reads as jitter rather than motion;
- * blending it against where the landmark just was removes that noise at the cost of a little
- * lag. Visibility is taken from the new frame as-is rather than blended, so a landmark that just
- * left or entered frame is not treated as still partway visible for a few extra frames.
+ * moving average per landmark, then clamp how far that blended result may have moved from the
+ * previous frame. The raw per-frame detection is noisy enough on its own (most visibly on depth)
+ * that applying it straight to the rig reads as jitter rather than motion; blending it against
+ * where the landmark just was removes that noise at the cost of a little lag. The blend alone
+ * still lets a single wildly misdetected frame through, scaled down by `factor` but still a
+ * visible snap; the jump clamp catches that case specifically, on top of the blend. Visibility is
+ * taken from the new frame as-is rather than blended, so a landmark that just left or entered
+ * frame is not treated as still partway visible for a few extra frames.
  * @param previous The previous frame's smoothed landmarks, or null for the first frame
  * @param next This frame's freshly detected landmarks
  * @param factor Fraction of `next` blended in; lower reads smoother but laggier
+ * @param maxJump The furthest a landmark may move from its previous position in one frame,
+ *   after blending; a sudden misdetection past this is pulled back rather than applied whole
  * @returns The smoothed landmarks to actually map onto the rig
  */
 export const smoothCameraLandmarks = (
   previous: CameraLandmark[] | null,
   next: CameraLandmark[],
-  factor: number = CAMERA_LANDMARK_SMOOTHING_FACTOR
+  factor: number = CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  maxJump: number = CAMERA_LANDMARK_MAX_JUMP_METERS
 ): CameraLandmark[] =>
   next.map((landmark, index) => {
     const previousLandmark = previous?.[index]
     if (!previousLandmark) return landmark
-    return {
+    const blended = {
       x: previousLandmark.x + (landmark.x - previousLandmark.x) * factor,
       y: previousLandmark.y + (landmark.y - previousLandmark.y) * factor,
       z: previousLandmark.z + (landmark.z - previousLandmark.z) * factor,
       visibility: landmark.visibility
     }
+    return clampLandmarkJump(previousLandmark, blended, maxJump)
   })
 
 const LANDMARK_INDEX = {

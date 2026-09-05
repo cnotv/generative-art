@@ -11,6 +11,9 @@ import { CAMERA_PANEL_WIDTH_VW } from './config'
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
   smoothingFactor: number
+  /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
+   * jump; tuned from the Config panel. */
+  maxJump: number
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
 }>()
@@ -23,7 +26,7 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'))
+const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
 const photo = useCameraPhotoPose()
 const mode = ref<'camera' | 'photo'>('camera')
 

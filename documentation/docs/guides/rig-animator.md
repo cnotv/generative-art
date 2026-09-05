@@ -374,6 +374,13 @@ per-joint curl angle is a small difference between two nearby points, so the sam
 noise a body landmark shrugs off reads as visible finger twitching once it is small enough to
 change a joint's read angle.
 
+Blending alone still lets one badly misdetected frame through, just scaled down by the smoothing
+factor rather than applied whole, which can still read as a sudden snap. **Max Jump (Live
+Feed)** clamps how far a landmark may move, past the blend, in a single frame: past that
+distance the excess is pulled back rather than applied, so a genuine fast movement still gets
+there, just over a couple of extra frames instead of one. Same slider for the body and every
+detected hand.
+
 ### Frame shortcuts
 
 **Space** (keyboard) or the gamepad's left face button adds a keyframe at the current frame, the

@@ -76,6 +76,12 @@ export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.05, max: 1, step: 0.05 }
 /** Range and step the Config panel's reach multiplier slider offers. */
 export const CAMERA_REACH_MULTIPLIER_RANGE = { min: 0.5, max: 2, step: 0.05 }
 
+/** How far, in metres, a smoothed landmark may move in a single frame before the excess past
+ * this is clamped off as a sudden jump rather than genuine motion. */
+export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
+/** Range and step the Config panel's max jump slider offers. */
+export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
+
 /**
  * Keyboard and gamepad shortcuts for the rig timeline. X and Square are the same physical
  * button under two different platforms' naming, so "X to save, Square for next" as asked
