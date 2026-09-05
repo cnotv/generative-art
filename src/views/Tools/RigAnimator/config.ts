@@ -70,8 +70,9 @@ export const CAMERA_PANEL_WIDTH_VW = 45
 /** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
  * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */
 export const CAMERA_LANDMARK_SMOOTHING_FACTOR = 0.35
-/** Range and step the Config panel's smoothing slider offers. */
-export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.05, max: 1, step: 0.05 }
+/** Range and step the Config panel's smoothing slider offers. Lower than the default's own
+ * 0.05 step reaches so heavier smoothing than the initial range allowed is still reachable. */
+export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.01, max: 1, step: 0.01 }
 
 /** Range and step the Config panel's reach multiplier slider offers. */
 export const CAMERA_REACH_MULTIPLIER_RANGE = { min: 0.5, max: 2, step: 0.05 }
