@@ -276,7 +276,8 @@ watch(
 )
 watch(
   () => reactiveConfig.value.showBoneMarkers,
-  (visible) => rig.setMarkersVisible(visible)
+  (visible) => rig.setMarkersVisible(visible),
+  { immediate: true }
 )
 watch(
   () => reactiveConfig.value.frame,
