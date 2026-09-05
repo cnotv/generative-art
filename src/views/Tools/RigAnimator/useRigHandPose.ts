@@ -11,8 +11,14 @@ import type { RigAnimatorConfig } from './types'
 /**
  * Owns applying a canned finger pose to whichever hand the panel's selected bone belongs to,
  * split out of `useRigModel` to stay under its function-length lint cap.
+ * @param getRestQuaternions Every bone's rest-pose local quaternion, from `useRigModel`, so the
+ *   preset's curl composes on top of each joint's own rest tilt rather than overwriting it
  */
-export const useRigHandPose = (bones: Ref<THREE.Bone[]>, config: Ref<RigAnimatorConfig>) => {
+export const useRigHandPose = (
+  bones: Ref<THREE.Bone[]>,
+  config: Ref<RigAnimatorConfig>,
+  getRestQuaternions: () => Map<string, THREE.Quaternion>
+) => {
   const selectedHandSide = computed(() => resolveHandSide(config.value.selectedBone))
 
   const canApplyHandPose = computed(() => {
@@ -27,7 +33,7 @@ export const useRigHandPose = (bones: Ref<THREE.Bone[]>, config: Ref<RigAnimator
     const side = selectedHandSide.value
     const preset = HAND_POSE_PRESETS[presetName]
     if (!side || !preset) return
-    applyHandPose(bones.value, side, preset)
+    applyHandPose(bones.value, side, preset, getRestQuaternions())
   }
 
   return { canApplyHandPose, applyHandPosePreset }

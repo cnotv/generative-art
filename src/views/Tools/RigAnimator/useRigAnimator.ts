@@ -24,7 +24,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigModel.applyBoneDragTarget,
     rigModel.resetAllBonesToRest
   )
-  const rigHandPose = useRigHandPose(rigModel.bones, config)
+  const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
 
   /** Load a model and drop whatever keyframes belonged to the one it replaces. */
   const loadModel = async (url: string): Promise<void> => {

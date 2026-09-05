@@ -5,13 +5,17 @@ const IK_EPSILON = 1e-6
 
 /**
  * Rotate a bone in world space so the direction it currently points turns into the direction
- * it should point, keeping whatever roll the minimal rotation between the two implies.
+ * it should point, keeping whatever roll the minimal rotation between the two implies. Calling
+ * this twice in a row on the same bone, once per reference direction, fully orients it: the
+ * second call's minimal rotation is necessarily a pure roll around the first call's now-matched
+ * axis, since both the current and desired second direction stay perpendicular to that shared
+ * axis by construction (see `cameraHandPoseMapping.ts`'s palm orientation for a worked case).
  * @param bone The bone to rotate
  * @param currentWorldDirection The direction the bone points right now, normalized
  * @param desiredWorldDirection The direction the bone should point, normalized
  * @returns Nothing; mutates the bone's local quaternion
  */
-const applyWorldDirectionToBone = (
+export const ikApplyWorldDirectionToBone = (
   bone: THREE.Bone,
   currentWorldDirection: THREE.Vector3,
   desiredWorldDirection: THREE.Vector3
@@ -97,7 +101,7 @@ export const ikSolveTwoBoneChain = (
     .add(bendDirection.clone().multiplyScalar(Math.sin(rootAngle)))
     .normalize()
   const currentUpperDirection = midWorldPosition.clone().sub(rootWorldPosition).normalize()
-  applyWorldDirectionToBone(chain.root, currentUpperDirection, upperDirection)
+  ikApplyWorldDirectionToBone(chain.root, currentUpperDirection, upperDirection)
 
   const midWorldPositionAfterRoot = chain.mid.getWorldPosition(new THREE.Vector3())
   const endWorldPositionAfterRoot = chain.end.getWorldPosition(new THREE.Vector3())
@@ -112,7 +116,7 @@ export const ikSolveTwoBoneChain = (
     .clone()
     .sub(midWorldPositionAfterRoot)
     .normalize()
-  applyWorldDirectionToBone(chain.mid, currentLowerDirection, desiredLowerDirection)
+  ikApplyWorldDirectionToBone(chain.mid, currentLowerDirection, desiredLowerDirection)
 }
 
 /**
@@ -136,5 +140,5 @@ export const ikSolveOneBoneAim = (
   const childWorldPosition = child.getWorldPosition(new THREE.Vector3())
   const desiredDirection = targetWorldPosition.clone().sub(parentWorldPosition).normalize()
   const currentDirection = childWorldPosition.clone().sub(parentWorldPosition).normalize()
-  applyWorldDirectionToBone(parent, currentDirection, desiredDirection)
+  ikApplyWorldDirectionToBone(parent, currentDirection, desiredDirection)
 }

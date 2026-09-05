@@ -144,7 +144,9 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
 
   /** Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc. */
   const resetAllBonesToRest = (): void => resetAllBoneTransformsToRest(bones.value, restPoses)
-
+  /** Every bone's rest quaternion, keyed by name, for `applyHandPose`'s rest-relative curl. */
+  const getRestQuaternions = (): Map<string, THREE.Quaternion> =>
+    new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.quaternion]))
   return {
     model,
     skinnedMesh,
@@ -164,6 +166,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     applyBonePosition,
     applyBoneDragTarget,
     resetSelectedBone,
-    resetAllBonesToRest
+    resetAllBonesToRest,
+    getRestQuaternions
   }
 }

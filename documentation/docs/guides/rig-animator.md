@@ -195,12 +195,16 @@ row, split into parts left to right.
 **Hand Pose**, next to Copy/Paste, offers a handful of canned finger poses (**Open**, **Fist**,
 **Point**, **Thumbs Up**) for whichever hand the currently selected bone belongs to: select the
 hand itself or any of its fingers, and the dropdown enables once every finger bone that hand
-needs is present on the rig. Applying a preset curls each finger joint around its local X axis,
-the flexion axis on both hands for a mixamorig-named rig, and only ever touches the selected
-hand's own fingers. Like a manual bone edit, it changes the live rig immediately; **Add
-Keyframe** is still what commits it to the timeline. Finger bones are not part of the auto-rig
-heuristic's generated skeleton, so this is only available on a model that already shipped with
-them, such as a genuine Mixamo export.
+needs is present on the rig. Applying a preset curls each finger joint by the preset's angle
+around its own local X axis, composed on top of that joint's rest pose rather than overwriting
+its rotation outright, and only ever touches the selected hand's own fingers. The composition
+matters for the thumb specifically: its CMC and MCP joints rest with a real tilt on every axis
+(anatomically, not an authoring accident), unlike the four straight fingers' own near-zero rest,
+so overwriting just the X component used to leave a curled thumb barely moving at all. Like a
+manual bone edit, applying a preset changes the live rig immediately; **Add Keyframe** is still
+what commits it to the timeline. Finger bones are not part of the auto-rig heuristic's generated
+skeleton, so this is only available on a model that already shipped with them, such as a genuine
+Mixamo export.
 
 ![The right hand curled into the Fist preset, its fingers closed while the rest of the rig stays untouched](/img/animation/rig-hand-pose-fist.webp)
 

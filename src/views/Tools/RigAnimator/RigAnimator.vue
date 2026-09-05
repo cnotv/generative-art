@@ -220,8 +220,9 @@ const handleCameraApply = (
   handPoses: Partial<Record<HandSide, HandPoseDefinition>>
 ): void => {
   rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value)
+  const restQuaternions = rig.getRestQuaternions()
   Object.entries(handPoses).forEach(([side, pose]) => {
-    applyHandPose(rig.bones.value, side as HandSide, pose)
+    applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
   if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
     const yaw = estimateCameraYaw(landmarks)

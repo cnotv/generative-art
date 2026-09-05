@@ -32,24 +32,38 @@ export const resolveHandSide = (boneName: string): HandSide | null => {
   return null
 }
 
+/** The flexion axis every finger joint curls around, in that joint's own local (rest) frame. */
+const FLEXION_AXIS = new THREE.Vector3(1, 0, 0)
+
 /**
- * Apply a canned finger pose to one hand, curling each joint around its local X axis (the
- * flexion axis for both hands on a mixamorig-named rig). Bones the rig doesn't have are skipped.
+ * Apply a canned finger pose to one hand, curling each joint by `angle` around its own local X
+ * axis, composed on top of that joint's rest orientation rather than overwriting its Euler X
+ * component directly. Those give the same result for a joint whose rest pose carries no twist of
+ * its own (true for the four straight fingers on a mixamorig-named rig), but not for the thumb:
+ * its CMC and MCP joints rest with a real, substantial tilt on every axis, an anatomical fact of
+ * thumb opposition, not an authoring accident, so overwriting just the X component left most of
+ * a detected or preset curl reading as barely any visible movement at all. Bones the rig doesn't
+ * have, or has no rest quaternion recorded for, are skipped.
  * @param bones The rig's bones
  * @param side Which hand the preset applies to
  * @param preset The per-finger joint angles to apply
+ * @param restQuaternions Every finger bone's rest-pose local quaternion, keyed by name
  */
 export const applyHandPose = (
   bones: THREE.Bone[],
   side: HandSide,
-  preset: HandPoseDefinition
+  preset: HandPoseDefinition,
+  restQuaternions: Map<string, THREE.Quaternion>
 ): void => {
   FINGERS.forEach(({ key, boneName }) => {
     preset[key].forEach((angle, jointIndex) => {
-      const bone = bones.find(
-        (candidate) => candidate.name === `mixamorig${side}Hand${boneName}${jointIndex + 1}`
-      )
-      if (bone) bone.rotation.x = angle
+      const name = `mixamorig${side}Hand${boneName}${jointIndex + 1}`
+      const bone = bones.find((candidate) => candidate.name === name)
+      const restQuaternion = restQuaternions.get(name)
+      if (!bone || !restQuaternion) return
+      bone.quaternion
+        .copy(restQuaternion)
+        .multiply(new THREE.Quaternion().setFromAxisAngle(FLEXION_AXIS, angle))
     })
   })
 }
