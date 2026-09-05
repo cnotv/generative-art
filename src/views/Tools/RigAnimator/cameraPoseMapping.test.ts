@@ -105,6 +105,23 @@ describe('computeCameraRigAnchor', () => {
     ]
     expect(computeCameraRigAnchor(bones)?.shoulderWidthWorld).toBeCloseTo(0.8)
   })
+
+  it('reads the hip center and width when the rig has UpLeg bones', () => {
+    const bones = [
+      ...buildTestRig(),
+      buildBone('mixamorigLeftUpLeg', [-0.1, 0, 0]),
+      buildBone('mixamorigRightUpLeg', [0.1, 0, 0])
+    ]
+    const anchor = computeCameraRigAnchor(bones)
+    expect(anchor?.hipCenterWorldPosition?.toArray()).toEqual([0, 0, 0])
+    expect(anchor?.hipWidthWorld).toBeCloseTo(0.2)
+  })
+
+  it('leaves the hip anchor null when the rig has no UpLeg bones', () => {
+    const anchor = computeCameraRigAnchor(buildTestRig())
+    expect(anchor?.hipCenterWorldPosition).toBeNull()
+    expect(anchor?.hipWidthWorld).toBeNull()
+  })
 })
 
 describe('cameraLandmarksToBoneTargets', () => {
@@ -206,6 +223,64 @@ describe('cameraLandmarksToBoneTargets', () => {
 
     expect(boneTargets.mixamorigHips).toBeDefined()
     expect(boneTargets.mixamorigHips.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
+  })
+})
+
+describe('legs scale off the hip anchor, not the shoulder one', () => {
+  // A rig whose legs are proportioned very differently from its shoulders: hips only 0.2
+  // apart against an 0.8 shoulder width, a 4:1 ratio well past a real body's. This is exactly
+  // the shape a real detected pose surfaced: scaling the ankle reach off the shoulders left it
+  // barely a third of the rig's own leg length, folding the knee into an unnatural crouch.
+  const buildRigWithHips = (): THREE.Bone[] => [
+    ...buildTestRig(),
+    buildBone('mixamorigLeftUpLeg', [-0.1, 0, 0]),
+    buildBone('mixamorigRightUpLeg', [0.1, 0, 0])
+  ]
+
+  const landmarksWithHips = (): CameraLandmark[] => {
+    const landmarks = buildTestLandmarks()
+    landmarks[23] = landmark(-0.1, 0, 0) // left hip, 0.2 apart from the right, same as the rig
+    landmarks[24] = landmark(0.1, 0, 0) // right hip
+    return landmarks
+  }
+
+  it('reaches a different target for the foot than the shoulder scale would, once a hip anchor is available', () => {
+    const withHipAnchor = cameraLandmarksToBoneTargets(
+      landmarksWithHips(),
+      computeCameraRigAnchor(buildRigWithHips())!
+    )
+    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
+      landmarksWithHips(),
+      computeCameraRigAnchor(buildTestRig())!
+    )
+    expect(withHipAnchor.boneTargets.mixamorigLeftFoot.y).not.toBeCloseTo(
+      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
+    )
+  })
+
+  it('falls back to the shoulder anchor and scale when the hip landmarks are not visible', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithHips())!
+    const withoutHipLandmarks = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
+    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
+      buildTestLandmarks(),
+      computeCameraRigAnchor(buildTestRig())!
+    )
+    expect(withoutHipLandmarks.boneTargets.mixamorigLeftFoot.y).toBeCloseTo(
+      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
+    )
+  })
+
+  it('also scales a knee pole target off the hip anchor', () => {
+    const landmarks = landmarksWithHips()
+    landmarks[25] = landmark(-0.15, 0.2, 0) // left knee
+    landmarks[26] = landmark(0.15, 0.2, 0) // right knee
+
+    const { poleTargets } = cameraLandmarksToBoneTargets(
+      landmarks,
+      computeCameraRigAnchor(buildRigWithHips())!,
+      { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeKnees: true }
+    )
+    expect(poleTargets.mixamorigLeftFoot).toBeDefined()
   })
 })
 

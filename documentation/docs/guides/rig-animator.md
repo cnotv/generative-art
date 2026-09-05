@@ -263,6 +263,16 @@ its target through the exact same drag-to-chain IK solve a mouse drag on that bo
 (see "Dragging never stretches a segment" above): no separate rotation math for camera input,
 just a different source of target positions. A body part out of frame, or below the detector's
 own confidence threshold, leaves its bone untouched rather than snapping it to the origin.
+
+Feet and knees scale off the rig's own hip width instead of its shoulder width, anchored to the
+hip center rather than the shoulder center, whenever the photo shows the hips confidently: a
+rig's leg length does not reliably track its shoulder width the way a real human's roughly
+does. A real seated photo surfaced this directly on a stylized character whose own legs, rest
+to rest, measured four times its shoulder width, a ratio well past a real body's: scaling the
+detected ankle reach off the shoulders left the target barely a third of the leg's own length,
+forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
+chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
+confidently detected, same as before.
 Applying a captured pose resets the whole rig to its rest transform first, so a bone the mapping
 does not drive this frame never keeps a stale pose left over from an earlier manual edit or a
 previous capture.
