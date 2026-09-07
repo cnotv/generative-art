@@ -22,6 +22,13 @@ export interface CommonOptions {
   type?: ModelType
   weight?: number
   enabledRotations?: [boolean, boolean, boolean]
+  /**
+   * Sweep the body's whole path each step rather than only testing where it lands.
+   *
+   * A body moving further in one step than the thing it should hit is thick passes straight
+   * through it, which is what a small fast object in a large-scale scene does by default.
+   */
+  ccd?: boolean
 }
 
 export interface ModelOptions extends CommonOptions {
@@ -39,7 +46,7 @@ export interface ModelOptions extends CommonOptions {
   setUV2?: boolean
   rotation?: CoordinateTuple
   scale?: CoordinateTuple
-  shape?: 'cuboid' | 'ball' | 'cylinder'
+  shape?: 'cuboid' | 'ball' | 'cylinder' | 'capsule'
   castShadow?: boolean
   receiveShadow?: boolean
   hasGravity?: boolean
@@ -81,7 +88,7 @@ export interface ModelOptions extends CommonOptions {
 }
 
 export interface PhysicOptions extends CommonOptions {
-  shape?: 'cuboid' | 'ball' | 'cylinder'
+  shape?: 'cuboid' | 'ball' | 'cylinder' | 'capsule'
 }
 
 export interface StatsLike {

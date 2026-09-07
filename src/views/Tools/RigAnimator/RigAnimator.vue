@@ -33,7 +33,9 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
-  RIG_TIMELINE_KEYBOARD_MAPPING
+  RIG_TIMELINE_KEYBOARD_MAPPING,
+  DEFAULT_MARBLE_COUNT,
+  DEFAULT_ENCLOSURE_OPACITY
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
@@ -80,7 +82,12 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
-  cameraShowPreview: false
+  cameraShowPreview: false,
+  physicsEnabled: false,
+  marbleCount: DEFAULT_MARBLE_COUNT,
+  marbleTextures: true,
+  showEnclosure: true,
+  enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
 })
 
 const cameraPoseMappingOptions = computed(() => ({
@@ -227,7 +234,8 @@ const refreshSchema = (): void => {
       rig.boneNames.value,
       rig.needsAutoRig.value,
       rig.positionRange.value,
-      rig.canCaptureFromCamera.value
+      rig.canCaptureFromCamera.value,
+      reactiveConfig.value.physicsEnabled
     )
   )
 }
@@ -349,22 +357,41 @@ watch(
   () => reactiveConfig.value.cameraShowPreview,
   () => updateCameraCentering()
 )
+watch(
+  () => reactiveConfig.value.physicsEnabled,
+  () => {
+    rig.rebuildPhysics()
+    refreshSchema()
+  }
+)
+watch(
+  () => [reactiveConfig.value.marbleCount, reactiveConfig.value.marbleTextures],
+  () => rig.rebuildMarbles()
+)
+watch(
+  () => [reactiveConfig.value.showEnclosure, reactiveConfig.value.enclosureOpacity],
+  () => rig.rebuildEnclosure()
+)
 
 const init = async (): Promise<void> => {
   if (!canvas.value) return
-  const { setup, animate, scene, camera, renderer, setActiveCamera } = await getTools({
+  const { setup, animate, scene, camera, renderer, setActiveCamera, world } = await getTools({
     canvas: canvas.value,
     onProgress: handleProgress
   })
 
   rig.setScene(scene)
+  rig.setWorld(world)
   cameraReference = camera
 
   const { orbit } = await setup({
     config: RIG_ANIMATOR_SETUP_CONFIG,
     defineSetup: async () => {
       animate({
-        beforeTimeline: () => rig.tickPlayback(),
+        beforeTimeline: () => {
+          rig.tickPlayback()
+          rig.tickPhysics()
+        },
         timeline: createTimelineManager()
       })
     }
@@ -409,7 +436,7 @@ onMounted(async () => {
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value, false),
+    buildRigAnimatorSchema([], false, rig.positionRange.value, false, false),
     undefined,
     {
       autoRig: () => {
@@ -418,6 +445,9 @@ onMounted(async () => {
       },
       resetBone: () => {
         rig.resetSelectedBone()
+      },
+      respawnMarbles: () => {
+        rig.rebuildMarbles()
       }
     }
   )
@@ -445,6 +475,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateCameraCentering)
   onWindowPointerUp()
   timelineControls?.destroyControls()
+  rig.clearPhysics()
   unregisterViewConfig(routeName)
   clearViewPanels()
   clearSceneElements()

@@ -80,6 +80,14 @@ exist, so two poses are already a movement.
   plain keyframe delete
 - `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
   render, re-applied whenever the markers are recreated
+- `src/views/Tools/RigAnimator/rigColliders.ts` (+ `.test.ts`): pure derivation of one capsule
+  per bone segment from the loaded skeleton, and the per-frame read of where that capsule sits
+- `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): the seeded marble spawn plan, and the
+  procedural swirl texture each marble is painted with
+- `src/views/Tools/RigAnimator/rigPhysicsObjects.ts`: creating and disposing the bone capsules,
+  the marbles and the enclosing walls
+- `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, rebuilding them when the
+  model or a setting changes and following the posed bones each frame
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
@@ -551,6 +559,52 @@ A **Record Motion** take that captured any real motion appears in the same dropd
 "Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
 without re-recording it. These entries are session-only — a refresh drops them, the same as
 every unsaved edit that is not the autosave.
+
+## Dropping marbles on the pose
+
+**Physics: Simulate** in the Config panel, off by default, turns the posed rig into something
+other objects can hit. It is a way to see a pose as a physical shape rather than a silhouette:
+a cupped hand catches marbles, a flat one does not, and playing the timeline back sweeps them
+around as the limbs move through them.
+
+Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
+segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
+a Mixamo FBX and a glTF character a hundred times smaller. A branching joint such as the hips
+gets one capsule per child rather than one for the joint, and a segment too short to be worth a
+body, a coincident bone or a fingertip with nowhere to go, gets none.
+
+The capsules are kinematic, never simulated. Posing, IK, camera capture and clip playback all
+write bone transforms, and a dynamic body would fight them for the same values every frame; a
+kinematic one is carried by whichever bone it belongs to and pushes everything else out of its
+way instead. So the rig is never knocked over by what lands on it, and nothing physical ever
+changes a pose or a keyframe.
+
+The rest of the settings appear once the toggle is on:
+
+- **Marbles** is how many drop. They are laid out from a fixed seed, so raising the count adds
+  to the ones already falling rather than reshuffling the whole heap, and a reload gives the
+  same scene back. **Drop Marbles Again** re-spawns the current count from the top.
+- **Marble Textures**, on by default, paints each marble a procedural swirl on a small canvas.
+  That canvas and its upload are the expensive half of a marble; turning it off leaves the
+  marble its palette colour, which reads as the same object and keeps a heavy count usable.
+- **Enclosing Walls**, on by default, puts four walls around the rig so the marbles stay in
+  shot instead of rolling off. Each run is a wall thickness longer than the space it encloses,
+  so perpendicular walls overlap inside each corner rather than leaving a gap to squeeze
+  through. A floor collider spans the enclosure whether or not the walls are drawn: the scene's
+  own ground is a fixed forty units across, which a rig authored in centimetres overruns, and
+  marbles landing past it would fall through the world.
+- **Wall Opacity** goes from barely visible to solid. Low is the useful setting for looking at
+  the rig through them; solid is the useful one for a recording where the walls are the frame.
+
+Everything above is torn out of both the scene and the physics world the moment the toggle goes
+off, and rebuilt from scratch when a different model is loaded, so switching it on costs
+nothing until it is wanted.
+
+Gravity is scaled to the rig rather than left at the world's own metres per second, since a
+Mixamo FBX is a hundred times the scale of a typical glTF character and falling at 9.81 units
+in it reads as slow motion. What that costs is speed: a marble then crosses more distance in
+one physics step than a wall is thick, which is why they carry continuous collision detection.
+The reasoning is in [scale, gravity and tunnelling](/docs/journey/scale-gravity-and-tunnelling).
 
 ## Saving and loading the animation
 

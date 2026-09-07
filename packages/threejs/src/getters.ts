@@ -194,6 +194,7 @@ type RigidBodyDescOptions = {
   damping: number
   angular: number
   enabledRotations: [boolean, boolean, boolean]
+  ccd: boolean
 }
 
 const buildRigidBodyDesc = ({
@@ -203,7 +204,8 @@ const buildRigidBodyDesc = ({
   dominance,
   damping,
   angular,
-  enabledRotations
+  enabledRotations,
+  ccd
 }: RigidBodyDescOptions): RAPIER.RigidBodyDesc =>
   RAPIER.RigidBodyDesc[type]()
     .setTranslation(...position)
@@ -212,6 +214,7 @@ const buildRigidBodyDesc = ({
     .setLinearDamping(damping)
     .setAngularDamping(angular)
     .enabledRotations(...enabledRotations)
+    .setCcdEnabled(ccd)
 
 const buildColliderShape = (
   shape: PhysicOptions['shape'],
@@ -230,6 +233,14 @@ const buildColliderShape = (
       ? sizeValue
       : [sizeValue, sizeValue, sizeValue]
     return RAPIER.ColliderDesc.cylinder((height * boundary) / 2, (diameter * boundary) / 2)
+  }
+  // A capsule reads its size the same way a cylinder does, so one can be swapped for the
+  // other; the height is the straight section only, with the two hemispherical caps on top.
+  if (shape === 'capsule') {
+    const [diameter, height] = Array.isArray(sizeValue)
+      ? sizeValue
+      : [sizeValue, sizeValue, sizeValue]
+    return RAPIER.ColliderDesc.capsule((height * boundary) / 2, (diameter * boundary) / 2)
   }
   return RAPIER.ColliderDesc.ball((Array.isArray(sizeValue) ? sizeValue[0] : sizeValue) as number)
 }
@@ -294,7 +305,8 @@ const buildCollider = (
  * @param {number} [options.density=1] - The density of the object.
  * @param {number} [options.dominance=1] - The influence level from other bodies.
  * @param {'fixed' | 'dynamic'} [options.type='fixed'] - The type of the rigid body.
- * @param {'cuboid' | 'ball'} [options.shape='cuboid'] - The shape of the collider.
+ * @param {'cuboid' | 'ball' | 'cylinder' | 'capsule'} [options.shape='cuboid'] - The shape of the collider.
+ * @param {boolean} [options.ccd=false] - Sweep the body's whole path each step, for anything fast enough to pass through what it should hit.
  * @returns {Object} The created rigid body and collider.
  * @returns
  */
@@ -318,6 +330,7 @@ type ResolvedPhysicOptions = Required<
     | 'shape'
     | 'type'
     | 'enabledRotations'
+    | 'ccd'
   >
 >
 
@@ -329,7 +342,8 @@ const resolvePhysicBodyOptions = (options: PhysicOptions) => ({
   damping: options.damping ?? 0,
   angular: options.angular ?? 1,
   enabledRotations: options.enabledRotations ?? ([true, true, true] as [boolean, boolean, boolean]),
-  type: options.type ?? ('fixed' as NonNullable<PhysicOptions['type']>)
+  type: options.type ?? ('fixed' as NonNullable<PhysicOptions['type']>),
+  ccd: options.ccd ?? false
 })
 
 const resolvePhysicColliderOptions = (options: PhysicOptions) => ({
@@ -365,7 +379,8 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
     dominance,
     shape,
     type,
-    enabledRotations
+    enabledRotations,
+    ccd
   } = resolvePhysicOptions(options)
   const rigidBodyDesc = buildRigidBodyDesc({
     type,
@@ -374,7 +389,8 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
     dominance,
     damping,
     angular,
-    enabledRotations: enabledRotations as [boolean, boolean, boolean]
+    enabledRotations: enabledRotations as [boolean, boolean, boolean],
+    ccd
   })
   const rigidBody = world.createRigidBody(rigidBodyDesc)
   applyRotationToRigidBody(rigidBody, rotation)

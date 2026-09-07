@@ -4,7 +4,9 @@ import {
   ROTATION_CONTROL,
   CAMERA_SMOOTHING_FACTOR_RANGE,
   CAMERA_REACH_MULTIPLIER_RANGE,
-  CAMERA_MAX_JUMP_RANGE
+  CAMERA_MAX_JUMP_RANGE,
+  MARBLE_COUNT_RANGE,
+  ENCLOSURE_OPACITY_RANGE
 } from './config'
 
 /**
@@ -18,13 +20,15 @@ import {
  * @param needsAutoRig Whether the loaded model has meshes but no skeleton
  * @param positionRange The +/- range the Bone Position field offers, scaled to the loaded rig
  * @param canCaptureFromCamera Whether the loaded rig has the bones camera pose capture needs
+ * @param physicsEnabled Whether the physics rows past the toggle are worth showing at all
  * @returns The schema to hand to registerViewConfig/updateViewSchema
  */
 export const buildRigAnimatorSchema = (
   boneNames: string[],
   needsAutoRig: boolean,
   positionRange: number,
-  canCaptureFromCamera: boolean
+  canCaptureFromCamera: boolean,
+  physicsEnabled: boolean
 ): ConfigControlsSchema => ({
   ...(needsAutoRig ? { autoRig: { callback: 'autoRig', label: 'Auto-rig as Humanoid' } } : {}),
   ...(boneNames.length > 0
@@ -71,6 +75,16 @@ export const buildRigAnimatorSchema = (
           label: 'Camera Pose: Max Jump (Live Feed)'
         },
         cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+      }
+    : {}),
+  physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },
+  ...(physicsEnabled
+    ? {
+        marbleCount: { ...MARBLE_COUNT_RANGE, label: 'Physics: Marbles' },
+        marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
+        respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Drop Marbles Again' },
+        showEnclosure: { checkbox: true, label: 'Physics: Enclosing Walls' },
+        enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
       }
     : {}),
   fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }
