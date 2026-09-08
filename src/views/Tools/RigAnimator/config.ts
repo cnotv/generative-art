@@ -75,7 +75,7 @@ export const MARBLE_MAX_ALIVE = 60
 /** Marble radius range, as fractions of the rig's spread, so marbles scale with any model. */
 export const MARBLE_RADIUS_FRACTION_RANGE: [number, number] = [0.014, 0.028]
 /** Height of the drop point above the rig's feet, as a fraction of the rig's spread. */
-export const MARBLE_DROP_HEIGHT_FRACTION = 0.6
+export const MARBLE_DROP_HEIGHT_FRACTION = 3
 /** Horizontal jitter of the drop point, as a fraction of the rig's spread, so a continuous
  * flow doesn't stack every marble on the exact same spot. */
 export const MARBLE_FLOW_JITTER_FRACTION = 0.05
