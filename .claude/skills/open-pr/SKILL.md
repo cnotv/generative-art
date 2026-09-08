@@ -1,17 +1,26 @@
 ---
 name: open-pr
 description: >-
-  Use when explicitly asked to open, raise, create, submit or update a pull request — "open
-  the PR", "raise a PR", "make a pull request", "push this up", "update the PR description".
-  Covers rebasing onto main, force-pushing safely, the PR body format, keeping the
+  Use once a change is validated and ready to ship — per AGENTS.md, every change ships with
+  a pull request, opened without waiting to be asked — and whenever explicitly asked to
+  open, raise, create, submit or update one: "open the PR", "raise a PR", "make a pull
+  request", "push this up", "update the PR description". Covers making sure an issue exists
+  first, rebasing onto main, force-pushing safely, the PR body format, keeping the
   description current after each push, watching CI to green, and the abstraction review
-  that closes out the work. Never open a pull request unless it was explicitly requested.
+  that closes out the work.
 ---
 
 # Opening a pull request
 
-A pull request is only ever opened on explicit request. If nobody asked for one, the work
-ends at the last commit.
+Work is not done at the last commit — it is done once the PR exists and its checks are
+green. Open one as soon as the change is validated (`finish-change` passed); do not wait to
+be asked.
+
+## 0. Make sure an issue exists
+
+The PR title and body both need an issue number (step 3). Work that started from a linked
+issue already has one. A prototype (AGENTS.md's "How work starts") does not — write it now,
+covering what was built and why, before opening the PR.
 
 ## 1. Rebase onto main
 

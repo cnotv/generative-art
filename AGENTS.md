@@ -26,6 +26,12 @@ Two entry paths, chosen by whether an issue exists yet.
 Either way: a fresh branch off main every time. Never commit to the current branch and never
 reuse an existing feature branch, however related it looks.
 
+Every change ships with both an issue and a pull request. If work starts with no issue yet
+(the prototype path above), write one — what was built and why — before opening the PR; a
+linked issue already covers this. Once the change is validated and `finish-change` passes,
+open the pull request via the `open-pr` procedure without waiting to be asked. Work is not
+done at the last commit; it is done once the PR exists and its checks are green.
+
 ## Working agreements
 
 - **Ask before assuming.** If intent, scope or expected behaviour is unclear, ask one focused
@@ -37,7 +43,8 @@ reuse an existing feature branch, however related it looks.
 - **Write it once, at the length it earns.** A one-line fix gets one line; a surprising
   constraint gets a paragraph. Prose that repeats the diff or restates something already
   written above is noise that hides what matters. Each kind of writing has one home, below.
-- **Never open a pull request unless explicitly asked.**
+- **Always ship an issue and a pull request.** See "How work starts" above and the `open-pr`
+  procedure — this replaces any earlier instinct to leave finished work at the last commit.
 - **Never modify `eslint.config.js`** unless explicitly asked. Fix violations by changing the
   code, not by loosening the rule.
 - **Never use `eslint-disable`**, in any form, and never `--no-verify`. If a hook or a rule
@@ -113,10 +120,12 @@ These are the steps that are easy to omit and impossible to notice missing. Run 
 - [ ] Changed package API is reflected in `documentation/docs/packages/`
 - [ ] Any guide that tracks a file you changed has been re-read and fixed
 - [ ] A journey doc exists if the work produced a non-obvious finding
+- [ ] An issue exists for this work — written now if the prototype path never created one
 - [ ] The linked issue and any open PR still describe the work accurately, edited rather than
       left to be inferred from a thread of comments
 - [ ] Every artifact the plan named exists, not just the ones that were forced by a deletion
 - [ ] `pnpm lint`, `pnpm lint:css` and `pnpm test:unit` pass, and you saw them pass
+- [ ] A pull request is open for the work, via the `open-pr` procedure
 
 ## Scoped rules
 
@@ -145,4 +154,4 @@ Skills in `.claude/skills/<name>/SKILL.md`, as plain markdown any agent can read
 | `journey-doc`   | a finding is worth recording — a repeated fix, a framework quirk, an invisible constraint |
 | `sync-docs`     | you changed a file that a tutorial documents                                              |
 | `finish-change` | before claiming work is complete                                                          |
-| `open-pr`       | a pull request was explicitly requested                                                   |
+| `open-pr`       | the work is validated and ready to ship, or a pull request was explicitly requested       |
