@@ -567,6 +567,8 @@ other objects can hit. It is a way to see a pose as a physical shape rather than
 a cupped hand catches marbles, a flat one does not, and playing the timeline back sweeps them
 around as the limbs move through them.
 
+![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
+
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
 a Mixamo FBX and a glTF character a hundred times smaller. A branching joint such as the hips
@@ -595,6 +597,8 @@ The rest of the settings appear once the toggle is on:
   marbles landing past it would fall through the world.
 - **Wall Opacity** goes from barely visible to solid. Low is the useful setting for looking at
   the rig through them; solid is the useful one for a recording where the walls are the frame.
+
+![The same marbles settled into a heap across the floor, the rig standing untouched among them](/img/animation/rig-physics-settled.webp)
 
 Everything above is torn out of both the scene and the physics world the moment the toggle goes
 off, and rebuilt from scratch when a different model is loaded, so switching it on costs
