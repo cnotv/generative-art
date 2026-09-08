@@ -389,6 +389,12 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   instead of leaving it at rest, so a lean or a step reads in the root position too, not only the
   limbs. Left off by default since it did not measurably improve the seated case above on its
   own, and moving the whole root is a bigger, more visible change than re-aiming a limb's bend.
+  Unlike every other mapped bone, the root is never snapped back to rest on a frame with no hip
+  target of its own — a webcam framed for arms and head routinely loses the hips out of the
+  bottom of the frame for a stretch of frames at a time, and resetting the whole rig to the
+  origin on each of those read as the model twitching back to rest rather than simply not moving
+  that frame. It holds wherever it was last driven to instead, until a fresh hip detection moves
+  it again.
 - **Use Depth (Z Axis)**, on by default, is the original behaviour: a landmark's estimated depth
   scales into the target the same as its x and y. A single photo gives MediaPipe far less to
   judge depth from than two eyes or a video's own motion parallax do, making z the least

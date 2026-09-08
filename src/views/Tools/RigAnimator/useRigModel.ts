@@ -141,9 +141,9 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     resetBoneChainToRest(bone, restPoses)
     selectBone(bone.name)
   }
-
   /** Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc. */
-  const resetAllBonesToRest = (): void => resetAllBoneTransformsToRest(bones.value, restPoses)
+  const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void =>
+    resetAllBoneTransformsToRest(bones.value, restPoses, excludeBoneNames)
   /** Every bone's rest quaternion, keyed by name, for `applyHandPose`'s rest-relative curl. */
   const getRestQuaternions = (): Map<string, THREE.Quaternion> =>
     new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.quaternion]))
