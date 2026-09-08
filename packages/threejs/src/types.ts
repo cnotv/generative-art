@@ -22,12 +22,7 @@ export interface CommonOptions {
   type?: ModelType
   weight?: number
   enabledRotations?: [boolean, boolean, boolean]
-  /**
-   * Sweep the body's whole path each step rather than only testing where it lands.
-   *
-   * A body moving further in one step than the thing it should hit is thick passes straight
-   * through it, which is what a small fast object in a large-scale scene does by default.
-   */
+  /** Sweep the body's whole path each step, for anything fast enough to pass through what it should hit. */
   ccd?: boolean
 }
 

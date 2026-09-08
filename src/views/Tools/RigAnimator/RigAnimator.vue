@@ -34,7 +34,7 @@ import {
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   RIG_TIMELINE_KEYBOARD_MAPPING,
-  DEFAULT_MARBLE_COUNT,
+  DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
@@ -84,7 +84,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false,
   physicsEnabled: false,
-  marbleCount: DEFAULT_MARBLE_COUNT,
+  marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   marbleTextures: true,
   showEnclosure: true,
   enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
@@ -365,8 +365,8 @@ watch(
   }
 )
 watch(
-  () => [reactiveConfig.value.marbleCount, reactiveConfig.value.marbleTextures],
-  () => rig.rebuildMarbles()
+  () => reactiveConfig.value.marbleSpawnInterval,
+  () => rig.updateMarbleFlow()
 )
 watch(
   () => [reactiveConfig.value.showEnclosure, reactiveConfig.value.enclosureOpacity],
@@ -384,6 +384,9 @@ const init = async (): Promise<void> => {
   rig.setWorld(world)
   cameraReference = camera
 
+  const timeline = createTimelineManager()
+  rig.setTimeline(timeline)
+
   const { orbit } = await setup({
     config: RIG_ANIMATOR_SETUP_CONFIG,
     defineSetup: async () => {
@@ -392,7 +395,7 @@ const init = async (): Promise<void> => {
           rig.tickPlayback()
           rig.tickPhysics()
         },
-        timeline: createTimelineManager()
+        timeline
       })
     }
   })

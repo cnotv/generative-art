@@ -27,19 +27,9 @@ const childBonesOf = (bone: THREE.Bone): THREE.Bone[] =>
 const worldSegmentLength = (bone: THREE.Bone, child: THREE.Bone): number =>
   bone.getWorldPosition(new THREE.Vector3()).distanceTo(child.getWorldPosition(new THREE.Vector3()))
 
-/**
- * Describe one capsule per bone segment, so a posed rig can be given a body that other physics
- * objects collide against.
- *
- * A segment is a bone and one of its bone children, which is what actually has a length and a
- * direction: a bone on its own is only a point, and a branching joint such as the hips is
- * several segments rather than one. Everything is measured in world units and the sizes are
- * fractions of the rig's own spread, so the same numbers hold for a model authored in metres
- * and one authored in centimetres.
- *
- * @param bones The rig's bones, with up-to-date world matrices
- * @returns One spec per segment worth simulating, in bone order
- */
+/** One capsule per bone segment: a bone and one of its bone children, which is what actually
+ * has a length and a direction. A bone on its own is only a point, and a branching joint such
+ * as the hips is several segments rather than one. */
 export const buildBoneColliderSpecs = (bones: THREE.Bone[]): BoneColliderSpec[] => {
   const rigDiagonal = computeRigDiagonal(bones)
   const minimumLength = rigDiagonal * BONE_COLLIDER_MIN_LENGTH_FRACTION
@@ -70,17 +60,8 @@ export const buildBoneColliderSpecs = (bones: THREE.Bone[]): BoneColliderSpec[] 
 const scratchPosition = new THREE.Vector3()
 const scratchScale = new THREE.Vector3()
 
-/**
- * Read where a segment's capsule sits right now, for the frame's kinematic update.
- *
- * Writes into the vectors it is handed rather than returning new ones, because this runs once
- * per segment per frame and a humanoid rig has upwards of fifty of them.
- *
- * @param bone The segment's parent bone, with an up-to-date world matrix
- * @param spec The segment's spec, from `buildBoneColliderSpecs`
- * @param outPosition Receives the capsule's world centre
- * @param outQuaternion Receives the capsule's world orientation
- */
+/** Writes into the vectors it is handed rather than returning new ones, because this runs once
+ * per segment per frame and a humanoid rig has upwards of fifty of them. */
 export const readBoneColliderTransform = (
   bone: THREE.Bone,
   spec: BoneColliderSpec,

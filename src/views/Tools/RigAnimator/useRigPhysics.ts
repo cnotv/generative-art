@@ -3,9 +3,15 @@ import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import type { CoordinateTuple } from '@webgamekit/threejs'
 import { syncMeshesWithBodies } from '@webgamekit/threejs'
+import type { TimelineManager } from '@webgamekit/animation'
 import { computeRigDiagonal } from './boneMarkers'
-import { DEFAULT_POSITION_RANGE, MARBLE_GRAVITY_REFERENCE_SPREAD, MARBLE_SEED } from './config'
-import { buildMarbleSpawnPlan } from './marbles'
+import {
+  DEFAULT_POSITION_RANGE,
+  MARBLE_DROP_HEIGHT_FRACTION,
+  MARBLE_GRAVITY_REFERENCE_SPREAD,
+  MARBLE_MAX_ALIVE
+} from './config'
+import { buildMarbleDropPosition, pickMarbleRadius, pickMarbleTexture } from './marbles'
 import { buildBoneColliderSpecs, readBoneColliderTransform } from './rigColliders'
 import {
   createBoneColliderBody,
@@ -18,53 +24,29 @@ import {
 } from './rigPhysicsObjects'
 import type { RigAnimatorConfig } from './types'
 
-/**
- * Owns everything physical in the rig animator: the capsules that follow the posed bones, the
- * marbles that fall onto them and the enclosure that keeps those marbles in shot.
- *
- * Nothing here exists until the physics toggle is switched on. A posing session that never
- * wants marbles pays for none of it, which matters because a humanoid rig is upwards of fifty
- * kinematic bodies rewritten every frame before the world is even stepped.
- *
- * @param config The view's reactive config
- * @param bones The loaded rig's bones
- * @param model The loaded model, whose position the marbles are dropped over
- */
-export const useRigPhysics = (
-  config: Ref<RigAnimatorConfig>,
-  bones: ShallowRef<THREE.Bone[]>,
+const MARBLE_FLOW_ACTION_NAME = 'rig-physics: marble flow'
+
+interface PhysicsReferences {
+  scene: ShallowRef<THREE.Scene | null>
+  world: ShallowRef<RAPIER.World | null>
+  bones: ShallowRef<THREE.Bone[]>
   model: ShallowRef<THREE.Object3D | null>
-) => {
-  const scene = shallowRef<THREE.Scene | null>(null)
-  const world = shallowRef<RAPIER.World | null>(null)
+  config: Ref<RigAnimatorConfig>
+  rigDiagonal: () => number
+}
+
+/** The kinematic capsules that follow the posed bones. */
+const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferences) => {
   let boneColliders: BoneColliderBody[] = []
-  let marbles: PhysicsMesh[] = []
-  let enclosure: PhysicsMesh[] = []
-  let enclosureFloor: RAPIER.RigidBody | null = null
 
-  const colliderPosition = new THREE.Vector3()
-  const colliderRotation = new THREE.Quaternion()
-
-  /** The rig's spread, which every physical size in here is a fraction of. */
-  const rigDiagonal = (): number =>
-    bones.value.length > 0 ? computeRigDiagonal(bones.value) : DEFAULT_POSITION_RANGE
-
-  const setScene = (nextScene: THREE.Scene): void => {
-    scene.value = nextScene
-  }
-
-  const setWorld = (nextWorld: RAPIER.World): void => {
-    world.value = nextWorld
-  }
-
-  const clearBoneColliders = (): void => {
+  const clear = (): void => {
     const currentWorld = world.value
     if (currentWorld) boneColliders.forEach(({ body }) => currentWorld.removeRigidBody(body))
     boneColliders = []
   }
 
-  const rebuildBoneColliders = (): void => {
-    clearBoneColliders()
+  const rebuild = (): void => {
+    clear()
     const currentWorld = world.value
     if (!currentWorld || !config.value.physicsEnabled || bones.value.length === 0) return
 
@@ -76,54 +58,44 @@ export const useRigPhysics = (
     })
   }
 
-  const clearMarbles = (): void => {
-    if (world.value) disposePhysicsMeshes(world.value, marbles)
-    marbles = []
-  }
-
-  const rebuildMarbles = (): void => {
-    clearMarbles()
-    const currentScene = scene.value
-    const currentWorld = world.value
-    if (!currentScene || !currentWorld || !config.value.physicsEnabled) return
-
-    const center = (model.value?.position.toArray() ?? [0, 0, 0]) as CoordinateTuple
-    const plan = buildMarbleSpawnPlan({
-      count: config.value.marbleCount,
-      seed: MARBLE_SEED,
-      center,
-      rigDiagonal: rigDiagonal()
+  const tick = (position: THREE.Vector3, rotation: THREE.Quaternion): void => {
+    boneColliders.forEach(({ bone, spec, body }) => {
+      readBoneColliderTransform(bone, spec, position, rotation)
+      body.setNextKinematicTranslation(position)
+      body.setNextKinematicRotation(rotation)
     })
-    marbles = plan.map((spawn) =>
-      createMarble(currentScene, currentWorld, spawn, {
-        textured: config.value.marbleTextures,
-        gravityScale: rigDiagonal() / MARBLE_GRAVITY_REFERENCE_SPREAD
-      })
-    )
   }
 
-  const clearEnclosure = (): void => {
+  return { clear, rebuild, tick }
+}
+
+/** The enclosure floor and its four optional walls, sized to the rig's own spread. */
+const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsReferences) => {
+  let walls: PhysicsMesh[] = []
+  let floor: RAPIER.RigidBody | null = null
+
+  const clear = (): void => {
     const currentWorld = world.value
     if (currentWorld) {
-      disposePhysicsMeshes(currentWorld, enclosure)
-      if (enclosureFloor) currentWorld.removeRigidBody(enclosureFloor)
+      disposePhysicsMeshes(currentWorld, walls)
+      if (floor) currentWorld.removeRigidBody(floor)
     }
-    enclosure = []
-    enclosureFloor = null
+    walls = []
+    floor = null
   }
 
-  const rebuildEnclosure = (): void => {
-    clearEnclosure()
+  const rebuild = (): void => {
+    clear()
     const currentScene = scene.value
     const currentWorld = world.value
     if (!currentScene || !currentWorld || !config.value.physicsEnabled) return
 
     // The floor is not part of the walls toggle: without it marbles fall through the world
     // wherever the scene's own smaller ground does not reach.
-    enclosureFloor = createEnclosureFloor(currentWorld, rigDiagonal())
+    floor = createEnclosureFloor(currentWorld, rigDiagonal())
     if (!config.value.showEnclosure) return
 
-    enclosure = createEnclosure(
+    walls = createEnclosure(
       currentScene,
       currentWorld,
       rigDiagonal(),
@@ -131,38 +103,126 @@ export const useRigPhysics = (
     )
   }
 
-  /** Rebuild everything the loaded rig's size and pose decide, after a model change or a toggle. */
-  const rebuild = (): void => {
-    rebuildBoneColliders()
-    rebuildEnclosure()
-    rebuildMarbles()
-  }
-  const clear = (): void => {
-    clearBoneColliders()
-    clearMarbles()
-    clearEnclosure()
+  return { clear, rebuild }
+}
+
+/** A timeline action that drips one marble in at a time, the same interval-action shape the
+ * Timeline view uses for its own ball spawner, so a hand can be held under the flow instead of
+ * a whole batch landing at once. */
+const createMarbleFlowState = (
+  { scene, world, model, config, rigDiagonal }: PhysicsReferences,
+  timeline: ShallowRef<TimelineManager | null>
+) => {
+  let marbles: PhysicsMesh[] = []
+  let flowActionId: string | null = null
+
+  const spawn = (): void => {
+    const currentScene = scene.value
+    const currentWorld = world.value
+    if (!currentScene || !currentWorld) return
+
+    const diagonal = rigDiagonal()
+    const center = (model.value?.position.toArray() ?? [0, 0, 0]) as CoordinateTuple
+    marbles.push(
+      createMarble(currentScene, currentWorld, {
+        position: buildMarbleDropPosition(center, diagonal * MARBLE_DROP_HEIGHT_FRACTION, diagonal),
+        radius: pickMarbleRadius(diagonal),
+        textureUrl: config.value.marbleTextures ? pickMarbleTexture() : undefined,
+        gravityScale: diagonal / MARBLE_GRAVITY_REFERENCE_SPREAD
+      })
+    )
+
+    if (marbles.length > MARBLE_MAX_ALIVE) {
+      const [oldest] = marbles.splice(0, 1)
+      disposePhysicsMeshes(currentWorld, [oldest])
+    }
   }
 
-  /**
-   * Carry the frame's pose onto the kinematic bodies, and the stepped world back onto the
-   * marbles. Runs before the world is stepped, so the marbles are resolved against where the
-   * bones are now rather than where they were last frame.
-   */
-  const tickPhysics = (): void => {
-    boneColliders.forEach(({ bone, spec, body }) => {
-      readBoneColliderTransform(bone, spec, colliderPosition, colliderRotation)
-      body.setNextKinematicTranslation(colliderPosition)
-      body.setNextKinematicRotation(colliderRotation)
+  const clear = (): void => {
+    if (world.value) disposePhysicsMeshes(world.value, marbles)
+    marbles = []
+  }
+
+  const stop = (): void => {
+    if (flowActionId) timeline.value?.removeAction(flowActionId)
+    flowActionId = null
+  }
+
+  const start = (): void => {
+    stop()
+    if (!timeline.value || !config.value.physicsEnabled) return
+    flowActionId = timeline.value.addAction({
+      name: MARBLE_FLOW_ACTION_NAME,
+      category: 'physics',
+      interval: [1, config.value.marbleSpawnInterval],
+      action: spawn
     })
-    syncMeshesWithBodies(marbles)
+  }
+
+  const rebuild = (): void => {
+    clear()
+    start()
+  }
+
+  const tick = (): void => syncMeshesWithBodies(marbles)
+
+  return { clear, stop, start, rebuild, tick }
+}
+
+/** Owns everything physical in the rig animator, built from the three states above. Nothing
+ * exists until the physics toggle is on, since a humanoid rig is upwards of fifty kinematic
+ * bodies rewritten every frame before the world is even stepped. */
+export const useRigPhysics = (
+  config: Ref<RigAnimatorConfig>,
+  bones: ShallowRef<THREE.Bone[]>,
+  model: ShallowRef<THREE.Object3D | null>
+) => {
+  const scene = shallowRef<THREE.Scene | null>(null)
+  const world = shallowRef<RAPIER.World | null>(null)
+  const timeline = shallowRef<TimelineManager | null>(null)
+  const rigDiagonal = (): number =>
+    bones.value.length > 0 ? computeRigDiagonal(bones.value) : DEFAULT_POSITION_RANGE
+
+  const refs: PhysicsReferences = { scene, world, bones, model, config, rigDiagonal }
+  const boneColliders = createBoneColliderState(refs)
+  const enclosure = createEnclosureState(refs)
+  const marbleFlow = createMarbleFlowState(refs, timeline)
+
+  const colliderPosition = new THREE.Vector3()
+  const colliderRotation = new THREE.Quaternion()
+
+  const rebuild = (): void => {
+    boneColliders.rebuild()
+    enclosure.rebuild()
+    marbleFlow.rebuild()
+  }
+
+  const clear = (): void => {
+    boneColliders.clear()
+    marbleFlow.stop()
+    marbleFlow.clear()
+    enclosure.clear()
+  }
+
+  const tickPhysics = (): void => {
+    boneColliders.tick(colliderPosition, colliderRotation)
+    marbleFlow.tick()
   }
 
   return {
-    setPhysicsScene: setScene,
-    setWorld,
+    setPhysicsScene: (nextScene: THREE.Scene): void => {
+      scene.value = nextScene
+    },
+    setWorld: (nextWorld: RAPIER.World): void => {
+      world.value = nextWorld
+    },
+    setTimeline: (nextTimeline: TimelineManager): void => {
+      timeline.value = nextTimeline
+    },
     rebuildPhysics: rebuild,
-    rebuildMarbles,
-    rebuildEnclosure,
+    rebuildMarbles: marbleFlow.rebuild,
+    updateMarbleFlow: marbleFlow.start,
+    rebuildEnclosure: enclosure.rebuild,
     clearPhysics: clear,
     tickPhysics
   }

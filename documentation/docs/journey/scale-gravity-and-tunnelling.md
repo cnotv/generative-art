@@ -49,9 +49,9 @@ fast bodies rather than on everything.
 Between "falls too slowly" and "falls through the floor" sits a third outcome that is easy to
 mistake for either: a body that never settles. Restitution is a fraction of impact speed, so a
 lively bounce that is pleasant at human scale returns hundreds of units per second at a scale
-a hundred times larger. Forty marbles each bouncing that hard read, at any single moment, as a
-cloud of objects hanging in mid-air, which looks far more like "gravity is not being applied"
-than like "gravity is being applied very well".
+a hundred times larger. A flow of marbles each bouncing that hard reads, at any single moment,
+as a cloud of objects hanging in mid-air, which looks far more like "gravity is not being
+applied" than like "gravity is being applied very well".
 
 Three symptoms, one cause, and they arrive in sequence as each is fixed:
 

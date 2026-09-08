@@ -65,18 +65,20 @@ export const BONE_COLLIDER_MIN_LENGTH_FRACTION = 0.004
 export const BONE_COLLIDER_RESTITUTION = 0.3
 export const BONE_COLLIDER_FRICTION = 0.6
 
-export const DEFAULT_MARBLE_COUNT = 40
-export const MARBLE_COUNT_RANGE = { min: 0, max: 300, step: 1 }
-/** Fixed seed, so the same count always lays out the same marbles rather than reshuffling. */
-export const MARBLE_SEED = 20281
+/** Frames between one marble dropping and the next, same pattern as the Timeline view's
+ * ball-spawn action, so the flow can be walked into rather than landing as one dump. */
+export const DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES = 30
+export const MARBLE_SPAWN_INTERVAL_RANGE = { min: 1, max: 200, step: 1 }
+/** Oldest live marble is recycled once the flow reaches this many, so a long session settles
+ * into a steady stream rather than piling up forever. */
+export const MARBLE_MAX_ALIVE = 60
 /** Marble radius range, as fractions of the rig's spread, so marbles scale with any model. */
 export const MARBLE_RADIUS_FRACTION_RANGE: [number, number] = [0.014, 0.028]
-/** Half-width of the square the marbles drop through, as a fraction of the rig's spread. */
-export const MARBLE_SPREAD_FRACTION = 0.45
-/** Height of the lowest marble above the rig's feet, as a fraction of the rig's spread. */
+/** Height of the drop point above the rig's feet, as a fraction of the rig's spread. */
 export const MARBLE_DROP_HEIGHT_FRACTION = 0.6
-/** Depth of the column marbles are stacked through, so they arrive spread over time. */
-export const MARBLE_STACK_HEIGHT_FRACTION = 0.9
+/** Horizontal jitter of the drop point, as a fraction of the rig's spread, so a continuous
+ * flow doesn't stack every marble on the exact same spot. */
+export const MARBLE_FLOW_JITTER_FRACTION = 0.05
 /**
  * Marbles keep little of the speed they land with, and shed a little more on every step.
  * Scaled-up gravity means a marble hits the floor several hundred units a second, and a lively
@@ -87,6 +89,8 @@ export const MARBLE_DAMPING = 0.2
 export const MARBLE_FRICTION = 0.6
 export const MARBLE_ROUGHNESS = 0.35
 export const MARBLE_METALNESS = 0.05
+/** Fallback colour when marble textures are switched off. */
+export const MARBLE_DEFAULT_COLOR = 0xd9e4f5
 /**
  * The rig spread, in world units, that the world's own gravity already suits: roughly a
  * human-sized rig in metres. A model authored in centimetres is a hundred times that, and
@@ -94,28 +98,11 @@ export const MARBLE_METALNESS = 0.05
  * by how far its rig is from this.
  */
 export const MARBLE_GRAVITY_REFERENCE_SPREAD = 2
-export const MARBLE_TEXTURE_SIZE = 128
-/** Swirl bands painted across one marble's texture. */
-export const MARBLE_SWIRL_COUNT = 7
-/** Swirl band width, as a fraction of the texture, from thinnest to thickest. */
-export const MARBLE_SWIRL_WIDTH_FRACTION_RANGE: [number, number] = [0.02, 0.08]
 
-/**
- * Base and swirl colours a marble is painted from. Pastel throughout, and each swirl only a
- * few steps darker than its base, so a heap of marbles reads as one material in many tints
- * rather than as a bag of unrelated primaries.
- */
-export const MARBLE_PALETTE = [
-  { base: 0xf7d9d5, swirl: 0xd98f86 },
-  { base: 0xd9e4f5, swirl: 0x8fa3cc },
-  { base: 0xd8efe0, swirl: 0x84b79a },
-  { base: 0xf3e6d0, swirl: 0xc4a173 },
-  { base: 0xe6dcf0, swirl: 0xa38fc0 }
-]
-
-/** Inner width of the enclosure, as a fraction of the rig's spread. */
-export const ENCLOSURE_SIZE_FRACTION = 1.6
-export const ENCLOSURE_HEIGHT_FRACTION = 1.5
+/** Inner width of the enclosure, as a fraction of the rig's spread. Sized to the narrow drop
+ * column rather than the rig's full spread, since marbles now flow through one point. */
+export const ENCLOSURE_SIZE_FRACTION = 0.55
+export const ENCLOSURE_HEIGHT_FRACTION = 1.1
 export const ENCLOSURE_THICKNESS_FRACTION = 0.04
 export const ENCLOSURE_COLOR = 0xc9d4e4
 export const ENCLOSURE_OPACITY_RANGE = { min: 0.05, max: 1, step: 0.05 }

@@ -18,7 +18,7 @@ export interface RigAnimatorConfig {
   cameraMaxJump: number
   cameraShowPreview: boolean
   physicsEnabled: boolean
-  marbleCount: number
+  marbleSpawnInterval: number
   marbleTextures: boolean
   showEnclosure: boolean
   enclosureOpacity: number

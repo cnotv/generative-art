@@ -82,12 +82,12 @@ exist, so two poses are already a movement.
   render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/rigColliders.ts` (+ `.test.ts`): pure derivation of one capsule
   per bone segment from the loaded skeleton, and the per-frame read of where that capsule sits
-- `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): the seeded marble spawn plan, and the
-  procedural swirl texture each marble is painted with
+- `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): pure helpers for one marble's drop
+  point, radius and texture, picking the texture from the Marble Editor's own marble assets
 - `src/views/Tools/RigAnimator/rigPhysicsObjects.ts`: creating and disposing the bone capsules,
-  the marbles and the enclosing walls
-- `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, rebuilding them when the
-  model or a setting changes and following the posed bones each frame
+  a marble and the enclosing walls
+- `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, driving the continuous
+  marble flow as a timeline action and following the posed bones each frame
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
@@ -581,20 +581,29 @@ kinematic one is carried by whichever bone it belongs to and pushes everything e
 way instead. So the rig is never knocked over by what lands on it, and nothing physical ever
 changes a pose or a keyframe.
 
+Marbles arrive one at a time rather than as a single dump, so a hand (posed, or mapped live
+from the camera) can be held under the stream and moved through it as it falls, instead of only
+ever seeing the aftermath of a heap that landed all at once.
+
 The rest of the settings appear once the toggle is on:
 
-- **Marbles** is how many drop. They are laid out from a fixed seed, so raising the count adds
-  to the ones already falling rather than reshuffling the whole heap, and a reload gives the
-  same scene back. **Drop Marbles Again** re-spawns the current count from the top.
-- **Marble Textures**, on by default, paints each marble a procedural swirl on a small canvas.
-  That canvas and its upload are the expensive half of a marble; turning it off leaves the
-  marble its palette colour, which reads as the same object and keeps a heavy count usable.
-- **Enclosing Walls**, on by default, puts four walls around the rig so the marbles stay in
-  shot instead of rolling off. Each run is a wall thickness longer than the space it encloses,
-  so perpendicular walls overlap inside each corner rather than leaving a gap to squeeze
-  through. A floor collider spans the enclosure whether or not the walls are drawn: the scene's
-  own ground is a fixed forty units across, which a rig authored in centimetres overruns, and
-  marbles landing past it would fall through the world.
+- **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
+  interval-action shape the Timeline view uses for its own ball spawner. Lower is a denser
+  stream. The oldest marble is recycled once the flow reaches a cap, so a long session settles
+  into a steady stream rather than piling up forever. **Reset Marbles** clears every marble
+  currently on the floor without stopping the flow.
+- **Marble Textures**, on by default, paints each marble with one of the Marble Editor's own
+  marble images, picked at random per spawn, so the same object drops here as in that game.
+  Turning it off leaves the marble a flat pastel colour instead, which is cheaper to draw and
+  keeps a dense flow usable.
+- **Enclosing Walls**, on by default, puts four walls around the drop point so the marbles stay
+  in shot instead of rolling off. They are sized to the narrow column the flow falls through
+  rather than the rig's full spread, so they frame the stream without dwarfing the rig. Each
+  run is a wall thickness longer than the space it encloses, so perpendicular walls overlap
+  inside each corner rather than leaving a gap to squeeze through. A floor collider spans the
+  enclosure whether or not the walls are drawn: the scene's own ground is a fixed forty units
+  across, which a rig authored in centimetres overruns, and marbles landing past it would fall
+  through the world.
 - **Wall Opacity** goes from barely visible to solid. Low is the useful setting for looking at
   the rig through them; solid is the useful one for a recording where the walls are the frame.
 

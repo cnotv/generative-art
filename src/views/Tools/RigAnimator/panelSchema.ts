@@ -5,24 +5,13 @@ import {
   CAMERA_SMOOTHING_FACTOR_RANGE,
   CAMERA_REACH_MULTIPLIER_RANGE,
   CAMERA_MAX_JUMP_RANGE,
-  MARBLE_COUNT_RANGE,
+  MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE
 } from './config'
 
-/**
- * Build the config panel schema for the rig animator. Rebuilt whenever the bone list or the
- * auto-rig availability changes, since those decide which rows even make sense to show. Frame
- * scheduling and import/export (playback, keyframes, the frame axis, poses in and GLB/JSON out)
- * live on the dedicated rig timeline instead of in this panel. Uploading a model and capturing a
- * pose from the camera are both triggered from buttons docked on the canvas itself instead of a
- * panel row, since both are about what is happening in the 3D view rather than a setting.
- * @param boneNames Every bone in the loaded rig, empty when nothing is rigged yet
- * @param needsAutoRig Whether the loaded model has meshes but no skeleton
- * @param positionRange The +/- range the Bone Position field offers, scaled to the loaded rig
- * @param canCaptureFromCamera Whether the loaded rig has the bones camera pose capture needs
- * @param physicsEnabled Whether the physics rows past the toggle are worth showing at all
- * @returns The schema to hand to registerViewConfig/updateViewSchema
- */
+/** Rebuilt whenever the bone list or the auto-rig availability changes, since those decide
+ * which rows even make sense to show. Playback, keyframes and import/export live on the
+ * dedicated rig timeline instead of in this panel. */
 export const buildRigAnimatorSchema = (
   boneNames: string[],
   needsAutoRig: boolean,
@@ -80,9 +69,12 @@ export const buildRigAnimatorSchema = (
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },
   ...(physicsEnabled
     ? {
-        marbleCount: { ...MARBLE_COUNT_RANGE, label: 'Physics: Marbles' },
+        marbleSpawnInterval: {
+          ...MARBLE_SPAWN_INTERVAL_RANGE,
+          label: 'Physics: Marble Flow (Frames)'
+        },
         marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
-        respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Drop Marbles Again' },
+        respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Reset Marbles' },
         showEnclosure: { checkbox: true, label: 'Physics: Enclosing Walls' },
         enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
       }
