@@ -31,6 +31,7 @@ const emit = defineEmits<{
   apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
   close: []
   toggleRecord: []
+  enablePreview: []
 }>()
 
 const videoReference = ref<HTMLVideoElement | null>(null)
@@ -123,6 +124,10 @@ watch(worldLandmarks, (landmarks) => {
   if (landmarks) emit('apply', landmarks, handPoses.value)
 })
 
+/** An uploaded photo (or, once supported, a video/gif) is the whole reason to look at this
+ * panel right then, so its preview always comes on regardless of whatever the Config panel's
+ * checkbox was last left at — leaving it off would run detection against the upload with
+ * nothing on screen to show for it. */
 const handlePhotoChange = (event: Event): void => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -131,6 +136,7 @@ const handlePhotoChange = (event: Event): void => {
   camera.stop()
   mode.value = 'photo'
   photo.detectPhoto(file)
+  emit('enablePreview')
 }
 
 const handleUseCamera = (): void => {

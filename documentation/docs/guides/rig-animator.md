@@ -313,6 +313,9 @@ a person is found, and stays available once a photo is already loaded so picking
 one never needs switching back to the camera first. **Use Camera** switches back. A photo is
 shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is, and its
 detected pose maps onto the rig unmirrored too, matching what the photo actually shows.
+Uploading one always turns **Show Camera Preview** on too, regardless of whatever it was last
+left at: the whole point of picking a photo is to look at it and its detected pose together,
+and running detection against an upload with the preview still hidden would show nothing for it.
 
 ### Mirrored like a real mirror
 
@@ -422,7 +425,8 @@ needs, control more of what MediaPipe actually detects and how the result is tun
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
-  same either way.
+  same either way. Uploading a photo turns it on automatically even if it was off, see
+  **Upload Photo** above.
 
 ### Smoothing the live feed
 
