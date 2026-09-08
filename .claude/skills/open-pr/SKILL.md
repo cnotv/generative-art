@@ -1,13 +1,13 @@
 ---
 name: open-pr
 description: >-
-  Use once a change is validated and ready to ship — per AGENTS.md, every change ships with
-  a pull request, opened without waiting to be asked — and whenever explicitly asked to
-  open, raise, create, submit or update one: "open the PR", "raise a PR", "make a pull
-  request", "push this up", "update the PR description". Covers making sure an issue exists
-  first, rebasing onto main, force-pushing safely, the PR body format, keeping the
-  description current after each push, watching CI to green, and the abstraction review
-  that closes out the work.
+  Use when a change is validated and ready to ship — per AGENTS.md, every change ships with
+  a pull request, opened without waiting to be asked — and when explicitly asked to open,
+  raise, create, submit or update one: "open the PR", "raise a PR", "make a pull request",
+  "push this up", "update the PR description". Covers making sure an issue exists first,
+  rebasing onto main, force-pushing safely, the PR body format, keeping the description
+  current after each push, watching CI to green, and the abstraction review that closes out
+  the work.
 ---
 
 # Opening a pull request
