@@ -269,6 +269,12 @@ const handleTogglePlayback = (): void => {
   rig.togglePlayback()
 }
 
+/** The docked camera icon opens the capture dialog, or closes it again if it is already open. */
+const toggleCameraCapture = (): void => {
+  if (showCameraCapture.value) handleCloseCamera()
+  else showCameraCapture.value = true
+}
+
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
  * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
@@ -503,8 +509,8 @@ onUnmounted(() => {
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
       variant="outline"
-      title="Capture Pose from Camera"
-      @click="showCameraCapture = true"
+      :title="showCameraCapture ? 'Stop Camera Capture' : 'Capture Pose from Camera'"
+      @click="toggleCameraCapture"
     >
       <CameraIcon />
     </IconButton>
