@@ -56,6 +56,8 @@ exist, so two poses are already a movement.
   single uploaded photo instead of the live feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
+- `src/views/Tools/RigAnimator/useRigMotionRecording.ts`: turning the live camera-driven pose
+  stream into keyframes automatically while Record Motion is on
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting a keyframe's pose
@@ -267,6 +269,20 @@ matches, rather than only a snapshot of it, since you can move and immediately s
 rig moved the same way. **Add Keyframe** on the rig timeline still commits whatever the rig's
 current pose happens to be to the animation, the same as it always has.
 
+### Recording motion instead of posing one keyframe at a time
+
+Every detected frame already applies live to the rig, but committing it to the timeline
+normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, next to
+Close in the camera panel, turns a live performance into an authored clip automatically
+instead: while it is on, every applied camera frame samples the rig's current pose onto the
+timeline at whatever frame real elapsed time has reached, at the panel's own FPS setting, so
+scrubbing the timeline afterward plays back the performance the same way any hand-authored
+clip does. The visible frame range grows to keep up with a long take rather than cutting it
+off, the same way the timeline's own resize handle only ever extends to fit real content.
+**Stop Recording**, the toggle's own second click, ends the take; closing the camera panel or
+switching to **Upload Photo** stops it too, since a still photo has nothing to keep sampling.
+Recording is only available in camera mode, not against an uploaded photo.
+
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
 its image mode and feeds the result through the exact same mapping, applying it once as soon as
@@ -435,5 +451,5 @@ happens, and restored automatically the next time the view loads, so an accident
 not lose the work in progress. Only the edit itself is saved, never the loaded model: an
 uploaded file's blob URL cannot survive a refresh anyway, so the restored keyframes apply to
 whatever model loads next, correctly if it is still the same rig. **Reset** on the rig timeline
-clears every keyframe and the autosave behind them, back to a blank edit, whenever you want to
-start over rather than undo one thing at a time.
+clears every keyframe and the autosave behind them, back to a blank edit, and snaps the live rig
+back to its rest pose too, whenever you want to start over rather than undo one thing at a time.

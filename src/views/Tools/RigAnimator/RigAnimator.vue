@@ -37,6 +37,7 @@ import {
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
+import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
 import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
@@ -94,6 +95,14 @@ const cameraPoseMappingOptions = computed(() => ({
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
+const motionRecording = useRigMotionRecording({
+  fps: () => reactiveConfig.value.fps,
+  currentFrame: () => reactiveConfig.value.frame,
+  frameMax: () => rig.frameMax.value,
+  setFrame: (frame) => (reactiveConfig.value.frame = frame),
+  setFrameMax: (frameMax) => rig.setFrameMax(frameMax),
+  addKeyframe: () => rig.addKeyframe()
+})
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
@@ -204,9 +213,15 @@ const refreshSchema = (): void => {
  */
 const handleCloseCamera = (): void => {
   showCameraCapture.value = false
+  motionRecording.stopRecording()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
   }
+}
+
+const handleToggleRecord = (): void => {
+  if (motionRecording.isRecording.value) motionRecording.stopRecording()
+  else motionRecording.startRecording()
 }
 
 /**
@@ -228,6 +243,7 @@ const handleCameraApply = (
     const yaw = estimateCameraYaw(landmarks)
     if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
   }
+  motionRecording.recordFrameIfActive()
 }
 
 const handleModelFileChange = (event: Event): void => {
@@ -440,8 +456,10 @@ onUnmounted(() => {
     :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
     :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
+    :is-recording="motionRecording.isRecording.value"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
+    @toggle-record="handleToggleRecord"
   />
 </template>
 

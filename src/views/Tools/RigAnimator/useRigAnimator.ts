@@ -38,6 +38,14 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Paste the copied pose onto the current frame and apply it to the live rig. */
   const pasteKeyframe = (): void => rigKeyframes.pasteKeyframe(rigModel.bones.value)
 
+  /** Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
+   * pose: a blank edit with the rig left wherever the last keyframe or drag happened to leave it
+   * would read as though the reset had failed. */
+  const resetAutosave = (): void => {
+    rigKeyframes.resetAutosave()
+    rigModel.resetAllBonesToRest()
+  }
+
   return {
     ...rigModel,
     ...rigKeyframes,
@@ -45,6 +53,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     ...rigHandPose,
     loadModel,
     addKeyframe,
-    pasteKeyframe
+    pasteKeyframe,
+    resetAutosave
   }
 }

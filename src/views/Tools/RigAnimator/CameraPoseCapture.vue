@@ -6,6 +6,7 @@ import {
   DrawingUtils,
   type NormalizedLandmark
 } from '@mediapipe/tasks-vision'
+import { Circle, Square } from 'lucide-vue-next'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
@@ -21,11 +22,15 @@ const props = defineProps<{
   maxJump: number
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
+  /** Whether the parent is currently sampling the live feed onto the rig timeline as
+   * keyframes; only meaningful in camera mode, see `useRigMotionRecording`. */
+  isRecording: boolean
 }>()
 
 const emit = defineEmits<{
   apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
   close: []
+  toggleRecord: []
 }>()
 
 const videoReference = ref<HTMLVideoElement | null>(null)
@@ -134,6 +139,12 @@ const handleUseCamera = (): void => {
   camera.start()
 }
 
+// Recording only makes sense against a continuous live feed: switching to photo mode mid
+// recording would otherwise keep sampling the same still pose onto the timeline forever.
+watch(mode, (value) => {
+  if (value === 'photo' && props.isRecording) emit('toggleRecord')
+})
+
 onMounted(async () => {
   camera.videoElement.value = videoReference.value
   await camera.start()
@@ -181,6 +192,9 @@ onUnmounted(() => camera.stop())
     >
       No person detected in this photo.
     </p>
+    <p v-else-if="isRecording" class="camera-pose-capture__status">
+      Recording motion onto the timeline…
+    </p>
     <p v-else class="camera-pose-capture__status">Applying live to the model.</p>
     <input
       ref="fileInputReference"
@@ -203,6 +217,16 @@ onUnmounted(() => camera.stop())
       </Button>
       <Button v-if="mode === 'photo'" size="sm" variant="secondary" @click="handleUseCamera">
         Use Camera
+      </Button>
+      <Button
+        v-if="mode === 'camera'"
+        size="sm"
+        :variant="isRecording ? 'destructive' : 'secondary'"
+        @click="emit('toggleRecord')"
+      >
+        <Square v-if="isRecording" class="camera-pose-capture__record-icon" />
+        <Circle v-else class="camera-pose-capture__record-icon" />
+        {{ isRecording ? 'Stop Recording' : 'Record Motion' }}
       </Button>
       <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
     </div>
@@ -284,6 +308,12 @@ onUnmounted(() => camera.stop())
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--spacing-2);
+}
+
+.camera-pose-capture__record-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: var(--spacing-1);
 }
 
 .camera-pose-capture__hidden-input {
