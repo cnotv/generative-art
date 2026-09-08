@@ -255,6 +255,11 @@ onUnmounted(stopDrag)
   background-color: var(--color-background);
   border-top: 1px solid var(--color-border);
   z-index: calc(var(--z-overlay) + 1);
+
+  /* Dragging the ruler, the track or a keyframe marker sweeps across the ticks and their
+     text labels; without this every drag also selects that text like a click-drag on a
+     paragraph would. */
+  user-select: none;
 }
 
 .rig-timeline__scrubber {

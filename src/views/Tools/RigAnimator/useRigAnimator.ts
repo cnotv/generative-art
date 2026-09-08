@@ -35,6 +35,15 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Capture the rig's current pose as a keyframe at the panel's current frame. */
   const addKeyframe = (): void => rigKeyframes.addKeyframe(rigModel.bones.value)
 
+  /** Capture a keyframe without the rebuild-and-persist cost `addKeyframe` pays every call —
+   * see `captureKeyframeSilently`'s own doc comment. For motion recording's per-frame sampling;
+   * call `commitRecordedKeyframes` once the burst of captures ends. */
+  const captureKeyframeSilently = (): void =>
+    rigKeyframes.captureKeyframeSilently(rigModel.bones.value)
+
+  /** Rebuild the preview clip and persist once, after a burst of `captureKeyframeSilently` calls. */
+  const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes()
+
   /** Paste the copied pose onto the current frame and apply it to the live rig. */
   const pasteKeyframe = (): void => rigKeyframes.pasteKeyframe(rigModel.bones.value)
 
@@ -53,6 +62,8 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     ...rigHandPose,
     loadModel,
     addKeyframe,
+    captureKeyframeSilently,
+    commitRecordedKeyframes,
     pasteKeyframe,
     resetAutosave
   }

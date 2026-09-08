@@ -101,8 +101,20 @@ const motionRecording = useRigMotionRecording({
   frameMax: () => rig.frameMax.value,
   setFrame: (frame) => (reactiveConfig.value.frame = frame),
   setFrameMax: (frameMax) => rig.setFrameMax(frameMax),
-  addKeyframe: () => rig.addKeyframe()
+  // Silent: rebuilding the preview clip and persisting on every one of a fast burst of
+  // sampled frames made each capture slower than the last (see captureKeyframeSilently's own
+  // doc comment) and was the actual cause of the stutter recording had — not the camera feed
+  // itself. stopRecordingAndCommit below pays that cost once, when the burst ends.
+  addKeyframe: () => rig.captureKeyframeSilently()
 })
+
+/** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
+ * skipped on every sampled frame — see the `addKeyframe` comment above. Both call sites that
+ * stop a recording (the toggle and closing the panel) go through this so neither forgets it. */
+const stopRecordingAndCommit = (): void => {
+  motionRecording.stopRecording()
+  rig.commitRecordedKeyframes()
+}
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
@@ -213,15 +225,26 @@ const refreshSchema = (): void => {
  */
 const handleCloseCamera = (): void => {
   showCameraCapture.value = false
-  motionRecording.stopRecording()
+  if (motionRecording.isRecording.value) stopRecordingAndCommit()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
   }
 }
 
+/** Recording and timeline playback both drive the current frame, so only one may run at
+ * once: starting either stops the other first rather than letting them fight over it. */
 const handleToggleRecord = (): void => {
-  if (motionRecording.isRecording.value) motionRecording.stopRecording()
-  else motionRecording.startRecording()
+  if (motionRecording.isRecording.value) {
+    stopRecordingAndCommit()
+    return
+  }
+  if (rig.isPlaying.value) rig.togglePlayback()
+  motionRecording.startRecording()
+}
+
+const handleTogglePlayback = (): void => {
+  if (!rig.isPlaying.value && motionRecording.isRecording.value) stopRecordingAndCommit()
+  rig.togglePlayback()
 }
 
 /**
@@ -299,8 +322,12 @@ watch(
   () => reactiveConfig.value.frame,
   (frame) => {
     // During playback the frame field only displays where tickPlayback already put the
-    // mixer; scrubbing it back would fight that same-tick update every frame.
-    if (!rig.isPlaying.value) rig.scrubToFrame(frame)
+    // mixer; scrubbing it back would fight that same-tick update every frame. During
+    // recording, handleCameraApply already applied this exact frame's pose straight to the
+    // rig's bones before this watcher fires; scrubbing the (unrebuilt, skipped for cost —
+    // see captureKeyframeSilently) preview clip on top of it every sampled frame was
+    // fighting the live pose it was trying to show, which read as the model stuttering.
+    if (!rig.isPlaying.value && !motionRecording.isRecording.value) rig.scrubToFrame(frame)
   }
 )
 watch(showCameraCapture, () => updateCameraCentering())
@@ -444,7 +471,7 @@ onUnmounted(() => {
     @paste-keyframe="rig.pasteKeyframe"
     @select-hand-pose="rig.applyHandPosePreset"
     @move-keyframe="rig.moveKeyframe"
-    @toggle-playback="rig.togglePlayback"
+    @toggle-playback="handleTogglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"
     @export-json="rig.exportJson"

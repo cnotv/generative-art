@@ -20,6 +20,8 @@ exist, so two poses are already a movement.
   its rest poses and the selected bone
 - `src/views/Tools/RigAnimator/useRigKeyframes.ts`: the authored pose keyframes, the preview
   clip built from them, and explicit autosave persistence on every genuine edit
+- `src/views/Tools/RigAnimator/useRigPlayback.ts`: real-time playback of the preview clip
+  (play/pause, per-tick advance, scrubbing to a frame)
 - `src/views/Tools/RigAnimator/useRigKeyframeIO.ts`: every way keyframes enter or leave the
   tool: GLB/JSON export, JSON import, loading a bundled preset, autosave restore and reset
 - `src/views/Tools/RigAnimator/rigModel.ts` (+ `.test.ts`): loading a model file, generating an
@@ -284,6 +286,13 @@ switching to **Upload Photo** stops it too, since a still photo has nothing to k
 Recording is only available in camera mode, not against an uploaded photo.
 
 ![The camera panel's action row mid-recording: Record Motion toggled to a red Stop Recording button, next to Upload Photo and Close](/img/animation/rig-record-motion.webp)
+
+Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
+either one stops the other first rather than letting them fight over it. While recording, the
+preview clip is not rebuilt or scrubbed on every sampled frame either — only once, when the
+take ends — since rebuilding it from the whole keyframe list on every one of several samples a
+second made each capture slower than the last and read as the model stuttering, even though
+every frame was still captured correctly underneath it.
 
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in

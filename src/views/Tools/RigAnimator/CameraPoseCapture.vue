@@ -220,8 +220,10 @@ onUnmounted(() => camera.stop())
       </Button>
       <Button
         v-if="mode === 'camera'"
-        size="sm"
-        :variant="isRecording ? 'destructive' : 'secondary'"
+        size="lg"
+        variant="ghost"
+        class="camera-pose-capture__record-toggle"
+        :class="{ 'camera-pose-capture__record-toggle--active': isRecording }"
         @click="emit('toggleRecord')"
       >
         <Square v-if="isRecording" class="camera-pose-capture__record-icon" />
@@ -310,10 +312,20 @@ onUnmounted(() => camera.stop())
   gap: var(--spacing-2);
 }
 
+/* Ghost variant carries no background of its own; the red colour is what makes the toggle
+   read as a record control at a glance instead of blending into the row. */
+.camera-pose-capture__record-toggle {
+  color: var(--color-destructive);
+}
+
+.camera-pose-capture__record-toggle--active {
+  font-weight: 700;
+}
+
 .camera-pose-capture__record-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  margin-right: var(--spacing-1);
+  width: var(--spacing-5);
+  height: var(--spacing-5);
+  margin-right: var(--spacing-2);
 }
 
 .camera-pose-capture__hidden-input {
