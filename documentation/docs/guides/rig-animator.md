@@ -38,6 +38,10 @@ exist, so two poses are already a movement.
   `localStorage`
 - `src/views/Tools/RigAnimator/presets.ts`: the bundled example animations, and sampling one
   into a sparse set of pose keyframes
+- `src/views/Tools/RigAnimator/useRigMotionRecording.ts`: the frame-timing logic behind
+  **Record Motion** — when real elapsed time has reached a new frame to sample
+- `src/views/Tools/RigAnimator/useRigRecordedPresets.ts`: session-only presets built from a
+  finished Record Motion take, offered in the same **Presets** picker as the bundled clips
 - `src/views/Tools/RigAnimator/RigTimeline.vue`: the dedicated panel for playback, keyframes,
   the frame axis, presets, import and export (see below)
 - `src/views/Tools/RigAnimator/cameraFraming.ts` (+ `.test.ts`): framing the camera to whatever
@@ -294,6 +298,14 @@ take ends — since rebuilding it from the whole keyframe list on every one of s
 second made each capture slower than the last and read as the model stuttering, even though
 every frame was still captured correctly underneath it.
 
+Starting a take also captures the live pose already on the rig at that exact instant, before
+any elapsed-time sampling begins. Without that, the take's very first frame carried no
+keyframe of its own — sampling only ever adds one once real time has moved past it — so
+scrubbing or playing into the start of the recording interpolated from whatever pose, if any,
+already sat there instead, a visible twitch right at the seam. Once a take ends, it is added
+to **Presets** — see below — so it can be played back or reloaded the same way a bundled
+mocap clip can.
+
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
 its image mode and feeds the result through the exact same mapping, applying it once as soon as
@@ -447,6 +459,11 @@ than this tool's sparse pose-keyframe model is meant to show, so picking one sam
 twelve evenly-spaced keyframes rather than importing every original frame, replacing whatever
 was on the timeline. It is a quick way to see the drag, resize and playback interactions
 working against a real, varied pose, not just a hand-posed test case.
+
+A **Record Motion** take that captured any real motion appears in the same dropdown too, as
+"Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
+without re-recording it. These entries are session-only — a refresh drops them, the same as
+every unsaved edit that is not the autosave.
 
 ## Saving and loading the animation
 

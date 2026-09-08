@@ -38,21 +38,34 @@ describe('useRigMotionRecording', () => {
     expect(addKeyframeCalls).toEqual([])
   })
 
+  it('captures the anchor frame itself the instant recording starts', () => {
+    const { recorder, addKeyframeCalls } = buildRecorder(30)
+
+    recorder.startRecording()
+
+    // recordFrameIfActive's own guard never captures this frame later (it only fires once
+    // real time reaches a frame strictly past it), so without this the take's start would be
+    // left holding whatever pose, if any, already sat there.
+    expect(addKeyframeCalls).toEqual([0])
+    expect(recorder.capturedFrameCount.value).toBe(0)
+  })
+
   it('samples a keyframe once real elapsed time reaches a new frame at the configured fps', () => {
     const { recorder, frame, addKeyframeCalls } = buildRecorder(30)
     recorder.startRecording()
 
-    // Under half a frame's worth of time at 30fps: still frame 0, nothing recorded yet.
+    // Under half a frame's worth of time at 30fps: still frame 0, nothing further recorded.
     nowMs = 10
     recorder.recordFrameIfActive()
     expect(frame.value).toBe(0)
-    expect(addKeyframeCalls).toEqual([])
+    expect(addKeyframeCalls).toEqual([0])
 
     // Exactly two frames in: advances the playhead and captures the pose there.
     nowMs = (2 * 1000) / 30
     recorder.recordFrameIfActive()
     expect(frame.value).toBe(2)
-    expect(addKeyframeCalls).toEqual([2])
+    expect(addKeyframeCalls).toEqual([0, 2])
+    expect(recorder.capturedFrameCount.value).toBe(1)
   })
 
   it('never re-captures the same frame twice for calls that land within it', () => {
@@ -63,7 +76,7 @@ describe('useRigMotionRecording', () => {
     recorder.recordFrameIfActive()
     recorder.recordFrameIfActive()
 
-    expect(addKeyframeCalls).toEqual([1])
+    expect(addKeyframeCalls).toEqual([0, 1])
   })
 
   it('grows the visible frame range rather than dropping frames past it', () => {
@@ -86,7 +99,7 @@ describe('useRigMotionRecording', () => {
     recorder.recordFrameIfActive()
 
     expect(frame.value).toBe(6)
-    expect(addKeyframeCalls).toEqual([6])
+    expect(addKeyframeCalls).toEqual([5, 6])
   })
 
   it('stops sampling once stopped', () => {
@@ -98,6 +111,6 @@ describe('useRigMotionRecording', () => {
     recorder.recordFrameIfActive()
 
     expect(frame.value).toBe(0)
-    expect(addKeyframeCalls).toEqual([])
+    expect(addKeyframeCalls).toEqual([0])
   })
 })

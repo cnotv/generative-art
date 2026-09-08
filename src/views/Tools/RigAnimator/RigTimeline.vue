@@ -19,6 +19,7 @@ import { POSES_FILE_ACCEPT } from './config'
 import { RIG_PRESETS } from './presets'
 import { computeTimelineTicks } from './timelineTicks'
 import { HAND_POSE_PRESETS } from '@webgamekit/rig'
+import type { RecordedPreset } from './useRigRecordedPresets'
 
 interface Properties {
   frame: number
@@ -27,6 +28,7 @@ interface Properties {
   isPlaying: boolean
   hasClipboard: boolean
   canApplyHandPose: boolean
+  recordedPresets: RecordedPreset[]
 }
 
 const props = defineProps<Properties>()
@@ -51,7 +53,19 @@ const emit = defineEmits<{
 const trackElement = ref<HTMLDivElement | null>(null)
 const fileInputElement = ref<HTMLInputElement | null>(null)
 const hasKeyframeAtCurrentFrame = computed(() => props.keyframeFrames.includes(props.frame))
-const presetOptions = RIG_PRESETS.map((preset) => ({ value: preset.url, label: preset.name }))
+const bundledPresetOptions = RIG_PRESETS.map((preset) => ({
+  value: preset.url,
+  label: preset.name
+}))
+/** A finished Record Motion take is offered here too, prefixed so `selectPreset` can tell a
+ * session recording apart from a bundled preset's URL without a second event. */
+const presetOptions = computed(() => [
+  ...bundledPresetOptions,
+  ...props.recordedPresets.map((preset, index) => ({
+    value: `recording:${index}`,
+    label: preset.name
+  }))
+])
 const handPoseOptions = Object.keys(HAND_POSE_PRESETS).map((name) => ({ value: name, label: name }))
 const ticks = computed(() => computeTimelineTicks(props.frameMax))
 

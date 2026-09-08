@@ -110,10 +110,23 @@ const motionRecording = useRigMotionRecording({
 
 /** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
  * skipped on every sampled frame — see the `addKeyframe` comment above. Both call sites that
- * stop a recording (the toggle and closing the panel) go through this so neither forgets it. */
+ * stop a recording (the toggle and closing the panel) go through this so neither forgets it.
+ * A take that actually captured motion is also snapshotted into the preset picker, the same
+ * way a bundled mocap clip is offered there, so it can be reloaded later in the session. */
 const stopRecordingAndCommit = (): void => {
   motionRecording.stopRecording()
   rig.commitRecordedKeyframes()
+  if (motionRecording.capturedFrameCount.value > 0) rig.addRecordedPreset(rig.keyframes.value)
+}
+
+/** A preset picked in the timeline dropdown is either a bundled mocap URL or a session
+ * recording, encoded as `recording:<index>` by `RigTimeline`'s own option list. */
+const handleSelectPreset = (value: string): void => {
+  const recordingIndex = value.startsWith('recording:')
+    ? Number(value.slice('recording:'.length))
+    : null
+  if (recordingIndex !== null) rig.applyRecordedPreset(recordingIndex)
+  else rig.loadPreset(value)
 }
 
 let cameraReference: THREE.Camera | null = null
@@ -463,6 +476,7 @@ onUnmounted(() => {
     :is-playing="rig.isPlaying.value"
     :has-clipboard="rig.hasClipboard.value"
     :can-apply-hand-pose="rig.canApplyHandPose.value"
+    :recorded-presets="rig.recordedPresets.value"
     @update:frame="(value) => (reactiveConfig.frame = value)"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
@@ -475,7 +489,7 @@ onUnmounted(() => {
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"
     @export-json="rig.exportJson"
-    @select-preset="rig.loadPreset"
+    @select-preset="handleSelectPreset"
     @reset-all="rig.resetAutosave"
   />
   <CameraPoseCapture

@@ -19,14 +19,26 @@ export interface RigMotionRecordingDependencies {
  */
 export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   const isRecording = ref(false)
+  /** How many frames this recording session has actually sampled, so a caller can tell a take
+   * that genuinely captured motion from a toggle-on/toggle-off that never advanced a frame. */
+  const capturedFrameCount = ref(0)
   let anchorFrame = 0
   let anchorTimeMs = 0
 
   /** Arm recording from whatever frame the playhead currently sits on. */
   const startRecording = (): void => {
     isRecording.value = true
+    capturedFrameCount.value = 0
     anchorFrame = deps.currentFrame()
     anchorTimeMs = performance.now()
+    // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
+    // below skips anything <= currentFrame, and currentFrame is this very frame until real
+    // time advances past it) — so without this, the anchor frame is left holding whatever
+    // keyframe, if any, already sat there. Scrubbing or playing into the start of a take then
+    // interpolates from that unrelated pose into the first real sample: a visible twitch right
+    // at the seam. Capturing the live pose already on the rig the instant recording arms closes
+    // that gap; it is not counted in `capturedFrameCount` since no time-driven motion happened.
+    deps.addKeyframe()
   }
 
   const stopRecording = (): void => {
@@ -48,7 +60,8 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     if (nextFrame > deps.frameMax()) deps.setFrameMax(nextFrame)
     deps.setFrame(nextFrame)
     deps.addKeyframe()
+    capturedFrameCount.value += 1
   }
 
-  return { isRecording, startRecording, stopRecording, recordFrameIfActive }
+  return { isRecording, capturedFrameCount, startRecording, stopRecording, recordFrameIfActive }
 }

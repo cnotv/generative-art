@@ -3,6 +3,7 @@ import { useRigModel } from './useRigModel'
 import { useRigKeyframes } from './useRigKeyframes'
 import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
+import { useRigRecordedPresets } from './useRigRecordedPresets'
 import type { RigAnimatorConfig } from './types'
 
 /**
@@ -25,6 +26,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigModel.resetAllBonesToRest
   )
   const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
+  const recordedPresets = useRigRecordedPresets()
 
   /** Load a model and drop whatever keyframes belonged to the one it replaces. */
   const loadModel = async (url: string): Promise<void> => {
@@ -47,6 +49,12 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Paste the copied pose onto the current frame and apply it to the live rig. */
   const pasteKeyframe = (): void => rigKeyframes.pasteKeyframe(rigModel.bones.value)
 
+  /** Load a session recording back onto the timeline, the same as picking a bundled preset. */
+  const applyRecordedPreset = (index: number): void => {
+    const preset = recordedPresets.recordedPresets.value[index]
+    if (preset) rigKeyframes.applyLoadedKeyframes(preset.keyframes)
+  }
+
   /** Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
    * pose: a blank edit with the rig left wherever the last keyframe or drag happened to leave it
    * would read as though the reset had failed. */
@@ -60,11 +68,13 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     ...rigKeyframes,
     ...rigCameraPose,
     ...rigHandPose,
+    ...recordedPresets,
     loadModel,
     addKeyframe,
     captureKeyframeSilently,
     commitRecordedKeyframes,
     pasteKeyframe,
-    resetAutosave
+    resetAutosave,
+    applyRecordedPreset
   }
 }
