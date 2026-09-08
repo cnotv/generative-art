@@ -283,6 +283,8 @@ off, the same way the timeline's own resize handle only ever extends to fit real
 switching to **Upload Photo** stops it too, since a still photo has nothing to keep sampling.
 Recording is only available in camera mode, not against an uploaded photo.
 
+![The camera panel's action row mid-recording: Record Motion toggled to a red Stop Recording button, next to Upload Photo and Close](/img/animation/rig-record-motion.webp)
+
 **Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
 from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
 its image mode and feeds the result through the exact same mapping, applying it once as soon as
