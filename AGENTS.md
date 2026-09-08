@@ -23,8 +23,7 @@ Two entry paths, chosen by whether an issue exists yet.
   tests-first, but they owe tests and, once validated, the issue and the pull request that
   closes it — run `open-pr` without waiting to be asked; work is not done at the last commit.
 
-Either way: a fresh branch off main every time. Never commit to the current branch and never
-reuse an existing feature branch, however related it looks.
+Either way: a fresh branch off main every time, never the current branch, never reused.
 
 ## Working agreements
 
@@ -77,8 +76,9 @@ reuse an existing feature branch, however related it looks.
 
 ## Git
 
-- Branches are `<type>/<issue-number>-<description>`, with type one of `feat`, `fix`, `docs`,
-  `refactor`, `test`, `chore`.
+- Branches are always `<type>/<issue-number>-<description>` once an issue exists, type one
+  of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`. A prototype branch that started
+  before its issue did gets renamed to match, before the PR opens — never left as-is.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
 - **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no

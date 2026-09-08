@@ -109,6 +109,13 @@ Pin the link to the **commit sha**, not the branch: a branch link dies when the 
 on merge, and the pull request is the record afterwards. GitHub will not play a `.webm` linked
 this way, so link the file for a video and keep the stills inline.
 
+**After writing the body, re-fetch the PR and confirm the image actually renders** — never
+trust that the markup you wrote is what got stored. A stray escape (quoted backticks or
+quotes wrapped around the URL, a mangled character) turns `![alt](url)` into literal text
+with no image, and it looks identical to a working link in the tool call that wrote it. Read
+the body back and check the image line is exactly `![alt](raw-url)`, no extra characters
+inside the parentheses.
+
 ## 4. Watch CI
 
 ```sh
@@ -156,5 +163,6 @@ it stops happening.
 ## Definition of done
 
 Every CI check is green, the PR description matches what is actually on the branch, the
-linked issue still describes the work accurately, and the abstraction review section is
-filled in — including when the answer is that nothing generalizes.
+linked issue still describes the work accurately, the abstraction review section is filled
+in — including when the answer is that nothing generalizes — and any embedded screenshot or
+video was confirmed to render, not just written.
