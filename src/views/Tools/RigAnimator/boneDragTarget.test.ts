@@ -53,6 +53,56 @@ describe('applyGizmoDragToChain', () => {
     const midWorldPosition = mid.getWorldPosition(new THREE.Vector3())
     expect(rootWorldPosition.distanceTo(midWorldPosition)).toBeCloseTo(1, 4)
   })
+
+  it('translates the skeleton root to follow a dragged foot, instead of only bending the leg', () => {
+    const hips = new THREE.Bone()
+    hips.name = 'mixamorigHips'
+    const upLeg = new THREE.Bone()
+    upLeg.name = 'mixamorigLeftUpLeg'
+    upLeg.position.set(0, -1, 0)
+    const leg = new THREE.Bone()
+    leg.name = 'mixamorigLeftLeg'
+    leg.position.set(0, -1, 0)
+    const foot = new THREE.Bone()
+    foot.name = 'mixamorigLeftFoot'
+    foot.position.set(0, -1, 0)
+    hips.add(upLeg)
+    upLeg.add(leg)
+    leg.add(foot)
+    hips.updateMatrixWorld(true)
+    const restPoses = captureRestPoses([hips, upLeg, leg, foot])
+
+    applyGizmoDragToChain(foot, new THREE.Vector3(2, -3, 0), restPoses)
+
+    expect(hips.position.distanceTo(new THREE.Vector3(2, 0, 0))).toBeLessThan(1e-3)
+    const footWorldPosition = foot.getWorldPosition(new THREE.Vector3())
+    expect(footWorldPosition.distanceTo(new THREE.Vector3(2, -3, 0))).toBeLessThan(1e-4)
+  })
+
+  it('leaves the skeleton root in place for a dragged hand, bending the arm to cover the reach', () => {
+    const hips = new THREE.Bone()
+    hips.name = 'mixamorigHips'
+    const arm = new THREE.Bone()
+    arm.name = 'mixamorigLeftArm'
+    arm.position.set(0, 1, 0)
+    const foreArm = new THREE.Bone()
+    foreArm.name = 'mixamorigLeftForeArm'
+    foreArm.position.set(0, 1, 0)
+    const hand = new THREE.Bone()
+    hand.name = 'mixamorigLeftHand'
+    hand.position.set(0, 1, 0)
+    hips.add(arm)
+    arm.add(foreArm)
+    foreArm.add(hand)
+    hips.updateMatrixWorld(true)
+    const restPoses = captureRestPoses([hips, arm, foreArm, hand])
+
+    applyGizmoDragToChain(hand, new THREE.Vector3(1, 2, 0), restPoses)
+
+    expect(hips.position.equals(new THREE.Vector3(0, 0, 0))).toBe(true)
+    const handWorldPosition = hand.getWorldPosition(new THREE.Vector3())
+    expect(handWorldPosition.distanceTo(new THREE.Vector3(1, 2, 0))).toBeLessThan(1e-4)
+  })
 })
 
 describe('applyPoleDrag', () => {

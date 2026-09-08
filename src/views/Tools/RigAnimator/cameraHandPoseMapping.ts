@@ -15,11 +15,19 @@ export interface CameraHandLandmark {
 }
 
 /**
- * Each finger's landmark indices in MediaPipe's 21-point hand topology, wrist first: the point
- * `applyHandPose`'s three joints (from the palm outward) are measured between.
+ * Each finger's landmark indices in MediaPipe's 21-point hand topology: the point
+ * `applyHandPose`'s three joints (from the palm outward) are measured between. The four straight
+ * fingers lead with the wrist (0), since on a relaxed hand a finger's own base segment continues
+ * roughly the same direction the wrist-to-knuckle line already points, making the wrist a good
+ * zero-bend reference for their own first joint. The thumb leads with the index finger's own
+ * knuckle (5) instead: its metacarpal sits at a real anatomical angle off the wrist even when
+ * fully relaxed (thumb opposition), so measuring its first joint's bend the same wrist-relative
+ * way reads a large, curl-unrelated angle on every frame, curled or not. The index knuckle sits
+ * roughly where a relaxed thumb's own metacarpal already points across the palm, closer to
+ * collinear with it at rest than the wrist ever is.
  */
 const FINGER_LANDMARK_INDEX = {
-  thumb: [0, 1, 2, 3, 4],
+  thumb: [5, 1, 2, 3, 4],
   index: [0, 5, 6, 7, 8],
   middle: [0, 9, 10, 11, 12],
   ring: [0, 13, 14, 15, 16],

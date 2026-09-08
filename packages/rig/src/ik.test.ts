@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   ikFindTwoBoneChain,
+  ikFindSkeletonRoot,
   ikSolveTwoBoneChain,
   ikSolveOneBoneAim,
   ikApplyWorldDirectionToBone
@@ -39,6 +40,29 @@ describe('ikFindTwoBoneChain', () => {
     expect(chain?.root).toBe(root)
     expect(chain?.mid).toBe(mid)
     expect(chain?.end).toBe(end)
+  })
+})
+
+describe('ikFindSkeletonRoot', () => {
+  it('returns the bone itself when it already has no Bone parent', () => {
+    const { root } = buildStraightChain()
+
+    expect(ikFindSkeletonRoot(root)).toBe(root)
+  })
+
+  it('walks up through every Bone ancestor to the topmost one', () => {
+    const { root, mid, end } = buildStraightChain()
+
+    expect(ikFindSkeletonRoot(mid)).toBe(root)
+    expect(ikFindSkeletonRoot(end)).toBe(root)
+  })
+
+  it('stops at a Bone whose own parent is a non-Bone Object3D', () => {
+    const group = new THREE.Group()
+    const { root, end } = buildStraightChain()
+    group.add(root)
+
+    expect(ikFindSkeletonRoot(end)).toBe(root)
   })
 })
 

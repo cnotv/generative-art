@@ -12,7 +12,6 @@ export interface RigAnimatorConfig {
   cameraUseNeck: boolean
   cameraUseHips: boolean
   cameraUseDepth: boolean
-  cameraUseViewpoint: boolean
   cameraReachMultiplier: number
   cameraSmoothingFactor: number
   cameraMaxJump: number

@@ -344,7 +344,10 @@ describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
       .filter((boneName) => boneName in targetsByBoneName)
       .forEach((boneName) => {
         const bone = bones.find((candidate) => candidate.name === boneName)!
-        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses)
+        // Applying several mapped bones' targets in one pass, like a real camera pose capture
+        // does: root-follow is off, or the head target below would carry the root along and
+        // throw off the hand target already applied.
+        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses, false)
       })
 
     const finalLeftHandPosition = leftHand.getWorldPosition(new THREE.Vector3())
@@ -491,7 +494,10 @@ describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTPoseLandmarks(), anchor)
 
     Object.keys(CAMERA_POSE_BONE_LANDMARKS).forEach((boneName) => {
-      applyGizmoDragToChain(findBone(boneName), boneTargets[boneName], restPoses)
+      // Applying every mapped bone's target in one pass, like a real camera pose capture does:
+      // root-follow is off, or the foot targets below would carry the root along and throw off
+      // the hand/head targets already applied.
+      applyGizmoDragToChain(findBone(boneName), boneTargets[boneName], restPoses, false)
     })
 
     const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(

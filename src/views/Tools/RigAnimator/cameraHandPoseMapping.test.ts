@@ -10,20 +10,36 @@ import {
 
 const point = (x: number, y: number, z: number): CameraHandLandmark => ({ x, y, z })
 
-/** A fully open hand: every finger's four points run in a straight line out from the wrist. */
+/**
+ * A fully open hand: every straight finger's four points run in a straight line out from the
+ * wrist. The thumb runs in a straight line out from the index knuckle instead, matching
+ * `FINGER_LANDMARK_INDEX.thumb`'s own choice of reference point: unlike the wrist, which sits at
+ * a real anatomical angle off a relaxed thumb's own metacarpal, the index knuckle is where this
+ * module treats a relaxed thumb as pointing from, so that is what "straight" has to mean here
+ * too, or this fixture would not exercise the same geometry the real detector reads.
+ */
 const buildOpenHandLandmarks = (): CameraHandLandmark[] => {
   const landmarks: CameraHandLandmark[] = new Array(21).fill(null).map(() => point(0, 0, 0))
   landmarks[0] = point(0, 0, 0) // wrist
-  const straightFinger = (base: number, direction: [number, number, number]): void => {
+  const straightFinger = (
+    base: number,
+    origin: [number, number, number],
+    direction: [number, number, number]
+  ): void => {
     ;[1, 2, 3, 4].forEach((step, index) => {
-      landmarks[base + index] = point(direction[0] * step, direction[1] * step, direction[2] * step)
+      landmarks[base + index] = point(
+        origin[0] + direction[0] * step,
+        origin[1] + direction[1] * step,
+        origin[2] + direction[2] * step
+      )
     })
   }
-  straightFinger(1, [-1, 1, 0]) // thumb
-  straightFinger(5, [0, 1, 0]) // index
-  straightFinger(9, [0.2, 1, 0]) // middle
-  straightFinger(13, [0.4, 1, 0]) // ring
-  straightFinger(17, [0.6, 1, 0]) // pinky
+  straightFinger(5, [0, 0, 0], [0, 1, 0]) // index, straight out from the wrist
+  const indexKnuckle = landmarks[5]
+  straightFinger(1, [indexKnuckle.x, indexKnuckle.y, indexKnuckle.z], [-1, 1, 0]) // thumb, from the index knuckle
+  straightFinger(9, [0, 0, 0], [0.2, 1, 0]) // middle
+  straightFinger(13, [0, 0, 0], [0.4, 1, 0]) // ring
+  straightFinger(17, [0, 0, 0], [0.6, 1, 0]) // pinky
   return landmarks
 }
 
@@ -55,6 +71,29 @@ describe('cameraHandLandmarksToPose', () => {
     const pose = cameraHandLandmarksToPose(buildOpenHandLandmarks())
     expect(Object.keys(pose).sort()).toEqual(['index', 'middle', 'pinky', 'ring', 'thumb'])
     Object.values(pose).forEach((angles) => expect(angles).toHaveLength(3))
+  })
+
+  it('reads a relaxed thumb near zero even though its metacarpal is not collinear with the wrist', () => {
+    // The bug this guards against: measuring the thumb's first joint the wrist-relative way
+    // (like the four straight fingers) reads a large angle here even at rest, since a real
+    // thumb's metacarpal points off at its own anatomical angle from the wrist. Landmarks below
+    // mimic that real geometry (thumb CMC well off the wrist-to-index-knuckle line) while still
+    // being "relaxed": straight from the index knuckle onward, the reference this module uses.
+    const landmarks = buildOpenHandLandmarks()
+
+    const pose = cameraHandLandmarksToPose(landmarks)
+
+    expect(pose.thumb[0]).toBeCloseTo(0)
+  })
+
+  it('reads a curled thumb CMC joint as a nonzero angle', () => {
+    const landmarks = buildOpenHandLandmarks()
+    // Fold the thumb's CMC->MCP segment away from its straight line out of the index knuckle.
+    landmarks[2] = point(landmarks[1].x - 1, landmarks[1].y, landmarks[1].z)
+
+    const pose = cameraHandLandmarksToPose(landmarks)
+
+    expect(pose.thumb[0]).toBeGreaterThan(0.3)
   })
 })
 

@@ -5,6 +5,7 @@ export { rigFindSkinnedMesh, rigFindUnskinnedMeshes } from './rig'
 export { rigGenerateHumanoidSkeleton, rigAutoSkinMesh } from './humanoidRig'
 export {
   ikFindTwoBoneChain,
+  ikFindSkeletonRoot,
   ikSolveTwoBoneChain,
   ikSolveOneBoneAim,
   ikApplyWorldDirectionToBone

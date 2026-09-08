@@ -31,7 +31,11 @@ exist, so two poses are already a movement.
   pointer against, so posing never jumps with a world axis
 - `src/views/Tools/RigAnimator/boneDragTarget.ts`: resolves a drag toward a world-space target
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
-  a plain translate, and resets whichever bones a drag rotated back to rest
+  a plain translate, carries the skeleton root along with an interactive drag on a foot or the
+  head (see "Dragging never stretches a segment" below), and resets whichever bones a drag
+  rotated back to rest
+- `src/views/Tools/RigAnimator/useRigBoneDragTarget.ts`: wraps `boneDragTarget.ts`'s solve for
+  the view, syncing the panel's Bone Position field with whatever the solve lands on
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
   timeline's frame range, repositioning one or many dragged keyframes together, and merging a
   new source's sampled keyframes into a body-part scope without disturbing the rest
@@ -181,6 +185,17 @@ direction, the way a puppet's limb bends or swings rather than stretching:
 Either way the result is only ever rotation, so it is exactly what **Add Keyframe** already
 captures, no different from posing each bone by hand one at a time.
 
+Dragging a **foot or the head** also carries the skeleton root along with it, translated by
+however far that end effector still has to travel to reach the drag target, before the two-bone
+solve above runs. The leg or neck then only has to close whatever small gap is left, rather than
+bending to cover the whole distance itself: a leg supports the body's own weight and a head sits
+on top of the spine, so pulling either normally moves the body along with it, the way it does in
+life, rather than stretching the limb away from a body that stays planted. A hand is deliberately
+left out of this: reaching for something normally bends the elbow while the torso stays put, and
+this is the same reason applying a captured camera pose does not carry the root along either
+(every limb has to reach its own already-correct target independently in that pass; only an
+interactive single-bone drag gets this).
+
 ![mixamorigRightHand dragged upward: the elbow bent to follow it, the mesh at the shoulder and elbow intact, the Bone Position field still reading the hand's rest offset since only its shoulder and elbow ancestors rotated](/img/animation/rig-ik-reach.webp)
 
 ### Re-aiming the bend without moving the hand
@@ -304,6 +319,17 @@ would. This rides along on the same live application the body mapping already do
 button, no separate confidence gate, since a hand simply not being detected in frame just leaves
 whatever the fingers were doing untouched.
 
+Every joint's bend is measured between the landmark before it, the joint itself, and the
+landmark after it; the four straight fingers use the wrist as the "before" point for their own
+first joint, since a relaxed hand's own base segment already continues roughly the same
+direction the wrist-to-knuckle line points. The thumb's first joint (its CMC) uses the index
+finger's own knuckle instead: its metacarpal sits at a real anatomical angle off the wrist even
+fully relaxed (thumb opposition), so measuring it the wrist-relative way read a large,
+curl-unrelated angle on every frame, curled or not, which then rode on top of that bone's own
+already-tilted rest pose and looked stuck rotated the wrong way. The index knuckle sits roughly
+where a relaxed thumb's own metacarpal already points across the palm, much closer to collinear
+with it at rest than the wrist ever is.
+
 MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
 through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
 reasoning from MediaPipe's documented caveat that it assumes a mirrored ("selfie") input; a
@@ -335,7 +361,10 @@ camera feed. The panel shows a mirrored webcam feed with a live skeleton overlay
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
 internally, and drawing that would show a confident-looking line to something that isn't really
-there.
+there. The body skeleton's own rough hand points (a pinky/index/thumb knuckle per side, far
+coarser than the dedicated Hand Landmarker's own 21 points per hand) are dropped from this
+overlay whenever that hand was separately detected, so the two skeletons never draw on top of
+each other for the same hand.
 
 The model re-centers within the now-narrower visible half rather than sitting off-center against
 the panel's edge, without the 3D canvas itself ever resizing: opening the panel shifts the
@@ -420,7 +449,7 @@ itself is reflected the same way the preview already is: `mirrorCameraLandmarks`
 landmark's x and swaps each left/right pair (shoulders, wrists, hips, ankles, and so on) right
 where MediaPipe's landmarks are first read, before any of the mapping above ever sees them, and
 `mirrorCameraHandPoses` does the equivalent swap for which side a detected hand's finger curl
-lands on. Everything downstream, the bone mapping and the camera-angle-matching yaw estimate
+lands on. Everything downstream, the bone mapping and the model-turning yaw estimate below
 alike, needed no changes of its own: both simply read whichever pose they are handed, and a
 pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video gets
 neither of these, since its own preview is not mirrored either.
@@ -461,6 +490,17 @@ Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra 
 drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
 a second detector alongside it, covered in "Fingers from the camera" above.
 
+The model itself also turns to roughly the angle the photo shows the subject from, so a turned
+pose reads as turned on screen too instead of always facing forward. This is the one
+camera-relative detail a single photo's body landmarks can actually support: MediaPipe's world
+landmarks are already normalized to a real-world body scale, so unlike the subject's facing
+direction, nothing in them hints at how close or how zoomed in the original camera was. The
+angle comes from the shoulder line's own tilt in the horizontal plane: facing the camera
+straight on, both shoulders sit at the same depth, and turning moves one shoulder closer to the
+camera than the other by exactly the angle turned. This turns the model, not the 3D view's own
+camera: the viewport stays entirely under manual orbit control throughout capture, rather than
+swinging around on every applied frame and fighting whatever orbiting was done in between.
+
 ### Extra details to try
 
 Checkboxes and sliders in the Config panel, shown once the rig has every bone the base mapping
@@ -499,16 +539,6 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   judge depth from than two eyes or a video's own motion parallax do, making z the least
   reliable of the three axes it reports; turning this off projects every target onto the
   shoulder anchor's own depth plane instead of trusting a noisy estimate.
-- **Match Camera Angle to Photo**, off by default, turns the 3D view's own camera to roughly the
-  angle the photo shows the subject from, so a turned pose reads as turned in the viewport too
-  instead of always being viewed square-on. This is the one camera-relative detail a single
-  photo's body landmarks can actually support: MediaPipe's world landmarks are already
-  normalized to a real-world body scale, so unlike the subject's facing direction, nothing in
-  them hints at how close or how zoomed in the original camera was. The angle comes from the
-  shoulder line's own tilt in the horizontal plane: facing the camera straight on, both
-  shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
-  other by exactly the angle turned. Off by default since it moves the view every applied frame,
-  which fights any manual orbiting done in between.
 - **Reach Multiplier**, 1 by default, scales every mapped target's distance from its anchor by
   this factor on top of the rig's own proportions, above 1 reaching further than the computed
   scale predicts and below 1 reaching less far. Even with the right bone anchored to the right

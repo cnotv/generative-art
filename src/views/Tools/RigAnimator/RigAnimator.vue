@@ -86,7 +86,6 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseNeck: true,
   cameraUseHips: false,
   cameraUseDepth: true,
-  cameraUseViewpoint: false,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
@@ -312,10 +311,12 @@ const toggleMarbleFlow = (): void => {
 }
 
 /**
- * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
- * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
- * from, the one camera-relative detail a single photo's body landmarks can actually support
- * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ * Applies a detected body pose and, riding along on the same emit, any detected hand poses. Also
+ * turns the model itself to roughly the angle the photo shows the subject from, the one
+ * camera-relative detail a single photo's body landmarks can actually support (see
+ * `estimateCameraYaw`'s own doc comment for why not more than that): the model turns to follow
+ * the subject instead of the viewing camera swinging around it, which stays entirely under the
+ * user's own orbit control throughout capture.
  */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
@@ -330,9 +331,9 @@ const handleCameraApply = (
     if (!targetBodyPartGroups.value.has(armGroup)) return
     applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
-  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
+  if (rig.model.value) {
     const yaw = estimateCameraYaw(landmarks)
-    if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
+    if (yaw !== null) rig.model.value.rotation.y = yaw
   }
   motionRecording.recordFrameIfActive()
 }

@@ -24,7 +24,11 @@ const BONES_KEPT_ACROSS_FRAMES = new Set([CAMERA_POSE_HIPS_BONE])
  */
 export const useRigCameraPose = (
   bones: Ref<THREE.Bone[]>,
-  applyBoneDragTarget: (bone: THREE.Bone, targetWorldPosition: THREE.Vector3) => void,
+  applyBoneDragTarget: (
+    bone: THREE.Bone,
+    targetWorldPosition: THREE.Vector3,
+    allowRootFollow?: boolean
+  ) => void,
   resetAllBonesToRest: (excludeBoneNames?: Set<string>) => void
 ) => {
   const canCaptureFromCamera = computed(() =>
@@ -74,7 +78,10 @@ export const useRigCameraPose = (
       .filter(([boneName]) => boneNamesInScope.has(boneName))
       .forEach(([boneName, targetWorldPosition]) => {
         const bone = bones.value.find((candidate) => candidate.name === boneName)
-        if (bone) applyBoneDragTarget(bone, targetWorldPosition)
+        // Every mapped limb's target already reproduces the detected whole-body pose on its
+        // own; letting one also carry the skeleton root along (as an interactive single-bone
+        // drag does) would throw off every other limb's own target applied in this same pass.
+        if (bone) applyBoneDragTarget(bone, targetWorldPosition, false)
       })
     Object.entries(poleTargets)
       .filter(([endBoneName]) => boneNamesInScope.has(endBoneName))

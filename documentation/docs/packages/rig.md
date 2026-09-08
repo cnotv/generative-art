@@ -111,6 +111,19 @@ rather than requiring a second draggable target.
 
 ![A hand dragged upward with the Rig Animator's gizmo, its elbow bent by ikSolveTwoBoneChain to follow](/img/animation/rig-ik-reach.webp)
 
+## ikFindSkeletonRoot
+
+Walks up from any bone to the topmost bone still in its own skeleton, a rig's hips
+conventionally: the joint every other bone's pose is ultimately relative to, and the bone a
+caller translates to carry the whole rig along with a dragged limb rather than only bending
+that limb's own chain (see the Rig Animator's own root-follow drag, below).
+
+```typescript
+import { ikFindSkeletonRoot } from '@webgamekit/rig'
+
+const skeletonRoot = ikFindSkeletonRoot(footBone) // walks Foot -> Leg -> UpLeg -> Hips
+```
+
 ## ikSolveOneBoneAim
 
 The degenerate one-segment case of the same idea: for a bone with only a Bone parent (no full

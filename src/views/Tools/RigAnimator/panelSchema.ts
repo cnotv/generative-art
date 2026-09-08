@@ -51,7 +51,6 @@ export const buildRigAnimatorSchema = (
         cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
         cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
-        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
         cameraReachMultiplier: {
           ...CAMERA_REACH_MULTIPLIER_RANGE,
           label: 'Camera Pose: Reach Multiplier'

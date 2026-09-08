@@ -120,6 +120,16 @@ export const ikSolveTwoBoneChain = (
 }
 
 /**
+ * Walk up from any bone to the topmost bone still in its own skeleton: a rig's hips,
+ * conventionally, the joint every other bone's pose is ultimately relative to.
+ * @param bone Any bone in the skeleton
+ * @returns The topmost ancestor that is still a Bone, or `bone` itself when it already has no
+ *   Bone parent
+ */
+export const ikFindSkeletonRoot = (bone: THREE.Bone): THREE.Bone =>
+  bone.parent instanceof THREE.Bone ? ikFindSkeletonRoot(bone.parent) : bone
+
+/**
  * Aim a single bone at a world-space target by rotating its parent, the degenerate one-segment
  * case of the same idea as `ikSolveTwoBoneChain`: only the direction from parent to child
  * changes, never the child's own local offset, so the segment can never stretch or shrink, only

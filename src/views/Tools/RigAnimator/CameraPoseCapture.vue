@@ -17,6 +17,21 @@ import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
 
+/** Body pose's own rough hand landmark indices (pinky/index/thumb knuckles, both sides), in
+ * BlazePose's own point order. */
+const BODY_POSE_HAND_LANDMARK_INDEX = {
+  leftPinky: 17,
+  rightPinky: 18,
+  leftIndex: 19,
+  rightIndex: 20,
+  leftThumb: 21,
+  rightThumb: 22
+}
+
+/** Dropped from the body skeleton overlay whenever the dedicated Hand Landmarker also found
+ * that hand, so its far more detailed finger skeleton is the only one drawn there. */
+const BODY_POSE_HAND_LANDMARK_INDICES = new Set(Object.values(BODY_POSE_HAND_LANDMARK_INDEX))
+
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
   smoothingFactor: number
@@ -134,9 +149,11 @@ const drawOverlay = (): void => {
     // connection's two endpoints by their original array index and already skips a missing one,
     // so a hole is safe there; drawLandmarks just iterates whatever it is given with no such
     // guard, so it needs the holes actually removed rather than left as `undefined` entries.
-    const landmarksByIndex = previewLandmarks.value.map((landmark) =>
-      landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
-    ) as NormalizedLandmark[]
+    const handsDetectedSeparately = !!previewHandLandmarks.value?.length
+    const landmarksByIndex = previewLandmarks.value.map((landmark, index) => {
+      if (handsDetectedSeparately && BODY_POSE_HAND_LANDMARK_INDICES.has(index)) return undefined
+      return landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
+    }) as NormalizedLandmark[]
     const visibleLandmarksOnly = landmarksByIndex.filter(
       (landmark): landmark is NormalizedLandmark => landmark !== undefined
     )
