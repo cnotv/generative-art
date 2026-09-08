@@ -131,10 +131,12 @@ gh run view <run-id> --log-failed
 Fix the cause, commit, push, and repeat until every check passes. Never bypass hooks with
 `--no-verify` — if a hook fails, the hook is usually right.
 
-Once `deploy/netlify` succeeds, hand over its preview link (`targetUrl` in
-`gh pr view <number> --json statusCheckRollup`) rather than making the reader dig for it.
-Append any query parameter the change relies on, so the link opens straight to the state
-being demonstrated instead of the bare root.
+Once `deploy/netlify` succeeds, take its preview link (`targetUrl` in
+`gh pr view <number> --json statusCheckRollup`) and append the route to the view being
+changed — `/tools/RigAnimator`, not the bare root — so it opens straight to the state being
+demonstrated. Put the full URL into the **Preview** line at the top of the PR body (the
+template carries the placeholder) and edit it in via step 5, the same as any other body
+update; do not only mention it in the chat reply, which the next reader of the PR never sees.
 
 Whenever a pull request exists for the work, end the report with a link to it too, so it is
 one click away rather than something the reader has to go find.
